@@ -323,11 +323,20 @@
   }
 
   async function searchPosts(params, deps) {
+    params = params || {};
     var config = getConfig(deps);
     var loadSearchShared = getSearchSharedLoader(deps);
     var fetchJSON = getFetchJSON(deps);
     var apiURL = getApiURL(deps);
 
+    function throwIfAborted() {
+      if (!params.signal || !params.signal.aborted) return;
+      var error = new Error('KC_SEARCH_ABORTED');
+      error.name = 'AbortError';
+      throw error;
+    }
+
+    throwIfAborted();
     if (!config.baseURL) {
       var searchShared = loadSearchShared();
       if (!searchShared) {
@@ -335,6 +344,7 @@
       }
 
       var collection = await getSearchCollection(deps);
+      throwIfAborted();
       if (isFeatureEnabled(deps, 'search.schemaFields')) {
         var loadSearchFieldRegistry = getSearchFieldRegistryLoader(deps);
         var searchFieldRegistry = loadSearchFieldRegistry();
@@ -349,10 +359,11 @@
     Object.entries(params || {}).forEach(function (entry) {
       var key = entry[0];
       var value = entry[1];
+      if (key === 'signal') return;
       if (value == null || value === '') return;
       q.set(key, String(value));
     });
-    return fetchJSON(apiURL('search?' + q.toString()));
+    return fetchJSON(apiURL('search?' + q.toString()), { signal: params.signal || undefined });
   }
 
   async function getPostById(id, deps) {

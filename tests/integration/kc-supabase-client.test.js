@@ -93,6 +93,16 @@ describe('KCSupabase.searchPosts', () => {
 
     expect(result).toEqual([]);
   });
+
+  test('propaga AbortSignal para o builder PostgREST do RPC', async () => {
+    const controller = new AbortController();
+    const abortSignal = jest.fn().mockResolvedValue({ data: [], error: null });
+    rpcMock.mockReturnValue({ abortSignal });
+
+    await window.KCSupabase.searchPosts({ q: 'evento', signal: controller.signal });
+
+    expect(abortSignal).toHaveBeenCalledWith(controller.signal);
+  });
 });
 
 describe('KCSupabase.getFeedCursor', () => {

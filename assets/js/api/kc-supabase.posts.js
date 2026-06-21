@@ -610,7 +610,7 @@
     var f = normalizeSearchPostsParams(params);
     if (!f.q || !f.terms.length) return [];
 
-    var rpc = await client.rpc('kc_search_posts_fts', {
+    var rpcRequest = client.rpc('kc_search_posts_fts', {
       p_q: f.q,
       p_terms: f.terms,
       p_module: f.module || null,
@@ -618,6 +618,10 @@
       p_subcategory: f.subcategory || null,
       p_limit: f.limit,
     });
+    if (params.signal && rpcRequest && typeof rpcRequest.abortSignal === 'function') {
+      rpcRequest = rpcRequest.abortSignal(params.signal);
+    }
+    var rpc = await rpcRequest;
 
     if (rpc && rpc.error) {
       try { console.error('[KCSupabase] searchPosts erro:', rpc.error); } catch (_) { }

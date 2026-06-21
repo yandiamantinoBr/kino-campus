@@ -238,6 +238,10 @@ header {
     display: block;
 }
 
+.kc-search-dropdown__list {
+    display: block;
+}
+
 .kc-search-dropdown__item {
     display: flex;
     align-items: center;
@@ -256,7 +260,9 @@ header {
 }
 
 .kc-search-dropdown__item:hover,
-.kc-search-dropdown__item:focus {
+.kc-search-dropdown__item:focus,
+.kc-search-dropdown__item.is-active,
+.kc-search-dropdown__footer.is-active {
     background-color: var(--kc-background-dark);
 }
 .kc-search-dropdown__item:focus:not(:focus-visible) {
@@ -322,6 +328,11 @@ header {
 
 .kc-search-dropdown__footer:hover {
     background-color: var(--kc-background-dark);
+}
+
+.kc-search-dropdown [role="option"].is-active {
+    outline: 2px solid var(--kc-primary-brand);
+    outline-offset: -2px;
 }
 
 /* ── Mobile search button: retângulo idêntico ao kc-search-bar ── */

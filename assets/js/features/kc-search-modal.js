@@ -66,6 +66,9 @@
 
     modalInput = card.querySelector('#kcSearchModalInput');
     const clearBtn = card.querySelector('.kc-search-modal-card__clear');
+    if (window.kcSearch && typeof window.kcSearch.attachComboboxInput === 'function') {
+      window.kcSearch.attachComboboxInput(modalInput);
+    }
 
     /* Fecha ao clicar no overlay (fora do card) */
     overlay.addEventListener('click', (e) => {
@@ -76,7 +79,7 @@
 
     /* Escape fecha */
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isOpen) closeModal();
+      if (e.key === 'Escape' && isOpen && !e.defaultPrevented) closeModal();
     });
 
     /* Botão limpar */
@@ -96,6 +99,8 @@
 
     /* Confirmação via Enter → abre search-results.html */
     modalInput.addEventListener('keydown', (e) => {
+      if (window.kcSearch && typeof window.kcSearch.handleComboboxKeydown === 'function' &&
+          window.kcSearch.handleComboboxKeydown(e, modalInput)) return;
       if (e.key === 'Enter') {
         const q = modalInput.value.trim();
         if (q) {
@@ -171,6 +176,9 @@
   /* ─── Abrir / fechar ─────────────────────────────────────── */
   function openModal() {
     if (!overlay) buildModal();
+    if (modalInput && window.kcSearch && typeof window.kcSearch.attachComboboxInput === 'function') {
+      window.kcSearch.attachComboboxInput(modalInput);
+    }
 
     /* Atualiza placeholder com o da página atual */
     if (modalInput) modalInput.placeholder = getPagePlaceholder();

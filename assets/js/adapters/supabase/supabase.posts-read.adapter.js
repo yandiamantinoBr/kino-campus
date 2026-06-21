@@ -502,6 +502,7 @@
         return (Array.isArray(rows) ? rows : []).map(normalizeSupabasePost).filter(Boolean);
       }
     } catch (e) {
+      if ((filters && filters.signal && filters.signal.aborted) || (e && e.name === 'AbortError')) throw e;
       console.error('[KCAPI][Supabase] searchPosts falhou:', e);
       return [];
     }

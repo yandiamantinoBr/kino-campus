@@ -26,13 +26,23 @@
   let dropdownDebounceTimer = null;
   let searchFlushTimer = null;
   let searchResultsRequestSeq = 0;
+  let dropdownRequestSeq = 0;
+  let searchResultsRequest = null;
+  let dropdownRequest = null;
+  let dropdownActiveIndex = -1;
+  let dropdownRenderSeq = 0;
   let structuredSearchRuntimePromise = null;
   let structuredDismissalQuery = '';
   let structuredDismissedSignals = new Set();
   let lastStructuredResultsView = null;
   const structuredAssetPromises = {};
+  const comboboxInputs = new Set();
+  const searchPerformanceSamples = [];
 
   const SEARCH_RESULTS_LIMIT = 120;
+  const SEARCH_PERFORMANCE_SAMPLE_LIMIT = 40;
+  const SEARCH_DROPDOWN_ID = 'kcSearchDropdown';
+  const SEARCH_DROPDOWN_LIST_ID = 'kcSearchDropdownList';
   const SEARCH_RESULTS_MODULES = [
     { key: '', label: 'Todos' },
     { key: 'eventos', label: 'Eventos' },
@@ -80,6 +90,95 @@
       }
     };
   })();
+
+  function performanceNow() {
+    return window.performance && typeof window.performance.now === 'function'
+      ? window.performance.now()
+      : Date.now();
+  }
+
+  function percentile(values, ratio) {
+    if (!values.length) return 0;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * ratio) - 1));
+    return sorted[index];
+  }
+
+  function recordSearchPerformance(request, outcome, resultCount) {
+    if (!request || request.finished) return;
+    request.finished = true;
+    searchPerformanceSamples.push(Object.freeze({
+      surface: request.surface,
+      durationMs: Math.max(0, Math.round((performanceNow() - request.startedAt) * 100) / 100),
+      outcome: String(outcome || 'ok'),
+      resultCount: Math.max(0, Math.min(120, Number(resultCount) || 0))
+    }));
+    if (searchPerformanceSamples.length > SEARCH_PERFORMANCE_SAMPLE_LIMIT) {
+      searchPerformanceSamples.splice(0, searchPerformanceSamples.length - SEARCH_PERFORMANCE_SAMPLE_LIMIT);
+    }
+  }
+
+  function getSearchPerformanceSnapshot() {
+    const snapshot = {};
+    ['dropdown', 'results'].forEach((surface) => {
+      const samples = searchPerformanceSamples.filter((sample) => sample.surface === surface);
+      const completed = samples.filter((sample) => sample.outcome === 'ok');
+      const durations = completed.map((sample) => sample.durationMs);
+      snapshot[surface] = Object.freeze({
+        count: samples.length,
+        completed: completed.length,
+        aborted: samples.filter((sample) => sample.outcome === 'aborted').length,
+        stale: samples.filter((sample) => sample.outcome === 'stale').length,
+        errors: samples.filter((sample) => sample.outcome === 'error').length,
+        p50Ms: percentile(durations, 0.5),
+        p95Ms: percentile(durations, 0.95),
+        maxMs: durations.length ? Math.max.apply(null, durations) : 0
+      });
+    });
+    return Object.freeze(snapshot);
+  }
+
+  function cancelSearchRequest(surface) {
+    const request = surface === 'dropdown' ? dropdownRequest : searchResultsRequest;
+    if (!request || request.finished) return;
+    if (request.controller) request.controller.abort();
+    recordSearchPerformance(request, 'aborted', 0);
+  }
+
+  function startSearchRequest(surface) {
+    cancelSearchRequest(surface);
+    const controller = typeof window.AbortController === 'function' ? new window.AbortController() : null;
+    const request = {
+      surface,
+      seq: surface === 'dropdown' ? ++dropdownRequestSeq : ++searchResultsRequestSeq,
+      controller,
+      signal: controller ? controller.signal : null,
+      startedAt: performanceNow(),
+      finished: false
+    };
+    if (surface === 'dropdown') dropdownRequest = request;
+    else searchResultsRequest = request;
+    return request;
+  }
+
+  function isCurrentSearchRequest(request) {
+    if (!request || (request.signal && request.signal.aborted)) return false;
+    return request.surface === 'dropdown'
+      ? dropdownRequest === request && request.seq === dropdownRequestSeq
+      : searchResultsRequest === request && request.seq === searchResultsRequestSeq;
+  }
+
+  function isAbortError(error, request) {
+    return !!((request && request.signal && request.signal.aborted) ||
+      (error && (error.name === 'AbortError' || error.code === 'ABORT_ERR')));
+  }
+
+  function throwIfSearchAborted(signal) {
+    if (!signal || !signal.aborted) return;
+    const error = new Error('KC_SEARCH_ABORTED');
+    error.name = 'AbortError';
+    throw error;
+  }
 
   function getSearchShared() {
     const shared = (typeof window !== 'undefined' && window.KCSearchShared) ? window.KCSearchShared : null;
@@ -452,7 +551,9 @@
     const q = String(query || '').trim();
     if (!q) return [];
 
+    throwIfSearchAborted(options.signal);
     const all = await getAllPosts();
+    throwIfSearchAborted(options.signal);
     const searchShared = getSearchShared();
     if (searchShared) {
       return searchShared.searchCollection(all, {
@@ -981,9 +1082,12 @@
   }
 
   async function renderResultsToPage(query) {
-    const requestSeq = ++searchResultsRequestSeq;
+    const request = startSearchRequest('results');
     const listEl = document.getElementById('searchResultsList');
-    if (!listEl) return;
+    if (!listEl) {
+      recordSearchPerformance(request, 'ok', 0);
+      return;
+    }
 
     const q = String(query || '').trim();
     const titleEl = document.getElementById('searchQueryText');
@@ -998,6 +1102,7 @@
       updateResultsControlsState([], [], readResultFilters());
       renderStructuredSearchState(null);
       updateNoResultsState(noEl, [], null);
+      recordSearchPerformance(request, 'ok', 0);
       return;
     }
 
@@ -1007,19 +1112,27 @@
     let results = [];
     try {
       if (KCAPI && typeof KCAPI.searchPosts === 'function') {
-        const params = { q, limit: SEARCH_RESULTS_LIMIT };
+        const params = { q, limit: SEARCH_RESULTS_LIMIT, signal: request.signal };
         if (categoryParam) params.category = categoryParam;
         if (subcategoryParam) params.subcategory = subcategoryParam;
         results = await KCAPI.searchPosts(params);
       } else {
-        results = await searchPosts(q, { limit: SEARCH_RESULTS_LIMIT, minScore: 0.2 });
+        results = await searchPosts(q, { limit: SEARCH_RESULTS_LIMIT, minScore: 0.2, signal: request.signal });
       }
     } catch (error) {
+      if (isAbortError(error, request)) {
+        recordSearchPerformance(request, 'aborted', 0);
+        return;
+      }
       console.error('[KinoCampus] Busca falhou:', error);
+      recordSearchPerformance(request, 'error', 0);
       results = [];
     }
 
-    if (requestSeq !== searchResultsRequestSeq) return;
+    if (!isCurrentSearchRequest(request)) {
+      recordSearchPerformance(request, 'stale', 0);
+      return;
+    }
 
     const safeResults = Array.isArray(results) ? results : [];
     const filters = readResultFilters();
@@ -1033,7 +1146,10 @@
       moduleOverride: filters.module,
       onState: (state) => { structuredState = state; }
     });
-    if (requestSeq !== searchResultsRequestSeq) return;
+    if (!isCurrentSearchRequest(request)) {
+      recordSearchPerformance(request, 'stale', 0);
+      return;
+    }
     writeResultFiltersToUrl(q, filters);
     const filteredResults = filterAndSortResults(pilotResults, q, filters);
     renderStructuredSearchState(structuredState);
@@ -1042,19 +1158,133 @@
 
     updateNoResultsState(noEl, filteredResults, structuredState);
     if (countEl) countEl.textContent = String(filteredResults.length);
+    recordSearchPerformance(request, 'ok', filteredResults.length);
   }
 
   function getOrCreateDropdown() {
-    let dropdown = document.getElementById('kcSearchDropdown');
+    let dropdown = document.getElementById(SEARCH_DROPDOWN_ID);
     if (!dropdown) {
       dropdown = document.createElement('div');
-      dropdown.id = 'kcSearchDropdown';
+      dropdown.id = SEARCH_DROPDOWN_ID;
       dropdown.className = 'kc-search-dropdown';
-      dropdown.setAttribute('role', 'listbox');
-      dropdown.setAttribute('aria-label', 'Sugestoes de busca');
+      dropdown.setAttribute('role', 'presentation');
       document.body.appendChild(dropdown);
     }
+    getDropdownList(dropdown);
     return dropdown;
+  }
+
+  function getDropdownList(dropdown) {
+    if (!dropdown) return null;
+    let list = dropdown.querySelector(`#${SEARCH_DROPDOWN_LIST_ID}`);
+    if (!list) {
+      list = document.createElement('div');
+      list.id = SEARCH_DROPDOWN_LIST_ID;
+      list.className = 'kc-search-dropdown__list';
+      list.setAttribute('role', 'listbox');
+      list.setAttribute('aria-label', 'Sugestões de busca');
+      dropdown.appendChild(list);
+    }
+    return list;
+  }
+
+  function setupComboboxInput(input) {
+    if (!input || input.nodeType !== 1) return;
+    comboboxInputs.add(input);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-haspopup', 'listbox');
+    input.setAttribute('aria-controls', SEARCH_DROPDOWN_LIST_ID);
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('autocomplete', 'off');
+    input.removeAttribute('aria-activedescendant');
+  }
+
+  function syncComboboxState(dropdown) {
+    const expanded = !!(dropdown && dropdown.classList.contains('active'));
+    const options = dropdown ? Array.from(dropdown.querySelectorAll('[role="option"]')) : [];
+    const active = dropdownActiveIndex >= 0 ? options[dropdownActiveIndex] : null;
+    Array.from(comboboxInputs).forEach((input) => {
+      if (!input || !input.isConnected) {
+        comboboxInputs.delete(input);
+        return;
+      }
+      input.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      if (expanded && active && active.id) input.setAttribute('aria-activedescendant', active.id);
+      else input.removeAttribute('aria-activedescendant');
+    });
+  }
+
+  function setActiveDropdownIndex(dropdown, index) {
+    const options = dropdown ? Array.from(dropdown.querySelectorAll('[role="option"]')) : [];
+    if (!options.length) dropdownActiveIndex = -1;
+    else dropdownActiveIndex = Math.max(0, Math.min(options.length - 1, Number(index) || 0));
+    options.forEach((option, optionIndex) => {
+      const selected = optionIndex === dropdownActiveIndex;
+      option.classList.toggle('is-active', selected);
+      option.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+    const active = dropdownActiveIndex >= 0 ? options[dropdownActiveIndex] : null;
+    if (active && typeof active.scrollIntoView === 'function') active.scrollIntoView({ block: 'nearest' });
+    syncComboboxState(dropdown);
+  }
+
+  function bindDropdownOptions(dropdown) {
+    const options = Array.from(dropdown.querySelectorAll('[role="option"]'));
+    options.forEach((option, index) => {
+      option.setAttribute('tabindex', '-1');
+      option.setAttribute('aria-selected', 'false');
+      option.addEventListener('mouseenter', () => setActiveDropdownIndex(dropdown, index));
+    });
+    dropdownActiveIndex = -1;
+    syncComboboxState(dropdown);
+  }
+
+  function handleComboboxKeydown(event, sourceInput) {
+    if (!event) return false;
+    const dropdown = document.getElementById(SEARCH_DROPDOWN_ID);
+    const expanded = !!(dropdown && dropdown.classList.contains('active'));
+    const options = expanded ? Array.from(dropdown.querySelectorAll('[role="option"]')) : [];
+
+    if (event.key === 'Escape' && expanded) {
+      event.preventDefault();
+      closeDropdown();
+      return true;
+    }
+    if (event.key === 'Tab' && expanded) {
+      closeDropdown();
+      return false;
+    }
+    if (event.key === 'Enter' && expanded && dropdownActiveIndex >= 0 && options[dropdownActiveIndex]) {
+      event.preventDefault();
+      options[dropdownActiveIndex].click();
+      return true;
+    }
+    if (expanded && (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End')) {
+      event.preventDefault();
+      if (event.key === 'Home') setActiveDropdownIndex(dropdown, 0);
+      else if (event.key === 'End') setActiveDropdownIndex(dropdown, options.length - 1);
+      else if (event.key === 'ArrowDown') {
+        setActiveDropdownIndex(dropdown, dropdownActiveIndex < 0 ? 0 : (dropdownActiveIndex + 1) % options.length);
+      } else {
+        setActiveDropdownIndex(dropdown, dropdownActiveIndex < 0 ? options.length - 1 : (dropdownActiveIndex - 1 + options.length) % options.length);
+      }
+      return true;
+    }
+    if (!expanded && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+      const input = sourceInput || document.getElementById('searchInput');
+      const q = input ? input.value : '';
+      if (String(q || '').trim().length < 2) return false;
+      event.preventDefault();
+      clearTimeout(dropdownDebounceTimer);
+      const bar = input.closest('.kc-search-bar, .kc-search-modal-card__bar');
+      updateDropdown(q, getOrCreateDropdown(), bar).then(() => {
+        const optionCount = getOrCreateDropdown().querySelectorAll('[role="option"]').length;
+        setActiveDropdownIndex(getOrCreateDropdown(), event.key === 'ArrowUp' ? optionCount - 1 : 0);
+      });
+      return true;
+    }
+    return false;
   }
 
   function positionDropdown(dropdown, searchBarEl) {
@@ -1087,35 +1317,44 @@
 
   function renderDropdown(dropdown, results, query, structuredState) {
     dropdown.innerHTML = '';
+    dropdownRenderSeq += 1;
+    const list = getDropdownList(dropdown);
 
     if (!results.length) {
       const empty = document.createElement('div');
       empty.className = 'kc-search-dropdown__empty';
+      empty.setAttribute('role', 'status');
+      empty.setAttribute('aria-live', 'polite');
       empty.textContent = structuredState && structuredState.active
         ? 'Nenhum resultado com os critérios entendidos.'
-        : `Nenhum resultado para "${query}"`;
-      dropdown.appendChild(empty);
+        : 'Nenhum resultado encontrado.';
+      dropdown.insertBefore(empty, list);
       if (structuredState && structuredState.active) {
         const summary = document.createElement('div');
         summary.className = 'kc-search-dropdown__meta';
         summary.textContent = structuredState.chips.slice(0, 3).map((chip) => chip.label).join(' · ');
-        dropdown.appendChild(summary);
+        dropdown.insertBefore(summary, list);
         const adjust = document.createElement('button');
         adjust.type = 'button';
         adjust.className = 'kc-search-dropdown__footer';
+        adjust.id = `kc-search-option-${dropdownRenderSeq}-0`;
+        adjust.setAttribute('role', 'option');
         adjust.textContent = 'Ajustar filtros na busca →';
         adjust.addEventListener('click', () => navigateToResults(query, { source: 'dropdown-empty-adjust' }));
-        dropdown.appendChild(adjust);
+        list.appendChild(adjust);
       }
       dropdown.classList.add('active');
+      bindDropdownOptions(dropdown);
+      syncComboboxState(dropdown);
       return;
     }
 
     const shown = results.slice(0, 8);
 
-    shown.forEach((post) => {
+    shown.forEach((post, index) => {
       const item = document.createElement('a');
       item.className = 'kc-search-dropdown__item';
+      item.id = `kc-search-option-${dropdownRenderSeq}-${index}`;
       item.href = getPostHref(post);
       item.setAttribute('role', 'option');
       item.addEventListener('click', () => {
@@ -1153,41 +1392,62 @@
         item.appendChild(price);
       }
 
-      dropdown.appendChild(item);
+      list.appendChild(item);
     });
 
     if (results.length > shown.length) {
-      const footer = document.createElement('div');
+      const footer = document.createElement('button');
+      footer.type = 'button';
       footer.className = 'kc-search-dropdown__footer';
+      footer.id = `kc-search-option-${dropdownRenderSeq}-${shown.length}`;
+      footer.setAttribute('role', 'option');
       footer.textContent = `Ver todos os ${results.length} resultados →`;
       footer.addEventListener('click', () => {
         navigateToResults(query, { source: 'dropdown-footer' });
       });
-      dropdown.appendChild(footer);
+      list.appendChild(footer);
     }
 
     dropdown.classList.add('active');
+    bindDropdownOptions(dropdown);
+    syncComboboxState(dropdown);
   }
 
-  function closeDropdown() {
-    const dropdown = document.getElementById('kcSearchDropdown');
-    if (dropdown) dropdown.classList.remove('active');
+  function closeDropdown(options = {}) {
+    clearTimeout(dropdownDebounceTimer);
+    if (options.cancelRequest !== false) cancelSearchRequest('dropdown');
+    const dropdown = document.getElementById(SEARCH_DROPDOWN_ID);
+    dropdownActiveIndex = -1;
+    if (dropdown) {
+      dropdown.classList.remove('active');
+      dropdown.querySelectorAll('[role="option"]').forEach((option) => {
+        option.classList.remove('is-active');
+        option.setAttribute('aria-selected', 'false');
+      });
+    }
+    syncComboboxState(dropdown);
   }
 
   async function updateDropdown(query, dropdown, searchBarEl) {
     loadStructuredSearchRuntime();
     const q = String(query || '').trim();
     if (q.length < 2) {
-      closeDropdown();
+      cancelSearchRequest('dropdown');
+      closeDropdown({ cancelRequest: false });
       return;
     }
 
+    const request = startSearchRequest('dropdown');
     try {
       let results = [];
       if (KCAPI && typeof KCAPI.searchPosts === 'function') {
-        results = await KCAPI.searchPosts({ q, limit: 8 });
+        results = await KCAPI.searchPosts({ q, limit: 8, signal: request.signal });
       } else {
-        results = await searchPosts(q, { limit: 8, minScore: 0.2 });
+        results = await searchPosts(q, { limit: 8, minScore: 0.2, signal: request.signal });
+      }
+      if (!isCurrentSearchRequest(request)) {
+        recordSearchPerformance(request, 'stale', 0);
+        return;
       }
       if (!Array.isArray(results)) results = [];
       let structuredState = null;
@@ -1197,11 +1457,21 @@
         limit: 8,
         onState: (state) => { structuredState = state; }
       });
+      if (!isCurrentSearchRequest(request)) {
+        recordSearchPerformance(request, 'stale', 0);
+        return;
+      }
       results = filterAndSortResults(results, q, { module: '', hideClosed: true, sortBy: 'relevance' }).slice(0, 8);
       positionDropdown(dropdown, searchBarEl);
       renderDropdown(dropdown, results, q, structuredState);
-    } catch (_) {
-      closeDropdown();
+      recordSearchPerformance(request, 'ok', results.length);
+    } catch (error) {
+      if (isAbortError(error, request)) {
+        recordSearchPerformance(request, 'aborted', 0);
+        return;
+      }
+      recordSearchPerformance(request, 'error', 0);
+      if (isCurrentSearchRequest(request)) closeDropdown({ cancelRequest: false });
     }
   }
 
@@ -1221,6 +1491,8 @@
     const searchButton = document.querySelector('.kc-search-bar button');
     const resultsPage = isResultsPage();
     const dropdown = (!resultsPage && searchBarEl) ? getOrCreateDropdown() : null;
+
+    if (dropdown && searchInput) setupComboboxInput(searchInput);
 
     bindSearchFlushLifecycle();
 
@@ -1266,6 +1538,7 @@
       });
 
       searchInput.addEventListener('keydown', function (event) {
+        if (dropdown && handleComboboxKeydown(event, this)) return;
         if (event.key === 'Escape') {
           closeDropdown();
           return;
@@ -1323,6 +1596,9 @@
     loadStructuredRuntime: loadStructuredSearchRuntime,
     applyStructuredPilot: applyStructuredSearchPilot,
     navigateToResults,
+    attachComboboxInput: setupComboboxInput,
+    handleComboboxKeydown,
+    getPerformanceSnapshot: getSearchPerformanceSnapshot,
     track: trackSearch,
     flushPending: flushPendingTrackedSearches,
     __internals: {
@@ -1335,6 +1611,11 @@
       isStructuredSearchPilotEnabled,
       loadStructuredSearchRuntime,
       resolveStructuredSearchAsset,
+      getSearchPerformanceSnapshot,
+      handleComboboxKeydown,
+      setupComboboxInput,
+      updateDropdown,
+      closeDropdown,
       navigateToResults,
       trackSearch
     }

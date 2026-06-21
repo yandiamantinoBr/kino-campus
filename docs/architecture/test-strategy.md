@@ -2,7 +2,7 @@
 
 **Versão:** v76.40.0 · **Atualizado em:** 2026-06-20
 
-> Documenta as 190 suites Jest + 11 specs Playwright: o que cada uma cobre,
+> Documenta as 191 suites Jest + 11 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 190 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todos os 191 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 190 suites · 3780 testes
-Playwright: 11 specs · 74 testes listados
+Jest: 191 suites · 3784 testes
+Playwright: 11 specs · 78 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥190 passed, 190 total` e `≥3780 passed, 3780 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥191 passed, 191 total` e `≥3784 passed, 3784 total`.
 
 ### Gate CI essencial
 
@@ -495,8 +495,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥190 passed, 190 total
-  Tests:       ≥3780 passed, 3780 total
+  Test Suites: ≥191 passed, 191 total
+  Tests:       ≥3784 passed, 3784 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.
