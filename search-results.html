@@ -276,6 +276,53 @@
             background: transparent;
         }
 
+        .kc-search-personalization {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            margin: -6px 0 18px;
+            padding: 14px 16px;
+            border: 1px solid rgba(255, 124, 0, 0.24);
+            border-radius: 14px;
+            background: rgba(255, 124, 0, 0.07);
+            color: var(--kc-text-dark);
+        }
+
+        .kc-search-personalization[hidden] {
+            display: none;
+        }
+
+        .kc-search-personalization > i,
+        .kc-search-personalization-reason i {
+            color: var(--primary-orange);
+        }
+
+        .kc-search-personalization p {
+            margin: 0;
+            color: var(--kc-text-dark-secondary);
+            line-height: 1.5;
+        }
+
+        .kc-search-personalization a {
+            color: var(--primary-orange);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .kc-search-personalization-reason {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 14px 14px;
+            padding: 9px 11px;
+            border-radius: 12px;
+            background: rgba(255, 124, 0, 0.08);
+            color: var(--kc-text-dark-secondary);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
         @media (max-width: 760px) {
             .kc-search-results-controls {
                 align-items: stretch;
@@ -329,6 +376,15 @@
             .kc-search-structured-chip {
                 min-height: 36px;
                 max-width: 100%;
+            }
+
+            .kc-search-personalization {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+
+            .kc-search-personalization a {
+                grid-column: 2;
+                white-space: normal;
             }
         }
 
@@ -495,6 +551,12 @@
             <div class="kc-search-structured__chips" id="searchResultsStructuredChips"></div>
             <p class="kc-search-structured__note" id="searchResultsStructuredNote" hidden></p>
         </section>
+
+        <aside class="kc-search-personalization" id="searchResultsPersonalization" aria-labelledby="searchResultsPersonalizationTitle" aria-live="polite" hidden>
+            <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+            <p><strong id="searchResultsPersonalizationTitle">Ordem personalizada neste navegador.</strong> <span id="searchResultsPersonalizationText"></span> A consulta e os filtros continuam dominantes.</p>
+            <a href="settings.html#settingsSearchPreferences">Revisar ou desligar</a>
+        </aside>
 
         <div id="noResults">
             <i class="fas fa-search" aria-hidden="true"></i>

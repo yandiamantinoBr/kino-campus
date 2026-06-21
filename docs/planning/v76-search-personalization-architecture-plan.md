@@ -424,7 +424,8 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
 10. **PR-I — executado:** dropdown combobox, cancelamento nos dois surfaces e performance real em memória.
 11. **PR-J — executado:** preferências explícitas locais, consentimentos separados,
     modo não personalizado, exportação e exclusão; sem mudança de ranking.
-12. **PR-K:** afinidade local opt-in; sincronização somente após gates.
+12. **PR-K — executado:** afinidade local opt-in com TTL/decaimento, caps,
+    explicação e influência combinada máxima de 7%; sem sincronização.
 
 Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
@@ -470,8 +471,7 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar **PR-K** usando exclusivamente o opt-in local entregue no PR-J: sinais
-categóricos mínimos, TTL/decaimento, teto pequeno, explicação e limpeza imediata.
-Consulta e filtros devem continuar dominando. O PR-H só pode avançar para SQL quando
-banco descartável permitir migrations, RLS, `EXPLAIN` e rollback R3. Migration remota,
-sincronização com conta e modelos aprendidos seguem bloqueados.
+Executar o gate **PR-H.1** somente em banco Supabase local descartável: migrations,
+matriz RLS/grants, `EXPLAIN (ANALYZE, BUFFERS)`, paridade e rollback R3. A personalização
+permanece exclusivamente local; migration remota, sincronização com conta, experimento
+e modelos aprendidos seguem bloqueados.

@@ -57,6 +57,7 @@
       'search.schemaFields': false,
       'search.structuredRuntime': false,
       'search.structuredPilot': false,
+      'search.personalization': true,
     },
     featureFlags: {},
 
