@@ -21,6 +21,12 @@
     { file: 'kc-search-query-parser.shared.js', global: 'KCSearchQueryParser' },
     { file: 'kc-search-shadow-pipeline.shared.js', global: 'KCSearchShadowPipeline' }
   ];
+  const PERSONALIZATION_PREFERENCES_ASSET =
+    { file: 'kc-search-preferences.shared.js', global: 'KCSearchPreferences' };
+  const PERSONALIZATION_ASSETS = [
+    { file: 'kc-search-registry.generated.js', global: 'KCSearchFieldRegistrySnapshot' },
+    { file: 'kc-search-affinity.shared.js', global: 'KCSearchAffinity' }
+  ];
 
   let kcDbPosts = null;
   let dropdownDebounceTimer = null;
@@ -32,9 +38,11 @@
   let dropdownActiveIndex = -1;
   let dropdownRenderSeq = 0;
   let structuredSearchRuntimePromise = null;
+  let searchPersonalizationRuntimePromise = null;
   let structuredDismissalQuery = '';
   let structuredDismissedSignals = new Set();
   let lastStructuredResultsView = null;
+  let lastRenderedSearchResults = new Map();
   const structuredAssetPromises = {};
   const comboboxInputs = new Set();
   const searchPerformanceSamples = [];
@@ -196,6 +204,11 @@
       window.KCFF.isEnabled('search.structuredPilot', false));
   }
 
+  function isSearchPersonalizationEnabled() {
+    return !!(window.KCFF && typeof window.KCFF.isEnabled === 'function' &&
+      window.KCFF.isEnabled('search.personalization', true));
+  }
+
   function resolveStructuredSearchAsset(file) {
     let src = `/assets/js/shared/${file}`;
     if (SEARCH_SCRIPT_SRC) {
@@ -262,6 +275,63 @@
       return null;
     });
     return structuredSearchRuntimePromise;
+  }
+
+  function buildSearchPersonalizationRuntime() {
+    const preferences = window.KCSearchPreferences;
+    const affinity = window.KCSearchAffinity;
+    const snapshot = window.KCSearchFieldRegistrySnapshot;
+    if (!preferences || typeof preferences.load !== 'function' ||
+        !affinity || typeof affinity.rerank !== 'function' ||
+        !snapshot || !snapshot.registry) {
+      throw new Error('KC_SEARCH_PERSONALIZATION_CONTRACT_INVALID');
+    }
+    return Object.freeze({ preferences, affinity, registry: snapshot });
+  }
+
+  function loadSearchPersonalizationRuntime() {
+    if (!isSearchPersonalizationEnabled()) return Promise.resolve(null);
+    if (searchPersonalizationRuntimePromise) return searchPersonalizationRuntimePromise;
+    searchPersonalizationRuntimePromise = loadStructuredSearchAsset(PERSONALIZATION_PREFERENCES_ASSET)
+      .then((preferences) => {
+        const state = preferences.load();
+        if (!preferences.isPersonalized(state)) return null;
+        return PERSONALIZATION_ASSETS.reduce(
+          (promise, asset) => promise.then(() => loadStructuredSearchAsset(asset)),
+          Promise.resolve()
+        ).then(buildSearchPersonalizationRuntime);
+      }).catch((error) => {
+      try { console.warn('[KinoCampus] Personalização local indisponível; ranking comum preservado.', error); } catch (_) {}
+      return null;
+    });
+    return searchPersonalizationRuntimePromise;
+  }
+
+  async function applySearchPersonalization(results, options = {}) {
+    const source = Array.isArray(results) ? results : [];
+    const runtime = await loadSearchPersonalizationRuntime();
+    if (!runtime) return source;
+    const preferences = runtime.preferences.load({ registry: runtime.registry });
+    if (!runtime.preferences.isPersonalized(preferences)) return source;
+    return runtime.affinity.rerank(source, {
+      preferences,
+      registry: runtime.registry,
+      sortBy: options.sortBy || 'relevance'
+    });
+  }
+
+  function recordSearchResultInteraction(post, source) {
+    if (!post || !isSearchPersonalizationEnabled()) return;
+    loadSearchPersonalizationRuntime().then((runtime) => {
+      if (!runtime) return;
+      const preferences = runtime.preferences.load({ registry: runtime.registry });
+      runtime.affinity.recordInteraction(post, {
+        preferences,
+        registry: runtime.registry,
+        source,
+        automated: !!(window.navigator && window.navigator.webdriver)
+      });
+    }).catch(() => {});
   }
 
   function getStructuredPostId(post) {
@@ -766,6 +836,8 @@
       structuredChips: document.getElementById('searchResultsStructuredChips'),
       structuredNote: document.getElementById('searchResultsStructuredNote'),
       structuredRestore: document.getElementById('searchResultsStructuredRestore'),
+      personalization: document.getElementById('searchResultsPersonalization'),
+      personalizationText: document.getElementById('searchResultsPersonalizationText'),
       noResultsMessage: document.getElementById('noResultsMessage'),
       noResultsRelax: document.getElementById('searchResultsRelaxStructured'),
       noResultsRestore: document.getElementById('searchResultsRestoreStructured')
@@ -891,6 +963,26 @@
         : '';
     }
     if (controls.structuredRestore) controls.structuredRestore.hidden = !(state.dismissedCount > 0);
+  }
+
+  function renderSearchPersonalizationState(results, sortBy) {
+    const controls = getResultControls();
+    if (!controls.personalization) return;
+    const personalized = (Array.isArray(results) ? results : []).filter((post) =>
+      post && post._kcPersonalization && post._kcPersonalization.boost > 0
+    );
+    const visible = sortBy === 'relevance' && personalized.length > 0;
+    controls.personalization.hidden = !visible;
+    if (!visible || !controls.personalizationText) return;
+    const reasonLabels = [];
+    personalized.forEach((post) => {
+      (post._kcPersonalization.reasons || []).forEach((reason) => {
+        if (reason && reason.label && reasonLabels.indexOf(reason.label) === -1) reasonLabels.push(reason.label);
+      });
+    });
+    controls.personalizationText.textContent = reasonLabels.length
+      ? `Ordem ajustada por: ${reasonLabels.slice(0, 3).join(' · ')}.`
+      : 'A ordem considera apenas preferências locais autorizadas.';
   }
 
   function updateNoResultsState(noElement, results, state) {
@@ -1050,10 +1142,39 @@
         rerender();
       });
     }
+
+    const list = document.getElementById('searchResultsList');
+    if (list && list.dataset.kcSearchAffinityBound !== '1') {
+      list.dataset.kcSearchAffinityBound = '1';
+      list.addEventListener('click', (event) => {
+        const link = event.target.closest && event.target.closest('a[href*="id="]');
+        const card = link && link.closest('[data-kc-search-result-id]');
+        if (!card) return;
+        const post = lastRenderedSearchResults.get(card.dataset.kcSearchResultId);
+        if (post) recordSearchResultInteraction(post, 'results-click');
+      });
+    }
+  }
+
+  function decorateResultCard(html, post) {
+    const source = String(html || '');
+    const id = getStructuredPostId(post);
+    if (!id || !/<article\b/i.test(source)) return source;
+    const personalization = post && post._kcPersonalization;
+    const reason = personalization && Array.isArray(personalization.reasons)
+      ? personalization.reasons.map((item) => item && item.label).filter(Boolean).slice(0, 2).join(' · ')
+      : '';
+    let decorated = source.replace(/<article\b/i, `<article data-kc-search-result-id="${escapeHtml(id)}"`);
+    if (reason && /<\/article>\s*$/i.test(decorated)) {
+      const explanation = `<div class="kc-search-personalization-reason"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><span>Priorizado: ${escapeHtml(reason)}</span></div>`;
+      decorated = decorated.replace(/<\/article>\s*$/i, `${explanation}</article>`);
+    }
+    return decorated;
   }
 
   function buildResultCard(raw) {
     const post = normalizeAnyPost(raw);
+    if (raw && raw._kcPersonalization) post._kcPersonalization = raw._kcPersonalization;
     const modeled = (window.KCPostModel && typeof window.KCPostModel.from === 'function')
       ? window.KCPostModel.from(post, {})
       : post;
@@ -1062,11 +1183,11 @@
     modeled._kcCompactComments = true;
 
     if (KCUtils && typeof KCUtils.renderPostCard === 'function') {
-      return KCUtils.renderPostCard(modeled);
+      return decorateResultCard(KCUtils.renderPostCard(modeled), post);
     }
 
     const href = `product.html?id=${encodeURIComponent(post.id ?? '')}`;
-    return `
+    return decorateResultCard(`
       <article class="kc-card">
         <div class="kc-card__main">
           <div class="kc-card__image-wrapper" style="font-size: 3em; display:flex; align-items:center; justify-content:center;">${escapeHtml(post.emoji || '✨')}</div>
@@ -1078,7 +1199,7 @@
           </div>
         </div>
       </article>
-    `.trim();
+    `.trim(), post);
   }
 
   async function renderResultsToPage(query) {
@@ -1098,9 +1219,11 @@
 
     if (!q) {
       listEl.innerHTML = '';
+      lastRenderedSearchResults = new Map();
       if (countEl) countEl.textContent = '0';
       updateResultsControlsState([], [], readResultFilters());
       renderStructuredSearchState(null);
+      renderSearchPersonalizationState([], 'relevance');
       updateNoResultsState(noEl, [], null);
       recordSearchPerformance(request, 'ok', 0);
       return;
@@ -1151,9 +1274,16 @@
       return;
     }
     writeResultFiltersToUrl(q, filters);
-    const filteredResults = filterAndSortResults(pilotResults, q, filters);
+    let filteredResults = filterAndSortResults(pilotResults, q, filters);
+    filteredResults = await applySearchPersonalization(filteredResults, { sortBy: filters.sortBy });
+    if (!isCurrentSearchRequest(request)) {
+      recordSearchPerformance(request, 'stale', 0);
+      return;
+    }
     renderStructuredSearchState(structuredState);
+    renderSearchPersonalizationState(filteredResults, filters.sortBy);
     updateResultsControlsState(pilotResults, filteredResults, filters, structuredState);
+    lastRenderedSearchResults = new Map(filteredResults.map((post) => [getStructuredPostId(post), post]));
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
 
     updateNoResultsState(noEl, filteredResults, structuredState);
@@ -1359,6 +1489,7 @@
       item.setAttribute('role', 'option');
       item.addEventListener('click', () => {
         trackSearch(query, { source: 'dropdown-item' });
+        recordSearchResultInteraction(post, 'dropdown-click');
       });
 
       const emoji = document.createElement('span');
@@ -1376,6 +1507,11 @@
       meta.className = 'kc-search-dropdown__meta';
       const parts = [post.categoria || post.modulo || ''].filter(Boolean);
       if (post.autor) parts.push(`por ${post.autor}`);
+      const personalization = post && post._kcPersonalization;
+      const firstReason = personalization && Array.isArray(personalization.reasons)
+        ? personalization.reasons.find((reason) => reason && reason.label)
+        : null;
+      if (firstReason) parts.unshift(`Prioridade: ${firstReason.label}`);
       meta.textContent = parts.join(' · ');
 
       info.appendChild(title);
@@ -1462,6 +1598,11 @@
         return;
       }
       results = filterAndSortResults(results, q, { module: '', hideClosed: true, sortBy: 'relevance' }).slice(0, 8);
+      results = await applySearchPersonalization(results, { sortBy: 'relevance' });
+      if (!isCurrentSearchRequest(request)) {
+        recordSearchPerformance(request, 'stale', 0);
+        return;
+      }
       positionDropdown(dropdown, searchBarEl);
       renderDropdown(dropdown, results, q, structuredState);
       recordSearchPerformance(request, 'ok', results.length);
@@ -1582,6 +1723,15 @@
     }
   }
 
+  window.addEventListener('storage', (event) => {
+    if (!event || event.key === 'kc_search_preferences_v1' || event.key === 'kc_search_affinity_v1') {
+      searchPersonalizationRuntimePromise = null;
+    }
+  });
+  window.addEventListener('kc:search-preferences-change', () => {
+    searchPersonalizationRuntimePromise = null;
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initSearch);
   } else {
@@ -1594,6 +1744,7 @@
     globalSearch,
     loadDatabase: loadDbPosts,
     loadStructuredRuntime: loadStructuredSearchRuntime,
+    loadPersonalizationRuntime: loadSearchPersonalizationRuntime,
     applyStructuredPilot: applyStructuredSearchPilot,
     navigateToResults,
     attachComboboxInput: setupComboboxInput,
@@ -1610,6 +1761,9 @@
       isStructuredSearchRuntimeEnabled,
       isStructuredSearchPilotEnabled,
       loadStructuredSearchRuntime,
+      loadSearchPersonalizationRuntime,
+      applySearchPersonalization,
+      recordSearchResultInteraction,
       resolveStructuredSearchAsset,
       getSearchPerformanceSnapshot,
       handleComboboxKeydown,

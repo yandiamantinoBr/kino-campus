@@ -47,6 +47,22 @@
       admin: 'Dashboard e Privacidade',
     },
     {
+      name: 'kc_search_preferences_v1',
+      storage: 'localStorage',
+      purpose: 'Guarda escolhas explícitas e o modo de personalização de busca.',
+      consent: 'Personalização',
+      retention: 'Até alteração ou exclusão pelo titular',
+      admin: 'Somente no navegador',
+    },
+    {
+      name: 'kc_search_affinity_v1',
+      storage: 'localStorage',
+      purpose: 'Agrega cliques consentidos por módulo/assunto canônico, sem consultas.',
+      consent: 'Personalização — opt-in separado',
+      retention: 'TTL de 90 dias com decaimento local',
+      admin: 'Somente no navegador',
+    },
+    {
       name: 'kc_home_category_*',
       storage: 'localStorage',
       purpose: 'Personaliza categorias e registra afinidade agregada.',
