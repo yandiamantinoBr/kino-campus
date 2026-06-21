@@ -19,7 +19,7 @@ O KinoCampus continua operando como aplicação estática hospedada na Vercel, c
 | componentes em `assets/js/components/` | `3` |
 | arquivos CSS em `assets/css/` (produção) | `10` |
 | suites de teste Jest em `tests/` | `189` |
-| testes Jest totais | `3780` |
+| testes Jest totais | `3784` |
 | specs E2E Playwright | `11` |
 
 ## Princípio estrutural
@@ -241,5 +241,6 @@ Quando um padrão compartilhado é alterado, o mínimo esperado de revisão é:
 - **v76.39.0 (2026-06-20):** integra seleção estruturada em resultados/dropdown sob duas flags desligadas, com fallback e E2E de rede.
 - **v76.40.0 (2026-06-20):** expõe critérios estruturados removíveis, facetas agregadas e estados vazios explicáveis sob as mesmas flags.
 - **v76.41.0 (2026-06-20):** registra o contrato SQL/RPC estruturado, matriz RLS, explain e rollback R3; nenhuma migration ou execução em banco foi autorizada.
+- **v76.42.0 (2026-06-20):** transforma o dropdown em combobox ARIA, propaga cancelamento até os drivers e mede latência somente em memória, sem consulta ou perfil.
 - `frontendRuntimeVersion` atual é `8.6.1` (constante canônica do runtime).
 - Para detalhes completos de cada módulo, ver: `docs/architecture/module-catalog.md`, `docs/architecture/controllers-catalog.md`, `docs/architecture/repository-structure.md`.

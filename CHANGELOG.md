@@ -2,6 +2,24 @@
 
 ---
 
+## [v76.42] - 2026-06-20 - combobox, cancelamento e métricas locais da busca
+
+### Adicionado
+
+- `kcSearchDropdown` segue o padrão ARIA combobox/listbox com `aria-expanded`, `aria-controls`, `aria-activedescendant` e seleção anunciável.
+- Setas, Home, End, Enter, Escape e Tab funcionam mantendo o foco no input; o modal mobile compartilha o mesmo contrato.
+- Cada nova busca aborta a anterior no dropdown e nos resultados; `AbortSignal` é propagado pelos adapters local e Supabase até `PostgREST.abortSignal`.
+- Métricas limitadas a 40 amostras permanecem somente em memória e expõem contagem, abortos, erros e p50/p95/máximo sem consulta ou identificador.
+- Quatro testes Jest e quatro cenários E2E novos cobrem semântica, teclado, mobile, concorrência, propagação do sinal e latência.
+
+### Segurança
+
+- Nenhuma métrica é persistida, enviada ou associada a perfil; o snapshot não contém texto pesquisado.
+- Respostas obsoletas não atualizam DOM, URL, facetas ou contagens, mesmo se um driver não suportar abort físico.
+- Flags estruturadas permanecem desligadas e não houve migration, RPC, grant ou mudança de dados.
+
+---
+
 ## [v76.41] - 2026-06-20 - dossiê SQL/RPC isolado da busca estruturada
 
 ### Adicionado

@@ -41,7 +41,7 @@ async function isolateLocalDatabase(page) {
   }));
 }
 
-test.describe('V76.40 - critérios e facetas da busca estruturada', () => {
+test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
   test('defaults desligados não fazem requisições estruturadas nas duas superfícies', async ({ page }) => {
     const requested = [];
     page.on('request', (request) => {
@@ -126,7 +126,7 @@ test.describe('V76.40 - critérios e facetas da busca estruturada', () => {
     await expect(dropdown).toHaveClass(/active/);
     await expect(dropdown).toContainText('Nenhum resultado com os critérios entendidos.');
     await expect(dropdown).toContainText('Modalidade: Remoto');
-    await expect(dropdown.getByRole('button', { name: /Ajustar filtros na busca/ })).toBeVisible();
+    await expect(dropdown.getByRole('option', { name: /Ajustar filtros na busca/ })).toBeVisible();
   });
 
   test('chips permanecem operáveis no mobile sem overflow horizontal', async ({ page }) => {
@@ -150,5 +150,145 @@ test.describe('V76.40 - critérios e facetas da busca estruturada', () => {
     expect(metrics.chipHeight).toBeGreaterThanOrEqual(36);
     await chip.click();
     await expect(chip).toHaveCount(0);
+  });
+
+  test('dropdown segue o padrão combobox e mantém foco durante navegação por teclado', async ({ page }) => {
+    await isolateLocalDatabase(page);
+    await page.goto('/index.html');
+    await enablePilotWithPosts(page, opportunityFixtures());
+    const input = page.locator('#searchInput');
+    await input.fill('estágio computação');
+
+    const dropdown = page.locator('#kcSearchDropdown');
+    const options = dropdown.locator('[role="option"]');
+    await expect(dropdown).toHaveClass(/active/);
+    await expect(input).toHaveAttribute('role', 'combobox');
+    await expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    await expect(input).toHaveAttribute('aria-controls', 'kcSearchDropdownList');
+    await expect(input).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#kcSearchDropdownList')).toHaveAttribute('role', 'listbox');
+    await expect(options).toHaveCount(2);
+
+    await input.press('ArrowDown');
+    const firstId = await options.nth(0).getAttribute('id');
+    await expect(input).toHaveAttribute('aria-activedescendant', firstId);
+    await expect(options.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(input).toBeFocused();
+    await input.press('End');
+    const lastId = await options.nth(1).getAttribute('id');
+    await expect(input).toHaveAttribute('aria-activedescendant', lastId);
+    await input.press('Escape');
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+    await expect(input).not.toHaveAttribute('aria-activedescendant');
+  });
+
+  test('nova consulta aborta a anterior e métricas não armazenam o texto', async ({ page }) => {
+    await isolateLocalDatabase(page);
+    await page.goto('/index.html');
+    await page.evaluate(() => {
+      window.__kcSearchAbortCount = 0;
+      window.KCAPI.registerAdapter('local', {
+        searchPosts: (params) => new Promise((resolve, reject) => {
+          const slow = params.q === 'evento';
+          const timer = setTimeout(() => resolve([{
+            id: slow ? 'old-result' : 'new-result',
+            titulo: slow ? 'Evento antigo' : 'Eventos novos',
+            descricao: slow ? 'Resposta lenta' : 'Resposta atual',
+            modulo: 'eventos'
+          }]), slow ? 600 : 20);
+          if (params.signal) params.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            window.__kcSearchAbortCount += 1;
+            reject(new DOMException('Aborted', 'AbortError'));
+          }, { once: true });
+        }),
+        getPosts: async () => [],
+        getFeedCursor: async () => ({ posts: [], nextCursor: null, hasMore: false }),
+        getPostById: async () => null
+      });
+    });
+
+    const input = page.locator('#searchInput');
+    await input.fill('evento');
+    await page.waitForTimeout(220);
+    await input.fill('eventos');
+    const dropdown = page.locator('#kcSearchDropdown');
+    await expect(dropdown).toContainText('Eventos novos');
+    await expect(dropdown).not.toContainText('Evento antigo');
+
+    const state = await page.evaluate(() => ({
+      aborts: window.__kcSearchAbortCount,
+      metrics: window.kcSearch.getPerformanceSnapshot()
+    }));
+    expect(state.aborts).toBe(1);
+    expect(state.metrics.dropdown.aborted).toBeGreaterThanOrEqual(1);
+    expect(state.metrics.dropdown.completed).toBeGreaterThanOrEqual(1);
+    expect(state.metrics.dropdown.p95Ms).toBeLessThan(1000);
+    expect(JSON.stringify(state.metrics)).not.toContain('eventos');
+  });
+
+  test('página de resultados também cancela resposta obsoleta', async ({ page }) => {
+    await isolateLocalDatabase(page);
+    await page.goto('/search-results.html');
+    await page.evaluate(() => {
+      window.__kcResultsAbortCount = 0;
+      window.KCAPI.registerAdapter('local', {
+        searchPosts: (params) => new Promise((resolve, reject) => {
+          const slow = params.q === 'evento';
+          const timer = setTimeout(() => resolve([{
+            id: slow ? 'old-page-result' : 'new-page-result',
+            titulo: slow ? 'Evento antigo' : 'Eventos novos',
+            descricao: slow ? 'Resposta lenta' : 'Resposta atual',
+            modulo: 'eventos'
+          }]), slow ? 600 : 20);
+          if (params.signal) params.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            window.__kcResultsAbortCount += 1;
+            reject(new DOMException('Aborted', 'AbortError'));
+          }, { once: true });
+        }),
+        getPosts: async () => [],
+        getFeedCursor: async () => ({ posts: [], nextCursor: null, hasMore: false }),
+        getPostById: async () => null
+      });
+    });
+
+    const input = page.locator('#searchInput');
+    await input.fill('evento');
+    await page.waitForTimeout(20);
+    await input.fill('eventos');
+    const list = page.locator('#searchResultsList');
+    await expect(list).toContainText('Eventos novos');
+    await expect(list).not.toContainText('Evento antigo');
+    const state = await page.evaluate(() => ({
+      aborts: window.__kcResultsAbortCount,
+      metrics: window.kcSearch.getPerformanceSnapshot().results
+    }));
+    expect(state.aborts).toBe(1);
+    expect(state.metrics.aborted).toBeGreaterThanOrEqual(1);
+    expect(state.metrics.completed).toBeGreaterThanOrEqual(1);
+    expect(state.metrics.p95Ms).toBeLessThan(1000);
+  });
+
+  test('modal mobile também opera o combobox sem fechar no primeiro Escape', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await isolateLocalDatabase(page);
+    await page.goto('/index.html');
+    await enablePilotWithPosts(page, opportunityFixtures());
+    await page.locator('#kcSearchMobileBtn').click();
+    const modal = page.locator('#kcSearchModalOverlay');
+    const input = page.locator('#kcSearchModalInput');
+    await expect(modal).toHaveClass(/active/);
+    await input.fill('estágio computação');
+    await expect(input).toHaveAttribute('role', 'combobox');
+    await expect(input).toHaveAttribute('aria-expanded', 'true');
+    await input.press('ArrowDown');
+    await expect(input).toHaveAttribute('aria-activedescendant', /kc-search-option-/);
+    await expect(input).toBeFocused();
+    await input.press('Escape');
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+    await expect(modal).toHaveClass(/active/);
+    await input.press('Escape');
+    await expect(modal).not.toHaveClass(/active/);
   });
 });

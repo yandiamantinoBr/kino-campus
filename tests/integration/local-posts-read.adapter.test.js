@@ -373,6 +373,21 @@ describe('local.posts-read.adapter.js - leitura e busca', () => {
     expect(result).toHaveLength(1);
     expect(result.map((post) => post.id)).toEqual(['seed-1']);
   });
+
+  test('searchPosts remoto não serializa signal e o encaminha ao fetch', async () => {
+    const controller = new AbortController();
+    const fetchJSON = jest.fn().mockResolvedValue([]);
+
+    await postsRead().searchPosts({ q: 'evento', signal: controller.signal }, buildDeps({
+      config: { baseURL: '/api/v1' },
+      fetchJSON,
+    }));
+
+    expect(fetchJSON).toHaveBeenCalledWith(
+      expect.not.stringContaining('signal='),
+      { signal: controller.signal }
+    );
+  });
 });
 
 describe('local.posts-read.adapter.js - detalhes e related', () => {
