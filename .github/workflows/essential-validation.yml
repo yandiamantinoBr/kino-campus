@@ -19,42 +19,53 @@ concurrency:
   group: essential-validation-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  validate:
-    name: Validators, Jest and Playwright list
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  jobs:
+    validate:
+      name: Validators, Jest and Playwright
+      runs-on: ubuntu-latest
+      timeout-minutes: 30
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+        - name: Setup Node.js 20
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20'
+            cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+        - name: Install dependencies
+          run: npm ci
 
-      - name: Version map
-        run: npm run check:version
+        - name: Version map
+          run: npm run check:version
 
-      - name: Repository structure
-        run: npm run check:structure
+        - name: Repository structure
+          run: npm run check:structure
 
-      - name: Script chains
-        run: npm run check:scripts
+        - name: Script chains
+          run: npm run check:scripts
 
-      - name: Public routes
-        run: npm run check:routes
+        - name: Public routes
+          run: npm run check:routes
 
-      - name: Hygiene
-        run: npm run check:hygiene
+        - name: Hygiene
+          run: npm run check:hygiene
 
-      - name: Jest
-        run: npm test -- --runInBand
+        - name: Jest
+          run: npm test -- --runInBand
 
-      - name: Playwright inventory
-        run: npx playwright test --list
+        - name: Install Playwright chromium
+          run: npx playwright install --with-deps chromium
+
+        - name: Playwright E2E (chromium)
+          run: npx playwright test
+
+        - name: Upload Playwright report
+          if: ${{ !cancelled() }}
+          uses: actions/upload-artifact@v4
+          with:
+            name: playwright-report
+            path: output/playwright-report
+            retention-days: 7

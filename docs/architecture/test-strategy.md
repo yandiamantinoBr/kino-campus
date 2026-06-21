@@ -76,9 +76,13 @@ O workflow `.github/workflows/essential-validation.yml` roda em pull requests e 
 - `npm run check:routes`
 - `npm run check:hygiene`
 - `npm test -- --runInBand`
-- `npx playwright test --list`
+- `npx playwright install --with-deps chromium`
+- `npx playwright test`
 
-Esse gate cobre validação estrutural, Jest completo e inventário Playwright sem exigir browser real ou deploy.
+Esse gate cobre validação estrutural, Jest completo e **execução real** das specs
+Playwright (chromium) — o `webServer` do `playwright.config.js` sobe `http-server`
+na porta 4000 automaticamente, inclusive em CI. Até a V76.48 o CI só rodava o
+inventário (`--list`); agora as 83 specs executam de fato como gate de regressão.
 
 ---
 

@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-ci-playwright-2026-06-21.md` | Evidência V76.48 do CI executando as 83 specs Playwright (chromium) como gate de regressão real, encerrando o modo inventário `--list` |
 | `report-v76-migration-baseline-2026-06-21.md` | Evidência V76.47 da baseline consolidada que destrava `supabase db reset` (132 migrations legacy arquivadas, 1 baseline validada em PostgreSQL 17.6 local) |
 | `report-v76-docs-hygiene-2026-06-21.md` | Evidência V76.49 da higiene de drift em `docs/index.md`/`_INDEX.md` e do comentário esclarecedor da flag `search.personalization` |
 | `report-v76-search-session-standard-order-2026-06-21.md` | Evidência V76.46 do bypass efêmero de personalização por consulta |
