@@ -269,6 +269,38 @@ candidato; (2) re-executar o harness confirmando timeout cumprido; (3) só entã
 uma migration candidata faria sentido. Nenhum banco remoto foi consultado nesta
 revalidação. Evidência: `docs/qa/reports/report-v76-search-sql-revalidation-2026-06-21.md`.
 
+## 14. Investigação do caminho de destravamento (V76.50 complementar)
+
+Após a revalidação, foram testadas em PostgreSQL 17 descartável (50k registros)
+três abordagens para cumprir o timeout absoluto de 1500ms:
+
+1. **Coluna gerada `fuzzy_text_gen` + índice GIN trigram** — **impossível**.
+   O PostgreSQL rejeita (`generation expression is not immutable`) porque a
+   expressão chama `unaccent()`, função marcada como `STABLE` (não `IMMUTABLE`)
+   no catálogo. Tentar declarar `kc_unaccent` como `IMMUTABLE` não contorna: o
+   planner valida a volatilidade real da cadeia de chamadas.
+
+2. **Índice GIN funcional sobre a expressão `fuzzy_text`** — **impossível**.
+   Erro `functions in index expression must be marked IMMUTABLE`, mesma causa
+   raiz: `unaccent` é STABLE.
+
+3. **Consulta candidata SEM o fallback trigram (FTS puro)** — **passa folgadamente**.
+   Em 50k: **344–361ms** (vs ~2510ms com o `OR` trigram). O custo vem
+   exclusivamente do `OR EXISTS (word_similarity(term, fuzzy_text) >= 0.5)`,
+   que força avaliação linha-a-linha porque `fuzzy_text` é calculada em CTE sem
+   índice e `word_similarity()` (função) não usa índice — só o operador `%>`
+   usaria, mas ele não pode ser indexado sobre a expressão (mesmo motivo do item 2).
+
+**Conclusão técnica:** o caminho para destravar o SQL estruturado **não é um índice**
+(os dois caminhos de indexação são bloqueados pela volatilidade de `unaccent`).
+O caminho viável é **redesenhar a consulta candidata** para separar a busca FTS
+(rápida, principal, já coberta por `idx_posts_fts`) do fallback trigram (lento):
+por exemplo, executar FTS primeiro e aplicar trigram apenas como segunda passada
+opcional com limite estrito, ou eliminá-lo do candidato principal. Esta é uma
+mudança de desenho da função `kc_search_posts_structured_v1`, a ser proposta como
+migration candidata futura após novo desenho e prova isolada — permanece em No-Go
+até então. Nenhum banco remoto foi consultado.
+
 ## 11. Fontes primárias verificadas
 
 - [Supabase — Full Text Search](https://supabase.com/docs/guides/database/full-text-search)
