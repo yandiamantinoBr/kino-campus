@@ -235,6 +235,40 @@ escolhido pelo planner. O gate absoluto de 1500 ms falhou em 50 mil linhas, e a 
 canônica de migrations não sobe do zero. Por esses dois motivos independentes, a decisão
 permanece No-Go para migration.
 
+## 13. Revalidação V76.50 (2026-06-21) — cadeia reparada, performance reafirmada
+
+Após a V76.47 reparar a cadeia canônica de migrations (baseline consolidada que
+sobe via `supabase db reset`), o harness `tests/sql/search-structured-v1-isolated-proof.sql`
+foi re-executado em PostgreSQL 17 descartável puro para atualizar a decisão por
+evidência. O resultado consolidou o estado dos gates:
+
+| Gate | V76.45 (pré-reparo) | V76.50 (pós-reparo) |
+|---|---|---|
+| Harness termina código 0 | passou | **passou** |
+| Matriz RLS 8/8 | passou | **passou** |
+| Validações fail-closed 6/6 | passou | **passou** |
+| Filtros estruturados + acento + typo | passou | **passou** |
+| p95 candidato sem filtro vs legado (10k) | +2,0% (≤20%) | **−2,9%** (candidate p95 507ms vs legado 522ms) |
+| p95 candidato sem filtro vs legado (50k) | +0,2% (≤20%) | **+1,5%** (candidate p95 2510ms vs legado 2474ms) |
+| Gate de regressão p95 ≤20% | passou | **passou** |
+| Rollback R3 | passou | **passou** |
+| Timeout absoluto 1500ms em 50k | **falhou** | **falhou** (`migration_gate=not-met`) |
+| Cadeia canônica de migrations | **falhava** (108 arquivos ignorados, `post_media` ausente) | **reparada** (V76.47, baseline consolidada) |
+
+**Decisão atualizada:** o blocker estrutural (cadeia de migrations) foi removido
+pela V76.47. Resta um único blocker independente: o **timeout absoluto de 1500ms
+não é atendido em 50 mil registros**. A causa raiz confirmada é o scan sequencial
+do fallback trigram sobre `fuzzy_text` (coluna calculada sem índice GIN) combinado
+com a cláusula `OR` que anula o uso do índice FTS. Este é um problema de
+planejamento de consulta, não de cadeia de migrations.
+
+Portanto SQL de produção, migration candidata, grant, ativação de flag e troca de
+RPC continuam em **No-Go**. O caminho para destravar (futuro) é: (1) propor um
+índice GIN trigram sobre a expressão `fuzzy_text` ou eliminar o `OR` trigram do
+candidato; (2) re-executar o harness confirmando timeout cumprido; (3) só então
+uma migration candidata faria sentido. Nenhum banco remoto foi consultado nesta
+revalidação. Evidência: `docs/qa/reports/report-v76-search-sql-revalidation-2026-06-21.md`.
+
 ## 11. Fontes primárias verificadas
 
 - [Supabase — Full Text Search](https://supabase.com/docs/guides/database/full-text-search)

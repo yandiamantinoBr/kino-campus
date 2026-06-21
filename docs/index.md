@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.47` (busca orientada ao schema e personalização responsável + cadeia canônica de migrations reparada como baseline consolidada que sobe via `supabase db reset`; SQL estruturado e migration candidata seguem em No-Go até revalidação do gate de timeout, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.50` (busca orientada ao schema e personalização responsável; cadeia canônica de migrations reparada como baseline consolidada que sobe via `supabase db reset`; CI executa as 83 specs Playwright de fato; SQL estruturado segue em No-Go apenas pelo timeout absoluto de 1500ms em 50k, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
