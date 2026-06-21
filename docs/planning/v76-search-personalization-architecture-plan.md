@@ -1,7 +1,7 @@
 # V76.32 — Plano de busca orientada ao schema e personalização responsável
 
 **Data:** 2026-06-19  
-**Estado:** execução incremental; UX/combobox V76.40–V76.42 e dossiê SQL/RPC concluídos sem migration
+**Estado:** execução incremental; UX, preferências e prova SQL local V76.40–V76.46 concluídas sem migration remota
 
 **Escopo:** `/search-results.html`, `kcSearchDropdown`, campos de criação, perfil de preferências, ranking e governança  
 **Fora do gate V76.42:** migration, SQL remoto, providers, secrets, deploy, perfil e alteração de dados reais
@@ -426,6 +426,8 @@ Rollout: canário interno, percentual pequeno e expansão por gate; migration ad
     modo não personalizado, exportação e exclusão; sem mudança de ranking.
 12. **PR-K — executado:** afinidade local opt-in com TTL/decaimento, caps,
     explicação e influência combinada máxima de 7%; sem sincronização.
+13. **PR-L — executado:** bypass efêmero “Usar ordem padrão” na consulta atual,
+    sem alterar consentimento, storage, outras consultas ou o dropdown.
 
 Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
@@ -471,7 +473,9 @@ Não misturar migration, perfil, ranking e redesign no mesmo PR.
 
 ## 20. Próxima ação segura
 
-Executar o gate **PR-H.1** somente em banco Supabase local descartável: migrations,
-matriz RLS/grants, `EXPLAIN (ANALYZE, BUFFERS)`, paridade e rollback R3. A personalização
-permanece exclusivamente local; migration remota, sincronização com conta, experimento
-e modelos aprendidos seguem bloqueados.
+Reparar e validar a cadeia canônica completa de migrations em banco Supabase local
+descartável. A prova V76.45 confirmou matriz RLS/grants, planos 10k/50k e rollback R3 no
+PostgreSQL 17.10 isolado, mas o bootstrap canônico ignora 108 nomes legados e o timeout
+estrito de 1500 ms não é atendido em 50 mil linhas. Personalização permanece exclusivamente
+local; migration remota, sincronização com conta, experimento e modelos aprendidos seguem
+bloqueados.

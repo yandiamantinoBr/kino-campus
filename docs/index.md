@@ -77,6 +77,7 @@
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
 | [qa/reports/report-v76-search-structured-facets-2026-06-20.md](./qa/reports/report-v76-search-structured-facets-2026-06-20.md) | evidência V76.40 dos chips removíveis, facetas agregadas e zero-results explicável |
+| [qa/reports/report-v76-search-session-standard-order-2026-06-21.md](./qa/reports/report-v76-search-session-standard-order-2026-06-21.md) | evidência V76.46 da ordem padrão efêmera por consulta personalizada |
 | [qa/reports/report-v76-search-sql-local-proof-2026-06-20.md](./qa/reports/report-v76-search-sql-local-proof-2026-06-20.md) | evidência V76.45 da prova SQL em PostgreSQL 17.10, matriz RLS, benchmark e rollback R3 |
 | [qa/reports/report-v76-search-sql-rpc-isolated-dossier-2026-06-20.md](./qa/reports/report-v76-search-sql-rpc-isolated-dossier-2026-06-20.md) | evidência V76.41 do contrato SQL/RPC, matriz RLS, explain e decisão No-Go para migration |
 | [qa/reports/report-v76-search-combobox-cancellation-2026-06-20.md](./qa/reports/report-v76-search-combobox-cancellation-2026-06-20.md) | evidência V76.42 do combobox, cancelamento, métricas em memória e validação desktop/mobile |

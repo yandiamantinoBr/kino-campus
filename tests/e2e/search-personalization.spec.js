@@ -47,7 +47,7 @@ async function prepare(page, path, options = {}) {
   }, { fixturePosts: posts, personalized: options.personalized !== false, affinity: options.affinity === true });
 }
 
-test.describe('V76.44 - personalização local opt-in', () => {
+test.describe('V76.44/V76.46 - personalização local opt-in', () => {
   test('resultados próximos usam preferência explícita com explicação e teto', async ({ page }) => {
     await prepare(page, '/search-results.html');
     await page.locator('#searchInput').fill('campus');
@@ -67,6 +67,26 @@ test.describe('V76.44 - personalização local opt-in', () => {
     });
     expect(state.ids).toEqual(['event-near', 'housing-strong']);
     expect(state.affinity).toBeNull();
+
+    const toggle = page.locator('#searchResultsPersonalizationToggle');
+    await expect(toggle).toHaveText('Ordem padrão');
+    await toggle.click();
+    await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'housing-strong');
+    await expect(page.locator('#searchResultsPersonalization')).toContainText('Ordem padrão nesta busca');
+    await expect(page.locator('#searchResultsList')).not.toContainText('Priorizado:');
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('kc_search_preferences_v1')).mode))
+      .toBe('personalized');
+
+    await toggle.click();
+    await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'event-near');
+    await expect(toggle).toHaveText('Ordem padrão');
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('#searchInput').fill('campu');
+    await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'event-near');
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 
     await page.setViewportSize({ width: 390, height: 844 });
     const mobile = await page.evaluate(() => ({
