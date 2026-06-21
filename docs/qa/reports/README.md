@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-search-session-standard-order-2026-06-21.md` | Evidência V76.46 do bypass efêmero de personalização por consulta |
 | `report-v76-search-sql-local-proof-2026-06-20.md` | Evidência V76.45 da matriz RLS, benchmark 10k/50k, índice rejeitado e rollback R3 em PostgreSQL 17.10 descartável |
 | `report-v76-kcapi-adapter-registry-contract-2026-06-19.md` | Evidência V76.31 dos quatro gates comportamentais de `adapter-registry` |
 | `report-v76-kcapi-transport-config-contract-2026-06-19.md` | Evidência V76.30 dos quatro gates comportamentais de `transport-config` |

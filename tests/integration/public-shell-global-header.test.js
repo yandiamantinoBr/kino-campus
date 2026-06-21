@@ -22,7 +22,7 @@ describe('header global em paginas de conta e suporte', () => {
     expect(html).toContain('assets/js/core/kc-core.js?v=8.6.1');
     expect(html).toContain('assets/js/features/kc-nav-links-personalized.js?v=8.6.3');
     expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.2');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.4');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.5');
     expect(html).toContain('assets/js/features/kc-search-modal.js?v=8.6.2');
   });
 });

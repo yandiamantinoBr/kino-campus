@@ -43,6 +43,8 @@
   let structuredDismissedSignals = new Set();
   let lastStructuredResultsView = null;
   let lastRenderedSearchResults = new Map();
+  let searchPersonalizationContextQuery = '';
+  let searchPersonalizationSuppressed = false;
   const structuredAssetPromises = {};
   const comboboxInputs = new Set();
   const searchPerformanceSamples = [];
@@ -309,6 +311,7 @@
 
   async function applySearchPersonalization(results, options = {}) {
     const source = Array.isArray(results) ? results : [];
+    if (options.disabled === true) return source.slice();
     const runtime = await loadSearchPersonalizationRuntime();
     if (!runtime) return source;
     const preferences = runtime.preferences.load({ registry: runtime.registry });
@@ -837,7 +840,9 @@
       structuredNote: document.getElementById('searchResultsStructuredNote'),
       structuredRestore: document.getElementById('searchResultsStructuredRestore'),
       personalization: document.getElementById('searchResultsPersonalization'),
+      personalizationTitle: document.getElementById('searchResultsPersonalizationTitle'),
       personalizationText: document.getElementById('searchResultsPersonalizationText'),
+      personalizationToggle: document.getElementById('searchResultsPersonalizationToggle'),
       noResultsMessage: document.getElementById('noResultsMessage'),
       noResultsRelax: document.getElementById('searchResultsRelaxStructured'),
       noResultsRestore: document.getElementById('searchResultsRestoreStructured')
@@ -899,6 +904,20 @@
     if (normalized === structuredDismissalQuery) return;
     structuredDismissalQuery = normalized;
     structuredDismissedSignals = new Set();
+  }
+
+  function syncSearchPersonalizationContext(query) {
+    const normalized = String(query || '').trim();
+    if (normalized !== searchPersonalizationContextQuery) {
+      searchPersonalizationContextQuery = normalized;
+      searchPersonalizationSuppressed = false;
+    }
+    return searchPersonalizationSuppressed;
+  }
+
+  function setSearchPersonalizationSuppressed(query, suppressed) {
+    searchPersonalizationContextQuery = String(query || '').trim();
+    searchPersonalizationSuppressed = suppressed === true && !!searchPersonalizationContextQuery;
   }
 
   function getStructuredIgnoredSignals(query) {
@@ -965,15 +984,28 @@
     if (controls.structuredRestore) controls.structuredRestore.hidden = !(state.dismissedCount > 0);
   }
 
-  function renderSearchPersonalizationState(results, sortBy) {
+  function renderSearchPersonalizationState(results, sortBy, options = {}) {
     const controls = getResultControls();
     if (!controls.personalization) return;
+    const suppressed = options.suppressed === true && sortBy === 'relevance';
     const personalized = (Array.isArray(results) ? results : []).filter((post) =>
       post && post._kcPersonalization && post._kcPersonalization.boost > 0
     );
-    const visible = sortBy === 'relevance' && personalized.length > 0;
+    const visible = suppressed || (sortBy === 'relevance' && personalized.length > 0);
     controls.personalization.hidden = !visible;
     if (!visible || !controls.personalizationText) return;
+    if (controls.personalizationTitle) {
+      controls.personalizationTitle.textContent = suppressed
+        ? 'Ordem padrão nesta busca.'
+        : 'Ordem personalizada neste navegador.';
+    }
+    if (controls.personalizationToggle) {
+      controls.personalizationToggle.setAttribute('aria-pressed', suppressed ? 'true' : 'false');
+    }
+    if (suppressed) {
+      controls.personalizationText.textContent = 'A personalização local foi ignorada somente para esta consulta.';
+      return;
+    }
     const reasonLabels = [];
     personalized.forEach((post) => {
       (post._kcPersonalization.reasons || []).forEach((reason) => {
@@ -1143,6 +1175,16 @@
       });
     }
 
+    if (controls.personalizationToggle && controls.personalizationToggle.dataset.kcSearchBound !== '1') {
+      controls.personalizationToggle.dataset.kcSearchBound = '1';
+      controls.personalizationToggle.addEventListener('click', () => {
+        const query = searchInput ? searchInput.value : getQueryParam('q');
+        const suppressed = syncSearchPersonalizationContext(query);
+        setSearchPersonalizationSuppressed(query, !suppressed);
+        rerender();
+      });
+    }
+
     const list = document.getElementById('searchResultsList');
     if (list && list.dataset.kcSearchAffinityBound !== '1') {
       list.dataset.kcSearchAffinityBound = '1';
@@ -1211,6 +1253,7 @@
     }
 
     const q = String(query || '').trim();
+    const personalizationSuppressed = syncSearchPersonalizationContext(q);
     const titleEl = document.getElementById('searchQueryText');
     const noEl = document.getElementById('noResults');
     const countEl = document.getElementById('resultsCount');
@@ -1223,7 +1266,7 @@
       if (countEl) countEl.textContent = '0';
       updateResultsControlsState([], [], readResultFilters());
       renderStructuredSearchState(null);
-      renderSearchPersonalizationState([], 'relevance');
+      renderSearchPersonalizationState([], 'relevance', { suppressed: false });
       updateNoResultsState(noEl, [], null);
       recordSearchPerformance(request, 'ok', 0);
       return;
@@ -1275,13 +1318,18 @@
     }
     writeResultFiltersToUrl(q, filters);
     let filteredResults = filterAndSortResults(pilotResults, q, filters);
-    filteredResults = await applySearchPersonalization(filteredResults, { sortBy: filters.sortBy });
+    filteredResults = await applySearchPersonalization(filteredResults, {
+      sortBy: filters.sortBy,
+      disabled: personalizationSuppressed
+    });
     if (!isCurrentSearchRequest(request)) {
       recordSearchPerformance(request, 'stale', 0);
       return;
     }
     renderStructuredSearchState(structuredState);
-    renderSearchPersonalizationState(filteredResults, filters.sortBy);
+    renderSearchPersonalizationState(filteredResults, filters.sortBy, {
+      suppressed: personalizationSuppressed
+    });
     updateResultsControlsState(pilotResults, filteredResults, filters, structuredState);
     lastRenderedSearchResults = new Map(filteredResults.map((post) => [getStructuredPostId(post), post]));
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
