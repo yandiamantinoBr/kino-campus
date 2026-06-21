@@ -1,7 +1,9 @@
 # V76.43 — preferências explícitas e controle local de busca
 
-**Data:** 2026-06-20  
-**Branch:** `codex/v76-search-explicit-preferences`  
+**Data:** 2026-06-20
+
+**Branch:** `codex/v76-search-explicit-preferences`
+
 **Escopo:** PR-J do plano de busca/personalização
 
 ## Resultado
