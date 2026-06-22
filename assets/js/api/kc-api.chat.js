@@ -82,6 +82,10 @@
     reportMessage: safe('reportMessage'),
     subscribeChat: sync('subscribeChat', null),
     unsubscribeChat: sync('unsubscribeChat'),
+    // Indicador "digitando..." — broadcast efêmero via Realtime, sem persistir no banco.
+    subscribeTyping: sync('subscribeTyping', null),
+    broadcastTyping: sync('broadcastTyping'),
+    unsubscribeTyping: sync('unsubscribeTyping'),
   };
 
   var target = window._KCAPI.chat || {};

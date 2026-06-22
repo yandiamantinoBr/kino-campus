@@ -57,6 +57,9 @@
     conversationLoadToken: 0,
     messageLoadToken: 0,
     pendingActiveUnread: 0,
+    typingChannel: null,
+    typingBroadcastTimer: null,
+    typingResetTimer: null,
   };
   const signedMediaCache = new Map();
 
@@ -232,6 +235,18 @@
     var btn = $('kcChatJumpBtn');
     if (!btn) return;
     btn.hidden = !visible;
+    // Atualiza badge de não-lidas dentro do botão (microinteração: contagem visível)
+    var badge = btn.querySelector('.kc-chat-jump__badge');
+    if (visible && state.pendingActiveUnread > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'kc-chat-jump__badge';
+        btn.appendChild(badge);
+      }
+      badge.textContent = String(state.pendingActiveUnread);
+    } else if (badge) {
+      badge.remove();
+    }
   }
 
   function scheduleLoadConversations() {
@@ -449,6 +464,7 @@
     }
     saveDraft(state.activeConvId);
     clearPreviewObjectUrl();
+    unsubscribeTypingChannel();
     if (state.rtChannel && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.unsubscribeChat === 'function') {
       try { window.KCAPI.chat.unsubscribeChat(state.rtChannel); } catch (_) {}
       state.rtChannel = null;
@@ -657,6 +673,9 @@
       await markActiveConversationRead(last.message_id);
     }
 
+    // Inscreve no indicador "digitando..." da conversa ativa
+    subscribeActiveTyping();
+
     restoreActiveDraft();
 
     // Foca composer
@@ -782,14 +801,29 @@
 
     var html = '';
     var lastDate = null;
-    state.messages.forEach(function (m) {
+    var lastSender = null;
+    var lastTs = null;
+    var GROUP_GAP_MS = 2 * 60 * 1000;  // mensagens do mesmo remetente em até 2 min formam um grupo
+    state.messages.forEach(function (m, idx) {
       var d = new Date(m.created_at);
       var dayKey = d.toDateString();
+      var ts = d.getTime();
+      // Nova divisa de dia sempre reinicia o grupo (outro bloco visual)
       if (dayKey !== lastDate) {
         html += '<div class="kc-chat-day-divider">' + esc(formatDayLabel(m.created_at)) + '</div>';
         lastDate = dayKey;
+        lastSender = null;
+        lastTs = null;
       }
-      html += renderMessageBubble(m);
+      // Continuação de grupo: mesmo remetente + delta curto + não deletada como marco
+      var isContinuation = !!(lastSender
+        && m.sender_id === lastSender
+        && lastTs !== null
+        && (ts - lastTs) >= 0
+        && (ts - lastTs) <= GROUP_GAP_MS);
+      html += renderMessageBubble(m, { isContinuation: isContinuation });
+      lastSender = m.sender_id;
+      lastTs = ts;
     });
     wrap.innerHTML = html;
 
@@ -839,10 +873,12 @@
       '</div>';
   }
 
-  function renderMessageBubble(m) {
+  function renderMessageBubble(m, opts) {
+    var options = opts || {};
     var isMine = state.me && m.sender_id === state.me.id;
     var classes = 'kc-chat-msg ' + (isMine ? 'kc-chat-msg--mine' : 'kc-chat-msg--other');
     if (m.deleted_at) classes += ' kc-chat-msg--deleted';
+    if (options.isContinuation) classes += ' kc-chat-msg--grouped';
     var content = '';
     if (m.deleted_at) {
       content = '<em>Mensagem apagada</em>';
@@ -986,6 +1022,11 @@
       state.pendingFile = null;
       renderComposerPreview();
       updateSendBtnState();
+      // Cancela broadcast de "digitando..." pendente após envio
+      if (state.typingBroadcastTimer) {
+        clearTimeout(state.typingBroadcastTimer);
+        state.typingBroadcastTimer = null;
+      }
     } finally {
       state.isSending = false;
       var sb = $('kcChatSendBtn');
@@ -1186,6 +1227,75 @@
     }
   }
 
+  // ── Indicador "digitando..." (broadcast efêmero, sem persistir) ──────────
+
+  function handleTyping(payload) {
+    if (!payload || !payload.user_id) return;
+    // Só mostra se a conversa ativa bate com o peer que está digitando
+    if (!state.activePeer || String(payload.user_id) !== String(state.activePeer.id)) return;
+    showTypingIndicator();
+    // Limpa o reset anterior e agenda novo (esconde após 3s sem novo sinal)
+    if (state.typingResetTimer) clearTimeout(state.typingResetTimer);
+    state.typingResetTimer = setTimeout(function () {
+      state.typingResetTimer = null;
+      hideTypingIndicator();
+    }, 3000);
+  }
+
+  function showTypingIndicator() {
+    var status = $('kcChatPeerStatus');
+    if (!status) return;
+    // Preserva o texto original para restaurar depois
+    if (!status.dataset.kcPrevStatus) {
+      status.dataset.kcPrevStatus = status.textContent || '';
+    }
+    status.innerHTML = '<span class="kc-chat-typing" aria-label="digitando...">' +
+      '<span></span><span></span><span></span></span>';
+  }
+
+  function hideTypingIndicator() {
+    var status = $('kcChatPeerStatus');
+    if (!status) return;
+    status.innerHTML = '';
+    delete status.dataset.kcPrevStatus;
+  }
+
+  // Debounce: transmite "digitando" no máximo a cada 1.5s enquanto o usuário digita
+  function onInputTyping() {
+    if (!state.activeConvId || !state.me || !state.me.id) return;
+    if (state.blocked.i_blocked || state.blocked.they_blocked) return;
+    if (state.typingBroadcastTimer) return;  // já agendado
+    state.typingBroadcastTimer = setTimeout(function () {
+      state.typingBroadcastTimer = null;
+      if (window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.broadcastTyping === 'function') {
+        window.KCAPI.chat.broadcastTyping(state.activeConvId, state.me.id);
+      }
+    }, 1500);
+  }
+
+  function subscribeActiveTyping() {
+    unsubscribeTypingChannel();
+    if (!state.activeConvId || !state.me || !state.me.id) return;
+    if (!window.KCAPI || !window.KCAPI.chat || typeof window.KCAPI.chat.subscribeTyping !== 'function') return;
+    state.typingChannel = window.KCAPI.chat.subscribeTyping(state.activeConvId, state.me.id, handleTyping);
+  }
+
+  function unsubscribeTypingChannel() {
+    if (state.typingBroadcastTimer) {
+      clearTimeout(state.typingBroadcastTimer);
+      state.typingBroadcastTimer = null;
+    }
+    if (state.typingResetTimer) {
+      clearTimeout(state.typingResetTimer);
+      state.typingResetTimer = null;
+    }
+    hideTypingIndicator();
+    if (state.typingChannel && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.unsubscribeTyping === 'function') {
+      try { window.KCAPI.chat.unsubscribeTyping(state.typingChannel); } catch (_) {}
+    }
+    state.typingChannel = null;
+  }
+
   function dispatchUnreadChange() {
     try {
       var total = state.conversations.reduce(function (acc, c) {
@@ -1261,6 +1371,7 @@
         autoGrow();
         updateSendBtnState();
         saveDraft(state.activeConvId);
+        onInputTyping();
       });
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -1286,6 +1397,7 @@
     if (backBtn) {
       backBtn.addEventListener('click', function () {
         saveDraft(state.activeConvId);
+        unsubscribeTypingChannel();
         state.activeConvId = null;
         state.activePeer = null;
         state.pendingActiveUnread = 0;
