@@ -526,42 +526,57 @@
     _deps.setSeller(post);
     _deps.setCTA(post);
 
+    // v11.30.16: isolamento de falhas — cada sub-feature roda em try/catch próprio
+    // para que um bug em uma delas (ex.: calendar com descrição que quebra
+    // encodeURIComponent) NUNCA impeça as outras de rodar — especialmente o
+    // upsertOwnerActions, que monta os botões admin/owner.
+
     if (window._KCProduct.calendar && typeof window._KCProduct.calendar.setEventCalendar === 'function') {
-      window._KCProduct.calendar.setEventCalendar(post);
+      try { window._KCProduct.calendar.setEventCalendar(post); }
+      catch (e) { try { console.warn('[KC][product] setEventCalendar falhou:', e); } catch (_) { } }
     }
     if (window._KCProduct.related && typeof window._KCProduct.related.setRelated === 'function') {
-      window._KCProduct.related.setRelated(post, !!(_deps.getUser() && _deps.getUser().id));
+      try { window._KCProduct.related.setRelated(post, !!(_deps.getUser() && _deps.getUser().id)); }
+      catch (e) { try { console.warn('[KC][product] setRelated falhou:', e); } catch (_) { } }
     }
     if (window._KCProduct.edit && typeof window._KCProduct.edit.upsertOwnerActions === 'function') {
-      window._KCProduct.edit.upsertOwnerActions(post, _deps.getUser(), {
-        renderPost: function (p) { return renderPost(p); },
-        getCurrentUser: function () { return _deps ? _deps.getUser() : null; },
-        getCurrentProfile: function () { return _deps ? _deps.getProfile() : null; },
-      });
+      try {
+        window._KCProduct.edit.upsertOwnerActions(post, _deps.getUser(), {
+          renderPost: function (p) { return renderPost(p); },
+          getCurrentUser: function () { return _deps ? _deps.getUser() : null; },
+          getCurrentProfile: function () { return _deps ? _deps.getProfile() : null; },
+        });
+      } catch (e) { try { console.warn('[KC][product] upsertOwnerActions falhou:', e); } catch (_) { } }
     }
     if (window._KCProduct.analytics && typeof window._KCProduct.analytics.renderAuthorAnalytics === 'function') {
-      window._KCProduct.analytics.renderAuthorAnalytics(post, _deps.getUser(), {
-        getCurrentProfile: function () { return _deps ? _deps.getProfile() : null; },
-      });
+      try {
+        window._KCProduct.analytics.renderAuthorAnalytics(post, _deps.getUser(), {
+          getCurrentProfile: function () { return _deps ? _deps.getProfile() : null; },
+        });
+      } catch (e) { try { console.warn('[KC][product] renderAuthorAnalytics falhou:', e); } catch (_) { } }
     }
     if (window._KCProduct.save && typeof window._KCProduct.save.bindSavedActions === 'function') {
-      window._KCProduct.save.bindSavedActions(post, function () { return _deps ? _deps.getUser() : null; });
+      try { window._KCProduct.save.bindSavedActions(post, function () { return _deps ? _deps.getUser() : null; }); }
+      catch (e) { try { console.warn('[KC][product] bindSavedActions falhou:', e); } catch (_) { } }
     }
     if (window._KCProduct.save && typeof window._KCProduct.save.refreshSavedState === 'function') {
       window._KCProduct.save.refreshSavedState(post).catch(function () {});
     }
-    _deps.resumeContact(post);
+    try { _deps.resumeContact(post); }
+    catch (e) { try { console.warn('[KC][product] resumeContact falhou:', e); } catch (_) { } }
     if (window._KCProduct.report && typeof window._KCProduct.report.wireReportButton === 'function') {
-      var reportAuthorId = (window._KCProduct.render && typeof window._KCProduct.render.getPostAuthorId === 'function')
-        ? window._KCProduct.render.getPostAuthorId(post)
-        : String(post && (post.autorId || post.authorId || post.author_id) || '').trim();
-      var reportUser = _deps.getUser ? _deps.getUser() : null;
-      window._KCProduct.report.wireReportButton({
-        postId: (post && post.uuid) ? post.uuid : post.id,
-        postTitle: post.titulo || post.title || 'Publicação',
-        postStatus: post.status || post.estado || 'published',
-        isOwner: !!(reportUser && reportUser.id && reportAuthorId && String(reportUser.id) === String(reportAuthorId)),
-      });
+      try {
+        var reportAuthorId = (window._KCProduct.render && typeof window._KCProduct.render.getPostAuthorId === 'function')
+          ? window._KCProduct.render.getPostAuthorId(post)
+          : String(post && (post.autorId || post.authorId || post.author_id) || '').trim();
+        var reportUser = _deps.getUser ? _deps.getUser() : null;
+        window._KCProduct.report.wireReportButton({
+          postId: (post && post.uuid) ? post.uuid : post.id,
+          postTitle: post.titulo || post.title || 'Publicação',
+          postStatus: post.status || post.estado || 'published',
+          isOwner: !!(reportUser && reportUser.id && reportAuthorId && String(reportUser.id) === String(reportAuthorId)),
+        });
+      } catch (e) { try { console.warn('[KC][product] wireReportButton falhou:', e); } catch (_) { } }
     }
   }
 

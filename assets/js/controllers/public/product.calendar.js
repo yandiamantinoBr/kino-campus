@@ -167,6 +167,25 @@
     if (closeBtn) closeBtn.addEventListener('click', closeCalendarPopover);
   }
 
+  /**
+   * Trunca uma string respeitando pares surrogate (UTF-16) para não cortar
+   * emojis/asteriscos no meio. Causava `URIError: URI malformed` no
+   * encodeURIComponent() da chamada ICS, que por sua vez cancelava o
+   * renderPost() e impedia o aparecimento dos botões admin (issue: post
+   * Cinemargem — 33cb3c6a-bd25-5eef-b9e4-ddde8dab381b).
+   */
+  function safeSubstring(value, maxLen) {
+    var s = String(value == null ? '' : value);
+    var max = Math.max(0, Number(maxLen) || 0);
+    if (!max || s.length <= max) return s;
+    var end = max;
+    var lastCode = s.charCodeAt(end - 1);
+    if (lastCode >= 0xD800 && lastCode <= 0xDBFF) {
+      end = end - 1; // high surrogate solto no fim → recuar 1
+    }
+    return s.substring(0, end);
+  }
+
   function setEventCalendar(post) {
     var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
     var status = String(post && (post.status || post.estado) || '').trim().toLowerCase();
@@ -181,7 +200,8 @@
     var horaEvento = String(meta.hora_evento || '').trim();
     var localizacao = String(meta.localizacao || '').trim();
     var titulo = String(post.titulo || post.title || '').trim();
-    var descricao = String(post.descricao || post.description || '').trim().substring(0, 500);
+    // v11.30.16: truncar respeitando pares surrogate (não cortar emoji no meio)
+    var descricao = safeSubstring(post.descricao || post.description || '', 500).trim();
 
     if (!dataEvento) return;
 
@@ -274,7 +294,17 @@
     if (localizacao) icsLines.push('LOCATION:' + safeStr(localizacao));
     if (descricao) icsLines.push('DESCRIPTION:' + safeStr(descricao));
     icsLines.push('END:VEVENT', 'END:VCALENDAR');
-    var icsHref = 'data:text/calendar;charset=utf8,' + encodeURIComponent(icsLines.join('\r\n'));
+    // v11.30.16: defesa contra texto malformado (lone surrogate, bytes inválidos).
+    // Se o encode falhar, ainda assim renderizamos o botão (sem ICS inline) em vez de
+    // quebrar todo o renderPost e sumir com os botões admin/owner.
+    var icsPayload = icsLines.join('\r\n');
+    var icsHref = '';
+    try {
+      icsHref = 'data:text/calendar;charset=utf8,' + encodeURIComponent(icsPayload);
+    } catch (encodeErr) {
+      try { console.warn('[KC][calendar] encodeURIComponent falhou; ICS inline desativado:', encodeErr); } catch (_) { }
+      icsHref = '';
+    }
     var icsFilename = (titulo.replace(/[^\w\u00C0-\u017E ]/g, '').trim().replace(/\s+/g, '-').substring(0, 50) || 'evento') + '.ics';
 
     var wrap = document.createElement('div');
