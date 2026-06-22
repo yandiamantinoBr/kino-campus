@@ -181,6 +181,41 @@ Padrão de produção sério com 4 status e retry desacoplado:
 
 ---
 
+## Integrações e analytics
+
+| Integração | Função | Implementação |
+|---|---|---|
+| **Google AdSense** | Monetização via anúncios em feeds (frequency cap explícito) | `ads.txt` + `supabase/migrations/20260605010000_feed_ads.sql` + `adsense_admin_monetization_runtime.sql` |
+| **Google Tag Manager** | Telemetria consent-aware (LGPD) | `assets/js/boot/kc-google-tag.js` + `assets/js/boot/kc-consent.js` (consent banner) |
+| **Vercel Speed Insights** | Core Web Vitals | `@vercel/speed-insights@2.0.0`; CSP permite `va.vercel-scripts.com` e `vitals.vercel-insights.com`. PR #549 merged em 2026-06-11 |
+| **Vercel Analytics** | Page views e engagement | `<script defer src="https://cdn.vercel-insights.com/v1/script.js">` em todos os HTMLs |
+| **Google Search Console** | Indexação e SEO monitoring | Verification meta em `index.html`; documentado em `docs/seo/` |
+| **Service Worker** | Cache offline com kill-switch | `sw.js`; `kc-env.js:55` define `flags['sw.enabled'] = false` por default |
+
+CSP em produção (`vercel.json:50-77`): `default-src 'self'` + whitelist específica para Supabase, jsdelivr, googletagmanager, googlesyndication, cdnjs, google-analytics, va.vercel-scripts.com (Speed Insights) e vitals.vercel-insights.com. HSTS 2 anos com preload, X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy desabilitando camera/mic/geo/interest-cohort.
+
+---
+
+## Feeds e discovery
+
+| Endpoint | Função |
+|---|---|
+| `/sitemap.xml` | Gerado dinamicamente por `/api/sitemap`; páginas estáticas + 100+ produtos |
+| `/feed.xml` | RSS 2.0 público das publicações aprovadas (`status='published'` + `visibility='public'`) |
+| `/robots.txt` | Permite indexação de páginas públicas, bloqueia `/admin/` e endpoints `/api/*` |
+| `/llms.txt` | Mapa estruturado da plataforma para agentes IA externos |
+| `/ads.txt` | Autorização de vendedores de anúncios (Google AdSense) |
+
+Páginas institucionais indexáveis (incluídas no sitemap, `llms.txt` e footer global):
+- `/sobre.html` — Sobre a comunidade UFG
+- `/editorial.html` — Política editorial e curadoria (PR #581, 2026-06-16)
+- `/transparencia.html` — Hub de transparência (2026-06-02)
+- `/privacidade.html` — Política de privacidade (LGPD)
+- `/termos.html` — Termos de uso
+- `/ods.html` — Alinhamento com ODS (ONU)
+
+---
+
 ## Como rodar localmente
 
 ### Opção A - VS Code Live Server
