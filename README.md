@@ -112,6 +112,75 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 
 ---
 
+## Funcionalidades
+
+### Conteúdo e busca
+
+| Feature | Como funciona | Onde |
+|---|---|---|
+| Criação de posts | Até 5 imagens com compressão client-side (`KCCompressImage`), upload via `supabase.posts-write.adapter.js`, gated por anti-spam (`kc_anti_spam_gate` trigger) | `create-post.html` + `assets/js/features/create-post/` |
+| Busca FTS | `unaccent` + `portuguese` + `pg_trgm` (fuzzy); índice GIN; expansão de sinônimos no client | `search-results.html` + `assets/js/features/kc-search.js` (32 KB) |
+| Feed paginado | Cursor via `kc_get_feed_cursor()` RPC; cache 3 min em sessionStorage; anti-duplicação por `Set` de IDs | `assets/js/controllers/public/kc-feed.controller.js` (1063 linhas) |
+| Categorização | 6 módulos + subcategorias com taxonomia estática em `kc-constants.js` (33 KB) | `assets/js/boot/kc-constants.js` |
+
+### Engajamento
+
+| Feature | Como funciona |
+|---|---|
+| Comentários | Threading 1 nível (trigger `kc_check_comment_depth`); rate-limit; soft-delete |
+| Votos | `hot`/`cold` (1 voto por usuário por post); aggregation em `profiles.rating_avg`/`rating_count` |
+| Ranking de contribuidores | Top Contribuidores widget (períodos Hoje/Semana/Mês + filtro por módulo); `kc-ranking.js` (24 KB) |
+| Avaliações de usuários | 1-5 estrelas com agregados; `v9.1.2.0_user_ratings_foundation.sql` |
+| Posts salvos | Três estados: `favorite`, `later`, `highlight`; `v8.3.4.0_saved_posts.sql` |
+| Reports de posts | Rate-limit 5/h via trigger; admin decide em `/admin/reports.html` |
+
+### Comunicação e suporte
+
+| Feature | Como funciona |
+|---|---|
+| Notificações in-app | Realtime publication em `notifications` table; `kc-notifications.js` (29 KB); sino com `display:none` quando deslogado |
+| Chat 1-a-1 (DM) | Schema completo (`v9.3.5.10_chat_schema.sql` + 5 migrations de hardening); `chat-inbox.controller.js` (50 KB); rota `/mensagens` |
+| Help requests | Formulário em `/ajuda.html`; fila admin em `/admin/help-requests.html`; notificação via `kc-help-request-notify` |
+| Banners admin | Carousel no header; CRUD em `/admin/banners.html`; `v8.3.2.0_hero_banners.sql` |
+
+### LGPD e privacidade
+
+| Feature | Como funciona |
+|---|---|
+| Account erasure (Art. 18 VI) | 2 passos (restriction → erasure) com confirmação por e-mail; `kc-account-erasure` Edge Function + runbook em `docs/privacy/` |
+| Consentimento de acesso externo | `v9.3.5.0_lgpd_consent_external_access.sql` + `kc-external-access-decide` Edge Function |
+| Privacy analytics | Métricas em `/admin/privacy-analytics.html`; `v9.3.5.16_privacy_analytics.sql` |
+| Anti-spam e rate-limit | Trigger `kc_anti_spam_gate`; `kc_check_post_flood_limit` RPC; controles admin-configuráveis |
+
+### Automação (Cadu Bot)
+
+Serviço externo em `services/cadu-ufg-publisher/` (14 módulos Node):
+
+- **Publicação automática** de oportunidades acadêmicas UFG via cron externo
+- **Edge Function `cadu-publish`** (v7) — JWT interno com conta dedicada, `verify_jwt=false`
+- **Quality gates**: anti-SVG, anti-CDN temporária, anti-resumo-genérico, anti-link-morto, anti-prazo-vencido, score thresholds públicos
+- **Anti-flood** com isenção para bot confiável (PR #529)
+- **Cobertura**: 100+ produtos no `/sitemap.xml` publicados pelo Cadu
+
+### Outbox de notificações
+
+Padrão de produção sério com 4 status e retry desacoplado:
+
+- `notification_delivery_outbox` (status: `queued`/`processing`/`sent`/`failed`/`blocked`/`cancelled`/`skipped`)
+- `kc_claim_notification_delivery_batch` (claim atômico) + `kc_record_notification_delivery_attempt` (histórico)
+- Scheduler pg_cron a cada 5 min consome via `pg_net.http_post` chamando `kc-dispatch-notification-outbox`
+- **Fail-closed** se `app.settings.kc_notify_*` ausentes ou secrets `KC_NOTIFICATION_DISPATCH_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` ausentes
+- Canais: e-mail (Resend) + WhatsApp (Twilio), ambos gated por secrets
+
+### Helpers runtime
+
+- ~15-20 RPCs distintas em uso (`kc_get_feed_cursor`, `kc_search_posts_fts`, `kc_admin_list_help_requests_paged`, `kc_get_user_rating_summary`, etc.)
+- Boot chain canônica: `kc-constants.js → kc-env.js → kc-feature-flags.js → kc-sw-register.js → kc-telemetry.js` (validado por `check:scripts`)
+- Service Worker com kill-switch (`kc-env.js:55` define `flags['sw.enabled'] = false`; só ativa se flag for ligada)
+- `kc-env.js` falha fechado em prod — se driver != supabase, seta `__invalid_production_driver__` (bloqueia fallback silencioso)
+
+---
+
 ## Como rodar localmente
 
 ### Opção A - VS Code Live Server
