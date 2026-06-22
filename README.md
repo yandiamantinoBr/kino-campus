@@ -15,12 +15,15 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Camada | Tecnologia |
 |--------|------------|
-| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, sem framework/bundler) |
-| Backend | Supabase (PostgreSQL, Auth, Storage, Edge Functions, Realtime) |
-| Hosting | Vercel |
+| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, `window.*` + `Object.freeze`, sem framework/bundler) |
+| Arquitetura | Driver Pattern: KCAPI fachada única, com adapters `local` (dev) e `supabase` (prod) |
+| Backend | Supabase (PostgreSQL 17, Auth, Storage, Edge Functions Deno/TS, Realtime) |
+| Hosting | Vercel (estático + 4 serverless functions) |
 | Domínio | `kinocampus.com.br` |
-| Build | `node scripts/inject-env.js` |
-| Testes | Jest: 191 suites · 3784 testes; Playwright: 11 specs E2E (78 testes listados) |
+| Build | `node scripts/inject-env.js` (substitui 4 placeholders `__KC_*__` + cache-busting `?v=<commit-hash>`) |
+| Tamanho JS | `assets/js/` ~1.5 MB; fachada `kc-api.client.js` ~55 KB (com submódulos `_KCAPI.*` extraídos) |
+| Tamanho CSS | `assets/css/` ~422 KB total; `styles.css` monolito ~274 KB (reduzido de 287 KB via micro-splits) |
+| Testes | Jest: 195 suites · 3806 testes; Playwright: 13 specs E2E (chromium) |
 
 ## Documentação Técnica
 
@@ -53,6 +56,59 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 | V71 | [RELATORIO-KINOCAMPUS-V71.md](RELATORIO-KINOCAMPUS-V71.md) | PUBLIC-A11Y admin dashboard charts decorative icons |
 | V15-V70 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Historico arquivado recente |
 | V9–V14 | [docs/archive/relatorios/_INDEX.md](docs/archive/relatorios/_INDEX.md) | Histórico arquivado |
+
+---
+
+## Estrutura de páginas e API
+
+### Páginas públicas (22 HTMLs + 1 template)
+
+| Rota | Arquivo | Função |
+|---|---|---|
+| `/` | `index.html` | Home — categorias, top contribuidores, busca |
+| `/eventos.html` | `eventos.html` | Módulo Eventos |
+| `/oportunidades.html` | `oportunidades.html` | Módulo Oportunidades |
+| `/moradia.html` | `moradia.html` | Módulo Moradia |
+| `/compra-venda-feed.html` | `compra-venda-feed.html` | Módulo Compra e Venda |
+| `/caronas-feed.html` | `caronas-feed.html` | Módulo Caronas |
+| `/achados-perdidos.html` | `achados-perdidos.html` | Módulo Achados e Perdidos |
+| `/ajuda.html` | `ajuda.html` | Central de ajuda (FAQ + help requests) |
+| `/mensagens.html` | `mensagens.html` | Chat 1-a-1 (DM) — requer auth |
+| `/profile.html` | `profile.html` | Perfil público (5 tabs) |
+| `/my-posts.html` | `my-posts.html` | "Meus Posts" do usuário autenticado |
+| `/create-post.html` | `create-post.html` | Criação de publicação |
+| `/account-setup.html` | `account-setup.html` | Onboarding em 2 passos |
+| `/auth-callback.html` | `auth-callback.html` | Callback pós-confirmação de e-mail |
+| `/search-results.html` | `search-results.html` | Resultados de busca (FTS) |
+| `/settings.html` | `settings.html` | Configurações do usuário |
+| `/sobre.html` | `sobre.html` | Sobre a comunidade UFG |
+| `/editorial.html` | `editorial.html` | Política editorial e curadoria |
+| `/transparencia.html` | `transparencia.html` | Hub de transparência |
+| `/privacidade.html` | `privacidade.html` | Política de privacidade (LGPD) |
+| `/termos.html` | `termos.html` | Termos de uso |
+| `/ods.html` | `ods.html` | Alinhamento com ODS (ONU) |
+| `/404.html` | `404.html` | Página de erro 404 |
+| `/product.html?id={uuid}` | `_product.html` (template) | Detalhe do produto (SSR via `/api/og-product`) |
+
+### Páginas admin (6 HTMLs)
+
+| Rota | Arquivo | Função |
+|---|---|---|
+| `/admin/` | `admin/index.html` | Dashboard principal (12+ métricas) |
+| `/admin/moderation.html` | `admin/moderation.html` | Moderação de conteúdo |
+| `/admin/banners.html` | `admin/banners.html` | Hero banners (carousel) |
+| `/admin/reports.html` | `admin/reports.html` | Denúncias |
+| `/admin/help-requests.html` | `admin/help-requests.html` | Tickets de suporte |
+| `/admin/privacy-analytics.html` | `admin/privacy-analytics.html` | Métricas de privacidade (LGPD) |
+
+### Serverless functions (Vercel, em `api/`)
+
+| Endpoint | Função |
+|---|---|
+| `/api/sitemap` | Gera sitemap dinâmico com páginas estáticas + 100+ produtos |
+| `/api/og-image?type={module}` | Gera imagem OG 1200×630 com `@vercel/og` |
+| `/api/og-product?id={uuid}` | Renderiza página de produto com OG dinâmico (substitui `_product.html` em SSR) |
+| `/api/feed.xml` | RSS 2.0 público das publicações aprovadas (PR #580, 2026-06-16) |
 
 ---
 
@@ -244,10 +300,22 @@ Se surgir SQL fora do fluxo oficial:
 
 ```bash
 npm run check:all          # 6 gates: version, structure, scripts, routes, hygiene, search registry
-npm test                   # Jest: 191 suites · 3784 testes
+npm test                   # Jest: 195 suites · 3806 testes
+npx playwright test        # 13 specs E2E (chromium) — gate de regressão real
 npm run benchmark:search-shadow # 12 cenários sintéticos, sem consultas reais
 npm run check:search-registry   # confirma paridade do snapshot gerado
 npm test -- --runInBand    # sequencial (mais lento, mais estável em CI)
 ```
 
-Artefatos de QA: `docs/qa/` — checklist E2E, smoke RLS, payloads XSS e invariantes Vercel/Supabase.
+Artefatos de QA: `docs/qa/` — checklist E2E, smoke RLS, payloads XSS e invariantes Vercel/Supabase. Índice de reports V54-V76+ em `docs/qa/reports/README.md`.
+
+## CI/CD (GitHub Actions)
+
+Dois workflows rodam em todo PR contra `kinocampus-V75.0-foundations`:
+
+| Workflow | Arquivo | Função |
+|---|---|---|
+| Essential Validation | `.github/workflows/essential-validation.yml` | Roda `npm run check:all` (6 gates) + `npm test` (Jest) + `npx playwright test --list`. Adicionado no PR #551 (2026-06-11) |
+| Lighthouse CI | `.github/workflows/lighthouse-ci.yml` | Roda `lhci autorun` em 4 URLs. Gates: a11y ≥ 0.90, SEO ≥ 0.90 (error); Performance ≥ 0.70, Best Practices ≥ 0.80 (warn) |
+
+Ambos os workflows têm que passar para o merge ser possível.
