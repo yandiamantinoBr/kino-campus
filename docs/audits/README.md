@@ -9,7 +9,9 @@ QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de rele
 
 | Auditoria | Data | Foco | Status |
 |---|---|---|---|
-| [audit-v3-actual-state-2026-06-11.md](./audit-v3-actual-state-2026-06-11.md) | 2026-06-11 | Comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h | Atual |
+| [audit-v4-publicacoes-2026-06-22.md](./audit-v4-publicacoes-2026-06-22.md) | 2026-06-22 | Auditoria de 112 publicacoes ativas: categorias erradas, eventos passados, padronizacao, links | Atual |
+| [report-aplicacao-audit-v4-2026-06-22.md](./report-aplicacao-audit-v4-2026-06-22.md) | 2026-06-22 | Relatorio de aplicacao da auditoria V4 (8 encerramentos, 4 correcoes de categoria, 38 subcategorias com acento corrigidas, 8 links externos) | Atual |
+| [audit-v3-actual-state-2026-06-11.md](./audit-v3-actual-state-2026-06-11.md) | 2026-06-11 | Comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h | Historico (ainda util como referencia de metodologia) |
 
 ## Auditorias externas (workspace do agent, fora do repo)
 
