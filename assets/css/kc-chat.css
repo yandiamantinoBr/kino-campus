@@ -275,6 +275,32 @@
   color: var(--kc-text-dark-secondary);
 }
 
+/* Indicador "digitando..." — três pontos pulsando no lugar do status */
+.kc-chat-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.kc-chat-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kc-primary-brand);
+  opacity: 0.5;
+  animation: kc-chat-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.kc-chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.kc-chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes kc-chat-typing-bounce {
+  0%, 60%, 100% { opacity: 0.4; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
 .kc-chat-panel__actions {
   display: flex;
   gap: 4px;
@@ -363,6 +389,29 @@
   background: var(--kc-surface-dark);
   color: var(--kc-text-dark-primary);
   border-bottom-left-radius: 6px;
+}
+
+/* Mensagens agrupadas (mesmo remetente, delta <= 2 min): reduzem gap e
+   arredondam menos o canto que toca a anterior, formando uma "stack". */
+.kc-chat-msg--grouped {
+  margin-top: 2px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  animation: none;  /* só a primeira do grupo anima */
+}
+.kc-chat-msg--mine.kc-chat-msg--grouped {
+  border-top-right-radius: 6px;
+}
+.kc-chat-msg--other.kc-chat-msg--grouped {
+  border-top-left-radius: 6px;
+}
+/* Em continuação de grupo, o meta (horário) fica discreto até o hover,
+   para reduzir ruído visual. A última do grupo volta a mostrá-lo. */
+.kc-chat-msg--grouped .kc-chat-msg__meta {
+  opacity: 0;
+}
+.kc-chat-msg--grouped:hover .kc-chat-msg__meta {
+  opacity: 0.75;
 }
 
 .kc-chat-msg--deleted {
@@ -481,6 +530,12 @@
   font-weight: 800;
   box-shadow: 0 12px 28px rgba(0,0,0,0.28);
   cursor: pointer;
+  animation: kc-chat-jump-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes kc-chat-jump-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.9); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 .kc-chat-jump[hidden] {
@@ -489,6 +544,21 @@
 
 .kc-chat-jump:hover {
   background: #ff8a1f;
+}
+
+/* Badge de não-lidas dentro do botão "descer para o fim" */
+.kc-chat-jump__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--kc-primary-brand);
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 /* ── Composer ────────────────────────────────────────────────────────────── */
@@ -691,6 +761,8 @@
   height: 48px;
   border-radius: 50%;
   background: rgba(255,255,255,0.06);
+  position: relative;
+  overflow: hidden;
   animation: kc-chat-pulse 1.4s ease-in-out infinite;
 }
 
@@ -699,7 +771,29 @@
   border-radius: 6px;
   background: rgba(255,255,255,0.06);
   margin-bottom: 6px;
+  position: relative;
+  overflow: hidden;
   animation: kc-chat-pulse 1.4s ease-in-out infinite;
+}
+
+/* Shimmer: gradiente que desliza sobre o skeleton, dando sensação de carregamento vivo */
+.kc-chat-skeleton-circle::after,
+.kc-chat-skeleton-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: kc-chat-shimmer 1.6s infinite;
+}
+
+@keyframes kc-chat-shimmer {
+  100% { transform: translateX(100%); }
 }
 
 .kc-chat-skeleton-line:nth-child(2) { width: 60%; }

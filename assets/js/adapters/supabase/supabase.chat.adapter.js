@@ -430,6 +430,62 @@
     try { client.removeChannel(channel); } catch (_) {}
   }
 
+  // ── Realtime: indicador "digitando..." (broadcast efêmero, sem persistir) ──
+  // Canal nomeado por conversa. Não toca chat_messages nem nenhuma tabela.
+  // Se o projeto Supabase não tiver broadcast habilitado, falha de forma graciosa
+  // (o chat permanece 100% funcional, apenas sem o indicador).
+
+  function typingChannelName(conversationId) {
+    return 'chat-typing:' + String(conversationId || '');
+  }
+
+  function subscribeTyping(conversationId, userId, onTyping) {
+    var client = getClient();
+    if (!client || !conversationId || !userId || typeof onTyping !== 'function') return null;
+    var channel;
+    try {
+      channel = client
+        .channel(typingChannelName(conversationId), { config: { broadcast: { self: false } } })
+        .on('broadcast', { event: 'typing' }, function (payload) {
+          try {
+            var from = payload && payload.payload && payload.payload.user_id;
+            if (from && String(from) !== String(userId)) {
+              onTyping({ user_id: from, at: Date.now() });
+            }
+          } catch (e) {
+            console.warn('[KCAPI][chat] subscribeTyping callback error:', e);
+          }
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn('[KCAPI][chat] subscribeTyping falhou (gracioso):', e);
+      return null;
+    }
+    return channel;
+  }
+
+  function broadcastTyping(conversationId, userId) {
+    var client = getClient();
+    if (!client || !conversationId || !userId) return;
+    try {
+      var channel = client.getChannels().filter(function (c) {
+        return c && c.topic === typingChannelName(conversationId);
+      })[0];
+      if (!channel) return;
+      channel.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { user_id: String(userId), at: Date.now() },
+      });
+    } catch (e) {
+      // Gracioso: broadcast é opcional, o chat segue funcionando sem o indicador.
+    }
+  }
+
+  function unsubscribeTyping(channel) {
+    unsubscribeChat(channel);
+  }
+
   // ── Expose ───────────────────────────────────────────────────────────────
 
   window._KCSA.chat = {
@@ -450,5 +506,8 @@
     reportMessage: reportMessage,
     subscribeChat: subscribeChat,
     unsubscribeChat: unsubscribeChat,
+    subscribeTyping: subscribeTyping,
+    broadcastTyping: broadcastTyping,
+    unsubscribeTyping: unsubscribeTyping,
   };
 })();

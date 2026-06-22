@@ -3,7 +3,7 @@
 ## Baseline atual
 
 - release consolidada: `v75.1.0`
-- linha de trabalho atual: `v76.50` (busca orientada ao schema e personalização responsável; cadeia canônica de migrations reparada como baseline consolidada que sobe via `supabase db reset`; CI executa as 83 specs Playwright de fato; SQL estruturado segue em No-Go apenas pelo timeout absoluto de 1500ms em 50k, runtime frontend `8.6.1` inalterado)
+- linha de trabalho atual: `v76.52` (busca orientada ao schema e personalização responsável; cadeia de migrations reparada; CI executa 83 specs Playwright; melhorias de UX em /mensagens.html — agrupamento de mensagens, indicador "digitando..." via broadcast efêmero, microinterações; SQL estruturado segue em No-Go apenas pelo timeout 1500ms em 50k, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 

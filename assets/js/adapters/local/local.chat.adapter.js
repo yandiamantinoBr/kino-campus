@@ -40,5 +40,9 @@
     reportMessage: notSupported,
     subscribeChat: function () { return null; },
     unsubscribeChat: function () {},
+    // Indicador "digitando..." — sem efeito no driver local (sem Realtime).
+    subscribeTyping: function () { return null; },
+    broadcastTyping: function () {},
+    unsubscribeTyping: function () {},
   };
 })();
