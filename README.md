@@ -78,38 +78,32 @@ Acesse `http://localhost:5500/index.html`.
 
 ### 1) Migrations
 
-Aplique todas as migrations em `supabase/migrations/` em ordem alfabética. Atualmente o diretório contém **132 arquivos**, incluindo as 2 migrations da v10, a migration operacional `v9.3.3.0_supabase_operational_rls_fk.sql`, a trilha `v11.20.1.0_notification_preferences.sql`, a fundação `v11.20.2.0_notification_delivery_outbox.sql`, a promoção do canal de e-mail `v11.21.0.0_notification_email_channel.sql`, a camada privada do canal WhatsApp `v11.21.1.0_notification_whatsapp_channel.sql` e o scheduler `v11.22.0.0_notification_dispatch_scheduler.sql`.
+**Arquitetura atual (V76.47, 2026-06-21):** as 132 migrations legacy foram consolidadas em **1 baseline** + migrations operacionais incrementais. Os arquivos originais foram preservados em `supabase/migrations/_archive-v75/` para referência histórica.
 
-No banco principal atual, as 2 migrations da v10 já foram aplicadas. Use a lista abaixo para ambientes novos, bancos recriados ou staging separado.
+| Arquivo | Tamanho | Função |
+|---|---|---|
+| `00000000000001_baseline_v76.sql` | ~410 KB | Schema `public` consolidado (PostgreSQL 17.6, `pg_dump --schema-only`). Validação local via `supabase db reset` |
+| `20260622132300_audit_fixes_2026_06_22.sql` | ~10 KB | Migration operacional de auditoria (categorias/acentos/eventos passados). Aplicada em prod em 2026-06-22 |
+| `_archive-v75/*.sql` | 132 arquivos | Cadeia legacy v8.x a v11.22 preservada para auditoria. **Não aplicar** |
 
-Se estiver atualizando um ambiente que já estava em v9, garanta pelo menos a aplicação destas novas migrations:
+Para um projeto novo:
 
-1. `v10.0.0.0_admin_search_posts_full.sql`
-2. `v10.0.1.0_admin_help_requests_pagination.sql`
-3. `v11.20.1.0_notification_preferences.sql`
-4. `v11.20.2.0_notification_delivery_outbox.sql`
-5. `v11.21.0.0_notification_email_channel.sql`
-6. `v11.21.1.0_notification_whatsapp_channel.sql`
-7. `v11.22.0.0_notification_dispatch_scheduler.sql`
+1. `supabase schema-bootstrap-v8.1.2.3.sql` + `supabase schema-update-v8.1.3.2.sql` (bootstrap pré-migrations, fora do diretório `migrations/`)
+2. Aplique a baseline consolidada: `00000000000001_baseline_v76.sql`
+3. Aplique as migrations operacionais em ordem cronológica (atualmente apenas a `20260622132300_audit_fixes_2026_06_22.sql`)
 
-Você pode aplicar pelo SQL Editor do Supabase ou pela CLI.
+Origem: PR #611 (`8fd3c19 feat(db): consolidate 132 legacy migrations into single baseline`). Documentação adicional em `docs/qa/reports/report-v76-migration-baseline-2026-06-21.md`.
 
-### 2) Schema bootstrap
+> Para ambientes que já estavam na cadeia legacy, pode-se continuar aplicando via CLI em ordem alfabética; a baseline é o destino final consolidado para novos bancos.
 
-Para um projeto novo, aplique antes:
-
-1. `supabase/schema-bootstrap-v8.1.2.3.sql`
-2. `supabase/schema-update-v8.1.3.2.sql`
-3. Depois as migrations em ordem
-
-### 3) Storage
+### 2) Storage
 
 Bucket esperado: `kino-media`.
 
 - `post-media/{uid}/{postId}/{timestamp}-image-{n}.{ext}`
 - `profile-avatars/{userId}/{timestamp}-avatar.{ext}`
 
-### 4) KC_ENV
+### 3) KC_ENV
 
 Edite/injete `assets/js/boot/kc-env.js`:
 
@@ -125,32 +119,33 @@ supabase: {
 
 Em produção, `driver = "supabase"` é obrigatório. `local` é apenas para desenvolvimento.
 
-### 5) Edge Functions
+### 4) Edge Functions
 
-Verificacao remota V75 (2026-06-11): no projeto Supabase `Kino Campus`,
-`kc-dispatch-notification-outbox` esta ativa e `notify-admin-reports-threshold` nao aparece
-na lista remota de Edge Functions. A funcao de reports continua versionada no repo, mas nao
-deve ser publicada sem validar secrets, contrato de chamada e impacto operacional.
+Verificação remota (2026-06-22): o projeto Supabase `Kino Campus` (`wacyrkwhkvzwkqpolrbg`, West US/Oregon) tem **7 Edge Functions deployadas** (todas `ACTIVE`):
 
-**notify-admin-reports-threshold**
+| Função | Versão | Função |
+|---|---|---|
+| `cadu-publish` | 7 | Publicação automática via Cadu Bot (Node CLI externo). JWT interno, `verify_jwt=false` |
+| `kc-account-erasure` | 6 | LGPD Art. 18 VI — exclusão de conta em 2 passos com confirmação por e-mail |
+| `kc-dispatch-notification-outbox` | 6 | Despacho de notificações via outbox (canal e-mail Resend + WhatsApp Twilio, gated por secrets) |
+| `kc-external-access-decide` | 6 | Decisão de acesso externo (LGPD) — usado por admin para aprovar/negar pedidos |
+| `kc-help-request-notify` | 5 | Notificação de help requests criados por usuários (canal admin) |
+| `kc-invite-user` | 6 | Convite de novos usuários (gated por domínio UFG) |
+| `notify-admin-reports-threshold` | 1 | Alerta por threshold de reports admin. Deploy em 2026-06-15 (PR #578); **fail-closed até configurar `KC_NOTIFY_HMAC_SECRET`, `ADMIN_REPORTS_WEBHOOK_URL` e `KC_APP_BASE_URL`** |
+
+Deploy (uma por vez, ou todas):
 
 ```bash
+supabase functions deploy cadu-publish
+supabase functions deploy kc-account-erasure
+supabase functions deploy kc-dispatch-notification-outbox
+supabase functions deploy kc-external-access-decide
+supabase functions deploy kc-help-request-notify
+supabase functions deploy kc-invite-user
 supabase functions deploy notify-admin-reports-threshold
 ```
 
-**kc-invite-user**
-
-```bash
-supabase functions deploy kc-invite-user
-```
-
-**kc-dispatch-notification-outbox**
-
-```bash
-supabase functions deploy kc-dispatch-notification-outbox
-```
-
-Segredos obrigatórios desta função:
+Segredos obrigatórios de `kc-dispatch-notification-outbox`:
 
 - `KC_NOTIFICATION_DISPATCH_SECRET`
 - `SUPABASE_URL`
@@ -179,10 +174,22 @@ Segredos adicionais para o canal de WhatsApp (`v11.21.1`):
 
 Observações:
 
+- `cadu-publish` valida JWT internamente com conta dedicada (`verify_jwt=false` em `index.ts:21`)
 - a `v11.21.0` publica essa função com envio real por e-mail via `Resend`, mas o projeto Supabase principal ainda precisa receber os segredos `KC_NOTIFICATION_EMAIL_*` para sair do gating operacional
 - a `v11.21.1` implementa o canal privado de WhatsApp sem reutilizar o contato publico do perfil; o envio real depende dos segredos `KC_NOTIFICATION_WHATSAPP_*`
 - a invocação exige o header `x-kc-dispatch-secret`
 - a `v11.22.0` adiciona um scheduler no banco para consumir a outbox automaticamente
+
+### 5) Cron jobs (pg_cron)
+
+Quatro jobs agendados via `pg_cron` no banco principal (configurados em `docs/db-schema.md:629-640`):
+
+| Job | Schedule | Função SQL | Origem |
+|---|---|---|---|
+| `kc-expire-old-posts` | `0 3 * * *` (03:00 diário) | `public.kc_expire_old_posts()` | Encerramento automático de posts fora de prazo |
+| `kc-prune-analytics` | `0 4 1 * *` (04:00 dia 1) | `public.kc_prune_old_analytics()` | Limpeza de `search_queries` (>6m), `audit_log` (>1a), `post_view_events` (>6m) |
+| `kc-prune-notifications` | `0 5 1 * *` (05:00 dia 1) | `public.kc_prune_old_notifications()` | Remove notificações lidas com > 90 dias |
+| `kc-dispatch-notification-outbox` | `*/5 * * * *` (a cada 5 min) | `public.kc_trigger_notification_dispatch()` | Consome a outbox via `pg_net.http_post` chamando Edge Function. **Fail-closed** se `app.settings.kc_notify_*` ausentes |
 
 ### 6) Settings de banco fora do git
 
