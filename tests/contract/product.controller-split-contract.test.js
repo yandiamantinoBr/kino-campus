@@ -106,16 +106,22 @@ describe('_product.html - ordem canonica dos scripts do split', () => {
     'assets/js/controllers/public/product.popovers.js',
   ];
 
+  // Aceita qualquer versão 8.6.x (cache-buster pode ser incrementado por fix/feature)
+  const versionPattern = '\\?v=8\\.6\\.\\d+';
+
   test('carrega todos os sub-modulos com defer', () => {
     orderedScripts.forEach((src) => {
-      expect(htmlSource).toContain(`<script defer src="${src}?v=8.6.1"></script>`);
+      const re = new RegExp(`<script defer src="${src.replace(/\./g, '\\.')}${versionPattern}"></script>`);
+      expect(htmlSource).toMatch(re);
     });
   });
 
   test('preserva a ordem incremental do core para os sub-modulos', () => {
     let lastIndex = -1;
     orderedScripts.forEach((src) => {
-      const currentIndex = htmlSource.indexOf(`<script defer src="${src}?v=8.6.1"></script>`);
+      const re = new RegExp(`<script defer src="${src.replace(/\./g, '\\.')}${versionPattern}"></script>`);
+      const match = htmlSource.match(re);
+      const currentIndex = match ? match.index : -1;
       expect(currentIndex).toBeGreaterThan(lastIndex);
       lastIndex = currentIndex;
     });
