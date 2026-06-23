@@ -1,0 +1,105 @@
+-- 20260622210709_fix_advisor_security_warnings.sql
+-- KinoCampus -- correcao de avisos do Supabase Advisor (2026-06-22)
+--
+-- Escopo: 2 dos 3 avisos WARN resolvidos por SQL. O terceiro
+-- (auth_leaked_password_protection) requer upgrade do plano Free
+-- para Pro+ no dashboard do Supabase e NAO pode ser feito via SQL
+-- nem Management API neste momento.
+--
+-- 1. anon_security_definer_function_executable:
+--    public.kc_chat_mark_messages_read() e uma funcao TRIGGER chamada
+--    internamente pelo Postgres quando ha INSERT/UPDATE em chat_read_state.
+--    Hoje ela tinha EXECUTE grants para PUBLIC, anon e authenticated,
+--    expondo a funcao via /rest/v1/rpc/kc_chat_mark_messages_read sem
+--    necessidade. Revogar EXECUTE NAO quebra o trigger: ele e executado
+--    internamente pelo Postgres com os privilegios do owner da funcao
+--    (postgres). O usuario que faz INSERT em chat_read_state nao precisa
+--    de EXECUTE na funcao trigger.
+--
+-- 2. authenticated_security_definer_function_executable: resolvido pelo
+--    mesmo REVOKE acima.
+--
+-- 3. auth_leaked_password_protection: PATCH na config do projeto
+--    (https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/config/auth)
+--    com {"password_hibp_enabled": true} retorna HTTP 402 Payment Required.
+--    O projeto esta no plano Free; HIBP so esta disponivel em Pro+.
+--    Acao: documentar no runbook operacional para decidir upgrade; nao
+--    pode ser feito automaticamente. Atea la, o lint permanecera no Advisor.
+--
+-- Antes desta migration (verificado 2026-06-22 23:05 UTC):
+--   SELECT name, proacl FROM pg_proc WHERE proname='kc_chat_mark_messages_read';
+--   acl: {=X/postgres, postgres=X/postgres, anon=X/postgres,
+--         authenticated=X/postgres, service_role=X/postgres}
+--
+-- Depois desta migration:
+--   acl: {postgres=X/postgres, service_role=X/postgres}
+--
+-- Lints esperados pos-fix:
+--   - anon_security_definer_function_executable_public_kc_chat_mark_messages_read_: SUMIR
+--   - authenticated_security_definer_function_executable_public_kc_chat_mark_messages_read_: SUMIR
+--   - auth_leaked_password_protection: PERMANECE (plano Free limita)
+
+-- =============================================================
+-- 1) Revoke EXECUTE de roles nao autorizadas
+-- =============================================================
+
+REVOKE EXECUTE ON FUNCTION public.kc_chat_mark_messages_read() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.kc_chat_mark_messages_read() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.kc_chat_mark_messages_read() FROM authenticated;
+
+-- Mantem EXECUTE apenas para postgres (owner) e service_role
+-- (ja garantidos pelo GRANT inicial; mantido explicito para auditoria)
+GRANT EXECUTE ON FUNCTION public.kc_chat_mark_messages_read() TO postgres;
+GRANT EXECUTE ON FUNCTION public.kc_chat_mark_messages_read() TO service_role;
+
+-- =============================================================
+-- 2) Verificacao pos-fix (SELECT para documentar nova ACL)
+-- =============================================================
+--
+-- SELECT
+--     p.proname AS name,
+--     p.proacl::text AS acl,
+--     p.prosecdef AS security_definer,
+--     p.prokind AS kind
+-- FROM pg_proc p
+-- JOIN pg_namespace n ON p.pronamespace = n.oid
+-- WHERE n.nspname = 'public'
+--   AND p.proname = 'kc_chat_mark_messages_read';
+--
+-- Esperado:
+--   name                       | acl                                                | security_definer | kind
+--   kc_chat_mark_messages_read | {postgres=X/postgres,service_role=X/postgres}    | true             | f
+--
+-- Trigger continua funcionando:
+-- SELECT tgname, tgenabled FROM pg_trigger t
+-- JOIN pg_proc p ON t.tgfoid = p.oid
+-- WHERE p.proname = 'kc_chat_mark_messages_read';
+-- Esperado: trg_chat_mark_messages_read | O (enabled)
+
+-- =============================================================
+-- 3) Nota sobre auth_leaked_password_protection (NAO RESOLVIDO AQUI)
+-- =============================================================
+--
+-- Investigacao via Management API em 2026-06-22:
+--   GET /v1/organizations/mylpdrlxzujksiuhpsox
+--   => { ..., "plan": "free", ... }
+--
+--   PATCH /v1/projects/wacyrkwhkvzwkqpolrbg/config/auth
+--   Body: {"password_hibp_enabled": true}
+--   => HTTP 402 Payment Required
+--
+-- HIBP (HaveIBeenPwned) password protection esta disponivel apenas em
+-- planos Supabase Pro e superiores. O projeto Kino Campus esta no
+-- plano Free, portanto este lint NAO pode ser resolvido sem upgrade.
+--
+-- Plano de mitigacao alternativo enquanto isso:
+--   1. Manter password_min_length=6 + complexidade ja configurados
+--   2. Considerar aumento para password_min_length=8 (ALTERAR via
+--      PATCH /v1/projects/.../config/auth com {"password_min_length": 8}
+--      -- NAO testado se Free aceita; documentar decisao do Yan)
+--   3. Decidir separadamente se vale o upgrade do plano so por isso
+--   4. Considerar validacao client-side no signup de senhas comuns
+--      (bloquear "123456", "senha", "ufg2026", etc.) via lista em
+--      assets/js/auth/
+--
+-- Acao humana pendente: decidir upgrade de plano ou aceitar o risco.
