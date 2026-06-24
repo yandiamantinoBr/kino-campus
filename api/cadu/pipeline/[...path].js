@@ -24,6 +24,8 @@ export default async function handler(req, res) {
   //     /api/cadu/pipeline/abc/stop → path = ["abc", "stop"]
   const subPath = Array.isArray(req.query.path) ? req.query.path.join("/") : "";
   const targetUrl = `${CADU_API_URL.replace(/\/$/, "")}/api/pipeline${subPath ? "/" + subPath : ""}`;
+  console.log(`[api/cadu/pipeline/*] ${req.method} path=${JSON.stringify(req.query.path)} url=${req.url} -> ${targetUrl}`);
+  console.log(`[api/cadu/pipeline/*] ${req.method} path=${JSON.stringify(req.query.path)} → ${targetUrl}`);
 
   try {
     const upstream = await fetch(targetUrl, {
