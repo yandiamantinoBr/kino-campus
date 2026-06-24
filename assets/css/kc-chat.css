@@ -802,3 +802,168 @@
   0%, 100% { opacity: 0.6; }
   50% { opacity: 0.25; }
 }
+
+/* ============================================================================
+ * V76.53 — Reações emoji, reply/quote e checkmark de leitura
+ * ========================================================================== */
+
+/* Checkmark de leitura (fa-check / fa-check-double) */
+.kc-chat-msg__check {
+  font-size: 0.72rem;
+  opacity: 0.7;
+  margin-left: 1px;
+}
+
+.kc-chat-msg__check--read {
+  color: #5ec8ff;
+  opacity: 1;
+}
+
+/* ── Quote de reply dentro da bolha ──────────────────────────────────────── */
+.kc-chat-msg__reply {
+  border-left: 3px solid rgba(255, 107, 0, 0.55);
+  background: rgba(0, 0, 0, 0.16);
+  padding: 5px 9px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+[data-theme="light"] .kc-chat-msg__reply {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.kc-chat-msg--mine .kc-chat-msg__reply {
+  background: rgba(0, 0, 0, 0.18);
+  border-left-color: rgba(255, 255, 255, 0.7);
+}
+
+.kc-chat-msg__reply-name {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--kc-primary-brand);
+}
+
+.kc-chat-msg--mine .kc-chat-msg__reply-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.kc-chat-msg__reply-text {
+  font-size: 0.8rem;
+  opacity: 0.82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Chips de reações abaixo da bolha ────────────────────────────────────── */
+.kc-chat-msg__reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.kc-chat-msg__reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background var(--transition-speed, 0.2s), transform 0.1s;
+}
+
+.kc-chat-msg--mine .kc-chat-msg__reaction {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+[data-theme="light"] .kc-chat-msg__reaction {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.kc-chat-msg__reaction:hover {
+  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.kc-chat-msg__reaction.is-mine {
+  background: rgba(255, 107, 0, 0.22);
+  border-color: rgba(255, 107, 0, 0.5);
+}
+
+.kc-chat-msg__reaction-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* ── Preview de reply no composer ────────────────────────────────────────── */
+.kc-chat-composer__reply {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--kc-background-dark);
+  border-left: 3px solid var(--kc-primary-brand);
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 8px;
+}
+
+.kc-chat-composer__reply-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.kc-chat-composer__reply-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--kc-primary-brand);
+}
+
+.kc-chat-composer__reply-text {
+  font-size: 0.82rem;
+  color: var(--kc-text-dark-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kc-chat-composer__reply-remove {
+  background: none;
+  border: none;
+  color: var(--kc-text-dark-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+.kc-chat-composer__reply-remove:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--kc-red-alert, #ff5252);
+}
+
+/* ── Highlight temporário ao clicar num quote (scroll-to) ─────────────────── */
+.kc-chat-msg--highlight {
+  animation: kc-chat-highlight 1.8s ease-out;
+}
+
+@keyframes kc-chat-highlight {
+  0%   { background-color: rgba(255, 107, 0, 0.35); }
+  100% { background-color: transparent; }
+}

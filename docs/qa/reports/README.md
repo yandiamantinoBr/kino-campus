@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-chat-features-backend-2026-06-22.md` | Evidência V76.53 das 3 features de chat em produção (checkmarks, reações emoji, reply/quote) — schema + RPCs + frontend |
 | `report-v76-chat-ux-improvements-2026-06-21.md` | Evidência V76.52 das 3 melhorias de UX em /mensagens.html (agrupamento de mensagens, indicador "digitando..." via broadcast efêmero, microinterações) sem migration |
 | `report-v76-prod-dev-alignment-2026-06-21.md` | Evidência V76.51 da auditoria de alinhamento produção↔dev: `db pull` confirmou schema idêntico à baseline, sem divergência |
 | `report-v76-search-sql-revalidation-2026-06-21.md` | Evidência V76.50 da revalidação SQL pós-reparo: cadeia de migrations destravada, matriz RLS 8/8, regressão p95 ≤20%, mas timeout 1500ms em 50k mantém No-Go para migration |

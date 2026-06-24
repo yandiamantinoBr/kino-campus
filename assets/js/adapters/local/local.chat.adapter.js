@@ -32,6 +32,8 @@
     unreadTotal: function () { return Promise.resolve(0); },
     deleteMessage: notSupported,
     editMessage: notSupported,
+    toggleReaction: notSupported,
+    setMessageReply: notSupported,
     blockUser: notSupported,
     unblockUser: notSupported,
     isBlocked: function () {

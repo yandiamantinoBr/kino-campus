@@ -60,6 +60,7 @@
     typingChannel: null,
     typingBroadcastTimer: null,
     typingResetTimer: null,
+    pendingReply: null,
   };
   const signedMediaCache = new Map();
 
@@ -836,6 +837,27 @@
         if (action === 'delete') handleDeleteMessage(msgId);
         else if (action === 'edit') handleEditMessage(msgId);
         else if (action === 'report') handleReportMessage(msgId);
+        else if (action === 'react') handleReactToMessage(msgId);
+        else if (action === 'reply') handleReplyToMessage(msgId);
+      });
+    });
+
+    // Bind clique nas reações existentes (toggle on/off)
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-reaction-msg]'), function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var emoji = btn.getAttribute('data-reaction-emoji');
+        var msgId = btn.getAttribute('data-reaction-msg');
+        if (emoji && msgId) handleToggleReaction(msgId, emoji);
+      });
+    });
+
+    // Bind clique no quote de reply (rola até a mensagem original)
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-reply-to]'), function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var targetId = el.getAttribute('data-reply-to');
+        if (targetId) scrollToMessage(targetId);
       });
     });
 
@@ -900,25 +922,72 @@
     var meta = '<span class="kc-chat-msg__meta">';
     if (m.edited_at) meta += '<span class="kc-chat-msg__edited">editada</span> · ';
     meta += esc(formatTime(m.created_at));
+    // Checkmark de leitura: só para minhas mensagens não deletadas. Um check = enviada/entregue,
+    // dois checks destacados = lida pelo destinatário (read_at preenchido).
+    if (isMine && !m.deleted_at) {
+      if (m.read_at) {
+        meta += ' <i class="fas fa-check-double kc-chat-msg__check kc-chat-msg__check--read" aria-label="lida"></i>';
+      } else {
+        meta += ' <i class="fas fa-check kc-chat-msg__check" aria-label="enviada"></i>';
+      }
+    }
     meta += '</span>';
+
+    // Quote de reply: se a mensagem responde a outra, mostra preview da original
+    var replyQuote = '';
+    if (m.reply_to_id) {
+      var replied = state.messagesById.get(m.reply_to_id);
+      if (replied && replied.content && !replied.deleted_at) {
+        var repliedName = (replied.sender_id === state.me.id) ? 'Você' : (state.activePeer ? esc(state.activePeer.display_name) : '');
+        replyQuote = '<div class="kc-chat-msg__reply" data-reply-to="' + esc(m.reply_to_id) + '">' +
+          '<span class="kc-chat-msg__reply-name">' + repliedName + '</span>' +
+          '<span class="kc-chat-msg__reply-text">' + esc(String(replied.content).slice(0, 80)) + '</span>' +
+        '</div>';
+      }
+    }
+
+    // Reações: agrega emoji → contagem, destacando as minhas
+    var reactionsHTML = '';
+    if (Array.isArray(m.reactions) && m.reactions.length > 0) {
+      var byEmoji = {};
+      m.reactions.forEach(function (r) {
+        if (!r || !r.emoji) return;
+        if (!byEmoji[r.emoji]) byEmoji[r.emoji] = { count: 0, mine: false };
+        byEmoji[r.emoji].count += 1;
+        if (state.me && r.user_id === state.me.id) byEmoji[r.emoji].mine = true;
+      });
+      var chips = Object.keys(byEmoji).map(function (emoji) {
+        var info = byEmoji[emoji];
+        var mineCls = info.mine ? ' is-mine' : '';
+        return '<button type="button" class="kc-chat-msg__reaction' + mineCls + '" data-reaction-emoji="' + esc(emoji) + '" data-reaction-msg="' + esc(m.message_id) + '">' +
+          '<span aria-hidden="true">' + emoji + '</span>' +
+          '<span class="kc-chat-msg__reaction-count">' + info.count + '</span>' +
+        '</button>';
+      }).join('');
+      reactionsHTML = '<div class="kc-chat-msg__reactions">' + chips + '</div>';
+    }
 
     var menu = '';
     if (!m.deleted_at) {
       if (isMine) {
         menu = '<span class="kc-chat-msg__menu">' +
+          '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="react" title="Reagir"><i class="fas fa-smile"></i></button>' +
+          '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="reply" title="Responder"><i class="fas fa-reply"></i></button>' +
           (m.message_type === 'text' ?
             '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="edit" title="Editar"><i class="fas fa-pen"></i></button>' : '') +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="delete" title="Apagar"><i class="fas fa-trash"></i></button>' +
         '</span>';
       } else {
         menu = '<span class="kc-chat-msg__menu">' +
+          '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="react" title="Reagir"><i class="fas fa-smile"></i></button>' +
+          '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="reply" title="Responder"><i class="fas fa-reply"></i></button>' +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="report" title="Denunciar"><i class="fas fa-flag"></i></button>' +
         '</span>';
       }
     }
 
     return '<div class="' + classes + '" data-msg-id="' + esc(m.message_id) + '">' +
-      content + meta + menu +
+      replyQuote + content + meta + reactionsHTML + menu +
     '</div>';
   }
 
@@ -939,6 +1008,9 @@
       created_at: m.created_at,
       edited_at: m.edited_at || null,
       deleted_at: m.deleted_at || null,
+      read_at: m.read_at || null,
+      reply_to_id: m.reply_to_id || null,
+      reactions: Array.isArray(m.reactions) ? m.reactions : [],
     };
     state.messagesById.set(normalized.message_id, normalized);
     state.messages.push(normalized);
@@ -960,6 +1032,7 @@
     var input = $('kcChatInput');
     var content = (input && input.value || '').trim();
     var hasImage = !!state.pendingFile;
+    var replyToId = state.pendingReply ? state.pendingReply.msgId : null;
 
     if (!content && !hasImage) return;
 
@@ -1027,6 +1100,18 @@
         clearTimeout(state.typingBroadcastTimer);
         state.typingBroadcastTimer = null;
       }
+      // V76.53: se era resposta, marca reply_to_id na mensagem enviada e limpa preview
+      var sentId = hasImage ? (sendImg && sendImg.data && sendImg.data.message_id)
+                            : (sendTxt && sendTxt.data && sendTxt.data.message_id);
+      if (replyToId && sentId && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.setMessageReply === 'function') {
+        window.KCAPI.chat.setMessageReply(sentId, replyToId).then(function (r) {
+          if (r && r.ok) {
+            var m = state.messagesById.get(sentId);
+            if (m) { m.reply_to_id = replyToId; renderMessagesList(); }
+          }
+        }).catch(function () {});
+      }
+      clearReply();
     } finally {
       state.isSending = false;
       var sb = $('kcChatSendBtn');
@@ -1187,6 +1272,102 @@
       return;
     }
     toast('Denúncia registrada. Obrigado!', 'success');
+  }
+
+  // ── Reações emoji (V76.53) ──────────────────────────────────────────────
+
+  var REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+
+  async function handleReactToMessage(msgId) {
+    if (!msgId) return;
+    // Popover simples: deixa o usuário escolher o emoji via prompt visual leve.
+    // (Popover DOM completo ficaria aqui; uso prompt nativo para simplicidade e robustez.)
+    var choice = prompt('Reagir com emoji:\n' + REACTION_EMOJIS.map(function (e, i) { return (i + 1) + ' = ' + e; }).join('  ') + '\n\nDigite o número ou cole o emoji:');
+    if (!choice) return;
+    var emoji = null;
+    var num = parseInt(choice, 10);
+    if (num >= 1 && num <= REACTION_EMOJIS.length) emoji = REACTION_EMOJIS[num - 1];
+    else emoji = REACTION_EMOJIS.indexOf(choice.trim()) >= 0 ? choice.trim() : null;
+    if (!emoji) { toast('Emoji inválido. Use 1-6 ou um dos sugeridos.', 'warn'); return; }
+    await handleToggleReaction(msgId, emoji);
+  }
+
+  async function handleToggleReaction(msgId, emoji) {
+    if (!window.KCAPI || !window.KCAPI.chat || typeof window.KCAPI.chat.toggleReaction !== 'function') return;
+    var r = await window.KCAPI.chat.toggleReaction(msgId, emoji);
+    if (!r || !r.ok) {
+      toast((r && r.error && r.error.message) || 'Erro ao reagir.', 'error');
+      return;
+    }
+    // Atualiza localmente a lista de reações da mensagem
+    var m = state.messagesById.get(msgId);
+    if (m) {
+      if (!Array.isArray(m.reactions)) m.reactions = [];
+      if (r.data && r.data.action === 'added') {
+        m.reactions.push({ emoji: emoji, user_id: state.me.id, created_at: new Date().toISOString() });
+      } else {
+        m.reactions = m.reactions.filter(function (rx) { return !(rx.emoji === emoji && rx.user_id === state.me.id); });
+      }
+      renderMessagesList();
+    }
+  }
+
+  // ── Reply / quote (V76.53) ───────────────────────────────────────────────
+
+  function handleReplyToMessage(msgId) {
+    if (!msgId) return;
+    var m = state.messagesById.get(msgId);
+    if (!m) return;
+    state.pendingReply = { msgId: msgId, content: m.content, sender_id: m.sender_id };
+    renderReplyPreview();
+    var input = $('kcChatInput');
+    if (input) input.focus();
+  }
+
+  function renderReplyPreview() {
+    var composer = $('kcChatComposer');
+    if (!composer) return;
+    var existing = composer.querySelector('.kc-chat-composer__reply');
+    if (existing) existing.remove();
+    if (!state.pendingReply) return;
+    var preview = document.createElement('div');
+    preview.className = 'kc-chat-composer__reply';
+    var name = (state.pendingReply.sender_id === state.me.id) ? 'Respondendo a você' : 'Respondendo a ' + (state.activePeer ? esc(state.activePeer.display_name) : '');
+    preview.innerHTML =
+      '<div class="kc-chat-composer__reply-info">' +
+        '<span class="kc-chat-composer__reply-name">' + name + '</span>' +
+        '<span class="kc-chat-composer__reply-text">' + esc(String(state.pendingReply.content || '').slice(0, 80)) + '</span>' +
+      '</div>' +
+      '<button type="button" class="kc-chat-composer__reply-remove" aria-label="Cancelar resposta">✕</button>';
+    preview.querySelector('.kc-chat-composer__reply-remove').addEventListener('click', function () {
+      clearReply();
+    });
+    composer.insertBefore(preview, composer.firstChild);
+  }
+
+  function clearReply() {
+    state.pendingReply = null;
+    var composer = $('kcChatComposer');
+    if (composer) {
+      var rp = composer.querySelector('.kc-chat-composer__reply');
+      if (rp) rp.remove();
+    }
+  }
+
+  function scrollToMessage(msgId) {
+    var wrap = $('kcChatMessages');
+    if (!wrap) return;
+    var el = wrap.querySelector('[data-msg-id="' + cssEscape(msgId) + '"]');
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('kc-chat-msg--highlight');
+    setTimeout(function () { el.classList.remove('kc-chat-msg--highlight'); }, 1800);
+  }
+
+  function cssEscape(str) {
+    return String(str == null ? '' : str).replace(/[^a-zA-Z0-9_-]/g, function (c) {
+      return '\\\\' + c;
+    });
   }
 
   // ── Realtime ────────────────────────────────────────────────────────────
