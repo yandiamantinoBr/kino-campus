@@ -1,11 +1,11 @@
-// KinoCampus — proxy Vercel: /api/cadu/pipeline[/*] → cadu-api (VPS)
+// KinoCampus â€” proxy Vercel: /api/cadu/pipeline[/*] â†’ cadu-api (VPS)
 //
 // Cobre tanto o "root" /api/cadu/pipeline quanto sub-paths
 // (ex: /run, /abc-id, /abc-id/stop). Em Vercel, arquivos `pipeline.js`
-// têm precedência sobre `pipeline/[...path].js` — então centralizamos
+// tÃªm precedÃªncia sobre `pipeline/[...path].js` â€” entÃ£o centralizamos
 // tudo aqui.
 //
-// IMPORTANTE: SSE (GET /api/cadu/pipeline/:id/stream) NÃO funciona em
+// IMPORTANTE: SSE (GET /api/cadu/pipeline/:id/stream) NÃƒO funciona em
 // Vercel serverless (timeout 10-60s). O cliente (admin/cadu.html)
 // faz SSE direto pra cadu-api via Traefik do VPS.
 
@@ -22,11 +22,11 @@ export default async function handler(req, res) {
     return res.status(503).json({ ok: false, error: "CADU_API_URL/TOKEN not configured" });
   }
 
-  // req.url chega como "/pipeline/run" ou "/pipeline" — extrai sub-path
+  // req.url chega como "/pipeline/run" ou "/pipeline" â€” extrai sub-path
   const fullPath = (req.url || "").split("?")[0];
   const subPath = fullPath.replace(/^\/pipeline\/?/, "").replace(/^\//, "");
   const targetUrl = `${CADU_API_URL.replace(/\/$/, "")}/api/pipeline${subPath ? "/" + subPath : ""}`;
-  console.log(`[api/cadu/pipeline] ${req.method} ${fullPath} → ${targetUrl}`);
+  console.log(`[api/cadu/pipeline] ${req.method} ${fullPath} â†’ ${targetUrl}`);
 
   try {
     const upstream = await fetch(targetUrl, {
