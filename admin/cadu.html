@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="kc-loading kc-theme-preload" data-i18n-title="meta-title.admin-cadu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+  <meta name="description" content="Painel administrativo do Cadu (OpenClaw) - curador de sites UFG." />
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
+  <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
+  <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+  <title>KinoCampus - Admin Cadu (OpenClaw)</title>
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.5" />
+  <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* ===== Cadu admin: scoped styles (não polui o resto do admin) ===== */
+    body.kc-admin-page--cadu main.kc-main-content { display: grid; grid-template-columns: minmax(0, 1fr) !important; gap: 0 !important; padding: 0 !important; margin: 0 auto !important; max-width: 100% !important; }
+    .kc-cadu-wrapper { width: 100%; max-width: 1240px; margin: 0 auto !important; padding: 20px 16px 92px; box-sizing: border-box; min-width: 0; }
+    .kc-cadu-hero { background: radial-gradient(circle at top right, rgba(255,107,0,.14), transparent 34%), linear-gradient(120deg, rgba(255,107,0,.16), rgba(255,107,0,.04)); border: 1px solid var(--kc-border-dark); border-radius: 18px; padding: 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+    .kc-cadu-hero h1 { margin: 0; font-size: 1.55rem; line-height: 1.1; display: flex; align-items: center; gap: 10px; }
+    .kc-cadu-hero p { margin: 8px 0 0; color: var(--kc-text-dark-secondary); font-size: .93rem; max-width: 60ch; }
+    .kc-cadu-hero .kc-cadu-status { display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3); color: #10b981; font-size: .8rem; font-weight: 600; }
+    .kc-cadu-hero .kc-cadu-status.is-down { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: #ef4444; }
+    .kc-cadu-hero .kc-cadu-status.is-loading { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.3); color: #f59e0b; }
+    .kc-cadu-kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
+    .kc-cadu-kpi { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 14px; min-width: 0; }
+    .kc-cadu-kpi__label { display: flex; gap: 6px; align-items: center; color: var(--kc-text-dark-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .kc-cadu-kpi strong { display: block; font-size: 1.7rem; line-height: 1; }
+    .kc-cadu-kpi small { display: block; margin-top: 6px; color: var(--kc-text-dark-secondary); font-size: .76rem; }
+    .kc-cadu-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--kc-border-dark); margin: 18px 0 12px; }
+    .kc-cadu-tab { background: transparent; border: 0; padding: 10px 16px; color: var(--kc-text-dark-secondary); font-size: .92rem; cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; display: inline-flex; gap: 8px; align-items: center; }
+    .kc-cadu-tab:hover { color: var(--kc-text-dark-primary); }
+    .kc-cadu-tab.is-active { color: var(--kc-primary-brand); border-bottom-color: var(--kc-primary-brand); }
+    .kc-cadu-tab__badge { background: var(--kc-border-dark); color: var(--kc-text-dark-secondary); border-radius: 10px; padding: 1px 8px; font-size: .74rem; font-weight: 600; }
+    .kc-cadu-tab.is-active .kc-cadu-tab__badge { background: var(--kc-primary-brand); color: #fff; }
+    .kc-cadu-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .kc-cadu-toolbar input, .kc-cadu-toolbar select { min-height: 38px; border: 1px solid var(--kc-border-dark); background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 7px 10px; font-size: .86rem; min-width: 0; }
+    .kc-cadu-toolbar input { width: 100%; }
+    .kc-cadu-toolbar select { width: 130px; }
+    .kc-cadu-toolbar button { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 7px 12px; font-size: .84rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .kc-cadu-toolbar button:hover { border-color: rgba(255,107,0,.45); }
+    .kc-cadu-section { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 18px; padding: 16px; min-width: 0; }
+    .kc-cadu-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; padding: 24px 0; text-align: center; }
+    .kc-cadu-table-wrap { overflow-x: auto; min-width: 0; }
+    .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    .kc-cadu-table th, .kc-cadu-table td { padding: 9px 8px; border-bottom: 1px solid var(--kc-border-dark); text-align: left; font-size: .85rem; vertical-align: top; }
+    .kc-cadu-table th { font-weight: 600; color: var(--kc-text-dark-secondary); text-transform: uppercase; font-size: .74rem; letter-spacing: .05em; }
+    .kc-cadu-table tbody tr:hover { background: rgba(255,107,0,.04); }
+    .kc-cadu-table code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; font-size: .82rem; }
+    .kc-cadu-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+    .kc-cadu-badge--confirmed { background: rgba(16,185,129,.12); color: #10b981; }
+    .kc-cadu-badge--tentative { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .kc-cadu-badge--missing { background: rgba(148,163,184,.12); color: #94a3b8; }
+    .kc-cadu-badge--unknown { background: rgba(99,102,241,.12); color: #818cf8; }
+    .kc-cadu-badge--tier-1 { background: rgba(239,68,68,.12); color: #ef4444; }
+    .kc-cadu-badge--tier-2 { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .kc-cadu-badge--tier-3 { background: rgba(99,102,241,.12); color: #818cf8; }
+    .kc-cadu-feed-item { padding: 12px; border: 1px solid var(--kc-border-dark); border-radius: 12px; margin-bottom: 10px; background: rgba(255,255,255,.01); }
+    .kc-cadu-feed-item__head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .78rem; color: var(--kc-text-dark-secondary); margin-bottom: 6px; }
+    .kc-cadu-feed-item__head code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; }
+    .kc-cadu-feed-item__snippet { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .82rem; line-height: 1.5; color: var(--kc-text-dark-primary); max-height: 220px; overflow: auto; }
+    .kc-cadu-loadmore { text-align: center; padding: 14px 0 0; }
+    .kc-cadu-loadmore button { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 8px 18px; font-size: .86rem; cursor: pointer; }
+    .kc-cadu-loadmore button:hover { border-color: rgba(255,107,0,.45); }
+    .kc-cadu-loadmore button:disabled { opacity: .5; cursor: not-allowed; }
+    .kc-cadu-footer { color: var(--kc-text-dark-secondary); font-size: .78rem; text-align: center; padding: 24px 0 0; }
+    .kc-cadu-footer code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; }
+  </style>
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.1" />
+</head>
+<body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
+
+  <!-- Header / nav: idêntica às outras admin pages; KCAdminShell cuida do active state -->
+  <header class="kc-header kc-header--admin">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <nav class="kc-admin-nav" aria-label="Navegação admin">
+        <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
+        <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
+        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart"></i> Privacidade</a>
+        <a href="cadu.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-robot"></i> Cadu</a>
+      </nav>
+      <div class="kc-user-actions">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" aria-label="Alternar tema" title="Alternar tema"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content" id="kc-main">
+    <div class="kc-cadu-wrapper">
+
+      <!-- HERO + STATUS -->
+      <section class="kc-cadu-hero">
+        <div>
+          <h1><i class="fas fa-robot"></i> Cadu (OpenClaw)</h1>
+          <p>Curador de sites institucionais e perfis do Instagram da UFG. Dados ao vivo da VPS Hostinger via cadu-api.</p>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="kc-cadu-status is-loading" id="cadu-status-pill"><i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
+            <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><i class="fab fa-telegram"></i> Bot Telegram ativo</span>
+          </div>
+        </div>
+        <div class="kc-cadu-toolbar" style="margin:0;">
+          <button type="button" id="cadu-refresh-btn" title="Atualizar"><i class="fas fa-rotate"></i> Atualizar</button>
+          <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);color:var(--kc-text-dark-primary);border-radius:10px;padding:7px 12px;font-size:.84rem;text-decoration:none;display:inline-flex;gap:6px;align-items:center;">
+            <i class="fab fa-github"></i> Repo
+          </a>
+        </div>
+      </section>
+
+      <!-- KPIs -->
+      <div class="kc-cadu-kpi-strip">
+        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-university"></i> Unidades UFG</div>
+          <strong id="kpi-sites">—</strong>
+          <small>no mapa curado pelo Cadu</small>
+        </div>
+        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__label"><i class="fab fa-instagram"></i> IG confirmado</div>
+          <strong id="kpi-ig-confirmed">—</strong>
+          <small id="kpi-ig-detail">perfis validados</small>
+        </div>
+        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Tier 1</div>
+          <strong id="kpi-tier1">—</strong>
+          <small>pró-reitorias + alta prioridade</small>
+        </div>
+        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-database"></i> Memória</div>
+          <strong id="kpi-memory">—</strong>
+          <small id="kpi-memory-detail">chunks indexados</small>
+        </div>
+        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-heart-pulse"></i> cadu-api</div>
+          <strong id="kpi-api">—</strong>
+          <small id="kpi-api-detail">FastAPI sidecar</small>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <div class="kc-cadu-tabs" role="tablist">
+        <button class="kc-cadu-tab is-active" data-tab="sites" role="tab">
+          <i class="fas fa-university"></i> Sites UFG <span class="kc-cadu-tab__badge" id="badge-sites">—</span>
+        </button>
+        <button class="kc-cadu-tab" data-tab="feed" role="tab">
+          <i class="fas fa-stream"></i> Feed coletado <span class="kc-cadu-tab__badge" id="badge-feed">—</span>
+        </button>
+      </div>
+
+      <!-- ============== TAB: SITES ============== -->
+      <section class="kc-cadu-section" id="tab-sites" role="tabpanel">
+        <div class="kc-cadu-toolbar">
+          <input id="sites-search" type="search" autocomplete="off" placeholder="Filtrar por nome, site ou @instagram" aria-label="Filtrar sites">
+          <select id="sites-tier" aria-label="Filtrar por tier">
+            <option value="">Todos os tiers</option>
+            <option value="1">Tier 1</option>
+            <option value="2">Tier 2</option>
+            <option value="3">Tier 3</option>
+          </select>
+          <select id="sites-ig" aria-label="Filtrar por status Instagram">
+            <option value="">IG: todos</option>
+            <option value="confirmed">confirmado</option>
+            <option value="tentative">tentativa</option>
+            <option value="missing">sem perfil</option>
+            <option value="unknown">desconhecido</option>
+          </select>
+          <button type="button" id="sites-export-csv"><i class="fas fa-file-csv"></i> CSV</button>
+        </div>
+        <div class="kc-cadu-table-wrap">
+          <table class="kc-cadu-table" id="sites-table" aria-live="polite">
+            <thead>
+              <tr>
+                <th style="width:90px;">Tier</th>
+                <th style="width:130px;">Nome</th>
+                <th>Site institucional</th>
+                <th style="width:170px;">Instagram</th>
+                <th style="width:120px;">Status IG</th>
+                <th>Observação</th>
+              </tr>
+            </thead>
+            <tbody id="sites-tbody">
+              <tr><td colspan="6" class="kc-cadu-empty">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============== TAB: FEED ============== -->
+      <section class="kc-cadu-section" id="tab-feed" role="tabpanel" style="display:none;">
+        <div class="kc-cadu-toolbar">
+          <input id="feed-search" type="search" autocomplete="off" placeholder="Filtrar por conteúdo do chunk" aria-label="Filtrar feed">
+          <select id="feed-limit" aria-label="Limite">
+            <option value="20">20 itens</option>
+            <option value="50">50 itens</option>
+            <option value="100">100 itens</option>
+          </select>
+          <button type="button" id="feed-refresh-btn"><i class="fas fa-rotate"></i> Recarregar</button>
+          <button type="button" id="feed-load-more-btn"><i class="fas fa-arrow-down"></i> Mais</button>
+        </div>
+        <div id="feed-list" aria-live="polite">
+          <div class="kc-cadu-empty">Carregando…</div>
+        </div>
+      </section>
+
+      <div class="kc-cadu-footer">
+        cadu-api rodando na VPS <code>srv1597083.hstgr.cloud</code> ·
+        <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="color:inherit;">repo</a>
+        · <a href="docs/INTEGRATION-KINOCAMPUS.md" style="color:inherit;">docs</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- nav mobile (mesmo padrão) -->
+  <nav class="kc-mobile-nav" aria-label="Menu mobile">
+    <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moder.</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúnc.</span></a>
+    <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
+    <a href="help-requests.html"><i class="fas fa-life-ring"></i><span>Ajuda</span></a>
+    <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i><span>Privac.</span></a>
+    <a href="cadu.html" class="active" aria-current="page"><i class="fas fa-robot"></i><span>Cadu</span></a>
+  </nav>
+
+  <!-- Scripts -->
+  <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.identity.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.taxonomy.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.location.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.presentation.js?v=8.6.1"></script>
+  <script defer src="../assets/js/features/kc-card-image-aspect.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.js?v=8.6.1"></script>
+  <script defer src="../assets/js/boot/kc-env.js?v=8.6.1"></script>
+  <script defer src="../assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
+  <script defer src="../assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-consent.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-google-tag.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="../assets/js/api/kc-supabase.client.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/admin-shell.js?v=8.6.1"></script>
+
+  <!-- Cadu controller -->
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=1.0.0"></script>
+</body>
+</html>
