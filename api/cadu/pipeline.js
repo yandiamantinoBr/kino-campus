@@ -1,14 +1,20 @@
-// KinoCampus — proxy Vercel: GET /api/cadu/pipeline → cadu-api
+// KinoCampus — proxy Vercel: /api/cadu/pipeline[/*] → cadu-api (VPS)
 //
-// Catch-all ([...path].js) só pega paths com pelo menos 1 segmento.
-// Este handler cobre o "root" /api/cadu/pipeline (sem path).
+// Cobre tanto o "root" /api/cadu/pipeline quanto sub-paths
+// (ex: /run, /abc-id, /abc-id/stop). Em Vercel, arquivos `pipeline.js`
+// têm precedência sobre `pipeline/[...path].js` — então centralizamos
+// tudo aqui.
+//
+// IMPORTANTE: SSE (GET /api/cadu/pipeline/:id/stream) NÃO funciona em
+// Vercel serverless (timeout 10-60s). O cliente (admin/cadu.html)
+// faz SSE direto pra cadu-api via Traefik do VPS.
 
 export default async function handler(req, res) {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
   if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "GET") return res.status(405).json({ detail: "Method Not Allowed" });
 
   const CADU_API_URL = process.env.CADU_API_URL || "";
   const CADU_API_TOKEN = process.env.CADU_API_TOKEN || "";
@@ -16,16 +22,22 @@ export default async function handler(req, res) {
     return res.status(503).json({ ok: false, error: "CADU_API_URL/TOKEN not configured" });
   }
 
-  const targetUrl = `${CADU_API_URL.replace(/\/$/, "")}/api/pipeline`;
+  // req.url chega como "/pipeline/run" ou "/pipeline" — extrai sub-path
+  const fullPath = (req.url || "").split("?")[0];
+  const subPath = fullPath.replace(/^\/pipeline\/?/, "").replace(/^\//, "");
+  const targetUrl = `${CADU_API_URL.replace(/\/$/, "")}/api/pipeline${subPath ? "/" + subPath : ""}`;
 
   try {
     const upstream = await fetch(targetUrl, {
-      method: "GET",
+      method: req.method,
       headers: {
         Authorization: `Bearer ${CADU_API_TOKEN}`,
+        "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body || {}) : undefined,
     });
+
     const ct = upstream.headers.get("content-type") || "application/json";
     const body = await upstream.text();
     res.status(upstream.status).setHeader("Content-Type", ct).send(body);
