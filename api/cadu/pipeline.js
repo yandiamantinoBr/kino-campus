@@ -23,10 +23,10 @@ export default async function handler(req, res) {
   }
 
   // req.url chega como "/pipeline/run" ou "/pipeline" â€” extrai sub-path
+  // req.url chega como "/api/cadu/pipeline/run" ou "/api/cadu/pipeline" (path completo do Vercel)
   const fullPath = (req.url || "").split("?")[0];
-  const subPath = fullPath.replace(/^\/pipeline\/?/, "").replace(/^\//, "");
+  const subPath = fullPath.replace(/^\/api\/cadu\/pipeline\/?/, "").replace(/^\//, "");
   const targetUrl = `${CADU_API_URL.replace(/\/$/, "")}/api/pipeline${subPath ? "/" + subPath : ""}`;
-  console.log(`[api/cadu/pipeline] ${req.method} ${fullPath} â†’ ${targetUrl}`);
 
   try {
     const upstream = await fetch(targetUrl, {
