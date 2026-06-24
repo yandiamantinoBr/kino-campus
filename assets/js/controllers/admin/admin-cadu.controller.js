@@ -58,7 +58,7 @@
     var wrap = $('#cadu-error');
     if (!wrap) return;
     wrap.style.display = 'block';
-    wrap.textContent = msg;
+    wrap.innerHTML = msg;  // aceita HTML (mensagens vêm com links)
   }
 
   function hideCaduError() {
@@ -305,8 +305,10 @@
           btn.classList.remove('is-ok');
         }, 2500);
       }
-      showCaduError('Publicado: ' + (data && (data.message || data.post_id || 'OK')));
-      setTimeout(hideCaduError, 3000);
+      var msg = (data && data.message) ? data.message : 'OK';
+      var via = (data && data.published_via) ? ' (' + data.published_via + ')' : '';
+      showCaduError('<i class="fas fa-circle-check"></i> ' + escapeHtml(msg) + '<small style="opacity:.7;display:block;margin-top:4px;">via: ' + escapeHtml(via.replace(/[()]/g, '')) + '</small>');
+      setTimeout(hideCaduError, 6000);
     } catch (err) {
       if (btn) {
         btn.disabled = false;
