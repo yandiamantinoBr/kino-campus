@@ -65,6 +65,18 @@
     .kc-cadu-loadmore button:disabled { opacity: .5; cursor: not-allowed; }
     .kc-cadu-footer { color: var(--kc-text-dark-secondary); font-size: .78rem; text-align: center; padding: 24px 0 0; }
     .kc-cadu-footer code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; }
+    /* ===== Auth gate (loading + access denied) ===== */
+    #cadu-loading, #cadu-access-denied { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; min-height: 240px; color: var(--kc-text-dark-secondary); font-size: .95rem; }
+    #cadu-loading i.fa-spinner { font-size: 1.6rem; margin-bottom: 10px; color: var(--kc-primary-brand); }
+    #cadu-access-denied { background: rgba(244,67,54,.06); border: 1px solid rgba(244,67,54,.25); border-radius: 14px; color: var(--kc-text-dark-primary); text-align: center; }
+    #cadu-access-denied i.fa-lock { color: #ef9a9a; }
+    #cadu-error { display: none; background: rgba(76,175,80,.12); border: 1px solid rgba(76,175,80,.35); color: #a5d6a7; border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: .9rem; }
+    /* ===== Botão publicar por site ===== */
+    .kc-cadu-publish-btn { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.3); color: var(--kc-primary-brand); border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; }
+    .kc-cadu-publish-btn:hover { background: rgba(255,107,0,.2); border-color: rgba(255,107,0,.5); }
+    .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .kc-cadu-publish-btn.is-ok { background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.4); color: #10b981; }
+    .kc-cadu-publish-btn.is-err { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.4); color: #ef4444; }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.1" />
 </head>
@@ -102,6 +114,16 @@
 
   <main class="kc-main-content" id="kc-main">
     <div class="kc-cadu-wrapper">
+
+      <!-- Auth gate: loading / acesso negado (controlado pelo admin-cadu.controller.js) -->
+      <div id="cadu-loading" role="status" aria-live="polite">
+        <i class="fas fa-spinner fa-spin"></i>
+        <div>Verificando permissões…</div>
+      </div>
+      <div id="cadu-access-denied" role="alert"></div>
+      <div id="cadu-error" role="status" aria-live="polite"></div>
+
+      <div id="cadu-content" style="display:none;">
 
       <!-- HERO + STATUS -->
       <section class="kc-cadu-hero">
@@ -189,10 +211,11 @@
                 <th style="width:170px;">Instagram</th>
                 <th style="width:120px;">Status IG</th>
                 <th>Observação</th>
+                <th style="width:80px;">Ações</th>
               </tr>
             </thead>
             <tbody id="sites-tbody">
-              <tr><td colspan="6" class="kc-cadu-empty">Carregando…</td></tr>
+              <tr><td colspan="7" class="kc-cadu-empty">Carregando…</td></tr>
             </tbody>
           </table>
         </div>
@@ -220,6 +243,8 @@
         <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="color:inherit;">repo</a>
         · <a href="docs/INTEGRATION-KINOCAMPUS.md" style="color:inherit;">docs</a>
       </div>
+
+      </div><!-- /#cadu-content -->
     </div>
   </main>
 
