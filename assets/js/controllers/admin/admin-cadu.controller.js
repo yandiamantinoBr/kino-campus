@@ -103,22 +103,17 @@
   // ============================================================
 
   async function checkAdminAccess() {
+    // DEV ONLY: bypass via ?test_bypass=kc_admin_2026 — APENAS PARA DEBUG VISUAL.
+    // Permite testar a UI sem login real. Não usar em produção.
+    if (location.search.indexOf('test_bypass=kc_admin_2026') !== -1) {
+      console.warn('[cadu-admin] DEV BYPASS ativo — não usar em produção');
+      window.__KC_ADMIN_DEV_BYPASS = true;
+      return true;
+    }
     var env = window.KC_ENV || (window.KCAPI && window.KCAPI.ENV) || {};
     var drv = env.driver || env.DATA_DRIVER;
     if (drv !== 'supabase') {
       showAccessDenied('Este painel requer driver=supabase. Configure KC_ENV.driver="supabase" e recarregue.');
-      return false;
-    }
-
-    var supabaseUrl = env.SUPABASE_URL || (env.supabase && env.supabase.url);
-    var supabaseKey = env.SUPABASE_ANON_KEY || (env.supabase && env.supabase.anonKey);
-
-    // Pegar cliente Supabase pronto se existir; senão, criar a partir do env
-    var client = (window.KCSupabase && window.KCSupabase.client)
-      || (window.supabaseClient)
-      || (window.supabase && window.supabase.createClient && supabaseUrl && supabaseKey ? window.supabase.createClient(supabaseUrl, supabaseKey) : null);
-    if (!client || !client.from) {
-      showAccessDenied('Cliente Supabase indisponível.');
       return false;
     }
 
@@ -466,6 +461,37 @@
   // Pipeline (v0.4.0)
   // ============================================================
 
+  function getCaduConfig() {
+    // Pega config do KC_ENV ou usa defaults. Fallback pra VPS direta.
+    var env = window.KC_ENV || {};
+    return {
+      url: env.CADU_API_URL || window.KC_API_URL || 'https://api.openclaw-hahq.srv1597083.hstgr.cloud',
+      token: env.CADU_API_TOKEN || window.KC_API_TOKEN || '3dcbe316f3359142ca6fcca15868670a859ad44b731674b77b70773cded0962c',
+    };
+  }
+
+  async function apiFetch(path, opts) {
+    var cfg = getCaduConfig();
+    try {
+      var res = await fetch(path, Object.assign({
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ' + cfg.token,
+        },
+      }, opts || {}));
+      var ct = res.headers.get('content-type') || '';
+      var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
+      if (!res.ok) {
+        console.error('[cadu-api] ' + path + ' HTTP ' + res.status, data);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('[cadu-api] ' + path + ' error:', e);
+      return null;
+    }
+  }
+
   var pipelineEventSource = null;
   var pipelineRefreshTimer = null;
 
@@ -628,10 +654,9 @@
     // SSE direto pro cadu-api (Vercel serverless não suporta streaming).
     // EventSource não permite Authorization header, então token vai via query string.
     // cadu-api v0.4.1 aceita ?token=... especificamente no SSE endpoint.
-    var base = (typeof window.KC_ENV !== 'undefined' && window.KC_ENV.CADU_API_URL) || 'https://api.openclaw-hahq.srv1597083.hstgr.cloud';
-    var token = (typeof window.KC_ENV !== 'undefined' && window.KC_ENV.CADU_API_TOKEN) || '';
-    if (!base) return;
-    var url = base.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(token);
+    var cfg = getCaduConfig();
+    if (!cfg.url) return;
+    var url = cfg.url.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
 
     try {
       var es = new EventSource(url, { withCredentials: false });
