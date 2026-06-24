@@ -1,0 +1,87 @@
+{
+  "$schema": "https://kinocampus.com.br/schemas/pipeline-stages.v1.json",
+  "_comment": "Catálogo canônico de estágios da pipeline do Cadu. Single source of truth — cadu-api/pipeline.py deve espelhar este arquivo. Sincronização manual por enquanto.",
+  "stages": [
+    {
+      "id": "curator",
+      "name": "Curador UFG v4.4",
+      "description": "Varre sites UFG Tier 1+2 (~80s) e classifica itens publicáveis",
+      "script": "scripts/cadu-curador-v4.4.js",
+      "args": ["--daily"],
+      "estimated_sec": 90,
+      "category": "scan"
+    },
+    {
+      "id": "ig",
+      "name": "Scanner Instagram",
+      "description": "14 perfis UFG via browser CDP (~45s)",
+      "script": "scripts/scan-ig-browser.js",
+      "args": [],
+      "estimated_sec": 50,
+      "category": "scan"
+    },
+    {
+      "id": "duplicates",
+      "name": "Enriquecimento Duplicatas",
+      "description": "Atualiza posts existentes com info nova de itens descartados",
+      "script": "scripts/enrich-duplicates.js",
+      "args": [],
+      "estimated_sec": 60,
+      "category": "process"
+    },
+    {
+      "id": "format",
+      "name": "Formatador IA",
+      "description": "Gera descrições canônicas (padrão CONPEEX) com IA",
+      "script": "scripts/formatador-ia.js",
+      "args": [],
+      "estimated_sec": 120,
+      "category": "process"
+    },
+    {
+      "id": "publish",
+      "name": "Publicação",
+      "description": "Publica itens selecionados via Edge Function cadu-publish",
+      "script": "scripts/publish_auto_v5.js",
+      "args": [],
+      "estimated_sec": 60,
+      "category": "publish"
+    },
+    {
+      "id": "enrich",
+      "name": "Enriquecimento Imagens",
+      "description": "Adiciona imagens complementares aos posts publicados",
+      "script": "scripts/enrich-images.js",
+      "args": ["--from-recent", "20"],
+      "estimated_sec": 90,
+      "category": "process"
+    },
+    {
+      "id": "dedup",
+      "name": "Dedup Visual + Textual",
+      "description": "Detecta posts duplicados via pHash + shingles Jaccard",
+      "script": "scripts/dedup-kino.js",
+      "args": [],
+      "estimated_sec": 120,
+      "category": "maintenance"
+    },
+    {
+      "id": "sigaa",
+      "name": "SIGAA Calendar Sync",
+      "description": "Sincroniza tarefas SIGAA → Google Calendar (~90s)",
+      "script": "scripts/sigaa/sync_calendar.js",
+      "args": [],
+      "estimated_sec": 100,
+      "category": "maintenance"
+    },
+    {
+      "id": "all",
+      "name": "Pipeline Completa",
+      "description": "IG + Curator + Duplicates + Format + Publish + Enrich",
+      "script": "scripts/pipeline-kino.js",
+      "args": ["--ig", "--format", "--publish"],
+      "estimated_sec": 400,
+      "category": "publish"
+    }
+  ]
+}
