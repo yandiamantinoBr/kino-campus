@@ -397,6 +397,13 @@
     });
     $('#tab-sites').style.display = name === 'sites' ? '' : 'none';
     $('#tab-feed').style.display = name === 'feed' ? '' : 'none';
+    var tabPipeline = $('#tab-pipeline');
+    if (tabPipeline) {
+      tabPipeline.style.display = name === 'pipeline' ? '' : 'none';
+      if (name === 'pipeline') {
+        refreshPipeline();
+      }
+    }
   }
 
   function bindEvents() {
@@ -454,6 +461,273 @@
       refreshAll();
     });
   }
+
+  // ============================================================
+  // Pipeline (v0.4.0)
+  // ============================================================
+
+  var pipelineEventSource = null;
+  var pipelineRefreshTimer = null;
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function fmtAgo(unix) {
+    if (!unix) return '—';
+    var sec = Math.max(0, Math.floor(Date.now() / 1000) - unix);
+    if (sec < 60) return sec + 's atrás';
+    if (sec < 3600) return Math.floor(sec / 60) + 'min atrás';
+    if (sec < 86400) return Math.floor(sec / 3600) + 'h atrás';
+    return Math.floor(sec / 86400) + 'd atrás';
+  }
+
+  function fmtDur(unixStart, unixEnd) {
+    if (!unixStart) return '—';
+    var sec = Math.max(0, (unixEnd || Math.floor(Date.now() / 1000)) - unixStart);
+    if (sec < 60) return sec + 's';
+    return Math.floor(sec / 60) + 'min ' + (sec % 60) + 's';
+  }
+
+  function categoryIcon(category) {
+    var map = {
+      scan: 'fa-magnifying-glass-chart',
+      process: 'fa-wand-magic-sparkles',
+      publish: 'fa-rocket',
+      maintenance: 'fa-screwdriver-wrench',
+    };
+    return map[category] || 'fa-circle-play';
+  }
+
+  async function refreshPipeline() {
+    var status = await apiFetch('/api/cadu/pipeline');
+    if (!status) return;
+    renderPipelineStages(status.stages || []);
+    renderPipelineActive(status.active_run);
+    renderPipelineHistory(status.history || []);
+    updatePipelineBadge(status);
+
+    // Se há run ativo, conecta SSE; senão desconecta
+    if (status.active_run && status.active_run.status === 'running') {
+      if (!pipelineEventSource || pipelineEventSource.runId !== status.active_run.id) {
+        connectPipelineStream(status.active_run.id);
+      }
+    } else {
+      disconnectPipelineStream();
+    }
+  }
+
+  function renderPipelineStages(stages) {
+    var container = $('#pipeline-stages-list');
+    if (!container) return;
+    if (!stages.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem estágios disponíveis.</div>'; return; }
+    container.innerHTML = stages.map(function (s) {
+      var lastTxt = '— sem runs —';
+      var lastCls = '';
+      if (s.last_run) {
+        lastTxt = fmtAgo(s.last_run.started_at) + ' (' + (s.last_run.status || '') + ')';
+        lastCls = 'is-' + (s.last_run.status || '');
+      }
+      return '<div class="kc-pipeline-stage">' +
+        '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
+        '<div class="kc-pipeline-stage__desc">' + escapeHtml(s.description) + '</div>' +
+        '<div class="kc-pipeline-stage__meta">' +
+          '<span class="kc-pipeline-history-item ' + lastCls + '" style="border:none;padding:2px 6px;"><i class="fas fa-clock"></i> ' + lastTxt + '</span>' +
+          '<span style="margin-left:auto;">~' + s.estimated_sec + 's</span>' +
+        '</div>' +
+        '<button class="kc-pipeline-stage__btn" data-stage="' + escapeHtml(s.id) + '"><i class="fas fa-play"></i> Executar</button>' +
+      '</div>';
+    }).join('');
+
+    // Bind botões (delegação não funciona pq innerHTML é reescrito)
+    $$('#pipeline-stages-list .kc-pipeline-stage__btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { runPipelineStage(btn.getAttribute('data-stage')); });
+    });
+  }
+
+  function renderPipelineActive(active) {
+    var card = $('#pipeline-active-card');
+    var dot = $('#pipeline-status-dot');
+    var logBox = $('#pipeline-log');
+    if (!card) return;
+    if (!active) {
+      card.className = 'kc-pipeline-active-card';
+      card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.</div>';
+      if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem run ativo'; }
+      if (logBox && (!pipelineEventSource)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
+      return;
+    }
+    var cls = 'is-' + active.status;
+    card.className = 'kc-pipeline-active-card ' + cls;
+    if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = active.status + ' (' + fmtAgo(active.started_at) + ')'; }
+    var stopBtn = active.status === 'running'
+      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + active.id + '"><i class="fas fa-stop"></i> Parar</button>'
+      : '';
+    card.innerHTML =
+      '<div class="kc-pipeline-active-card__head">' +
+        '<strong>' + escapeHtml(active.stage) + '</strong>' +
+        '<span class="kc-cadu-badge ' + cls + '" style="background:rgba(255,107,0,.12);color:#ff6b00;">' + escapeHtml(active.status) + '</span>' +
+        stopBtn +
+      '</div>' +
+      '<div class="kc-pipeline-active-card__meta">' +
+        '<span><i class="fas fa-fingerprint"></i> <code>' + active.id.slice(0, 8) + '</code></span>' +
+        '<span><i class="fas fa-clock"></i> Iniciado ' + fmtAgo(active.started_at) + '</span>' +
+        '<span><i class="fas fa-hourglass-half"></i> ' + fmtDur(active.started_at, active.finished_at) + '</span>' +
+        (active.exit_code != null ? '<span><i class="fas fa-flag-checkered"></i> exit ' + active.exit_code + '</span>' : '') +
+      '</div>';
+    var stopEl = card.querySelector('[data-stop]');
+    if (stopEl) stopEl.addEventListener('click', function () { stopPipelineRun(active.id); });
+  }
+
+  function renderPipelineHistory(history) {
+    var container = $('#pipeline-history-list');
+    if (!container) return;
+    if (!history.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem runs anteriores.</div>'; return; }
+    container.innerHTML = history.slice(0, 20).map(function (r) {
+      var cls = 'is-' + (r.status || 'unknown');
+      return '<div class="kc-pipeline-history-item ' + cls + '">' +
+        '<div class="kc-pipeline-history-item__head">' +
+          '<strong>' + escapeHtml(r.stage) + '</strong>' +
+          '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +
+        '</div>' +
+        '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function updatePipelineBadge(status) {
+    var badge = $('#badge-pipeline');
+    if (!badge) return;
+    var running = status.active_run && status.active_run.status === 'running';
+    badge.textContent = running ? '● running' : (status.history ? status.history.length : 0);
+  }
+
+  function appendLogLine(text) {
+    var logBox = $('#pipeline-log');
+    if (!logBox) return;
+    // Limpa mensagem inicial se for a primeira linha
+    if (logBox.querySelector('.kc-cadu-empty')) logBox.innerHTML = '';
+    var lineClass = 'kc-log-line';
+    var lowText = text.toLowerCase();
+    if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('✗')) lineClass += ' kc-log-line--err';
+    else if (lowText.includes('ok') || lowText.includes('✓') || lowText.includes('saved')) lineClass += ' kc-log-line--ok';
+    var div = document.createElement('div');
+    div.className = lineClass;
+    div.textContent = text;
+    logBox.appendChild(div);
+    // Auto-scroll pra última linha (mas só se usuário já estava no fim)
+    var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
+    if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function connectPipelineStream(runId) {
+    disconnectPipelineStream();
+    // SSE direto pro cadu-api (Vercel serverless não suporta streaming).
+    // EventSource não permite Authorization header, então token vai via query string.
+    // cadu-api v0.4.1 aceita ?token=... especificamente no SSE endpoint.
+    var base = (typeof window.KC_ENV !== 'undefined' && window.KC_ENV.CADU_API_URL) || 'https://api.openclaw-hahq.srv1597083.hstgr.cloud';
+    var token = (typeof window.KC_ENV !== 'undefined' && window.KC_ENV.CADU_API_TOKEN) || '';
+    if (!base) return;
+    var url = base.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(token);
+
+    try {
+      var es = new EventSource(url, { withCredentials: false });
+      pipelineEventSource = es;
+      pipelineEventSource.runId = runId;
+      es.addEventListener('log', function (e) {
+        try { var d = JSON.parse(e.data); if (d.line) appendLogLine(d.line); } catch (err) {}
+      });
+      es.addEventListener('done', function (e) {
+        try {
+          var d = JSON.parse(e.data);
+          appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
+        } catch (err) {}
+        es.close();
+        pipelineEventSource = null;
+        refreshPipeline();
+      });
+      es.addEventListener('error', function (e) {
+        appendLogLine('[stream error] reconectando em 2s…');
+        try { es.close(); } catch (err) {}
+        pipelineEventSource = null;
+        setTimeout(function () { refreshPipeline(); }, 2000);
+      });
+    } catch (err) {
+      console.warn('SSE connect falhou:', err);
+    }
+  }
+
+  function parseSSEBlock(block) {
+    // Cada bloco SSE tem linhas "event: TYPE\ndata: JSON\n"
+    var lines = block.split('\n');
+    var eventType = 'message';
+    var dataLines = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.indexOf('event:') === 0) eventType = line.substring(6).trim();
+      else if (line.indexOf('data:') === 0) dataLines.push(line.substring(5).trim());
+    }
+    var dataStr = dataLines.join('\n');
+    if (!dataStr) return;
+    try {
+      var d = JSON.parse(dataStr);
+      if (eventType === 'log' && d.line) appendLogLine(d.line);
+      else if (eventType === 'done') {
+        appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
+        disconnectPipelineStream();
+        refreshPipeline();
+      } else if (eventType === 'error') {
+        appendLogLine('[error] ' + (d.message || ''));
+      }
+    } catch (e) {}
+  }
+
+  function disconnectPipelineStream() {
+    if (pipelineEventSource) {
+      if (pipelineEventSource.controller) {
+        try { pipelineEventSource.controller.abort(); } catch (e) {}
+      }
+      pipelineEventSource = null;
+    }
+  }
+
+  async function runPipelineStage(stageId) {
+    if (!confirm('Iniciar pipeline "' + stageId + '"?\n\nLogs ficarão disponíveis em tempo real abaixo.')) return;
+    var btn = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…'; }
+    var resp = await apiFetch('/api/cadu/pipeline/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stage: stageId }),
+    });
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-play"></i> Executar'; }
+    if (resp && resp.run_id) {
+      // Limpa log box pra nova execução
+      var logBox = $('#pipeline-log');
+      if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
+      refreshPipeline();
+    } else {
+      alert('Falha ao iniciar: ' + (resp ? JSON.stringify(resp) : 'sem resposta'));
+    }
+  }
+
+  async function stopPipelineRun(runId) {
+    if (!confirm('Parar este run? O subprocess será morto via SIGTERM.')) return;
+    var resp = await apiFetch('/api/cadu/pipeline/' + runId + '/stop', { method: 'POST' });
+    if (resp && resp.ok) {
+      refreshPipeline();
+    } else {
+      alert('Falha ao parar: ' + (resp ? JSON.stringify(resp) : 'sem resposta'));
+    }
+  }
+
+  // Auto-refresh do pipeline a cada 5s quando na aba
+  setInterval(function () {
+    if (state.currentTab === 'pipeline') refreshPipeline();
+  }, 5000);
 
   async function refreshAll() {
     var loading = $('#cadu-loading');

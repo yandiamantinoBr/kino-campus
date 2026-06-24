@@ -50,6 +50,46 @@
     .kc-cadu-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; }
     .kc-cadu-badge--confirmed { background: rgba(16,185,129,.12); color: #10b981; }
     .kc-cadu-badge--tentative { background: rgba(245,158,11,.12); color: #f59e0b; }
+
+    /* ===== Pipeline tab (v0.4.0) ===== */
+    .kc-pipeline-grid { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(220px, 280px); gap: 16px; min-width: 0; }
+    @media (max-width: 1100px) { .kc-pipeline-grid { grid-template-columns: 1fr; } }
+    .kc-pipeline-stages__list, .kc-pipeline-history__list { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .kc-pipeline-stage { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s, transform .12s; }
+    .kc-pipeline-stage:hover { border-color: rgba(255,107,0,.45); transform: translateY(-1px); }
+    .kc-pipeline-stage__head { display: flex; gap: 8px; align-items: center; }
+    .kc-pipeline-stage__head i { color: var(--kc-primary-brand); }
+    .kc-pipeline-stage__head strong { font-size: .92rem; }
+    .kc-pipeline-stage__desc { font-size: .78rem; color: var(--kc-text-dark-secondary); line-height: 1.35; }
+    .kc-pipeline-stage__meta { display: flex; gap: 8px; align-items: center; font-size: .72rem; color: var(--kc-text-dark-secondary); }
+    .kc-pipeline-stage__btn { background: var(--kc-primary-brand); color: #fff; border: 0; border-radius: 8px; padding: 7px 10px; font-size: .82rem; cursor: pointer; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+    .kc-pipeline-stage__btn:hover { filter: brightness(1.1); }
+    .kc-pipeline-stage__btn:disabled { background: rgba(255,107,0,.3); cursor: not-allowed; }
+    .kc-pipeline-stage__btn.is-danger { background: rgba(239,68,68,.85); }
+    .kc-pipeline-active-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; margin-bottom: 10px; min-width: 0; }
+    .kc-pipeline-active-card.is-running { border-color: rgba(255,107,0,.45); box-shadow: 0 0 0 1px rgba(255,107,0,.18); }
+    .kc-pipeline-active-card.is-failed { border-color: rgba(239,68,68,.45); }
+    .kc-pipeline-active-card.is-finished { border-color: rgba(16,185,129,.45); }
+    .kc-pipeline-active-card__head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .kc-pipeline-active-card__head strong { font-size: 1rem; }
+    .kc-pipeline-active-card__meta { font-size: .76rem; color: var(--kc-text-dark-secondary); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+    .kc-pipeline-active-card__stop { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.4); color: #ef4444; border-radius: 8px; padding: 5px 10px; font-size: .8rem; cursor: pointer; }
+    .kc-pipeline-active-card__stop:hover { background: rgba(239,68,68,.3); }
+    .kc-pipeline-log { background: #0d1117; border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 10px 14px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; font-size: .78rem; line-height: 1.45; color: #d1d5db; height: 380px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; min-width: 0; }
+    .kc-pipeline-log .kc-log-line { padding: 0; margin: 0; }
+    .kc-pipeline-log .kc-log-line--err { color: #f87171; }
+    .kc-pipeline-log .kc-log-line--ok { color: #34d399; }
+    .kc-pipeline-status-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); display: inline-block; margin-left: 6px; vertical-align: middle; transition: background .15s; }
+    .kc-pipeline-status-dot.is-running { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.18); animation: kc-pulse 1.4s infinite; }
+    .kc-pipeline-status-dot.is-finished { background: #10b981; }
+    .kc-pipeline-status-dot.is-failed { background: #ef4444; }
+    @keyframes kc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+    .kc-pipeline-history-item { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 8px 10px; font-size: .78rem; display: flex; flex-direction: column; gap: 4px; }
+    .kc-pipeline-history-item.is-running { border-color: rgba(245,158,11,.45); }
+    .kc-pipeline-history-item.is-finished { border-color: rgba(16,185,129,.35); }
+    .kc-pipeline-history-item.is-failed { border-color: rgba(239,68,68,.35); }
+    .kc-pipeline-history-item__head { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+    .kc-pipeline-history-item__id { font-family: monospace; font-size: .68rem; color: var(--kc-text-dark-secondary); }
     .kc-cadu-badge--missing { background: rgba(148,163,184,.12); color: #94a3b8; }
     .kc-cadu-badge--unknown { background: rgba(99,102,241,.12); color: #818cf8; }
     .kc-cadu-badge--tier-1 { background: rgba(239,68,68,.12); color: #ef4444; }
@@ -180,6 +220,9 @@
         <button class="kc-cadu-tab" data-tab="feed" role="tab">
           <i class="fas fa-stream"></i> Feed coletado <span class="kc-cadu-tab__badge" id="badge-feed">—</span>
         </button>
+        <button class="kc-cadu-tab" data-tab="pipeline" role="tab">
+          <i class="fas fa-gears"></i> Pipeline <span class="kc-cadu-tab__badge" id="badge-pipeline">—</span>
+        </button>
       </div>
 
       <!-- ============== TAB: SITES ============== -->
@@ -218,6 +261,47 @@
               <tr><td colspan="7" class="kc-cadu-empty">Carregando…</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- ============== TAB: PIPELINE (v0.4.0) ============== -->
+      <section class="kc-cadu-section" id="tab-pipeline" role="tabpanel" style="display:none;">
+        <div class="kc-pipeline-grid">
+          <!-- Coluna 1: lista de estágios + botões -->
+          <div class="kc-pipeline-stages">
+            <h3 style="margin-top:0;font-size:1rem;color:var(--kc-text-dark-secondary);text-transform:uppercase;letter-spacing:.06em;">
+              <i class="fas fa-list-check"></i> Estágios pré-definidos
+            </h3>
+            <div id="pipeline-stages-list" class="kc-pipeline-stages__list">
+              <div class="kc-cadu-empty">Carregando estágios…</div>
+            </div>
+          </div>
+
+          <!-- Coluna 2: run ativo + log stream -->
+          <div class="kc-pipeline-runner">
+            <h3 style="margin-top:0;font-size:1rem;color:var(--kc-text-dark-secondary);text-transform:uppercase;letter-spacing:.06em;">
+              <i class="fas fa-play"></i> Execução atual
+              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" title="Sem run ativo"></span>
+            </h3>
+            <div id="pipeline-active-card" class="kc-pipeline-active-card">
+              <div class="kc-cadu-empty">
+                <i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.
+              </div>
+            </div>
+            <div class="kc-pipeline-log" id="pipeline-log">
+              <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>
+            </div>
+          </div>
+
+          <!-- Coluna 3: histórico -->
+          <div class="kc-pipeline-history">
+            <h3 style="margin-top:0;font-size:1rem;color:var(--kc-text-dark-secondary);text-transform:uppercase;letter-spacing:.06em;">
+              <i class="fas fa-clock-rotate-left"></i> Histórico recente
+            </h3>
+            <div id="pipeline-history-list" class="kc-pipeline-history__list">
+              <div class="kc-cadu-empty">Carregando…</div>
+            </div>
+          </div>
         </div>
       </section>
 
