@@ -5,8 +5,10 @@
 //
 // Endpoint exposto: GET /api/cadu/sites
 // Retorna: JSON array de SiteUnit (mesmo schema do cadu-api)
+//
+// ES module (api/package.json contém "type": "module").
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS permissivo dentro do domínio KinoCampus (admin)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -67,4 +69,4 @@ module.exports = async function handler(req, res) {
       message: String(err && err.message ? err.message : err)
     });
   }
-};
+}

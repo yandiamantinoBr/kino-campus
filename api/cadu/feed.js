@@ -2,8 +2,10 @@
 //
 // Endpoint exposto: GET /api/cadu/feed?limit=N
 // Param: limit (1..200, default 20)
+//
+// ES module (api/package.json contém "type": "module").
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -43,4 +45,4 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     return res.status(502).json({ error: 'cadu_api_unreachable', message: String(err && err.message ? err.message : err) });
   }
-};
+}
