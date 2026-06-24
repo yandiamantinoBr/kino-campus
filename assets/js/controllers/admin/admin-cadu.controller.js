@@ -103,28 +103,44 @@
   // ============================================================
 
   async function checkAdminAccess() {
-    var drv = window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver;
+    var env = window.KC_ENV || (window.KCAPI && window.KCAPI.ENV) || {};
+    var drv = env.driver || env.DATA_DRIVER;
     if (drv !== 'supabase') {
       showAccessDenied('Este painel requer driver=supabase. Configure KC_ENV.driver="supabase" e recarregue.');
       return false;
     }
 
-    var user = null;
-    try {
-      user = await window.KCAPI.getCurrentUser();
-    } catch (e) {
-      showAccessDenied('Não foi possível verificar sua sessão.');
-      return false;
-    }
-    if (!user) {
-      showAccessDenied('Você precisa estar autenticado. Redirecionando…');
-      setTimeout(function () { window.location.replace('../index.html#login'); }, 2000);
+    var supabaseUrl = env.SUPABASE_URL || (env.supabase && env.supabase.url);
+    var supabaseKey = env.SUPABASE_ANON_KEY || (env.supabase && env.supabase.anonKey);
+
+    // Pegar cliente Supabase pronto se existir; senão, criar a partir do env
+    var client = (window.KCSupabase && window.KCSupabase.client)
+      || (window.supabaseClient)
+      || (window.supabase && window.supabase.createClient && supabaseUrl && supabaseKey ? window.supabase.createClient(supabaseUrl, supabaseKey) : null);
+    if (!client || !client.from) {
+      showAccessDenied('Cliente Supabase indisponível.');
       return false;
     }
 
-    var client = (window.KCSupabase && window.KCSupabase.client) || (window.supabase && window.supabase.createClient && window.supabase.createClient(window.KCAPI.ENV.supabaseUrl, window.KCAPI.ENV.supabaseAnonKey));
-    if (!client || !client.from) {
-      showAccessDenied('Cliente Supabase indisponível.');
+    // Pegar usuário atual (Supabase Auth via cliente)
+    var user = null;
+    try {
+      var sess = await client.auth.getSession();
+      user = sess && sess.data && sess.data.session && sess.data.session.user;
+    } catch (e) { /* fall through */ }
+
+    if (!user) {
+      // fallback: tentar via KCAPI
+      try {
+        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+          user = await window.KCAPI.getCurrentUser();
+        }
+      } catch (e) { /* fall through */ }
+    }
+
+    if (!user) {
+      showAccessDenied('Você precisa estar autenticado. Redirecionando…');
+      setTimeout(function () { window.location.replace('../index.html#login'); }, 2000);
       return false;
     }
 
