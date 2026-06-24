@@ -76,6 +76,9 @@
     },
     deleteMessage: safe('deleteMessage'),
     editMessage: safe('editMessage'),
+    // V76.53: reações emoji e reply/quote
+    toggleReaction: safe('toggleReaction'),
+    setMessageReply: safe('setMessageReply'),
     blockUser: safe('blockUser'),
     unblockUser: safe('unblockUser'),
     isBlocked: safe('isBlocked'),

@@ -75,6 +75,11 @@
       created_at: row.out_created_at || row.created_at,
       edited_at: row.out_edited_at || row.edited_at || null,
       deleted_at: row.out_deleted_at || row.deleted_at || null,
+      // V76.53: checkmark de leitura, reply/quote e reações
+      read_at: row.out_read_at !== undefined ? row.out_read_at : (row.read_at || null),
+      reply_to_id: row.out_reply_to_id !== undefined ? row.out_reply_to_id : (row.reply_to_id || null),
+      reactions: Array.isArray(row.out_reactions) ? row.out_reactions
+        : (Array.isArray(row.reactions) ? row.reactions : []),
     };
   }
 
@@ -318,6 +323,65 @@
     }
   }
 
+  // ── toggle_reaction (V76.53) ────────────────────────────────────────────
+  // Tabela chat_reactions via client direto (RLS: usuário só insere/deleta as suas).
+  // Toggle: se já existe, deleta; senão, insere.
+
+  async function toggleReaction(messageId, emoji) {
+    var client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!messageId || !emoji) return { ok: false, error: { message: 'Parâmetros inválidos.' } };
+    try {
+      // Verifica se já existe reação deste usuário com este emoji
+      var existing = await client
+        .from('chat_reactions')
+        .select('id')
+        .eq('message_id', messageId)
+        .eq('emoji', emoji)
+        .maybeSingle();
+      if (existing.error) return { ok: false, error: { message: existing.error.message } };
+      if (existing.data) {
+        // Já existe → remove (toggle off)
+        var del = await client
+          .from('chat_reactions')
+          .delete()
+          .eq('id', existing.data.id);
+        if (del.error) return { ok: false, error: { message: del.error.message } };
+        return { ok: true, data: { action: 'removed' } };
+      }
+      // Não existe → insere (toggle on)
+      var ins = await client
+        .from('chat_reactions')
+        .insert({ message_id: messageId, emoji: emoji })
+        .select('id')
+        .single();
+      if (ins.error) return { ok: false, error: { message: ins.error.message } };
+      return { ok: true, data: { action: 'added', reaction_id: ins.data.id } };
+    } catch (e) {
+      return { ok: false, error: { message: (e && e.message) || String(e) } };
+    }
+  }
+
+  // ── set_message_reply (V76.53) ───────────────────────────────────────────
+  // Marca reply_to_id numa mensagem própria recém-enviada. RLS permite update
+  // de mensagens do próprio autor.
+
+  async function setMessageReply(messageId, replyToId) {
+    var client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!messageId) return { ok: false, error: { message: 'message_id inválido.' } };
+    try {
+      var r = await client
+        .from('chat_messages')
+        .update({ reply_to_id: replyToId || null })
+        .eq('id', messageId);
+      if (r.error) return { ok: false, error: { message: r.error.message } };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: { message: (e && e.message) || String(e) } };
+    }
+  }
+
   // ── block / unblock / isBlocked ──────────────────────────────────────────
 
   async function blockUser(otherUserId, reason) {
@@ -500,6 +564,8 @@
     unreadTotal: unreadTotal,
     deleteMessage: deleteMessage,
     editMessage: editMessage,
+    toggleReaction: toggleReaction,
+    setMessageReply: setMessageReply,
     blockUser: blockUser,
     unblockUser: unblockUser,
     isBlocked: isBlocked,
