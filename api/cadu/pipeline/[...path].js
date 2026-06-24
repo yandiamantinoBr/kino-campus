@@ -19,12 +19,15 @@ export default async function handler(req, res) {
     return res.status(503).json({ ok: false, error: "CADU_API_URL/TOKEN not configured" });
   }
 
-  // req.query.path é array dos segmentos depois de /api/cadu/pipeline/
-  // Ex: /api/cadu/pipeline/run → path = ["run"]
-  //     /api/cadu/pipeline/abc/stop → path = ["abc", "stop"]
-  const subPath = Array.isArray(req.query.path) ? req.query.path.join("/") : "";
+  // Detecta sub-path: req.query.path (modo catch-all) ou req.url (modo "exact").
+  let subPath = "";
+  if (Array.isArray(req.query.path) && req.query.path.length) {
+    subPath = req.query.path.join("/");
+  } else {
+    // req.url chega como "/api/cadu/pipeline/run" ou "/api/cadu/pipeline".
+    subPath = (req.url || "").split("?")[0].replace(/^\/api\/cadu\/pipeline\/?/, "").replace(/^\//, "");
+  }
   const targetUrl = `${CADU_API_URL.replace(/\/$/, "")}/api/pipeline${subPath ? "/" + subPath : ""}`;
-  console.log(`[api/cadu/pipeline/*] ${req.method} path=${JSON.stringify(req.query.path)} url=${req.url} -> ${targetUrl}`);
   console.log(`[api/cadu/pipeline/*] ${req.method} path=${JSON.stringify(req.query.path)} → ${targetUrl}`);
 
   try {
