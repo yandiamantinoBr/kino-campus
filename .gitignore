@@ -1,6 +1,12 @@
 .playwright-cli/
 .vercel/
 
+# Local secrets — NUNCA COMMITE
+.env
+.env.*
+!.env.example
+!.env.sample
+
 # Generated local test/evidence output. Canonical QA evidence belongs in docs/qa/reports/.
 output/
 
