@@ -123,9 +123,13 @@
 
     // ============================================================
     // CAMADA 2: tenta extrair email do usuário logado de VÁRIAS fontes
-    // (kc:user localStorage, KCAPI.getCurrentUser, Supabase session).
+    // (kc:user localStorage, KCSupabase.getCurrentUser, KCAPI.getCurrentUser).
     // Se for email confiável, libera IMEDIATAMENTE — sem checar driver,
     // sem checar profile.is_admin. Isso evita lock-out do admin.
+    //
+    // IMPORTANTE: usar o facade canônico window.KCSupabase (com client de
+    // persistSession:true) — NÃO criar um supabase.createClient temporário,
+    // pois sem persistência a getSession() não vê a sessão do cookie.
     // ============================================================
     var detectedEmail = '';
     try {
@@ -134,26 +138,24 @@
         try { detectedEmail = (JSON.parse(stored).email || '').toLowerCase(); } catch (e) {}
       }
     } catch (e) {}
-    if (!detectedEmail && window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+    if (!detectedEmail && window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function') {
       try {
-        var u = await window.KCAPI.getCurrentUser();
+        var u = await window.KCSupabase.getCurrentUser();
         if (u && u.email) detectedEmail = (u.email || '').toLowerCase();
+      } catch (e) { console.warn('[cadu-admin] KCSupabase.getCurrentUser falhou:', e); }
+    }
+    if (!detectedEmail && window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
+      try {
+        await window.KCSupabase.refreshSession();
+        var u2 = window.KCSupabase.getUser ? window.KCSupabase.getUser() : null;
+        if (u2 && u2.email) detectedEmail = (u2.email || '').toLowerCase();
       } catch (e) {}
     }
-    if (!detectedEmail) {
-      // Tenta Supabase Auth direto via env (se disponível)
-      var envForSupa = window.KC_ENV || {};
-      var supaUrl = envForSupa.SUPABASE_URL || envForSupa.supabase?.url;
-      var supaKey = envForSupa.SUPABASE_ANON_KEY || envForSupa.supabase?.anonKey;
-      if (supaUrl && supaKey && window.supabase && window.supabase.createClient) {
-        try {
-          var tmpClient = window.supabase.createClient(supaUrl, supaKey, { auth: { persistSession: false } });
-          var s = await tmpClient.auth.getSession();
-          if (s && s.data && s.data.session && s.data.session.user) {
-            detectedEmail = (s.data.session.user.email || '').toLowerCase();
-          }
-        } catch (e) {}
-      }
+    if (!detectedEmail && window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      try {
+        var u3 = await window.KCAPI.getCurrentUser();
+        if (u3 && u3.email) detectedEmail = (u3.email || '').toLowerCase();
+      } catch (e) {}
     }
     if (detectedEmail && TRUSTED_ADMIN_EMAILS.indexOf(detectedEmail) !== -1) {
       console.warn('[cadu-admin] BYPASS email confiável (CAMADA 2): ' + detectedEmail);
