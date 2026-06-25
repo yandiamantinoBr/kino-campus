@@ -111,34 +111,77 @@
   ];
 
   async function checkAdminAccess() {
-    // DEV ONLY: bypass via ?test_bypass=kc_admin_2026 — APENAS PARA DEBUG VISUAL.
-    // Permite testar a UI sem login real. Não usar em produção.
+    // ============================================================
+    // CAMADA 1 (mais alta prioridade): BYPASS DEV via query string.
+    // Permite testar UI sem login real. NÃO usar em produção.
+    // ============================================================
     if (location.search.indexOf('test_bypass=kc_admin_2026') !== -1) {
-      console.warn('[cadu-admin] DEV BYPASS ativo — não usar em produção');
+      console.warn('[cadu-admin] DEV BYPASS ativo (não usar em produção)');
       window.__KC_ADMIN_DEV_BYPASS = true;
       return true;
     }
+
+    // ============================================================
+    // CAMADA 2: tenta extrair email do usuário logado de VÁRIAS fontes
+    // (kc:user localStorage, KCAPI.getCurrentUser, Supabase session).
+    // Se for email confiável, libera IMEDIATAMENTE — sem checar driver,
+    // sem checar profile.is_admin. Isso evita lock-out do admin.
+    // ============================================================
+    var detectedEmail = '';
+    try {
+      var stored = localStorage.getItem('kc:user');
+      if (stored) {
+        try { detectedEmail = (JSON.parse(stored).email || '').toLowerCase(); } catch (e) {}
+      }
+    } catch (e) {}
+    if (!detectedEmail && window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      try {
+        var u = await window.KCAPI.getCurrentUser();
+        if (u && u.email) detectedEmail = (u.email || '').toLowerCase();
+      } catch (e) {}
+    }
+    if (!detectedEmail) {
+      // Tenta Supabase Auth direto via env (se disponível)
+      var envForSupa = window.KC_ENV || {};
+      var supaUrl = envForSupa.SUPABASE_URL || envForSupa.supabase?.url;
+      var supaKey = envForSupa.SUPABASE_ANON_KEY || envForSupa.supabase?.anonKey;
+      if (supaUrl && supaKey && window.supabase && window.supabase.createClient) {
+        try {
+          var tmpClient = window.supabase.createClient(supaUrl, supaKey, { auth: { persistSession: false } });
+          var s = await tmpClient.auth.getSession();
+          if (s && s.data && s.data.session && s.data.session.user) {
+            detectedEmail = (s.data.session.user.email || '').toLowerCase();
+          }
+        } catch (e) {}
+      }
+    }
+    if (detectedEmail && TRUSTED_ADMIN_EMAILS.indexOf(detectedEmail) !== -1) {
+      console.warn('[cadu-admin] BYPASS email confiável (CAMADA 2): ' + detectedEmail);
+      window.__KC_ADMIN_TRUSTED_BYPASS = true;
+      window.__KC_ADMIN_EMAIL = detectedEmail;
+      return true;
+    }
+
+    // ============================================================
+    // CAMADA 3: driver check
+    // ============================================================
     var env = window.KC_ENV || (window.KCAPI && window.KCAPI.ENV) || {};
     var drv = env.driver || env.DATA_DRIVER;
     if (drv !== 'supabase') {
-      showAccessDenied('Este painel requer driver=supabase. Configure KC_ENV.driver="supabase" e recarregue.');
+      showAccessDenied('Este painel requer driver=supabase (atual: "' + drv + '"). Configure KC_ENV.driver="supabase" e recarregue.');
       return false;
     }
 
-    // Pegar usuário atual (Supabase Auth via cliente)
+    // ============================================================
+    // CAMADA 4: Supabase Auth session
+    // ============================================================
     var user = null;
     try {
       var sess = await client.auth.getSession();
       user = sess && sess.data && sess.data.session && sess.data.session.user;
     } catch (e) { /* fall through */ }
-
-    if (!user) {
-      // fallback: tentar via KCAPI
-      try {
-        if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-          user = await window.KCAPI.getCurrentUser();
-        }
-      } catch (e) { /* fall through */ }
+    if (!user && window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
+      try { user = await window.KCAPI.getCurrentUser(); } catch (e) {}
     }
 
     if (!user) {
@@ -147,15 +190,21 @@
       return false;
     }
 
-    // BYPASS DE EMERGÊNCIA: emails hardcoded na lista confiável
-    // (caso a profile esteja desatualizada com is_admin=false)
+    // ============================================================
+    // CAMADA 5: re-check bypass com email do user autenticado
+    // (caso CAMADA 2 não tenha conseguido extrair)
+    // ============================================================
     var userEmail = (user.email || '').toLowerCase();
     if (TRUSTED_ADMIN_EMAILS.indexOf(userEmail) !== -1) {
-      console.warn('[cadu-admin] bypass de email confiável: ' + userEmail);
+      console.warn('[cadu-admin] BYPASS email confiável (CAMADA 5): ' + userEmail);
       window.__KC_ADMIN_TRUSTED_BYPASS = true;
+      window.__KC_ADMIN_EMAIL = userEmail;
       return true;
     }
 
+    // ============================================================
+    // CAMADA 6: profile.is_admin (último recurso)
+    // ============================================================
     try {
       var res = await client.from('profiles').select('is_admin, display_name, full_name, email').eq('id', user.id).maybeSingle();
       var profile = res && res.data;
