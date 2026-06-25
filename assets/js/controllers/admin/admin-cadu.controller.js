@@ -621,7 +621,7 @@
       if (openclawState.lastSessionId) payload.session_id = openclawState.lastSessionId;
       if (deliverEl && deliverEl.checked) payload.deliver = true;
 
-      var resp = await apiFetch('/api/cadu/openclaw/agent/send', {
+      var resp = await apiFetch('/api/cadu/openclaw/agent-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -683,7 +683,7 @@
     var btn = $('#openclaw-trigger-heartbeat-btn');
     if (btn) btn.disabled = true;
     try {
-      var resp = await apiFetch('/api/cadu/openclaw/agent/event', {
+      var resp = await apiFetch('/api/cadu/openclaw/agent-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: 'Admin trigger from KinoCampus UI', agent: 'main' }),
