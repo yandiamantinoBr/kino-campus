@@ -821,7 +821,8 @@
         var heading = btn.getAttribute('data-ask-heading') || '';
         message = 'Resume e me diga o que faco com o chunk "' + heading + '" (id=' + chunkId + ').';
         // Tenta endpoint dedicado /api/feed/{id}/ask (cadu-api v0.4.6+)
-        var resp = await apiFetch('/api/cadu/feed/' + encodeURIComponent(chunkId) + '/ask', {
+        // via proxy consolidado /api/cadu/feed?path={chunk_id}/ask
+        var resp = await apiFetch('/api/cadu/feed?path=' + encodeURIComponent(chunkId + '/ask'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
