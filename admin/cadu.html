@@ -221,6 +221,18 @@
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
     .kc-cadu-publish-btn.is-ok { background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.4); color: #10b981; }
     .kc-cadu-publish-btn.is-err { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.4); color: #ef4444; }
+    /* ===== Botão "Perguntar Cadu" (cross-tab) ===== */
+    .kc-cadu-ask-btn { background: rgba(79,195,247,.10); border: 1px solid rgba(79,195,247,.32); color: #4fc3f7; border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
+    .kc-cadu-ask-btn:hover { background: rgba(79,195,247,.22); border-color: rgba(79,195,247,.55); }
+    .kc-cadu-ask-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .kc-cadu-ask-btn i { font-size: .82rem; }
+    /* notification bell + status indicator no hero */
+    .kc-cadu-hero-stats { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .kc-cadu-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .kc-cadu-status-dot--ok { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.18); }
+    .kc-cadu-status-dot--down { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
+    .kc-cadu-status-dot--loading { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.18); animation: kc-cadu-pulse 1.4s infinite; }
+    @keyframes kc-cadu-pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.1" />
 </head>
@@ -275,8 +287,10 @@
           <h1><i class="fas fa-robot"></i> Cadu (OpenClaw)</h1>
           <p>Curador de sites institucionais e perfis do Instagram da UFG. Dados ao vivo da VPS Hostinger via cadu-api.</p>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="kc-cadu-status is-loading" id="cadu-status-pill"><i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
-            <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><i class="fab fa-telegram"></i> Bot Telegram ativo</span>
+            <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
+            <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
+            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites+pipeline+feed+openclaw em 1 request)"><i class="fas fa-layer-group"></i> Context API</span>
+            <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
           </div>
         </div>
         <div class="kc-cadu-toolbar" style="margin:0;">

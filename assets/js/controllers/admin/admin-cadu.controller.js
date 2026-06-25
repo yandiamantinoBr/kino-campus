@@ -232,28 +232,54 @@
 
   async function checkHealth() {
     var pill = $('#cadu-status-pill');
+    var contextPill = $('#cadu-context-pill');
+    var versionPill = $('#cadu-version-pill');
+    var versionText = $('#cadu-version-text');
     try {
       var res = await fetch('/api/cadu/health', { headers: { Accept: 'application/json' } });
       var data = await res.json();
       if (res.ok && data && data.status === 'ok') {
         state.apiHealthy = true;
         setStatus(pill, null,
-          '<i class="fas fa-circle-check"></i> cadu-api online (v' + (data.version || '?') + ')');
+          '<span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fas fa-circle-check"></i> cadu-api online (v' + (data.version || '?') + ')');
         // atualiza KPI api
         $('#kpi-api').textContent = 'OK';
         $('#kpi-api-detail').textContent = 'ts ' + new Date(data.ts * 1000).toLocaleTimeString('pt-BR');
+        if (versionText) versionText.textContent = 'v' + (data.version || '?');
+        if (versionPill) versionPill.style.display = '';
+        // Probe se context endpoint existe (cadu-api v0.4.6+)
+        try {
+          var ctxRes = await fetch('/api/cadu/openclaw/context', { headers: { Accept: 'application/json' } });
+          if (ctxRes.ok) {
+            var ctx = await ctxRes.json();
+            state.openclawContext = ctx;
+            if (contextPill) {
+              contextPill.style.display = '';
+              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Context: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' chunks · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
+            }
+          } else {
+            state.openclawContext = null;
+            if (contextPill) contextPill.style.display = 'none';
+          }
+        } catch (_) {
+          state.openclawContext = null;
+        }
       } else {
         state.apiHealthy = false;
         setStatus(pill, 'is-down',
-          '<i class="fas fa-triangle-exclamation"></i> cadu-api respondeu ' + res.status);
+          '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> cadu-api respondeu ' + res.status);
         $('#kpi-api').textContent = 'OFF';
         $('#kpi-api-detail').textContent = (data && data.error) || 'ver logs';
+        if (contextPill) contextPill.style.display = 'none';
+        if (versionPill) versionPill.style.display = 'none';
       }
     } catch (err) {
       state.apiHealthy = false;
-      setStatus(pill, 'is-down', '<i class="fas fa-triangle-exclamation"></i> cadu-api inacessível');
+      setStatus(pill, 'is-down', '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> cadu-api inacessível');
       $('#kpi-api').textContent = 'OFF';
       $('#kpi-api-detail').textContent = 'fetch falhou';
+      if (contextPill) contextPill.style.display = 'none';
+      if (versionPill) versionPill.style.display = 'none';
     }
   }
 
@@ -360,7 +386,8 @@
       // OBSERVAÇÃO: textarea editável com auto-save
       var noteVal = s.note ? escapeHtml(s.note) : '';
       var noteHtml = '<div class="kc-cadu-note-cell"><textarea class="kc-cadu-note-input" data-field="note" data-name="' + escapeHtml(s.name) + '" placeholder="Adicionar observação..." rows="1">' + noteVal + '</textarea><span class="kc-cadu-save-status" data-site-save-status="' + escapeHtml(s.name) + '"></span></div>';
-      var actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button>';
+      var actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button>'
+        + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Perguntar ao Cadu sobre este site (vai para a aba OpenClaw)"><i class="fas fa-robot"></i></button>';
       return '<tr data-site-name="' + escapeHtml(s.name) + '">'
         + '<td>' + tierHtml + '</td>'
         + '<td><code>' + escapeHtml(s.name) + '</code></td>'
@@ -495,11 +522,13 @@
       var dt = fmtDate(it.created_at);
       var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : '—';
       var snippet = it.snippet || '(sem conteúdo)';
+      var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml((it.heading || '').replace(/"/g, '&quot;')) + '" title="Perguntar ao Cadu sobre esse chunk (vai para a aba OpenClaw)"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
       return '<article class="kc-cadu-feed-item">'
         + '<div class="kc-cadu-feed-item__head">'
         + '<i class="fas fa-hashtag"></i><code>' + escapeHtml(hash) + '</code>'
         + '<span>·</span><span>' + heading + '</span>'
         + '<span>·</span><span><i class="far fa-clock"></i> ' + dt + '</span>'
+        + '<span style="margin-left:auto;">' + askBtn + '</span>'
         + '</div>'
         + '<pre class="kc-cadu-feed-item__snippet">' + escapeHtml(snippet) + '</pre>'
         + '</article>';
@@ -772,9 +801,99 @@
     }
   }
 
+  // ============================================================
+  // Cross-tab: "Perguntar Cadu" a partir de Sites/Feed/Pipeline
+  // ============================================================
+
+  async function askCaduContext(ev) {
+    if (ev) ev.preventDefault();
+    var btn = ev && ev.currentTarget;
+    if (btn && btn.disabled) return false;
+    if (btn) btn.disabled = true;
+    try {
+      var kind = btn.getAttribute('data-ask-kind') || 'raw';
+      var sessionId = openclawState.lastSessionId || null;
+      var agentReq = 'main';
+      var message = '';
+
+      if (kind === 'feed') {
+        var chunkId = btn.getAttribute('data-ask-id') || '';
+        var heading = btn.getAttribute('data-ask-heading') || '';
+        message = 'Resume e me diga o que faco com o chunk "' + heading + '" (id=' + chunkId + ').';
+        // Tenta endpoint dedicado /api/feed/{id}/ask (cadu-api v0.4.6+)
+        var resp = await apiFetch('/api/cadu/feed/' + encodeURIComponent(chunkId) + '/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+        });
+        if (!resp || resp.__error) {
+          // Fallback: monta contexto inline + agent-send
+          message = '<chunk-context id="' + chunkId + '" heading="' + heading.replace(/"/g, "'") + '">' + (btn.getAttribute('data-ask-snippet') || '(conteudo sera carregado pelo Cadu)') + '</chunk-context>\n\n' + message;
+          resp = await apiFetch('/api/cadu/openclaw/agent-send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+          });
+        }
+        if (resp && !resp.__error) {
+          switchTab('openclaw');
+          setTimeout(refreshOpenclaw, 800);
+        }
+      } else if (kind === 'site') {
+        var siteName = btn.getAttribute('data-ask-name') || '';
+        var siteUrl = btn.getAttribute('data-ask-url') || '';
+        var siteIg = btn.getAttribute('data-ask-instagram') || '';
+        var siteTier = btn.getAttribute('data-ask-tier') || '';
+        message = '<site-context name="' + siteName + '" url="' + siteUrl + '" instagram="' + siteIg + '" tier="' + siteTier + '"></site-context>\n\nMe de um resumo rapido sobre o que voce sabe do site "' + siteName + '" (' + siteUrl + ') e o que vale destacar. Use os tiers e notas que voce tem em mente.';
+        var resp2 = await apiFetch('/api/cadu/openclaw/agent-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+        });
+        if (resp2 && !resp2.__error) {
+          switchTab('openclaw');
+          setTimeout(refreshOpenclaw, 800);
+        }
+      } else if (kind === 'pipeline') {
+        var runId = btn.getAttribute('data-ask-run-id') || '';
+        var stage = btn.getAttribute('data-ask-stage') || '';
+        var status = btn.getAttribute('data-ask-status') || '';
+        message = '<run-context id="' + runId + '" stage="' + stage + '" status="' + status + '"></run-context>\n\nAnalise a pipeline run "' + runId.slice(0, 8) + '..." (stage=' + stage + ', status=' + status + '). Voce pode buscar detalhes via /api/cadu/pipeline/' + runId + '/export.';
+        var resp3 = await apiFetch('/api/cadu/openclaw/agent-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+        });
+        if (resp3 && !resp3.__error) {
+          switchTab('openclaw');
+          setTimeout(refreshOpenclaw, 800);
+        }
+      }
+    } catch (e) {
+      console.error('askCaduContext error:', e);
+      try { alert('Erro ao enviar ao Cadu: ' + (e && e.message ? e.message : e)); } catch (_) {}
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+    return false;
+  }
+
+  // ============================================================
+  // Tabs + eventos
+  // ============================================================
+
   function bindEvents() {
     $$('.kc-cadu-tab').forEach(function (tab) {
       tab.addEventListener('click', function () { switchTab(tab.getAttribute('data-tab')); });
+    });
+
+    // Delegacao direta para "Perguntar Cadu" em qualquer container
+    document.addEventListener('click', function (ev) {
+      var t = ev.target;
+      var btn = t && t.closest ? t.closest('.kc-cadu-ask-btn') : null;
+      if (btn) {
+        askCaduContext({ preventDefault: function () {}, currentTarget: btn });
+      }
     });
 
     var sitesSearch = $('#sites-search');
