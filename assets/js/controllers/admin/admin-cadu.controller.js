@@ -467,6 +467,251 @@
         refreshPipeline();
       }
     }
+    var tabOpenclaw = $('#tab-openclaw');
+    if (tabOpenclaw) {
+      tabOpenclaw.style.display = name === 'openclaw' ? '' : 'none';
+      if (name === 'openclaw') {
+        refreshOpenclaw();
+      }
+    }
+  }
+
+  // ============================================================
+  // OpenClaw (v0.4.3) — integração direta com Cadu agent
+  // ============================================================
+
+  var openclawState = {
+    lastSessionId: null,
+    busy: false,
+  };
+
+  function fmtAgeMs(ms) {
+    if (!ms && ms !== 0) return '—';
+    var s = Math.floor(ms / 1000);
+    if (s < 60) return s + 's atrás';
+    if (s < 3600) return Math.floor(s / 60) + 'min atrás';
+    if (s < 86400) return Math.floor(s / 3600) + 'h atrás';
+    return Math.floor(s / 86400) + 'd atrás';
+  }
+
+  async function refreshOpenclaw() {
+    var statusBadge = $('#badge-openclaw');
+    var agentEl = $('#openclaw-stat-agent');
+    var tgEl = $('#openclaw-stat-telegram');
+    var hbEl = $('#openclaw-stat-heartbeat');
+    var tasksEl = $('#openclaw-stat-tasks');
+    var agentHint = $('#openclaw-stat-agent-hint');
+    var tgHint = $('#openclaw-stat-telegram-hint');
+    var hbHint = $('#openclaw-stat-heartbeat-hint');
+    var tasksHint = $('#openclaw-stat-tasks-hint');
+
+    try {
+      // 1. Status (consolidado: openclaw status --json + health)
+      var statusResp = await apiFetch('/api/cadu/openclaw/status');
+      if (!statusResp || statusResp.__error) {
+        if (statusBadge) statusBadge.textContent = '!';
+        if (agentEl) agentEl.textContent = 'offline';
+        if (agentHint) agentHint.textContent = statusResp && statusResp.data ? 'cadu-api sem permissão' : 'erro cadu-api';
+        return;
+      }
+      var st = statusResp.data || {};
+      var rawData = st.data || st;
+      var agents = rawData.agents && rawData.agents.agents ? rawData.agents.agents : [];
+      var defaultAgent = rawData.agents ? rawData.agents.defaultId : 'main';
+      var mainAgent = agents.find(function (a) { return a.id === defaultAgent; }) || agents[0];
+      var lastActiveMs = mainAgent ? (mainAgent.lastActiveAgeMs || 0) : 0;
+      var hb = rawData.heartbeat || {};
+      var hbEvery = hb.agents && hb.agents[0] ? hb.agents[0].every : '—';
+
+      // Agent
+      if (agentEl) agentEl.innerHTML = '<i class="fas fa-circle-check"></i> online';
+      if (agentHint) agentHint.innerHTML = (defaultAgent || 'main') + ' · deepseek-v4-pro · ctx 1M';
+
+      // Tasks
+      var tasks = rawData.tasks || {};
+      var failures = tasks.failures || 0;
+      var total = tasks.total || 0;
+      var succeeded = (tasks.byStatus && tasks.byStatus.succeeded) || 0;
+      if (tasksEl) {
+        tasksEl.innerHTML = (tasks.active || 0) + '/' + total;
+        tasksEl.style.color = (tasks.active > 0) ? '#4caf50' : '#888';
+      }
+      if (tasksHint) tasksHint.innerHTML = succeeded + ' OK · ' + failures + ' falhas';
+
+      // 2. Health (heartbeat, telegram)
+      var healthText = statusResp.health && statusResp.health.stdout ? statusResp.health.stdout : '';
+      var tgOk = /Telegram:\s*configured/i.test(healthText);
+      var hbOk = /Heartbeat/i.test(healthText);
+      if (tgEl) {
+        tgEl.innerHTML = tgOk ? '<i class="fas fa-circle-check"></i> ON' : '<i class="fas fa-circle-xmark"></i> off';
+        tgEl.style.color = tgOk ? '#4caf50' : '#f44336';
+      }
+      if (tgHint) tgHint.innerHTML = 'Bot: 8746…f8DM · 1/1 account';
+      if (hbEl) {
+        hbEl.innerHTML = hbOk ? '<i class="fas fa-circle-check"></i> ' + hbEvery : '—';
+      }
+      if (hbHint) hbHint.innerHTML = mainAgent ? ('última atividade: ' + fmtAgeMs(lastActiveMs)) : '—';
+
+      if (statusBadge) statusBadge.textContent = tasks.active > 0 ? '●' : 'ok';
+
+      // 3. Sessions recentes
+      var sessResp = await apiFetch('/api/cadu/openclaw/sessions?limit=8');
+      var sessList = $('#openclaw-sessions-list');
+      if (sessResp && !sessResp.__error && sessResp.data && sessResp.data.sessions) {
+        var sessions = sessResp.data.sessions;
+        // lembrar a sessão mais recente "direct" pra próxima msg
+        var lastDirect = sessions.find(function (s) { return s.kind === 'direct'; });
+        if (lastDirect) {
+          openclawState.lastSessionId = lastDirect.sessionId;
+          var ls = $('#openclaw-last-session');
+          if (ls) ls.textContent = lastDirect.sessionId.slice(0, 8) + '…';
+        }
+        if (sessList) {
+          if (sessions.length === 0) {
+            sessList.innerHTML = '<div class="kc-cadu-empty">Nenhuma sessão.</div>';
+          } else {
+            sessList.innerHTML = sessions.map(function (s) {
+              var kindIcon = s.kind === 'cron' ? 'fa-clock' : (s.kind === 'direct' ? 'fa-comments' : 'fa-circle');
+              var pct = s.percentUsed != null ? (' · ' + s.percentUsed + '% ctx') : '';
+              return '<div class="kc-openclaw-list-item">' +
+                '<div class="kc-openclaw-list-item__title"><i class="fas ' + kindIcon + '"></i> ' +
+                escapeHtml(s.kind || '?') + ' · ' + escapeHtml((s.model || '?').toString()) + '</div>' +
+                '<div class="kc-openclaw-list-item__meta">' +
+                escapeHtml((s.key || '').slice(0, 60)) +
+                ' · ' + fmtAgeMs(s.ageMs || (s.age ? s.age * 1000 : 0)) +
+                pct +
+                '</div></div>';
+            }).join('');
+          }
+        }
+      } else if (sessList) {
+        sessList.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar sessões.</div>';
+      }
+
+    } catch (e) {
+      if (agentEl) agentEl.textContent = 'erro';
+      if (agentHint) agentHint.textContent = String(e && e.message || e);
+    }
+  }
+
+  async function openclawSendChat(ev) {
+    if (ev) ev.preventDefault();
+    if (openclawState.busy) return false;
+    var input = $('#openclaw-chat-input');
+    var log = $('#openclaw-chat-log');
+    var status = $('#openclaw-chat-status');
+    var btn = $('#openclaw-chat-send-btn');
+    var deliverEl = $('#openclaw-chat-deliver');
+    if (!input || !log) return false;
+    var msg = (input.value || '').trim();
+    if (!msg) {
+      if (status) status.textContent = '⚠️ mensagem vazia';
+      return false;
+    }
+    openclawState.busy = true;
+    if (btn) btn.disabled = true;
+    if (status) status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadu pensando…';
+
+    // Render user msg
+    appendChatMsg('user', msg, null);
+    input.value = '';
+
+    try {
+      var payload = { message: msg, agent: 'main' };
+      if (openclawState.lastSessionId) payload.session_id = openclawState.lastSessionId;
+      if (deliverEl && deliverEl.checked) payload.deliver = true;
+
+      var resp = await apiFetch('/api/cadu/openclaw/agent/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!resp || resp.__error) {
+        appendChatMsg('cadu', '[erro: ' + (resp ? JSON.stringify(resp.data || resp.message || resp) : 'sem resposta') + ']', null);
+        if (status) status.textContent = '❌ Falhou';
+        return false;
+      }
+      var data = resp.data || {};
+      var payloads = (data.result && data.result.payloads) || [];
+      var text = '';
+      for (var i = 0; i < payloads.length; i++) {
+        if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
+      }
+      if (!text && data.summary) text = '(sem texto de retorno — summary: ' + escapeHtml(data.summary) + ')';
+      var meta = (data.result && data.result.meta) || {};
+      var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '?s';
+      var usage = meta.agentMeta ? (' · in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
+      appendChatMsg('cadu', text.trim() || '(resposta vazia)', dur + usage);
+
+      // atualizar session_id se o run criou nova
+      if (data.runId && meta.agentMeta && meta.agentMeta.sessionId) {
+        openclawState.lastSessionId = meta.agentMeta.sessionId;
+        var ls = $('#openclaw-last-session');
+        if (ls) ls.textContent = meta.agentMeta.sessionId.slice(0, 8) + '…';
+      }
+      if (status) status.textContent = '✅ ' + (data.summary || 'ok') + ' (' + dur + ')';
+      // re-render status pra atualizar lastActive
+      setTimeout(refreshOpenclaw, 1500);
+    } catch (e) {
+      appendChatMsg('cadu', '[exception: ' + String(e && e.message || e) + ']', null);
+      if (status) status.textContent = '❌ Exception';
+    } finally {
+      openclawState.busy = false;
+      if (btn) btn.disabled = false;
+    }
+    return false;
+  }
+
+  function appendChatMsg(role, text, meta) {
+    var log = $('#openclaw-chat-log');
+    if (!log) return;
+    if (log.querySelector('.kc-cadu-empty')) log.innerHTML = '';
+    var div = document.createElement('div');
+    div.className = 'kc-openclaw-chat-msg kc-openclaw-chat-msg--' + role;
+    var roleLabel = role === 'user' ? 'VOCÊ' : 'CADU';
+    var html = '<div class="kc-openclaw-chat-msg__role">' + roleLabel + '</div>' +
+               '<div class="kc-openclaw-chat-msg__text">' + escapeHtml(text || '') + '</div>';
+    if (meta) html += '<div class="kc-openclaw-chat-msg__meta">' + escapeHtml(meta) + '</div>';
+    div.innerHTML = html;
+    log.appendChild(div);
+    // auto-scroll
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function openclawTriggerHeartbeat() {
+    var btn = $('#openclaw-trigger-heartbeat-btn');
+    if (btn) btn.disabled = true;
+    try {
+      var resp = await apiFetch('/api/cadu/openclaw/agent/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'Admin trigger from KinoCampus UI', agent: 'main' }),
+      });
+      if (resp && !resp.__error) {
+        setTimeout(refreshOpenclaw, 1500);
+      }
+    } catch (e) {}
+    finally { if (btn) btn.disabled = false; }
+  }
+
+  async function openclawShowLogs() {
+    var box = $('#openclaw-logs-box');
+    var pre = $('#openclaw-logs-pre');
+    if (!box || !pre) return;
+    if (!box.hidden) { box.hidden = true; return; }
+    pre.textContent = 'Carregando…';
+    box.hidden = false;
+    try {
+      var resp = await apiFetch('/api/cadu/openclaw/logs?limit=100');
+      if (resp && !resp.__error) {
+        pre.textContent = (resp.stdout || '') + (resp.stderr ? '\n[stderr]\n' + resp.stderr : '');
+      } else {
+        pre.textContent = 'Erro: ' + (resp ? JSON.stringify(resp) : 'sem resposta');
+      }
+    } catch (e) {
+      pre.textContent = 'Exception: ' + e.message;
+    }
   }
 
   function bindEvents() {
@@ -480,6 +725,26 @@
     sitesSearch.addEventListener('input', function () { state.sitesFilter.q = sitesSearch.value; applySitesFilter(); });
     sitesTier.addEventListener('change', function () { state.sitesFilter.tier = sitesTier.value; applySitesFilter(); });
     sitesIg.addEventListener('change', function () { state.sitesFilter.ig = sitesIg.value; applySitesFilter(); });
+
+    // OpenClaw (v0.4.3)
+    var ocRefresh = $('#openclaw-refresh-btn');
+    if (ocRefresh) ocRefresh.addEventListener('click', refreshOpenclaw);
+    var ocForm = $('#openclaw-chat-form');
+    if (ocForm) ocForm.addEventListener('submit', openclawSendChat);
+    var ocHeartbeat = $('#openclaw-trigger-heartbeat-btn');
+    if (ocHeartbeat) ocHeartbeat.addEventListener('click', openclawTriggerHeartbeat);
+    var ocLogs = $('#openclaw-show-logs-btn');
+    if (ocLogs) ocLogs.addEventListener('click', openclawShowLogs);
+    // Enter no textarea envia (Shift+Enter quebra linha)
+    var ocInput = $('#openclaw-chat-input');
+    if (ocInput) {
+      ocInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          openclawSendChat();
+        }
+      });
+    }
 
     $('#sites-export-csv').addEventListener('click', function () {
       var rows = [['name','tier','category','url','instagram','instagram_status','note']];
@@ -863,6 +1128,11 @@
   setInterval(function () {
     if (state.currentTab === 'pipeline') refreshPipeline();
   }, 5000);
+
+  // Auto-refresh do OpenClaw a cada 15s quando na aba
+  setInterval(function () {
+    if (state.currentTab === 'openclaw') refreshOpenclaw();
+  }, 15000);
 
   async function refreshAll() {
     var loading = $('#cadu-loading');

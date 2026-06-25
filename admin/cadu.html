@@ -42,6 +42,86 @@
     .kc-cadu-section { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 18px; padding: 16px; min-width: 0; }
     .kc-cadu-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; padding: 24px 0; text-align: center; }
     .kc-cadu-table-wrap { overflow-x: auto; min-width: 0; }
+
+/* ===== OpenClaw section ===== */
+.kc-openclaw-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-top: 12px; }
+@media (max-width: 900px) { .kc-openclaw-grid { grid-template-columns: 1fr; } }
+.kc-openclaw-panel {
+  background: var(--kc-bg-card-dark, #1e1e22);
+  border: 1px solid var(--kc-border-dark, #333);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.kc-openclaw-panel h3 { margin: 0 0 8px; font-size: 1rem; color: var(--kc-primary-brand, #ff6b00); }
+.kc-openclaw-chat-log {
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--kc-border-dark, #333);
+  border-radius: 6px;
+  padding: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  font-family: ui-monospace, 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.kc-openclaw-chat-msg { margin-bottom: 8px; }
+.kc-openclaw-chat-msg__role {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+.kc-openclaw-chat-msg--user .kc-openclaw-chat-msg__role { color: #4fc3f7; }
+.kc-openclaw-chat-msg--cadu .kc-openclaw-chat-msg__role { color: #ff6b00; }
+.kc-openclaw-chat-msg__text { color: #e0e0e0; white-space: pre-wrap; word-wrap: break-word; }
+.kc-openclaw-chat-msg__meta { color: #888; font-size: 0.72rem; margin-top: 2px; }
+.kc-openclaw-chat-form { display: flex; flex-direction: column; gap: 8px; }
+.kc-openclaw-chat-form textarea {
+  width: 100%;
+  background: rgba(0,0,0,.3);
+  border: 1px solid var(--kc-border-dark, #333);
+  color: #e0e0e0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 56px;
+}
+.kc-openclaw-chat-form-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kc-openclaw-chat-form-row label { color: #aaa; font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
+.kc-openclaw-chat-status { color: #888; font-size: 0.82rem; min-height: 18px; }
+.kc-openclaw-list { font-size: 0.85rem; max-height: 320px; overflow-y: auto; }
+.kc-openclaw-list-item {
+  padding: 8px 10px;
+  border-left: 3px solid var(--kc-primary-brand, #ff6b00);
+  background: rgba(255,107,0,.04);
+  margin-bottom: 6px;
+  border-radius: 0 4px 4px 0;
+}
+.kc-openclaw-list-item__title { font-weight: 600; color: #e0e0e0; }
+.kc-openclaw-list-item__meta { color: #888; font-size: 0.74rem; margin-top: 2px; }
+.kc-openclaw-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.kc-openclaw-logs { margin-top: 12px; }
+.kc-openclaw-logs pre {
+  background: rgba(0,0,0,.4);
+  color: #b0b0b0;
+  border: 1px solid var(--kc-border-dark, #333);
+  border-radius: 4px;
+  padding: 10px;
+  max-height: 300px;
+  overflow: auto;
+  font-size: 0.74rem;
+  line-height: 1.3;
+  margin: 0;
+}
+.kc-cadu-stat-card__hint { color: #888; font-size: 0.74rem; margin-top: 4px; min-height: 18px; }
+.kc-btn-secondary, .kc-btn-primary { cursor: pointer; border-radius: 6px; padding: 7px 12px; font-size: 0.85rem; border: 1px solid var(--kc-border-dark, #444); }
+.kc-btn-secondary { background: rgba(255,255,255,.04); color: #e0e0e0; }
+.kc-btn-primary { background: var(--kc-primary-brand, #ff6b00); color: #fff; border-color: var(--kc-primary-brand, #ff6b00); font-weight: 600; }
+.kc-btn-secondary:disabled, .kc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 700px; }
     .kc-cadu-table th, .kc-cadu-table td { padding: 9px 8px; border-bottom: 1px solid var(--kc-border-dark); text-align: left; font-size: .85rem; vertical-align: top; }
     .kc-cadu-table th { font-weight: 600; color: var(--kc-text-dark-secondary); text-transform: uppercase; font-size: .74rem; letter-spacing: .05em; }
@@ -223,6 +303,9 @@
         <button class="kc-cadu-tab" data-tab="pipeline" role="tab">
           <i class="fas fa-gears"></i> Pipeline <span class="kc-cadu-tab__badge" id="badge-pipeline">—</span>
         </button>
+        <button class="kc-cadu-tab" data-tab="openclaw" role="tab">
+          <i class="fas fa-robot"></i> OpenClaw <span class="kc-cadu-tab__badge" id="badge-openclaw">—</span>
+        </button>
       </div>
 
       <!-- ============== TAB: SITES ============== -->
@@ -319,6 +402,90 @@
         </div>
         <div id="feed-list" aria-live="polite">
           <div class="kc-cadu-empty">Carregando…</div>
+        </div>
+      </section>
+
+      <section class="kc-cadu-section" id="tab-openclaw" role="tabpanel" style="display:none;">
+        <div class="kc-cadu-section-header">
+          <h2><i class="fas fa-robot"></i> OpenClaw (Cadu agent)</h2>
+          <div class="kc-cadu-section-actions">
+            <button type="button" id="openclaw-refresh-btn" class="kc-btn-secondary"><i class="fas fa-rotate"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <!-- Status cards (4 KPIs OpenClaw) -->
+        <div class="kc-cadu-stats">
+          <div class="kc-cadu-stat-card">
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-robot"></i> AGENT</div>
+            <div class="kc-cadu-stat-card__value" id="openclaw-stat-agent">—</div>
+            <div class="kc-cadu-stat-card__hint" id="openclaw-stat-agent-hint">—</div>
+          </div>
+          <div class="kc-cadu-stat-card">
+            <div class="kc-cadu-stat-card__label"><i class="fab fa-telegram"></i> TELEGRAM</div>
+            <div class="kc-cadu-stat-card__value" id="openclaw-stat-telegram">—</div>
+            <div class="kc-cadu-stat-card__hint" id="openclaw-stat-telegram-hint">—</div>
+          </div>
+          <div class="kc-cadu-stat-card">
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-heartbeat"></i> HEARTBEAT</div>
+            <div class="kc-cadu-stat-card__value" id="openclaw-stat-heartbeat">—</div>
+            <div class="kc-cadu-stat-card__hint" id="openclaw-stat-heartbeat-hint">—</div>
+          </div>
+          <div class="kc-cadu-stat-card">
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-tasks"></i> TASKS</div>
+            <div class="kc-cadu-stat-card__value" id="openclaw-stat-tasks">—</div>
+            <div class="kc-cadu-stat-card__hint" id="openclaw-stat-tasks-hint">—</div>
+          </div>
+        </div>
+
+        <div class="kc-openclaw-grid">
+          <!-- LEFT: Chat com Cadu -->
+          <div class="kc-openclaw-panel kc-openclaw-chat">
+            <h3><i class="fas fa-comments"></i> Chat com Cadu</h3>
+            <p class="kc-cadu-empty-sub">
+              Envia mensagem direta pro agente. Cadu responde usando suas skills (browser, canvas, sigaa-scraper, etc.).
+              <br>Última sessão: <code id="openclaw-last-session">—</code>
+            </p>
+            <div id="openclaw-chat-log" class="kc-openclaw-chat-log" aria-live="polite">
+              <div class="kc-cadu-empty">Sem mensagens ainda. Envia algo abaixo.</div>
+            </div>
+            <form id="openclaw-chat-form" class="kc-openclaw-chat-form" autocomplete="off">
+              <textarea id="openclaw-chat-input" rows="2" maxlength="4000"
+                placeholder="Ex: 'Quais posts do IG da UFG foram publicados hoje?' ou 'Sincroniza o SIGAA'…"></textarea>
+              <div class="kc-openclaw-chat-form-row">
+                <label>
+                  <input type="checkbox" id="openclaw-chat-deliver" checked>
+                  Salvar na sessão (session-id mantém contexto)
+                </label>
+                <button type="submit" id="openclaw-chat-send-btn" class="kc-btn-primary">
+                  <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+              </div>
+              <div class="kc-openclaw-chat-status" id="openclaw-chat-status"></div>
+            </form>
+          </div>
+
+          <!-- RIGHT: Sessions + Heartbeat -->
+          <div class="kc-openclaw-panel">
+            <h3><i class="fas fa-clock-rotate-left"></i> Sessões recentes</h3>
+            <div id="openclaw-sessions-list" class="kc-openclaw-list">
+              <div class="kc-cadu-empty">Carregando…</div>
+            </div>
+
+            <h3 style="margin-top:18px;"><i class="fas fa-bolt"></i> Ações rápidas</h3>
+            <div class="kc-openclaw-actions">
+              <button type="button" id="openclaw-trigger-heartbeat-btn" class="kc-btn-secondary">
+                <i class="fas fa-heart-pulse"></i> Trigger Heartbeat
+              </button>
+              <button type="button" id="openclaw-show-logs-btn" class="kc-btn-secondary">
+                <i class="fas fa-file-lines"></i> Ver logs do Gateway
+              </button>
+            </div>
+
+            <div id="openclaw-logs-box" class="kc-openclaw-logs" hidden>
+              <h4>Logs do Gateway</h4>
+              <pre id="openclaw-logs-pre"></pre>
+            </div>
+          </div>
         </div>
       </section>
 
