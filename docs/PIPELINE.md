@@ -1,6 +1,6 @@
 # KinoCampus + Cadu (OpenClaw) — Pipeline Documentation
 
-Documentação canônica da pipeline automatizada do Cadu. Esta é a **fonte de verdade** — o admin UI (`/admin/cadu.html`) consome via cadu-api v0.4.0+ e o VPS Hostinger `srv1597083.hstgr.cloud` executa via `docker exec` no container `openclaw-hahq-openclaw-1`.
+Documentação canônica da pipeline automatizada do Cadu. Esta é a **fonte de verdade** — o admin UI (`/admin/cadu.html`) consome via cadu-api v0.4.2+ e o VPS Hostinger `srv1597083.hstgr.cloud` executa via `docker exec` no container `openclaw-hahq-openclaw-1`.
 
 ## Arquitetura
 
@@ -16,8 +16,11 @@ Documentação canônica da pipeline automatizada do Cadu. Esta é a **fonte de 
                   │ HTTPS + Bearer token
                   v
 ┌──────────────────────────────────────┐
-│ cadu-api v0.4.1 (FastAPI, VPS)       │  ← Orquestra runs + persiste
+│ cadu-api v0.4.2 (FastAPI, VPS)       │  ← Orquestra runs + persiste
 │ - Python 3.12 + Docker socket        │
+│ - Dedup automático (sem runs paralelos do mesmo stage)
+│ - Popen polling (detecta término real, não /proc/PID)
+│ - SSE heartbeat :keepalive a cada 15s│
 └─────────────────┬────────────────────┘
                   │ subprocess docker exec
                   v
@@ -77,7 +80,9 @@ Logs de cada run em `/data/cadu-pipeline-logs/{run_id}.log` (volume persistente,
 
 ## Reaper background
 
-Loop de 5s detecta runs `running` cujo PID morreu sem finalizar. Marca como `failed` automaticamente. Inicia no startup via `lifespan` do FastAPI.
+**v0.4.2 — correção crítica do reaper**: o reaper original usava `os.kill(pid, 0)` para detectar término do subprocess, mas o PID retornado pelo `subprocess.Popen` no cadu-api é do `docker exec` no namespace cadu-api — quando o bash dentro faz `exec node`, o PID original morre mas o `node` continua rodando dentro do `openclaw-hahq-openclaw-1` container (PID diferente em outro namespace).
+
+**Solução v0.4.2**: reaper mantém `dict[run_id, Popen]` em memória e usa `proc.poll()` (que reflete corretamente o término do docker exec group). Adicionalmente, faz reconciliação de runs órfãos (sem handle, de sessões anteriores do cadu-api) marcando como `failed` após 5 min.
 
 ## Cron diário (sugestão — ainda não configurado)
 
@@ -112,8 +117,16 @@ Loop de 5s detecta runs `running` cujo PID morreu sem finalizar. Marca como `fai
 
 - **Vercel serverless timeout (10-60s)** impede SSE via proxy — clients devem chamar cadu-api direto via Traefik
 - **Sem retry automático** em caso de falha de subprocess — admin deve disparar manualmente
-- **Não há lock de execução** — se disparar 2 curators simultâneos, ambos rodam (mas é raro na prática)
-- **catálogo duplicado** (Python hardcoded + JSON de docs) — alvo: ler do JSON no futuro
+- **Catálogo duplicado** (Python hardcoded + JSON de docs) — alvo: ler do JSON no futuro
+- **Browser CDP porta 18800** precisa estar rodando dentro do `openclaw-hahq-openclaw-1` para estágios `ig`, `curator`, `duplicates` (que usam Playwright). Iniciar com `docker exec openclaw-hahq-openclaw-1 openclaw browser start`
+
+## Comportamentos v0.4.2 (vs v0.4.1)
+
+- **Dedup automático**: se já existe run `running` para um stage, novo POST `/api/pipeline/run` retorna **409 Conflict** com `existing_run_id` no body. UI mostra "⛔ Já existe um run ativo para X".
+- **SSE heartbeat**: `:keepalive` enviado a cada 15s previne reconexão por inatividade (proxies Cloudflare/Traefik/nginx podem fechar conexão sem dados por ~30s).
+- **SSE aceita `?token=xxx`** no endpoint `/stream` (workaround para EventSource que não suporta Authorization header). Mesma validação do Bearer token.
+- **Stop robusto**: `stop_run()` usa `proc.terminate()` no handle em memória, com fallback `kill()` após 5s timeout.
+- **Cleanup automático**: histórico limitado aos últimos `CADU_PIPELINE_MAX_HISTORY=100` runs (configurável via env var).
 
 ## Roadmap
 
