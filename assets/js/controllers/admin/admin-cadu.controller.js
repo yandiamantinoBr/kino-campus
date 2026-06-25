@@ -102,6 +102,14 @@
   // Auth gate (mesmo padrão de admin-reports / admin-moderation)
   // ============================================================
 
+  // Emails hardcoded de admins confiáveis (último recurso se profile.is_admin
+  // estiver desatualizado). Manter sincronizado com admin-cadu.html.
+  var TRUSTED_ADMIN_EMAILS = [
+    'yandiamantino@egresso.ufg.br',
+    'yan1nakamura@gmail.com',
+    'yan1nakamura+cadu.kinocampus@gmail.com',
+  ];
+
   async function checkAdminAccess() {
     // DEV ONLY: bypass via ?test_bypass=kc_admin_2026 — APENAS PARA DEBUG VISUAL.
     // Permite testar a UI sem login real. Não usar em produção.
@@ -139,16 +147,25 @@
       return false;
     }
 
+    // BYPASS DE EMERGÊNCIA: emails hardcoded na lista confiável
+    // (caso a profile esteja desatualizada com is_admin=false)
+    var userEmail = (user.email || '').toLowerCase();
+    if (TRUSTED_ADMIN_EMAILS.indexOf(userEmail) !== -1) {
+      console.warn('[cadu-admin] bypass de email confiável: ' + userEmail);
+      window.__KC_ADMIN_TRUSTED_BYPASS = true;
+      return true;
+    }
+
     try {
-      var res = await client.from('profiles').select('is_admin, display_name, full_name').eq('id', user.id).maybeSingle();
+      var res = await client.from('profiles').select('is_admin, display_name, full_name, email').eq('id', user.id).maybeSingle();
       var profile = res && res.data;
       var error = res && res.error;
       if (error || !profile) {
-        showAccessDenied('Não foi possível carregar seu perfil.');
+        showAccessDenied('Não foi possível carregar seu perfil: ' + (error ? error.message : 'not found') + '. Se você é admin, peça grant-admin via `node scripts/grant-admin.js ' + userEmail + '`');
         return false;
       }
       if (!profile.is_admin) {
-        showAccessDenied('Apenas administradores podem acessar este painel.');
+        showAccessDenied('Sua conta (' + userEmail + ') não tem is_admin=true. Se você é admin, peça grant-admin via `node scripts/grant-admin.js ' + userEmail + '`');
         return false;
       }
       return true;
