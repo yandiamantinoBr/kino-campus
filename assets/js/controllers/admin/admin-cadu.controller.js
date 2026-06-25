@@ -988,23 +988,19 @@
 
   function connectPipelineStream(runId) {
     disconnectPipelineStream();
-    // v0.4.3: SSE via Vercel Edge Function proxy (mesmo domínio = CSP OK).
-    // Edge Function faz streaming nativo (sem timeout curto de serverless).
-    // cadu-api v0.4.2+ aceita ?token=... no endpoint /stream.
+    // v0.4.4: SSE via Vercel rewrite → pipeline-router.
+    // Vercel rewrite manda source path via query ?path=, router parseia e
+    // encaminha pra cadu-api com path completo.
     var cfg = getCaduConfig();
     if (!cfg.url) return;
-    // cfg.url pode ser:
-    //   - absoluto: "https://www.kinocampus.com.br/api/cadu" (Vercel proxy)
-    //   - absoluto: "https://api.openclaw-hahq.srv1597083.hstgr.cloud" (VPS direta, fallback)
-    // Se termina com "/api/cadu", sufixo é "/pipeline/{id}/stream" (Vercel proxy).
-    // Se termina com hostname, sufixo é "/api/pipeline/{id}/stream" (VPS direta).
-    var streamPath;
+    var url;
     if (cfg.url.replace(/\/$/, '').endsWith('/api/cadu')) {
-      streamPath = '/pipeline/' + runId + '/stream';
+      // Vercel proxy: URL pública é /pipeline/{id}/stream (rewrite → pipeline-router)
+      url = cfg.url.replace(/\/$/, '') + '/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
     } else {
-      streamPath = '/api/pipeline/' + runId + '/stream';
+      // VPS direta
+      url = cfg.url.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
     }
-    var url = cfg.url.replace(/\/$/, '') + streamPath + '?follow=true&token=' + encodeURIComponent(cfg.token);
 
     try {
       var es = new EventSource(url, { withCredentials: false });
@@ -1106,6 +1102,7 @@
 
   async function stopPipelineRun(runId) {
     if (!confirm('Parar este run? O subprocess será morto via SIGTERM.')) return;
+    // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
     var resp = await apiFetch('/api/cadu/pipeline/' + runId + '/stop', { method: 'POST' });
     if (resp && resp.ok) {
       refreshPipeline();

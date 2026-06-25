@@ -1,6 +1,6 @@
-// KinoCampus — proxy Vercel catch-all: /api/cadu/pipeline/[...path] → cadu-api
-//
-// Pega sub-paths: /run, /{id}, /{id}/stop, /{id}/stream
+// KinoCampus — proxy Vercel: /api/cadu/pipeline-router (1 function)
+// Recebe qualquer sub-path via rewrite + query ?path=<sub-path>
+// Pega: /run, /{id}, /{id}/stop, /{id}/stream
 // SSE via res.write() (Node serverless + Fluid Compute, maxDuration:300 = 5min)
 
 export const config = {
@@ -19,18 +19,30 @@ export default async function handler(req, res) {
     return res.status(503).json({ ok: false, error: 'CADU_API_URL/TOKEN not configured' });
   }
 
-  // Detecta sub-path: req.query.path (modo catch-all) ou req.url (modo "exact")
+  // sub-path vem via query string (Vercel rewrite: ?path=$1)
   let subPath = '';
-  if (Array.isArray(req.query.path) && req.query.path.length) {
+  if (Array.isArray(req.query.path)) {
     subPath = req.query.path.join('/');
+  } else if (typeof req.query.path === 'string') {
+    subPath = req.query.path;
   } else {
-    subPath = (req.url || '').split('?')[0].replace(/^\/api\/cadu\/pipeline\/?/, '').replace(/^\//, '');
+    // fallback: parse de req.url (caso rewrite não passe ?path)
+    subPath = (req.url || '').split('?')[0].replace(/^\/api\/cadu\/pipeline-router\/?/, '').replace(/^\//, '');
   }
-  const queryString = (req.url || '').includes('?') ? req.url.split('?')[1] : '';
-  const targetUrl = `${CADU_API_URL.replace(/\/$/, '')}/api/pipeline${subPath ? '/' + subPath : ''}${queryString ? '?' + queryString : ''}`;
+
+  // query string original do cliente (preserva ?token=xxx)
+  const clientQueryString = (req.url || '').includes('?') ? req.url.split('?')[1] : '';
+  const clientQs = new URLSearchParams(clientQueryString);
+  // remove 'path' (injetado pelo rewrite)
+  clientQs.delete('path');
+  const finalQueryString = clientQs.toString();
+
+  const targetUrl = `${CADU_API_URL.replace(/\/$/, '')}/api/pipeline${subPath ? '/' + subPath : ''}${finalQueryString ? '?' + finalQueryString : ''}`;
 
   // SSE: GET + path termina com "/stream"
   const isSSE = req.method === 'GET' && subPath.endsWith('/stream');
+
+  console.log(`[api/cadu/pipeline-router] ${req.method} ${subPath || '(root)'} isSSE=${isSSE} → ${targetUrl.replace(CADU_API_TOKEN, '***')}`);
 
   try {
     if (isSSE) {
@@ -61,12 +73,10 @@ export default async function handler(req, res) {
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
-          if (value) {
-            res.write(decoder.decode(value, { stream: true }));
-          }
+          if (value) res.write(decoder.decode(value, { stream: true }));
         }
       } catch (e) {
-        console.error('[api/cadu/pipeline/.../stream] SSE error:', e.message);
+        console.error('[api/cadu/pipeline-router] SSE error:', e.message);
       } finally {
         res.end();
       }

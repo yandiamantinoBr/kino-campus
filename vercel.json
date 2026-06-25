@@ -8,7 +8,9 @@
     { "source": "/product.html", "destination": "/api/og-product" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/mensagens", "destination": "/mensagens.html" },
-    { "source": "/auth/callback", "destination": "/auth-callback.html" }
+    { "source": "/auth/callback", "destination": "/auth-callback.html" },
+    { "source": "/api/cadu/pipeline/(.+)", "destination": "/api/cadu/pipeline-router?path=$1" },
+    { "source": "/api/cadu/openclaw/(.+)", "destination": "/api/cadu/openclaw-router?path=$1" }
   ],
   "headers": [
     {
