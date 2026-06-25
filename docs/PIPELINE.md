@@ -118,7 +118,41 @@ Logs de cada run em `/data/cadu-pipeline-logs/{run_id}.log` (volume persistente,
 - **Vercel serverless timeout (10-60s)** impede SSE via proxy — clients devem chamar cadu-api direto via Traefik
 - **Sem retry automático** em caso de falha de subprocess — admin deve disparar manualmente
 - **Catálogo duplicado** (Python hardcoded + JSON de docs) — alvo: ler do JSON no futuro
-- **Browser CDP porta 18800** precisa estar rodando dentro do `openclaw-hahq-openclaw-1` para estágios `ig`, `curator`, `duplicates` (que usam Playwright). Iniciar com `docker exec openclaw-hahq-openclaw-1 openclaw browser start`
+
+## Browser CDP (Chrome DevTools Protocol)
+
+Estágios `ig`, `curator`, `duplicates` (e qualquer futuro que use Playwright/headless browser) precisam de Chrome rodando dentro do `openclaw-hahq-openclaw-1` na porta `18800`.
+
+### Verificar status
+```bash
+ssh root@187.77.37.25 'docker exec openclaw-hahq-openclaw-1 python3 -c "
+import socket
+s = socket.socket()
+s.settimeout(2)
+try:
+    s.connect((chr(49)+chr(50)+chr(55)+chr(46)+chr(48)+chr(46)+chr(48)+chr(46)+chr(49), 18800))
+    print(\"CDP UP\")
+except: print(\"CDP DOWN\")"'
+```
+O container NÃO tem `nc`/`netstat`/`ss` — usar Python (ou `curl http://127.0.0.1:18800/json/version`).
+
+### Iniciar
+```bash
+ssh root@187.77.37.25 'docker exec openclaw-hahq-openclaw-1 openclaw browser start'
+```
+Resposta esperada: `🦞 browser [openclaw] running: true (headless)`.
+
+### Auto-restart
+Adicionar ao crontab do host (roda a cada 5 min):
+```cron
+*/5 * * * * docker exec openclaw-hahq-openclaw-1 sh -c "echo Q | nc -w 1 127.0.0.1 18800 2>/dev/null || openclaw browser start"
+```
+(Detalhe: `nc` não está no container; usar Python via wrapper script.)
+
+### Bug conhecido do scanner IG (Chrome 149+)
+Antes da v4.4.3, `scripts/scan-ig-browser.js` filtrava `!t.url.startsWith('chrome://')` ao listar pages — Chrome 149 só abre `chrome://newtab/`, então scanner abortava com `❌ Nenhuma página aberta no browser.`
+
+**Fix (v4.4.3)**: aceita `chrome://newtab/` como starting point (o scanner navega pra URL real via `Page.navigate`). Localizado em `scripts/scan-ig-browser.js` linhas 580-595.
 
 ## Comportamentos v0.4.2 (vs v0.4.1)
 
