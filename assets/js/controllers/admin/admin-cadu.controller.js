@@ -294,38 +294,96 @@
     renderSitesTable();
   }
 
+  // Auto-save debounce timers keyed by unit name
+  var _saveTimers = {};
+  function scheduleSiteSave(site, field, value) {
+    var key = site.name;
+    var pending = (_saveTimers[key] = _saveTimers[key] || {});
+    pending[field] = value;
+    clearTimeout(pending._t);
+    pending._t = setTimeout(function () {
+      commitSiteSave(site, pending);
+      delete _saveTimers[key];
+    }, 700);
+    var statusEl = document.querySelector('[data-site-save-status="' + cssEscape(key) + '"]');
+    if (statusEl) { statusEl.innerHTML = '<i class="fas fa-clock"></i>'; }
+  }
+  async function commitSiteSave(site, payload) {
+    var key = site.name;
+    var statusEl = document.querySelector('[data-site-save-status="' + cssEscape(key) + '"]');
+    try {
+      var body = {};
+      if (payload.tier !== undefined) body.tier = payload.tier;
+      if (payload.note !== undefined) body.note = payload.note;
+      var res = await fetch('/api/cadu/sites/' + encodeURIComponent(key) + '/meta', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      var data = await res.json().catch(function () { return null; });
+      if (!res.ok) throw new Error((data && (data.message || data.detail)) || ('status ' + res.status));
+      if (statusEl) { statusEl.innerHTML = '<i class="fas fa-check" style="color:#10b981;"></i>'; setTimeout(function(){ if (statusEl) statusEl.innerHTML = ''; }, 2500); }
+      if (data && data.tier !== undefined) site.tier = data.tier;
+      if (data && data.note !== undefined) site.note = data.note;
+      computeKpis();
+    } catch (err) {
+      if (statusEl) { statusEl.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:#ef4444;"></i>'; setTimeout(function(){ if (statusEl) statusEl.innerHTML = ''; }, 4000); }
+      showCaduError('Erro ao salvar ' + key + ': ' + (err && err.message ? err.message : err));
+      setTimeout(hideCaduError, 6000);
+    }
+  }
+
   function renderSitesTable() {
     var tbody = $('#sites-tbody');
-    if (!state.filteredSites.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Nenhuma unidade corresponde ao filtro.</td></tr>';
-      return;
-    }
+    if (!tbody) return;
+    if (!state.filteredSites.length) { tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Nenhuma unidade corresponde ao filtro.</td></tr>'; return; }
     tbody.innerHTML = state.filteredSites.map(function (s) {
       var key = s.name + '|' + (s.url || '');
-      var tierHtml = s.tier
-        ? '<span class="kc-cadu-badge kc-cadu-badge--tier-' + s.tier + '">T' + s.tier + '</span>'
-        : '<span class="kc-cadu-badge" style="background:rgba(148,163,184,.1);color:#64748b;">—</span>';
-      var igStatus = s.instagram_status || 'unknown';
-      var igBadge = '<span class="kc-cadu-badge kc-cadu-badge--' + igStatus + '">' + igStatus + '</span>';
+      // TIER: dropdown editável (T1/T2/T3/—)
+      var currentTier = s.tier ? String(s.tier) : '';
+      var tierHtml = '<select class="kc-cadu-tier-select" data-field="tier" data-name="' + escapeHtml(s.name) + '" title="Editar tier (1=alta prioridade, 3=baixa)">'
+        + '<option value="1"' + (currentTier === '1' ? ' selected' : '') + '>T1</option>'
+        + '<option value="2"' + (currentTier === '2' ? ' selected' : '') + '>T2</option>'
+        + '<option value="3"' + (currentTier === '3' ? ' selected' : '') + '>T3</option>'
+        + '<option value=""' + (currentTier === '' ? ' selected' : '') + '>—</option>'
+        + '</select>';
+      // IG: link clicável @handle
       var igCell = s.instagram
-        ? '<a href="https://instagram.com/' + escapeHtml(s.instagram.replace(/^@/, '')) + '" target="_blank" rel="noopener" style="color:var(--kc-primary-brand);text-decoration:none;">' + escapeHtml(s.instagram) + '</a>'
+        ? '<a href="https://instagram.com/' + escapeHtml(s.instagram.replace(/^@/, '')) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(s.instagram.replace(/^@/, '')) + '</a>'
         : '<span style="color:var(--kc-text-dark-secondary);">—</span>';
+      var igStatus = s.instagram_status || 'unknown';
+      var igBadgeHtml = '<span class="kc-cadu-badge kc-cadu-badge--' + igStatus + '">' + igStatus + '</span>';
+      // URL: link clicável
       var urlCell = s.url
-        ? '<a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener" style="color:var(--kc-text-dark-primary);">' + escapeHtml(s.url.replace(/^https?:\/\//, '')) + '</a>'
+        ? '<a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(s.url.replace(/^https?:\/\//, '')) + '</a>'
         : '<span style="color:var(--kc-text-dark-secondary);">—</span>';
-      var noteHtml = s.note
-        ? '<span style="color:var(--kc-text-dark-secondary);font-size:.82rem;">' + escapeHtml(s.note) + '</span>'
-        : '';
-      return '<tr>'
+      // OBSERVAÇÃO: textarea editável com auto-save
+      var noteVal = s.note ? escapeHtml(s.note) : '';
+      var noteHtml = '<div class="kc-cadu-note-cell"><textarea class="kc-cadu-note-input" data-field="note" data-name="' + escapeHtml(s.name) + '" placeholder="Adicionar observação..." rows="1">' + noteVal + '</textarea><span class="kc-cadu-save-status" data-site-save-status="' + escapeHtml(s.name) + '"></span></div>';
+      var actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button>';
+      return '<tr data-site-name="' + escapeHtml(s.name) + '">'
         + '<td>' + tierHtml + '</td>'
         + '<td><code>' + escapeHtml(s.name) + '</code></td>'
         + '<td>' + urlCell + '</td>'
         + '<td>' + igCell + '</td>'
-        + '<td>' + igBadge + '</td>'
+        + '<td>' + igBadgeHtml + '</td>'
         + '<td>' + noteHtml + '</td>'
-        + '<td style="white-space:nowrap;"><button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button></td>'
+        + '<td style="white-space:nowrap;">' + actionsHtml + '</td>'
         + '</tr>';
     }).join('');
+
+    // Wire up auto-save handlers
+    tbody.querySelectorAll('select.kc-cadu-tier-select, textarea.kc-cadu-note-input').forEach(function (el) {
+      el.addEventListener('change', function () {
+        var field = el.getAttribute('data-field');
+        var name = el.getAttribute('data-name');
+        var site = state.allSites.find(function (x) { return x.name === name; });
+        if (!site) return;
+        var rawValue = el.value;
+        var value = (rawValue === '' || rawValue === '—') ? null : (field === 'tier' ? parseInt(rawValue, 10) : rawValue);
+        scheduleSiteSave(site, field, value);
+      });
+    });
   }
 
   function computeKpis() {
