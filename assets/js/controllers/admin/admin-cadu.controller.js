@@ -551,12 +551,14 @@
       var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
       if (!res.ok) {
         console.error('[cadu-api] ' + path + ' HTTP ' + res.status, data);
-        return null;
+        // Retorna estrutura com status pra handling de erros no caller
+        // (ex: 409 dedup mostra mensagem específica em vez de "sem resposta")
+        return { __error: true, status: res.status, data: data };
       }
       return data;
     } catch (e) {
       console.error('[cadu-api] ' + path + ' error:', e);
-      return null;
+      return { __error: true, status: 0, data: null, message: String(e && e.message || e) };
     }
   }
 
@@ -802,8 +804,25 @@
       var logBox = $('#pipeline-log');
       if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
       refreshPipeline();
+    } else if (resp && resp.__error) {
+      // Mensagens específicas por status code
+      var msg = 'Falha ao iniciar.';
+      if (resp.status === 409) {
+        var detail = resp.data && (resp.data.detail || resp.data);
+        var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
+        msg = '⛔ Já existe um run ativo para "' + stageId + '" (id ' + existingId + ').\n\nAguarde terminar ou pare-o via botão Parar antes de iniciar novo.';
+      } else if (resp.status === 401) {
+        msg = '🔒 Token inválido. Verifique KC_CADU_TOKEN.';
+      } else if (resp.status === 503) {
+        msg = '⚙️ cadu-api não configurado (CADU_API_TOKEN ausente no .env).';
+      } else if (resp.status >= 500) {
+        msg = '🔥 cadu-api erro interno (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
+      } else if (resp.message) {
+        msg = 'Erro: ' + resp.message;
+      }
+      alert(msg);
     } else {
-      alert('Falha ao iniciar: ' + (resp ? JSON.stringify(resp) : 'sem resposta'));
+      alert('Falha ao iniciar: resposta vazia do cadu-api.');
     }
   }
 
@@ -812,8 +831,18 @@
     var resp = await apiFetch('/api/cadu/pipeline/' + runId + '/stop', { method: 'POST' });
     if (resp && resp.ok) {
       refreshPipeline();
+    } else if (resp && resp.__error) {
+      var msg = 'Falha ao parar.';
+      if (resp.status === 409) {
+        msg = '⛔ Run não está mais ativo (já terminou ou foi parado).';
+      } else if (resp.status === 404) {
+        msg = '❓ Run não encontrado no cadu-api.';
+      } else {
+        msg = 'Erro ao parar (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
+      }
+      alert(msg);
     } else {
-      alert('Falha ao parar: ' + (resp ? JSON.stringify(resp) : 'sem resposta'));
+      alert('Falha ao parar: resposta vazia do cadu-api.');
     }
   }
 
