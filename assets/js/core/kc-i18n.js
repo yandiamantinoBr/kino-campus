@@ -459,6 +459,15 @@
 
     // Admin
     'aria-label.admin-nav':             'Navegação admin',
+    'aria-label.menu-mobile':           'Menu mobile',
+    'aria-label.cadu-sites-search':     'Filtrar sites',
+    'aria-label.cadu-sites-tier':       'Filtrar por tier',
+    'aria-label.cadu-feed-search':      'Filtrar feed',
+    'aria-label.cadu-feed-limit':       'Limite',
+    'placeholder.cadu-sites-search':    'Filtrar por nome, site ou @instagram',
+    'placeholder.cadu-feed-search':     'Filtrar por conteúdo do chunk',
+    'tooltip.cadu-refresh':             'Atualizar',
+    'tooltip.cadu-pipeline-idle':       'Sem run ativo',
     'aria-label.admin-insights':        'Insights do dashboard',
     'aria-label.series-picker':         'Configurar séries do gráfico',
     'aria-label.audit-log':             'Audit log de ações administrativas',
