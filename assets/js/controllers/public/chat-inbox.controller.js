@@ -61,6 +61,7 @@
     typingBroadcastTimer: null,
     typingResetTimer: null,
     pendingReply: null,
+    activeReactionPopover: null,
   };
   const signedMediaCache = new Map();
 
@@ -465,6 +466,8 @@
     }
     saveDraft(state.activeConvId);
     clearPreviewObjectUrl();
+    closeReactionPopover();
+    clearReply();
     unsubscribeTypingChannel();
     if (state.rtChannel && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.unsubscribeChat === 'function') {
       try { window.KCAPI.chat.unsubscribeChat(state.rtChannel); } catch (_) {}
@@ -1280,16 +1283,74 @@
 
   async function handleReactToMessage(msgId) {
     if (!msgId) return;
-    // Popover simples: deixa o usuário escolher o emoji via prompt visual leve.
-    // (Popover DOM completo ficaria aqui; uso prompt nativo para simplicidade e robustez.)
-    var choice = prompt('Reagir com emoji:\n' + REACTION_EMOJIS.map(function (e, i) { return (i + 1) + ' = ' + e; }).join('  ') + '\n\nDigite o número ou cole o emoji:');
-    if (!choice) return;
-    var emoji = null;
-    var num = parseInt(choice, 10);
-    if (num >= 1 && num <= REACTION_EMOJIS.length) emoji = REACTION_EMOJIS[num - 1];
-    else emoji = REACTION_EMOJIS.indexOf(choice.trim()) >= 0 ? choice.trim() : null;
-    if (!emoji) { toast('Emoji inválido. Use 1-6 ou um dos sugeridos.', 'warn'); return; }
-    await handleToggleReaction(msgId, emoji);
+    // Fecha qualquer popover aberto antes de abrir um novo
+    closeReactionPopover();
+    // Localiza a bolha da mensagem para posicionar o popover acima dela
+    var msgEl = document.querySelector('[data-msg-id="' + cssEscape(msgId) + '"]');
+    if (!msgEl) return;
+    var rect = msgEl.getBoundingClientRect();
+
+    var popover = document.createElement('div');
+    popover.className = 'kc-chat-reaction-popover';
+    popover.setAttribute('role', 'dialog');
+    popover.setAttribute('aria-label', 'Escolher reação');
+    popover.innerHTML = REACTION_EMOJIS.map(function (emoji) {
+      return '<button type="button" class="kc-chat-reaction-popover__btn" data-react-emoji="' + esc(emoji) + '" aria-label="Reagir com ' + esc(emoji) + '">' + emoji + '</button>';
+    }).join('');
+
+    document.body.appendChild(popover);
+
+    // Posiciona acima da bolha, alinhado (clamp horizontal para não sair da viewport)
+    var popRect = popover.getBoundingClientRect();
+    var left = rect.left + Math.min(rect.width / 2, 80) - popRect.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - popRect.width - 8));
+    var top = rect.top - popRect.height - 8;
+    // Se não cabe acima, coloca abaixo
+    if (top < 8) top = rect.bottom + 8;
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+    // Anima entrada
+    requestAnimationFrame(function () { popover.classList.add('is-open'); });
+
+    // Guarda referência para fechar depois
+    state.activeReactionPopover = popover;
+
+    // Bind cliques nos emojis
+    Array.prototype.forEach.call(popover.querySelectorAll('[data-react-emoji]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var emoji = btn.getAttribute('data-react-emoji');
+        closeReactionPopover();
+        if (emoji) handleToggleReaction(msgId, emoji);
+      });
+    });
+
+    // Fecha ao clicar fora ou pressionar Escape
+    setTimeout(function () {
+      document.addEventListener('click', onPopoverOutsideClick, { once: true });
+      document.addEventListener('keydown', onPopoverEscape, { once: true });
+    }, 0);
+  }
+
+  function onPopoverOutsideClick(e) {
+    if (state.activeReactionPopover && !state.activeReactionPopover.contains(e.target)) {
+      closeReactionPopover();
+    } else if (state.activeReactionPopover) {
+      // Clique dentro não fecha (o handler do botão já fecha); re-registra
+      document.addEventListener('click', onPopoverOutsideClick, { once: true });
+    }
+  }
+
+  function onPopoverEscape(e) {
+    if (e.key === 'Escape') closeReactionPopover();
+    else if (state.activeReactionPopover) document.addEventListener('keydown', onPopoverEscape, { once: true });
+  }
+
+  function closeReactionPopover() {
+    if (!state.activeReactionPopover) return;
+    var pop = state.activeReactionPopover;
+    state.activeReactionPopover = null;
+    pop.classList.remove('is-open');
+    setTimeout(function () { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 120);
   }
 
   async function handleToggleReaction(msgId, emoji) {
