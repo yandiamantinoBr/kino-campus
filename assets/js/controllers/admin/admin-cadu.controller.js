@@ -530,10 +530,12 @@
   // ============================================================
 
   function getCaduConfig() {
-    // Pega config do KC_ENV ou usa defaults. Fallback pra VPS direta.
+    // v0.4.3: usa Vercel proxy (mesmo domínio = CSP OK + Edge Function SSE).
+    // Fallback pra VPS direta se explicitamente configurado.
     var env = window.KC_ENV || {};
+    var direct = env.CADU_API_DIRECT_URL;
     return {
-      url: env.CADU_API_URL || window.KC_API_URL || 'https://api.openclaw-hahq.srv1597083.hstgr.cloud',
+      url: direct || window.KC_API_URL || 'https://www.kinocampus.com.br/api/cadu',
       token: env.CADU_API_TOKEN || window.KC_API_TOKEN || '3dcbe316f3359142ca6fcca15868670a859ad44b731674b77b70773cded0962c',
     };
   }
@@ -721,12 +723,23 @@
 
   function connectPipelineStream(runId) {
     disconnectPipelineStream();
-    // SSE direto pro cadu-api (Vercel serverless não suporta streaming).
-    // EventSource não permite Authorization header, então token vai via query string.
-    // cadu-api v0.4.1 aceita ?token=... especificamente no SSE endpoint.
+    // v0.4.3: SSE via Vercel Edge Function proxy (mesmo domínio = CSP OK).
+    // Edge Function faz streaming nativo (sem timeout curto de serverless).
+    // cadu-api v0.4.2+ aceita ?token=... no endpoint /stream.
     var cfg = getCaduConfig();
     if (!cfg.url) return;
-    var url = cfg.url.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
+    // cfg.url pode ser:
+    //   - absoluto: "https://www.kinocampus.com.br/api/cadu" (Vercel proxy)
+    //   - absoluto: "https://api.openclaw-hahq.srv1597083.hstgr.cloud" (VPS direta, fallback)
+    // Se termina com "/api/cadu", sufixo é "/pipeline/{id}/stream" (Vercel proxy).
+    // Se termina com hostname, sufixo é "/api/pipeline/{id}/stream" (VPS direta).
+    var streamPath;
+    if (cfg.url.replace(/\/$/, '').endsWith('/api/cadu')) {
+      streamPath = '/pipeline/' + runId + '/stream';
+    } else {
+      streamPath = '/api/pipeline/' + runId + '/stream';
+    }
+    var url = cfg.url.replace(/\/$/, '') + streamPath + '?follow=true&token=' + encodeURIComponent(cfg.token);
 
     try {
       var es = new EventSource(url, { withCredentials: false });
