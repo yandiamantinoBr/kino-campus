@@ -951,14 +951,143 @@
     if (!history.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem runs anteriores.</div>'; return; }
     container.innerHTML = history.slice(0, 20).map(function (r) {
       var cls = 'is-' + (r.status || 'unknown');
+      var actions = '';
+      // só mostra ações pra runs terminados
+      if (r.status === 'finished' || r.status === 'failed' || r.status === 'cancelled') {
+        actions =
+          '<div class="kc-pipeline-history-item__actions">' +
+            '<button class="kc-pipeline-history-btn" data-action="view" data-run="' + r.id + '" title="Ver artefatos + log"><i class="fas fa-eye"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="download-log" data-run="' + r.id + '" title="Baixar log completo (.log)"><i class="fas fa-download"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="export" data-run="' + r.id + '" title="Export consolidado (JSON)"><i class="fas fa-file-export"></i></button>' +
+            '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + r.id + '" title="Perguntar ao Cadu sobre esta run"><i class="fas fa-robot"></i></button>' +
+          '</div>';
+      }
       return '<div class="kc-pipeline-history-item ' + cls + '">' +
         '<div class="kc-pipeline-history-item__head">' +
           '<strong>' + escapeHtml(r.stage) + '</strong>' +
           '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +
         '</div>' +
         '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
+        actions +
       '</div>';
     }).join('');
+    // wire actions
+    container.querySelectorAll('button[data-action]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var action = btn.getAttribute('data-action');
+        var runId = btn.getAttribute('data-run');
+        if (action === 'view') openRunDetailsModal(runId);
+        else if (action === 'download-log') downloadRunLog(runId);
+        else if (action === 'export') downloadRunExport(runId);
+        else if (action === 'ask-cadu') askCaduAboutRun(runId);
+      });
+    });
+  }
+
+  function openRunDetailsModal(runId) {
+    var cfg = getCaduConfig();
+    var modal = ensureRunDetailsModal();
+    modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos...</div>';
+    modal.title.textContent = 'Run ' + runId.slice(0, 8);
+    modal.el.style.display = 'flex';
+    // fetch artifacts + log tail in parallel
+    Promise.all([
+      apiFetch(cfg.caduBase + '/api/cadu/pipeline/' + runId + '/artifacts').then(function (r) { return r.data || r; }),
+      apiFetch(cfg.caduBase + '/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
+    ]).then(function (res) {
+      var arts = res[0].artifacts || [];
+      var log = res[1].content || '';
+      var artifactsHtml = arts.length
+        ? arts.map(function (a) {
+            return '<div class="kc-pipeline-artifact">' +
+              '<i class="fas fa-file-code"></i> ' +
+              '<span class="kc-pipeline-artifact__kind">' + escapeHtml(a.kind || 'other') + '</span>' +
+              ' <span class="kc-pipeline-artifact__name">' + escapeHtml(a.name) + '</span>' +
+              ' <span style="color:var(--kc-text-dark-secondary);font-size:.7rem;">' + (a.size_bytes / 1024).toFixed(1) + ' KB</span>' +
+            '</div>';
+          }).join('')
+        : '<div class="kc-cadu-empty">Nenhum artefato encontrado.</div>';
+      var logHtml = '<pre class="kc-pipeline-log-tail">' + escapeHtml(log) + '</pre>';
+      modal.body.innerHTML =
+        '<h4 style="margin:0 0 8px;font-size:.85rem;">Artefatos (' + arts.length + ')</h4>' +
+        artifactsHtml +
+        '<h4 style="margin:14px 0 8px;font-size:.85rem;">Log (últimas 80 linhas)</h4>' +
+        logHtml +
+        '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
+          '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" id="modal-ask-cadu" data-run="' + runId + '"><i class="fas fa-robot"></i> Perguntar ao Cadu</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-download-log" data-run="' + runId + '"><i class="fas fa-download"></i> Baixar log</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-export" data-run="' + runId + '"><i class="fas fa-file-export"></i> Export JSON</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-close" style="margin-left:auto;"><i class="fas fa-times"></i> Fechar</button>' +
+        '</div>';
+      var closeBtn = document.getElementById('modal-close');
+      if (closeBtn) closeBtn.addEventListener('click', function () { modal.el.style.display = 'none'; });
+      var askBtn = document.getElementById('modal-ask-cadu');
+      if (askBtn) askBtn.addEventListener('click', function () { modal.el.style.display = 'none'; askCaduAboutRun(runId); });
+      var dlBtn = document.getElementById('modal-download-log');
+      if (dlBtn) dlBtn.addEventListener('click', function () { downloadRunLog(runId); });
+      var expBtn = document.getElementById('modal-export');
+      if (expBtn) expBtn.addEventListener('click', function () { downloadRunExport(runId); });
+    }).catch(function (err) {
+      modal.body.innerHTML = '<div style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>';
+    });
+  }
+
+  function ensureRunDetailsModal() {
+    var el = document.getElementById('run-details-modal');
+    if (el) return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
+    el = document.createElement('div');
+    el.id = 'run-details-modal';
+    el.className = 'kc-modal';
+    el.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:20px;';
+    el.innerHTML =
+      '<div class="kc-modal__inner" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:14px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;">' +
+        '<div class="kc-modal__head" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--kc-border-dark);">' +
+          '<h3 class="kc-modal__title" style="margin:0;font-size:1rem;">Run</h3>' +
+        '</div>' +
+        '<div class="kc-modal__body" style="padding:18px;overflow:auto;flex:1;"></div>' +
+      '</div>';
+    el.addEventListener('click', function (e) { if (e.target === el) el.style.display = 'none'; });
+    document.body.appendChild(el);
+    return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
+  }
+
+  function downloadRunLog(runId) {
+    var cfg = getCaduConfig();
+    var url = cfg.caduBase + '/api/cadu/pipeline/' + runId + '/log?download=1&token=' + encodeURIComponent(cfg.token);
+    window.open(url, '_blank');
+  }
+
+  function downloadRunExport(runId) {
+    var cfg = getCaduConfig();
+    apiFetch(cfg.caduBase + '/api/cadu/pipeline/' + runId + '/export').then(function (r) {
+      var data = r.data || r;
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'pipeline-' + runId + '.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }).catch(function (err) {
+      alert('Erro ao exportar: ' + (err && err.message || err));
+    });
+  }
+
+  function askCaduAboutRun(runId) {
+    // Switch to OpenClaw tab and prefill the chat with a question referencing this run
+    var tab = document.querySelector('[data-tab="openclaw"]');
+    if (tab) tab.click();
+    setTimeout(function () {
+      var input = document.querySelector('#openclaw-chat-input, [data-openclaw-input], textarea[name="openclaw-message"]');
+      if (input) {
+        var question = 'Sobre o run ' + runId.slice(0, 8) + ' (stage=all): o que aconteceu? Me dá um resumo dos artefatos, métricas, e pontos de atenção. Onde estão os erros?';
+        input.value = question;
+        if (input.tagName === 'TEXTAREA') input.focus();
+      } else {
+        // Tenta achar o campo de chat OpenClaw por seletor mais genérico
+        var ta = document.querySelector('textarea');
+        if (ta) { ta.value = 'Sobre o run ' + runId.slice(0, 8) + ', o que aconteceu?'; ta.focus(); }
+      }
+    }, 200);
   }
 
   function updatePipelineBadge(status) {

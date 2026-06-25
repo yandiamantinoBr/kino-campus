@@ -170,6 +170,16 @@
     .kc-pipeline-history-item.is-failed { border-color: rgba(239,68,68,.35); }
     .kc-pipeline-history-item__head { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
     .kc-pipeline-history-item__id { font-family: monospace; font-size: .68rem; color: var(--kc-text-dark-secondary); }
+    .kc-pipeline-history-item__actions { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+    .kc-pipeline-history-btn { background: rgba(255,255,255,.06); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-secondary); border-radius: 6px; padding: 3px 8px; font-size: .72rem; cursor: pointer; }
+    .kc-pipeline-history-btn:hover { background: rgba(255,255,255,.12); color: var(--kc-text-dark-primary); }
+    .kc-pipeline-history-btn--ask { background: rgba(255,107,0,.15); border-color: rgba(255,107,0,.4); color: #ff8c42; }
+    .kc-pipeline-history-btn--ask:hover { background: rgba(255,107,0,.25); }
+    .kc-pipeline-artifact { padding: 6px 0; border-bottom: 1px dashed var(--kc-border-dark); font-size: .82rem; display: flex; gap: 8px; align-items: center; }
+    .kc-pipeline-artifact:last-child { border-bottom: none; }
+    .kc-pipeline-artifact__kind { background: rgba(99,102,241,.18); color: #818cf8; padding: 2px 6px; border-radius: 4px; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+    .kc-pipeline-artifact__name { font-family: monospace; flex: 1; }
+    .kc-pipeline-log-tail { background: rgba(0,0,0,.4); border: 1px solid var(--kc-border-dark); border-radius: 8px; padding: 10px; font-family: monospace; font-size: .72rem; max-height: 300px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
     .kc-cadu-badge--missing { background: rgba(148,163,184,.12); color: #94a3b8; }
     .kc-cadu-badge--unknown { background: rgba(99,102,241,.12); color: #818cf8; }
     .kc-cadu-badge--tier-1 { background: rgba(239,68,68,.12); color: #ef4444; }
