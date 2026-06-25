@@ -13,7 +13,6 @@
 
 export const config = {
   runtime: 'edge', // pre-requisito p/ Edge runtime
-  regions: ['iad1'], // executa em Washington (mais perto da VPS US West via private peering)
 };
 
 const CADU_API_URL = process.env.CADU_API_URL || '';
