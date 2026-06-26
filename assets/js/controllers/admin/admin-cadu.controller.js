@@ -880,6 +880,84 @@
   }
 
   // ============================================================
+  // Notification bell (cross-tab via Vercel polling - nao Supabase Realtime
+  // por causa de RLS + perf). Atualiza bell com runs/publicacoes recentes.
+  // ============================================================
+
+  var notifState = { lastCount: 0, runs: [], seen: {} };
+
+  function pollNotifActivity() {
+    var bell = $('#kcNotifBell');
+    var badge = $('#kcNotifBadge');
+    var list = $('#kcNotifList');
+    if (!bell || !badge) return;
+
+    fetch('/api/cadu/pipeline/runs?limit=8', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !Array.isArray(data.runs)) return;
+        notifState.runs = data.runs;
+
+        var dayAgo = Math.floor(Date.now() / 1000) - 86400;
+        var recent24h = data.runs.filter(function (r) { return (r.started_at || 0) >= dayAgo; });
+
+        try {
+          var seenIds = JSON.parse(localStorage.getItem('kc_cadu_seen_runs') || '{}');
+          var newOnes = data.runs.filter(function (r) { return !seenIds[r.id]; });
+          if (Object.keys(seenIds).length > 0 && newOnes.length > 0) {
+            badge.textContent = newOnes.length > 9 ? '9+' : String(newOnes.length);
+            badge.style.display = '';
+          } else if (recent24h.length > 0) {
+            badge.textContent = recent24h.length > 9 ? '9+' : String(recent24h.length);
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
+        } catch (e) {
+          badge.style.display = 'none';
+        }
+
+        try {
+          var newSeen = {};
+          data.runs.slice(0, 20).forEach(function (r) { newSeen[r.id] = Date.now(); });
+          localStorage.setItem('kc_cadu_seen_runs', JSON.stringify(newSeen));
+        } catch (e) {}
+
+        if (list && $('#kcNotifDropdown') && !$('#kcNotifDropdown').hasAttribute('hidden')) {
+          if (data.runs.length === 0) {
+            list.innerHTML = '<div class="kc-cadu-empty">Nenhuma run ainda.</div>';
+            return;
+          }
+          list.innerHTML = data.runs.slice(0, 8).map(function (r) {
+            var stClass = r.status === 'finished' ? 'pill--finished'
+                       : r.status === 'failed' ? 'pill--failed'
+                       : r.status === 'running' ? 'pill--running' : '';
+            return '<div class="kc-notif-dropdown__item" data-run="' + r.id + '">'
+              + '<div class="kc-notif-dropdown__item__title">' + escapeHtml(r.stage) + '</div>'
+              + '<div class="kc-notif-dropdown__item__meta">'
+              + '<span class="pill ' + stClass + '">' + escapeHtml(r.status) + '</span>'
+              + '<span>' + fmtAgo(r.started_at) + '</span>'
+              + (r.exit_code != null ? '<span>exit ' + r.exit_code + '</span>' : '')
+              + '</div>'
+              + '</div>';
+          }).join('');
+          $$('.kc-notif-dropdown__item', list).forEach(function (it) {
+            it.addEventListener('click', function () {
+              switchTab('pipeline');
+              $('#kcNotifDropdown').setAttribute('hidden', '');
+              var rid = it.getAttribute('data-run');
+              setTimeout(function () {
+                var target = document.querySelector('[data-run-id="' + rid + '"]');
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 200);
+            });
+          });
+        }
+      })
+      .catch(function () {});
+  }
+
+  // ============================================================
   // Tabs + eventos
   // ============================================================
 
@@ -896,6 +974,55 @@
         askCaduContext({ preventDefault: function () {}, currentTarget: btn });
       }
     });
+
+    // Notification bell: toggle dropdown + click-outside close
+    var notifBell = $('#kcNotifBell');
+    var notifDropdown = $('#kcNotifDropdown');
+    if (notifBell && notifDropdown) {
+      notifBell.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var isHidden = notifDropdown.hasAttribute('hidden');
+        if (isHidden) {
+          notifDropdown.removeAttribute('hidden');
+          pollNotifActivity();
+        } else {
+          notifDropdown.setAttribute('hidden', '');
+        }
+      });
+      document.addEventListener('click', function (ev) {
+        if (!notifDropdown.hasAttribute('hidden') &&
+            !notifDropdown.contains(ev.target) &&
+            ev.target !== notifBell) {
+          notifDropdown.setAttribute('hidden', '');
+        }
+      });
+    }
+
+    // Periodic status poll (a cada 30s): atualiza cadu-api/version pills + activity bell
+    setInterval(function () {
+      // Poll silencioso - so atualiza se API saudavel
+      fetch('/api/cadu/health', { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          var vp = $('#cadu-version-text');
+          if (vp && data.version && vp.textContent !== 'v' + data.version) {
+            vp.textContent = 'v' + data.version;
+          }
+          if (data.version && data.version !== state.lastVersion) {
+            state.lastVersion = data.version;
+            // Se a versao mudou (ex: Yan restartou cadu-api), refrescar pills
+            var cp = $('#cadu-context-pill');
+            if (cp && cp.style.display === 'none' && data.version >= '0.4.6') {
+              pollNotifActivity();
+            }
+          }
+        })
+        .catch(function () {});
+    }, 30000);
+
+    // First poll (assincrono, nao bloqueia init)
+    setTimeout(pollNotifActivity, 2000);
 
     var sitesSearch = $('#sites-search');
     var sitesTier = $('#sites-tier');
@@ -1140,7 +1267,7 @@
             '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + r.id + '" title="Perguntar ao Cadu sobre esta run"><i class="fas fa-robot"></i></button>' +
           '</div>';
       }
-      return '<div class="kc-pipeline-history-item ' + cls + '">' +
+      return '<div class="kc-pipeline-history-item ' + cls + '" data-run-id="' + r.id + '">' +
         '<div class="kc-pipeline-history-item__head">' +
           '<strong>' + escapeHtml(r.stage) + '</strong>' +
           '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +

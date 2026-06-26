@@ -227,6 +227,23 @@
     .kc-cadu-ask-btn:disabled { opacity: .55; cursor: not-allowed; }
     .kc-cadu-ask-btn i { font-size: .82rem; }
     /* notification bell + status indicator no hero */
+    .kc-notif-dropdown { position: absolute; right: 0; top: 100%; min-width: 320px; max-width: 380px; background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.45); margin-top: 8px; z-index: 9999; }
+    .kc-notif-dropdown__head { padding: 12px 14px; border-bottom: 1px solid var(--kc-border-dark); font-weight: 600; font-size: .85rem; color: var(--kc-text-dark-primary); }
+    .kc-notif-dropdown__list { max-height: 360px; overflow-y: auto; padding: 6px 0; }
+    .kc-notif-dropdown__list .kc-cadu-empty { padding: 20px; text-align: center; color: var(--kc-text-dark-secondary); font-size: .85rem; }
+    .kc-notif-dropdown__item { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.04); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .kc-notif-dropdown__item:hover { background: rgba(255,107,0,.08); }
+    .kc-notif-dropdown__item:last-child { border-bottom: 0; }
+    .kc-notif-dropdown__item__title { font-size: .85rem; color: var(--kc-text-dark-primary); font-weight: 500; }
+    .kc-notif-dropdown__item__meta { font-size: .72rem; color: var(--kc-text-dark-secondary); display: flex; gap: 8px; align-items: center; }
+    .kc-notif-dropdown__item__meta .pill { padding: 1px 6px; border-radius: 6px; font-size: .68rem; font-weight: 600; }
+    .kc-notif-dropdown__item__meta .pill--finished { background: rgba(16,185,129,.18); color: #10b981; }
+    .kc-notif-dropdown__item__meta .pill--failed { background: rgba(239,68,68,.18); color: #ef4444; }
+    .kc-notif-dropdown__item__meta .pill--running { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .kc-notif-dropdown__foot { padding: 10px 14px; border-top: 1px solid var(--kc-border-dark); text-align: center; font-size: .8rem; }
+    .kc-notif-dropdown__foot a { color: var(--kc-primary-brand); text-decoration: none; }
+    .kc-notif-dropdown__foot a:hover { text-decoration: underline; }
+    .kc-user-actions { position: relative; }
     .kc-cadu-hero-stats { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .kc-cadu-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .kc-cadu-status-dot--ok { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.18); }
@@ -261,7 +278,16 @@
         <a href="cadu.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-robot"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações Cadu" data-i18n-aria-label="aria-label.notifications" title="Notificações Cadu (runs recentes, publicações)"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <div id="kcNotifDropdown" class="kc-notif-dropdown" hidden>
+          <div class="kc-notif-dropdown__head">Atividade recente</div>
+          <div id="kcNotifList" class="kc-notif-dropdown__list">
+            <div class="kc-cadu-empty">Carregando...</div>
+          </div>
+          <div class="kc-notif-dropdown__foot">
+            <a href="#tab-pipeline">Ver pipeline →</a>
+          </div>
+        </div>
         <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
