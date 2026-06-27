@@ -64,8 +64,8 @@ const MODULE_PAGE: Record<string, string> = {
   eventos: "eventos.html",
   oportunidades: "oportunidades.html",
   moradia: "moradia.html",
-  "compra-venda": "compra-venda.html",
-  caronas: "caronas.html",
+  "compra-venda": "compra-venda-feed.html",
+  caronas: "caronas-feed.html",
   "achados-perdidos": "achados-perdidos.html",
 };
 

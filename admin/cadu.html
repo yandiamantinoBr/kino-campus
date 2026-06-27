@@ -278,7 +278,7 @@
         <a href="cadu.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-robot"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações Cadu" data-i18n-aria-label="aria-label.notifications" title="Notificações Cadu (runs recentes, publicações)"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações Cadu" data-i18n-aria-label="aria-label.notifications" title="Notificações Cadu (runs recentes, publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
         <div id="kcNotifDropdown" class="kc-notif-dropdown" hidden>
           <div class="kc-notif-dropdown__head">Atividade recente</div>
           <div id="kcNotifList" class="kc-notif-dropdown__list">
@@ -315,8 +315,8 @@
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
             <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
-            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites+pipeline+feed+openclaw em 1 request)"><i class="fas fa-layer-group"></i> Context API</span>
-            <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
+            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites+pipeline+feed+openclaw em 1 request)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> Context API</span>
+            <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api" data-i18n-tooltip="tooltip.cadu-version"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
           </div>
         </div>
         <div class="kc-cadu-toolbar" style="margin:0;">

@@ -2,6 +2,8 @@
 
 ## Baseline atual
 
+- consolidação documental atual: `v76.54` (painel Cadu/OpenClaw, proxies `/api/cadu/*` com sessão admin Supabase e inventário cross-AI)
+
 - release consolidada: `v75.1.0`
 - linha de trabalho atual: `v76.53` (busca orientada ao schema e personalização responsável; cadeia de migrations reparada; CI executa 83 specs Playwright; chat com checkmarks de leitura, reações emoji e reply/quote em produção; SQL estruturado segue em No-Go apenas pelo timeout 1500ms em 50k, runtime frontend `8.6.1` inalterado)
 - branch-base operacional: `kinocampus-V75.0-foundations`
@@ -67,6 +69,7 @@
 | [planning/v76-search-personalization-architecture-plan.md](./planning/v76-search-personalization-architecture-plan.md) | plano por fases para busca orientada ao schema, preferências, privacidade, métricas e rollback |
 | [planning/v76-search-sql-rpc-isolated-dossier.md](./planning/v76-search-sql-rpc-isolated-dossier.md) | contrato RPC estruturado V76.41, matriz RLS, plano de explain, limites e rollback R3; sem migration |
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
+| [ops/cadu-openclaw-operational-handoff-2026-06-27.md](./ops/cadu-openclaw-operational-handoff-2026-06-27.md) | mapa operacional Cadu/OpenClaw: conexões, rotas, envs, pendências e runbook sem segredos |
 | [ops/adsense-search-console-readiness-runbook.md](./ops/adsense-search-console-readiness-runbook.md) | gate operacional para deploy, inspeção de URLs e revisão AdSense sem ativação automática |
 | [audits/README.md](./audits/README.md) | indice de auditorias tecnicas pontuais (read-only + validacao contra producao) |
 | [audits/audit-v3-actual-state-2026-06-11.md](./audits/audit-v3-actual-state-2026-06-11.md) | V3 - comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h (2026-06-11) |
@@ -76,6 +79,7 @@
 | [ops/v48-external-evidence-request-pack.md](./ops/v48-external-evidence-request-pack.md) | pacote de solicitacao/redacao de evidencias externas sem secrets |
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
+| [qa/reports/report-v76-cadu-admin-openclaw-consolidation-2026-06-27.md](./qa/reports/report-v76-cadu-admin-openclaw-consolidation-2026-06-27.md) | evidência V76.54 da consolidação cross-AI do painel Cadu/OpenClaw, hardening dos proxies `/api/cadu/*` e inventário das melhorias de chat |
 | [qa/reports/report-v76-search-structured-facets-2026-06-20.md](./qa/reports/report-v76-search-structured-facets-2026-06-20.md) | evidência V76.40 dos chips removíveis, facetas agregadas e zero-results explicável |
 | [qa/reports/report-v76-search-session-standard-order-2026-06-21.md](./qa/reports/report-v76-search-session-standard-order-2026-06-21.md) | evidência V76.46 da ordem padrão efêmera por consulta personalizada |
 | [qa/reports/report-v76-search-sql-local-proof-2026-06-20.md](./qa/reports/report-v76-search-sql-local-proof-2026-06-20.md) | evidência V76.45 da prova SQL em PostgreSQL 17.10, matriz RLS, benchmark e rollback R3 |

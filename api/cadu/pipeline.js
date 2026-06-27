@@ -12,6 +12,8 @@
 const CADU_API_URL = process.env.CADU_API_URL || '';
 const CADU_API_TOKEN = process.env.CADU_API_TOKEN || '';
 
+import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
+
 export const config = {
   // Fluid compute + Node 20 → suporta streaming via res.write() sem timeout curto.
   // SSE usa Content-Type text/event-stream e mantém conexão aberta.
@@ -24,6 +26,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'method_not_allowed' });
+  }
+
+  const admin = await requireCaduAdmin(req, res);
+  if (!admin) return;
 
   if (!CADU_API_URL || !CADU_API_TOKEN) {
     return res.status(503).json({ ok: false, error: 'CADU_API_URL/TOKEN not configured' });
@@ -37,9 +45,10 @@ export default async function handler(req, res) {
   // Detecta SSE: GET + path termina com "/stream"
   const isSSE = req.method === 'GET' && subPath.endsWith('/stream');
 
-  // Monta URL upstream (preserva query string ?token=xxx)
+  // Monta URL upstream e remove o JWT admin antes de encaminhar.
   const queryString = (req.url || '').includes('?') ? req.url.split('?')[1] : '';
-  const targetUrl = `${CADU_API_URL.replace(/\/$/, '')}/api/pipeline${subPath ? '/' + subPath : ''}${queryString ? '?' + queryString : ''}`;
+  const finalQueryString = stripCaduAdminQuery(queryString);
+  const targetUrl = `${CADU_API_URL.replace(/\/$/, '')}/api/pipeline${subPath ? '/' + subPath : ''}${finalQueryString ? '?' + finalQueryString : ''}`;
 
   console.log(`[api/cadu/pipeline] ${req.method} ${subPath || '(root)'} isSSE=${isSSE}`);
 

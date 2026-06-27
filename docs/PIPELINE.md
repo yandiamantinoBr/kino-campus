@@ -59,7 +59,9 @@ A ordem real é:
 
 ## Endpoints da cadu-api
 
-Todos exigem Bearer token (`CADU_API_TOKEN`). Path base: `/api/cadu/pipeline/*`.
+No admin UI, o path público é same-origin: `/api/cadu/pipeline/*`. O browser envia JWT Supabase de usuário admin para o proxy Vercel, e o proxy encaminha para a cadu-api com `CADU_API_TOKEN` apenas server-side.
+
+Na VPS, o path real da cadu-api é `/api/pipeline/*` e exige Bearer token (`CADU_API_TOKEN`). Acesso direto à VPS deve ficar restrito a operação/debug autorizado.
 
 | Método | Path                                    | Descrição |
 |--------|-----------------------------------------|-----------|
@@ -68,7 +70,7 @@ Todos exigem Bearer token (`CADU_API_TOKEN`). Path base: `/api/cadu/pipeline/*`.
 | GET    | `/api/cadu/pipeline/runs`                | Lista runs (mesmo que history no GET root) |
 | GET    | `/api/cadu/pipeline/:id`                 | Status de um run específico |
 | POST   | `/api/cadu/pipeline/:id/stop`            | Mata subprocess (SIGTERM no grupo de processos) |
-| GET    | `/api/cadu/pipeline/:id/stream`          | SSE com stdout linha-a-linha. **Bypass Vercel** — chamar direto cadu-api via Traefik. Aceita `?token=...` |
+| GET    | `/api/cadu/pipeline/:id/stream`          | SSE com stdout linha-a-linha via proxy same-origin. Como `EventSource` não permite header customizado, o admin usa `kc_admin_token` contra o proxy; a VPS continua recebendo `CADU_API_TOKEN` apenas do servidor. |
 
 ## Persistência
 
@@ -115,7 +117,7 @@ Logs de cada run em `/data/cadu-pipeline-logs/{run_id}.log` (volume persistente,
 
 ## Limitações conhecidas
 
-- **Vercel serverless timeout (10-60s)** impede SSE via proxy — clients devem chamar cadu-api direto via Traefik
+- **SSE via Vercel proxy** depende de Node serverless com `maxDuration` configurado. Para runs muito longos, usar reconexão/log tail/export ou acesso direto à cadu-api apenas em operação/debug autorizado.
 - **Sem retry automático** em caso de falha de subprocess — admin deve disparar manualmente
 - **Catálogo duplicado** (Python hardcoded + JSON de docs) — alvo: ler do JSON no futuro
 

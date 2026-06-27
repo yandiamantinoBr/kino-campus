@@ -104,18 +104,54 @@
 
   // Emails hardcoded de admins confiáveis (último recurso se profile.is_admin
   // estiver desatualizado). Manter sincronizado com admin-cadu.html.
-  var TRUSTED_ADMIN_EMAILS = [
-    'yandiamantino@egresso.ufg.br',
-    'yan1nakamura@gmail.com',
-    'yan1nakamura+cadu.kinocampus@gmail.com',
-  ];
+  function getSupabaseClient() {
+    if (window.KCSupabase && typeof window.KCSupabase.getClient === 'function') {
+      return window.KCSupabase.getClient();
+    }
+    return null;
+  }
+
+  async function getAdminSession() {
+    if (window.KCSupabase && typeof window.KCSupabase.refreshSession === 'function') {
+      try {
+        var refreshed = await window.KCSupabase.refreshSession();
+        if (refreshed && refreshed.access_token) return refreshed;
+      } catch (e) {
+        console.warn('[cadu-admin] refreshSession falhou:', e);
+      }
+    }
+    if (window.KCSupabase && typeof window.KCSupabase.getSession === 'function') {
+      var cached = window.KCSupabase.getSession();
+      if (cached && cached.access_token) return cached;
+    }
+    var supabaseClient = getSupabaseClient();
+    if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.getSession === 'function') {
+      try {
+        var result = await supabaseClient.auth.getSession();
+        var session = result && result.data && result.data.session;
+        if (session && session.access_token) return session;
+      } catch (e2) {
+        console.warn('[cadu-admin] client.auth.getSession falhou:', e2);
+      }
+    }
+    return null;
+  }
+
+  async function getAdminAccessToken() {
+    var session = await getAdminSession();
+    return session && session.access_token ? session.access_token : '';
+  }
+
+  // Não há allowlist de e-mail no cliente: a decisão real vem de
+  // profiles.is_admin no Supabase e é revalidada no serverless /api/cadu/*.
+  var TRUSTED_ADMIN_EMAILS = [];
 
   async function checkAdminAccess() {
     // ============================================================
     // CAMADA 1 (mais alta prioridade): BYPASS DEV via query string.
     // Permite testar UI sem login real. NÃO usar em produção.
     // ============================================================
-    if (location.search.indexOf('test_bypass=kc_admin_2026') !== -1) {
+    if (false) {
       console.warn('[cadu-admin] DEV BYPASS ativo (não usar em produção)');
       window.__KC_ADMIN_DEV_BYPASS = true;
       return true;
@@ -177,6 +213,12 @@
     // ============================================================
     // CAMADA 4: Supabase Auth session
     // ============================================================
+    var client = getSupabaseClient();
+    if (!client) {
+      showAccessDenied('Supabase client não disponível. Recarregue a página e tente novamente.');
+      return false;
+    }
+
     var user = null;
     try {
       var sess = await client.auth.getSession();
@@ -249,9 +291,8 @@
         if (versionPill) versionPill.style.display = '';
         // Probe se context endpoint existe (cadu-api v0.4.6+)
         try {
-          var ctxRes = await fetch('/api/cadu/openclaw/context', { headers: { Accept: 'application/json' } });
-          if (ctxRes.ok) {
-            var ctx = await ctxRes.json();
+          var ctx = await apiFetch('/api/cadu/openclaw/context');
+          if (ctx && !ctx.__error) {
             state.openclawContext = ctx;
             if (contextPill) {
               contextPill.style.display = '';
@@ -291,9 +332,8 @@
     var tbody = $('#sites-tbody');
     tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Carregando…</td></tr>';
     try {
-      var res = await fetch('/api/cadu/sites', { headers: { Accept: 'application/json' } });
-      var data = await res.json();
-      if (!res.ok) throw new Error((data && data.message) || 'status ' + res.status);
+      var data = await apiFetch('/api/cadu/sites');
+      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
 
       state.allSites = Array.isArray(data) ? data : (data.body || []);
       $('#badge-sites').textContent = String(state.allSites.length);
@@ -341,13 +381,12 @@
       var body = {};
       if (payload.tier !== undefined) body.tier = payload.tier;
       if (payload.note !== undefined) body.note = payload.note;
-      var res = await fetch('/api/cadu/sites/' + encodeURIComponent(key) + '/meta', {
+      var data = await apiFetch('/api/cadu/sites/' + encodeURIComponent(key) + '/meta', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(body)
       });
-      var data = await res.json().catch(function () { return null; });
-      if (!res.ok) throw new Error((data && (data.message || data.detail)) || ('status ' + res.status));
+      if (data && data.__error) throw new Error((data.data && (data.data.message || data.data.detail || data.data.error)) || ('status ' + data.status));
       if (statusEl) { statusEl.innerHTML = '<i class="fas fa-check" style="color:#10b981;"></i>'; setTimeout(function(){ if (statusEl) statusEl.innerHTML = ''; }, 2500); }
       if (data && data.tier !== undefined) site.tier = data.tier;
       if (data && data.note !== undefined) site.note = data.note;
@@ -437,13 +476,12 @@
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     }
     try {
-      var res = await fetch('/api/cadu/publish', {
+      var data = await apiFetch('/api/cadu/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ name: site.name, url: site.url, instagram: site.instagram, note: site.note, tier: site.tier, category: site.category, source: 'cadu-admin' })
       });
-      var data = await res.json().catch(function () { return null; });
-      if (!res.ok) throw new Error((data && (data.message || data.error)) || ('status ' + res.status));
+      if (data && data.__error) throw new Error((data.data && (data.data.message || data.data.error)) || ('status ' + data.status));
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check"></i>';
@@ -489,9 +527,8 @@
     }
     var limit = state.feedLimit;
     try {
-      var res = await fetch('/api/cadu/feed?limit=' + limit, { headers: { Accept: 'application/json' } });
-      var data = await res.json();
-      if (!res.ok) throw new Error((data && data.message) || 'status ' + res.status);
+      var data = await apiFetch('/api/cadu/feed?limit=' + limit);
+      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
       state.allFeedItems = Array.isArray(data) ? data : (data.body || []);
       $('#badge-feed').textContent = String(state.allFeedItems.length);
       $('#kpi-memory').textContent = String(state.allFeedItems.length);
@@ -892,8 +929,8 @@
     var list = $('#kcNotifList');
     if (!bell || !badge) return;
 
-    fetch('/api/cadu/pipeline/runs?limit=8', { headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
+    apiFetch('/api/cadu/pipeline/runs?limit=8')
+      .then(function (r) { return r && !r.__error ? r : null; })
       .then(function (data) {
         if (!data || !Array.isArray(data.runs)) return;
         notifState.runs = data.runs;
@@ -1104,32 +1141,76 @@
     // Fallback pra VPS direta se explicitamente configurado.
     var env = window.KC_ENV || {};
     var direct = env.CADU_API_DIRECT_URL;
+    var baseUrl = direct || window.KC_API_URL || '/api/cadu';
+    var localDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     return {
-      url: direct || window.KC_API_URL || 'https://www.kinocampus.com.br/api/cadu',
-      token: env.CADU_API_TOKEN || window.KC_API_TOKEN || '3dcbe316f3359142ca6fcca15868670a859ad44b731674b77b70773cded0962c',
+      url: String(baseUrl || '').replace(/\/$/, ''),
+      direct: !!direct,
+      token: localDev ? (env.CADU_API_TOKEN || window.KC_API_TOKEN || '') : '',
     };
+  }
+
+  function buildCaduApiUrl(path) {
+    var cfg = getCaduConfig();
+    var p = String(path || '');
+    if (/^https?:\/\//i.test(p)) return p;
+    if (cfg.direct) {
+      var mapped = p.replace(/^\/api\/cadu\/?/, '/api/');
+      return cfg.url + mapped;
+    }
+    if (cfg.url && cfg.url !== '/api/cadu' && /^\/api\/cadu(\/|$)/.test(p)) {
+      return cfg.url + p.replace(/^\/api\/cadu/, '');
+    }
+    return p;
+  }
+
+  function appendQuery(url, params) {
+    var pairs = [];
+    Object.keys(params || {}).forEach(function (key) {
+      var value = params[key];
+      if (value !== undefined && value !== null && value !== '') {
+        pairs.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(value)));
+      }
+    });
+    if (!pairs.length) return url;
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + pairs.join('&');
+  }
+
+  async function buildCaduUrlForBrowser(path, params) {
+    var cfg = getCaduConfig();
+    var query = Object.assign({}, params || {});
+    if (cfg.direct) {
+      if (cfg.token) query.token = cfg.token;
+    } else {
+      var adminToken = await getAdminAccessToken();
+      if (adminToken) query.kc_admin_token = adminToken;
+    }
+    return appendQuery(buildCaduApiUrl(path), query);
   }
 
   async function apiFetch(path, opts) {
     var cfg = getCaduConfig();
+    var url = buildCaduApiUrl(path);
     try {
-      var res = await fetch(path, Object.assign({
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ' + cfg.token,
-        },
-      }, opts || {}));
+      var headers = Object.assign({ 'Accept': 'application/json' }, (opts && opts.headers) || {});
+      if (cfg.direct && cfg.token) {
+        headers.Authorization = 'Bearer ' + cfg.token;
+      } else if (!cfg.direct) {
+        var adminToken = await getAdminAccessToken();
+        if (adminToken) headers.Authorization = 'Bearer ' + adminToken;
+      }
+      var res = await fetch(url, Object.assign({}, opts || {}, { headers: headers }));
       var ct = res.headers.get('content-type') || '';
       var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
       if (!res.ok) {
-        console.error('[cadu-api] ' + path + ' HTTP ' + res.status, data);
+        console.error('[cadu-api] ' + url + ' HTTP ' + res.status, data);
         // Retorna estrutura com status pra handling de erros no caller
         // (ex: 409 dedup mostra mensagem específica em vez de "sem resposta")
         return { __error: true, status: res.status, data: data };
       }
       return data;
     } catch (e) {
-      console.error('[cadu-api] ' + path + ' error:', e);
+      console.error('[cadu-api] ' + url + ' error:', e);
       return { __error: true, status: 0, data: null, message: String(e && e.message || e) };
     }
   }
@@ -1141,7 +1222,9 @@
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function fmtAgo(unix) {
@@ -1290,15 +1373,14 @@
   }
 
   function openRunDetailsModal(runId) {
-    var cfg = getCaduConfig();
     var modal = ensureRunDetailsModal();
     modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos...</div>';
     modal.title.textContent = 'Run ' + runId.slice(0, 8);
     modal.el.style.display = 'flex';
     // fetch artifacts + log tail in parallel
     Promise.all([
-      apiFetch(cfg.caduBase + '/api/cadu/pipeline/' + runId + '/artifacts').then(function (r) { return r.data || r; }),
-      apiFetch(cfg.caduBase + '/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
+      apiFetch('/api/cadu/pipeline/' + runId + '/artifacts').then(function (r) { return r.data || r; }),
+      apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
     ]).then(function (res) {
       var arts = res[0].artifacts || [];
       var log = res[1].content || '';
@@ -1356,15 +1438,13 @@
     return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
   }
 
-  function downloadRunLog(runId) {
-    var cfg = getCaduConfig();
-    var url = cfg.caduBase + '/api/cadu/pipeline/' + runId + '/log?download=1&token=' + encodeURIComponent(cfg.token);
+  async function downloadRunLog(runId) {
+    var url = await buildCaduUrlForBrowser('/api/cadu/pipeline/' + runId + '/log', { download: 1 });
     window.open(url, '_blank');
   }
 
   function downloadRunExport(runId) {
-    var cfg = getCaduConfig();
-    apiFetch(cfg.caduBase + '/api/cadu/pipeline/' + runId + '/export').then(function (r) {
+    apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) {
       var data = r.data || r;
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
@@ -1420,7 +1500,7 @@
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
-  function connectPipelineStream(runId) {
+  async function connectPipelineStream(runId) {
     disconnectPipelineStream();
     // v0.4.4: SSE via Vercel rewrite → pipeline-router.
     // Vercel rewrite manda source path via query ?path=, router parseia e
@@ -1435,6 +1515,8 @@
       // VPS direta
       url = cfg.url.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
     }
+
+    url = await buildCaduUrlForBrowser('/api/cadu/pipeline/' + runId + '/stream', { follow: 'true' });
 
     try {
       var es = new EventSource(url, { withCredentials: false });

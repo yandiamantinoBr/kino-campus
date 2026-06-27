@@ -7,11 +7,19 @@ export const config = {
   maxDuration: 300,
 };
 
+import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'method_not_allowed' });
+  }
+
+  const admin = await requireCaduAdmin(req, res);
+  if (!admin) return;
 
   const CADU_API_URL = process.env.CADU_API_URL || '';
   const CADU_API_TOKEN = process.env.CADU_API_TOKEN || '';
@@ -30,12 +38,10 @@ export default async function handler(req, res) {
     subPath = (req.url || '').split('?')[0].replace(/^\/api\/cadu\/pipeline-router\/?/, '').replace(/^\//, '');
   }
 
-  // query string original do cliente (preserva ?token=xxx)
+  // query string original do cliente. Remove o JWT admin antes de encaminhar
+  // para a VPS; a VPS recebe apenas o CADU_API_TOKEN server-side.
   const clientQueryString = (req.url || '').includes('?') ? req.url.split('?')[1] : '';
-  const clientQs = new URLSearchParams(clientQueryString);
-  // remove 'path' (injetado pelo rewrite)
-  clientQs.delete('path');
-  const finalQueryString = clientQs.toString();
+  const finalQueryString = stripCaduAdminQuery(clientQueryString);
 
   const targetUrl = `${CADU_API_URL.replace(/\/$/, '')}/api/pipeline${subPath ? '/' + subPath : ''}${finalQueryString ? '?' + finalQueryString : ''}`;
 

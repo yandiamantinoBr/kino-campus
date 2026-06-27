@@ -7,6 +7,7 @@ Reports ativos e templates de evidencia. Reports historicos V8/V11/V15 foram mov
 
 | Arquivo | Uso |
 |---|---|
+| `report-v76-cadu-admin-openclaw-consolidation-2026-06-27.md` | Evidência V76.54 da consolidação cross-AI do painel `/admin/cadu.html`, cadu-api/OpenClaw/VPS, melhorias recentes de chat, hardening dos proxies `/api/cadu/*`, handoff operacional e correção de URLs Cadu canônicas |
 | `report-v76-chat-features-backend-2026-06-22.md` | Evidência V76.53 das 3 features de chat em produção (checkmarks, reações emoji, reply/quote) — schema + RPCs + frontend |
 | `report-v76-chat-ux-improvements-2026-06-21.md` | Evidência V76.52 das 3 melhorias de UX em /mensagens.html (agrupamento de mensagens, indicador "digitando..." via broadcast efêmero, microinterações) sem migration |
 | `report-v76-prod-dev-alignment-2026-06-21.md` | Evidência V76.51 da auditoria de alinhamento produção↔dev: `db pull` confirmou schema idêntico à baseline, sem divergência |

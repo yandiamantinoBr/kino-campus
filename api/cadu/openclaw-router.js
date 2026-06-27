@@ -2,11 +2,19 @@
 // Recebe qualquer sub-path via rewrite + query ?path=<sub-path>
 // Pega: status, sessions, logs, heartbeat, agent-send (POST), agent-event (POST)
 
+import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'method_not_allowed' });
+  }
+
+  const admin = await requireCaduAdmin(req, res);
+  if (!admin) return;
 
   const CADU_API_URL = process.env.CADU_API_URL || '';
   const CADU_API_TOKEN = process.env.CADU_API_TOKEN || '';
@@ -25,9 +33,7 @@ export default async function handler(req, res) {
   }
 
   const clientQueryString = (req.url || '').includes('?') ? req.url.split('?')[1] : '';
-  const clientQs = new URLSearchParams(clientQueryString);
-  clientQs.delete('path');
-  const finalQueryString = clientQs.toString();
+  const finalQueryString = stripCaduAdminQuery(clientQueryString);
 
   const targetUrl = `${CADU_API_URL.replace(/\/$/, '')}/api/openclaw${subPath ? '/' + subPath : ''}${finalQueryString ? '?' + finalQueryString : ''}`;
 

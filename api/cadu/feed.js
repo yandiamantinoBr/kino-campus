@@ -1,14 +1,12 @@
-// api/cadu/feed.js — proxy para cadu-api /api/feed (chunks do Cadu)
+// api/cadu/feed.js — proxy admin para cadu-api /api/feed (chunks do Cadu)
 //
-// Endpoint exposto: GET /api/cadu/feed?limit=N
-// Vercel roteia automaticamente pelo nome do arquivo.
-//
-// Também suporta sub-paths via ?path=:
-//   GET  /api/cadu/feed?path={chunk_id}        -> cadu-api GET /api/feed/{chunk_id}
-//   POST /api/cadu/feed?path={chunk_id}/ask    -> cadu-api POST /api/feed/{chunk_id}/ask
-//   POST /api/cadu/feed?path=admin/redeploy    -> cadu-api POST /api/admin/redeploy
-//
-// Mantém compatibilidade retroativa: GET sem ?path funciona igual antes.
+// Endpoints expostos:
+// - GET  /api/cadu/feed?limit=N
+// - GET  /api/cadu/feed?path={chunk_id}
+// - POST /api/cadu/feed?path={chunk_id}/ask
+// - POST /api/cadu/feed?path=admin/redeploy
+
+import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,6 +14,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: 'method_not_allowed', message: 'Use GET ou POST' });
+  }
+
+  const admin = await requireCaduAdmin(req, res);
+  if (!admin) return;
 
   const apiUrl = process.env.CADU_API_URL;
   const token = process.env.CADU_API_TOKEN;
@@ -23,14 +27,11 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'cadu_api_not_configured' });
   }
 
-  const subPath = (typeof req.query.path === 'string' ? req.query.path : '').replace(/^\/+|\/+$/g, '');
-  const qs = new URLSearchParams();
-  for (const k of Object.keys(req.query)) {
-    if (k !== 'path') qs.set(k, String(req.query[k]));
-  }
-  const finalQs = qs.toString();
+  const rawPath = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
+  const subPath = (typeof rawPath === 'string' ? rawPath : '').replace(/^\/+|\/+$/g, '');
+  const clientQueryString = (req.url || '').includes('?') ? req.url.split('?')[1] : '';
+  const finalQs = stripCaduAdminQuery(clientQueryString);
 
-  // Detecta namespace (feed vs admin)
   let ns = 'feed';
   let cleanSubPath = subPath;
   if (subPath.startsWith('admin/')) {
@@ -67,9 +68,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Cache: lista do feed muda mais, sub-paths individuais não cacheiam
     if (!subPath && req.method === 'GET') {
-      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60');
+      res.setHeader('Cache-Control', 'private, max-age=60');
     } else {
       res.setHeader('Cache-Control', 'no-cache');
     }

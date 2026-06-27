@@ -1,12 +1,10 @@
-// api/cadu/publish.js — proxy para cadu-api POST /api/publish (VPS Hostinger)
+// api/cadu/publish.js — proxy admin para cadu-api POST /api/publish (VPS Hostinger)
 //
-// Recebe um site sugerido pelo admin Cadu e dispara a publicação no feed KinoCampus.
-// O cadu-api usa o CADU_PUBLISH_TOKEN pra chamar o KinoCampus publish endpoint
-// (services/cadu-ufg-publisher ou supabase/functions/cadu-publish).
-//
-// Endpoint exposto: POST /api/cadu/publish
-// Body: { name, url, instagram?, note?, tier?, category?, source? }
-// Auth: Bearer com CADU_API_TOKEN (mesma chave dos outros endpoints).
+// Recebe um site sugerido pelo admin Cadu e dispara a publicação no feed
+// KinoCampus. O cliente público autentica com JWT Supabase de admin; o
+// CADU_API_TOKEN permanece apenas no serverless.
+
+import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,7 +12,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed', message: 'Use POST' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'method_not_allowed', message: 'Use POST' });
+  }
+
+  const admin = await requireCaduAdmin(req, res);
+  if (!admin) return;
 
   const apiUrl = process.env.CADU_API_URL;
   const token = process.env.CADU_API_TOKEN;
@@ -22,7 +25,6 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'cadu_api_not_configured', message: 'CADU_API_URL/CADU_API_TOKEN ausentes' });
   }
 
-  // Validação mínima do body — cadu-api vai validar melhor
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   if (!body.name || typeof body.name !== 'string') {
     return res.status(400).json({ error: 'invalid_body', message: 'Campo "name" é obrigatório' });
@@ -35,10 +37,10 @@ export default async function handler(req, res) {
     const upstream = await fetch(`${apiUrl.replace(/\/$/, '')}/api/publish`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'KinoCampus-Admin/1.0'
+        Accept: 'application/json',
+        'User-Agent': 'KinoCampus-Admin/1.0',
       },
       body: JSON.stringify({
         name: body.name.trim(),
@@ -47,9 +49,9 @@ export default async function handler(req, res) {
         note: body.note || null,
         tier: body.tier || null,
         category: body.category || null,
-        source: body.source || 'cadu-admin'
+        source: body.source || 'cadu-admin',
       }),
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(30000),
     });
 
     const text = await upstream.text();
@@ -60,7 +62,7 @@ export default async function handler(req, res) {
       return res.status(upstream.status).json({
         error: 'cadu_api_error',
         status: upstream.status,
-        body: respBody
+        body: respBody,
       });
     }
 
@@ -68,7 +70,7 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(502).json({
       error: 'cadu_api_unreachable',
-      message: String(err && err.message ? err.message : err)
+      message: String(err && err.message ? err.message : err),
     });
   }
 }

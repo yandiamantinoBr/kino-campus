@@ -1,26 +1,28 @@
-// api/cadu/sites.js — proxy para cadu-api /api/sites (VPS Hostinger)
+// api/cadu/sites.js — proxy admin para cadu-api /api/sites (VPS Hostinger)
 //
-// Autentica via Bearer token em CADU_API_TOKEN (env var do Vercel).
-// Cache server-side: 5 minutos (cadu-api é o source of truth).
+// Cliente público autentica com JWT Supabase de admin. O serverless valida
+// profiles.is_admin/kc_is_admin e só então usa CADU_API_TOKEN server-side.
 //
-// Endpoint exposto: GET /api/cadu/sites
-// Retorna: JSON array de SiteUnit (mesmo schema do cadu-api)
-//
-// ES module (api/package.json contém "type": "module").
+// Endpoints expostos:
+// - GET   /api/cadu/sites
+// - GET   /api/cadu/sites/{unit_id}/meta       (via rewrite ?path=...)
+// - PATCH /api/cadu/sites/{unit_id}/meta       (via rewrite ?path=...)
+
+import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
 
 export default async function handler(req, res) {
-  // CORS permissivo dentro do domínio KinoCampus (admin)
+  // CORS permissivo para preflight; dados continuam protegidos por JWT admin.
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET' && req.method !== 'PATCH') {
+    return res.status(405).json({ error: 'method_not_allowed', message: 'Use GET ou PATCH' });
   }
 
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'method_not_allowed', message: 'Use GET' });
-  }
+  const admin = await requireCaduAdmin(req, res);
+  if (!admin) return;
 
   const apiUrl = process.env.CADU_API_URL;
   const token = process.env.CADU_API_TOKEN;
@@ -28,45 +30,47 @@ export default async function handler(req, res) {
   if (!apiUrl || !token) {
     return res.status(503).json({
       error: 'cadu_api_not_configured',
-      message: 'CADU_API_URL/CADU_API_TOKEN ausentes no servidor'
+      message: 'CADU_API_URL/CADU_API_TOKEN ausentes no servidor',
     });
   }
 
   try {
-    const upstream = await fetch(`${apiUrl.replace(/\/$/, '')}/api/sites`, {
-      method: 'GET',
+    const rawPath = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
+    const subPath = (typeof rawPath === 'string' ? rawPath : '').replace(/^\/+|\/+$/g, '');
+    const targetUrl = `${apiUrl.replace(/\/$/, '')}/api/sites${subPath ? '/' + subPath : ''}`;
+
+    const upstream = await fetch(targetUrl, {
+      method: req.method,
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'User-Agent': 'KinoCampus-Admin/1.0'
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'User-Agent': 'KinoCampus-Admin/1.0',
       },
-      // 25s timeout (Vercel serverless padrão é 10s pra hobby, 60s pro)
-      signal: AbortSignal.timeout(25000)
+      body: (req.method !== 'GET' && req.method !== 'HEAD')
+        ? (req.body ? JSON.stringify(req.body) : undefined)
+        : undefined,
+      signal: AbortSignal.timeout(25000),
     });
 
     const text = await upstream.text();
     let body;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      body = { raw: text };
-    }
+    try { body = JSON.parse(text); } catch { body = { raw: text }; }
 
     if (!upstream.ok) {
       return res.status(upstream.status).json({
         error: 'cadu_api_error',
         status: upstream.status,
-        body
+        body,
       });
     }
 
-    // Cache 5 min — cadu-api é o source of truth
-    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+    res.setHeader('Cache-Control', req.method === 'GET' && !subPath ? 'private, max-age=300' : 'no-cache');
     return res.status(200).json(body);
   } catch (err) {
     return res.status(502).json({
       error: 'cadu_api_unreachable',
-      message: String(err && err.message ? err.message : err)
+      message: String(err && err.message ? err.message : err),
     });
   }
 }
