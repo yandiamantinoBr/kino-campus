@@ -460,4 +460,502 @@ pollNotifActivity()              // notification bell (novo v0.4.6)
 
 ---
 
-**Próxima ação crítica:** Yan precisa fazer SSH + `docker restart openclaw-hahq-cadu-api` + atualizar `CADU_API_TOKEN` no Vercel. Sem isso, a UI mostra dados stale (ou 401) e os botões "Perguntar Cadu" não funcionam.
+**Próxima ação crítica:** Yan precisa fazer SSH + `docker compose up -d cadu-api` (em `/docker/openclaw-hahq`, NÃO `docker restart`) + atualizar `CADU_API_TOKEN` no Vercel. Sem isso, a UI mostra dados stale (ou 401) e os botões "Perguntar Cadu" não funcionam. Sem restart v0.4.6, o notification bell polling `/api/cadu/pipeline/runs` retorna 404 e `/api/cadu/openclaw/context` consolidado nunca ativa.
+
+---
+
+# v2 — Auditoria Profunda (2026-06-29)
+
+> Adicionado por Mavis após análise de código real (admin/cadu.html 613L,
+> admin-cadu.controller.js 1694L, server/cadu-auth.mjs 131L,
+> api/cadu/*.js 7 arquivos, server.py 1493L, pipeline.py 571L).
+> Tudo aqui foi validado lendo o código, não inferido.
+
+---
+
+## 1. Auth: 3 camadas com responsabilidades diferentes
+
+O sistema tem **3 camadas de autenticação** validando coisas distintas:
+
+### CAMADA 1 — Client UI (`admin-cadu.controller.js:149-269`)
+- Roda **no browser** do admin
+- Verifica `profiles.is_admin` no Supabase via `client.from('profiles').select('is_admin,...')`
+- Fallbacks em cadeia: localStorage `kc:user` → `KCSupabase.getCurrentUser()` → `KCSupabase.refreshSession()+getUser()` → `KCAPI.getCurrentUser()`
+- Se nenhuma fonte tem email → `TRUSTED_ADMIN_EMAILS.indexOf(email) !== -1` (atualmente VAZIO)
+- Se Supabase Auth sem sessão → redirect `/index.html#login` (2s delay)
+- **Final fallback**: `profiles.is_admin === true`
+- ⚠️ Client-side é **performance gate**, não segurança real. Fácil de burlar via DevTools.
+
+### CAMADA 2 — Vercel proxy (`server/cadu-auth.mjs:74-124`)
+- Roda em **Vercel Edge** (Node serverless)
+- Lê `Authorization: Bearer <jwt>` **OU** `?kc_admin_token=<jwt>` (query string pro caso SSE)
+- Chama Supabase `/auth/v1/user` com o JWT → valida sessão
+- Verifica admin via `kc_is_admin(p_user_id)` RPC **OU** fallback `profiles.is_admin`
+- ⚠️ A RPC `kc_is_admin` precisa existir no Supabase (PostgREST) — se não existir, fallback automático
+- Retorna `{ id, email }` se admin, ou 401/403/503
+- **Esta é a fonte da verdade server-side do KinoCampus.** cadu-api recebe apenas um `Bearer CADU_API_TOKEN` server-side (não vê o JWT Supabase)
+
+### CAMADA 3 — cadu-api container (`server.py:152-179`)
+- Roda **na VPS** (FastAPI + uvicorn)
+- Lê `Authorization: Bearer <CADU_API_TOKEN>` da env var do container
+- `_optional_token_or_query` para SSE aceita header OU `?token=<EXPECTED_TOKEN>` query string
+- **Cadu-api NÃO sabe qual usuário admin está chamando** — vê apenas um Bearer token compartilhado
+- 401 se token errado, 503 se `EXPECTED_TOKEN` vazio (fail closed)
+- Exceções notáveis:
+  - `GET /pipeline/{id}/artifacts` (linha 872), `GET /pipeline/{id}/log` (linha 941), `GET /pipeline/{id}/export` (linha 965) **NÃO têm Depends(require_token)** — desprotegidos no cadu-api, mas passam pelo Vercel proxy que valida Supabase
+
+### Fluxo de um request típico (ex: clicar "Publicar" num site)
+
+```
+[Browser]  POST /api/cadu/publish
+              ↓ Authorization: Bearer <Supabase JWT>
+[Vercel]   requireCaduAdmin():
+              1. Supabase /auth/v1/user (valida JWT)
+              2. RPC kc_is_admin OR profiles.is_admin
+              → 401/403 se não-admin
+              ↓
+[Vercel]   POST https://cadu-api/api/publish
+              ↓ Authorization: Bearer <CADU_API_TOKEN>
+[cadu-api] require_token()
+              → 401 se token errado
+              ↓
+[cadu-api] publish_site() → Edge Function cadu-publish no Supabase
+```
+
+**Implicações de segurança**:
+- Comprometer `CADU_API_TOKEN` dá acesso a **todos** os endpoints cadu-api (incluindo pipeline run/stop)
+- Comprometer JWT Supabase de um admin dá acesso **apenas via Vercel proxy** (ainda passa pelo `kc_is_admin`)
+- cadu-api `/artifacts`, `/log`, `/export` são pontos de menor proteção — se Vercel proxy falhar, dados vazam direto
+
+---
+
+## 2. cadu-api: 25 endpoints mapeados (server.py v0.4.3 + hardcoded 0.4.6)
+
+### 2.1 Versões inconsistentes (MESMO arquivo, 3 números!)
+
+| Local | Valor | Linha |
+|-------|-------|-------|
+| `app.version` | `"0.4.3"` | 117 |
+| `GET /health` (hardcoded) | `"0.4.2"` | 607 |
+| `GET /openclaw/context.cadu_api_info.version` (hardcoded) | `"0.4.6"` | 1162 |
+| Container rodando | **`v0.4.2`** | reportado por /health |
+
+⚠️ A UI mostra `data.version` do `/health`, então **a UI mostra "0.4.2" mesmo após restartar com o server.py novo do repo**. Próxima fase: unificar `__version__` no topo do server.py e usar `app.version` em todos os lugares.
+
+### 2.2 Endpoints cadu-api (todos)
+
+| # | Método | Path | Auth | Função |
+|---|--------|------|------|--------|
+| 1 | GET | `/health` | ❌ sem auth | liveness; retorna `version`, `publish_modes`, `pipeline_stages` |
+| 2 | GET | `/api/sites` | ✅ | Lista unidades UFG parseadas + merge com `kc_unit_meta` do Supabase |
+| 3 | GET | `/api/sites/{unit_id}/meta` | ✅ | Metadata editável (tier+note) do Supabase |
+| 4 | PATCH | `/api/sites/{unit_id}/meta` | ✅ (via sites.js upstream) | Atualiza tier/note no `kc_unit_meta` |
+| 5 | GET | `/api/feed` | ✅ | Lista chunks do Cadu memory (últimos N, default 20) |
+| 6 | POST | `/api/publish` | ✅ | Sugere publicação no feed KinoCampus |
+| 7 | GET | `/api/pipeline` | ✅ | Status consolidado (stages + active_run + history) |
+| 8 | POST | `/api/pipeline/run` | ✅ | Cria run (dedup: rejeita se já tem running/pending do mesmo stage) |
+| 9 | GET | `/api/pipeline/runs` | ✅ | Lista runs (history) |
+| 10 | GET | `/api/pipeline/{run_id}` | ✅ | Detalhe de um run |
+| 11 | POST | `/api/pipeline/{run_id}/stop` | ✅ | SIGTERM no subprocess |
+| 12 | GET | `/api/pipeline/{run_id}/stream` | ✅ ou `?token=` | SSE ao vivo do log |
+| 13 | GET | `/api/pipeline/{run_id}/artifacts` | ⚠️ **SEM AUTH** | Lista artifacts |
+| 14 | GET | `/api/pipeline/{run_id}/log` | ⚠️ **SEM AUTH** | Tail do log (param `tail=80`) |
+| 15 | GET | `/api/pipeline/{run_id}/export` | ⚠️ **SEM AUTH** | Export consolidado (artifacts + summary + log_tail) |
+| 16 | GET | `/api/openclaw/status` | ✅ | OpenClaw status (agents, heartbeat, tasks) |
+| 17 | GET | `/api/openclaw/sessions` | ✅ | Lista sessões (param `limit=N`) |
+| 18 | GET | `/api/openclaw/messages` | ✅ | Mensagens de uma sessão |
+| 19 | GET | `/api/openclaw/logs` | ✅ | Logs do Gateway (param `limit=100`) |
+| 20 | GET | `/api/openclaw/heartbeat` | ✅ | Status do heartbeat |
+| 21 | GET | `/api/openclaw/context` | ✅ | **Snapshot consolidado** com cache TTL 30s |
+| 22 | GET | `/api/feed/{chunk_id}` | ✅ | Detalhe de um chunk (heading + content) |
+| 23 | POST | `/api/feed/{chunk_id}/ask` | ✅ | Pergunta sobre chunk específico (atalho pra agent-send) |
+| 24 | POST | `/api/openclaw/agent-send` | ✅ | Envia msg ao Cadu (auto-inject context + tiers) |
+| 25 | POST | `/api/openclaw/agent-event` | ✅ | Trigger Heartbeat manual |
+| 26 | POST | `/api/admin/redeploy` | ✅ | Redeploy self (git pull + cp + docker restart) |
+
+### 2.3 Detalhes críticos dos endpoints NOVOS (v0.4.3+, hardcoded v0.4.6)
+
+**`GET /api/openclaw/context`** (linha 1082-1208)
+- Consolida em paralelo: sites (com merge Supabase), pipeline (status + last run summary), feed (5 chunks), openclaw (status + health + last_session via `asyncio.gather`)
+- **Cache TTL 30s em memória** (`_openclaw_context_cache` linha 1079): se `<30s`, retorna `cache_hit=True` + `cache_age_sec`
+- Query param `?refresh=true` força bypass do cache
+- `cadu_api_info.version` retorna hardcoded `"0.4.6"` — **divergente do `app.version` real ("0.4.3")**
+
+**`POST /api/feed/{chunk_id}/ask`** (linha 1257-1285)
+- Atalho: pega chunk + monta `<chunk-context>` + pergunta default `"Resume esse chunk do Cadu memory e me diga o que fazer com ele."`
+- Content do chunk truncado em **3000 chars** (linha 1271)
+- Heading escapado com aspas simples (linha 1267) — evita quebrar XML
+- Chama `openclaw_agent_send` por baixo (delega toda lógica de inject_context + inject_tiers)
+- Body opcional: `{ message: "pergunta custom" }`
+
+**`POST /api/admin/redeploy`** (linha 1411-1493)
+- ⚠️ **Lógica com bugs latentes**:
+  - `cadu_api_dir = /data/.openclaw/skills/cadu-api` — assume `.git` acima desse path
+  - Sobe na árvore até achar `.git`; se não achar (cenário comum em VPS), retorna **500**
+  - Step 3: copia `repo_root/data/.openclaw/skills/cadu-api/server.py` → `cadu_api_dir/server.py`. **Assume que repo é `openclaw-cadu`** com layout `data/.openclaw/skills/cadu-api/server.py`. Se o repo local não for esse, pula (linha 1467) ou falha (linha 1463-1464)
+  - Step 4: `docker restart <container>` (env `CADU_API_CONTAINER`, default `openclaw-hahq-cadu-api`) — **NÃO** é `docker compose up -d`, então **env vars antigas persistem** (gotcha memory). Restart funciona pra carregar server.py novo, mas NÃO pra carregar `CADU_API_TOKEN` novo
+- **Recomendação**: usar `docker compose up -d cadu-api` (recria container) OU passar env vars via `--env-file`
+
+**`POST /api/openclaw/agent-send`** (linha 1297+) — auto-inject (padrão)
+- `inject_context=True` (default): prepend `<pipeline-context>` com última run se `status in (finished|failed|cancelled)` E `age_sec < 86400`
+- `inject_tiers=True` (default): prepend `<sites-tiers>` com lista T1/T2/T3 do `kc_unit_meta` Supabase
+- Payload shape: `{ message, agent="main", session_id?, deliver?, inject_context?, inject_tiers? }`
+- `deliver=True` faz reply via Telegram (além de retornar pro caller)
+
+---
+
+## 3. Vercel proxy: 7 functions + roteamento
+
+### 3.1 Functions deployadas
+
+| Arquivo | Linhas | URL pública | Auth |
+|---------|--------|-------------|------|
+| `api/cadu/health.js` | 38 | `GET /api/cadu/health` | ❌ sem auth |
+| `api/cadu/sites.js` | 76 | `GET/PATCH /api/cadu/sites` + `/sites/{id}/meta` (via `?path=`) | ✅ Supabase JWT |
+| `api/cadu/feed.js` | 84 | `GET/POST /api/cadu/feed?limit=N` + `?path={id}/ask` | ✅ |
+| `api/cadu/publish.js` | 76 | `POST /api/cadu/publish` | ✅ |
+| `api/cadu/pipeline.js` | 118 | `GET /api/cadu/pipeline` (sem sub-path) | ✅ |
+| `api/cadu/pipeline-router.js` | 108 | `GET/POST /api/cadu/pipeline/*` via vercel rewrite | ✅ |
+| `api/cadu/openclaw-router.js` | 58 | `GET/POST /api/cadu/openclaw/*` via vercel rewrite | ✅ |
+
+**Total: 7 functions. Dentro do limite Vercel Hobby (12).** Sobra pra 5.
+
+### 3.2 Roteamento via `vercel.json`
+
+```json
+{ "source": "/api/cadu/sites/(.+)",      "destination": "/api/cadu/sites?path=$1" }
+{ "source": "/api/cadu/pipeline/(.+)",   "destination": "/api/cadu/pipeline-router?path=$1" }
+{ "source": "/api/cadu/openclaw/(.+)",   "destination": "/api/cadu/openclaw-router?path=$1" }
+```
+
+⚠️ **Não há rewrite pra `/api/cadu/feed/(.+)`** — feed usa query string direto (`?path=`).
+⚠️ **Há DOIS arquivos pra pipeline** (`pipeline.js` + `pipeline-router.js`). O router recebe as requisições reais via rewrite; `pipeline.js` fica órfão pra maioria dos sub-paths. **Possível cleanup**: deletar `pipeline.js` ou mover lógica comum pra `cadu-router.js` único (Yan já cogitou no commit `148b0c6`).
+
+### 3.3 SSE pipeline (detalhes técnicos)
+
+**`api/cadu/pipeline.js` e `pipeline-router.js`** (linhas 56-95 / 54-89):
+- Detectam SSE: `GET` + `subPath.endsWith('/stream')`
+- **Vercel Fluid Compute + Node 20**: suportam `res.write()` em streaming
+- `export const config = { maxDuration: 300 }` (5 min — suficiente pra curator, ig, format)
+- Headers do response:
+  - `Content-Type: text/event-stream; charset=utf-8`
+  - `Cache-Control: no-cache, no-transform`
+  - `Connection: keep-alive`
+  - `X-Accel-Buffering: no` (desativa buffering de proxy/CDN)
+- Upstream `fetch()` com `Accept: text/event-stream` → repassa chunks via `reader.read()` + `res.write()`
+- **Sem retry** — se upstream cair, cliente vê `[stream error]` (linha 1538 do controller) e tenta reconectar em 2s
+
+**Client SSE** (`controller.js:1503-1546`):
+- `EventSource(url, { withCredentials: false })` — EventSource NÃO suporta `Authorization` header (limitação WHATWG). Auth vai via `?kc_admin_token=` ou `?token=` query string
+- 3 event types: `log` (linha de log), `done` (run finished), `error` (stream error)
+- Auto-reconnect após 2s no handler `error`
+- ⚠️ Bug potencial (linha 1576): `pipelineEventSource.controller.abort()` — `EventSource` não tem `.controller`. Vai throw silencioso em try/catch (não causa crash mas é dead code)
+
+### 3.4 Cache policy inconsistente
+
+| Endpoint Vercel | Cache-Control | TTL |
+|----------------|---------------|-----|
+| `/api/cadu/health` | sem cache | 0 |
+| `/api/cadu/sites` (GET root) | `private, max-age=300` | **5 min** |
+| `/api/cadu/sites/{id}/meta` (sub-path) | `no-cache` | 0 |
+| `/api/cadu/feed` (GET root) | `private, max-age=60` | **1 min** |
+| `/api/cadu/feed/{id}/ask` (sub-path) | `no-cache` | 0 |
+
+⚠️ Após PATCH bem-sucedido em `/sites/{id}/meta`, o root `/sites` permanece cacheado por 5 min. Usuário vê dados stale até dar refresh manual. **Próxima fase**: invalidar cache no PATCH (header `Cache-Control: no-store` ou versão por timestamp).
+
+---
+
+## 4. Comportamento por aba — bugs latentes e melhorias
+
+### 4.1 Sites UFG
+
+**Render** (`renderSitesTable` linha 401-453):
+- Re-renderiza **tudo** via `tbody.innerHTML = ...map().join('')` a cada mudança de filtro ou save
+- Ineficiente mas com 56 sites é OK. Se chegar a 200+ (futuro câmpus), reescrever com diff
+- Event delegation em `tbody.querySelectorAll('select.kc-cadu-tier-select, textarea.kc-cadu-note-input')` — bound **DEPOIS** de cada re-render
+
+**Auto-save debounce** (`scheduleSiteSave` linha 365-376):
+- 700ms debounce por `(name, field)`
+- Status visual: `<i class="fas fa-clock"></i>` (pendente) → `fa-check verde` (sucesso) → `fa-triangle-exclamation vermelho` (erro)
+- Sucesso limpa após 2.5s; erro após 4s
+- ⚠️ **BUG LATENTE**: key do debounce é só `site.name` (linha 366). Se 2 sites têm **mesmo nome**, o segundo save sobrescreve pending do primeiro. Em produção atual (56 unidades únicas) OK, mas vale documentar a constraint
+
+**IG link** (linha 416-418):
+- Remove `@` leading com `.replace(/^@/, '')` — defensivo
+- `target="_blank" rel="noopener"` — seguro
+- Cor rosa `#e1306c` (instagram oficial) — fixo no CSS `.kc-cadu-ig-link`
+
+**CSV export** (`#sites-export-csv` handler linha 1091-1097):
+- BOM UTF-8 (`'\uFEFF'` linha 93 helper) — Excel abre com encoding correto
+- Nome: `cadu-sites-YYYY-MM-DD.csv`
+- ⚠️ Exporta `state.filteredSites` (não `state.allSites`) — comportamento útil (exporta só o filtrado) mas pode confundir
+
+**Botão Publicar** (handler linha 1099-1112):
+- Delega clique no `#sites-table` (não em cada botão)
+- Parse `data-key = name|url` (key composto, evita conflito se 2 sites têm mesmo nome)
+- `publishSite` (linha 470): anti double-click via `state.publishingKey === site.key`
+- Feedback visual: `is-ok` (verde, 2.5s) / `is-err` (vermelho, 3.5s)
+
+**Botão Perguntar Cadu** (linha 429):
+- Atributos `data-ask-kind="site" data-ask-name=... data-ask-url=... data-ask-instagram=... data-ask-tier=...`
+- Delegação GLOBAL no `document.addEventListener('click')` (linha 1007) — `t.closest('.kc-cadu-ask-btn')`
+- Aciona `askCaduContext({...})` → POST `/api/cadu/openclaw/agent-send` direto (sem tentar endpoint dedicado)
+
+### 4.2 Feed coletado
+
+**Auto-load** (`refreshAll` linha 1650-1658):
+- Carrega feed **mesmo** quando tab não é feed (linha 1656: `if (state.currentTab !== 'feed') loadFeed(true)`) — pra atualizar KPI Memória
+- KPI `kpi-memory` = `state.allFeedItems.length` = chunks da amostra (não total real do DB)
+- `kpi-memory-detail` = texto dinâmico: `'X com perfil atribuído (confirmado ou tentativa)'` (linha 461) / `'amostra carregada (limit=' + limit + ')'` (linha 535)
+
+**Filtro local** (`applyFeedFilter` linha 543-573):
+- Não chama API — filtra `state.allFeedItems` em memória
+- Busca case-insensitive em `snippet + heading + chunk_id`
+- ⚠️ **BUG LATENTE**: snippet truncado em 500ch em algum lugar do pipeline (citado no doc anterior) — pode perder contexto em chunks grandes. Validar cadu-api `fetch_recent_chunks`
+
+**Botão Perguntar Cadu** (linha 562):
+- `data-ask-kind="feed" data-ask-id={chunk_id} data-ask-heading={heading}`
+- `askCaduContext` (linha 856-879):
+  1. Tenta `POST /api/cadu/feed?path={chunk_id}/ask` PRIMEIRO (endpoint dedicado v0.4.6+)
+  2. Se 404/`__error` → fallback com `<chunk-context>` inline + `agent-send`
+- ⚠️ **Comportamento atual**: cadu-api v0.4.2 → endpoint dedicado retorna 404 → fallback executa → cai no `agent-send` → **401 admin_auth_required**
+
+**Load More** (handler linha 1124-1128):
+- Incrementa `feedLimit` por `FEED_PAGE_SIZE=20`, máx 200 (linha 1125)
+- Não persiste — ao mudar de tab e voltar, `state.feedLimit` reseta pro default? Não verificado.
+
+### 4.3 Pipeline
+
+**3 colunas no grid** (HTML linha 415-453):
+- Coluna 1: `pipeline-stages-list` (estágios pré-definidos, 220-320px)
+- Coluna 2: `pipeline-active-card` + `pipeline-log` (1fr — toma espaço disponível)
+- Coluna 3: `pipeline-history-list` (histórico, 220-280px)
+- Mobile (`max-width: 1100px`): 1 coluna, empilhado
+
+**Auto-refresh intervals** (linha 1641-1648):
+- `setInterval(refreshPipeline, 5000)` quando `state.currentTab === 'pipeline'`
+- `setInterval(refreshOpenclaw, 15000)` quando `state.currentTab === 'openclaw'`
+- ⚠️ Os intervals NÃO checam `if (pipelineEventSource)` — sempre fazem 1 fetch+render a cada 5s, mesmo com SSE ativo. Pode causar flash visual ao receber log line via SSE e re-render do active card
+
+**Active run card** (`renderPipelineActive` linha 1302-1334):
+- Status class: `is-running` (âmbar pulsante), `is-failed` (vermelho), `is-finished` (verde)
+- Stop button SÓ se `status === 'running'` (linha 1317)
+- Botão Parar chama `stopPipelineRun` (linha 1619-1638): confirm + POST `/pipeline/{id}/stop`
+- Mensagens de erro específicas por status code (409, 404, 5xx)
+
+**SSE reconnect** (linha 1537-1542):
+- Em `error`, fecha ES, marca null, `setTimeout(refreshPipeline, 2000)`
+- ⚠️ **Não diferencia "transient" de "fatal"** — vai ficar reconectando pra sempre se cadu-api estiver down
+
+**Histórico** (`renderPipelineHistory` linha 1336-1373):
+- Mostra **últimos 20** runs (`history.slice(0, 20)`)
+- **4 botões** SÓ para runs `finished|failed|cancelled` (rodando não tem ações):
+  - 👁 Ver (modal com artifacts + log tail, paralelo `Promise.all`)
+  - ⬇ Baixar log (`window.open` URL com `?download=1`)
+  - 📤 Export JSON (client-side Blob + download)
+  - 🤖 Perguntar Cadu (chama `askCaduAboutRun` — vide inconsistência abaixo)
+
+**Modal de detalhes** (`openRunDetailsModal` linha 1375-1420):
+- Modal criado dinamicamente em `ensureRunDetailsModal()` (linha 1422-1439) — fica no DOM permanentemente
+- CSS inline (`style.cssText`) — não usa CSS global
+- Fecha em click no overlay (linha 1436) ou botão Fechar
+- 4 botões no footer: 🤖 / ⬇ / 📤 / Fechar
+
+**Cache-bust inconsistente** (admin/cadu.html linha 611):
+- `<script src=".../admin-cadu.controller.js?v=1.0.0">` — **versão imutável 1.0.0**
+- Outros assets usam `?v=8.6.x` (semver). Controller ficou em 1.0.0 desde o commit original
+- ⚠️ **Yan precisa lembrar de bumpar manualmente** após mudanças no controller. Se esquecer, browser cache pode mostrar versão antiga por horas
+- **Recomendação próxima fase**: alinhar com `?v={git short hash}` (script de build) ou usar `?v=kc-admin.X.Y`
+
+### 4.4 OpenClaw (Cadu agent)
+
+**4 stat cards** (`refreshOpenclaw` linha 621-719):
+- AGENT: `main + deepseek-v4-pro + ctx 1M` (hardcoded hint linha 652)
+- TELEGRAM: `Bot: 8746…f8DM · 1/1 account` (hardcoded, vaza início do bot token — aceitável)
+- HEARTBEAT: regex em `healthText` (`/Telegram:\s*configured/i`, `/Heartbeat/i`)
+- TASKS: `active/total` + `succeeded OK · failures falhas`
+
+**Chat** (`openclawSendChat` linha 721-788):
+- Render user msg ANTES do fetch (linha 740) — UX responsiva
+- `openclawState.busy = true` no início, libera no `finally` — anti double-click
+- Payload: `{ message, agent: "main", session_id?, deliver? }`
+- `deliver=true` só se checkbox marcado (linha 746) — Telegram delivery
+- Resposta: pega `payloads[].text` ou fallback `data.summary`
+- Atualiza `lastSessionId` se criou novo
+- `setTimeout(refreshOpenclaw, 1500)` após envio — atualiza stats
+
+**Cross-tab Ask** — INCONSISTÊNCIA CRÍTICA:
+
+| Caminho | Auto-envia? | Onde |
+|---------|-------------|------|
+| Site row → 🤖 | ✅ sim | `askCaduContext` kind="site" linha 880 |
+| Feed chunk → 🤖 | ✅ sim | `askCaduContext` kind="feed" linha 856 |
+| Pipeline run history → 🤖 | ❌ **NÃO** | `askCaduAboutRun` linha 1460 |
+| Pipeline modal → 🤖 | ❌ **NÃO** | `askCaduAboutRun` linha 1460 |
+
+`askCaduAboutRun` pré-popula o textarea mas **não envia** — usuário precisa clicar Enviar manualmente. Diferente dos outros 2 caminhos que enviam direto. **Inconsistência de UX que vale alinhar**.
+
+**Sessões recentes** (`refreshOpenclaw` linha 682-713):
+- Fetch `/api/cadu/openclaw/sessions?limit=8`
+- Mostra `kind` (cron/direct), `model`, `key` (slice 60), `ageMs`, `% ctx` se disponível
+- Salva `lastSessionId` da sessão "direct" mais recente — usado nos próximos sends
+
+**Notification bell polling** (linha 926-995):
+- `pollNotifActivity` chama `GET /api/cadu/pipeline/runs?limit=8`
+- ⚠️ **Esse endpoint é NOVO v0.4.3+**. Em cadu-api v0.4.2 retorna 404 → bell **nunca atualiza**
+- First poll: `setTimeout(pollNotifActivity, 2000)` (linha 1062)
+- Periodic: **NÃO** chama `pollNotifActivity` direto no interval. Em vez disso, faz só `/api/cadu/health` poll a cada 30s (linha 1039-1059). Se a **versão mudou**, aí chama `pollNotifActivity()`
+- Lógica: badge = runs NOVAS desde última visita OU runs das últimas 24h (whichever > 0)
+- `localStorage.kc_cadu_seen_runs`: `{run_id: Date.now()}` das últimas 20
+- Click no item do dropdown → `switchTab('pipeline')` + `scrollIntoView` pro `[data-run-id="..."]`
+
+**Periodic health poll** (linha 1039-1059):
+- A cada 30s, GET `/api/cadu/health`
+- Atualiza `#cadu-version-text` se mudou (mantém em sync com /health)
+- Se version mudou → re-poll notification activity (pega runs novas)
+- ⚠️ Comparação `data.version >= '0.4.6'` (linha 1053) é **string comparison**. `'0.4.6'` >= `'0.4.6'` é OK, mas se houver version como `'0.4.10'`, `'0.4.10' < '0.4.6'` lexicograficamente — bug latente. **Fix**: usar `parseFloat(data.version) >= 0.46` ou semver compare
+
+---
+
+## 5. Pontos de extensão / pontos de quebra
+
+### 5.1 Onde adicionar uma nova feature
+
+| Quer adicionar | Mexer em |
+|----------------|----------|
+| Novo endpoint cadu-api | `server.py` (FastAPI), opcional `api/cadu/*.js` se quer expor via Vercel |
+| Nova aba no admin | `admin/cadu.html` (HTML + CSS), `admin-cadu.controller.js` (state + switchTab + loadFn), opcional `bindEvents` |
+| Novo botão em site row | `renderSitesTable` (linha 401), `bindEvents` (delegação), `askCaduContext` se for ask-btn |
+| Novo estágio de pipeline | `pipeline.py` linha 82 `PIPELINE_STAGES` dict |
+| Novo stat card | `refreshOpenclaw` linha 621 + HTML `.kc-cadu-stat-card` correspondente |
+| Nova coluna em `kc_unit_meta` | `server.py:_fetch_unit_meta` linha 618 + `SiteUnit` Pydantic + UI |
+
+### 5.2 Onde NÃO mexer sem cuidado
+
+| Componente | Por quê |
+|------------|---------|
+| `_cadu_token_cache` (server.py:58) | Cache do token do Cadu em memória. Resetar = re-login Supabase. Usado em publish via Edge Function |
+| `_openclaw_context_cache` (server.py:1079) | Cache TTL 30s em memória. Resetar = refetch paralelo de 5 fontes |
+| `PIPELINE_STAGES` dict (pipeline.py:82) | Stages são referenciados por ID em DB. Renomear ID quebra histórico |
+| `app.version` (server.py:117) | Aparece em OpenAPI docs, FastAPI exception handlers |
+| `kc_admin_token` query param (cadu-auth.mjs:31) | Hardcoded como convenção entre UI e proxy. Mudar nome = quebrar SSE |
+| `data-ask-*` attributes (controller.js) | Contrato implícito UI ↔ askCaduContext. Mudar = quebrar delegation |
+
+### 5.3 Limites operacionais
+
+| Limite | Valor | Onde |
+|--------|-------|------|
+| Vercel Hobby functions | 12 (usando 7) | vercel.json |
+| Vercel Hobby maxDuration SSE | 300s (5min) | pipeline.js + pipeline-router.js config |
+| Cadu memory chunks sample | max 200 (limit=200) | controller.js linha 1125 |
+| Sites UFG na UI | sem limite explícito (parser renderiza tudo) | renderSitesTable |
+| Pipeline dedup | rejeita 2º run se mesmo stage em running/pending | pipeline.py:235 |
+| Chat input chars | max 4000 | admin/cadu.html linha 516 |
+| SSE auth via query | `?token=` OU `?kc_admin_token=` | server.py:162-179 |
+| OpenClaw context cache | 30s TTL | server.py:1098 |
+
+---
+
+## 6. Próximas fases sugeridas (ordem de prioridade)
+
+### 🔴 URGENTE (bloqueia uso)
+1. **SSH + `docker compose up -d cadu-api`** em `/docker/openclaw-hahq/` (NÃO `docker restart`)
+   - Ativa v0.4.3 do server.py (com `/openclaw/context`, `/feed/{id}/ask`, `/admin/redeploy`)
+   - **Sem isso**: notification bell polling 404, cross-tab Ask cai no fallback 401, modal de detalhes 404
+2. **Atualizar `CADU_API_TOKEN` no Vercel** com token novo (Yan rotacionou após exposição)
+   - Comando: `vercel env rm CADU_API_TOKEN production` + `vercel env add CADU_API_TOKEN production`
+3. **Decidir sobre DEV BYPASS** (linha 154 controller): reativar com flag `if (hostname.endsWith('.vercel.app') || hostname === 'localhost')` para permitir testes em preview sem login real
+
+### 🟡 IMPORTANTE (qualidade)
+4. **Unificar número de versão no server.py**: criar `__version__ = "0.4.6"` no topo, usar em `app.version`, `/health.version`, e `/openclaw/context.cadu_api_info.version`. **Bate 3 lugares com 1 fonte**
+5. **Adicionar `Depends(require_token)` em `/artifacts`, `/log`, `/export`** (server.py:872, 941, 965). **Inconsistência de segurança** — Vercel proxy protege hoje mas cadu-api direto vazaria
+6. **Adicionar `Depends(require_token)` no `/health`** OU whitelist pra evitar info disclosure (atualmente expõe `publish_modes` + `pipeline_stages` que são sensíveis)
+7. **Auto-invalidate cache `/api/cadu/sites` após PATCH** (sites.js linha 68): usar `Cache-Control: no-store` ou version por `?_t={started_at}`
+8. **Fix `askCaduAboutRun` auto-envio** (controller.js:1460): alinharsempipeline ask behavior com site/feed
+9. **Bumpar `?v=1.0.0` do controller**: substituir por `?v=kc-admin.{Y.M.D}` ou usar git short hash em build step
+10. **Fix `pipelineEventSource.controller.abort()`** (linha 1576): `EventSource` não tem `.controller` — substituir por `es.close()` direto
+11. **Dedupe `escapeHtml`** (linha 34 e linha 1221): a segunda é dead code ou shadowing perigoso
+12. **Limpar `pipelineRefreshTimer`** (linha 1219): declarado mas nunca usado
+13. **Versão semver no periodic poll** (linha 1053): `data.version >= '0.4.6'` falha em `0.4.10`. Usar `parseFloat` ou comparator próprio
+
+### 🟢 DESEJÁVEL (futuro)
+14. **Adicionar Cadu Bot ID via env** (controller.js:673 hardcoded `'Bot: 8746…f8DM'`) — vaza bot ID truncation. Ler de `KC_ENV.TELEGRAM_BOT_ID_PREFIX` + `TELEGRAM_BOT_ID_SUFFIX`
+15. **Implementar `docker compose up -d` no `/api/admin/redeploy`** (server.py:1474): substituir `docker restart` por `docker compose up -d cadu-api` pra recarregar env vars
+16. **Cleanup scripts legacy** no VPS (`/tmp/legacy-scripts-archive/scripts-legacy-2026-06-26.tar.gz` já tem backup — mover para `/data/.openclaw/workspace/_legacy/` ou deletar via SSH)
+17. **Implementar scraper SECOM `/e/*`** (BUG D pendente): sites como `ufg.br/e/39237` não são capturados pelo scraper SECOM atual. Pattern precisa cobrir paths `/e/*`
+18. **Renomear `pipeline.js` ou deletar**: redundante com `pipeline-router.js`. Unificar em router único
+19. **Adicionar testes E2E** (Playwright): capturar screenshots dos 4 estados da página + verificar notification bell em ambiente staging
+20. **Documentar processo de rotação de tokens** em `docs/SECURITY.md` (não existe ainda): Supabase, GitHub, Vercel, CADU_API_TOKEN — quem rotaciona, quando, como verificar se está sincronizado
+
+---
+
+## 7. Convenções pra quem for mexer
+
+### 7.1 Naming CSS (kc-cadu-* namespace)
+- `.kc-cadu-section` — wrapper de aba
+- `.kc-cadu-table` + `.kc-cadu-table-wrap` — tabela editável
+- `.kc-cadu-tier-select`, `.kc-cadu-note-input`, `.kc-cadu-ig-link` — controles por célula
+- `.kc-cadu-publish-btn` (laranja), `.kc-cadu-ask-btn` (azul cyan) — actions
+- `.kc-cadu-badge--{tier|confirmed|tentative|missing|unknown}` — status visual
+- `.kc-cadu-kpi`, `.kc-cadu-kpi-strip` — KPI cards
+- `.kc-pipeline-grid`, `.kc-pipeline-stage`, `.kc-pipeline-active-card`, `.kc-pipeline-history-item` — pipeline específico
+- `.kc-openclaw-grid`, `.kc-openclaw-panel`, `.kc-openclaw-chat-log`, `.kc-openclaw-list-item` — openclaw específico
+- `.kc-notif-bell`, `.kc-notif-badge`, `.kc-notif-dropdown`, `.kc-notif-dropdown__item` — notification bell
+
+### 7.2 Contrato de data attributes (ask-btn)
+- `data-ask-kind` ∈ {`site`, `feed`, `pipeline`}
+- Site: `data-ask-name`, `data-ask-url`, `data-ask-instagram`, `data-ask-tier`
+- Feed: `data-ask-id` (chunk_id), `data-ask-heading`
+- Pipeline: `data-ask-run-id`, `data-ask-stage`, `data-ask-status`
+
+### 7.3 Contrato de resposta cadu-api
+- `__error: true, status: <http_code>, data: <upstream body>` quando erro upstream
+- Resposta JSON normal em sucesso
+- SSE: `event: log\ndata: {"line": "..."}` e `event: done\ndata: {"status":"finished","exit_code":0}`
+
+### 7.4 Padrão de query params
+- `?limit=N` — listas
+- `?path=<sub-path>` — proxy Vercel rewrite
+- `?token=<EXPECTED_TOKEN>` — cadu-api SSE auth
+- `?kc_admin_token=<Supabase JWT>` — Vercel proxy SSE auth
+- `?download=1` — força Content-Disposition: attachment
+- `?tail=N` — log tail (default 80)
+- `?refresh=true` — bypass cache TTL
+
+---
+
+## 8. Onde a próxima IA deve olhar primeiro
+
+Ordem de leitura sugerida pra entender o sistema completo em <30min:
+
+1. **`admin/cadu.html`** (613L, 15min) — vê estrutura DOM + CSS variables + scripts carregados
+2. **`assets/js/controllers/admin/admin-cadu.controller.js`** linhas 149-269 (5min) — auth flow
+3. **`assets/js/controllers/admin/admin-cadu.controller.js`** linhas 1130-1500 (15min) — pipeline + SSE
+4. **`server/cadu-auth.mjs`** (131L, 5min) — Vercel proxy auth
+5. **`api/cadu/pipeline.js` + `pipeline-router.js`** (10min) — SSE proxy
+6. **`openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`** linhas 595-700 (5min) — `/health` + `/sites` + Supabase merge
+7. **`openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`** linhas 1082-1208 (5min) — `/openclaw/context` (snapshot consolidado)
+8. **`openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`** linhas 75-164 (5min) — `PIPELINE_STAGES` dict
+
+Total: ~65min de leitura focada. Depois, ler commit `5891525` (20 arquivos versionados) pra entender decisões históricas.
+
+**Não pule a etapa 6 e 7** — é onde tá a "alma" do cadu-api: como ele mescla Supabase com workspace, e como ele consolida 4 fontes em 1 request via `/openclaw/context`.
+
+---
+
+## 9. TL;DR pro Mavis da próxima iteração
+
+- **3 camadas de auth** validando coisas diferentes (UI / Vercel proxy / cadu-api container)
+- **3 versões inconsistentes** no mesmo server.py (app.version="0.4.3", /health="0.4.2", context="0.4.6")
+- **7 functions Vercel** deployadas (limite Hobby 12)
+- **26 endpoints cadu-api** (25 com auth, 3 sem: /artifacts /log /export)
+- **5 bugs latentes críticos** (DEV bypass off, ask auto-inconsistente, version compare string, controller?v=1.0.0, /admin/redeploy docker restart vs compose up)
+- **3 ações urgentes bloqueando uso** (SSH+restart cadu-api, atualizar CADU_API_TOKEN no Vercel, decidir bypass)
+- **Yan rotacionou todos os tokens após exposição em chat** (CADU_API_TOKEN, Supabase service_role, etc) — `.env` local está obsoleto
+- **OpenClaw agent está sem login web** (form HTML pedindo token) — agente sem capacidade de executar remoto até logar
+
+**Próximo passo mais impactante**: SSH + `docker compose up -d cadu-api` (recria container, recarrega env vars) + atualizar `CADU_API_TOKEN` no Vercel. 5 minutos de SSH destravam notification bell, modal de detalhes, cross-tab Ask, e todos os endpoints v0.4.3+.
+
+---
+
+**Fim da v2.** Commit seguinte: append acima do que existia em `0f59546`. v1 em `f6ceb23` preserva o estado básico; v2 adiciona profundidade analítica pra próximas IAs.
