@@ -16,7 +16,7 @@
 
 @media (min-width: 1024px) {
   .kc-chat-page {
-    grid-template-columns: 360px 1fr;
+    grid-template-columns: 380px 1fr;
   }
 }
 
@@ -37,12 +37,12 @@
 }
 
 .kc-chat-sidebar__header {
-  padding: 18px 18px 12px;
+  padding: 20px 20px 14px;
   border-bottom: 1px solid var(--kc-border-dark, rgba(255,255,255,0.06));
 }
 
 .kc-chat-sidebar__title {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 800;
   margin: 0 0 4px;
   color: var(--kc-text-dark-primary);
@@ -330,13 +330,19 @@
 .kc-chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 18px;
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   background:
     radial-gradient(circle at top right, rgba(255, 124, 0, 0.04), transparent 60%),
     var(--kc-background-dark);
+}
+
+@media (min-width: 768px) {
+  .kc-chat-messages {
+    padding: 24px 32px;
+  }
 }
 
 .kc-chat-day-divider {
@@ -361,15 +367,22 @@
 
 /* Bolha de mensagem */
 .kc-chat-msg {
-  max-width: 75%;
-  padding: 10px 14px;
+  max-width: 78%;
+  padding: 11px 16px;
   border-radius: 18px;
   position: relative;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
-  line-height: 1.4;
+  line-height: 1.45;
+  font-size: 0.95rem;
   animation: kc-chat-msg-in 180ms ease-out;
+}
+
+@media (min-width: 768px) {
+  .kc-chat-msg {
+    max-width: 65%;
+  }
 }
 
 @keyframes kc-chat-msg-in {

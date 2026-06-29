@@ -324,39 +324,26 @@
   }
 
   // ── toggle_reaction (V76.53) ────────────────────────────────────────────
-  // Tabela chat_reactions via client direto (RLS: usuário só insere/deleta as suas).
-  // Toggle: se já existe, deleta; senão, insere.
+  // Usa RPC kc_chat_toggle_reaction (SECURITY DEFINER) que preenche user_id via
+  // auth.uid() internamente. Isso resolve o problema de RLS: o insert direto na
+  // tabela exigia user_id explícito para satisfazer a policy chat_reactions_upsert_own.
 
   async function toggleReaction(messageId, emoji) {
     var client = getClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     if (!messageId || !emoji) return { ok: false, error: { message: 'Parâmetros inválidos.' } };
     try {
-      // Verifica se já existe reação deste usuário com este emoji
-      var existing = await client
-        .from('chat_reactions')
-        .select('id')
-        .eq('message_id', messageId)
-        .eq('emoji', emoji)
-        .maybeSingle();
-      if (existing.error) return { ok: false, error: { message: existing.error.message } };
-      if (existing.data) {
-        // Já existe → remove (toggle off)
-        var del = await client
-          .from('chat_reactions')
-          .delete()
-          .eq('id', existing.data.id);
-        if (del.error) return { ok: false, error: { message: del.error.message } };
-        return { ok: true, data: { action: 'removed' } };
+      var r = await client.rpc('kc_chat_toggle_reaction', {
+        p_message_id: messageId,
+        p_emoji: emoji,
+      });
+      if (r.error) return { ok: false, error: { message: r.error.message } };
+      var row = Array.isArray(r.data) ? r.data[0] : r.data;
+      if (!row) return { ok: false, error: { message: 'Resposta vazia.' } };
+      if (row.ok === false) {
+        return { ok: false, error: { message: row.error || 'Erro ao reagir.' } };
       }
-      // Não existe → insere (toggle on)
-      var ins = await client
-        .from('chat_reactions')
-        .insert({ message_id: messageId, emoji: emoji })
-        .select('id')
-        .single();
-      if (ins.error) return { ok: false, error: { message: ins.error.message } };
-      return { ok: true, data: { action: 'added', reaction_id: ins.data.id } };
+      return { ok: true, data: { action: row.action } };
     } catch (e) {
       return { ok: false, error: { message: (e && e.message) || String(e) } };
     }
