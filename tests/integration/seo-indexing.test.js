@@ -86,6 +86,7 @@ describe('SEO e indexacao publica', () => {
       expect(html).toContain(`<link rel="canonical" href="${canonical}" />`);
       expect(html).toContain('<link rel="alternate" type="application/rss+xml" href="https://www.kinocampus.com.br/feed.xml" />');
       expect(html).toContain('<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />');
+      expect(html).toContain('<meta name="google-adsense-account" content="ca-pub-2776499020194231" />');
       expect(html).toContain('<meta property="og:locale" content="pt_BR" />');
       expect(html).toContain('assets/js/boot/kc-seo-structured-data.js?v=8.6.1');
     });
@@ -125,6 +126,7 @@ describe('SEO e indexacao publica', () => {
       const html = read(file);
       expect(html).toContain('<meta name="robots" content="noindex');
       expect(html).toContain('<link rel="canonical" href="https://www.kinocampus.com.br/');
+      expect(html).not.toContain('google-adsense-account');
       if (file === '_product.html') {
         expect(html).toContain('<link rel="alternate" type="application/rss+xml" href="https://www.kinocampus.com.br/feed.xml" />');
       }
@@ -227,6 +229,7 @@ describe('SEO e indexacao publica', () => {
     expect(audit).toContain('auditPublicImageAlt');
     expect(audit).toContain('auditPublicContentDepth');
     expect(audit).toContain('auditProductSsr');
+    expect(audit).toContain('ADSENSE_PUBLISHER_ID');
     expect(audit).toContain('G-P9RKYHPB7Z');
     expect(audit).toContain('GPTBot');
   });

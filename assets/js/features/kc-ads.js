@@ -39,10 +39,9 @@
     '/compra-venda-feed.html': 'compra-venda',
     '/caronas-feed.html': 'caronas',
     '/achados-perdidos.html': 'achados-perdidos',
-    '/search-results.html': '',
   });
 
-  const BLOCKED_PATH_RE = /\/(?:admin\/|product\.html|_product\.html|create-post\.html|my-posts\.html|profile\.html|settings\.html|mensagens\.html|account-setup\.html|auth-callback\.html|privacidade\.html|termos\.html|ajuda\.html|transparencia\.html)/i;
+  const BLOCKED_PATH_RE = /\/(?:admin\/|product\.html|_product\.html|create-post\.html|my-posts\.html|profile\.html|settings\.html|mensagens\.html|account-setup\.html|auth-callback\.html|search-results\.html|privacidade\.html|termos\.html|ajuda\.html|transparencia\.html)/i;
   const ADSENSE_CLIENT_FALLBACK = 'ca-pub-2776499020194231';
   const ADSENSE_SCRIPT_ID = 'kcAdsenseScript';
   const VALID_PLACEMENTS = ['feed_inline', 'feed_aside'];

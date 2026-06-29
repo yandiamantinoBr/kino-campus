@@ -191,6 +191,33 @@ describe('KCAds feed monetization', () => {
     expect(document.querySelector('#kcAdsenseScript')).toBeFalsy();
   });
 
+  test('busca interna noindex nao e placement de anuncios', () => {
+    window.history.replaceState({}, '', '/search-results.html?q=evento');
+    window.KCConsent = { hasConsent: (key) => key === 'advertising' };
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 6 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
+      '</div>',
+    ].join('');
+
+    expect(KCAds.isFeedPage('/search-results.html')).toBe(false);
+    expect(KCAds.maybeLoadAutoAds({
+      status: 'active',
+      auto_ads_enabled: true,
+      adsense_client_id: 'ca-pub-2776499020194231',
+    })).toBe(false);
+
+    const rendered = KCAds.renderAllAds([], { module_key: '' }, document, {
+      status: 'active',
+      placement_modes: { feed_inline: 'adsense_only' },
+      adsense_slots: { feed_inline: '1234567890' },
+    });
+
+    expect(rendered).toBe(false);
+    expect(document.querySelector('#kcAdsenseScript')).toBeFalsy();
+    expect(document.querySelector('ins.adsbygoogle')).toBeFalsy();
+  });
+
   test('renderiza anúncios laterais em bloco inicial e bloco sticky final', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
@@ -267,7 +294,6 @@ describe('KCAds feed monetization', () => {
       'compra-venda-feed.html',
       'caronas-feed.html',
       'achados-perdidos.html',
-      'search-results.html',
     ].forEach((file) => {
       expect(read(file)).toContain('assets/js/features/kc-ads.js');
     });
@@ -278,6 +304,7 @@ describe('KCAds feed monetization', () => {
       'my-posts.html',
       'profile.html',
       'settings.html',
+      'search-results.html',
       'privacidade.html',
       'termos.html',
       'ajuda.html',

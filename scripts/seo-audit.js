@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const GOOGLE_SITE_VERIFICATION = 'pUhcnFNqCxds-Z6VQcj7g5-IbIcEwSVZ9b2l4_OHIcc';
 const GA4_MEASUREMENT_ID = 'G-P9RKYHPB7Z';
+const ADSENSE_PUBLISHER_ID = 'ca-pub-2776499020194231';
 
 const INDEXABLE = {
   'index.html': '/',
@@ -73,6 +74,7 @@ function auditHtml(file, expectedRoute, errors, warnings) {
   const ogTitle = match(html, /<meta\s+property=["']og:title["']\s+content=["']([^"']*)/i).trim();
   const ogDescription = match(html, /<meta\s+property=["']og:description["']\s+content=["']([^"']*)/i).trim();
   const ogImage = match(html, /<meta\s+property=["']og:image["']\s+content=["']([^"']*)/i).trim();
+  const adsenseAccount = match(html, /<meta\s+name=["']google-adsense-account["']\s+content=["']([^"']*)/i).trim();
   const rssLink = /<link\s+rel=["']alternate["'][^>]+type=["']application\/rss\+xml["'][^>]+href=["']https:\/\/www\.kinocampus\.com\.br\/feed\.xml["']/i.test(html);
 
   if (!title || title.length < 8 || title.length > 70) errors.push(`${file}: title ausente ou fora do intervalo recomendado.`);
@@ -81,6 +83,7 @@ function auditHtml(file, expectedRoute, errors, warnings) {
   if (!/\bindex\b/i.test(robots) || /\bnoindex\b/i.test(robots)) errors.push(`${file}: robots deveria permitir indexacao.`);
   if (!h1 || h1.length < 4) errors.push(`${file}: H1 ausente ou vazio.`);
   if (!ogTitle || !ogDescription || !ogImage) errors.push(`${file}: Open Graph incompleto.`);
+  if (adsenseAccount !== ADSENSE_PUBLISHER_ID) errors.push(`${file}: meta google-adsense-account ausente ou divergente.`);
   if (!rssLink) errors.push(`${file}: link RSS publico ausente.`);
 }
 
@@ -88,8 +91,10 @@ function auditNoindex(file, errors) {
   const html = read(file);
   const robots = match(html, /<meta\s+name=["']robots["']\s+content=["']([^"']*)/i).trim();
   const canonical = match(html, /<link\s+rel=["']canonical["']\s+href=["']([^"']*)/i).trim();
+  const adsenseAccount = match(html, /<meta\s+name=["']google-adsense-account["']\s+content=["']([^"']*)/i).trim();
   if (!/\bnoindex\b/i.test(robots)) errors.push(`${file}: deveria estar noindex.`);
   if (!canonical.startsWith(SITE_ORIGIN)) errors.push(`${file}: canonical absoluto ausente.`);
+  if (adsenseAccount) errors.push(`${file}: pagina noindex nao deve declarar google-adsense-account.`);
 }
 
 function auditRobots(errors) {

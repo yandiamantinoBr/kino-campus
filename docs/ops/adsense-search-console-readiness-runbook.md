@@ -34,6 +34,9 @@ Gate adicional antes de pedir nova revisão:
 
 - home e todos os seis feeds públicos devem conter uma seção `kc-feed-guide`
   no HTML inicial;
+- páginas públicas indexáveis devem declarar o Publisher ID com
+  `google-adsense-account`, enquanto páginas `noindex` não devem declarar essa
+  meta;
 - cada guia deve ter orientações específicas do módulo, não texto genérico de
   marketing;
 - cada guia deve ter pelo menos três orientações práticas e texto suficiente
