@@ -1,6 +1,6 @@
 # Cadu Admin (`/admin/cadu.html`) — Estado Atual
 
-**Última atualização:** 2026-06-28
+**Última atualização:** 2026-06-29 (revisão pós-feedback — 3 correções factuais)
 **Branch kino-campus:** `kinocampus-V75.0-foundations`
 **Commits relevantes:**
 - `218e7a6` — feat(admin/cadu): cross-tab "Perguntar Cadu" buttons + status indicators
@@ -19,17 +19,21 @@
 │   ├─ admin-cadu.controller.js (1694 linhas, monolítico IIFE)         │
 │   └─ localStorage: kc:cadu:tab, kc_cadu_seen_runs                  │
 │                                                                       │
-│ ▼ Vercel Edge /api/cadu/* (proxy + Bearer token)                     │
-│   ├─ api/cadu/health.js      → /api/health                           │
-│   ├─ api/cadu/sites.js       → /api/sites                            │
-│   ├─ api/cadu/feed.js        → /api/feed?limit=N                    │
-│   │                          → /api/feed?path={id}                   │
-│   │                          → /api/feed?path={id}/ask                │
-│   │                          → /api/feed?path=admin/redeploy          │
-│   ├─ api/cadu/pipeline-router.js → /api/pipeline/{stage,id,...}     │
-│   ├─ api/cadu/openclaw-router.js → /api/openclaw/{status,sessions,...}│
-│   ├─ api/cadu/publish.js     → /api/publish                           │
-│   └─ api/cadu/health.js      → /api/health                           │
+│ ▼ Vercel Edge /api/cadu/* (proxy + Bearer token; URLs públicas)     │
+│   ├─ api/cadu/health.js      → /api/health                            │
+│   ├─ api/cadu/sites.js       → /api/sites                             │
+│   ├─ api/cadu/feed.js        → /api/cadu/feed?limit=N                 │
+│   │                          → /api/cadu/feed?path={id}               │
+│   │                          → /api/cadu/feed?path={id}/ask           │
+│   │                          → /api/cadu/feed?path=admin/redeploy     │
+│   ├─ api/cadu/pipeline.js    → /api/cadu/pipeline (lista + run)       │
+│   ├─ api/cadu/pipeline-router.js → /api/cadu/pipeline/* (rewrite → ?path=)│
+│   ├─ api/cadu/openclaw-router.js → /api/cadu/openclaw/* (rewrite → ?path=)│
+│   ├─ api/cadu/publish.js     → /api/cadu/publish                      │
+│   └─ vercel.json rewrites:                                               │
+│       /api/cadu/sites/(.+)      → /api/cadu/sites?path=$1               │
+│       /api/cadu/pipeline/(.+)   → /api/cadu/pipeline-router?path=$1     │
+│       /api/cadu/openclaw/(.+)   → /api/cadu/openclaw-router?path=$1     │
 │                                                                       │
 │ ▼ cadu-api (FastAPI sidecar na VPS)                                  │
 │   ├─ VPS: srv1597083.hstgr.cloud (Hostinger)                         │
@@ -54,37 +58,43 @@
 |-----------|--------|----------|
 | **cadu-api (VPS)** | ⚠️ **UP mas admin_auth_required** | Yan rotacionou tokens após exposição no chat. TODOS endpoints `/api/*` (exceto `/health`) retornam `401 admin_auth_required`. `/health` retorna `200 version=0.4.2`. |
 | **cadu-api version** | ❌ **0.4.2 (não atualizado)** | server.py v0.4.6 está escrito no filesystem (`/data/.openclaw/skills/cadu-api/server.py`, 1493 linhas, md5 confere com `5891525`) mas container foi iniciado com versão antiga. **Restart manual pendente.** |
-| **cadu-api endpoint `/api/openclaw/context`** | ❌ **404** | Endpoint novo (v0.4.6) não carregado. Quando restartar v0.4.6, esse endpoint consolidará sites+pipeline+feed+openclaw em 1 request. |
-| **cadu-api endpoint `/api/feed/{id}/ask`** | ❌ **404** | Mesmo motivo. Cai no fallback `agent-send` (controller `askCaduContext`). |
+| **cadu-api endpoint `/api/openclaw/context`** | ❌ **404** | Endpoint novo (v0.4.6) não carregado no cadu-api container. Quando restartar v0.4.6, esse endpoint consolidará sites+pipeline+feed+openclaw em 1 request. URL pública via Vercel proxy: `/api/cadu/openclaw/context` (rewrite → `/api/cadu/openclaw-router?path=context`). |
+| **cadu-api endpoint `/api/feed/{id}/ask`** | ❌ **404** | Mesmo motivo (cadu-api v0.4.2 não tem). URL pública via Vercel proxy: `/api/cadu/feed?path={id}/ask` (Vercel proxy repassa como POST para `https://cadu-api/api/feed/{id}/ask`). Cai no fallback `agent-send` no controller. |
 | **Vercel proxy `/api/cadu/*`** | ⚠️ **Funciona, mas retorna 502/cadu_api_error** | Vercel injeta `Bearer CADU_API_TOKEN` que **foi rotacionado**. Token local em `C:\Users\yan1n\Documents\GitHub\kino-campus\.env` (`3dcbe...`) está obsoleto. |
 | **OpenClaw (VPS)** | ⚠️ **UP requer login** | Página `/` retorna HTML com form de token. Endpoint `/agent-send` requer autenticação. Yan fez login em algum momento, mas agora pode ter deslogado. |
 | **TRUSTED_ADMIN_EMAILS (controller)** | ❌ **VAZIO** | `var TRUSTED_ADMIN_EMAILS = []` (linha 147). Antes tinha 3 emails hardcoded, Yan limpou por segurança. |
 | **DEV BYPASS** | ❌ **DESABILITADO** | Linha 154: `if (false)` — sempre pula o bypass `?test_bypass=kc_admin_2026`. |
 | **UI render** | ✅ **Funciona** | HTML/CSS renderiza corretamente. Gate de auth bloqueia dynamic state mas UI está visível. |
 
-### Diagnóstico de fluxo de auth (linhas 149-260 do controller)
+### Diagnóstico de fluxo de auth (controller linhas 149-269)
 
 ```
-CAMADA 1: DEV BYPASS via ?test_bypass=kc_admin_2026 → if (false) = desabilitado
-CAMADA 2: emails hardcoded em TRUSTED_ADMIN_EMAILS → [] = vazio
-CAMADA 3: KC_ENV.driver === 'supabase' check
-CAMADA 4: Supabase Auth session check
-   ├─ KCSupabase.refreshSession()
-   ├─ KCSupabase.getSession()
-   └─ supabaseClient.auth.getSession()
+CAMADA 1 (mais alta): DEV BYPASS via ?test_bypass=kc_admin_2026 → if (false) = DESATIVADO
+CAMADA 2: extrai email de localStorage('kc:user') → window.KCSupabase.getCurrentUser()
+          → window.KCSupabase.refreshSession()+getUser() → window.KCAPI.getCurrentUser()
+          se email ∈ TRUSTED_ADMIN_EMAILS (VAZIO) → libera
+CAMADA 3: KC_ENV.driver === 'supabase' (else: acesso negado)
+CAMADA 4: Supabase Auth session (else: redirect /index.html#login)
+CAMADA 5: re-checa TRUSTED_ADMIN_EMAILS com user.email do Auth (VAZIO)
+CAMADA 6: profiles.is_admin no Supabase via client.from('profiles').select('is_admin,...')
+          (fonte da verdade; se is_admin=false → acesso negado)
 ```
 
-Se CAMADA 1/2 falham + driver correto + Supabase não tem sessão válida → **acesso negado + redirect pra `/index.html#login`**.
+**Quando CAMADAS 1/2/5 falham (todas desabilitadas ou VAZIAS)** + driver correto + Supabase sem sessão → **acesso negado + redirect pra `/index.html#login`**.
+**Quando há sessão válida mas `profiles.is_admin=false`** → **acesso negado + dica de `node scripts/grant-admin.js <email>`**.
 
 ### Para destravar agora (Yan precisa fazer 1-3 coisas)
 
-1. **SSH + restart cadu-api**:
+1. **SSH + recriar cadu-api (NÃO usar `docker restart`)**:
    ```bash
    ssh root@srv1597083.hstgr.cloud
-   docker restart openclaw-hahq-cadu-api
+   cd /docker/openclaw-hahq
+   docker compose up -d cadu-api   # recria o container pra recarregar env vars
    sleep 10
+   docker exec openclaw-hahq-cadu-api env | grep CADU_API_TOKEN  # confirma token novo
    curl -sS http://localhost:49104/health  # deve retornar version=0.4.6
    ```
+   ⚠️ **`docker restart` NÃO basta**: container tem `restart: unless-stopped` mas env vars só recarregam com `docker compose up -d` (recria container e relê `.env`).
 
 2. **Atualizar `CADU_API_TOKEN` em Vercel** com o token novo (que Yan rotacionou). Vercel CLI:
    ```bash
