@@ -1035,3 +1035,85 @@ Total: ~65min de leitura focada. Depois, ler commit `5891525` (20 arquivos versi
 
 - Resolve visibilidade no admin: o operador vê atraso/falha sem abrir logs ou interpretar histórico manualmente.
 - Ainda não é alerta externo persistente: se ninguém abrir o painel, Yan ainda pode não ser avisado. Próximo passo recomendado é um job/watchdog que chama esse endpoint periodicamente e envia Telegram/e-mail quando `level` for `warning` ou `critical`, com dedupe por último alerta.
+
+---
+
+# v5 — Alerta persistente da pipeline e conexão VPS/OpenClaw (2026-06-29)
+
+> Adicionado por Codex após a v4. Escopo: consolidar conexão operacional com o VPS Hostinger/OpenClaw e fechar a lacuna “Yan só descobre dias depois”.
+
+## Conexão consolidada
+
+- SSH funcional via chave local para `root@srv1597083.hstgr.cloud`.
+- Diretório operacional: `/docker/openclaw-hahq`.
+- Containers vivos após validação:
+  - `openclaw-hahq-cadu-api`
+  - `openclaw-hahq-openclaw-1`
+- Compose: `/docker/openclaw-hahq/docker-compose.yml`.
+- cadu-api monta `./data/.openclaw/skills/cadu-api:/app` e `./data:/data`.
+- OpenClaw CLI acessível dentro do container: `docker exec openclaw-hahq-openclaw-1 openclaw ...`.
+
+## Schedulers encontrados
+
+- `openclaw cron list` continua retornando `No cron jobs.`.
+- Host `crontab -l` possui:
+  - sync a cada 6h: `/docker/openclaw-hahq/scripts/sync.sh`
+  - watchdog de CDP a cada 5min: `/usr/local/bin/ensure-browser-cdp.py`
+- Não foram encontrados timers systemd ativos para Cadu/OpenClaw/Kino.
+- Conclusão: o scheduler persistente real hoje é host cron + loops internos do cadu-api, não cron isolado do OpenClaw.
+
+## Alerta persistente implementado
+
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: novo loop `_pipeline_alert_loop()` roda dentro do cadu-api.
+- O loop consulta `cadu_pipeline.get_pipeline_health()` a cada `CADU_PIPELINE_ALERT_INTERVAL_SEC` (default 1800s).
+- Envia Telegram somente se `level` for `warning` ou `critical`.
+- Dedupe/cooldown:
+  - estado persistente em `/data/cadu-pipeline-alert-state.json`
+  - cooldown default `CADU_PIPELINE_ALERT_COOLDOWN_SEC=21600` (6h)
+  - envia recuperação quando volta para `ok` após alerta ativo.
+- Novo endpoint autenticado: `GET /api/pipeline/alert-status`.
+- `/health` público agora expõe apenas flags não sensíveis em `pipeline_alerts`: `enabled`, `configured`, `interval_sec`, `cooldown_sec`.
+
+## Ambiente remoto atualizado
+
+- `TELEGRAM_BOT_TOKEN` já existia no `.env` do VPS.
+- `TELEGRAM_CHAT_ID` foi adicionado ao `.env` remoto a partir do script operacional existente `scripts/telegram-watchdog.js`.
+- Backup criado no VPS antes da alteração: `/docker/openclaw-hahq/.env.bak.pipeline-alert-1782751313`.
+- Não registrar token/chat id em Git, docs ou chat.
+
+## Validação
+
+- `/health` via KinoCampus retornou:
+  - `version="0.4.6"`
+  - `publish_modes.telegram=true`
+  - `pipeline_alerts.enabled=true`
+  - `pipeline_alerts.configured=true`
+- `GET /api/pipeline/alert-status` dentro do container retornou:
+  - `enabled=true`
+  - `configured=true`
+  - `alert_active=false`
+- `GET /api/pipeline/health` retornou:
+  - `level="ok"`
+  - `status="ok"`
+  - `failures_recent_count=0`
+- Teste Telegram seguro:
+  - `TELEGRAM_BOT_TOKEN` presente
+  - `TELEGRAM_CHAT_ID` presente
+  - `getMe_ok=true`
+  - nenhum alerta fake foi enviado porque a pipeline está saudável.
+
+## Achado operacional importante
+
+- O comando `docker compose up -d --force-recreate cadu-api` recriou também `openclaw-hahq-openclaw-1` por dependência.
+- Após isso, o CLI `openclaw status --json` passou a reportar runtime `2026.5.19` e contadores de tasks reiniciados, embora os arquivos persistentes ainda existam:
+  - `/data/.openclaw/state/openclaw.sqlite`
+  - `/data/.openclaw/tasks/runs.sqlite`
+  - `/data/.openclaw/agents/main/sessions/sessions.json`
+- Próxima regra operacional: para deploy só do cadu-api, usar:
+
+```bash
+cd /docker/openclaw-hahq
+docker compose up -d --no-deps --force-recreate cadu-api
+```
+
+- Futuro P1: transformar cadu-api em imagem buildada ou cachear dependências. Hoje cada recriação reinstala `apt`/`pip`, gerando janela de `502 Bad Gateway`.

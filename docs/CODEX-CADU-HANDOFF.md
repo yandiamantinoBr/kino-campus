@@ -30,12 +30,13 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
 - cadu-api na VPS está online e responde **v0.4.6** tanto direto quanto via proxy KinoCampus (`/api/cadu/health`)
 - endpoints novos (`/pipeline/runs`, `/feed/{chunk_id}/ask`, `/pipeline/{id}/artifacts`, `/pipeline/{id}/log`, `/pipeline/{id}/export`, `/openclaw/context`) estão deployados
 - a pipeline tem observabilidade inicial via `GET /api/pipeline/health` e card “Saúde da automação” no admin
+- alerta persistente da pipeline está ativo no cadu-api: `GET /api/pipeline/alert-status`, Telegram configurado por env no VPS, dedupe em `/data/cadu-pipeline-alert-state.json`
 - `/health.version`, `FastAPI.version` e `/openclaw/context.cadu_api.version` foram unificados em `CADU_API_VERSION="0.4.6"`
-- o container foi recriado com `docker compose up -d --force-recreate cadu-api`; durante a recriação apareceu um bug latente de import (`AgentSendRequest` definido depois da rota), corrigido antes da validação final
+- o deploy seguro do sidecar deve usar `docker compose up -d --no-deps --force-recreate cadu-api`; sem `--no-deps`, o Compose também recria o OpenClaw por dependência
 - `DEV BYPASS` no client continua desabilitado (`if (false)`) — login Supabase obrigatório
 - `TRUSTED_ADMIN_EMAILS = []` — única auth local é `profiles.is_admin=true`
 
-**Bloqueio principal anterior foi removido.** O painel já não deve depender de fallback 401 por falta dos endpoints atuais. Os problemas restantes são operacionais e evolutivos: cron jobs invisíveis/lista vazia, alertas fracos, cache/dedup a auditar, duplicação de mappers Node/Deno e endurecimento de endpoints/health.
+**Bloqueio principal anterior foi removido.** O painel já não deve depender de fallback 401 por falta dos endpoints atuais. O alerta externo básico também foi ativado. Os problemas restantes são operacionais e evolutivos: cron jobs OpenClaw invisíveis/lista vazia, cache/dedup a auditar, duplicação de mappers Node/Deno, otimização do deploy do cadu-api e endurecimento de endpoints/health.
 
 ---
 
@@ -95,14 +96,14 @@ Antes de mexer em qualquer coisa, leia nesta ordem:
 | `/api/cadu/sites` + `/sites/{id}/meta` | Lista UFG + edit tier/note | ✅ Supabase JWT |
 | `/api/cadu/feed` + `/api/cadu/feed?path={chunk_id}/ask` | Lista chunks + proxy para ask dedicado (`/api/feed/{chunk_id}/ask` no cadu-api) | ✅ |
 | `/api/cadu/publish` | Sugerir publicação no feed | ✅ |
-| `/api/cadu/pipeline` + `/pipeline/*` (via rewrite) | Status + run + log SSE + `/health` operacional | ✅ |
+| `/api/cadu/pipeline` + `/pipeline/*` (via rewrite) | Status + run + log SSE + `/health`/`/alert-status` operacional | ✅ |
 | `/api/cadu/openclaw/*` (via rewrite) | Status + chat + sessions | ✅ |
 
 ### cadu-api VPS (FastAPI, v0.4.6)
 
 Pontos validados em 2026-06-29:
 - `/health` responde `version="0.4.6"` direto no domínio `api.openclaw-hahq.srv1597083.hstgr.cloud` e via `https://www.kinocampus.com.br/api/cadu/health`
-- `/api/pipeline/runs?limit=1`, `/api/pipeline/health`, `/api/openclaw/context?refresh=true`, `/api/sites` e `/api/openclaw/status` responderam com dados reais na VPS
+- `/api/pipeline/runs?limit=1`, `/api/pipeline/health`, `/api/pipeline/alert-status`, `/api/openclaw/context?refresh=true`, `/api/sites` e `/api/openclaw/status` responderam com dados reais na VPS
 - `/api/openclaw/context` agora usa timeouts maiores e não deve marcar OpenClaw como offline por atraso curto se `/api/openclaw/status` está saudável
 
 **IMPORTANTE**: `/pipeline/{id}/artifacts`, `/pipeline/{id}/log` e `/pipeline/{id}/export` não usam exatamente o mesmo `Depends(require_token)` das demais rotas. No código atual, elas são protegidas por `Security(_optional_token_or_query)`, aceitando Bearer token ou `?token=`. Portanto, não são endpoints abertos sem auth, mas o token em query é um risco de exposição por logs/histórico e deve ser migrado para Bearer-only quando possível.
@@ -125,9 +126,9 @@ Pontos validados em 2026-06-29:
 
 ### 🔴 Problemas reais restantes
 1. **Cron jobs invisíveis/lista vazia**: `openclaw cron list` retorna `No cron jobs.`, então não há fonte operacional clara para agenda durável/observável.
-2. **Alertas de falha ainda frágeis**: há health/status/logs, mas não foi encontrada camada persistente que avise Yan por Telegram/e-mail quando publish, IG scan ou pipeline quebram.
+2. **Cron OpenClaw continua vazio**: o alerta foi movido para loop interno do cadu-api, mas `openclaw cron list` ainda retorna `No cron jobs.`.
 3. **Duplicação de mapper Node vs Deno**: existem `services/cadu-ufg-publisher/src/mapper.js` e `supabase/functions/cadu-publish/mapper.ts`; divergência de contrato pode gerar publicações inconsistentes.
-4. **`/api/admin/redeploy` usa `docker restart`** no cadu-api: não recarrega env vars de forma confiável; preferir `docker compose up -d --force-recreate cadu-api`.
+4. **`/api/admin/redeploy` usa `docker restart`** no cadu-api: não recarrega env vars de forma confiável; preferir `docker compose up -d --no-deps --force-recreate cadu-api`.
 
 ### 🟡 Riscos/potenciais que precisam de auditoria própria
 5. **Cache/dedup superprotetor**: a run viva teve `633 itens -> 1 publicável -> 1 publicado`; isso é suspeito, mas a causa pode ser curadoria, dedup, relevância ou cache. Não concluir sem auditar `kino-posts-cache.json` e os descartes.
@@ -205,7 +206,8 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 - **NÃO altere cache policies** sem testar SSE — quebra EventSource
 - **NÃO mexa em `_cadu_token_cache` / `_openclaw_context_cache`** sem entender (reseta tokens)
 - **NÃO reintroduza versões hardcoded divergentes**: use `CADU_API_VERSION` no cadu-api
-- **NÃO use `docker restart`** para deploy/reload de env — use `docker compose up -d --force-recreate cadu-api`
+- **NÃO use `docker restart`** para deploy/reload de env — use `docker compose up -d --no-deps --force-recreate cadu-api`
+- **NÃO rode `docker compose up -d --force-recreate cadu-api` sem `--no-deps`** — isso também recria o container OpenClaw por dependência
 - **NÃO propague token em query string** em novos endpoints; prefira Bearer token
 
 ### ✅ FAÇA
@@ -225,8 +227,9 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 | Sync com origin | Validar com `git status -sb` na sessão atual |
 | Último commit de referência | `823a645` — docs v2 (2026-06-29), antes das correções Codex v3 |
 | cadu-api (VPS) | ✅ v0.4.6 online; health direto e proxy KinoCampus respondem |
+| Pipeline alerts | ✅ `enabled=true`, `configured=true`, Telegram via env no VPS, sem secrets em Git |
 | CADU_API_TOKEN no Vercel | Não registrar valor em docs/chat; validar somente por ambiente/headers |
-| OpenClaw container | ✅ status endpoint respondeu; CDP Chrome 149 online |
+| OpenClaw container | ✅ status endpoint respondeu; CDP online; evitar recriar como dependência do cadu-api |
 | OpenClaw context | ✅ `/api/openclaw/context?refresh=true` validado com `cadu_api.openclaw_reachable=true`, `openclaw.status` e `openclaw.last_session` |
 | Vercel Hobby functions | 7/12 usadas |
 | `.env` local | Não confiar sem validação; nunca colar tokens em chat/PR |
@@ -237,9 +240,11 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 
 ### 🔴 Fase 1 — Operação observável
 1. Criar fonte de agendamento durável e visível para pipeline (`openclaw cron list` está vazio).
-2. Adicionar alerta persistente para falha de publish/scan/format/pipeline, idealmente Telegram + registro em Supabase/log.
+2. Alerta persistente para falha de publish/scan/format/pipeline:
+   - Implementado no cadu-api via loop interno + Telegram + dedupe em `/data/cadu-pipeline-alert-state.json`.
+   - Falta evoluir para registro em Supabase/log estruturado se necessário.
 3. Criar healthcheck sintético que verifique `/health`, `/pipeline/runs`, `/openclaw/context` e “última publicação recente”.
-   - Parcialmente iniciado: `/api/pipeline/health` calcula atraso/falhas e aparece no admin. Falta job externo com alerta persistente.
+   - Parcialmente iniciado: `/api/pipeline/health` calcula atraso/falhas e aparece no admin; `/api/pipeline/alert-status` confirma alerta configurado.
 
 ### 🟡 Fase 2 — Consolidação de contratos
 4. Migrar artifacts/log/export para Bearer-only ou reduzir uso de `?token=`.
@@ -251,7 +256,7 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 8. Auditar `kino-posts-cache.json`, critérios de descarte e dedup para explicar `633 -> 1 publicável` sem assumir causa.
 9. Adicionar approval gate/métricas de qualidade para conteúdo publicado.
 10. Reduzir payload público de `/health` se health checks externos não precisarem de `publish_modes`/`pipeline_stages`.
-11. Trocar `/api/admin/redeploy` para `docker compose up -d --force-recreate cadu-api`.
+11. Trocar `/api/admin/redeploy` para `docker compose up -d --no-deps --force-recreate cadu-api`.
 12. Decidir sobre DEV BYPASS com flag segura para preview/dev, sem abrir produção.
 
 ---
@@ -282,7 +287,7 @@ curl -sS http://localhost:49104/health
 ```bash
 ssh root@srv1597083.hstgr.cloud
 cd /docker/openclaw-hahq
-docker compose up -d --force-recreate cadu-api
+docker compose up -d --no-deps --force-recreate cadu-api
 docker compose logs cadu-api --tail=80
 ```
 
@@ -329,4 +334,4 @@ Yan é mestrando em Administração (PPGADM/FACE/UFG), nível técnico leigo em 
 
 **Fim do handoff.** Tudo que você precisa pra iterar com autonomia está aqui. Se algo mudou, atualize este arquivo junto com `CADU-ADMIN-STATE.md`.
 
-Próxima ação recomendada: implementar observabilidade/alertas e scheduler durável, depois auditar cache/dedup e unificar os mappers de publicação.
+Próxima ação recomendada: criar scheduler durável/visível para a pipeline, auditar cache/dedup e unificar os mappers de publicação.
