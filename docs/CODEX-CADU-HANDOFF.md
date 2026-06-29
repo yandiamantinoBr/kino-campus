@@ -5,6 +5,7 @@
 **Para:** Codex (OpenAI CLI) ou outra IA autônoma iterando em `/admin/cadu.html`
 **Branch:** `kinocampus-V75.0-foundations`
 **Último commit:** `823a645` — docs(admin/cadu): v2 auditoria profunda
+**Atualização Codex:** 2026-06-29 — v3 pós-verificação VPS/OpenClaw e correções cadu-api v0.4.6
 
 ---
 
@@ -25,13 +26,15 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
 | **Pipeline** | Lista 9 estágios (curator, ig, duplicates, format, publish, enrich, dedup, sigaa, all). Log streaming SSE ao vivo |
 | **OpenClaw** | Chat direto com agente Cadu. Status cards (agent/telegram/heartbeat/tasks). Sessões recentes |
 
-**Estado crítico (junho/2026):**
-- cadu-api na VPS roda **v0.4.2** mas server.py no repo é **v0.4.3** com endpoints novos (404 em produção)
-- `CADU_API_TOKEN` no Vercel está obsoleto — Yan rotacionou após exposição
-- `DEV BYPASS` no client desabilitado (`if (false)` linha 154) — login Supabase obrigatório
-- `TRUSTED_ADMIN_EMAILS = []` — única auth é `profiles.is_admin=true`
+**Estado verificado por Codex em 2026-06-29:**
+- cadu-api na VPS está online e responde **v0.4.6** tanto direto quanto via proxy KinoCampus (`/api/cadu/health`)
+- endpoints novos (`/pipeline/runs`, `/feed/{chunk_id}/ask`, `/pipeline/{id}/artifacts`, `/pipeline/{id}/log`, `/pipeline/{id}/export`, `/openclaw/context`) estão deployados
+- `/health.version`, `FastAPI.version` e `/openclaw/context.cadu_api.version` foram unificados em `CADU_API_VERSION="0.4.6"`
+- o container foi recriado com `docker compose up -d --force-recreate cadu-api`; durante a recriação apareceu um bug latente de import (`AgentSendRequest` definido depois da rota), corrigido antes da validação final
+- `DEV BYPASS` no client continua desabilitado (`if (false)`) — login Supabase obrigatório
+- `TRUSTED_ADMIN_EMAILS = []` — única auth local é `profiles.is_admin=true`
 
-**Bloqueio principal:** notification bell polling 404, modal de detalhes 404, cross-tab Ask cai em 401. Tudo isso resolve com SSH + `docker compose up -d cadu-api` + atualizar `CADU_API_TOKEN` no Vercel (5min).
+**Bloqueio principal anterior foi removido.** O painel já não deve depender de fallback 401 por falta dos endpoints atuais. Os problemas restantes são operacionais e evolutivos: cron jobs invisíveis/lista vazia, alertas fracos, cache/dedup a auditar, duplicação de mappers Node/Deno e endurecimento de endpoints/health.
 
 ---
 
@@ -66,7 +69,7 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
 
 Antes de mexer em qualquer coisa, leia nesta ordem:
 
-1. **`docs/CADU-ADMIN-STATE.md`** (961 linhas, commit `823a645`) — **LEIA INTEIRO**. Tem estado, bugs, próximos passos
+1. **`docs/CADU-ADMIN-STATE.md`** — leia primeiro o aviso inicial e a seção v3 no fim do arquivo; depois leia v1/v2 como histórico. Tem estado, bugs e próximos passos
 2. **`admin/cadu.html`** (613 linhas) — DOM + CSS variables + scripts carregados
 3. **`assets/js/controllers/admin/admin-cadu.controller.js`** (1694 linhas):
    - Linhas 149-269 — auth flow (6 camadas, importante entender)
@@ -82,51 +85,55 @@ Antes de mexer em qualquer coisa, leia nesta ordem:
 
 ---
 
-## 4. Endpoints cheave
+## 4. Endpoints chave
 
 ### Vercel proxy (`/api/cadu/*`)
 | URL pública | Função | Auth |
 |-------------|--------|------|
 | `/api/cadu/health` | Liveness, retorna version | ❌ |
 | `/api/cadu/sites` + `/sites/{id}/meta` | Lista UFG + edit tier/note | ✅ Supabase JWT |
-| `/api/cadu/feed` + `/feed?path={id}/ask` | Lista chunks + ask dedicado | ✅ |
+| `/api/cadu/feed` + `/api/cadu/feed?path={chunk_id}/ask` | Lista chunks + proxy para ask dedicado (`/api/feed/{chunk_id}/ask` no cadu-api) | ✅ |
 | `/api/cadu/publish` | Sugerir publicação no feed | ✅ |
 | `/api/cadu/pipeline` + `/pipeline/*` (via rewrite) | Status + run + log SSE | ✅ |
 | `/api/cadu/openclaw/*` (via rewrite) | Status + chat + sessions | ✅ |
 
-### cadu-api VPS (FastAPI, 26 endpoints)
-**IMPORTANTE**: 3 endpoints **SEM auth** no cadu-api: `/pipeline/{id}/artifacts`, `/pipeline/{id}/log`, `/pipeline/{id}/export`. Vercel proxy protege hoje, mas cadu-api direto vazaria.
+### cadu-api VPS (FastAPI, v0.4.6)
 
-Versões inconsistentes no MESMO arquivo:
-- `app.version = "0.4.3"` (linha 117)
-- `/health.version = "0.4.2"` hardcoded (linha 607)
-- `/openclaw/context.cadu_api_info.version = "0.4.6"` hardcoded (linha 1162)
+Pontos validados em 2026-06-29:
+- `/health` responde `version="0.4.6"` direto no domínio `api.openclaw-hahq.srv1597083.hstgr.cloud` e via `https://www.kinocampus.com.br/api/cadu/health`
+- `/api/pipeline/runs?limit=1`, `/api/openclaw/context?refresh=true`, `/api/sites` e `/api/openclaw/status` responderam com dados reais na VPS
+- `/api/openclaw/context` agora usa timeouts maiores e não deve marcar OpenClaw como offline por atraso curto se `/api/openclaw/status` está saudável
 
-Container reporta v0.4.2. server.py novo no repo é v0.4.3. Não há v0.4.6 deployado.
+**IMPORTANTE**: `/pipeline/{id}/artifacts`, `/pipeline/{id}/log` e `/pipeline/{id}/export` não usam exatamente o mesmo `Depends(require_token)` das demais rotas. No código atual, elas são protegidas por `Security(_optional_token_or_query)`, aceitando Bearer token ou `?token=`. Portanto, não são endpoints abertos sem auth, mas o token em query é um risco de exposição por logs/histórico e deve ser migrado para Bearer-only quando possível.
 
 ---
 
-## 5. Bugs latentes (9 prioritários)
+## 5. Achados atuais e classificação
 
-### 🔴 Críticos (bloqueiam features)
-1. **Notification bell polling 404**: depende de `/api/cadu/pipeline/runs` (novo v0.4.3+). Sem restart cadu-api → bell nunca atualiza
-2. **Cross-tab Ask cai em 401**: `/api/cadu/feed/{id}/ask` 404 → fallback `/agent-send` → 401 (admin_auth_required)
-3. **Modal de detalhes 404**: `/artifacts`, `/log`, `/export` endpoints não-deployados em v0.4.2
+### ✅ Corrigidos nesta rodada
+1. **Notification bell e endpoints pipeline 404**: cadu-api foi recriado em v0.4.6 e `/api/pipeline/runs` responde.
+2. **Cross-tab Ask para feed/pipeline**: `/api/feed/{chunk_id}/ask` está deployado; `askCaduAboutRun()` agora autoenvia via `askCaduContext()`.
+3. **Modal de detalhes 404**: endpoints de artifacts/log/export existem em produção v0.4.6.
+4. **Versões inconsistentes**: `CADU_API_VERSION` centraliza FastAPI, `/health` e `/openclaw/context`.
+5. **`EventSource.controller.abort()`**: substituído por `EventSource.close()`.
+6. **Version string compare**: substituído por comparação semver simples.
+7. **`escapeHtml` duplicado e `pipelineRefreshTimer` morto**: removidos do controller.
+8. **Checkbox OpenClaw enganoso**: `deliver=true` agora aparece como “Enviar resposta também pelo Telegram”, desmarcado por padrão.
+9. **`refreshOpenclaw()` interpretando shape errado**: agora lê `statusResp.status.data` e fallbacks.
+10. **`/openclaw/context` falso negativo**: timeouts aumentados; validado `cadu_api.openclaw_reachable=true`, com `openclaw.status` e `openclaw.last_session` presentes.
 
-### 🟡 Importantes (qualidade)
-4. **3 endpoints cadu-api sem auth** (`/artifacts`, `/log`, `/export`) — line 872, 941, 965
-5. **Cache stale de 5min em `/api/cadu/sites`** — após PATCH bem-sucedido, root permanece cacheado
-6. **`askCaduAboutRun` não auto-envia** (linha 1460 controller) — pré-popula textarea mas usuário precisa clicar Enviar. Diferente de site/feed que enviam direto
-7. **`?v=1.0.0` imutável** no controller (linha 611 admin/cadu.html) — Yan precisa bumpar manualmente após mudanças
-8. **`EventSource.controller.abort()` dead code** (linha 1576) — EventSource não tem `.controller`. Try/catch engole throw silencioso
-9. **Version string compare** (linha 1053 controller): `data.version >= '0.4.6'` falha em `'0.4.10'` (lexicográfico). Usar `parseFloat` ou semver compare
+### 🔴 Problemas reais restantes
+1. **Cron jobs invisíveis/lista vazia**: `openclaw cron list` retorna `No cron jobs.`, então não há fonte operacional clara para agenda durável/observável.
+2. **Alertas de falha ainda frágeis**: há health/status/logs, mas não foi encontrada camada persistente que avise Yan por Telegram/e-mail quando publish, IG scan ou pipeline quebram.
+3. **Duplicação de mapper Node vs Deno**: existem `services/cadu-ufg-publisher/src/mapper.js` e `supabase/functions/cadu-publish/mapper.ts`; divergência de contrato pode gerar publicações inconsistentes.
+4. **`/api/admin/redeploy` usa `docker restart`** no cadu-api: não recarrega env vars de forma confiável; preferir `docker compose up -d --force-recreate cadu-api`.
 
-### 🟢 Desejáveis (futuro)
-10. **`pipeline.js` órfão** — duplica `pipeline-router.js`. Cleanup
-11. **`escapeHtml` definido 2x** (linha 34 + 1221) — shadowing perigoso
-12. **`pipelineRefreshTimer` declarado mas nunca usado** (linha 1219)
-13. **`/api/admin/redeploy` usa `docker restart`** (server.py:1474) — não recarrega env vars. Substituir por `docker compose up -d`
-14. **`/health` expõe `publish_modes` + `pipeline_stages`** — info disclosure (sensível em prod)
+### 🟡 Riscos/potenciais que precisam de auditoria própria
+5. **Cache/dedup superprotetor**: a run viva teve `633 itens -> 1 publicável -> 1 publicado`; isso é suspeito, mas a causa pode ser curadoria, dedup, relevância ou cache. Não concluir sem auditar `kino-posts-cache.json` e os descartes.
+6. **Token por query em artifacts/log/export**: não é “sem auth”, mas `?token=` pode vazar em logs/histórico. Migrar para Bearer-only quando não quebrar downloads.
+7. **Cache stale em `/api/cadu/sites`**: PATCH funciona, mas lista root cacheada por 5min pode atrasar confirmação visual. Precisa teste de UI antes de mudar headers.
+8. **`/health` público expõe `publish_modes` + `pipeline_stages`**: info disclosure moderado; mudar com cuidado para não quebrar health checks externos.
+9. **`pipeline.js` órfão/duplicado**: existe junto de `pipeline-router.js`; limpar só depois de confirmar rewrites e imports em Vercel.
 
 ---
 
@@ -147,9 +154,10 @@ Container reporta v0.4.2. server.py novo no repo é v0.4.3. Não há v0.4.6 depl
 ### C. Debug "algo não funciona"
 1. Abra DevTools no browser → Console + Network
 2. Identifique se o erro é **client-side** (TypeError, etc) ou **401/502** (auth/upstream)
-3. Se 401: cadu-api retornando `admin_auth_required` → token rotacionado, atualizar Vercel
-4. Se 404 em endpoint v0.4.3+: cadu-api v0.4.2 ainda rodando, precisa restart
-5. Se 502: cadu-api offline, verificar `docker ps` na VPS via SSH
+3. Se 401: diferencie proxy KinoCampus (`server/cadu-auth.mjs`) de cadu-api (`admin_auth_required`/token upstream). Não peça token em chat; valide env/headers no ambiente.
+4. Se 404: em v0.4.6 não assuma container velho. Confira primeiro rewrite em `api/cadu/*`, path enviado pelo browser e rota real no FastAPI.
+5. Se 502: cadu-api pode estar reiniciando/offline. Verificar `docker compose ps`, logs e `/health` local na VPS.
+6. Se OpenClaw aparece offline mas `/api/openclaw/status` responde: confira timeouts/cache de `/api/openclaw/context` antes de concluir queda real.
 
 ---
 
@@ -195,8 +203,9 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 - **NÃO delete arquivos sem confirmar** — use `mavis-trash` (recuperável)
 - **NÃO altere cache policies** sem testar SSE — quebra EventSource
 - **NÃO mexa em `_cadu_token_cache` / `_openclaw_context_cache`** sem entender (reseta tokens)
-- **NÃO confunda versões**: `app.version="0.4.3"`, /health="0.4.2", /context="0.4.6" — três números, MESMO arquivo, três lugares diferentes
-- **NÃO use `docker restart`** — precisa `docker compose up -d` pra recarregar env vars
+- **NÃO reintroduza versões hardcoded divergentes**: use `CADU_API_VERSION` no cadu-api
+- **NÃO use `docker restart`** para deploy/reload de env — use `docker compose up -d --force-recreate cadu-api`
+- **NÃO propague token em query string** em novos endpoints; prefira Bearer token
 
 ### ✅ FAÇA
 - **Cite `file:line`** ao descrever mudanças (ex: "Fix em controller.js:1460 — askCaduAboutRun auto-envia")
@@ -212,39 +221,36 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 | Componente | Status |
 |------------|--------|
 | Branch local | `kinocampus-V75.0-foundations` |
-| Sync com origin | ✅ `Already up to date` |
-| Último commit | `823a645` — docs v2 (2026-06-29) |
-| cadu-api (VPS) | ⚠️ v0.4.2 — server.py v0.4.3 deployado mas container não-restartado |
-| CADU_API_TOKEN no Vercel | ⚠️ Obsoleto (Yan rotacionou após exposição) |
-| OpenClaw container | ⚠️ UP mas requer login web (form HTML pedindo token) |
-| OpenClaw agent (`agent-send`) | ⚠️ 401 admin_auth_required |
+| Sync com origin | Validar com `git status -sb` na sessão atual |
+| Último commit de referência | `823a645` — docs v2 (2026-06-29), antes das correções Codex v3 |
+| cadu-api (VPS) | ✅ v0.4.6 online; health direto e proxy KinoCampus respondem |
+| CADU_API_TOKEN no Vercel | Não registrar valor em docs/chat; validar somente por ambiente/headers |
+| OpenClaw container | ✅ status endpoint respondeu; CDP Chrome 149 online |
+| OpenClaw context | ✅ `/api/openclaw/context?refresh=true` validado com `cadu_api.openclaw_reachable=true`, `openclaw.status` e `openclaw.last_session` |
 | Vercel Hobby functions | 7/12 usadas |
-| `.env` local | ⚠️ Tokens obsoletos (rotacionados) |
+| `.env` local | Não confiar sem validação; nunca colar tokens em chat/PR |
 
 ---
 
 ## 10. Próximas fases priorizadas
 
-### 🔴 URGENTE (5min destrava tudo)
-1. SSH + `docker compose up -d cadu-api` em `/docker/openclaw-hahq/` (NÃO `docker restart`)
-2. Atualizar `CADU_API_TOKEN` no Vercel: `vercel env rm CADU_API_TOKEN production` + `vercel env add CADU_API_TOKEN production`
-3. Decidir sobre DEV BYPASS (linha 154): reativar com flag `if (hostname.endsWith('.vercel.app'))` pra preview/dev
+### 🔴 Fase 1 — Operação observável
+1. Criar fonte de agendamento durável e visível para pipeline (`openclaw cron list` está vazio).
+2. Adicionar alerta persistente para falha de publish/scan/format/pipeline, idealmente Telegram + registro em Supabase/log.
+3. Criar healthcheck sintético que verifique `/health`, `/pipeline/runs`, `/openclaw/context` e “última publicação recente”.
 
-### 🟡 IMPORTANTE (qualidade)
-4. Unificar `__version__` em server.py (substituir 3 números hardcoded por 1)
-5. Adicionar `Depends(require_token)` em `/artifacts`, `/log`, `/export`
-6. Auto-invalidate cache `/sites` após PATCH (`Cache-Control: no-store`)
-7. Fix `askCaduAboutRun` auto-envio (alinhar com site/feed)
-8. Bumpar `?v=1.0.0` do controller → `?v=kc-admin.{Y.M.D}` ou git hash
-9. Fix `EventSource.controller.abort()` (linha 1576) — usar `es.close()`
-10. Semver compare em periodic poll (linha 1053)
+### 🟡 Fase 2 — Consolidação de contratos
+4. Migrar artifacts/log/export para Bearer-only ou reduzir uso de `?token=`.
+5. Unificar ou gerar a partir de uma fonte comum os mappers Node (`services/cadu-ufg-publisher`) e Deno (`supabase/functions/cadu-publish`).
+6. Auditar `pipeline.js` vs `pipeline-router.js` e remover duplicação só depois de confirmar rewrites em produção.
+7. Rever cache de `/api/cadu/sites` após PATCH com teste de UI, sem quebrar cache de listas nem SSE.
 
-### 🟢 DESEJÁVEL
-11. Limpar `pipeline.js` órfão (substituído por pipeline-router.js)
-12. Dedupe `escapeHtml` (linha 34 vs 1221)
-13. Limpar `pipelineRefreshTimer` não usado (linha 1219)
-14. `/api/admin/redeploy` usar `docker compose up -d` ao invés de `docker restart`
-15. Env-based telegram bot ID (controller.js:673 hardcoded)
+### 🟢 Fase 3 — Qualidade editorial e automação
+8. Auditar `kino-posts-cache.json`, critérios de descarte e dedup para explicar `633 -> 1 publicável` sem assumir causa.
+9. Adicionar approval gate/métricas de qualidade para conteúdo publicado.
+10. Reduzir payload público de `/health` se health checks externos não precisarem de `publish_modes`/`pipeline_stages`.
+11. Trocar `/api/admin/redeploy` para `docker compose up -d --force-recreate cadu-api`.
+12. Decidir sobre DEV BYPASS com flag segura para preview/dev, sem abrir produção.
 
 ---
 
@@ -267,14 +273,21 @@ cd /docker/openclaw-hahq
 docker compose ps
 docker compose logs cadu-api --tail=50
 curl -sS http://localhost:49104/health
-# Espera: {"status":"ok","version":"0.4.2",...}
+# Espera: {"status":"ok","version":"0.4.6",...}
+```
+
+### Recriar cadu-api quando houver deploy de server.py/env
+```bash
+ssh root@srv1597083.hstgr.cloud
+cd /docker/openclaw-hahq
+docker compose up -d --force-recreate cadu-api
+docker compose logs cadu-api --tail=80
 ```
 
 ### Verificar Vercel
 ```bash
 vercel env ls production --token $env:VERCEL_TOKEN
-vercel env rm CADU_API_TOKEN production --token $env:VERCEL_TOKEN --yes
-vercel env add CADU_API_TOKEN production --token $env:VERCEL_TOKEN --sensitive
+# Rotacionar CADU_API_TOKEN somente se validação de ambiente/header mostrar necessidade real.
 ```
 
 ### Validação browser (Playwright)
@@ -314,4 +327,4 @@ Yan é mestrando em Administração (PPGADM/FACE/UFG), nível técnico leigo em 
 
 **Fim do handoff.** Tudo que você precisa pra iterar com autonomia está aqui. Se algo mudou, atualize este arquivo junto com `CADU-ADMIN-STATE.md`.
 
-Próxima ação: SSH + restart cadu-api destrava 80% dos bugs. Depois, cleanup dos bugs latentes em ordem de prioridade.
+Próxima ação recomendada: implementar observabilidade/alertas e scheduler durável, depois auditar cache/dedup e unificar os mappers de publicação.

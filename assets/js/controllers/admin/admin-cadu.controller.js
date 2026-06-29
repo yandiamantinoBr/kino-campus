@@ -21,7 +21,10 @@
     feedFilter: { q: '' },
     currentTab: 'sites',
     apiHealthy: false,
-    publishingKey: null  // chave do site sendo publicado (evita duplo-clique)
+    publishingKey: null,  // chave do site sendo publicado (evita duplo-clique)
+    pipelineActive: null,
+    pipelineHistory: [],
+    lastVersion: null
   };
 
   // ============================================================
@@ -45,6 +48,23 @@
     var d = new Date(unix * (unix < 1e12 ? 1000 : 1));
     if (isNaN(d.getTime())) return '—';
     return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function compareVersions(a, b) {
+    var pa = String(a || '').split('.').map(function (part) { return parseInt(part, 10) || 0; });
+    var pb = String(b || '').split('.').map(function (part) { return parseInt(part, 10) || 0; });
+    var len = Math.max(pa.length, pb.length);
+    for (var i = 0; i < len; i++) {
+      var da = pa[i] || 0;
+      var db = pb[i] || 0;
+      if (da > db) return 1;
+      if (da < db) return -1;
+    }
+    return 0;
+  }
+
+  function versionAtLeast(version, minimum) {
+    return compareVersions(version, minimum) >= 0;
   }
 
   function setStatus(pill, kind, html) {
@@ -638,18 +658,22 @@
         if (agentHint) agentHint.textContent = statusResp && statusResp.data ? 'cadu-api sem permissão' : 'erro cadu-api';
         return;
       }
-      var st = statusResp.data || {};
+      var st = statusResp.status || statusResp.data || statusResp;
       var rawData = st.data || st;
       var agents = rawData.agents && rawData.agents.agents ? rawData.agents.agents : [];
-      var defaultAgent = rawData.agents ? rawData.agents.defaultId : 'main';
+      var defaultAgent = (rawData.heartbeat && rawData.heartbeat.defaultAgentId) || (rawData.agents && rawData.agents.defaultId) || 'main';
       var mainAgent = agents.find(function (a) { return a.id === defaultAgent; }) || agents[0];
-      var lastActiveMs = mainAgent ? (mainAgent.lastActiveAgeMs || 0) : 0;
+      var recentSessions = rawData.sessions && rawData.sessions.recent ? rawData.sessions.recent : [];
+      var lastActiveMs = mainAgent ? (mainAgent.lastActiveAgeMs || 0) : (recentSessions[0] ? (recentSessions[0].ageMs || recentSessions[0].age || 0) : 0);
       var hb = rawData.heartbeat || {};
       var hbEvery = hb.agents && hb.agents[0] ? hb.agents[0].every : '—';
+      var sessionDefaults = rawData.sessions && rawData.sessions.defaults ? rawData.sessions.defaults : {};
+      var modelHint = sessionDefaults.model || (mainAgent && mainAgent.model) || 'deepseek-v4-pro';
+      var contextHint = sessionDefaults.contextTokens ? ('ctx ' + Math.round(sessionDefaults.contextTokens / 1000000) + 'M') : 'ctx 1M';
 
       // Agent
       if (agentEl) agentEl.innerHTML = '<i class="fas fa-circle-check"></i> online';
-      if (agentHint) agentHint.innerHTML = (defaultAgent || 'main') + ' · deepseek-v4-pro · ctx 1M';
+      if (agentHint) agentHint.innerHTML = escapeHtml(defaultAgent || 'main') + ' · ' + escapeHtml(modelHint) + ' · ' + escapeHtml(contextHint);
 
       // Tasks
       var tasks = rawData.tasks || {};
@@ -1050,7 +1074,7 @@
             state.lastVersion = data.version;
             // Se a versao mudou (ex: Yan restartou cadu-api), refrescar pills
             var cp = $('#cadu-context-pill');
-            if (cp && cp.style.display === 'none' && data.version >= '0.4.6') {
+            if (cp && cp.style.display === 'none' && versionAtLeast(data.version, '0.4.6')) {
               pollNotifActivity();
             }
           }
@@ -1216,16 +1240,6 @@
   }
 
   var pipelineEventSource = null;
-  var pipelineRefreshTimer = null;
-
-  function escapeHtml(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 
   function fmtAgo(unix) {
     if (!unix) return '—';
@@ -1255,10 +1269,12 @@
 
   async function refreshPipeline() {
     var status = await apiFetch('/api/cadu/pipeline');
-    if (!status) return;
+    if (!status || status.__error) return;
+    state.pipelineActive = status.active_run || null;
+    state.pipelineHistory = status.history || [];
     renderPipelineStages(status.stages || []);
-    renderPipelineActive(status.active_run);
-    renderPipelineHistory(status.history || []);
+    renderPipelineActive(state.pipelineActive);
+    renderPipelineHistory(state.pipelineHistory);
     updatePipelineBadge(status);
 
     // Se há run ativo, conecta SSE; senão desconecta
@@ -1457,22 +1473,26 @@
     });
   }
 
+  function findPipelineRun(runId) {
+    if (state.pipelineActive && state.pipelineActive.id === runId) return state.pipelineActive;
+    return (state.pipelineHistory || []).find(function (run) { return run && run.id === runId; }) || null;
+  }
+
   function askCaduAboutRun(runId) {
-    // Switch to OpenClaw tab and prefill the chat with a question referencing this run
-    var tab = document.querySelector('[data-tab="openclaw"]');
-    if (tab) tab.click();
-    setTimeout(function () {
-      var input = document.querySelector('#openclaw-chat-input, [data-openclaw-input], textarea[name="openclaw-message"]');
-      if (input) {
-        var question = 'Sobre o run ' + runId.slice(0, 8) + ' (stage=all): o que aconteceu? Me dá um resumo dos artefatos, métricas, e pontos de atenção. Onde estão os erros?';
-        input.value = question;
-        if (input.tagName === 'TEXTAREA') input.focus();
-      } else {
-        // Tenta achar o campo de chat OpenClaw por seletor mais genérico
-        var ta = document.querySelector('textarea');
-        if (ta) { ta.value = 'Sobre o run ' + runId.slice(0, 8) + ', o que aconteceu?'; ta.focus(); }
+    var run = findPipelineRun(runId) || { id: runId, stage: 'pipeline', status: 'unknown' };
+    var attrs = {
+      'data-ask-kind': 'pipeline',
+      'data-ask-run-id': run.id || runId,
+      'data-ask-stage': run.stage || 'pipeline',
+      'data-ask-status': run.status || 'unknown'
+    };
+    return askCaduContext({
+      preventDefault: function () {},
+      currentTarget: {
+        disabled: false,
+        getAttribute: function (name) { return attrs[name] || ''; }
       }
-    }, 200);
+    });
   }
 
   function updatePipelineBadge(status) {
@@ -1572,9 +1592,7 @@
 
   function disconnectPipelineStream() {
     if (pipelineEventSource) {
-      if (pipelineEventSource.controller) {
-        try { pipelineEventSource.controller.abort(); } catch (e) {}
-      }
+      try { pipelineEventSource.close(); } catch (e) {}
       pipelineEventSource = null;
     }
   }

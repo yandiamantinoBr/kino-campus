@@ -1,5 +1,7 @@
 # Cadu Admin (`/admin/cadu.html`) — Estado Atual
 
+> **Aviso de leitura (2026-06-29):** este documento preserva auditorias v1/v2 com achados históricos. Vários pontos antigos sobre `cadu-api v0.4.2`, token obsoleto, endpoints 404 e restart pendente foram corrigidos ou reclassificados na seção **v3 — Verificação Codex pós-devolutiva OpenClaw (2026-06-29)** no fim do arquivo. Para estado vivo atual, leia a v3 primeiro e use v1/v2 como contexto histórico.
+
 **Última atualização:** 2026-06-29 (revisão pós-feedback — 3 correções factuais)
 **Branch kino-campus:** `kinocampus-V75.0-foundations`
 **Commits relevantes:**
@@ -959,3 +961,50 @@ Total: ~65min de leitura focada. Depois, ler commit `5891525` (20 arquivos versi
 ---
 
 **Fim da v2.** Commit seguinte: append acima do que existia em `0f59546`. v1 em `f6ceb23` preserva o estado básico; v2 adiciona profundidade analítica pra próximas IAs.
+
+---
+
+# v3 — Verificação Codex pós-devolutiva OpenClaw (2026-06-29)
+
+> Adicionado por Codex após leitura de `CODEX-CADU-HANDOFF.md`, auditoria deste arquivo,
+> código local do painel e sondagem read-only do VPS Hostinger/OpenClaw.
+
+## Estado vivo medido em 2026-06-29
+
+- O relatório `docs/kino-openclaw-integration-state.md` citado pelo Cadu **não existe neste checkout local**. Ele existe no workspace remoto do OpenClaw em `/data/.openclaw/workspace/docs/kino-openclaw-integration-state.md`.
+- `cadu-api` **não está offline**: o container `openclaw-hahq-cadu-api` está `running` desde `2026-06-26T11:01:58Z` e `/health` público responde `200`.
+- Antes desta rodada, `/health.version` ainda retornava `0.4.2`, mas o arquivo carregado no container já tinha endpoints v0.4.6 (`/api/openclaw/context`, `/api/feed/{chunk_id}/ask`). Isso induziu diagnóstico errado.
+- Corrigido em `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: criado `CADU_API_VERSION="0.4.6"` e usado em `FastAPI.version`, `/health.version` e `/openclaw/context.cadu_api.version`. Validado direto e via `https://www.kinocampus.com.br/api/cadu/health`: ambos retornam `version="0.4.6"`.
+- `GET /api/openclaw/context`, `GET /api/pipeline/runs?limit=8`, `GET /api/sites` e `GET /api/openclaw/status` responderam `200` nos logs/sondagens internas.
+- `GET /api/sites` retornou 56 unidades; `GET /api/feed?limit=1` retornou amostra válida; `GET /api/openclaw/status` retornou `status`, `health`, `checked_at`.
+- Última run consultada: `83fa67cf-b2c2-4d9b-8251-84d3ae41d5aa`, stage `all`, `2026-06-29 06:41:43` a `06:51:21` BRT, `exit_code=0`.
+- Resumo dessa run: `Sites escaneados=31`, `Total itens=633`, `Publicáveis=1`, `Revisão=38`, `Descartados=585`, `Publicados=1`.
+- `openclaw cron list` retornou `No cron jobs.`; este achado da devolutiva é real.
+- Browser CDP está online com Chrome `149.0.7827.155`; este achado da devolutiva é real.
+
+## Correções aplicadas no painel
+
+- `assets/js/controllers/admin/admin-cadu.controller.js`: `askCaduAboutRun()` deixou de apenas preencher textarea e agora reutiliza `askCaduContext()` para autoenviar a pergunta de pipeline ao Cadu, com `stage` e `status` reais da run.
+- `assets/js/controllers/admin/admin-cadu.controller.js`: `disconnectPipelineStream()` agora chama `EventSource.close()` antes de limpar a referência.
+- `assets/js/controllers/admin/admin-cadu.controller.js`: comparação de versão no health poll passou a usar comparator semver simples, evitando erro lexicográfico em versões como `0.4.10`.
+- `assets/js/controllers/admin/admin-cadu.controller.js`: removidos `pipelineRefreshTimer` não usado e a segunda definição duplicada de `escapeHtml`.
+- `assets/js/controllers/admin/admin-cadu.controller.js`: `refreshOpenclaw()` passou a interpretar o shape real de `/api/openclaw/status` (`status.data`, `health`, `checked_at`) em vez de procurar somente `statusResp.data`.
+- `admin/cadu.html`: checkbox do chat OpenClaw corrigido de “Salvar na sessão” para “Enviar resposta também pelo Telegram” e desmarcado por padrão. O campo mapeia para `deliver=true`, que envia reply via Telegram; sessão continua via `session_id`.
+- `admin/cadu.html`: cache-bust do controller atualizado de `v=1.0.0` para `v=kc-admin-20260629.2`.
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: classe `AgentSendRequest` movida para antes de `/api/feed/{chunk_id}/ask`; a recriação limpa do container revelou que a ordem antiga quebrava o import do uvicorn com `NameError`.
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: timeouts do `/api/openclaw/context` aumentados para `status=15s`, `health=10s`, `sessions=10s`. Antes, o snapshot podia marcar `cadu_api.openclaw_reachable=false` enquanto `/api/openclaw/status` respondia OK.
+
+## Classificação da devolutiva `kino-openclaw-integration-state.md`
+
+| Afirmação | Classificação | Evidência |
+|---|---|---|
+| `cadu-api` parado/offline desde 26/06 | ❌ Equivocada no estado vivo | Container running desde 26/06 e health/proxy respondem `200`. |
+| Publicação não rodou hoje / 0 publicados | ❌ Desatualizada | Run `all` de 29/06 publicou `1` item. Pode ter sido verdade antes da run das 06:41 BRT. |
+| `/admin/cadu` não existe | ❌ Equivocada para este repo | A página está em `admin/cadu.html` e é a superfície atual do painel. |
+| `/health` indica `0.4.2` | ✅ Era real, corrigido | `CADU_API_VERSION` agora unifica `FastAPI`, `/health` e `/openclaw/context` em `0.4.6`. |
+| `/openclaw/context` pode dizer OpenClaw offline | ✅ Era real/potencial, corrigido | Timeout do snapshot era curto; após ajuste, `cadu_api.openclaw_reachable=true`, `openclaw.status` e `openclaw.last_session` foram validados. |
+| Cron jobs invisíveis/lista vazia | ✅ Real | `openclaw cron list` retornou `No cron jobs.` |
+| CDP Chrome 149 online | ✅ Real | `/json/version` retornou Chrome 149. |
+| Sem alertas fortes de falha | ⚠️ Problema real/potencial | Há logs e status, mas não foi encontrado alerta operacional robusto e persistente. |
+| Cache/dedup superprotetor | ⚠️ Potencial | A run atual teve `633 itens -> 1 publicável -> 1 publicado`; precisa auditoria específica do cache para confirmar causa. |
+| Mappers duplicados Node/Deno | ✅ Real | Existem `services/cadu-ufg-publisher/src/mapper.js` e `supabase/functions/cadu-publish/mapper.ts`. |
