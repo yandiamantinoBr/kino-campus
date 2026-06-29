@@ -29,6 +29,7 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
 **Estado verificado por Codex em 2026-06-29:**
 - cadu-api na VPS está online e responde **v0.4.6** tanto direto quanto via proxy KinoCampus (`/api/cadu/health`)
 - endpoints novos (`/pipeline/runs`, `/feed/{chunk_id}/ask`, `/pipeline/{id}/artifacts`, `/pipeline/{id}/log`, `/pipeline/{id}/export`, `/openclaw/context`) estão deployados
+- a pipeline tem observabilidade inicial via `GET /api/pipeline/health` e card “Saúde da automação” no admin
 - `/health.version`, `FastAPI.version` e `/openclaw/context.cadu_api.version` foram unificados em `CADU_API_VERSION="0.4.6"`
 - o container foi recriado com `docker compose up -d --force-recreate cadu-api`; durante a recriação apareceu um bug latente de import (`AgentSendRequest` definido depois da rota), corrigido antes da validação final
 - `DEV BYPASS` no client continua desabilitado (`if (false)`) — login Supabase obrigatório
@@ -94,14 +95,14 @@ Antes de mexer em qualquer coisa, leia nesta ordem:
 | `/api/cadu/sites` + `/sites/{id}/meta` | Lista UFG + edit tier/note | ✅ Supabase JWT |
 | `/api/cadu/feed` + `/api/cadu/feed?path={chunk_id}/ask` | Lista chunks + proxy para ask dedicado (`/api/feed/{chunk_id}/ask` no cadu-api) | ✅ |
 | `/api/cadu/publish` | Sugerir publicação no feed | ✅ |
-| `/api/cadu/pipeline` + `/pipeline/*` (via rewrite) | Status + run + log SSE | ✅ |
+| `/api/cadu/pipeline` + `/pipeline/*` (via rewrite) | Status + run + log SSE + `/health` operacional | ✅ |
 | `/api/cadu/openclaw/*` (via rewrite) | Status + chat + sessions | ✅ |
 
 ### cadu-api VPS (FastAPI, v0.4.6)
 
 Pontos validados em 2026-06-29:
 - `/health` responde `version="0.4.6"` direto no domínio `api.openclaw-hahq.srv1597083.hstgr.cloud` e via `https://www.kinocampus.com.br/api/cadu/health`
-- `/api/pipeline/runs?limit=1`, `/api/openclaw/context?refresh=true`, `/api/sites` e `/api/openclaw/status` responderam com dados reais na VPS
+- `/api/pipeline/runs?limit=1`, `/api/pipeline/health`, `/api/openclaw/context?refresh=true`, `/api/sites` e `/api/openclaw/status` responderam com dados reais na VPS
 - `/api/openclaw/context` agora usa timeouts maiores e não deve marcar OpenClaw como offline por atraso curto se `/api/openclaw/status` está saudável
 
 **IMPORTANTE**: `/pipeline/{id}/artifacts`, `/pipeline/{id}/log` e `/pipeline/{id}/export` não usam exatamente o mesmo `Depends(require_token)` das demais rotas. No código atual, elas são protegidas por `Security(_optional_token_or_query)`, aceitando Bearer token ou `?token=`. Portanto, não são endpoints abertos sem auth, mas o token em query é um risco de exposição por logs/histórico e deve ser migrado para Bearer-only quando possível.
@@ -238,6 +239,7 @@ data-ask-kind="pipeline" data-ask-run-id="..." data-ask-stage="..." data-ask-sta
 1. Criar fonte de agendamento durável e visível para pipeline (`openclaw cron list` está vazio).
 2. Adicionar alerta persistente para falha de publish/scan/format/pipeline, idealmente Telegram + registro em Supabase/log.
 3. Criar healthcheck sintético que verifique `/health`, `/pipeline/runs`, `/openclaw/context` e “última publicação recente”.
+   - Parcialmente iniciado: `/api/pipeline/health` calcula atraso/falhas e aparece no admin. Falta job externo com alerta persistente.
 
 ### 🟡 Fase 2 — Consolidação de contratos
 4. Migrar artifacts/log/export para Bearer-only ou reduzir uso de `?token=`.

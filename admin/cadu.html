@@ -155,6 +155,21 @@
     .kc-pipeline-active-card__meta { font-size: .76rem; color: var(--kc-text-dark-secondary); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
     .kc-pipeline-active-card__stop { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.4); color: #ef4444; border-radius: 8px; padding: 5px 10px; font-size: .8rem; cursor: pointer; }
     .kc-pipeline-active-card__stop:hover { background: rgba(239,68,68,.3); }
+    .kc-pipeline-health-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; min-width: 0; font-size: .8rem; }
+    .kc-pipeline-health-card.is-ok { border-color: rgba(16,185,129,.4); }
+    .kc-pipeline-health-card.is-running { border-color: rgba(245,158,11,.45); }
+    .kc-pipeline-health-card.is-warning { border-color: rgba(245,158,11,.45); }
+    .kc-pipeline-health-card.is-critical { border-color: rgba(239,68,68,.5); }
+    .kc-pipeline-health-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .kc-pipeline-health-card__head strong { font-size: .9rem; }
+    .kc-pipeline-health-card__level { border-radius: 999px; padding: 2px 8px; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .kc-pipeline-health-card__level.is-ok { background: rgba(16,185,129,.14); color: #34d399; }
+    .kc-pipeline-health-card__level.is-running { background: rgba(245,158,11,.14); color: #f59e0b; }
+    .kc-pipeline-health-card__level.is-warning { background: rgba(245,158,11,.14); color: #f59e0b; }
+    .kc-pipeline-health-card__level.is-critical { background: rgba(239,68,68,.16); color: #f87171; }
+    .kc-pipeline-health-card__meta { color: var(--kc-text-dark-secondary); display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+    .kc-pipeline-health-card__issues { margin: 8px 0 0; padding-left: 16px; color: var(--kc-text-dark-secondary); }
+    .kc-pipeline-health-card__issues li { margin: 2px 0; }
     .kc-pipeline-log { background: #0d1117; border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 10px 14px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; font-size: .78rem; line-height: 1.45; color: #d1d5db; height: 380px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; min-width: 0; }
     .kc-pipeline-log .kc-log-line { padding: 0; margin: 0; }
     .kc-pipeline-log .kc-log-line--err { color: #f87171; }
@@ -435,6 +450,9 @@
                 <i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.
               </div>
             </div>
+            <div id="pipeline-health-card" class="kc-pipeline-health-card">
+              <div class="kc-cadu-empty"><i class="fas fa-heart-pulse"></i> Carregando saúde da automação…</div>
+            </div>
             <div class="kc-pipeline-log" id="pipeline-log">
               <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>
             </div>
@@ -608,6 +626,6 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
 
   <!-- Cadu controller -->
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260629.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260629.3"></script>
 </body>
 </html>

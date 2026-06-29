@@ -24,6 +24,7 @@
     publishingKey: null,  // chave do site sendo publicado (evita duplo-clique)
     pipelineActive: null,
     pipelineHistory: [],
+    pipelineHealth: null,
     lastVersion: null
   };
 
@@ -1257,6 +1258,15 @@
     return Math.floor(sec / 60) + 'min ' + (sec % 60) + 's';
   }
 
+  function fmtSecondsWindow(sec) {
+    if (sec == null) return 'sem sucesso all';
+    sec = Math.max(0, Math.floor(sec));
+    if (sec < 60) return sec + 's';
+    if (sec < 3600) return Math.floor(sec / 60) + 'min';
+    if (sec < 86400) return Math.floor(sec / 3600) + 'h';
+    return Math.floor(sec / 86400) + 'd';
+  }
+
   function categoryIcon(category) {
     var map = {
       scan: 'fa-magnifying-glass-chart',
@@ -1272,8 +1282,11 @@
     if (!status || status.__error) return;
     state.pipelineActive = status.active_run || null;
     state.pipelineHistory = status.history || [];
+    state.pipelineHealth = status.health || state.pipelineHealth;
     renderPipelineStages(status.stages || []);
     renderPipelineActive(state.pipelineActive);
+    if (status.health) renderPipelineHealth(status.health);
+    else refreshPipelineHealth();
     renderPipelineHistory(state.pipelineHistory);
     updatePipelineBadge(status);
 
@@ -1284,6 +1297,16 @@
       }
     } else {
       disconnectPipelineStream();
+    }
+  }
+
+  async function refreshPipelineHealth() {
+    var health = await apiFetch('/api/cadu/pipeline/health');
+    if (health && !health.__error) {
+      state.pipelineHealth = health;
+      renderPipelineHealth(health);
+    } else {
+      renderPipelineHealth(null);
     }
   }
 
@@ -1347,6 +1370,52 @@
       '</div>';
     var stopEl = card.querySelector('[data-stop]');
     if (stopEl) stopEl.addEventListener('click', function () { stopPipelineRun(active.id); });
+  }
+
+  function renderPipelineHealth(health) {
+    var card = $('#pipeline-health-card');
+    if (!card) return;
+    if (!health) {
+      card.className = 'kc-pipeline-health-card is-warning';
+      card.innerHTML =
+        '<div class="kc-pipeline-health-card__head">' +
+          '<strong><i class="fas fa-heart-pulse"></i> Saúde da automação</strong>' +
+          '<span class="kc-pipeline-health-card__level is-warning">indisponível</span>' +
+        '</div>' +
+        '<div class="kc-pipeline-health-card__meta">Endpoint de health ainda não respondeu.</div>';
+      return;
+    }
+    var level = health.level || health.status || 'warning';
+    if (health.status === 'running' && level === 'ok') level = 'running';
+    if (['ok', 'running', 'warning', 'critical'].indexOf(level) === -1) level = 'warning';
+    var label = {
+      ok: 'ok',
+      running: 'rodando',
+      warning: 'atenção',
+      critical: 'crítico'
+    }[level] || level;
+    var lastSuccess = health.last_successful_all_run || null;
+    var latest = health.latest_run || null;
+    var since = fmtSecondsWindow(health.seconds_since_successful_all);
+    var failures = health.failures_recent_count || 0;
+    var issues = (health.issues || []).slice(0, 3);
+    var issueHtml = issues.length
+      ? '<ul class="kc-pipeline-health-card__issues">' + issues.map(function (issue) { return '<li>' + escapeHtml(issue) + '</li>'; }).join('') + '</ul>'
+      : '';
+    card.className = 'kc-pipeline-health-card is-' + level;
+    card.innerHTML =
+      '<div class="kc-pipeline-health-card__head">' +
+        '<strong><i class="fas fa-heart-pulse"></i> Saúde da automação</strong>' +
+        '<span class="kc-pipeline-health-card__level is-' + level + '">' + escapeHtml(label) + '</span>' +
+      '</div>' +
+      '<div class="kc-pipeline-health-card__meta">' +
+        '<span><i class="fas fa-rotate"></i> all ok: ' + (lastSuccess ? fmtAgo(lastSuccess.finished_at || lastSuccess.started_at) : 'nunca') + '</span>' +
+        '<span><i class="fas fa-hourglass-half"></i> atraso: ' + escapeHtml(since) + '</span>' +
+        '<span><i class="fas fa-triangle-exclamation"></i> falhas 24h: ' + failures + '</span>' +
+        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(latest.stage || '?') + ' ' + escapeHtml(latest.status || '?') + '</span>' : '') +
+      '</div>' +
+      issueHtml +
+      (health.recommendation ? '<div class="kc-pipeline-health-card__meta"><span><i class="fas fa-screwdriver-wrench"></i> ' + escapeHtml(health.recommendation) + '</span></div>' : '');
   }
 
   function renderPipelineHistory(history) {

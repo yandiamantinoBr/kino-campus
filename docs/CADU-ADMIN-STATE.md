@@ -1008,3 +1008,30 @@ Total: ~65min de leitura focada. Depois, ler commit `5891525` (20 arquivos versi
 | Sem alertas fortes de falha | ⚠️ Problema real/potencial | Há logs e status, mas não foi encontrado alerta operacional robusto e persistente. |
 | Cache/dedup superprotetor | ⚠️ Potencial | A run atual teve `633 itens -> 1 publicável -> 1 publicado`; precisa auditoria específica do cache para confirmar causa. |
 | Mappers duplicados Node/Deno | ✅ Real | Existem `services/cadu-ufg-publisher/src/mapper.js` e `supabase/functions/cadu-publish/mapper.ts`. |
+
+---
+
+# v4 — Observabilidade inicial da pipeline (2026-06-29)
+
+> Adicionado por Codex após a v3. Escopo: reduzir a chance de o painel esconder falha/atraso da automação.
+
+## Implementado
+
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`: novo `get_pipeline_health()` lê o SQLite `/data/cadu-pipeline.db` e calcula um resumo operacional sem disparar jobs.
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: novo endpoint autenticado `GET /api/pipeline/health`, definido antes da rota dinâmica `/api/pipeline/{run_id}` para não colidir com `run_id="health"`.
+- `GET /api/pipeline` agora inclui `health` no payload root. O proxy Vercel já encaminha `/api/cadu/pipeline/health` via rewrite existente.
+- `admin/cadu.html` e `admin-cadu.controller.js`: novo card “Saúde da automação” na coluna da execução atual, exibindo nível (`ok`, `rodando`, `atenção`, `crítico`), último `all` bem-sucedido, atraso, falhas recentes e recomendação.
+- Validado no VPS após `docker compose up -d --force-recreate cadu-api`: `/api/pipeline/health` retornou `level="ok"`, `ok=true`, `failures_recent_count=0`, última run `83fa67cf-b2c2-4d9b-8251-84d3ae41d5aa`; `/api/pipeline` retornou `has_health=true`, 9 estágios e 20 itens de histórico.
+
+## Contrato do health
+
+- Limites padrão via env:
+  - `CADU_PIPELINE_HEALTH_WARN_AFTER_SEC=129600` (36h)
+  - `CADU_PIPELINE_HEALTH_CRITICAL_AFTER_SEC=259200` (72h)
+  - `CADU_PIPELINE_HEALTH_FAILURE_WINDOW_SEC=86400` (24h)
+- Campos principais: `ok`, `status`, `level`, `checked_at`, `thresholds`, `active_run`, `latest_run`, `latest_all_run`, `last_successful_all_run`, `seconds_since_successful_all`, `failures_recent_count`, `failures_recent`, `recent_counts`, `issues`, `recommendation`.
+
+## O que isso resolve e o que não resolve
+
+- Resolve visibilidade no admin: o operador vê atraso/falha sem abrir logs ou interpretar histórico manualmente.
+- Ainda não é alerta externo persistente: se ninguém abrir o painel, Yan ainda pode não ser avisado. Próximo passo recomendado é um job/watchdog que chama esse endpoint periodicamente e envia Telegram/e-mail quando `level` for `warning` ou `critical`, com dedupe por último alerta.
