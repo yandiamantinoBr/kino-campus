@@ -193,6 +193,27 @@ describe('SEO e indexacao publica', () => {
     });
   });
 
+  test('feeds indexáveis têm guias editoriais próprios no HTML inicial', () => {
+    const feedPages = [
+      'index.html',
+      'eventos.html',
+      'oportunidades.html',
+      'moradia.html',
+      'compra-venda-feed.html',
+      'caronas-feed.html',
+      'achados-perdidos.html',
+    ];
+
+    feedPages.forEach((file) => {
+      const html = read(file);
+      const guide = (html.match(/<section\s+class="kc-feed-guide"[\s\S]*?<\/section>/) || [])[0] || '';
+      const guideText = guide.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      expect(html).toContain('class="kc-feed-guide"');
+      expect((html.match(/class="kc-feed-guide__item"/g) || [])).toHaveLength(3);
+      expect(guideText.length).toBeGreaterThanOrEqual(650);
+    });
+  });
+
   test('auditoria local de SEO esta disponivel', () => {
     const pkg = JSON.parse(read('package.json'));
     const audit = read('scripts/seo-audit.js');
@@ -204,6 +225,7 @@ describe('SEO e indexacao publica', () => {
     expect(audit).toContain('auditGoogleTag');
     expect(audit).toContain('auditPublicEncoding');
     expect(audit).toContain('auditPublicImageAlt');
+    expect(audit).toContain('auditPublicContentDepth');
     expect(audit).toContain('auditProductSsr');
     expect(audit).toContain('G-P9RKYHPB7Z');
     expect(audit).toContain('GPTBot');

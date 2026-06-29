@@ -22,6 +22,31 @@ políticas do Google nem garante aprovação.
 - AdSense continua restrito aos placements controlados de feed e ao
   consentimento de publicidade.
 
+## Resposta a recusa por conteúdo de baixo valor
+
+Em 28/06/2026, o AdSense marcou `kinocampus.com.br` como não pronto por
+"conteúdo de baixo valor". Para esta classe de recusa, a correção prioritária
+não é adicionar mais slots nem mudar `ads.txt`; é garantir que o avaliador veja
+conteúdo próprio, útil e rastreável mesmo antes do JavaScript carregar posts do
+Supabase.
+
+Gate adicional antes de pedir nova revisão:
+
+- home e todos os seis feeds públicos devem conter uma seção `kc-feed-guide`
+  no HTML inicial;
+- cada guia deve ter orientações específicas do módulo, não texto genérico de
+  marketing;
+- cada guia deve ter pelo menos três orientações práticas e texto suficiente
+  para explicar critérios, riscos, fontes, filtros e próximos passos;
+- páginas institucionais (`sobre.html`, `editorial.html`, `transparencia.html`,
+  `privacidade.html`, `termos.html`, `ajuda.html`) devem continuar indexáveis,
+  com conteúdo próprio e ligações internas claras;
+- AdSense não deve ser carregado em produto, admin, auth, perfil, mensagens,
+  configurações, busca interna, páginas legais ou páginas de suporte.
+
+Somente depois desse gate, revalidar no Search Console e então pedir revisão no
+AdSense.
+
 ## Gate local antes do deploy
 
 Executar na raiz do repositório:

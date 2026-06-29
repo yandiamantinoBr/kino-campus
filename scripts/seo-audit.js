@@ -37,6 +37,16 @@ const NOINDEX = [
   'settings.html',
 ];
 
+const FEED_GUIDE_PAGES = [
+  'index.html',
+  'eventos.html',
+  'oportunidades.html',
+  'moradia.html',
+  'compra-venda-feed.html',
+  'caronas-feed.html',
+  'achados-perdidos.html',
+];
+
 function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
 }
@@ -166,6 +176,23 @@ function auditPublicImageAlt(errors) {
   }
 }
 
+function auditPublicContentDepth(errors) {
+  FEED_GUIDE_PAGES.forEach((file) => {
+    const html = read(file);
+    if (!html.includes('class="kc-feed-guide"')) {
+      errors.push(`${file}: guia editorial publico ausente no HTML inicial.`);
+    }
+    const guideText = textFromHtml(match(html, /<section\s+class=["']kc-feed-guide["'][^>]*>([\s\S]*?)<\/section>/i));
+    if (guideText.length < 650) {
+      errors.push(`${file}: guia editorial publico muito curto para uma pagina de feed indexavel.`);
+    }
+    const guideItems = (html.match(/class=["']kc-feed-guide__item["']/g) || []).length;
+    if (guideItems < 3) {
+      errors.push(`${file}: guia editorial publico deve ter ao menos 3 orientacoes especificas.`);
+    }
+  });
+}
+
 function auditProductSsr(errors) {
   const source = read('api/og-product.js');
   if (!source.includes('const canonicalUrl = `${SITE_ORIGIN}/product.html?id=')) {
@@ -218,6 +245,7 @@ function main() {
   auditGoogleTag(errors);
   auditPublicEncoding(errors);
   auditPublicImageAlt(errors);
+  auditPublicContentDepth(errors);
   auditProductSsr(errors);
 
   const summary = {
