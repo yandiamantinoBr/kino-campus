@@ -30,13 +30,14 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
 - cadu-api na VPS está online e responde **v0.4.6** tanto direto quanto via proxy KinoCampus (`/api/cadu/health`)
 - endpoints novos (`/pipeline/runs`, `/feed/{chunk_id}/ask`, `/pipeline/{id}/artifacts`, `/pipeline/{id}/log`, `/pipeline/{id}/export`, `/openclaw/context`) estão deployados
 - a pipeline tem observabilidade inicial via `GET /api/pipeline/health` e card “Saúde da automação” no admin
+- a pipeline agora expõe preflight por estágio via `GET /api/pipeline/preflight`, summaries normalizados de logs e chips de risco/efeitos no admin
 - alerta persistente da pipeline está ativo no cadu-api: `GET /api/pipeline/alert-status`, Telegram configurado por env no VPS, dedupe em `/data/cadu-pipeline-alert-state.json`
 - `/health.version`, `FastAPI.version` e `/openclaw/context.cadu_api.version` foram unificados em `CADU_API_VERSION="0.4.6"`
 - o deploy seguro do sidecar deve usar `docker compose up -d --no-deps --force-recreate cadu-api`; sem `--no-deps`, o Compose também recria o OpenClaw por dependência
 - `DEV BYPASS` no client continua desabilitado (`if (false)`) — login Supabase obrigatório
 - `TRUSTED_ADMIN_EMAILS = []` — única auth local é `profiles.is_admin=true`
 
-**Bloqueio principal anterior foi removido.** O painel já não deve depender de fallback 401 por falta dos endpoints atuais. O alerta externo básico também foi ativado. Os problemas restantes são operacionais e evolutivos: cron jobs OpenClaw invisíveis/lista vazia, cache/dedup a auditar, duplicação de mappers Node/Deno, otimização do deploy do cadu-api e endurecimento de endpoints/health.
+**Bloqueio principal anterior foi removido.** O painel já não deve depender de fallback 401 por falta dos endpoints atuais. O alerta externo básico também foi ativado. Os problemas restantes são operacionais e evolutivos: cron jobs OpenClaw invisíveis/lista vazia, cache/dedup a auditar, duplicação de mappers Node/Deno, saneamento do estágio SIGAA (script remoto tem configuração sensível e não está versionado), otimização do deploy do cadu-api e endurecimento de endpoints/health.
 
 ---
 
@@ -97,6 +98,7 @@ Antes de mexer em qualquer coisa, leia nesta ordem:
 | `/api/cadu/feed` + `/api/cadu/feed?path={chunk_id}/ask` | Lista chunks + proxy para ask dedicado (`/api/feed/{chunk_id}/ask` no cadu-api) | ✅ |
 | `/api/cadu/publish` | Sugerir publicação no feed | ✅ |
 | `/api/cadu/pipeline` + `/pipeline/*` (via rewrite) | Status + run + log SSE + `/health`/`/alert-status` operacional | ✅ |
+| `/api/cadu/pipeline/preflight?deep=0|1` | Scripts, dependências, risco e efeitos dos 9 estágios | ✅ |
 | `/api/cadu/openclaw/*` (via rewrite) | Status + chat + sessions | ✅ |
 
 ### cadu-api VPS (FastAPI, v0.4.6)

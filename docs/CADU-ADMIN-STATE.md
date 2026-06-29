@@ -1117,3 +1117,66 @@ docker compose up -d --no-deps --force-recreate cadu-api
 ```
 
 - Futuro P1: transformar cadu-api em imagem buildada ou cachear dependências. Hoje cada recriação reinstala `apt`/`pip`, gerando janela de `502 Bad Gateway`.
+
+# v6 — Pipeline stages: preflight, summaries e divergencia SIGAA (2026-06-29)
+
+> Adicionado por Codex nesta iteracao. Escopo: aprofundar os 9 estagios pre-definidos da aba Pipeline em `/admin/cadu.html`, validar scripts/estado vivo e tornar decisoes operacionais mais explicitas para Yan/OpenClaw.
+
+## Estado vivo verificado
+
+- `GET /api/pipeline`, `/api/pipeline/health` e `/api/pipeline/alert-status` responderam no VPS via token interno do container `openclaw-hahq-cadu-api`.
+- A pipeline estava saudavel (`level="ok"`) e sem run ativo.
+- Runs recentes `all` terminaram `exit_code=0`; a run mais recente consultada publicou `0` posts porque o unico item publicavel ja estava publicado/absorvido por dedup/merge. Isso nao e automaticamente falha, mas precisa ficar visivel no painel.
+- `openclaw cron list` continua nao sendo a fonte de scheduler; o estado operacional real segue em host cron + loop interno do cadu-api.
+
+## Achados por estagio
+
+- `curator`: existe no repo e VPS; gera artefatos e le cache Supabase.
+- `ig`: existe no repo e VPS; depende do Chrome/CDP dentro do OpenClaw.
+- `duplicates`: existe; altera posts existentes no Supabase quando rodado sem `--dry-run`.
+- `format`: existe; consome chave DeepSeek/Z.ai e gera `_formatted_*.json`.
+- `publish`: existe; chama Edge Function `cadu-publish` e pode publicar/mesclar posts reais.
+- `enrich`: existe; atualiza metadata/post_media de posts publicados.
+- `dedup`: existe; no comando catalogado fica em dry-run por padrao porque `dedup-kino.js` so altera com `--apply`.
+- `sigaa`: existe no VPS em `/data/.openclaw/workspace/scripts/sigaa/sync_calendar.js`, mas nao existe no checkout local `openclaw-cadu`. O arquivo remoto contem linhas com cara de segredo embutido; nao copiar cru para Git. Proxima melhoria correta: mover segredos para `.env`, versionar script saneado/template e manter preflight apontando disponibilidade real.
+- `all`: existe; encadeia IG + curator + duplicates + format + publish + enrich. Pode terminar `ok` com `Publicados=0` se nada novo passou pelo filtro.
+
+## Melhorias implementadas
+
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`:
+  - adiciona perfis por estagio (`risk`, `effects`, `requirements`, `mutates_platform`, `dry_run_available`);
+  - adiciona preflight leve por estagio: existencia do script, comando efetivo, checks sem expor segredos, bloqueio de run se o script estiver ausente;
+  - adiciona `get_pipeline_preflight(deep=false)`; `deep=true` testa CDP via `docker exec` quando aplicavel;
+  - adiciona parser de resumo de logs (`summary.metrics`, `summary.labels`, `summary.warnings`, `duration_sec`);
+  - inclui summaries em `GET /api/pipeline` e `/api/pipeline/health`.
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`:
+  - novo endpoint autenticado `GET /api/pipeline/preflight?deep=0|1`;
+  - export consolidado agora tambem retorna `summary_metrics` e `summary_warnings`, mantendo `summary` legado.
+- `admin/cadu.html` e `assets/js/controllers/admin/admin-cadu.controller.js`:
+  - cards de stage mostram preflight, risco, efeitos, script, mutacao real/dry-run;
+  - botao de executar fica desabilitado se o backend bloquear o stage;
+  - confirmacao de run mostra comando, risco e avisos;
+  - historico, active card e modal exibem metricas como `publicaveis`, `publicados`, `descartados`, `atualizados`, `avisos`.
+
+## Validacoes locais
+
+- `python -m py_compile` em `pipeline.py` e `server.py`: OK.
+- `node --check assets/js/controllers/admin/admin-cadu.controller.js`: OK.
+- `node --check` nos scripts versionados dos estagios (`curator`, `ig`, `duplicates`, `format`, `publish`, `enrich`, `dedup`, `all`): OK.
+- `scripts/sigaa/sync_calendar.js` nao foi validado localmente por nao estar versionado.
+
+## Validacoes VPS pos-deploy
+
+- Deploy aplicado no VPS com `docker compose up -d --no-deps --force-recreate cadu-api`; backups:
+  - `/docker/openclaw-hahq/backups/cadu-api-20260629-142329`
+  - `/docker/openclaw-hahq/backups/cadu-api-20260629-142445`
+- `/health` direto e via `https://www.kinocampus.com.br/api/cadu/health` retornaram `version="0.4.6"` e `pipeline_alerts.configured=true`.
+- `/api/pipeline/preflight?deep=1` retornou `total=9`, `runnable=9`, `blocked=0`, `with_warnings=1`; warning do `sigaa` em `google_calendar` porque configuracao sensivel nao e confirmada sem expor segredo.
+- `/api/pipeline` retornou 20 runs de historico, `active_run=null`, `health.level="ok"` e summary da ultima run.
+- `/api/pipeline/{latest}/export` retornou `summary_metrics` incluindo `publishable=1`, `published=0`, `discarded=609`, `updated=78`.
+
+## Proximas acoes recomendadas
+
+1. Saneamento do SIGAA: extrair segredos do script remoto para `.env`, versionar script/template sem segredo, e documentar variaveis obrigatorias.
+2. Considerar alerta de “run all ok mas publicou 0 com publicaveis > 0” como informativo, nao critical; agora fica visivel por summary.
+3. Futuro: mover parser de artefatos/resumos para contrato unico e reduzir duplicacao entre export, contexto OpenClaw e UI.

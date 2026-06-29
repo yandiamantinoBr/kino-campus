@@ -23,6 +23,7 @@
     apiHealthy: false,
     publishingKey: null,  // chave do site sendo publicado (evita duplo-clique)
     pipelineActive: null,
+    pipelineStages: [],
     pipelineHistory: [],
     pipelineHealth: null,
     lastVersion: null
@@ -1281,6 +1282,7 @@
     var status = await apiFetch('/api/cadu/pipeline');
     if (!status || status.__error) return;
     state.pipelineActive = status.active_run || null;
+    state.pipelineStages = status.stages || [];
     state.pipelineHistory = status.history || [];
     state.pipelineHealth = status.health || state.pipelineHealth;
     renderPipelineStages(status.stages || []);
@@ -1310,6 +1312,70 @@
     }
   }
 
+  function findPipelineStage(stageId) {
+    return (state.pipelineStages || []).find(function (stage) { return stage && stage.id === stageId; }) || null;
+  }
+
+  function stageChip(text, level) {
+    return '<span class="kc-pipeline-stage__chip' + (level ? ' is-' + escapeHtml(level) : '') + '">' + escapeHtml(text) + '</span>';
+  }
+
+  function effectLabel(effect) {
+    var labels = {
+      workspace_artifacts: 'gera arquivos',
+      supabase_read: 'le Supabase',
+      supabase_update: 'altera Supabase',
+      supabase_insert: 'insere Supabase',
+      edge_publish: 'publica feed',
+      post_media_insert: 'adiciona midia',
+      browser_cdp: 'usa CDP',
+      ig_seen_cache: 'cache IG',
+      ai_api: 'usa IA',
+      workspace_report: 'gera relatorio',
+      sigaa_login: 'login SIGAA',
+      captcha_solver: 'captcha',
+      google_calendar_write: 'altera Calendar'
+    };
+    return labels[effect] || effect;
+  }
+
+  function renderStagePreflight(s) {
+    var pf = s.preflight || {};
+    var profile = pf.profile || {};
+    var checks = pf.checks || [];
+    var missing = checks.filter(function (check) { return check.status === 'missing'; });
+    var level = pf.can_run === false ? 'danger' : (missing.length ? 'warning' : 'ok');
+    var chips = [];
+    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atencao' : 'preflight ok'), level));
+    chips.push(stageChip('risco ' + (profile.risk || 'n/d'), profile.risk === 'high' ? 'danger' : (profile.risk === 'medium' ? 'warning' : 'ok')));
+    if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'dry-run padrao' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
+    else chips.push(stageChip('sem mutacao direta', 'ok'));
+    (profile.effects || []).slice(0, 3).forEach(function (effect) { chips.push(stageChip(effectLabel(effect), '')); });
+    if ((profile.effects || []).length > 3) chips.push(stageChip('+' + ((profile.effects || []).length - 3), ''));
+    var script = pf.script || {};
+    var scriptHtml = '<div class="kc-pipeline-stage__script" title="' + escapeHtml(script.path || s.script || '') + '">' +
+      '<i class="fas fa-file-code"></i> ' + escapeHtml(script.relative_path || s.script || '') +
+      (script.exists === false ? ' · ausente' : '') +
+      '</div>';
+    return '<div class="kc-pipeline-stage__preflight">' + chips.join('') + '</div>' + scriptHtml;
+  }
+
+  function renderRunSummary(summary) {
+    if (!summary || !summary.metrics) return '';
+    var m = summary.metrics || {};
+    var parts = [];
+    if (m.publishable != null) parts.push('<span>publicaveis ' + escapeHtml(m.publishable) + '</span>');
+    if (m.published != null) {
+      var cls = (Number(m.published) === 0 && Number(m.publishable || 0) > 0) ? ' class="is-warning"' : '';
+      parts.push('<span' + cls + '>publicados ' + escapeHtml(m.published) + '</span>');
+    }
+    if (m.updated != null) parts.push('<span>atualizados ' + escapeHtml(m.updated) + '</span>');
+    if (m.discarded != null) parts.push('<span>descartados ' + escapeHtml(m.discarded) + '</span>');
+    if (summary.duration_sec != null) parts.push('<span>' + escapeHtml(Math.round(Number(summary.duration_sec))) + 's</span>');
+    if ((summary.warnings || []).length) parts.push('<span class="is-warning">avisos ' + summary.warnings.length + '</span>');
+    return parts.length ? '<div class="kc-pipeline-history-item__summary">' + parts.join('') + '</div>' : '';
+  }
+
   function renderPipelineStages(stages) {
     var container = $('#pipeline-stages-list');
     if (!container) return;
@@ -1321,14 +1387,23 @@
         lastTxt = fmtAgo(s.last_run.started_at) + ' (' + (s.last_run.status || '') + ')';
         lastCls = 'is-' + (s.last_run.status || '');
       }
+      var pf = s.preflight || {};
+      var profile = pf.profile || {};
+      var canRun = pf.can_run !== false;
+      var mutatesReal = profile.mutates_platform && !profile.default_dry_run;
+      var btnClass = 'kc-pipeline-stage__btn' + (mutatesReal ? ' is-danger' : '');
+      var btnTitle = canRun ? 'Executar ' + s.id : 'Indisponivel: ' + ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
+      var lastSummary = s.last_run && s.last_run.summary ? renderRunSummary(s.last_run.summary) : '';
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
         '<div class="kc-pipeline-stage__desc">' + escapeHtml(s.description) + '</div>' +
+        renderStagePreflight(s) +
         '<div class="kc-pipeline-stage__meta">' +
           '<span class="kc-pipeline-history-item ' + lastCls + '" style="border:none;padding:2px 6px;"><i class="fas fa-clock"></i> ' + lastTxt + '</span>' +
           '<span style="margin-left:auto;">~' + s.estimated_sec + 's</span>' +
         '</div>' +
-        '<button class="kc-pipeline-stage__btn" data-stage="' + escapeHtml(s.id) + '"><i class="fas fa-play"></i> Executar</button>' +
+        lastSummary +
+        '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '" title="' + escapeHtml(btnTitle) + '"' + (canRun ? '' : ' disabled') + '><i class="fas fa-play"></i> ' + (canRun ? 'Executar' : 'Indisponivel') + '</button>' +
       '</div>';
     }).join('');
 
@@ -1367,7 +1442,8 @@
         '<span><i class="fas fa-clock"></i> Iniciado ' + fmtAgo(active.started_at) + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> ' + fmtDur(active.started_at, active.finished_at) + '</span>' +
         (active.exit_code != null ? '<span><i class="fas fa-flag-checkered"></i> exit ' + active.exit_code + '</span>' : '') +
-      '</div>';
+      '</div>' +
+      renderRunSummary(active.summary);
     var stopEl = card.querySelector('[data-stop]');
     if (stopEl) stopEl.addEventListener('click', function () { stopPipelineRun(active.id); });
   }
@@ -1441,6 +1517,7 @@
           '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +
         '</div>' +
         '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
+        renderRunSummary(r.summary) +
         actions +
       '</div>';
     }).join('');
@@ -1466,9 +1543,17 @@
     Promise.all([
       apiFetch('/api/cadu/pipeline/' + runId + '/artifacts').then(function (r) { return r.data || r; }),
       apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
+      apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) { return r.data || r; }),
     ]).then(function (res) {
       var arts = res[0].artifacts || [];
       var log = res[1].content || '';
+      var exp = res[2] || {};
+      var exportSummary = {
+        metrics: exp.summary_metrics || {},
+        warnings: exp.summary_warnings || [],
+        duration_sec: exp.summary && exp.summary.duration_sec
+      };
+      var summaryHtml = renderRunSummary(exportSummary) || '<div class="kc-cadu-empty">Resumo operacional ainda não detectado no log.</div>';
       var artifactsHtml = arts.length
         ? arts.map(function (a) {
             return '<div class="kc-pipeline-artifact">' +
@@ -1481,6 +1566,8 @@
         : '<div class="kc-cadu-empty">Nenhum artefato encontrado.</div>';
       var logHtml = '<pre class="kc-pipeline-log-tail">' + escapeHtml(log) + '</pre>';
       modal.body.innerHTML =
+        '<h4 style="margin:0 0 8px;font-size:.85rem;">Resumo</h4>' +
+        summaryHtml +
         '<h4 style="margin:0 0 8px;font-size:.85rem;">Artefatos (' + arts.length + ')</h4>' +
         artifactsHtml +
         '<h4 style="margin:14px 0 8px;font-size:.85rem;">Log (últimas 80 linhas)</h4>' +
@@ -1667,7 +1754,22 @@
   }
 
   async function runPipelineStage(stageId) {
-    if (!confirm('Iniciar pipeline "' + stageId + '"?\n\nLogs ficarão disponíveis em tempo real abaixo.')) return;
+    var stage = findPipelineStage(stageId);
+    var pf = stage && stage.preflight ? stage.preflight : null;
+    if (pf && pf.can_run === false) {
+      var blockers = (pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou';
+      alert('Estagio indisponivel: ' + blockers);
+      return;
+    }
+    var profile = pf && pf.profile ? pf.profile : {};
+    var warnings = pf ? (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n') : '';
+    var msg = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + (pf && pf.command ? pf.command : 'node ' + stageId) +
+      '\nRisco: ' + (profile.risk || 'n/d') +
+      (profile.mutates_platform ? '\n\nATENCAO: este estagio altera dados reais/plataforma.' : '\n\nEste estagio nao declara mutacao direta de plataforma.') +
+      (profile.default_dry_run ? '\nModo padrao: dry-run.' : '') +
+      (warnings ? '\n\nAvisos:\n' + warnings : '') +
+      '\n\nLogs ficarao disponiveis em tempo real abaixo.';
+    if (!confirm(msg)) return;
     var btn = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…'; }
     var resp = await apiFetch('/api/cadu/pipeline/run', {
