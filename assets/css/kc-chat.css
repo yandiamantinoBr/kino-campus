@@ -496,6 +496,21 @@
 
 .kc-chat-msg:hover .kc-chat-msg__menu { display: inline-flex; }
 
+/* Em dispositivos de toque (mobile/tablet sem hover), o menu fica sempre visível
+   para que reagir/responder/editar/apagar sejam acessíveis por toque. */
+@media (hover: none) {
+  .kc-chat-msg__menu {
+    display: inline-flex;
+    top: auto;
+    bottom: -30px;
+    right: 4px;
+    background: rgba(0,0,0,0.5);
+    padding: 2px;
+  }
+  /* Dar mais espaço para os botões de menu no mobile */
+  .kc-chat-msg { margin-bottom: 6px; }
+}
+
 .kc-chat-msg__menu-btn {
   background: none;
   border: none;
@@ -509,6 +524,15 @@
 
 .kc-chat-msg__menu-btn:hover {
   background: rgba(255,255,255,0.12);
+}
+
+/* Targets de toque maiores no mobile */
+@media (hover: none) {
+  .kc-chat-msg__menu-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 0.85rem;
+  }
 }
 
 .kc-chat-jump {
