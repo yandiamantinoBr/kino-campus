@@ -1242,6 +1242,8 @@
   }
 
   var pipelineEventSource = null;
+  var pipelineLogPollTimer = null;
+  var pipelineLogPollRunId = null;
 
   function fmtAgo(unix) {
     if (!unix) return '—';
@@ -1292,13 +1294,19 @@
     renderPipelineHistory(state.pipelineHistory);
     updatePipelineBadge(status);
 
-    // Se há run ativo, conecta SSE; senão desconecta
+    // Se ha run ativo, acompanha por SSE curto ou polling para runs longos.
     if (status.active_run && status.active_run.status === 'running') {
-      if (!pipelineEventSource || pipelineEventSource.runId !== status.active_run.id) {
-        connectPipelineStream(status.active_run.id);
+      if (shouldUsePipelineLogPolling(status.active_run)) {
+        connectPipelineLogPolling(status.active_run.id);
+      } else {
+        stopPipelineLogPolling();
+        if (!pipelineEventSource || pipelineEventSource.runId !== status.active_run.id) {
+          connectPipelineStream(status.active_run.id);
+        }
       }
     } else {
       disconnectPipelineStream();
+      stopPipelineLogPolling();
     }
   }
 
@@ -1422,7 +1430,7 @@
       card.className = 'kc-pipeline-active-card';
       card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.</div>';
       if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem run ativo'; }
-      if (logBox && (!pipelineEventSource)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
+      if (logBox && (!pipelineEventSource) && (!pipelineLogPollTimer)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
       return;
     }
     var cls = 'is-' + active.status;
@@ -1560,6 +1568,7 @@
               '<i class="fas fa-file-code"></i> ' +
               '<span class="kc-pipeline-artifact__kind">' + escapeHtml(a.kind || 'other') + '</span>' +
               ' <span class="kc-pipeline-artifact__name">' + escapeHtml(a.name) + '</span>' +
+              (a.stale_for_run ? ' <span class="kc-pipeline-artifact__kind" title="Arquivo do mesmo dia, mas anterior ao inicio deste run">antes do run</span>' : '') +
               ' <span style="color:var(--kc-text-dark-secondary);font-size:.7rem;">' + (a.size_bytes / 1024).toFixed(1) + ' KB</span>' +
             '</div>';
           }).join('')
@@ -1676,7 +1685,65 @@
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
+  function shouldUsePipelineLogPolling(active) {
+    if (!active) return false;
+    var stage = findPipelineStage(active.stage);
+    var estimate = stage ? Number(stage.estimated_sec || 0) : 0;
+    return active.stage === 'all' || estimate > 260;
+  }
+
+  function renderPipelineLogSnapshot(content, marker) {
+    var logBox = $('#pipeline-log');
+    if (!logBox) return;
+    var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
+    var lines = String(content || '').split(/\r?\n/).filter(Boolean);
+    if (marker) lines.push(marker);
+    logBox.innerHTML = '';
+    if (!lines.length) {
+      logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log...</div>';
+      return;
+    }
+    lines.forEach(function (line) {
+      var lineClass = 'kc-log-line';
+      var lowText = String(line).toLowerCase();
+      if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('falhou')) lineClass += ' kc-log-line--err';
+      else if (lowText.includes('ok') || lowText.includes('saved') || lowText.includes('concluido')) lineClass += ' kc-log-line--ok';
+      var div = document.createElement('div');
+      div.className = lineClass;
+      div.textContent = line;
+      logBox.appendChild(div);
+    });
+    if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  async function refreshPipelineLogSnapshot(runId) {
+    var res = await apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=180');
+    if (!res || res.__error) {
+      appendLogLine('[log polling] falha ao buscar tail do log');
+      return;
+    }
+    renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'));
+  }
+
+  function connectPipelineLogPolling(runId) {
+    disconnectPipelineStream();
+    if (pipelineLogPollRunId === runId && pipelineLogPollTimer) return;
+    stopPipelineLogPolling();
+    pipelineLogPollRunId = runId;
+    refreshPipelineLogSnapshot(runId);
+    pipelineLogPollTimer = setInterval(function () {
+      if (pipelineLogPollRunId === runId) refreshPipelineLogSnapshot(runId);
+    }, 5000);
+  }
+
+  function stopPipelineLogPolling() {
+    if (pipelineLogPollTimer) clearInterval(pipelineLogPollTimer);
+    pipelineLogPollTimer = null;
+    pipelineLogPollRunId = null;
+  }
+
   async function connectPipelineStream(runId) {
+    stopPipelineLogPolling();
     disconnectPipelineStream();
     // v0.4.4: SSE via Vercel rewrite → pipeline-router.
     // Vercel rewrite manda source path via query ?path=, router parseia e
@@ -1782,6 +1849,8 @@
       // Limpa log box pra nova execução
       var logBox = $('#pipeline-log');
       if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
+      disconnectPipelineStream();
+      stopPipelineLogPolling();
       refreshPipeline();
     } else if (resp && resp.__error) {
       // Mensagens específicas por status code

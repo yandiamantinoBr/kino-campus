@@ -334,6 +334,21 @@ Yan é mestrando em Administração (PPGADM/FACE/UFG), nível técnico leigo em 
 
 ---
 
+## 14. Atualizacao Codex — pipeline isolada e logs longos (2026-06-29)
+
+- Achado real: `format` e `publish` isolados estavam catalogados como scripts diretos (`formatador-ia.js` e `publish_auto_v5.js`). Na pratica, `formatador-ia.js` sem arquivo falha por uso invalido, e `publish_auto_v5.js` sem arquivo procurava padrao legado `curadoria-v4-`, incompatível com os artefatos atuais `curadoria-v4.4-*`.
+- Correcao OpenClaw/cadu-api: `format` agora roda `pipeline-kino.js --stage=format`; `publish` roda `pipeline-kino.js --stage=publish`; `all` declara explicitamente os seis `--stage` e ETA de 600s.
+- Correcao de guardrail: preflight agora valida artefatos de estagio. `publish` bloqueia se `_formatted_YYYY-MM-DD.json` faltar ou estiver mais antigo que `_truly_new_YYYY-MM-DD.json`.
+- Correcao de dedup/freshness: `pipeline-kino.js` agora cruza o cache local `kino-posts-cache.json` com uma leitura REST viva do Supabase (`posts.status=published`, `metadata.source_url/link`) antes de decidir `trulyNew`.
+- Correcao de no-op: quando `format` descobre que todos os `trulyNew` ja estao publicados, ele grava `_formatted_YYYY-MM-DD.json` vazio e fresco, em vez de deixar o `publish` eternamente bloqueado por artefato stale.
+- Correcao de observabilidade: `/api/pipeline/preflight` voltou a expor `total`, `runnable`, `blocked` e `with_warnings` no topo, mantendo `summary`.
+- Correcao de artefatos: arquivos do mesmo dia mas anteriores ao run aparecem com `stale_for_run=true`; o modal do admin mostra “antes do run”.
+- Correcao admin/Vercel: runs longos (`all` ou ETA >260s) usam polling de `/log?tail=180` a cada 5s no browser, evitando timeout SSE de 300s no Vercel.
+- Evidencia viva: ultimo `all` auditado durou ~499s, `publishable=1`, `published=0` porque o item ja existia no Supabase. Supabase tinha 408 posts, 102 publicados, 270 com `source_url` e 41 com `metadata.last_update`.
+- Validacao pos-deploy: `format` isolado run `1daf1190-1054-47d3-9c2c-9c81b1fb7d29` gerou `_formatted_2026-06-29.json` vazio/fresco (`reason=all_already_published`); `publish` isolado run `7f657040-b112-4535-8d79-052102081702` finalizou `exit_code=0`, carregou 0 itens e publicou 0. Preflight vivo depois disso: `total=9`, `runnable=9`, `blocked=0`.
+
+---
+
 **Fim do handoff.** Tudo que você precisa pra iterar com autonomia está aqui. Se algo mudou, atualize este arquivo junto com `CADU-ADMIN-STATE.md`.
 
 Próxima ação recomendada: criar scheduler durável/visível para a pipeline, auditar cache/dedup e unificar os mappers de publicação.

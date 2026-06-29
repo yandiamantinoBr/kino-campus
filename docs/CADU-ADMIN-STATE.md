@@ -1180,3 +1180,59 @@ docker compose up -d --no-deps --force-recreate cadu-api
 1. Saneamento do SIGAA: extrair segredos do script remoto para `.env`, versionar script/template sem segredo, e documentar variaveis obrigatorias.
 2. Considerar alerta de “run all ok mas publicou 0 com publicaveis > 0” como informativo, nao critical; agora fica visivel por summary.
 3. Futuro: mover parser de artefatos/resumos para contrato unico e reduzir duplicacao entre export, contexto OpenClaw e UI.
+
+# v7 — Refinamento da Pipeline Completa e estagios isolados (2026-06-29)
+
+> Escopo: auditar profundamente os 9 estagios da aba Pipeline, cruzar estado vivo VPS/OpenClaw/Supabase/Vercel e corrigir problemas reais que impediam execucoes isoladas confiaveis.
+
+## Estado vivo verificado
+
+- SSH funcional via `~/.ssh/openclaw_vps` para `root@187.77.37.25`.
+- Containers em execucao: `openclaw-hahq-cadu-api` e `openclaw-hahq-openclaw-1`.
+- Ultimo `all` auditado: `64aa40ad-2b9c-4a25-b072-2753b13cf250`, `finished`, `exit_code=0`, duracao ~499s.
+- Metricas do ultimo `all`: `total_items=655`, `publishable=1`, `review=41`, `discarded=609`, `published=0`, `updated=78`.
+- O `published=0` nesta run nao indica falha de publicacao: o log mostra `1 itens ja publicados` e `0 itens realmente novos`; o enriquecimento de duplicatas atualizou posts existentes.
+- Artefatos vivos de 2026-06-29: `curadoria-v4.4-daily` com 5 publicaveis, `_truly_new` com 1, `_formatted` de 09:21 anterior ao ultimo `_truly_new` de 15:10.
+- Apos a correcao, `format` isolado gerou `_formatted_2026-06-29.json` fresco com `items=0`, `reason=all_already_published`, `skippedAlreadyPublished=1`.
+- `publish` isolado com esse `_formatted` vazio finalizou como no-op (`Publicados: 0`), sem erro e sem publicacao real.
+- Supabase: `posts=408`, `published=102`, `posts_with_source_url=270`, `posts_with_last_update=41`. Em 2026-06-29 havia 2 posts com `source_url`, ambos publicados.
+
+## Problemas reais encontrados
+
+- `format` isolado estava mapeado para `formatador-ia.js` sem arquivo de entrada. Esse script exige JSON/`--stdin`/`--item`, entao o stage isolado falharia.
+- `publish` isolado estava mapeado para `publish_auto_v5.js` sem arquivo. O fallback procurava `curadoria-v4-`, mas os artefatos atuais sao `curadoria-v4.4-*`; alem disso, publicar relatorio cru sem `formattedDescription` e inseguro.
+- `duplicates` direto procurava apenas `curadoria-v4.2-*`; com a versao atual `curadoria-v4.4-*`, poderia falhar ao rodar isolado.
+- `format` podia virar no-op quando o item ja existia no Supabase, mas nao gravava `_formatted` fresco; isso deixava o `publish` bloqueado por stale mesmo quando nao havia nada novo a publicar.
+- `/api/pipeline/preflight` tinha `summary.total/runnable/blocked`, mas os campos de topo documentados estavam ausentes. Scripts/IA que validavam `total` no root viam `null`.
+- A listagem de artefatos atribuia arquivos do mesmo dia ao run mesmo quando eram anteriores ao inicio do run, exemplo `_formatted_2026-06-29.json` stale.
+- Vercel registrou timeout de 300s nas rotas de pipeline. Runs `all` duram ~500-600s, entao SSE via Function e inadequado para a Pipeline Completa.
+
+## Correcoes aplicadas
+
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`:
+  - `format` agora roda `pipeline-kino.js --stage=format`.
+  - `publish` agora roda `pipeline-kino.js --stage=publish`.
+  - `all` declara `--stage=ig --stage=curator --stage=duplicates --stage=format --stage=publish --stage=enrich`, ETA 600s.
+  - Preflight adiciona checks de artefatos: `format` depende de `_truly_new` ou curadoria daily do dia; `publish` depende de `_formatted` fresco; `duplicates` depende de relatorio `curadoria-v4.x`.
+  - Preflight expoe `total`, `runnable`, `blocked`, `with_warnings` no topo e em `summary`.
+- `openclaw-cadu/data/.openclaw/workspace/scripts/publish_auto_v5.js`: fallback sem arquivo agora escolhe o `_formatted_*.json` mais recente.
+- `openclaw-cadu/data/.openclaw/workspace/scripts/enrich-duplicates.js`: fallback agora aceita `curadoria-v4.4-*`, `curadoria-v4.2-*` e padroes `curadoria-v4-*`, ordenando por `mtime`.
+- `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: artefatos incluem `produced_during_run` e `stale_for_run`.
+- `openclaw-cadu/data/.openclaw/workspace/scripts/pipeline-kino.js`: filtro `trulyNew` agora combina `kino-posts-cache.json` com leitura REST viva do Supabase; `format` grava `_formatted` vazio e fresco quando todos os itens ja estao publicados.
+- `assets/js/controllers/admin/admin-cadu.controller.js`: runs longos (`all` ou ETA >260s) usam polling de `/log?tail=180` a cada 5s, em vez de SSE; modal de artefatos mostra “antes do run” para stale.
+- `docs/PIPELINE.md` atualizado para refletir comandos reais, artefatos exigidos e limite Vercel/SSE.
+
+## Validacoes
+
+- `python -m py_compile` em `pipeline.py` e `server.py`.
+- `node --check` em `pipeline-kino.js`, `publish_auto_v5.js`, `enrich-duplicates.js` e `assets/js/controllers/admin/admin-cadu.controller.js`.
+- Import local de `pipeline.py` com envs temporarios confirmou `total=9`, comando de `format` como `node scripts/pipeline-kino.js --stage=format` e comando `all` com seis `--stage`.
+- VPS/cadu-api: `format` isolado run `1daf1190-1054-47d3-9c2c-9c81b1fb7d29`, `exit_code=0`, gerou `_formatted` vazio/fresco.
+- VPS/cadu-api: `publish` isolado run `7f657040-b112-4535-8d79-052102081702`, `exit_code=0`, carregou 0 itens formatados e publicou 0.
+- VPS/cadu-api preflight apos esses runs: `total=9`, `runnable=9`, `blocked=0`; `format`, `publish` e `all` sem blockers/warnings.
+
+## Proximas melhorias recomendadas
+
+1. Avaliar expor no admin um botao "Preparar publicacao" que rode `curator -> format` sem publicar, para reduzir risco operacional.
+2. Investigar se o cache `kino-posts-cache.json` deve ser atualizado diariamente; o arquivo vivo auditado estava com mtime 2026-06-25, enquanto Supabase ja tinha posts de 2026-06-29. A pipeline agora cruza com Supabase vivo, mas o arquivo segue util como fallback.
+3. Corrigir de forma dedicada o parser de resultado de `enrich-images.js`, que em runs anteriores registrou `Parse do enrich result falhou`.

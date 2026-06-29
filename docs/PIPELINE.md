@@ -38,12 +38,12 @@ Cada estágio é uma combinação `script` + `args` fixos. Catálogo em `pipelin
 | `curator`   | Curador UFG v4.4           | `scripts/cadu-curador-v4.4.js`           | `--daily`                       | scan          | 90s |
 | `ig`        | Scanner Instagram          | `scripts/scan-ig-browser.js`             | (nenhum)                        | scan          | 50s |
 | `duplicates`| Enriquecimento Duplicatas  | `scripts/enrich-duplicates.js`           | (nenhum)                        | process       | 60s |
-| `format`    | Formatador IA              | `scripts/formatador-ia.js`               | (nenhum)                        | process       | 120s |
-| `publish`   | Publicação                 | `scripts/publish_auto_v5.js`             | (nenhum)                        | publish       | 60s |
+| `format`    | Formatador IA              | `scripts/pipeline-kino.js`               | `--stage=format`                | process       | 120s |
+| `publish`   | Publicação                 | `scripts/pipeline-kino.js`               | `--stage=publish`               | publish       | 60s |
 | `enrich`    | Enriquecimento Imagens     | `scripts/enrich-images.js`              | `--from-recent 20`              | process       | 90s |
 | `dedup`     | Dedup Visual + Textual     | `scripts/dedup-kino.js`                  | (nenhum)                        | maintenance   | 120s |
 | `sigaa`     | SIGAA Calendar Sync        | `scripts/sigaa/sync_calendar.js`         | (nenhum)                        | maintenance   | 100s |
-| `all`       | Pipeline Completa          | `scripts/pipeline-kino.js`               | `--ig --format --publish`       | publish       | 400s |
+| `all`       | Pipeline Completa          | `scripts/pipeline-kino.js`               | `--stage=ig --stage=curator --stage=duplicates --stage=format --stage=publish --stage=enrich` | publish | 600s |
 
 ## Pipeline Completa (workflow diário)
 
@@ -55,7 +55,14 @@ A ordem real é:
 5. **`publish`** — Publica os selecionados via Edge Function cadu-publish
 6. **`enrich`** — Adiciona imagens complementares aos posts publicados
 
-`pipeline-kino.js --ig --format --publish` faz apenas 1, 2, 4, 5 (sem duplicates + enrich).
+Hoje a Pipeline Completa chama explicitamente os seis estágios acima. Runs recentes em produção duraram ~500-600s, então o admin usa polling de log para `all` em vez de manter SSE aberto por mais de 300s na Vercel.
+
+Para estágios isolados:
+- `format` depende de `_truly_new_YYYY-MM-DD.json`; se ele não existir, tenta derivar do `curadoria-v4.4-daily-YYYY-MM-DD.json` do mesmo dia. Quando todos os itens já existem no Supabase, grava `_formatted_YYYY-MM-DD.json` vazio e fresco para deixar o no-op explícito.
+- `publish` depende de `_formatted_YYYY-MM-DD.json` fresco. Se o arquivo formatado for anterior ao `_truly_new` do dia, o preflight bloqueia e orienta rodar `format` novamente.
+- `duplicates` usa o relatório `curadoria-v4.x` mais recente; padrões legados `v4.2` e atuais `v4.4` são aceitos.
+
+O filtro de "truly new" usa duas fontes: o cache local `kino-posts-cache.json` e uma leitura REST do Supabase em tempo real (`posts.status=published`, `metadata.source_url/link`). Se a leitura viva falhar, o pipeline continua com o cache local e registra warning no log.
 
 ## Endpoints da cadu-api
 
