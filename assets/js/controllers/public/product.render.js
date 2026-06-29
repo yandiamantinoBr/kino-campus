@@ -137,13 +137,16 @@
     var modLbl = moduleLabel(modKey);
     var catLbl = post.categoriaLabel || post.categoria || '';
     var subLbl = post.subcategoriaLabel || post.subcategoria || '';
+    var title = post.titulo || post.title || '';
     var parts = [];
     parts.push('<a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>');
     var rawModulePage = String((post._kcModulePage || '') || 'index.html').trim();
     var safeModulePage = /^[a-z0-9_-]+\.html(?:[?#].*)?$/i.test(rawModulePage) ? rawModulePage : 'index.html';
     if (modKey) parts.push('<i class="fas fa-chevron-right"></i><a href="' + esc(safeModulePage) + '">' + esc(modLbl) + '</a>');
-    parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(catLbl || 'Detalhes') + '</span>');
+    if (catLbl) parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(catLbl) + '</span>');
     if (subLbl) parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(subLbl) + '</span>');
+    if (title) parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(title) + '</span>');
+    if (parts.length === 1) parts.push('<i class="fas fa-chevron-right"></i><span>Detalhes</span>');
     bc.innerHTML = parts.join(' ');
   }
 
@@ -152,6 +155,7 @@
   function setBadges(post) {
     var el = document.getElementById('badges');
     if (!el) return;
+    var metadata = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
     var badges = [];
     var isClosed = String(post && (post.status || post.estado) || '').trim().toLowerCase() === 'closed' || post.isClosed === true;
     syncClosedStatusNote(post, isClosed);
@@ -160,6 +164,25 @@
         ? window.KCUtils.getModuleIconClass(post.modulo)
         : 'fas fa-layer-group';
       badges.push('<span class="kc-badge"><i class="' + esc(icon) + '"></i> ' + esc(moduleLabel(post.modulo)) + '</span>');
+    }
+    // Categoria (se diferente do módulo, pra não duplicar)
+    var catLbl = post.categoriaLabel || post.categoria || '';
+    var catKey = String(post.categoriaKey || post.categoria || '').toLowerCase().trim();
+    var modKey = String(post.modulo || '').toLowerCase().trim();
+    if (catLbl && catKey !== modKey) {
+      badges.push('<span class="kc-badge"><i class="fas fa-tag"></i> ' + esc(catLbl) + '</span>');
+    }
+    // Gratuito (se metadata.gratuito !== false)
+    if (metadata.gratuito === true) {
+      badges.push('<span class="kc-badge"><i class="fas fa-money-bill-wave"></i> Gratuito</span>');
+    } else if (typeof post.preco === 'number' && post.preco > 0) {
+      badges.push('<span class="kc-badge"><i class="fas fa-money-bill-wave"></i> ' + esc(formatCurrency(post.preco)) + '</span>');
+    }
+    // Prazo (se metadata.deadline_date)
+    var deadline = metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || post.expires_at || '';
+    if (deadline) {
+      var datePart = String(deadline).slice(0, 10);
+      badges.push('<span class="kc-badge"><i class="fas fa-calendar-check"></i> Prazo: ' + esc(datePart) + '</span>');
     }
     if (isClosed) badges.push('<span class="kc-badge kc-badge--closed"><i class="fas fa-lock" aria-hidden="true"></i> Encerrado</span>');
     if (post._kcStatusBadgeHtml) badges.push(post._kcStatusBadgeHtml);
@@ -346,16 +369,50 @@
     var grid = document.getElementById('specsGrid');
     if (!block || !grid) return;
     grid.innerHTML = '';
+    var metadata = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
     var pairs = [];
+    var links = [];
     var tagsHtml = buildTagsSpecHtml(post);
     if (tagsHtml) addSpecHtml(grid, 'fas fa-hashtag', 'Tags', tagsHtml);
     if (post.modulo) pairs.push(['fas fa-layer-group', 'Módulo', moduleLabel(post.modulo)]);
-    if (post.categoriaLabel || post.categoria) pairs.push(['fas fa-tag', 'Categoria', post.categoriaLabel || post.categoria]);
+    if ((post.categoriaLabel || post.categoria) && String(post.categoriaKey || post.categoria || '').toLowerCase().trim() !== String(post.modulo || '').toLowerCase().trim()) {
+      pairs.push(['fas fa-tag', 'Categoria', post.categoriaLabel || post.categoria]);
+    }
     if (post.subcategoriaLabel || post.subcategoria) pairs.push(['fas fa-hashtag', 'Subcategoria', post.subcategoriaLabel || post.subcategoria]);
+    var local = post.location || metadata.location || metadata.local || '';
+    if (local) pairs.push(['fas fa-map-marker-alt', 'Local', local.replace(/^\*\*\s*/, '').replace(/\*\*$/, '').trim() || local]);
+    var dataEvento = metadata.data_evento || metadata.event_date || metadata.eventDate || '';
+    if (dataEvento) pairs.push(['fas fa-calendar-day', 'Data do evento', String(dataEvento).slice(0, 10)]);
+    var deadline = metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || post.expires_at || '';
+    if (deadline) pairs.push(['fas fa-calendar-check', 'Prazo', String(deadline).slice(0, 10)]);
+    var modalidade = metadata.modalidadeTrabalho || metadata.modalidade || metadata.workModeLabel || '';
+    if (modalidade) pairs.push(['fas fa-laptop-house', 'Modalidade', modalidade]);
+    var contato = metadata.contato || '';
+    if (contato) pairs.push(['fas fa-envelope', 'Contato', contato]);
+    var fonte = metadata.source_url || metadata.sourceUrl || '';
+    if (fonte) links.push(['fas fa-external-link-alt', 'Fonte oficial', fonte]);
+    var linkPrincipal = metadata.link || metadata.cta_url || metadata.inscricao_url || metadata.registration_url || metadata.source_url || '';
+    if (linkPrincipal && linkPrincipal !== fonte) links.push(['fas fa-link', 'Link principal', linkPrincipal]);
+    if (typeof post.preco === 'number' && post.preco > 0 && metadata.gratuito !== true) {
+      pairs.push(['fas fa-money-bill-wave', 'Preço', formatCurrency(post.preco)]);
+    } else if (metadata.gratuito === true) {
+      pairs.push(['fas fa-money-bill-wave', 'Preço', 'Gratuito']);
+    }
     if (post.verificado != null) pairs.push(['fas fa-check-circle', 'Verificação', post.verificado ? 'Sim' : 'Não']);
     if (post.condicao) pairs.push(['fas fa-star', 'Condição', post.condicao]);
-    if (!pairs.length && !tagsHtml) { block.style.display = 'none'; return; }
+
+    // Renderiza pairs (texto simples)
     pairs.forEach(function (pair) { addSpec(grid, pair[0], pair[1], pair[2]); });
+    // Renderiza links como <a> clicável
+    links.forEach(function (entry) {
+      var item = document.createElement('div');
+      item.className = 'kc-spec-item';
+      var safeUrl = esc(entry[2]);
+      item.innerHTML = '<i class="' + esc(entry[0]) + '"></i><div class="kc-spec-item__body"><strong>' + esc(entry[1]) + '</strong><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + safeUrl + '</a></div>';
+      grid.appendChild(item);
+    });
+
+    if (!pairs.length && !links.length && !tagsHtml) { block.style.display = 'none'; return; }
     block.style.display = 'block';
   }
 
