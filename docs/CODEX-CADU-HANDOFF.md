@@ -6,6 +6,7 @@
 **Branch:** `kinocampus-V75.0-foundations`
 **Último commit:** `823a645` — docs(admin/cadu): v2 auditoria profunda
 **Atualização Codex:** 2026-06-29 — v3 pós-verificação VPS/OpenClaw e correções cadu-api v0.4.6
+**Atualização Codex:** 2026-06-30 — v9 curador passou a priorizar `events.json` local, oportunidades acionáveis e fontes Instagram-only; `/api/sites` validado com 73 fontes.
 
 ---
 
@@ -21,13 +22,15 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
 
 | Aba | O que faz |
 |-----|-----------|
-| **Sites UFG** | Tabela editável (Tier T1/T2/T3 + Observação) de 56 unidades UFG. Auto-save 700ms via Supabase |
+| **Sites UFG** | Tabela editável (Tier T1/T2/T3 + Observação) de 73 fontes UFG, incluindo canais Instagram-only sem URL. Auto-save 700ms via Supabase |
 | **Feed coletado** | Lista chunks do Cadu memory (SQLite no VPS). 20/50/100 itens, busca local |
 | **Pipeline** | Lista 9 estágios (curator, ig, duplicates, format, publish, enrich, dedup, sigaa, all). Log streaming SSE ao vivo |
 | **OpenClaw** | Chat direto com agente Cadu. Status cards (agent/telegram/heartbeat/tasks). Sessões recentes |
 
 **Estado verificado por Codex em 2026-06-29:**
 - cadu-api na VPS está online e responde **v0.4.6** tanto direto quanto via proxy KinoCampus (`/api/cadu/health`)
+- o curador `--daily` agora busca `events.json` local antes de `news.json`; validacao em 2026-06-30 gerou 22 eventos locais futuros, 13 publicaveis, 30 revisaveis e 719 descartes
+- handles novos encontrados por busca/Instagram (`@fefufg`, `@em.ufg`, `@icb.ufg`, `@campusaparecidaufg`, `@odontologia.ufg`, `@cecasufg`) estao como `tentative` porque o CDP `127.0.0.1:18800` estava recusando conexao
 - endpoints novos (`/pipeline/runs`, `/feed/{chunk_id}/ask`, `/pipeline/{id}/artifacts`, `/pipeline/{id}/log`, `/pipeline/{id}/export`, `/openclaw/context`) estão deployados
 - a pipeline tem observabilidade inicial via `GET /api/pipeline/health` e card “Saúde da automação” no admin
 - a pipeline agora expõe preflight por estágio via `GET /api/pipeline/preflight`, summaries normalizados de logs e chips de risco/efeitos no admin
@@ -58,7 +61,7 @@ Dar a você (Codex ou outra IA) **contexto suficiente pra entender, debugar e ev
    └─ Lê Supabase direto via REST (kc_unit_meta)
    ↓
 [Workspace /data/.openclaw/workspace/]
-   ├─ ufg-sites-map.md (58 unidades UFG)
+   ├─ ufg-sites-map.md (73 fontes na API, incluindo Instagram-only)
    ├─ scripts/ (pipeline-kino, cadu-curador-v4.4, formatador-ia, etc)
    └─ data/cadu-pipeline.db (SQLite WAL, runs history)
 

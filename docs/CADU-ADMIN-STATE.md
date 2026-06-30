@@ -1278,3 +1278,73 @@ docker compose up -d --no-deps --force-recreate cadu-api
 2. Revisar se CEFIS/Firminopolis deve subir para Tier 2 depois de observar qualidade dos itens publicados.
 3. Procurar periodicamente site/IG novo da Secretaria de Cultura, pois `seacult.ufg.br` ja existe mas ainda estava vazio.
 4. Avaliar se o admin deve mostrar "fonte monitora Instagram-only" para perfis como LACENA, TV UFG, LAPIG e Floreser, que nao possuem fonte Weby principal.
+
+# v9 - Curadoria orientada a eventos futuros/oportunidades (2026-06-30)
+
+> Escopo: responder a critica de produto de que a pipeline estava coletando noticias demais. O objetivo correto e alimentar os modulos `eventos` e `oportunidades` com itens futuros, acionaveis e relevantes para comunidade UFG.
+
+## Diagnostico
+
+- Problema real: `cadu-curador-v4.4.js` lia `news.json` de todas as unidades e so lia `https://ufg.br/events.json` na etapa global. Calendarios locais (`centrocultural.ufg.br/events.json`, `fef.ufg.br/events.json`, `em.ufg.br/events.json`, etc.) eram ignorados.
+- Problema real: noticia com palavras como "evento", "curso" ou "palestra" podia passar para `publish` mesmo sem data futura extraida.
+- Problema real: duplicatas dentro da mesma rodada nao eram detectadas. Exemplo: mesmo evento aparecia no calendario local e no calendario central.
+- Problema real: updates de resultado podiam ficar em `review` quando o tipo principal era `prorrogacao_prazo`, apesar de tambem conter `keyword:resultado`.
+- Problema real de observabilidade: o classificador tinha motivos, mas o artefato nao persistia `reasons` no registro final.
+- Bloqueio operacional real: o CDP do Instagram no VPS esta inacessivel em `127.0.0.1:18800`; a tentativa de validar os handles novos retornou `ECONNREFUSED`.
+
+## Correcoes aplicadas
+
+- OpenClaw `cadu-curador-v4.4.js`:
+  - busca `events.json` de cada unidade antes de `news.json`;
+  - marca eventos Weby com `sourceKind="event"`, `eventSource`, `place`, `externalUrl`;
+  - gera link local correto `/e/{id}` para eventos de unidades;
+  - corrige bug de `allEvents.map(parseEventItem)` que podia produzir URL `[object Object].../e/{id}`;
+  - impede `publish` de noticia-evento sem data futura/prazo; se houver link de inscricao sem data, fica no maximo `review`;
+  - descarta updates quando `updateSignals` contem `keyword:resultado` ou `keyword:cancelamento`;
+  - adiciona dedup de rodada (`run_link_duplicate`, `run_title_duplicate`);
+  - persiste `reasons` no artefato.
+- OpenClaw `server.py`:
+  - parser de `/api/sites` aceita `(tentative)` em ASCII;
+  - nao transforma `tentative/confirmed` em nota visual;
+  - aceita fontes Instagram-only sem URL, como `CECAS`, `LACENA` e `ESPORTES`.
+- OpenClaw fontes/scripts:
+  - FEF usa `https://fef.ufg.br` e `@fefufg` tentativa;
+  - EM usa `https://em.ufg.br` e `@em.ufg` tentativa;
+  - ICB usa `@icb.ufg` tentativa;
+  - FCT usa `@campusaparecidaufg` tentativa;
+  - FO usa `@odontologia.ufg` tentativa;
+  - CECAS entrou como Instagram-only `@cecasufg`.
+- KinoCampus `services/cadu-ufg-publisher/config/sources.json` alinhado para FEF/EM canonicos.
+
+## Validacoes
+
+- `node --check` local e no VPS para `cadu-curador-v4.4.js`; `python -m py_compile` para `server.py`.
+- Backup VPS antes do deploy incremental: `/docker/openclaw-hahq/backups/events-first-20260630-153418`.
+- `cadu-api` recriada com `docker compose up -d --no-deps --force-recreate cadu-api`; `/health` interno OK, `version="0.4.6"`.
+- `/api/sites` autenticado retornou 73 fontes. Amostras:
+  - FEF `https://fef.ufg.br`, `@fefufg`, `tentative`;
+  - EM `https://em.ufg.br`, `@em.ufg`, `tentative`;
+  - ICB `https://icb.ufg.br`, `@icb.ufg`, `tentative`;
+  - FCT `https://fct.ufg.br`, `@campusaparecidaufg`, `tentative`;
+  - FO `https://odonto.ufg.br`, `@odontologia.ufg`, `tentative`;
+  - CECAS `url=null`, `@cecasufg`, `tentative`.
+- `curator --daily` no VPS:
+  - 36 sites;
+  - 35 `news.json`;
+  - 35 calendars locais;
+  - 22 eventos locais futuros;
+  - 762 itens;
+  - 13 `publish`;
+  - 30 `review`;
+  - 719 descartes, 204 duplicados.
+- Casos de controle no artefato `curadoria-v4.4-daily-2026-06-30.json`:
+  - FEF Solidaria/mulher atleta: `review`, score 0.69, reason `news_event_without_future_date`;
+  - PIEmp/UFG resultado preliminar: `discarded`, `update=true`, `updateSignals` contem `keyword:resultado`;
+  - XIX Seminario PPGECM: 1 publicavel e 1 duplicata descartada com `run_link_duplicate`;
+  - URLs `[object Object]`: 0.
+
+## Proximos passos
+
+1. Corrigir/reiniciar CDP do OpenClaw na porta 18800 e validar os handles marcados como `tentative`.
+2. Melhorar OCR/extração de data de imagens/cards para casos como FEF Solidaria, onde o texto tem link de inscricao mas a data pode estar apenas na imagem.
+3. Decidir se itens de oportunidade sem prazo extraido, mas com titulo muito forte ("Selecao de bolsista", "edital", "chamada"), devem ir direto para `publish` ou ficar em `review` ate haver deadline.

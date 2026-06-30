@@ -55,6 +55,8 @@ A ordem real é:
 5. **`publish`** — Publica os selecionados via Edge Function cadu-publish
 6. **`enrich`** — Adiciona imagens complementares aos posts publicados
 
+Nota 2026-06-30: dentro de `curator`, cada unidade agora e varrida com `events.json` local antes de `news.json`. A pipeline deve privilegiar eventos futuros/ongoing e oportunidades acionaveis, nao noticias institucionais genericas.
+
 Hoje a Pipeline Completa chama explicitamente os seis estágios acima. Runs recentes em produção duraram ~500-600s, então o admin usa polling de log para `all` em vez de manter SSE aberto por mais de 300s na Vercel.
 
 Para estágios isolados:
@@ -64,15 +66,29 @@ Para estágios isolados:
 
 O filtro de "truly new" usa duas fontes: o cache local `kino-posts-cache.json` e uma leitura REST do Supabase em tempo real (`posts.status=published`, `metadata.source_url/link`). Se a leitura viva falhar, o pipeline continua com o cache local e registra warning no log.
 
+### Regra de produto do curador
+
+O curador nao deve operar como agregador generico de noticias. A saida esperada alimenta os modulos `eventos` e `oportunidades`:
+
+- Eventos vindos de `events.json` local/global tem prioridade e sao marcados com `sourceKind="event"`.
+- Noticias so entram como `eventos` se tiverem data futura/prazo ou acao clara; noticia-evento sem data futura nao pode ir direto para `publish`.
+- Oportunidades devem privilegiar edital, chamada, bolsa, inscricao, processo seletivo, prazo, vaga ou requisito acionavel.
+- Resultados, homologacoes e cancelamentos sao updates/enriquecimento, nao posts novos.
+- O artefato da curadoria deve preservar `reasons`, `sourceKind`, `eventSource`, `place` e `externalUrl` para auditoria na aba Pipeline/OpenClaw.
+
 ## Fontes monitoradas
 
 Auditoria de 2026-06-30: `docs/CADU-SOURCE-AUDIT-2026-06-30.md`.
 
 O `curator --daily` varre Tier 1+2. Depois da auditoria, entraram no Tier 2: IAC, CEROF, Centro Cultural UFG, CSA/Campus Goias e UAECH/Campus Goias. Fontes suplementares como CEFIS, CPA, CIDARQ, CEGRAF, Hospital Veterinario e SEACULT ficam no Tier 3/full.
 
+Em 2026-06-30, o curador passou a buscar `events.json` de cada fonte antes de `news.json`. Isso corrige a distorcao anterior em que a pipeline dependia demais de noticias e ignorava calendarios locais das unidades.
+
 O scanner Instagram tambem monitora fontes sem site Weby dedicado, como LACENA, TV UFG, LAPIG, Floreser e canais culturais/esportivos.
 
-Validacao VPS 2026-06-30: `/api/sites` autenticado retornou 65 fontes apos deploy do mapa v1.5 e parser corrigido. O override Supabase `kc_unit_meta` de `CSA` foi ajustado de Tier 3 para Tier 2 para manter admin, mapa e curador diario sincronizados.
+Validacao VPS 2026-06-30 v2: `/api/sites` autenticado retornou 73 fontes apos o parser aceitar linhas Instagram-only sem URL. O override Supabase `kc_unit_meta` de `CSA` foi ajustado de Tier 3 para Tier 2 para manter admin, mapa e curador diario sincronizados.
+
+Handles marcados como `tentative` dependem de validacao CDP. Em 2026-06-30, a porta CDP `127.0.0.1:18800` estava recusando conexao; por isso `@fefufg`, `@em.ufg`, `@icb.ufg`, `@campusaparecidaufg`, `@odontologia.ufg` e `@cecasufg` foram registrados como tentativa, nao confirmados.
 
 ## Endpoints da cadu-api
 

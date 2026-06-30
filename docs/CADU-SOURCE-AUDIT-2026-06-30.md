@@ -47,7 +47,7 @@ Escopo: revisar sites oficiais, `news.json`/`events.json` e perfis Instagram usa
 
 - `agro`: `@ea.ufg`
 - `direito`: `@direitoufg`
-- `fefd`: `@fefdufg`
+- `fefd`: `@fefufg` (tentative; rodape antigo ainda cita `@fefdufg`)
 - `eeca`: `@eeca_ufg`
 - `ime`: `@ime_ufg`
 - `campusgoias`: `@campusgoiasufg`
@@ -104,3 +104,43 @@ Escopo: revisar sites oficiais, `news.json`/`events.json` e perfis Instagram usa
 - O IAC ainda aponta no footer para `emacufg`, mas esse handle nao trouxe posts via CDP. Por enquanto o valor principal e o site Weby `iac.ufg.br`.
 - Alguns handles com 0 posts podem existir, mas o scanner antigo nao distinguia claramente perfil vazio de perfil inexistente. Foi adicionada deteccao basica de `profile_unavailable`.
 - O aumento do `--daily` e moderado: +5 fontes Tier 2. A proxima run deve confirmar impacto de tempo e qualidade.
+
+# Complemento v2 - foco em eventos futuros/oportunidades (2026-06-30)
+
+> Contexto: Yan apontou corretamente que a curadoria estava parecendo uma pipeline de noticias. A regra de produto do KinoCampus e mais estreita: dois modulos, `eventos` e `oportunidades`. Evento deve ser futuro/ongoing ou pelo menos ter acao clara; oportunidade deve ser edital/chamada/bolsa/inscricao/processo seletivo com utilidade real para estudantes, tecnicos e docentes.
+
+## Confirmacoes novas de fontes citadas por Yan
+
+- FEF: `https://fefd.ufg.br` redireciona para `https://fef.ufg.br`. O rodape oficial ainda cita `@fefdufg`, mas a busca/Instagram indicou `@fefufg`; por isso o curador passou a usar `https://fef.ufg.br` e `@fefufg` como tentativa ate validacao CDP.
+- EM: `https://emac.ufg.br` redireciona para `https://em.ufg.br`. O rodape oficial ainda cita `@emacufg`, mas a busca/Instagram indicou `@em.ufg`; por isso o curador passou a usar `https://em.ufg.br` e `@em.ufg` como tentativa.
+- ICB: site `https://icb.ufg.br`; handle tentativo `@icb.ufg`.
+- FCT/Campus Aparecida: site `https://fct.ufg.br`; handle tentativo `@campusaparecidaufg`.
+- FO/Odontologia: site `https://odonto.ufg.br`; handle tentativo `@odontologia.ufg`.
+- Centro Cultural UFG: `https://centrocultural.ufg.br` e `@centroculturalufg`; forte para `events.json`.
+- CECAS: canal sem site Weby dedicado; entrou como Instagram-only `@cecasufg` e agora aparece em `/api/sites` com `url=null`.
+
+## Mudanca funcional aplicada
+
+- `cadu-curador-v4.4.js` agora busca `events.json` local de cada fonte antes de `news.json`. Antes, somente `https://ufg.br/events.json` era lido na etapa global; eventos especificos de unidades ficavam perdidos ou competiam com noticias.
+- Eventos Weby locais sao marcados com `sourceKind="event"`, `eventSource`, `place`, `externalUrl` e link canonico `/e/{id}` da unidade. O bug que gerava URL `[object Object].../e/{id}` no calendario global foi corrigido.
+- Noticia classificada como `eventos` sem data futura/prazo nao pode mais virar `publish`. Se tiver link de inscricao mas nenhuma data extraida, fica no maximo em `review` com reason `news_event_without_future_date`.
+- Resultados/homologacoes/cancelamentos agora sao descartados se qualquer sinal terminal aparecer em `updateSignals`, mesmo quando o tipo principal ficou como `prorrogacao_prazo`.
+- Foi adicionada deduplicacao dentro da propria rodada (`run_link_duplicate`/`run_title_duplicate`), evitando publicar o mesmo evento quando ele aparece no calendario local e no calendario central.
+- O artefato da curadoria agora persiste `reasons` em cada registro, para a aba/admin e futuras IAs entenderem por que um item foi publicado, revisado ou descartado.
+
+## Validacao operacional v2
+
+- Backup remoto antes do deploy incremental: `/docker/openclaw-hahq/backups/events-first-20260630-153418`.
+- `node --check` passou localmente e no container `openclaw-hahq-openclaw-1` para o curador e scripts correlatos; `python -m py_compile` passou para `cadu-api/server.py`.
+- `cadu-api` recriada com `docker compose up -d --no-deps --force-recreate cadu-api`; `/health` interno retornou `version="0.4.6"`.
+- `/api/sites` autenticado passou de 65 para 73 fontes porque o parser agora aceita fontes Instagram-only sem URL. Amostras confirmadas: `@fefufg`, `@em.ufg`, `@icb.ufg`, `@campusaparecidaufg`, `@odontologia.ufg`, `@cecasufg`.
+- `curator --daily` no VPS gerou `curadoria-v4.4-daily-2026-06-30.json` com: 35 `news.json`, 35 calendars locais, 22 eventos locais futuros, 762 itens, 13 `publish`, 30 `review`, 719 descartes.
+- Casos de controle:
+  - `[FEF SOLIDARIA] ... mulher atleta` saiu de `publish` e ficou em `review` com `news_event_without_future_date`.
+  - `PIEmp/UFG - resultado preliminar` foi para `discarded` com `update:*`.
+  - `XIX Seminario de Integracao do PPGECM` apareceu uma vez em `publish`; a copia do calendario global foi descartada com `run_link_duplicate`.
+  - URLs corrompidas com `[object Object]`: 0.
+
+## Bloqueio ainda real
+
+- Validacao CDP dos handles novos citados por Yan nao foi concluida nesta rodada: `scan-ig-browser.js --handle ... --dry-run` falhou com `connect ECONNREFUSED 127.0.0.1:18800`. Ha processo Chrome no VPS, mas a porta CDP nao estava ouvindo. Os handles marcados como `(tentative)` devem ser confirmados quando o CDP/browser do OpenClaw voltar a aceitar conexao.
