@@ -76,6 +76,16 @@ O curador nao deve operar como agregador generico de noticias. A saida esperada 
 - Resultados, homologacoes e cancelamentos sao updates/enriquecimento, nao posts novos.
 - O artefato da curadoria deve preservar `reasons`, `sourceKind`, `eventSource`, `place` e `externalUrl` para auditoria na aba Pipeline/OpenClaw.
 
+Nota 2026-06-30 v3 (Run `8192bbbe`): o problema de itens sem data/prazo chegando ao publish era real. A pipeline OpenClaw foi endurecida para:
+- nao inventar `futureDates` no pos-format;
+- enviar para revisao oportunidades sem prazo/data futura;
+- enviar para revisao noticias-evento sem data futura, mesmo que tenham termos de prazo ambiguos;
+- gravar `_publish_skipped_quality_YYYY-MM-DD.json` com motivos por item;
+- ignorar `_formatted` antigo quando `_truly_new` do dia esta vazio;
+- validar imports Node no `preflight?deep=1` da cadu-api.
+
+Estado validado no VPS em 2026-06-30 19:40 BRT: `curator` gerou 760 itens, 8 publicaveis, 22 revisao e 730 descartados; os 8 publicaveis ja existiam no Supabase, entao `_truly_new_2026-06-30.json` ficou com 0 itens e `_formatted_2026-06-30.json` foi renovado vazio (`reason=no_truly_new`).
+
 ## Fontes monitoradas
 
 Auditoria de 2026-06-30: `docs/CADU-SOURCE-AUDIT-2026-06-30.md`.
