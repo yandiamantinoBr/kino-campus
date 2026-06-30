@@ -1236,3 +1236,45 @@ docker compose up -d --no-deps --force-recreate cadu-api
 1. Avaliar expor no admin um botao "Preparar publicacao" que rode `curator -> format` sem publicar, para reduzir risco operacional.
 2. Investigar se o cache `kino-posts-cache.json` deve ser atualizado diariamente; o arquivo vivo auditado estava com mtime 2026-06-25, enquanto Supabase ja tinha posts de 2026-06-29. A pipeline agora cruza com Supabase vivo, mas o arquivo segue util como fallback.
 3. Corrigir de forma dedicada o parser de resultado de `enrich-images.js`, que em runs anteriores registrou `Parse do enrich result falhou`.
+
+# v8 — Auditoria e expansao de fontes UFG/Cadu (2026-06-30)
+
+> Escopo: aprofundar a cobertura de fontes oficiais e Instagram para melhorar a coleta de eventos/oportunidades da Pipeline Completa.
+
+## Confirmacoes principais
+
+- Fonte oficial de referencia: `https://ufg.br/p/27412-unidades-e-orgaos`, atualizada em 2026-06-27.
+- IAC existe e e relevante: `https://iac.ufg.br` tem `news.json` e `events.json`; havia edital de monitoria 2026-2 e eventos culturais recentes.
+- CEROF existe e e relevante: `https://cerof.ufg.br` tem `news.json` e link oficial para `@cerofufg`; CDP encontrou 10 posts/3 relevantes.
+- Centro Cultural UFG existe e e forte para eventos: `https://centrocultural.ufg.br` tem `news.json` e `events.json` com 20 itens cada e IG `@centroculturalufg`.
+- SEACULT responde em `https://seacult.ufg.br`, mas estava sem itens em `news.json/events.json` no momento da auditoria.
+- `cultura.ufg.br` e `secult.ufg.br` nao resolvem DNS; nao usar.
+- Corrigidos hosts legados: `mat.ufg.br` -> `ime.ufg.br`, `cienciassociais.ufg.br` -> `fcs.ufg.br`, `eec.ufg.br` -> `eeca.ufg.br`, `www2.emc.ufg.br` -> `emc.ufg.br`.
+
+## Mudancas aplicadas na pipeline
+
+- `cadu-curador-v4.4.js`: adiciona ao Tier 2/daily `iac`, `cerof`, `centrocultural`, `csa`, `uaech`.
+- `cadu-curador-v4.4.js`: adiciona ao Tier 3/full `cefis`, `cpa`, `cidarq`, `cegraf`, `hospitalveterinario`, `seacult`.
+- `scan-ig-browser.js`: adiciona `cerofufg`, `eeca_ufg`, `ime_ufg`, `campusgoiasufg`, `firminopolis_ufg`, `centroculturalufg`, `lacena_ufg`.
+- `scan-ig-browser.js`: passa a detectar `profile_unavailable` para reduzir falso positivo de perfil inexistente como "OK 0 posts".
+- `ufg-sites-map.md`: refeito em v1.5, ASCII/parseavel, com as fontes novas e status `(confirmed)`.
+- `server.py`: parser de `/api/sites` aceita subdominios profundos (`cpa.secplan.ufg.br`, `hospitalveterinario.evz.ufg.br`) e status ASCII `(confirmed)`.
+- `server.py`: parser agora restringe mudanca de categoria a headings; antes, uma fonte com texto "Centro"/"Secretaria"/"Hospital" podia derrubar indevidamente o Tier explicito do bloco.
+- `server.py`: `(confirmed)` deixou de virar observacao; a aba volta a mostrar a descricao da unidade como nota quando nao ha nota editada no Supabase.
+- `site-structure-scan.js` e `services/cadu-ufg-publisher/config/sources.json` alinhados com as novas fontes.
+
+## Evidencia operacional
+
+- CDP Instagram validou: `@cerofufg` (10/3 relevantes), `@eeca_ufg` (6/2), `@ime_ufg` (11/6), `@campusgoiasufg` (9/5), `@firminopolis_ufg` (9/6), `@centroculturalufg` (11/1), `@lacena_ufg` (7/1).
+- VPS/OpenClaw: backup criado em `/docker/openclaw-hahq/backups/source-audit-20260630-140850`; `node --check` passou dentro de `openclaw-hahq-openclaw-1`; `cadu-api` foi recriado com `docker compose up -d --no-deps --force-recreate cadu-api`.
+- `/api/sites` autenticado no container retornou 65 fontes. IAC, CEROF, CCUFG, CSA e UAECH aparecem como Tier 2; CEFIS, CPA, CIDARQ, CEGRAF, HV e SEACULT aparecem como Tier 3.
+- Smoke `news.json/events.json`: IAC 17/4, CEROF 20/0, CCUFG 20/20, CSA 20/9, UAECH 20/16, CEFIS 20/2, CPA 3/1, CIDARQ 30/25, CEGRAF 25/13, HV 20/3, SEACULT 0/0.
+- Supabase `kc_unit_meta`: override de `CSA` estava em Tier 3 desde 2026-06-25; corrigido via `PATCH /api/sites/CSA/meta` para Tier 2 em 2026-06-30.
+- Documento detalhado criado em `docs/CADU-SOURCE-AUDIT-2026-06-30.md`.
+
+## Proximas verificacoes recomendadas
+
+1. Rodar `curator --daily` em janela segura e medir o impacto de +5 fontes Tier 2 no tempo total e na quantidade de publicaveis/revisao.
+2. Revisar se CEFIS/Firminopolis deve subir para Tier 2 depois de observar qualidade dos itens publicados.
+3. Procurar periodicamente site/IG novo da Secretaria de Cultura, pois `seacult.ufg.br` ja existe mas ainda estava vazio.
+4. Avaliar se o admin deve mostrar "fonte monitora Instagram-only" para perfis como LACENA, TV UFG, LAPIG e Floreser, que nao possuem fonte Weby principal.

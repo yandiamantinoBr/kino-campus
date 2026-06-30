@@ -352,3 +352,4 @@ Yan é mestrando em Administração (PPGADM/FACE/UFG), nível técnico leigo em 
 **Fim do handoff.** Tudo que você precisa pra iterar com autonomia está aqui. Se algo mudou, atualize este arquivo junto com `CADU-ADMIN-STATE.md`.
 
 Próxima ação recomendada: criar scheduler durável/visível para a pipeline, auditar cache/dedup e unificar os mappers de publicação.
+<!-- Codex 2026-06-30: auditoria de fontes UFG registrada em docs/CADU-SOURCE-AUDIT-2026-06-30.md. Novas fontes: IAC, CEROF, Centro Cultural, CSA/UAECH Goias; novos IGs: cerofufg, eeca_ufg, ime_ufg, campusgoiasufg, firminopolis_ufg, centroculturalufg, lacena_ufg. -->

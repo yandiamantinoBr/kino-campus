@@ -64,6 +64,16 @@ Para estágios isolados:
 
 O filtro de "truly new" usa duas fontes: o cache local `kino-posts-cache.json` e uma leitura REST do Supabase em tempo real (`posts.status=published`, `metadata.source_url/link`). Se a leitura viva falhar, o pipeline continua com o cache local e registra warning no log.
 
+## Fontes monitoradas
+
+Auditoria de 2026-06-30: `docs/CADU-SOURCE-AUDIT-2026-06-30.md`.
+
+O `curator --daily` varre Tier 1+2. Depois da auditoria, entraram no Tier 2: IAC, CEROF, Centro Cultural UFG, CSA/Campus Goias e UAECH/Campus Goias. Fontes suplementares como CEFIS, CPA, CIDARQ, CEGRAF, Hospital Veterinario e SEACULT ficam no Tier 3/full.
+
+O scanner Instagram tambem monitora fontes sem site Weby dedicado, como LACENA, TV UFG, LAPIG, Floreser e canais culturais/esportivos.
+
+Validacao VPS 2026-06-30: `/api/sites` autenticado retornou 65 fontes apos deploy do mapa v1.5 e parser corrigido. O override Supabase `kc_unit_meta` de `CSA` foi ajustado de Tier 3 para Tier 2 para manter admin, mapa e curador diario sincronizados.
+
 ## Endpoints da cadu-api
 
 No admin UI, o path público é same-origin: `/api/cadu/pipeline/*`. O browser envia JWT Supabase de usuário admin para o proxy Vercel, e o proxy encaminha para a cadu-api com `CADU_API_TOKEN` apenas server-side.
