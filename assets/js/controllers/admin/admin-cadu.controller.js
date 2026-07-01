@@ -9,7 +9,7 @@
 (function () {
   'use strict';
 
-  var FEED_PAGE_SIZE = 20; // cresce a cada "Carregar mais"
+  var FEED_PAGE_SIZE = 20;
   var STORAGE_TAB = 'kc:cadu:tab';
 
   var state = {
@@ -17,6 +17,9 @@
     filteredSites: [],
     allFeedItems: [],
     feedLimit: 20,
+    feedPage: 0,
+    feedTotal: 0,
+    feedHasMore: false,
     sitesFilter: { q: '', tier: '', ig: '' },
     feedFilter: { q: '' },
     currentTab: 'sites',
@@ -425,7 +428,7 @@
     if (!tbody) return;
     if (!state.filteredSites.length) { tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Nenhuma unidade corresponde ao filtro.</td></tr>'; return; }
     tbody.innerHTML = state.filteredSites.map(function (s) {
-      var key = s.name + '|' + (s.url || '');
+      var key = siteActionKey(s);
       // TIER: dropdown editável (T1/T2/T3/—)
       var currentTier = s.tier ? String(s.tier) : '';
       var tierHtml = '<select class="kc-cadu-tier-select" data-field="tier" data-name="' + escapeHtml(s.name) + '" title="Editar tier (1=alta prioridade, 3=baixa)">'
@@ -449,6 +452,11 @@
       var noteHtml = '<div class="kc-cadu-note-cell"><textarea class="kc-cadu-note-input" data-field="note" data-name="' + escapeHtml(s.name) + '" placeholder="Adicionar observação..." rows="1">' + noteVal + '</textarea><span class="kc-cadu-save-status" data-site-save-status="' + escapeHtml(s.name) + '"></span></div>';
       var actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button>'
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Perguntar ao Cadu sobre este site (vai para a aba OpenClaw)"><i class="fas fa-robot"></i></button>';
+      var publishUrl = getSitePublishUrl(s);
+      var publishTitle = publishUrl ? ('Sugerir publicacao usando ' + publishUrl) : 'Sem URL HTTPS nem Instagram para sugerir publicacao';
+      var publishDisabled = publishUrl ? '' : ' disabled aria-disabled="true"';
+      actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="' + escapeHtml(publishTitle) + '"' + publishDisabled + '><i class="fas fa-paper-plane"></i><span>Sugerir</span></button>'
+        + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Enviar contexto deste site para o chat Cadu na aba OpenClaw"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
       return '<tr data-site-name="' + escapeHtml(s.name) + '">'
         + '<td>' + tierHtml + '</td>'
         + '<td><code>' + escapeHtml(s.name) + '</code></td>'
@@ -490,9 +498,16 @@
   // ============================================================
 
   async function publishSite(site) {
-    if (state.publishingKey === site.key) return;
-    state.publishingKey = site.key;
-    var btn = document.querySelector('.kc-cadu-publish-btn[data-key="' + cssEscape(site.key) + '"]');
+    var key = siteActionKey(site);
+    if (state.publishingKey === key) return;
+    var publishUrl = getSitePublishUrl(site);
+    if (!publishUrl) {
+      showCaduError('Nao foi possivel sugerir "' + escapeHtml(site.name) + '": informe uma URL HTTPS ou Instagram na fonte.');
+      setTimeout(hideCaduError, 6000);
+      return;
+    }
+    state.publishingKey = key;
+    var btn = document.querySelector('.kc-cadu-publish-btn[data-key="' + cssEscape(key) + '"]');
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -501,7 +516,7 @@
       var data = await apiFetch('/api/cadu/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ name: site.name, url: site.url, instagram: site.instagram, note: site.note, tier: site.tier, category: site.category, source: 'cadu-admin' })
+        body: JSON.stringify({ name: site.name, url: publishUrl, instagram: site.instagram, note: site.note, tier: site.tier, category: site.category, source: 'cadu-admin' })
       });
       if (data && data.__error) throw new Error((data.data && (data.data.message || data.data.error)) || ('status ' + data.status));
       if (btn) {
@@ -592,6 +607,89 @@
         + '<pre class="kc-cadu-feed-item__snippet">' + escapeHtml(snippet) + '</pre>'
         + '</article>';
     }).join('');
+  }
+
+  function loadFeedPage(page) {
+    state.feedPage = Math.max(0, page || 0);
+    return loadFeed(false);
+  }
+
+  async function loadFeed(initial) {
+    var list = $('#feed-list');
+    if (initial) {
+      state.feedPage = 0;
+      if (list) list.innerHTML = '<div class="kc-cadu-empty">Carregando...</div>';
+      state.allFeedItems = [];
+    }
+    var limit = state.feedLimit || FEED_PAGE_SIZE;
+    var offset = state.feedPage * limit;
+    try {
+      var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true');
+      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
+      var items = Array.isArray(data) ? data : (data.items || data.body || []);
+      state.allFeedItems = items;
+      state.feedTotal = Array.isArray(data) ? Math.max(offset + items.length, items.length) : (data.total || items.length);
+      state.feedHasMore = Array.isArray(data) ? items.length >= limit : !!data.has_more;
+      $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
+      $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
+      $('#kpi-memory-detail').textContent = 'memoria indexada do Cadu; pagina ' + (state.feedPage + 1);
+      applyFeedFilter();
+    } catch (err) {
+      if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
+      $('#badge-feed').textContent = '!';
+      updateFeedPager(0);
+    }
+  }
+
+  function applyFeedFilter() {
+    var q = (state.feedFilter.q || '').toLowerCase().trim();
+    var items = q
+      ? state.allFeedItems.filter(function (it) {
+          var hay = ((it.snippet || '') + ' ' + (it.heading || '') + ' ' + (it.chunk_id || '') + ' ' + (it.file_path || '')).toLowerCase();
+          return hay.indexOf(q) !== -1;
+        })
+      : state.allFeedItems;
+
+    if (!items.length) {
+      $('#feed-list').innerHTML = '<div class="kc-cadu-empty">Nenhum item corresponde ao filtro nesta pagina.</div>';
+      updateFeedPager(0);
+      return;
+    }
+
+    $('#feed-list').innerHTML = items.map(function (it) {
+      var heading = it.heading ? escapeHtml(it.heading) : '<span style="color:var(--kc-text-dark-secondary);">sem titulo</span>';
+      var dt = fmtDate(it.created_at);
+      var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : 'sem id';
+      var snippet = it.snippet || '(sem conteudo)';
+      var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml((it.heading || '').replace(/"/g, '&quot;')) + '" data-ask-snippet="' + escapeHtml(String(snippet).slice(0, 900)) + '" title="Enviar esse chunk para o chat Cadu na aba OpenClaw"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
+      return '<article class="kc-cadu-feed-item">'
+        + '<div class="kc-cadu-feed-item__head">'
+        + '<i class="fas fa-hashtag"></i><code>' + escapeHtml(hash) + '</code>'
+        + '<span>-</span><span>' + heading + '</span>'
+        + '<span>-</span><span><i class="far fa-clock"></i> ' + dt + '</span>'
+        + '<span style="margin-left:auto;">' + askBtn + '</span>'
+        + '</div>'
+        + '<pre class="kc-cadu-feed-item__snippet">' + escapeHtml(snippet) + '</pre>'
+        + '</article>';
+    }).join('');
+    updateFeedPager(items.length);
+  }
+
+  function updateFeedPager(filteredCount) {
+    var status = $('#feed-page-status');
+    var prev = $('#feed-prev-page-btn');
+    var next = $('#feed-next-page-btn');
+    var limit = state.feedLimit || FEED_PAGE_SIZE;
+    var start = state.feedTotal && state.allFeedItems.length ? (state.feedPage * limit + 1) : 0;
+    var end = state.feedPage * limit + state.allFeedItems.length;
+    var visible = filteredCount == null ? state.allFeedItems.length : filteredCount;
+    if (status) {
+      status.textContent = state.feedTotal
+        ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' chunks' + (visible !== state.allFeedItems.length ? ' (' + visible + ' apos filtro)' : ''))
+        : ('Mostrando ' + visible + ' chunks');
+    }
+    if (prev) prev.disabled = state.feedPage <= 0;
+    if (next) next.disabled = !state.feedHasMore;
   }
 
   // ============================================================
@@ -732,6 +830,29 @@
                 pct +
                 '</div></div>';
             }).join('');
+            $$('.kc-openclaw-list-item', sessList).forEach(function (item, idx) {
+              var session = sessions[idx] || {};
+              item.setAttribute('role', 'button');
+              item.setAttribute('tabindex', '0');
+              item.setAttribute('title', 'Usar esta sessao no chat');
+              function selectSession() {
+                var sid = session.sessionId || '';
+                if (!sid) return;
+                openclawState.lastSessionId = sid;
+                var selected = $('#openclaw-last-session');
+                if (selected) selected.textContent = sid.slice(0, 8) + '...';
+                var chatStatus = $('#openclaw-chat-status');
+                if (chatStatus) chatStatus.textContent = 'Sessao selecionada para o proximo envio: ' + sid.slice(0, 8) + '...';
+                $$('.kc-openclaw-list-item', sessList).forEach(function (el) { el.classList.toggle('is-selected', el === item); });
+              }
+              item.addEventListener('click', selectSession);
+              item.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                  ev.preventDefault();
+                  selectSession();
+                }
+              });
+            });
           }
         }
       } else if (sessList) {
@@ -829,31 +950,75 @@
     log.scrollTop = log.scrollHeight;
   }
 
+  function parseAgentResponse(resp) {
+    var data = resp && (resp.data || resp);
+    if (data && data.data && data.data.result) data = data.data;
+    var payloads = (data && data.result && data.result.payloads) || [];
+    var text = '';
+    for (var i = 0; i < payloads.length; i++) {
+      if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
+    }
+    if (!text && data && data.summary) text = data.summary;
+    if (!text && resp && resp.stderr) text = 'Sem texto de retorno. stderr: ' + resp.stderr;
+    var meta = (data && data.result && data.result.meta) || {};
+    var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '';
+    var usage = meta.agentMeta ? ('in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
+    return { text: (text || '(resposta vazia)').trim(), meta: [dur, usage].filter(Boolean).join(' - ') };
+  }
+
+  function showAskCaduResult(label, resp) {
+    switchTab('openclaw');
+    appendChatMsg('user', label, 'acao do painel');
+    var parsed = parseAgentResponse(resp);
+    appendChatMsg('cadu', parsed.text, parsed.meta || null);
+    setTimeout(refreshOpenclaw, 800);
+  }
+
   async function openclawTriggerHeartbeat() {
     var btn = $('#openclaw-trigger-heartbeat-btn');
-    if (btn) btn.disabled = true;
+    var status = $('#openclaw-chat-status');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Trigger Heartbeat';
+    }
+    if (status) status.textContent = 'Enviando evento de heartbeat...';
     try {
       var resp = await apiFetch('/api/cadu/openclaw/agent-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: 'Admin trigger from KinoCampus UI', agent: 'main' }),
+        body: JSON.stringify({ text: 'Admin trigger from KinoCampus UI', agent: 'main', mode: 'now' }),
       });
-      if (resp && !resp.__error) {
+      var data = resp && (resp.data || resp);
+      var ok = !!(resp && !resp.__error && data && data.ok !== false && Number(data.exit_code || 0) === 0);
+      if (ok) {
+        if (status) status.textContent = 'Heartbeat disparado; atualizando status...';
         setTimeout(refreshOpenclaw, 1500);
+      } else {
+        var detail = data && (data.stderr || data.error || JSON.stringify(data));
+        if (status) status.textContent = 'Heartbeat falhou: ' + String(detail || 'sem detalhe').slice(0, 180);
       }
-    } catch (e) {}
-    finally { if (btn) btn.disabled = false; }
+    } catch (e) {
+      if (status) status.textContent = 'Heartbeat falhou: ' + (e && e.message ? e.message : e);
+    }
+    finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-heart-pulse"></i> Trigger Heartbeat';
+      }
+    }
   }
 
   async function openclawShowLogs() {
     var box = $('#openclaw-logs-box');
     var pre = $('#openclaw-logs-pre');
+    var btn = $('#openclaw-show-logs-btn');
     if (!box || !pre) return;
-    if (!box.hidden) { box.hidden = true; return; }
+    if (!box.hidden) { openclawCloseLogs(); return; }
     pre.textContent = 'Carregando…';
     box.hidden = false;
+    if (btn) btn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar logs';
     try {
-      var resp = await apiFetch('/api/cadu/openclaw/logs?limit=100');
+      var resp = await apiFetch('/api/cadu/openclaw/logs?limit=80');
       if (resp && !resp.__error) {
         pre.textContent = (resp.stdout || '') + (resp.stderr ? '\n[stderr]\n' + resp.stderr : '');
       } else {
@@ -862,6 +1027,13 @@
     } catch (e) {
       pre.textContent = 'Exception: ' + e.message;
     }
+  }
+
+  function openclawCloseLogs() {
+    var box = $('#openclaw-logs-box');
+    var btn = $('#openclaw-show-logs-btn');
+    if (box) box.hidden = true;
+    if (btn) btn.innerHTML = '<i class="fas fa-file-lines"></i> Ver logs do Gateway';
   }
 
   // ============================================================
@@ -900,8 +1072,9 @@
           });
         }
         if (resp && !resp.__error) {
-          switchTab('openclaw');
-          setTimeout(refreshOpenclaw, 800);
+          showAskCaduResult('Perguntar sobre chunk: ' + (heading || chunkId), resp);
+        } else {
+          showCaduError('Erro ao perguntar ao Cadu sobre o chunk: ' + escapeHtml(resp && resp.status ? ('HTTP ' + resp.status) : 'sem resposta'));
         }
       } else if (kind === 'site') {
         var siteName = btn.getAttribute('data-ask-name') || '';
@@ -915,8 +1088,9 @@
           body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
         });
         if (resp2 && !resp2.__error) {
-          switchTab('openclaw');
-          setTimeout(refreshOpenclaw, 800);
+          showAskCaduResult('Perguntar sobre site: ' + siteName, resp2);
+        } else {
+          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + escapeHtml(resp2 && resp2.status ? ('HTTP ' + resp2.status) : 'sem resposta'));
         }
       } else if (kind === 'pipeline') {
         var runId = btn.getAttribute('data-ask-run-id') || '';
@@ -929,8 +1103,9 @@
           body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
         });
         if (resp3 && !resp3.__error) {
-          switchTab('openclaw');
-          setTimeout(refreshOpenclaw, 800);
+          showAskCaduResult('Perguntar sobre pipeline: ' + runId.slice(0, 8), resp3);
+        } else {
+          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + escapeHtml(resp3 && resp3.status ? ('HTTP ' + resp3.status) : 'sem resposta'));
         }
       }
     } catch (e) {
@@ -1103,6 +1278,8 @@
     if (ocHeartbeat) ocHeartbeat.addEventListener('click', openclawTriggerHeartbeat);
     var ocLogs = $('#openclaw-show-logs-btn');
     if (ocLogs) ocLogs.addEventListener('click', openclawShowLogs);
+    var ocCloseLogs = $('#openclaw-close-logs-btn');
+    if (ocCloseLogs) ocCloseLogs.addEventListener('click', openclawCloseLogs);
     // Enter no textarea envia (Shift+Enter quebra linha)
     var ocInput = $('#openclaw-chat-input');
     if (ocInput) {
@@ -1143,15 +1320,17 @@
     var feedLimit = $('#feed-limit');
     feedLimit.addEventListener('change', function () {
       state.feedLimit = parseInt(feedLimit.value, 10) || 20;
+      state.feedPage = 0;
       loadFeed(true);
     });
 
     $('#feed-refresh-btn').addEventListener('click', function () { loadFeed(true); });
-    $('#feed-load-more-btn').addEventListener('click', function () {
-      state.feedLimit = Math.min(200, state.feedLimit + FEED_PAGE_SIZE);
-      $('#feed-limit').value = String(state.feedLimit);
-      loadFeed(true);
-    });
+    var feedPrev = $('#feed-prev-page-btn');
+    if (feedPrev) feedPrev.addEventListener('click', function () { loadFeedPage(state.feedPage - 1); });
+    var feedNext = $('#feed-next-page-btn');
+    if (feedNext) feedNext.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
+    var feedMore = $('#feed-load-more-btn');
+    if (feedMore) feedMore.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
 
     $('#cadu-refresh-btn').addEventListener('click', function () {
       refreshAll();
@@ -1259,6 +1438,29 @@
     var sec = Math.max(0, (unixEnd || Math.floor(Date.now() / 1000)) - unixStart);
     if (sec < 60) return sec + 's';
     return Math.floor(sec / 60) + 'min ' + (sec % 60) + 's';
+  }
+
+  function siteActionKey(site) {
+    return String((site && site.name) || '') + '|' + String((site && site.url) || '');
+  }
+
+  function normalizeSiteUrl(url) {
+    var raw = String(url || '').trim();
+    if (!raw) return '';
+    if (/^http:\/\//i.test(raw)) return raw.replace(/^http:\/\//i, 'https://');
+    if (/^https:\/\//i.test(raw)) return raw;
+    return '';
+  }
+
+  function normalizeInstagramUrl(handle) {
+    var raw = String(handle || '').trim().replace(/^@/, '').replace(/^https?:\/\/(?:www\.)?instagram\.com\//i, '');
+    raw = raw.split(/[/?#]/)[0].trim();
+    if (!raw) return '';
+    return 'https://www.instagram.com/' + raw + '/';
+  }
+
+  function getSitePublishUrl(site) {
+    return normalizeSiteUrl(site && site.url) || normalizeInstagramUrl(site && site.instagram);
   }
 
   function fmtSecondsWindow(sec) {
@@ -1523,6 +1725,7 @@
             '<button class="kc-pipeline-history-btn" data-action="view" data-run="' + r.id + '" title="Ver artefatos + log"><i class="fas fa-eye"></i></button>' +
             '<button class="kc-pipeline-history-btn" data-action="download-log" data-run="' + r.id + '" title="Baixar log completo (.log)"><i class="fas fa-download"></i></button>' +
             '<button class="kc-pipeline-history-btn" data-action="export" data-run="' + r.id + '" title="Export consolidado (JSON)"><i class="fas fa-file-export"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="export-pdf" data-run="' + r.id + '" title="Export visual em PDF"><i class="fas fa-file-pdf"></i></button>' +
             '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + r.id + '" title="Perguntar ao Cadu sobre esta run"><i class="fas fa-robot"></i></button>' +
           '</div>';
       }
@@ -1544,6 +1747,7 @@
         if (action === 'view') openRunDetailsModal(runId);
         else if (action === 'download-log') downloadRunLog(runId);
         else if (action === 'export') downloadRunExport(runId);
+        else if (action === 'export-pdf') exportRunPdf(runId);
         else if (action === 'ask-cadu') askCaduAboutRun(runId);
       });
     });
@@ -1592,6 +1796,7 @@
           '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" id="modal-ask-cadu" data-run="' + runId + '"><i class="fas fa-robot"></i> Perguntar ao Cadu</button>' +
           '<button class="kc-pipeline-history-btn" id="modal-download-log" data-run="' + runId + '"><i class="fas fa-download"></i> Baixar log</button>' +
           '<button class="kc-pipeline-history-btn" id="modal-export" data-run="' + runId + '"><i class="fas fa-file-export"></i> Export JSON</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-export-pdf" data-run="' + runId + '"><i class="fas fa-file-pdf"></i> Export PDF</button>' +
           '<button class="kc-pipeline-history-btn" id="modal-close" style="margin-left:auto;"><i class="fas fa-times"></i> Fechar</button>' +
         '</div>';
       var closeBtn = document.getElementById('modal-close');
@@ -1602,6 +1807,8 @@
       if (dlBtn) dlBtn.addEventListener('click', function () { downloadRunLog(runId); });
       var expBtn = document.getElementById('modal-export');
       if (expBtn) expBtn.addEventListener('click', function () { downloadRunExport(runId); });
+      var pdfBtn = document.getElementById('modal-export-pdf');
+      if (pdfBtn) pdfBtn.addEventListener('click', function () { exportRunPdf(runId); });
     }).catch(function (err) {
       modal.body.innerHTML = '<div style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>';
     });
@@ -1642,6 +1849,50 @@
       URL.revokeObjectURL(url);
     }).catch(function (err) {
       alert('Erro ao exportar: ' + (err && err.message || err));
+    });
+  }
+
+  function exportRunPdf(runId) {
+    apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) {
+      var data = r.data || r;
+      var run = data.run || {};
+      var metrics = data.summary_metrics || {};
+      var warnings = data.summary_warnings || [];
+      var artifacts = data.artifacts || [];
+      var rows = Object.keys(metrics).sort().map(function (key) {
+        return '<tr><th>' + escapeHtml(key) + '</th><td>' + escapeHtml(metrics[key]) + '</td></tr>';
+      }).join('');
+      var artifactRows = artifacts.map(function (a) {
+        return '<tr><td>' + escapeHtml(a.kind || 'other') + '</td><td>' + escapeHtml(a.name || '') + '</td><td>' + escapeHtml(a.produced_during_run ? 'sim' : 'nao') + '</td></tr>';
+      }).join('');
+      var html = '<!doctype html><html><head><meta charset="utf-8"><title>Pipeline ' + escapeHtml(runId.slice(0, 8)) + '</title>' +
+        '<style>body{font-family:Arial,sans-serif;color:#111;margin:28px;line-height:1.45}h1{font-size:22px;margin:0 0 8px}h2{font-size:15px;margin:24px 0 8px}table{width:100%;border-collapse:collapse;margin:8px 0 14px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:12px;vertical-align:top}th{background:#f5f5f5;width:220px}pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f7;border:1px solid #ddd;padding:10px;font-size:11px}.muted{color:#666;font-size:12px}.warn{color:#9a3412}</style>' +
+        '</head><body>' +
+        '<h1>Relatorio da Pipeline Cadu</h1>' +
+        '<div class="muted">Run ' + escapeHtml(runId) + ' - gerado em ' + escapeHtml(new Date().toLocaleString('pt-BR')) + '</div>' +
+        '<h2>Status</h2><table>' +
+        '<tr><th>stage</th><td>' + escapeHtml(run.stage || '') + '</td></tr>' +
+        '<tr><th>status</th><td>' + escapeHtml(run.status || '') + '</td></tr>' +
+        '<tr><th>exit_code</th><td>' + escapeHtml(run.exit_code == null ? '' : run.exit_code) + '</td></tr>' +
+        '<tr><th>inicio</th><td>' + escapeHtml(fmtDate(run.started_at)) + '</td></tr>' +
+        '<tr><th>fim</th><td>' + escapeHtml(fmtDate(run.finished_at)) + '</td></tr>' +
+        '</table>' +
+        '<h2>Metricas</h2><table>' + (rows || '<tr><td>Sem metricas detectadas.</td></tr>') + '</table>' +
+        '<h2>Avisos</h2>' + (warnings.length ? '<ul class="warn">' + warnings.map(function (w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('') + '</ul>' : '<p class="muted">Sem avisos.</p>') +
+        '<h2>Artefatos</h2><table><tr><th>tipo</th><th>arquivo</th><th>durante run</th></tr>' + (artifactRows || '<tr><td colspan="3">Nenhum artefato.</td></tr>') + '</table>' +
+        '<h2>Log tail</h2><pre>' + escapeHtml(data.log_tail || '') + '</pre>' +
+        '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},250)})</script>' +
+        '</body></html>';
+      var w = window.open('', '_blank');
+      if (!w) {
+        alert('Pop-up bloqueado. Permita pop-ups para exportar PDF.');
+        return;
+      }
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+    }).catch(function (err) {
+      alert('Erro ao exportar PDF: ' + (err && err.message || err));
     });
   }
 

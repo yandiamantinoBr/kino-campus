@@ -1388,3 +1388,15 @@ docker compose up -d --no-deps --force-recreate cadu-api
   - `docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep -E 'cadu|openclaw|NAMES'`
   - `curl -fsS https://api.openclaw-hahq.srv1597083.hstgr.cloud/health`
   - `curl -fsS https://www.kinocampus.com.br/api/cadu/health`
+
+# v10 - Admin Cadu: Sites, Feed Coletado e OpenClaw UX (2026-07-01)
+
+- Problema real: o botao "Sugerir" em Sites UFG podia enviar fonte sem URL ou com `http://`, gerando erro "Campo url deve ser uma URL HTTPS". Corrigido no admin e no proxy `/api/cadu/publish`: URL `http` vira `https`; se nao houver site mas houver Instagram, usa `https://www.instagram.com/{handle}/`; sem ambos, o botao fica desabilitado.
+- Problema real: o controller usava `site.key`, mas os objetos vindos de `/api/sites` nao possuem esse campo. Agora a chave e calculada com `siteActionKey(name|url)`.
+- Problema real: Feed Coletado nao tinha paginacao real. `cadu-api` v0.4.7 adiciona `GET /api/feed?limit=&offset=&with_meta=true`, retornando `items`, `total`, `has_more`; a UI ganhou Anterior/Proxima e texto explicando que o Feed Coletado e a memoria indexada do Cadu/OpenClaw, nao o feed publico final.
+- Problema real: `/api/feed/{chunk_id}` tentava colunas inexistentes (`file_path`, `heading`, `content`, `created_at`). O schema vivo usa `id`, `path`, `hash`, `model`, `text`, `updated_at`; o endpoint agora procura por `hash/id` e prefixo.
+- Problema real: Trigger Heartbeat chamava `openclaw system event --agent`, opcao rejeitada pela CLI OpenClaw 2026.5.19. `cadu-api` v0.4.7 remove `--agent`, usa `--mode now`, marca `ok=false` quando `exit_code != 0`, e a UI mostra sucesso/falha.
+- Melhoria UX: "Perguntar Cadu" em site/feed/pipeline agora mostra a pergunta e a resposta no chat OpenClaw, em vez de apenas trocar de aba.
+- Melhoria UX: sessoes recentes do OpenClaw sao selecionaveis para o proximo envio do chat.
+- Melhoria UX: logs do Gateway ganharam fechamento explicito, limite menor e CSS com `pre-wrap`/`overflow-wrap`, evitando deformar desktop/mobile.
+- Pipeline: historico/modal ganharam "Export PDF", que abre uma versao imprimivel do export consolidado (resumo, metricas, avisos, artefatos e tail do log) para salvar como PDF pelo navegador.

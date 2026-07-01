@@ -51,7 +51,9 @@
   border: 1px solid var(--kc-border-dark, #333);
   border-radius: 8px;
   padding: 14px 16px;
+  min-width: 0;
 }
+.kc-openclaw-grid > * { min-width: 0; }
 .kc-openclaw-panel h3 { margin: 0 0 8px; font-size: 1rem; color: var(--kc-primary-brand, #ff6b00); }
 .kc-openclaw-chat-log {
   background: rgba(0,0,0,.25);
@@ -95,27 +97,38 @@
 .kc-openclaw-chat-status { color: #888; font-size: 0.82rem; min-height: 18px; }
 .kc-openclaw-list { font-size: 0.85rem; max-height: 320px; overflow-y: auto; }
 .kc-openclaw-list-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
   padding: 8px 10px;
   border-left: 3px solid var(--kc-primary-brand, #ff6b00);
   background: rgba(255,107,0,.04);
   margin-bottom: 6px;
   border-radius: 0 4px 4px 0;
+  cursor: pointer;
 }
+.kc-openclaw-list-item:hover,
+.kc-openclaw-list-item.is-selected { background: rgba(255,107,0,.12); }
 .kc-openclaw-list-item__title { font-weight: 600; color: #e0e0e0; }
 .kc-openclaw-list-item__meta { color: #888; font-size: 0.74rem; margin-top: 2px; }
 .kc-openclaw-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .kc-openclaw-logs { margin-top: 12px; }
+.kc-openclaw-logs__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.kc-openclaw-logs__head h4 { margin: 0; font-size: .86rem; color: var(--kc-text-dark-primary); }
 .kc-openclaw-logs pre {
   background: rgba(0,0,0,.4);
   color: #b0b0b0;
   border: 1px solid var(--kc-border-dark, #333);
   border-radius: 4px;
   padding: 10px;
-  max-height: 300px;
+  max-height: min(420px, 48vh);
+  max-width: 100%;
   overflow: auto;
   font-size: 0.74rem;
   line-height: 1.3;
   margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .kc-cadu-stat-card__hint { color: #888; font-size: 0.74rem; margin-top: 4px; min-height: 18px; }
 .kc-btn-secondary, .kc-btn-primary { cursor: pointer; border-radius: 6px; padding: 7px 12px; font-size: 0.85rem; border: 1px solid var(--kc-border-dark, #444); }
@@ -224,6 +237,7 @@
     .kc-cadu-badge--tier-2 { background: rgba(245,158,11,.12); color: #f59e0b; }
     .kc-cadu-badge--tier-3 { background: rgba(99,102,241,.12); color: #818cf8; }
     .kc-cadu-feed-item { padding: 12px; border: 1px solid var(--kc-border-dark); border-radius: 12px; margin-bottom: 10px; background: rgba(255,255,255,.01); }
+    .kc-cadu-feed-help { color: var(--kc-text-dark-secondary); font-size: .86rem; line-height: 1.45; margin: -2px 0 12px; max-width: 900px; }
     .kc-cadu-feed-item__head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .78rem; color: var(--kc-text-dark-secondary); margin-bottom: 6px; }
     .kc-cadu-feed-item__head code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; }
     .kc-cadu-feed-item__snippet { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .82rem; line-height: 1.5; color: var(--kc-text-dark-primary); max-height: 220px; overflow: auto; }
@@ -231,6 +245,8 @@
     .kc-cadu-loadmore button { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 8px 18px; font-size: .86rem; cursor: pointer; }
     .kc-cadu-loadmore button:hover { border-color: rgba(255,107,0,.45); }
     .kc-cadu-loadmore button:disabled { opacity: .5; cursor: not-allowed; }
+    .kc-cadu-feed-pager { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin: 0 0 12px; color: var(--kc-text-dark-secondary); font-size: .84rem; }
+    .kc-cadu-feed-pager__actions { display:flex; gap:8px; flex-wrap:wrap; }
     .kc-cadu-footer { color: var(--kc-text-dark-secondary); font-size: .78rem; text-align: center; padding: 24px 0 0; }
     .kc-cadu-footer code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; }
     /* ===== Auth gate (loading + access denied) ===== */
@@ -240,7 +256,7 @@
     #cadu-access-denied i.fa-lock { color: #ef9a9a; }
     #cadu-error { display: none; background: rgba(76,175,80,.12); border: 1px solid rgba(76,175,80,.35); color: #a5d6a7; border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: .9rem; }
     /* ===== Botão publicar por site ===== */
-    .kc-cadu-publish-btn { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.3); color: var(--kc-primary-brand); border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; }
+    .kc-cadu-publish-btn { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.3); color: var(--kc-primary-brand); border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
     .kc-cadu-publish-btn:hover { background: rgba(255,107,0,.2); border-color: rgba(255,107,0,.5); }
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
     .kc-cadu-publish-btn.is-ok { background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.4); color: #10b981; }
@@ -481,6 +497,9 @@
 
       <!-- ============== TAB: FEED ============== -->
       <section class="kc-cadu-section" id="tab-feed" role="tabpanel" style="display:none;">
+        <p class="kc-cadu-feed-help">
+          O Feed coletado mostra os chunks da memoria indexada do Cadu/OpenClaw. Ele serve para auditar o contexto que o Cadu pode consultar e perguntar sobre trechos especificos; nao e o feed publico final de posts publicados.
+        </p>
         <div class="kc-cadu-toolbar">
           <input id="feed-search" type="search" autocomplete="off" placeholder="Filtrar por conteúdo do chunk" data-i18n-placeholder="placeholder.cadu-feed-search" aria-label="Filtrar feed" data-i18n-aria-label="aria-label.cadu-feed-search">
           <select id="feed-limit" aria-label="Limite" data-i18n-aria-label="aria-label.cadu-feed-limit">
@@ -489,7 +508,13 @@
             <option value="100">100 itens</option>
           </select>
           <button type="button" id="feed-refresh-btn"><i class="fas fa-rotate"></i> Recarregar</button>
-          <button type="button" id="feed-load-more-btn"><i class="fas fa-arrow-down"></i> Mais</button>
+        </div>
+        <div class="kc-cadu-feed-pager" aria-live="polite">
+          <span id="feed-page-status">Carregando...</span>
+          <div class="kc-cadu-feed-pager__actions">
+            <button type="button" id="feed-prev-page-btn" class="kc-btn-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
+            <button type="button" id="feed-next-page-btn" class="kc-btn-secondary">Proxima <i class="fas fa-arrow-right"></i></button>
+          </div>
         </div>
         <div id="feed-list" aria-live="polite">
           <div class="kc-cadu-empty">Carregando…</div>
@@ -573,7 +598,10 @@
             </div>
 
             <div id="openclaw-logs-box" class="kc-openclaw-logs" hidden>
-              <h4>Logs do Gateway</h4>
+              <div class="kc-openclaw-logs__head">
+                <h4>Logs do Gateway</h4>
+                <button type="button" id="openclaw-close-logs-btn" class="kc-btn-secondary"><i class="fas fa-times"></i> Fechar</button>
+              </div>
               <pre id="openclaw-logs-pre"></pre>
             </div>
           </div>

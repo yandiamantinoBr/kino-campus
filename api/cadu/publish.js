@@ -29,8 +29,17 @@ export default async function handler(req, res) {
   if (!body.name || typeof body.name !== 'string') {
     return res.status(400).json({ error: 'invalid_body', message: 'Campo "name" é obrigatório' });
   }
-  if (!body.url || typeof body.url !== 'string' || !/^https?:\/\//i.test(body.url)) {
-    return res.status(400).json({ error: 'invalid_body', message: 'Campo "url" deve ser uma URL http(s)' });
+  const instagramHandle = String(body.instagram || '')
+    .trim()
+    .replace(/^@/, '')
+    .replace(/^https?:\/\/(?:www\.)?instagram\.com\//i, '')
+    .split(/[/?#]/)[0]
+    .trim();
+  let targetUrl = String(body.url || '').trim();
+  if (/^http:\/\//i.test(targetUrl)) targetUrl = targetUrl.replace(/^http:\/\//i, 'https://');
+  if (!targetUrl && instagramHandle) targetUrl = `https://www.instagram.com/${instagramHandle}/`;
+  if (!/^https:\/\//i.test(targetUrl)) {
+    return res.status(400).json({ error: 'invalid_body', message: 'Campo "url" deve ser uma URL HTTPS ou a fonte deve ter Instagram' });
   }
 
   try {
@@ -44,7 +53,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         name: body.name.trim(),
-        url: body.url.trim(),
+        url: targetUrl,
         instagram: body.instagram || null,
         note: body.note || null,
         tier: body.tier || null,

@@ -376,3 +376,12 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
 - O container `openclaw-hahq-cadu-api` fica `Up`, mas sem `PortBindings` no host. Isso e esperado: o compose expoe o sidecar via Traefik, nao por `0.0.0.0:49104`.
 - Health operacional do sidecar: `https://api.openclaw-hahq.srv1597083.hstgr.cloud/health`.
 - Nao diagnosticar `curl http://127.0.0.1:49104/api/health` como offline; esse teste falha no host atual porque a porta nao esta publicada.
+
+## 17. Atualizacao Codex - Sites/Feed/OpenClaw admin UX (2026-07-01)
+
+- `cadu-api` v0.4.7: `/api/feed` aceita `offset` e `with_meta=true`, retornando `items`, `total`, `has_more`; `/api/feed/{chunk_id}` agora usa o schema real `chunks(id,path,hash,model,text,updated_at)`.
+- `cadu-api` v0.4.7: `/api/openclaw/agent-event` removeu `--agent` porque a CLI OpenClaw 2026.5.19 rejeita essa opcao; usa `--mode now` e marca `ok=false` se `exit_code != 0`.
+- Admin Sites UFG: "Sugerir" normaliza `http` para `https`, usa Instagram como fallback para fontes Instagram-only e desabilita o botao se nao houver destino. Corrigido bug de `site.key` inexistente.
+- Admin Feed Coletado: ganhou explicacao de finalidade e paginacao Anterior/Proxima. A aba e memoria/contexto do Cadu, nao o feed publico final.
+- Admin OpenClaw: "Perguntar Cadu" agora renderiza pergunta+resposta no chat; sessoes recentes podem ser selecionadas; logs do Gateway tem fechamento e nao deformam layout.
+- Pipeline: historico/modal ganharam Export PDF por print do navegador a partir do export consolidado.
