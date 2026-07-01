@@ -86,6 +86,115 @@
     syncActiveLinks(document.querySelector('.kc-mobile-nav'));
   }
 
+  function createRailButton(direction) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'kc-scroll-rail__btn kc-scroll-rail__btn--' + direction;
+    btn.setAttribute(direction === 'prev' ? 'data-kc-rail-prev' : 'data-kc-rail-next', '');
+    btn.setAttribute('aria-label', direction === 'prev' ? 'Rolar para o início' : 'Rolar para o fim');
+    btn.hidden = true;
+    btn.innerHTML = '<i class="fas fa-chevron-' + (direction === 'prev' ? 'left' : 'right') + '" aria-hidden="true"></i>';
+    return btn;
+  }
+
+  function ensureAdminNavLabels(nav) {
+    if (!nav) return;
+    Array.from(nav.querySelectorAll('a')).forEach(function (link) {
+      if (link.dataset.kcA11yEnhanced === '1') return;
+      var span = link.querySelector('span');
+      var text = span ? String(span.textContent || '').trim() : '';
+      if (!text) return;
+      if (!link.getAttribute('aria-label')) link.setAttribute('aria-label', text);
+      if (!link.getAttribute('title')) link.setAttribute('title', text);
+      link.dataset.kcA11yEnhanced = '1';
+    });
+  }
+
+  function attachAdminNavRail(rail) {
+    if (!rail || rail.__kcAdminRailAttached) return;
+    var nav = rail.querySelector('.kc-admin-nav');
+    if (!nav) return;
+    var prev = rail.querySelector('[data-kc-rail-prev]');
+    var next = rail.querySelector('[data-kc-rail-next]');
+    if (!prev || !next) return;
+
+    function update() {
+      var max = nav.scrollWidth - nav.clientWidth;
+      var hasOverflow = max > 4;
+      var atStart = nav.scrollLeft <= 4;
+      var atEnd = nav.scrollLeft >= max - 4;
+      rail.classList.toggle('is-overflow-start', hasOverflow && !atStart);
+      rail.classList.toggle('is-overflow-end', hasOverflow && !atEnd);
+      prev.hidden = !hasOverflow || atStart;
+      next.hidden = !hasOverflow || atEnd;
+    }
+
+    function scrollByDirection(dir) {
+      var amount = Math.max(160, Math.floor(nav.clientWidth * 0.7));
+      try {
+        nav.scrollBy({ left: dir * amount, behavior: 'smooth' });
+      } catch (_) {
+        nav.scrollLeft += dir * amount;
+      }
+    }
+
+    prev.addEventListener('click', function () { scrollByDirection(-1); });
+    next.addEventListener('click', function () { scrollByDirection(1); });
+    nav.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      var ro = new ResizeObserver(update);
+      ro.observe(nav);
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      var mo = new MutationObserver(update);
+      mo.observe(nav, { childList: true, subtree: false });
+    }
+    rail.__kcAdminRailAttached = true;
+    rail.__kcAdminRailUpdate = update;
+    requestAnimationFrame(update);
+    setTimeout(update, 250);
+  }
+
+  function applyAdminNavCollapse() {
+    var nav = document.querySelector('.kc-admin-nav');
+    if (!nav) return;
+    var links = Array.from(nav.querySelectorAll(':scope > a'));
+    links.forEach(function (link) { link.classList.remove('is-icon-only'); });
+    if (window.innerWidth <= 768) return;
+    for (var i = links.length - 1; i >= 1; i--) {
+      if (nav.scrollWidth <= nav.clientWidth + 2) break;
+      links[i].classList.add('is-icon-only');
+      void nav.offsetWidth;
+    }
+    var rail = nav.parentElement && nav.parentElement.matches('[data-kc-scroll-rail]') ? nav.parentElement : null;
+    if (rail && typeof rail.__kcAdminRailUpdate === 'function') requestAnimationFrame(rail.__kcAdminRailUpdate);
+  }
+
+  function ensureAdminNavRail() {
+    var nav = document.querySelector('.kc-admin-nav');
+    if (!nav) return;
+    ensureAdminNavLabels(nav);
+    var rail = nav.parentElement && nav.parentElement.matches('[data-kc-scroll-rail]')
+      ? nav.parentElement
+      : null;
+    if (!rail) {
+      rail = document.createElement('div');
+      rail.className = 'kc-scroll-rail kc-scroll-rail--admin';
+      rail.setAttribute('data-kc-scroll-rail', '');
+      var parent = nav.parentNode;
+      parent.insertBefore(rail, nav);
+      rail.appendChild(createRailButton('prev'));
+      rail.appendChild(nav);
+      rail.appendChild(createRailButton('next'));
+    } else {
+      rail.classList.add('kc-scroll-rail', 'kc-scroll-rail--admin');
+    }
+    attachAdminNavRail(rail);
+    applyAdminNavCollapse();
+    syncHeaderHeight();
+  }
+
   function setModalOpen(isOpen) {
     if (!document.body) return;
     document.body.classList.toggle('kc-admin-modal-open', !!isOpen);
@@ -108,11 +217,15 @@
     if (!document.body || !document.body.classList.contains('kc-admin-page')) return;
     releaseBootState();
     ensureHelpRequestsLinks();
+    ensureAdminNavRail();
     syncHeaderState();
     observeHeaderAuth();
     window.addEventListener('resize', function () {
       window.clearTimeout(resizeTimer);
-      resizeTimer = window.setTimeout(syncHeaderHeight, RESIZE_DEBOUNCE_MS);
+      resizeTimer = window.setTimeout(function () {
+        syncHeaderHeight();
+        applyAdminNavCollapse();
+      }, RESIZE_DEBOUNCE_MS);
     });
     window.addEventListener('orientationchange', syncHeaderHeight);
     document.addEventListener('kc:authchange', function () {
@@ -125,6 +238,7 @@
 
   window.KCAdminShell = Object.freeze({
     syncHeader: syncHeaderState,
+    refreshNavRail: ensureAdminNavRail,
     setModalOpen: setModalOpen
   });
 

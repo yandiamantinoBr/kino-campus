@@ -449,11 +449,11 @@
         : '<span style="color:var(--kc-text-dark-secondary);">—</span>';
       // OBSERVAÇÃO: textarea editável com auto-save
       var noteVal = s.note ? escapeHtml(s.note) : '';
-      var noteHtml = '<div class="kc-cadu-note-cell"><textarea class="kc-cadu-note-input" data-field="note" data-name="' + escapeHtml(s.name) + '" placeholder="Adicionar observação..." rows="1">' + noteVal + '</textarea><span class="kc-cadu-save-status" data-site-save-status="' + escapeHtml(s.name) + '"></span></div>';
+      var noteHtml = '<div class="kc-cadu-note-cell"><textarea class="kc-cadu-note-input" data-field="note" data-name="' + escapeHtml(s.name) + '" placeholder="Adicionar observação…" rows="1">' + noteVal + '</textarea><span class="kc-cadu-save-status" data-site-save-status="' + escapeHtml(s.name) + '"></span></div>';
       var actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button>'
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Perguntar ao Cadu sobre este site (vai para a aba OpenClaw)"><i class="fas fa-robot"></i></button>';
       var publishUrl = getSitePublishUrl(s);
-      var publishTitle = publishUrl ? ('Sugerir publicacao usando ' + publishUrl) : 'Sem URL HTTPS nem Instagram para sugerir publicacao';
+      var publishTitle = publishUrl ? ('Sugerir publicação usando ' + publishUrl) : 'Sem URL HTTPS nem Instagram para sugerir publicação';
       var publishDisabled = publishUrl ? '' : ' disabled aria-disabled="true"';
       actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="' + escapeHtml(publishTitle) + '"' + publishDisabled + '><i class="fas fa-paper-plane"></i><span>Sugerir</span></button>'
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Enviar contexto deste site para o chat Cadu na aba OpenClaw"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
@@ -618,7 +618,7 @@
     var list = $('#feed-list');
     if (initial) {
       state.feedPage = 0;
-      if (list) list.innerHTML = '<div class="kc-cadu-empty">Carregando...</div>';
+      if (list) list.innerHTML = '<div class="kc-cadu-empty">Carregando…</div>';
       state.allFeedItems = [];
     }
     var limit = state.feedLimit || FEED_PAGE_SIZE;
@@ -632,7 +632,7 @@
       state.feedHasMore = Array.isArray(data) ? items.length >= limit : !!data.has_more;
       $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
       $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
-      $('#kpi-memory-detail').textContent = 'memoria indexada do Cadu; pagina ' + (state.feedPage + 1);
+      $('#kpi-memory-detail').textContent = 'memória indexada do Cadu; página ' + (state.feedPage + 1);
       applyFeedFilter();
     } catch (err) {
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
@@ -660,7 +660,7 @@
       var heading = it.heading ? escapeHtml(it.heading) : '<span style="color:var(--kc-text-dark-secondary);">sem titulo</span>';
       var dt = fmtDate(it.created_at);
       var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : 'sem id';
-      var snippet = it.snippet || '(sem conteudo)';
+      var snippet = it.snippet || '(sem conteúdo)';
       var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml((it.heading || '').replace(/"/g, '&quot;')) + '" data-ask-snippet="' + escapeHtml(String(snippet).slice(0, 900)) + '" title="Enviar esse chunk para o chat Cadu na aba OpenClaw"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
       return '<article class="kc-cadu-feed-item">'
         + '<div class="kc-cadu-feed-item__head">'
@@ -726,6 +726,8 @@
 
   var openclawState = {
     lastSessionId: null,
+    selectedSession: null,
+    chatFocused: false,
     busy: false,
   };
 
@@ -736,6 +738,114 @@
     if (s < 3600) return Math.floor(s / 60) + 'min atrás';
     if (s < 86400) return Math.floor(s / 3600) + 'h atrás';
     return Math.floor(s / 86400) + 'd atrás';
+  }
+
+  function fmtSessionId(sessionId) {
+    var sid = String(sessionId || '');
+    return sid ? sid.slice(0, 8) + '…' : '—';
+  }
+
+  function getOpenclawSessionId(session) {
+    return session ? String(session.sessionId || session.session_id || session.id || '') : '';
+  }
+
+  function setOpenclawActionStatus(message, kind) {
+    var el = $('#openclaw-action-status');
+    if (!el) return;
+    el.hidden = !message;
+    el.classList.remove('is-ok', 'is-error', 'is-loading');
+    if (kind) el.classList.add('is-' + kind);
+    el.innerHTML = message || '';
+  }
+
+  function getSessionLogTerms(session) {
+    if (!session) return [];
+    var raw = [
+      getOpenclawSessionId(session),
+      session.key,
+      session.runtimePolicySessionKey,
+      session.kind,
+    ];
+    if (getOpenclawSessionId(session)) raw.push(getOpenclawSessionId(session).slice(0, 8));
+    if (session.key) {
+      var parts = String(session.key).split(/[/:| ]+/).filter(Boolean);
+      raw = raw.concat(parts.slice(-3));
+    }
+    var seen = {};
+    return raw.map(function (term) { return String(term || '').trim(); })
+      .filter(function (term) {
+        if (!term || term.length < 4 || seen[term]) return false;
+        seen[term] = true;
+        return true;
+      });
+  }
+
+  function filterLogsForSession(text, session) {
+    var terms = getSessionLogTerms(session);
+    var lines = String(text || '').split(/\r?\n/);
+    if (!terms.length) return text;
+    var matches = lines.filter(function (line) {
+      return terms.some(function (term) {
+        return line.toLowerCase().indexOf(term.toLowerCase()) !== -1;
+      });
+    });
+    if (matches.length) {
+      return '[filtro de sessão: ' + fmtSessionId(getOpenclawSessionId(session)) + ' | termos: ' + terms.join(', ') + ']\n\n' + matches.join('\n');
+    }
+    return '[sem linhas específicas para a sessão ' + fmtSessionId(getOpenclawSessionId(session)) + ' nos últimos logs do Gateway]\n'
+      + '[termos buscados: ' + terms.join(', ') + ']\n\n'
+      + text;
+  }
+
+  function focusOpenclawChat() {
+    var input = $('#openclaw-chat-input');
+    var chat = $('.kc-openclaw-chat');
+    if (chat && chat.scrollIntoView) chat.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(function () {
+      if (input && input.focus) input.focus();
+    }, 200);
+  }
+
+  function toggleOpenclawChatFocus(force) {
+    var grid = $('.kc-openclaw-grid');
+    var btn = $('#openclaw-chat-focus-btn');
+    if (!grid) return;
+    var next = typeof force === 'boolean' ? force : !grid.classList.contains('is-chat-focus');
+    openclawState.chatFocused = next;
+    grid.classList.toggle('is-chat-focus', next);
+    if (btn) {
+      btn.innerHTML = next
+        ? '<i class="fas fa-compress"></i> Recolher'
+        : '<i class="fas fa-expand"></i> Foco';
+    }
+    focusOpenclawChat();
+  }
+
+  function renderOpenclawSessionDetail(session) {
+    var box = $('#openclaw-session-detail');
+    if (!box) return;
+    var sid = getOpenclawSessionId(session);
+    if (!session || !sid) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    var pct = session.percentUsed != null ? escapeHtml(String(session.percentUsed)) + '% do contexto' : 'contexto n/d';
+    var age = fmtAgeMs(session.ageMs || (session.age ? session.age * 1000 : 0));
+    box.hidden = false;
+    box.innerHTML =
+      '<div class="kc-openclaw-session-detail__title"><i class="fas fa-circle-info"></i> Sessão selecionada: <code>' + escapeHtml(fmtSessionId(sid)) + '</code></div>' +
+      '<div class="kc-openclaw-session-detail__meta">' +
+        '<span>' + escapeHtml(session.kind || 'tipo n/d') + '</span>' +
+        '<span>' + escapeHtml(session.model || 'modelo n/d') + '</span>' +
+        '<span>' + pct + '</span>' +
+        '<span>' + escapeHtml(age) + '</span>' +
+      '</div>' +
+      '<div><strong>Chave:</strong> <code>' + escapeHtml(session.key || '—') + '</code></div>' +
+      '<div class="kc-openclaw-session-detail__actions">' +
+        '<button type="button" id="openclaw-session-chat-btn" class="kc-btn-secondary"><i class="fas fa-comments"></i> Usar no chat</button>' +
+        '<button type="button" id="openclaw-session-logs-btn" class="kc-btn-secondary"><i class="fas fa-file-lines"></i> Ver logs desta sessão</button>' +
+      '</div>';
   }
 
   async function refreshOpenclaw() {
@@ -807,21 +917,24 @@
       var sessList = $('#openclaw-sessions-list');
       if (sessResp && !sessResp.__error && sessResp.data && sessResp.data.sessions) {
         var sessions = sessResp.data.sessions;
-        // lembrar a sessão mais recente "direct" pra próxima msg
+        // lembrar a sessão mais recente "direct" para próxima mensagem
         var lastDirect = sessions.find(function (s) { return s.kind === 'direct'; });
         if (lastDirect) {
-          openclawState.lastSessionId = lastDirect.sessionId;
+          openclawState.lastSessionId = getOpenclawSessionId(lastDirect);
           var ls = $('#openclaw-last-session');
-          if (ls) ls.textContent = lastDirect.sessionId.slice(0, 8) + '…';
+          if (ls) ls.textContent = fmtSessionId(openclawState.lastSessionId);
         }
         if (sessList) {
           if (sessions.length === 0) {
             sessList.innerHTML = '<div class="kc-cadu-empty">Nenhuma sessão.</div>';
+            openclawState.selectedSession = null;
+            renderOpenclawSessionDetail(null);
           } else {
             sessList.innerHTML = sessions.map(function (s) {
               var kindIcon = s.kind === 'cron' ? 'fa-clock' : (s.kind === 'direct' ? 'fa-comments' : 'fa-circle');
               var pct = s.percentUsed != null ? (' · ' + s.percentUsed + '% ctx') : '';
-              return '<div class="kc-openclaw-list-item">' +
+              var selectedClass = openclawState.selectedSession && getOpenclawSessionId(openclawState.selectedSession) === getOpenclawSessionId(s) ? ' is-selected' : '';
+              return '<div class="kc-openclaw-list-item' + selectedClass + '">' +
                 '<div class="kc-openclaw-list-item__title"><i class="fas ' + kindIcon + '"></i> ' +
                 escapeHtml(s.kind || '?') + ' · ' + escapeHtml((s.model || '?').toString()) + '</div>' +
                 '<div class="kc-openclaw-list-item__meta">' +
@@ -834,15 +947,18 @@
               var session = sessions[idx] || {};
               item.setAttribute('role', 'button');
               item.setAttribute('tabindex', '0');
-              item.setAttribute('title', 'Usar esta sessao no chat');
+              item.setAttribute('title', 'Selecionar sessão e ver detalhes');
               function selectSession() {
-                var sid = session.sessionId || '';
+                var sid = getOpenclawSessionId(session);
                 if (!sid) return;
                 openclawState.lastSessionId = sid;
+                openclawState.selectedSession = session;
                 var selected = $('#openclaw-last-session');
-                if (selected) selected.textContent = sid.slice(0, 8) + '...';
+                if (selected) selected.textContent = fmtSessionId(sid);
                 var chatStatus = $('#openclaw-chat-status');
-                if (chatStatus) chatStatus.textContent = 'Sessao selecionada para o proximo envio: ' + sid.slice(0, 8) + '...';
+                if (chatStatus) chatStatus.textContent = 'Sessão selecionada para o próximo envio: ' + fmtSessionId(sid);
+                setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(sid)) + '</code> selecionada. Você pode usá-la no chat ou filtrar logs por ela.', 'ok');
+                renderOpenclawSessionDetail(session);
                 $$('.kc-openclaw-list-item', sessList).forEach(function (el) { el.classList.toggle('is-selected', el === item); });
               }
               item.addEventListener('click', selectSession);
@@ -853,6 +969,10 @@
                 }
               });
             });
+            if (openclawState.selectedSession && getOpenclawSessionId(openclawState.selectedSession)) {
+              var stillExists = sessions.some(function (s) { return getOpenclawSessionId(s) === getOpenclawSessionId(openclawState.selectedSession); });
+              if (!stillExists) renderOpenclawSessionDetail(openclawState.selectedSession);
+            }
           }
         }
       } else if (sessList) {
@@ -919,7 +1039,7 @@
       if (data.runId && meta.agentMeta && meta.agentMeta.sessionId) {
         openclawState.lastSessionId = meta.agentMeta.sessionId;
         var ls = $('#openclaw-last-session');
-        if (ls) ls.textContent = meta.agentMeta.sessionId.slice(0, 8) + '…';
+        if (ls) ls.textContent = fmtSessionId(meta.agentMeta.sessionId);
       }
       if (status) status.textContent = '✅ ' + (data.summary || 'ok') + ' (' + dur + ')';
       // re-render status pra atualizar lastActive
@@ -968,7 +1088,7 @@
 
   function showAskCaduResult(label, resp) {
     switchTab('openclaw');
-    appendChatMsg('user', label, 'acao do painel');
+    appendChatMsg('user', label, 'ação do painel');
     var parsed = parseAgentResponse(resp);
     appendChatMsg('cadu', parsed.text, parsed.meta || null);
     setTimeout(refreshOpenclaw, 800);
@@ -981,7 +1101,8 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Trigger Heartbeat';
     }
-    if (status) status.textContent = 'Enviando evento de heartbeat...';
+    if (status) status.textContent = 'Enviando evento de heartbeat…';
+    setOpenclawActionStatus('<i class="fas fa-spinner fa-spin"></i> Enviando heartbeat para o agente principal…', 'loading');
     try {
       var resp = await apiFetch('/api/cadu/openclaw/agent-event', {
         method: 'POST',
@@ -991,14 +1112,17 @@
       var data = resp && (resp.data || resp);
       var ok = !!(resp && !resp.__error && data && data.ok !== false && Number(data.exit_code || 0) === 0);
       if (ok) {
-        if (status) status.textContent = 'Heartbeat disparado; atualizando status...';
+        if (status) status.textContent = 'Heartbeat disparado; atualizando status…';
+        setOpenclawActionStatus('<i class="fas fa-circle-check"></i> Heartbeat disparado com sucesso. Atualizando cartões e sessões…', 'ok');
         setTimeout(refreshOpenclaw, 1500);
       } else {
         var detail = data && (data.stderr || data.error || JSON.stringify(data));
         if (status) status.textContent = 'Heartbeat falhou: ' + String(detail || 'sem detalhe').slice(0, 180);
+        setOpenclawActionStatus('<i class="fas fa-circle-xmark"></i> Heartbeat falhou: ' + escapeHtml(String(detail || 'sem detalhe').slice(0, 240)), 'error');
       }
     } catch (e) {
       if (status) status.textContent = 'Heartbeat falhou: ' + (e && e.message ? e.message : e);
+      setOpenclawActionStatus('<i class="fas fa-circle-xmark"></i> Heartbeat falhou: ' + escapeHtml(e && e.message ? e.message : e), 'error');
     }
     finally {
       if (btn) {
@@ -1008,24 +1132,35 @@
     }
   }
 
-  async function openclawShowLogs() {
+  async function openclawShowLogs(options) {
+    options = options || {};
     var box = $('#openclaw-logs-box');
     var pre = $('#openclaw-logs-pre');
     var btn = $('#openclaw-show-logs-btn');
+    var session = options.session || null;
     if (!box || !pre) return;
-    if (!box.hidden) { openclawCloseLogs(); return; }
-    pre.textContent = 'Carregando…';
+    if (!session && !box.hidden) { openclawCloseLogs(); return; }
+    pre.textContent = session ? ('Carregando logs da sessão ' + fmtSessionId(getOpenclawSessionId(session)) + '…') : 'Carregando logs…';
     box.hidden = false;
     if (btn) btn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar logs';
+    setOpenclawActionStatus(session
+      ? '<i class="fas fa-spinner fa-spin"></i> Buscando logs e filtrando pela sessão <code>' + escapeHtml(fmtSessionId(getOpenclawSessionId(session))) + '</code>…'
+      : '<i class="fas fa-spinner fa-spin"></i> Buscando últimos logs do Gateway…', 'loading');
     try {
       var resp = await apiFetch('/api/cadu/openclaw/logs?limit=80');
       if (resp && !resp.__error) {
-        pre.textContent = (resp.stdout || '') + (resp.stderr ? '\n[stderr]\n' + resp.stderr : '');
+        var raw = (resp.stdout || '') + (resp.stderr ? '\n[stderr]\n' + resp.stderr : '');
+        pre.textContent = session ? filterLogsForSession(raw, session) : raw;
+        setOpenclawActionStatus(session
+          ? '<i class="fas fa-circle-check"></i> Logs carregados com filtro de sessão. Se não houver linhas específicas, o painel mostra o log geral logo abaixo.'
+          : '<i class="fas fa-circle-check"></i> Logs do Gateway carregados.', 'ok');
       } else {
         pre.textContent = 'Erro: ' + (resp ? JSON.stringify(resp) : 'sem resposta');
+        setOpenclawActionStatus('<i class="fas fa-circle-xmark"></i> Erro ao carregar logs do Gateway.', 'error');
       }
     } catch (e) {
       pre.textContent = 'Exception: ' + e.message;
+      setOpenclawActionStatus('<i class="fas fa-circle-xmark"></i> Erro ao carregar logs: ' + escapeHtml(e.message), 'error');
     }
   }
 
@@ -1054,7 +1189,7 @@
       if (kind === 'feed') {
         var chunkId = btn.getAttribute('data-ask-id') || '';
         var heading = btn.getAttribute('data-ask-heading') || '';
-        message = 'Resume e me diga o que faco com o chunk "' + heading + '" (id=' + chunkId + ').';
+        message = 'Resuma e me diga o que faço com o chunk "' + heading + '" (id=' + chunkId + ').';
         // Tenta endpoint dedicado /api/feed/{id}/ask (cadu-api v0.4.6+)
         // via proxy consolidado /api/cadu/feed?path={chunk_id}/ask
         var resp = await apiFetch('/api/cadu/feed?path=' + encodeURIComponent(chunkId + '/ask'), {
@@ -1064,7 +1199,7 @@
         });
         if (!resp || resp.__error) {
           // Fallback: monta contexto inline + agent-send
-          message = '<chunk-context id="' + chunkId + '" heading="' + heading.replace(/"/g, "'") + '">' + (btn.getAttribute('data-ask-snippet') || '(conteudo sera carregado pelo Cadu)') + '</chunk-context>\n\n' + message;
+          message = '<chunk-context id="' + chunkId + '" heading="' + heading.replace(/"/g, "'") + '">' + (btn.getAttribute('data-ask-snippet') || '(conteúdo será carregado pelo Cadu)') + '</chunk-context>\n\n' + message;
           resp = await apiFetch('/api/cadu/openclaw/agent-send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1081,7 +1216,7 @@
         var siteUrl = btn.getAttribute('data-ask-url') || '';
         var siteIg = btn.getAttribute('data-ask-instagram') || '';
         var siteTier = btn.getAttribute('data-ask-tier') || '';
-        message = '<site-context name="' + siteName + '" url="' + siteUrl + '" instagram="' + siteIg + '" tier="' + siteTier + '"></site-context>\n\nMe de um resumo rapido sobre o que voce sabe do site "' + siteName + '" (' + siteUrl + ') e o que vale destacar. Use os tiers e notas que voce tem em mente.';
+        message = '<site-context name="' + siteName + '" url="' + siteUrl + '" instagram="' + siteIg + '" tier="' + siteTier + '"></site-context>\n\nMe dê um resumo rápido sobre o que você sabe do site "' + siteName + '" (' + siteUrl + ') e o que vale destacar. Use os tiers e notas que você tem em mente.';
         var resp2 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1096,7 +1231,7 @@
         var runId = btn.getAttribute('data-ask-run-id') || '';
         var stage = btn.getAttribute('data-ask-stage') || '';
         var status = btn.getAttribute('data-ask-status') || '';
-        message = '<run-context id="' + runId + '" stage="' + stage + '" status="' + status + '"></run-context>\n\nAnalise a pipeline run "' + runId.slice(0, 8) + '..." (stage=' + stage + ', status=' + status + '). Voce pode buscar detalhes via /api/cadu/pipeline/' + runId + '/export.';
+        message = '<run-context id="' + runId + '" stage="' + stage + '" status="' + status + '"></run-context>\n\nAnalise a pipeline run "' + runId.slice(0, 8) + '…" (stage=' + stage + ', status=' + status + '). Você pode buscar detalhes via /api/cadu/pipeline/' + runId + '/export.';
         var resp3 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1118,8 +1253,8 @@
   }
 
   // ============================================================
-  // Notification bell (cross-tab via Vercel polling - nao Supabase Realtime
-  // por causa de RLS + perf). Atualiza bell com runs/publicacoes recentes.
+  // Notification bell (cross-tab via Vercel polling - não Supabase Realtime
+  // por causa de RLS + perf). Atualiza bell com runs/publicações recentes.
   // ============================================================
 
   var notifState = { lastCount: 0, runs: [], seen: {} };
@@ -1238,18 +1373,19 @@
 
     // Periodic status poll (a cada 30s): atualiza cadu-api/version pills + activity bell
     setInterval(function () {
-      // Poll silencioso - so atualiza se API saudavel
+      // Poll silencioso: atualiza health e atividade recente quando a API está saudável.
       fetch('/api/cadu/health', { headers: { Accept: 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           if (!data) return;
+          pollNotifActivity();
           var vp = $('#cadu-version-text');
           if (vp && data.version && vp.textContent !== 'v' + data.version) {
             vp.textContent = 'v' + data.version;
           }
           if (data.version && data.version !== state.lastVersion) {
             state.lastVersion = data.version;
-            // Se a versao mudou (ex: Yan restartou cadu-api), refrescar pills
+            // Se a versão mudou (ex: Yan restartou cadu-api), refrescar pills
             var cp = $('#cadu-context-pill');
             if (cp && cp.style.display === 'none' && versionAtLeast(data.version, '0.4.6')) {
               pollNotifActivity();
@@ -1259,7 +1395,7 @@
         .catch(function () {});
     }, 30000);
 
-    // First poll (assincrono, nao bloqueia init)
+    // First poll (assíncrono, não bloqueia init)
     setTimeout(pollNotifActivity, 2000);
 
     var sitesSearch = $('#sites-search');
@@ -1280,6 +1416,22 @@
     if (ocLogs) ocLogs.addEventListener('click', openclawShowLogs);
     var ocCloseLogs = $('#openclaw-close-logs-btn');
     if (ocCloseLogs) ocCloseLogs.addEventListener('click', openclawCloseLogs);
+    var ocFocus = $('#openclaw-chat-focus-btn');
+    if (ocFocus) ocFocus.addEventListener('click', function () { toggleOpenclawChatFocus(); });
+    var ocSessionDetail = $('#openclaw-session-detail');
+    if (ocSessionDetail) {
+      ocSessionDetail.addEventListener('click', function (ev) {
+        var target = ev.target && ev.target.closest ? ev.target.closest('button') : null;
+        if (!target || !openclawState.selectedSession) return;
+        if (target.id === 'openclaw-session-chat-btn') {
+          openclawState.lastSessionId = getOpenclawSessionId(openclawState.selectedSession);
+          setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(openclawState.lastSessionId)) + '</code> pronta para o próximo envio no chat.', 'ok');
+          focusOpenclawChat();
+        } else if (target.id === 'openclaw-session-logs-btn') {
+          openclawShowLogs({ session: openclawState.selectedSession });
+        }
+      });
+    }
     // Enter no textarea envia (Shift+Enter quebra linha)
     var ocInput = $('#openclaw-chat-input');
     if (ocInput) {
@@ -1558,8 +1710,8 @@
     var chips = [];
     chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atencao' : 'preflight ok'), level));
     chips.push(stageChip('risco ' + (profile.risk || 'n/d'), profile.risk === 'high' ? 'danger' : (profile.risk === 'medium' ? 'warning' : 'ok')));
-    if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'dry-run padrao' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
-    else chips.push(stageChip('sem mutacao direta', 'ok'));
+    if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'dry-run padrão' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
+    else chips.push(stageChip('sem mutação direta', 'ok'));
     (profile.effects || []).slice(0, 3).forEach(function (effect) { chips.push(stageChip(effectLabel(effect), '')); });
     if ((profile.effects || []).length > 3) chips.push(stageChip('+' + ((profile.effects || []).length - 3), ''));
     var script = pf.script || {};
@@ -1755,7 +1907,7 @@
 
   function openRunDetailsModal(runId) {
     var modal = ensureRunDetailsModal();
-    modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos...</div>';
+    modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos…</div>';
     modal.title.textContent = 'Run ' + runId.slice(0, 8);
     modal.el.style.display = 'flex';
     // fetch artifacts + log tail in parallel
@@ -1863,7 +2015,7 @@
         return '<tr><th>' + escapeHtml(key) + '</th><td>' + escapeHtml(metrics[key]) + '</td></tr>';
       }).join('');
       var artifactRows = artifacts.map(function (a) {
-        return '<tr><td>' + escapeHtml(a.kind || 'other') + '</td><td>' + escapeHtml(a.name || '') + '</td><td>' + escapeHtml(a.produced_during_run ? 'sim' : 'nao') + '</td></tr>';
+        return '<tr><td>' + escapeHtml(a.kind || 'other') + '</td><td>' + escapeHtml(a.name || '') + '</td><td>' + escapeHtml(a.produced_during_run ? 'sim' : 'não') + '</td></tr>';
       }).join('');
       var html = '<!doctype html><html><head><meta charset="utf-8"><title>Pipeline ' + escapeHtml(runId.slice(0, 8)) + '</title>' +
         '<style>body{font-family:Arial,sans-serif;color:#111;margin:28px;line-height:1.45}h1{font-size:22px;margin:0 0 8px}h2{font-size:15px;margin:24px 0 8px}table{width:100%;border-collapse:collapse;margin:8px 0 14px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:12px;vertical-align:top}th{background:#f5f5f5;width:220px}pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f7;border:1px solid #ddd;padding:10px;font-size:11px}.muted{color:#666;font-size:12px}.warn{color:#9a3412}</style>' +
@@ -1958,14 +2110,14 @@
     if (marker) lines.push(marker);
     logBox.innerHTML = '';
     if (!lines.length) {
-      logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log...</div>';
+      logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
       return;
     }
     lines.forEach(function (line) {
       var lineClass = 'kc-log-line';
       var lowText = String(line).toLowerCase();
       if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('falhou')) lineClass += ' kc-log-line--err';
-      else if (lowText.includes('ok') || lowText.includes('saved') || lowText.includes('concluido')) lineClass += ' kc-log-line--ok';
+      else if (lowText.includes('ok') || lowText.includes('saved') || lowText.includes('concluido') || lowText.includes('concluído')) lineClass += ' kc-log-line--ok';
       var div = document.createElement('div');
       div.className = lineClass;
       div.textContent = line;
@@ -2065,6 +2217,7 @@
         appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
         disconnectPipelineStream();
         refreshPipeline();
+        pollNotifActivity();
       } else if (eventType === 'error') {
         appendLogLine('[error] ' + (d.message || ''));
       }
@@ -2083,17 +2236,17 @@
     var pf = stage && stage.preflight ? stage.preflight : null;
     if (pf && pf.can_run === false) {
       var blockers = (pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou';
-      alert('Estagio indisponivel: ' + blockers);
+      alert('Estágio indisponível: ' + blockers);
       return;
     }
     var profile = pf && pf.profile ? pf.profile : {};
     var warnings = pf ? (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n') : '';
     var msg = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + (pf && pf.command ? pf.command : 'node ' + stageId) +
       '\nRisco: ' + (profile.risk || 'n/d') +
-      (profile.mutates_platform ? '\n\nATENCAO: este estagio altera dados reais/plataforma.' : '\n\nEste estagio nao declara mutacao direta de plataforma.') +
-      (profile.default_dry_run ? '\nModo padrao: dry-run.' : '') +
+      (profile.mutates_platform ? '\n\nATENÇÃO: este estágio altera dados reais/plataforma.' : '\n\nEste estágio não declara mutação direta de plataforma.') +
+      (profile.default_dry_run ? '\nModo padrão: dry-run.' : '') +
       (warnings ? '\n\nAvisos:\n' + warnings : '') +
-      '\n\nLogs ficarao disponiveis em tempo real abaixo.';
+      '\n\nLogs ficarão disponíveis em tempo real abaixo.';
     if (!confirm(msg)) return;
     var btn = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…'; }

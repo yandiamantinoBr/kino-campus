@@ -54,7 +54,12 @@
   min-width: 0;
 }
 .kc-openclaw-grid > * { min-width: 0; }
+.kc-openclaw-grid.is-chat-focus { grid-template-columns: minmax(0, 1fr); }
+.kc-openclaw-grid.is-chat-focus .kc-openclaw-chat { grid-column: 1 / -1; }
+.kc-openclaw-grid.is-chat-focus .kc-openclaw-side { order: 2; }
+.kc-openclaw-panel__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .kc-openclaw-panel h3 { margin: 0 0 8px; font-size: 1rem; color: var(--kc-primary-brand, #ff6b00); }
+.kc-openclaw-panel__head h3 { margin: 0; }
 .kc-openclaw-chat-log {
   background: rgba(0,0,0,.25);
   border: 1px solid var(--kc-border-dark, #333);
@@ -109,9 +114,34 @@
 }
 .kc-openclaw-list-item:hover,
 .kc-openclaw-list-item.is-selected { background: rgba(255,107,0,.12); }
+.kc-openclaw-list-item.is-selected { border-left-color: #10b981; }
 .kc-openclaw-list-item__title { font-weight: 600; color: #e0e0e0; }
 .kc-openclaw-list-item__meta { color: #888; font-size: 0.74rem; margin-top: 2px; }
 .kc-openclaw-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.kc-openclaw-action-status,
+.kc-openclaw-session-detail {
+  margin-top: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: rgba(0,0,0,.16);
+  color: var(--kc-text-dark-secondary);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.kc-openclaw-action-status.is-ok { color: #10b981; border-color: rgba(16,185,129,.28); background: rgba(16,185,129,.08); }
+.kc-openclaw-action-status.is-error { color: #f87171; border-color: rgba(248,113,113,.28); background: rgba(248,113,113,.08); }
+.kc-openclaw-action-status.is-loading { color: #f59e0b; border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.08); }
+.kc-openclaw-session-detail[hidden] { display: none; }
+.kc-openclaw-session-detail__title { color: var(--kc-text-dark-primary); font-weight: 700; margin-bottom: 5px; }
+.kc-openclaw-session-detail__meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.kc-openclaw-session-detail__meta span {
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: rgba(255,255,255,.04);
+}
+.kc-openclaw-session-detail__actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
 .kc-openclaw-logs { margin-top: 12px; }
 .kc-openclaw-logs__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .kc-openclaw-logs__head h4 { margin: 0; font-size: .86rem; color: var(--kc-text-dark-primary); }
@@ -322,7 +352,7 @@
         <div id="kcNotifDropdown" class="kc-notif-dropdown" hidden>
           <div class="kc-notif-dropdown__head">Atividade recente</div>
           <div id="kcNotifList" class="kc-notif-dropdown__list">
-            <div class="kc-cadu-empty">Carregando...</div>
+            <div class="kc-cadu-empty">Carregando…</div>
           </div>
           <div class="kc-notif-dropdown__foot">
             <a href="#tab-pipeline">Ver pipeline →</a>
@@ -498,7 +528,7 @@
       <!-- ============== TAB: FEED ============== -->
       <section class="kc-cadu-section" id="tab-feed" role="tabpanel" style="display:none;">
         <p class="kc-cadu-feed-help">
-          O Feed coletado mostra os chunks da memoria indexada do Cadu/OpenClaw. Ele serve para auditar o contexto que o Cadu pode consultar e perguntar sobre trechos especificos; nao e o feed publico final de posts publicados.
+          O Feed coletado mostra os chunks da memória indexada do Cadu/OpenClaw. Ele serve para auditar o contexto que o Cadu pode consultar e perguntar sobre trechos específicos; não é o feed público final de posts publicados.
         </p>
         <div class="kc-cadu-toolbar">
           <input id="feed-search" type="search" autocomplete="off" placeholder="Filtrar por conteúdo do chunk" data-i18n-placeholder="placeholder.cadu-feed-search" aria-label="Filtrar feed" data-i18n-aria-label="aria-label.cadu-feed-search">
@@ -510,10 +540,10 @@
           <button type="button" id="feed-refresh-btn"><i class="fas fa-rotate"></i> Recarregar</button>
         </div>
         <div class="kc-cadu-feed-pager" aria-live="polite">
-          <span id="feed-page-status">Carregando...</span>
+          <span id="feed-page-status">Carregando…</span>
           <div class="kc-cadu-feed-pager__actions">
             <button type="button" id="feed-prev-page-btn" class="kc-btn-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
-            <button type="button" id="feed-next-page-btn" class="kc-btn-secondary">Proxima <i class="fas fa-arrow-right"></i></button>
+            <button type="button" id="feed-next-page-btn" class="kc-btn-secondary">Próxima <i class="fas fa-arrow-right"></i></button>
           </div>
         </div>
         <div id="feed-list" aria-live="polite">
@@ -556,9 +586,14 @@
         <div class="kc-openclaw-grid">
           <!-- LEFT: Chat com Cadu -->
           <div class="kc-openclaw-panel kc-openclaw-chat">
-            <h3><i class="fas fa-comments"></i> Chat com Cadu</h3>
+            <div class="kc-openclaw-panel__head">
+              <h3><i class="fas fa-comments"></i> Chat com Cadu</h3>
+              <button type="button" id="openclaw-chat-focus-btn" class="kc-btn-secondary" title="Expandir ou recolher o chat">
+                <i class="fas fa-expand"></i> Foco
+              </button>
+            </div>
             <p class="kc-cadu-empty-sub">
-              Envia mensagem direta pro agente. Cadu responde usando suas skills (browser, canvas, sigaa-scraper, etc.).
+              Envia mensagem direta para o agente. Cadu responde usando as skills disponíveis no OpenClaw.
               <br>Última sessão: <code id="openclaw-last-session">—</code>
             </p>
             <div id="openclaw-chat-log" class="kc-openclaw-chat-log" aria-live="polite">
@@ -581,11 +616,12 @@
           </div>
 
           <!-- RIGHT: Sessions + Heartbeat -->
-          <div class="kc-openclaw-panel">
+          <div class="kc-openclaw-panel kc-openclaw-side">
             <h3><i class="fas fa-clock-rotate-left"></i> Sessões recentes</h3>
             <div id="openclaw-sessions-list" class="kc-openclaw-list">
               <div class="kc-cadu-empty">Carregando…</div>
             </div>
+            <div id="openclaw-session-detail" class="kc-openclaw-session-detail" hidden></div>
 
             <h3 style="margin-top:18px;"><i class="fas fa-bolt"></i> Ações rápidas</h3>
             <div class="kc-openclaw-actions">
@@ -596,6 +632,7 @@
                 <i class="fas fa-file-lines"></i> Ver logs do Gateway
               </button>
             </div>
+            <div id="openclaw-action-status" class="kc-openclaw-action-status" hidden></div>
 
             <div id="openclaw-logs-box" class="kc-openclaw-logs" hidden>
               <div class="kc-openclaw-logs__head">

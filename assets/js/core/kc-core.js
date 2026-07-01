@@ -281,7 +281,7 @@ function kcEnableDragToScroll(el) {
 }
 
 function kcInitHorizontalDragAreas() {
-  document.querySelectorAll(".kc-feed-tabs, .kc-ranking-users").forEach(kcEnableDragToScroll);
+  document.querySelectorAll(".kc-feed-tabs, .kc-ranking-users, .kc-admin-nav").forEach(kcEnableDragToScroll);
 }
 
 /* === v75.1: Indicadores de overflow horizontal (chevrons + fades) ===
@@ -300,7 +300,7 @@ function kcInitHorizontalDragAreas() {
  */
 function kcAttachScrollIndicators(rail) {
   if (!rail || rail.__kcScrollRailAttached) return;
-  const scrollEl = rail.querySelector('.kc-nav-links, .kc-feed-tabs');
+  const scrollEl = rail.querySelector('.kc-nav-links, .kc-feed-tabs, .kc-admin-nav');
   if (!scrollEl) return;
 
   const btnPrev = rail.querySelector('[data-kc-rail-prev]');
@@ -356,7 +356,7 @@ function kcAttachScrollIndicators(rail) {
 /* Envolve automaticamente cada .kc-nav-links e .kc-feed-tabs em um wrapper
  * .kc-scroll-rail com botões prev/next, evitando alterar 20+ HTMLs. */
 function kcWrapScrollRails() {
-  const SELECTOR = '.kc-nav-links, .kc-feed-tabs';
+  const SELECTOR = '.kc-nav-links, .kc-admin-nav, .kc-feed-tabs';
   document.querySelectorAll(SELECTOR).forEach((el) => {
     if (!el || el.__kcRailWrapped) return;
     if (el.parentElement && el.parentElement.matches('[data-kc-scroll-rail]')) {
@@ -367,6 +367,7 @@ function kcWrapScrollRails() {
     rail.className = 'kc-scroll-rail';
     // Modificador para o CSS distinguir wrapper de nav vs tabs (mobile-hide)
     if (el.classList.contains('kc-nav-links')) rail.classList.add('kc-scroll-rail--nav');
+    if (el.classList.contains('kc-admin-nav')) rail.classList.add('kc-scroll-rail--admin');
     if (el.classList.contains('kc-feed-tabs')) rail.classList.add('kc-scroll-rail--tabs');
     rail.setAttribute('data-kc-scroll-rail', '');
 
@@ -410,7 +411,7 @@ if (typeof window !== 'undefined') {
  * cada link tenha aria-label/title derivados do <span>, permitindo tooltips
  * nativos e leitura adequada por screen readers. */
 function kcEnsureNavA11yLabels() {
-  document.querySelectorAll('.kc-nav-links a').forEach((a) => {
+  document.querySelectorAll('.kc-nav-links a, .kc-admin-nav a').forEach((a) => {
     if (a.dataset.kcA11yEnhanced === '1') return;
     const span = a.querySelector('span');
     if (!span) return;
@@ -432,13 +433,13 @@ function kcApplyProgressiveNavCollapse() {
   if (typeof window === 'undefined') return;
   if (window.innerWidth <= 768) {
     // Mobile: garante reset (caso volte de desktop com classes residuais)
-    document.querySelectorAll('.kc-nav-links a.is-icon-only').forEach((a) => {
+    document.querySelectorAll('.kc-nav-links a.is-icon-only, .kc-admin-nav a.is-icon-only').forEach((a) => {
       a.classList.remove('is-icon-only');
     });
     return;
   }
 
-  document.querySelectorAll('.kc-nav-links').forEach((nav) => {
+  document.querySelectorAll('.kc-nav-links, .kc-admin-nav').forEach((nav) => {
     const links = Array.from(nav.querySelectorAll(':scope > a'));
     if (links.length === 0) return;
 

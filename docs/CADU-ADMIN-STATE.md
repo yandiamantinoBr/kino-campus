@@ -1400,3 +1400,52 @@ docker compose up -d --no-deps --force-recreate cadu-api
 - Melhoria UX: sessoes recentes do OpenClaw sao selecionaveis para o proximo envio do chat.
 - Melhoria UX: logs do Gateway ganharam fechamento explicito, limite menor e CSS com `pre-wrap`/`overflow-wrap`, evitando deformar desktop/mobile.
 - Pipeline: historico/modal ganharam "Export PDF", que abre uma versao imprimivel do export consolidado (resumo, metricas, avisos, artefatos e tail do log) para salvar como PDF pelo navegador.
+
+# v11 - Admin nav rail, português e OpenClaw ativo (2026-07-01)
+
+## Escopo
+
+Responder aos problemas de navegação admin, textos em PT-BR e baixa responsividade percebida na aba OpenClaw do `/admin/cadu.html`.
+
+## Diagnóstico
+
+- Problema real: o rail público (`kc-scroll-rail` usado por `.kc-nav-links`) não era aplicado ao `kc-admin-nav`, e as páginas admin não carregam `kc-core.js`. Só alterar o core público não resolveria o admin.
+- Problema real: `admin/cadu.html` e `admin-cadu.controller.js` tinham strings sem acentos ou reticências inconsistentes em áreas visíveis e no prompt enviado ao Cadu.
+- Problema real: a seleção de sessão OpenClaw só mudava uma linha pequena no chat; não havia painel de detalhe nem ação dedicada para logs daquela sessão.
+- Problema real de UX: `Trigger Heartbeat` dependia apenas do status do chat, então parecia não responder quando o usuário estava olhando para "Ações rápidas".
+- Problema potencial: logs por sessão só são tão bons quanto o que `/api/cadu/openclaw/logs` registra. Se o Gateway não inclui `sessionId`/`key`, a UI não consegue inventar rastreabilidade retroativa.
+
+## Correções aplicadas
+
+- `assets/js/api/admin-shell.js`:
+  - cria `.kc-scroll-rail.kc-scroll-rail--admin` em torno de `.kc-admin-nav`;
+  - adiciona botões de rolagem prev/next, medição de overflow, labels acessíveis e colapso progressivo de links;
+  - expõe `KCAdminShell.refreshNavRail()` e recalcula no resize.
+- `assets/css/admin-shell.css` e `assets/css/styles.css`:
+  - adicionam suporte visual para `.kc-scroll-rail--admin`;
+  - escondem o rail admin junto com a nav no breakpoint mobile;
+  - aplicam `.is-icon-only` também aos links admin quando necessário.
+- `assets/js/core/kc-core.js`:
+  - reconhece `.kc-admin-nav` nos helpers públicos de rail/drag/a11y/collapse para compatibilidade futura.
+- `admin/cadu.html`:
+  - corrige textos visíveis (`memória`, `específicos`, `não`, `público`, `Próxima`, `Carregando…`);
+  - adiciona botão "Foco" ao chat OpenClaw;
+  - adiciona painel `openclaw-session-detail` e status `openclaw-action-status`.
+- `assets/js/controllers/admin/admin-cadu.controller.js`:
+  - corrige strings PT-BR do confirm da Pipeline (`ATENÇÃO`, `estágio`, `mutação`, `padrão`, `ficarão disponíveis`);
+  - corrige prompts enviados ao Cadu em feed/site/pipeline;
+  - armazena `selectedSession`, renderiza detalhe da sessão e permite "Usar no chat" ou "Ver logs desta sessão";
+  - filtra logs por `sessionId`, `session_id`, `id`, `key` e termos derivados;
+  - mostra feedback explícito do heartbeat em "Ações rápidas";
+  - atualiza notificações de Pipeline a cada health poll saudável e quando o SSE de run emite `done`.
+
+## Validação mínima
+
+- `node --check assets/js/core/kc-core.js`
+- `node --check assets/js/api/admin-shell.js`
+- `node --check assets/js/controllers/admin/admin-cadu.controller.js`
+
+## Próximo cuidado
+
+- Validar visualmente em desktop estreito/tablet: o admin nav deve virar rail com chevrons antes de comprometer logo/user-actions.
+- Se o usuário exigir log realmente vinculado a cada cron/session, evoluir o cadu-api/OpenClaw para persistir `session_id` nos eventos de log, em vez de depender apenas de filtro textual no tail do Gateway.

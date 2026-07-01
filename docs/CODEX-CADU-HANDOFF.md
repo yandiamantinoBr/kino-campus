@@ -385,3 +385,13 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
 - Admin Feed Coletado: ganhou explicacao de finalidade e paginacao Anterior/Proxima. A aba e memoria/contexto do Cadu, nao o feed publico final.
 - Admin OpenClaw: "Perguntar Cadu" agora renderiza pergunta+resposta no chat; sessoes recentes podem ser selecionadas; logs do Gateway tem fechamento e nao deformam layout.
 - Pipeline: historico/modal ganharam Export PDF por print do navegador a partir do export consolidado.
+
+## 18. Atualizacao Codex - Admin nav rail, PT-BR e OpenClaw mais interativo (2026-07-01)
+
+- Problema real: o `kc-admin-nav` não usava o mesmo padrão de rail das páginas públicas. Como `admin-shell.js` é carregado por todas as páginas admin, ele agora cria `.kc-scroll-rail--admin`, botões prev/next, labels acessíveis e colapso progressivo de labels para `Dashboard`, `Moderação`, `Denúncias`, `Banners`, `Pedidos de ajuda`, `Privacidade` e `Cadu`.
+- Complemento no core público: `kc-core.js` também reconhece `.kc-admin-nav` caso alguma página admin passe a carregar o core completo no futuro.
+- Problema real: textos visíveis e prompts do Cadu tinham PT-BR sem acentuação (`ATENCAO`, `ficarao`, `memoria`, `Proxima`, `sessao`). Corrigidos os textos principais do `admin/cadu.html` e de `admin-cadu.controller.js`, inclusive o confirm da Pipeline.
+- OpenClaw UX: sessões recentes agora exibem painel de detalhe da sessão selecionada, com ações "Usar no chat" e "Ver logs desta sessão"; o filtro de logs usa `sessionId/session_id/id`, `key` e termos derivados.
+- OpenClaw UX: `Trigger Heartbeat` ganhou status próprio em "Ações rápidas", além do status do chat. O chat ganhou botão "Foco" para ampliar/recolher a área de conversa.
+- Notificações admin: o polling de atividade da Pipeline passou a rodar a cada health poll saudável e também quando o SSE recebe `done`, para deixar runs concluídas mais visíveis no sino.
+- Limite conhecido: os logs por sessão ainda dependem do texto disponível em `/api/cadu/openclaw/logs`; se o Gateway não registrar o `sessionId`/`key`, a UI informa que não achou linhas específicas e mantém o log geral abaixo.

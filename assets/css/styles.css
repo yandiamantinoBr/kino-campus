@@ -1456,6 +1456,7 @@ main {
 }
 
 .kc-scroll-rail > .kc-nav-links,
+.kc-scroll-rail > .kc-admin-nav,
 .kc-scroll-rail > .kc-feed-tabs {
     flex: 1 1 auto;
     min-width: 0;
@@ -1519,7 +1520,8 @@ main {
      * (a nav já era display:none). Sem isso, o flex item vazio ainda
      * ocupava espaço entre o logo e o user-actions, quebrando o header
      * em 2 linhas. */
-    .kc-scroll-rail--nav { display: none !important; }
+    .kc-scroll-rail--nav,
+    .kc-scroll-rail--admin { display: none !important; }
 }
 
 /* Tabs de módulo (Minhas Publicações) — mesmo estilo visual dos feed-tabs */
@@ -11867,14 +11869,17 @@ a.kc-home-metric-card:hover {
    No desktop, a nav nunca shrinka antes da search-bar — o JS faz a redução.
    ========================================================================== */
 
-.kc-nav-links a.is-icon-only span {
+.kc-nav-links a.is-icon-only span,
+.kc-admin-nav__link.is-icon-only span {
   display: none;
 }
-.kc-nav-links a.is-icon-only {
+.kc-nav-links a.is-icon-only,
+.kc-admin-nav__link.is-icon-only {
   padding: 7px 9px;
   gap: 0;
 }
-.kc-nav-links a.is-icon-only i {
+.kc-nav-links a.is-icon-only i,
+.kc-admin-nav__link.is-icon-only i {
   font-size: 1.05em;
 }
 
