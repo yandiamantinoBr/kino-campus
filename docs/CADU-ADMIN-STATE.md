@@ -1348,3 +1348,31 @@ docker compose up -d --no-deps --force-recreate cadu-api
 1. Corrigir/reiniciar CDP do OpenClaw na porta 18800 e validar os handles marcados como `tentative`.
 2. Melhorar OCR/extração de data de imagens/cards para casos como FEF Solidaria, onde o texto tem link de inscricao mas a data pode estar apenas na imagem.
 3. Decidir se itens de oportunidade sem prazo extraido, mas com titulo muito forte ("Selecao de bolsista", "edital", "chamada"), devem ir direto para `publish` ou ficar em `review` ate haver deadline.
+
+# v8 - Run 4cb7fc43, Instagram aliases e observabilidade IG (2026-06-30)
+
+> Escopo: responder ao pedido de Yan para investigar perfis nao encontrados, duplicados e ausentes no Run `4cb7fc43`, e melhorar a aba Pipeline/OpenClaw para explicar melhor cada estagio.
+
+## Achados do Run 4cb7fc43
+
+- Run completo: `4cb7fc43-6207-4eac-89b9-0bbbd250f79a`, stage `all`, `exit_code=0`.
+- Resultado: 760 itens, 0 publicaveis novos, 22 revisao, 730 descartados, 0 publicados.
+- Instagram: 58 perfis, 51 OK, 7 falhas, 545 posts ja vistos, 9 posts novos, 0 relevantes.
+- Falhas de IG eram aliases/canais legados: `@icbufg`, `@emacufg`, `@fct.ufg`, `@odontologiaufg`, `@fefdufg`, `@culturaufg`, `@esportesufg`.
+
+## Correcoes aplicadas
+
+- OpenClaw `scan-ig-browser.js`: canoniza URL/@handle e aliases, remove aliases quebrados da lista ativa, registra `sourceAudit`, versiona `seen-posts`, nao grava cache em `--dry-run` e extrai datas futuras simples da legenda.
+- OpenClaw `cadu-curador-v4.4.js`: `dates.futureDates` de IG agora vem de `post.futureDates`; a data da postagem fica em `sourcePublishedDate`.
+- OpenClaw `cadu-api`: resumo de log extrai metricas IG e `/artifacts` inclui `ig-browser-YYYY-MM-DD.json`.
+- Kino admin: resumo da aba Pipeline mostra chips de IG perfis, novos, relevantes e ja vistos.
+- Validacao viva: run `d4b5829e-ba01-4b2e-8413-a0f5687f31c5` (`ig`) terminou `exit_code=0`, 51 perfis OK, 0 falhas, 523 posts avaliados, 136 relevantes, 23 ja vistos; `/artifacts` marcou `ig-browser-2026-06-30.json` como `produced_during_run=true`.
+- ETA do stage `ig` foi ajustado para 420s porque o stage isolado roda enriquecimento de legenda/data; a Pipeline Completa segue usando `--skip-enrich`.
+
+## Reclassificacao
+
+- Problema real: aliases antigos poluiam os logs como falha de perfil.
+- Problema real: cache antigo bloqueava reavaliacao apos mudanca de criterio editorial.
+- Problema real: data de postagem IG era usada como data futura do evento.
+- Problema potencial: `--stage=ig` ainda depende de legenda/alt text; se data/CTA estiver so na imagem, o item exige OCR ou revisao manual.
+- Equivoco corrigido: as 7 falhas do Run `4cb7fc43` nao significavam 7 fontes oficiais novas perdidas; eram cadastro antigo ou canal substituido.

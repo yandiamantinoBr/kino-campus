@@ -352,6 +352,18 @@ Yan é mestrando em Administração (PPGADM/FACE/UFG), nível técnico leigo em 
 
 ---
 
+## 15. Atualizacao Codex - Run 4cb7fc43 e Instagram aliases (2026-06-30)
+
+- Run `4cb7fc43-6207-4eac-89b9-0bbbd250f79a` (`all`) terminou `exit_code=0`, mas publicou 0. IG: 58 perfis, 51 OK, 7 `profile_unavailable`, 545 posts ja vistos, 9 posts novos de `@cecasufg`, 0 relevantes.
+- As 7 falhas eram aliases/canais legados, nao novas fontes oficiais perdidas: `icbufg`, `emacufg`, `fct.ufg`, `odontologiaufg`, `culturaufg`, `esportesufg`, `fefdufg`.
+- OpenClaw `scan-ig-browser.js` agora canoniza aliases, registra `sourceAudit`, versiona `seen-posts`, nao altera cache em `--dry-run` e extrai datas futuras simples da legenda.
+- `cadu-curador-v4.4.js` parou de usar data da postagem IG como `futureDates`; usa `post.futureDates` e guarda `sourcePublishedDate`.
+- `cadu-api` agora resume metricas IG e inclui `ig-browser-YYYY-MM-DD.json` em `/artifacts`; o admin mostra chips de IG no resumo da Pipeline.
+- Validacao viva: run `d4b5829e-ba01-4b2e-8413-a0f5687f31c5` (`ig`) terminou `exit_code=0`, 51 perfis OK, 0 falhas, 523 posts avaliados, 136 relevantes, 23 ja vistos.
+- Documentacao detalhada: `docs/CADU-SOURCE-AUDIT-2026-06-30.md` complemento v3 e `docs/CADU-ADMIN-STATE.md` v8.
+
+---
+
 **Fim do handoff.** Tudo que você precisa pra iterar com autonomia está aqui. Se algo mudou, atualize este arquivo junto com `CADU-ADMIN-STATE.md`.
 
 Próxima ação recomendada: criar scheduler durável/visível para a pipeline, auditar cache/dedup e unificar os mappers de publicação.

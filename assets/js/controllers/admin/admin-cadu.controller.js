@@ -1379,6 +1379,13 @@
     }
     if (m.updated != null) parts.push('<span>atualizados ' + escapeHtml(m.updated) + '</span>');
     if (m.discarded != null) parts.push('<span>descartados ' + escapeHtml(m.discarded) + '</span>');
+    if (m.ig_profiles_ok != null || m.ig_profiles_failed != null) {
+      var igFail = Number(m.ig_profiles_failed || 0);
+      parts.push('<span' + (igFail ? ' class="is-warning"' : '') + '>IG perfis ' + escapeHtml(m.ig_profiles_ok || 0) + '/' + escapeHtml(igFail) + '</span>');
+    }
+    if (m.ig_new_posts != null) parts.push('<span>IG novos ' + escapeHtml(m.ig_new_posts) + '</span>');
+    if (m.ig_relevant_posts != null) parts.push('<span>IG relevantes ' + escapeHtml(m.ig_relevant_posts) + '</span>');
+    if (m.ig_seen_skipped != null) parts.push('<span>IG ja vistos ' + escapeHtml(m.ig_seen_skipped) + '</span>');
     if (summary.duration_sec != null) parts.push('<span>' + escapeHtml(Math.round(Number(summary.duration_sec))) + 's</span>');
     if ((summary.warnings || []).length) parts.push('<span class="is-warning">avisos ' + summary.warnings.length + '</span>');
     return parts.length ? '<div class="kc-pipeline-history-item__summary">' + parts.join('') + '</div>' : '';

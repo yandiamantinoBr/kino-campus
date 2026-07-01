@@ -36,7 +36,7 @@ Cada estágio é uma combinação `script` + `args` fixos. Catálogo em `pipelin
 | Stage ID    | Nome                       | Script                                   | Args                            | Categoria     | ETA |
 |-------------|----------------------------|------------------------------------------|---------------------------------|---------------|-----|
 | `curator`   | Curador UFG v4.4           | `scripts/cadu-curador-v4.4.js`           | `--daily`                       | scan          | 90s |
-| `ig`        | Scanner Instagram          | `scripts/scan-ig-browser.js`             | (nenhum)                        | scan          | 50s |
+| `ig`        | Scanner Instagram          | `scripts/scan-ig-browser.js`             | (nenhum)                        | scan          | 420s |
 | `duplicates`| Enriquecimento Duplicatas  | `scripts/enrich-duplicates.js`           | (nenhum)                        | process       | 60s |
 | `format`    | Formatador IA              | `scripts/pipeline-kino.js`               | `--stage=format`                | process       | 120s |
 | `publish`   | Publicação                 | `scripts/pipeline-kino.js`               | `--stage=publish`               | publish       | 60s |
@@ -95,6 +95,16 @@ O `curator --daily` varre Tier 1+2. Depois da auditoria, entraram no Tier 2: IAC
 Em 2026-06-30, o curador passou a buscar `events.json` de cada fonte antes de `news.json`. Isso corrige a distorcao anterior em que a pipeline dependia demais de noticias e ignorava calendarios locais das unidades.
 
 O scanner Instagram tambem monitora fontes sem site Weby dedicado, como LACENA, TV UFG, LAPIG, Floreser e canais culturais/esportivos.
+
+Nota 2026-06-30 v4 (Run `4cb7fc43`): o stage `ig` terminou com exit code 0, mas o JSON `ig-browser-2026-06-30.json` mostrou 58 perfis, 51 OK, 7 `profile_unavailable`, 545 posts pulados por cache e 0 relevantes. As 7 falhas eram aliases/handles legados (`icbufg`, `emacufg`, `fct.ufg`, `odontologiaufg`, `culturaufg`, `esportesufg`, `fefdufg`), nao queda geral do Instagram. O scanner passou a:
+
+- canonizar aliases para os handles ativos (`icb.ufg`, `em.ufg`, `campusaparecidaufg`, `odontologia.ufg`, `centroculturalufg`, `cecasufg`, `fefufg`);
+- registrar `sourceAudit` no artefato IG;
+- versionar `seen-posts.json` com `relevanceVersion`, termos encontrados, motivo de descarte e datas futuras;
+- nao alterar `seen-posts.json` em `--dry-run`;
+- extrair datas futuras simples da legenda e nao repassar a data da postagem como data futura do evento.
+
+Validacao viva do fix: run `d4b5829e-ba01-4b2e-8413-a0f5687f31c5` (`ig`) terminou `exit_code=0` com 51 perfis OK, 0 falhas, 523 posts avaliados, 136 relevantes e 23 ja vistos. O stage isolado levou ~424s porque roda enriquecimento de legenda/data; por isso o ETA do catalogo foi ajustado para 420s.
 
 Validacao VPS 2026-06-30 v2: `/api/sites` autenticado retornou 73 fontes apos o parser aceitar linhas Instagram-only sem URL. O override Supabase `kc_unit_meta` de `CSA` foi ajustado de Tier 3 para Tier 2 para manter admin, mapa e curador diario sincronizados.
 

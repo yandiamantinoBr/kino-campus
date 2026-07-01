@@ -144,3 +144,37 @@ Escopo: revisar sites oficiais, `news.json`/`events.json` e perfis Instagram usa
 ## Bloqueio ainda real
 
 - Validacao CDP dos handles novos citados por Yan nao foi concluida nesta rodada: `scan-ig-browser.js --handle ... --dry-run` falhou com `connect ECONNREFUSED 127.0.0.1:18800`. Ha processo Chrome no VPS, mas a porta CDP nao estava ouvindo. Os handles marcados como `(tentative)` devem ser confirmados quando o CDP/browser do OpenClaw voltar a aceitar conexao.
+
+# Complemento v3 - Run 4cb7fc43 e aliases Instagram (2026-06-30)
+
+> Contexto: Yan pediu revisao aprofundada dos problemas do Run `4cb7fc43`, especialmente perfis nao encontrados, duplicados e ausentes.
+
+## Diagnostico do run
+
+- Run: `4cb7fc43-6207-4eac-89b9-0bbbd250f79a`, stage `all`, `exit_code=0`, duracao ~580s.
+- Resultado final: 760 itens, 0 publicaveis novos, 22 revisao, 730 descartados, 0 publicados.
+- Instagram: 58 perfis, 51 OK, 7 `profile_unavailable`, 545 posts pulados por cache, 9 posts novos de `@cecasufg`, 0 relevantes pelas regras antigas.
+- As 7 falhas nao indicavam queda geral do IG nem fonte essencial ausente; eram aliases/handles legados ou canais substituidos:
+  - `@icbufg` -> usar `@icb.ufg`;
+  - `@emacufg` -> usar `@em.ufg`;
+  - `@fct.ufg` -> usar `@campusaparecidaufg`;
+  - `@odontologiaufg` -> usar `@odontologia.ufg`;
+  - `@fefdufg` -> usar `@fefufg`;
+  - `@culturaufg` -> usar `@centroculturalufg`;
+  - `@esportesufg` -> usar `@cecasufg`.
+
+## Mudanca funcional aplicada
+
+- `scan-ig-browser.js` agora canoniza handles, deduplica a lista operacional e registra `sourceAudit` no JSON de Instagram.
+- `seen-posts.json` agora grava `relevanceVersion`, termos encontrados, termos de exclusao, modulo/categoria estimados, datas futuras e motivo de descarte. Isso permite reavaliar posts antigos uma vez quando a taxonomia editorial mudar.
+- `--dry-run` do scanner nao altera mais `seen-posts.json`.
+- O scanner extrai datas futuras simples da legenda (`DD/MM`, `DD de mes`) e o curador parou de usar a data da postagem como data futura do evento.
+- A `cadu-api` passou a incluir artefatos `ig-browser-YYYY-MM-DD.json` em `/api/pipeline/{run}/artifacts` e a extrair metricas IG para os chips da aba Pipeline.
+- Validacao viva: run `d4b5829e-ba01-4b2e-8413-a0f5687f31c5` (`ig`) terminou `exit_code=0`, 51 perfis OK, 0 falhas, 523 posts avaliados, 136 relevantes, 23 ja vistos; o artefato `ig-browser-2026-06-30.json` foi produzido durante o run.
+
+## Estado editorial
+
+- Problema real: o cache antigo era superprotetor e escondia reavaliacoes apos mudanca de criterio.
+- Problema real: a pipeline confundia data de postagem do Instagram com data futura do evento.
+- Problema real: o resumo da run nao deixava claro que `0 relevantes` vinha de cache/filtros e aliases, nao de ausencia absoluta de fontes.
+- Problema reclassificado: os perfis `profile_unavailable` do Run `4cb7fc43` eram majoritariamente cadastro legado, nao novas fontes oficiais que precisavam ser adicionadas.
