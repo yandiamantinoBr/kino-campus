@@ -368,3 +368,11 @@ Yan é mestrando em Administração (PPGADM/FACE/UFG), nível técnico leigo em 
 
 Próxima ação recomendada: criar scheduler durável/visível para a pipeline, auditar cache/dedup e unificar os mappers de publicação.
 <!-- Codex 2026-06-30: auditoria de fontes UFG registrada em docs/CADU-SOURCE-AUDIT-2026-06-30.md. Novas fontes: IAC, CEROF, Centro Cultural, CSA/UAECH Goias; novos IGs: cerofufg, eeca_ufg, ime_ufg, campusgoiasufg, firminopolis_ufg, centroculturalufg, lacena_ufg. -->
+
+## 16. Atualizacao Codex - rota real do cadu-api no VPS (2026-06-30)
+
+- Vercel producao validada em `https://kino-campus-hwlf8z4wg-yannakamurabrs-projects.vercel.app`, status `Ready`, com aliases publicos incluindo `https://www.kinocampus.com.br`.
+- `https://www.kinocampus.com.br/api/cadu/health` respondeu `status="ok"`, `version="0.4.6"`, `pipeline_alerts.configured=true`.
+- O container `openclaw-hahq-cadu-api` fica `Up`, mas sem `PortBindings` no host. Isso e esperado: o compose expoe o sidecar via Traefik, nao por `0.0.0.0:49104`.
+- Health operacional do sidecar: `https://api.openclaw-hahq.srv1597083.hstgr.cloud/health`.
+- Nao diagnosticar `curl http://127.0.0.1:49104/api/health` como offline; esse teste falha no host atual porque a porta nao esta publicada.

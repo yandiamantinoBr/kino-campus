@@ -1376,3 +1376,15 @@ docker compose up -d --no-deps --force-recreate cadu-api
 - Problema real: data de postagem IG era usada como data futura do evento.
 - Problema potencial: `--stage=ig` ainda depende de legenda/alt text; se data/CTA estiver so na imagem, o item exige OCR ou revisao manual.
 - Equivoco corrigido: as 7 falhas do Run `4cb7fc43` nao significavam 7 fontes oficiais novas perdidas; eram cadastro antigo ou canal substituido.
+
+# v9 - Rota real do cadu-api no VPS apos recreate (2026-06-30)
+
+- Validacao pos-deploy: Vercel producao `https://kino-campus-hwlf8z4wg-yannakamurabrs-projects.vercel.app` ficou `Ready` e com aliases `www.kinocampus.com.br`, `kinocampus.com.br`, `kinocampus.vercel.app` etc.
+- `https://www.kinocampus.com.br/api/cadu/health` respondeu `status="ok"`, `version="0.4.6"` e `pipeline_alerts.configured=true`.
+- No VPS, `openclaw-hahq-cadu-api` esta `Up`, mas `docker ps` nao mostra `0.0.0.0:49104->49104`. Isso e esperado no compose atual: o sidecar nao publica porta no host; ele e exposto pelo Traefik via label.
+- Health correto do cadu-api no VPS: `https://api.openclaw-hahq.srv1597083.hstgr.cloud/health`.
+- `curl http://127.0.0.1:49104/api/health` no host falha com connection refused e nao deve ser tratado como cadu-api offline nesse setup.
+- Para diagnostico, use:
+  - `docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep -E 'cadu|openclaw|NAMES'`
+  - `curl -fsS https://api.openclaw-hahq.srv1597083.hstgr.cloud/health`
+  - `curl -fsS https://www.kinocampus.com.br/api/cadu/health`
