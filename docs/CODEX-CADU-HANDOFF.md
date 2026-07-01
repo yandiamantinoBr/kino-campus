@@ -395,3 +395,19 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
 - OpenClaw UX: `Trigger Heartbeat` ganhou status próprio em "Ações rápidas", além do status do chat. O chat ganhou botão "Foco" para ampliar/recolher a área de conversa.
 - Notificações admin: o polling de atividade da Pipeline passou a rodar a cada health poll saudável e também quando o SSE recebe `done`, para deixar runs concluídas mais visíveis no sino.
 - Limite conhecido: os logs por sessão ainda dependem do texto disponível em `/api/cadu/openclaw/logs`; se o Gateway não registrar o `sessionId`/`key`, a UI informa que não achou linhas específicas e mantém o log geral abaixo.
+
+
+## 19. Atualizacao Codex - Admin nav igual ao KC nav, PDF compartilhado e cache-bust (2026-07-01)
+
+- Causa raiz confirmada do print do Yan: os links de `.kc-admin-nav` tinham texto solto (`<i>...</i> Dashboard`) em vez de `<span>Dashboard</span>`. A classe `.is-icon-only` era aplicada, mas nao tinha `span` para esconder; por isso os labels ficavam colados/cortados.
+- `admin-shell.js` agora normaliza os links admin em runtime, criando `<span>` para labels soltos antes de medir overflow. O core tambem faz o mesmo se alguma pagina admin carregar `kc-core.js`.
+- O rail admin agora colapsa labels antes de mostrar chevrons. Se ainda houver overflow com algum label visivel, o update chama o collapse novamente; chevron so aparece quando nao ha mais label textual para esconder.
+- O shell agenda remedicoes tardias apos fonts/load/layout (`120ms`, `400ms`, `900ms`, `1600ms` e `load`) porque dashboard/moderacao podem hidratar usuario/acoes depois do primeiro paint.
+- Cache-bust aplicado: todas as paginas admin agora carregam `admin-shell.css/js?v=8.6.2`; `admin/cadu.html` carrega `admin-cadu.controller.js?v=kc-admin-20260701.1`. Sem isso, service worker/cache podia servir o controller antigo.
+- Pipeline PDF: `admin/cadu.html` passou a carregar `admin-export.shared.js`, e o historico da Pipeline agora usa `KCAdminExport.exportReportPDF()` com a mesma linguagem visual dos PDFs de Dashboard/Moderacao. O fallback print permanece apenas se o exporter compartilhado nao existir.
+- OpenClaw: "Continuar sessao" prepara e envia uma mensagem de retomada com `session_id`; "Usar no chat" explicita no status que o proximo payload tera `session_id=...`; heartbeat confirma `exit_code`, horario e trecho de stdout.
+- Validacao local final: `node --check` em `admin-shell.js`, `kc-core.js`, `admin-cadu.controller.js`, `admin-export.shared.js`; Playwright com Supabase/cadu-api mockados e service worker bloqueado validou:
+  - `admin/index.html`: 7 links, 7 spans, 2 `is-icon-only`, overflow 0, ativo visivel.
+  - `admin/cadu.html`: 7 links, 7 spans, 2 `is-icon-only`, overflow 0.
+  - OpenClaw: sessao selecionada, `Continuar sessao` enviou `session_id=sess-abc123456789`, heartbeat chamou `agent-event` e exibiu `exit_code=0`, logs ficaram em `pre` com `overflow-y:auto`.
+  - PDF: filename `kc-cadu-pipeline-2026-07-01-4cb7fc43.pdf`, titulo `KinoCampus - Relatorio da Pipeline Cadu`, secoes `Status da execucao`, `Metricas`, `Avisos e riscos`, `Artefatos`, `Log tail` no objeto do exporter.

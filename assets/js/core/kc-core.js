@@ -313,6 +313,19 @@ function kcAttachScrollIndicators(rail) {
     const sl = scrollEl.scrollLeft;
     const max = scrollEl.scrollWidth - scrollEl.clientWidth;
     const hasOverflow = max > 4;
+    const visibleLabels = scrollEl.classList.contains('kc-admin-nav')
+      ? Array.from(scrollEl.querySelectorAll(':scope > a:not(.is-icon-only)')).length
+      : 0;
+    if (hasOverflow && visibleLabels && !rail.__kcScrollRailCollapsing
+      && typeof kcApplyProgressiveNavCollapse === 'function') {
+      rail.__kcScrollRailCollapsing = true;
+      try {
+        kcApplyProgressiveNavCollapse();
+      } finally {
+        rail.__kcScrollRailCollapsing = false;
+      }
+      return;
+    }
     const atStart = sl <= 4;
     const atEnd = sl >= max - 4;
 
@@ -322,6 +335,7 @@ function kcAttachScrollIndicators(rail) {
     if (btnPrev) btnPrev.hidden = !hasOverflow || atStart;
     if (btnNext) btnNext.hidden = !hasOverflow || atEnd;
   };
+  rail.__kcScrollRailUpdate = update;
 
   const scrollByAmount = (dir) => {
     const amount = Math.max(160, Math.floor(scrollEl.clientWidth * 0.7));
@@ -412,10 +426,22 @@ if (typeof window !== 'undefined') {
  * nativos e leitura adequada por screen readers. */
 function kcEnsureNavA11yLabels() {
   document.querySelectorAll('.kc-nav-links a, .kc-admin-nav a').forEach((a) => {
+    let labelSpan = a.querySelector('span');
+    if (!labelSpan && a.closest('.kc-admin-nav')) {
+      const textNodes = Array.from(a.childNodes).filter((node) => (
+        node.nodeType === 3 && String(node.nodeValue || '').trim()
+      ));
+      const labelText = textNodes.map((node) => String(node.nodeValue || '').trim()).join(' ').replace(/\s+/g, ' ').trim();
+      if (labelText) {
+        labelSpan = document.createElement('span');
+        labelSpan.textContent = labelText;
+        textNodes.forEach((node) => node.parentNode.removeChild(node));
+        a.appendChild(labelSpan);
+      }
+    }
     if (a.dataset.kcA11yEnhanced === '1') return;
-    const span = a.querySelector('span');
-    if (!span) return;
-    const text = (span.textContent || '').trim();
+    if (!labelSpan) return;
+    const text = (labelSpan.textContent || '').trim();
     if (!text) return;
     if (!a.getAttribute('aria-label')) a.setAttribute('aria-label', text);
     if (!a.getAttribute('title')) a.setAttribute('title', text);
@@ -442,22 +468,33 @@ function kcApplyProgressiveNavCollapse() {
   document.querySelectorAll('.kc-nav-links, .kc-admin-nav').forEach((nav) => {
     const links = Array.from(nav.querySelectorAll(':scope > a'));
     if (links.length === 0) return;
+    const isAdminNav = nav.classList.contains('kc-admin-nav');
+    const rail = nav.parentElement && nav.parentElement.matches('[data-kc-scroll-rail]') ? nav.parentElement : null;
 
     // 1) Reset: tudo com label visível, deixar o browser remediar layout
     links.forEach((a) => a.classList.remove('is-icon-only'));
+    nav.scrollLeft = 0;
+    if (isAdminNav && rail) {
+      rail.classList.remove('is-overflow-start', 'is-overflow-end');
+      rail.querySelectorAll('.kc-scroll-rail__btn').forEach((btn) => { btn.hidden = true; });
+    }
 
     // 2) Esperar reflow e medir overflow
     // requestAnimationFrame não é suficiente sozinho aqui porque modificamos
     // estado e queremos medir DEPOIS do reflow. Forçamos leitura de scrollWidth
     // (síncrono) que dispara reflow.
-    // Itera do último até o segundo, preservando uma âncora textual.
-    for (let i = links.length - 1; i >= 1; i--) {
+    // Público preserva uma âncora textual; admin pode ir até ícone-só em todos.
+    const minIndex = isAdminNav ? 0 : 1;
+    for (let i = links.length - 1; i >= minIndex; i--) {
       // Margem de tolerância: 2px contra erros de arredondamento
       if (nav.scrollWidth <= nav.clientWidth + 2) break;
       links[i].classList.add('is-icon-only');
       // Forçar reflow para o próximo scrollWidth refletir a mudança
       // (acessar offsetWidth força reflow síncrono)
       void nav.offsetWidth;
+    }
+    if (isAdminNav && rail && typeof rail.__kcScrollRailUpdate === 'function') {
+      requestAnimationFrame(rail.__kcScrollRailUpdate);
     }
   });
 }

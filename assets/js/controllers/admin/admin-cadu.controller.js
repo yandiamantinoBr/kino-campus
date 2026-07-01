@@ -835,6 +835,7 @@
     box.hidden = false;
     box.innerHTML =
       '<div class="kc-openclaw-session-detail__title"><i class="fas fa-circle-info"></i> Sessão selecionada: <code>' + escapeHtml(fmtSessionId(sid)) + '</code></div>' +
+      '<div>O próximo envio do chat incluirá <code>session_id=' + escapeHtml(sid) + '</code>, permitindo continuar o contexto salvo pelo OpenClaw quando a sessão ainda existir no agente.</div>' +
       '<div class="kc-openclaw-session-detail__meta">' +
         '<span>' + escapeHtml(session.kind || 'tipo n/d') + '</span>' +
         '<span>' + escapeHtml(session.model || 'modelo n/d') + '</span>' +
@@ -844,6 +845,7 @@
       '<div><strong>Chave:</strong> <code>' + escapeHtml(session.key || '—') + '</code></div>' +
       '<div class="kc-openclaw-session-detail__actions">' +
         '<button type="button" id="openclaw-session-chat-btn" class="kc-btn-secondary"><i class="fas fa-comments"></i> Usar no chat</button>' +
+        '<button type="button" id="openclaw-session-resume-btn" class="kc-btn-secondary"><i class="fas fa-rotate-right"></i> Continuar sessão</button>' +
         '<button type="button" id="openclaw-session-logs-btn" class="kc-btn-secondary"><i class="fas fa-file-lines"></i> Ver logs desta sessão</button>' +
       '</div>';
   }
@@ -1112,13 +1114,22 @@
       var data = resp && (resp.data || resp);
       var ok = !!(resp && !resp.__error && data && data.ok !== false && Number(data.exit_code || 0) === 0);
       if (ok) {
-        if (status) status.textContent = 'Heartbeat disparado; atualizando status…';
-        setOpenclawActionStatus('<i class="fas fa-circle-check"></i> Heartbeat disparado com sucesso. Atualizando cartões e sessões…', 'ok');
+        var sentAt = new Date().toLocaleTimeString('pt-BR');
+        var stdout = data && data.stdout ? String(data.stdout).trim().slice(0, 180) : '';
+        if (status) status.textContent = 'Heartbeat confirmado pelo Gateway; atualizando status…';
+        setOpenclawActionStatus(
+          '<i class="fas fa-circle-check"></i> Heartbeat confirmado às ' + escapeHtml(sentAt) +
+          ' com <code>exit_code=' + escapeHtml(data.exit_code == null ? 0 : data.exit_code) + '</code>.' +
+          (stdout ? '<br><small>stdout: ' + escapeHtml(stdout) + '</small>' : '') +
+          '<br><small>Os cartões serão atualizados em instantes para refletir a última atividade do agente.</small>',
+          'ok'
+        );
         setTimeout(refreshOpenclaw, 1500);
       } else {
         var detail = data && (data.stderr || data.error || JSON.stringify(data));
-        if (status) status.textContent = 'Heartbeat falhou: ' + String(detail || 'sem detalhe').slice(0, 180);
-        setOpenclawActionStatus('<i class="fas fa-circle-xmark"></i> Heartbeat falhou: ' + escapeHtml(String(detail || 'sem detalhe').slice(0, 240)), 'error');
+        var exitCode = data && data.exit_code != null ? (' exit_code=' + data.exit_code + '.') : '';
+        if (status) status.textContent = 'Heartbeat falhou:' + exitCode + ' ' + String(detail || 'sem detalhe').slice(0, 180);
+        setOpenclawActionStatus('<i class="fas fa-circle-xmark"></i> Heartbeat não foi confirmado.' + escapeHtml(exitCode) + '<br><small>' + escapeHtml(String(detail || 'sem detalhe').slice(0, 300)) + '</small>', 'error');
       }
     } catch (e) {
       if (status) status.textContent = 'Heartbeat falhou: ' + (e && e.message ? e.message : e);
@@ -1425,8 +1436,16 @@
         if (!target || !openclawState.selectedSession) return;
         if (target.id === 'openclaw-session-chat-btn') {
           openclawState.lastSessionId = getOpenclawSessionId(openclawState.selectedSession);
-          setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(openclawState.lastSessionId)) + '</code> pronta para o próximo envio no chat.', 'ok');
+          setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(openclawState.lastSessionId)) + '</code> pronta para o próximo envio no chat. O payload incluirá <code>session_id=' + escapeHtml(openclawState.lastSessionId) + '</code>.', 'ok');
           focusOpenclawChat();
+        } else if (target.id === 'openclaw-session-resume-btn') {
+          openclawState.lastSessionId = getOpenclawSessionId(openclawState.selectedSession);
+          var input = $('#openclaw-chat-input');
+          if (input) {
+            input.value = 'Continue a sessão ' + openclawState.lastSessionId + '. Resuma o histórico/contexto recente disponível, diga o que ficou pendente e proponha o próximo passo operacional no KinoCampus/Cadu.';
+          }
+          setOpenclawActionStatus('Mensagem de continuação preparada com <code>session_id=' + escapeHtml(openclawState.lastSessionId) + '</code>. Enviando ao Cadu…', 'loading');
+          openclawSendChat();
         } else if (target.id === 'openclaw-session-logs-btn') {
           openclawShowLogs({ session: openclawState.selectedSession });
         }
@@ -1685,15 +1704,15 @@
   function effectLabel(effect) {
     var labels = {
       workspace_artifacts: 'gera arquivos',
-      supabase_read: 'le Supabase',
+      supabase_read: 'lê Supabase',
       supabase_update: 'altera Supabase',
       supabase_insert: 'insere Supabase',
       edge_publish: 'publica feed',
-      post_media_insert: 'adiciona midia',
+      post_media_insert: 'adiciona mídia',
       browser_cdp: 'usa CDP',
       ig_seen_cache: 'cache IG',
       ai_api: 'usa IA',
-      workspace_report: 'gera relatorio',
+      workspace_report: 'gera relatório',
       sigaa_login: 'login SIGAA',
       captcha_solver: 'captcha',
       google_calendar_write: 'altera Calendar'
@@ -1708,7 +1727,7 @@
     var missing = checks.filter(function (check) { return check.status === 'missing'; });
     var level = pf.can_run === false ? 'danger' : (missing.length ? 'warning' : 'ok');
     var chips = [];
-    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atencao' : 'preflight ok'), level));
+    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atenção' : 'preflight ok'), level));
     chips.push(stageChip('risco ' + (profile.risk || 'n/d'), profile.risk === 'high' ? 'danger' : (profile.risk === 'medium' ? 'warning' : 'ok')));
     if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'dry-run padrão' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
     else chips.push(stageChip('sem mutação direta', 'ok'));
@@ -1899,7 +1918,7 @@
         if (action === 'view') openRunDetailsModal(runId);
         else if (action === 'download-log') downloadRunLog(runId);
         else if (action === 'export') downloadRunExport(runId);
-        else if (action === 'export-pdf') exportRunPdf(runId);
+        else if (action === 'export-pdf') exportRunPdf(runId, btn);
         else if (action === 'ask-cadu') askCaduAboutRun(runId);
       });
     });
@@ -1960,7 +1979,7 @@
       var expBtn = document.getElementById('modal-export');
       if (expBtn) expBtn.addEventListener('click', function () { downloadRunExport(runId); });
       var pdfBtn = document.getElementById('modal-export-pdf');
-      if (pdfBtn) pdfBtn.addEventListener('click', function () { exportRunPdf(runId); });
+      if (pdfBtn) pdfBtn.addEventListener('click', function () { exportRunPdf(runId, pdfBtn); });
     }).catch(function (err) {
       modal.body.innerHTML = '<div style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>';
     });
@@ -2004,48 +2023,208 @@
     });
   }
 
-  function exportRunPdf(runId) {
-    apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) {
-      var data = r.data || r;
-      var run = data.run || {};
-      var metrics = data.summary_metrics || {};
-      var warnings = data.summary_warnings || [];
-      var artifacts = data.artifacts || [];
-      var rows = Object.keys(metrics).sort().map(function (key) {
-        return '<tr><th>' + escapeHtml(key) + '</th><td>' + escapeHtml(metrics[key]) + '</td></tr>';
-      }).join('');
-      var artifactRows = artifacts.map(function (a) {
-        return '<tr><td>' + escapeHtml(a.kind || 'other') + '</td><td>' + escapeHtml(a.name || '') + '</td><td>' + escapeHtml(a.produced_during_run ? 'sim' : 'não') + '</td></tr>';
-      }).join('');
-      var html = '<!doctype html><html><head><meta charset="utf-8"><title>Pipeline ' + escapeHtml(runId.slice(0, 8)) + '</title>' +
-        '<style>body{font-family:Arial,sans-serif;color:#111;margin:28px;line-height:1.45}h1{font-size:22px;margin:0 0 8px}h2{font-size:15px;margin:24px 0 8px}table{width:100%;border-collapse:collapse;margin:8px 0 14px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:12px;vertical-align:top}th{background:#f5f5f5;width:220px}pre{white-space:pre-wrap;word-break:break-word;background:#f7f7f7;border:1px solid #ddd;padding:10px;font-size:11px}.muted{color:#666;font-size:12px}.warn{color:#9a3412}</style>' +
-        '</head><body>' +
-        '<h1>Relatorio da Pipeline Cadu</h1>' +
-        '<div class="muted">Run ' + escapeHtml(runId) + ' - gerado em ' + escapeHtml(new Date().toLocaleString('pt-BR')) + '</div>' +
-        '<h2>Status</h2><table>' +
-        '<tr><th>stage</th><td>' + escapeHtml(run.stage || '') + '</td></tr>' +
-        '<tr><th>status</th><td>' + escapeHtml(run.status || '') + '</td></tr>' +
-        '<tr><th>exit_code</th><td>' + escapeHtml(run.exit_code == null ? '' : run.exit_code) + '</td></tr>' +
-        '<tr><th>inicio</th><td>' + escapeHtml(fmtDate(run.started_at)) + '</td></tr>' +
-        '<tr><th>fim</th><td>' + escapeHtml(fmtDate(run.finished_at)) + '</td></tr>' +
-        '</table>' +
-        '<h2>Metricas</h2><table>' + (rows || '<tr><td>Sem metricas detectadas.</td></tr>') + '</table>' +
-        '<h2>Avisos</h2>' + (warnings.length ? '<ul class="warn">' + warnings.map(function (w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('') + '</ul>' : '<p class="muted">Sem avisos.</p>') +
-        '<h2>Artefatos</h2><table><tr><th>tipo</th><th>arquivo</th><th>durante run</th></tr>' + (artifactRows || '<tr><td colspan="3">Nenhum artefato.</td></tr>') + '</table>' +
-        '<h2>Log tail</h2><pre>' + escapeHtml(data.log_tail || '') + '</pre>' +
-        '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},250)})</script>' +
-        '</body></html>';
-      var w = window.open('', '_blank');
-      if (!w) {
-        alert('Pop-up bloqueado. Permita pop-ups para exportar PDF.');
-        return;
-      }
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-    }).catch(function (err) {
-      alert('Erro ao exportar PDF: ' + (err && err.message || err));
+  function metricLabel(key) {
+    var labels = {
+      scanned: 'Itens escaneados',
+      total_items: 'Itens totais',
+      total: 'Total',
+      publishable: 'Publicáveis',
+      published: 'Publicados',
+      formatted: 'Formatados',
+      relevant: 'Relevantes',
+      review: 'Em revisão',
+      discarded: 'Descartados',
+      duplicates: 'Duplicados',
+      already_seen: 'Já vistos',
+      ig_profiles: 'Perfis IG',
+      ig_ok: 'Perfis IG OK',
+      ig_failed: 'Perfis IG com falha',
+      duration_sec: 'Duração (s)',
+      exit_code: 'Exit code',
+    };
+    if (labels[key]) return labels[key];
+    return String(key || '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+
+  function exportValue(value) {
+    if (value == null) return '—';
+    if (typeof value === 'boolean') return value ? 'sim' : 'não';
+    if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '—';
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object') {
+      try { return JSON.stringify(value); } catch (_) { return String(value); }
+    }
+    return String(value);
+  }
+
+  function statusPt(status) {
+    var map = {
+      finished: 'concluída',
+      failed: 'falhou',
+      running: 'rodando',
+      cancelled: 'cancelada',
+      queued: 'na fila',
+      unknown: 'desconhecido',
+    };
+    return map[status] || status || 'desconhecido';
+  }
+
+  function buildPipelinePdfReport(data, runId) {
+    var run = data.run || {};
+    var metrics = data.summary_metrics || {};
+    var warnings = data.summary_warnings || [];
+    var artifacts = data.artifacts || [];
+    var logLines = String(data.log_tail || '').split(/\r?\n/).filter(Boolean).slice(-60);
+    var runStage = run.stage || data.stage || 'pipeline';
+    var runStatus = run.status || data.status || 'unknown';
+    var duration = run.started_at ? fmtDur(run.started_at, run.finished_at) : exportValue(data.summary && data.summary.duration_sec);
+    var metricRows = Object.keys(metrics).sort().map(function (key) {
+      return { chave: key, métrica: metricLabel(key), valor: exportValue(metrics[key]) };
     });
+    var artifactRows = artifacts.map(function (a) {
+      return {
+        tipo: a.kind || 'other',
+        arquivo: a.name || '',
+        tamanho_kb: a.size_bytes != null ? (Number(a.size_bytes) / 1024).toFixed(1) : '',
+        durante_run: a.produced_during_run ? 'sim' : 'não',
+        observação: a.stale_for_run ? 'Arquivo anterior ao início desta run' : '',
+      };
+    });
+    var warningRows = warnings.map(function (warning, index) {
+      return { item: index + 1, aviso: warning };
+    });
+    var logRows = logLines.map(function (line, index) {
+      return { linha: index + 1, mensagem: line };
+    });
+
+    return {
+      title: 'KinoCampus - Relatório da Pipeline Cadu',
+      subtitle: 'Resumo operacional da execução ' + runId.slice(0, 8) + ' no painel admin/cadu.html',
+      source: 'admin/cadu.html — Histórico recente da Pipeline',
+      filters: {
+        run_id: runId,
+        estágio: runStage,
+        status: statusPt(runStatus),
+      },
+      kpis: [
+        { label: 'Estágio', value: runStage, note: 'Stage executado' },
+        { label: 'Status', value: statusPt(runStatus), note: run.exit_code != null ? ('exit ' + run.exit_code) : 'sem exit code' },
+        { label: 'Duração', value: duration, note: fmtDate(run.started_at) + ' até ' + fmtDate(run.finished_at) },
+        { label: 'Publicáveis', value: exportValue(metrics.publishable != null ? metrics.publishable : metrics.publicaveis), note: 'Itens aprovados para publicação' },
+        { label: 'Publicados', value: exportValue(metrics.published), note: 'Posts efetivamente publicados' },
+        { label: 'Artefatos', value: artifacts.length, note: 'Arquivos associados à run' },
+      ],
+      sections: [
+        {
+          title: 'Status da execução',
+          note: 'Identificação e tempos principais da execução selecionada no histórico recente.',
+          rows: [
+            { campo: 'Run ID', valor: runId },
+            { campo: 'Estágio', valor: runStage },
+            { campo: 'Status', valor: statusPt(runStatus) },
+            { campo: 'Exit code', valor: run.exit_code == null ? '—' : run.exit_code },
+            { campo: 'Início', valor: fmtDate(run.started_at) },
+            { campo: 'Fim', valor: fmtDate(run.finished_at) },
+            { campo: 'Duração', valor: duration },
+          ],
+          columns: [{ key: 'campo', label: 'Campo' }, { key: 'valor', label: 'Valor' }],
+          maxPdfRows: 12,
+        },
+        {
+          title: 'Métricas',
+          note: metricRows.length ? 'Métricas consolidadas extraídas do export operacional da pipeline.' : 'Nenhuma métrica foi detectada no export desta run.',
+          rows: metricRows,
+          pdfColumns: [{ key: 'métrica', label: 'Métrica' }, { key: 'valor', label: 'Valor' }],
+          xlsxColumns: [{ key: 'chave', label: 'Chave técnica' }, { key: 'métrica', label: 'Métrica' }, { key: 'valor', label: 'Valor' }],
+          maxPdfRows: 36,
+        },
+        {
+          title: 'Avisos e riscos',
+          note: warningRows.length ? 'Avisos registrados na execução.' : 'Sem avisos registrados nesta execução.',
+          rows: warningRows,
+          columns: [{ key: 'item', label: '#' }, { key: 'aviso', label: 'Aviso' }],
+          maxPdfRows: 24,
+        },
+        {
+          title: 'Artefatos',
+          note: 'Arquivos localizados pelo cadu-api para auditoria, reprocessamento ou troubleshooting.',
+          rows: artifactRows,
+          pdfColumns: [
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'arquivo', label: 'Arquivo' },
+            { key: 'durante_run', label: 'Durante a run' },
+          ],
+          xlsxColumns: [
+            { key: 'tipo', label: 'Tipo' },
+            { key: 'arquivo', label: 'Arquivo' },
+            { key: 'tamanho_kb', label: 'Tamanho (KB)' },
+            { key: 'durante_run', label: 'Durante a run' },
+            { key: 'observação', label: 'Observação' },
+          ],
+          maxPdfRows: 24,
+        },
+        {
+          title: 'Log tail',
+          note: 'Últimas linhas do log disponíveis no export. Use o botão de log completo para auditoria integral.',
+          rows: logRows,
+          pdfColumns: [{ key: 'linha', label: '#' }, { key: 'mensagem', label: 'Mensagem' }],
+          maxPdfRows: 40,
+        },
+      ],
+    };
+  }
+
+  function exportRunPdfFallback(data, runId) {
+    var report = buildPipelinePdfReport(data, runId);
+    var html = '<!doctype html><html><head><meta charset="utf-8"><title>Pipeline ' + escapeHtml(runId.slice(0, 8)) + '</title>' +
+      '<style>body{font-family:Arial,sans-serif;color:#111;margin:28px;line-height:1.45}h1{font-size:22px;margin:0 0 8px}h2{font-size:15px;margin:24px 0 8px}table{width:100%;border-collapse:collapse;margin:8px 0 14px}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:12px;vertical-align:top}th{background:#ff6b00;color:#fff}.muted{color:#666;font-size:12px}</style>' +
+      '</head><body><h1>' + escapeHtml(report.title) + '</h1><p class="muted">' + escapeHtml(report.subtitle) + '</p>' +
+      report.sections.map(function (section) {
+        var columns = section.pdfColumns || section.columns || [];
+        var rows = section.rows || [];
+        var head = '<tr>' + columns.map(function (col) { return '<th>' + escapeHtml(col.label || col.key || col) + '</th>'; }).join('') + '</tr>';
+        var body = rows.length ? rows.map(function (row) {
+          return '<tr>' + columns.map(function (col) {
+            var key = col.key || col;
+            return '<td>' + escapeHtml(row[key]) + '</td>';
+          }).join('') + '</tr>';
+        }).join('') : '<tr><td>Sem dados.</td></tr>';
+        return '<h2>' + escapeHtml(section.title) + '</h2><p class="muted">' + escapeHtml(section.note || '') + '</p><table>' + head + body + '</table>';
+      }).join('') +
+      '<script>window.addEventListener("load",function(){setTimeout(function(){window.print()},250)})</script></body></html>';
+    var w = window.open('', '_blank');
+    if (!w) throw new Error('Pop-up bloqueado. Permita pop-ups para exportar PDF.');
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  async function exportRunPdf(runId, btn) {
+    var originalHtml = btn ? btn.innerHTML : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      }
+      var r = await apiFetch('/api/cadu/pipeline/' + runId + '/export');
+      var data = r.data || r;
+      if (!data || data.__error) throw new Error(data && (data.message || data.error) || 'export indisponível');
+      if (window.KCAdminExport && typeof window.KCAdminExport.exportReportPDF === 'function') {
+        var date = new Date().toISOString().slice(0, 10);
+        await window.KCAdminExport.exportReportPDF('kc-cadu-pipeline-' + date + '-' + runId.slice(0, 8) + '.pdf', buildPipelinePdfReport(data, runId));
+      } else {
+        exportRunPdfFallback(data, runId);
+      }
+    } catch (err) {
+      alert('Erro ao exportar PDF: ' + (err && err.message || err));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
   }
 
   function findPipelineRun(runId) {

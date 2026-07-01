@@ -1449,3 +1449,57 @@ Responder aos problemas de navegação admin, textos em PT-BR e baixa responsivi
 
 - Validar visualmente em desktop estreito/tablet: o admin nav deve virar rail com chevrons antes de comprometer logo/user-actions.
 - Se o usuário exigir log realmente vinculado a cada cron/session, evoluir o cadu-api/OpenClaw para persistir `session_id` nos eventos de log, em vez de depender apenas de filtro textual no tail do Gateway.
+
+
+# v12 - Admin Cadu nav responsivo, OpenClaw session UX e PDF compartilhado (2026-07-01)
+
+## Escopo
+
+Responder aos problemas ainda visiveis no admin: nav admin diferente do KC nav publico, labels cortados/colados no header, Trigger Heartbeat com baixa confirmacao, historico de sessoes OpenClaw pouco acionavel e PDF da Pipeline fora do padrao visual dos relatorios admin.
+
+## Diagnostico
+
+- Problema real: os links de `.kc-admin-nav` nas paginas admin usam texto solto depois do icone, nao `<span>label</span>`. Como o CSS de `.is-icon-only` escondia apenas `span`, o JS podia marcar links como icon-only sem esconder o texto. Esse era o motivo de labels como Dashboard/Cadu ficarem cortados.
+- Problema real: o rail mostrava chevron quando ainda havia labels textuais que poderiam desaparecer. O comportamento desejado e o mesmo do `kc-nav-links`: primeiro compacta labels, depois habilita rolagem se ainda houver overflow.
+- Problema real/potencial: dashboard e outras paginas admin hidratam auth/user-actions depois do primeiro paint; medir apenas no DOMContentLoaded deixa overflow residual em larguras intermediarias.
+- Problema real: o controller Cadu modificado podia ficar preso no cache/service worker porque a query string do asset continuava `kc-admin-20260629.3`.
+- Problema real: o PDF da Pipeline usava fluxo proprio de print/fallback e nao a estetica compartilhada de Dashboard/Moderacao.
+
+## Correcoes aplicadas
+
+- `assets/js/api/admin-shell.js`:
+  - normaliza links admin criando `<span>` em torno de labels soltos;
+  - mede overflow e colapsa labels antes de mostrar chevrons;
+  - recalcula apos resize, mutation, fonts ready e remedicoes tardias em `120ms/400ms/900ms/1600ms` e `load`;
+  - refresca a nav quando auth/profile/user-actions mudam.
+- `assets/js/core/kc-core.js`:
+  - adiciona a mesma normalizacao e regra de colapso para `.kc-admin-nav` caso alguma pagina admin carregue o core publico.
+- `assets/css/admin-shell.css`:
+  - reduz gap/padding dos links admin e alinha o rail a esquerda, mantendo o header sem wrap indesejado no desktop.
+- HTMLs admin:
+  - bump para `admin-shell.css/js?v=8.6.2` em todas as paginas admin;
+  - `admin/cadu.html` carrega `admin-export.shared.js` e `admin-cadu.controller.js?v=kc-admin-20260701.1`.
+- `assets/js/controllers/admin/admin-cadu.controller.js`:
+  - PDF da Pipeline usa `KCAdminExport.exportReportPDF()` com report estruturado: filtros, KPIs, status da execucao, metricas, avisos, artefatos e tail do log;
+  - fallback print mantido apenas se o exporter compartilhado nao existir;
+  - `Trigger Heartbeat` mostra horario, `exit_code`, stdout parcial e avisa que os cards serao atualizados;
+  - sessao OpenClaw selecionada mostra painel de detalhe; `Usar no chat` informa explicitamente o `session_id`; `Continuar sessao` envia uma mensagem de retomada com o mesmo `session_id`.
+
+## Validacao
+
+- `node --check assets/js/api/admin-shell.js`
+- `node --check assets/js/core/kc-core.js`
+- `node --check assets/js/controllers/admin/admin-cadu.controller.js`
+- `node --check assets/js/controllers/admin/admin-export.shared.js`
+- `git diff --check`
+- Playwright local com Supabase/cadu-api mockados e service worker bloqueado:
+  - `admin/index.html`: 7 links, 7 spans, 2 `is-icon-only`, overflow 0, ativo visivel.
+  - `admin/cadu.html`: 7 links, 7 spans, 2 `is-icon-only`, overflow 0, chevron oculto.
+  - OpenClaw: sessao selecionada; `Continuar sessao` enviou payload com `session_id=sess-abc123456789`; heartbeat chamou `agent-event` e exibiu `exit_code=0`; logs abriram com `overflow-y:auto`.
+  - PDF: objeto enviado ao exporter gerou filename `kc-cadu-pipeline-2026-07-01-4cb7fc43.pdf`, titulo `KinoCampus - Relatorio da Pipeline Cadu`, secoes `Status da execucao|Metricas|Avisos e riscos|Artefatos|Log tail`.
+
+## Cuidados para proxima iteracao
+
+- Se Yan ainda vir assets antigos, orientar hard refresh ou limpar service worker/cache; o codigo ja tem cache-bust novo, mas navegadores podem manter HTML antigo por alguns segundos apos deploy.
+- O teste automatizado precisou bloquear service worker para validar o codigo local. Em producao, confirmar pela aba Network que `admin-shell.js?v=8.6.2` e `admin-cadu.controller.js?v=kc-admin-20260701.1` foram carregados.
+- O PDF usa o exporter compartilhado; melhorias futuras devem entrar em `admin-export.shared.js` para manter Dashboard, Moderacao e Cadu consistentes.

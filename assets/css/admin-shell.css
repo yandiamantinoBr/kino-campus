@@ -117,23 +117,24 @@ body.kc-admin-page .kc-header--admin .kc-user-actions {
 body.kc-admin-page .kc-header--admin .kc-admin-nav {
   flex: 1 1 0%;
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 body.kc-admin-page .kc-header--admin .kc-scroll-rail--admin {
   flex: 1 1 0%;
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 /* Admin navigation base moved from styles.css in V76 CSS-C. */
 .kc-admin-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: clamp(7px, 0.7vw, 10px);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  flex-wrap: nowrap;
 }
 
 .kc-admin-nav::-webkit-scrollbar { display: none; }
@@ -141,9 +142,9 @@ body.kc-admin-page .kc-header--admin .kc-scroll-rail--admin {
 .kc-admin-nav__link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 13px;
-  border-radius: 10px;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
   border: 1px solid transparent;
   color: var(--kc-text-dark-secondary);
   text-decoration: none;
@@ -151,7 +152,7 @@ body.kc-admin-page .kc-header--admin .kc-scroll-rail--admin {
   font-weight: 500;
   white-space: nowrap;
   transition: all var(--transition-speed) ease;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 .kc-admin-nav__link:hover {
@@ -181,7 +182,7 @@ body.kc-admin-page .kc-header--admin .kc-scroll-rail--admin {
 .kc-header--admin .kc-admin-nav {
   flex: 1 1 0%;
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
   z-index: 1;
 }
@@ -201,10 +202,10 @@ body.kc-admin-page .kc-header--admin .kc-scroll-rail--admin {
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-  .kc-header--admin .kc-admin-nav { gap: 2px; }
+  .kc-header--admin .kc-admin-nav { gap: 6px; }
 
   .kc-admin-nav__link {
-    padding: 6px 8px;
+    padding: 6px 7px;
     font-size: 0.82rem;
   }
 }
