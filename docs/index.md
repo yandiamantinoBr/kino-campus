@@ -23,6 +23,7 @@
 | [architecture/test-strategy.md](./architecture/test-strategy.md) | estratégia de 191 suites: onde adicionar testes, regras de manutenção *(contagem v76.42)* |
 | [architecture/css-architecture.md](./architecture/css-architecture.md) | CSS em produção, ownership de `styles.css`, baseline CSS-B.1/C e `future-split/` *(v76.28)* |
 | [architecture/feed-ranking-recommendation-audit-2026-07-02.md](./architecture/feed-ranking-recommendation-audit-2026-07-02.md) | auditoria do ranking de posts, abas `Destaques/Recentes/Comentados`, chips personalizados da home, riscos de eventos expirados e roadmap de personalização auditável |
+| [architecture/feed-ranking-transition-plan-2026-07-02.md](./architecture/feed-ranking-transition-plan-2026-07-02.md) | plano de transição e contrato implementado para ranking v2 do feed em modo shadow, com elegibilidade ativa, score global, personalização limitada e roteiro de RPC/UI |
 | [api-contract.md](./api-contract.md) | contrato publico da `KCAPI`, metodos expostos e semantica de retorno |
 | [db-schema.md](./db-schema.md) | tabelas, politicas, indices, storage, cron jobs e notas de estado do banco |
 | [rpc-catalog.md](./rpc-catalog.md) | catalogo de RPCs, triggers e funcoes PostgreSQL usadas pelo app |
