@@ -113,6 +113,13 @@ describe('Cadu publish — Edge Function', () => {
     expect(mapper).toContain('deepMergeMetadata');
   });
 
+  test('mapper normaliza deadline_date para oportunidades', () => {
+    expect(mapper).toContain('resolveOpportunityDeadline');
+    expect(mapper).toContain('extractDeadlineFromText');
+    expect(mapper).toContain('deadline_date: deadlineDate');
+    expect(mapper).toContain('deadlinePriority');
+  });
+
   test('mapper preserva descricao formatada e metadata de CTA do formatador', () => {
     expect(schema).toContain('formattedDescription?: string');
     expect(schema).toContain('score?: number | string');

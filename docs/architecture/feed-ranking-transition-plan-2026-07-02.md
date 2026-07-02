@@ -176,6 +176,8 @@ A pipeline deve produzir metadados equivalentes ao contrato:
 - todos: `source_url`, `source_label`, `source_verified` quando a fonte for oficial;
 - eventos passados/noticias: nao publicar como `eventos` ativos; enviar para revisao ou outro tipo editorial.
 
+Progresso em 2026-07-02: a normalizacao de prazo principal para `oportunidades` foi iniciada no publisher Node e na Edge Function `cadu-publish`. O `deadlineDate` agora diferencia prazos de inscricao/submissao de datas posteriores de cronograma, como resultado e matricula, e o endpoint passa a gravar `metadata.deadline_date` para oportunidades quando receber campo explicito ou texto inferivel. Evidencia: `docs/qa/reports/report-v76-cadu-deadline-normalization-2026-07-02.md`.
+
 ### Fase 4 - RPC v2 aditiva
 
 Criar uma RPC nova, sem substituir a atual:

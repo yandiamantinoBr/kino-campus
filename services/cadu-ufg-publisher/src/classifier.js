@@ -97,24 +97,56 @@ function referenceYear(item, today) {
 }
 
 function contextFor(text, index, length) {
-  return text.slice(Math.max(0, index - 90), Math.min(text.length, index + length + 90));
+  const minStart = Math.max(0, index - 120);
+  const maxEnd = Math.min(text.length, index + length + 120);
+  const before = text.slice(0, index);
+  const after = text.slice(index + length);
+  const previousBreak = Math.max(
+    before.lastIndexOf('.'),
+    before.lastIndexOf(';'),
+    before.lastIndexOf('!'),
+    before.lastIndexOf('?'),
+    before.lastIndexOf('|'),
+  );
+  const nextBreakValues = ['.', ';', '!', '?', '|']
+    .map((token) => after.indexOf(token))
+    .filter((value) => value >= 0);
+  const nextBreak = nextBreakValues.length ? Math.min(...nextBreakValues) : -1;
+  const start = Math.max(minStart, previousBreak >= 0 ? previousBreak + 1 : minStart);
+  const end = Math.min(maxEnd, nextBreak >= 0 ? index + length + nextBreak : maxEnd);
+  return text.slice(start, end);
 }
 
 function hasDeadlineContext(context) {
-  return /\b(inscric\w*|submiss\w*|prazo|ate|encerra\w*|termina\w*|periodo|candidat\w*|recurso\w*|matricula\w*|solicit\w*|envio\w*)\b/i.test(context);
+  return deadlinePriority(context) > 0;
 }
 
 function hasEventContext(context) {
   return /\b(evento|acontece|realiza|sera realizado|seminario|palestra|oficina|curso|congresso|mostra|festival|webinario)\b/i.test(context);
 }
 
+function deadlinePriority(context) {
+  if (/\b(inscric\w*|submiss\w*|candidat\w*|prazo(?:\s+final)?|encerra\w*|termina\w*|envio\w*|propost\w*|formulario|solicit\w*)\b/i.test(context)) {
+    return 3;
+  }
+  if (/\b(recurso\w*|matricula\w*|homolog\w*|resultado\w*|entrevista\w*|prova\w*|cronograma|periodo)\b/i.test(context)) {
+    return 2;
+  }
+  if (/\bate\b/i.test(context)) {
+    return 1;
+  }
+  return 0;
+}
+
 function addCandidate(candidates, text, match, iso, kind) {
   if (!iso) return;
   const windowText = contextFor(text, match.index || 0, match[0].length);
+  const priority = deadlinePriority(windowText);
   candidates.push({
     iso,
     kind,
-    isDeadline: hasDeadlineContext(windowText),
+    isDeadline: priority > 0,
+    deadlinePriority: priority,
     isEvent: hasEventContext(windowText),
   });
 }
@@ -161,6 +193,15 @@ function latestIso(values) {
   return values.filter(Boolean).sort().pop() || '';
 }
 
+function bestDeadlineIso(candidates) {
+  const eligible = candidates.filter((candidate) => candidate.deadlinePriority > 0);
+  if (!eligible.length) return '';
+  const maxPriority = Math.max(...eligible.map((candidate) => candidate.deadlinePriority));
+  return latestIso(eligible
+    .filter((candidate) => candidate.deadlinePriority === maxPriority)
+    .map((candidate) => candidate.iso));
+}
+
 function uniqValues(values) {
   return Array.from(new Set((values || []).filter(Boolean)));
 }
@@ -185,14 +226,22 @@ function analyzeTemporalRelevance(item, options = {}) {
   const rawDateBegin = isoDateFromValue(item.dateBeginAt || item.raw?.date_begin_at || item.raw?.begin_at);
   const rawDateEnd = isoDateFromValue(item.dateEndAt || item.raw?.date_end_at || item.raw?.end_at);
   const isEventItem = String(item.type || '').toLowerCase() === 'event';
-  const deadlineValues = candidates.filter((candidate) => candidate.isDeadline).map((candidate) => candidate.iso);
+  const deadlineCandidates = candidates.filter((candidate) => candidate.isDeadline);
   const eventValues = candidates.filter((candidate) => candidate.isEvent).map((candidate) => candidate.iso);
 
-  if (rawDateEnd && hasActionableDateEndContext(rawText)) deadlineValues.push(rawDateEnd);
+  if (rawDateEnd && hasActionableDateEndContext(rawText)) {
+    deadlineCandidates.push({
+      iso: rawDateEnd,
+      kind: 'source-end',
+      isDeadline: true,
+      deadlinePriority: 3,
+      isEvent: false,
+    });
+  }
   if (rawDateBegin && isEventItem) eventValues.push(rawDateBegin);
   if (rawDateEnd && isEventItem) eventValues.push(rawDateEnd);
 
-  const deadlineDate = latestIso(deadlineValues);
+  const deadlineDate = bestDeadlineIso(deadlineCandidates);
   const eventDate = latestIso(eventValues);
   const dates = uniqValues(candidates.map((candidate) => candidate.iso).concat([rawDateBegin, rawDateEnd]));
 

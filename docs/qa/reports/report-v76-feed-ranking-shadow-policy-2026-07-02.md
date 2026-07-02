@@ -31,6 +31,8 @@ Achados:
 - As 40 oportunidades da amostra nao tinham prazo real normalizado nos aliases reconhecidos (`deadline_at`, `deadline_date`, `data_limite`, `inscricoes_ate`, etc.). Elas continuam ativas quando existe `expires_at`, mas recebem penalidade e razao `missing-deadline`.
 - O campo `expires_at` nao deve ser tratado como prazo real de oportunidade. Ele e uma janela generica de publicacao/expiracao, nao necessariamente o ultimo dia de inscricao.
 
+Follow-up no mesmo dia: `docs/qa/reports/report-v76-cadu-deadline-normalization-2026-07-02.md` implementou a primeira correcao na origem do dado, normalizando `metadata.deadline_date` para oportunidades no publisher Cadu e na Edge Function `cadu-publish`.
+
 ## Comparacao com as abas atuais
 
 ### `Destaques` / `votos`

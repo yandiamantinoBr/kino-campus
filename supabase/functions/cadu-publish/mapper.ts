@@ -79,6 +79,140 @@ function detectLocation(text: string, sourceName: string): string {
   return normalizeWhitespace(match ? match[1] : (sourceName || "UFG"));
 }
 
+interface DeadlineCandidate {
+  iso: string;
+  priority: number;
+}
+
+function validIsoDateStrict(value: unknown): string {
+  const iso = String(value ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const date = new Date(`${iso}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10) === iso ? iso : "";
+}
+
+function isoDateCandidate(value: unknown, fallbackYear?: number): string {
+  return validIsoDateStrict(isoDateFromAny(value) || parseBrazilianDate(value, fallbackYear));
+}
+
+function yearFromOpportunityItem(item: CaduItem): number {
+  const raw = [
+    item.dateEnd,
+    item.dateStart,
+    (item as Record<string, unknown>).updatedAt,
+    (item as Record<string, unknown>).updated_at,
+    item.sourceUrl,
+  ].map((value) => String(value || "")).join(" ");
+  const match = raw.match(/\b(20\d{2})\b/);
+  return match ? Number(match[1]) : new Date().getUTCFullYear();
+}
+
+function localDateContext(text: string, index: number, length: number): string {
+  const minStart = Math.max(0, index - 120);
+  const maxEnd = Math.min(text.length, index + length + 120);
+  const before = text.slice(0, index);
+  const after = text.slice(index + length);
+  const previousBreak = Math.max(
+    before.lastIndexOf("."),
+    before.lastIndexOf(";"),
+    before.lastIndexOf("!"),
+    before.lastIndexOf("?"),
+    before.lastIndexOf("|"),
+  );
+  const nextBreakValues = [".", ";", "!", "?", "|"]
+    .map((token) => after.indexOf(token))
+    .filter((value) => value >= 0);
+  const nextBreak = nextBreakValues.length ? Math.min(...nextBreakValues) : -1;
+  const start = Math.max(minStart, previousBreak >= 0 ? previousBreak + 1 : minStart);
+  const end = Math.min(maxEnd, nextBreak >= 0 ? index + length + nextBreak : maxEnd);
+  return text.slice(start, end);
+}
+
+function deadlinePriority(context: string): number {
+  if (/\b(inscric\w*|submiss\w*|candidat\w*|prazo(?:\s+final)?|encerra\w*|termina\w*|envio\w*|propost\w*|formulario|solicit\w*)\b/i.test(context)) {
+    return 3;
+  }
+  if (/\b(recurso\w*|matricula\w*|homolog\w*|resultado\w*|entrevista\w*|prova\w*|cronograma|periodo)\b/i.test(context)) {
+    return 2;
+  }
+  return /\bate\b/i.test(context) ? 1 : 0;
+}
+
+function addDeadlineCandidate(candidates: DeadlineCandidate[], text: string, match: RegExpExecArray, iso: string): void {
+  const cleanIso = validIsoDateStrict(iso);
+  if (!cleanIso) return;
+  const priority = deadlinePriority(localDateContext(text, match.index || 0, match[0].length));
+  if (priority <= 0) return;
+  candidates.push({ iso: cleanIso, priority });
+}
+
+function extractDeadlineFromText(value: unknown, fallbackYear: number): string {
+  const text = normalizeText(stripHtml(value || ""));
+  const candidates: DeadlineCandidate[] = [];
+  let match: RegExpExecArray | null;
+
+  const numericRange = /\b([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\s*(?:a|ate|-)\s*([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\b/g;
+  while ((match = numericRange.exec(text))) {
+    const year = Number(String(match[6] || match[3] || fallbackYear).replace(/^(\d{2})$/, "20$1"));
+    addDeadlineCandidate(candidates, text, match, parseBrazilianDate(`${match[4]}/${match[5]}/${year}`, fallbackYear));
+  }
+
+  const compactRange = /\b([0-3]?\d)\s*(?:a|ate|-)\s*([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\b/g;
+  while ((match = compactRange.exec(text))) {
+    const year = Number(String(match[4] || fallbackYear).replace(/^(\d{2})$/, "20$1"));
+    addDeadlineCandidate(candidates, text, match, parseBrazilianDate(`${match[2]}/${match[3]}/${year}`, fallbackYear));
+  }
+
+  const namedRange = /\b([0-3]?\d)\s*(?:a|ate|-)\s*([0-3]?\d)\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+((?:20)?\d{2}))?\b/g;
+  while ((match = namedRange.exec(text))) {
+    const year = Number(String(match[4] || fallbackYear).replace(/^(\d{2})$/, "20$1"));
+    addDeadlineCandidate(candidates, text, match, parseBrazilianDate(`${match[2]} de ${match[3]} de ${year}`, fallbackYear));
+  }
+
+  const numeric = /\b([0-3]?\d)[\/.-]([01]?\d)(?:[\/.-]((?:20)?\d{2}))?\b/g;
+  while ((match = numeric.exec(text))) {
+    const year = Number(String(match[3] || fallbackYear).replace(/^(\d{2})$/, "20$1"));
+    addDeadlineCandidate(candidates, text, match, parseBrazilianDate(`${match[1]}/${match[2]}/${year}`, fallbackYear));
+  }
+
+  const named = /\b([0-3]?\d)\s+de\s+(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+((?:20)?\d{2}))?\b/g;
+  while ((match = named.exec(text))) {
+    const year = Number(String(match[3] || fallbackYear).replace(/^(\d{2})$/, "20$1"));
+    addDeadlineCandidate(candidates, text, match, parseBrazilianDate(`${match[1]} de ${match[2]} de ${year}`, fallbackYear));
+  }
+
+  if (!candidates.length) return "";
+  const maxPriority = Math.max(...candidates.map((candidate) => candidate.priority));
+  return candidates
+    .filter((candidate) => candidate.priority === maxPriority)
+    .map((candidate) => candidate.iso)
+    .sort()
+    .pop() || "";
+}
+
+function resolveOpportunityDeadline(item: CaduItem, fullText: string): string {
+  const fallbackYear = yearFromOpportunityItem(item);
+  const dates = item.dates && typeof item.dates === "object" ? item.dates as Record<string, unknown> : {};
+  const explicitCandidates = [
+    (item as Record<string, unknown>).deadlineDate,
+    (item as Record<string, unknown>).deadline_date,
+    (item as Record<string, unknown>).deadline,
+    (item as Record<string, unknown>).deadlineAt,
+    (item as Record<string, unknown>).deadline_at,
+    dates.deadlineDate,
+    dates.deadline_date,
+    dates.deadline,
+    dates.endDate,
+    dates.end,
+  ];
+  for (const candidate of explicitCandidates) {
+    const iso = isoDateCandidate(candidate, fallbackYear);
+    if (iso) return iso;
+  }
+  return extractDeadlineFromText(fullText, fallbackYear);
+}
+
 function markdownUrlLink(url: unknown): string {
   const clean = validRemoteImageUrl(url);
   return clean ? `[${clean}](${clean})` : "";
@@ -389,6 +523,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     if (remunValue != null) price = remunValue;
     const gratuito = item.gratuito !== undefined ? !!item.gratuito : true;
     if (gratuito && price == null) price = 0;
+    const deadlineDate = resolveOpportunityDeadline(item, fullText);
 
     Object.assign(metadata, {
       subcategory: areaKey,
@@ -407,6 +542,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       remuneracao: remuneracaoText,
       opportunityType: type,
       gratuito,
+      deadline_date: deadlineDate,
     });
     if (wm.label) {
       const extra = uniq([...(tags as string[]), wm.label, regime.label]).slice(0, 10);

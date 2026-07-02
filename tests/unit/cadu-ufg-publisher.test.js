@@ -254,6 +254,60 @@ describe('cadu-ufg-publisher', () => {
     expect(['publish', 'review']).toContain(result.decision);
   });
 
+  test('temporal analysis extracts named prazo final dates', () => {
+    const item = {
+      title: 'Chamada interna para apoio a projetos de pesquisa',
+      summary: 'O prazo final e 30 de junho de 2026.',
+      text: 'Pesquisadores da UFG devem conferir as regras no edital.',
+      updatedAt: '2026-06-20',
+    };
+    const temporal = analyzeTemporalRelevance(item, { now: '2026-06-20T12:00:00-03:00' });
+
+    expect(temporal.expired).toBe(false);
+    expect(temporal.deadlineDate).toBe('2026-06-30');
+  });
+
+  test('temporal analysis prefers signup deadlines over later schedule dates', () => {
+    const item = {
+      title: 'Processo seletivo para bolsa de extensao',
+      summary: 'Inscricoes: de 15/06/2026 ate 19/06/2026. Resultado: 24/06/2026. Matricula: a partir de 25/06/2026.',
+      text: 'Edital com vagas para estudantes da UFG.',
+      updatedAt: '2026-06-10',
+    };
+    const temporal = analyzeTemporalRelevance(item, { now: '2026-06-10T12:00:00-03:00' });
+
+    expect(temporal.expired).toBe(false);
+    expect(temporal.deadlineDate).toBe('2026-06-19');
+  });
+
+  test('classifier discards opportunities after signup even with future results', () => {
+    const item = {
+      title: 'Processo seletivo para bolsa de extensao',
+      summary: 'Inscricoes: de 15/06/2026 ate 19/06/2026. Resultado: 24/06/2026. Matricula: a partir de 25/06/2026.',
+      text: 'Edital com vagas para estudantes da UFG.',
+      updatedAt: '2026-06-10',
+      pdfLinks: ['https://proex.ufg.br/edital.pdf'],
+    };
+    const result = classifyItem(item, { tier: 1 }, { now: '2026-06-20T12:00:00-03:00' });
+
+    expect(result.temporal.expired).toBe(true);
+    expect(result.temporal.deadlineDate).toBe('2026-06-19');
+    expect(result.decision).toBe('discard');
+  });
+
+  test('temporal analysis keeps latest primary submission deadline across official lines', () => {
+    const item = {
+      title: 'Edital de apoio a participacao em congresso',
+      summary: 'Solicitar Carta de Indicacao a PRPI: ate 31 de agosto de 2026. Submissao do trabalho: ate 15 de setembro de 2026.',
+      text: 'Chamada para pesquisadores da UFG com apoio a eventos cientificos.',
+      updatedAt: '2026-08-01',
+    };
+    const temporal = analyzeTemporalRelevance(item, { now: '2026-08-01T12:00:00-03:00' });
+
+    expect(temporal.expired).toBe(false);
+    expect(temporal.deadlineDate).toBe('2026-09-15');
+  });
+
   test('mapper keeps Kino modal fields and one official link', () => {
     const item = {
       id: 'ufg:1',
