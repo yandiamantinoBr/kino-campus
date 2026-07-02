@@ -78,6 +78,18 @@
     try { return Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); } catch (_) { return String(n); }
   }
 
+  function formatLinkLabel(url) {
+    var text = String(url || '').trim();
+    var label = text;
+    try {
+      var parsed = new URL(text);
+      var path = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname : '';
+      label = parsed.hostname.replace(/^www\./, '') + path;
+      if (parsed.search && label.length < 42) label += parsed.search;
+    } catch (_) {}
+    return label.length > 56 ? label.slice(0, 53).trim() + '...' : label;
+  }
+
   // ── Helpers de identificação ─────────────────────────────────────────────────
 
   function getPostAuthorId(post) {
@@ -408,7 +420,8 @@
       var item = document.createElement('div');
       item.className = 'kc-spec-item kc-spec-item--link';
       var safeUrl = esc(entry[2]);
-      item.innerHTML = '<i class="' + esc(entry[0]) + '"></i><div class="kc-spec-item__body"><strong>' + esc(entry[1]) + '</strong><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + safeUrl + '</a></div>';
+      var linkLabel = esc(formatLinkLabel(entry[2]));
+      item.innerHTML = '<i class="' + esc(entry[0]) + '"></i><div class="kc-spec-item__body"><strong>' + esc(entry[1]) + '</strong><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer" title="' + safeUrl + '">' + linkLabel + '</a></div>';
       grid.appendChild(item);
     });
 

@@ -141,6 +141,18 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+function formatLinkLabel(url) {
+  const text = String(url || '').trim();
+  let label = text;
+  try {
+    const parsed = new URL(text);
+    const path = parsed.pathname && parsed.pathname !== '/' ? parsed.pathname : '';
+    label = parsed.hostname.replace(/^www\./, '') + path;
+    if (parsed.search && label.length < 42) label += parsed.search;
+  } catch (_) {}
+  return label.length > 56 ? `${label.slice(0, 53).trim()}...` : label;
+}
+
 function clamp(value, max) {
   const text = String(value || '').trim();
   if (text.length <= max) return text;
@@ -425,7 +437,7 @@ function specRowsHtml(post, values) {
     const text = String(value || '').trim();
     const isLink = /^https?:\/\//i.test(text);
     const safeValue = isLink
-      ? `<a href="${escapeAttr(text)}" rel="noopener noreferrer" target="_blank">${escapeHtml(text)}</a>`
+      ? `<a href="${escapeAttr(text)}" rel="noopener noreferrer" target="_blank" title="${escapeAttr(text)}">${escapeHtml(formatLinkLabel(text))}</a>`
       : escapeHtml(text);
     const itemClass = isLink ? 'kc-spec-item kc-spec-item--link' : 'kc-spec-item';
     const iconClass = iconByLabel[label] || 'fas fa-info-circle';
