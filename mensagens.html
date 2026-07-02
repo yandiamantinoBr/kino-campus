@@ -15,15 +15,28 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.5" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.6.7" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.6.9" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
+    /* Envoltório centralizado estilo WhatsApp Web: card flutuante sobre um
+       backdrop levemente diferenciado, com altura total sob o header global. */
     .kc-chat-page-wrap {
-      max-width: 1180px;
+      max-width: 1600px;
       margin: 0 auto;
+      padding: 0 0;          /* mobile: sem respiro lateral */
       height: calc(100vh - var(--kc-header-height, 64px));
       height: calc(100dvh - var(--kc-header-height, 64px));
+    }
+    @media (min-width: 1024px) {
+      .kc-chat-page-wrap {
+        padding: 0 24px;
+      }
+    }
+    @media (min-width: 1400px) {
+      .kc-chat-page-wrap {
+        padding: 0 40px;
+      }
     }
   </style>
 </head>
