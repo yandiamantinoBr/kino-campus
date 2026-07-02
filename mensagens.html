@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.5" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.6.9" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.0" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
@@ -91,8 +91,12 @@
         <!-- ── Sidebar: lista de conversas ───────────────────────────────── -->
         <aside class="kc-chat-sidebar" id="kcChatSidebar" aria-label="Lista de conversas" data-i18n-aria-label="aria-label.chat-list">
           <div class="kc-chat-sidebar__header">
-            <h1 class="kc-chat-sidebar__title">Mensagens</h1>
+            <h1 class="kc-chat-sidebar__title"><i class="fas fa-comments" aria-hidden="true"></i> Mensagens</h1>
             <p class="kc-chat-sidebar__subtitle">Suas conversas diretas no KinoCampus</p>
+            <div class="kc-chat-filter-tabs" id="kcChatFilterTabs">
+              <button type="button" class="kc-chat-filter-tab is-active" data-filter="all">Todas</button>
+              <button type="button" class="kc-chat-filter-tab" data-filter="unread">Não lidas <span class="kc-chat-filter-tab__count">0</span></button>
+            </div>
             <label class="kc-chat-search" for="kcChatConversationSearch">
               <i class="fas fa-search" aria-hidden="true"></i>
               <input
@@ -181,20 +185,25 @@
               <span>Novas mensagens</span>
             </button>
 
-            <!-- Composer -->
+            <!-- Composer (estilo WhatsApp: emoji + anexo + input numa pill unificada, send separado) -->
             <form class="kc-chat-composer" id="kcChatComposer" autocomplete="off">
-              <button type="button" class="kc-chat-composer__btn" id="kcChatAttachBtn" title="Anexar imagem" data-i18n-tooltip="tooltip.chat-attach" aria-label="Anexar imagem" data-i18n-aria-label="aria-label.chat-attach">
-                <i class="fas fa-paperclip"></i>
-              </button>
               <input type="file" id="kcChatFileInput" accept="image/*" style="display:none" />
-              <textarea
-                id="kcChatInput"
-                class="kc-chat-composer__input"
-                rows="1"
-                placeholder="Escreva uma mensagem..."
-                data-i18n-placeholder="placeholder.chat-message"
-                maxlength="4000"
-              ></textarea>
+              <div class="kc-chat-composer__input-row">
+                <button type="button" class="kc-chat-composer__btn" id="kcChatEmojiBtn" title="Emoji" data-i18n-tooltip="tooltip.chat-emoji" aria-label="Emoji" data-i18n-aria-label="aria-label.chat-emoji" tabindex="-1">
+                  <i class="far fa-smile"></i>
+                </button>
+                <button type="button" class="kc-chat-composer__btn" id="kcChatAttachBtn" title="Anexar imagem" data-i18n-tooltip="tooltip.chat-attach" aria-label="Anexar imagem" data-i18n-aria-label="aria-label.chat-attach">
+                  <i class="fas fa-paperclip"></i>
+                </button>
+                <textarea
+                  id="kcChatInput"
+                  class="kc-chat-composer__input"
+                  rows="1"
+                  placeholder="Escreva uma mensagem..."
+                  data-i18n-placeholder="placeholder.chat-message"
+                  maxlength="4000"
+                ></textarea>
+              </div>
               <button type="submit" class="kc-chat-composer__btn kc-chat-composer__btn--send" id="kcChatSendBtn" disabled title="Enviar" data-i18n-tooltip="tooltip.chat-send" aria-label="Enviar mensagem" data-i18n-aria-label="aria-label.chat-send">
                 <i class="fas fa-paper-plane"></i>
               </button>
@@ -279,6 +288,6 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.5"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.19"></script>
+  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.20"></script>
 </body>
 </html>
