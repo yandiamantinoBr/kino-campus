@@ -582,10 +582,37 @@
 
   // ── loadPost ─────────────────────────────────────────────────────────────────
 
+  function hasServerRenderedProductContent(id) {
+    var titleEl = document.getElementById('postTitle');
+    var title = String((titleEl && titleEl.textContent) || '').trim();
+    var canonical = document.querySelector('link[rel="canonical"]');
+    var ogUrl = document.querySelector('meta[property="og:url"]');
+    var robots = document.querySelector('meta[name="robots"]');
+    var canonicalHref = String((canonical && canonical.getAttribute('href')) || '');
+    var ogUrlContent = String((ogUrl && ogUrl.getAttribute('content')) || '');
+    var robotsContent = String((robots && robots.getAttribute('content')) || '').toLowerCase();
+    var idText = String(id || '').trim();
+
+    if (!idText || !title || /^Carregando/i.test(title)) return false;
+    if (title.toLowerCase().indexOf('não encontrado') !== -1 || title.toLowerCase().indexOf('nao encontrado') !== -1) return false;
+    if (robotsContent.indexOf('index,follow') !== 0) return false;
+    return canonicalHref.indexOf(idText) !== -1 || ogUrlContent.indexOf(idText) !== -1;
+  }
+
+  function preserveServerRenderedProduct(id) {
+    var R = window._KCProduct.render;
+    if (R && typeof R.hide === 'function') R.hide('notFound');
+    window.kcCurrentPostId = id;
+    document.body.setAttribute('data-post-id', id);
+    loadProductComments(id);
+    trackProductViewOnce(null, id);
+  }
+
   async function loadPost() {
     if (!_deps) return;
     var id = _deps.getParam('id');
     var cached;
+    var hasSsrContent;
     var renderedCached = false;
     var renderedSignature = '';
     var viewerPromise;
@@ -600,6 +627,7 @@
 
     window.kcCurrentPostId = id;
     document.body.setAttribute('data-post-id', id);
+    hasSsrContent = hasServerRenderedProductContent(id);
 
     var author = document.getElementById('commentAuthor');
     var text = document.getElementById('commentText');
@@ -631,11 +659,19 @@
     fetched = await fetchPromise;
     if (fetched && fetched.error) {
       if (renderedCached) return;
+      if (hasSsrContent) {
+        preserveServerRenderedProduct(id);
+        return;
+      }
       R3 = window._KCProduct.render;
       if (R3) R3.showNotFound();
       return;
     }
     if (!fetched || !fetched.post) {
+      if (hasSsrContent) {
+        preserveServerRenderedProduct(id);
+        return;
+      }
       invalidateProductDetailCache(id);
       R3 = window._KCProduct.render;
       if (R3) R3.showNotFound();
