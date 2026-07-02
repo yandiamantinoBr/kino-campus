@@ -14,6 +14,7 @@
   var VERSION = 1;
   var PURPOSE_VERSION = 'feed-personalization-v1';
   var DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  var BR_DATE_RE = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/;
   var DAY_MS = 24 * 60 * 60 * 1000;
   var HALF_LIFE_MS = 30 * DAY_MS;
   var MAX_EXPLICIT_BOOST = 0.07;
@@ -126,9 +127,15 @@
     if (value == null || typeof value === 'object') return null;
     var text = String(value).trim();
     if (!text) return null;
-    var parsed = DATE_ONLY_RE.test(text)
-      ? Date.parse(text + (mode === 'end' ? 'T23:59:59.999Z' : 'T00:00:00.000Z'))
-      : Date.parse(text);
+    var brMatch = text.match(BR_DATE_RE);
+    var parsed = brMatch
+      ? Date.parse(
+        brMatch[3] + '-' + brMatch[2].padStart(2, '0') + '-' + brMatch[1].padStart(2, '0') +
+        (mode === 'end' ? 'T23:59:59.999Z' : 'T00:00:00.000Z')
+      )
+      : DATE_ONLY_RE.test(text)
+        ? Date.parse(text + (mode === 'end' ? 'T23:59:59.999Z' : 'T00:00:00.000Z'))
+        : Date.parse(text);
     return Number.isFinite(parsed) ? parsed : null;
   }
 
@@ -187,6 +194,7 @@
   function eventStartMs(post) {
     return firstDateMs(post || {}, [
       'event_start', 'eventStart', 'starts_at', 'startsAt', 'start_at', 'startAt',
+      'data_inicio_evento', 'dataInicioEvento',
       'data_evento', 'dataEvento', 'event_date', 'eventDate', 'date', 'data'
     ], 'start');
   }
@@ -194,7 +202,8 @@
   function eventEndMs(post, start) {
     return firstDateMs(post || {}, [
       'event_end', 'eventEnd', 'ends_at', 'endsAt', 'end_at', 'endAt',
-      'data_fim', 'dataFim', 'active_until', 'activeUntil', 'expires_at', 'expiresAt'
+      'data_fim_evento', 'dataFimEvento', 'data_fim', 'dataFim',
+      'active_until', 'activeUntil', 'expires_at', 'expiresAt'
     ], 'end') || (start == null ? null : parseDateMs(iso(start).slice(0, 10), 'end'));
   }
 
@@ -202,7 +211,8 @@
     return firstDateMs(post || {}, [
       'deadline_at', 'deadlineAt', 'deadline', 'data_limite', 'dataLimite',
       'inscricoes_ate', 'inscricoesAte', 'application_deadline', 'applicationDeadline',
-      'active_until', 'activeUntil', 'expires_at', 'expiresAt'
+      'deadline_date', 'deadlineDate', 'prazo', 'prazo_inscricao', 'prazoInscricao',
+      'submission_deadline', 'submissionDeadline'
     ], 'end');
   }
 
@@ -320,17 +330,19 @@
 
     if (moduleKey === 'oportunidades') {
       deadline = deadlineMs(post || {});
+      end = genericExpiryMs(post || {});
       if (deadline == null) reasons.push({ type: 'missing-deadline', label: 'Oportunidade sem prazo normalizado' });
       if (deadline != null && deadline < current) reasons.push({ type: 'expired-deadline', label: 'Prazo da oportunidade encerrado' });
+      if (deadline == null && end != null && end < current) reasons.push({ type: 'expired', label: 'Publicacao fora da janela util' });
       return {
         module: moduleKey,
         status: 'published',
-        state: deadline != null && deadline < current ? 'expired' : 'active',
-        active: !(deadline != null && deadline < current),
-        archiveEligible: deadline != null && deadline < current,
+        state: (deadline != null && deadline < current) || (deadline == null && end != null && end < current) ? 'expired' : 'active',
+        active: !((deadline != null && deadline < current) || (deadline == null && end != null && end < current)),
+        archiveEligible: (deadline != null && deadline < current) || (deadline == null && end != null && end < current),
         reasons: reasons,
         activeFrom: iso(activeFrom),
-        activeUntil: iso(deadline),
+        activeUntil: iso(deadline || end),
         eventStart: null,
         eventEnd: null,
         deadlineAt: iso(deadline)

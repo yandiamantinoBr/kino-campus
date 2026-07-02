@@ -48,6 +48,35 @@ describe('politica de ranking do feed', () => {
     expect(Policy.scoreGlobal(eventPost({ metadata: { data_evento: '2026-07-01' } }), { now: NOW }).score).toBe(0);
   });
 
+  test('entende aliases do Cadu para data_fim_evento e deadline_date em formato brasileiro', () => {
+    const event = eventPost({
+      metadata: { data_evento: '2026-07-01', data_fim_evento: '2026-07-29' }
+    });
+    const opportunity = basePost({
+      module: 'oportunidades',
+      category: 'bolsas',
+      metadata: { deadline_date: '10/07/2026' }
+    });
+    const expired = basePost({
+      module: 'oportunidades',
+      category: 'bolsas',
+      metadata: { deadline_date: '01/07/2026' }
+    });
+
+    expect(Policy.resolveActiveWindow(event, { now: NOW })).toMatchObject({
+      active: true,
+      eventEnd: expect.stringMatching(/^2026-07-29/)
+    });
+    expect(Policy.resolveActiveWindow(opportunity, { now: NOW })).toMatchObject({
+      active: true,
+      deadlineAt: expect.stringMatching(/^2026-07-10/)
+    });
+    expect(Policy.resolveActiveWindow(expired, { now: NOW })).toMatchObject({
+      active: false,
+      state: 'expired'
+    });
+  });
+
   test('oportunidade respeita prazo aberto e prazo expirado', () => {
     const open = basePost({
       module: 'oportunidades',
@@ -62,6 +91,21 @@ describe('politica de ranking do feed', () => {
     expect(Policy.resolveActiveWindow(open, { now: NOW }).active).toBe(true);
     expect(Policy.resolveActiveWindow(expired, { now: NOW }).active).toBe(false);
     expect(Policy.scoreGlobal(expired, { now: NOW }).score).toBe(0);
+  });
+
+  test('expires_at nao substitui prazo real de oportunidade', () => {
+    const genericExpiryOnly = basePost({
+      module: 'oportunidades',
+      category: 'estagios',
+      expires_at: '2026-08-01T00:00:00.000Z',
+      metadata: {}
+    });
+    const eligibility = Policy.resolveActiveWindow(genericExpiryOnly, { now: NOW });
+    expect(eligibility.active).toBe(true);
+    expect(eligibility.activeUntil).toMatch(/^2026-08-01/);
+    expect(eligibility.deadlineAt).toBe(null);
+    expect(eligibility.reasons.map((reason) => reason.type)).toContain('missing-deadline');
+    expect(Policy.scoreGlobal(genericExpiryOnly, { now: NOW }).components.penalty).toBeGreaterThan(0);
   });
 
   test('publicacao encerrada nao volta ao destaque por engajamento alto', () => {

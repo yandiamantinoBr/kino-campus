@@ -10,6 +10,7 @@ O feed do KinoCampus nao deve trocar a ordenacao atual diretamente no cliente. A
 A transicao segura passa por uma camada de politica pura, testada e sem efeitos colaterais:
 
 - arquivo implementado: `assets/js/shared/kc-feed-ranking-policy.shared.js`;
+- diagnostico implementado: `scripts/analyze-feed-ranking-shadow.js` / `npm run benchmark:feed-ranking-shadow`;
 - testes implementados: `tests/unit/kc-feed-ranking-policy.test.js`;
 - escopo atual: elegibilidade ativa, score global, boost pessoal com teto, dedupe e ranking sombra;
 - escopo excluido nesta fase: migration, alteracao de `kc_get_feed_cursor`, storage pessoal novo, UI de preferencia e coleta comportamental.
@@ -157,6 +158,14 @@ Metricas minimas:
 - diferenca de CTR util quando houver experimento futuro.
 
 Evidencia inicial de 2026-07-02: uma amostra publica de 80 posts recentes (`status=published`) retornou 40 eventos e 40 oportunidades. Com a politica em modo shadow, 2 itens de Cadu classificados como `eventos` mas sem `data_evento` foram sinalizados como `needs-review` em vez de ranquearem como evento ativo: "FANUT Conecta" e a lista de subsidio alimentacao da PRPG. Uma inspeção complementar em eventos encontrou o mesmo padrao em noticia do Projeto Rondon/ICB e curso CIAR com inscricao. O padrao confirma a critica de produto: parte do acervo que parece noticia, canal institucional ou inscricao deve ser reclassificada pela pipeline, nao competir com eventos futuros.
+
+Na mesma amostra, as 40 oportunidades foram sinalizadas com `missing-deadline`. Isso nao significa que todas devam sair do feed: significa que a pipeline ainda nao esta preenchendo prazo real (`deadline_at`, `deadline_date`, `data_limite`, `inscricoes_ate`) de forma confiavel. `expires_at` fica como janela generica de publicacao e nao substitui prazo de inscricao.
+
+Comando reproduzivel:
+
+```powershell
+npm run benchmark:feed-ranking-shadow -- --limit 80 --rpc-limit 10 --now 2026-07-02T12:00:00.000Z
+```
 
 ### Fase 3 - normalizacao na pipeline Cadu
 

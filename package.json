@@ -22,6 +22,7 @@
     "audit:css-baseline": "node scripts/capture-css-visual-baseline.js",
     "audit:kcapi-residual": "node scripts/audit-kcapi-facade-residual.js",
     "benchmark:search-shadow": "node scripts/benchmark-search-shadow.js",
+    "benchmark:feed-ranking-shadow": "node scripts/analyze-feed-ranking-shadow.js",
     "generate:search-registry": "node scripts/generate-search-registry-snapshot.js",
     "check:search-registry": "node scripts/generate-search-registry-snapshot.js --check",
     "cadu:dry-run": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=quick",

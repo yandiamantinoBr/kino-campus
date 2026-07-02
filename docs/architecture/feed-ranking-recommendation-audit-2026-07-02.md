@@ -294,6 +294,7 @@ O fix de 2026-07-02 aplica essa lógica no nível dos chips da home. Ainda falta
 - Formalizar elegibilidade ativa para eventos, oportunidades, caronas e demais módulos.
 - Implementar score global v2 com qualidade, tempo, engajamento saturado, fonte e relevância comunitária.
 - Implementar personalização limitada a 10%, dependente de finalidade `feed-personalization-v1`.
+- Adicionar `scripts/analyze-feed-ranking-shadow.js` e `npm run benchmark:feed-ranking-shadow` para comparar amostra REST/RPC anon sem alterar produção.
 - Adicionar `tests/unit/kc-feed-ranking-policy.test.js` para impedir regressões como evento expirado destacado, `closed` ressuscitado por engajamento e boost pessoal acima do teto.
 - Registrar plano de transição em `docs/architecture/feed-ranking-transition-plan-2026-07-02.md`.
 

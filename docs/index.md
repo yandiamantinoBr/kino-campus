@@ -82,6 +82,7 @@
 | [ops/v75-token-rotation-runbook.md](./ops/v75-token-rotation-runbook.md) | runbook de rotacao e mitigacao de tokens locais sem registrar valores |
 | [qa/README.md](./qa/README.md) | mapa dos artefatos de QA e referencia rapida de validacao |
 | [qa/reports/report-v76-cadu-admin-openclaw-consolidation-2026-06-27.md](./qa/reports/report-v76-cadu-admin-openclaw-consolidation-2026-06-27.md) | evidência V76.54 da consolidação cross-AI do painel Cadu/OpenClaw, hardening dos proxies `/api/cadu/*` e inventário das melhorias de chat |
+| [qa/reports/report-v76-feed-ranking-shadow-policy-2026-07-02.md](./qa/reports/report-v76-feed-ranking-shadow-policy-2026-07-02.md) | evidência V76 do ranking shadow do feed, com amostra Supabase REST/RPC anon, eventos sem data, oportunidades sem prazo e confirmação de `Comentados` com `closed` |
 | [qa/reports/report-v76-search-structured-facets-2026-06-20.md](./qa/reports/report-v76-search-structured-facets-2026-06-20.md) | evidência V76.40 dos chips removíveis, facetas agregadas e zero-results explicável |
 | [qa/reports/report-v76-search-session-standard-order-2026-06-21.md](./qa/reports/report-v76-search-session-standard-order-2026-06-21.md) | evidência V76.46 da ordem padrão efêmera por consulta personalizada |
 | [qa/reports/report-v76-search-sql-local-proof-2026-06-20.md](./qa/reports/report-v76-search-sql-local-proof-2026-06-20.md) | evidência V76.45 da prova SQL em PostgreSQL 17.10, matriz RLS, benchmark e rollback R3 |
