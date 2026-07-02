@@ -558,59 +558,6 @@
   // Feed
   // ============================================================
 
-  async function loadFeed(initial) {
-    var list = $('#feed-list');
-    if (initial) {
-      list.innerHTML = '<div class="kc-cadu-empty">Carregando…</div>';
-      state.allFeedItems = [];
-    }
-    var limit = state.feedLimit;
-    try {
-      var data = await apiFetch('/api/cadu/feed?limit=' + limit);
-      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
-      state.allFeedItems = Array.isArray(data) ? data : (data.body || []);
-      $('#badge-feed').textContent = String(state.allFeedItems.length);
-      $('#kpi-memory').textContent = String(state.allFeedItems.length);
-      $('#kpi-memory-detail').textContent = 'amostra carregada (limit=' + limit + ')';
-      applyFeedFilter();
-    } catch (err) {
-      list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
-      $('#badge-feed').textContent = '!';
-    }
-  }
-
-  function applyFeedFilter() {
-    var q = (state.feedFilter.q || '').toLowerCase().trim();
-    var items = q
-      ? state.allFeedItems.filter(function (it) {
-          var hay = ((it.snippet || '') + ' ' + (it.heading || '') + ' ' + (it.chunk_id || '')).toLowerCase();
-          return hay.indexOf(q) !== -1;
-        })
-      : state.allFeedItems;
-
-    if (!items.length) {
-      $('#feed-list').innerHTML = '<div class="kc-cadu-empty">Nenhum item corresponde ao filtro.</div>';
-      return;
-    }
-
-    $('#feed-list').innerHTML = items.map(function (it) {
-      var heading = it.heading ? escapeHtml(it.heading) : '<span style="color:var(--kc-text-dark-secondary);">—</span>';
-      var dt = fmtDate(it.created_at);
-      var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : '—';
-      var snippet = it.snippet || '(sem conteúdo)';
-      var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml((it.heading || '').replace(/"/g, '&quot;')) + '" title="Perguntar ao Cadu sobre esse chunk (vai para a aba OpenClaw)"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
-      return '<article class="kc-cadu-feed-item">'
-        + '<div class="kc-cadu-feed-item__head">'
-        + '<i class="fas fa-hashtag"></i><code>' + escapeHtml(hash) + '</code>'
-        + '<span>·</span><span>' + heading + '</span>'
-        + '<span>·</span><span><i class="far fa-clock"></i> ' + dt + '</span>'
-        + '<span style="margin-left:auto;">' + askBtn + '</span>'
-        + '</div>'
-        + '<pre class="kc-cadu-feed-item__snippet">' + escapeHtml(snippet) + '</pre>'
-        + '</article>';
-    }).join('');
-  }
-
   function loadFeedPage(page) {
     state.feedPage = Math.max(0, page || 0);
     return loadFeed(false);

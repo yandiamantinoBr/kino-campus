@@ -169,20 +169,58 @@ function canonicalPostId(post) {
   return String((post && post.id) || (post && post.legacy_id) || '').trim();
 }
 
+function isHttpUrl(value) {
+  return /^https?:\/\/[^\s"'<>]+$/i.test(String(value || '').trim());
+}
+
+function flattenImageCandidates(value) {
+  if (!value) return [];
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(flattenImageCandidates);
+  if (typeof value === 'object') {
+    return flattenImageCandidates(value.url || value.image_url || value.imageUrl || value.src || value.href);
+  }
+  return [];
+}
+
 function getPostImage(post) {
-  if (post && post.image_url) return String(post.image_url);
   const metadata = metadataOf(post);
-  const metadataImage = metadata.cover_url || metadata.coverUrl || metadata.image_url || metadata.imageUrl;
-  if (metadataImage) return String(metadataImage);
   const media = post && post.post_media;
-  if (!Array.isArray(media) || media.length === 0) return '';
-  const cover = media.find((item) => item && item.is_cover === true);
-  const selected = cover || media[0];
-  return selected && selected.url ? String(selected.url) : '';
+  const mediaCandidates = Array.isArray(media)
+    ? flattenImageCandidates([
+        media.find((item) => item && item.is_cover === true),
+        media,
+      ])
+    : [];
+  const candidates = flattenImageCandidates([
+    post && post.image_url,
+    post && post.imageUrl,
+    post && post.cover_url,
+    post && post.coverUrl,
+    metadata.cover_url,
+    metadata.coverUrl,
+    metadata.image_url,
+    metadata.imageUrl,
+    metadata.og_image,
+    metadata.ogImage,
+    metadata.thumbnail_url,
+    metadata.thumbnailUrl,
+    post && post.images,
+    post && post.imagens,
+    post && post.image_urls,
+    post && post.gallery_image_urls,
+    metadata.images,
+    metadata.imagens,
+    metadata.image_urls,
+    metadata.gallery_image_urls,
+    metadata.galleryImageUrls,
+    mediaCandidates,
+  ]);
+  return candidates.map((item) => String(item || '').trim()).find(isHttpUrl) || '';
 }
 
 function isRemoteImageUrl(value) {
-  return /^https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|webp|gif|avif)(?:[?#][^\s"'<>]*)?$/i.test(String(value || ''));
+  return isHttpUrl(value) && !/\.(?:pdf|docx?|xlsx?|pptx?|zip|html?|php)(?:[?#].*)?$/i.test(String(value || '').trim());
 }
 
 function beautifyKey(value) {

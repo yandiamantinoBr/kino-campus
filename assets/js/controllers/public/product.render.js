@@ -314,7 +314,26 @@
   function setOpenGraphTags(post) {
     var title = (post.titulo || post.title || 'KinoCampus') + ' — KinoCampus';
     var desc = String(post.descricao || post.description || 'Anúncios, eventos e oportunidades da comunidade universitária UFG.').trim().substring(0, 200);
-    var images = post.images || post.image_urls || [];
+    var metadata = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
+    var images = [];
+    function addImage(value) {
+      if (!value) return;
+      if (Array.isArray(value)) {
+        value.forEach(addImage);
+        return;
+      }
+      if (typeof value === 'object') {
+        addImage(value.url || value.image_url || value.imageUrl || value.src || value.href);
+        return;
+      }
+      var text = String(value || '').trim();
+      if (/^https?:\/\/[^\s"'<>]+$/i.test(text) && images.indexOf(text) === -1) images.push(text);
+    }
+    addImage(post.image_url || post.imageUrl || post.cover_url || post.coverUrl);
+    addImage(metadata.cover_url || metadata.coverUrl || metadata.image_url || metadata.imageUrl || metadata.og_image || metadata.ogImage);
+    addImage(post.imagens || post.images || post.image_urls || post.gallery_image_urls);
+    addImage(metadata.imagens || metadata.images || metadata.image_urls || metadata.gallery_image_urls || metadata.galleryImageUrls);
+    addImage(post.post_media);
     var img = images.length ? String(images[0]) : '';
     var url = window.location.href;
     function setMeta(selector, attr, value) {

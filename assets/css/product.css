@@ -1,5 +1,6 @@
     /* Ajustes pontuais de layout para a página de detalhes (mantém o design existente do projeto) */
     .kc-product-page .kc-main-content {
+      display: block !important;
       padding-top: 30px;
       padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
       /* kc-product-section gerencia seu próprio padding — anular o gutter global */
@@ -44,6 +45,7 @@
       display: flex;
       flex-direction: column;
       gap: 24px;
+      width: 100%;
       margin-bottom: 30px;
       align-items: stretch;
     }
