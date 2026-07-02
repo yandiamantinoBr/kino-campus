@@ -20,6 +20,8 @@
     feedPage: 0,
     feedTotal: 0,
     feedHasMore: false,
+    feedDiagnostics: null,
+    feedDiagnosticsLoading: false,
     sitesFilter: { q: '', tier: '', ig: '' },
     feedFilter: { q: '' },
     currentTab: 'sites',
@@ -692,6 +694,97 @@
     if (next) next.disabled = !state.feedHasMore;
   }
 
+  function countFrom(obj, key) {
+    return obj && obj[key] ? obj[key] : 0;
+  }
+
+  function renderFeedDiagnostics(payload) {
+    var summaryEl = $('#feed-diagnostics-summary');
+    var listEl = $('#feed-diagnostics-list');
+    if (!summaryEl || !listEl) return;
+    var report = payload && payload.report ? payload.report : payload;
+    var triage = report && report.sample && report.sample.caduTriage;
+    if (!triage) {
+      summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Diagnóstico indisponível</span>';
+      listEl.innerHTML = '<div class="kc-cadu-feed-diagnostics__empty">Não foi possível montar a triagem do feed.</div>';
+      return;
+    }
+    var byReason = triage.byReason || {};
+    var queues = triage.queues || {};
+    var missing = queues.missingDeadlines || [];
+    var eventReview = queues.eventDateReview || [];
+    var expired = queues.expired || [];
+    summaryEl.innerHTML = [
+      '<span class="kc-cadu-feed-diagnostics__chip"><strong>' + escapeHtml(triage.total || 0) + '</strong> problemas</span>',
+      '<span class="kc-cadu-feed-diagnostics__chip"><strong>' + escapeHtml(triage.caduMarked || 0) + '</strong> marcados como Cadu</span>',
+      '<span class="kc-cadu-feed-diagnostics__chip"><strong>' + escapeHtml(countFrom(byReason, 'missing-deadline')) + '</strong> sem prazo</span>',
+      '<span class="kc-cadu-feed-diagnostics__chip"><strong>' + escapeHtml(countFrom(byReason, 'missing-event-date')) + '</strong> eventos sem data</span>',
+      '<span class="kc-cadu-feed-diagnostics__chip"><strong>' + escapeHtml(expired.length) + '</strong> expirados na fila</span>',
+    ].join('');
+
+    var items = missing.concat(eventReview).concat(expired).slice(0, 12);
+    if (!items.length) {
+      listEl.innerHTML = '<div class="kc-cadu-feed-diagnostics__empty">Nenhum problema prioritário encontrado na amostra atual.</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(function (item) {
+      var title = item.title || item.id || 'Item sem título';
+      var action = item.repairAction || 'review_metadata';
+      var reason = (item.reasons || []).join(', ') || 'review';
+      var source = item.source || '';
+      var host = item.sourceHost || '';
+      var badge = action === 'extract_deadline_date' ? 'Extrair prazo' : (action === 'fill_data_evento_or_reclassify' ? 'Data/reclassificar' : 'Revisar');
+      return '<article class="kc-cadu-feed-diagnostics__item">'
+        + '<div class="kc-cadu-feed-diagnostics__item-head">'
+        + '<code>' + escapeHtml(item.id || '') + '</code>'
+        + '<span>' + escapeHtml(item.module || '') + '</span>'
+        + '<span>' + escapeHtml(reason) + '</span>'
+        + (host ? '<span>' + escapeHtml(host) + '</span>' : '')
+        + '</div>'
+        + '<div class="kc-cadu-feed-diagnostics__item-title">' + escapeHtml(title) + '</div>'
+        + '<div class="kc-cadu-feed-diagnostics__item-actions">'
+        + '<span class="kc-cadu-feed-diagnostics__chip">' + escapeHtml(badge) + '</span>'
+        + (source ? '<a href="' + escapeHtml(source) + '" target="_blank" rel="noopener" class="kc-cadu-feed-diagnostics__chip">Fonte</a>' : '')
+        + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed-diagnostic"'
+        + ' data-ask-id="' + escapeHtml(item.id || '') + '"'
+        + ' data-ask-title="' + escapeHtml(title.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-source="' + escapeHtml(source.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-action="' + escapeHtml(action) + '"'
+        + ' data-ask-reason="' + escapeHtml(reason.replace(/"/g, '&quot;')) + '">'
+        + '<i class="fas fa-robot"></i> Perguntar Cadu</button>'
+        + '</div>'
+        + '</article>';
+    }).join('');
+  }
+
+  async function loadFeedDiagnostics() {
+    var btn = $('#feed-diagnostics-refresh-btn');
+    var summaryEl = $('#feed-diagnostics-summary');
+    var listEl = $('#feed-diagnostics-list');
+    if (state.feedDiagnosticsLoading) return;
+    state.feedDiagnosticsLoading = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+    }
+    if (summaryEl) summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Consultando Supabase read-only...</span>';
+    try {
+      var data = await apiFetch('/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12');
+      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
+      state.feedDiagnostics = data;
+      renderFeedDiagnostics(data);
+    } catch (err) {
+      if (summaryEl) summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Erro no diagnóstico</span>';
+      if (listEl) listEl.innerHTML = '<div class="kc-cadu-feed-diagnostics__empty">Erro ao carregar diagnóstico: ' + escapeHtml(err.message || err) + '</div>';
+    } finally {
+      state.feedDiagnosticsLoading = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-chart-line"></i> Atualizar diagnóstico';
+      }
+    }
+  }
+
   // ============================================================
   // Tabs + eventos
   // ============================================================
@@ -704,6 +797,9 @@
     });
     $('#tab-sites').style.display = name === 'sites' ? '' : 'none';
     $('#tab-feed').style.display = name === 'feed' ? '' : 'none';
+    if (name === 'feed' && !state.feedDiagnostics && !state.feedDiagnosticsLoading) {
+      loadFeedDiagnostics();
+    }
     var tabPipeline = $('#tab-pipeline');
     if (tabPipeline) {
       tabPipeline.style.display = name === 'pipeline' ? '' : 'none';
@@ -1222,6 +1318,26 @@
         } else {
           showCaduError('Erro ao perguntar ao Cadu sobre o chunk: ' + escapeHtml(resp && resp.status ? ('HTTP ' + resp.status) : 'sem resposta'));
         }
+      } else if (kind === 'feed-diagnostic') {
+        var diagId = btn.getAttribute('data-ask-id') || '';
+        var diagTitle = btn.getAttribute('data-ask-title') || '';
+        var diagSource = btn.getAttribute('data-ask-source') || '';
+        var diagAction = btn.getAttribute('data-ask-action') || '';
+        var diagReason = btn.getAttribute('data-ask-reason') || '';
+        message = '<feed-diagnostic id="' + diagId + '" action="' + diagAction + '" reason="' + diagReason + '" source="' + diagSource + '"></feed-diagnostic>\n\n'
+          + 'Analise este problema do feed publico do KinoCampus: "' + diagTitle + '". '
+          + 'A acao sugerida e "' + diagAction + '" por causa de "' + diagReason + '". '
+          + 'Use a fonte oficial quando disponivel (' + (diagSource || 'sem fonte') + ') e diga exatamente qual metadata deve ser corrigida, se e prazo, data de evento, reclassificacao ou arquivamento.';
+        var diagResp = await apiFetch('/api/cadu/openclaw/agent-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+        });
+        if (diagResp && !diagResp.__error) {
+          showAskCaduResult('Diagnóstico do feed: ' + (diagTitle || diagId), diagResp);
+        } else {
+          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + escapeHtml(diagResp && diagResp.status ? ('HTTP ' + diagResp.status) : 'sem resposta'));
+        }
       } else if (kind === 'site') {
         var siteName = btn.getAttribute('data-ask-name') || '';
         var siteUrl = btn.getAttribute('data-ask-url') || '';
@@ -1496,6 +1612,8 @@
     });
 
     $('#feed-refresh-btn').addEventListener('click', function () { loadFeed(true); });
+    var feedDiagRefresh = $('#feed-diagnostics-refresh-btn');
+    if (feedDiagRefresh) feedDiagRefresh.addEventListener('click', loadFeedDiagnostics);
     var feedPrev = $('#feed-prev-page-btn');
     if (feedPrev) feedPrev.addEventListener('click', function () { loadFeedPage(state.feedPage - 1); });
     var feedNext = $('#feed-next-page-btn');

@@ -15,6 +15,7 @@ function parseArgs(argv) {
     envUrl: DEFAULT_PUBLIC_ENV_URL,
     limit: 120,
     rpcLimit: 20,
+    triageLimit: 25,
     modules: DEFAULT_MODULES.slice(),
     statuses: ['published'],
     sortBys: DEFAULT_SORTS.slice(),
@@ -37,6 +38,7 @@ function parseArgs(argv) {
     const value = argv[index + 1] && !argv[index + 1].startsWith('--') ? argv[++index] : '';
     if (key === 'limit') options.limit = Math.max(1, Number(value) || options.limit);
     else if (key === 'rpc-limit') options.rpcLimit = Math.max(1, Number(value) || options.rpcLimit);
+    else if (key === 'triage-limit') options.triageLimit = Math.max(1, Number(value) || options.triageLimit);
     else if (key === 'modules') options.modules = csv(value, DEFAULT_MODULES);
     else if (key === 'statuses') options.statuses = csv(value, ['published']);
     else if (key === 'sort-by') options.sortBys = csv(value, DEFAULT_SORTS);
@@ -180,6 +182,25 @@ function sourceOf(post) {
   return String(post && (post.source_url || post.url || post.link) || metadata.source_url || metadata.link || '').trim();
 }
 
+function sourceHostOf(post) {
+  try {
+    return new URL(sourceOf(post)).hostname.replace(/^www\./, '');
+  } catch (_) {
+    return '';
+  }
+}
+
+function isCaduPublished(post) {
+  const metadata = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+  return (
+    metadata.cadu_published === true ||
+    metadata.published_by_cadu === true ||
+    post && post.cadu_published === true ||
+    post && post.published_by_cadu === true ||
+    Boolean(metadata.cadu_run_id || post && post.cadu_run_id)
+  );
+}
+
 function reasonTypes(entry) {
   return (entry.eligibility.reasons || []).map((reason) => reason.type);
 }
@@ -190,7 +211,7 @@ function classifyIssue(entry) {
   const reasons = reasonTypes(entry);
   const moduleKey = moduleOf(entry);
   const metadata = post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
-  const caduPublished = metadata.cadu_published === true;
+  const caduPublished = isCaduPublished(post);
   let severity = 'info';
   let suggestion = '';
 
@@ -223,9 +244,91 @@ function classifyIssue(entry) {
     score: entry.finalScore,
     reasons,
     caduPublished,
+    caduRunId: String(metadata.cadu_run_id || post.cadu_run_id || ''),
     title: title.slice(0, 120),
     source: sourceOf(post),
+    sourceHost: sourceHostOf(post),
     suggestion
+  };
+}
+
+function countBy(values) {
+  return values.reduce((acc, value) => {
+    const key = String(value || 'unknown');
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function repairAction(issue) {
+  const reasons = issue.reasons || [];
+  if (reasons.includes('missing-deadline')) return 'extract_deadline_date';
+  if (reasons.includes('missing-event-date')) return 'fill_data_evento_or_reclassify';
+  if (reasons.includes('expired-event') || reasons.includes('expired-deadline') || reasons.includes('expired')) return 'archive_or_close';
+  return 'review_metadata';
+}
+
+function triageItem(issue) {
+  return {
+    id: issue.id,
+    module: issue.module,
+    severity: issue.severity,
+    score: issue.score,
+    reasons: issue.reasons,
+    caduPublished: issue.caduPublished,
+    caduRunId: issue.caduRunId,
+    repairAction: repairAction(issue),
+    title: issue.title,
+    source: issue.source,
+    sourceHost: issue.sourceHost,
+    suggestion: issue.suggestion
+  };
+}
+
+function buildCaduTriage(entries, options = {}) {
+  const limit = Math.max(1, Number(options.limit) || 25);
+  const issues = entries
+    .map(classifyIssue)
+    .filter(Boolean)
+    .filter((issue) => issue.severity !== 'info')
+    .sort((left, right) => {
+      const severityOrder = { high: 0, medium: 1, info: 2 };
+      return severityOrder[left.severity] - severityOrder[right.severity] || right.score - left.score;
+    });
+  const actionable = issues.filter((issue) => issue.caduPublished || ['eventos', 'oportunidades'].includes(issue.module));
+  const byReason = {};
+  actionable.forEach((issue) => {
+    (issue.reasons || []).forEach((reason) => {
+      byReason[reason] = (byReason[reason] || 0) + 1;
+    });
+  });
+  const bySourceHost = countBy(actionable.map((issue) => issue.sourceHost).filter(Boolean));
+  const byRepairAction = countBy(actionable.map(repairAction));
+  const sortIssue = (left, right) => right.score - left.score || String(left.title).localeCompare(String(right.title));
+  return {
+    total: actionable.length,
+    caduMarked: actionable.filter((issue) => issue.caduPublished).length,
+    unmarkedButRelevant: actionable.filter((issue) => !issue.caduPublished).length,
+    byReason,
+    bySourceHost,
+    byRepairAction,
+    queues: {
+      missingDeadlines: actionable
+        .filter((issue) => issue.module === 'oportunidades' && issue.reasons.includes('missing-deadline'))
+        .sort(sortIssue)
+        .slice(0, limit)
+        .map(triageItem),
+      eventDateReview: actionable
+        .filter((issue) => issue.module === 'eventos' && issue.reasons.includes('missing-event-date'))
+        .sort(sortIssue)
+        .slice(0, limit)
+        .map(triageItem),
+      expired: actionable
+        .filter((issue) => issue.reasons.some((reason) => ['expired', 'expired-event', 'expired-deadline'].includes(reason)))
+        .sort(sortIssue)
+        .slice(0, limit)
+        .map(triageItem)
+    }
   };
 }
 
@@ -324,7 +427,8 @@ async function run(options) {
     sample: {
       summary: summarize(shadowEntries),
       topShadow: shadowEntries.slice(0, 12).map(compactEntry),
-      issues
+      issues,
+      caduTriage: buildCaduTriage(shadowEntries, { limit: options.triageLimit })
     },
     currentFeeds: rpcFeeds
   };
@@ -355,6 +459,8 @@ module.exports = {
   resolveSupabaseConfig,
   summarize,
   classifyIssue,
+  buildCaduTriage,
+  isCaduPublished,
   compareRpcFeed,
   run
 };

@@ -57,6 +57,81 @@ Resultado:
 - 67 testes passaram;
 - `deno check` passou para `supabase/functions/cadu-publish/index.ts`.
 
+## Follow-up: diagnostico operacional no admin/Cadu
+
+Na mesma data, o benchmark shadow ganhou um bloco `sample.caduTriage`, com filas operacionais para:
+
+- `missingDeadlines`: oportunidades publicadas sem `metadata.deadline_date`;
+- `eventDateReview`: eventos publicados sem `data_evento`/`data_fim_evento`;
+- `expired`: itens que nao deveriam competir no feed ativo.
+
+Arquivos:
+
+- `scripts/analyze-feed-ranking-shadow.js`;
+- `api/cadu/feed-diagnostics.js`;
+- `admin/cadu.html`;
+- `assets/js/controllers/admin/admin-cadu.controller.js`;
+- `tests/unit/analyze-feed-ranking-shadow.test.js`;
+- `tests/integration/cadu-feed-diagnostics-contract.test.js`.
+
+O endpoint `/api/cadu/feed-diagnostics` e read-only, protegido por `requireCaduAdmin`, usa Supabase anon/REST/RPC e reaproveita o mesmo analisador do CLI. Ele nao aceita metodos de escrita, nao usa `service_role` e retorna `{ ok, report }`.
+
+A aba **Feed coletado** passou a exibir um painel "Diagnostico do feed publico" com:
+
+- contagem de problemas totais;
+- quantos posts estao marcados como Cadu;
+- oportunidades sem prazo;
+- eventos sem data;
+- lista priorizada com fonte e botao "Perguntar Cadu".
+
+Consulta real executada:
+
+```powershell
+npm run benchmark:feed-ranking-shadow -- --limit 80 --rpc-limit 10 --triage-limit 12 --now 2026-07-02T12:00:00.000Z --pretty --output output/feed-ranking-shadow-cadu-triage-2026-07-02.json
+```
+
+Resultado da triagem:
+
+| Metrica | Valor |
+|---|---:|
+| problemas relevantes | 42 |
+| marcados como Cadu | 41 |
+| oportunidades sem prazo | 40 |
+| eventos sem data | 2 |
+| acao `extract_deadline_date` | 40 |
+| acao `fill_data_evento_or_reclassify` | 2 |
+
+Fontes com maior concentracao na amostra:
+
+- `ufg.br`: 6;
+- `inf.ufg.br`: 4;
+- `institutoverbena.ufg.br`: 4;
+- `sri.ufg.br`: 4;
+- `prpi.ufg.br`: 3;
+- `prpg.ufg.br`: 3.
+
+Itens prioritarios observados:
+
+- `b2171655-7bf7-483a-b251-9908d2377c45` - Mobilidade internacional CEIA/AKCIT, `inf.ufg.br`, extrair prazo;
+- `7b8f44bd-2a47-422b-9fc0-7baf579cb5a3` - Premio Peter Muranyi 2027, `inf.ufg.br`, extrair prazo;
+- `19a3f0d1-d78a-45cf-8de3-b59efbff95e9` - CICSIC 2026, `ufg.br`, extrair prazo;
+- `8d5950f3-e3a6-4123-bd99-0ca2a50c4a6e` - lista de subsidio alimentacao PRPG, reclassificar/retirar de eventos;
+- `b5e3aac9-dead-4130-903b-2d4b3737e21a` - FANUT Conecta, reclassificar/retirar de eventos.
+
+Validacao adicional:
+
+```powershell
+node --check api/cadu/feed-diagnostics.js
+node --check assets/js/controllers/admin/admin-cadu.controller.js
+npm test -- tests/unit/analyze-feed-ranking-shadow.test.js tests/unit/kc-feed-ranking-policy.test.js tests/integration/cadu-feed-diagnostics-contract.test.js --runInBand
+```
+
+Resultado:
+
+- `node --check` passou nos dois arquivos;
+- 3 suites Jest passaram;
+- 17 testes passaram.
+
 ## Impacto no ranking/feed
 
 Esta alteracao nao muda a ordenacao publica do feed. Ela melhora os metadados que a politica shadow e uma futura RPC v2 precisam consumir.
@@ -70,5 +145,5 @@ Efeito esperado nas proximas publicacoes:
 ## Pendencias
 
 - Rodar novo benchmark shadow depois de novas publicacoes do Cadu entrarem no banco.
-- Criar diagnostico no painel admin/Cadu para listar oportunidades publicadas sem `deadline_date`.
 - Em uma fase posterior, normalizar tambem um campo de cronograma detalhado (`schedule_dates`) para preservar resultado/matricula sem confundir com prazo principal.
+- Planejar reparo retroativo seguro para posts ja publicados, preferencialmente gerando sugestoes de patch por item antes de qualquer escrita no banco.
