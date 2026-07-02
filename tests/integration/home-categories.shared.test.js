@@ -11,6 +11,21 @@ describe('KCHomeCategoryUtils', () => {
     });
   });
 
+  test('resolve categorias de oportunidades usadas pelas abas personalizadas', () => {
+    expect(HomeCategories.findCategory('oportunidades', 'estagios')).toMatchObject({
+      categoryKey: 'estagio',
+      label: 'Estágios'
+    });
+    expect(HomeCategories.findCategory('oportunidades', 'pesquisa')).toMatchObject({
+      categoryKey: 'pesquisa',
+      href: 'oportunidades.html#pesquisa'
+    });
+    expect(HomeCategories.findCategory('oportunidades', 'bolsas')).toMatchObject({
+      categoryKey: 'bolsa',
+      label: 'Bolsas'
+    });
+  });
+
   test('resolveCategoriesFromPost usa modulo e categoria normalizados', () => {
     const results = HomeCategories.resolveCategoriesFromPost({
       module: 'moradia',

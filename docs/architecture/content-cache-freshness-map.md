@@ -104,6 +104,10 @@ A ordenacao e do servidor (cursor); o cliente NAO deve reordenar a pagina pagina
 (quebraria o cursor). Para mudar pesos de relevancia, ajustar `kc_compute_highlight_score`;
 para frescor, o cron acima.
 
+Auditoria complementar: `docs/architecture/feed-ranking-recommendation-audit-2026-07-02.md`
+detalha a separacao entre ranking de posts, chips personalizados da home, elegibilidade ativa,
+risco de eventos passados e roadmap de personalizacao auditavel.
+
 ## Rollback
 
 Se algum problema de consistencia aparecer:
