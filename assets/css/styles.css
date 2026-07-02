@@ -11383,6 +11383,26 @@ a.kc-home-metric-card:hover {
   color: var(--kc-text-dark-primary);
 }
 
+body.kc-admin-page .kc-consent-banner {
+  left: auto;
+  right: 16px;
+  max-width: min(560px, calc(100vw - 32px));
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 10px;
+  padding: 14px;
+}
+
+body.kc-admin-page .kc-consent-banner__actions {
+  justify-content: flex-start;
+}
+
+body.kc-admin-page .kc-consent-btn {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
 .kc-consent-modal {
   position: fixed;
   inset: 0;
@@ -11605,6 +11625,8 @@ a.kc-home-metric-card:hover {
     grid-template-columns: 1fr;
     left: 10px;
     right: 10px;
+    max-height: min(40vh, 340px);
+    overflow-y: auto;
     padding: 14px;
   }
 

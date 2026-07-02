@@ -24,11 +24,12 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.16';
+  const VERSION = '9.3.5.20';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
   const AUTH_BOOT_TIMEOUT_MS = 8000;
   const CHAT_REQUEST_TIMEOUT_MS = 12000;
+  const PRESENCE_ONLINE_MS = 2 * 60 * 1000;  // 2 min — peer "online" se última msg nesse intervalo
 
   const state = {
     me: null,
@@ -48,6 +49,7 @@
     rtChannel: null,
     blocked: { i_blocked: false, they_blocked: false },
     conversationQuery: '',
+    conversationFilter: 'all',  // 'all' | 'unread' — tabs Todas / Não lidas
     inboxReloadTimer: null,
     authRestartTimer: null,
     bootPromise: null,
@@ -515,6 +517,7 @@
   function renderConversationsList() {
     var list = $('kcChatList');
     if (!list) return;
+    updateFilterTabs();
     if (state.conversations.length === 0) {
       list.innerHTML = '<div class="kc-chat-empty" style="height:100%">' +
         '<div class="kc-chat-empty__icon"><i class="fas fa-inbox"></i></div>' +
@@ -524,22 +527,26 @@
       return;
     }
     var query = String(state.conversationQuery || '').trim().toLowerCase();
-    var visibleConversations = query
-      ? state.conversations.filter(function (c) {
-        var haystack = [
-          c.other_display_name,
-          c.last_message_preview,
-          c.last_message_type === 'image' ? 'imagem foto anexo' : ''
-        ].join(' ').toLowerCase();
-        return haystack.indexOf(query) >= 0;
-      })
-      : state.conversations;
+    var visibleConversations = state.conversations.filter(function (c) {
+      // Filtro por tab: "unread" mostra só conversas com unread_count > 0
+      if (state.conversationFilter === 'unread' && !(c.unread_count > 0)) return false;
+      if (!query) return true;
+      var haystack = [
+        c.other_display_name,
+        c.last_message_preview,
+        c.last_message_type === 'image' ? 'imagem foto anexo' : ''
+      ].join(' ').toLowerCase();
+      return haystack.indexOf(query) >= 0;
+    });
 
     if (visibleConversations.length === 0) {
+      var emptyMsg = state.conversationFilter === 'unread'
+        ? 'Você não tem mensagens não lidas. Quando chegar uma nova, ela aparece aqui.'
+        : 'Tente buscar pelo nome da pessoa ou por um trecho da mensagem.';
       list.innerHTML = '<div class="kc-chat-empty" style="height:100%">' +
-        '<div class="kc-chat-empty__icon"><i class="fas fa-search"></i></div>' +
-        '<h2 class="kc-chat-empty__title">Nenhuma conversa encontrada</h2>' +
-        '<p class="kc-chat-empty__body">Tente buscar pelo nome da pessoa ou por um trecho da mensagem.</p>' +
+        '<div class="kc-chat-empty__icon"><i class="fas fa-check-double"></i></div>' +
+        '<h2 class="kc-chat-empty__title">' + (state.conversationFilter === 'unread' ? 'Tudo lido!' : 'Nenhuma conversa encontrada') + '</h2>' +
+        '<p class="kc-chat-empty__body">' + esc(emptyMsg) + '</p>' +
         '</div>';
       return;
     }
@@ -547,17 +554,21 @@
     var html = visibleConversations.map(function (c) {
       var preview = c.last_message_preview || (c.last_message_type === 'image' ? '[imagem]' : 'Sem mensagens ainda');
       var time = formatTime(c.last_message_at);
-      var badge = c.unread_count > 0
+      var isUnread = c.unread_count > 0;
+      var badge = isUnread
         ? '<span class="kc-chat-conv-item__badge">' + (c.unread_count > 99 ? '99+' : c.unread_count) + '</span>'
         : '';
       var isActive = c.conversation_id === state.activeConvId ? ' is-active' : '';
+      var unreadCls = isUnread ? ' is-unread' : '';
       var isImagePreview = c.last_message_type === 'image' ? ' is-image' : '';
+      var isOnline = c.last_message_at && (Date.now() - new Date(c.last_message_at).getTime() < PRESENCE_ONLINE_MS);
+      var onlineCls = isOnline ? ' kc-chat-conv-item__avatar--online' : '';
       return '<a href="#c/' + esc(c.conversation_id) + '" ' +
-        'class="kc-chat-conv-item' + isActive + '" ' +
+        'class="kc-chat-conv-item' + isActive + unreadCls + '" ' +
         'role="listitem" ' +
         'data-conv-id="' + esc(c.conversation_id) + '" ' +
         'data-peer-id="' + esc(c.other_user_id) + '">' +
-        '<div class="kc-chat-conv-item__avatar">' + avatarHTML(c.other_avatar_url, c.other_display_name) + '</div>' +
+        '<div class="kc-chat-conv-item__avatar' + onlineCls + '">' + avatarHTML(c.other_avatar_url, c.other_display_name) + '</div>' +
         '<div class="kc-chat-conv-item__body">' +
           '<span class="kc-chat-conv-item__name">' + esc(c.other_display_name) + '</span>' +
           '<span class="kc-chat-conv-item__preview' + isImagePreview + '">' + esc(preview) + '</span>' +
@@ -580,6 +591,26 @@
         }
       });
     });
+  }
+
+  // Atualiza as tabs de filtro (Todas / Não lidas) com contagem dinâmica
+  function updateFilterTabs() {
+    var tabs = $('kcChatFilterTabs');
+    if (!tabs) return;
+    var unreadTotal = state.conversations.reduce(function (sum, c) {
+      return sum + (c.unread_count > 0 ? 1 : 0);
+    }, 0);
+    var tabAll = tabs.querySelector('[data-filter="all"]');
+    var tabUnread = tabs.querySelector('[data-filter="unread"]');
+    if (tabAll) {
+      tabAll.classList.toggle('is-active', state.conversationFilter === 'all');
+    }
+    if (tabUnread) {
+      tabUnread.classList.toggle('is-active', state.conversationFilter === 'unread');
+      var countEl = tabUnread.querySelector('.kc-chat-filter-tab__count');
+      if (countEl) countEl.textContent = unreadTotal > 99 ? '99+' : String(unreadTotal);
+      tabUnread.style.display = unreadTotal > 0 ? '' : 'none';
+    }
   }
 
   function renderEmptyList(reason) {
@@ -695,9 +726,30 @@
     var status = $('kcChatPeerStatus');
     var avatarEl = $('kcChatPeerAvatar');
     if (name) name.textContent = state.activePeer.display_name || 'Usuário';
-    if (status) status.textContent = '';  // futuro: online/última vez
     if (avatarEl) {
       avatarEl.innerHTML = avatarHTML(state.activePeer.avatar_url, state.activePeer.display_name);
+    }
+    renderPresence(status, avatarEl);
+  }
+
+  // Calcula presença do peer com base na última mensagem recebida dele.
+  // "online" se < 2 min; senão "visto por último HH:MM" ou "offline".
+  function renderPresence(statusEl, avatarEl) {
+    var peerMsgs = state.messages.filter(function (m) {
+      return m.sender_id !== state.me.id && !m.deleted_at;
+    });
+    var lastPeerTs = peerMsgs.length ? new Date(peerMsgs[peerMsgs.length - 1].created_at).getTime() : 0;
+    var isOnline = lastPeerTs && (Date.now() - lastPeerTs < PRESENCE_ONLINE_MS);
+    if (avatarEl) avatarEl.classList.toggle('is-online', isOnline);
+    if (!statusEl) return;
+    statusEl.classList.remove('is-online');
+    if (isOnline) {
+      statusEl.textContent = 'online';
+      statusEl.classList.add('is-online');
+    } else if (lastPeerTs) {
+      statusEl.textContent = 'visto por último ' + formatTime(new Date(lastPeerTs).toISOString());
+    } else {
+      statusEl.textContent = '';
     }
   }
 
@@ -842,6 +894,7 @@
         else if (action === 'report') handleReportMessage(msgId);
         else if (action === 'react') handleReactToMessage(msgId);
         else if (action === 'reply') handleReplyToMessage(msgId);
+        else if (action === 'copy') handleCopyMessage(msgId);
       });
     });
 
@@ -972,8 +1025,13 @@
 
     var menu = '';
     if (!m.deleted_at) {
+      // "Copiar" aparece em mensagens de texto de qualquer remetente
+      var copyBtn = m.message_type === 'text'
+        ? '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="copy" title="Copiar"><i class="fas fa-copy"></i></button>'
+        : '';
       if (isMine) {
         menu = '<span class="kc-chat-msg__menu">' +
+          copyBtn +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="react" title="Reagir"><i class="fas fa-smile"></i></button>' +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="reply" title="Responder"><i class="fas fa-reply"></i></button>' +
           (m.message_type === 'text' ?
@@ -982,6 +1040,7 @@
         '</span>';
       } else {
         menu = '<span class="kc-chat-msg__menu">' +
+          copyBtn +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="react" title="Reagir"><i class="fas fa-smile"></i></button>' +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="reply" title="Responder"><i class="fas fa-reply"></i></button>' +
           '<button class="kc-chat-msg__menu-btn" data-msg-menu="' + esc(m.message_id) + '" data-action="report" title="Denunciar"><i class="fas fa-flag"></i></button>' +
@@ -1277,6 +1336,37 @@
     toast('Denúncia registrada. Obrigado!', 'success');
   }
 
+  // Copia o texto da mensagem para a área de transferência (V76.56)
+  function handleCopyMessage(msgId) {
+    var m = state.messagesById.get(msgId);
+    if (!m || m.message_type !== 'text' || !m.content) return;
+    var text = m.content;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast('Mensagem copiada!', 'success'); },
+        function () { fallbackCopy(text); }
+      );
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function fallbackCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast(ok ? 'Mensagem copiada!' : 'Não foi possível copiar.', ok ? 'success' : 'error');
+    } catch (e) {
+      toast('Não foi possível copiar.', 'error');
+    }
+  }
+
   // ── Reações emoji (V76.53) ──────────────────────────────────────────────
 
   var REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '👏'];
@@ -1498,8 +1588,10 @@
   function hideTypingIndicator() {
     var status = $('kcChatPeerStatus');
     if (!status) return;
-    status.innerHTML = '';
     delete status.dataset.kcPrevStatus;
+    // Restaura o status de presença (online / visto por último) em vez de vazio
+    var avatarEl = $('kcChatPeerAvatar');
+    renderPresence(status, avatarEl);
   }
 
   // Debounce: transmite "digitando" no máximo a cada 1.5s enquanto o usuário digita
@@ -1690,6 +1782,17 @@
         scrollToBottom();
         var last = state.messages[state.messages.length - 1];
         markActiveConversationRead(last && last.message_id);
+      });
+    }
+
+    // Tabs de filtro: Todas / Não lidas
+    var filterTabs = $('kcChatFilterTabs');
+    if (filterTabs) {
+      filterTabs.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-filter]');
+        if (!btn) return;
+        state.conversationFilter = btn.getAttribute('data-filter') === 'unread' ? 'unread' : 'all';
+        renderConversationsList();
       });
     }
 

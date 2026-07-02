@@ -25,6 +25,29 @@ describe('metadados SEO de product.html', () => {
     expect(values.image).toBe('https://www.kinocampus.com.br/api/og-image?type=eventos');
   });
 
+  test('prioriza capa marcada em post_media para preview social', () => {
+    const values = buildProductValues(buildPost({
+      post_media: [
+        { url: 'https://cdn.example.com/galeria-1.jpg', is_cover: false },
+        { url: 'https://cdn.example.com/capa-evento.webp', is_cover: true },
+      ],
+    }));
+
+    expect(values.image).toBe('https://cdn.example.com/capa-evento.webp');
+  });
+
+  test('aceita listas de imagens em metadata mesmo sem extensao explicita', () => {
+    const values = buildProductValues(buildPost({
+      metadata: {
+        gallery_image_urls: [
+          'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover',
+        ],
+      },
+    }));
+
+    expect(values.image).toBe('https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover');
+  });
+
   test('limita title e description sem perder contexto editorial', () => {
     const values = buildProductValues(buildPost({
       title: 'Evento '.repeat(30),

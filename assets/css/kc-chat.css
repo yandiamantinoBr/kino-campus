@@ -20,16 +20,16 @@
 
 @media (min-width: 1024px) {
   .kc-chat-page {
-    /* Sidebar estilo WhatsApp: faixa fixa confortável (min 360 / ideal 30% / max 440).
-       O 1fr restante acomoda o painel de conversa com respiro natural. */
     grid-template-columns: minmax(360px, 30%) minmax(0, 1fr);
     max-width: 1520px;
+    margin: 0 auto;
+    border-left: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
+    border-right: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
   }
 }
 
 @media (min-width: 1400px) {
   .kc-chat-page {
-    /* Em telas largas, limita a sidebar para não esticar demais. */
     grid-template-columns: 420px minmax(0, 1fr);
   }
 }
@@ -39,9 +39,14 @@
 .kc-chat-sidebar {
   display: flex;
   flex-direction: column;
+  /* Sidebar um tom mais escura que o painel — separação clara como no WhatsApp. */
   background: var(--kc-surface-dark);
   border-right: 1px solid var(--kc-border-dark, rgba(255,255,255,0.06));
   overflow: hidden;
+}
+
+[data-theme="light"] .kc-chat-sidebar {
+  background: #f0f2f5;
 }
 
 @media (max-width: 1023px) {
@@ -71,25 +76,84 @@
 }
 
 .kc-chat-sidebar__header {
-  padding: 22px 20px 16px;
+  padding: 18px 18px 14px;
   border-bottom: 1px solid var(--kc-border-dark, rgba(255,255,255,0.06));
   flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08), transparent 70%);
 }
 
 .kc-chat-sidebar__title {
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   font-weight: 800;
   margin: 0 0 2px;
   color: var(--kc-text-dark-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-chat-sidebar__title i {
+  color: var(--kc-primary-brand);
+  font-size: 1.2rem;
 }
 
 .kc-chat-sidebar__subtitle {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--kc-text-dark-secondary);
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   line-height: 1.4;
+}
+
+/* ── Tabs de filtro: Todas / Não lidas ────────────────────────────────────── */
+
+.kc-chat-filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.kc-chat-filter-tab {
+  background: transparent;
+  border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.1));
+  color: var(--kc-text-dark-secondary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--transition-speed, 0.2s), color var(--transition-speed, 0.2s), border-color var(--transition-speed, 0.2s);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.kc-chat-filter-tab:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-chat-filter-tab.is-active {
+  background: var(--kc-primary-brand);
+  border-color: var(--kc-primary-brand);
+  color: #fff;
+}
+
+.kc-chat-filter-tab__count {
+  background: rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+.kc-chat-filter-tab:not(.is-active) .kc-chat-filter-tab__count {
+  background: var(--kc-primary-brand);
+  color: #fff;
 }
 
 .kc-chat-search {
@@ -147,10 +211,10 @@
 
 .kc-chat-conv-item {
   display: grid;
-  grid-template-columns: 49px 1fr auto;
+  grid-template-columns: 52px 1fr auto;
   gap: 13px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 11px 12px;
   cursor: pointer;
   border-radius: 12px;
   transition: background var(--transition-speed, 0.18s);
@@ -159,11 +223,15 @@
 }
 
 .kc-chat-conv-item:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.06);
+}
+
+[data-theme="light"] .kc-chat-conv-item:hover {
+  background: rgba(0,0,0,0.04);
 }
 
 .kc-chat-conv-item.is-active {
-  background: rgba(255, 107, 0, 0.12);
+  background: rgba(255, 107, 0, 0.14);
 }
 
 .kc-chat-conv-item.is-active .kc-chat-conv-item__name {
@@ -171,8 +239,8 @@
 }
 
 .kc-chat-conv-item__avatar {
-  width: 49px;
-  height: 49px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ff7c00, #ff9a3a);
   display: flex;
@@ -180,17 +248,46 @@
   justify-content: center;
   color: #fff;
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+
+.kc-chat-conv-item__avatar > img,
+.kc-chat-conv-item__avatar > span {
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .kc-chat-conv-item__avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Indicador "online" — bolinha verde no canto do avatar */
+.kc-chat-conv-item__avatar--online::after {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--kc-whatsapp-green, #25D366);
+  border: 2.5px solid var(--kc-surface-dark);
+  box-shadow: 0 0 4px rgba(37, 211, 102, 0.5);
+}
+
+[data-theme="light"] .kc-chat-conv-item__avatar--online::after {
+  border-color: #f0f2f5;
+}
+
+/* Em conversa ativa, o anel do online acompanha a cor de fundo ativa */
+.kc-chat-conv-item.is-active .kc-chat-conv-item__avatar--online::after {
+  border-color: rgba(255, 107, 0, 0.14);
 }
 
 .kc-chat-conv-item__body {
@@ -209,8 +306,15 @@
   text-overflow: ellipsis;
 }
 
+/* Conversas não-lidas: nome e preview em negrito para destaque */
+.kc-chat-conv-item.is-unread .kc-chat-conv-item__name { font-weight: 800; }
+.kc-chat-conv-item.is-unread .kc-chat-conv-item__preview {
+  font-weight: 600;
+  color: var(--kc-text-dark-primary);
+}
+
 .kc-chat-conv-item__preview {
-  font-size: 0.82rem;
+  font-size: 0.83rem;
   color: var(--kc-text-dark-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -238,11 +342,18 @@
   white-space: nowrap;
 }
 
+/* Conversa não-lida: horário em destaque na cor brand */
+.kc-chat-conv-item.is-unread .kc-chat-conv-item__time {
+  color: var(--kc-primary-brand);
+  font-weight: 700;
+}
+
 .kc-chat-conv-item__badge {
-  background: var(--kc-primary-brand);
+  /* Badge verde estilo WhatsApp para não-lidas */
+  background: var(--kc-whatsapp-green, #25D366);
   color: #fff;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
@@ -250,6 +361,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 3px rgba(37, 211, 102, 0.4);
 }
 
 /* ── Painel da conversa ──────────────────────────────────────────────────── */
@@ -312,14 +424,30 @@
   color: #fff;
   font-weight: 700;
   font-size: 1.05rem;
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
+  position: relative;
 }
 
 .kc-chat-panel__avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Online dot no avatar do header da conversa */
+.kc-chat-panel__avatar.is-online::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--kc-whatsapp-green, #25D366);
+  border: 2.5px solid var(--kc-surface-dark);
+  box-shadow: 0 0 4px rgba(37, 211, 102, 0.5);
 }
 
 .kc-chat-panel__user {
@@ -331,7 +459,7 @@
 .kc-chat-panel__name {
   font-weight: 700;
   color: var(--kc-text-dark-primary);
-  font-size: 1rem;
+  font-size: 1.02rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -340,6 +468,15 @@
 .kc-chat-panel__status {
   font-size: 0.78rem;
   color: var(--kc-text-dark-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status "online" em verde para destaque de presença */
+.kc-chat-panel__status.is-online {
+  color: var(--kc-whatsapp-green, #25D366);
+  font-weight: 600;
 }
 
 /* Indicador "digitando..." — três pontos pulsando no lugar do status */
@@ -523,23 +660,34 @@
 
 .kc-chat-msg--mine {
   align-self: flex-end;
-  background: var(--kc-primary-brand);
+  /* Gradiente laranja vibrante para destacar minhas mensagens */
+  background: linear-gradient(135deg, #FF6B00, #ff8533);
   color: #fff;
   border-bottom-right-radius: 4px;
   margin-right: 8px;
 }
 
+.kc-chat-msg--mine::before {
+  background: #ff8533;  /* cauda acompanha o fim do gradiente */
+}
+
 .kc-chat-msg--other {
   align-self: flex-start;
-  background: var(--kc-surface-dark);
+  /* Dark: cinza mais claro que o sidebar para diferenciação */
+  background: #3a3a3a;
   color: var(--kc-text-dark-primary);
   border-bottom-left-radius: 4px;
   margin-left: 8px;
 }
 
+.kc-chat-msg--other::before {
+  background: #3a3a3a;
+}
+
 [data-theme="light"] .kc-chat-msg--other {
   background: #ffffff;
-  box-shadow: 0 1px 1.5px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
 
 [data-theme="light"] .kc-chat-msg--other::before {
@@ -633,8 +781,13 @@
 }
 
 .kc-chat-msg--mine .kc-chat-msg__meta {
-  color: rgba(255,255,255,0.85);
-  opacity: 0.9;
+  color: rgba(255,255,255,0.9);
+  opacity: 1;
+}
+
+/* Checkmarks de leitura: dupla-azul mais visível */
+.kc-chat-msg__check--read {
+  color: #4fc3f7;
 }
 
 .kc-chat-msg__edited {
@@ -751,12 +904,12 @@
   font-weight: 800;
 }
 
-/* ── Composer ────────────────────────────────────────────────────────────── */
+/* ── Composer (estilo WhatsApp: pill unificado com anexo + emoji dentro) ──── */
 
 .kc-chat-composer {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
   padding: 10px 12px 12px;
   background: var(--kc-surface-dark);
   border-top: 1px solid var(--kc-border-dark, rgba(255,255,255,0.06));
@@ -767,7 +920,7 @@
 @media (min-width: 768px) {
   .kc-chat-composer {
     padding: 12px 24px 14px;
-    gap: 10px;
+    gap: 12px;
   }
 }
 
@@ -777,12 +930,34 @@
   }
 }
 
+/* O "input-row" agrupa anexo + emoji + textarea num container pill único */
+.kc-chat-composer__input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  background: var(--kc-background-dark);
+  border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
+  border-radius: 24px;
+  padding: 2px 4px 2px 6px;
+  transition: border-color var(--transition-speed, 0.2s), box-shadow var(--transition-speed, 0.2s);
+}
+
+.kc-chat-composer__input-row:focus-within {
+  border-color: rgba(255, 107, 0, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+[data-theme="light"] .kc-chat-composer__input-row {
+  background: #ffffff;
+  border-color: rgba(0,0,0,0.1);
+}
+
 .kc-chat-composer__btn {
   background: none;
   border: none;
   color: var(--kc-text-dark-secondary);
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   cursor: pointer;
   font-size: 1.15rem;
@@ -798,14 +973,21 @@
   color: var(--kc-text-dark-primary);
 }
 
+[data-theme="light"] .kc-chat-composer__btn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+/* Botão de send fica FORA da pill — círculo laranja independente */
 .kc-chat-composer__btn--send {
   background: var(--kc-primary-brand);
   color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.35);
 }
 
 .kc-chat-composer__btn--send:hover {
-  background: #ff8a1f;
+  background: #ff8533;
   color: #fff;
+  transform: scale(1.06);
 }
 
 .kc-chat-composer__btn:disabled {
@@ -816,24 +998,22 @@
 .kc-chat-composer__input {
   width: 100%;
   resize: none;
-  min-height: 44px;
+  min-height: 42px;
   max-height: 140px;
-  padding: 11px 16px;
-  border-radius: 22px;
-  background: var(--kc-background-dark);
-  border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
+  padding: 11px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--kc-text-dark-primary);
   font: inherit;
   font-size: 0.95rem;
   line-height: 1.4;
   box-sizing: border-box;
-  transition: border-color var(--transition-speed, 0.2s), box-shadow var(--transition-speed, 0.2s);
+  outline: none;
 }
 
-.kc-chat-composer__input:focus {
-  outline: none;
-  border-color: rgba(255, 107, 0, 0.5);
-  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+[data-theme="light"] .kc-chat-composer__input {
+  color: #1a1a1a;
 }
 
 [data-theme="light"] .kc-chat-composer__input {
@@ -898,21 +1078,22 @@
 }
 
 .kc-chat-empty__icon {
-  width: 80px;
-  height: 80px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
-  background: rgba(255, 107, 0, 0.12);
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.18), rgba(255, 138, 31, 0.08));
   color: var(--kc-primary-brand);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.9rem;
-  margin-bottom: 4px;
+  font-size: 2.4rem;
+  margin-bottom: 6px;
+  box-shadow: 0 0 0 10px rgba(255, 107, 0, 0.04), 0 8px 24px rgba(0,0,0,0.12);
 }
 
 .kc-chat-empty__title {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   color: var(--kc-text-dark-primary);
   font-weight: 700;
   letter-spacing: -0.015em;
@@ -921,7 +1102,7 @@
 .kc-chat-empty__body {
   margin: 0;
   font-size: 0.9rem;
-  max-width: 340px;
+  max-width: 320px;
   line-height: 1.6;
 }
 
@@ -930,7 +1111,7 @@
   content: "";
   display: block;
   width: 100%;
-  max-width: 340px;
+  max-width: 320px;
   height: 1px;
   margin-top: 8px;
   background: linear-gradient(90deg, transparent, var(--kc-border-dark, rgba(255,255,255,0.1)), transparent);
