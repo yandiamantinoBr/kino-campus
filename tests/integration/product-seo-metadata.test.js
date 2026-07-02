@@ -43,4 +43,20 @@ describe('metadados SEO de product.html', () => {
 
     expect(shouldIndexPost(post, values)).toBe(false);
   });
+
+  test('interpreta prazo em formato brasileiro sem expirar no dia correto', () => {
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-07-02T12:00:00.000Z').getTime());
+    try {
+      const post = buildPost({
+        metadata: { deadline_date: '02/07/2026' },
+        expires_at: '2026-07-31T14:14:22.237246+00:00',
+      });
+      const values = buildProductValues(post);
+
+      expect(values.deadline).toBe('02/07/2026');
+      expect(shouldIndexPost(post, values)).toBe(true);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
 });

@@ -406,7 +406,7 @@
     // Renderiza links como <a> clicável
     links.forEach(function (entry) {
       var item = document.createElement('div');
-      item.className = 'kc-spec-item';
+      item.className = 'kc-spec-item kc-spec-item--link';
       var safeUrl = esc(entry[2]);
       item.innerHTML = '<i class="' + esc(entry[0]) + '"></i><div class="kc-spec-item__body"><strong>' + esc(entry[1]) + '</strong><a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + safeUrl + '</a></div>';
       grid.appendChild(item);

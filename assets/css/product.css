@@ -268,45 +268,67 @@
     }
 
     .kc-product-specs {
-      margin: 18px 0;
-      padding: 18px;
+      margin: 0 0 30px;
+      padding: 20px;
       border-radius: 10px;
       background-color: var(--kc-background-dark);
       border: 1px solid var(--kc-border-dark);
+      box-sizing: border-box;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .kc-product-specs h3 {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
       margin-bottom: 12px;
       font-size: 1.05em;
     }
 
     .kc-specs-grid {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-
-    @media (min-width: 520px) {
-      .kc-specs-grid {
-        grid-template-columns: 1fr 1fr;
-      }
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+      gap: 12px 18px;
+      align-items: start;
     }
 
     .kc-spec-item {
-      display: flex;
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
       align-items: flex-start;
-      gap: 10px;
+      gap: 12px;
+      min-width: 0;
+      max-width: 100%;
       font-size: .95em;
       color: var(--kc-text-dark-secondary);
+    }
+
+    .kc-spec-item--link {
+      grid-column: 1 / -1;
     }
 
     .kc-spec-item__body {
       display: grid;
       gap: 6px;
       min-width: 0;
+      max-width: 100%;
+    }
+
+    .kc-spec-item__body strong {
+      color: var(--kc-text-dark);
+      line-height: 1.35;
+    }
+
+    .kc-spec-item__body span,
+    .kc-spec-item__body a,
+    .kc-spec-item__html {
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.45;
     }
 
     .kc-spec-item__html {
@@ -318,9 +340,17 @@
     }
 
     .kc-spec-item i {
-      width: 18px;
+      width: 32px;
+      height: 32px;
       text-align: center;
-      margin-top: 2px;
+      margin-top: 0;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--kc-primary-brand);
+      background: rgba(255, 107, 0, .1);
+      flex-shrink: 0;
     }
 
     .kc-product-page .kc-product-actions,

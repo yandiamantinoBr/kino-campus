@@ -202,9 +202,32 @@ function formatPrice(price) {
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function parseDateLike(value) {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+
+  const text = String(value).trim();
+  if (!text) return null;
+
+  const isoDateMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoDateMatch) {
+    const [, year, month, day] = isoDateMatch;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  }
+
+  const brDateMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+.*)?$/);
+  if (brDateMatch) {
+    const [, day, month, year] = brDateMatch;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function isoDate(value) {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? date.toISOString() : '';
+  const date = parseDateLike(value);
+  return date ? date.toISOString() : '';
 }
 
 function dateOnly(value) {
@@ -256,8 +279,8 @@ function getSourceUrl(post, values) {
 function isExpired(post) {
   const deadline = getDeadline(post);
   if (!deadline) return false;
-  const date = new Date(deadline);
-  if (Number.isNaN(date.getTime())) return false;
+  const date = parseDateLike(deadline);
+  if (!date) return false;
   return date.getTime() < Date.now() - 24 * 60 * 60 * 1000;
 }
 
@@ -386,12 +409,27 @@ function specRowsHtml(post, values) {
 
   if (!rows.length) return { blockStyle: 'display:none;', grid: '' };
 
+  const iconByLabel = {
+    'M\u00f3dulo': 'fas fa-layer-group',
+    Categoria: 'fas fa-tag',
+    Local: 'fas fa-map-marker-alt',
+    'Data do evento': 'fas fa-calendar-day',
+    Prazo: 'fas fa-calendar-check',
+    Modalidade: 'fas fa-laptop-house',
+    Contato: 'fas fa-envelope',
+    'Fonte oficial': 'fas fa-external-link-alt',
+    'Link principal': 'fas fa-link',
+  };
+
   const grid = rows.map(([label, value]) => {
     const text = String(value || '').trim();
-    const safeValue = /^https?:\/\//i.test(text)
+    const isLink = /^https?:\/\//i.test(text);
+    const safeValue = isLink
       ? `<a href="${escapeAttr(text)}" rel="noopener noreferrer" target="_blank">${escapeHtml(text)}</a>`
       : escapeHtml(text);
-    return `<div class="kc-spec-item"><span>${escapeHtml(label)}</span><strong>${safeValue}</strong></div>`;
+    const itemClass = isLink ? 'kc-spec-item kc-spec-item--link' : 'kc-spec-item';
+    const iconClass = iconByLabel[label] || 'fas fa-info-circle';
+    return `<div class="${itemClass}"><i class="${escapeAttr(iconClass)}"></i><div class="kc-spec-item__body"><strong>${escapeHtml(label)}</strong><span>${safeValue}</span></div></div>`;
   }).join('');
 
   return { blockStyle: 'display:block;', grid };
