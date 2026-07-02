@@ -1503,3 +1503,66 @@ Responder aos problemas ainda visiveis no admin: nav admin diferente do KC nav p
 - Se Yan ainda vir assets antigos, orientar hard refresh ou limpar service worker/cache; o codigo ja tem cache-bust novo, mas navegadores podem manter HTML antigo por alguns segundos apos deploy.
 - O teste automatizado precisou bloquear service worker para validar o codigo local. Em producao, confirmar pela aba Network que `admin-shell.js?v=8.6.2` e `admin-cadu.controller.js?v=kc-admin-20260701.1` foram carregados.
 - O PDF usa o exporter compartilhado; melhorias futuras devem entrar em `admin-export.shared.js` para manter Dashboard, Moderacao e Cadu consistentes.
+
+# v13 - Feed diagnostics com sugestoes dry-run de reparo (2026-07-02)
+
+## Escopo
+
+Continuar a transicao do ranking/feed sem quebrar producao: identificar posts ja publicados pelo Cadu que precisam de `deadline_date`, `data_evento`, reclassificacao ou revisao, mas sem executar escrita automatica no Supabase.
+
+## Diagnostico
+
+- Problema real: depois da normalizacao na origem, ainda existem posts publicados antes da correcao sem `metadata.deadline_date`.
+- Problema real: alguns itens em `eventos` ainda nao carregam `data_evento`/`data_fim_evento` e nao devem competir como evento ativo sem revisao.
+- Risco evitado: aplicar patch automatico so por regex pode confundir data de resultado/matricula com prazo principal. Por isso a primeira etapa e dry-run, com evidencias e confianca.
+
+## Correcoes aplicadas
+
+- `scripts/analyze-feed-ranking-shadow.js`:
+  - adiciona `repairLimit` no CLI;
+  - reaproveita `analyzeTemporalRelevance()` do classificador Cadu;
+  - gera `sample.repairSuggestions` com `dryRun: true`, `wouldWrite: false`, `metadataPatch`, `rowPatch`, `confidence`, `evidence` e `notes`;
+  - separa `totalCandidates`, `shown`, `byAction` e `shownByAction`.
+- `api/cadu/feed-diagnostics.js`:
+  - aceita `repairLimit`/`repair_limit`, default `100`, max `200`;
+  - continua apenas `GET`, protegido por `requireCaduAdmin`, sem `service_role`.
+- `assets/js/controllers/admin/admin-cadu.controller.js`:
+  - chama `/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12&repairLimit=100`;
+  - cria mapa de sugestoes por `id`;
+  - mostra chip "Patch sugerido" quando houver patch estruturado;
+  - inclui o patch dry-run no prompt enviado ao Cadu/OpenClaw.
+
+## Evidencia de dados
+
+Benchmark read-only:
+
+```powershell
+npm run benchmark:feed-ranking-shadow -- --limit 80 --rpc-limit 10 --triage-limit 12 --repair-limit 100 --now 2026-07-02T12:00:00.000Z --pretty --output output/feed-ranking-shadow-repair-suggestions-2026-07-02.json
+```
+
+Resultado:
+
+- 80 posts analisados;
+- 76 ativos pela politica shadow;
+- 40 itens acionaveis;
+- 39 marcados como Cadu;
+- 36 `missing-deadline`;
+- 4 `missing-event-date`;
+- 27 sugestoes `patch_deadline_date`;
+- 9 `manual_deadline_review`;
+- 4 `manual_event_date_review`.
+
+## Validacao
+
+- `node --check scripts/analyze-feed-ranking-shadow.js`
+- `node --check assets/js/controllers/admin/admin-cadu.controller.js`
+- `node --check api/cadu/feed-diagnostics.js`
+- `npm test -- tests/unit/analyze-feed-ranking-shadow.test.js tests/unit/kc-feed-ranking-policy.test.js tests/integration/cadu-feed-diagnostics-contract.test.js --runInBand`
+
+Resultado: 3 suites Jest passaram, 20 testes passaram.
+
+## Cuidados para proxima iteracao
+
+- Nao transformar `repairSuggestions` em escrita direta. A proxima etapa deve ser uma acao admin separada, com revisao humana/OpenClaw, log de auditoria e rollback por item.
+- Os 4 eventos sem data ficaram como `manual_event_date_review`; devem ser validados na fonte oficial antes de preencher `data_evento` ou reclassificar.
+- Itens `manual_deadline_review` precisam consulta da fonte oficial; nao havia data extraivel no texto publicado com confianca suficiente.

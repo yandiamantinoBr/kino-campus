@@ -711,6 +711,11 @@
     }
     var byReason = triage.byReason || {};
     var queues = triage.queues || {};
+    var suggestions = report && report.sample && report.sample.repairSuggestions && report.sample.repairSuggestions.suggestions || [];
+    var suggestionById = {};
+    suggestions.forEach(function (suggestion) {
+      if (suggestion && suggestion.id) suggestionById[suggestion.id] = suggestion;
+    });
     var missing = queues.missingDeadlines || [];
     var eventReview = queues.eventDateReview || [];
     var expired = queues.expired || [];
@@ -733,6 +738,14 @@
       var reason = (item.reasons || []).join(', ') || 'review';
       var source = item.source || '';
       var host = item.sourceHost || '';
+      var repair = suggestionById[item.id] || {};
+      var metadataPatch = repair.metadataPatch || {};
+      var rowPatch = repair.rowPatch || {};
+      var patchBits = [];
+      Object.keys(metadataPatch).forEach(function (key) { patchBits.push('metadata.' + key + '=' + metadataPatch[key]); });
+      Object.keys(rowPatch).forEach(function (key) { patchBits.push(key + '=' + rowPatch[key]); });
+      var patchLabel = patchBits.length ? patchBits.slice(0, 2).join(' · ') : '';
+      var patchPayload = patchBits.length ? JSON.stringify({ metadata: metadataPatch, row: rowPatch, action: repair.action || '' }) : '';
       var badge = action === 'extract_deadline_date' ? 'Extrair prazo' : (action === 'fill_data_evento_or_reclassify' ? 'Data/reclassificar' : 'Revisar');
       return '<article class="kc-cadu-feed-diagnostics__item">'
         + '<div class="kc-cadu-feed-diagnostics__item-head">'
@@ -744,13 +757,15 @@
         + '<div class="kc-cadu-feed-diagnostics__item-title">' + escapeHtml(title) + '</div>'
         + '<div class="kc-cadu-feed-diagnostics__item-actions">'
         + '<span class="kc-cadu-feed-diagnostics__chip">' + escapeHtml(badge) + '</span>'
+        + (patchLabel ? '<span class="kc-cadu-feed-diagnostics__chip">Patch sugerido: ' + escapeHtml(patchLabel) + '</span>' : '')
         + (source ? '<a href="' + escapeHtml(source) + '" target="_blank" rel="noopener" class="kc-cadu-feed-diagnostics__chip">Fonte</a>' : '')
         + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed-diagnostic"'
         + ' data-ask-id="' + escapeHtml(item.id || '') + '"'
         + ' data-ask-title="' + escapeHtml(title.replace(/"/g, '&quot;')) + '"'
         + ' data-ask-source="' + escapeHtml(source.replace(/"/g, '&quot;')) + '"'
         + ' data-ask-action="' + escapeHtml(action) + '"'
-        + ' data-ask-reason="' + escapeHtml(reason.replace(/"/g, '&quot;')) + '">'
+        + ' data-ask-reason="' + escapeHtml(reason.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-patch="' + escapeHtml(patchPayload) + '">'
         + '<i class="fas fa-robot"></i> Perguntar Cadu</button>'
         + '</div>'
         + '</article>';
@@ -769,7 +784,7 @@
     }
     if (summaryEl) summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Consultando Supabase read-only...</span>';
     try {
-      var data = await apiFetch('/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12');
+      var data = await apiFetch('/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12&repairLimit=100');
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
       state.feedDiagnostics = data;
       renderFeedDiagnostics(data);
@@ -1324,9 +1339,11 @@
         var diagSource = btn.getAttribute('data-ask-source') || '';
         var diagAction = btn.getAttribute('data-ask-action') || '';
         var diagReason = btn.getAttribute('data-ask-reason') || '';
+        var diagPatch = btn.getAttribute('data-ask-patch') || '';
         message = '<feed-diagnostic id="' + diagId + '" action="' + diagAction + '" reason="' + diagReason + '" source="' + diagSource + '"></feed-diagnostic>\n\n'
           + 'Analise este problema do feed publico do KinoCampus: "' + diagTitle + '". '
           + 'A acao sugerida e "' + diagAction + '" por causa de "' + diagReason + '". '
+          + (diagPatch ? 'Patch dry-run sugerido: ' + diagPatch + '. ' : '')
           + 'Use a fonte oficial quando disponivel (' + (diagSource || 'sem fonte') + ') e diga exatamente qual metadata deve ser corrigida, se e prazo, data de evento, reclassificacao ou arquivamento.';
         var diagResp = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',

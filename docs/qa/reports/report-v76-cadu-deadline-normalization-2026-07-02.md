@@ -132,6 +132,89 @@ Resultado:
 - 3 suites Jest passaram;
 - 17 testes passaram.
 
+## Follow-up: sugestoes dry-run de reparo retroativo
+
+Ainda em 2026-07-02, o diagnostico ganhou `sample.repairSuggestions`, uma fila
+read-only de patches sugeridos por item. Ela nao escreve no Supabase e retorna
+`dryRun: true` / `wouldWrite: false` em cada sugestao.
+
+Arquivos alterados:
+
+- `scripts/analyze-feed-ranking-shadow.js`;
+- `api/cadu/feed-diagnostics.js`;
+- `assets/js/controllers/admin/admin-cadu.controller.js`;
+- `tests/unit/analyze-feed-ranking-shadow.test.js`;
+- `tests/integration/cadu-feed-diagnostics-contract.test.js`.
+
+Contrato novo:
+
+- `triageLimit`: limita quantos itens aparecem em cada fila visual;
+- `repairLimit`: limita quantas sugestoes dry-run sao retornadas para mapear por
+  `id`;
+- `repairSuggestions.totalCandidates`: total de candidatos de reparo na amostra;
+- `repairSuggestions.shown`: quantos foram retornados depois do limite;
+- `repairSuggestions.byAction`: contagem de todas as acoes candidatas;
+- `repairSuggestions.shownByAction`: contagem so das sugestoes retornadas.
+
+A aba **Feed coletado** usa esse mapa por `id` para exibir um chip "Patch
+sugerido" quando houver `metadataPatch`/`rowPatch` e inclui o patch dry-run no
+prompt enviado ao Cadu/OpenClaw. A chamada do admin ficou explicita:
+
+```text
+/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12&repairLimit=100
+```
+
+Consulta real executada:
+
+```powershell
+npm run benchmark:feed-ranking-shadow -- --limit 80 --rpc-limit 10 --triage-limit 12 --repair-limit 100 --now 2026-07-02T12:00:00.000Z --pretty --output output/feed-ranking-shadow-repair-suggestions-2026-07-02.json
+```
+
+Resultado read-only:
+
+| Metrica | Valor |
+|---|---:|
+| posts analisados | 80 |
+| posts ativos pela politica shadow | 76 |
+| itens `needs-review` | 4 |
+| triagem acionavel | 40 |
+| marcados como Cadu | 39 |
+| relevantes sem marca historica do Cadu | 1 |
+| `missing-deadline` | 36 |
+| `missing-event-date` | 4 |
+| sugestoes dry-run totais | 40 |
+| `patch_deadline_date` | 27 |
+| `manual_deadline_review` | 9 |
+| `manual_event_date_review` | 4 |
+
+Exemplos de `metadataPatch` com confianca alta:
+
+- `7b8f44bd-2a47-422b-9fc0-7baf579cb5a3` - `deadline_date=2026-09-15`;
+- `c83e2151-0bb0-4abb-b98f-46197fb88f6e` - `deadline_date=2026-08-03`;
+- `d6992be0-e204-407a-a3f8-26aa2d5d4ab5` - `deadline_date=2026-07-03`;
+- `d960985c-11f8-432f-b732-29e5c636b691` - `deadline_date=2026-09-23`.
+
+Os 4 eventos sem data nao receberam patch automatico, porque a amostra publicada
+nao trazia data extraivel com confianca suficiente. Eles ficaram como
+`manual_event_date_review`; a etapa correta e pedir ao Cadu/OpenClaw para checar
+a fonte oficial antes de reclassificar, preencher `data_evento` ou retirar do
+feed ativo.
+
+Validacao adicional:
+
+```powershell
+node --check scripts/analyze-feed-ranking-shadow.js
+node --check assets/js/controllers/admin/admin-cadu.controller.js
+node --check api/cadu/feed-diagnostics.js
+npm test -- tests/unit/analyze-feed-ranking-shadow.test.js tests/unit/kc-feed-ranking-policy.test.js tests/integration/cadu-feed-diagnostics-contract.test.js --runInBand
+```
+
+Resultado:
+
+- `node --check` passou nos 3 arquivos;
+- 3 suites Jest passaram;
+- 20 testes passaram.
+
 ## Impacto no ranking/feed
 
 Esta alteracao nao muda a ordenacao publica do feed. Ela melhora os metadados que a politica shadow e uma futura RPC v2 precisam consumir.
@@ -146,4 +229,4 @@ Efeito esperado nas proximas publicacoes:
 
 - Rodar novo benchmark shadow depois de novas publicacoes do Cadu entrarem no banco.
 - Em uma fase posterior, normalizar tambem um campo de cronograma detalhado (`schedule_dates`) para preservar resultado/matricula sem confundir com prazo principal.
-- Planejar reparo retroativo seguro para posts ja publicados, preferencialmente gerando sugestoes de patch por item antes de qualquer escrita no banco.
+- Criar uma acao admin separada para aplicar patches somente depois de revisao humana/OpenClaw, com log de auditoria e rollback por item.

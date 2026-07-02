@@ -12,6 +12,7 @@ describe('Cadu feed diagnostics proxy', () => {
     expect(source).toContain('Shadow.run(options)');
     expect(source).toContain("modules: ['eventos', 'oportunidades']");
     expect(source).toContain("statuses: ['published']");
+    expect(source).toContain('repairLimit');
     expect(source).toContain('maxDuration: 60');
   });
 

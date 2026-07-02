@@ -132,4 +132,94 @@ describe('diagnostico shadow de ranking do feed', () => {
       sourceHost: 'ciar.ufg.br'
     });
   });
+
+  test('gera sugestao dry-run de metadataPatch para prazo ausente detectavel', () => {
+    const entry = Policy.rankForShadow([{
+      id: 'opp-deadline-text',
+      module: 'oportunidades',
+      status: 'published',
+      title: 'Selecao de monitoria com inscricoes abertas',
+      description: 'Inscricoes ate 10/07/2026 para estudantes da UFG.',
+      metadata: { cadu_published: true, source_url: 'https://ime.ufg.br/n/10' }
+    }], { now: NOW, diversify: false })[0];
+
+    const suggestion = Shadow.buildRepairSuggestion(entry, { now: NOW });
+
+    expect(suggestion).toMatchObject({
+      dryRun: true,
+      wouldWrite: false,
+      action: 'patch_deadline_date',
+      metadataPatch: {
+        deadline_date: '2026-07-10',
+        temporal_status: 'current_or_unknown'
+      }
+    });
+    expect(suggestion.confidence).toBeGreaterThan(0.8);
+  });
+
+  test('gera sugestao dry-run de data_evento quando evento sem metadata tem data clara', () => {
+    const entry = Policy.rankForShadow([{
+      id: 'event-date-text',
+      module: 'eventos',
+      status: 'published',
+      title: 'Seminario de pesquisa da UFG',
+      description: 'Evento acontece em 05/07/2026 no campus Samambaia.',
+      metadata: { cadu_run_id: 'cadu-full-2', source_url: 'https://ufg.br/e/10' }
+    }], { now: NOW, diversify: false })[0];
+
+    const suggestion = Shadow.buildRepairSuggestion(entry, { now: NOW });
+
+    expect(suggestion).toMatchObject({
+      dryRun: true,
+      action: 'patch_event_date',
+      metadataPatch: {
+        data_evento: '2026-07-05',
+        event_date_detected: '2026-07-05'
+      }
+    });
+    expect(suggestion.confidence).toBeGreaterThan(0.7);
+  });
+
+  test('mantem contagem total de sugestoes mesmo quando a exibicao e limitada', () => {
+    const entries = Policy.rankForShadow([
+      {
+        id: 'opp-a',
+        module: 'oportunidades',
+        status: 'published',
+        title: 'Bolsa com inscricoes abertas',
+        description: 'Inscricoes ate 10/07/2026.',
+        metadata: { cadu_published: true, source_url: 'https://inf.ufg.br/n/a' }
+      },
+      {
+        id: 'opp-b',
+        module: 'oportunidades',
+        status: 'published',
+        title: 'Monitoria com inscricoes abertas',
+        description: 'Inscricoes ate 11/07/2026.',
+        metadata: { cadu_published: true, source_url: 'https://ime.ufg.br/n/b' }
+      },
+      {
+        id: 'event-c',
+        module: 'eventos',
+        status: 'published',
+        title: 'Seminario sem data estruturada',
+        description: 'Evento acontece em 12/07/2026.',
+        metadata: { cadu_published: true, source_url: 'https://ufg.br/events?event=c' }
+      }
+    ], { now: NOW, diversify: false });
+
+    const suggestions = Shadow.buildRepairSuggestions(entries, { now: NOW, limit: 2 });
+
+    expect(suggestions).toMatchObject({
+      total: 3,
+      totalCandidates: 3,
+      shown: 2,
+      limit: 2,
+      byAction: {
+        patch_deadline_date: 2,
+        patch_event_date: 1
+      }
+    });
+    expect(suggestions.suggestions).toHaveLength(2);
+  });
 });

@@ -1,6 +1,6 @@
 // api/cadu/feed-diagnostics.js - diagnostico read-only do feed publico para o painel Cadu.
 //
-// GET /api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12
+// GET /api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12&repairLimit=100
 //
 // Executa a mesma politica shadow usada pelo CLI `benchmark:feed-ranking-shadow`,
 // mas protegida pelo gate admin de /api/cadu/* e sem escrita no Supabase.
@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     limit: intParam(req.query.limit, 80, 200),
     rpcLimit: intParam(req.query.rpcLimit || req.query.rpc_limit, 10, 50),
     triageLimit: intParam(req.query.triageLimit || req.query.triage_limit, 12, 50),
+    repairLimit: intParam(req.query.repairLimit || req.query.repair_limit, 100, 200),
     modules: ['eventos', 'oportunidades'],
     statuses: ['published'],
     sortBys: req.query.noRpc === '1' ? [] : ['votos', 'recentes', 'comentados'],

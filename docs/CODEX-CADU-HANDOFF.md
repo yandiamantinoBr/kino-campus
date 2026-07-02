@@ -411,3 +411,13 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
   - `admin/cadu.html`: 7 links, 7 spans, 2 `is-icon-only`, overflow 0.
   - OpenClaw: sessao selecionada, `Continuar sessao` enviou `session_id=sess-abc123456789`, heartbeat chamou `agent-event` e exibiu `exit_code=0`, logs ficaram em `pre` com `overflow-y:auto`.
   - PDF: filename `kc-cadu-pipeline-2026-07-01-4cb7fc43.pdf`, titulo `KinoCampus - Relatorio da Pipeline Cadu`, secoes `Status da execucao`, `Metricas`, `Avisos e riscos`, `Artefatos`, `Log tail` no objeto do exporter.
+
+## 20. Atualizacao Codex - Feed diagnostics com reparo dry-run (2026-07-02)
+
+- O diagnostico shadow do feed agora gera `sample.repairSuggestions` alem de `sample.caduTriage`.
+- A fila e read-only: cada sugestao vem com `dryRun: true`, `wouldWrite: false`, `metadataPatch`, `rowPatch`, `confidence`, `evidence` e `notes`.
+- `triageLimit` limita a exibicao das filas visuais; `repairLimit` limita o mapa de sugestoes por `id`. O admin chama `/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12&repairLimit=100`.
+- A aba Feed Coletado mostra chip "Patch sugerido" quando houver patch estruturado e inclui esse patch no prompt enviado ao Cadu/OpenClaw.
+- Benchmark read-only em 2026-07-02: 80 posts analisados, 40 itens acionaveis, 36 `missing-deadline`, 4 `missing-event-date`, 27 `patch_deadline_date`, 9 `manual_deadline_review`, 4 `manual_event_date_review`.
+- Ainda nao ha escrita automatica no Supabase. Proxima fase segura: acao admin separada para aplicar patch apos revisao humana/OpenClaw, com log de auditoria e rollback por item.
+- Evidencia: `docs/qa/reports/report-v76-cadu-deadline-normalization-2026-07-02.md` e `docs/architecture/feed-ranking-transition-plan-2026-07-02.md`.

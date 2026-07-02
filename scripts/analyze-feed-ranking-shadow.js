@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const Policy = require('../assets/js/shared/kc-feed-ranking-policy.shared.js');
+const { analyzeTemporalRelevance } = require('../services/cadu-ufg-publisher/src/classifier.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_PUBLIC_ENV_URL = 'https://www.kinocampus.com.br/assets/js/boot/kc-env.js';
@@ -16,6 +17,7 @@ function parseArgs(argv) {
     limit: 120,
     rpcLimit: 20,
     triageLimit: 25,
+    repairLimit: 100,
     modules: DEFAULT_MODULES.slice(),
     statuses: ['published'],
     sortBys: DEFAULT_SORTS.slice(),
@@ -39,6 +41,7 @@ function parseArgs(argv) {
     if (key === 'limit') options.limit = Math.max(1, Number(value) || options.limit);
     else if (key === 'rpc-limit') options.rpcLimit = Math.max(1, Number(value) || options.rpcLimit);
     else if (key === 'triage-limit') options.triageLimit = Math.max(1, Number(value) || options.triageLimit);
+    else if (key === 'repair-limit') options.repairLimit = Math.max(1, Number(value) || options.repairLimit);
     else if (key === 'modules') options.modules = csv(value, DEFAULT_MODULES);
     else if (key === 'statuses') options.statuses = csv(value, ['published']);
     else if (key === 'sort-by') options.sortBys = csv(value, DEFAULT_SORTS);
@@ -285,6 +288,137 @@ function triageItem(issue) {
   };
 }
 
+function postRepairText(post) {
+  const metadata = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+  return [
+    post && (post.title || post.titulo || ''),
+    post && (post.description || post.descricao || ''),
+    metadata.original_title,
+    metadata.summary,
+    metadata.resumo,
+    metadata.source_unit,
+    metadata.source_url,
+    Array.isArray(metadata.tags) ? metadata.tags.join(' ') : '',
+    Array.isArray(metadata.tagKeys) ? metadata.tagKeys.join(' ') : ''
+  ].filter(Boolean).join('\n');
+}
+
+function postForTemporalRepair(post) {
+  const metadata = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+  return {
+    id: post && post.id,
+    title: titleOf(post),
+    summary: post && (post.description || post.descricao || ''),
+    text: postRepairText(post),
+    type: moduleOf({ module: post && (post.module || post.modulo) }) === 'eventos' ? 'event' : '',
+    updatedAt: post && (post.updated_at || post.created_at) || metadata.source_lastmod || ''
+  };
+}
+
+function looksLikeOpportunityText(post) {
+  return /inscri[cç][aã]o|inscri[cç][oõ]es|edital|chamada|bolsa|sele[cç][aã]o|vaga|monitoria|est[aá]gio|submiss/i.test(postRepairText(post));
+}
+
+function buildRepairSuggestion(entry, options = {}) {
+  const issue = classifyIssue(entry);
+  if (!issue || issue.severity === 'info') return null;
+  const post = entry.post || {};
+  const temporal = analyzeTemporalRelevance(postForTemporalRepair(post), { now: options.now });
+  const suggestion = {
+    id: issue.id,
+    module: issue.module,
+    dryRun: true,
+    wouldWrite: false,
+    action: repairAction(issue),
+    confidence: 0,
+    reasons: issue.reasons,
+    title: issue.title,
+    source: issue.source,
+    metadataPatch: {},
+    rowPatch: {},
+    evidence: {
+      detectedDates: temporal.dates || [],
+      deadlineDate: temporal.deadlineDate || '',
+      eventDate: temporal.eventDate || '',
+      temporalExpired: !!temporal.expired,
+      temporalReason: temporal.reason || ''
+    },
+    notes: []
+  };
+
+  if (issue.reasons.includes('missing-deadline')) {
+    if (temporal.deadlineDate) {
+      suggestion.action = 'patch_deadline_date';
+      suggestion.confidence = temporal.expired ? 0.74 : 0.82;
+      suggestion.metadataPatch.deadline_date = temporal.deadlineDate;
+      suggestion.metadataPatch.temporal_status = temporal.expired ? temporal.reason : 'current_or_unknown';
+      suggestion.notes.push(temporal.expired
+        ? 'Prazo detectado ja esta vencido; aplicar o patch deve fazer o ranking tratar o item como expirado.'
+        : 'Prazo detectado a partir do texto publicado; revisar fonte oficial antes de aplicar.');
+    } else {
+      suggestion.action = 'manual_deadline_review';
+      suggestion.confidence = 0.25;
+      suggestion.notes.push('Nao foi possivel extrair prazo do texto publicado; consultar fonte oficial ou OpenClaw.');
+    }
+  } else if (issue.reasons.includes('missing-event-date')) {
+    if (temporal.eventDate) {
+      suggestion.action = 'patch_event_date';
+      suggestion.confidence = temporal.expired ? 0.68 : 0.78;
+      suggestion.metadataPatch.data_evento = temporal.eventDate;
+      suggestion.metadataPatch.event_date_detected = temporal.eventDate;
+      suggestion.metadataPatch.temporal_status = temporal.expired ? temporal.reason : 'current_or_unknown';
+      suggestion.notes.push('Data de evento detectada a partir do texto publicado; revisar se e realizacao, nao prazo de inscricao.');
+    } else if (looksLikeOpportunityText(post)) {
+      suggestion.action = 'manual_reclassify_event';
+      suggestion.confidence = 0.48;
+      suggestion.rowPatch.module = 'oportunidades';
+      suggestion.notes.push('Texto parece inscricao/edital/curso sem data de realizacao; reclassificar somente apos checar prazo e categoria.');
+    } else {
+      suggestion.action = 'manual_event_date_review';
+      suggestion.confidence = 0.2;
+      suggestion.notes.push('Evento sem data e sem sinal suficiente para patch automatico.');
+    }
+  } else if (issue.reasons.some((reason) => ['expired', 'expired-event', 'expired-deadline', 'closed'].includes(reason))) {
+    suggestion.action = issue.state === 'closed' ? 'keep_out_of_active_feed' : 'archive_or_close';
+    suggestion.confidence = 0.72;
+    suggestion.notes.push('Item nao deve competir no feed ativo; preservar historico quando houver comentarios.');
+  }
+
+  if (!Object.keys(suggestion.metadataPatch).length && !Object.keys(suggestion.rowPatch).length) {
+    suggestion.wouldWrite = false;
+  }
+  return suggestion;
+}
+
+function buildRepairSuggestions(entries, options = {}) {
+  const limit = Math.max(1, Number(options.limit) || entries.length || 25);
+  const candidates = entries
+    .map((entry) => buildRepairSuggestion(entry, options))
+    .filter(Boolean)
+    .sort((left, right) => {
+      const actionOrder = {
+        patch_deadline_date: 0,
+        patch_event_date: 1,
+        archive_or_close: 2,
+        manual_reclassify_event: 3,
+        manual_deadline_review: 4,
+        manual_event_date_review: 5,
+        keep_out_of_active_feed: 6
+      };
+      return (actionOrder[left.action] ?? 99) - (actionOrder[right.action] ?? 99) || right.confidence - left.confidence;
+    });
+  const suggestions = candidates.slice(0, limit);
+  return {
+    total: candidates.length,
+    totalCandidates: candidates.length,
+    shown: suggestions.length,
+    limit,
+    byAction: countBy(candidates.map((item) => item.action)),
+    shownByAction: countBy(suggestions.map((item) => item.action)),
+    suggestions
+  };
+}
+
 function buildCaduTriage(entries, options = {}) {
   const limit = Math.max(1, Number(options.limit) || 25);
   const issues = entries
@@ -428,7 +562,8 @@ async function run(options) {
       summary: summarize(shadowEntries),
       topShadow: shadowEntries.slice(0, 12).map(compactEntry),
       issues,
-      caduTriage: buildCaduTriage(shadowEntries, { limit: options.triageLimit })
+      caduTriage: buildCaduTriage(shadowEntries, { limit: options.triageLimit }),
+      repairSuggestions: buildRepairSuggestions(shadowEntries, { limit: options.repairLimit, now: options.now })
     },
     currentFeeds: rpcFeeds
   };
@@ -460,6 +595,8 @@ module.exports = {
   summarize,
   classifyIssue,
   buildCaduTriage,
+  buildRepairSuggestion,
+  buildRepairSuggestions,
   isCaduPublished,
   compareRpcFeed,
   run
