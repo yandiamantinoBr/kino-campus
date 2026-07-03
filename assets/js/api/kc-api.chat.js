@@ -64,6 +64,7 @@
     startConversation: safe('startConversation'),
     sendMessage: safe('sendMessage'),
     uploadChatImage: safe('uploadChatImage'),
+    uploadChatMedia: safe('uploadChatMedia'),
     getSignedUrl: safe('getSignedUrl'),
     deleteUploadedMedia: safe('deleteUploadedMedia'),
     listConversations: safe('listConversations'),

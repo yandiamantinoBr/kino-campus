@@ -190,6 +190,89 @@
     return { ok: true, data: { path: path, bucket: bucket } };
   }
 
+  // ── Upload de mídia NÃO-imagem (audio/document) com validação de segurança ─
+  // MIME allowlist + verificação de magic bytes (onde aplicável) + limite de tamanho.
+  var MEDIA_MIME_MAP = {
+    // audio
+    'audio/mpeg': { ext: 'mp3', type: 'audio' },
+    'audio/mp3': { ext: 'mp3', type: 'audio' },
+    'audio/m4a': { ext: 'm4a', type: 'audio' },
+    'audio/x-m4a': { ext: 'm4a', type: 'audio' },
+    'audio/aac': { ext: 'aac', type: 'audio' },
+    'audio/ogg': { ext: 'ogg', type: 'audio' },
+    'audio/wav': { ext: 'wav', type: 'audio' },
+    'audio/x-wav': { ext: 'wav', type: 'audio' },
+    'audio/webm': { ext: 'ogg', type: 'audio' },
+    // document
+    'application/pdf': { ext: 'pdf', type: 'document' },
+    'application/msword': { ext: 'doc', type: 'document' },
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { ext: 'docx', type: 'document' },
+  };
+  var MEDIA_MAX_BYTES = 15 * 1024 * 1024; // 15 MB
+
+  // Magic bytes para os formatos suportados (header inspection anti-spoofing)
+  function checkMediaMagicBytes(file) {
+    return new Promise(function (resolve) {
+      var info = MEDIA_MIME_MAP[String(file.type || '').toLowerCase()];
+      if (!info) { resolve(null); return; }
+      var slice = file.slice(0, 12);
+      var reader = new FileReader();
+      reader.onload = function () {
+        var buf = new Uint8Array(reader.result);
+        var hex = '';
+        for (var i = 0; i < Math.min(buf.length, 12); i++) hex += buf[i].toString(16).padStart(2, '0');
+        var valid = false;
+        if (info.ext === 'mp3') valid = (hex.indexOf('fffb') === 0 || hex.indexOf('fff3') === 0 || hex.indexOf('494433') === 0); // MP3 or ID3
+        else if (info.ext === 'ogg') valid = hex.indexOf('4f676753') === 0; // "OggS"
+        else if (info.ext === 'wav') valid = hex.indexOf('52494646') === 0; // "RIFF"
+        else if (info.ext === 'pdf') valid = hex.indexOf('25504446') === 0; // "%PDF"
+        else if (info.ext === 'm4a' || info.ext === 'aac') valid = hex.indexOf('fff0') === 0 || hex.indexOf('0000') === 0 || hex.indexOf('4d34') === 0; // AAC/ADTS or M4A approx
+        else if (info.ext === 'doc' || info.ext === 'docx') valid = hex.indexOf('d0cf11e0') === 0 || hex.indexOf('504b0304') === 0; // OLE or ZIP (docx)
+        else valid = true; // unknown ext — allow (MIME already validated)
+        resolve(valid ? file.type : null);
+      };
+      reader.onerror = function () { resolve(null); };
+      reader.readAsArrayBuffer(slice);
+    });
+  }
+
+  async function uploadChatMedia(conversationId, file, opts) {
+    var client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    var user = await getCurrentUser();
+    if (!user || !user.id) return { ok: false, error: { message: 'Faça login para enviar arquivos.' } };
+    if (!conversationId) return { ok: false, error: { message: 'Conversa inválida.' } };
+    if (!file) return { ok: false, error: { message: 'Arquivo inválido.' } };
+
+    var mime = String(file.type || '').toLowerCase();
+    var info = MEDIA_MIME_MAP[mime];
+    if (!info) {
+      return { ok: false, error: { message: 'Tipo de arquivo não permitido. Use áudio (MP3, M4A, OGG, WAV, AAC) ou documento (PDF, DOC, DOCX).' } };
+    }
+    var maxBytes = (opts && Number.isFinite(opts.maxBytes)) ? Number(opts.maxBytes) : MEDIA_MAX_BYTES;
+    if (file.size > maxBytes) {
+      return { ok: false, error: { message: 'Arquivo excede o limite (' + Math.round(maxBytes / 1048576) + ' MB).' } };
+    }
+
+    // Magic bytes — rejeita se o conteúdo não bate com o MIME declarado
+    var detected = await checkMediaMagicBytes(file);
+    if (detected === null) {
+      return { ok: false, error: { message: 'O arquivo parece estar corrompido ou não corresponde ao tipo declarado.' } };
+    }
+
+    var bucket = getBucketName();
+    var filename = Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + info.ext;
+    var path = 'chat-media/' + conversationId + '/' + user.id + '/' + filename;
+    var up = await client.storage.from(bucket).upload(path, file, {
+      contentType: mime || 'application/octet-stream',
+      upsert: false,
+    });
+    if (up && up.error) {
+      return { ok: false, error: { message: 'Falha no upload do arquivo.', detail: up.error.message } };
+    }
+    return { ok: true, data: { path: path, bucket: bucket, mediaType: info.type, ext: info.ext } };
+  }
+
   async function getSignedUrl(path, expiresInSeconds) {
     var client = getClient();
     if (!client || !path) return null;
@@ -565,6 +648,7 @@
     startConversation: startConversation,
     sendMessage: sendMessage,
     uploadChatImage: uploadChatImage,
+    uploadChatMedia: uploadChatMedia,
     getSignedUrl: getSignedUrl,
     deleteUploadedMedia: deleteUploadedMedia,
     listConversations: listConversations,

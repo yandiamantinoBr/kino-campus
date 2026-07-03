@@ -986,6 +986,29 @@
       if (m.content) {
         content += '<div>' + esc(m.content) + '</div>';
       }
+    } else if (m.message_type === 'audio' && m.media_path) {
+      var aMedia = mediaState(m.media_path);
+      if (aMedia.status === 'ready' && aMedia.url) {
+        content += '<div class="kc-chat-msg__audio"><i class="fas fa-microphone" aria-hidden="true"></i>' +
+          '<audio controls preload="metadata" src="' + esc(aMedia.url) + '">Seu navegador não suporta áudio.</audio></div>';
+      } else if (aMedia.status === 'failed') {
+        content += '<button type="button" class="kc-chat-msg__image-placeholder is-error" data-media-retry="' + esc(m.media_path) + '"><i class="fas fa-microphone"></i><span>Áudio indisponível. Tentar novamente</span></button>';
+      } else {
+        content += '<div class="kc-chat-msg__image-placeholder" aria-busy="true"><i class="fas fa-microphone"></i><span>Carregando áudio...</span></div>';
+      }
+      if (m.content) content += '<div>' + esc(m.content) + '</div>';
+    } else if (m.message_type === 'document' && m.media_path) {
+      var dMedia = mediaState(m.media_path);
+      var fname = m.media_path.split('/').pop() || 'documento';
+      if (dMedia.status === 'ready' && dMedia.url) {
+        content += '<a class="kc-chat-msg__doc" href="' + esc(dMedia.url) + '" target="_blank" rel="noopener" download>' +
+          '<i class="fas fa-file-pdf"></i><span>' + esc(fname) + '</span><i class="fas fa-download"></i></a>';
+      } else if (dMedia.status === 'failed') {
+        content += '<button type="button" class="kc-chat-msg__image-placeholder is-error" data-media-retry="' + esc(m.media_path) + '"><i class="fas fa-file"></i><span>Documento indisponível. Tentar novamente</span></button>';
+      } else {
+        content += '<div class="kc-chat-msg__image-placeholder" aria-busy="true"><i class="fas fa-file"></i><span>Carregando documento...</span></div>';
+      }
+      if (m.content) content += '<div>' + esc(m.content) + '</div>';
     } else {
       content = esc(m.content || '');
     }
@@ -1107,40 +1130,47 @@
 
     var input = $('kcChatInput');
     var content = (input && input.value || '').trim();
-    var hasImage = !!state.pendingFile;
+    var hasFile = !!state.pendingFile;
     var replyToId = state.pendingReply ? state.pendingReply.msgId : null;
 
-    if (!content && !hasImage) return;
+    if (!content && !hasFile) return;
 
     state.isSending = true;
     var sendBtn = $('kcChatSendBtn');
     if (sendBtn) sendBtn.disabled = true;
 
     try {
-      if (hasImage) {
-        var up = await window.KCAPI.chat.uploadChatImage(state.activeConvId, state.pendingFile);
+      if (hasFile) {
+        var file = state.pendingFile;
+        var fileMime = String(file.type || '').toLowerCase();
+        var isImage = fileMime.indexOf('image/') === 0;
+        var uploadFn = isImage ? window.KCAPI.chat.uploadChatImage : window.KCAPI.chat.uploadChatMedia;
+        var uploadMethod = isImage ? 'uploadChatImage' : 'uploadChatMedia';
+        if (!uploadFn) { toast('Upload indisponível.', 'error'); return; }
+        var up = await uploadFn(state.activeConvId, file);
         if (!up || !up.ok) {
           toast((up && up.error && up.error.message) || 'Falha no upload.', 'error');
           return;
         }
-        var sendImg = await window.KCAPI.chat.sendMessage(state.activeConvId, {
-          message_type: 'image',
+        // Determina o message_type: image para imagens, senão o mediaType do upload
+        var msgType = isImage ? 'image' : (up.data && up.data.mediaType) || 'document';
+        var sendMedia = await window.KCAPI.chat.sendMessage(state.activeConvId, {
+          message_type: msgType,
           content: content || null,
           media_path: up.data.path,
         });
-        if (!sendImg || !sendImg.ok) {
+        if (!sendMedia || !sendMedia.ok) {
           await cleanupUploadedChatImage(up.data && up.data.path);
-          toast((sendImg && sendImg.error && sendImg.error.message) || 'Falha ao enviar imagem.', 'error');
+          toast((sendMedia && sendMedia.error && sendMedia.error.message) || 'Falha ao enviar arquivo.', 'error');
           return;
         }
-        // Adiciona localmente (realtime também trará, mas o set evita duplicar)
         appendMessage({
-          message_id: sendImg.data.message_id,
+          message_id: sendMedia.data.message_id,
           sender_id: state.me.id,
-          message_type: 'image',
+          message_type: msgType,
           content: content || null,
           media_path: up.data.path,
-          created_at: sendImg.data.created_at,
+          created_at: sendMedia.data.created_at,
         });
       } else {
         var sendTxt = await window.KCAPI.chat.sendMessage(state.activeConvId, {

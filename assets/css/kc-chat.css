@@ -759,6 +759,80 @@
   color: var(--kc-red-alert, #ff5252);
 }
 
+/* ── Bolhas de áudio e documento ──────────────────────────────────────────── */
+
+.kc-chat-msg__audio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.kc-chat-msg__audio > i {
+  color: var(--kc-primary-brand);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.kc-chat-msg--mine .kc-chat-msg__audio > i {
+  color: rgba(255,255,255,0.9);
+}
+
+.kc-chat-msg__audio audio {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  max-width: 100%;
+}
+
+.kc-chat-msg__doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition-speed, 0.2s);
+}
+
+.kc-chat-msg__doc:hover {
+  background: rgba(0,0,0,0.28);
+}
+
+.kc-chat-msg--mine .kc-chat-msg__doc {
+  background: rgba(0,0,0,0.2);
+  color: #fff;
+}
+
+[data-theme="light"] .kc-chat-msg--other .kc-chat-msg__doc {
+  background: rgba(0,0,0,0.04);
+}
+
+.kc-chat-msg__doc > i:first-child {
+  font-size: 1.5rem;
+  color: var(--kc-red-alert, #ff5252);
+  flex-shrink: 0;
+}
+
+.kc-chat-msg__doc span {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kc-chat-msg__doc > i:last-child {
+  font-size: 0.9rem;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
 .kc-chat-msg__meta {
   display: inline-flex;
   align-items: center;

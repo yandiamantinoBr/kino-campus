@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.5" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.1" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.2" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
@@ -189,7 +189,7 @@
 
             <!-- Composer (estilo WhatsApp: emoji + anexo + input numa pill unificada, send separado) -->
             <form class="kc-chat-composer" id="kcChatComposer" autocomplete="off" style="position:relative;">
-              <input type="file" id="kcChatFileInput" accept="image/*" style="display:none" />
+              <input type="file" id="kcChatFileInput" accept="image/*,audio/mpeg,audio/mp3,audio/m4a,audio/x-m4a,audio/aac,audio/ogg,audio/wav,audio/x-wav,audio/webm,.pdf,.doc,.docx" style="display:none" />
               <!-- Emoji picker (popover leve) -->
               <div class="kc-chat-emoji-picker" id="kcChatEmojiPicker" role="dialog" aria-label="Emojis" data-i18n-aria-label="aria-label.chat-emojis">
                 <p class="kc-chat-emoji-picker__title">Emojis</p>
@@ -255,7 +255,7 @@
   <script defer src="assets/js/api/kc-api.profiles.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.related.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.auth.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.chat.js?v=8.6.4"></script>
+  <script defer src="assets/js/api/kc-api.chat.js?v=8.6.5"></script>
   <script defer src="assets/js/api/kc-api.diagnostics.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.session.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.filters.js?v=8.6.1"></script>
@@ -280,7 +280,7 @@
   <script defer src="assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.chat.adapter.js?v=8.6.5"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.chat.adapter.js?v=8.6.6"></script>
   <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
@@ -295,6 +295,6 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.5"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.21"></script>
+  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.22"></script>
 </body>
 </html>
