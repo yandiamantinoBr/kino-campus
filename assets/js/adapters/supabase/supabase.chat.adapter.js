@@ -436,19 +436,22 @@
   }
 
   // ── set_message_reply (V76.53) ───────────────────────────────────────────
-  // Marca reply_to_id numa mensagem própria recém-enviada. RLS permite update
-  // de mensagens do próprio autor.
+  // Marca reply_to_id numa mensagem própria recém-enviada via RPC autenticada.
 
   async function setMessageReply(messageId, replyToId) {
     var client = getClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
     if (!messageId) return { ok: false, error: { message: 'message_id inválido.' } };
     try {
-      var r = await client
-        .from('chat_messages')
-        .update({ reply_to_id: replyToId || null })
-        .eq('id', messageId);
+      var r = await client.rpc('kc_chat_set_message_reply', {
+        p_message_id: messageId,
+        p_reply_to_id: replyToId || null,
+      });
       if (r.error) return { ok: false, error: { message: r.error.message } };
+      var row = Array.isArray(r.data) ? r.data[0] : r.data;
+      if (row && row.ok === false) {
+        return { ok: false, error: { message: row.error || 'Erro ao salvar resposta.' } };
+      }
       return { ok: true };
     } catch (e) {
       return { ok: false, error: { message: (e && e.message) || String(e) } };

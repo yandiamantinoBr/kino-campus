@@ -87,8 +87,8 @@ describe('chat continuity contract', () => {
     expect(html).toContain('padding-left: 0 !important;');
     expect(html).toContain('justify-self: center;');
     expect(html).toContain('width: min(1760px, calc(100vw - 56px));');
-    expect(html).toContain('assets/css/kc-chat.css?v=8.7.3');
-    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.23');
+    expect(html).toContain('assets/css/kc-chat.css?v=8.7.4');
+    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.24');
     expect(css).toContain('grid-template-columns: minmax(360px, 33%) minmax(620px, 1fr);');
     expect(css).toContain('height: 100%;');
     expect(css).toContain('border-radius: 22px;');
@@ -106,7 +106,31 @@ describe('chat continuity contract', () => {
     expect(css).toContain('.kc-chat-msg.is-menu-open .kc-chat-msg__menu');
     expect(controller).toContain('function isTouchMenuMode()');
     expect(controller).toContain('function closeMessageMenus(root)');
+    expect(controller).toContain('function positionOpenMessageMenu(bubble)');
+    expect(controller).toContain('menu.style.left = left + \'px\';');
+    expect(controller).toContain('positioned.left - left');
     expect(controller).toContain('if (!isTouchMenuMode()) return;');
+    expect(css).toContain('position: fixed;');
+    expect(css).toContain('max-width: calc(100vw - 24px);');
+  });
+
+  test('chat jump button supports bottom and top navigation for long conversations', () => {
+    const controller = read('assets/js/controllers/public/chat-inbox.controller.js');
+
+    expect(controller).toContain('jumpTarget');
+    expect(controller).toContain('function updateJumpButton()');
+    expect(controller).toContain("btn.setAttribute('data-direction', target);");
+    expect(controller).toContain("label.textContent = state.pendingActiveUnread > 0 ? 'Novas mensagens' : (target === 'top' ? 'Topo' : 'Fim');");
+    expect(controller).toContain('function scrollToTop()');
+    expect(controller).toContain("if (state.jumpTarget === 'top')");
+  });
+
+  test('chat emoji picker is vertically scrollable without horizontal overflow', () => {
+    const css = read('assets/css/kc-chat.css');
+
+    expect(css).toContain('overflow-y: auto;');
+    expect(css).toContain('overflow-x: hidden;');
+    expect(css).toContain('grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));');
   });
 
   test('chat bubbles use a single background token for the received bubble and tail', () => {
@@ -127,5 +151,16 @@ describe('chat continuity contract', () => {
     expect(localAdapter).toContain('uploadChatMedia: notSupported');
     expect(supabaseAdapter).toContain('options.includeArchived !== true');
     expect(supabaseAdapter).toContain('list = list.filter(function (c) { return !c.archived; });');
+  });
+
+  test('chat reply persistence uses RPC instead of direct table update', () => {
+    const supabaseAdapter = read('assets/js/adapters/supabase/supabase.chat.adapter.js');
+    const migration = read('supabase/migrations/20260703175720_harden_chat_anon_execute.sql');
+
+    expect(supabaseAdapter).toContain("client.rpc('kc_chat_set_message_reply'");
+    expect(supabaseAdapter).not.toContain(".from('chat_messages')\n        .update({ reply_to_id");
+    expect(migration).toContain('create or replace function public.kc_chat_set_message_reply');
+    expect(migration).toContain('reply_wrong_conversation');
+    expect(migration).toContain('grant execute on function public.kc_chat_set_message_reply(uuid, uuid) to authenticated;');
   });
 });

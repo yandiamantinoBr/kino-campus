@@ -15,6 +15,10 @@
       ? window._KCSA.getCurrentUser() : Promise.resolve(null);
   }
 
+  function withoutDirectMessages(query) {
+    return query.neq('type', 'direct_message');
+  }
+
   // ── Helpers de normalização ────────────────────────────────────────────────
 
   function buildDefaultNotificationPreferences() {
@@ -258,12 +262,26 @@
   async function getNotifications(limit, offset) {
     const client = getClient();
     if (!client) return { ok: false, error: 'NO_CLIENT' };
-    const { data, error } = await client.rpc('kc_get_notifications', {
-      p_limit: limit || 20,
-      p_offset: offset || 0,
-    });
+    const user = await getCurrentUser();
+    if (!user || !user.id) return { ok: false, error: 'NOT_AUTHENTICATED' };
+    const start = Math.max(0, Number(offset) || 0);
+    const end = start + Math.max(1, Number(limit) || 20) - 1;
+    const query = withoutDirectMessages(
+      client
+        .from('notifications')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(start, end)
+    );
+    const { data, error, count } = await query;
     if (error) return { ok: false, error: error.message };
-    return data;
+    return {
+      ok: true,
+      notifications: Array.isArray(data) ? data : [],
+      unread: await getUnreadNotificationCount(),
+      total: count || 0,
+    };
   }
 
   async function markNotificationsRead(ids) {
@@ -277,9 +295,22 @@
   async function markAllNotificationsRead() {
     const client = getClient();
     if (!client) return { ok: false, error: 'NO_CLIENT' };
-    const { data, error } = await client.rpc('kc_mark_all_notifications_read');
+    const user = await getCurrentUser();
+    if (!user || !user.id) return { ok: false, error: 'NOT_AUTHENTICATED' };
+    const query = withoutDirectMessages(
+      client
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false)
+        .select('id')
+    );
+    const { data, error } = await query;
     if (error) return { ok: false, error: error.message };
-    return data;
+    return {
+      ok: true,
+      updated: Array.isArray(data) ? data.length : 0,
+    };
   }
 
   async function clearNotifications() {
@@ -291,6 +322,7 @@
       .from('notifications')
       .delete()
       .eq('user_id', user.id)
+      .neq('type', 'direct_message')
       .select('id');
     if (error) return { ok: false, error: error.message };
     return {
@@ -302,9 +334,18 @@
   async function getUnreadNotificationCount() {
     const client = getClient();
     if (!client) return 0;
-    const { data, error } = await client.rpc('kc_unread_notification_count');
+    const user = await getCurrentUser();
+    if (!user || !user.id) return 0;
+    const query = withoutDirectMessages(
+      client
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false)
+    );
+    const { error, count } = await query;
     if (error) return 0;
-    return data || 0;
+    return count || 0;
   }
 
   // ── API: Realtime ──────────────────────────────────────────────────────────

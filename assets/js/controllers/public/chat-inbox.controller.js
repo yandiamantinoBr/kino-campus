@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.20';
+  const VERSION = '9.3.5.24';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
   const AUTH_BOOT_TIMEOUT_MS = 8000;
@@ -59,6 +59,7 @@
     conversationLoadToken: 0,
     messageLoadToken: 0,
     pendingActiveUnread: 0,
+    jumpTarget: 'bottom',
     typingChannel: null,
     typingBroadcastTimer: null,
     typingResetTimer: null,
@@ -235,13 +236,63 @@
     return (wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight) < 120;
   }
 
+  function isNearTop() {
+    var wrap = $('kcChatMessages');
+    if (!wrap) return true;
+    return wrap.scrollTop < 120;
+  }
+
+  function isMessagesScrollable() {
+    var wrap = $('kcChatMessages');
+    return !!(wrap && (wrap.scrollHeight - wrap.clientHeight) > 160);
+  }
+
   function setJumpVisible(visible) {
     var btn = $('kcChatJumpBtn');
     if (!btn) return;
-    btn.hidden = !visible;
-    // Atualiza badge de não-lidas dentro do botão (microinteração: contagem visível)
+    if (!visible) {
+      btn.hidden = true;
+      var oldBadge = btn.querySelector('.kc-chat-jump__badge');
+      if (oldBadge) oldBadge.remove();
+      return;
+    }
+    updateJumpButton();
+  }
+
+  function updateJumpButton() {
+    var btn = $('kcChatJumpBtn');
+    var wrap = $('kcChatMessages');
+    if (!btn || !wrap) return;
+
+    var canScroll = isMessagesScrollable();
+    var nearTop = isNearTop();
+    var nearBottom = isNearBottom();
+    var target = '';
+
+    if (!nearBottom || state.pendingActiveUnread > 0) target = 'bottom';
+    else if (!nearTop) target = 'top';
+
+    if (!canScroll || !target) {
+      btn.hidden = true;
+      var staleBadge = btn.querySelector('.kc-chat-jump__badge');
+      if (staleBadge) staleBadge.remove();
+      return;
+    }
+
+    state.jumpTarget = target;
+    btn.hidden = false;
+    btn.setAttribute('data-direction', target);
+
+    var icon = btn.querySelector('i');
+    if (icon) icon.className = target === 'top' ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+    var label = btn.querySelector('.kc-chat-jump__label') || btn.querySelector('span:not(.kc-chat-jump__badge)');
+    if (label) {
+      label.classList.add('kc-chat-jump__label');
+      label.textContent = state.pendingActiveUnread > 0 ? 'Novas mensagens' : (target === 'top' ? 'Topo' : 'Fim');
+    }
+
     var badge = btn.querySelector('.kc-chat-jump__badge');
-    if (visible && state.pendingActiveUnread > 0) {
+    if (state.pendingActiveUnread > 0) {
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'kc-chat-jump__badge';
@@ -251,6 +302,11 @@
     } else if (badge) {
       badge.remove();
     }
+  }
+
+  function clampNumber(value, min, max) {
+    if (max < min) return min;
+    return Math.max(min, Math.min(value, max));
   }
 
   function scheduleLoadConversations() {
@@ -732,8 +788,8 @@
     renderPresence(status, avatarEl);
   }
 
-  // Calcula presença do peer com base na última mensagem recebida dele.
-  // "online" se < 2 min; senão "visto por último HH:MM" ou "offline".
+  // Sem presença persistida no banco: usamos a última mensagem recebida do peer
+  // como sinal leve de atividade recente, sem chamar isso de "visto por último".
   function renderPresence(statusEl, avatarEl) {
     var peerMsgs = state.messages.filter(function (m) {
       return m.sender_id !== state.me.id && !m.deleted_at;
@@ -747,7 +803,7 @@
       statusEl.textContent = 'online';
       statusEl.classList.add('is-online');
     } else if (lastPeerTs) {
-      statusEl.textContent = 'visto por último ' + formatTime(new Date(lastPeerTs).toISOString());
+      statusEl.textContent = 'última mensagem ' + formatTime(new Date(lastPeerTs).toISOString());
     } else {
       statusEl.textContent = '';
     }
@@ -851,7 +907,47 @@
     if (!scope) return;
     Array.prototype.forEach.call(scope.querySelectorAll('.kc-chat-msg.is-menu-open'), function (el) {
       el.classList.remove('is-menu-open');
+      resetMessageMenuPosition(el);
     });
+  }
+
+  function resetMessageMenuPosition(bubble) {
+    var menu = bubble && bubble.querySelector('.kc-chat-msg__menu');
+    if (!menu) return;
+    menu.style.left = '';
+    menu.style.top = '';
+    menu.style.right = '';
+    menu.style.bottom = '';
+  }
+
+  function positionOpenMessageMenu(bubble) {
+    if (!isTouchMenuMode() || !bubble) return;
+    var menu = bubble.querySelector('.kc-chat-msg__menu');
+    if (!menu) return;
+
+    var rect = bubble.getBoundingClientRect();
+    var menuRect = menu.getBoundingClientRect();
+    var width = menuRect.width || Math.min(240, window.innerWidth - 24);
+    var height = menuRect.height || 42;
+    var left = clampNumber(rect.left + (rect.width / 2) - (width / 2), 8, window.innerWidth - width - 8);
+    var top = rect.bottom + 8;
+    var footerLimit = window.innerHeight - 92;
+
+    if (top + height > footerLimit) top = rect.top - height - 8;
+    top = clampNumber(top, 8, window.innerHeight - height - 8);
+
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.style.right = 'auto';
+    menu.style.bottom = 'auto';
+
+    var positioned = menu.getBoundingClientRect();
+    if (Number.isFinite(positioned.left) && Math.abs(positioned.left - left) > 1) {
+      menu.style.left = (left - (positioned.left - left)) + 'px';
+    }
+    if (Number.isFinite(positioned.top) && Math.abs(positioned.top - top) > 1) {
+      menu.style.top = (top - (positioned.top - top)) + 'px';
+    }
   }
 
   function renderMessagesList() {
@@ -864,6 +960,7 @@
         '<h2 class="kc-chat-empty__title">Diga olá!</h2>' +
         '<p class="kc-chat-empty__body">Envie a primeira mensagem para começar a conversa.</p>' +
         '</div>';
+      setJumpVisible(false);
       return;
     }
 
@@ -894,6 +991,7 @@
       lastTs = ts;
     });
     wrap.innerHTML = html;
+    updateJumpButton();
 
     // Bind context menu de mensagens próprias
     Array.prototype.forEach.call(wrap.querySelectorAll('[data-msg-menu]'), function (btn) {
@@ -962,7 +1060,10 @@
             e.target.closest('[data-media-retry]') || e.target.closest('.kc-chat-msg__edit-area')) return;
         var wasOpen = bubble.classList.contains('is-menu-open');
         closeMessageMenus(wrap);
-        if (!wasOpen) bubble.classList.add('is-menu-open');
+        if (!wasOpen) {
+          bubble.classList.add('is-menu-open');
+          requestAnimationFrame(function () { positionOpenMessageMenu(bubble); });
+        }
       });
     });
 
@@ -1112,7 +1213,21 @@
 
   function scrollToBottom() {
     var wrap = $('kcChatMessages');
-    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+    if (wrap) {
+      wrap.scrollTop = wrap.scrollHeight;
+      setTimeout(updateJumpButton, 120);
+    }
+  }
+
+  function scrollToTop() {
+    var wrap = $('kcChatMessages');
+    if (!wrap) return;
+    try {
+      wrap.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (_) {
+      wrap.scrollTop = 0;
+    }
+    setTimeout(updateJumpButton, 220);
   }
 
   function appendMessage(m, opts) {
@@ -1459,6 +1574,7 @@
         e.stopPropagation();
         var mid = btn.getAttribute('data-msg-menu');
         var action = btn.getAttribute('data-action');
+        closeMessageMenus($('kcChatMessages'));
         if (action === 'delete') handleDeleteMessage(mid);
         else if (action === 'edit') handleEditMessage(mid);
         else if (action === 'report') handleReportMessage(mid);
@@ -1794,7 +1910,7 @@
     var status = $('kcChatPeerStatus');
     if (!status) return;
     delete status.dataset.kcPrevStatus;
-    // Restaura o status de presença (online / visto por último) em vez de vazio
+    // Restaura o status de atividade (online / última mensagem) em vez de vazio.
     var avatarEl = $('kcChatPeerAvatar');
     renderPresence(status, avatarEl);
   }
@@ -1980,6 +2096,7 @@
     if (messages) {
       // Paginação ao scrollar pro topo
       messages.addEventListener('scroll', function () {
+        closeMessageMenus(messages);
         if (messages.scrollTop < 80 && state.hasMoreMessages && !state.isLoadingMore) {
           loadMoreMessages();
         }
@@ -1987,6 +2104,7 @@
           var last = state.messages[state.messages.length - 1];
           markActiveConversationRead(last && last.message_id);
         }
+        updateJumpButton();
       });
     }
 
@@ -1999,9 +2117,15 @@
 
     if (jumpBtn) {
       jumpBtn.addEventListener('click', function () {
+        if (state.jumpTarget === 'top') {
+          scrollToTop();
+          return;
+        }
         scrollToBottom();
-        var last = state.messages[state.messages.length - 1];
-        markActiveConversationRead(last && last.message_id);
+        if (state.pendingActiveUnread > 0) {
+          var last = state.messages[state.messages.length - 1];
+          markActiveConversationRead(last && last.message_id);
+        }
       });
     }
 
@@ -2018,6 +2142,10 @@
 
     // Reage a auth changes sem recarregar a pagina em refresh de token.
     document.addEventListener('kc:authchange', handleAuthChange);
+    window.addEventListener('resize', function () {
+      closeMessageMenus();
+      updateJumpButton();
+    });
   }
 
   // ── Bootstrap ───────────────────────────────────────────────────────────
