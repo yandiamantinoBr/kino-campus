@@ -103,9 +103,16 @@
     if (closeButton) closeButton.focus();
   }
 
+  function isInteractiveInsideOpener(event, opener) {
+    if (!event || !opener || event.target === opener) return false;
+    var interactive = event.target.closest && event.target.closest('a, button, input, select, textarea, summary, [role="button"]');
+    return !!(interactive && interactive !== opener);
+  }
+
   function onClick(event) {
     var opener = event.target.closest && event.target.closest('[data-kc-context-open]');
     if (opener) {
+      if (isInteractiveInsideOpener(event, opener)) return;
       event.preventDefault();
       openModal(opener);
       return;
@@ -117,6 +124,13 @@
   }
 
   function onKeydown(event) {
+    var opener = event.target.closest && event.target.closest('[data-kc-context-open]');
+    if (opener && (event.key === 'Enter' || event.key === ' ')) {
+      if (isInteractiveInsideOpener(event, opener)) return;
+      event.preventDefault();
+      openModal(opener);
+      return;
+    }
     var modal = getModal();
     if (!modal || modal.getAttribute('aria-hidden') === 'true') return;
     if (event.key === 'Escape') {

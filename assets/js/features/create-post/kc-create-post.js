@@ -459,6 +459,15 @@ function kcOpenCreatePostModal(prefModuleKey) {
   return true;
 }
 
+function kcResolveEditLocationValue(post, metadata, moduleKey) {
+  const source = post && typeof post === 'object' ? post : {};
+  const meta = metadata && typeof metadata === 'object' ? metadata : {};
+  if (moduleKey === 'achados-perdidos') {
+    return meta.lostFoundLocationLabel || source.lostFoundLocationLabel || source.location || source.localizacao || meta.localizacao || meta.location || '';
+  }
+  return source.location || source.localizacao || meta.localizacao || meta.location || meta.local || '';
+}
+
 function kcCloseCreatePostModal() {
   const overlay = document.getElementById(KC_CREATE_MODAL_ID);
   if (!overlay) return;
@@ -532,7 +541,7 @@ function kcOpenEditPostModal(post, callback) {
     titulo: post.titulo || post.title || '',
     descricao: post.descricao || post.description || '',
     preco: post.preco != null ? String(post.preco) : '',
-    localizacao: md.lostFoundLocationLabel || post.lostFoundLocationLabel || post.location || post.localizacao || md.localizacao || '',
+    localizacao: kcResolveEditLocationValue(post, md, moduleKey),
     condicao: post.condicao || md.condicao || '',
     sustentavel: !!(post.sustentavel || post.sustainable || md.sustentavel),
     // Campos de módulos específicos (extraídos de metadata)

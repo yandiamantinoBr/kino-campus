@@ -110,12 +110,15 @@
             required: true,
             multi: false,
             options: [
-              { key: 'sustentabilidade', label: 'Sustentabilidade' },
               { key: 'academicos', label: 'Acadêmicos' },
+              { key: 'palestras', label: 'Palestras' },
+              { key: 'congressos', label: 'Congressos' },
+              { key: 'cursos', label: 'Cursos' },
               { key: 'culturais', label: 'Culturais' },
               { key: 'esportivos', label: 'Esportivos' },
               { key: 'workshops', label: 'Workshops' },
               { key: 'festas', label: 'Festas' },
+              { key: 'sustentabilidade', label: 'Sustentabilidade' },
             ]
           }
         ]
@@ -163,12 +166,16 @@
             required: true,
             multi: false,
             options: [
+              { key: 'editais', label: 'Editais' },
+              { key: 'concursos', label: 'Concursos' },
+              { key: 'bolsas', label: 'Bolsas' },
               { key: 'estagios', label: 'Estágio' },
               { key: 'empregos', label: 'Emprego' },
-              { key: 'freelancer', label: 'Freelancer' },
               { key: 'monitoria', label: 'Monitoria' },
               { key: 'pesquisa', label: 'Pesquisa' },
+              { key: 'cursos-capacitacoes', label: 'Cursos e capacitações' },
               { key: 'voluntariado', label: 'Voluntariado' },
+              { key: 'freelancer', label: 'Freelancer' },
             ]
           }
         ]

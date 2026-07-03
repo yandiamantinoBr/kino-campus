@@ -179,15 +179,38 @@ function inferOportunidadesSubcategory(source, tags = []) {
 function inferEventosCategory(rawCat, tags = []) {
   const base = _normalizeText(rawCat);
   const t = (Array.isArray(tags) ? tags : []).map(x => _normalizeText(x));
+  const official = {
+    academico: 'academicos',
+    academicos: 'academicos',
+    palestra: 'palestras',
+    palestras: 'palestras',
+    congresso: 'congressos',
+    congressos: 'congressos',
+    curso: 'cursos',
+    cursos: 'cursos',
+    cultural: 'culturais',
+    culturais: 'culturais',
+    esportivo: 'esportivos',
+    esportivos: 'esportivos',
+    workshop: 'workshops',
+    workshops: 'workshops',
+    festa: 'festas',
+    festas: 'festas',
+    sustentabilidade: 'sustentabilidade',
+  };
 
   // Se já veio uma categoria "boa", respeitar
-  if (base && base !== 'eventos') return base;
+  if (base && base !== 'eventos') return official[base] || base;
 
   const has = (needle) => t.some(x => x.includes(needle) || needle.includes(x));
   if (has('sustent') || has('feira')) return 'sustentabilidade';
-  if (has('festival') || has('cultural') || has('musica') || has('arte')) return 'cultural';
-  if (has('torneio') || has('futsal') || has('esport')) return 'esportivo';
-  if (has('palestra') || has('workshop') || has('academ')) return 'academico';
+  if (has('palestra') || has('mesa redonda')) return 'palestras';
+  if (has('congresso') || has('seminario') || has('simposio') || has('jornada')) return 'congressos';
+  if (has('curso') || has('minicurso') || has('capacit') || has('formacao')) return 'cursos';
+  if (has('workshop') || has('oficina')) return 'workshops';
+  if (has('festival') || has('cultural') || has('musica') || has('arte')) return 'culturais';
+  if (has('torneio') || has('futsal') || has('esport')) return 'esportivos';
+  if (has('academ')) return 'academicos';
   return base || 'eventos';
 }
 

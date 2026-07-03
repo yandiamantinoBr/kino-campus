@@ -30,6 +30,9 @@
   var CATEGORIES = {
     sustentabilidade: { label: 'Sustentabilidade', icon: 'fas fa-leaf',               color: '#4caf50' },
     academicos:       { label: 'Acadêmicos',        icon: 'fas fa-graduation-cap',     color: '#2196f3' },
+    palestras:        { label: 'Palestras',         icon: 'fas fa-microphone-lines',   color: '#3f51b5' },
+    congressos:       { label: 'Congressos',        icon: 'fas fa-users-rectangle',    color: '#795548' },
+    cursos:           { label: 'Cursos',            icon: 'fas fa-book-open-reader',   color: '#607d8b' },
     culturais:        { label: 'Culturais',          icon: 'fas fa-theater-masks',      color: '#9c27b0' },
     esportivos:       { label: 'Esportivos',         icon: 'fas fa-running',            color: '#ff9800' },
     workshops:        { label: 'Workshops',           icon: 'fas fa-chalkboard-teacher', color: '#00bcd4' },
@@ -93,6 +96,9 @@
     return [
       '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#4caf50"></span><span>Sustentabilidade</span></div>',
       '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#2196f3"></span><span>Acadêmicos</span></div>',
+      '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#3f51b5"></span><span>Palestras</span></div>',
+      '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#795548"></span><span>Congressos</span></div>',
+      '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#607d8b"></span><span>Cursos</span></div>',
       '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#9c27b0"></span><span>Culturais</span></div>',
       '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#ff9800"></span><span>Esportivos</span></div>',
       '<div class="kc-cal-legend-item"><span class="kc-cal-dot" style="background:#00bcd4"></span><span>Workshops</span></div>',
@@ -208,6 +214,7 @@
     }
     var ALIASES = {
       academico: 'academicos', cultural: 'culturais', esportivo: 'esportivos',
+      palestra: 'palestras', congresso: 'congressos', curso: 'cursos',
       workshop: 'workshops', festa: 'festas',
     };
     return ALIASES[key] || key;

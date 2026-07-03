@@ -62,6 +62,19 @@ describe('kc-create-post.schema — module contracts', () => {
     expect(source).toContain("categoryGroupId: 'categoria'");
     expect(source).toContain("{ key: 'ingressos', label: 'Ingressos' }");
   });
+
+  test('expande subtópicos de eventos para formatos acadêmicos úteis', () => {
+    expect(source).toContain("{ key: 'palestras', label: 'Palestras' }");
+    expect(source).toContain("{ key: 'congressos', label: 'Congressos' }");
+    expect(source).toContain("{ key: 'cursos', label: 'Cursos' }");
+  });
+
+  test('expande tipos de oportunidades além de vagas tradicionais', () => {
+    expect(source).toContain("{ key: 'editais', label: 'Editais' }");
+    expect(source).toContain("{ key: 'concursos', label: 'Concursos' }");
+    expect(source).toContain("{ key: 'bolsas', label: 'Bolsas' }");
+    expect(source).toContain("{ key: 'cursos-capacitacoes', label: 'Cursos e capacitações' }");
+  });
 });
 
 describe('kc-create-post.schema — loader order', () => {

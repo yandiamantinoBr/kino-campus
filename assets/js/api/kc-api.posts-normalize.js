@@ -42,6 +42,7 @@
     const preco = (typeof r.preco === 'number') ? r.preco : ((r.price != null) ? r.price : null);
 
     const meta = (r.metadata && typeof r.metadata === 'object' && !Array.isArray(r.metadata)) ? { ...r.metadata } : {};
+    const location = pickFirstNonEmpty([r.localizacao, r.location, meta.localizacao, meta.location, meta.local]);
     const authorProfile = (r.authorProfile && typeof r.authorProfile === 'object' && !Array.isArray(r.authorProfile))
       ? { ...r.authorProfile }
       : null;
@@ -140,6 +141,8 @@
       votos: (r.votos != null ? r.votos : null),
       comentarios: (r.comentarios != null ? r.comentarios : null),
       condicao: r.condicao || r.condition || null,
+      localizacao: location,
+      location,
       precoOriginal: (r.precoOriginal != null ? r.precoOriginal : null),
       precoTexto: r.precoTexto || r.priceText || null,
       imagens: normalizedImages,
@@ -188,6 +191,10 @@
         }
       }
       if (!meta.visibility && visibility) meta.visibility = visibility;
+      if (location) {
+        if (!meta.location) meta.location = location;
+        if (!meta.localizacao) meta.localizacao = location;
+      }
     } catch (_e) { }
 
     return out;

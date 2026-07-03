@@ -24,6 +24,7 @@
     published: { label: 'Ativo',     bg: 'rgba(83,214,129,.15)',  color: '#53d681', borderColor: 'rgba(83,214,129,.3)'  },
     hidden:    { label: 'Inativo',   bg: 'rgba(239,108,0,.12)',   color: '#ef6c00', borderColor: 'rgba(239,108,0,.3)'   },
     expired:   { label: 'Expirado',  bg: 'rgba(244,67,54,.10)',   color: '#ef9a9a', borderColor: 'rgba(244,67,54,.3)'   },
+    closed:    { label: 'Encerrado',  bg: 'rgba(148,163,184,.12)', color: '#cbd5e1', borderColor: 'rgba(148,163,184,.3)' },
     deleted:   { label: 'Excluído',  bg: 'rgba(150,150,150,.12)', color: '#aaa',    borderColor: 'rgba(150,150,150,.25)' },
     pending:   { label: 'Pendente',  bg: 'rgba(255,193,7,.12)',   color: '#ffc107', borderColor: 'rgba(255,193,7,.3)'   },
   };
@@ -107,6 +108,67 @@
       return window.KCUtils.buildProductDetailHref(normalized);
     }
     return '_product.html?id=' + encodeURIComponent(normalized);
+  }
+
+  function findPostByUuid(uuid) {
+    var normalized = String(uuid || '').trim();
+    if (!normalized) return null;
+    return state.posts.find(function (p) { return String((p && (p.uuid || p.id)) || '') === normalized; }) || null;
+  }
+
+  function getPostMetadata(post) {
+    return (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata))
+      ? post.metadata
+      : {};
+  }
+
+  function getAbsolutePostUrl(uuid) {
+    var href = buildPostDetailHref(uuid);
+    if (!href) return '';
+    try { return new URL(href, window.location.href).href; }
+    catch (_) { return href; }
+  }
+
+  function toGoogleDate(d) {
+    return String(d.getFullYear()) +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function toGoogleDateTime(d) {
+    return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  }
+
+  function buildGoogleCalendarHref(post) {
+    var meta = getPostMetadata(post);
+    var moduleKey = String((post && (post.module || post.modulo)) || '').toLowerCase();
+    var date = String(meta.data_evento || meta.data || (post && (post.data_evento || post.data)) || '').slice(0, 10);
+    var time = String(meta.hora_evento || meta.hora || (post && (post.hora_evento || post.hora)) || '').trim();
+    var title = (post && (post.title || post.titulo)) || 'Evento KinoCampus';
+    var location = (post && (post.location || post.localizacao)) || meta.location || meta.localizacao || '';
+    var details = [
+      (post && (post.descricao || post.description)) || '',
+      getAbsolutePostUrl(post && (post.uuid || post.id)),
+    ].filter(Boolean).join('\n\n');
+    var start;
+    var end;
+    var params;
+    if (moduleKey !== 'eventos' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return '';
+
+    params = new URLSearchParams({ action: 'TEMPLATE', text: title });
+    if (/^\d{2}:\d{2}/.test(time)) {
+      start = new Date(date + 'T' + time.slice(0, 5) + ':00');
+      end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      params.set('dates', toGoogleDateTime(start) + '/' + toGoogleDateTime(end));
+    } else {
+      start = new Date(date + 'T12:00:00');
+      end = new Date(start.getTime());
+      end.setDate(end.getDate() + 1);
+      params.set('dates', toGoogleDate(start) + '/' + toGoogleDate(end));
+    }
+    if (details) params.set('details', details);
+    if (location) params.set('location', location);
+    return 'https://calendar.google.com/calendar/render?' + params.toString();
   }
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -273,6 +335,9 @@
         else if (action === 'toggle') handleToggle(uuid, btn);
         else if (action === 'boost') handleBoost(uuid, btn);
         else if (action === 'renew') handleRenew(uuid);
+        else if (action === 'share') handleShare(uuid, btn);
+        else if (action === 'close') handleClose(uuid, btn);
+        else if (action === 'reactivate') handleReactivate(uuid, btn);
         else if (action === 'save') handleSave(uuid, btn);
         else if (action === 'clone') { e.preventDefault(); handleClone(uuid); }
         else if (action === 'delete') handleDelete(uuid);
@@ -281,9 +346,20 @@
     }
   }
 
-  function buildPostActions(uuid, status) {
+  function buildPostActions(post) {
+    var uuid = post && (post.uuid || post.id) || '';
+    var status = String((post && post.status) || 'published').toLowerCase();
+    var calendarHref = buildGoogleCalendarHref(post);
     var viewBtn = '<a href="' + esc(buildPostDetailHref(uuid)) + '" class="kc-btn-secondary kc-my-posts-action--full" style="text-decoration:none;">' +
       '<i class="fas fa-eye"></i> Ver publicação</a>';
+
+    var shareBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="share" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="fas fa-share-nodes"></i> Compartilhar</button>';
+
+    var calendarBtn = calendarHref
+      ? '<a href="' + esc(calendarHref) + '" class="kc-btn-secondary" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">' +
+        '<i class="fas fa-calendar-plus"></i> Marcar na agenda</a>'
+      : '';
 
     var editBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="edit" data-post-uuid="' + esc(uuid) + '">' +
       '<i class="fas fa-pen"></i> Editar</button>';
@@ -292,7 +368,7 @@
       '<i class="fas fa-bookmark"></i> Salvar</button>';
 
     var cloneBtn = '<a href="create-post.html" class="kc-btn-secondary" data-my-post-action="clone" data-post-uuid="' + esc(uuid) + '" style="text-decoration:none;">' +
-      '<i class="fas fa-copy"></i> Criar Parecido</a>';
+      '<i class="fas fa-copy"></i> Criar parecido</a>';
 
     var deleteBtn = '<button type="button" class="kc-btn-secondary kc-my-posts-action--danger" data-my-post-action="delete" data-post-uuid="' + esc(uuid) + '">' +
       '<i class="fas fa-trash"></i> Excluir</button>';
@@ -301,27 +377,40 @@
       var renewBtn = '<button type="button" class="kc-btn-primary kc-my-posts-action--full" data-my-post-action="renew" data-post-uuid="' + esc(uuid) + '">' +
         '<i class="fas fa-rotate-right"></i> Renovar publicação</button>';
       return '<div class="kc-my-posts-actions">' +
-        renewBtn + viewBtn + editBtn + saveBtn + cloneBtn + deleteBtn +
+        renewBtn + viewBtn + shareBtn + calendarBtn + editBtn + saveBtn + cloneBtn + deleteBtn +
+        '</div>';
+    }
+
+    if (status === 'closed') {
+      var reactivateBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="reactivate" data-post-uuid="' + esc(uuid) + '">' +
+        '<i class="fas fa-unlock"></i> Reativar</button>';
+      return '<div class="kc-my-posts-actions">' +
+        viewBtn + shareBtn + calendarBtn + editBtn + reactivateBtn + saveBtn + cloneBtn + deleteBtn +
         '</div>';
     }
 
     if (status === 'deleted' || status === 'pending') {
       return '<div class="kc-my-posts-actions">' +
-        viewBtn + editBtn + saveBtn + cloneBtn + deleteBtn +
+        viewBtn + shareBtn + calendarBtn + editBtn + saveBtn + cloneBtn + deleteBtn +
         '</div>';
     }
 
     // published ou hidden
-    var toggleLabel = status === 'hidden' ? 'Reativar' : 'Desabilitar';
+    var toggleLabel = status === 'hidden' ? 'Reativar anúncio' : 'Desabilitar anúncio';
     var toggleIcon  = status === 'hidden' ? 'fas fa-eye' : 'fas fa-eye-slash';
     var toggleBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="toggle" data-post-uuid="' + esc(uuid) + '">' +
       '<i class="' + esc(toggleIcon) + '"></i> ' + esc(toggleLabel) + '</button>';
 
-    var boostBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="boost" data-post-uuid="' + esc(uuid) + '">' +
-      '<i class="fas fa-rocket"></i> Impulsionar</button>';
+    var closeBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="close" data-post-uuid="' + esc(uuid) + '">' +
+      '<i class="fas fa-lock"></i> Encerrar</button>';
+
+    var boostBtn = status === 'published'
+      ? '<button type="button" class="kc-btn-secondary" data-my-post-action="boost" data-post-uuid="' + esc(uuid) + '">' +
+        '<i class="fas fa-rocket"></i> Impulsionar hoje</button>'
+      : '';
 
     return '<div class="kc-my-posts-actions">' +
-      viewBtn + editBtn + toggleBtn + boostBtn + saveBtn + cloneBtn + deleteBtn +
+      viewBtn + shareBtn + calendarBtn + editBtn + toggleBtn + closeBtn + boostBtn + saveBtn + cloneBtn + deleteBtn +
       '</div>';
   }
 
@@ -366,7 +455,7 @@
           '</div>' +
         '</div>' +
       '</div>' +
-      buildPostActions(uuid, status) +
+      buildPostActions(post) +
     '</div>';
   }
 
@@ -411,6 +500,104 @@
     }).catch(function () {
       showToastMsg('Erro ao alterar status.', 'error');
       if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+  }
+
+  function handleShare(uuid, btn) {
+    var post = findPostByUuid(uuid);
+    var title = (post && (post.title || post.titulo)) || 'Publicação KinoCampus';
+    var url = getAbsolutePostUrl(uuid);
+    var text = title + (url ? '\n' + url : '');
+    var api = window.KCAPI;
+
+    function trackShare() {
+      if (api && typeof api.trackShare === 'function') {
+        api.trackShare(uuid).catch(function () { });
+      }
+    }
+
+    function done(copied) {
+      if (copied !== false) trackShare();
+      showToastMsg(copied === false ? 'Não foi possível copiar o link.' : 'Link da publicação copiado.', copied === false ? 'error' : 'info', 2200);
+    }
+
+    if (window.navigator && typeof window.navigator.share === 'function' && window.isSecureContext) {
+      window.navigator.share({ title: title, text: title, url: url }).then(function () {
+        trackShare();
+      }).catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        if (window.KCUtils && typeof window.KCUtils.copyTextToClipboard === 'function') {
+          window.KCUtils.copyTextToClipboard(text, { target: btn }).then(done);
+        } else {
+          done(false);
+        }
+      });
+      return;
+    }
+
+    if (window.KCUtils && typeof window.KCUtils.copyTextToClipboard === 'function') {
+      window.KCUtils.copyTextToClipboard(text, { target: btn }).then(done);
+      return;
+    }
+
+    done(false);
+  }
+
+  function handleClose(uuid, btn) {
+    var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
+    var api = window.KCAPI;
+    var prevHTML = btn ? btn.innerHTML : '';
+    if (postIdx < 0) return;
+    if (!api || typeof api.closePost !== 'function') { showToastMsg('Serviço indisponível.', 'error'); return; }
+    if (!window.confirm('Encerrar esta publicação? Ela continuará visível como histórico, mas não ficará ativa no feed.')) return;
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Encerrando...'; }
+    api.closePost(uuid, { reason: 'owner_closed' }).then(function (res) {
+      if (res && res.ok) {
+        state.posts[postIdx] = Object.assign({}, state.posts[postIdx], {
+          status: 'closed',
+          closed_at: res.closed_at || new Date().toISOString(),
+        });
+        persistCachedPosts(state.posts);
+        showToastMsg(res.message || 'Publicação encerrada.', 'success', 2400);
+        renderTabs();
+        renderPostsList(state.activeModule);
+        return;
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; }
+      showToastMsg((res && (res.message || (res.error && res.error.message))) || 'Não foi possível encerrar a publicação.', 'error', 2800);
+    }).catch(function () {
+      if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; }
+      showToastMsg('Não foi possível encerrar a publicação.', 'error', 2800);
+    });
+  }
+
+  function handleReactivate(uuid, btn) {
+    var postIdx = state.posts.findIndex(function (p) { return (p.uuid || p.id) === uuid; });
+    var api = window.KCAPI;
+    var prevHTML = btn ? btn.innerHTML : '';
+    if (postIdx < 0) return;
+    if (!api || typeof api.reactivatePost !== 'function') { showToastMsg('Serviço indisponível.', 'error'); return; }
+    if (!window.confirm('Reativar esta publicação? Ela voltará a ficar ativa nos feeds.')) return;
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reativando...'; }
+    api.reactivatePost(uuid).then(function (res) {
+      if (res && res.ok) {
+        state.posts[postIdx] = Object.assign({}, state.posts[postIdx], {
+          status: 'published',
+          expires_at: res.expires_at || state.posts[postIdx].expires_at || null,
+        });
+        persistCachedPosts(state.posts);
+        showToastMsg(res.message || 'Publicação reativada.', 'success', 2400);
+        renderTabs();
+        renderPostsList(state.activeModule);
+        return;
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; }
+      showToastMsg((res && (res.message || (res.error && res.error.message))) || 'Não foi possível reativar a publicação.', 'error', 2800);
+    }).catch(function () {
+      if (btn) { btn.disabled = false; btn.innerHTML = prevHTML; }
+      showToastMsg('Não foi possível reativar a publicação.', 'error', 2800);
     });
   }
 

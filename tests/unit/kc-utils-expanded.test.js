@@ -84,6 +84,12 @@ describe('KCUtils - Testes Expandidos', () => {
       expect(result).toContain('KinoCampus</a>');
     });
 
+    test('converte links mailto sem target externo', () => {
+      const result = utils.renderMarkdownInline('fale com [secretaria](mailto:sec@ufg.br)');
+      expect(result).toContain('<a href="mailto:sec@ufg.br">secretaria</a>');
+      expect(result).not.toContain('target="_blank"');
+    });
+
     test('escapa HTML antes de aplicar markdown', () => {
       const result = utils.renderMarkdownInline('<script>alert("xss")</script>');
       expect(result).not.toContain('<script>');

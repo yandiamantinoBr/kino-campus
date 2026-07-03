@@ -348,6 +348,13 @@ describe('kc-create-post.fields.js — módulo oportunidades', () => {
     expect(slice).toContain("type: 'opportunity-area'");
   });
 
+  test('inclui campo local ou campus para oportunidades', () => {
+    const idx = source.indexOf("moduleKey === 'oportunidades'");
+    const slice = source.slice(idx, idx + 1300);
+    expect(slice).toContain("name: 'localizacao'");
+    expect(slice).toContain("label: 'Local ou campus (opcional)'");
+  });
+
   test('inclui campo modalidadeTrabalho (select)', () => {
     const idx = source.indexOf("moduleKey === 'oportunidades'");
     const slice = source.slice(idx, idx + 1000);
@@ -458,6 +465,12 @@ describe('kc-create-post.js — stub _kcFieldsModule + kcBuildFieldsForModule', 
     const idx = coreSource.indexOf('function kcBuildFieldsForModule(');
     const slice = coreSource.slice(idx, idx + 300);
     expect(slice).toContain(': []');
+  });
+
+  test('modo de edicao preserva aliases de localizacao/location', () => {
+    expect(coreSource).toContain('function kcResolveEditLocationValue(post, metadata, moduleKey)');
+    expect(coreSource).toContain('source.location || source.localizacao');
+    expect(coreSource).toContain('meta.localizacao || meta.location');
   });
 
   test('não contém mais campos exclusivos da implementação de kcBuildFieldsForModule no core', () => {

@@ -2,6 +2,10 @@ describe('kc-sidebar-context', () => {
   beforeAll(() => {
     document.body.innerHTML = `
       <button type="button" data-kc-context-open="eventos">Abrir contexto</button>
+      <h3 class="kc-home-context-heading" data-kc-context-open="eventos" role="button" tabindex="0">
+        <span class="kc-home-context-heading__label"><i class="fas fa-circle-info"></i> Sobre Eventos</span>
+        <button type="button" data-kc-context-open="eventos" aria-label="Abrir detalhes"><i class="fas fa-circle-info"></i></button>
+      </h3>
       <aside>
         <div data-kc-context-section="eventos">
           <div class="kc-sidebar-section-head kc-sidebar-section-head--accordion">
@@ -41,5 +45,29 @@ describe('kc-sidebar-context', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(modal.getAttribute('aria-hidden')).toBe('true');
     expect(document.activeElement).toBe(trigger);
+  });
+
+  test('abre pelo cabecalho contextual inteiro e pelo botao interno', () => {
+    const heading = document.querySelector('.kc-home-context-heading');
+    heading.click();
+
+    const modal = document.getElementById('kcSidebarContextModal');
+    expect(modal.getAttribute('aria-hidden')).toBe('false');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(modal.getAttribute('aria-hidden')).toBe('true');
+
+    heading.querySelector('button').click();
+    expect(modal.getAttribute('aria-hidden')).toBe('false');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  });
+
+  test('abre por teclado quando o cabecalho contextual esta focado', () => {
+    const heading = document.querySelector('.kc-home-context-heading');
+    heading.focus();
+    heading.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    const modal = document.getElementById('kcSidebarContextModal');
+    expect(modal.getAttribute('aria-hidden')).toBe('false');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   });
 });

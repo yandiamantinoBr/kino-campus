@@ -78,6 +78,13 @@ describe('kc-create-post.resolvers — kcNormalizeOpportunityTypeKey', () => {
     expect(source).toContain("'voluntariado'");
   });
 
+  test('normaliza edital, concurso, bolsa e cursos/capacitações', () => {
+    expect(source).toContain("'edital'");
+    expect(source).toContain("'concurso'");
+    expect(source).toContain("'bolsa'");
+    expect(source).toContain("'curso-capacitacao'");
+  });
+
   test('exporta normalizeOpportunityTypeKey no namespace', () => {
     expect(source).toContain('normalizeOpportunityTypeKey: kcNormalizeOpportunityTypeKey,');
   });
@@ -88,7 +95,11 @@ describe('kc-create-post.resolvers — kcGetOpportunityTypeOptionKey', () => {
     expect(source).toContain('function kcGetOpportunityTypeOptionKey(value)');
   });
 
-  test('mapeia estagio->estagios e emprego->empregos', () => {
+  test('mapeia tipos singulares para opções plurais do schema', () => {
+    expect(source).toContain("'editais'");
+    expect(source).toContain("'concursos'");
+    expect(source).toContain("'bolsas'");
+    expect(source).toContain("'cursos-capacitacoes'");
     expect(source).toContain("'estagios'");
     expect(source).toContain("'empregos'");
   });

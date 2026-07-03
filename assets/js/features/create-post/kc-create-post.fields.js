@@ -187,7 +187,7 @@
           options: ['CLT', 'PJ', 'Temporário', 'Jovem Aprendiz']
         });
       }
-      fields.push({ type: 'text', name: 'localizacao', label: 'Cidade/Campus (opcional)', placeholder: 'Ex: Goiânia / Campus Samambaia', required: false });
+      fields.push({ type: 'text', name: 'localizacao', label: 'Local ou campus (opcional)', placeholder: 'Ex: Goiânia / Campus Samambaia / online', required: false });
       fields.push({ ...moneyFieldMeta, name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
       fields.push({ type: 'text', name: 'contato', label: 'Contato', placeholder: 'Ex: email@ufg.br', required: true });
       fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });

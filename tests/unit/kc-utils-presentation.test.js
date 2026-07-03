@@ -122,7 +122,7 @@ describe('inferOportunidadesSubcategory', () => {
 
 describe('inferEventosCategory', () => {
   test('preserva categoria expl?cita j? can?nica', () => {
-    expect(pres().inferEventosCategory('cultural', ['musica'])).toBe('cultural');
+    expect(pres().inferEventosCategory('cultural', ['musica'])).toBe('culturais');
   });
 
   test('infere sustentabilidade por tags de feira', () => {
@@ -130,11 +130,11 @@ describe('inferEventosCategory', () => {
   });
 
   test('infere cultural por tags de arte', () => {
-    expect(pres().inferEventosCategory('eventos', ['arte', 'musica'])).toBe('cultural');
+    expect(pres().inferEventosCategory('eventos', ['arte', 'musica'])).toBe('culturais');
   });
 
-  test('infere acad?mico por workshop', () => {
-    expect(pres().inferEventosCategory('eventos', ['workshop'])).toBe('academico');
+  test('infere workshop por oficina/workshop', () => {
+    expect(pres().inferEventosCategory('eventos', ['workshop'])).toBe('workshops');
   });
 });
 
@@ -192,7 +192,7 @@ describe('applyPresentationRules ? shape b?sico', () => {
       tags: ['workshop'],
       titulo: 'Workshop acad?mico',
     });
-    expect(output.categoriaKey).toBe('academico');
+    expect(output.categoriaKey).toBe('workshops');
     expect(output._kcAuthorPrefix).toBe('Organizado por');
     expect(output._kcVerifiedTag).toBe('');
   });

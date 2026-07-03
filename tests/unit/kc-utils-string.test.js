@@ -241,4 +241,10 @@ describe('_KCU.string.renderMarkdownInline', () => {
     expect(result).toContain('KinoCampus');
     expect(result).toContain('target="_blank"');
   });
+
+  test('converte link mailto sem target externo', () => {
+    const result = fn('[Contato](mailto:edital@ufg.br)');
+    expect(result).toContain('<a href="mailto:edital@ufg.br">Contato</a>');
+    expect(result).not.toContain('target="_blank"');
+  });
 });
