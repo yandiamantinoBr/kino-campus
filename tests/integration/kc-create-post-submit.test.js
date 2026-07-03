@@ -165,9 +165,22 @@ describe('kc-create-post.submit.js — campos ativos e payload', () => {
     expect(source).toContain('descricao: desc,');
   });
 
+  test('payload preserva localizacao e location para edicao/leitura normalizada', () => {
+    expect(source).toContain('const persistedLocation =');
+    expect(source).toContain('localizacao: persistedLocation,');
+    expect(source).toContain('location: persistedLocation,');
+  });
+
   test('payload contém metadado com subcategory para filtros', () => {
     expect(source).toContain('metadata: {');
     expect(source).toContain('subcategory: filterSubKey');
+  });
+
+  test('metadata preserva aliases localizacao/location', () => {
+    const idx = source.indexOf('lostFoundLocationEmoji:');
+    const slice = source.slice(idx, idx + 500);
+    expect(slice).toContain('localizacao: persistedLocation,');
+    expect(slice).toContain('location: persistedLocation,');
   });
 
   test('obtém imagens via kcGetOrderedCreateImages()', () => {

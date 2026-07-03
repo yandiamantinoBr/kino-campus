@@ -277,6 +277,7 @@
           window.__KC_LOST_FOUND_LOCATION_HISTORY = history;
         }
       }
+      const persistedLocation = isAchados ? (lostFoundLocation.label || activeLocation) : activeLocation;
 
       // Caronas: origem, destino, features
       const caronasOrigem = isCaronas ? activeOrigem : '';
@@ -413,7 +414,8 @@
         preco,
         precoTexto,
         condicao: activeCondicao,
-        localizacao: isAchados ? (lostFoundLocation.label || activeLocation) : activeLocation,
+        localizacao: persistedLocation,
+        location: persistedLocation,
         lostFoundLocationKey: isAchados ? (lostFoundLocation.key || '') : '',
         lostFoundLocationLabel: isAchados ? (lostFoundLocation.label || '') : '',
         lostFoundLocationIcon: isAchados ? (lostFoundLocation.icon || '') : '',
@@ -475,6 +477,8 @@
           lostFoundLocationLabel: isAchados ? (lostFoundLocation.label || '') : '',
           lostFoundLocationIcon: isAchados ? (lostFoundLocation.icon || '') : '',
           lostFoundLocationEmoji: isAchados ? (lostFoundLocation.emoji || '') : '',
+          localizacao: persistedLocation,
+          location: persistedLocation,
           detalhes: activeDetalhes,
           orcamento: activeOrcamento,
           area: isOpportunity ? (opportunityArea.label || '') : '',

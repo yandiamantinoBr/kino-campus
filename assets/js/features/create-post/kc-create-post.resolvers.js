@@ -37,19 +37,31 @@
     const canonical = KCUtils && typeof KCUtils.canonicalCategory === 'function'
       ? KCUtils.canonicalCategory(value)
       : String(value || '').trim().toLowerCase();
+    const rawNormalized = KCUtils && typeof KCUtils.normalizeText === 'function'
+      ? KCUtils.normalizeText(value)
+      : String(value || '').trim().toLowerCase();
+    const haystack = `${rawNormalized} ${canonical}`;
 
     if (!canonical) return '';
-    if (canonical.includes('estagio')) return 'estagio';
-    if (canonical.includes('emprego')) return 'emprego';
-    if (canonical.includes('freelancer')) return 'freelancer';
-    if (canonical.includes('monitor')) return 'monitoria';
-    if (canonical.includes('pesquis') || canonical.includes('pibic') || canonical.includes('pivic')) return 'pesquisa';
-    if (canonical.includes('volunt')) return 'voluntariado';
+    if (haystack.includes('edital') || haystack.includes('editai') || haystack.includes('chamada')) return 'edital';
+    if (haystack.includes('concurso') || haystack.includes('processo seletivo') || haystack.includes('selecao')) return 'concurso';
+    if (haystack.includes('bolsa') || haystack.includes('auxilio') || haystack.includes('auxílio') || haystack.includes('fomento')) return 'bolsa';
+    if (haystack.includes('curso') || haystack.includes('capacit') || haystack.includes('qualific') || haystack.includes('formacao')) return 'curso-capacitacao';
+    if (haystack.includes('estagio')) return 'estagio';
+    if (haystack.includes('emprego')) return 'emprego';
+    if (haystack.includes('freelancer')) return 'freelancer';
+    if (haystack.includes('monitor')) return 'monitoria';
+    if (haystack.includes('pesquis') || haystack.includes('pibic') || haystack.includes('pivic')) return 'pesquisa';
+    if (haystack.includes('volunt')) return 'voluntariado';
     return canonical;
   }
 
   function kcGetOpportunityTypeOptionKey(value) {
     const normalized = kcNormalizeOpportunityTypeKey(value);
+    if (normalized === 'edital') return 'editais';
+    if (normalized === 'concurso') return 'concursos';
+    if (normalized === 'bolsa') return 'bolsas';
+    if (normalized === 'curso-capacitacao') return 'cursos-capacitacoes';
     if (normalized === 'estagio') return 'estagios';
     if (normalized === 'emprego') return 'empregos';
     return normalized;

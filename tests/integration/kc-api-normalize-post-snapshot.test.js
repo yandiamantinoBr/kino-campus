@@ -352,6 +352,18 @@ describe('KCAPI.normalizePost - V76 pre-extraction snapshots', () => {
 `);
   });
 
+  test('preserva aliases location/localizacao no contrato normalizado', () => {
+    const fromColumn = window.KCAPI.normalizePost({ id: 'loc-1', location: 'Centro Cultural UFG', metadata: {} });
+    expect(fromColumn.location).toBe('Centro Cultural UFG');
+    expect(fromColumn.localizacao).toBe('Centro Cultural UFG');
+    expect(fromColumn.metadata.location).toBe('Centro Cultural UFG');
+    expect(fromColumn.metadata.localizacao).toBe('Centro Cultural UFG');
+
+    const fromMetadata = window.KCAPI.normalizePost({ id: 'loc-2', metadata: { localizacao: 'FEFD/UFG' } });
+    expect(fromMetadata.location).toBe('FEFD/UFG');
+    expect(fromMetadata.localizacao).toBe('FEFD/UFG');
+  });
+
   test('mantem shape atual da funcao dentro da fachada antes da extracao', () => {
     expect(typeof window.KCAPI.normalizePost).toBe('function');
     expect(window.KCAPI.normalizePost.name).toBe('normalizePost');

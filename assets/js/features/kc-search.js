@@ -81,7 +81,8 @@
     'setor-universitario': 'Setor Universitário', 'aceita-pets': 'Aceita pets',
     mobiliado: 'Mobiliado', documentos: 'Documentos', eletronicos: 'Eletrônicos',
     livros: 'Livros', ingressos: 'Ingressos', estagios: 'Estágios', empregos: 'Empregos',
-    academicos: 'Acadêmicos', workshops: 'Workshops', encontrados: 'Encontrados',
+    editais: 'Editais', concursos: 'Concursos', bolsas: 'Bolsas', 'cursos-capacitacoes': 'Cursos e capacitações',
+    academicos: 'Acadêmicos', palestras: 'Palestras', congressos: 'Congressos', cursos: 'Cursos', workshops: 'Workshops', encontrados: 'Encontrados',
     perdidos: 'Perdidos', compro: 'Compra', vendo: 'Venda', procuro: 'Procura',
     ofereco: 'Oferta', procurando: 'Procura', oferta: 'Oferta'
   });

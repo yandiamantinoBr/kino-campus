@@ -471,6 +471,7 @@
     'tooltip.cadu-version':             'Versão cadu-api',
     'tooltip.cadu-refresh':             'Atualizar',
     'tooltip.cadu-pipeline-idle':       'Sem run ativo',
+    'tooltip.cadu-openclaw-chat-focus': 'Expandir ou recolher o chat',
     'aria-label.admin-insights':        'Insights do dashboard',
     'aria-label.series-picker':         'Configurar séries do gráfico',
     'aria-label.audit-log':             'Audit log de ações administrativas',

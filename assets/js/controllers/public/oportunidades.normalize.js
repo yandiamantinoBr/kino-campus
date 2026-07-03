@@ -153,6 +153,12 @@ function getPostIdentity(post) {
 
 function normalizeOpportunityType(value, sourceText) {
   const direct = canonicalCategory(value);
+  const directRaw = normalizeText(value);
+  const directText = directRaw + ' ' + direct;
+  if (directText.includes('edital') || directText.includes('editai') || directText.includes('chamada')) return 'edital';
+  if (directText.includes('concurso') || directText.includes('processo seletivo') || directText.includes('selecao')) return 'concurso';
+  if (directText.includes('bolsa') || directText.includes('auxilio') || directText.includes('fomento')) return 'bolsa';
+  if (directText.includes('curso') || directText.includes('capacit') || directText.includes('qualific') || directText.includes('formacao')) return 'curso-capacitacao';
   if (direct.includes('estag')) return 'estagio';
   if (direct.includes('empreg')) return 'emprego';
   if (direct.includes('freela') || direct.includes('freelancer')) return 'freelancer';
@@ -161,6 +167,10 @@ function normalizeOpportunityType(value, sourceText) {
   if (direct.includes('volunt')) return 'voluntariado';
 
   const haystack = normalizeText(sourceText);
+  if (haystack.includes('edital') || haystack.includes('editai') || haystack.includes('chamada publica') || haystack.includes('chamada pública')) return 'edital';
+  if (haystack.includes('concurso') || haystack.includes('processo seletivo') || haystack.includes('selecao')) return 'concurso';
+  if (haystack.includes('bolsa') || haystack.includes('auxilio') || haystack.includes('fomento')) return 'bolsa';
+  if (haystack.includes('curso') || haystack.includes('capacit') || haystack.includes('qualific') || haystack.includes('formacao')) return 'curso-capacitacao';
   if (haystack.includes('freelancer') || haystack.includes('freela')) return 'freelancer';
   if (haystack.includes('monitoria') || haystack.includes('monitor ')) return 'monitoria';
   if (haystack.includes('pesquisa') || haystack.includes('pibic') || haystack.includes('pivic') || haystack.includes('iniciacao cientifica')) return 'pesquisa';
@@ -414,9 +424,9 @@ function isModeMatch(filterKey, workModeKey, isRemote, isPresential) {
 }
 
 function categoryMatches(summary, selectedCategory) {
-  const selected = canonicalCategory(selectedCategory);
+  const selected = normalizeOpportunityType(selectedCategory, selectedCategory);
   if (!selected || selected === 'toda' || selected === 'todas') return true;
-  const item = canonicalCategory(summary.type);
+  const item = normalizeOpportunityType(summary.type, summary.type);
   if (!item) return false;
   return item.includes(selected) || selected.includes(item);
 }

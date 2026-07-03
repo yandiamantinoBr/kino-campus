@@ -53,7 +53,7 @@ describe('kc-events-calendar — contrato estático (fonte)', () => {
   });
 
   // Dados / categorias
-  ['sustentabilidade', 'academicos', 'culturais', 'esportivos', 'workshops', 'festas'].forEach((cat) => {
+  ['sustentabilidade', 'academicos', 'palestras', 'congressos', 'cursos', 'culturais', 'esportivos', 'workshops', 'festas'].forEach((cat) => {
     test('categoria presente: ' + cat, () => {
       expect(source).toContain(cat);
     });

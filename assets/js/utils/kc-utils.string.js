@@ -88,11 +88,14 @@
 
     // Links [label](url) — extrair antes para não interferir com outros patterns
     const links = [];
-    html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, url) {
+    html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, function (_, label, url) {
       const safeUrl = String(url || '').trim();
       const safeLabel = String(label || '').trim() || safeUrl;
       const token = `__KC_LINK_${links.length}__`;
-      links.push(`<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`);
+      const isMailto = safeUrl.toLowerCase().startsWith('mailto:');
+      links.push(isMailto
+        ? `<a href="${safeUrl}">${safeLabel}</a>`
+        : `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`);
       return token;
     });
 
