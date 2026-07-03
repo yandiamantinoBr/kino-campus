@@ -69,6 +69,22 @@
     return '_product.html?id=' + encodeURIComponent(data.post_id);
   }
 
+  function isDirectMessageNotification(notif) {
+    return !!(notif && notif.type === 'direct_message');
+  }
+
+  function filterBellNotifications(list) {
+    return (Array.isArray(list) ? list : []).filter(function (notif) {
+      return !isDirectMessageNotification(notif);
+    });
+  }
+
+  function countUnreadBellNotifications(list) {
+    return filterBellNotifications(list).reduce(function (total, notif) {
+      return total + (notif && notif.read === false ? 1 : 0);
+    }, 0);
+  }
+
   function normalizeNotificationId(value) {
     return String(value || '').trim();
   }
@@ -131,8 +147,8 @@
   function hydrateNotificationSnapshot(userId) {
     var snapshot = readNotificationSnapshot(userId);
     if (!snapshot) return false;
-    _notifications = Array.isArray(snapshot.notifications) ? snapshot.notifications.slice(0, 20) : [];
-    updateBadge(snapshot.unread || 0);
+    _notifications = filterBellNotifications(snapshot.notifications).slice(0, 20);
+    updateBadge(Math.min(Number(snapshot.unread) || 0, countUnreadBellNotifications(_notifications)));
     if (_dropdownOpen) renderDropdown();
     return true;
   }
@@ -507,7 +523,7 @@
     return window.KCAPI.getNotifications(20, 0).then(function (result) {
       _loading = false;
       if (result && result.ok) {
-        _notifications = Array.isArray(result.notifications) ? result.notifications.slice(0, 20) : [];
+        _notifications = filterBellNotifications(result.notifications).slice(0, 20);
         updateBadge(result.unread || 0);
         writeNotificationSnapshot();
       }
@@ -666,12 +682,17 @@
     var event = normalizeRealtimeEvent(payload);
     if (!event) return;
 
+    var realtimeNotif = event.current || event.previous;
+    if (isDirectMessageNotification(realtimeNotif)) {
+      refreshChatUnreadCount();
+      return;
+    }
+
     if (event.eventType === 'DELETE') {
       removeNotificationById(event.previous && event.previous.id);
       if (_dropdownOpen) renderDropdown();
       writeNotificationSnapshot();
       fetchUnreadCount();
-      if (event.previous && event.previous.type === 'direct_message') refreshChatUnreadCount();
       return;
     }
 
@@ -682,7 +703,6 @@
     if (_dropdownOpen) renderDropdown();
     writeNotificationSnapshot();
     fetchUnreadCount();
-    if (notif.type === 'direct_message') refreshChatUnreadCount();
   }
 
   function activate(bell, user) {

@@ -895,7 +895,8 @@
 .kc-chat-msg__menu {
   position: absolute;
   top: -30px;
-  right: 6px;
+  left: 6px;
+  right: auto;
   background: rgba(0,0,0,0.7);
   border-radius: 999px;
   display: inline-flex;
@@ -908,7 +909,7 @@
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
-.kc-chat-msg--mine .kc-chat-msg__menu { right: auto; left: 6px; }
+.kc-chat-msg--mine .kc-chat-msg__menu { left: auto; right: 6px; }
 
 .kc-chat-msg.is-menu-open .kc-chat-msg__menu {
   opacity: 1;
@@ -929,15 +930,24 @@
 /* Mobile (sem hover): menu SÓ aparece quando a mensagem é tocada (is-menu-open) */
 @media (hover: none), (pointer: coarse) {
   .kc-chat-msg__menu {
+    position: fixed;
     top: auto;
-    bottom: -32px;
-    right: 2px;
-    background: rgba(0,0,0,0.78);
+    left: 12px;
+    right: auto;
+    bottom: auto;
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: rgba(31,31,31,0.92);
+    backdrop-filter: blur(10px);
+    padding: 4px;
+    gap: 2px;
+    scrollbar-width: none;
   }
-  .kc-chat-msg--mine .kc-chat-msg__menu { right: auto; left: 2px; }
+  .kc-chat-msg__menu::-webkit-scrollbar { display: none; }
+  .kc-chat-msg--mine .kc-chat-msg__menu { left: 12px; right: auto; }
   .kc-chat-msg.is-menu-open {
-    z-index: 6;
-    margin-bottom: 34px;
+    z-index: 7;
   }
 }
 
@@ -989,22 +999,40 @@
 
 /* ── Emoji picker do composer ─────────────────────────────────────────────── */
 .kc-chat-emoji-picker {
-  position: absolute; bottom: 70px; left: 16px; z-index: 50;
-  width: 300px; max-width: calc(100vw - 32px); max-height: 260px; overflow-y: auto;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(420px, 56vh);
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.12));
-  border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,0.4); padding: 10px; display: none;
+  border-radius: 18px; box-shadow: 0 18px 44px rgba(0,0,0,0.32); padding: 12px; display: none;
   scrollbar-width: thin;
 }
 [data-theme="light"] .kc-chat-emoji-picker { background: #fff; border-color: rgba(0,0,0,0.1); }
 .kc-chat-emoji-picker.is-open { display: block; }
 .kc-chat-emoji-picker__title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--kc-text-dark-secondary); margin: 0 0 8px; padding: 0 2px; }
-.kc-chat-emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.kc-chat-emoji-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38px, 1fr)); gap: 6px; }
 .kc-chat-emoji-btn {
-  background: none; border: none; font-size: 1.4rem; line-height: 1; width: 100%;
+  background: none; border: none; font-size: 1.45rem; line-height: 1; width: 100%; min-width: 0;
   aspect-ratio: 1; border-radius: 8px; cursor: pointer; display: flex; align-items: center;
   justify-content: center; transition: background 0.12s, transform 0.1s; padding: 0;
 }
 .kc-chat-emoji-btn:hover { background: rgba(255,107,0,0.14); transform: scale(1.2); }
+
+@media (hover: none), (pointer: coarse) {
+  .kc-chat-emoji-picker {
+    width: min(360px, calc(100vw - 16px));
+    max-height: min(390px, 54vh);
+  }
+
+  .kc-chat-emoji-btn:hover {
+    transform: none;
+  }
+}
 
 .kc-chat-jump {
   position: absolute;

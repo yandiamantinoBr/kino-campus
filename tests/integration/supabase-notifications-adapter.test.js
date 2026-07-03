@@ -98,9 +98,11 @@ describe('supabase.notifications.adapter.js — métodos de preferências export
 });
 
 describe('supabase.notifications.adapter.js — métodos de listagem/operação exportados', () => {
-  test('exporta getNotifications com RPC kc_get_notifications', () => {
+  test('exporta getNotifications filtrando direct_message do sino', () => {
     expect(source).toContain('getNotifications,');
-    expect(source).toContain("'kc_get_notifications'");
+    expect(source).toContain("from('notifications')");
+    expect(source).toContain("neq('type', 'direct_message')");
+    expect(source).not.toContain("'kc_get_notifications'");
   });
 
   test('exporta markNotificationsRead com RPC kc_mark_notifications_read', () => {
@@ -108,20 +110,25 @@ describe('supabase.notifications.adapter.js — métodos de listagem/operação 
     expect(source).toContain("'kc_mark_notifications_read'");
   });
 
-  test('exporta markAllNotificationsRead com RPC kc_mark_all_notifications_read', () => {
+  test('exporta markAllNotificationsRead sem marcar mensagens diretas', () => {
     expect(source).toContain('markAllNotificationsRead,');
-    expect(source).toContain("'kc_mark_all_notifications_read'");
+    expect(source).toContain('.update({ read: true })');
+    expect(source).toContain("withoutDirectMessages(");
+    expect(source).not.toContain("'kc_mark_all_notifications_read'");
   });
 
   test('exporta clearNotifications (delete da tabela notifications)', () => {
     expect(source).toContain('clearNotifications,');
     expect(source).toContain("from('notifications')");
     expect(source).toContain('.delete()');
+    expect(source).toContain(".neq('type', 'direct_message')");
   });
 
-  test('exporta getUnreadNotificationCount com RPC kc_unread_notification_count', () => {
+  test('exporta getUnreadNotificationCount sem contar mensagens diretas', () => {
     expect(source).toContain('getUnreadNotificationCount,');
-    expect(source).toContain("'kc_unread_notification_count'");
+    expect(source).toContain(".select('id', { count: 'exact', head: true })");
+    expect(source).toContain(".eq('read', false)");
+    expect(source).not.toContain("'kc_unread_notification_count'");
   });
 });
 

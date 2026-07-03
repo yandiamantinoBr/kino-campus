@@ -60,6 +60,9 @@ describe('KCNotifications dropdown hardening', () => {
         unreadCount = 0;
         return Promise.resolve({ ok: true, deleted: deleted });
       }),
+      chat: {
+        unreadTotal: jest.fn(() => Promise.resolve(3)),
+      },
       subscribeNotifications: jest.fn((userId, callback) => {
         global.__kcNotifRealtimeCallback = callback;
         return { userId };
@@ -191,5 +194,47 @@ describe('KCNotifications dropdown hardening', () => {
     expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(window.KCAPI.clearNotifications).toHaveBeenCalledTimes(1);
     expect(document.querySelector('.kc-notif-dropdown__empty').textContent).toContain('Nenhuma');
+  });
+
+  test('routes direct_message realtime events to chat badge without adding bell items', async () => {
+    const code = fs.readFileSync(
+      path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
+      'utf8'
+    );
+    // eslint-disable-next-line no-eval
+    (0, eval)(code);
+
+    window.KCNotifications.init();
+
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    window.KCNotifications.toggleDropdown();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    window.KCAPI.chat.unreadTotal.mockClear();
+
+    global.__kcNotifRealtimeCallback({
+      eventType: 'INSERT',
+      new: {
+        id: 'dm-1',
+        read: false,
+        title: 'Mensagem direta',
+        body: 'Nova mensagem',
+        type: 'direct_message',
+        created_at: '2026-04-09T13:10:00Z',
+        data: { conversation_id: 'conv-1' },
+      },
+      old: null,
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.querySelector('.kc-notif-item[data-notif-id="dm-1"]')).toBeNull();
+    expect(window.KCAPI.chat.unreadTotal).toHaveBeenCalledTimes(1);
   });
 });
