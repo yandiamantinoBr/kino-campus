@@ -10,6 +10,12 @@ ALTER TABLE public.chat_messages
   ADD CONSTRAINT chat_messages_message_type_check
   CHECK (message_type = ANY (ARRAY['text'::text, 'image'::text, 'audio'::text, 'document'::text]));
 
+-- 1c. Constraint em chat_conversations.last_message_type (trigger denormaliza)
+ALTER TABLE public.chat_conversations DROP CONSTRAINT IF EXISTS chat_conversations_last_message_type_check;
+ALTER TABLE public.chat_conversations
+  ADD CONSTRAINT chat_conversations_last_message_type_check
+  CHECK (last_message_type = ANY (ARRAY['text'::text, 'image'::text, 'audio'::text, 'document'::text]));
+
 -- 1b. Constraint estrutural: text->content, image/audio/document->media_path (+caption)
 ALTER TABLE public.chat_messages DROP CONSTRAINT IF EXISTS chat_msg_text_or_image;
 ALTER TABLE public.chat_messages
