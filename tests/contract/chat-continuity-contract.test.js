@@ -77,4 +77,55 @@ describe('chat continuity contract', () => {
     expect(source).toContain('"source": "/mensagens"');
     expect(source).toContain('"destination": "/mensagens.html"');
   });
+
+  test('mensagens keeps the chat shell wide, stable and cache-busted', () => {
+    const html = read('mensagens.html');
+    const css = read('assets/css/kc-chat.css');
+
+    expect(html).toContain('body.kc-chat-route .kc-main-content');
+    expect(html).toContain('display: block;');
+    expect(html).toContain('padding-left: 0 !important;');
+    expect(html).toContain('justify-self: center;');
+    expect(html).toContain('width: min(1760px, calc(100vw - 56px));');
+    expect(html).toContain('assets/css/kc-chat.css?v=8.7.3');
+    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.23');
+    expect(css).toContain('grid-template-columns: minmax(360px, 33%) minmax(620px, 1fr);');
+    expect(css).toContain('height: 100%;');
+    expect(css).toContain('border-radius: 22px;');
+    expect(css).toContain('overflow-anchor: none;');
+  });
+
+  test('chat message menus are hidden by default and only open on hover or touch state', () => {
+    const css = read('assets/css/kc-chat.css');
+    const controller = read('assets/js/controllers/public/chat-inbox.controller.js');
+
+    expect(css).toContain('opacity: 0;');
+    expect(css).toContain('pointer-events: none;');
+    expect(css).toContain('@media (hover: hover) and (pointer: fine)');
+    expect(css).toContain('@media (hover: none), (pointer: coarse)');
+    expect(css).toContain('.kc-chat-msg.is-menu-open .kc-chat-msg__menu');
+    expect(controller).toContain('function isTouchMenuMode()');
+    expect(controller).toContain('function closeMessageMenus(root)');
+    expect(controller).toContain('if (!isTouchMenuMode()) return;');
+  });
+
+  test('chat bubbles use a single background token for the received bubble and tail', () => {
+    const css = read('assets/css/kc-chat.css');
+
+    expect(css).toContain('--kc-chat-other-bubble: #3a3a3a;');
+    expect(css).toContain('--kc-chat-other-bubble: #f3f4f6;');
+    expect(css).toContain('background: var(--kc-chat-other-bubble);  /* EXATA cor do bal');
+  });
+
+  test('chat conversation deletion is consistent across adapters and hides archived conversations', () => {
+    const facade = read('assets/js/api/kc-api.chat.js');
+    const localAdapter = read('assets/js/adapters/local/local.chat.adapter.js');
+    const supabaseAdapter = read('assets/js/adapters/supabase/supabase.chat.adapter.js');
+
+    expect(facade).toContain('deleteConversation: safe(\'deleteConversation\')');
+    expect(localAdapter).toContain('deleteConversation: notSupported');
+    expect(localAdapter).toContain('uploadChatMedia: notSupported');
+    expect(supabaseAdapter).toContain('options.includeArchived !== true');
+    expect(supabaseAdapter).toContain('list = list.filter(function (c) { return !c.archived; });');
+  });
 });

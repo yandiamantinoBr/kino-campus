@@ -308,6 +308,9 @@
       });
       if (r.error) return { ok: false, error: { message: r.error.message }, data: [] };
       var list = Array.isArray(r.data) ? r.data.map(normalizeConversation).filter(Boolean) : [];
+      if (options.includeArchived !== true) {
+        list = list.filter(function (c) { return !c.archived; });
+      }
       return { ok: true, data: list };
     } catch (e) {
       return { ok: false, error: { message: (e && e.message) || String(e) }, data: [] };

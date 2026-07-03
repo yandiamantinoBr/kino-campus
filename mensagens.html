@@ -15,28 +15,49 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.5" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.2" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
+    body.kc-chat-route .kc-main-content {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      display: block;
+      gap: 0;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
     /* Card flutuante centralizado com respiro vertical e horizontal. */
     .kc-chat-page-wrap {
-      max-width: 1480px;
+      width: 100%;
+      max-width: none;
       margin: 0 auto;
+      justify-self: center;
       padding: 0;
       height: calc(100vh - var(--kc-header-height, 64px));
       height: calc(100dvh - var(--kc-header-height, 64px));
+      box-sizing: border-box;
+    }
+    @media (max-width: 767px) {
+      .kc-chat-page-wrap {
+        height: calc(100vh - var(--kc-header-height, 64px) - 70px - env(safe-area-inset-bottom, 0px));
+        height: calc(100dvh - var(--kc-header-height, 64px) - 70px - env(safe-area-inset-bottom, 0px));
+      }
     }
     @media (min-width: 1024px) {
-      body.kc-chat-route { background: #1a1a1a; }
+      body.kc-chat-route { background: #e9ebf0; }
       .kc-chat-page-wrap {
-        padding: 10px 24px;
+        --kc-chat-shell-gap-y: clamp(14px, 2.1vh, 28px);
+        width: min(1760px, calc(100vw - 56px));
+        padding: var(--kc-chat-shell-gap-y) 0;
       }
     }
     @media (min-width: 1400px) {
-      .kc-chat-page-wrap { padding: 10px 40px; }
+      .kc-chat-page-wrap { width: min(1820px, calc(100vw - 72px)); }
     }
     [data-theme="light"] body.kc-chat-route { background: #e9ebf0; }
+    [data-theme="dark"] body.kc-chat-route { background: #1a1a1a; }
   </style>
 </head>
 <body class="kc-shell-page kc-chat-route">
@@ -269,7 +290,7 @@
   <script defer src="assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/local/local.chat.adapter.js?v=8.6.3"></script>
+  <script defer src="assets/js/adapters/local/local.chat.adapter.js?v=8.6.4"></script>
   <script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
@@ -295,6 +316,6 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.5"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.22"></script>
+  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.23"></script>
 </body>
 </html>
