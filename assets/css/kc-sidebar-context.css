@@ -72,6 +72,10 @@
   gap: 8px;
 }
 
+.kc-home-context-heading__text {
+  min-width: 0;
+}
+
 .kc-home-context-heading:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 40%, transparent);
   outline-offset: 4px;
@@ -262,6 +266,9 @@
   }
 
   .kc-sidebar--home-context .kc-home-context-heading {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
+    gap: 8px;
     min-height: 38px;
     margin: 0;
     font-size: clamp(1rem, 4.8vw, 1.16rem);
@@ -269,8 +276,17 @@
   }
 
   .kc-sidebar--home-context .kc-home-context-heading__label {
-    flex: 1 1 auto;
-    justify-content: center;
+    display: contents;
+  }
+
+  .kc-sidebar--home-context .kc-home-context-heading__text {
+    grid-column: 2;
+    min-width: 0;
+    justify-self: center;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .kc-sidebar--home-context .kc-home-context-heading__label > i,
@@ -286,6 +302,20 @@
     background: color-mix(in srgb, var(--kc-primary-brand) 12%, transparent);
     color: var(--kc-primary-brand);
     font-size: 0.78em;
+  }
+
+  .kc-sidebar--home-context .kc-home-context-heading__label > i {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .kc-sidebar--home-context .kc-context-info-btn {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .kc-sidebar--home-context .kc-context-info-btn--context-arrow {
+    font-size: 0.72rem;
   }
 
   .kc-sidebar--home-context .kc-sidebar-help,
