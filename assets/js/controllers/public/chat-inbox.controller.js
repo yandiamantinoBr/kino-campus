@@ -939,6 +939,20 @@
         renderMessagesList();
       });
     });
+
+    // Mobile: tap na bolha abre/fecha o menu de contexto (toggle is-menu-open).
+    Array.prototype.forEach.call(wrap.querySelectorAll('.kc-chat-msg'), function (bubble) {
+      bubble.addEventListener('click', function (e) {
+        if (e.target.closest('[data-msg-menu]') || e.target.closest('[data-reaction-msg]') ||
+            e.target.closest('[data-reply-to]') || e.target.closest('[data-image-full]') ||
+            e.target.closest('[data-media-retry]') || e.target.closest('.kc-chat-msg__edit-area')) return;
+        var wasOpen = bubble.classList.contains('is-menu-open');
+        Array.prototype.forEach.call(wrap.querySelectorAll('.kc-chat-msg.is-menu-open'), function (el) {
+          el.classList.remove('is-menu-open');
+        });
+        if (!wasOpen) bubble.classList.add('is-menu-open');
+      });
+    });
   }
 
   function renderMessagesError() {
@@ -1284,6 +1298,30 @@
     toast('Usuário desbloqueado.', 'success');
   }
 
+  // Excluir (arquivar) a conversa atual para o usuário — some da lista dele.
+  async function handleDeleteConversation() {
+    if (!state.activeConvId || !state.me || !state.me.id) return;
+    if (!confirm('Excluir esta conversa? Ela será removida da sua lista. A outra pessoa ainda terá a cópia dela.')) return;
+    var r = await window.KCAPI.chat.deleteConversation(state.activeConvId, state.me.id);
+    if (!r || !r.ok) {
+      toast((r && r.error && r.error.message) || 'Erro ao excluir conversa.', 'error');
+      return;
+    }
+    toast('Conversa excluída.', 'success');
+    unsubscribeTypingChannel();
+    state.activeConvId = null;
+    state.activePeer = null;
+    state.messages = [];
+    state.messagesById = new Map();
+    setHash('');
+    setActivePane('list');
+    var empty = $('kcChatEmptyPanel');
+    var active = $('kcChatActiveConv');
+    if (empty) empty.style.display = 'flex';
+    if (active) active.style.display = 'none';
+    loadConversations();
+  }
+
   // ── Delete / Edit / Report ──────────────────────────────────────────────
 
   async function handleDeleteMessage(msgId) {
@@ -1303,24 +1341,91 @@
     renderMessagesList();
   }
 
-  async function handleEditMessage(msgId) {
+  // Edição INLINE: substitui o conteúdo da bolha por um textarea + botões.
+  function handleEditMessage(msgId) {
     if (!msgId) return;
     var m = state.messagesById.get(msgId);
     if (!m || m.message_type !== 'text') return;
-    var newContent = prompt('Editar mensagem:', m.content || '');
-    if (newContent == null) return;
-    newContent = String(newContent).trim();
-    if (newContent === '' || newContent === m.content) return;
-    var r = await window.KCAPI.chat.editMessage(msgId, newContent);
-    if (!r || !r.ok) {
-      var msg = (r && r.error && r.error.message) || 'Erro ao editar.';
-      if (msg.indexOf('edit_window_expired') >= 0) msg = 'Só dá para editar mensagens das últimas 24 horas.';
-      toast(msg, 'error');
-      return;
-    }
-    m.content = newContent;
-    m.edited_at = new Date().toISOString();
-    renderMessagesList();
+    var bubble = document.querySelector('.kc-chat-msg[data-msg-id="' + cssEscape(msgId) + '"]');
+    if (!bubble || bubble.querySelector('.kc-chat-msg__edit-area')) return;
+
+    var originalHTML = bubble.innerHTML;
+    var currentText = m.content || '';
+
+    var editArea = document.createElement('div');
+    editArea.className = 'kc-chat-msg__edit-area';
+    var textarea = document.createElement('textarea');
+    textarea.className = 'kc-chat-msg__edit-input';
+    textarea.value = currentText;
+    textarea.maxLength = 4000;
+    var btnRow = document.createElement('div');
+    btnRow.className = 'kc-chat-msg__edit-actions';
+    var saveBtn = document.createElement('button');
+    saveBtn.type = 'button'; saveBtn.className = 'kc-chat-msg__edit-save'; saveBtn.textContent = 'Salvar';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button'; cancelBtn.className = 'kc-chat-msg__edit-cancel'; cancelBtn.textContent = 'Cancelar';
+    btnRow.appendChild(cancelBtn); btnRow.appendChild(saveBtn);
+    editArea.appendChild(textarea); editArea.appendChild(btnRow);
+
+    bubble.innerHTML = '';
+    bubble.appendChild(editArea);
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
+    textarea.addEventListener('input', function () {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px';
+    });
+
+    cancelBtn.addEventListener('click', function () { bubble.innerHTML = originalHTML; rebindBubble(bubble); });
+
+    saveBtn.addEventListener('click', async function () {
+      saveBtn.disabled = true; cancelBtn.disabled = true; saveBtn.textContent = '...';
+      var newContent = String(textarea.value).trim();
+      if (newContent === '' || newContent === currentText) { bubble.innerHTML = originalHTML; rebindBubble(bubble); return; }
+      var r = await window.KCAPI.chat.editMessage(msgId, newContent);
+      if (!r || !r.ok) {
+        var msg = (r && r.error && r.error.message) || 'Erro ao editar.';
+        if (msg.indexOf('edit_window_expired') >= 0) msg = 'Só dá para editar mensagens das últimas 24 horas.';
+        toast(msg, 'error');
+        bubble.innerHTML = originalHTML; rebindBubble(bubble);
+        return;
+      }
+      m.content = newContent;
+      m.edited_at = new Date().toISOString();
+      renderMessagesList();
+    });
+
+    textarea.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveBtn.click(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancelBtn.click(); }
+    });
+  }
+
+  function rebindBubble(bubble) {
+    Array.prototype.forEach.call(bubble.querySelectorAll('[data-msg-menu]'), function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var mid = btn.getAttribute('data-msg-menu');
+        var action = btn.getAttribute('data-action');
+        if (action === 'delete') handleDeleteMessage(mid);
+        else if (action === 'edit') handleEditMessage(mid);
+        else if (action === 'report') handleReportMessage(mid);
+        else if (action === 'react') handleReactToMessage(mid);
+        else if (action === 'reply') handleReplyToMessage(mid);
+        else if (action === 'copy') handleCopyMessage(mid);
+      });
+    });
+    Array.prototype.forEach.call(bubble.querySelectorAll('[data-reaction-msg]'), function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        handleToggleReaction(btn.getAttribute('data-reaction-msg'), btn.getAttribute('data-reaction-emoji'));
+      });
+    });
+    Array.prototype.forEach.call(bubble.querySelectorAll('[data-reply-to]'), function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); scrollToMessage(el.getAttribute('data-reply-to')); });
+    });
   }
 
   async function handleReportMessage(msgId) {
@@ -1365,6 +1470,56 @@
     } catch (e) {
       toast('Não foi possível copiar.', 'error');
     }
+  }
+
+  // ── Emoji picker do composer (V76.57) ────────────────────────────────────
+
+  var COMPOSER_EMOJIS = [
+    '😀','😃','😄','😁','😆','😅','😂','🤣','😉','😊','😇','🙂','🙃','😍','🥰','😘',
+    '😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢',
+    '😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔',
+    '🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤',
+    '😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','💩','👻','💀','👍',
+    '👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖',
+    '👋','🤝','💪','🙏','👏','🙌','👐','🤲','❤️','🧡','💛','💚','💙','💜','🖤','🤍',
+    '💔','❣️','💕','💞','💓','💗','💖','💘','💝','🔥','⭐','🌟','✨','⚡','💯','🎉'
+  ];
+
+  function buildEmojiPicker() {
+    var grid = $('kcChatEmojiGrid');
+    if (!grid || grid.childElementCount > 0) return;
+    grid.innerHTML = COMPOSER_EMOJIS.map(function (e) {
+      return '<button type="button" class="kc-chat-emoji-btn" data-emoji="' + e + '">' + e + '</button>';
+    }).join('');
+    grid.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('[data-emoji]');
+      if (!btn) return;
+      insertEmojiAtCaret(btn.getAttribute('data-emoji'));
+    });
+  }
+
+  function insertEmojiAtCaret(emoji) {
+    var input = $('kcChatInput');
+    if (!input) return;
+    var start = input.selectionStart || 0, end = input.selectionEnd || 0;
+    var val = input.value || '';
+    input.value = val.slice(0, start) + emoji + val.slice(end);
+    var pos = start + emoji.length;
+    input.setSelectionRange(pos, pos);
+    input.focus();
+    autoGrow(); updateSendBtnState(); saveDraft(state.activeConvId);
+  }
+
+  function toggleEmojiPicker() {
+    var picker = $('kcChatEmojiPicker');
+    if (!picker) return;
+    buildEmojiPicker();
+    picker.classList.toggle('is-open');
+  }
+
+  function closeEmojiPicker() {
+    var picker = $('kcChatEmojiPicker');
+    if (picker) picker.classList.remove('is-open');
   }
 
   // ── Reações emoji (V76.53) ──────────────────────────────────────────────
@@ -1689,6 +1844,7 @@
     var form = $('kcChatComposer');
     var input = $('kcChatInput');
     var attachBtn = $('kcChatAttachBtn');
+    var emojiBtn = $('kcChatEmojiBtn');
     var fileInput = $('kcChatFileInput');
     var backBtn = $('kcChatBackBtn');
     var profileBtn = $('kcChatViewProfileBtn');
@@ -1698,7 +1854,7 @@
     var searchInput = $('kcChatConversationSearch');
     var jumpBtn = $('kcChatJumpBtn');
 
-    if (form) form.addEventListener('submit', handleSubmit);
+    if (form) form.addEventListener('submit', function (e) { handleSubmit(e); closeEmojiPicker(); });
 
     if (input) {
       input.addEventListener('input', function () {
@@ -1728,6 +1884,17 @@
       });
     }
 
+    // Emoji picker do composer
+    if (emojiBtn) {
+      emojiBtn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); toggleEmojiPicker(); });
+    }
+    document.addEventListener('click', function (e) {
+      var picker = $('kcChatEmojiPicker');
+      if (!picker || !picker.classList.contains('is-open')) return;
+      if (picker.contains(e.target) || (emojiBtn && emojiBtn.contains(e.target))) return;
+      closeEmojiPicker();
+    });
+
     if (backBtn) {
       backBtn.addEventListener('click', function () {
         saveDraft(state.activeConvId);
@@ -1756,6 +1923,9 @@
 
     if (blockBtn) blockBtn.addEventListener('click', handleBlock);
     if (unblockBtn) unblockBtn.addEventListener('click', handleUnblock);
+
+    var deleteConvBtn = $('kcChatDeleteConvBtn');
+    if (deleteConvBtn) deleteConvBtn.addEventListener('click', handleDeleteConversation);
 
     if (messages) {
       // Paginação ao scrollar pro topo

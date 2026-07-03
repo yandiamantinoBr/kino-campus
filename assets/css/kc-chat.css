@@ -21,16 +21,21 @@
 @media (min-width: 1024px) {
   .kc-chat-page {
     grid-template-columns: minmax(360px, 30%) minmax(0, 1fr);
-    max-width: 1520px;
+    max-width: 1480px;
     margin: 0 auto;
-    border-left: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
-    border-right: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
+    height: calc(100dvh - var(--kc-header-height, 64px) - 20px);
+    border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.24);
+    overflow: hidden;
   }
+  .kc-chat-sidebar { border-radius: 16px 0 0 16px; }
+  .kc-chat-panel { border-radius: 0 16px 16px 0; }
 }
 
 @media (min-width: 1400px) {
   .kc-chat-page {
-    grid-template-columns: 420px minmax(0, 1fr);
+    grid-template-columns: 400px minmax(0, 1fr);
   }
 }
 
@@ -623,8 +628,21 @@
   }
 }
 
-/* "Cauda" da bolha — pequena ponta que aponta para o remetente, estilo WhatsApp.
-   Usa ::before posicionado no canto inferior do lado correspondente. */
+@keyframes kc-chat-msg-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Bolhas MINHAS (gradiente laranja) ─────────────────────────────────────── */
+.kc-chat-msg--mine {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #FF6B00, #ff8533);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  margin-right: 8px;
+}
+
+/* Cauda da bolha "mine" — mesma cor do fim do gradiente, conectada ao balão */
 .kc-chat-msg--mine::before {
   content: "";
   position: absolute;
@@ -632,43 +650,9 @@
   right: -7px;
   width: 14px;
   height: 13px;
-  background: var(--kc-primary-brand);
+  background: #ff8533;
   border-bottom-left-radius: 14px 10px;
   clip-path: polygon(0 0, 100% 100%, 0 100%);
-}
-
-.kc-chat-msg--other::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: -7px;
-  width: 14px;
-  height: 13px;
-  background: var(--kc-surface-dark);
-  border-bottom-right-radius: 14px 10px;
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-}
-
-/* A primeira bolha de um grupo mantém a cauda; as seguintes (grouped)
-   escondem a cauda para formar um "stack" coeso. */
-.kc-chat-msg--grouped::before { display: none; }
-
-@keyframes kc-chat-msg-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.kc-chat-msg--mine {
-  align-self: flex-end;
-  /* Gradiente laranja vibrante para destacar minhas mensagens */
-  background: linear-gradient(135deg, #FF6B00, #ff8533);
-  color: #fff;
-  border-bottom-right-radius: 4px;
-  margin-right: 8px;
-}
-
-.kc-chat-msg--mine::before {
-  background: #ff8533;  /* cauda acompanha o fim do gradiente */
 }
 
 .kc-chat-msg--other {
@@ -681,17 +665,26 @@
 }
 
 .kc-chat-msg--other::before {
-  background: #3a3a3a;
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -7px;
+  width: 14px;
+  height: 13px;
+  background: #3a3a3a;  /* EXATA cor do balão — sem mismatch */
+  border-bottom-right-radius: 14px 10px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
+/* Light mode: balão branco + cauda branca, borda para definição */
 [data-theme="light"] .kc-chat-msg--other {
   background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.07);
   box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
 
 [data-theme="light"] .kc-chat-msg--other::before {
-  background: #ffffff;
+  background: #ffffff;  /* EXATA cor do balão branco no light */
 }
 
 /* Mensagens agrupadas (mesmo remetente, delta <= 2 min): reduzem gap e
@@ -802,32 +795,36 @@
   color: #5ec8ff;
 }
 
-/* Menu de contexto da mensagem */
+/* Menu de contexto da mensagem — oculto por padrão, aparece no hover (desktop) */
 .kc-chat-msg__menu {
   position: absolute;
-  top: -28px;
+  top: -30px;
   right: 6px;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.7);
   border-radius: 999px;
   display: none;
+  padding: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 5;
 }
 
-.kc-chat-msg:hover .kc-chat-msg__menu { display: inline-flex; }
+.kc-chat-msg--mine .kc-chat-msg__menu { right: auto; left: 6px; }
 
-/* Em dispositivos de toque (mobile/tablet sem hover), o menu fica sempre visível
-   para que reagir/responder/editar/apagar sejam acessíveis por toque. */
+/* Desktop: menu aparece no hover */
+@media (hover: hover) {
+  .kc-chat-msg:hover .kc-chat-msg__menu { display: inline-flex; }
+}
+
+/* Mobile (sem hover): menu SÓ aparece quando a mensagem é tocada (is-menu-open) */
 @media (hover: none) {
   .kc-chat-msg__menu {
-    display: inline-flex;
     top: auto;
-    bottom: -28px;
+    bottom: -32px;
     right: 2px;
-    background: rgba(0,0,0,0.55);
-    padding: 2px;
+    background: rgba(0,0,0,0.78);
   }
   .kc-chat-msg--mine .kc-chat-msg__menu { right: auto; left: 2px; }
-  /* Dar mais espaço para os botões de menu no mobile */
-  .kc-chat-msg { margin-bottom: 10px; }
+  .kc-chat-msg.is-menu-open .kc-chat-msg__menu { display: inline-flex; }
 }
 
 .kc-chat-msg__menu-btn {
@@ -839,20 +836,61 @@
   border-radius: 50%;
   cursor: pointer;
   font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .kc-chat-msg__menu-btn:hover {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.16);
 }
 
 /* Targets de toque maiores no mobile */
 @media (hover: none) {
   .kc-chat-msg__menu-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 0.85rem;
+    width: 36px;
+    height: 36px;
+    font-size: 0.88rem;
   }
 }
+
+/* ── Edição inline de mensagem ────────────────────────────────────────────── */
+.kc-chat-msg__edit-area { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+.kc-chat-msg__edit-input {
+  width: 100%; min-height: 40px; resize: none; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2);
+  color: inherit; padding: 8px 10px; font: inherit; font-size: 0.92rem; line-height: 1.4;
+  box-sizing: border-box; outline: none;
+}
+.kc-chat-msg--mine .kc-chat-msg__edit-input { background: rgba(0,0,0,0.18); border-color: rgba(255,255,255,0.3); color: #fff; }
+[data-theme="light"] .kc-chat-msg--other .kc-chat-msg__edit-input { background: #fff; border-color: rgba(0,0,0,0.15); color: #1a1a1a; }
+.kc-chat-msg__edit-input:focus { border-color: var(--kc-primary-brand); box-shadow: 0 0 0 2px rgba(255,107,0,0.15); }
+.kc-chat-msg__edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.kc-chat-msg__edit-save, .kc-chat-msg__edit-cancel { border: none; border-radius: 8px; padding: 5px 14px; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.kc-chat-msg__edit-save { background: rgba(255,255,255,0.25); color: #fff; }
+.kc-chat-msg--mine .kc-chat-msg__edit-save { background: #fff; color: var(--kc-primary-brand); }
+[data-theme="light"] .kc-chat-msg--other .kc-chat-msg__edit-save { background: var(--kc-primary-brand); color: #fff; }
+.kc-chat-msg__edit-cancel { background: transparent; color: inherit; opacity: 0.7; }
+.kc-chat-msg__edit-save:disabled, .kc-chat-msg__edit-cancel:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Emoji picker do composer ─────────────────────────────────────────────── */
+.kc-chat-emoji-picker {
+  position: absolute; bottom: 70px; left: 16px; z-index: 50;
+  width: 300px; max-width: calc(100vw - 32px); max-height: 260px; overflow-y: auto;
+  background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.12));
+  border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,0.4); padding: 10px; display: none;
+  scrollbar-width: thin;
+}
+[data-theme="light"] .kc-chat-emoji-picker { background: #fff; border-color: rgba(0,0,0,0.1); }
+.kc-chat-emoji-picker.is-open { display: block; }
+.kc-chat-emoji-picker__title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--kc-text-dark-secondary); margin: 0 0 8px; padding: 0 2px; }
+.kc-chat-emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.kc-chat-emoji-btn {
+  background: none; border: none; font-size: 1.4rem; line-height: 1; width: 100%;
+  aspect-ratio: 1; border-radius: 8px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: background 0.12s, transform 0.1s; padding: 0;
+}
+.kc-chat-emoji-btn:hover { background: rgba(255,107,0,0.14); transform: scale(1.2); }
 
 .kc-chat-jump {
   position: absolute;
@@ -933,12 +971,13 @@
 /* O "input-row" agrupa anexo + emoji + textarea num container pill único */
 .kc-chat-composer__input-row {
   display: flex;
-  align-items: flex-end;
-  gap: 2px;
+  align-items: center;
+  gap: 0;
   background: var(--kc-background-dark);
   border: 1px solid var(--kc-border-dark, rgba(255,255,255,0.08));
   border-radius: 24px;
-  padding: 2px 4px 2px 6px;
+  padding: 2px 6px;
+  min-width: 0;
   transition: border-color var(--transition-speed, 0.2s), box-shadow var(--transition-speed, 0.2s);
 }
 
@@ -956,11 +995,11 @@
   background: none;
   border: none;
   color: var(--kc-text-dark-secondary);
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -969,7 +1008,7 @@
 }
 
 .kc-chat-composer__btn:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.1);
   color: var(--kc-text-dark-primary);
 }
 
@@ -982,6 +1021,9 @@
   background: var(--kc-primary-brand);
   color: #fff;
   box-shadow: 0 2px 8px rgba(255, 107, 0, 0.35);
+  width: 46px;
+  height: 46px;
+  align-self: center;
 }
 
 .kc-chat-composer__btn--send:hover {
@@ -993,14 +1035,18 @@
 .kc-chat-composer__btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  transform: none;
 }
 
+/* Textarea ocupa todo o espaço restante da pill, placeholder nunca cortado */
 .kc-chat-composer__input {
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   resize: none;
-  min-height: 42px;
+  min-height: 40px;
   max-height: 140px;
-  padding: 11px 8px;
+  padding: 11px 6px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -1010,16 +1056,15 @@
   line-height: 1.4;
   box-sizing: border-box;
   outline: none;
+  overflow-y: auto;
 }
 
 [data-theme="light"] .kc-chat-composer__input {
   color: #1a1a1a;
 }
 
-[data-theme="light"] .kc-chat-composer__input {
+[data-theme="light"] .kc-chat-composer__input-row {
   background: #ffffff;
-  border-color: rgba(0,0,0,0.1);
-  color: #1f2937;
 }
 
 .kc-chat-composer__preview {

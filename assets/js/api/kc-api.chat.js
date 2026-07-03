@@ -82,6 +82,8 @@
     blockUser: safe('blockUser'),
     unblockUser: safe('unblockUser'),
     isBlocked: safe('isBlocked'),
+    // V76.57: excluir (arquivar) conversa para o usuário atual
+    deleteConversation: safe('deleteConversation'),
     reportMessage: safe('reportMessage'),
     subscribeChat: sync('subscribeChat', null),
     unsubscribeChat: sync('unsubscribeChat'),

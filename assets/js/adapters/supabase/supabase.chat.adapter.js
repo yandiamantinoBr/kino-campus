@@ -414,6 +414,28 @@
     }
   }
 
+  // ── Excluir (arquivar) conversa para o usuário atual ──────────────────────
+  async function deleteConversation(conversationId, myUserId) {
+    var client = getClient();
+    if (!client || !conversationId || !myUserId) return { ok: false, error: { message: 'Parâmetros inválidos.' } };
+    try {
+      var q = await client.from('chat_conversations')
+        .select('id, participant_low, participant_high').eq('id', conversationId).limit(1);
+      if (q.error) return { ok: false, error: { message: q.error.message } };
+      var row = Array.isArray(q.data) ? q.data[0] : q.data;
+      if (!row) return { ok: false, error: { message: 'Conversa não encontrada.' } };
+      var patch = {};
+      if (String(row.participant_low) === String(myUserId)) patch.archived_by_low = true;
+      else if (String(row.participant_high) === String(myUserId)) patch.archived_by_high = true;
+      else return { ok: false, error: { message: 'Você não participa desta conversa.' } };
+      var u = await client.from('chat_conversations').update(patch).eq('id', conversationId);
+      if (u.error) return { ok: false, error: { message: u.error.message } };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: { message: (e && e.message) || String(e) } };
+    }
+  }
+
   // ── report_message ───────────────────────────────────────────────────────
 
   async function reportMessage(messageId, reason, details) {
@@ -556,6 +578,7 @@
     blockUser: blockUser,
     unblockUser: unblockUser,
     isBlocked: isBlocked,
+    deleteConversation: deleteConversation,
     reportMessage: reportMessage,
     subscribeChat: subscribeChat,
     unsubscribeChat: unsubscribeChat,

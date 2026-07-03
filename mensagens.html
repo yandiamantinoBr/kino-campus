@@ -15,29 +15,28 @@
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.5" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.0" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
-    /* Envoltório centralizado estilo WhatsApp Web: card flutuante sobre um
-       backdrop levemente diferenciado, com altura total sob o header global. */
+    /* Card flutuante centralizado com respiro vertical e horizontal. */
     .kc-chat-page-wrap {
-      max-width: 1600px;
+      max-width: 1480px;
       margin: 0 auto;
-      padding: 0 0;          /* mobile: sem respiro lateral */
+      padding: 0;
       height: calc(100vh - var(--kc-header-height, 64px));
       height: calc(100dvh - var(--kc-header-height, 64px));
     }
     @media (min-width: 1024px) {
+      body.kc-chat-route { background: #1a1a1a; }
       .kc-chat-page-wrap {
-        padding: 0 24px;
+        padding: 10px 24px;
       }
     }
     @media (min-width: 1400px) {
-      .kc-chat-page-wrap {
-        padding: 0 40px;
-      }
+      .kc-chat-page-wrap { padding: 10px 40px; }
     }
+    [data-theme="light"] body.kc-chat-route { background: #e9ebf0; }
   </style>
 </head>
 <body class="kc-shell-page kc-chat-route">
@@ -168,6 +167,9 @@
                 <button class="kc-chat-panel__action-btn" id="kcChatBlockBtn" title="Bloquear" data-i18n-tooltip="tooltip.chat-block" aria-label="Bloquear usuário" data-i18n-aria-label="aria-label.chat-block">
                   <i class="fas fa-ban"></i>
                 </button>
+                <button class="kc-chat-panel__action-btn" id="kcChatDeleteConvBtn" title="Excluir conversa" data-i18n-tooltip="tooltip.chat-delete-conv" aria-label="Excluir conversa" data-i18n-aria-label="aria-label.chat-delete-conv">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
               </div>
             </header>
 
@@ -186,8 +188,13 @@
             </button>
 
             <!-- Composer (estilo WhatsApp: emoji + anexo + input numa pill unificada, send separado) -->
-            <form class="kc-chat-composer" id="kcChatComposer" autocomplete="off">
+            <form class="kc-chat-composer" id="kcChatComposer" autocomplete="off" style="position:relative;">
               <input type="file" id="kcChatFileInput" accept="image/*" style="display:none" />
+              <!-- Emoji picker (popover leve) -->
+              <div class="kc-chat-emoji-picker" id="kcChatEmojiPicker" role="dialog" aria-label="Emojis" data-i18n-aria-label="aria-label.chat-emojis">
+                <p class="kc-chat-emoji-picker__title">Emojis</p>
+                <div class="kc-chat-emoji-grid" id="kcChatEmojiGrid"></div>
+              </div>
               <div class="kc-chat-composer__input-row">
                 <button type="button" class="kc-chat-composer__btn" id="kcChatEmojiBtn" title="Emoji" data-i18n-tooltip="tooltip.chat-emoji" aria-label="Emoji" data-i18n-aria-label="aria-label.chat-emoji" tabindex="-1">
                   <i class="far fa-smile"></i>
@@ -248,7 +255,7 @@
   <script defer src="assets/js/api/kc-api.profiles.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.related.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.auth.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.chat.js?v=8.6.3"></script>
+  <script defer src="assets/js/api/kc-api.chat.js?v=8.6.4"></script>
   <script defer src="assets/js/api/kc-api.diagnostics.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.session.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.filters.js?v=8.6.1"></script>
@@ -273,7 +280,7 @@
   <script defer src="assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.chat.adapter.js?v=8.6.4"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.chat.adapter.js?v=8.6.5"></script>
   <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
@@ -288,6 +295,6 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.5"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.20"></script>
+  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.21"></script>
 </body>
 </html>
