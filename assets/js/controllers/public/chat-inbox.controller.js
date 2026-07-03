@@ -842,6 +842,18 @@
     updateSendBtnState();
   }
 
+  function isTouchMenuMode() {
+    return !!(window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches);
+  }
+
+  function closeMessageMenus(root) {
+    var scope = root || $('kcChatMessages');
+    if (!scope) return;
+    Array.prototype.forEach.call(scope.querySelectorAll('.kc-chat-msg.is-menu-open'), function (el) {
+      el.classList.remove('is-menu-open');
+    });
+  }
+
   function renderMessagesList() {
     var wrap = $('kcChatMessages');
     if (!wrap) return;
@@ -889,6 +901,7 @@
         e.stopPropagation();
         var msgId = btn.getAttribute('data-msg-menu');
         var action = btn.getAttribute('data-action');
+        closeMessageMenus(wrap);
         if (action === 'delete') handleDeleteMessage(msgId);
         else if (action === 'edit') handleEditMessage(msgId);
         else if (action === 'report') handleReportMessage(msgId);
@@ -943,16 +956,23 @@
     // Mobile: tap na bolha abre/fecha o menu de contexto (toggle is-menu-open).
     Array.prototype.forEach.call(wrap.querySelectorAll('.kc-chat-msg'), function (bubble) {
       bubble.addEventListener('click', function (e) {
+        if (!isTouchMenuMode()) return;
         if (e.target.closest('[data-msg-menu]') || e.target.closest('[data-reaction-msg]') ||
             e.target.closest('[data-reply-to]') || e.target.closest('[data-image-full]') ||
             e.target.closest('[data-media-retry]') || e.target.closest('.kc-chat-msg__edit-area')) return;
         var wasOpen = bubble.classList.contains('is-menu-open');
-        Array.prototype.forEach.call(wrap.querySelectorAll('.kc-chat-msg.is-menu-open'), function (el) {
-          el.classList.remove('is-menu-open');
-        });
+        closeMessageMenus(wrap);
         if (!wasOpen) bubble.classList.add('is-menu-open');
       });
     });
+
+    if (!wrap.dataset.menuCloserBound) {
+      wrap.addEventListener('click', function (e) {
+        if (!isTouchMenuMode()) return;
+        if (e.target === wrap) closeMessageMenus(wrap);
+      });
+      wrap.dataset.menuCloserBound = '1';
+    }
   }
 
   function renderMessagesError() {

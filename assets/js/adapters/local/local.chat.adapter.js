@@ -24,6 +24,7 @@
     startConversation: notSupported,
     sendMessage: notSupported,
     uploadChatImage: notSupported,
+    uploadChatMedia: notSupported,
     getSignedUrl: function () { return Promise.resolve(null); },
     deleteUploadedMedia: notSupported,
     listConversations: function () { return Promise.resolve({ ok: true, data: [] }); },
@@ -40,6 +41,7 @@
       return Promise.resolve({ ok: true, data: { i_blocked: false, they_blocked: false } });
     },
     reportMessage: notSupported,
+    deleteConversation: notSupported,
     subscribeChat: function () { return null; },
     unsubscribeChat: function () {},
     // Indicador "digitando..." — sem efeito no driver local (sem Realtime).
