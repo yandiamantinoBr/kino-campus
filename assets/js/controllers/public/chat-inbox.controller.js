@@ -24,12 +24,14 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.25';
+  const VERSION = '9.3.5.26';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
   const AUTH_BOOT_TIMEOUT_MS = 8000;
   const CHAT_REQUEST_TIMEOUT_MS = 12000;
   const PRESENCE_ONLINE_MS = 2 * 60 * 1000;  // 2 min — peer "online" se última msg nesse intervalo
+  const CHAT_JUMP_IDLE_HIDE_MS = 5500;
+  const CHAT_JUMP_IDLE_HIDE_GRACE_MS = 200;
 
   const state = {
     me: null,
@@ -270,7 +272,7 @@
   }
 
   function requestJumpVisibility() {
-    state.jumpVisibleUntil = Date.now() + 2600;
+    state.jumpVisibleUntil = Date.now() + CHAT_JUMP_IDLE_HIDE_MS;
     updateJumpButton();
     clearJumpAutoHideTimer();
     state.jumpAutoHideTimer = setTimeout(function () {
@@ -281,7 +283,7 @@
       } else {
         updateJumpButton();
       }
-    }, 2700);
+    }, CHAT_JUMP_IDLE_HIDE_MS + CHAT_JUMP_IDLE_HIDE_GRACE_MS);
   }
 
   function updateJumpButton() {

@@ -88,7 +88,7 @@ describe('chat continuity contract', () => {
     expect(html).toContain('justify-self: center;');
     expect(html).toContain('width: min(1760px, calc(100vw - 56px));');
     expect(html).toContain('assets/css/kc-chat.css?v=8.7.4');
-    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.25');
+    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.26');
     expect(css).toContain('grid-template-columns: minmax(360px, 33%) minmax(620px, 1fr);');
     expect(css).toContain('height: 100%;');
     expect(css).toContain('border-radius: 22px;');
@@ -120,6 +120,8 @@ describe('chat continuity contract', () => {
     expect(controller).toContain('jumpTarget');
     expect(controller).toContain('jumpVisibleUntil');
     expect(controller).toContain('jumpAutoHideTimer');
+    expect(controller).toContain('const CHAT_JUMP_IDLE_HIDE_MS = 5500;');
+    expect(controller).toContain('CHAT_JUMP_IDLE_HIDE_MS + CHAT_JUMP_IDLE_HIDE_GRACE_MS');
     expect(controller).toContain('function requestJumpVisibility()');
     expect(controller).toContain('function updateJumpButton()');
     expect(controller).toContain("btn.setAttribute('data-direction', target);");
