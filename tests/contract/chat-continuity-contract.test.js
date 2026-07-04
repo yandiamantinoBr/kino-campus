@@ -88,7 +88,7 @@ describe('chat continuity contract', () => {
     expect(html).toContain('justify-self: center;');
     expect(html).toContain('width: min(1760px, calc(100vw - 56px));');
     expect(html).toContain('assets/css/kc-chat.css?v=8.7.4');
-    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.24');
+    expect(html).toContain('chat-inbox.controller.js?v=9.3.5.25');
     expect(css).toContain('grid-template-columns: minmax(360px, 33%) minmax(620px, 1fr);');
     expect(css).toContain('height: 100%;');
     expect(css).toContain('border-radius: 22px;');
@@ -118,8 +118,13 @@ describe('chat continuity contract', () => {
     const controller = read('assets/js/controllers/public/chat-inbox.controller.js');
 
     expect(controller).toContain('jumpTarget');
+    expect(controller).toContain('jumpVisibleUntil');
+    expect(controller).toContain('jumpAutoHideTimer');
+    expect(controller).toContain('function requestJumpVisibility()');
     expect(controller).toContain('function updateJumpButton()');
     expect(controller).toContain("btn.setAttribute('data-direction', target);");
+    expect(controller).toContain("var hasUnread = state.pendingActiveUnread > 0;");
+    expect(controller).toContain("var isTemporaryVisible = Date.now() <= state.jumpVisibleUntil;");
     expect(controller).toContain("label.textContent = state.pendingActiveUnread > 0 ? 'Novas mensagens' : (target === 'top' ? 'Topo' : 'Fim');");
     expect(controller).toContain('function scrollToTop()');
     expect(controller).toContain("if (state.jumpTarget === 'top')");

@@ -206,6 +206,10 @@
 
 @media (max-width: 768px) {
   .kc-module-heading {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 38px;
+    align-items: center;
+    gap: 8px;
     min-height: 50px;
     margin: 0 0 10px;
     padding: 6px 7px 6px 10px;
@@ -219,24 +223,38 @@
   }
 
   .kc-module-heading__label {
-    gap: 8px;
+    display: contents;
   }
 
   .kc-module-heading__label > i {
     display: inline-flex;
+    grid-column: 1;
     flex: 0 0 auto;
     width: 30px;
     height: 30px;
     align-items: center;
     justify-content: center;
+    justify-self: start;
     border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 26%, transparent);
     border-radius: 9px;
     background: color-mix(in srgb, var(--kc-primary-brand) 12%, transparent);
     font-size: 0.78em;
   }
 
+  .kc-module-heading__label > span {
+    grid-column: 2;
+    min-width: 0;
+    justify-self: center;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .kc-context-info-btn {
     display: inline-flex;
+    grid-column: 3;
+    justify-self: end;
     width: 38px;
     height: 38px;
     border-radius: 11px;
@@ -250,7 +268,7 @@
   }
 
   aside.kc-sidebar.kc-sidebar--contextual.kc-sidebar--home-context {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
 
   aside.kc-sidebar.kc-sidebar--home-context .kc-sidebar-section--context {

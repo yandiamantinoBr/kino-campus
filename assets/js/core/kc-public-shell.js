@@ -18,8 +18,8 @@
   const MENU_ROUTE_PAGES = new Set([
     'achados-perdidos.html',
     'caronas-feed.html',
+    'compra-venda-feed.html',
     'moradia.html',
-    'oportunidades.html',
     'ajuda.html',
     'search-results.html',
     '_product.html',
@@ -89,7 +89,7 @@
 
   function buildMobileNav(activeKey) {
     const isEvents = activeKey === 'events';
-    const isMarket = activeKey === 'market';
+    const isOpportunities = activeKey === 'opportunities';
     const isCreate = activeKey === 'create';
     const isMenu = activeKey === 'menu';
     return [
@@ -97,7 +97,7 @@
       `<a href="index.html"${activeKey === 'home' ? ' class="active"' : ''}><i class="fas fa-home"></i><span>Início</span></a>`,
       `<a href="eventos.html"${isEvents ? ' class="active"' : ''}><i class="fas fa-calendar"></i><span>Eventos</span></a>`,
       `<a class="kc-create-btn${isCreate ? ' active' : ''}" href="create-post.html" aria-label="Criar publicação"><i class="fas fa-plus"></i></a>`,
-      `<a href="compra-venda-feed.html"${isMarket ? ' class="active"' : ''}><i class="fas fa-shopping-bag"></i><span class="kc-mobile-nav-label-long">Compra/Venda</span></a>`,
+      `<a href="oportunidades.html"${isOpportunities ? ' class="active"' : ''}><i class="fas fa-briefcase"></i><span class="kc-mobile-nav-label-long">Oportunidades</span></a>`,
       `<button class="kc-menu-toggle${isMenu ? ' active' : ''}" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle" type="button"><i class="fas fa-bars"></i><span>Menu</span></button>`,
       '</nav>'
     ].join('');
@@ -227,7 +227,7 @@
   function resolveBottomNavKey(page) {
     if (page === 'index.html') return 'home';
     if (page === 'eventos.html') return 'events';
-    if (page === 'compra-venda-feed.html') return 'market';
+    if (page === 'oportunidades.html') return 'opportunities';
     if (page === 'create-post.html') return 'create';
     if (MENU_ROUTE_PAGES.has(page)) return 'menu';
     return '';
@@ -261,8 +261,8 @@
         ? 'home'
         : href === 'eventos.html'
           ? 'events'
-          : href === 'compra-venda-feed.html'
-            ? 'market'
+          : href === 'oportunidades.html'
+            ? 'opportunities'
             : href === 'create-post.html'
               ? 'create'
               : '';
