@@ -1,26 +1,19 @@
-// -----------------------------
-// Mobile menu
-// -----------------------------
 function getMobileMenuElements() {
   const menu = document.getElementById('mobileMenuDrawer') || document.getElementById('mobileMenu');
   const overlay = document.getElementById('mobileMenuOverlay');
   return { menu, overlay };
 }
-
 function openMobileMenu() {
   const { menu, overlay } = getMobileMenuElements();
   if (!menu || !overlay) return;
-
   menu.classList.add('active');
   overlay.classList.add('active');
   // Não usa KCOverlayLock: position:fixed no body quebra position:sticky
   // no kc-header e kc-feed-tabs — o overlay com touch-action:none já
   // impede scroll de fundo no iOS sem remover o sticky do header.
   document.documentElement.classList.add('kc-menu-open');
-
   menu.setAttribute('aria-hidden', 'false');
   overlay.setAttribute('aria-hidden', 'false');
-
   const toggleBtn = document.querySelector('[data-kc-mobile-menu="toggle"]');
   if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
 }
@@ -50,15 +43,11 @@ function toggleMobileMenu(event) {
   else openMobileMenu();
 }
 
-// Close on Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeMobileMenu();
 });
 
 
-// -----------------------------
-// Ripple effect (event delegation)
-// -----------------------------
 function installRippleStylesOnce() {
   if (document.getElementById('kc-ripple-style')) return;
 
@@ -100,9 +89,6 @@ function createRipple(target, clientX, clientY) {
   target.appendChild(ripple);
 }
 
-// -----------------------------
-// Smooth scroll for anchors
-// -----------------------------
 function initSmoothAnchors() {
   document.body.addEventListener('click', (e) => {
     const a = e.target.closest('a[href^="#"]');
@@ -119,16 +105,13 @@ function initSmoothAnchors() {
   });
 }
 
-// -----------------------------
-// Mobile nav active state
-// -----------------------------
 function initMobileNavActive() {
   const currentPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
   const menuPages = new Set([
     'achados-perdidos.html',
     'caronas-feed.html',
+    'compra-venda-feed.html',
     'moradia.html',
-    'oportunidades.html',
     'ajuda.html',
     'search-results.html',
     '_product.html',
@@ -150,7 +133,7 @@ function initMobileNavActive() {
   function resolveBottomNavKey(page) {
     if (page === 'index.html') return 'home';
     if (page === 'eventos.html') return 'events';
-    if (page === 'compra-venda-feed.html') return 'market';
+    if (page === 'oportunidades.html') return 'opportunities';
     if (page === 'create-post.html') return 'create';
     if (menuPages.has(page)) return 'menu';
     return '';
@@ -174,8 +157,8 @@ function initMobileNavActive() {
       ? 'home'
       : href === 'eventos.html'
         ? 'events'
-        : href === 'compra-venda-feed.html'
-          ? 'market'
+        : href === 'oportunidades.html'
+          ? 'opportunities'
           : href === 'create-post.html'
             ? 'create'
             : '';
@@ -194,9 +177,6 @@ function initMobileNavActive() {
 }
 
 
-// -----------------------------
-// Responsive UX helpers (V5.5.1)
-// -----------------------------
 function kcUpdateHeaderHeightVar() {
   const header = document.querySelector("header") || document.querySelector(".kc-header");
   const h = header ? header.offsetHeight : 0;
@@ -206,9 +186,7 @@ function kcUpdateHeaderHeightVar() {
 function kcEnableDragToScroll(el) {
   if (!el) return;
 
-  // Drag-to-scroll sem quebrar clique em links
   // - Só captura o pointer quando o usuário realmente começa a arrastar
-  // - Se for apenas um clique, o link funciona normalmente
 
   let isDown = false;
   let startX = 0;
@@ -271,7 +249,6 @@ function kcEnableDragToScroll(el) {
     e.stopPropagation();
   };
 
-  // Pointer events
   el.addEventListener('pointerdown', start, { passive: true });
   el.addEventListener('pointermove', move, { passive: true });
   el.addEventListener('pointerup', end, { passive: true });
@@ -598,11 +575,8 @@ function kcInitHeroSwipe() {
 
 
 
-// -----------------------------
-// Image fallbacks (offline/local)
 // - Quando as imagens remotas não carregam (ex.: abrindo via file:// sem internet),
 //   o ALT pode estourar o layout. Aqui substituímos por um emoji consistente.
-// -----------------------------
 function kcInitImageFallbacks() {
   const map = {
     destaque: '🔥',
@@ -650,11 +624,8 @@ function kcInitImageFallbacks() {
   });
 }
 
-// -----------------------------
-// Mobile card micro-polish (V5.5.2)
 // - Encurta label de comentários ("23 comentários" -> "23")
 // - Encurta CTA do card ("Ver Detalhes" -> "Ver mais")
-// -----------------------------
 function kcIsMobileViewport() {
   return window.matchMedia && window.matchMedia("(max-width: 576px)").matches;
 }
@@ -691,9 +662,6 @@ function kcPolishCardsForMobile() {
   });
 }
 
-// -----------------------------
-// Responsive CSS vars (extracted from V5.5.6 IIFE)
-// -----------------------------
 function _kcClamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
@@ -726,7 +694,6 @@ function kcDebounce(fn, wait = 120) {
   };
 }
 
-// -----------------------------
 document.addEventListener('DOMContentLoaded', () => {
   // Anti-FOUC: remove loading class after first paint
   requestAnimationFrame(() => {

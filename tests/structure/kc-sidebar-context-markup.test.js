@@ -15,7 +15,7 @@ describe('V76.23 - contexto dos módulos', () => {
   test.each(Object.entries(PAGES))('%s usa o trigger e os assets compartilhados', (file, moduleKey) => {
     const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
 
-    expect(html).toContain('assets/css/kc-sidebar-context.css?v=8.6.1');
+    expect(html).toContain('assets/css/kc-sidebar-context.css?v=8.6.2');
     expect(html).toContain('assets/js/features/kc-sidebar-context.js?v=8.6.1');
     expect(html).toContain('class="kc-module-heading"');
     expect(html).toContain(`data-kc-context-open="${moduleKey}"`);

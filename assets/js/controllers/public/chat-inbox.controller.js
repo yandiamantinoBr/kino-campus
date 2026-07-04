@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.24';
+  const VERSION = '9.3.5.25';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
   const AUTH_BOOT_TIMEOUT_MS = 8000;
@@ -60,6 +60,8 @@
     messageLoadToken: 0,
     pendingActiveUnread: 0,
     jumpTarget: 'bottom',
+    jumpVisibleUntil: 0,
+    jumpAutoHideTimer: null,
     typingChannel: null,
     typingBroadcastTimer: null,
     typingResetTimer: null,
@@ -247,16 +249,39 @@
     return !!(wrap && (wrap.scrollHeight - wrap.clientHeight) > 160);
   }
 
+  function clearJumpAutoHideTimer() {
+    if (!state.jumpAutoHideTimer) return;
+    clearTimeout(state.jumpAutoHideTimer);
+    state.jumpAutoHideTimer = null;
+  }
+
   function setJumpVisible(visible) {
     var btn = $('kcChatJumpBtn');
     if (!btn) return;
     if (!visible) {
+      clearJumpAutoHideTimer();
+      state.jumpVisibleUntil = 0;
       btn.hidden = true;
       var oldBadge = btn.querySelector('.kc-chat-jump__badge');
       if (oldBadge) oldBadge.remove();
       return;
     }
     updateJumpButton();
+  }
+
+  function requestJumpVisibility() {
+    state.jumpVisibleUntil = Date.now() + 2600;
+    updateJumpButton();
+    clearJumpAutoHideTimer();
+    state.jumpAutoHideTimer = setTimeout(function () {
+      state.jumpAutoHideTimer = null;
+      if (state.pendingActiveUnread <= 0) {
+        state.jumpVisibleUntil = 0;
+        setJumpVisible(false);
+      } else {
+        updateJumpButton();
+      }
+    }, 2700);
   }
 
   function updateJumpButton() {
@@ -272,7 +297,10 @@
     if (!nearBottom || state.pendingActiveUnread > 0) target = 'bottom';
     else if (!nearTop) target = 'top';
 
-    if (!canScroll || !target) {
+    var hasUnread = state.pendingActiveUnread > 0;
+    var isTemporaryVisible = Date.now() <= state.jumpVisibleUntil;
+
+    if (!canScroll || !target || (!hasUnread && !isTemporaryVisible)) {
       btn.hidden = true;
       var staleBadge = btn.querySelector('.kc-chat-jump__badge');
       if (staleBadge) staleBadge.remove();
@@ -2104,7 +2132,7 @@
           var last = state.messages[state.messages.length - 1];
           markActiveConversationRead(last && last.message_id);
         }
-        updateJumpButton();
+        requestJumpVisibility();
       });
     }
 
@@ -2119,12 +2147,15 @@
       jumpBtn.addEventListener('click', function () {
         if (state.jumpTarget === 'top') {
           scrollToTop();
+          if (state.pendingActiveUnread <= 0) setJumpVisible(false);
           return;
         }
         scrollToBottom();
         if (state.pendingActiveUnread > 0) {
           var last = state.messages[state.messages.length - 1];
           markActiveConversationRead(last && last.message_id);
+        } else {
+          setJumpVisible(false);
         }
       });
     }

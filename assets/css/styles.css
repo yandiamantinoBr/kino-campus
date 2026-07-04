@@ -7921,6 +7921,70 @@ textarea::placeholder {
   text-align: left;
 }
 
+/* Mobile home/menu refinements (V76.26) */
+@media (max-width: 768px) {
+  main.kc-main-content--home {
+    gap: 8px !important;
+  }
+
+  main.kc-main-content--home .kc-sidebar--home-context {
+    margin-bottom: 0 !important;
+  }
+
+  main.kc-main-content--home .kc-hero-carousel {
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+  }
+
+  .kc-mobile-menu-content {
+    padding-bottom: max(124px, calc(env(safe-area-inset-bottom, 0px) + 116px)) !important;
+    scroll-padding-bottom: max(124px, calc(env(safe-area-inset-bottom, 0px) + 116px));
+  }
+
+  .kc-mobile-menu-content .kc-mobile-menu-account-link,
+  .kc-mobile-menu-content .kc-mobile-menu-account-btn,
+  .kc-mobile-menu-content .kc-mobile-menu-logout-btn,
+  .kc-mobile-menu-content button.kc-mobile-menu-logout-btn {
+    display: grid !important;
+    grid-template-columns: 24px minmax(0, 1fr);
+    column-gap: 15px !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 15px 20px !important;
+    text-align: left !important;
+    transform: none !important;
+  }
+
+  .kc-mobile-menu-content .kc-mobile-menu-account-link i,
+  .kc-mobile-menu-content .kc-mobile-menu-account-btn i,
+  .kc-mobile-menu-content .kc-mobile-menu-logout-btn i,
+  .kc-mobile-menu-content button.kc-mobile-menu-logout-btn i {
+    width: 24px !important;
+    margin: 0 !important;
+    justify-self: center;
+    text-align: center;
+  }
+
+  .kc-mobile-menu-content .kc-mobile-menu-account-link span,
+  .kc-mobile-menu-content .kc-mobile-menu-account-btn span,
+  .kc-mobile-menu-content .kc-mobile-menu-logout-btn span,
+  .kc-mobile-menu-content button.kc-mobile-menu-logout-btn span {
+    min-width: 0;
+    justify-self: start;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kc-mobile-menu-content .kc-mobile-menu-logout-btn:hover,
+  .kc-mobile-menu-content .kc-mobile-menu-logout-btn:focus {
+    transform: none !important;
+  }
+}
+
 .kc-card__image-wrapper {
   position: relative;
   overflow: hidden;
