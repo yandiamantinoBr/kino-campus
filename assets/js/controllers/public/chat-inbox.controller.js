@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '9.3.5.26';
+  const VERSION = '9.3.5.27';
   const PAGE_SIZE_CONV = 50;
   const PAGE_SIZE_MSG = 50;
   const AUTH_BOOT_TIMEOUT_MS = 8000;
@@ -32,6 +32,9 @@
   const PRESENCE_ONLINE_MS = 2 * 60 * 1000;  // 2 min — peer "online" se última msg nesse intervalo
   const CHAT_JUMP_IDLE_HIDE_MS = 5500;
   const CHAT_JUMP_IDLE_HIDE_GRACE_MS = 200;
+  const CHAT_JUMP_REVEAL_INTERACTIONS = 2;
+  const CHAT_JUMP_SCROLL_GESTURE_IDLE_MS = 520;
+  const CHAT_JUMP_SCROLL_SESSION_RESET_MS = 1400;
 
   const state = {
     me: null,
@@ -64,6 +67,10 @@
     jumpTarget: 'bottom',
     jumpVisibleUntil: 0,
     jumpAutoHideTimer: null,
+    jumpLastScrollTop: 0,
+    jumpLastScrollAt: 0,
+    jumpScrollDirection: '',
+    jumpScrollInteractions: 0,
     typingChannel: null,
     typingBroadcastTimer: null,
     typingResetTimer: null,
@@ -257,12 +264,65 @@
     state.jumpAutoHideTimer = null;
   }
 
+  function resetJumpRevealIntent() {
+    state.jumpLastScrollTop = 0;
+    state.jumpLastScrollAt = 0;
+    state.jumpScrollDirection = '';
+    state.jumpScrollInteractions = 0;
+  }
+
+  function isJumpVisible() {
+    var btn = $('kcChatJumpBtn');
+    return !!(btn && !btn.hidden);
+  }
+
+  function shouldRevealJumpAfterScroll() {
+    var wrap = $('kcChatMessages');
+    if (!wrap || state.pendingActiveUnread > 0) return true;
+
+    var now = Date.now();
+    var scrollTop = wrap.scrollTop;
+    var lastAt = state.jumpLastScrollAt;
+    if (!lastAt) {
+      var initialDelta = scrollTop - state.jumpLastScrollTop;
+      state.jumpLastScrollTop = scrollTop;
+      state.jumpLastScrollAt = now;
+      state.jumpScrollDirection = initialDelta > 0 ? 'down' : (initialDelta < 0 ? 'up' : '');
+      state.jumpScrollInteractions = 1;
+      return false;
+    }
+
+    var delta = scrollTop - state.jumpLastScrollTop;
+    state.jumpLastScrollTop = scrollTop;
+    if (Math.abs(delta) < 4) {
+      state.jumpLastScrollAt = now;
+      return state.jumpScrollInteractions >= CHAT_JUMP_REVEAL_INTERACTIONS;
+    }
+
+    var direction = delta > 0 ? 'down' : 'up';
+    var elapsed = now - lastAt;
+    var directionChanged = !!state.jumpScrollDirection && state.jumpScrollDirection !== direction;
+    var resetSession = directionChanged || elapsed > CHAT_JUMP_SCROLL_SESSION_RESET_MS;
+    var newGesture = resetSession || elapsed > CHAT_JUMP_SCROLL_GESTURE_IDLE_MS || !state.jumpScrollDirection;
+
+    if (resetSession) {
+      state.jumpScrollInteractions = 1;
+    } else if (newGesture) {
+      state.jumpScrollInteractions += 1;
+    }
+
+    state.jumpScrollDirection = direction;
+    state.jumpLastScrollAt = now;
+    return state.jumpScrollInteractions >= CHAT_JUMP_REVEAL_INTERACTIONS;
+  }
+
   function setJumpVisible(visible) {
     var btn = $('kcChatJumpBtn');
     if (!btn) return;
     if (!visible) {
       clearJumpAutoHideTimer();
       state.jumpVisibleUntil = 0;
+      resetJumpRevealIntent();
       btn.hidden = true;
       var oldBadge = btn.querySelector('.kc-chat-jump__badge');
       if (oldBadge) oldBadge.remove();
@@ -2134,7 +2194,11 @@
           var last = state.messages[state.messages.length - 1];
           markActiveConversationRead(last && last.message_id);
         }
-        requestJumpVisibility();
+        if (isJumpVisible() || shouldRevealJumpAfterScroll()) {
+          requestJumpVisibility();
+        } else {
+          updateJumpButton();
+        }
       });
     }
 
