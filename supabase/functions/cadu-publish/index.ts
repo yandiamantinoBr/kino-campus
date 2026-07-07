@@ -291,7 +291,13 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
     else if (start && start < today && !end && !futureDates.length) block("event_past");
     else if (!start && latestDate && latestDate < today && !futureDates.length) block("event_past");
   } else if (hasDeadlineContext && latestDate && latestDate < today && !futureDates.length) {
-    block("deadline_past");
+    // F2 B8 (2026-07-06): mudou de block pra warn. Heurística original bloqueava
+    // itens válidos como "Transporte XVII SEREX" (vagas remanescentes, texto:
+    // "vagas limitadas e preenchimento imediato") e "AUIP bolsas" (sem data
+    // futura explícita, texto: "Prazo não divulgado"). Agora o Curador pode
+    // sinalizar a qualidade (warning) sem bloquear — o user revisa no painel
+    // se quiser. Eventos com data fim passada (event_past) continuam bloqueando.
+    warn("deadline_past");
   }
 
   if (
