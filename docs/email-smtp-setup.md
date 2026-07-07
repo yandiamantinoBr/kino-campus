@@ -3,6 +3,11 @@
 Documento descrevendo como o envio de e-mails está configurado no KinoCampus,
 para referência ao operar/restaurar o setup.
 
+> ⚠️ **DKIM ausente no DNS do `kinocampus.com.br`** — Yahoo/Outlook rejeitam ou marcam como spam.
+> Veja `EMAIL-DELIVERABILITY-2026-07-07.md` para investigação completa, plano
+> de fix passo-a-passo (Hostinger DKIM manual ou migração para Resend), e
+> automação de validação em CI.
+
 ## Provedor SMTP atual
 
 **Hostinger** (mesma conta que hospeda o site/domínio kinocampus.com.br).
