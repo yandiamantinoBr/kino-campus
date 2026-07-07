@@ -698,6 +698,87 @@ async function main() {
     }
   }
 
+  // ── STEP 3.5: Event Link Enrichment via Chromium CDP (F3 B9) ─────
+  // Enriquece items UFG com info oficial antes do publish readiness check.
+  // Resolve /events?event=N → /e/{slug}, navega via browser headless, extrai
+  // metadata canonica (og:image, titulo, local, periodo). Limita a 3 items
+  // pra nao atrasar o pipeline.
+  let enrichedEventLinks = 0;
+  if (formattedItems.length > 0) {
+    const ufgItems = formattedItems.filter((it) => {
+      const url = it.sourceUrl || it.url || it.link || '';
+      try { const u = new URL(url); return u.hostname.endsWith('ufg.br'); }
+      catch (_) { return false; }
+    });
+    const limit = 3;
+    const itemsToEnrich = ufgItems.slice(0, limit);
+
+    if (itemsToEnrich.length > 0) {
+      log('🔎', `Enriquecimento de link via browser: ${itemsToEnrich.length}/${ufgItems.length} items UFG (limite ${limit})`);
+      for (const item of itemsToEnrich) {
+        const targetUrl = item.sourceUrl || item.url || item.link || '';
+        try {
+          const tmpFile = path.join(DATA_DIR, `_temp_enrich_link_${TIMESTAMP}_${Math.random().toString(36).slice(2, 8)}.json`);
+          fs.writeFileSync(tmpFile, JSON.stringify({ url: targetUrl, title: item.title }));
+
+          const cmd = `node ${path.join(SCRIPTS_DIR, 'enrich-event-link.js')} --file ${tmpFile}`;
+          const enrichOut = await runStep(cmd, `EventLink enrich: ${item.title?.slice(0, 50)}`);
+
+          if (enrichOut) {
+            // Padrao: pegar ULTIMO JSON valido do stdout
+            const jsonMatches = enrichOut.match(/\{[\s\S]*?"ok"\s*:\s*true[\s\S]*?\n\}/g);
+            const candidate = jsonMatches && jsonMatches.length > 0
+              ? jsonMatches[jsonMatches.length - 1]
+              : null;
+            if (candidate) {
+              try {
+                const parsed = JSON.parse(candidate);
+                const meta = parsed.item?.metadata || {};
+                // Merge: og:image sobrescreve image se existir
+                if (meta.ogImage && !item.image) {
+                  item.image = meta.ogImage;
+                  item.imageUrl = meta.ogImage;
+                }
+                // mainText: usado para preencher description se description vazia
+                if (meta.mainText && (!item.description || item.description.length < 80)) {
+                  item.description = meta.mainText;
+                  item.formattedDescription = meta.mainText;
+                }
+                // pdf links merge
+                if (Array.isArray(meta.pdfLinks)) {
+                  item.pdfLinks = [...(item.pdfLinks || []), ...meta.pdfLinks];
+                  item.pdfs = item.pdfLinks;
+                }
+                // Atualiza sourceUrl pro canonical (limpa SPA URLs)
+                if (parsed.item?.canonicalUrl) {
+                  item.sourceUrl = parsed.item.canonicalUrl;
+                  item.url = parsed.item.canonicalUrl;
+                }
+                item.enrichmentSources = item.enrichmentSources || [];
+                item.enrichmentSources.push({
+                  url: parsed.item?.canonicalUrl || targetUrl,
+                  label: 'Página oficial do evento (browser enrichment)',
+                  type: 'official-browser',
+                });
+                enrichedEventLinks++;
+              } catch (e) {
+                log('⚠️', `Parse enrich-event-link falhou: ${e.message?.slice(0, 80)}`);
+              }
+            }
+          }
+        } catch (e) {
+          log('⚠️', `EventLink enrich erro: ${e.message?.slice(0, 80)}`);
+        } finally {
+          // Cleanup temp file
+          try { fs.unlinkSync(tmpFile); } catch (_) {}
+        }
+      }
+      if (enrichedEventLinks > 0) {
+        log('✅', `${enrichedEventLinks} items enriquecidos via browser`);
+      }
+    }
+  }
+
   // ── STEP 4: Publicação (se --publish) ────────────────────────
   let published = 0;
   let publishErrors = 0;
