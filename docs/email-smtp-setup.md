@@ -27,6 +27,18 @@ para referência ao operar/restaurar o setup.
 > password pode ser revogada individualmente sem afetar o login do webmail
 > nem outras integrações.
 
+> ⚠️ **2026-07-07 18:50 BRT — incident resolvido**: Yan rotacionou a senha do
+> `contato@kinocampus.com.br` no painel Hostinger mas esqueceu de atualizar
+> o Supabase Auth SMTP config. Resultado: TODOS os emails enviados pelo
+> Supabase Auth (signup confirm, magic link, recovery, invite) estavam
+> falhando silenciosamente com **535 authentication failed**. Sintomas:
+> bounces "Undelivered Mail Returned to Sender" no hotmail, emails indo
+> pro spam. **Fix**: atualizado Supabase Auth SMTP config (Management API
+> PATCH) + atualizado `KC_SMTP_PASS` secret das Edge Functions. **Lição**:
+> ao trocar senha no Hostinger, **sempre** atualizar AMBOS: Supabase Auth
+> SMTP config E o `KC_SMTP_PASS` secret. Em caso de dúvida, validar
+> fazendo `auth/v1/recover` com email próprio.
+
 ## Onde o SMTP está consumido
 
 ### 1. Supabase Auth (built-in)
