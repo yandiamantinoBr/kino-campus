@@ -443,7 +443,7 @@
       }
 
       const socialLinks = collectSocialLinks();
-      if (!String(socialLinks[primaryMethod] || '').trim()) {
+      if (primaryMethod !== 'chat' && !String(socialLinks[primaryMethod] || '').trim()) {
         setStatus('Preencha o valor do contato principal escolhido para que o botão de contato funcione.', 'warn');
         return false;
       }

@@ -100,6 +100,7 @@
       instagram: 'fab fa-instagram',
       linkedin: 'fab fa-linkedin',
       facebook: 'fab fa-facebook',
+      chat_internal: 'fas fa-comments',
       login_required: 'fas fa-right-to-bracket',
       view_profile: 'fas fa-id-badge',
       external_link: 'fas fa-arrow-up-right-from-square',
@@ -193,7 +194,9 @@
         viewerAuthenticated: isViewerAuthenticated(),
         postTitle: post && (post.titulo || post.title) || '',
         postUrl: window.location.href,
-        viewProfileHref
+        viewProfileHref,
+        authorId: authorId || null,
+        postId: post && (post.id || post.uuid) || null
       });
       if (profileAction && profileAction.type && profileAction.type !== 'unavailable') {
         return profileAction;

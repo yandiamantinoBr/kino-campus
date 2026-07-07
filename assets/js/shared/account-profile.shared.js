@@ -93,7 +93,8 @@
     Object.freeze({ value: 'instagram', label: 'Instagram' }),
     Object.freeze({ value: 'linkedin', label: 'LinkedIn' }),
     Object.freeze({ value: 'facebook', label: 'Facebook' }),
-    Object.freeze({ value: 'email_public', label: 'E-mail' })
+    Object.freeze({ value: 'email_public', label: 'E-mail' }),
+    Object.freeze({ value: 'chat', label: 'Chat do KinoCampus' })
   ]);
 
   const COUNTRY_DIAL_OPTIONS = Object.freeze([
@@ -856,6 +857,21 @@
       return Object.freeze({
         type: 'login_required',
         label: 'Entrar para contatar'
+      });
+    }
+
+    if (primary === 'chat') {
+      const authorId = String(source.authorId || '').trim();
+      const postId = String(source.postId || '').trim();
+      const chatParams = [];
+      if (authorId) chatParams.push('with=' + encodeURIComponent(authorId));
+      if (postId) chatParams.push('post=' + encodeURIComponent(postId));
+      const chatHref = 'mensagens.html' + (chatParams.length ? '?' + chatParams.join('&') : '');
+      return Object.freeze({
+        type: 'chat_internal',
+        label: 'Conversar no KinoCampus',
+        href: chatHref,
+        target: '_self'
       });
     }
 
