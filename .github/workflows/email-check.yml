@@ -1,0 +1,44 @@
+# GitHub Actions — E-mail deliverability checks
+#
+# Roda diariamente + em PRs que tocam arquivos de e-mail.
+# Quebra o build se DNS/Supabase Auth perderem configuração crítica.
+
+name: Email deliverability
+
+on:
+  pull_request:
+    branches: [kinocampus-V75.0-foundations]
+    paths:
+      - 'supabase/functions/**'
+      - 'services/cadu-ufg-publisher/**'
+      - '.github/workflows/email-check.yml'
+      - 'docs/EMAIL-DELIVERABILITY-2026-07-07.md'
+      - 'tests/test-email-*.js'
+  schedule:
+    # Daily 06:00 UTC (~03:00 BRT) - detecta drift em config de DNS/Auth
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dns-checks:
+    name: DNS + Supabase Auth
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run email deliverability test
+        env:
+          KINOCAMPUS_SUPABASE_ANON_KEY: ${{ secrets.KINOCAMPUS_SUPABASE_ANON_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        # Allow run without secrets (DNS-only mode) but exit non-zero if real issue
+        run: node tests/test-email-deliverability.js
+        continue-on-error: false
