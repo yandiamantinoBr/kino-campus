@@ -32,44 +32,56 @@ const errors = [];
 const warnings = [];
 
 function recordDns(label, hostname, type, expected) {
+  // Try Google DoH first (8.8.8.8), fall back to Cloudflare (1.1.1.1) if cache stale
   return new Promise((resolve) => {
-    const url = `https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=${type}`;
-    const req = https.get(url, { timeout: 10_000 }, (res) => {
-      let body = '';
-      res.on('data', (c) => (body += c));
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(body);
-          if (data.Status !== 0) {
-            errors.push(`[${label}] DNS query for ${hostname} returned status ${data.Status}`);
-            return resolve(false);
+    const resolvers = [
+      { url: `https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=${type}`, name: 'Google' },
+      { url: `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`, name: 'Cloudflare', headers: { 'Accept': 'application/dns-json' } },
+    ];
+
+    function tryResolver(idx) {
+      if (idx >= resolvers.length) {
+        errors.push(`[${label}] NO ${type} record found for ${hostname} (all resolvers returned NXDOMAIN)`);
+        return resolve(false);
+      }
+      const resolver = resolvers[idx];
+      const req = https.get(resolver.url, { timeout: 10_000, headers: resolver.headers || {} }, (res) => {
+        let body = '';
+        res.on('data', (c) => (body += c));
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            if (data.Status !== 0) {
+              // Try next resolver (cache may be stale)
+              return tryResolver(idx + 1);
+            }
+            const records = (data.Answer || []).map((a) => a.data);
+            if (records.length === 0) {
+              return tryResolver(idx + 1);
+            }
+            if (expected && !records.some((r) => r.includes(expected))) {
+              warnings.push(`[${label}] ${type} record(s) for ${hostname} exist but missing expected substring "${expected}". Found: ${records.join(', ')}`);
+              return resolve(false);
+            }
+            const recordStr = records[0].slice(0, 80) + (records[0].length > 80 ? '...' : '');
+            console.log(`  ✓ ${label}: ${hostname} ${type} = ${recordStr} (via ${resolver.name})`);
+            resolve(true);
+          } catch (e) {
+            errors.push(`[${label}] DNS parse error: ${e.message}`);
+            resolve(false);
           }
-          const records = (data.Answer || []).map((a) => a.data);
-          if (records.length === 0) {
-            errors.push(`[${label}] NO ${type} record found for ${hostname}`);
-            return resolve(false);
-          }
-          if (expected && !records.some((r) => r.includes(expected))) {
-            warnings.push(`[${label}] ${type} record(s) for ${hostname} exist but missing expected substring "${expected}". Found: ${records.join(', ')}`);
-            return resolve(false);
-          }
-          console.log(`  ✓ ${label}: ${hostname} ${type} = ${records[0].slice(0, 80)}${records[0].length > 80 ? '...' : ''}`);
-          resolve(true);
-        } catch (e) {
-          errors.push(`[${label}] DNS parse error: ${e.message}`);
-          resolve(false);
-        }
+        });
       });
-    });
-    req.on('timeout', () => {
-      req.destroy(new Error('DNS query timeout'));
-      errors.push(`[${label}] DNS query timeout for ${hostname}`);
-      resolve(false);
-    });
-    req.on('error', (e) => {
-      errors.push(`[${label}] DNS error for ${hostname}: ${e.message}`);
-      resolve(false);
-    });
+      req.on('timeout', () => {
+        req.destroy(new Error('DNS query timeout'));
+        tryResolver(idx + 1);
+      });
+      req.on('error', (e) => {
+        errors.push(`[${label}] DNS error for ${hostname} (${resolver.name}): ${e.message}`);
+        tryResolver(idx + 1);
+      });
+    }
+    tryResolver(0);
   });
 }
 
