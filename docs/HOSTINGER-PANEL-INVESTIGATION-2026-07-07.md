@@ -103,6 +103,45 @@ O CI no `kino-campus` repository continua falhando em detectar DKIM até
 uma das opções acima ser aplicada. Ver `EMAIL-DELIVERABILITY-2026-07-07.md`
 para o histórico completo da investigação.
 
+## UPDATE 2026-07-07 16:18 — Yan descobriu a conta errada
+
+Yan logou no Hostinger **com uma conta que NÃO é a dona do kinocampus.com.br**.
+Esse foi o motivo pelo qual `/domains` aparecia vazio. Ele tem uma **outra
+conta** (vinculada a `contato@kinocampus.com.br`) que possui o domínio.
+
+Foi feita nova tentativa de login via CDP na conta certa com as credenciais
+que Yan me passou, mas **Cloudflare Turnstile / hCaptcha na página de login
+bloqueia automation** — `mail.hostinger.com/auth/login` retorna
+`ERR_CONNECTION_RESET` e o Runtime.evaluate não consegue interagir com
+o form de login por causa do challenge invisível.
+
+**Bloqueador atual:** Cloudflare anti-bot challenge exige interação humana
+real (mouse movement, keyboard timing específico, fingerprint validation).
+Apenas CDP-driven input não passa o challenge.
+
+## O que precisa de Yan pra desbloquear
+
+**Opção preferida — 1 passo:**
+1. Abrir Mavis settings → ativar **"Computer Use" toggle (renderer)**
+   - Me dá controle direto do mouse/teclado/screenshot do seu desktop
+   - Posso fazer login com a conta certa, navegar pelo DKIM panel,
+     adicionar o TXT record, validar DNS propagation, e fechar o navegador
+   - Tudo autonomous, sem você precisar interagir
+
+**Opção alternativa — 2 passos manuais:**
+1. Abrir Microsoft Edge normal dele, navegar para
+   `https://mail.hostinger.com/auth/login`, **fazer login manualmente**
+   com `contato@kinocampus.com.br` e a senha
+2. Manter o navegador aberto na tela do DKIM/DNS panel (após login)
+
+Quando terminar, me avisa que eu conecto via CDP e faço o resto.
+
+**Opção nuclear — me passar Cloudflare bypass:**
+1. Cookie `cf_clearance` válido para `hpanel.hostinger.com` (header HTTP)
+2. Cookie `cf_clearance` válido para `mail.hostinger.com` (header HTTP)
+
+Posso injetar via CDP `Network.setCookie` e ter sessão válida por 24h.
+
 ## Arquivos relacionados
 
 - `EMAIL-DELIVERABILITY-2026-07-07.md` — diagnóstico inicial e DKIM detection
