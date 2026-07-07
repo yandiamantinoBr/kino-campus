@@ -204,3 +204,11 @@ e verificar `confirmation_sent_at` preenchido + e-mail chega no inbox
 ## Histórico
 
 - **2026-07-07 14:30 BRT**: investigação completa, este doc + PR aberto
+- **2026-07-07 16:18 BRT**: DKIM CNAME `default._domainkey → hostingermail-a.dkim.mail.hostinger.com` adicionado via Hostinger hpanel (conta correta, login Google). PR #634 mergeado.
+- **2026-07-07 17:30 BRT**: Yan aprovou acesso do YAN FELIPE DIAMANTINO NAKAMURA mas email não chegou. Investigação revelou:
+  - `admin_status` foi para `approved` (RPC funcionou)
+  - `invite_email.sent_at` foi setado (Supabase Auth tentou enviar)
+  - Mas DKIM ainda não tinha propagado em todos resolvers (Google 8.8.8.8 tinha cache stale de tentativa anterior com target errado `default.dkim.mail.hostinger.com`)
+  - **Fix**: TTL do CNAME reduzido para 60s + re-invite via `auth.admin.generateLink({type: 'magiclink'})` em 20:47:41Z
+  - DKIM agora válido em 8.8.8.8, 1.1.1.1, 208.67.222.222, 9.9.9.9
+  - Email reenviado deve chegar limpo
