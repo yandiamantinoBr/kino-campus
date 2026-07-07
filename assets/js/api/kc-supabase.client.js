@@ -504,59 +504,89 @@
       return !!mk && moduleSet.has(mk);
     }
 
-    function notify(change) {
-      if (!shouldNotify(change)) return;
-      try {
-        if (window.KCPostFreshness && typeof window.KCPostFreshness.emit === 'function') {
-          window.KCPostFreshness.emit(change);
+    // Multiplexação: cria o canal UMA vez e notifica todos os listeners (mesmo
+    // padrão de subscribeNewPosts). Evita o erro "cannot add postgres_changes
+    // callbacks after subscribe()" quando múltiplos pagers compartilham o canal.
+    if (!activeChannels[channelName]) {
+      const channel = client.channel(channelName);
+      activeChannels[channelName] = { channel, listeners: new Set() };
+
+      function notifyAll(change) {
+        if (!shouldNotify(change)) return;
+        try {
+          if (window.KCPostFreshness && typeof window.KCPostFreshness.emit === 'function') {
+            window.KCPostFreshness.emit(change);
+          }
+        } catch (_) { }
+        if (activeChannels[channelName]) {
+          activeChannels[channelName].listeners.forEach(function (l) {
+            try { if (typeof l.onChange === 'function') l.onChange(change); } catch (_) { }
+          });
         }
-      } catch (_) { }
-      try { if (typeof opt.onChange === 'function') opt.onChange(change); } catch (_) { }
-    }
-
-    const channel = client.channel(channelName);
-    try {
-      channel.on('broadcast', { event: 'post_change' }, (payload) => {
-        const source = payload && payload.payload ? payload.payload : payload;
-        const change = {
-          type: source && source.type || 'updated',
-          source: 'realtime-broadcast',
-          postId: source && (source.postId || source.post_id || source.id || source.uuid) || '',
-          legacyId: source && (source.legacyId || source.legacy_id) || '',
-          module: source && (source.module || source.modulo) || '',
-          status: source && (source.status || source.new_status) || '',
-          updated_at: source && (source.updated_at || source.updatedAt) || '',
-        };
-        notify(change);
-      });
-    } catch (_) { }
-
-    try {
-      channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'posts' },
-        (payload) => {
-          notify(normalizePostChangePayload(payload));
-        }
-      );
-
-      if (typeof channel.subscribe === 'function') {
-        channel.subscribe((status) => {
-          try { if (typeof opt.onStatus === 'function') opt.onStatus(status); } catch (_) { }
-        });
       }
-    } catch (e) {
-      try { if (typeof opt.onError === 'function') opt.onError(e); } catch (_) { }
-      return noopSubscription();
+
+      try {
+        channel.on('broadcast', { event: 'post_change' }, (payload) => {
+          const source = payload && payload.payload ? payload.payload : payload;
+          const change = {
+            type: source && source.type || 'updated',
+            source: 'realtime-broadcast',
+            postId: source && (source.postId || source.post_id || source.id || source.uuid) || '',
+            legacyId: source && (source.legacyId || source.legacy_id) || '',
+            module: source && (source.module || source.modulo) || '',
+            status: source && (source.status || source.new_status) || '',
+            updated_at: source && (source.updated_at || source.updatedAt) || '',
+          };
+          notifyAll(change);
+        });
+      } catch (_) { }
+
+      try {
+        channel.on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'posts' },
+          (payload) => { notifyAll(normalizePostChangePayload(payload)); }
+        );
+        if (typeof channel.subscribe === 'function') {
+          channel.subscribe((status) => {
+            if (activeChannels[channelName]) {
+              activeChannels[channelName].listeners.forEach(function (l) {
+                try { if (typeof l.onStatus === 'function') l.onStatus(status); } catch (_) { }
+              });
+            }
+          });
+        }
+      } catch (e) {
+        delete activeChannels[channelName];
+        try { if (typeof opt.onError === 'function') opt.onError(e); } catch (_) { }
+        return noopSubscription();
+      }
     }
+
+    // Registra este listener no canal compartilhado
+    const listener = {
+      onChange: function (change) { try { if (typeof opt.onChange === 'function') opt.onChange(change); } catch (_) { } },
+      onStatus: function (status) { try { if (typeof opt.onStatus === 'function') opt.onStatus(status); } catch (_) { } },
+    };
+    activeChannels[channelName].listeners.add(listener);
 
     let unsubscribed = false;
     return {
       unsubscribe: function () {
         if (unsubscribed) return;
         unsubscribed = true;
-        try { if (typeof channel.unsubscribe === 'function') channel.unsubscribe(); } catch (_) { }
-        try { if (typeof client.removeChannel === 'function') client.removeChannel(channel); } catch (_) { }
+        if (activeChannels[channelName]) {
+          activeChannels[channelName].listeners.delete(listener);
+          // Só remove o canal quando não há mais listeners
+          if (activeChannels[channelName].listeners.size === 0) {
+            try {
+              const ch = activeChannels[channelName].channel;
+              if (typeof ch.unsubscribe === 'function') ch.unsubscribe();
+            } catch (_) { }
+            try { if (typeof client.removeChannel === 'function') client.removeChannel(activeChannels[channelName].channel); } catch (_) { }
+            delete activeChannels[channelName];
+          }
+        }
       }
     };
   }

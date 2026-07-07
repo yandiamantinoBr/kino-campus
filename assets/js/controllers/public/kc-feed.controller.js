@@ -13,8 +13,8 @@
   const FEED_SNAPSHOT_VERSION = 4;
   const NEW_CARD_HIGHLIGHT_MS = 1500;
   const FEED_CACHE_MAX_AGE_MS = 1000 * 60 * 2;
-  const FEED_REVALIDATE_COOLDOWN_MS = 1000 * 45;
-  const FEED_FOCUS_REVALIDATE_MS = 1000 * 30;
+  const FEED_REVALIDATE_COOLDOWN_MS = 1000 * 60 * 3; // 3 min — menos revalidações agressivas
+  const FEED_FOCUS_REVALIDATE_MS = 1000 * 60 * 2;   // 2 min — só revalida ao focar após 2 min fora
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let activePager = null;
 

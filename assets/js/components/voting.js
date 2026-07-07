@@ -550,6 +550,21 @@ function vote(button, type) {
 
 async function kcInitVoteStates() {
   if (!kcIsSupabaseRuntime()) return;
+  // Não busca votos no servidor se o usuário não está autenticado (evita 401 desnecessário).
+  // O cache local (se houver) ainda é aplicado abaixo.
+  const isAuthenticated = (function () {
+    try {
+      if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
+        return !!window.KCSupabase.getUser();
+      }
+      if (window.KCAPI && window.KCAPI.ENV) return !!window.KCAPI.ENV.user;
+    } catch (_) {}
+    return false;
+  })();
+  if (!isAuthenticated) {
+    kcApplyMyVotesCacheToDOM();
+    return;
+  }
   kcEnsureVoteSessionHydrated();
 
   // 1. Aplica do cache imediatamente (sem esperar DB)
