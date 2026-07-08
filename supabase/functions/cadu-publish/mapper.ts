@@ -459,6 +459,61 @@ function buildImageList(item: CaduItem): string[] {
     .slice(0, MAX_IMAGE_COUNT);
 }
 
+// Heuristic cover scorer — ranqueia candidatos a imagem de capa por relevância
+// ao título/categoria, penalizando logos/ícones/imagens genéricas. Zero risco
+// (sem chamada de API externa). Futura melhoria: VLM (Z.ai GLM-4.6V) pode
+// refinar este ranking com visão real, mas este já resolve a maioria dos casos.
+const COVER_PENALTY_PATTERNS = /(?:logo|banner|favicon|icon|placeholder|default|spinner|loading|avatar|sprite|btn_|button|nav_|header_|footer_|sidebar|background|bg\.|wallpaper|stamp|seal|assinatura)/i;
+const COVER_TINY_DIM = /[_\-/](\d{1,2})x(\d{1,2})(?![0-9])(?:\.|$|_)/;  // e.g. 16x16, 32x32
+const COVER_GOOD_EXT = /\.(jpe?g|png|webp)(?:$|[?#])/i;
+
+function scoreCoverCandidate(url: string, title: string, category: string, sourceHost: string): number {
+  let score = 0;
+  const lower = url.toLowerCase();
+
+  // Penalidade forte: logos, ícones, placeholders
+  if (COVER_PENALTY_PATTERNS.test(url)) score -= 50;
+
+  // Penalidade: imagens minúsculas (provavelmente ícones)
+  const dimMatch = lower.match(COVER_TINY_DIM);
+  if (dimMatch) score -= 40;
+
+  // Bônus: extensão de imagem fotográfica
+  if (COVER_GOOD_EXT.test(lower)) score += 10;
+
+  // Bônus: URL/filename contém palavra-chave relevante do título
+  const titleWords = normalizeText(title)
+    .split(/\s+/)
+    .filter((w) => w.length >= 4)
+    .slice(0, 6);
+  const haystack = normalizeText(url);
+  titleWords.forEach((word) => {
+    if (haystack.indexOf(word) >= 0) score += 8;
+  });
+
+  // Bônus: URL/filename contém categoria
+  if (category && haystack.indexOf(normalizeText(category)) >= 0) score += 5;
+
+  // Penalidade leve: mesma origem do source (pode ser template logo)
+  if (sourceHost && lower.indexOf(sourceHost.toLowerCase()) >= 0) score -= 2;
+
+  // Penalidade: paths genéricos de upload sem contexto (img/photo/image + número)
+  if (/\/(?:img|photo|image|foto|imagem)[-_/]?\d+[/.]/i.test(lower)) score -= 3;
+
+  return score;
+}
+
+// Escolhe a melhor capa entre os candidatos usando scoring heurístico.
+function pickCoverImage(candidates: string[], title: string, category: string, sourceHost: string): string {
+  const persistable = candidates.filter(canPersistExternalImageUrl);
+  if (persistable.length === 0) return "";
+  if (persistable.length === 1) return persistable[0];
+  const ranked = persistable
+    .map((url) => ({ url, score: scoreCoverCandidate(url, title, category, sourceHost) }))
+    .sort((a, b) => b.score - a.score);
+  return ranked[0].url;
+}
+
 export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}): MappedPost {
   const warnings: string[] = [];
   const module = item.module as ModuleKey;
@@ -469,7 +524,10 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const sourceUrl = String(item.sourceUrl || "");
   const sourceId = String(item.sourceId || "");
   const images = buildImageList(item);
-  const safeExternalImage = images.find(canPersistExternalImageUrl) || "";
+  const sourceHost = hostOf(sourceUrl);
+  const categoryKeyForCover = slugify(item.category) || DEFAULT_CATEGORY[module] || "";
+  // Cover: escolhe o melhor candidato por scoring heurístico (não apenas o primeiro)
+  const safeExternalImage = pickCoverImage(images, title, categoryKeyForCover, sourceHost);
   const safeGalleryImages = images.filter(canPersistExternalImageUrl);
   const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
   const enrichmentSources = normalizeEnrichmentSources(item);
