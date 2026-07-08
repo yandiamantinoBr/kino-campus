@@ -81,7 +81,8 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          supabase link --project-ref wacyrkwhkvzwkqpolrbg --password "$SUPABASE_ACCESS_TOKEN" || true
+          # O Supabase CLI lê SUPABASE_ACCESS_TOKEN do env automaticamente
+          supabase link --project-ref wacyrkwhkvzwkqpolrbg || true
 
       - name: Deploy edge function ${{ matrix.function }}
         env:
@@ -89,8 +90,7 @@ jobs:
         run: |
           echo "Deploying ${{ matrix.function }}..."
           supabase functions deploy ${{ matrix.function }} \
-            --project-ref wacyrkwhkvzwkqpolrbg \
-            --token "$SUPABASE_ACCESS_TOKEN"
+            --project-ref wacyrkwhkvzwkqpolrbg
 
       - name: Verify deploy
         env:
