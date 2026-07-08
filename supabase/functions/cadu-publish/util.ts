@@ -79,6 +79,41 @@ export function adaptTitleForPlatform(value: unknown): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Strip a redundant institutional prefix from the title when the same prefix
+ * is already attributed via sourceName. Common UFG pattern: "UFG, abre
+ * inscricoes para X" — when sourceName is "UFG" (or any of the pro-reitorias
+ * that always prefix their titles), the platform already attributes the post
+ * via metadata.source_unit, so the redundant prefix makes the title look
+ * truncated or boilerplate.
+ *
+ * Examples:
+ *   ("UFG, abre inscricoes para X", "UFG")        -> "abre inscricoes para X"
+ *   ("SECOM: edital PROEX 2026",  "SECOM")        -> "edital PROEX 2026"
+ *   ("UFG sedia X",               "UFG")          -> "UFG sedia X" (NOT stripped — UFG is part of subject)
+ *   ("Proex abre edital X",       "PROEX")        -> "abre edital X"
+ *
+ * Only strips when prefix is at column 0 and followed by ONE of: ":", "," or "- ".
+ */
+export function stripInstitutionalPrefix(title: unknown, sourceName: unknown): string {
+  const text = adaptTitleForPlatform(title);
+  const src = String(sourceName ?? "").trim();
+  if (!text || !src) return text;
+  // Build candidate prefixes: sourceName as-is, plus uppercase variant
+  const candidates = [src, src.toUpperCase(), src.toLowerCase()].filter((v, i, a) => a.indexOf(v) === i);
+  for (const prefix of candidates) {
+    if (!prefix) continue;
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Only strip if followed by ":", "," or " - " (NOT just " ") — preserves "UFG sedia X"
+    const re = new RegExp(`^${escaped}\\s*(?::|,|\\s-\\s)`, "i");
+    const m = text.match(re);
+    if (m) {
+      return text.slice(m[0].length).trim();
+    }
+  }
+  return text;
+}
+
 export function clampMarkdown(value: unknown, maxLength: number): string {
   const text = String(value ?? "").normalize("NFKC").trim();
   if (text.length <= maxLength) return text;

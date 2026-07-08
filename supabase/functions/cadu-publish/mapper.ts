@@ -33,6 +33,7 @@ import {
   parseDateRange,
   slugify,
   stripHtml,
+  stripInstitutionalPrefix,
   timeFromAny,
   uniq,
   canPersistExternalImageUrl,
@@ -420,7 +421,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const module = item.module as ModuleKey;
   const fullText = `${item.title || ""}\n${item.summary || ""}\n${item.text || ""}\n${item.description || ""}`;
 
-  const title = clamp(adaptTitleForPlatform(item.formattedTitle || item.formatted_title || item.title || ""), 80);
+  const title = clamp(stripInstitutionalPrefix(item.formattedTitle || item.formatted_title || item.title || "", item.sourceName), 80);
   const description = buildDescription(item);
   const sourceUrl = String(item.sourceUrl || "");
   const sourceId = String(item.sourceId || "");
