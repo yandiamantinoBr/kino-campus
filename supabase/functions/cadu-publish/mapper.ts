@@ -289,7 +289,50 @@ function normalizeDocumentLinks(item: CaduItem): Array<{ url: string; label: str
     if (!url || byUrl.has(url)) return;
     byUrl.set(url, { url, label: `documento ${index + 1}` });
   });
-  return Array.from(byUrl.values()).slice(0, 6);
+  return Array.from(byUrl.values());
+}
+
+/**
+ * Filter and rank document links by relevance to the post. Returns at most
+ * `max` documents, prioritizing those with custom labels or specific filenames
+ * over generic "documento N" labels and ultra-generic filenames like
+ * "edital.pdf" / "anexo.pdf".
+ *
+ * Yan reported the issue: a post listing 5 PDFs that were NOT actually related
+ * (one was about ponto eletronico, another about cargos nivel D, etc.) still
+ * appeared in the description as "Documento 1, 2, 3, 4, 5" — this hallucinated
+ * attachment list damaged credibility.
+ *
+ * Fix: only keep at most 3 documents, drop generic ones first when there are
+ * many, prefer custom labels (extracted from page) over auto-numbered.
+ */
+const GENERIC_PDF_FILENAMES = /^(edital|anexo|anexos|formulario|documento|doc|file|upload|download)\w*\.pdf$/i;
+
+function filterRelevantDocuments(
+  links: Array<{ url: string; label: string }>,
+  item: CaduItem,
+  module: string,
+  max = 3,
+): Array<{ url: string; label: string }> {
+  if (!Array.isArray(links) || !links.length) return [];
+  const moduleKey = module as ModuleKey;
+  // Score each link; keep only those with score >= 0 (relevance threshold)
+  const scored = links.map((link, index) => ({
+    link,
+    score: scoreActionLink(item, moduleKey, link, index),
+    isGenericLabel: /^documento \d+$/i.test(link.label || ""),
+    isGenericFilename: GENERIC_PDF_FILENAMES.test(decodeURIComponent(
+      (() => { try { return new URL(link.url).pathname.split("/").pop() || ""; } catch (_) { return ""; } })()
+    )),
+  }));
+  // Custom labels always keep (they came from page, not auto-numbered)
+  const custom = scored.filter((s) => !s.isGenericLabel);
+  const generic = scored.filter((s) => s.isGenericLabel);
+  // For generic-label docs: only keep those that score OK AND have specific filename
+  const genericKept = generic.filter((s) => s.score >= 20 && !s.isGenericFilename);
+  const ranked = [...custom, ...genericKept]
+    .sort((a, b) => b.score - a.score);
+  return ranked.slice(0, max).map((s) => s.link);
 }
 
 function normalizeEnrichmentSources(item: CaduItem): Array<{ url: string; label: string; type: string }> {
@@ -325,7 +368,7 @@ function buildDescription(item: CaduItem): string {
   const sourceLabel = buildSourceLabel(String(item.sourceName || ""));
   const alreadyHasSource = sourceUrl && (formatted.includes(sourceUrl) || lead.includes(sourceUrl));
 
-  const documentLinks = normalizeDocumentLinks(item);
+  const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
   if (formatted && isUsefulFormattedDescription(formatted)) {
     chunks.push(clampMarkdown(formatted, 1700));
   } else if (lead) {
@@ -428,7 +471,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const images = buildImageList(item);
   const safeExternalImage = images.find(canPersistExternalImageUrl) || "";
   const safeGalleryImages = images.filter(canPersistExternalImageUrl);
-  const documentLinks = normalizeDocumentLinks(item);
+  const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
   const enrichmentSources = normalizeEnrichmentSources(item);
   const actionLink = pickActionLink(item, module, documentLinks);
   const actionLabel = inferActionLabel(item, module, documentLinks);
