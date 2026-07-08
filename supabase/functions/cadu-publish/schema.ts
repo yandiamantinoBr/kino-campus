@@ -125,6 +125,8 @@ export interface CaduItem {
   module?: string;
   type?: string;
   title?: string;
+  formattedTitle?: string;
+  formatted_title?: string;
   description?: string;
   formattedDescription?: string;
   formatted_description?: string;

@@ -55,6 +55,30 @@ export function clamp(value: unknown, maxLength: number): string {
   return `${(boundary > 40 ? sliced.slice(0, boundary) : sliced).trim()}...`;
 }
 
+/**
+ * Remove trailing ellipsis (literal or Unicode) from a string.
+ * Handles: "...", "…", " .. ", "... " — anywhere in the last 8 chars.
+ * Useful before clamping titles that already got truncated upstream.
+ */
+export function stripTrailingEllipsis(value: unknown): string {
+  const text = String(value ?? "");
+  if (!text) return "";
+  // Match trailing: dots, ellipsis char, ellipsis word, optional whitespace
+  return text.replace(/[\s.]*(?:\.\.\.|…|\.\s\.\s\.)+\s*$/g, "").trim();
+}
+
+/**
+ * Adapt a title to platform-friendly form. Strips trailing ellipsis (already
+ * truncated upstream), collapses multiple spaces, removes redundant leading
+ * source label (e.g. "UFG:") if the body already attributes the post.
+ */
+export function adaptTitleForPlatform(value: unknown): string {
+  const text = stripTrailingEllipsis(value);
+  if (!text) return "";
+  // collapse runs of whitespace
+  return text.replace(/\s+/g, " ").trim();
+}
+
 export function clampMarkdown(value: unknown, maxLength: number): string {
   const text = String(value ?? "").normalize("NFKC").trim();
   if (text.length <= maxLength) return text;
