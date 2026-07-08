@@ -98,7 +98,9 @@ function log(icon, msg) {
 // Solucao para o bug de "0 publicados" reportado em 2026-06-08.
 // ============================================================
 function getSupabaseKey() {
-  return (process.env.CADU_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  // 2026-07-08 fix: also accept KINOCAMPUS_* prefix used in production docker .env
+  return (process.env.CADU_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+    || process.env.KINOCAMPUS_SUPABASE_ANON_KEY || process.env.KINOCAMPUS_SUPABASE_KEY || '').trim();
 }
 
 function addPostUrlToSet(urls, value) {

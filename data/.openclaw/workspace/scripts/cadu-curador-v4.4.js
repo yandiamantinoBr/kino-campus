@@ -1625,7 +1625,9 @@ function fetchInstagramPosts(handle) {
 // ============================================================
 
 function getSupabaseKey() {
-  const direct = process.env.CADU_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  // 2026-07-08 fix: also accept KINOCAMPUS_* prefix used in production docker .env
+  const direct = process.env.CADU_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+    || process.env.KINOCAMPUS_SUPABASE_ANON_KEY || process.env.KINOCAMPUS_SUPABASE_KEY;
   if (direct) return direct.trim();
   const candidates = [
     path.join(process.cwd(), '.env.local'),
@@ -1634,7 +1636,7 @@ function getSupabaseKey() {
   for (const envPath of candidates) {
     try {
       const envContent = fs.readFileSync(envPath, 'utf8');
-      const match = envContent.match(/^(?:CADU_SUPABASE_ANON_KEY|SUPABASE_ANON_KEY)=(.+)$/m);
+      const match = envContent.match(/^(?:CADU_SUPABASE_ANON_KEY|SUPABASE_ANON_KEY|KINOCAMPUS_SUPABASE_ANON_KEY|KINOCAMPUS_SUPABASE_KEY)=(.+)$/m);
       if (match) return match[1].trim().replace(/^['"]|['"]$/g, '');
     } catch (_) {}
   }
@@ -1646,7 +1648,7 @@ async function loadPublishedPosts() {
     const key = getSupabaseKey();
     if (!key) throw new Error('CADU_SUPABASE_ANON_KEY ausente no ambiente');
     const resp = execSync(
-      `curl -s --max-time 10 -H "apikey: ${key}" "${SUPABASE_URL}/rest/v1/posts?select=title,metadata&status=eq.published&limit=100"`,
+      `curl -s --max-time 10 -H "apikey: ${key}" "${SUPABASE_URL}/rest/v1/posts?select=title,metadata&status=eq.published&limit=1000"`,
       { timeout: 12000, encoding: 'utf8', maxBuffer: 512 * 1024 }
     );
     if (!resp) return { titles: [], links: [] };
