@@ -99,13 +99,20 @@ export function stripInstitutionalPrefix(title: unknown, sourceName: unknown): s
   const text = adaptTitleForPlatform(title);
   const src = String(sourceName ?? "").trim();
   if (!text || !src) return text;
-  // Build candidate prefixes: sourceName as-is, plus uppercase variant
+  // Build candidate prefixes: sourceName as-is, plus uppercase/lowercase variants
   const candidates = [src, src.toUpperCase(), src.toLowerCase()].filter((v, i, a) => a.indexOf(v) === i);
   for (const prefix of candidates) {
     if (!prefix) continue;
     const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    // Only strip if followed by ":", "," or " - " (NOT just " ") — preserves "UFG sedia X"
-    const re = new RegExp(`^${escaped}\\s*(?::|,|\\s-\\s)`, "i");
+    // Strip if prefix is followed by ANY of these separators:
+    //   ":" "," " - " (space-hyphen-space), " — " (space-em-dash-space),
+    //   " – " (space-en-dash-space), " | " (space-pipe-space — common in news),
+    //   " —" / " –" (em/en-dash at end of prefix without trailing space — common Weby pattern).
+    // NOT just " " — preserves "UFG sedia X".
+    const re = new RegExp(
+      `^${escaped}\\s*(?::|,|\\s-\\s|\\s[\\u2014\\u2013]\\s?|\\s\\|\\s|[\\u2014\\u2013])`,
+      "i",
+    );
     const m = text.match(re);
     if (m) {
       return text.slice(m[0].length).trim();
