@@ -100,6 +100,32 @@ Uma integração server-side pode consolidar:
 - remoção de páginas privadas/duplicadas do índice;
 - conteúdo editorial claro: prazo, local, contato, fonte, categoria e CTA.
 
+## Eventos customizados GA4 (Phase 1 — instrumentados em 2026-07-08)
+
+Front-end emite via `window.KCEvents.track(name, params)` (helper em `assets/js/boot/kc-events.js`), que faz:
+- consent check (LGPD Consent Mode v2);
+- PII redaction (drop params com nome contendo `email|phone|cpf|senha|password|token|secret|auth|whatsapp|number`);
+- prefixo automático `kc_` em todos os nomes para evitar conflito com eventos reservados do Google (`login`, `purchase`, `sign_up`);
+- fila `window.KCEvents.queue` (max 50) quando consent é `denied` ou GA4 offline.
+
+| Evento            | Quando dispara                                | Params principais                              | Origem (arquivo)                                      |
+|-------------------|-----------------------------------------------|------------------------------------------------|-------------------------------------------------------|
+| `kc_login`        | login Supabase sucesso                        | `method`                                       | `assets/js/core/kc-auth.ui.js` (doLogin)             |
+| `kc_sign_up`      | signup Supabase sucesso                       | `method`, `needs_confirmation`                 | `assets/js/core/kc-auth.ui.js` (doSignup)            |
+| `kc_logout`       | logout Supabase sucesso                       | —                                              | `assets/js/core/kc-auth.ui.js` (doLogout)            |
+| `kc_post_view`    | tracking de visualização (RPC `kc_track_view`) | `post_id`                                      | `adapters/supabase/supabase.analytics.adapter.js`    |
+| `kc_share`        | tracking de compartilhamento (RPC `kc_track_share`) | `post_id`, `method`                      | `adapters/supabase/supabase.analytics.adapter.js`    |
+| `kc_coupon_click` | clique em cupom (RPC `kc_track_coupon_click`) | `post_id`                                      | `adapters/supabase/supabase.analytics.adapter.js`    |
+| `kc_contact_click`| clique no CTA de contato de uma publicação    | `post_id`, `contact_type`, `channel`           | `controllers/public/product.controller.js`            |
+| `kc_post_create`  | criação de publicação (RPC `kc_create_post`)  | `post_id`, `module`                            | `controllers/public/create-post.controller.js`       |
+| `kc_search`       | busca (termo com ≥ 2 chars e consentimento)    | `term`, `source`                               | `features/kc-search.js`                               |
+| `kc_chat_open`    | abertura de conversa 1:1                      | `conversation_id`, `peer_id`, `is_new`         | `controllers/public/chat-inbox.controller.js`        |
+| `kc_chat_inbox_open` | primeira carga da inbox de chat             | `conversation_count`                           | `controllers/public/chat-inbox.controller.js`        |
+
+**Validação no GA4**: `Relatórios → Engajamento → Eventos` (lag de 24-48h para primeira aparição). Para debug em tempo real, use `DebugView` no GA4 (requer `?debug_mode=1` ou `window.KCEvents.enableDebug()`).
+
+**Canais de contact_click** (derivado do href): `whatsapp` | `email` | `phone` | `chat_internal` (link para `/mensagens.html?with=`) | `external` (outros links externos).
+
 ## O que não fazer
 
 - Não colocar OAuth token do Google no frontend.
