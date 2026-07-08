@@ -788,6 +788,12 @@
     const result = await window.KCAPI.signIn(email, password);
     if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.login-failed') : 'Não foi possível entrar.')), 'error'); return; }
     setStatus(window.KCi18n ? window.KCi18n.t('auth.login-success') : 'Login realizado com sucesso.', 'success');
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        var method = (window.KCAPI && window.KCAPI.authProvider) ? String(window.KCAPI.authProvider) : 'email';
+        window.KCEvents.track('kc_login', { method: method });
+      }
+    } catch (_) {}
     await handlePostAuthSuccess(modalState.nextPath);
   }
 
@@ -815,6 +821,11 @@
       data: buildLegalAcceptanceMetadata(email)
     });
     if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.signup-failed') : 'Não foi possível criar sua conta.')), 'error'); return; }
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track('kc_sign_up', { method: 'email', needs_confirmation: !result.session });
+      }
+    } catch (_) {}
     if (result.session) {
       setStatus(window.KCi18n ? window.KCi18n.t('auth.account-created-verified') : 'Conta criada e autenticada. Vamos completar seu perfil.', 'success');
       await handlePostAuthSuccess(modalState.nextPath);
@@ -913,6 +924,11 @@
     try {
       writeShellSnapshot(null, null);
       await window.KCAPI.logout();
+      try {
+        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+          window.KCEvents.track('kc_logout', {});
+        }
+      } catch (_) {}
       closeProfileDropdown();
       if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
       closeModal();

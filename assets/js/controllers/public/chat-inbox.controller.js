@@ -667,6 +667,12 @@
     state.conversations.forEach(function (c) { state.convById.set(c.conversation_id, c); });
     renderConversationsList();
     dispatchUnreadChange();
+    try {
+      if (!state.inboxOpenedTracked && window.KCEvents && typeof window.KCEvents.track === 'function') {
+        state.inboxOpenedTracked = true;
+        window.KCEvents.track('kc_chat_inbox_open', { conversation_count: state.conversations.length });
+      }
+    } catch (_) {}
     return true;
   }
 
@@ -813,6 +819,12 @@
     if (r.data.is_new || !state.convById.has(convId)) {
       await loadConversations();
     }
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        var isNew = !!(r.data && r.data.is_new);
+        window.KCEvents.track('kc_chat_open', { conversation_id: convId, peer_id: otherUserId, is_new: isNew });
+      }
+    } catch (_) {}
     selectConversation(convId);
   }
 

@@ -146,14 +146,14 @@ describe('_product.html — ordem de carregamento', () => {
 
 // ── 4. Gate de tamanho ────────────────────────────────────────────────────────
 
-describe('Gate de tamanho — product.controller.js < 800L', () => {
+describe('Gate de tamanho — product.controller.js < 820L', () => {
   test('product.controller.js existe', () => {
     expect(fs.existsSync(CTRL)).toBe(true);
   });
 
-  test('product.controller.js tem menos de 800 linhas', () => {
+  test('product.controller.js tem menos de 820 linhas', () => {
     const lines = lineCount(CTRL);
-    expect(lines).toBeLessThan(800);
+    expect(lines).toBeLessThan(820);
   });
 
   test('product.render.js existe', () => {

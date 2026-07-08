@@ -32,6 +32,7 @@
     try {
       const { data, error } = await client.rpc('kc_track_coupon_click', { p_post_id: uuid });
       if (error) return { ok: false, error };
+      try { if (window.KCEvents && typeof window.KCEvents.track === 'function') window.KCEvents.track('kc_coupon_click', { post_id: uuid }); } catch (_) {}
       return data || { ok: false };
     } catch (_) { return { ok: false }; }
   }
@@ -45,6 +46,13 @@
     try {
       const { data, error } = await client.rpc('kc_track_share', { p_post_id: uuid });
       if (error) return { ok: false, error };
+      try {
+        var method = 'unknown';
+        if (data && typeof data === 'object' && data.method) method = String(data.method);
+        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+          window.KCEvents.track('kc_share', { post_id: uuid, method: method });
+        }
+      } catch (_) {}
       return data || { ok: false };
     } catch (_) { return { ok: false }; }
   }
@@ -58,6 +66,11 @@
     try {
       const { data, error } = await client.rpc('kc_track_view', { p_post_id: uuid });
       if (error) return { ok: false, error };
+      try {
+        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+          window.KCEvents.track('kc_post_view', { post_id: uuid });
+        }
+      } catch (_) {}
       return data || { ok: false };
     } catch (_) { return { ok: false }; }
   }

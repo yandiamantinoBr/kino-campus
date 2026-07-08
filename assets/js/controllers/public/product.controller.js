@@ -135,6 +135,19 @@
     }
 
     if (action.href) {
+      try {
+        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+          var pid = post && (post.uuid || post.id);
+          var contactType = (action && action.type) ? String(action.type) : 'unknown';
+          var channel = 'external';
+          if (/^https?:\/\/(api\.)?whatsapp\.com|^https:\/\/wa\.me\//i.test(action.href)) channel = 'whatsapp';
+          else if (/^mailto:/i.test(action.href)) channel = 'email';
+          else if (/^tel:/i.test(action.href)) channel = 'phone';
+          else if (/mensagens\.html/i.test(action.href)) channel = 'chat_internal';
+          else if (/_blank/.test(action.target || '')) channel = 'external';
+          window.KCEvents.track('kc_contact_click', { post_id: pid || null, contact_type: contactType, channel: channel });
+        }
+      } catch (_) {}
       if (action.target === '_blank') {
         window.open(action.href, '_blank', action.rel || 'noopener,noreferrer');
       } else {

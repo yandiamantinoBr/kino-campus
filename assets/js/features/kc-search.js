@@ -760,6 +760,13 @@
       }
     } catch (_) {}
 
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        var source = (meta && meta.source) ? String(meta.source) : 'search';
+        window.KCEvents.track('kc_search', { term: q, source: source });
+      }
+    } catch (_) {}
+
     if (!KCSearchAnalytics) {
       insertTrackedTerms([{ term: q }]).catch(() => {});
       return true;
