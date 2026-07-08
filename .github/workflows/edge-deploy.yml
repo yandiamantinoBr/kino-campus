@@ -1,0 +1,105 @@
+# GitHub Actions — Auto-deploy Edge Functions on push
+#
+# Runs after push to kinocampus-V75.0-foundations when Edge Function source changes.
+# Uses supabase CLI to deploy (no manual step needed).
+# 2026-07-08: created because we discovered Edge Function v11 was running OLD code from
+# 2026-05 while commits to supabase/functions/cadu-publish/ were not deployed. This was
+# the root cause of "literal ..." and "UFG —" prefix reaching production.
+
+name: Deploy Edge Functions
+
+on:
+  push:
+    branches: [kinocampus-V75.0-foundations]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/edge-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      function_name:
+        description: 'Edge function name to deploy (empty = all)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect changed functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Detect changed edge functions
+        id: detect
+        run: |
+          # If manual dispatch with input, use that
+          if [ -n "${{ inputs.function_name }}" ]; then
+            echo "matrix={\"include\":[{\"function\":\"${{ inputs.function_name }}\"}]}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Otherwise detect changed files since last commit
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '^supabase/functions/' | awk -F/ '{print $3}' | sort -u | tr '\n' ',' | sed 's/,$//')
+          if [ -z "$CHANGED" ]; then
+            # Fallback: deploy all functions
+            CHANGED=$(ls supabase/functions/ | grep -v _shared | tr '\n' ',' | sed 's/,$//')
+          fi
+          echo "Changed functions: $CHANGED"
+          # Build matrix
+          MATRIX=""
+          for fn in $(echo $CHANGED | tr ',' ' '); do
+            if [ -d "supabase/functions/$fn" ]; then
+              MATRIX="${MATRIX}{\"function\":\"$fn\"},"
+            fi
+          done
+          MATRIX="${MATRIX%,}"
+          echo "matrix={\"include\":[${MATRIX}]}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy ${{ matrix.function }}
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref wacyrkwhkvzwkqpolrbg --password "$SUPABASE_ACCESS_TOKEN" || true
+
+      - name: Deploy edge function ${{ matrix.function }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "Deploying ${{ matrix.function }}..."
+          supabase functions deploy ${{ matrix.function }} \
+            --project-ref wacyrkwhkvzwkqpolrbg \
+            --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Verify deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          sleep 5
+          # Get current version
+          VERSION=$(curl -sS \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/functions/${{ matrix.function }}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','?'))" 2>/dev/null || echo "?")
+          echo "Deployed ${{ matrix.function }} version: $VERSION"

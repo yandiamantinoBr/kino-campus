@@ -30,6 +30,7 @@
     "cadu:publish:quick": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=quick",
     "cadu:publish:full": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=full",
     "cadu:reviews": "node services/cadu-ufg-publisher/src/reviews.js",
+    "cadu:refresh-cache": "node services/cadu-ufg-publisher/scripts/regenerate-posts-cache.js",
     "test:cadu": "jest tests/unit/cadu-ufg-publisher.test.js --runInBand"
   },
   "repository": {
