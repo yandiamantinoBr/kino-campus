@@ -1102,11 +1102,26 @@ function detectUpdateSignals(title, text) {
 // Retorna null se não detectar.
 // ============================================================
 const UFG_SITES = ['inf.ufg.br', 'prpi.ufg.br', 'prpg.ufg.br', 'proex.ufg.br', 'prograd.ufg.br', 'prae.ufg.br', 'sri.ufg.br', 'ciar.ufg.br', 'cei.ufg.br', 'em.ufg.br', 'emac.ufg.br', 'fanut.ufg.br', 'fen.ufg.br', 'iptsp.ufg.br', 'ib.ufg.br', 'icb.ufg.br', 'eeca.ufg.br', 'evz.ufg.br', 'ime.ufg.br', 'agro.ufg.br', 'fef.ufg.br', 'fefd.ufg.br', 'ufg.br'];
+
+/**
+ * Match any subdomain of ufg.br as a UFG site. Used as a fallback for units
+ * not listed in UFG_SITES above (e.g. idiomassemfronteiras.sri.ufg.br was
+ * missed because it's a subdomain of sri.ufg.br). Single source of truth:
+ * if hostname ends with .ufg.br (and not just the root 'ufg.br'), accept.
+ */
+function isUfgHostname(hostname) {
+  if (!hostname) return false;
+  const h = String(hostname).toLowerCase();
+  if (h === 'ufg.br') return true;
+  return h.endsWith('.ufg.br');
+}
 const TRUSTED_INSTITUTIONAL = ['ufg.br', 'capes.gov.br', 'cnpq.br', 'fapeg.go.gov.br', 'gov.br', 'mec.gov.br'];
 function detectOfficialSource(itemUrl, fullText, relevantLinks) {
   try {
     const u = new URL(itemUrl);
-    const isUfgSite = UFG_SITES.some(s => u.hostname.endsWith(s));
+    // Aceita qualquer subdomínio de ufg.br (NÃO apenas a lista hardcoded UFG_SITES).
+    // Fix para idiomasemfronteiras.sri.ufg.br que estava sendo descartado.
+    const isUfgSite = isUfgHostname(u.hostname);
     if (!isUfgSite) return null; // Já é fonte não-UFG, não precisa detectar
   } catch (_) { return null; }
   // Procura links externos no relevantLinks que NÃO são UFG, CNPq, CAPES, FAPEG
@@ -1118,7 +1133,7 @@ function detectOfficialSource(itemUrl, fullText, relevantLinks) {
         if (!link) continue;
         try {
           const lurl = new URL(link);
-          const isUfg = UFG_SITES.some(s => lurl.hostname.endsWith(s));
+          const isUfg = isUfgHostname(lurl.hostname);
           const isTrusted = TRUSTED_INSTITUTIONAL.some(s => lurl.hostname.endsWith(s));
           if (!isUfg && !isTrusted) {
             return link; // Fonte externa encontrada
