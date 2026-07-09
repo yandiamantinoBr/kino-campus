@@ -161,6 +161,58 @@
               </table>
             </div>
           </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-clock"></i> Engajamento (7 dias)</h2>
+            <p>Médias ponderadas por sessão. Engagement rate &gt; 50% indica boa retenção.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead>
+                  <tr><th>Métrica</th><th>Valor</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Duração média por sessão</td><td><strong id="ga4AvgSession">—</strong></td></tr>
+                  <tr><td>Taxa de rejeição (bounce)</td><td><strong id="ga4BounceRate">—</strong></td></tr>
+                  <tr><td>Taxa de engajamento</td><td><strong id="ga4EngagementRate">—</strong></td></tr>
+                  <tr><td>Sessões engajadas (10s+ ou conversão)</td><td><strong id="ga4EngagedSessions">—</strong></td></tr>
+                  <tr><td>Sessões por usuário</td><td><strong id="ga4SessionsPerUser">—</strong></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-user-plus"></i> Novos vs Recorrentes (7 dias)</h2>
+            <p>Proporção entre usuários que visitam pela primeira vez e os que voltam.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th>Tipo</th><th>Usuários</th></tr></thead>
+                <tbody id="ga4NewReturningBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-mobile-screen"></i> Dispositivos (7 dias)</h2>
+            <p>Categorias de device declaradas pelo navegador. Compare mobile vs desktop para priorizar layouts.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th>Categoria</th><th>Visualizações</th></tr></thead>
+                <tbody id="ga4DevicesBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-route"></i> Fontes de tráfego (7 dias)</h2>
+            <p>Default Channel Group do GA4. Comparar canais para entender aquisição.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th>Canal</th><th>Sessões</th></tr></thead>
+                <tbody id="ga4SourcesBody"></tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
     </div>

@@ -281,10 +281,104 @@
         '<span class="kc-funnel-value">' + fmtNumber(n) + '</span>' +
       '</div>';
     };
-    el.innerHTML = step('Visualizações', v, v) +
+      el.innerHTML = step('Visualizações', v, v) +
       step('Compartilhamentos', s, v) +
       step('Cliques em contato', c, v) +
       step('Conversas iniciadas', ch, v);
+  }
+
+  function fmtDuration(seconds) {
+    if (typeof seconds !== 'number' || !isFinite(seconds) || seconds < 0) return '—';
+    if (seconds < 60) return seconds.toFixed(0) + 's';
+    var m = Math.floor(seconds / 60);
+    var s = Math.floor(seconds % 60);
+    if (m < 60) return m + 'min' + (s ? ' ' + s + 's' : '');
+    var h = Math.floor(m / 60);
+    var rm = m % 60;
+    return h + 'h' + (rm ? ' ' + rm + 'm' : '');
+  }
+
+  function renderEngagement(m) {
+    var avg = m.avgSessionDuration || 0;
+    var bounce = (m.bounceRate || 0) * 100;
+    var eng = (m.engagementRate || 0) * 100;
+    var engagedSessions = m.engagedSessions || 0;
+    var sessionsPerUser = m.sessionsPerUser || 0;
+
+    var avgEl = $('#ga4AvgSession');
+    var bounceEl = $('#ga4BounceRate');
+    var engEl = $('#ga4EngagementRate');
+    var esEl = $('#ga4EngagedSessions');
+    var spuEl = $('#ga4SessionsPerUser');
+
+    if (avgEl) avgEl.textContent = fmtDuration(avg);
+    if (bounceEl) bounceEl.textContent = bounce.toFixed(1) + '%';
+    if (engEl) engEl.textContent = eng.toFixed(1) + '%';
+    if (esEl) esEl.textContent = fmtNumber(engagedSessions);
+    if (spuEl) spuEl.textContent = sessionsPerUser.toFixed(2);
+  }
+
+  function renderNewVsReturning(m) {
+    var el = $('#ga4NewReturningBody');
+    if (!el) return;
+    var total = m.total || 0;
+    if (!total) {
+      el.innerHTML = '<tr><td colspan="2" class="kc-admin-empty">Sem dados.</td></tr>';
+      return;
+    }
+    var newPct = total ? ((m.new / total) * 100).toFixed(1) : '0.0';
+    var retPct = total ? ((m.returning / total) * 100).toFixed(1) : '0.0';
+    el.innerHTML =
+      '<tr><td><i class="fas fa-user-plus"></i> Novos</td><td>' + fmtNumber(m.new) + ' <small>(' + newPct + '%)</small></td></tr>' +
+      '<tr><td><i class="fas fa-user-check"></i> Recorrentes</td><td>' + fmtNumber(m.returning) + ' <small>(' + retPct + '%)</small></td></tr>';
+  }
+
+  function renderDevices(rows) {
+    var el = $('#ga4DevicesBody');
+    if (!el) return;
+    if (!rows || rows.length === 0) {
+      el.innerHTML = '<tr><td colspan="2" class="kc-admin-empty">Sem dados.</td></tr>';
+      return;
+    }
+    var labelMap = {
+      desktop: 'Desktop', mobile: 'Mobile', tablet: 'Tablet',
+      smart_tv: 'Smart TV', smart_speaker: 'Smart Speaker',
+      wearable: 'Wearable', 'connected_tv': 'TV conectada', other: 'Outro',
+    };
+    var total = rows.reduce(function (acc, r) { return acc + r.count; }, 0);
+    el.innerHTML = rows.map(function (r) {
+      var label = labelMap[r.key] || r.key;
+      var pct = total ? ((r.count / total) * 100).toFixed(1) : '0.0';
+      return '<tr><td>' + escapeHtml(label) + '</td><td>' + fmtNumber(r.count) + ' <small>(' + pct + '%)</small></td></tr>';
+    }).join('');
+  }
+
+  function renderTrafficSources(rows) {
+    var el = $('#ga4SourcesBody');
+    if (!el) return;
+    if (!rows || rows.length === 0) {
+      el.innerHTML = '<tr><td colspan="2" class="kc-admin-empty">Sem dados.</td></tr>';
+      return;
+    }
+    var labelMap = {
+      'Organic Search': '<i class="fas fa-magnifying-glass"></i> Busca orgânica',
+      'Direct': '<i class="fas fa-link"></i> Direto',
+      'Referral': '<i class="fas fa-share-nodes"></i> Referral',
+      'Organic Social': '<i class="fas fa-hashtag"></i> Social orgânico',
+      'Paid Social': '<i class="fas fa-bullhorn"></i> Social pago',
+      'Paid Search': '<i class="fas fa-ad"></i> Busca paga',
+      'Email': '<i class="fas fa-envelope"></i> E-mail',
+      'Display': '<i class="fas fa-image"></i> Display',
+      'Affiliates': '<i class="fas fa-handshake"></i> Afiliados',
+      'Video': '<i class="fas fa-film"></i> Vídeo',
+      'Unassigned': '<i class="fas fa-question"></i> Não atribuído',
+    };
+    var total = rows.reduce(function (acc, r) { return acc + r.count; }, 0);
+    el.innerHTML = rows.map(function (r) {
+      var label = labelMap[r.key] || ('<i class="fas fa-tag"></i> ' + escapeHtml(r.key));
+      var pct = total ? ((r.count / total) * 100).toFixed(1) : '0.0';
+      return '<tr><td>' + label + '</td><td>' + fmtNumber(r.count) + ' <small>(' + pct + '%)</small></td></tr>';
+    }).join('');
   }
 
   // ── Data fetch + orchestration ─────────────────────────────────────────
@@ -352,6 +446,43 @@
       agg.other.views += p.views;
     });
     return Object.values(agg).filter(function (m) { return m.views > 0; }).sort(function (a, b) { return b.views - a.views; });
+  }
+
+  function rowsToEngagementMap(rows) {
+    var out = {};
+    if (!rows || rows.length === 0 || !rows[0].metricValues) return out;
+    var keys = ['avgSessionDuration', 'bounceRate', 'engagementRate', 'engagedSessions', 'sessionsPerUser'];
+    rows[0].metricValues.forEach(function (mv, i) {
+      var k = keys[i];
+      if (!k) return;
+      var v = parseFloat(mv.value);
+      out[k] = isNaN(v) ? 0 : v;
+    });
+    return out;
+  }
+
+  function rowsToNewVsReturningMap(rows) {
+    var out = { new: 0, returning: 0, total: 0 };
+    if (!rows) return out;
+    rows.forEach(function (r) {
+      var dim = r.dimensionValues && r.dimensionValues[0] ? String(r.dimensionValues[0].value).toLowerCase() : '';
+      var val = r.metricValues && r.metricValues[0] ? parseInt(r.metricValues[0].value, 10) || 0 : 0;
+      if (dim === 'new') out.new += val;
+      else if (dim === 'returning') out.returning += val;
+      out.total += val;
+    });
+    return out;
+  }
+
+  function rowsToDimensionCountMap(rows) {
+    var out = [];
+    if (!rows) return out;
+    rows.forEach(function (r) {
+      var dim = r.dimensionValues && r.dimensionValues[0] ? r.dimensionValues[0].value : '';
+      var val = r.metricValues && r.metricValues[0] ? parseInt(r.metricValues[0].value, 10) || 0 : 0;
+      if (dim) out.push({ key: dim, count: val });
+    });
+    return out;
   }
 
   async function loadDashboard() {
@@ -446,6 +577,49 @@
         contacts: (eventMap.kc_contact_click && eventMap.kc_contact_click.count) || 0,
         chats: (eventMap.kc_chat_open && eventMap.kc_chat_open.count) || 0,
       });
+
+      // 7) Engagement metrics (7d): avg engagement time, bounce rate, engagement rate
+      var engagementRes = await callGa4Reports({
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+        metrics: [
+          { name: 'averageSessionDuration' },
+          { name: 'bounceRate' },
+          { name: 'engagementRate' },
+          { name: 'engagedSessions' },
+          { name: 'sessionsPerUser' },
+        ],
+      });
+      renderEngagement(rowsToEngagementMap(engagementRes.rows));
+
+      // 8) New vs Returning users (7d)
+      var newVsReturningRes = await callGa4Reports({
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+        dimensions: [{ name: 'newVsReturning' }],
+        metrics: [{ name: 'totalUsers' }],
+        orderBys: [{ metric: { metricName: 'totalUsers' }, desc: true }],
+        limit: 5,
+      });
+      renderNewVsReturning(rowsToNewVsReturningMap(newVsReturningRes.rows));
+
+      // 9) Device breakdown (7d)
+      var devicesRes = await callGa4Reports({
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+        dimensions: [{ name: 'deviceCategory' }],
+        metrics: [{ name: 'screenPageViews' }],
+        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+        limit: 10,
+      });
+      renderDevices(rowsToDimensionCountMap(devicesRes.rows));
+
+      // 10) Traffic sources (7d)
+      var sourcesRes = await callGa4Reports({
+        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+        dimensions: [{ name: 'sessionDefaultChannelGroup' }],
+        metrics: [{ name: 'sessions' }],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+        limit: 10,
+      });
+      renderTrafficSources(rowsToDimensionCountMap(sourcesRes.rows));
 
       setStatus('Atualizado às ' + new Date().toLocaleTimeString('pt-BR'));
     } catch (err) {
