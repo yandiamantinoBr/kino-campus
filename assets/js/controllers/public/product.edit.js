@@ -132,7 +132,24 @@
     if (tagsRaw) metadata.tags = tagsRaw.split(',').map(function (tag) { return tag.trim(); }).filter(Boolean);
     else delete metadata.tags;
 
-    return {
+    // v13.6.3: gerenciar galeria de imagens. O editor mostra uma lista de URLs
+    // (textarea com 1 URL por linha). O admin pode remover URLs existentes e/ou
+    // adicionar novas (após upload pro Storage). A primeira URL vira o cover
+    // (image_url top-level) para o card do feed.
+    var galleryRaw = String((form.gallery && form.gallery.value) || '').trim();
+    var galleryUrls = galleryRaw
+      ? galleryRaw.split(/\r?\n/).map(function (u) { return String(u || '').trim(); }).filter(function (u) { return /^https?:\/\//i.test(u); })
+      : [];
+
+    if (galleryUrls.length) {
+      metadata.gallery_image_urls = galleryUrls;
+      metadata.gallery_count = galleryUrls.length;
+    } else {
+      delete metadata.gallery_image_urls;
+      delete metadata.gallery_count;
+    }
+
+    var payload = {
       title: String(form.title.value || '').trim(),
       description: String(form.description.value || '').trim(),
       module: String(form.module.value || '').trim(),
@@ -141,6 +158,15 @@
       price: String(form.price.value || '').trim(),
       metadata: metadata,
     };
+
+    // v13.6.3: passar `imagens` (top-level) também — isso faz o write-adapter
+    // sincronizar post_media + atualizar image_url/cover_url via updatePostCoverImage.
+    // Sem isso, image_url top-level fica stale e o feed mostra capa antiga.
+    if (galleryUrls.length) {
+      payload.imagens = galleryUrls;
+    }
+
+    return payload;
   }
 
   function resolveCurrentUser(context, fallbackUser) {
@@ -188,6 +214,12 @@
       '  <div class="kc-form-group"><label>Condi\u00E7\u00E3o</label><input class="kc-input" name="condition" /></div>',
       '  <div class="kc-form-group"><label>Emoji</label><input class="kc-input" name="emoji" maxlength="4" /></div>',
       '  <div class="kc-form-group"><label>Tags (v\u00EDrgula)</label><input class="kc-input" name="tags" /></div>',
+      // v13.6.3: galeria de imagens — uma URL por linha. A 1ª vira cover.
+      '  <div class="kc-form-group">',
+      '    <label>Galeria de imagens <span style="color:var(--text-muted, #64748b);font-size:.85em;">(1 URL por linha — a 1ª \u00E9 a capa)</span></label>',
+      '    <textarea class="kc-input" name="gallery" rows="6" placeholder="https://... (1 URL por linha)"></textarea>',
+      '    <small style="color:var(--text-muted, #64748b);">At\u00E9 12 imagens. Fa\u00E7a upload no Supabase Storage (bucket <code>kino-media</code>) e cole as URLs p\u00FAblicas aqui.</small>',
+      '  </div>',
       '  <div class="kc-create-actions">',
       '    <button type="button" class="kc-btn-secondary" data-action="cancel">Cancelar</button>',
       '    <button type="button" class="kc-btn-primary" data-action="save">Salvar</button>',
@@ -215,6 +247,7 @@
       condition: modal.querySelector('[name="condition"]'),
       emoji: modal.querySelector('[name="emoji"]'),
       tags: modal.querySelector('[name="tags"]'),
+      gallery: modal.querySelector('[name="gallery"]'),
     };
 
     function setContext(nextContext) {
@@ -231,6 +264,7 @@
     function open(post) {
       var md;
       var tags;
+      var gallery;
 
       editingPost = post;
       md = (post && post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
@@ -245,6 +279,13 @@
       form.emoji.value = post.emoji || md.emoji || '';
       tags = Array.isArray(post.tags) ? post.tags : (Array.isArray(md.tags) ? md.tags : []);
       form.tags.value = tags.join(', ');
+
+      // v13.6.3: popular galeria de imagens. Prioridade: post.imagens (normalizado) > metadata.gallery_image_urls.
+      // O admin pode editar livremente (1 URL por linha) — a 1ª vira a capa.
+      gallery = Array.isArray(post.imagens) ? post.imagens : (Array.isArray(md.gallery_image_urls) ? md.gallery_image_urls : []);
+      if (form.gallery) {
+        form.gallery.value = (gallery || []).filter(function(u){ return u && /^https?:\/\//i.test(u); }).join('\n');
+      }
 
       overlay.style.display = 'flex';
       try { form.title.focus(); } catch (_) { }

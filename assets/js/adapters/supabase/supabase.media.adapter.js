@@ -266,7 +266,8 @@
     if (!list.length) return { ok: true, uploaded: [] };
 
     // Hard limits (mínimo anti-abuso)
-    const maxImages = 5;
+    // v13.6.3: maxImages aumentado de 5 → 12 (matches create form)
+    const maxImages = 12;
     const maxBytes = (ENV && ENV.supabase && Number.isFinite(ENV.supabase.maxImageBytes))
       ? Number(ENV.supabase.maxImageBytes)
       : (5 * 1024 * 1024); // 5MB

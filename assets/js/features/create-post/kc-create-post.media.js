@@ -38,7 +38,9 @@
   }
 
   // ── Constantes ────────────────────────────────────────────────────────────
-  var KC_CREATE_MAX_IMAGES = 5;
+  // v13.6.3: limite aumentado de 5 → 12 (necessário para posts com galeria rica,
+  // ex: carrossel de 7+ frames do Instagram). Hard-limit anti-abuso mantido.
+  var KC_CREATE_MAX_IMAGES = 12;
 
   // ── Leitura de arquivo ────────────────────────────────────────────────────
   function kcReadFileAsDataUrl(file) {

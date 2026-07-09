@@ -19,7 +19,8 @@
   'use strict';
 
   const KEY = 'kc_user_posts';
-  const MAX_IMAGES = 5;
+  // v13.6.3: limite aumentado de 5 → 12 (matches create form e supabase media adapter)
+  const MAX_IMAGES = 12;
   const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB por imagem (heurístico para DataURL)
 
   // ------------- utils -------------
