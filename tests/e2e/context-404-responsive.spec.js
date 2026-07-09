@@ -15,15 +15,19 @@ test.describe('V76.25 - Sobre o KinoCampus compacto no mobile', () => {
     await page.goto('/index.html');
 
     const section = page.locator('[data-kc-context-section="home"]');
-    const trigger = page.locator('[data-kc-context-open="home"]');
+    const triggers = section.locator('[data-kc-context-open="home"]');
+    const trigger = triggers.first();
+    const arrowButton = section.locator('.kc-context-info-btn--context-arrow');
     await expect(section).toBeVisible();
+    await expect(triggers).toHaveCount(2);
     await expect(trigger).toBeVisible();
+    await expect(arrowButton).toBeVisible();
     await expect(section.locator('.kc-sidebar-help')).toBeHidden();
     await expect(section.locator('details')).toBeHidden();
 
     const compactMetrics = await page.evaluate(() => {
       const context = document.querySelector('[data-kc-context-section="home"]');
-      const button = document.querySelector('[data-kc-context-open="home"]');
+      const button = context.querySelector('.kc-context-info-btn--context-arrow');
       return {
         sectionHeight: context.getBoundingClientRect().height,
         buttonHeight: button.getBoundingClientRect().height,
