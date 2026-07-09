@@ -24,6 +24,7 @@
   let flushTimer = null;
   let mergeInFlight = null;
   let countsCache = { at: 0, rows: null };
+  let countsInFlight = null;
   let affinityCache = { at: 0, rows: null };
   let consentListenerBound = false;
 
@@ -249,12 +250,22 @@
   async function getCategoryCounts(force) {
     const now = Date.now();
     if (!force && countsCache.rows && now - countsCache.at < CACHE_TTL_MS) return countsCache.rows;
+    if (countsInFlight) return countsInFlight;
 
-    let rows = await fetchCountsViaRpc();
-    if (!rows) rows = await fetchCountsFallback();
+    const request = (async function () {
+      let rows = await fetchCountsViaRpc();
+      if (!rows) rows = await fetchCountsFallback();
 
-    countsCache = { at: now, rows: Array.isArray(rows) ? rows : [] };
-    return countsCache.rows;
+      countsCache = { at: Date.now(), rows: Array.isArray(rows) ? rows : [] };
+      return countsCache.rows;
+    }());
+
+    countsInFlight = request;
+    try {
+      return await request;
+    } finally {
+      if (countsInFlight === request) countsInFlight = null;
+    }
   }
 
   async function fetchAffinityViaRpc() {

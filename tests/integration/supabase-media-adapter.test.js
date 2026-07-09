@@ -163,8 +163,8 @@ describe('supabase.media.adapter.js — uploadImagesToSupabaseStorage', () => {
     expect(source).toContain('async function uploadImagesToSupabaseStorage(');
   });
 
-  test('limita a 5 imagens (maxImages)', () => {
-    expect(source).toContain('const maxImages = 5');
+  test('limita a 12 imagens (maxImages)', () => {
+    expect(source).toContain('const maxImages = 12');
   });
 
   test('permite tipos jpeg/png/webp/gif (allowedTypes)', () => {

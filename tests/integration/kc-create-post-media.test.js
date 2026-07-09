@@ -71,8 +71,8 @@ describe('kc-create-post.media — acesso ao estado compartilhado', () => {
 // ── Constante KC_CREATE_MAX_IMAGES ───────────────────────────────────────────
 
 describe('kc-create-post.media — constante de limite', () => {
-  test('define KC_CREATE_MAX_IMAGES = 5', () => {
-    expect(source).toContain('var KC_CREATE_MAX_IMAGES = 5;');
+  test('define KC_CREATE_MAX_IMAGES = 12', () => {
+    expect(source).toContain('var KC_CREATE_MAX_IMAGES = 12;');
   });
 
   test('exporta MAX_IMAGES no namespace', () => {

@@ -20,6 +20,7 @@
   const INLINE_INTERVAL = 6;
   const INLINE_MAX_PER_LIST = 8;
   let frequencyMemory = {};
+  let initialLoadStarted = false;
   const safeSetTimeout = typeof root.setTimeout === 'function'
     ? root.setTimeout.bind(root)
     : (typeof setTimeout === 'function' ? setTimeout : function (fn) {
@@ -794,7 +795,12 @@
 
   function init() {
     if (!root.document || !isFeedPage()) return;
-    const run = function () { loadAndRender().catch(function () { }); };
+    const run = function () {
+      if (initialLoadStarted) return;
+      if (!(root.KCSupabase && typeof root.KCSupabase.getClient === 'function' && root.KCSupabase.getClient())) return;
+      initialLoadStarted = true;
+      loadAndRender().catch(function () { });
+    };
     if (root.KCSupabase && typeof root.KCSupabase.getClient === 'function' && root.KCSupabase.getClient()) {
       safeSetTimeout(run, 250);
     } else {
