@@ -60,11 +60,11 @@
 ### Contagem canônica
 
 ```
-Jest: 203 suites · 3902 testes
+Jest: 203 suites · 3903 testes
 Playwright: 13 specs · 85 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥203 passed, 203 total` e `≥3902 passed, 3902 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥203 passed, 203 total` e `≥3903 passed, 3903 total`.
 
 ### Gate CI essencial
 
@@ -500,7 +500,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥203 passed, 203 total
-  Tests:       ≥3902 passed, 3902 total
+  Tests:       ≥3903 passed, 3903 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

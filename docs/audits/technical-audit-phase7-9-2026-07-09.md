@@ -75,6 +75,8 @@ Não foram executadas migrations, chamadas de escrita ao Supabase, deploy de pro
 
 As mudanças já implementadas nesta sequência foram pequenas, reversíveis e verificadas: contratos de upload atualizados, deduplicação de requisições iniciais e inclusão do snapshot de busca na CI. Não é apropriado implementar agora mudanças de RLS, CORS, migrations ou workflows de deploy sem ambiente isolado, revisão de política e plano de rollback.
 
+**Atualização:** a evidência de grants anônimos de chat foi suficiente para uma única migration de hardening, validada no Docker local e documentada em `docs/audits/technical-audit-phase10-controlled-hardening-2026-07-09.md`. O rollout remoto continua bloqueado pela reconciliação de migrations.
+
 ## Próximos passos seguros
 
 1. Manter o PR #641 em revisão até a decisão explícita sobre merge/deploy.

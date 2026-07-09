@@ -9,6 +9,7 @@ QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de rele
 
 | Auditoria | Data | Foco | Status |
 |---|---|---|---|
+| [technical-audit-phase10-controlled-hardening-2026-07-09.md](./technical-audit-phase10-controlled-hardening-2026-07-09.md) | 2026-07-09 | Hardening controlado de grants de chat e prova local | Pendente de validação/rollout remoto controlado |
 | [technical-audit-phase1-3-2026-07-09.md](./technical-audit-phase1-3-2026-07-09.md) | 2026-07-09 | Inventário, confronto documentação-código e dívida técnica | Atual, complemento em fases 4-9 |
 | [technical-audit-phase4-6-2026-07-09.md](./technical-audit-phase4-6-2026-07-09.md) | 2026-07-09 | Performance, segurança e operação GitHub-Vercel-Supabase | Atual, complemento em fases 7-9 |
 | [technical-audit-phase7-9-2026-07-09.md](./technical-audit-phase7-9-2026-07-09.md) | 2026-07-09 | Testes, roadmap e manutenção documental | Atual |
