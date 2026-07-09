@@ -103,6 +103,14 @@
       return token;
     });
 
+    // v13.6.3: headings Markdown (# / ## / ### / ####) → h1..h4.
+    // Tem que vir ANTES de outras regras pra não conflitar com listas.
+    html = html
+      .replace(/^####\s+(.+)$/gm, '<h4>$1</h4>')
+      .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+      .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+      .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+
     html = html
       .replace(/`([^`]+)`/g, '<code>$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -111,7 +119,9 @@
 
     html = html.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>');
     html = html.replace(/(?:^|\n)-\s+(.+)(?=\n|$)/g, '<li>$1</li>');
-    html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+    // v13.6.3: agrupar TODOS os <li> consecutivos em um único <ul> (antes, cada li
+    // virava um <ul> próprio, gerando listas de 1 item — visualmente confuso).
+    html = html.replace(/(?:<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>');
     html = html.replace(/\n/g, '<br>');
 
     // Restore links before applying underline (__ delimiters would corrupt tokens)
