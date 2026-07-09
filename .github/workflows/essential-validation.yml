@@ -53,6 +53,9 @@ jobs:
       - name: Hygiene
         run: npm run check:hygiene
 
+      - name: Search registry snapshot
+        run: npm run check:search-registry
+
       - name: Jest
         run: npm test -- --runInBand
 
