@@ -488,9 +488,166 @@
     return out;
   }
 
+  // ── CSV export ─────────────────────────────────────────────────────────
+  // Build a multi-section CSV from the last loaded data snapshot.
+  // Empty snapshot → message in setError.
+  function snapshotRowsToCsv(snap) {
+    if (!snap || !snap.startedAt) return null;
+    var csv = [];
+    csv.push('# KinoCampus GA4 dashboard snapshot');
+    csv.push('# Generated: ' + snap.startedAt);
+    csv.push('');
+
+    // Section: Summary (today vs yesterday)
+    if (snap.summary) {
+      csv.push('== Summary (today vs yesterday) ==');
+      csv.push('metric,today,yesterday,delta_pct');
+      var keys = ['views', 'users', 'events', 'sessions'];
+      var labels = { views: 'Visualizações', users: 'Usuários', events: 'Eventos', sessions: 'Sessões' };
+      keys.forEach(function (k) {
+        var t = (snap.summary.today && snap.summary.today[k]) || 0;
+        var y = (snap.summary.yesterday && snap.summary.yesterday[k]) || 0;
+        var pct = y ? (((t - y) / y) * 100).toFixed(1) : '0.0';
+        csv.push([labels[k], t, y, pct].join(','));
+      });
+      if (snap.summary.sevenDays) {
+        csv.push('');
+        csv.push('== 7-day totals ==');
+        csv.push('metric,value');
+        csv.push('Visualizações 7d,' + (snap.summary.sevenDays.views || 0));
+        csv.push('Usuários 7d,' + (snap.summary.sevenDays.users || 0));
+        csv.push('Eventos 7d,' + (snap.summary.sevenDays.events || 0));
+      }
+      csv.push('');
+    }
+
+    // Section: Trend (7 days page views)
+    if (snap.trend) {
+      csv.push('== 7-day trend (page views) ==');
+      csv.push('date,views');
+      snap.trend.forEach(function (t) { csv.push([t.date, t.views].join(',')); });
+      csv.push('');
+    }
+
+    // Section: Funnel
+    if (snap.funnel) {
+      csv.push('== Funnel (7 days) ==');
+      csv.push('step,count,conversion_pct');
+      var f = snap.funnel;
+      var base = f.views || 0;
+      csv.push(['Visualizações', f.views || 0, '100.0'].join(','));
+      csv.push(['Compartilhamentos', f.shares || 0, base ? ((f.shares / base) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push(['Cliques em contato', f.contacts || 0, base ? ((f.contacts / base) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push(['Conversas iniciadas', f.chats || 0, base ? ((f.chats / base) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push('');
+    }
+
+    // Section: Top kc_* events
+    if (snap.events) {
+      csv.push('== Custom events kc_* (7 days) ==');
+      csv.push('event,count,users');
+      snap.events.forEach(function (r) {
+        csv.push([r.key || r.event, r.count, r.users].join(','));
+      });
+      csv.push('');
+    }
+
+    // Section: Top pages
+    if (snap.pages) {
+      csv.push('== Top pages by views (7 days) ==');
+      csv.push('path,views');
+      snap.pages.forEach(function (r) { csv.push([r.path, r.views].join(',')); });
+      csv.push('');
+    }
+
+    // Section: Module breakdown
+    if (snap.modules) {
+      csv.push('== Module breakdown (7 days) ==');
+      csv.push('module,views');
+      snap.modules.forEach(function (r) { csv.push([r.label, r.views].join(',')); });
+      csv.push('');
+    }
+
+    // Section: New vs Returning
+    if (snap.newReturning) {
+      var n = snap.newReturning;
+      csv.push('== New vs Returning (7 days) ==');
+      csv.push('type,users,pct');
+      var total = (n.new || 0) + (n.returning || 0);
+      csv.push(['Novos', n.new || 0, total ? ((n.new / total) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push(['Recorrentes', n.returning || 0, total ? ((n.returning / total) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push('');
+    }
+
+    // Section: Devices
+    if (snap.devices) {
+      csv.push('== Devices (7 days) ==');
+      csv.push('category,views');
+      snap.devices.forEach(function (r) { csv.push([r.key, r.count].join(',')); });
+      csv.push('');
+    }
+
+    // Section: Traffic sources
+    if (snap.sources) {
+      csv.push('== Traffic sources (7 days) ==');
+      csv.push('channel,sessions');
+      snap.sources.forEach(function (r) { csv.push([r.key, r.count].join(',')); });
+      csv.push('');
+    }
+
+    // Engagement
+    if (snap.engagement) {
+      csv.push('== Engagement (7 days) ==');
+      csv.push('metric,value');
+      csv.push('avg_session_duration_seconds,' + (snap.engagement.avgSessionDuration || 0));
+      csv.push('bounce_rate_pct,' + ((snap.engagement.bounceRate || 0) * 100).toFixed(2));
+      csv.push('engagement_rate_pct,' + ((snap.engagement.engagementRate || 0) * 100).toFixed(2));
+      csv.push('engaged_sessions,' + (snap.engagement.engagedSessions || 0));
+      csv.push('sessions_per_user,' + (snap.engagement.sessionsPerUser || 0).toFixed(2));
+    }
+    return csv.join('\n');
+  }
+
+  function csvEscape(v) {
+    var s = String(v == null ? '' : v);
+    if (/[,"\n]/.test(s)) return '"' + s.replaceAll('"', '""') + '"';
+    return s;
+  }
+
+  function exportCsv() {
+    var snap = window.__KCGa4Data;
+    if (!snap || !snap.startedAt) {
+      setError('Sem dados para exportar. Aguarde o carregamento inicial.');
+      return;
+    }
+    var csv = snapshotRowsToCsv(snap);
+    if (!csv) { setError('Falha ao gerar CSV'); return; }
+    // BOM for Excel UTF-8 detection
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var ts = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
+    a.href = url;
+    a.download = 'kc-ga4-' + ts + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 0);
+    if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+      window.KCEvents.track('kc_csv_export', { source: 'ga4-dashboard' });
+    }
+  }
+
   async function loadDashboard() {
     clearError();
     setStatus('Carregando métricas...');
+
+    // Reset snapshot for CSV export
+    if (!window.__KCGa4Data) window.__KCGa4Data = {};
+    window.__KCGa4Data.startedAt = new Date().toISOString();
+    window.__KCGa4Data.queries = {};
 
     try {
       // 1) Today + yesterday + 7d (single batch of 3 calls)
@@ -528,6 +685,11 @@
         yesterday: rowsToMetricsMap(yesterdayRes.rows),
         sevenDays: rowsToMetricsMap(sevenDaysRes.rows),
       });
+      window.__KCGa4Data.summary = {
+        today: rowsToMetricsMap(todayRes.rows),
+        yesterday: rowsToMetricsMap(yesterdayRes.rows),
+        sevenDays: rowsToMetricsMap(sevenDaysRes.rows),
+      };
 
       // 2) 7-day trend
       var trendRes = await callGa4Reports({
@@ -537,7 +699,9 @@
         orderBys: [{ dimension: { dimensionName: 'date' } }],
         limit: 8,
       });
-      renderTrend(rowsToTrendMap(trendRes.rows));
+      var trendList = rowsToTrendMap(trendRes.rows);
+      renderTrend(trendList);
+      window.__KCGa4Data.trend = trendList;
 
       // 3) Top events (filter kc_*)
       var eventsRes = await callGa4Reports({
@@ -553,7 +717,10 @@
         orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
         limit: 20,
       });
-      renderEvents(rowsToEventMap(eventsRes.rows));
+      var eventsList = rowsToEventMap(eventsRes.rows);
+      var eventsListArr = Object.keys(eventsList).map(function (k) { return { key: k, count: eventsList[k].count, users: eventsList[k].users }; }).sort(function (a, b) { return b.count - a.count; });
+      renderEvents(eventsList);
+      window.__KCGa4Data.events = eventsListArr;
 
       // 4) Top pages
       var pagesRes = await callGa4Reports({
@@ -565,21 +732,26 @@
       });
       var pagesList = rowsToPagesMap(pagesRes.rows);
       renderPages(pagesList);
+      window.__KCGa4Data.pages = pagesList;
 
       // 5) Module breakdown
-      renderModuleBreakdown(aggregateModuleBreakdown(pagesList));
+      var modulesList = aggregateModuleBreakdown(pagesList);
+      renderModuleBreakdown(modulesList);
+      window.__KCGa4Data.modules = modulesList;
 
       // 6) Funnel: views / shares / contacts / chats
       var eventMap = rowsToEventMap(eventsRes.rows);
       var pagesMap = {};
       pagesList.forEach(function (p) { pagesMap[p.path] = p.views; });
       var totalViews = pagesList.reduce(function (acc, p) { return acc + (p.views || 0); }, 0);
-      renderFunnel({
+      var funnelSnapshot = {
         views: totalViews,
         shares: (eventMap.kc_share && eventMap.kc_share.count) || 0,
         contacts: (eventMap.kc_contact_click && eventMap.kc_contact_click.count) || 0,
         chats: (eventMap.kc_chat_open && eventMap.kc_chat_open.count) || 0,
-      });
+      };
+      renderFunnel(funnelSnapshot);
+      window.__KCGa4Data.funnel = funnelSnapshot;
 
       // 7) Engagement metrics (7d): avg engagement time, bounce rate, engagement rate
       var engagementRes = await callGa4Reports({
@@ -592,7 +764,9 @@
           { name: 'sessionsPerUser' },
         ],
       });
-      renderEngagement(rowsToEngagementMap(engagementRes.rows));
+      var engagementMap = rowsToEngagementMap(engagementRes.rows);
+      renderEngagement(engagementMap);
+      window.__KCGa4Data.engagement = engagementMap;
 
       // 8) New vs Returning users (7d)
       var newVsReturningRes = await callGa4Reports({
@@ -602,7 +776,9 @@
         orderBys: [{ metric: { metricName: 'totalUsers' }, desc: true }],
         limit: 5,
       });
-      renderNewVsReturning(rowsToNewVsReturningMap(newVsReturningRes.rows));
+      var nrMap = rowsToNewVsReturningMap(newVsReturningRes.rows);
+      renderNewVsReturning(nrMap);
+      window.__KCGa4Data.newReturning = nrMap;
 
       // 9) Device breakdown (7d)
       var devicesRes = await callGa4Reports({
@@ -612,7 +788,9 @@
         orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
         limit: 10,
       });
-      renderDevices(rowsToDimensionCountMap(devicesRes.rows));
+      var devicesList = rowsToDimensionCountMap(devicesRes.rows);
+      renderDevices(devicesList);
+      window.__KCGa4Data.devices = devicesList;
 
       // 10) Traffic sources (7d)
       var sourcesRes = await callGa4Reports({
@@ -622,9 +800,15 @@
         orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
         limit: 10,
       });
-      renderTrafficSources(rowsToDimensionCountMap(sourcesRes.rows));
+      var sourcesList = rowsToDimensionCountMap(sourcesRes.rows);
+      renderTrafficSources(sourcesList);
+      window.__KCGa4Data.sources = sourcesList;
 
+      window.__KCGa4Data.loadedAt = new Date().toISOString();
       setStatus('Atualizado às ' + new Date().toLocaleTimeString('pt-BR'));
+      // Update button enabled state
+      var csvBtn = $('#ga4ExportCsv');
+      if (csvBtn) csvBtn.disabled = false;
     } catch (err) {
       var msg = err && err.message ? err.message : String(err);
       setError('Falha ao carregar: ' + msg);
@@ -653,6 +837,11 @@
       refreshBtn.addEventListener('click', function () {
         loadDashboard().catch(function (e) { console.error('[ga4-dashboard] refresh failed:', e); });
       });
+    }
+    var csvBtn = $('#ga4ExportCsv');
+    if (csvBtn) {
+      csvBtn.disabled = true;
+      csvBtn.addEventListener('click', exportCsv);
     }
 
     await loadDashboard();
