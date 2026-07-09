@@ -94,9 +94,31 @@
     const ratingCount = Math.max(0, parseInt(String(ratingCountRaw != null ? ratingCountRaw : 0), 10) || 0);
     const normalizedImages = (() => {
       const direct = Array.isArray(r.imagens) ? r.imagens : (Array.isArray(r.images) ? r.images : []);
+      // v13.6.2: também ler galerias em metadata (gallery_image_urls / galleryImageUrls / image_urls)
+      // — comum em posts manuais e em posts vindos de cadu-publish onde só metadata é preenchido.
+      const metaGallery = pickFirstNonEmpty([
+        meta && meta.gallery_image_urls,
+        meta && meta.galleryImageUrls,
+        meta && meta.image_urls,
+        meta && meta.imageUrls,
+        r.gallery_image_urls,
+        r.galleryImageUrls,
+        r.image_urls,
+      ]);
+      const metaGalleryArr = Array.isArray(metaGallery) ? metaGallery : [];
       const fallback = pickFirstNonEmpty([r.cover_url, r.coverUrl, r.image_url, r.imageUrl, meta.cover_url, meta.coverUrl, meta.image_url, meta.imageUrl]);
-      const values = direct.length ? direct : (fallback ? [fallback] : []);
-      return values.map((value) => String(value || '').trim()).filter(Boolean);
+      // Prioridade: direct (imagens) > metaGallery (gallery_image_urls) > fallback (image_url único)
+      let values;
+      if (direct.length) values = direct;
+      else if (metaGalleryArr.length) values = metaGalleryArr;
+      else values = fallback ? [fallback] : [];
+      // Deduplicar preservando ordem
+      const seen = new Set();
+      return values.map((value) => String(value || '').trim()).filter(Boolean).filter((v) => {
+        if (seen.has(v)) return false;
+        seen.add(v);
+        return true;
+      });
     })();
 
     if (authorProfile) {
