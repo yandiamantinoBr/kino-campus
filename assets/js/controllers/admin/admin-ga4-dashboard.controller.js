@@ -132,14 +132,17 @@
   }
 
   // ── Renderers ──────────────────────────────────────────────────────────
+  // setError / clearError target the OUTER #admin-error (outside
+  // #admin-content) so all errors (auth denied, data fetch failed,
+  // etc.) surface even when the inner content panel is hidden.
   function setError(msg) {
-    var el = $('#ga4-error');
+    var el = $('#admin-error');
     if (!el) return;
     el.textContent = msg;
     el.style.display = 'block';
   }
   function clearError() {
-    var el = $('#ga4-error');
+    var el = $('#admin-error');
     if (!el) return;
     el.textContent = '';
     el.style.display = 'none';
