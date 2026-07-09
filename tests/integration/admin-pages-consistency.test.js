@@ -20,7 +20,8 @@ const ADMIN_PAGES = [
   'admin/reports.html',
   'admin/banners.html',
   'admin/help-requests.html',
-  'admin/privacy-analytics.html'
+  'admin/privacy-analytics.html',
+  'admin/ga4-dashboard.html'
 ];
 
 const SKELETON_CONTROLLERS = [
@@ -57,7 +58,7 @@ describe('Rodada 3 Fase 2 — skeleton compartilhado', () => {
 });
 
 describe('Rodada 3 Fase 2 — navegação acessível', () => {
-  test('as 6 páginas marcam o link ativo com aria-current="page"', () => {
+  test('as páginas admin marcam o link ativo com aria-current="page"', () => {
     ADMIN_PAGES.forEach((p) => {
       const html = r(p);
       expect(html).toContain('class="kc-admin-nav__link active" aria-current="page"');

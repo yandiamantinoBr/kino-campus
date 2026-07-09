@@ -326,6 +326,7 @@
     'meta-title.admin-moderation':     'KinoCampus - Moderação Admin',
     'meta-title.admin-reports':        'KinoCampus - Denúncias Admin',
     'meta-title.admin-privacy-analytics': 'KinoCampus - Privacidade e Analytics Admin',
+    'meta-title.admin-ga4-dashboard':  'KinoCampus - Dashboard GA4 Admin',
 
     'meta-description.error-404':            'Página não encontrada no KinoCampus. Volte ao início ou explore os módulos da comunidade UFG: eventos, oportunidades, moradia, compra e venda, caronas e achados e perdidos.',
     'meta-description.account-setup':       'Complete sua conta no KinoCampus — comunidade universitária da UFG.',
@@ -356,6 +357,7 @@
     'meta-description.admin-moderation':    'Modere publicações e conteúdos reportados no painel administrativo do KinoCampus.',
     'meta-description.admin-reports':       'Analise denúncias recebidas no painel administrativo do KinoCampus.',
     'meta-description.admin-privacy-analytics': 'Acompanhe consentimento, armazenamento local e analytics agregados do KinoCampus.',
+    'meta-description.admin-ga4-dashboard': 'Acompanhe métricas agregadas do Google Analytics 4 no painel administrativo do KinoCampus.',
 
     // ── Alt text estático ──────────────────────────────────────────────────────
     'alt.avatar-preview':        'Preview do avatar',

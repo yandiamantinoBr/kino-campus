@@ -32,6 +32,7 @@ const ADMIN_PAGES = Object.freeze([
   'admin/banners.html',
   'admin/help-requests.html',
   'admin/privacy-analytics.html',
+  'admin/ga4-dashboard.html',
 ]);
 
 const ADMIN_ROUTES = Object.freeze([
@@ -41,6 +42,7 @@ const ADMIN_ROUTES = Object.freeze([
   Object.freeze({ route: '/admin/banners', file: 'admin/banners.html', label: 'Banners' }),
   Object.freeze({ route: '/admin/help-requests', file: 'admin/help-requests.html', label: 'Pedidos de ajuda' }),
   Object.freeze({ route: '/admin/privacy-analytics', file: 'admin/privacy-analytics.html', label: 'Privacidade e Analytics' }),
+  Object.freeze({ route: '/admin/ga4-dashboard', file: 'admin/ga4-dashboard.html', label: 'GA4' }),
 ]);
 
 function routeFromPage(page) {

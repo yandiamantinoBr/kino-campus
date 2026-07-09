@@ -20,6 +20,7 @@ const ADMIN_PAGES = [
   { path: '/admin/reports.html',       name: 'Admin Denúncias' },
   { path: '/admin/help-requests.html', name: 'Admin Ajuda' },
   { path: '/admin/privacy-analytics.html', name: 'Admin Privacidade' },
+  { path: '/admin/ga4-dashboard.html', name: 'Admin GA4' },
 ];
 
 for (const { path, name } of ADMIN_PAGES) {

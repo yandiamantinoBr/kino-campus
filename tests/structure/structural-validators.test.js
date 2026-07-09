@@ -92,12 +92,13 @@ describe('validate-script-chains.js — integridade', function () {
     expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-telemetry.js');
   });
 
-  test('lista 17 páginas públicas e 5 admin', function () {
+  test('lista páginas públicas e admin pelo manifest compartilhado', function () {
     expect(CHAINS_SCRIPT).toContain('PUBLIC_PAGES');
     expect(CHAINS_SCRIPT).toContain('ADMIN_PAGES');
     expect(CHAINS_SCRIPT).toContain('PAGE_MANIFEST.PUBLIC_PAGES');
     expect(CHAINS_SCRIPT).toContain('PAGE_MANIFEST.ADMIN_PAGES');
-    expect(PAGE_MANIFEST.ADMIN_PAGES).toHaveLength(6);
+    expect(PAGE_MANIFEST.ADMIN_PAGES).toContain('admin/privacy-analytics.html');
+    expect(PAGE_MANIFEST.ADMIN_PAGES).toContain('admin/ga4-dashboard.html');
   });
 
   test('valida posição (indexOf) e ordem', function () {
@@ -173,6 +174,7 @@ describe('validate-public-routes.js — integridade', function () {
     expect(ROUTES_SCRIPT).toContain('PAGE_MANIFEST.PUBLIC_ROUTES');
     expect(ROUTES_SCRIPT).toContain('PAGE_MANIFEST.ADMIN_ROUTES');
     expect(PAGE_MANIFEST.ADMIN_ROUTES.map(function (route) { return route.file; })).toContain('admin/privacy-analytics.html');
+    expect(PAGE_MANIFEST.ADMIN_ROUTES.map(function (route) { return route.file; })).toContain('admin/ga4-dashboard.html');
   });
 
   test('valida existência dos HTMLs', function () {

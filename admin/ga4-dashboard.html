@@ -1,0 +1,243 @@
+<html lang="pt-BR" class="kc-loading kc-theme-preload" data-i18n-title="meta-title.admin-ga4-dashboard" data-i18n-description="meta-description.admin-ga4-dashboard">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
+  <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
+  <title>KinoCampus - Dashboard Google Analytics</title>
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.6" />
+  <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.2" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .kc-admin-page .kc-main-content { padding-top: 24px; }
+    .kc-admin-wrapper { max-width: 1240px; margin: 0 auto; padding: 0 16px 92px; box-sizing: border-box; }
+    .kc-admin-header-bar { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+    .kc-admin-header-bar h1 { margin:0; font-size:1.45rem; }
+    .kc-admin-header-bar p { margin:8px 0 0; color:var(--kc-text-dark-secondary); max-width:78ch; }
+    .kc-admin-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .kc-admin-toolbar button { padding:10px 12px; border-radius:12px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); color:var(--kc-text-dark-primary); font:inherit; cursor:pointer; }
+    .kc-admin-toolbar button:disabled { opacity:.55; cursor:not-allowed; }
+    #admin-loading { display:flex; align-items:center; justify-content:center; gap:12px; padding:64px 0; color:var(--kc-text-dark-secondary); }
+    #admin-error { display:none; padding:14px 16px; border-radius:14px; border:1px solid rgba(255,98,98,.4); background:rgba(255,98,98,.12); color:#ffb0b0; margin-bottom:16px; }
+    #admin-content { display:none; }
+    .kc-privacy-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:18px; }
+    .kc-privacy-metric { padding:16px; border-radius:16px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); min-width:0; }
+    .kc-privacy-metric span { display:block; font-size:.78rem; color:var(--kc-text-dark-secondary); text-transform:uppercase; letter-spacing:.06em; }
+    .kc-privacy-metric strong { display:block; margin-top:10px; font-size:1.65rem; line-height:1; }
+    .kc-privacy-metric small { display:block; margin-top:8px; color:var(--kc-text-dark-secondary); font-size:.78rem; }
+    .kc-privacy-metric small.is-up { color:#7eea9c; }
+    .kc-privacy-metric small.is-down { color:#ff8e8e; }
+    .kc-ga4-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .kc-ga4-section { border:1px solid var(--kc-border-dark); border-radius:16px; background:var(--kc-surface-dark); padding:16px; min-width:0; }
+    .kc-ga4-section--wide { grid-column:1 / -1; }
+    .kc-ga4-section h2 { margin:0 0 6px; font-size:1.05rem; }
+    .kc-ga4-section p { margin:0 0 14px; color:var(--kc-text-dark-secondary); line-height:1.55; }
+    .kc-ga4-table-wrap { overflow:auto; border:1px solid var(--kc-border-dark); border-radius:12px; }
+    .kc-ga4-table { width:100%; border-collapse:collapse; min-width:480px; }
+    .kc-ga4-table th,
+    .kc-ga4-table td { padding:11px 12px; border-bottom:1px solid var(--kc-border-dark); text-align:left; vertical-align:top; }
+    .kc-ga4-table th { color:var(--kc-text-dark-secondary); font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; background:rgba(255,255,255,.03); }
+    .kc-ga4-table tr:last-child td { border-bottom:0; }
+    .kc-ga4-table code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.85em; color:var(--kc-text-dark-primary); background:rgba(255,255,255,.06); padding:2px 6px; border-radius:6px; }
+    .kc-admin-empty { color:var(--kc-text-dark-secondary); text-align:center; padding:20px; }
+    #ga4LastSync { color:var(--kc-text-dark-secondary); font-size:.86rem; margin:0 0 14px; }
+    .kc-ga4-bar { display:inline-block; height:10px; background:linear-gradient(90deg,#3b82f6,#8b5cf6); border-radius:5px; vertical-align:middle; margin-right:8px; min-width:4px; }
+    .kc-ga4-bar-value { font-variant-numeric:tabular-nums; font-weight:600; }
+    .kc-funnel-step { display:grid; grid-template-columns:160px 1fr 80px; align-items:center; gap:12px; margin-bottom:8px; font-size:.92rem; }
+    .kc-funnel-bar { display:inline-block; height:18px; background:linear-gradient(90deg,#10b981,#3b82f6); border-radius:9px; vertical-align:middle; min-width:4px; }
+    .kc-funnel-value { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+    .kc-funnel-label { color:var(--kc-text-dark-secondary); }
+    @media (max-width: 820px) {
+      .kc-ga4-grid { grid-template-columns:1fr; }
+      .kc-admin-toolbar { width:100%; }
+      .kc-admin-toolbar button { flex:1 1 150px; }
+      .kc-funnel-step { grid-template-columns:120px 1fr 60px; }
+    }
+  </style>
+</head>
+<body class="kc-admin-page kc-admin-page--ga4-dashboard">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
+  <header class="kc-header kc-header--admin">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="../index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <nav class="kc-admin-nav" aria-label="Navegação admin" data-i18n-aria-label="aria-label.admin-nav">
+        <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
+        <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
+        <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
+        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart"></i> Privacidade</a>
+        <a href="ga4-dashboard.html" class="kc-admin-nav__link active" aria-current="page"><i class="fab fa-google"></i> GA4</a>
+        <a href="cadu.html" class="kc-admin-nav__link"><i class="fas fa-robot"></i> Cadu</a>
+      </nav>
+      <div class="kc-user-actions">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="kc-main-content" id="kc-main">
+    <div class="kc-admin-wrapper">
+      <div id="admin-loading">
+        <i class="fas fa-spinner fa-spin" style="font-size:1.4rem;"></i>
+        <span>Verificando acesso...</span>
+      </div>
+      <div id="admin-error" role="alert"></div>
+
+      <div id="admin-content">
+        <div class="kc-admin-header-bar">
+          <div>
+            <h1><i class="fab fa-google" style="color:#4285f4;margin-right:8px;"></i>Google Analytics 4</h1>
+            <p>Leitura server-side via Edge Function <code>kc-ga4-reports</code>, com credenciais guardadas como Supabase secrets e acesso restrito a administradores. Atualiza a cada 60 s. Documentação em <code>docs/analytics/GA4-AUDIT-2026-07-08.md</code>.</p>
+          </div>
+          <div class="kc-admin-toolbar">
+            <button id="ga4RefreshButton" type="button"><i class="fas fa-rotate"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <div id="ga4LastSync" aria-live="polite">Aguardando dados...</div>
+        <div id="ga4-error" role="alert"></div>
+        <div id="ga4Summary" class="kc-privacy-summary"></div>
+
+        <div class="kc-ga4-grid">
+          <section class="kc-ga4-section kc-ga4-section--wide">
+            <h2><i class="fas fa-chart-column"></i> Visualizações nos últimos 7 dias</h2>
+            <p>Distribuição diária de page views. Use para identificar quedas ou picos anormais.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th style="width:140px;">Data</th><th>Visualizações</th></tr></thead>
+                <tbody id="ga4TrendBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-bolt"></i> Funil de engajamento (7 dias)</h2>
+            <p>Visualizações → compartilhamentos → cliques em contato → conversas iniciadas.</p>
+            <div id="ga4Funnel" style="padding:8px 0;"></div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-fingerprint"></i> Eventos customizados (kc_*)</h2>
+            <p>Emitidos pelo helper <code>window.KCEvents.track()</code> no frontend. Lag típico do GA4: 5-60 min.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th>Evento</th><th>Eventos</th><th>Usuários</th></tr></thead>
+                <tbody id="ga4EventsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-file-lines"></i> Páginas mais vistas (7 dias)</h2>
+            <p>Top 10 page views por URL absoluta. Eventos de admin/login não devem aparecer aqui.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th>Caminho</th><th>Views</th></tr></thead>
+                <tbody id="ga4PagesBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="kc-ga4-section">
+            <h2><i class="fas fa-layer-group"></i> Distribuição por módulo (7 dias)</h2>
+            <p>Classificação heurística baseada no prefixo da URL. Útil para saber qual módulo atrai mais tráfego.</p>
+            <div class="kc-ga4-table-wrap">
+              <table class="kc-ga4-table">
+                <thead><tr><th>Módulo</th><th>Visualizações</th></tr></thead>
+                <tbody id="ga4ModulesBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
+    <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
+    <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
+    <a href="help-requests.html"><i class="fas fa-life-ring"></i><span>Ajuda</span></a>
+    <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i><span>Privac.</span></a>
+    <a class="active" href="ga4-dashboard.html"><i class="fab fa-google"></i><span>GA4</span></a>
+  </nav>
+
+  <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.2"></script>
+  <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.identity.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.taxonomy.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.location.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.presentation.js?v=8.6.1"></script>
+  <script defer src="../assets/js/features/kc-card-image-aspect.js?v=8.6.1"></script>
+  <script defer src="../assets/js/utils/kc-utils.js?v=8.6.1"></script>
+  <script defer src="../assets/js/boot/kc-env.js?v=8.6.1"></script>
+  <script defer src="../assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
+  <script defer src="../assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-consent.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-google-tag.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-events.js?v=8.6.4"></script>
+  <script defer src="../assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="../assets/js/api/kc-supabase.client.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-supabase.posts.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-supabase.ratings.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.notifications.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.saved.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.help.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.posts-read.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.comments-votes.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.ratings.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.posts-feed.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.posts-write.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.profiles.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.related.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.auth.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.diagnostics.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.session.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.filters.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.authors.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.posts-normalize.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/kc-api.client.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.saved.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-auth.ui.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
+  <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
+  <script defer src="../assets/js/api/admin-shell.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-ga4-dashboard.controller.js?v=8.6.4"></script>
+</body>
+</html>
