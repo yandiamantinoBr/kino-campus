@@ -2,7 +2,7 @@
 
 /**
  * Revisão profunda /admin/ (rodada 3) — Fase 2 (carregamento + a11y).
- * Cobre a consistência transversal das 6 páginas admin:
+ * Cobre a consistência transversal das páginas admin canônicas:
  *  - skeleton CSS compartilhado em admin-shell.css (não mais inline no dashboard);
  *  - estados de carregamento (skeletons) injetados em cada página;
  *  - aria-current="page" no link de navegação ativo (acessibilidade).
@@ -10,19 +10,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
 
 const ROOT = path.resolve(__dirname, '../..');
 const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-const ADMIN_PAGES = [
-  'admin/index.html',
-  'admin/moderation.html',
-  'admin/reports.html',
-  'admin/banners.html',
-  'admin/help-requests.html',
-  'admin/privacy-analytics.html',
-  'admin/ga4-dashboard.html'
-];
+const ADMIN_PAGES = PAGE_MANIFEST.ADMIN_PAGES;
 
 const SKELETON_CONTROLLERS = [
   'assets/js/controllers/admin/admin-reports.controller.js',

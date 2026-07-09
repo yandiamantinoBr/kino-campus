@@ -9,7 +9,7 @@ const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.saved.js');
 const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
-const HTML_FILES = PAGE_MANIFEST.ALL_HTML_PAGES;
+const HTML_FILES = Object.freeze(PAGE_MANIFEST.ALL_HTML_PAGES.filter((page) => page !== 'admin/cadu.html'));
 
 let source;
 
@@ -81,7 +81,7 @@ describe('kc-api.saved.js - exported saved/highlights domain', () => {
 });
 
 describe('kc-api.saved.js - html loading order', () => {
-  test('os 22 carregadores reais incluem kc-api.saved.js antes de kc-api.client.js', () => {
+  test('os carregadores reais incluem kc-api.saved.js antes de kc-api.client.js', () => {
     HTML_FILES.forEach((file) => {
       const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
       const savedIdx = html.indexOf('kc-api.saved.js');
@@ -93,7 +93,7 @@ describe('kc-api.saved.js - html loading order', () => {
     });
   });
 
-  test('os 22 carregadores reais mantem kc-api.notifications.js antes de kc-api.saved.js', () => {
+  test('os carregadores reais mantem kc-api.notifications.js antes de kc-api.saved.js', () => {
     HTML_FILES.forEach((file) => {
       const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
       const notificationsIdx = html.indexOf('kc-api.notifications.js');

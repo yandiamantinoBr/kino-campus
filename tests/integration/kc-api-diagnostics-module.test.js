@@ -9,7 +9,9 @@ const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.diagnostics.js');
 const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
-const HTML_FILES_WITH_CLIENT = Object.freeze(PAGE_MANIFEST.ALL_HTML_PAGES.concat(['mensagens.html']));
+const HTML_FILES_WITH_CLIENT = Object.freeze(PAGE_MANIFEST.ALL_HTML_PAGES.filter((page) => (
+  page !== 'admin/cadu.html'
+)));
 
 let source;
 

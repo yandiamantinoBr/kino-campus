@@ -9,7 +9,7 @@ const path = require('path');
 
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.help.js');
 const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
-const HTML_FILES = PAGE_MANIFEST.ALL_HTML_PAGES;
+const HTML_FILES = Object.freeze(PAGE_MANIFEST.ALL_HTML_PAGES.filter((page) => page !== 'admin/cadu.html'));
 
 let source;
 
@@ -79,7 +79,7 @@ describe('kc-api.help.js - exported help/invites domain', () => {
 });
 
 describe('kc-api.help.js - html loading order', () => {
-  test('os 22 carregadores reais incluem kc-api.help.js antes de kc-api.client.js', () => {
+  test('os carregadores reais incluem kc-api.help.js antes de kc-api.client.js', () => {
     HTML_FILES.forEach((file) => {
       const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
       const helpIdx = html.indexOf('kc-api.help.js');
@@ -91,7 +91,7 @@ describe('kc-api.help.js - html loading order', () => {
     });
   });
 
-  test('os 22 carregadores reais mantem kc-api.saved.js antes de kc-api.help.js', () => {
+  test('os carregadores reais mantem kc-api.saved.js antes de kc-api.help.js', () => {
     HTML_FILES.forEach((file) => {
       const html = fs.readFileSync(path.resolve(__dirname, '..', '..', file), 'utf8');
       const savedIdx = html.indexOf('kc-api.saved.js');

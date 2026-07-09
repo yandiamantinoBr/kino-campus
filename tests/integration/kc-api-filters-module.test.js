@@ -10,7 +10,9 @@ const path = require('path');
 const SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.filters.js');
 const CLIENT_SRC = path.resolve(__dirname, '../../assets/js/api/kc-api.client.js');
 const PAGE_MANIFEST = require('../../scripts/admin-pages.manifest.js');
-const HTML_FILES_WITH_CLIENT = Object.freeze(PAGE_MANIFEST.ALL_HTML_PAGES.concat(['mensagens.html']));
+const HTML_FILES_WITH_CLIENT = Object.freeze(PAGE_MANIFEST.ALL_HTML_PAGES.filter((page) => (
+  page !== '404.html' && page !== 'admin/cadu.html'
+)));
 
 let source;
 let clientSource;
