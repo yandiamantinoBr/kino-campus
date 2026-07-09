@@ -88,10 +88,14 @@
       border-radius: 10px;
       padding: 12px;
       width: 100%;
-      aspect-ratio: 4 / 3;
-      max-height: min(520px, 60vh);
+      max-height: min(720px, 80vh);
       overflow: hidden;
       position: relative;
+    }
+    .kc-gallery-main img {
+      max-width: 100%;
+      max-height: min(700px, 78vh);
+      object-fit: contain;
     }
 
     .kc-product-example-ribbon {
@@ -1740,8 +1744,7 @@
 
       .kc-gallery-main {
         padding: 8px;
-        aspect-ratio: 1 / 1;
-        max-height: min(340px, 48vh);
+        max-height: min(500px, 70vh);
       }
 
       .kc-gallery-thumbnails {
