@@ -210,4 +210,4 @@ Nenhum P0 confirmado sem evidência adicional de indisponibilidade, vazamento de
 1. Revisar esta mudança em PR e executar a CI remota, inclusive a suite E2E que não concluiu localmente.
 2. Tratar configurações externas P1 no dashboard com checklist e evidência registrada, sem colocar valores sensíveis no repositório.
 3. Abrir uma tarefa exclusiva para migrations/grants de chat, com branch Supabase e plano de testes, antes de produzir SQL de produção.
-4. Só então avançar às fases 7-9: matriz executável de testes, plano de ação consolidado e atualização dos runbooks operacionais.
+4. A continuidade de testes, roadmap e manutenção documental está em `docs/audits/technical-audit-phase7-9-2026-07-09.md`.

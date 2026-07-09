@@ -1,8 +1,8 @@
 # Estratégia de Testes — KinoCampus
 
-**Versão:** v76.40.0 · **Atualizado em:** 2026-06-20
+**Referência de contagem:** 2026-07-09
 
-> Documenta as 191 suites Jest + 11 specs Playwright: o que cada uma cobre,
+> Documenta as 203 suites Jest + 13 specs Playwright: o que cada uma cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -11,12 +11,12 @@
 
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
-3. [Diretório unit/ — 26 suites](#3-diretório-unit--26-suites)
-4. [Diretório integration/ — 131 suites](#4-diretório-integration--131-suites)
-5. [Diretório contract/ — 13 suites](#5-diretório-contract--13-suites)
-6. [Diretório structure/ — 14 suites](#6-diretório-structure--14-suites)
+3. [Diretório unit/ — 31 suites](#3-diretório-unit--31-suites)
+4. [Diretório integration/ — 138 suites](#4-diretório-integration--138-suites)
+5. [Diretório contract/ — 14 suites](#5-diretório-contract--14-suites)
+6. [Diretório structure/ — 15 suites](#6-diretório-structure--15-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
-8. [E2E com Playwright — 11 specs](#8-e2e-com-playwright--11-specs)
+8. [E2E com Playwright — 13 specs](#8-e2e-com-playwright--13-specs)
 9. [Como adicionar novos testes](#9-como-adicionar-novos-testes)
 10. [Regras de manutenção](#10-regras-de-manutenção)
 
@@ -32,7 +32,7 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todos os 191 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todas as 203 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
@@ -49,22 +49,22 @@
 
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
-| `tests/unit/` | **26** | Módulos utilitários individuais |
-| `tests/integration/` | **131** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark, lazy runtime e piloto estruturado |
-| `tests/contract/` | **13** | Contratos públicos, exports, registro e snapshot gerado de busca |
-| `tests/structure/` | **14** | Estrutura HTML, namespaces, cadeia de scripts |
+| `tests/unit/` | **31** | Módulos utilitários individuais |
+| `tests/integration/` | **138** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark, lazy runtime e piloto estruturado |
+| `tests/contract/` | **14** | Contratos públicos, exports, registro e snapshot gerado de busca |
+| `tests/structure/` | **15** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
-| `tests/e2e/` | **11** | Playwright (browser real, HTTP real) |
-| **Total** | **200** | (189 Jest + 11 Playwright specs) |
+| `tests/e2e/` | **13** | Playwright (browser real, HTTP real) |
+| **Total** | **216** | (203 Jest + 13 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 191 suites · 3784 testes
-Playwright: 11 specs · 78 testes listados
+Jest: 203 suites · 3902 testes
+Playwright: 13 specs · 85 testes listados
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥191 passed, 191 total` e `≥3784 passed, 3784 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥203 passed, 203 total` e `≥3902 passed, 3902 total`.
 
 ### Gate CI essencial
 
@@ -82,11 +82,11 @@ O workflow `.github/workflows/essential-validation.yml` roda em pull requests e 
 Esse gate cobre validação estrutural, Jest completo e **execução real** das specs
 Playwright (chromium) — o `webServer` do `playwright.config.js` sobe `http-server`
 na porta 4000 automaticamente, inclusive em CI. Até a V76.48 o CI só rodava o
-inventário (`--list`); agora as 83 specs executam de fato como gate de regressão.
+inventário (`--list`); agora os 85 testes executam de fato como gate de regressão.
 
 ---
 
-## 3. Diretório unit/ — 26 suites
+## 3. Diretório unit/ — 31 suites
 
 Cobre módulos utilitários individuais — funções puras, sem dependências de DOM ou browser.
 
@@ -119,11 +119,11 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 131 suites
+## 4. Diretório integration/ — 138 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
-A tabela abaixo é agrupada por domínio e não lista todos os 131 arquivos individualmente.
+A tabela abaixo é agrupada por domínio e não lista todos os 138 arquivos individualmente.
 
 ### Sub-grupo: Controllers públicos (6 suites)
 
@@ -268,7 +268,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 131 arquivos indi
 
 ---
 
-## 5. Diretório contract/ — 13 suites
+## 5. Diretório contract/ — 14 suites
 
 Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falha se um método for removido ou renomeado, mesmo sem quebrar a funcionalidade aparente.
 
@@ -290,7 +290,7 @@ Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falh
 
 ---
 
-## 6. Diretório structure/ — 14 suites
+## 6. Diretório structure/ — 15 suites
 
 Verifica estrutura de HTML, namespaces de módulos e cadeias de scripts — sem rodar código de negócio.
 
@@ -325,7 +325,7 @@ Verifica conformidade com WCAG 2.1 AA: estrutura de documento, marcações i18n,
 
 ---
 
-## 8. E2E com Playwright — 11 specs
+## 8. E2E com Playwright — 13 specs
 
 Rodam no browser real (Chromium) contra um servidor HTTP local (`http-server` na porta 4000). Não fazem chamadas reais ao Supabase — usam o driver local.
 
@@ -499,8 +499,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥191 passed, 191 total
-  Tests:       ≥3784 passed, 3784 total
+  Test Suites: ≥203 passed, 203 total
+  Tests:       ≥3902 passed, 3902 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.
