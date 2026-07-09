@@ -159,15 +159,15 @@
 
     .kc-gallery-thumbnails {
       display: flex;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-top: 15px;
-      overflow: auto;
       padding-bottom: 5px;
     }
 
     .kc-thumbnail {
-      width: 90px;
-      height: 90px;
+      width: 70px;
+      height: 70px;
       object-fit: cover;
       border-radius: 8px;
       cursor: pointer;
