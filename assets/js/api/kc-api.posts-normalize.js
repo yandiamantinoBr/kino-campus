@@ -112,11 +112,20 @@
         if (Array.isArray(cand) && cand.length) { metaGalleryArr = cand; break; }
       }
       const fallback = pickFirstNonEmpty([r.cover_url, r.coverUrl, r.image_url, r.imageUrl, meta.cover_url, meta.coverUrl, meta.image_url, meta.imageUrl]);
-      // Prioridade: direct (imagens) > metaGallery (gallery_image_urls) > fallback (image_url único)
+      // Prioridade inteligente:
+      // 1) Se direct (r.imagens) tem MAIS itens que metaGallery, usar direct (galeria real do post_media)
+      // 2) Se metaGallery tem MAIS ou IGUAL a direct, usar metaGallery (gallery_image_urls é o source of truth manual)
+      // 3) Fallback: image_url único
       let values;
-      if (direct.length) values = direct;
-      else if (metaGalleryArr.length) values = metaGalleryArr;
-      else values = fallback ? [fallback] : [];
+      if (direct.length > 1 && direct.length >= metaGalleryArr.length) {
+        values = direct;
+      } else if (metaGalleryArr.length) {
+        values = metaGalleryArr;
+      } else if (direct.length) {
+        values = direct;
+      } else {
+        values = fallback ? [fallback] : [];
+      }
       // Deduplicar preservando ordem
       const seen = new Set();
       return values.map((value) => String(value || '').trim()).filter(Boolean).filter((v) => {
