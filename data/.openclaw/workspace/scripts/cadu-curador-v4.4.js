@@ -128,6 +128,8 @@ const TIERS = {
       'fav': { url: 'https://fav.ufg.br', ig: 'fav_ufg' },
       'fcs': { url: 'https://fcs.ufg.br', ig: 'fcs_ufg' },
       'letras': { url: 'https://letras.ufg.br', ig: 'letras.ufg' },
+      // v4.5.3 (2026-07-09): Centro de Linguas UFG (sub-dominio letras) - cursos de idiomas
+      'cl': { url: 'https://cl.letras.ufg.br', ig: 'centrodelinguasflufg' },
       'fic': { url: 'https://fic.ufg.br', ig: 'fic.ufg' },
       'fct': { url: 'https://fct.ufg.br', ig: 'campusaparecidaufg' },
       'medicina': { url: 'https://medicina.ufg.br', ig: null },
