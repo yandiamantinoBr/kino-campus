@@ -158,16 +158,16 @@
     }
 
     .kc-gallery-thumbnails {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
       gap: 8px;
       margin-top: 15px;
       padding-bottom: 5px;
     }
 
     .kc-thumbnail {
-      width: 70px;
-      height: 70px;
+      width: 100%;
+      aspect-ratio: 1 / 1;
       object-fit: cover;
       border-radius: 8px;
       cursor: pointer;
