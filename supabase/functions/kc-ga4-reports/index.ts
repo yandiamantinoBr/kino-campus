@@ -1,4 +1,4 @@
-// KinoCampus -- Edge Function: kc-ga4-reports (v8.6.4)
+// KinoCampus -- Edge Function: kc-ga4-reports (v8.6.5)
 //
 // Server-side proxy for Google Analytics 4 Data API.
 //
@@ -24,6 +24,7 @@
 // Optional:
 //   - KC_GA4_CACHE_TTL_SEC     default 300 (5 min)
 //   - KC_GA4_ALLOWED_ORIGINS   default "*" (frontend pages in same origin)
+//   - KC_GA4_MAX_LIMIT         default 1000 (hard cap 10000)
 //
 // Auth for the caller:
 // - Caller must be authenticated as admin (profile.is_admin = true).
@@ -33,8 +34,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // ── Constants ────────────────────────────────────────────────────────────
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+const COMMON_CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Cache-Control": "no-store",
@@ -43,12 +43,45 @@ const CORS_HEADERS = {
 const GA4_SCOPE = "https://www.googleapis.com/auth/analytics.readonly";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DATA_API_BASE = "https://analyticsdata.googleapis.com/v1beta";
+const DEFAULT_MAX_LIMIT = 1000;
+const HARD_MAX_LIMIT = 10000;
+const DEFAULT_CACHE_TTL_SEC = 300;
+const MAX_CACHE_TTL_SEC = 3600;
+const MAX_RESPONSE_CACHE_ENTRIES = 50;
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-function json(status: number, body: Record<string, unknown>) {
+function readAllowedOrigins(): string[] {
+  const raw = (Deno.env.get("KC_GA4_ALLOWED_ORIGINS") ?? "*").trim() || "*";
+  return raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+}
+
+function isOriginAllowed(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true;
+  const allowed = readAllowedOrigins();
+  return allowed.includes("*") || allowed.includes(origin);
+}
+
+function corsHeadersFor(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") || "";
+  const allowed = readAllowedOrigins();
+  const headers: Record<string, string> = { ...COMMON_CORS_HEADERS };
+  if (allowed.includes("*")) {
+    headers["Access-Control-Allow-Origin"] = "*";
+  } else if (origin && allowed.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Vary"] = "Origin";
+  } else if (!origin && allowed.length > 0) {
+    headers["Access-Control-Allow-Origin"] = allowed[0];
+    headers["Vary"] = "Origin";
+  }
+  return headers;
+}
+
+function json(req: Request, status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeadersFor(req) },
   });
 }
 
@@ -65,6 +98,11 @@ function asText(v: unknown): string {
 function asNumber(v: unknown, fallback = 0): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function clampInteger(n: number, min: number, max: number): number {
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, Math.floor(n)));
 }
 
 // Strip trailing slashes for URL joining
@@ -215,7 +253,7 @@ function cacheGet(key: string): unknown | null {
 }
 
 function cacheSet(key: string, body: unknown, ttlSec: number): void {
-  if (responseCache.size > 50) {
+  if (responseCache.size > MAX_RESPONSE_CACHE_ENTRIES) {
     const firstKey = responseCache.keys().next().value;
     if (firstKey !== undefined) responseCache.delete(firstKey);
   }
@@ -227,7 +265,7 @@ async function callDataApi(
   saKey: ServiceAccountKey,
   propertyId: string,
   path: string,
-  body: Record<string, unknown>,
+  body: RunReportRequest,
 ): Promise<unknown> {
   const token = await getAccessToken(saKey);
   const url = `${DATA_API_BASE}/${trimPath(path)}:runReport`;
@@ -250,13 +288,27 @@ async function callDataApi(
 }
 
 // ── Request handlers ─────────────────────────────────────────────────────
-function buildRequestKey(body: Record<string, unknown>): string {
-  const stable = JSON.stringify(body, Object.keys(body).sort());
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    const encoded = JSON.stringify(value);
+    return encoded === undefined ? "null" : encoded;
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, item]) => item !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
+}
+
+function buildRequestKey(body: unknown): string {
+  const stable = stableStringify(body);
   let hash = 0;
   for (let i = 0; i < stable.length; i++) {
     hash = (hash * 31 + stable.charCodeAt(i)) | 0;
   }
-  return `runReport:${hash}`;
+  return `runReport:${hash >>> 0}`;
 }
 
 interface RunReportRequest {
@@ -270,7 +322,7 @@ interface RunReportRequest {
   metricFilter?: Record<string, unknown>;
 }
 
-function validateRequest(input: unknown): { ok: true; value: RunReportRequest } | { ok: false; error: string } {
+function validateRequest(input: unknown, maxLimit: number): { ok: true; value: RunReportRequest } | { ok: false; error: string } {
   if (!input || typeof input !== "object") return { ok: false, error: "body must be object" };
   const v = input as Record<string, unknown>;
 
@@ -297,9 +349,14 @@ function validateRequest(input: unknown): { ok: true; value: RunReportRequest } 
   }
 
   if (v.limit !== undefined) {
-    const n = Number(v.limit);
-    if (!Number.isFinite(n) || n < 1 || n > 250000) {
-      return { ok: false, error: "limit must be 1..250000" };
+    if (typeof v.limit !== "number" || !Number.isInteger(v.limit) || v.limit < 1 || v.limit > maxLimit) {
+      return { ok: false, error: `limit must be integer 1..${maxLimit}` };
+    }
+  }
+
+  if (v.offset !== undefined) {
+    if (typeof v.offset !== "number" || !Number.isInteger(v.offset) || v.offset < 0 || v.offset > 100000) {
+      return { ok: false, error: "offset must be integer 0..100000" };
     }
   }
 
@@ -307,51 +364,60 @@ function validateRequest(input: unknown): { ok: true; value: RunReportRequest } 
 }
 
 async function handleRunReport(
+  req: Request,
   saKey: ServiceAccountKey,
   propertyId: string,
   body: unknown,
 ): Promise<Response> {
-  const validation = validateRequest(body);
-  if (!validation.ok) return json(400, { error: validation.error });
+  const maxLimit = clampInteger(asNumber(getEnv("KC_GA4_MAX_LIMIT", String(DEFAULT_MAX_LIMIT)), DEFAULT_MAX_LIMIT), 1, HARD_MAX_LIMIT);
+  const validation = validateRequest(body, maxLimit);
+  if (!validation.ok) return json(req, 400, { error: validation.error });
 
-  const cacheTtl = asNumber(getEnv("KC_GA4_CACHE_TTL_SEC", "300"), 300);
+  const cacheTtl = clampInteger(asNumber(getEnv("KC_GA4_CACHE_TTL_SEC", String(DEFAULT_CACHE_TTL_SEC)), DEFAULT_CACHE_TTL_SEC), 0, MAX_CACHE_TTL_SEC);
   const cacheKey = buildRequestKey(validation.value);
   const cached = cacheGet(cacheKey);
-  if (cached) return json(200, { ok: true, cached: true, data: cached });
+  if (cached) return json(req, 200, { ok: true, cached: true, data: cached });
 
   try {
     const data = await callDataApi(saKey, propertyId, "", validation.value);
     cacheSet(cacheKey, data, cacheTtl);
-    return json(200, { ok: true, cached: false, data });
+    return json(req, 200, { ok: true, cached: false, data });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const isAuth = msg.includes("401") || msg.includes("403") || msg.includes("token");
-    return json(isAuth ? 502 : 500, { ok: false, error: msg });
+    return json(req, isAuth ? 502 : 500, { ok: false, error: msg });
   }
 }
 
 // ── Router ───────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    if (!isOriginAllowed(req)) {
+      return json(req, 403, { error: "origin_not_allowed" });
+    }
+    return new Response(null, { status: 204, headers: corsHeadersFor(req) });
+  }
+
+  if (!isOriginAllowed(req)) {
+    return json(req, 403, { error: "origin_not_allowed" });
   }
 
   const path = new URL(req.url).pathname.replace(/\/$/, "");
   const isRunReport = path.endsWith("/runReport") || path === "" || path.endsWith("/kc-ga4-reports");
 
   if (req.method !== "POST" || !isRunReport) {
-    return json(405, { error: "method_not_allowed" });
+    return json(req, 405, { error: "method_not_allowed" });
   }
 
   const caller = await resolveCaller(req);
   if (!caller.isAdmin) {
-    return json(403, { error: "admin_required" });
+    return json(req, 403, { error: "admin_required" });
   }
 
   const saKeyJson = getEnv("KC_GA4_SA_KEY");
   const propertyId = getEnv("KC_GA4_PROPERTY_ID");
   if (!saKeyJson || !propertyId) {
-    return json(503, {
+    return json(req, 503, {
       error: "missing_config",
       detail: "Set KC_GA4_SA_KEY and KC_GA4_PROPERTY_ID via supabase secrets set",
     });
@@ -364,15 +430,15 @@ Deno.serve(async (req: Request) => {
       throw new Error("SA key missing private_key or client_email");
     }
   } catch (e) {
-    return json(503, { error: "invalid_sa_key", detail: e instanceof Error ? e.message : String(e) });
+    return json(req, 503, { error: "invalid_sa_key", detail: e instanceof Error ? e.message : String(e) });
   }
 
   let body: unknown;
   try {
     body = await req.json();
   } catch (_) {
-    return json(400, { error: "invalid_json" });
+    return json(req, 400, { error: "invalid_json" });
   }
 
-  return await handleRunReport(saKey, propertyId, body);
+  return await handleRunReport(req, saKey, propertyId, body);
 });
