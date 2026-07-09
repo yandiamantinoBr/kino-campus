@@ -96,7 +96,9 @@
       const direct = Array.isArray(r.imagens) ? r.imagens : (Array.isArray(r.images) ? r.images : []);
       // v13.6.2: também ler galerias em metadata (gallery_image_urls / galleryImageUrls / image_urls)
       // — comum em posts manuais e em posts vindos de cadu-publish onde só metadata é preenchido.
-      const metaGallery = pickFirstNonEmpty([
+      // pickFirstNonEmpty só devolve 1 valor, aqui precisamos de um ARRAY, então pegamos o primeiro
+      // candidato que já seja array.
+      const metaGalleryCandidates = [
         meta && meta.gallery_image_urls,
         meta && meta.galleryImageUrls,
         meta && meta.image_urls,
@@ -104,8 +106,11 @@
         r.gallery_image_urls,
         r.galleryImageUrls,
         r.image_urls,
-      ]);
-      const metaGalleryArr = Array.isArray(metaGallery) ? metaGallery : [];
+      ];
+      let metaGalleryArr = [];
+      for (const cand of metaGalleryCandidates) {
+        if (Array.isArray(cand) && cand.length) { metaGalleryArr = cand; break; }
+      }
       const fallback = pickFirstNonEmpty([r.cover_url, r.coverUrl, r.image_url, r.imageUrl, meta.cover_url, meta.coverUrl, meta.image_url, meta.imageUrl]);
       // Prioridade: direct (imagens) > metaGallery (gallery_image_urls) > fallback (image_url único)
       let values;

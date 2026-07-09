@@ -87,13 +87,17 @@
     let html = escapeHtml(source);
 
     // Links [label](url) — extrair antes para não interferir com outros patterns
+    // Aceita https://, http://, mailto:, tel: (v13.6.2)
     const links = [];
-    html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, function (_, label, url) {
+    html = html.replace(/\[(.+?)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+|tel:[^\s)]+)\)/g, function (_, label, url) {
       const safeUrl = String(url || '').trim();
       const safeLabel = String(label || '').trim() || safeUrl;
       const token = `__KC_LINK_${links.length}__`;
-      const isMailto = safeUrl.toLowerCase().startsWith('mailto:');
-      links.push(isMailto
+      const lower = safeUrl.toLowerCase();
+      const isMailto = lower.startsWith('mailto:');
+      const isTel = lower.startsWith('tel:');
+      // mailto:/tel: são navegação interna do device, sem target=_blank
+      links.push((isMailto || isTel)
         ? `<a href="${safeUrl}">${safeLabel}</a>`
         : `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`);
       return token;
