@@ -239,7 +239,7 @@
           });
           thumbs.appendChild(img);
         });
-        thumbs.style.display = images.length > 1 ? 'flex' : 'none';
+        thumbs.style.display = images.length > 1 ? 'grid' : 'none';
       }
     } else {
       if (mainImg) mainImg.style.display = 'none';
