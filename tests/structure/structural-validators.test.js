@@ -54,11 +54,14 @@ describe('validate-repository-structure.js — integridade', function () {
     expect(STRUCT_SCRIPT).toContain('validate-public-routes.js');
   });
 
-  test('verifica todos os 22 HTMLs', function () {
+  test('verifica todos os HTMLs canônicos', function () {
     expect(STRUCT_SCRIPT).toContain('PUBLIC_HTMLS');
     expect(STRUCT_SCRIPT).toContain('ADMIN_HTMLS');
     expect(STRUCT_SCRIPT).toContain('index.html');
+    expect(PAGE_MANIFEST.PUBLIC_PAGES).toContain('404.html');
+    expect(PAGE_MANIFEST.PUBLIC_PAGES).toContain('mensagens.html');
     expect(PAGE_MANIFEST.ADMIN_PAGES).toContain('admin/privacy-analytics.html');
+    expect(PAGE_MANIFEST.ADMIN_PAGES).toContain('admin/cadu.html');
   });
 
   test('sai com código 0 em sucesso, 1 em falha', function () {
@@ -115,7 +118,7 @@ describe('validate-script-chains.js — integridade', function () {
 
 // ── 3. validate-script-chains.js — cadeia real ──────────────────────────────
 
-describe('validate-script-chains.js — cadeia real nos 22 HTMLs', function () {
+describe('validate-script-chains.js — cadeia real nos HTMLs canônicos', function () {
 
   var bootChain = [
     'boot/kc-constants.js',
@@ -168,12 +171,15 @@ describe('validate-public-routes.js — integridade', function () {
     expect(ROUTES_SCRIPT).toContain("'use strict';");
   });
 
-  test('define 17 rotas públicas e 5 admin', function () {
+  test('define rotas públicas e admin pelo manifest compartilhado', function () {
     expect(ROUTES_SCRIPT).toContain('PUBLIC_ROUTES');
     expect(ROUTES_SCRIPT).toContain('ADMIN_ROUTES');
     expect(ROUTES_SCRIPT).toContain('PAGE_MANIFEST.PUBLIC_ROUTES');
     expect(ROUTES_SCRIPT).toContain('PAGE_MANIFEST.ADMIN_ROUTES');
+    expect(PAGE_MANIFEST.PUBLIC_ROUTES.map(function (route) { return route.file; })).toContain('404.html');
+    expect(PAGE_MANIFEST.PUBLIC_ROUTES.map(function (route) { return route.file; })).toContain('mensagens.html');
     expect(PAGE_MANIFEST.ADMIN_ROUTES.map(function (route) { return route.file; })).toContain('admin/privacy-analytics.html');
+    expect(PAGE_MANIFEST.ADMIN_ROUTES.map(function (route) { return route.file; })).toContain('admin/cadu.html');
     expect(PAGE_MANIFEST.ADMIN_ROUTES.map(function (route) { return route.file; })).toContain('admin/ga4-dashboard.html');
   });
 

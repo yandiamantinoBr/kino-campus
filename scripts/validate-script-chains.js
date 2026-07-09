@@ -3,7 +3,7 @@
  * validate-script-chains.js — KinoCampus v13.2.0
  *
  * Valida que os scripts de boot obrigatórios aparecem na ordem correta
- * em todos os 22 HTMLs canônicos (17 públicos + 5 admin).
+ * em todos os HTMLs canônicos declarados em scripts/admin-pages.manifest.js.
  *
  * Cadeia validada (por posição no HTML):
  *   kc-constants.js → kc-env.js → kc-feature-flags.js →

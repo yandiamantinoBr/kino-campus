@@ -43,7 +43,7 @@ O monólito `styles.css` segue sendo o principal hotspot visual: 11.982 linhas, 
 | `styles.css` | tokens, base, layout global, componentes, feed, cards, ranking, módulos públicos e patches responsivos remanescentes | 30 HTMLs descobertos |
 | `kc-theme-boot.css` | CSS critico anti-FOUC/CLS durante aplicacao inicial de tema | 30 HTMLs descobertos |
 | `kc-chat-shortcut.css` | atalho global de mensagens injetado por `kc-notifications.js` | 30 HTMLs descobertos |
-| `admin-shell.css` | shell e componentes das 6 paginas admin | 6 HTMLs admin |
+| `admin-shell.css` | shell e componentes das paginas admin canônicas | HTMLs admin no manifest |
 | `kc-public-shell.css` | profile, settings, account setup, legal/privacidade/transparencia, ajuda, mensagens e 404 | 12 paginas, 13 links |
 | `kc-sidebar-context.css` | títulos de módulo, contexto compacto da home e diálogo contextual | home + 6 feeds de módulo |
 | `kc-error-page.css` | composição visual isolada da página de erro | `404.html` |
@@ -51,8 +51,8 @@ O monólito `styles.css` segue sendo o principal hotspot visual: 11.982 linhas, 
 | `product-lightbox.css` | lightbox de midia do produto | `_product.html` |
 | `kc-chat.css` | UI dedicada de conversa | `mensagens.html` |
 
-`mensagens.html` existe na raiz e carrega CSS de producao, mas ainda nao faz parte do manifest
-canonico de 26 paginas validado por `scripts/admin-pages.manifest.js`.
+`404.html`, `mensagens.html` e `admin/cadu.html` fazem parte do manifest canônico
+validado por `scripts/admin-pages.manifest.js`.
 
 ---
 

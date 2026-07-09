@@ -2,6 +2,7 @@
 
 const PUBLIC_PAGES = Object.freeze([
   'index.html',
+  '404.html',
   '_product.html',
   'account-setup.html',
   'achados-perdidos.html',
@@ -12,6 +13,7 @@ const PUBLIC_PAGES = Object.freeze([
   'create-post.html',
   'editorial.html',
   'eventos.html',
+  'mensagens.html',
   'moradia.html',
   'my-posts.html',
   'ods.html',
@@ -30,6 +32,7 @@ const ADMIN_PAGES = Object.freeze([
   'admin/moderation.html',
   'admin/reports.html',
   'admin/banners.html',
+  'admin/cadu.html',
   'admin/help-requests.html',
   'admin/privacy-analytics.html',
   'admin/ga4-dashboard.html',
@@ -40,6 +43,7 @@ const ADMIN_ROUTES = Object.freeze([
   Object.freeze({ route: '/admin/moderation', file: 'admin/moderation.html', label: 'Moderacao' }),
   Object.freeze({ route: '/admin/reports', file: 'admin/reports.html', label: 'Denuncias' }),
   Object.freeze({ route: '/admin/banners', file: 'admin/banners.html', label: 'Banners' }),
+  Object.freeze({ route: '/admin/cadu', file: 'admin/cadu.html', label: 'Cadu' }),
   Object.freeze({ route: '/admin/help-requests', file: 'admin/help-requests.html', label: 'Pedidos de ajuda' }),
   Object.freeze({ route: '/admin/privacy-analytics', file: 'admin/privacy-analytics.html', label: 'Privacidade e Analytics' }),
   Object.freeze({ route: '/admin/ga4-dashboard', file: 'admin/ga4-dashboard.html', label: 'GA4' }),
