@@ -29,10 +29,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -72,3 +72,33 @@ jobs:
           name: playwright-report
           path: output/playwright-report
           retention-days: 7
+
+  database-contracts:
+    name: Supabase reset, lint and pgTAP
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Rebuild schema from active migrations
+        run: supabase db reset --local --no-seed
+
+      - name: Lint database functions
+        run: supabase db lint --local --level error --fail-on error
+
+      - name: Run pgTAP contracts
+        run: supabase test db --local supabase/tests
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup
