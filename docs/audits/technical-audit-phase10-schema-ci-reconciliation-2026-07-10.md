@@ -6,6 +6,12 @@
 **Projeto Supabase observado:** `wacyrkwhkvzwkqpolrbg`
 **Modo remoto:** somente leitura; sem migration, secret, deploy ou alteração de produção
 
+> **Atualização pós-merge (2026-07-10):** a PR #641 foi incorporada como `e84d81d8` e o novo
+> workflow publicou duas Edge Functions. O deploy revelou uma regressão confirmada de
+> `verify_jwt` no dispatcher. O snapshot abaixo permanece como registro da evidência anterior ao
+> merge; para o estado posterior e a correção, consulte
+> [`technical-audit-edge-auth-regression-2026-07-10.md`](./technical-audit-edge-auth-regression-2026-07-10.md).
+
 ## 1. Síntese executiva
 
 O repositório não reconstruía integralmente o schema usado em produção. O reset local possuía
