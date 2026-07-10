@@ -205,7 +205,10 @@ function publishReadinessIssues(item) {
   const desc = item.formattedDescription || item.description || '';
   const blocking = Array.isArray(item.qualityBlockingIssues) ? item.qualityBlockingIssues : [];
   if (blocking.length) issues.push(...blocking);
-  if (item.needsReview === true) issues.push('needs_review');
+  // 2026-07-10: needsReview sozinho não bloqueia publish — só bloqueia se
+  // combinado com weak_description. Permite publicar quando AI está fora do ar
+  // (descrição crua é usada como fallback e é boa o suficiente).
+  if (item.needsReview === true && (!desc || desc.length < 80)) issues.push('needs_review_weak');
   if (!desc || desc.length < 80) issues.push('weak_description');
   if (dates.isExpired === true || dates.expired === true || item.expired === true) issues.push('expired');
   if (module === 'eventos' && !hasFutureDate(item)) issues.push('no_future_event_date');
