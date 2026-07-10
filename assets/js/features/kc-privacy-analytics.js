@@ -185,7 +185,9 @@
     try {
       const response = await client.rpc('kc_track_privacy_event', args);
       if (response && response.error) return { ok: false, error: response.error };
-      return { ok: true, data: response && response.data };
+      const data = response && response.data;
+      if (data && data.ok === false) return { ok: false, code: data.code || 'RPC_REJECTED', data };
+      return { ok: true, data };
     } catch (error) {
       return { ok: false, error };
     }
@@ -225,8 +227,10 @@
         p_source: sanitizeScalar(prefs.source || 'user', 48),
       });
       if (response && response.error) return { ok: false, error: response.error };
+      const data = response && response.data;
+      if (data && data.ok === false) return { ok: false, code: data.code || 'RPC_REJECTED', data };
       try { storage.setItem(CONSENT_SIGNATURE_KEY, signature); } catch (_) { }
-      return { ok: true, data: response && response.data };
+      return { ok: true, data };
     } catch (error) {
       return { ok: false, error };
     }

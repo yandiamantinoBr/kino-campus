@@ -1,7 +1,7 @@
 # GitHub Actions — Auto-deploy Edge Functions on push
 #
-# Runs after push to kinocampus-V75.0-foundations when Edge Function source changes.
-# Uses supabase CLI to deploy (no manual step needed).
+# Runs after Essential Validation succeeds for a base-branch push.
+# Pull requests never deploy Edge Functions.
 # 2026-07-08: created because we discovered Edge Function v11 was running OLD code from
 # 2026-05 while commits to supabase/functions/cadu-publish/ were not deployed. This was
 # the root cause of "literal ..." and "UFG —" prefix reaching production.
@@ -9,11 +9,10 @@
 name: Deploy Edge Functions
 
 on:
-  push:
+  workflow_run:
+    workflows: [Essential Validation]
     branches: [kinocampus-V75.0-foundations]
-    paths:
-      - 'supabase/functions/**'
-      - '.github/workflows/edge-deploy.yml'
+    types: [completed]
   workflow_dispatch:
     inputs:
       function_name:
@@ -27,43 +26,89 @@ permissions:
 jobs:
   detect-changes:
     name: Detect changed functions
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       matrix: ${{ steps.detect.outputs.matrix }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 50
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Detect changed edge functions
         id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_FUNCTION: ${{ inputs.function_name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # If manual dispatch with input, use that
-          if [ -n "${{ inputs.function_name }}" ]; then
-            echo "matrix={\"include\":[{\"function\":\"${{ inputs.function_name }}\"}]}" >> "$GITHUB_OUTPUT"
+          list_all_functions() {
+            find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name _shared \
+              -printf '%f\n' | sort
+          }
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            REQUESTED="$REQUESTED_FUNCTION"
+            if [ -n "$REQUESTED" ]; then
+              if ! [[ "$REQUESTED" =~ ^[a-z0-9_-]+$ ]] || [ ! -d "supabase/functions/$REQUESTED" ]; then
+                echo "Invalid Edge Function name: $REQUESTED" >&2
+                exit 1
+              fi
+              CHANGED="$REQUESTED"
+            else
+              CHANGED=$(list_all_functions | paste -sd, -)
+            fi
+          else
+            if ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Invalid validated commit SHA: $HEAD_SHA" >&2
+              exit 1
+            fi
+
+            CHANGED_FILES=$(git diff --name-only "${HEAD_SHA}^" "$HEAD_SHA")
+            if grep -Eq '^supabase/functions/_shared/|^supabase/functions/[^/]+$' <<< "$CHANGED_FILES"; then
+              echo 'Shared Edge Function code or configuration changed; all functions must be rebuilt.'
+              CHANGED=$(list_all_functions | paste -sd, -)
+            else
+              CHANGED=$(awk -F/ \
+                '$1 == "supabase" && $2 == "functions" && $3 != "_shared" { print $3 }' \
+                <<< "$CHANGED_FILES" | sort -u | paste -sd, -)
+            fi
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+            echo 'No Edge Function changes detected.'
             exit 0
           fi
-          # Otherwise detect changed files since last commit
-          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -E '^supabase/functions/' | awk -F/ '{print $3}' | sort -u | tr '\n' ',' | sed 's/,$//')
-          if [ -z "$CHANGED" ]; then
-            # Fallback: deploy all functions
-            CHANGED=$(ls supabase/functions/ | grep -v _shared | tr '\n' ',' | sed 's/,$//')
-          fi
+
           echo "Changed functions: $CHANGED"
-          # Build matrix
           MATRIX=""
-          for fn in $(echo $CHANGED | tr ',' ' '); do
-            if [ -d "supabase/functions/$fn" ]; then
-              MATRIX="${MATRIX}{\"function\":\"$fn\"},"
+          for fn in $(echo "$CHANGED" | tr ',' ' '); do
+            if ! [[ "$fn" =~ ^[a-z0-9_-]+$ ]]; then
+              echo "Invalid Edge Function directory name: $fn" >&2
+              exit 1
             fi
+            if [ ! -d "supabase/functions/$fn" ]; then
+              echo "Edge Function '$fn' was removed. Remote deletion requires an explicit manual operation." >&2
+              exit 1
+            fi
+            MATRIX="${MATRIX}{\"function\":\"$fn\"},"
           done
           MATRIX="${MATRIX%,}"
           echo "matrix={\"include\":[${MATRIX}]}" >> "$GITHUB_OUTPUT"
+          echo 'has_changes=true' >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy ${{ matrix.function }}
     needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -71,18 +116,18 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.105.0
 
       - name: Link project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          # O Supabase CLI lê SUPABASE_ACCESS_TOKEN do env automaticamente
-          supabase link --project-ref wacyrkwhkvzwkqpolrbg || true
+        run: supabase link --project-ref wacyrkwhkvzwkqpolrbg
 
       - name: Deploy edge function ${{ matrix.function }}
         env:

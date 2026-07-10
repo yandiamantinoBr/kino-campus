@@ -320,6 +320,13 @@ describe('KCAds feed monetization', () => {
     });
   });
 
+  test('protege a carga inicial contra corrida entre authchange e fallback', () => {
+    const source = read('assets/js/features/kc-ads.js');
+    expect(source).toContain('let initialLoadStarted = false;');
+    expect(source).toContain('if (initialLoadStarted) return;');
+    expect(source).toContain('initialLoadStarted = true;');
+  });
+
   test('migration define tabela, RPCs e eventos de anuncios', () => {
     const sql = read('supabase/migrations/_archive-v75/20260605010000_feed_ads.sql');
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.ad_campaigns');

@@ -5,6 +5,8 @@
 **Base observada após pull/rebase:** `kinocampus-V75.0-foundations` em `6755ec1a`  
 **Escopo desta iteração:** aprofundar Fase 1, executar Fase 2 e iniciar Fase 3 com correções pequenas, seguras e testadas.
 
+**Continuação:** as evidências das Fases 4 a 6, incluindo performance, segurança e operação GitHub-Vercel-Supabase, estão registradas em `docs/audits/technical-audit-phase4-6-2026-07-09.md`.
+
 ## Resumo executivo
 
 O repositório é uma aplicação web estática/serverless em JavaScript vanilla, hospedada na Vercel, com Supabase como backend principal e Edge Functions para fluxos administrativos/privados. A base também contém um subsistema Cadu/OpenClaw via proxies Vercel (`api/cadu/*`) e um serviço Node `services/cadu-ufg-publisher`.

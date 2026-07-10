@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 
 function read(file) {
-  return fs.readFileSync(path.join(ROOT, file), 'utf8');
+  return fs.readFileSync(path.join(ROOT, file), 'utf8').replace(/\r\n?/g, '\n');
 }
 
 describe('chat continuity contract', () => {
@@ -174,5 +174,26 @@ describe('chat continuity contract', () => {
     expect(migration).toContain('create or replace function public.kc_chat_set_message_reply');
     expect(migration).toContain('reply_wrong_conversation');
     expect(migration).toContain('grant execute on function public.kc_chat_set_message_reply(uuid, uuid) to authenticated;');
+  });
+
+  test('active grant hardening keeps chat RPCs authenticated-only after wrapper recreation', () => {
+    const migration = read('supabase/migrations/20260709000000_harden_chat_rpc_execute_grants.sql');
+    const functions = [
+      'kc_private.kc_chat_list_messages(uuid, integer, timestamp with time zone)',
+      'kc_private.kc_chat_set_message_reply(uuid, uuid)',
+      'kc_private.kc_chat_toggle_reaction(uuid, text)',
+      'public.kc_chat_list_messages(uuid, integer, timestamp with time zone)',
+      'public.kc_chat_set_message_reply(uuid, uuid)',
+      'public.kc_chat_toggle_reaction(uuid, text)',
+    ];
+
+    functions.forEach((functionSignature) => {
+      expect(migration).toContain(
+        `revoke all on function ${functionSignature}\n  from public, anon, authenticated;`
+      );
+      expect(migration).toContain(
+        `grant execute on function ${functionSignature}\n  to authenticated;`
+      );
+    });
   });
 });

@@ -1,7 +1,8 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2.105.4";
 
 type Channel = "email" | "whatsapp";
 type JsonObject = Record<string, unknown>;
+type ServiceClient = SupabaseClient<any, "public", "public", any, any>;
 
 type OutboxRow = {
   id: string;
@@ -430,7 +431,7 @@ function buildWhatsAppEnvelope(
 }
 
 async function getRecentWhatsAppWindow(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   userId: string,
   providerConfig: WhatsAppProviderConfig,
 ) {
@@ -464,7 +465,7 @@ async function getRecentWhatsAppWindow(
 }
 
 async function claimDispatchBatch(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   channel: Channel,
   limit: number,
   workerId: string,
@@ -480,7 +481,7 @@ async function claimDispatchBatch(
   }
 
   return Array.isArray(data)
-    ? data.map((row) => ({
+    ? data.map((row: Record<string, unknown>) => ({
       ...row,
       payload: normalizeJsonObject((row as Record<string, unknown>).payload),
     })) as OutboxRow[]
@@ -488,7 +489,7 @@ async function claimDispatchBatch(
 }
 
 async function recordAttempt(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   outboxId: string,
   status: "sent" | "failed" | "blocked" | "cancelled" | "skipped",
   provider: string,
@@ -523,7 +524,7 @@ function computeNextAttemptAt(previousAttempts: number) {
   return new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 }
 
-async function getDispatchRuntimeConfig(supabase: ReturnType<typeof createClient>) {
+async function getDispatchRuntimeConfig(supabase: ServiceClient) {
   try {
     const { data, error } = await supabase
       .from("notification_dispatch_runtime")
@@ -558,7 +559,7 @@ async function getDispatchRuntimeConfig(supabase: ReturnType<typeof createClient
 }
 
 async function persistDispatchRun(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   payload: {
     executionId: string;
     source: string;
@@ -686,7 +687,7 @@ async function dispatchEmail(
 }
 
 async function sendWhatsAppWithTwilio(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   row: OutboxRow,
   providerConfig: WhatsAppProviderConfig,
 ): Promise<DispatchResult> {
@@ -772,7 +773,7 @@ async function sendWhatsAppWithTwilio(
 }
 
 async function dispatchWhatsApp(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   row: OutboxRow,
   providerConfig: WhatsAppProviderConfig,
 ): Promise<DispatchResult> {
@@ -792,7 +793,7 @@ async function dispatchWhatsApp(
 }
 
 async function processDispatchChannel(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   channel: Channel,
   batchLimit: number,
   executionId: string,
