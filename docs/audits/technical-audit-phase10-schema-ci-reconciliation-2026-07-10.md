@@ -11,6 +11,13 @@
 > `verify_jwt` no dispatcher. O snapshot abaixo permanece como registro da evidência anterior ao
 > merge; para o estado posterior e a correção, consulte
 > [`technical-audit-edge-auth-regression-2026-07-10.md`](./technical-audit-edge-auth-regression-2026-07-10.md).
+>
+> **Atualização de paridade (2026-07-10 16:45 UTC):** o incidente Edge foi remediado, mas o
+> schema remoto continua sem as migrations incrementais de reconciliação. Uma revisão posterior
+> também identificou que `20260710015000` voltaria a expor uma função administrativa
+> `SECURITY DEFINER` no schema público. A migration incremental `20260710164556` preserva o
+> wrapper `SECURITY INVOKER` que já existe em produção. Evidências e validação atualizadas:
+> [`technical-audit-production-parity-followup-2026-07-10.md`](./technical-audit-production-parity-followup-2026-07-10.md).
 
 ## 1. Síntese executiva
 
@@ -24,7 +31,7 @@ Esta rodada reconciliou o **código versionado e o banco local**, não a produç
 | Área | Antes | Estado desta branch | Produção |
 |---|---|---|---|
 | Schema público | Reset local incompleto em relação ao runtime | 43 tabelas reconstruídas | 42 tabelas; ainda sem `privacy_consent_events` |
-| Banco em CI | Sem reset, lint ou pgTAP | Reset + lint + 106 contratos pgTAP | Não alterado |
+| Banco em CI | Sem reset, lint ou pgTAP | Reset + lint + 111 contratos pgTAP | Não alterado |
 | Edge Functions | Sem type-check integral em CI | 8 entrypoints aprovados por Deno | 8 funções ativas; não redeployadas por esta branch |
 | RPCs administrativas | Grants amplos herdados no reset; 7 RPCs anon no remoto | Nenhuma `kc_admin_*` executável por `anon` no reset | 7 RPCs de anúncios ainda executáveis por `anon` |
 | Privacidade admin | Ausência remota virava zero aparente | Ausência é exibida como `N/D`/indisponível | Tabela/RPC de consentimento continuam ausentes |
@@ -123,7 +130,15 @@ Contratos:
 - remove a leitura descartada que causava aviso do linter;
 - faz update de banner inexistente falhar explicitamente, sem auditoria com ID nulo.
 
-Contrato: `supabase/tests/admin_rpc_hardening_test.sql` (10 testes).
+Contrato: `supabase/tests/admin_rpc_hardening_test.sql` (15 testes após a migration de fronteira).
+
+### `20260710164556_preserve_admin_banner_invoker_boundary.sql`
+
+- mantém a implementação privilegiada em `kc_private`;
+- restaura o RPC público como wrapper `SECURITY INVOKER`;
+- evita o warning 0029 do Advisor no estado final da cadeia;
+- reaplica grants explícitos para `authenticated` e `service_role`;
+- preserva as correções de comportamento e auditoria da migration anterior.
 
 ## 4. Edge Functions
 
@@ -179,9 +194,9 @@ validado com `actionlint 1.7.7`.
 |---|---|
 | `supabase db reset --local --no-seed` | Cadeia completa aplicada do zero |
 | `supabase db lint --local --level warning` | Sem erros ou avisos |
-| `supabase test db --local supabase/tests` | 4 arquivos, 106 testes aprovados |
+| `supabase test db --local supabase/tests` | 4 arquivos, 111 testes aprovados |
 | Deno check | 8 de 8 Edge Functions aprovadas |
-| `npm run check:all` | 207 suítes, 3.922 testes e 3 snapshots aprovados |
+| `npm run check:all` | 208 suítes, 3.929 testes e 3 snapshots aprovados |
 | Playwright Chromium | 85 de 85 cenários aprovados |
 | `actionlint` | 0 achados |
 | `npm audit --omit=dev` | 0 vulnerabilidades de produção |
@@ -207,8 +222,8 @@ registry. Portanto, não há conclusão nova sobre advisories de desenvolvimento
 
 1. Criar uma branch Supabase de preview; a criação possui custo e exige confirmação do usuário.
 2. Rebasear essa branch sobre a produção imediatamente antes do teste.
-3. Aplicar as quatro migrations na ordem versionada, nunca o baseline sintético.
-4. Executar os 106 pgTAP e repetir consultas de ACL, RLS, índices e contagens.
+3. Aplicar as cinco migrations na ordem versionada, nunca o baseline sintético.
+4. Executar os 111 pgTAP e repetir consultas de ACL, RLS, índices e contagens.
 5. Testar admin de privacidade, caronas, Sites UFG/Cadu, busca admin, convites e banners.
 6. Testar anon, authenticated, dono e admin onde aplicável.
 7. Capturar definições remotas anteriores das funções substituídas para rollback auditável.

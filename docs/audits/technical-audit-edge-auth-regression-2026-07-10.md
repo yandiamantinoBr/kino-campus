@@ -6,6 +6,14 @@
 **Projeto Supabase:** `wacyrkwhkvzwkqpolrbg`
 **Modo remoto desta análise:** somente leitura; nenhum deploy, secret ou dado foi alterado
 
+> **Atualização pós-rollout (2026-07-10 16:40 UTC):** a PR #644 foi incorporada externamente
+> como `47b09cbe`. O workflow validado publicou `kc-invite-user` v13 e
+> `kc-dispatch-notification-outbox` v13, ambas `ACTIVE` e com `verify_jwt=false`. Entre 15:05 e
+> 16:40 UTC, 20 execuções `pg_cron` foram registradas como `completed`; os 19 registros v13
+> disponíveis nos Edge logs responderam HTTP 200. As seções abaixo preservam a investigação
+> pré-remediação. O estado consolidado e os riscos residuais estão em
+> [`technical-audit-production-parity-followup-2026-07-10.md`](./technical-audit-production-parity-followup-2026-07-10.md).
+
 ## 1. Resumo executivo
 
 O deploy automático posterior ao merge da PR #641 publicou a versão 12 de
