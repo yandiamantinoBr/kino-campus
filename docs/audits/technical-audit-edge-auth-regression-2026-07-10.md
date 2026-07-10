@@ -66,6 +66,28 @@ credenciais e testes próprios.
 faz `auth.getUser()` e a autorização administrativa dentro do handler para preservar o preflight
 CORS. Sem configuração versionada, um futuro deploy também poderia alterar esse contrato.
 
+### 4.1 Auditoria dos oito modos de autenticação
+
+O uso de autenticação dentro de um handler não implica, sozinho, que o gateway deva ser
+desabilitado. O contrato foi classificado pelo chamador real e pelo estado remoto:
+
+| Função | Remoto observado | Contrato versionado/esperado | Evidência principal |
+|---|---|---|---|
+| `cadu-publish` | `true` | `true` por default | publisher envia JWT; v20 publicou 2 posts depois do deploy com esse modo |
+| `kc-account-erasure` | `true` | `true` por default | cliente Supabase envia JWT; handler exige admin |
+| `kc-dispatch-notification-outbox` | `true` | **`false` explícito** | cron envia apenas `x-kc-dispatch-secret`; remoto responde 401 |
+| `kc-external-access-decide` | `true` | `true` por default | cliente Supabase envia JWT; handler revalida sessão |
+| `kc-ga4-reports` | `true` | `true` por default | dashboard envia Bearer; handler exige perfil admin |
+| `kc-help-request-notify` | `true` | `true` por default | `functions.invoke` autenticado; handler usa service role após o gateway |
+| `kc-invite-user` | `false` | **`false` explícito** | decisão histórica de CORS; handler revalida JWT e admin |
+| `notify-admin-reports-threshold` | `true` | `true` por default | trigger prevê Bearer de gateway e assinatura HMAC própria |
+
+O comentário no topo de `cadu-publish/index.ts` que afirma `verify_jwt=false` é documentação
+legada. O estado remoto `true` foi preservado porque há prova de funcionamento posterior ao
+deploy e ele adiciona uma camada de validação. Alterar apenas esse comentário faria o detector
+redeployar a função; a limpeza deve acompanhar uma mudança funcional futura do Cadu, não ampliar
+o rollout deste incidente.
+
 ## 5. Correção versionada nesta branch
 
 - declara `verify_jwt=false` para as duas funções de autenticação interna;
@@ -114,4 +136,3 @@ funcional.
 | P1 | Decidir e testar provedores externos | fila pronta não é entregue com providers ausentes |
 | P2 | Adicionar testes HTTP das Edge Functions | type-check não valida CORS, gateway nem auth runtime |
 | P2 | Registrar versão, SHA e modo JWT por deploy | reduz drift entre Git, CLI e estado remoto |
-

@@ -157,7 +157,7 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 Serviço externo em `services/cadu-ufg-publisher/` (14 módulos Node):
 
 - **Publicação automática** de oportunidades acadêmicas UFG via cron externo
-- **Edge Function `cadu-publish`** (v7) — JWT interno com conta dedicada, `verify_jwt=false`
+- **Edge Function `cadu-publish`** — gateway e handler validam o JWT da conta dedicada; o handler também exige allowlist de publisher confiável
 - **Quality gates**: anti-SVG, anti-CDN temporária, anti-resumo-genérico, anti-link-morto, anti-prazo-vencido, score thresholds públicos
 - **Anti-flood** com isenção para bot confiável (PR #529)
 - **Cobertura**: 100+ produtos no `/sitemap.xml` publicados pelo Cadu
@@ -169,7 +169,7 @@ Padrão de produção sério com 4 status e retry desacoplado:
 - `notification_delivery_outbox` (status: `queued`/`processing`/`sent`/`failed`/`blocked`/`cancelled`/`skipped`)
 - `kc_claim_notification_delivery_batch` (claim atômico) + `kc_record_notification_delivery_attempt` (histórico)
 - Scheduler pg_cron a cada 5 min consome via `pg_net.http_post` chamando `kc-dispatch-notification-outbox`
-- **Fail-closed** se `app.settings.kc_notify_*` ausentes ou secrets `KC_NOTIFICATION_DISPATCH_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` ausentes
+- **Fail-closed** se o runtime privado/fallback do dispatcher ou os secrets `KC_NOTIFICATION_DISPATCH_SECRET`/`SUPABASE_SERVICE_ROLE_KEY` estiverem ausentes
 - Canais: e-mail (Resend) + WhatsApp (Twilio), ambos gated por secrets
 
 ### Helpers runtime
@@ -281,25 +281,31 @@ Em produção, `driver = "supabase"` é obrigatório. `local` é apenas para des
 
 ### 4) Edge Functions
 
-Verificação remota (2026-06-22): o projeto Supabase `Kino Campus` (`wacyrkwhkvzwkqpolrbg`, West US/Oregon) tem **7 Edge Functions deployadas** (todas `ACTIVE`):
+Verificação remota em 2026-07-10: o projeto Supabase `Kino Campus`
+(`wacyrkwhkvzwkqpolrbg`, West US/Oregon) possui **8 Edge Functions `ACTIVE`**. Versões numéricas
+são estado de deploy, não contrato de código; consulte a Management API/CLI durante um diagnóstico.
 
-| Função | Versão | Função |
+| Função | JWT no gateway | Responsabilidade |
 |---|---|---|
-| `cadu-publish` | 7 | Publicação automática via Cadu Bot (Node CLI externo). JWT interno, `verify_jwt=false` |
-| `kc-account-erasure` | 6 | LGPD Art. 18 VI — exclusão de conta em 2 passos com confirmação por e-mail |
-| `kc-dispatch-notification-outbox` | 6 | Despacho de notificações via outbox (canal e-mail Resend + WhatsApp Twilio, gated por secrets) |
-| `kc-external-access-decide` | 6 | Decisão de acesso externo (LGPD) — usado por admin para aprovar/negar pedidos |
-| `kc-help-request-notify` | 5 | Notificação de help requests criados por usuários (canal admin) |
-| `kc-invite-user` | 6 | Convite de novos usuários (gated por domínio UFG) |
-| `notify-admin-reports-threshold` | 1 | Alerta por threshold de reports admin. Deploy em 2026-06-15 (PR #578); **fail-closed até configurar `KC_NOTIFY_HMAC_SECRET`, `ADMIN_REPORTS_WEBHOOK_URL` e `KC_APP_BASE_URL`** |
+| `cadu-publish` | `true` (default) | Publicação automática via Cadu Bot; o handler revalida usuário e allowlist |
+| `kc-account-erasure` | `true` (default) | LGPD Art. 18 VI — exclusão de conta em 2 passos com confirmação por e-mail |
+| `kc-dispatch-notification-outbox` | `false` (TOML) | Dispatch por secret próprio; e-mail Resend + WhatsApp Twilio, gated por secrets |
+| `kc-external-access-decide` | `true` (default) | Decisão administrativa de acesso externo e comunicação por e-mail |
+| `kc-ga4-reports` | `true` (default) | Proxy admin server-side para a GA4 Data API |
+| `kc-help-request-notify` | `true` (default) | Notificação de pedidos de acesso externo para o canal admin |
+| `kc-invite-user` | `false` (TOML) | Convite externo; valida JWT e privilégio admin dentro do handler |
+| `notify-admin-reports-threshold` | `true` (default) | Alerta HMAC de reports; fail-closed sem webhook e secrets operacionais |
 
-Deploy (uma por vez, ou todas):
+O workflow `Deploy Edge Functions` publica somente funções alteradas depois de `Essential
+Validation` verde em push da branch base. Deploy manual deve ser excepcional; o CLI lê os modos
+de autenticação versionados em `supabase/config.toml`:
 
 ```bash
 supabase functions deploy cadu-publish
 supabase functions deploy kc-account-erasure
 supabase functions deploy kc-dispatch-notification-outbox
 supabase functions deploy kc-external-access-decide
+supabase functions deploy kc-ga4-reports
 supabase functions deploy kc-help-request-notify
 supabase functions deploy kc-invite-user
 supabase functions deploy notify-admin-reports-threshold
@@ -334,7 +340,7 @@ Segredos adicionais para o canal de WhatsApp (`v11.21.1`):
 
 Observações:
 
-- `cadu-publish` valida JWT internamente com conta dedicada (`verify_jwt=false` em `index.ts:21`)
+- `cadu-publish` recebe JWT de usuário da conta dedicada; o gateway valida o token e o handler repete a validação antes de consultar `kc_trusted_publishers`
 - a `v11.21.0` publica essa função com envio real por e-mail via `Resend`, mas o projeto Supabase principal ainda precisa receber os segredos `KC_NOTIFICATION_EMAIL_*` para sair do gating operacional
 - a `v11.21.1` implementa o canal privado de WhatsApp sem reutilizar o contato publico do perfil; o envio real depende dos segredos `KC_NOTIFICATION_WHATSAPP_*`
 - a invocação exige o header `x-kc-dispatch-secret`
@@ -349,7 +355,7 @@ Quatro jobs agendados via `pg_cron` no banco principal (configurados em `docs/db
 | `kc-expire-old-posts` | `0 3 * * *` (03:00 diário) | `public.kc_expire_old_posts()` | Encerramento automático de posts fora de prazo |
 | `kc-prune-analytics` | `0 4 1 * *` (04:00 dia 1) | `public.kc_prune_old_analytics()` | Limpeza de `search_queries` (>6m), `audit_log` (>1a), `post_view_events` (>6m) |
 | `kc-prune-notifications` | `0 5 1 * *` (05:00 dia 1) | `public.kc_prune_old_notifications()` | Remove notificações lidas com > 90 dias |
-| `kc-dispatch-notification-outbox` | `*/5 * * * *` (a cada 5 min) | `public.kc_trigger_notification_dispatch()` | Consome a outbox via `pg_net.http_post` chamando Edge Function. **Fail-closed** se `app.settings.kc_notify_*` ausentes |
+| `kc-dispatch-notification-outbox` | `*/5 * * * *` (a cada 5 min) | `public.kc_trigger_notification_dispatch()` | Consome a outbox via `pg_net.http_post`. **Fail-closed** sem `notification_dispatch_runtime` ou fallback `app.settings.kc_notification_dispatch_*` |
 
 ### 6) Settings de banco fora do git
 
@@ -357,6 +363,10 @@ Quatro jobs agendados via `pg_cron` no banco principal (configurados em `docs/db
 - `public.notification_dispatch_runtime.function_url`
 - `public.notification_dispatch_runtime.dispatch_secret`
 - opcionalmente `public.notification_dispatch_runtime.batch_limit`
+- fallback `app.settings.kc_notification_dispatch_function_url`
+- fallback `app.settings.kc_notification_dispatch_secret`
+- fallback `app.settings.kc_notification_dispatch_batch_limit`
+- para `notify-admin-reports-threshold`:
 - `app.settings.kc_notify_function_url`
 - `app.settings.kc_notify_function_auth_token`
 - `app.settings.kc_notify_hmac_secret`
