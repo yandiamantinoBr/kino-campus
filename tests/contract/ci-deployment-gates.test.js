@@ -14,6 +14,8 @@ const lighthouse = read('.github/workflows/lighthouse-ci.yml');
 const supabaseConfig = read('supabase/config.toml');
 const dispatchFunction = read('supabase/functions/kc-dispatch-notification-outbox/index.ts');
 const inviteFunction = read('supabase/functions/kc-invite-user/index.ts');
+const caduFunction = read('supabase/functions/cadu-publish/index.ts');
+const caduPublisher = read('services/cadu-ufg-publisher/src/publisher.js');
 const baseline = read('supabase/migrations/00000000000001_baseline_v76.sql');
 const workflows = [essential, edgeDeploy, emailCheck, lighthouse];
 
@@ -98,5 +100,14 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).toContain('JWT verification drift');
     expect(edgeDeploy).toContain('curl --fail-with-body --retry 3 --retry-all-errors');
     expect(edgeDeploy).not.toContain('|| echo "?"');
+  });
+
+  test('keeps gateway JWT enabled by default for the authenticated Cadu publisher', () => {
+    expect(supabaseConfig).not.toMatch(
+      /\[functions\.cadu-publish\]\s*verify_jwt\s*=\s*false/
+    );
+    expect(caduPublisher).toContain('authorization: `Bearer ${token || this.session.access_token}`');
+    expect(caduFunction).toContain('userClient.auth.getUser()');
+    expect(caduFunction).toContain('.from("kc_trusted_publishers")');
   });
 });
