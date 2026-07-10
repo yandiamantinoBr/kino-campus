@@ -520,7 +520,15 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const module = item.module as ModuleKey;
   const fullText = `${item.title || ""}\n${item.summary || ""}\n${item.text || ""}\n${item.description || ""}`;
 
-  const title = clamp(stripInstitutionalPrefix(item.formattedTitle || item.formatted_title || item.title || "", item.sourceName), 80);
+  // Título: prefere formattedTitle da IA (já otimizado), clamp só em fallback
+  const rawTitle = stripInstitutionalPrefix(
+    stripTrailingEllipsis(item.formattedTitle || item.formatted_title || item.title || ""),
+    item.sourceName
+  );
+  // Se veio da IA (formattedTitle), confia no tamanho (até 120 chars).
+  // Se é título cru da fonte, clamp em 100 para evitar truncamento agressivo.
+  const hasFormattedTitle = !!(item.formattedTitle || item.formatted_title);
+  const title = hasFormattedTitle ? clamp(rawTitle, 120) : clamp(rawTitle, 100);
   const description = buildDescription(item);
   const sourceUrl = String(item.sourceUrl || "");
   const sourceId = String(item.sourceId || "");
