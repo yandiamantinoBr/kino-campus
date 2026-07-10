@@ -127,12 +127,14 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - a migration `v11.22.0.0_notification_dispatch_scheduler.sql` cria `notification_dispatch_runs` para log privado de dry-run/dispatch
   - a mesma migration cria `notification_dispatch_runtime` como camada privada versionada de URL/segredo/batch do scheduler
   - o helper `kc_trigger_notification_dispatch(...)` usa `net.http_post(...)` para chamar a Edge Function sem expor segredos no repositório
+  - o request do `pg_net` usa timeout de 30 segundos; esse valor deve permanecer acima da duração operacional observada da Edge Function para evitar falso erro de transporte após processamento bem-sucedido
   - o job `pg_cron` `kc-dispatch-notification-outbox` passa a consumir a outbox a cada 5 minutos
   - a Edge Function agora devolve e persiste `execution_id` e `source` para rastreabilidade operacional
 - Invariante nova de segredo/URL:
   - `notification_dispatch_runtime.dispatch_secret` e a fonte preferencial do scheduler; `app.settings.kc_notification_dispatch_secret` fica como fallback
   - `notification_dispatch_runtime.function_url` deve apontar para a URL pública correta da função no projeto ativo
   - `app.settings.kc_notification_dispatch_secret` e `app.settings.kc_notification_dispatch_function_url` ficam como fallback/override operacional, nao como trilha preferencial
+  - somente `service_role` recebe `EXECUTE` em `kc_trigger_notification_dispatch(...)`; resets locais devem reproduzir a mesma ACL da produção
 
 ## 8. Residual Supabase advisor items
 

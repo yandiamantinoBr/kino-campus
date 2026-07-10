@@ -22,6 +22,16 @@ describe('notification dispatch operational invariants', () => {
     expect(sql).toContain("select net.http_post(");
   });
 
+  test('migration de transporte cobre a latencia observada e preserva a ACL privilegiada', () => {
+    const sql = read('supabase/migrations/20260710172239_harden_notification_dispatch_transport.sql');
+
+    expect(sql).toContain('timeout_milliseconds := 30000');
+    expect(sql).not.toContain('timeout_milliseconds := 5000');
+    expect(sql).toMatch(/revoke all on function public\.kc_trigger_notification_dispatch[\s\S]*from public, anon, authenticated;/);
+    expect(sql).toMatch(/grant execute on function public\.kc_trigger_notification_dispatch[\s\S]*to service_role;/);
+    expect(sql).toContain("set search_path = ''");
+  });
+
   test('edge function persiste execution_id/source em notification_dispatch_runs', () => {
     const source = read('supabase/functions/kc-dispatch-notification-outbox/index.ts');
 

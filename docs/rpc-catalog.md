@@ -593,6 +593,8 @@ Revoga convite externo e registra `invite_revoked` no `audit_log`.
 - lê `notification_dispatch_runtime.batch_limit`
 - mantém `app.settings.kc_notification_dispatch_*` apenas como fallback operacional
 - retorna `NULL` quando a configuração ainda não existe, preservando fail-closed
+- aguarda por até 30 segundos a resposta assíncrona registrada pelo `pg_net`
+- permite execução apenas por `service_role`; usuários `anon` e `authenticated` não podem iniciar o dispatch
 
 **Uso atual:**
 - job `pg_cron` `kc-dispatch-notification-outbox`
