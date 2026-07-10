@@ -4,10 +4,15 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 
 ## 1. Vercel
 
+- Estado observado em 2026-07-10: o projeto Vercel `kino-campus` usa Node `24.x`; `package.json`
+  e os workflows Node devem permanecer alinhados nesse major.
 - O build do projeto deve continuar usando `node scripts/inject-env.js`, conforme [vercel.json](/C:/Users/yan1n/Documents/GitHub/kino-campus/vercel.json).
 - A saída continua estática (`outputDirectory: "."`).
 - O rewrite `/auth/callback -> /auth-callback.html` é obrigatório para o callback do Supabase Auth funcionar sem framework server-side.
 - Previews podem ficar protegidos por Vercel Authentication mesmo quando o deploy é publicado com sucesso.
+- A integração Git da Vercel promove pushes na base independentemente da conclusão de
+  `Essential Validation`. Branch protection/deployment checks continuam obrigatórios; o gate de
+  Edge Functions não deve ser confundido com gate da Vercel.
 - Em ambiente Windows, a validação protegida via `vercel curl` pode exigir `-- --ssl-no-revoke` por causa do `curl`/Schannel.
 - A CSP deve continuar permitindo:
   - `script-src` e `script-src-elem` com `self` e `https://cdn.jsdelivr.net`
@@ -138,3 +143,19 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 - Esses dois pontos nao devem ser corrigidos por SQL improvisado no meio da rodada:
   - mover `unaccent` de schema exige planejamento para nao quebrar busca/FTS
   - leaked password protection depende de configuracao do Supabase Auth no projeto, nao de patch frontend
+
+## 9. Gates versionados de banco e Edge Functions
+
+- `Essential Validation` deve manter três blocos: frontend/Jest/Playwright, banco local e Deno.
+- O bloco de banco usa Supabase CLI `2.105.0`, reconstrói migrations do zero, executa linter e
+  `supabase test db --local supabase/tests`.
+- O bloco Deno usa `2.8.0` e respeita o `deno.json` específico de cada função.
+- `Deploy Edge Functions` só pode iniciar automaticamente por `workflow_run` após validação
+  essencial verde em push da base; execução de pull request nunca publica.
+- O SHA publicado deve ser `github.event.workflow_run.head_sha`, o mesmo que foi validado.
+- Alteração em `_shared` ou configuração compartilhada deve reconstruir todas as funções.
+- Remoção de diretório de função deve falhar e exigir operação explícita; nunca apagar função
+  remota implicitamente.
+- `supabase link` e o deploy devem falhar fechados; não reintroduzir `|| true`.
+- Nenhuma dessas garantias autoriza migration remota automática. O rollout do schema continua
+  separado e exige o procedimento de branch descrito na auditoria de 2026-07-10.

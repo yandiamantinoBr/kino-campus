@@ -1,7 +1,7 @@
-# Auditorias Tecnicas do Kino Campus
+# Auditorias Técnicas do KinoCampus
 
-Este diretorio concentra **auditorias pontuais** de cima pra baixo (read-only + validacao contra
-producao) para reduzir drift entre codigo, documentacao e estado remoto. Diferem dos reports de
+Este diretório concentra **auditorias pontuais** de cima para baixo (read-only + validação contra
+produção) para reduzir drift entre código, documentação e estado remoto. Diferem dos relatórios de
 QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de release na raiz
 (`RELATORIO-KINOCAMPUS-V*.md`, que documentam uma versao especifica).
 
@@ -9,6 +9,7 @@ QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de rele
 
 | Auditoria | Data | Foco | Status |
 |---|---|---|---|
+| [technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md](./technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md) | 2026-07-10 | Reconciliação local de schema, ACL, CI e Edge Functions | Validado localmente; rollout remoto bloqueado até branch Supabase |
 | [technical-audit-phase10-controlled-hardening-2026-07-09.md](./technical-audit-phase10-controlled-hardening-2026-07-09.md) | 2026-07-09 | Hardening controlado de grants de chat e prova local | Pendente de validação/rollout remoto controlado |
 | [technical-audit-phase1-3-2026-07-09.md](./technical-audit-phase1-3-2026-07-09.md) | 2026-07-09 | Inventário, confronto documentação-código e dívida técnica | Atual, complemento em fases 4-9 |
 | [technical-audit-phase4-6-2026-07-09.md](./technical-audit-phase4-6-2026-07-09.md) | 2026-07-09 | Performance, segurança e operação GitHub-Vercel-Supabase | Atual, complemento em fases 7-9 |
@@ -30,7 +31,7 @@ trabalho, nao como documentacao canonica. Quando uma auditoria do agent gera um 
 documental que entra no repo, esse patch vira um PR proprio (ex: PR #558
 `docs(ops): record notify-admin-reports-threshold remote state`).
 
-## Conveccao
+## Convenção
 
 - Toda auditoria aqui documentada tem **data, escopo, modo (read-only ou nao) e limite
   metodologico** declarados no cabecalho

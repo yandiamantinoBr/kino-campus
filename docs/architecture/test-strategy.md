@@ -1,8 +1,9 @@
 # Estratégia de Testes — KinoCampus
 
-**Referência de contagem:** 2026-07-09
+**Referência de contagem:** 2026-07-10
 
-> Documenta as 203 suites Jest + 13 specs Playwright: o que cada uma cobre,
+> Documenta as 207 suites Jest + 13 specs Playwright, 4 contratos pgTAP e o
+> type-check das 8 Edge Functions: o que cada camada cobre,
 > como adicionar novos testes e as regras de manutenção.
 
 ---
@@ -12,8 +13,8 @@
 1. [Filosofia](#1-filosofia)
 2. [Métricas atuais](#2-métricas-atuais)
 3. [Diretório unit/ — 31 suites](#3-diretório-unit--31-suites)
-4. [Diretório integration/ — 138 suites](#4-diretório-integration--138-suites)
-5. [Diretório contract/ — 14 suites](#5-diretório-contract--14-suites)
+4. [Diretório integration/ — 139 suites](#4-diretório-integration--139-suites)
+5. [Diretório contract/ — 17 suites](#5-diretório-contract--17-suites)
 6. [Diretório structure/ — 15 suites](#6-diretório-structure--15-suites)
 7. [Diretório a11y/ — 5 suites](#7-diretório-a11y--5-suites)
 8. [E2E com Playwright — 13 specs](#8-e2e-com-playwright--13-specs)
@@ -32,13 +33,13 @@
 | **Contrato público, não implementação** | Os testes verificam `window.KCAPI.getFeedCursor` existe e retorna o tipo correto — não como está implementado internamente |
 | **Zero mocks de negócio** | Os adapters locais (`local.adapter.js` + sub-módulos) funcionam como implementação real em testes, não como mocks. Isso garante que o driver local seja sempre uma implementação funcional |
 | **Gates B2** | Thresholds mínimos de i18n (≥440 chaves, ≥189 `data-i18n-aria-label`, etc.) são validados como testes, impedindo regressão silenciosa |
-| **Execução rápida** | Todas as 203 suites Jest rodam sem network, sem browser e sem Supabase real |
+| **Execução rápida** | Todas as 207 suites Jest rodam sem network, sem browser e sem Supabase real |
 
 ### O que os testes NÃO fazem
 
 - Não testam o Supabase real (sem chamadas de rede nos testes Jest)
 - Não testam a UI visual (CSS, layout, responsive) — isso é coberto pelos E2E
-- Não testam Edge Functions do Supabase (validadas em ambiente separado)
+- Não exercitam HTTP real das Edge Functions; a CI valida a compilação Deno separadamente
 - Não testam o comportamento do `vercel.json` em produção
 
 ---
@@ -50,21 +51,23 @@
 | Diretório | Suites | Domínio principal |
 |-----------|--------|------------------|
 | `tests/unit/` | **31** | Módulos utilitários individuais |
-| `tests/integration/` | **138** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark, lazy runtime e piloto estruturado |
-| `tests/contract/` | **14** | Contratos públicos, exports, registro e snapshot gerado de busca |
+| `tests/integration/` | **139** | Controllers, adapters, sub-módulos KCAPI, parser, pipeline, benchmark, lazy runtime e piloto estruturado |
+| `tests/contract/` | **17** | Contratos públicos, exports, schema reconciliado, CI/deploy, registro e snapshot gerado de busca |
 | `tests/structure/` | **15** | Estrutura HTML, namespaces, cadeia de scripts |
 | `tests/a11y/` | **5** | Acessibilidade WCAG 2.1 AA |
 | `tests/e2e/` | **13** | Playwright (browser real, HTTP real) |
-| **Total** | **216** | (203 Jest + 13 Playwright specs) |
+| **Total** | **220** | (207 Jest + 13 Playwright specs) |
 
 ### Contagem canônica
 
 ```
-Jest: 203 suites · 3903 testes
+Jest: 207 suites · 3921 testes
 Playwright: 13 specs · 85 testes listados
+pgTAP: 4 arquivos · 106 testes
+Edge Functions: 8 entrypoints · Deno check
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥203 passed, 203 total` e `≥3903 passed, 3903 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥207 passed, 207 total` e `≥3921 passed, 3921 total`.
 
 ### Gate CI essencial
 
@@ -75,9 +78,14 @@ O workflow `.github/workflows/essential-validation.yml` roda em pull requests e 
 - `npm run check:scripts`
 - `npm run check:routes`
 - `npm run check:hygiene`
+- `npm run check:search-registry`
 - `npm test -- --runInBand`
 - `npx playwright install --with-deps chromium`
 - `npx playwright test`
+- `supabase db reset --local --no-seed`
+- `supabase db lint --local --level error --fail-on error`
+- `supabase test db --local supabase/tests`
+- `deno check` para cada `supabase/functions/*/index.ts`
 
 Esse gate cobre validação estrutural, Jest completo e **execução real** das specs
 Playwright (chromium) — o `webServer` do `playwright.config.js` sobe `http-server`
@@ -119,7 +127,7 @@ A tabela abaixo destaca as suites principais; a contagem canônica vem do filesy
 
 ---
 
-## 4. Diretório integration/ — 138 suites
+## 4. Diretório integration/ — 139 suites
 
 Cobre fluxos completos: controllers, adapters, sub-módulos KCAPI — onde módulos interagem entre si.
 
@@ -268,7 +276,7 @@ A tabela abaixo é agrupada por domínio e não lista todos os 138 arquivos indi
 
 ---
 
-## 5. Diretório contract/ — 14 suites
+## 5. Diretório contract/ — 17 suites
 
 Trava formas públicas (shapes) de módulos críticos. Um teste de contrato falha se um método for removido ou renomeado, mesmo sem quebrar a funcionalidade aparente.
 
@@ -499,8 +507,8 @@ module.exports = {
 
 ```
 npm test deve SEMPRE retornar:
-  Test Suites: ≥203 passed, 203 total
-  Tests:       ≥3903 passed, 3903 total
+  Test Suites: ≥207 passed, 207 total
+  Tests:       ≥3921 passed, 3921 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

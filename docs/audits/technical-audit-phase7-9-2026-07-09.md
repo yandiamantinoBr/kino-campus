@@ -83,3 +83,17 @@ As mudanças já implementadas nesta sequência foram pequenas, reversíveis e v
 2. Criar issue/PR próprio para proteção de branch, Dependabot e gate de Edge deploy.
 3. Criar branch Supabase de teste para a reconciliação de migrations e grants de chat.
 4. Implementar primeiro testes de runtime para chat/Cadu; depois aplicar migrations de hardening com rollback documentado.
+
+## Atualização de execução - 2026-07-10
+
+| Item anteriormente pendente | Progressão comprovada | Residual |
+|---|---|---|
+| Banco efêmero na CI | `Essential Validation` agora executa reset, lint e 106 pgTAP | A branch ainda precisa passar no GitHub após o force-push |
+| Gate de Edge deploy | Deploy depende de `workflow_run` verde da validação essencial | Vercel continua independente do GitHub Actions |
+| Validação Deno | 8 Edge Functions passam em Deno 2.8.0; 13 erros de tipagem foram corrigidos | Faltam testes HTTP/runtime por função |
+| Drift caronas/Cadu/privacidade | Quatro migrations idempotentes reconstruídas e testadas localmente | Produção não foi alterada; exige branch Supabase |
+| Advisor `kc_unit_meta` | Índice e policies otimizadas estão na migration local | Revalidar advisors após rollout controlado |
+| Contagem de regressão | 207 suítes/3.921 Jest e 85 Playwright aprovados | Atualizar sempre com execução, não apenas filesystem |
+
+O relatório detalhado desta progressão é
+`technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md`.
