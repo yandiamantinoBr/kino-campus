@@ -466,6 +466,12 @@ Avisos bloqueantes retornados diretamente pelo endpoint `cadu-publish` como `QUA
 - `institutional_or_biographical_release`: release institucional/biografico sem acao concreta para o usuario.
 - `cms_credits_in_description`: a descricao ainda contem creditos de CMS (`Texto:`, `Fotos:`, `Por ...`).
 - `weak_description`: descricao curta/crua, sem link e informacao acionavel suficiente.
-- `score_below_auto_publish_threshold`: score informado abaixo de `0.70`.
+- `score_below_auto_publish_threshold`: score informado abaixo do limiar efetivo de publicacao automatica. O campo `quality.autoPublishScoreMin` informa o valor usado na resposta.
 - `only_temporary_or_svg_images`: candidatas de imagem eram apenas temporarias ou SVG.
 - `instagram_without_official_source`: item veio apenas de Instagram, sem fonte oficial complementar.
+
+O limiar pode ser configurado no runtime da Edge Function com
+`AUTO_PUBLISH_SCORE_MIN`, entre `0` e `1`. O padrao e `0.70`; valor ausente,
+vazio, nao numerico ou fora do intervalo volta para `0.70`, sem desativar a
+barreira. O identificador do aviso permanece estavel para dashboards, logs e
+automacoes, independentemente do valor configurado.

@@ -135,3 +135,14 @@ jobs:
               deno check --no-lock --node-modules-dir=none "$entrypoint"
             fi
           done
+
+      - name: Run Edge Function unit tests
+        shell: bash
+        run: |
+          mapfile -t test_files < <(find supabase/functions -type f \( -name '*_test.ts' -o -name '*.test.ts' \) -print | sort)
+          if [ "${#test_files[@]}" -eq 0 ]; then
+            echo 'No Edge Function unit tests found.'
+            exit 0
+          fi
+
+          deno test --no-lock --node-modules-dir=none "${test_files[@]}"

@@ -34,6 +34,7 @@ import {
   normalizeWhitespace,
   parseBrazilianDate,
   parseDateRange,
+  resolveAutoPublishScoreMin,
   stripHtml,
   validRemoteImageUrl,
 } from "./util.ts";
@@ -46,6 +47,7 @@ const SITE_URL = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com
 const STORAGE_BUCKET = "kino-media";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
+const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"));
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -78,6 +80,7 @@ interface PublishQuality {
   ok: boolean;
   warnings: string[];
   blockingWarnings: string[];
+  autoPublishScoreMin: number;
   recommendation: string;
 }
 
@@ -307,22 +310,9 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   if (hasCmsCreditLine(description)) block("cms_credits_in_description");
   if (!hasActionableMarkdownDescription(description)) block("weak_description");
 
-  // 2026-07-10 (Mavis): threshold 0.7 hard-coded -> configurável via env.
-  // Yan pediu pra reduzir (0.55-0.65) porque muitos posts com potencial
-  // estavam sendo barrados. Default mantida em 0.7 pra retrocompatibilidade.
-  // Ajuste via Supabase Function config: `deno run --env-file=...` ou
-  // supabase secrets: supabase secrets set AUTO_PUBLISH_SCORE_MIN=0.6
-  // Valor: número entre 0.0 e 1.0. Post vai pra "review" se score < min.
-  const AUTO_PUBLISH_SCORE_MIN = Number(Deno.env.get("AUTO_PUBLISH_SCORE_MIN") ?? "0.7");
   const numericScore = Number(item.score);
-  if (
-    Number.isFinite(numericScore) &&
-    Number.isFinite(AUTO_PUBLISH_SCORE_MIN) &&
-    AUTO_PUBLISH_SCORE_MIN >= 0 &&
-    AUTO_PUBLISH_SCORE_MIN <= 1 &&
-    numericScore < AUTO_PUBLISH_SCORE_MIN
-  ) {
-    block(`score_below_${AUTO_PUBLISH_SCORE_MIN.toFixed(2)}_auto_publish_threshold`);
+  if (Number.isFinite(numericScore) && numericScore < AUTO_PUBLISH_SCORE_MIN) {
+    block("score_below_auto_publish_threshold");
   }
 
   const rawImages = imageCandidatesFromItem(item);
@@ -338,6 +328,7 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
     ok: blockingWarnings.length === 0,
     warnings,
     blockingWarnings,
+    autoPublishScoreMin: AUTO_PUBLISH_SCORE_MIN,
     recommendation: blockingWarnings.length
       ? "Corrija o item, consulte fonte oficial complementar e rode dry-run antes de reenviar para publicacao."
       : "Item apto para tentativa de publicacao pelo endpoint do Cadu.",

@@ -95,6 +95,17 @@ describe('Cadu publish — Edge Function', () => {
     expect(index.indexOf('const quality = evaluateCaduPublishQuality')).toBeLessThan(index.indexOf('admin.from("posts").insert'));
   });
 
+  test('mantem o limiar configuravel fail-closed e o codigo de bloqueio estavel', () => {
+    const util = r('supabase/functions/cadu-publish/util.ts');
+    expect(util).toContain('export const DEFAULT_AUTO_PUBLISH_SCORE_MIN = 0.7');
+    expect(util).toContain('export function resolveAutoPublishScoreMin');
+    expect(util).toContain('parsed >= 0 && parsed <= 1');
+    expect(index).toContain('resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"))');
+    expect(index).toContain('block("score_below_auto_publish_threshold")');
+    expect(index).toContain('autoPublishScoreMin: AUTO_PUBLISH_SCORE_MIN');
+    expect(index).not.toContain('block(`score_below_${');
+  });
+
   test('publica com dedup e upload de imagem com fallback', () => {
     expect(index).toContain('findExisting');
     expect(index).toContain('code: "DUPLICATE"');
