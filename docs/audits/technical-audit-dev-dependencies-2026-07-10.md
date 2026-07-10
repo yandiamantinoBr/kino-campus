@@ -56,13 +56,17 @@ O `package.json` força somente:
 ```json
 {
   "overrides": {
-    "tmp": "0.2.6",
+    "tmp": "0.2.7",
     "@lhci/cli": {
       "uuid": "11.1.1"
     }
   }
 }
 ```
+
+Durante a validação pós-rebase, o registry passou a reportar o advisory novo
+`GHSA-7c78-jf6q-g5cm` para `tmp >=0.2.6 <0.2.7`. O override foi elevado para `0.2.7` antes da
+publicação final da branch; `0.2.6` não permanece no lockfile.
 
 Compatibilidade comprovada no pacote instalado:
 
@@ -91,17 +95,17 @@ configuração remota continua pendente e deve ser ativada administrativamente d
 |---|---|
 | `npm ci` | instalação limpa reproduzida; 729 pacotes instalados |
 | Validadores do `check:all` | versão, estrutura, scripts, rotas, higiene e busca aprovados |
-| Jest | 207 suítes, 3.921 testes e 3 snapshots aprovados |
+| Jest | 207 suítes, 3.925 testes e 3 snapshots aprovados |
 | Playwright Chromium | 85 de 85 cenários aprovados, 1 worker |
 | Lighthouse CI 0.15.1 | 3 rotas concluídas; apenas warnings locais de best-practices 0,79 |
-| `npm audit --offline --json` | 0 vulnerabilidades com o advisory cache atualizado nesta sessão |
+| `npm audit` durante o `npm ci` final | 0 vulnerabilidades, confirmado online após adoção de `tmp@0.2.7` |
 | YAML do Dependabot | parse estruturado aprovado; 2 ecossistemas semanais |
 | `git diff --check` | aprovado |
 
-O endpoint online de audit do registry retornou `ECONNRESET` em tentativas posteriores. Por isso,
-o resultado zero deve ser confirmado novamente pela CI/rede do GitHub. O audit offline não foi
-usado para ocultar um advisory: o cache foi populado pela execução online que encontrou os 15
-itens e pelo plano de correção que os reduziu primeiro a cinco.
+O endpoint online de audit do registry retornou `ECONNRESET` em algumas tentativas intermediárias.
+Uma resposta posterior revelou o advisory novo de `tmp@0.2.6`; após a atualização para `0.2.7`,
+o `npm ci` final auditou 730 pacotes online e confirmou zero vulnerabilidades. A CI do GitHub ainda
+é uma segunda rede independente para validar a reprodutibilidade desse resultado.
 
 ## 7. Riscos residuais e próximos passos
 
