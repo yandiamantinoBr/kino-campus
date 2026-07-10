@@ -71,8 +71,8 @@ jobs:
             fi
 
             CHANGED_FILES=$(git diff --name-only "${HEAD_SHA}^" "$HEAD_SHA")
-            if grep -q '^supabase/functions/_shared/' <<< "$CHANGED_FILES"; then
-              echo 'Shared Edge Function code changed; all functions must be rebuilt.'
+            if grep -Eq '^supabase/functions/_shared/|^supabase/functions/[^/]+$' <<< "$CHANGED_FILES"; then
+              echo 'Shared Edge Function code or configuration changed; all functions must be rebuilt.'
               CHANGED=$(list_all_functions | paste -sd, -)
             else
               CHANGED=$(awk -F/ \

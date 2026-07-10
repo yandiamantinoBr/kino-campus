@@ -30,6 +30,15 @@ describe('CI and deployment safety contracts', () => {
     expect(essential).toContain('supabase stop --no-backup');
   });
 
+  test('type-checks every Edge Function with its deployment-specific Deno config', () => {
+    expect(essential).toContain('edge-functions:');
+    expect(essential).toContain('uses: denoland/setup-deno@v2');
+    expect(essential).toContain('deno-version: v2.8.0');
+    expect(essential).toContain('entrypoints=(supabase/functions/*/index.ts)');
+    expect(essential).toContain('--config "$config"');
+    expect(essential).toContain('deno check --no-lock --node-modules-dir=none');
+  });
+
   test('deploys Edge Functions only after a successful validated base push', () => {
     expect(edgeDeploy).toContain('workflow_run:');
     expect(edgeDeploy).toContain('workflows: [Essential Validation]');
@@ -42,7 +51,7 @@ describe('CI and deployment safety contracts', () => {
   test('fails closed and handles shared Edge Function dependencies', () => {
     expect(edgeDeploy).toContain('REQUESTED_FUNCTION: ${{ inputs.function_name }}');
     expect(edgeDeploy).not.toContain('REQUESTED="${{ inputs.function_name }}"');
-    expect(edgeDeploy).toContain("grep -q '^supabase/functions/_shared/'");
+    expect(edgeDeploy).toContain("grep -Eq '^supabase/functions/_shared/|^supabase/functions/[^/]+$'");
     expect(edgeDeploy).toContain('all functions must be rebuilt');
     expect(edgeDeploy).toContain('Remote deletion requires an explicit manual operation');
     expect(edgeDeploy).toContain('version: 2.105.0');

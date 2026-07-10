@@ -18,10 +18,11 @@
 //   - KC_ADMIN_NOTIFICATION_EMAIL (default: contato@kinocampus.com.br)
 //   - KC_APP_BASE_URL (default: https://www.kinocampus.com.br)
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2.105.4";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 type JsonObject = Record<string, unknown>;
+type ServiceClient = SupabaseClient<any, "public", "public", any, any>;
 
 type HelpRequestRow = {
   id: string;
@@ -277,7 +278,7 @@ async function sendEmail(opts: {
 }
 
 async function updateMetadata(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   rowId: string,
   prevMetadata: JsonObject,
   patch: JsonObject,

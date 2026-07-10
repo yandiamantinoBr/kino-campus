@@ -102,3 +102,36 @@ jobs:
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup
+
+  edge-functions:
+    name: Edge Functions type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno 2.8.0
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.0
+
+      - name: Type-check every Edge Function
+        shell: bash
+        run: |
+          shopt -s nullglob
+          entrypoints=(supabase/functions/*/index.ts)
+          if [ "${#entrypoints[@]}" -eq 0 ]; then
+            echo 'No Edge Function entrypoints found.' >&2
+            exit 1
+          fi
+
+          for entrypoint in "${entrypoints[@]}"; do
+            config="$(dirname "$entrypoint")/deno.json"
+            if [ -f "$config" ]; then
+              deno check --no-lock --node-modules-dir=none --config "$config" "$entrypoint"
+            else
+              deno check --no-lock --node-modules-dir=none "$entrypoint"
+            fi
+          done
