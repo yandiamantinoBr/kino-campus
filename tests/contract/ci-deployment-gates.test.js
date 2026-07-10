@@ -11,6 +11,10 @@ const essential = read('.github/workflows/essential-validation.yml');
 const edgeDeploy = read('.github/workflows/edge-deploy.yml');
 const emailCheck = read('.github/workflows/email-check.yml');
 const lighthouse = read('.github/workflows/lighthouse-ci.yml');
+const supabaseConfig = read('supabase/config.toml');
+const dispatchFunction = read('supabase/functions/kc-dispatch-notification-outbox/index.ts');
+const inviteFunction = read('supabase/functions/kc-invite-user/index.ts');
+const baseline = read('supabase/migrations/00000000000001_baseline_v76.sql');
 const workflows = [essential, edgeDeploy, emailCheck, lighthouse];
 
 describe('CI and deployment safety contracts', () => {
@@ -67,5 +71,32 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).toContain('version: 2.105.0');
     expect(edgeDeploy).not.toContain('version: latest');
     expect(edgeDeploy).not.toMatch(/supabase link[^\n]*\|\|\s*true/);
+  });
+
+  test('versions the internal-auth mode of Edge Functions that bypass gateway JWT checks', () => {
+    expect(supabaseConfig).toMatch(
+      /\[functions\.kc-dispatch-notification-outbox\]\s*verify_jwt\s*=\s*false/
+    );
+    expect(supabaseConfig).toMatch(
+      /\[functions\.kc-invite-user\]\s*verify_jwt\s*=\s*false/
+    );
+    expect(supabaseConfig.match(/verify_jwt\s*=\s*false/g)).toHaveLength(2);
+
+    expect(baseline).toContain("'x-kc-dispatch-secret', v_dispatch_secret");
+    expect(dispatchFunction).toContain('req.headers.get("x-kc-dispatch-secret")');
+    expect(dispatchFunction).toContain('timingSafeEqual(providedSecret, secret)');
+    expect(inviteFunction).toContain('userClient.auth.getUser()');
+    expect(inviteFunction).toContain('.select("is_admin, display_name")');
+  });
+
+  test('deploys changed function configuration and rejects remote auth drift', () => {
+    expect(edgeDeploy).toContain("grep -Fxq 'supabase/config.toml'");
+    expect(edgeDeploy).toContain('import tomllib');
+    expect(edgeDeploy).toContain('before.get(name) != after.get(name)');
+    expect(edgeDeploy).toContain('EXPECTED_VERIFY_JWT');
+    expect(edgeDeploy).toContain('ACTUAL_VERIFY_JWT');
+    expect(edgeDeploy).toContain('JWT verification drift');
+    expect(edgeDeploy).toContain('curl --fail-with-body --retry 3 --retry-all-errors');
+    expect(edgeDeploy).not.toContain('|| echo "?"');
   });
 });

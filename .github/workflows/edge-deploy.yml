@@ -75,9 +75,33 @@ jobs:
               echo 'Shared Edge Function code or configuration changed; all functions must be rebuilt.'
               CHANGED=$(list_all_functions | paste -sd, -)
             else
-              CHANGED=$(awk -F/ \
-                '$1 == "supabase" && $2 == "functions" && $3 != "_shared" { print $3 }' \
-                <<< "$CHANGED_FILES" | sort -u | paste -sd, -)
+              CONFIG_FUNCTIONS=""
+              if grep -Fxq 'supabase/config.toml' <<< "$CHANGED_FILES"; then
+                BEFORE_CONFIG="$RUNNER_TEMP/supabase-config-before.toml"
+                git show "${HEAD_SHA}^:supabase/config.toml" > "$BEFORE_CONFIG"
+                CONFIG_FUNCTIONS=$(python3 - "$BEFORE_CONFIG" 'supabase/config.toml' <<'PY'
+          import sys
+          import tomllib
+
+          def read_functions(path):
+              with open(path, "rb") as handle:
+                  return tomllib.load(handle).get("functions", {})
+
+          before = read_functions(sys.argv[1])
+          after = read_functions(sys.argv[2])
+          for name in sorted(set(before) | set(after)):
+              if before.get(name) != after.get(name):
+                  print(name)
+          PY
+                )
+              fi
+
+              CHANGED=$({
+                awk -F/ \
+                  '$1 == "supabase" && $2 == "functions" && $3 != "_shared" { print $3 }' \
+                  <<< "$CHANGED_FILES"
+                printf '%s\n' "$CONFIG_FUNCTIONS"
+              } | sed '/^$/d' | sort -u | paste -sd, -)
             fi
           fi
 
@@ -142,9 +166,40 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           sleep 5
-          # Get current version
-          VERSION=$(curl -sS \
+          EXPECTED_VERIFY_JWT=$(python3 - '${{ matrix.function }}' <<'PY'
+          import sys
+          import tomllib
+
+          with open('supabase/config.toml', 'rb') as handle:
+              config = tomllib.load(handle)
+          function_config = config.get('functions', {}).get(sys.argv[1], {})
+          print(str(function_config.get('verify_jwt', True)).lower())
+          PY
+          )
+
+          DEPLOYMENT_JSON=$(curl --fail-with-body --retry 3 --retry-all-errors -sS \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/functions/${{ matrix.function }}" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','?'))" 2>/dev/null || echo "?")
-          echo "Deployed ${{ matrix.function }} version: $VERSION"
+            "https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/functions/${{ matrix.function }}")
+
+          DETAILS=$(printf '%s' "$DEPLOYMENT_JSON" | python3 -c '
+          import json, sys
+          payload = json.load(sys.stdin)
+          version = payload.get("version")
+          status = payload.get("status")
+          verify_jwt = payload.get("verify_jwt")
+          if not isinstance(version, int) or not isinstance(status, str) or not isinstance(verify_jwt, bool):
+              raise SystemExit("Management API returned an incomplete Edge Function deployment")
+          print(f"{version}\t{status}\t{str(verify_jwt).lower()}")
+          ')
+          IFS=$'\t' read -r VERSION STATUS ACTUAL_VERIFY_JWT <<< "$DETAILS"
+
+          if [ "$STATUS" != 'ACTIVE' ]; then
+            echo "Deployment is not active: status=$STATUS" >&2
+            exit 1
+          fi
+          if [ "$ACTUAL_VERIFY_JWT" != "$EXPECTED_VERIFY_JWT" ]; then
+            echo "JWT verification drift: expected=$EXPECTED_VERIFY_JWT actual=$ACTUAL_VERIFY_JWT" >&2
+            exit 1
+          fi
+
+          echo "Deployed ${{ matrix.function }} version=$VERSION status=$STATUS verify_jwt=$ACTUAL_VERIFY_JWT"
