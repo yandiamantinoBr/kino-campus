@@ -160,6 +160,10 @@ funções simultaneamente.
 - falhar explicitamente diante de função removida, pois exclusão remota exige operação manual;
 - não fazer fallback automático para deploy de todas quando não há mudança.
 
+As 14 referências externas `uses:` dos quatro workflows foram fixadas em SHAs oficiais. O
+repositório permite ações por tags móveis (`sha_pinning_required=false`), portanto o contrato de
+CI também rejeita novas referências que não terminem em um commit hexadecimal de 40 caracteres.
+
 O contrato `tests/contract/ci-deployment-gates.test.js` protege esses invariantes. O YAML foi
 validado com `actionlint 1.7.7`.
 
@@ -171,7 +175,7 @@ validado com `actionlint 1.7.7`.
 | `supabase db lint --local --level warning` | Sem erros ou avisos |
 | `supabase test db --local supabase/tests` | 4 arquivos, 106 testes aprovados |
 | Deno check | 8 de 8 Edge Functions aprovadas |
-| `npm run check:all` | 207 suítes, 3.921 testes e 3 snapshots aprovados |
+| `npm run check:all` | 207 suítes, 3.922 testes e 3 snapshots aprovados |
 | Playwright Chromium | 85 de 85 cenários aprovados |
 | `actionlint` | 0 achados |
 | `npm audit --omit=dev` | 0 vulnerabilidades de produção |
@@ -186,6 +190,7 @@ registry. Portanto, não há conclusão nova sobre advisories de desenvolvimento
 | P1 | Confirmado | Produção não possui consent table/RPC esperadas pelo admin | Validar as migrations em branch Supabase antes de rollout |
 | P1 | Confirmado | Histórico remoto não corresponde à baseline sintética local | Não usar `supabase db push` direto |
 | P1 | Confirmado | Vercel promove push da base independentemente do CI | Exigir PR/checks e configurar deployment checks |
+| P1 | Confirmado | Branch base sem proteção; Dependabot alerts/updates desabilitados | Ativar nas configurações após decisão operacional |
 | P1 | Confirmado | Leaked password protection desabilitada | Alteração manual de Auth com teste de cadastro/reset |
 | P1 | Confirmado | 7 RPCs admin executáveis por anon no remoto | Aplicar migration de ACL somente após branch testada |
 | P2 | Confirmado | Seis imports Edge ainda flutuam em `@2` | Pin por função em PR e rollout graduais |
@@ -213,3 +218,20 @@ registry. Portanto, não há conclusão nova sobre advisories de desenvolvimento
 - nenhum deploy Vercel foi iniciado;
 - nenhum container ou processo do VPS/OpenClaw foi alterado;
 - a pull request permanece adequada para revisão técnica, não para merge automático.
+
+## 10. Snapshot de governança GitHub
+
+Consulta somente leitura em 2026-07-10:
+
+- branch padrão `kinocampus-V75.0-foundations`: sem branch protection;
+- Dependabot vulnerability alerts: desabilitado;
+- Dependabot security updates: desabilitado;
+- secret scanning: habilitado;
+- secret scanning push protection: habilitado;
+- non-provider patterns e validity checks: desabilitados;
+- Actions: `allowed_actions=all`, exigência de SHA desabilitada;
+- permissão padrão dos workflows: leitura; workflows não podem aprovar PRs;
+- auto-merge: desabilitado.
+
+Esta branch reduz o risco de supply chain ao fixar os SHAs no YAML. Ela não altera as
+configurações externas acima.

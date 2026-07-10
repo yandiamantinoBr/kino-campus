@@ -11,6 +11,7 @@ const essential = read('.github/workflows/essential-validation.yml');
 const edgeDeploy = read('.github/workflows/edge-deploy.yml');
 const emailCheck = read('.github/workflows/email-check.yml');
 const lighthouse = read('.github/workflows/lighthouse-ci.yml');
+const workflows = [essential, edgeDeploy, emailCheck, lighthouse];
 
 describe('CI and deployment safety contracts', () => {
   test('uses the same Node major configured in the Vercel project', () => {
@@ -32,11 +33,20 @@ describe('CI and deployment safety contracts', () => {
 
   test('type-checks every Edge Function with its deployment-specific Deno config', () => {
     expect(essential).toContain('edge-functions:');
-    expect(essential).toContain('uses: denoland/setup-deno@v2');
+    expect(essential).toContain('uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed');
     expect(essential).toContain('deno-version: v2.8.0');
     expect(essential).toContain('entrypoints=(supabase/functions/*/index.ts)');
     expect(essential).toContain('--config "$config"');
     expect(essential).toContain('deno check --no-lock --node-modules-dir=none');
+  });
+
+  test('pins every third-party GitHub Action to an immutable commit', () => {
+    const uses = workflows.flatMap((workflow) => (
+      [...workflow.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)/gm)].map((match) => match[1])
+    ));
+
+    expect(uses.length).toBeGreaterThanOrEqual(14);
+    uses.forEach((action) => expect(action).toMatch(/^[^@]+@[0-9a-f]{40}$/));
   });
 
   test('deploys Edge Functions only after a successful validated base push', () => {
