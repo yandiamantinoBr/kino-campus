@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(10);
+select extensions.plan(15);
 
 select extensions.ok(
   (select count(*) >= 40 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'kc_admin_%'),
@@ -19,16 +19,36 @@ select extensions.is(
   'authenticated callers can reach administrative RPC authorization checks'
 );
 select extensions.ok(
-  (select prosecdef from pg_proc where oid = 'public.kc_admin_save_banner(jsonb)'::regprocedure),
-  'banner save implementation remains a definer function'
+  not (select prosecdef from pg_proc where oid = 'public.kc_admin_save_banner(jsonb)'::regprocedure),
+  'the public banner RPC is an invoker wrapper'
 );
 select extensions.ok(
   (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.kc_admin_save_banner(jsonb)'::regprocedure),
-  'banner save fixes its search path'
+  'the public banner wrapper fixes its search path'
 );
 select extensions.ok(
-  (select prosrc not like '%v_old%' from pg_proc where oid = 'public.kc_admin_save_banner(jsonb)'::regprocedure),
-  'banner save has no discarded pre-update read'
+  (select prosrc like '%kc_private.kc_admin_save_banner%' from pg_proc where oid = 'public.kc_admin_save_banner(jsonb)'::regprocedure),
+  'the public banner wrapper delegates to the private implementation'
+);
+select extensions.ok(
+  (select prosecdef from pg_proc where oid = 'kc_private.kc_admin_save_banner(jsonb)'::regprocedure),
+  'the private banner implementation remains a definer function'
+);
+select extensions.ok(
+  (select proconfig @> array['search_path=""'] from pg_proc where oid = 'kc_private.kc_admin_save_banner(jsonb)'::regprocedure),
+  'the private banner implementation fixes its search path'
+);
+select extensions.ok(
+  not has_function_privilege('anon', 'kc_private.kc_admin_save_banner(jsonb)', 'execute'),
+  'anonymous callers cannot execute the private banner implementation'
+);
+select extensions.ok(
+  has_function_privilege('authenticated', 'kc_private.kc_admin_save_banner(jsonb)', 'execute'),
+  'authenticated wrappers can execute the private banner implementation'
+);
+select extensions.ok(
+  (select prosrc not like '%v_old%' from pg_proc where oid = 'kc_private.kc_admin_save_banner(jsonb)'::regprocedure),
+  'the private banner implementation has no discarded pre-update read'
 );
 
 insert into auth.users (id, email)

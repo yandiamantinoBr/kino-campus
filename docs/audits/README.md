@@ -9,7 +9,8 @@ QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de rele
 
 | Auditoria | Data | Foco | Status |
 |---|---|---|---|
-| [technical-audit-edge-auth-regression-2026-07-10.md](./technical-audit-edge-auth-regression-2026-07-10.md) | 2026-07-10 | Regressão de `verify_jwt` no dispatcher de notificações e hardening do deploy Edge | Incidente confirmado; correção local validada, produção ainda sem remediação |
+| [technical-audit-production-parity-followup-2026-07-10.md](./technical-audit-production-parity-followup-2026-07-10.md) | 2026-07-10 | Pós-rollout Edge, paridade remota de migrations/RPCs e fronteira de segurança dos banners | Evidência remota atual; correção local validada, rollout de schema bloqueado |
+| [technical-audit-edge-auth-regression-2026-07-10.md](./technical-audit-edge-auth-regression-2026-07-10.md) | 2026-07-10 | Regressão de `verify_jwt` no dispatcher de notificações e hardening do deploy Edge | Incidente remediado pela PR #644; providers externos ainda desabilitados |
 | [technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md](./technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md) | 2026-07-10 | Reconciliação local de schema, ACL, CI e Edge Functions | Validado localmente; rollout remoto bloqueado até branch Supabase |
 | [technical-audit-phase10-controlled-hardening-2026-07-09.md](./technical-audit-phase10-controlled-hardening-2026-07-09.md) | 2026-07-09 | Hardening controlado de grants de chat e prova local | Pendente de validação/rollout remoto controlado |
 | [technical-audit-phase1-3-2026-07-09.md](./technical-audit-phase1-3-2026-07-09.md) | 2026-07-09 | Inventário, confronto documentação-código e dívida técnica | Atual, complemento em fases 4-9 |
