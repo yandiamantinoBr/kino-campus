@@ -105,7 +105,7 @@ Validação local executada:
 |---|---|
 | Parse de `supabase/config.toml` com `tomllib` | aprovado; duas funções com `false` |
 | Simulação do diff de configuração | detectou exatamente dispatcher e convite |
-| Jest do contrato de deploy | 8 de 8 testes aprovados |
+| Jest do contrato de deploy | 9 de 9 testes aprovados |
 | `actionlint 1.7.12` | todos os workflows aprovados |
 
 ## 6. Rollout e verificação remota necessários

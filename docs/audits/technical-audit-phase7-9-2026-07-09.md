@@ -4,6 +4,12 @@
 **Branch de trabalho:** `codex/audit-phase4-6-2026-07-09`
 **Complementa:** `technical-audit-phase1-3-2026-07-09.md` e `technical-audit-phase4-6-2026-07-09.md`
 
+> **Atualização pós-merge (2026-07-10):** a PR #641 foi incorporada como `e84d81d8`.
+> Banco efêmero, pgTAP, type-check Deno e gate pós-CI de Edge passaram a existir na base. O
+> primeiro deploy automático expôs uma regressão P1 de autenticação do dispatcher; consulte
+> [`technical-audit-edge-auth-regression-2026-07-10.md`](./technical-audit-edge-auth-regression-2026-07-10.md).
+> As tabelas abaixo preservam o diagnóstico que motivou essa progressão.
+
 ## Escopo e método
 
 Esta etapa verifica a confiabilidade efetiva da suíte, a cobertura dos gates de CI, a atualização da documentação operacional e o plano de ação. Foram inspecionados `package.json`, `jest.config.js`, `playwright.config.js`, `.lighthouserc.js`, todos os workflows em `.github/workflows`, o filesystem de testes e a execução remota do PR #641.
@@ -97,3 +103,20 @@ As mudanças já implementadas nesta sequência foram pequenas, reversíveis e v
 
 O relatório detalhado desta progressão é
 `technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md`.
+
+## Atualização de dependências - 2026-07-10
+
+Nova execução verificável, sem alteração de pacote:
+
+| Comando | Resultado |
+|---|---|
+| `npm audit --omit=dev --json` | 0 vulnerabilidades em 27 dependências de produção |
+| `npm audit --json` | 15 achados exclusivos da toolchain: 5 altos, 7 moderados e 3 baixos |
+| `npm outdated --json` | Babel/Jest/Playwright têm updates patch/minor; `@vercel/og` possui major disponível |
+| `npm audit fix --dry-run` | inconclusivo por `ECONNRESET` no endpoint de advisories |
+
+Os achados de desenvolvimento passam por Babel, Lighthouse/ChromeLauncher e suas dependências
+transitivas (`ws`, `tmp`, `picomatch`, `js-yaml`, entre outras). Não há justificativa para misturar
+uma atualização ampla da toolchain com a correção do dispatcher. O próximo passo é um PR isolado,
+com atualização patch/minor dos pacotes diretos, inspeção do lockfile, CI completa e nova auditoria;
+`@vercel/og` deve permanecer fora dessa rodada por exigir avaliação de major version.
