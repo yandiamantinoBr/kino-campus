@@ -1,9 +1,9 @@
 # Incidente técnico: regressão de autenticação no dispatcher Edge
 
-**Data da evidência:** 2026-07-10 11:15 UTC  
-**Branch de correção:** `codex/edge-auth-config-hardening`  
-**Base observada:** `e84d81d8` (`kinocampus-V75.0-foundations`)  
-**Projeto Supabase:** `wacyrkwhkvzwkqpolrbg`  
+**Data da evidência:** 2026-07-10 11:15 UTC
+**Branch de correção:** `codex/edge-auth-config-hardening`
+**Base observada:** `e84d81d8` (`kinocampus-V75.0-foundations`)
+**Projeto Supabase:** `wacyrkwhkvzwkqpolrbg`
 **Modo remoto desta análise:** somente leitura; nenhum deploy, secret ou dado foi alterado
 
 ## 1. Resumo executivo
