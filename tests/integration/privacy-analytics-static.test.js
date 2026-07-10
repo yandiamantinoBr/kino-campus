@@ -32,13 +32,15 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(categories).toMatch(/function hasAnalyticsConsent\(\)[\s\S]*return false;\s*\}/);
   });
 
-  test('migration de privacidade usa RLS, hash de sessao e security definer seguro', () => {
-    const sql = read('supabase/migrations/_archive-v75/v9.3.5.16_privacy_analytics.sql');
-    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.privacy_analytics_events');
-    expect(sql).toContain('ALTER TABLE public.privacy_analytics_events ENABLE ROW LEVEL SECURITY');
-    expect(sql).toContain('SECURITY DEFINER');
-    expect(sql).toContain("SET search_path = ''");
-    expect(sql).toContain("encode(digest(v_session_id, 'sha256'), 'hex')");
+  test('migration ativa de privacidade usa RLS, hash de sessao e grants explicitos', () => {
+    const sql = read('supabase/migrations/20260710011442_reconcile_privacy_runtime.sql');
+    expect(sql).toContain('create table if not exists public.privacy_analytics_events');
+    expect(sql).toContain('create table if not exists public.privacy_consent_events');
+    expect(sql).toContain('alter table public.privacy_analytics_events enable row level security');
+    expect(sql).toContain('security invoker');
+    expect(sql).toContain("set search_path = ''");
+    expect(sql).toContain("encode(extensions.digest(v_session_id, 'sha256'), 'hex')");
+    expect(sql).toContain('revoke all on table public.privacy_consent_events');
     expect(sql).toContain('public.kc_admin_privacy_analytics');
     expect(sql).toContain('public.kc_prune_old_analytics()');
   });
