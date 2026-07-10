@@ -380,6 +380,14 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# These functions bypass the gateway JWT check because they authenticate inside
+# the handler. Keep this contract versioned: the Supabase CLI defaults to true.
+[functions.kc-dispatch-notification-outbox]
+verify_jwt = false
+
+[functions.kc-invite-user]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

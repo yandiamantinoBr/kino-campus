@@ -4,6 +4,12 @@
 **Branch de trabalho:** `codex/audit-phase4-6-2026-07-09`
 **Complementa:** `technical-audit-phase1-3-2026-07-09.md` e `technical-audit-phase4-6-2026-07-09.md`
 
+> **Atualização pós-merge (2026-07-10):** a PR #641 foi incorporada como `e84d81d8`.
+> Banco efêmero, pgTAP, type-check Deno e gate pós-CI de Edge passaram a existir na base. O
+> primeiro deploy automático expôs uma regressão P1 de autenticação do dispatcher; consulte
+> [`technical-audit-edge-auth-regression-2026-07-10.md`](./technical-audit-edge-auth-regression-2026-07-10.md).
+> As tabelas abaixo preservam o diagnóstico que motivou essa progressão.
+
 ## Escopo e método
 
 Esta etapa verifica a confiabilidade efetiva da suíte, a cobertura dos gates de CI, a atualização da documentação operacional e o plano de ação. Foram inspecionados `package.json`, `jest.config.js`, `playwright.config.js`, `.lighthouserc.js`, todos os workflows em `.github/workflows`, o filesystem de testes e a execução remota do PR #641.
@@ -93,7 +99,24 @@ As mudanças já implementadas nesta sequência foram pequenas, reversíveis e v
 | Validação Deno | 8 Edge Functions passam em Deno 2.8.0; 13 erros de tipagem foram corrigidos | Faltam testes HTTP/runtime por função |
 | Drift caronas/Cadu/privacidade | Quatro migrations idempotentes reconstruídas e testadas localmente | Produção não foi alterada; exige branch Supabase |
 | Advisor `kc_unit_meta` | Índice e policies otimizadas estão na migration local | Revalidar advisors após rollout controlado |
-| Contagem de regressão | 207 suítes/3.921 Jest e 85 Playwright aprovados | Atualizar sempre com execução, não apenas filesystem |
+| Contagem de regressão | 207 suítes/3.922 Jest e 85 Playwright aprovados | Atualizar sempre com execução, não apenas filesystem |
 
 O relatório detalhado desta progressão é
 `technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md`.
+
+## Atualização de dependências - 2026-07-10
+
+Nova execução verificável, sem alteração de pacote:
+
+| Comando | Resultado |
+|---|---|
+| `npm audit --omit=dev --json` | 0 vulnerabilidades em 27 dependências de produção |
+| `npm audit --json` | 15 achados exclusivos da toolchain: 5 altos, 7 moderados e 3 baixos |
+| `npm outdated --json` | Babel/Jest/Playwright têm updates patch/minor; `@vercel/og` possui major disponível |
+| `npm audit fix --dry-run` | inconclusivo por `ECONNRESET` no endpoint de advisories |
+
+Os achados de desenvolvimento passam por Babel, Lighthouse/ChromeLauncher e suas dependências
+transitivas (`ws`, `tmp`, `picomatch`, `js-yaml`, entre outras). Não há justificativa para misturar
+uma atualização ampla da toolchain com a correção do dispatcher. O próximo passo é um PR isolado,
+com atualização patch/minor dos pacotes diretos, inspeção do lockfile, CI completa e nova auditoria;
+`@vercel/og` deve permanecer fora dessa rodada por exigir avaliação de major version.
