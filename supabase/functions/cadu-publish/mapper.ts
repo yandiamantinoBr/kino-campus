@@ -34,6 +34,7 @@ import {
   slugify,
   stripHtml,
   stripInstitutionalPrefix,
+  stripTrailingEllipsis,
   timeFromAny,
   uniq,
   canPersistExternalImageUrl,

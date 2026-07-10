@@ -133,6 +133,15 @@ describe('Cadu publish — Edge Function', () => {
     expect(mapper).toContain('inferActionLabel');
   });
 
+  test('mapper importa o normalizador usado pelos titulos formatados', () => {
+    const util = r('supabase/functions/cadu-publish/util.ts');
+    const utilImport = mapper.match(/import\s*\{([^}]*)\}\s*from\s*"\.\/util\.ts"/);
+    expect(util).toContain('export function stripTrailingEllipsis');
+    expect(utilImport).not.toBeNull();
+    expect(utilImport[1]).toMatch(/\bstripTrailingEllipsis\b/);
+    expect(mapper).toContain('stripTrailingEllipsis(item.formattedTitle || item.formatted_title || item.title || "")');
+  });
+
   test('nao persiste CDN temporaria ou SVG como imagem final quando upload falha', () => {
     const util = r('supabase/functions/cadu-publish/util.ts');
     expect(util).toContain('canPersistExternalImageUrl');
