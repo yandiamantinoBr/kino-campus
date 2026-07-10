@@ -829,6 +829,7 @@ Deno.serve(async (req) => {
     }
   } catch (e) {
     console.error("[cadu-publish] erro:", e);
-    return json(500, { ok: false, code: "INTERNAL_ERROR", message: e instanceof Error ? e.message : String(e) });
+    const stack = e instanceof Error ? e.stack || "" : "";
+    return json(500, { ok: false, code: "INTERNAL_ERROR", message: e instanceof Error ? e.message : String(e), stack: stack.slice(0, 800) });
   }
 });
