@@ -55,7 +55,7 @@
     "@vercel/speed-insights": "^2.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.0",
+    "@babel/core": "^8.0.1",
     "@babel/preset-env": "^7.29.2",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.59.1",
