@@ -4,6 +4,18 @@
 // Espelham (em TS) os utilitarios de services/cadu-ufg-publisher/src/utils.js
 // para manter a mesma normalizacao de texto/slug/data que ja era usada.
 
+export const DEFAULT_AUTO_PUBLISH_SCORE_MIN = 0.7;
+
+export function resolveAutoPublishScoreMin(value: unknown): number {
+  const raw = String(value ?? "").trim();
+  if (!raw) return DEFAULT_AUTO_PUBLISH_SCORE_MIN;
+
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1
+    ? parsed
+    : DEFAULT_AUTO_PUBLISH_SCORE_MIN;
+}
+
 export function normalizeWhitespace(value: unknown): string {
   return String(value ?? "")
     .replace(/[^\S\n]+/g, " ")

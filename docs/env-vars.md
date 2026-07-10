@@ -91,6 +91,7 @@ Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e aut
 | `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_WINDOW_MINUTES` | janela de rate limit do canal WhatsApp |
 | `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_MAX_PER_WINDOW` | maximo de envios por usuario na janela do canal WhatsApp |
 | `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT` | limite padrao de rows por execucao do dispatcher |
+| `AUTO_PUBLISH_SCORE_MIN` | limiar da barreira editorial do `cadu-publish`, entre `0` e `1`; padrao e fallback seguro `0.70` |
 
 ### Edge Functions relevantes
 
