@@ -132,6 +132,14 @@
     return toNumber(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
   }
 
+  function isConsentDataAvailable(consent) {
+    return !consent || consent.data_available !== false;
+  }
+
+  function consentExportValue(consent, key) {
+    return isConsentDataAvailable(consent) ? toNumber(consent && consent[key]) : 'Indisponível';
+  }
+
   function formatDateTime(value) {
     if (!value) return '-';
     const date = new Date(value);
@@ -337,6 +345,7 @@
     });
 
     const consentList = Array.isArray(consentRows) ? consentRows : [];
+    const consentDataAvailable = !options || options.consentDataAvailable !== false;
     return {
       ok: true,
       generated_at: new Date().toISOString(),
@@ -351,6 +360,7 @@
         report_submits: sourceRows.filter(function (row) { return row.event_name === 'report_submit'; }).length,
       },
       consent: {
+        data_available: consentDataAvailable,
         updates: consentList.length,
         analytics_accepted: consentList.filter(function (row) { return row.analytics_enabled === true || row.analytics === true; }).length,
         analytics_rejected: consentList.filter(function (row) { return row.analytics_enabled === false || row.analytics === false; }).length,
@@ -384,7 +394,11 @@
         ? 'A RPC retornou acesso negado para este usuario.'
         : 'A RPC de privacidade ainda nao esta disponivel. Rode a migration v9.3.5.16 no Supabase.');
     }
-    return Object.assign({}, data, { filters, source_mode: 'rpc' });
+    return Object.assign({}, data, {
+      consent: Object.assign({ data_available: true }, data.consent || {}),
+      filters,
+      source_mode: 'rpc',
+    });
   }
 
   async function loadDirectPrivacyRows(client, filters) {
@@ -405,20 +419,37 @@
       }
 
       let consentRows = [];
+      let consentDataAvailable = false;
+      let consentNotice = '';
       try {
         const consentResult = await client
           .from('privacy_consent_events')
           .select('created_at,preferences_enabled,analytics_enabled')
           .gte('created_at', filters.since)
           .limit(5000);
-        if (consentResult && !consentResult.error && Array.isArray(consentResult.data)) {
+        if (consentResult && consentResult.error) {
+          consentNotice = isMissingTableError(consentResult.error)
+            ? 'Histórico de consentimento indisponível neste ambiente; aceites e rejeições não são exibidos.'
+            : 'Não foi possível consultar o histórico de consentimento; aceites e rejeições não são exibidos.';
+          if (!isMissingTableError(consentResult.error)) {
+            console.warn('[Admin Privacy Analytics] Consentimento indisponível:', consentResult.error.message || consentResult.error);
+          }
+        } else if (consentResult && Array.isArray(consentResult.data)) {
           consentRows = consentResult.data;
+          consentDataAvailable = true;
         }
-      } catch (_) { }
+      } catch (error) {
+        consentNotice = 'Não foi possível consultar o histórico de consentimento; aceites e rejeições não são exibidos.';
+        console.warn('[Admin Privacy Analytics] Consentimento indisponível:', error && error.message || error);
+      }
 
       return aggregateEventRows(result && result.data || [], consentRows, filters, {
         sourceMode: 'direct_privacy_tables',
-        notice: 'RPC ausente; usando tabelas de privacidade diretamente.',
+        consentDataAvailable,
+        notice: [
+          'RPC administrativa ausente; usando eventos de privacidade diretamente.',
+          consentNotice,
+        ].filter(Boolean).join(' '),
       });
     } catch (error) {
       if (isMissingTableError(error)) return null;
@@ -508,6 +539,7 @@
 
     const data = aggregateEventRows(rows, [], filters, {
       sourceMode: 'legacy_fallback',
+      consentDataAvailable: false,
       notice: 'Migration/RPC de privacidade pendente; exibindo compatibilidade com buscas e views existentes.',
     });
 
@@ -541,6 +573,7 @@
     if (!client) {
       return aggregateEventRows([], [], filters, {
         sourceMode: 'no_client',
+        consentDataAvailable: false,
         notice: 'Supabase client indisponivel; exibindo inventario local.',
       });
     }
@@ -570,6 +603,7 @@
   function renderSummary(data) {
     const totals = data && data.totals ? data.totals : {};
     const consent = data && data.consent ? data.consent : {};
+    const consentAvailable = isConsentDataAvailable(consent);
     const impressions = toNumber(totals.banner_impressions);
     const clicks = toNumber(totals.banner_clicks);
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
@@ -580,8 +614,8 @@
       metricCard('fas fa-users-viewfinder', 'Sessões agregadas', formatNumber(totals.sessions), 'sem identificação individual'),
       metricCard('fas fa-magnifying-glass', 'Buscas', formatNumber(totals.searches), 'tabela search_queries'),
       metricCard('fas fa-images', 'CTR banners', formatPercent(ctr), formatNumber(clicks) + ' cliques / ' + formatNumber(impressions) + ' impressões'),
-      metricCard('fas fa-check-circle', 'Aceites analytics', formatNumber(consent.analytics_accepted), 'histórico agregado'),
-      metricCard('fas fa-ban', 'Rejeições analytics', formatNumber(consent.analytics_rejected), 'opcionais bloqueados'),
+      metricCard('fas fa-check-circle', 'Aceites analytics', consentAvailable ? formatNumber(consent.analytics_accepted) : 'N/D', consentAvailable ? 'histórico agregado' : 'histórico indisponível'),
+      metricCard('fas fa-ban', 'Rejeições analytics', consentAvailable ? formatNumber(consent.analytics_rejected) : 'N/D', consentAvailable ? 'opcionais bloqueados' : 'histórico indisponível'),
     ].join('');
   }
 
@@ -763,9 +797,9 @@
         { label: 'Buscas', value: totals.searches || 0, context: 'Eventos de busca no período' },
         { label: 'Impressões de banners', value: totals.banner_impressions || 0, context: 'Eventos banner_impression' },
         { label: 'Cliques em banners', value: totals.banner_clicks || 0, context: 'Eventos banner_click' },
-        { label: 'Consentimentos registrados', value: consent.updates || 0, context: 'Histórico agregado' },
-        { label: 'Analytics aceitos', value: consent.analytics_accepted || 0, context: 'Consentimento opcional aceito' },
-        { label: 'Analytics rejeitados', value: consent.analytics_rejected || 0, context: 'Consentimento opcional recusado' },
+        { label: 'Consentimentos registrados', value: consentExportValue(consent, 'updates'), context: isConsentDataAvailable(consent) ? 'Histórico agregado' : 'Fonte indisponível' },
+        { label: 'Analytics aceitos', value: consentExportValue(consent, 'analytics_accepted'), context: isConsentDataAvailable(consent) ? 'Consentimento opcional aceito' : 'Fonte indisponível' },
+        { label: 'Analytics rejeitados', value: consentExportValue(consent, 'analytics_rejected'), context: isConsentDataAvailable(consent) ? 'Consentimento opcional recusado' : 'Fonte indisponível' },
       ],
       sections: [
         {
@@ -860,9 +894,9 @@
           buscas: totals.searches || 0,
           impressões_banners: totals.banner_impressions || 0,
           cliques_banners: totals.banner_clicks || 0,
-          consentimentos: consent.updates || 0,
-          analytics_aceitos: consent.analytics_accepted || 0,
-          analytics_rejeitados: consent.analytics_rejected || 0,
+          consentimentos: consentExportValue(consent, 'updates'),
+          analytics_aceitos: consentExportValue(consent, 'analytics_accepted'),
+          analytics_rejeitados: consentExportValue(consent, 'analytics_rejected'),
         }],
       },
       { name: 'Eventos', rows: state.data.by_event || [] },
@@ -888,7 +922,9 @@
           sessoes: totals.sessions || 0,
           buscas: totals.searches || 0,
           banners: (totals.banner_clicks || 0) + ' cliques / ' + (totals.banner_impressions || 0) + ' impressões',
-          consentimento: (consent.analytics_accepted || 0) + ' aceites / ' + (consent.analytics_rejected || 0) + ' rejeições',
+          consentimento: isConsentDataAvailable(consent)
+            ? (consent.analytics_accepted || 0) + ' aceites / ' + (consent.analytics_rejected || 0) + ' rejeições'
+            : 'Indisponível',
         }],
       },
       { title: 'Eventos por tipo', rows: state.data.by_event || [] },
@@ -999,7 +1035,16 @@
     refresh();
   }
 
-  if (document.readyState === 'loading') {
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Object.freeze({
+      aggregateEventRows,
+      isConsentDataAvailable,
+      consentExportValue,
+      loadDataViaRpcFallbackAware,
+      loadDirectPrivacyRows,
+      renderSummary,
+    });
+  } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init, { once: true });
   } else {
     init();

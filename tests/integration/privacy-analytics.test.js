@@ -115,4 +115,38 @@ describe('kc-privacy-analytics.js', () => {
       p_source: 'reject_optional',
     });
   });
+
+  test('propaga rejeicao de dominio da RPC de analytics', async () => {
+    const rpc = jest.fn(() => Promise.resolve({ data: { ok: false, code: 'INVALID_METADATA' }, error: null }));
+    window.KCConsent = { hasConsent: jest.fn(() => true) };
+    window.KCSupabase = { getClient: () => ({ rpc }) };
+
+    const api = loadPrivacyAnalytics();
+    const result = await api.track('search', { value: 'edital' });
+
+    expect(result).toMatchObject({ ok: false, code: 'INVALID_METADATA' });
+  });
+
+  test('nao memoriza consentimento rejeitado pela RPC', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: { ok: false, code: 'INVALID_SESSION' }, error: null })
+      .mockResolvedValueOnce({ data: { ok: true }, error: null });
+    window.KCSupabase = { getClient: () => ({ rpc }) };
+
+    const api = loadPrivacyAnalytics();
+    const prefs = {
+      version: '2026-05-07',
+      preferences: true,
+      analytics: false,
+      updatedAt: '2026-07-09T12:00:00.000Z',
+      source: 'custom',
+    };
+
+    const first = await api.recordConsent(prefs);
+    const second = await api.recordConsent(prefs);
+
+    expect(first).toMatchObject({ ok: false, code: 'INVALID_SESSION' });
+    expect(second).toMatchObject({ ok: true });
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
 });
