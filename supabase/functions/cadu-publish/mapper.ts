@@ -368,6 +368,7 @@ function buildDescription(item: CaduItem): string {
   const sourceLabel = buildSourceLabel(String(item.sourceName || ""));
   const alreadyHasSource = sourceUrl && (formatted.includes(sourceUrl) || lead.includes(sourceUrl));
 
+  const module = (item.module as string) || "";
   const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
   if (formatted && isUsefulFormattedDescription(formatted)) {
     chunks.push(clampMarkdown(formatted, 1700));
