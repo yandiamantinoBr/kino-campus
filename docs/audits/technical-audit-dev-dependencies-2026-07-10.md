@@ -113,4 +113,3 @@ itens e pelo plano de correção que os reduziu primeiro a cinco.
 | P3 | `@vercel/og` possui versão major mais nova | avaliar API e snapshots separadamente; não atualizar nesta rodada |
 
 Nenhum secret, deploy, configuração remota ou arquivo de runtime da aplicação foi alterado.
-
