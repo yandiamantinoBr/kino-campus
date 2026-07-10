@@ -21,13 +21,19 @@
  *   7. P1-Sympla-Even3: detecta links de inscrição externos (Sympla, Even3, Google Forms) e adiciona a relevantLinks
  *
  * v4.6.0 (2026-07-10) — Inventario extensivo UFG (171 sites em sources.json):
- *   1. Adicionados 67 PPGs stricto sensu ao Tier 1 (publicam editais ~3-4x/ano)
+ *   1. Adicionados 67 PPGs stricto sensu ao Tier 1 (publicam editais 3-4x/ano)
  *   2. Adicionado Campus Cidade Ocidental (co.ufg.br) ao Tier 2
  *   3. Adicionados 10+ estruturas vinculadas (CRTI, CPCBio, LaMCAD, IPElab, PTS, PITT, etc) ao Tier 2/3
  *   4. Adicionados midias (Jornal UFG, TV UFG, Radio UFG, Revistas UFG) ao Tier 2
  *   5. Adicionados PROEC, SECPLAN, PROPESSOAS ao Tier 1/2 (movidos do 3)
  *   6. Total: Tier 1 passou de 10 para 76+; Tier 2 de 26 para 63+; Tier 3 de 33 para 32+
  *   7. Yan pediu mapeamento extensivo com PPGs/labs/campi fora de Goiânia; ufg-sites-map.md v2.0 reflete.
+ *
+ * v4.6.1 (2026-07-10) — URLs REAIS dos PPGs (audit via Weby /feed):
+ *   1. 29 PPGs com site proprio descoberto via teste de URLs (ppgX.unidade.ufg.br)
+ *   2. PPGs sem site proprio usam pos.ufg.br/p/[...] como fallback
+ *   3. Yan pediu "mais profundidade, mais analitico" — sites testados 1 a 1
+ *   4. ufg-sites-map.md v3.0 + sources.json v3.0 refletem URLs REAIS (106 sites)
  *
  * Uso:
  *   node cadu-curador-v4.4.js           → full (Tier 1+2+3 + Browser IG)
@@ -105,22 +111,24 @@ const TIERS = {
       'pitt': { url: 'https://pitt.prpi.ufg.br', ig: null },
       'jornal-ufg': { url: 'https://jornal.ufg.br', ig: null },
       'tvufg': { url: 'https://tvufg.org.br', ig: 'tvufg' },
-      // v4.6.0: 67 PPGs stricto sensu — editais publicados 3-4x/ano
+      // v4.6.1 (2026-07-10): URLs REAIS dos PPGs - testados via audit (29 com /feed)
+      // Cada PPG tem seu proprio subdominio (padrao: ppgX.unidade.ufg.br)
+      // Os que NAO tem site proprio usam pos.ufg.br/p/ como fallback.
       // Ciencias Agrarias
-      'ppgagro': { url: 'https://pos.ufg.br/p/pos-graduacao-agronegocio-ppgagro', ig: null },
-      'ppgca': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencia-animal-ppgca', ig: null },
-      'ppgcta': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencia-tecnologia-alimentos-ppgcta', ig: null },
-      'ppggmp': { url: 'https://pos.ufg.br/p/programa-pos-graduacao-genetica-melhoramento-plantas-ppggmp', ig: null },
-      'ppgz': { url: 'https://pos.ufg.br/p/pos-graduacao-zootecnia-ppgz', ig: null },
-      'ppga': { url: 'https://pos.ufg.br/p/pos-graduacao-agronomia-ppga', ig: null },
+      'ppgagro': { url: 'https://ppgagro.agro.ufg.br', ig: null },
+      'ppgca': { url: 'https://ppgca.evz.ufg.br', ig: null },
+      'ppgcta': { url: 'https://ppgcta.agro.ufg.br', ig: null },
+      'ppggmp': { url: 'https://ppggmp.agro.ufg.br', ig: null },
+      'ppgz': { url: 'https://ppgz.evz.ufg.br', ig: null },
+      'ppga': { url: 'https://ppga.agro.ufg.br', ig: null },
       // Ciencias Exatas e da Terra
-      'ppgcc': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencia-computacao-ppgcc', ig: 'ppgccufg' },
+      'ppgcc': { url: 'https://ppgcc.inf.ufg.br', ig: 'ppgccufg' },
       'ppgf': { url: 'https://pos.ufg.br/p/pos-graduacao-fisica-ppgf', ig: null },
       'ppgec': { url: 'https://pos.ufg.br/p/pos-graduacao-matematica-ppgime', ig: null },
-      'ppgq': { url: 'https://pos.ufg.br/p/pos-graduacao-quimica-ppgq', ig: null },
+      'ppgq': { url: 'https://ppgq.quimica.ufg.br', ig: null },
       'ppgea': { url: 'https://ppgea.fct.ufg.br', ig: null },
-      'profmat': { url: 'https://pos.ufg.br/p/mestrado-profissional-matematica-rede-nacional-profmat', ig: null },
-      // Ciencias Biologicas
+      'profmat': { url: 'https://profmat.ime.ufg.br', ig: null },
+      // Ciencias Biologicas (sem site proprio - usam pos.ufg.br)
       'ppgban': { url: 'https://pos.ufg.br/p/pos-graduacao-biodiversidade-animal-ppgban', ig: null },
       'ppgrph': { url: 'https://pos.ufg.br/p/pos-graduacao-biologia-relacao-parasito-hospedeiro', ig: null },
       'ppgcb': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencias-biologicas-ppgcb', ig: null },
@@ -128,50 +136,50 @@ const TIERS = {
       'ppgmcf': { url: 'https://pos.ufg.br/p/pos-graduacao-multicentrico-ciencias-fisiologicas-ppgmcf', ig: null },
       'ppgbm': { url: 'https://pos.ufg.br/p/pos-graduacao-genetica-biologia-molecular', ig: null },
       // Ciencias da Saude
-      'ppgaas': { url: 'https://pos.ufg.br/p/pos-graduacao-assistencia-avaliacao-saude-ppgaas', ig: null },
+      'ppgaas': { url: 'https://ppgaas.farmacia.ufg.br', ig: null },
       'ppgcs': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencias-saude-ppgcs', ig: null },
-      'ppgcf': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencias-farmaceuticas-ppgcf', ig: null },
+      'ppgcf': { url: 'https://ppgcf.farmacia.ufg.br', ig: null },
       'ppgef': { url: 'https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef', ig: null },
       'proef': { url: 'https://pos.ufg.br/p/mestrado-profissional-educacao-fisica-rede-nacional-proef', ig: null },
       'ppgenf': { url: 'https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf', ig: null },
       'ppgif': { url: 'https://ppgif.farmacia.ufg.br', ig: null },
-      'ppgmtsp': { url: 'https://pos.ufg.br/p/pos-graduacao-medicina-tropical-saude-publica-ppgmtsp', ig: null },
+      'ppgmtsp': { url: 'https://ppgmtsp.iptsp.ufg.br', ig: null },
       'ppgfnf': { url: 'https://pos.ufg.br/p/pos-graduacao-nanotecnologia-farmaceutica-ppgnanofarma', ig: null },
-      'ppgnut': { url: 'https://pos.ufg.br/p/pos-graduacao-nutricao-saude', ig: 'ppgnut.ufg' },
+      'ppgnut': { url: 'https://ppgnut.fanut.ufg.br', ig: 'ppgnut.ufg' },
       'ppgo': { url: 'https://pos.ufg.br/p/programa-pos-graduacao-odontologia-ppgo', ig: null },
       'ppgsc': { url: 'https://pos.ufg.br/p/pos-graduacao-saude-coletiva-ppgsc', ig: null },
       // Ciencias Humanas
-      'ppgas': { url: 'https://pos.ufg.br/p/pos-graduacao-antropologia-social-ppgas', ig: null },
+      'ppgas': { url: 'https://ppgas.fcs.ufg.br', ig: null },
       'ppgcpri': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencia-politica-ppgcpri', ig: null },
       'ppge': { url: 'https://pos.ufg.br/p/pos-graduacao-educacao-ppge', ig: null },
       'ppgfil': { url: 'https://pos.ufg.br/p/pos-graduacao-filosofia-ppgfil', ig: null },
-      'ppgeo': { url: 'https://pos.ufg.br/p/pos-graduacao-geografia-ppgeo', ig: null },
+      'ppgeo': { url: 'https://ppgeo.iesa.ufg.br', ig: null },
       'ppgh': { url: 'https://pos.ufg.br/p/pos-graduacao-historia-ppgh', ig: null },
       'ppgp': { url: 'https://pos.ufg.br/p/pos-graduacao-psicologia-ppgp', ig: null },
       'ppgs': { url: 'https://pos.ufg.br/p/pos-graduacao-sociologia-ppgs', ig: null },
       'profhistoria': { url: 'https://pos.ufg.br/p/pos-graduacao-ensino-historia-profhistoria', ig: null },
       // Engenharias
-      'ppgeas': { url: 'https://pos.ufg.br/p/pos-graduacao-engenharia-ambiental-sanitaria-ppgeas', ig: null },
-      'ppgeec': { url: 'https://pos.ufg.br/p/pos-graduacao-engenharia-eletrica-computacao-ppgeec', ig: null },
-      'ppgmec': { url: 'https://pos.ufg.br/p/pos-graduacao-engenharia-mecanica-ppgmec', ig: null },
-      'ppgeq': { url: 'https://pos.ufg.br/p/pos-graduacao-engenharia-quimica-ppgeq', ig: null },
+      'ppgeas': { url: 'https://ppgeas.eeca.ufg.br', ig: null },
+      'ppgeec': { url: 'https://ppgeec.emc.ufg.br', ig: null },
+      'ppgmec': { url: 'https://ppgmec.emc.ufg.br', ig: null },
+      'ppgeq': { url: 'https://ppgeq.quimica.ufg.br', ig: null },
       'ppggecon': { url: 'https://pos.ufg.br/p/pos-graduacao-geotecnia-estruturas-construcao-civil-ppggecon', ig: null },
       // Linguistica, Letras e Artes
       'ppgacv': { url: 'https://pos.ufg.br/p/programa-pos-graduacao-arte-cultura-visual-ppgacv', ig: 'ppgacv' },
       'ppgac': { url: 'https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac', ig: null },
       'ppgll': { url: 'https://pos.ufg.br/p/pos-graduacao-letras-linguistica-ppgll', ig: null },
-      'ppgmus': { url: 'https://ppgmus.emac.ufg.br', ig: null },
+      'ppgmus': { url: 'https://ppgmus.em.ufg.br', ig: null },
       // Ciencias Sociais Aplicadas
       'ppgadm': { url: 'https://ppgadm.face.ufg.br', ig: 'ppgadm.ufg' },
       'ppgcont': { url: 'https://ppgcont.face.ufg.br', ig: null },
       'ppgecon': { url: 'https://ppgecon.face.ufg.br', ig: null },
       'ppgdr': { url: 'https://ppgdr.face.ufg.br', ig: null },
       'ppgci': { url: 'https://ppgci.fic.ufg.br', ig: null },
-      'ppgcom': { url: 'https://pos.ufg.br/p/pos-graduacao-comunicacao-ppgcom', ig: null },
+      'ppgcom': { url: 'https://ppgcom.fic.ufg.br', ig: null },
       'ppgda': { url: 'https://pos.ufg.br/p/pos-graduacao-direito-agrario-ppgda', ig: null },
       'ppgdp': { url: 'https://pos.ufg.br/p/pos-graduacao-direito-politicas-publicas-ppgdp', ig: null },
       'ppgpc': { url: 'https://pos.ufg.br/p/pos-graduacao-projeto-cidade-ppgprocidade', ig: null },
-      'profiap': { url: 'https://pos.ufg.br/p/mestrado-profissional-administracao-publica-profiap', ig: null },
+      'profiap': { url: 'https://profiap.fct.ufg.br', ig: null },
       // Programas Multidisciplinares
       'ppgciamb': { url: 'https://pos.ufg.br/p/pos-graduacao-ciencias-ambientais-ppgciamb', ig: null },
       'ppgdh': { url: 'https://pos.ufg.br/p/pos-graduacao-direitos-humanos-ppgdh', ig: null },
