@@ -61,13 +61,13 @@
 ### Contagem canônica
 
 ```
-Jest: 207 suites · 3921 testes
+Jest: 207 suites · 3922 testes
 Playwright: 13 specs · 85 testes listados
 pgTAP: 4 arquivos · 106 testes
 Edge Functions: 8 entrypoints · Deno check
 ```
 
-**Regra imutável:** `npm test` DEVE sempre retornar `≥207 passed, 207 total` e `≥3921 passed, 3921 total`.
+**Regra imutável:** `npm test` DEVE sempre retornar `≥207 passed, 207 total` e `≥3922 passed, 3922 total`.
 
 ### Gate CI essencial
 
@@ -508,7 +508,7 @@ module.exports = {
 ```
 npm test deve SEMPRE retornar:
   Test Suites: ≥207 passed, 207 total
-  Tests:       ≥3921 passed, 3921 total
+  Tests:       ≥3922 passed, 3922 total
 ```
 
 Qualquer commit que reduza esses números é inválido e deve ser corrigido antes de ser mergeado.

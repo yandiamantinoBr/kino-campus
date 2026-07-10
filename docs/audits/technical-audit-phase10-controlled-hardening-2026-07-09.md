@@ -59,7 +59,7 @@ O drift acima foi reconciliado **na cadeia versionada local**, não em produçã
 `20260710011442`, `20260710012022`, `20260710012926` e `20260710015000`. O reset local agora
 reconstrói 43 tabelas públicas, passa sem avisos no linter e possui 106 contratos pgTAP.
 
-A validação consolidada passou com 207 suítes/3.921 testes Jest, 85 cenários Playwright e
+A validação consolidada passou com 207 suítes/3.922 testes Jest, 85 cenários Playwright e
 type-check das 8 Edge Functions. Evidências, limites e plano de rollout estão em
 `technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md`. A produção continua sem
 `privacy_consent_events`; nenhuma migration remota foi executada.

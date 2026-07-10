@@ -157,5 +157,7 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 - Remoção de diretório de função deve falhar e exigir operação explícita; nunca apagar função
   remota implicitamente.
 - `supabase link` e o deploy devem falhar fechados; não reintroduzir `|| true`.
+- Referências externas `uses:` devem permanecer fixadas em SHA completo; comentários de versão
+  podem indicar o major, mas tags móveis não são aceitas pelo contrato de CI.
 - Nenhuma dessas garantias autoriza migration remota automática. O rollout do schema continua
   separado e exige o procedimento de branch descrito na auditoria de 2026-07-10.
