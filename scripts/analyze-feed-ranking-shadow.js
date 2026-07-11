@@ -4,7 +4,59 @@ const fs = require('fs');
 const path = require('path');
 
 const Policy = require('../assets/js/shared/kc-feed-ranking-policy.shared.js');
-const { analyzeTemporalRelevance } = require('../services/cadu-ufg-publisher/src/classifier.js');
+
+// analyzeTemporalRelevance é a única dependência de classifier.js.
+// Como a Vercel NÃO bundle `services/cadu-ufg-publisher/src/classifier.js`
+// (path fora do `api/` raiz e fora de `dependencies` no package.json), o
+// require direto quebra com "Cannot find module" em produção.
+//
+// Solução: tentar carregar o classifier completo; se falhar (Vercel),
+// usar um fallback inline minimalista que implementa a mesma interface
+// (item, options) → { expired, reason, today, deadlineDate, eventDate, dates }.
+//
+// O fallback só precisa detectar ISO dates (YYYY-MM-DD) no texto e nos
+// campos dateBeginAt/dateEndAt do item, e checar se alguma é anterior
+// a `today`. É menos sofisticado que o classifier completo (não detecta
+// "10 de outubro de 2026", "10/10/2026" etc), mas é suficiente para o
+// shadow produzir a mesma shape de triage/repair.
+let analyzeTemporalRelevance = null;
+try {
+  // eslint-disable-next-line global-require
+  ({ analyzeTemporalRelevance } = require('../services/cadu-ufg-publisher/src/classifier.js'));
+} catch (err) {
+  // Fallback inline: extrai datas ISO do text + campos explícitos do item.
+  analyzeTemporalRelevance = function analyzeTemporalRelevanceFallback(item, options) {
+    const now = options && options.now ? new Date(options.now) : new Date();
+    const today = Number.isNaN(now.getTime()) ? new Date().toISOString().slice(0, 10) : now.toISOString().slice(0, 10);
+    const rawText = String((item && (item.title || '')) + ' ' + (item && (item.summary || '')) + ' ' + (item && (item.text || '')));
+    const isoMatches = rawText.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/g) || [];
+    const explicit = [item && item.dateEndAt, item && item.dateBeginAt,
+                      item && item.raw && item.raw.date_end_at,
+                      item && item.raw && item.raw.end_at,
+                      item && item.raw && item.raw.date_begin_at,
+                      item && item.raw && item.raw.begin_at];
+    const allIso = Array.from(new Set(
+      [].concat(isoMatches, explicit.filter(Boolean).map(function (v) {
+        return String(v).slice(0, 10);
+      })).filter(function (s) { return /^\d{4}-\d{2}-\d{2}$/.test(s); })
+    )).sort();
+    let deadlineDate = '';
+    let eventDate = '';
+    for (let i = 0; i < allIso.length; i += 1) {
+      const iso = allIso[i];
+      if (!deadlineDate || iso > deadlineDate) deadlineDate = iso;
+    }
+    eventDate = deadlineDate;
+    const dates = allIso;
+    if (deadlineDate && deadlineDate < today) {
+      return { expired: true, reason: 'deadline_past', today, deadlineDate, eventDate, dates };
+    }
+    if (eventDate && eventDate < today) {
+      return { expired: true, reason: 'event_past', today, deadlineDate, eventDate, dates };
+    }
+    return { expired: false, reason: '', today, deadlineDate, eventDate, dates };
+  };
+}
 
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_PUBLIC_ENV_URL = 'https://www.kinocampus.com.br/assets/js/boot/kc-env.js';
