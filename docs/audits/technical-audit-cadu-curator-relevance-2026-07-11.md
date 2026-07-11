@@ -35,6 +35,10 @@ arquivo ou stdin e devolve decisão, módulo, motivos e evidências temporais po
 - a PR #667 restaurou os dois gates concorrentes e foi mesclada como `3d42904b`;
 - o CI pós-merge `29144210994` passou em validators/Jest/Playwright, Supabase e nove Edge Functions;
 - o deploy Edge pós-CI `29144294126` publicou somente `cadu-auth-proxy` e verificou o resultado;
+- a PR A #668 foi mesclada como `b91d21d6`; o Essential Validation pós-merge `29157172931`
+  passou, e o workflow Edge `29157255987` detectou zero funções alteradas e pulou o deploy;
+- o merge gerou deployment automático Vercel `dpl_4c8d8ESJtFV1Vo6PYJDNbZkJz6Cp`, estado `READY`,
+  e `vercel curl` confirmou HTML com o título Kino; nenhuma promoção manual foi executada;
 - nenhuma migration foi aplicada remotamente.
 
 ### VPS e artefato
@@ -49,6 +53,13 @@ arquivo ou stdin e devolve decisão, módulo, motivos e evidências temporais po
 - SHA-256: `b3a83d904d90827d4faed0e0541e59fbd26f454c22ecefba4533441dd62faf85`;
 - o arquivo `_truly_new_2026-07-11.json` era byte a byte igual ao daily completo e não representava
   apenas itens realmente novos.
+- no probe final pós-merge, o artefato continuava no mesmo SHA, mas o curador do VPS havia sido
+  alterado externamente às 11:07:20 -03 para o SHA-256
+  `fb28cb33cd9f3c36d5ffc9b92b4ca2b61a5fecdd362d2cb87af0c973b74622ef`;
+- esse arquivo remoto não corresponde nem ao OpenClaw local
+  (`575662f2311f9eac31780fa686b0090546d364326d5da0453ad6892ceecdfebc`) nem ao espelho
+  mesclado (`df59d4ddc47df10661c15becc7843aafa22958e8781fef3402e7999629decb8e`); a comparação mostra
+  40 linhas de hotfix adicionadas ao arquivo antigo. A origem da escrita não foi inferida.
 
 ## Causas raiz confirmadas
 
@@ -157,6 +168,8 @@ curador espelhado.
 - nenhum dos 15 possuía `eventDate` ou `deadline` top-level;
 - o dry-run novo resulta em quatro `publish` e onze `discard`;
 - nenhum run ou publish foi disparado por esta auditoria.
+- o curador remoto sofreu uma escrita concorrente depois do replay e antes do probe final; nenhum
+  comando desta auditoria escreveu no VPS.
 
 ### Inferências sustentadas
 
@@ -174,19 +187,22 @@ curador espelhado.
 
 ## Limites e rollout
 
-- este PR altera o espelho versionado no KinoCampus; o OpenClaw local/VPS permanece no SHA antigo
-  `575662f2311f9eac31780fa686b0090546d364326d5da0453ad6892ceecdfebc`;
+- este PR altera o espelho versionado no KinoCampus; o OpenClaw local permanece no SHA antigo,
+  enquanto o VPS contém um hotfix concorrente não versionado e diferente dos dois repositórios;
 - nenhuma sincronização com o VPS faz parte deste lote;
-- antes do rollout operacional, portar o mesmo patch ao repositório OpenClaw, executar seus testes,
-  comparar o diff, criar backup/rollback e somente então sincronizar;
+- antes do rollout operacional, preservar e atribuir o hotfix remoto, corrigir seus defeitos em
+  branch, portar o gate mesclado ao OpenClaw, executar testes, comparar o diff, criar
+  backup/rollback e somente então sincronizar;
 - não usar `npm run cadu:dry-run` como prova deste curador: esse comando exercita o publisher Node,
   que possui outro classificador.
 
 ## Riscos remanescentes priorizados
 
-- **P0:** nenhum P0 novo demonstrado neste lote; o CI essencial da base foi restaurado antes do
-  trabalho do curador.
-- **P1:** o patch ainda não está no OpenClaw/VPS; os quatro inventários de fontes continuam
+- **P0:** o hotfix concorrente no VPS usa `decision`, `reasons` e `module` antes das respectivas
+  declarações (`let`/`const`), o que pode lançar `ReferenceError` quando os novos ramos executam;
+  dois regex de cobertura passada contêm U+0008 em vez de `\b`. `node --check` passa porque o
+  defeito é semântico, não sintático. Novos runs devem aguardar reconciliação versionada e rollback.
+- **P1:** o gate mesclado ainda não está no OpenClaw/VPS; os quatro inventários de fontes continuam
   divergentes (publisher com 106 fontes, curador com 156 linhas/147 IDs e mapa remoto com 106
   declaradas/104 parseadas); `_truly_new` continua copiando o daily inteiro; métricas de candidato,
   formatado e publicado continuam semanticamente misturadas; a base ainda não exige os checks por
@@ -199,11 +215,13 @@ curador espelhado.
 
 ## Decisões e próximos lotes
 
-1. Este PR A termina no espelho versionado, testes e replay offline; sem sync, publish ou deploy.
+1. A PR A termina no espelho versionado, testes e replay offline; sem sync ou publish OpenClaw,
+   migration ou deploy manual.
 2. PR B deve criar o contrato canônico de fontes e geradores deterministas, eliminando requests
    duplicados antes da rede.
 3. PR C deve tornar `cadu-api` estruturado, restaurar as três fontes FACE e expor
    `declaredTier`, `overrideTier` e `effectiveTier` por `source_id` estável.
 4. PR D deve corrigir summary, `_truly_new`, métricas/health e export JSON/PDF/admin.
-5. Só depois, em lote operacional próprio, portar o patch ao OpenClaw, comparar hashes, manter
-   backup/rollback e executar dry-run controlado antes de qualquer publicação.
+5. Antes dos PRs B-D em operação, abrir um lote curto para preservar o hotfix remoto, reproduzir os
+   `ReferenceError`, reconciliar as intenções com a PR A e preparar rollback; só então portar ao
+   OpenClaw e executar dry-run controlado antes de qualquer publicação.
