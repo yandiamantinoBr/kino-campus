@@ -433,31 +433,31 @@
 
       <!-- KPIs (cada KPI é clicável e leva à aba correspondente) -->
       <div class="kc-cadu-kpi-strip">
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="all" title="Abrir aba Sites UFG (lista completa)">
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="all" title="Abrir aba Sites UFG (lista completa)" data-i18n-tooltip="tooltip.cadu-kpi-sites">
           <div class="kc-cadu-kpi__label"><i class="fas fa-university"></i> Unidades UFG</div>
           <strong id="kpi-sites">—</strong>
           <small>no mapa curado pelo Cadu</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Sites UFG</div>
         </button>
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="ig=confirmed" title="Abrir aba Sites UFG filtrando por IG confirmado">
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="ig=confirmed" title="Abrir aba Sites UFG filtrando por IG confirmado" data-i18n-tooltip="tooltip.cadu-kpi-instagram">
           <div class="kc-cadu-kpi__label"><i class="fab fa-instagram"></i> IG confirmado</div>
           <strong id="kpi-ig-confirmed">—</strong>
           <small id="kpi-ig-detail">perfis validados</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por Tier 1">
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por Tier 1" data-i18n-tooltip="tooltip.cadu-kpi-tier1">
           <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Tier 1</div>
           <strong id="kpi-tier1">—</strong>
           <small>pró-reitorias + alta prioridade</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir aba Feed Coletado (memória do Cadu)">
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir aba Feed Coletado (memória do Cadu)" data-i18n-tooltip="tooltip.cadu-kpi-feed">
           <div class="kc-cadu-kpi__label"><i class="fas fa-database"></i> Memória</div>
           <strong id="kpi-memory">—</strong>
           <small id="kpi-memory-detail">chunks indexados</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Feed Coletado</div>
         </button>
-        <div class="kc-cadu-kpi" data-kpi-tab="" title="Status do cadu-api (FastAPI sidecar) — somente leitura">
+        <div class="kc-cadu-kpi" data-kpi-tab="" title="Status do cadu-api (FastAPI sidecar) — somente leitura" data-i18n-tooltip="tooltip.cadu-kpi-api">
           <div class="kc-cadu-kpi__label"><i class="fas fa-heart-pulse"></i> cadu-api</div>
           <strong id="kpi-api">—</strong>
           <small id="kpi-api-detail">FastAPI sidecar</small>
@@ -498,7 +498,7 @@
             <option value="unknown">desconhecido</option>
           </select>
           <button type="button" id="sites-export-csv"><i class="fas fa-file-csv"></i> CSV</button>
-          <button type="button" id="sites-export-pdf" title="Exportar mapa de sites em PDF (com KPIs + tabela filtrada)"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" id="sites-export-pdf" title="Exportar mapa de sites em PDF (com KPIs + tabela filtrada)" data-i18n-tooltip="tooltip.cadu-sites-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
         </div>
         <div class="kc-cadu-table-wrap">
           <table class="kc-cadu-table" id="sites-table" aria-live="polite">
@@ -615,7 +615,7 @@
             <option value="200">200 itens</option>
           </select>
           <button type="button" id="feed-refresh-btn"><i class="fas fa-rotate"></i> Recarregar</button>
-          <button type="button" id="feed-export-pdf" title="Exportar a página atual do feed em PDF (com KPIs + tabela)"><i class="fas fa-file-pdf"></i> PDF</button>
+          <button type="button" id="feed-export-pdf" title="Exportar a página atual do feed em PDF (com KPIs + tabela)" data-i18n-tooltip="tooltip.cadu-feed-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
         </div>
         <div class="kc-cadu-feed-pager" aria-live="polite">
           <span id="feed-page-status">Carregando…</span>
@@ -632,7 +632,7 @@
           <div class="kc-cadu-feed-pager__actions">
             <button type="button" id="feed-prev-page-btn-bottom" class="kc-btn-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
             <button type="button" id="feed-next-page-btn-bottom" class="kc-btn-secondary">Próxima <i class="fas fa-arrow-right"></i></button>
-            <button type="button" id="feed-load-more-btn-bottom" class="kc-btn-secondary" title="Carregar mais 25 itens no fim da lista (concatena)"><i class="fas fa-plus"></i> Carregar mais</button>
+            <button type="button" id="feed-load-more-btn-bottom" class="kc-btn-secondary" title="Carregar mais 25 itens no fim da lista (concatena)" data-i18n-tooltip="tooltip.cadu-feed-load-more"><i class="fas fa-plus"></i> Carregar mais</button>
           </div>
         </div>
       </section>

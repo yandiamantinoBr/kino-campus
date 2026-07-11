@@ -9,14 +9,14 @@
 (function () {
   'use strict';
 
-  var FEED_PAGE_SIZE = 20;
+  var FEED_PAGE_SIZE = 25;
   var STORAGE_TAB = 'kc:cadu:tab';
 
   var state = {
     allSites: [],
     filteredSites: [],
     allFeedItems: [],
-    feedLimit: 20,
+    feedLimit: FEED_PAGE_SIZE,
     feedPage: 0,
     feedTotal: 0,
     feedHasMore: false,
@@ -563,7 +563,14 @@
     return loadFeed(false);
   }
 
-  async function loadFeed(initial) {
+  function loadFeedMore() {
+    if (!state.feedHasMore) return Promise.resolve();
+    var limit = state.feedLimit || FEED_PAGE_SIZE;
+    var loadedPages = Math.max(1, Math.ceil(state.allFeedItems.length / limit));
+    return loadFeed(false, state.feedPage + loadedPages);
+  }
+
+  async function loadFeed(initial, appendPage) {
     var list = $('#feed-list');
     if (initial) {
       state.feedPage = 0;
@@ -571,13 +578,15 @@
       state.allFeedItems = [];
     }
     var limit = state.feedLimit || FEED_PAGE_SIZE;
-    var offset = state.feedPage * limit;
+    var shouldAppend = typeof appendPage === 'number';
+    var requestPage = shouldAppend ? appendPage : state.feedPage;
+    var offset = requestPage * limit;
     try {
       var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true');
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
       var items = Array.isArray(data) ? data : (data.items || data.body || []);
-      state.allFeedItems = items;
-      state.feedTotal = Array.isArray(data) ? Math.max(offset + items.length, items.length) : (data.total || items.length);
+      state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
+      state.feedTotal = Array.isArray(data) ? Math.max(offset + items.length, state.allFeedItems.length) : (data.total || state.allFeedItems.length);
       state.feedHasMore = Array.isArray(data) ? items.length >= limit : !!data.has_more;
       $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
       $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
@@ -632,6 +641,7 @@
     var statusB = $('#feed-page-status-bottom');
     var prevB = $('#feed-prev-page-btn-bottom');
     var nextB = $('#feed-next-page-btn-bottom');
+    var moreB = $('#feed-load-more-btn-bottom');
     var limit = state.feedLimit || FEED_PAGE_SIZE;
     var start = state.feedTotal && state.allFeedItems.length ? (state.feedPage * limit + 1) : 0;
     var end = state.feedPage * limit + state.allFeedItems.length;
@@ -647,6 +657,7 @@
     if (prevB) prevB.disabled = prevDisabled;
     if (next) next.disabled = nextDisabled;
     if (nextB) nextB.disabled = nextDisabled;
+    if (moreB) moreB.disabled = nextDisabled;
   }
 
   function countFrom(obj, key) {
@@ -1505,7 +1516,7 @@
       acc[host] = (acc[host] || 0) + 1;
       return acc;
     }, {});
-    var topSources = Object.keys(source).sort(function (a, b) { return source[b] - source[a]; }).slice(0, 8);
+    var topSources = Object.keys(source).sort(function (a, b) { return source[b] - source[a]; }).slice(0, 5);
     var rows = items.map(function (it) {
       return {
         chunk: it.chunk_id ? it.chunk_id.slice(0, 16) : '—',
@@ -1522,7 +1533,7 @@
       generatedAt: new Date().toISOString(),
       filters: {
         pagina: (state.feedPage || 0) + 1,
-        limite: state.feedLimit || 20,
+        limite: state.feedLimit || FEED_PAGE_SIZE,
         busca: f.q || '—',
         chunks_listados: items.length,
         chunks_total: total,
@@ -1531,7 +1542,7 @@
         { label: 'Chunks listados', value: items.length, note: 'página atual' },
         { label: 'Total na memória', value: total, note: 'todos os chunks indexados' },
         { label: 'Página', value: ((state.feedPage || 0) + 1), note: 'paginação atual' },
-        { label: 'Limite', value: state.feedLimit || 20, note: 'itens por página' },
+        { label: 'Limite', value: state.feedLimit || FEED_PAGE_SIZE, note: 'itens por página' },
         { label: 'Fontes no top 5', value: topSources.length, note: topSources.slice(0, 5).map(function (h) { return h + ' (' + source[h] + ')'; }).join(' · ') || '—' },
       ],
       sections: [
@@ -1578,7 +1589,7 @@
   }
 
   async function exportFeedPdf(btn) {
-    var originalHtml = btn ? btn.innerHtml : '';
+    var originalHtml = btn ? btn.innerHTML : '';
     try {
       if (btn) {
         btn.disabled = true;
@@ -1619,12 +1630,18 @@
       if (!tabName) return; // kpi-api é status, não vira aba
       btn.addEventListener('click', function () {
         var filter = btn.getAttribute('data-kpi-filter') || '';
-        if (tabName === 'sites' && filter && filter !== 'all') {
-          var parts = filter.split('=');
-          var field = parts[0];
-          var value = parts[1];
-          if (field === 'tier' && sitesTier) { sitesTier.value = value; state.sitesFilter.tier = value; }
-          if (field === 'ig' && sitesIg) { sitesIg.value = value; state.sitesFilter.ig = value; }
+        if (tabName === 'sites' && filter) {
+          state.sitesFilter = { q: '', tier: '', ig: '' };
+          if (sitesSearch) sitesSearch.value = '';
+          if (sitesTier) sitesTier.value = '';
+          if (sitesIg) sitesIg.value = '';
+          if (filter !== 'all') {
+            var parts = filter.split('=');
+            var field = parts[0];
+            var value = parts[1];
+            if (field === 'tier' && sitesTier) { sitesTier.value = value; state.sitesFilter.tier = value; }
+            if (field === 'ig' && sitesIg) { sitesIg.value = value; state.sitesFilter.ig = value; }
+          }
           applySitesFilter();
         }
         switchTab(tabName);
@@ -1771,7 +1788,7 @@
 
     var feedLimit = $('#feed-limit');
     feedLimit.addEventListener('change', function () {
-      state.feedLimit = parseInt(feedLimit.value, 10) || 20;
+      state.feedLimit = parseInt(feedLimit.value, 10) || FEED_PAGE_SIZE;
       state.feedPage = 0;
       loadFeed(true);
     });
@@ -1784,14 +1801,14 @@
     var feedNext = $('#feed-next-page-btn');
     if (feedNext) feedNext.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
     var feedMore = $('#feed-load-more-btn');
-    if (feedMore) feedMore.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
+    if (feedMore) feedMore.addEventListener('click', loadFeedMore);
     // pager bottom (espelha o topo)
     var feedPrevB = $('#feed-prev-page-btn-bottom');
     if (feedPrevB) feedPrevB.addEventListener('click', function () { loadFeedPage(state.feedPage - 1); });
     var feedNextB = $('#feed-next-page-btn-bottom');
     if (feedNextB) feedNextB.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
     var feedMoreB = $('#feed-load-more-btn-bottom');
-    if (feedMoreB) feedMoreB.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
+    if (feedMoreB) feedMoreB.addEventListener('click', loadFeedMore);
     // export PDF
     var sitesExportPdf = $('#sites-export-pdf');
     if (sitesExportPdf) sitesExportPdf.addEventListener('click', function () { exportSitesPdf(sitesExportPdf); });
