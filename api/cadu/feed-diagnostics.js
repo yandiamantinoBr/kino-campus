@@ -47,7 +47,14 @@ export default async function handler(req, res) {
     now: typeof now === 'string' && now ? now : new Date().toISOString(),
     envUrl: 'https://www.kinocampus.com.br/assets/js/boot/kc-env.js',
     supabaseUrl: process.env.KC_SUPABASE_URL || process.env.SUPABASE_URL || '',
-    anonKey: process.env.KC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '',
+    // Aceita KC_SUPABASE_ANON_KEY → SUPABASE_ANON_KEY → NEXT_PUBLIC_SUPABASE_ANON_KEY → SUPABASE_PUBLIC_KEY.
+    // A Vercel só expõe NEXT_PUBLIC_SUPABASE_ANON_KEY por padrão (Vite/Next pattern),
+    // então esse fallback é essencial pro endpoint não quebrar em produção.
+    anonKey: process.env.KC_SUPABASE_ANON_KEY
+          || process.env.SUPABASE_ANON_KEY
+          || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          || process.env.SUPABASE_PUBLIC_KEY
+          || '',
   };
 
   try {
