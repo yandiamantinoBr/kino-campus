@@ -51,7 +51,7 @@
   "homepage": "https://github.com/yandiamantinoBr/kino-campus#readme",
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
-    "@vercel/og": "^0.6.0",
+    "@vercel/og": "^0.11.1",
     "@vercel/speed-insights": "^2.0.0"
   },
   "devDependencies": {
