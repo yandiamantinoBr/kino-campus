@@ -30,11 +30,12 @@
     "check:search-registry": "node scripts/generate-search-registry-snapshot.js --check",
     "cadu:dry-run": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=quick",
     "cadu:dry-run:full": "node services/cadu-ufg-publisher/src/cli.js --dry-run --mode=full",
+    "cadu:curator:relevance-report": "node scripts/evaluate-cadu-curator-relevance.js",
     "cadu:publish:quick": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=quick",
     "cadu:publish:full": "node services/cadu-ufg-publisher/src/cli.js --publish --mode=full",
     "cadu:reviews": "node services/cadu-ufg-publisher/src/reviews.js",
     "cadu:refresh-cache": "node services/cadu-ufg-publisher/scripts/regenerate-posts-cache.js",
-    "test:cadu": "jest tests/unit/cadu-ufg-publisher.test.js --runInBand",
+    "test:cadu": "jest tests/unit/cadu-ufg-publisher.test.js tests/unit/cadu-openclaw-curator.test.js --runInBand",
     "cadu:audit": "node tests/manual/cadu-site-health-probe.js"
   },
   "repository": {

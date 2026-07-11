@@ -54,17 +54,33 @@ const { normalizeImageUrl: normalizeCmsUrl, isThumbnailUrl } = require('./lib/im
 // CONFIG
 // ============================================================
 
+function isoDateInTimeZone(date, timeZone = 'America/Sao_Paulo') {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 const BASE_DIR = '/data/.openclaw/workspace/data/ufg-scrape';
 const IG_DIR = '/data/.openclaw/workspace/data/ufg-instagram';
-const TIMESTAMP = new Date().toISOString().slice(0, 10);
-const TODAY = new Date();
-const TODAY_ISO = TODAY.toISOString().slice(0, 10);
-const CURRENT_YEAR = TODAY.getFullYear();
+const configuredReferenceDate = process.env.CADU_REFERENCE_DATE
+  ? new Date(process.env.CADU_REFERENCE_DATE)
+  : null;
+const TODAY = configuredReferenceDate && !Number.isNaN(configuredReferenceDate.getTime())
+  ? configuredReferenceDate
+  : new Date();
+const TODAY_ISO = isoDateInTimeZone(TODAY);
+const TIMESTAMP = TODAY_ISO;
+const CURRENT_YEAR = Number(TODAY_ISO.slice(0, 4));
 
 // Helper: retorna data ISO de N dias atrás
 function daysAgo(n) {
-  const d = new Date(TODAY);
-  d.setDate(d.getDate() - n);
+  const d = new Date(`${TODAY_ISO}T12:00:00-03:00`);
+  d.setUTCDate(d.getUTCDate() - n);
   return d.toISOString().slice(0, 10);
 }
 const MODE = process.argv.includes('--quick') ? 'quick' :
@@ -495,7 +511,82 @@ function normalizeText(t) {
 }
 
 function has(text, term) {
-  return normalizeText(text).includes(normalizeText(term));
+  const normalizedText = normalizeText(text);
+  const normalizedTerm = normalizeText(term);
+  if (!normalizedTerm) return false;
+
+  // Short institutional lexemes must be whole tokens. Without this boundary,
+  // PET matched "petiscos" and RU matched words such as "frutas".
+  if (normalizedTerm.length <= 3 && !normalizedTerm.includes(' ')) {
+    return normalizedText.split(' ').includes(normalizedTerm);
+  }
+
+  return normalizedText.includes(normalizedTerm);
+}
+
+function isActionableUrl(rawUrl, label = '') {
+  const url = String(rawUrl || '').trim();
+  const normalizedLabel = normalizeText(label);
+  if (!url) return false;
+  if (/^mailto:[^\s@]+@[^\s@]+\.[^\s@]+/i.test(url)) return true;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const pathname = parsed.pathname.toLowerCase();
+    if (host === 'forms.gle' || host.startsWith('forms.') || host === 'typeform.com' || host.endsWith('.typeform.com') ||
+        host === 'even3.com.br' || host.endsWith('.even3.com.br') || host === 'sympla.com.br' || host.endsWith('.sympla.com.br') ||
+        host === 'doity.com.br' || host.endsWith('.doity.com.br') || host === 'eventbrite.com' || host.endsWith('.eventbrite.com') ||
+        ((host === 'docs.google.com' || host === 'google.com') && pathname.startsWith('/forms/'))) return true;
+    if (/(?:^|\/)(?:inscri(?:cao|coes)|candidatura|apply|submissao|matricula)(?:[/?#-]|$)/i.test(pathname)) return true;
+  } catch (_) {}
+  return /\b(?:formulario|formularios|inscricao|inscricoes|candidatura|submissao|matricula)\b/.test(normalizedLabel) &&
+    /^https?:\/\//i.test(url);
+}
+
+function collectActionEvidence(text, html, linkUrl, relevantLinks) {
+  const evidence = [];
+  const seen = new Set();
+  const add = (type, value, source, label = '') => {
+    const normalizedValue = String(value || '').trim();
+    if (!normalizedValue) return;
+    const key = `${type}:${normalizedValue.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    evidence.push({ type, value: normalizedValue, source, label: String(label || '').trim() });
+  };
+
+  const combined = `${text || ''} ${html || ''}`;
+  const normalizedCombined = normalizeText(combined);
+  const hasEmailActionContext = /\b(?:inscricao|candidatura|submissao|matricula|envie|encaminhe)\b.{0,100}\b(?:email|e mail)\b|\b(?:email|e mail)\b.{0,100}\b(?:inscricao|candidatura|submissao|matricula)\b/.test(normalizedCombined);
+  const urlPattern = /(?:https?:\/\/|mailto:)[^\s"'<>]+/gi;
+  for (const match of combined.match(urlPattern) || []) {
+    const clean = match.replace(/[),.;]+$/, '');
+    if (clean.startsWith('mailto:') && !hasEmailActionContext) continue;
+    if (isActionableUrl(clean)) add(clean.startsWith('mailto:') ? 'email' : 'application_url', clean, 'content');
+  }
+
+  const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+  if (hasEmailActionContext) {
+    for (const email of combined.match(emailPattern) || []) add('email', email, 'content');
+  }
+
+  if (isActionableUrl(linkUrl)) add('application_url', linkUrl, 'link_url');
+
+  if (relevantLinks && typeof relevantLinks === 'object') {
+    for (const [group, links] of Object.entries(relevantLinks)) {
+      if (!Array.isArray(links)) continue;
+      for (const link of links) {
+        const linkLabel = `${group} ${link?.label || ''}`;
+        const isEmail = /^mailto:/i.test(String(link?.url || ''));
+        const hasApplicationLabel = /\b(?:formulario|formularios|inscricao|inscricoes|candidatura|submissao|matricula)\b/.test(normalizeText(linkLabel));
+        if ((!isEmail || hasApplicationLabel) && isActionableUrl(link?.url, linkLabel)) {
+          add(group === 'formularios' ? 'form' : 'application_url', link.url, 'relevant_links', link.label || group);
+        }
+      }
+    }
+  }
+
+  return evidence;
 }
 
 function fetchUrl(url) {
@@ -950,122 +1041,329 @@ function parseDatePt(text) {
   return [...new Set(dates)].sort();
 }
 
-function analyzeTemporalRelevance(text, html, webyDate) {
-  const fullText = extractText(html || '') + ' ' + (text || '');
-  const dates = parseDatePt(fullText);
-  // v4.4.2: Filtrar datas que são EXATAMENTE iguais à data de publicação do weby
-  // (não são prazo, são data de publicação do próprio item)
-  const webyDateOnly = webyDate ? String(webyDate).slice(0, 10) : null;
-  // Se a ÚNICA data detectada é igual à data de publicação, considerar SEM data
-  let filteredDates = dates;
-  if (webyDateOnly && dates.length === 1 && dates[0] === webyDateOnly) {
-    filteredDates = [];
-  } else if (webyDateOnly) {
-    // Remover a data de publicação do array (mas manter outras datas se houver)
-    filteredDates = dates.filter(d => d !== webyDateOnly);
+function sentenceStart(text, index) {
+  let start = 0;
+  const boundary = /[.!?;]\s+/g;
+  let match;
+  while ((match = boundary.exec(text)) !== null && match.index < index) {
+    start = match.index + match[0].length;
   }
-  const futureDates = filteredDates.filter(d => d >= TODAY_ISO);
-  const pastDates = filteredDates.filter(d => d < TODAY_ISO);
+  return start;
+}
+
+function lastMatchIndex(text, pattern) {
+  const regex = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+  let index = -1;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    index = match.index;
+    if (match[0].length === 0) regex.lastIndex++;
+  }
+  return index;
+}
+
+function classifyDateRole(text, index) {
+  const before = normalizeText(text.slice(sentenceStart(text, index), index));
+  const resultIndex = lastMatchIndex(before, /\b(?:resultado|resultado final|resultado preliminar|homologacao|lista de aprovados)\b/g);
+  const applicationIndex = lastMatchIndex(
+    before,
+    /\b(?:inscricao|inscricoes|candidatura|candidaturas|submissao|submissoes|matricula|matriculas|prazo\s+(?:de|para)\s+(?:inscricao|submissao|candidatura|matricula))\b/g
+  );
+  const eventContextIndex = lastMatchIndex(
+    before,
+    /\b(?:data|evento|curso|palestra|workshop|seminario|simposio|congresso|oficina|programacao|realizad[oa]s?|ocorre|acontece|comeca|inicia)\b/g
+  );
+
+  if (resultIndex > Math.max(applicationIndex, eventContextIndex)) {
+    return 'resultPublishedAt';
+  }
+
+  // A course/event name commonly appears between "inscricoes" and its deadline.
+  // Prefer the explicit registration cue over the nearer event noun in that case.
+  const explicitApplicationDeadline = /\b(?:inscricao|inscricoes|candidatura|candidaturas|submissao|submissoes|matricula|matriculas)\b[^.!?;]{0,160}\b(?:ate|encerra|encerram|encerramento|limite|prazo final)\b[^.!?;]{0,35}$/.test(before);
+  const explicitApplicationOpening = /\b(?:inscricao|inscricoes|candidatura|candidaturas|submissao|submissoes|matricula|matriculas)\b[^.!?;]{0,160}\b(?:abrem|abertas|abertura|iniciam|inicio)\b[^.!?;]{0,35}$/.test(before) &&
+    !/\b(?:ate|encerra|encerram|limite|prazo final)\b[^.!?;]{0,35}$/.test(before);
+  if (explicitApplicationDeadline) return 'applicationDeadline';
+  if (explicitApplicationOpening) return 'applicationOpensAt';
+
+  if (applicationIndex > eventContextIndex) {
+    if (/\b(abrem|abertas|abertura|iniciam|inicio)\b[^.]{0,40}$/.test(before) &&
+        !/\b(ate|encerra|encerram|limite|final)\b[^.]{0,30}$/.test(before)) {
+      return 'applicationOpensAt';
+    }
+    return 'applicationDeadline';
+  }
+
+  if (eventContextIndex >= 0 && /\b(fim|termina|terminam|encerra|encerramento|ate)\b[^.]{0,20}$/.test(before)) {
+    return 'eventEndsAt';
+  }
+
+  if (eventContextIndex >= 0 && /\b(data|comeca|inicio|inicia|iniciam|realizado de|realizada de|ocorre|acontece|de)\b[^.]{0,20}$/.test(before)) {
+    return 'eventStartsAt';
+  }
+
+  if (eventContextIndex >= 0) return 'eventStartsAt';
+
+  return 'contextDate';
+}
+
+function parseDateEvidence(text, source = 'item_text') {
+  const occurrences = [];
+  const coveredRanges = [];
+  const monthPattern = 'janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro';
+
+  const excerptFor = (start, length) => text
+    .slice(Math.max(0, start - 70), Math.min(text.length, start + length + 70))
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const rolesForRange = (index, length) => {
+    const nearbyBefore = normalizeText(text.slice(Math.max(sentenceStart(text, index), index - 220), index));
+    const nearbyAfterRaw = text.slice(index + length, Math.min(text.length, index + length + 140));
+    const nearbyAfter = normalizeText(nearbyAfterRaw.split(/[.!?;]/, 1)[0]);
+    const registrationNamedAfterRange = /\b(?:aberta|abertas|aberto|abertos)\b[^.!?;]{0,80}$/.test(nearbyBefore) &&
+      /\b(?:inscricao|inscricoes|candidatura|candidaturas|submissao|submissoes|matricula|matriculas)\b/.test(nearbyAfter);
+    if (registrationNamedAfterRange) return ['applicationOpensAt', 'applicationDeadline'];
+
+    const role = classifyDateRole(text, index);
+    if (role === 'applicationDeadline' || role === 'applicationOpensAt') {
+      return ['applicationOpensAt', 'applicationDeadline'];
+    }
+    if (role === 'resultPublishedAt') return ['resultPublishedAt', 'resultPublishedAt'];
+    return ['eventStartsAt', 'eventEndsAt'];
+  };
+
+  const rangePatterns = [
+    {
+      regex: new RegExp(`(\\d{1,2})\\s+de\\s+(${monthPattern})(?:\\s+de\\s+(\\d{4}))?\\s*(?:a|e|at[eé])\\s*(\\d{1,2})\\s+de\\s+(${monthPattern})(?:\\s+de\\s+(\\d{4}))?`, 'gi'),
+      toDates: (match) => {
+        const firstYear = match[3] || match[6] || CURRENT_YEAR;
+        const secondYear = match[6] || match[3] || CURRENT_YEAR;
+        return [
+          validIsoDate(firstYear, MONTHS_PT[match[2].toLowerCase()], match[1]),
+          validIsoDate(secondYear, MONTHS_PT[match[5].toLowerCase()], match[4]),
+        ];
+      },
+    },
+    {
+      regex: new RegExp(`(\\d{1,2})\\s*,\\s*(\\d{1,2})\\s+e\\s+(\\d{1,2})\\s+de\\s+(${monthPattern})(?:\\s+de\\s+(\\d{4}))?`, 'gi'),
+      toDates: (match) => [
+        validIsoDate(match[5] || CURRENT_YEAR, MONTHS_PT[match[4].toLowerCase()], match[1]),
+        validIsoDate(match[5] || CURRENT_YEAR, MONTHS_PT[match[4].toLowerCase()], match[3]),
+      ],
+    },
+    {
+      regex: new RegExp(`(\\d{1,2})\\s*(?:a|e|at[eé])\\s*(\\d{1,2})\\s+de\\s+(${monthPattern})(?:\\s+de\\s+(\\d{4}))?`, 'gi'),
+      toDates: (match) => [
+        validIsoDate(match[4] || CURRENT_YEAR, MONTHS_PT[match[3].toLowerCase()], match[1]),
+        validIsoDate(match[4] || CURRENT_YEAR, MONTHS_PT[match[3].toLowerCase()], match[2]),
+      ],
+    },
+    {
+      regex: /(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*(?:a|e|at[eé])\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/gi,
+      toDates: (match) => {
+        const firstYear = Number(match[3]) < 100 ? Number(match[3]) + 2000 : match[3];
+        const secondYear = Number(match[6]) < 100 ? Number(match[6]) + 2000 : match[6];
+        return [
+          validIsoDate(firstYear, match[2], match[1]),
+          validIsoDate(secondYear, match[5], match[4]),
+        ];
+      },
+    },
+  ];
+
+  for (const { regex, toDates } of rangePatterns) {
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (coveredRanges.some(({ start, end }) => match.index >= start && match.index < end)) continue;
+      const [startDate, endDate] = toDates(match);
+      if (!startDate || !endDate) continue;
+      const [startRole, endRole] = rolesForRange(match.index, match[0].length);
+      const excerpt = excerptFor(match.index, match[0].length);
+      occurrences.push({ date: startDate, role: startRole, excerpt, source, index: match.index });
+      occurrences.push({ date: endDate, role: endRole, excerpt, source, index: match.index + match[0].length - 1 });
+      coveredRanges.push({ start: match.index, end: regex.lastIndex });
+    }
+  }
+
+  const patterns = [
+    {
+      regex: /(\d{1,2})\s+de\s+(janeiro|fevereiro|marco|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+de\s+(\d{4}))?/gi,
+      toIso: (match) => validIsoDate(match[3] || CURRENT_YEAR, MONTHS_PT[match[2].toLowerCase()], match[1]),
+    },
+    {
+      regex: /(\d{4})-(\d{2})-(\d{2})/g,
+      toIso: (match) => validIsoDate(match[1], match[2], match[3]),
+    },
+    {
+      regex: /(\d{2})\/(\d{2})\/(\d{4})/g,
+      toIso: (match) => validIsoDate(match[3], match[2], match[1]),
+    },
+    {
+      regex: /(\d{2})\/(\d{2})\/(\d{2})(?!\d)/g,
+      toIso: (match) => validIsoDate(Number(match[3]) + 2000, match[2], match[1]),
+    },
+  ];
+
+  for (const { regex, toIso } of patterns) {
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (coveredRanges.some(({ start, end }) => match.index >= start && match.index < end)) continue;
+      const date = toIso(match);
+      if (!date) continue;
+      const role = classifyDateRole(text, match.index);
+      const excerpt = excerptFor(match.index, match[0].length);
+      occurrences.push({
+        date,
+        role,
+        excerpt,
+        source,
+        index: match.index,
+      });
+    }
+  }
+
+  const seen = new Set();
+  return occurrences
+    .sort((a, b) => a.index - b.index)
+    .filter((item) => {
+      const key = `${item.date}:${item.role}:${normalizeText(item.excerpt)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(({ index, ...item }) => item);
+}
+
+function firstRoleDate(evidence, role) {
+  const dates = evidence.filter(item => item.role === role).map(item => item.date).sort();
+  return dates[0] || null;
+}
+
+function lastRoleDate(evidence, role) {
+  const dates = evidence.filter(item => item.role === role).map(item => item.date).sort();
+  return dates[dates.length - 1] || null;
+}
+
+function analyzeTemporalRelevance(text, html, webyDate, options = {}) {
+  const htmlText = extractText(html || '');
+  const fullText = `${text || ''} ${htmlText}`.trim();
+  const publishedAt = options.publishedAt || webyDate || null;
+  const updatedAt = options.updatedAt || null;
+  const publishedDate = publishedAt ? String(publishedAt).slice(0, 10) : null;
+  const evidenceSeen = new Set();
+  const dateEvidence = [
+    ...parseDateEvidence(text || '', 'item_text'),
+    ...parseDateEvidence(htmlText, 'html'),
+  ].filter((item) => {
+    if (item.role === 'contextDate' && item.date === publishedDate) return false;
+    const key = `${item.date}:${item.role}:${normalizeText(item.excerpt)}`;
+    if (evidenceSeen.has(key)) return false;
+    evidenceSeen.add(key);
+    return true;
+  });
+
+  if (options.eventStartsAt) {
+    dateEvidence.push({
+      date: String(options.eventStartsAt).slice(0, 10),
+      role: 'eventStartsAt',
+      excerpt: 'structured event start',
+      source: 'structured_event',
+    });
+  }
+  if (options.eventEndsAt) {
+    dateEvidence.push({
+      date: String(options.eventEndsAt).slice(0, 10),
+      role: 'eventEndsAt',
+      excerpt: 'structured event end',
+      source: 'structured_event',
+    });
+  }
+
+  const filteredDates = [...new Set(dateEvidence.map(item => item.date))].sort();
+  const futureDates = filteredDates.filter(date => date >= TODAY_ISO);
+  const pastDates = filteredDates.filter(date => date < TODAY_ISO);
   const latestDate = filteredDates[filteredDates.length - 1] || null;
 
-  // Deadline detection: check context around dates
-  // v4.4.1: regex ampliada + removido "resultado previsto para" (falso positivo)
-  const hasDeadline = /(^|\s|\.|,)(prazo|ate|até|inscricoes? (ate|até|vao ate|vão até|abertas? ate|abertas? até|prorrogadas? ate|prorrogadas? até|ate o|até o)|inscrições? (até|vão até|abertas? até|prorrogadas? até|ate o|até o)|submissoes? (ate|até|ate o|até o)|submissão (ate|até|ate o|até o)|encerram? em|encerram? no dia|terminam? em|data limite|data de inscricao|data de inscrição|data de submissao|data de submissão|prazo final|prazo limite|prazo de inscricao|prazo de submissao|vigencia ate|vigência até)(\s|$|\.|,)/i.test(fullText);
+  const structuredEventStartsAt = options.eventStartsAt ? String(options.eventStartsAt).slice(0, 10) : null;
+  const structuredEventEndsAt = options.eventEndsAt ? String(options.eventEndsAt).slice(0, 10) : null;
+  const applicationOpensAt = firstRoleDate(dateEvidence, 'applicationOpensAt');
+  const applicationDeadline = lastRoleDate(dateEvidence, 'applicationDeadline');
+  const resultPublishedAt = lastRoleDate(dateEvidence, 'resultPublishedAt');
+  const eventStartsAt = structuredEventStartsAt || firstRoleDate(dateEvidence, 'eventStartsAt');
+  const eventEndsAt = structuredEventEndsAt || lastRoleDate(dateEvidence, 'eventEndsAt');
 
-  // v4.4 P0-BugFix-2: Heurística de deadline por data presente
-  // PRPG, PROEX, PRAE não usam date_end_at. Se tem data futura no texto,
-  // assumir que é deadline (e marcar hasDeadline = true se ainda não estiver)
-  // v4.4.1: Se há data passada (latestDate < TODAY) E é ÚNICA data detectada,
-  // provavelmente É um prazo que já passou — marcar como expirado
-  // v4.4.2: Se o TÍTULO contém "Edital" + número (ex: "Edital 02/2026") e tem PDF,
-  // marcar como having deadline (prazo presumido no PDF)
-  let hasDeadlineHeuristic = false;
-  if (!hasDeadline && futureDates.length > 0) {
-    hasDeadlineHeuristic = true;
-  }
-  // v4.4.2: Heurística por TÍTULO + PDF — edital/chamada com PDF anexado = tem deadline presumido
-  const titleHasEdital = /(edital|chamada|sele[çc][aã]o|processo\s+seletivo|concurso\s+p[úu]blico)/i.test(fullText);
-  const hasPdf = (text || '').match(/href="[^"]+\.pdf/i) || (html || '').match(/href="[^"]+\.pdf/i);
-  if (!hasDeadline && titleHasEdital && hasPdf) {
-    hasDeadlineHeuristic = true;
-  }
-  const hasDeadlineFinal = hasDeadline || hasDeadlineHeuristic;
+  const normalizedFullText = normalizeText(fullText);
+  const statusDate = updatedAt || publishedAt;
+  const statusDateOnly = statusDate ? String(statusDate).slice(0, 10) : null;
+  const hasFreshStatus = Boolean(statusDateOnly && statusDateOnly >= daysAgo(30));
+  const explicitlyClosed = /\b(?:inscricoes?|candidaturas?|submissoes?|matriculas?)\s+(?:encerradas?|fechadas?|finalizadas?)\b/.test(normalizedFullText);
+  const explicitlyOpen = /\b(?:inscricoes?|candidaturas?|submissoes?|matriculas?)\s+(?:abertas?|reabertas?|prorrogadas?)\b/.test(normalizedFullText);
+  const applicationStatus = explicitlyClosed
+    ? 'closed'
+    : (applicationDeadline
+      ? (applicationDeadline >= TODAY_ISO ? 'open' : 'closed')
+      : (explicitlyOpen && hasFreshStatus ? 'open' : 'unknown'));
 
-  // Expired? Check if the latest deadline date is in the past AND there are no future dates
-  // v4.4.1: Se hasDeadline regex OU heurística detectou deadline, e latestDate já passou → expirado
-  let isExpired = hasDeadlineFinal && latestDate && latestDate < TODAY_ISO && futureDates.length === 0;
-
-  // v4.4.1: Fallback — se latestDate < TODAY_ISO e o texto tem sinais de prazo
-  // (inscrição, edital, seleção) e NÃO tem data futura, provavelmente é prazo passado
-  if (!isExpired && latestDate && latestDate < TODAY_ISO && futureDates.length === 0) {
-    if (/edital|inscri[cç][aã]o|sele[cç][aã]o|candidatura|processo seletivo|chamada|prazo/i.test(fullText)) {
-      isExpired = true;
-    }
-  }
-  
-  // HARDENING 2026-06-04: Multi-date expiration check
-  // If there are multiple dates AND the first/registration dates are ALL in the past,
-  // but the event date is in the future → STILL mark as expired (registration is over)
-  if (!isExpired && dates.length >= 2) {
-    const registrationDates = dates.slice(0, -1); // all dates except the last one (which is likely the event)
-    const allRegistrationPast = registrationDates.every(d => d < TODAY_ISO);
-    const isLikelyRegistration = /inscri[cç][aã]o|matr[ií]cula|candidatura/i.test(fullText);
-    if (allRegistrationPast && isLikelyRegistration && futureDates.length <= 1) {
-      isExpired = true;
-    }
+  let eventStatus = 'unknown';
+  if (eventEndsAt && eventEndsAt < TODAY_ISO) {
+    eventStatus = 'finished';
+  } else if (eventStartsAt && eventStartsAt > TODAY_ISO) {
+    eventStatus = 'upcoming';
+  } else if (eventStartsAt && eventStartsAt <= TODAY_ISO) {
+    eventStatus = eventEndsAt && eventEndsAt >= TODAY_ISO
+      ? 'ongoing'
+      : (eventStartsAt === TODAY_ISO ? 'ongoing' : 'finished');
+  } else if (eventEndsAt && eventEndsAt >= TODAY_ISO) {
+    eventStatus = 'upcoming';
   }
 
-  // HARDENING 2026-06-23: Qualquer item com TODAS as datas no passado e SEM datas futuras
-  // é expirado. Corrige o bug onde eventos sem deadline (ex: feiras, palestras já ocorridas)
-  // não eram marcados como expirados porque hasDeadlineFinal era false.
-  if (!isExpired && dates.length > 0 && futureDates.length === 0 && latestDate && latestDate < TODAY_ISO) {
-    isExpired = true;
-  }
-  // Fix 2026-06-24: isOld relativo (90 dias) em vez de absoluto ("antes de 2026").
-  // Itens com webyDate > 90 dias atrás são considerados antigos e perdem relevância.
-    // FIX 2026-06-25 BUG B v2: detectar horario/data passada mesmo quando dates=[]
+  const hasUpcomingEvent = eventStatus === 'upcoming' || eventStatus === 'ongoing';
+  const hasDeadline = Boolean(applicationDeadline);
+  let isExpired = eventStatus === 'finished' ||
+    (applicationStatus === 'closed' && !hasUpcomingEvent) ||
+    (filteredDates.length > 0 && futureDates.length === 0 && eventStatus === 'unknown' && applicationStatus === 'unknown');
+
   const now = new Date();
   if (!isExpired) {
     const todayMatch = /\b(?:data|quando|acontece)\s*[:\s]?\s*(\d{1,2})\/(\d{1,2})(?:\s+(?:as|aos)\s+(\d{1,2})[h:](\d{2})?)?/i.exec(fullText);
     const timeMatch = /\b(?:horario|hora|h)[\s:]+(\d{1,2})[h:](\d{2})?\b/i.exec(fullText);
     if (todayMatch) {
-      const dd = parseInt(todayMatch[1]);
-      const mm = parseInt(todayMatch[2]);
-      const yy = now.getFullYear();
-      const itemDate = new Date(yy, mm - 1, dd);
-      const hh = todayMatch[3] ? parseInt(todayMatch[3]) : null;
-      if (itemDate.getFullYear() === yy && itemDate.getMonth() + 1 === mm && itemDate.getDate() === dd) {
-        if (timeMatch) {
-          const hh2 = parseInt(timeMatch[1]);
-          if (hh2 < now.getHours()) isExpired = true;
-        } else if (hh !== null && hh < now.getHours()) {
-          isExpired = true;
-        }
-      } else if (itemDate < now) {
-        isExpired = true;
-      }
-    } else if (timeMatch && !todayMatch) {
-      const hh = parseInt(timeMatch[1]);
-      if (hh < now.getHours() && /hoje|amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo/i.test(fullText)) {
+      const itemDate = new Date(now.getFullYear(), Number(todayMatch[2]) - 1, Number(todayMatch[1]));
+      const hour = todayMatch[3] ? Number(todayMatch[3]) : (timeMatch ? Number(timeMatch[1]) : null);
+      if (itemDate < new Date(now.getFullYear(), now.getMonth(), now.getDate()) ||
+          (itemDate.toDateString() === now.toDateString() && hour !== null && hour < now.getHours())) {
         isExpired = true;
       }
     }
   }
-  const isOld = webyDate ? webyDate < daysAgo(90) : false;
-  const isUpcoming = futureDates.length > 0;
+
+  const isOld = Boolean(publishedDate && publishedDate < daysAgo(90));
+  const isUpcoming = hasUpcomingEvent || applicationStatus === 'open' || futureDates.length > 0;
 
   return {
-    dates: filteredDates, // v4.4.2: usar filteredDates (sem data de publicação)
+    publishedAt,
+    updatedAt,
+    eventStartsAt,
+    eventEndsAt,
+    applicationOpensAt,
+    applicationDeadline,
+    resultPublishedAt,
+    applicationStatus,
+    eventStatus,
+    canApply: false,
+    dateEvidence,
+    dates: filteredDates,
     futureDates,
     pastDates,
     latestDate,
-    hasDeadline: hasDeadlineFinal,
-    hasDeadlineByRegex: hasDeadline,
-    hasDeadlineByHeuristic: hasDeadlineHeuristic,
-    isExpired,
+    hasDeadline,
+    hasDeadlineByRegex: dateEvidence.some(item => item.role === 'applicationDeadline' && item.source !== 'structured_event'),
+    hasDeadlineByHeuristic: false,
+    isExpired: Boolean(isExpired),
     isOld,
     isUpcoming,
-    webyDate: webyDate || null,
+    webyDate: publishedAt,
   };
 }
 
@@ -1529,7 +1827,18 @@ function classifyItem(title, text, html, sourceName, linkUrl, jsonItem) {
   const internationalBoost = hasInternational ? 0.05 : (hasHighValueTerm ? 0.03 : 0);
 
   // Temporal analysis (key improvement vs v3)
-  const temporal = analyzeTemporalRelevance(combinedText, html, jsonItem?.created_at || jsonItem?.updated_at);
+  const temporal = analyzeTemporalRelevance(
+    combinedText,
+    html,
+    jsonItem?.created_at || jsonItem?.updated_at,
+    {
+      publishedAt: jsonItem?.created_at || null,
+      updatedAt: jsonItem?.updated_at || null,
+      sourceKind: jsonItem?.sourceKind || 'news',
+      eventStartsAt: jsonItem?.eventStartsAt || null,
+      eventEndsAt: jsonItem?.eventEndsAt || null,
+    }
+  );
 
   // Scoring
   let score = 0.15 + sourceBoost + internationalBoost + nativeCatBoost + processoSeletivoBoost + exposicaoBoost + editalTitleBoost + pdfBoost + linkInscrBoost;
@@ -1574,10 +1883,66 @@ function classifyItem(title, text, html, sourceName, linkUrl, jsonItem) {
 
   const oppScore = OPP_SIGNALS.filter(t => has(nt, t)).length;
   const evtScore = EVT_SIGNALS.filter(t => has(nt, t)).length;
-  const module = isEventJson ? 'eventos' : (oppScore > evtScore ? 'oportunidades' : 'eventos');
+  let module = isEventJson ? 'eventos' : (oppScore > evtScore ? 'oportunidades' : 'eventos');
   // v4.5.2 P0-Cat-Override: aplicar override de categoria
-  const baseCategory = module === 'oportunidades' ? detectOpportunityCategory(nt) : detectEventCategory(nt);
-  const category = categoryOverride(title, text, baseCategory, module);
+  let baseCategory = module === 'oportunidades' ? detectOpportunityCategory(nt) : detectEventCategory(nt);
+  let category = categoryOverride(title, text, baseCategory, module);
+
+  const sourceKind = jsonItem?.sourceKind || 'news';
+  const actionIsNegated = /\b(?:sem|nao\s+(?:oferece|ha|possui|informa))\b.{0,60}\b(?:inscricao|vaga|formulario|candidatura|chamada)\b/i.test(nt);
+  const actionEvidence = actionIsNegated
+    ? []
+    : collectActionEvidence(combinedText, html, linkUrl, jsonItem?.relevantLinks);
+  const hasActionableCta = actionEvidence.length > 0;
+  const hasUpcomingEvent = temporal.eventStatus === 'upcoming' || temporal.eventStatus === 'ongoing';
+  const hasConcreteEventEvidence =
+    /\b(?:participe|compareca|aberto\s+ao\s+publico|aberta\s+ao\s+publico|publico-alvo|entrada\s+(?:gratuita|franca))\b/.test(nt) ||
+    /\b(?:local|horario|programacao|transmissao)\s*:/.test(nt);
+  const hasActiveParticipationWindow = temporal.applicationStatus === 'open' &&
+    /\b(?:inscricao|inscricoes|submissao|submissoes|candidatura|candidaturas)\b/.test(nt);
+  const hasEventParticipation = isEventJson || actionEvidence.length > 0 || hasConcreteEventEvidence || hasActiveParticipationWindow;
+  temporal.canApply = temporal.applicationStatus === 'open' && hasActionableCta;
+
+  const updatedDate = jsonItem?.updated_at ? String(jsonItem.updated_at).slice(0, 10) : null;
+  const hasCurrentUpdateSignal = Boolean(
+    updatedDate && updatedDate >= daysAgo(30) &&
+    temporal.applicationStatus === 'open' &&
+    /\b(?:retifica[cç][aã]o|retificado|prorroga[cç][aã]o|prorrogad[oa]s?|novo\s+prazo|reabertura)\b/i.test(combinedText)
+  );
+
+  // Semantic module selection: a closed application can still describe an
+  // upcoming event, but it is never an active opportunity.
+  if (hasUpcomingEvent && (isEventJson || hasEventParticipation) && !temporal.canApply) {
+    module = 'eventos';
+  } else if (temporal.canApply && (sourceKind === 'opportunity' || oppScore > evtScore)) {
+    module = 'oportunidades';
+  }
+  baseCategory = module === 'oportunidades' ? detectOpportunityCategory(nt) : detectEventCategory(nt);
+  category = categoryOverride(title, text, baseCategory, module);
+
+  const updatedRecently = Boolean(updatedDate && updatedDate >= daysAgo(30));
+  const hasStrongHydrationSignal = sourceKind === 'opportunity' || hasEditalInTitle ||
+    hasProcessoSeletivo || nativeCatBoost > 0 || hasLinkInscrText || inc.length >= 2;
+  const shouldHydrate = !isEventJson && hasStrongHydrationSignal && (!temporal.isOld || updatedRecently);
+
+  let forcedDiscardReason = null;
+  const oldItemAllowed = (isEventJson && hasUpcomingEvent) || hasCurrentUpdateSignal;
+  if (temporal.isOld && !oldItemAllowed) {
+    forcedDiscardReason = 'old_without_current_window';
+  } else if (sourceKind === 'news' && !temporal.canApply && !(hasUpcomingEvent && hasEventParticipation)) {
+    forcedDiscardReason = 'news_without_action';
+  } else if (module === 'oportunidades' && !temporal.canApply) {
+    forcedDiscardReason = 'opportunity_without_active_window';
+  } else if (module === 'eventos' && !hasUpcomingEvent) {
+    forcedDiscardReason = 'event_without_future_schedule';
+  }
+
+  if (forcedDiscardReason) {
+    score = Math.min(score, 0.49);
+  } else if ((module === 'eventos' && hasUpcomingEvent && (isEventJson || hasEventParticipation)) ||
+             (module === 'oportunidades' && temporal.canApply)) {
+    score = Math.max(score, 0.72);
+  }
 
   // Fix 2026-06-24: Itens antigos sem datas futuras devem ser descartados.
   // Ex: FACE (março), FEF Solidária (maio) — evento/inscrição já passou.
@@ -1608,8 +1973,7 @@ function classifyItem(title, text, html, sourceName, linkUrl, jsonItem) {
   // should be reviewed, not auto-published.
   const opportunityWithoutDeadline = !isEventJson &&
     module === 'oportunidades' &&
-    temporal.futureDates.length === 0 &&
-    !temporal.hasDeadline;
+    !temporal.canApply;
   if (opportunityWithoutDeadline) {
     const hasDocumentAction = hasPdf || hasPdfInHtml || hasLinkInscrText;
     score = Math.min(score, hasDocumentAction ? (REVIEW_THRESHOLD + 0.19) : 0.49);
@@ -1617,7 +1981,7 @@ function classifyItem(title, text, html, sourceName, linkUrl, jsonItem) {
   
   // Decision
   let decision;
-  if (temporal.isExpired || isStale || isEventExpired) {
+  if (forcedDiscardReason || temporal.isExpired || isStale || isEventExpired) {
     decision = 'discard';
   } else if (score >= PUBLISH_THRESHOLD) {
     decision = 'publish';
@@ -1627,12 +1991,24 @@ function classifyItem(title, text, html, sourceName, linkUrl, jsonItem) {
     decision = 'discard';
   }
 
+  const gateReason = forcedDiscardReason ||
+    (temporal.isExpired ? 'temporal_expired' :
+      (isStale ? 'stale_without_current_date' :
+        (isEventExpired ? 'event_expired' :
+          (decision === 'discard' ? 'below_relevance_threshold' : null))));
+
   const reasons = inc.slice();
   if (newsEventWithoutFutureDate) {
     reasons.push(hasLinkInscrText || temporal.hasDeadline ? 'news_event_without_future_date' : 'news_event_without_future_action');
   }
   if (opportunityWithoutDeadline) {
     reasons.push('opportunity_without_deadline');
+  }
+  if (forcedDiscardReason) {
+    reasons.push(forcedDiscardReason);
+  }
+  if (module === 'eventos' && hasUpcomingEvent && temporal.applicationStatus === 'closed') {
+    reasons.push('application_closed_event_upcoming');
   }
 
   return {
@@ -1645,6 +2021,9 @@ function classifyItem(title, text, html, sourceName, linkUrl, jsonItem) {
     expired: temporal.isExpired,
     hasDeadline: temporal.hasDeadline,
     hasUpcoming: temporal.isUpcoming,
+    actionEvidence,
+    gateReason,
+    shouldHydrate,
   };
 }
 
@@ -1702,13 +2081,22 @@ function parseEventItem(ev, sourceName = 'eventos', baseUrl = 'https://ufg.br') 
     link,
     image,
     images: [image].filter(Boolean),
-    date: beginAt,
+    date: ev.created_at || ev.updated_at || beginAt,
+    createdAt: ev.created_at || null,
     updatedAt: ev.updated_at || ev.created_at || beginAt,
+    eventStartsAt: beginAt,
+    eventEndsAt: endAt || beginAt,
     raw: ev,
     nativeCategories: categories,
     place,
     endAt,
     externalUrl,
+    relevantLinks: externalUrl ? {
+      formularios: [],
+      editais: [],
+      paginasOficiais: [{ url: externalUrl, label: 'Página externa do evento', type: 'event' }],
+      outros: [],
+    } : null,
     viewCount,
     sourceKind: 'event',
     eventSource: sourceName,
@@ -1721,11 +2109,11 @@ function filterUpcomingEvents(events) {
   lookahead.setDate(lookahead.getDate() + EVENTS_LOOKAHEAD_DAYS);
 
   return events.filter(ev => {
-    const beginAt = ev.raw?.begin_at || ev.date;
+    const beginAt = ev.raw?.begin_at || ev.eventStartsAt || ev.date;
     if (!beginAt) return false;
     const beginDate = new Date(beginAt);
     if (Number.isNaN(beginDate.getTime())) return false;
-    const endAt = ev.raw?.end_at || ev.endAt || beginAt;
+    const endAt = ev.raw?.end_at || ev.eventEndsAt || ev.endAt || beginAt;
     const endDate = new Date(endAt);
     const effectiveEnd = Number.isNaN(endDate.getTime()) ? beginDate : endDate;
     // Keep future or ongoing events, up to the lookahead window.
@@ -1796,7 +2184,7 @@ async function loadPublishedPosts() {
 
 function fetchNewsDetail(url) {
   const html = fetchUrl(url);
-  if (!html || html.length < 200) return { text: '', image: '', images: [], pdfs: [], relevantLinks: null };
+  if (!html || html.length < 200) return { text: '', html: '', image: '', images: [], pdfs: [], relevantLinks: null };
 
   let text = extractText(html);
   // HARDENING 2026-06-04: Sanitize portal junk
@@ -1812,7 +2200,7 @@ function fetchNewsDetail(url) {
   // v4.3 (2026-06-08): Extract relevant links for post CTA
   const relevantLinks = extractRelevantLinks(html, url);
 
-  return { text: text.slice(0, 4000), image, images, pdfs: extractPdfLinks(html), relevantLinks };
+  return { text: text.slice(0, 4000), html, image, images, pdfs: extractPdfLinks(html), relevantLinks };
 }
 
 // ============================================================
@@ -1836,10 +2224,28 @@ function parseWebyJson(json, sourceName, limit) {
     if (image && image.toLowerCase().split('?')[0].endsWith('.svg')) image = '';
     // v4.4 P0-BugFix-4: Reject institutional templates (ofícios) também aqui
     if (image && isInstitutionalImage(image)) image = '';
-    const date = item.created_at || item.date || item.published_at || '';
+    const createdAt = item.created_at || item.date || item.published_at || '';
+    const updatedAt = item.updated_at || item.modified_at || item.changed_at || createdAt;
+    const sourceKind = item.sourceKind || item.source_kind || item.kind || 'news';
+    const eventStartsAt = item.begin_at || item.event_starts_at || null;
+    const eventEndsAt = item.end_at || item.event_ends_at || null;
     // v4.3: Extract native categories from the API
     const nativeCategories = item.category_list || [];
-    items.push({ title, text, link, image, images: [image].filter(Boolean), date, raw: item, nativeCategories });
+    items.push({
+      title,
+      text,
+      link,
+      image,
+      images: [image].filter(Boolean),
+      date: createdAt,
+      createdAt,
+      updatedAt,
+      sourceKind,
+      eventStartsAt,
+      eventEndsAt,
+      raw: item,
+      nativeCategories,
+    });
   }
   return items;
 }
@@ -1996,14 +2402,18 @@ async function main() {
         const combinedText = `${item.title} ${item.text}`;
 
         // Initial classification
-        const classification = classifyItem(
+        const classificationContext = {
+          created_at: item.createdAt || item.date,
+          updated_at: item.updatedAt || item.date,
+          nativeCategories: item.nativeCategories,
+          sourceKind: item.sourceKind || 'news',
+          eventStartsAt: item.eventStartsAt || null,
+          eventEndsAt: item.eventEndsAt || null,
+          relevantLinks: item.relevantLinks || null,
+        };
+        let classification = classifyItem(
           item.title, item.text, '', name, item.link,
-          {
-            created_at: item.date,
-            updated_at: item.updatedAt || item.date,
-            nativeCategories: item.nativeCategories,
-            sourceKind: item.sourceKind,
-          }
+          classificationContext
         );
 
         // For review+ items: fetch individual page for full text
@@ -2012,9 +2422,10 @@ async function main() {
         let images = Array.isArray(item.images) ? item.images : [item.image].filter(Boolean);
         let pdfs = [];
         let relevantLinks = null; // v4.3 — extracted from page
+        let detailHtml = '';
         let finalTemporal = classification.temporal;
 
-        if (classification.decision === 'publish' || classification.decision === 'review') {
+        if (classification.decision === 'publish' || classification.decision === 'review' || classification.shouldHydrate) {
           // v4.5.2 P0-Fix-ForceDetail: sites sem fullText (prograd/farmacia/cepae/seinfra)
           // SEMPRE fazem fetch detail, mesmo se text.length >= 500
           const siteConfig = TIERS[getSiteTier(name)]?.sites?.[name] || {};
@@ -2022,14 +2433,15 @@ async function main() {
           // v4.5.2: também fetch se detectou "Link para inscrição" (texto curto mas tem URL real)
           const hasInscrLink = /\b(Link\s+para\s+(?:inscri[çc][aã]o|inscrever|inscrever-se)|Inscri[çc][oõ]es?\s*[:\)]|Inscreva-se)\b/i.test(fullText || '');
           // v4.3: Skip detail fetch if API already gave us plenty of text (saves ~80% of time)
-          if (forceDetail || hasInscrLink || !fullText || fullText.length < 500) {
+          if (classification.shouldHydrate || forceDetail || hasInscrLink || !fullText || fullText.length < 500) {
             const pageDetail = fetchNewsDetail(item.link);
             fullText = pageDetail.text || fullText;
+            detailHtml = pageDetail.html || '';
             image = pageDetail.image || image;
             images = (pageDetail.images && pageDetail.images.length) ? pageDetail.images : images;
             pdfs = pageDetail.pdfs;
             // v4.5.2: extrair relevantLinks sempre que faz detail fetch (force ou hasInscrLink)
-            if ((forceDetail || hasInscrLink) && pageDetail.relevantLinks) {
+            if (pageDetail.relevantLinks) {
               relevantLinks = pageDetail.relevantLinks;
             }
           } else {
@@ -2037,21 +2449,25 @@ async function main() {
             // But still try to extract better images if current is SVG or empty
             if (!image || (image.toLowerCase().split('?')[0].endsWith('.svg'))) {
               const pageDetail = fetchNewsDetail(item.link);
+              detailHtml = pageDetail.html || '';
               image = pageDetail.image || image;
               if (pageDetail.images && pageDetail.images.length) images = pageDetail.images;
               pdfs = pageDetail.pdfs;
+              if (pageDetail.relevantLinks) relevantLinks = pageDetail.relevantLinks;
             }
           }
 
           // Re-analyze with full text
           if (fullText) {
-            const reAnalysis = analyzeTemporalRelevance(fullText, '', item.date);
-            finalTemporal = reAnalysis;
-            if (reAnalysis.isExpired) {
-              classification.decision = 'discard';
-              classification.score = 0.49;
-              classification.expired = true;
-            }
+            classification = classifyItem(
+              item.title,
+              fullText,
+              detailHtml,
+              name,
+              item.link,
+              { ...classificationContext, relevantLinks }
+            );
+            finalTemporal = classification.temporal;
           }
         }
 
@@ -2301,7 +2717,15 @@ async function main() {
         eventCount++;
         const classification = classifyItem(
           ev.title, ev.text, '', 'eventos', ev.link,
-          { created_at: ev.date, updated_at: ev.updatedAt || ev.date, nativeCategories: ev.nativeCategories, sourceKind: ev.sourceKind }
+          {
+            created_at: ev.createdAt || ev.raw?.created_at || ev.updatedAt || null,
+            updated_at: ev.updatedAt || ev.createdAt || null,
+            nativeCategories: ev.nativeCategories,
+            sourceKind: ev.sourceKind,
+            eventStartsAt: ev.eventStartsAt || ev.raw?.begin_at || null,
+            eventEndsAt: ev.eventEndsAt || ev.endAt || ev.raw?.end_at || ev.eventStartsAt || null,
+            relevantLinks: ev.relevantLinks || null,
+          }
         );
 
         const evCategory = detectEventCategory(ev.title + ' ' + ev.text);
@@ -2331,14 +2755,8 @@ async function main() {
           reasons: classification.reasons || [],
           dates: {
             ...classification.temporal,
-            hasDeadline: classification.temporal?.hasDeadline ||
-              /inscri[çc][aã]o|prazo|até|ate o dia/i.test(ev.text),
-            isExpired: false,
-            isOld: false,
-            isUpcoming: true,
-            webyDate: ev.date,
-            beginAt: ev.date,
-            endAt: ev.endAt || null,
+            beginAt: ev.eventStartsAt || ev.raw?.begin_at || null,
+            endAt: ev.eventEndsAt || ev.endAt || ev.raw?.end_at || null,
           },
           image: ev.image || '',
           images: ev.images.slice(0, 5),
@@ -2536,4 +2954,15 @@ async function main() {
   console.log();
 }
 
-main().catch(e => { console.error('💥', e.message); process.exit(1); });
+if (require.main === module) {
+  main().catch(e => { console.error('💥', e.message); process.exit(1); });
+}
+
+module.exports = {
+  analyzeTemporalRelevance,
+  classifyItem,
+  has,
+  parseEventItem,
+  parseDatePt,
+  parseWebyJson,
+};
