@@ -628,17 +628,25 @@
     var status = $('#feed-page-status');
     var prev = $('#feed-prev-page-btn');
     var next = $('#feed-next-page-btn');
+    // pager bottom (espelha o topo)
+    var statusB = $('#feed-page-status-bottom');
+    var prevB = $('#feed-prev-page-btn-bottom');
+    var nextB = $('#feed-next-page-btn-bottom');
     var limit = state.feedLimit || FEED_PAGE_SIZE;
     var start = state.feedTotal && state.allFeedItems.length ? (state.feedPage * limit + 1) : 0;
     var end = state.feedPage * limit + state.allFeedItems.length;
     var visible = filteredCount == null ? state.allFeedItems.length : filteredCount;
-    if (status) {
-      status.textContent = state.feedTotal
-        ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' chunks' + (visible !== state.allFeedItems.length ? ' (' + visible + ' apos filtro)' : ''))
-        : ('Mostrando ' + visible + ' chunks');
-    }
-    if (prev) prev.disabled = state.feedPage <= 0;
-    if (next) next.disabled = !state.feedHasMore;
+    var statusText = state.feedTotal
+      ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' chunks' + (visible !== state.allFeedItems.length ? ' (' + visible + ' apos filtro)' : ''))
+      : ('Mostrando ' + visible + ' chunks');
+    if (status) status.textContent = statusText;
+    if (statusB) statusB.textContent = statusText;
+    var prevDisabled = state.feedPage <= 0;
+    var nextDisabled = !state.feedHasMore;
+    if (prev) prev.disabled = prevDisabled;
+    if (prevB) prevB.disabled = prevDisabled;
+    if (next) next.disabled = nextDisabled;
+    if (nextB) nextB.disabled = nextDisabled;
   }
 
   function countFrom(obj, key) {
@@ -1422,12 +1430,205 @@
   }
 
   // ============================================================
-  // Tabs + eventos
+  // Export PDF — Sites UFG e Feed Coletado
+  // ============================================================
+
+  function buildSitesPdfReport() {
+    var f = state.sitesFilter || {};
+    var sites = state.filteredSites || state.allSites || [];
+    var tierCount = { '1': 0, '2': 0, '3': 0, '': 0 };
+    var igCount = { confirmed: 0, tentative: 0, missing: 0, unknown: 0 };
+    var hasUrl = 0;
+    sites.forEach(function (s) {
+      var t = s.tier != null ? String(s.tier) : '';
+      if (tierCount[t] != null) tierCount[t] = tierCount[t] + 1; else tierCount[''] = (tierCount[''] || 0) + 1;
+      var ig = s.instagram_status || 'unknown';
+      igCount[ig] = (igCount[ig] || 0) + 1;
+      if (s.url) hasUrl += 1;
+    });
+    var rows = sites.map(function (s) {
+      return {
+        unidade: s.name || '',
+        tier: s.tier ? 'T' + s.tier : '—',
+        site: s.url || '—',
+        instagram: s.instagram || '—',
+        ig_status: s.instagram_status || '—',
+        categoria: s.category || '—',
+        observacao: s.note || '',
+      };
+    });
+    return {
+      title: 'KinoCampus — Mapa de Sites UFG (Cadu)',
+      subtitle: 'Inventário institucional curado pelo Cadu (OpenClaw)',
+      source: 'admin/cadu.html — aba Sites UFG',
+      generatedAt: new Date().toISOString(),
+      filters: {
+        busca: f.q || '—',
+        tier: f.tier ? ('Tier ' + f.tier) : 'todos',
+        ig_status: f.ig || 'todos',
+        total_filtrado: sites.length + ' de ' + (state.allSites || []).length,
+      },
+      kpis: [
+        { label: 'Total filtrado', value: sites.length + ' / ' + (state.allSites || []).length, note: 'após aplicar busca, tier e status IG' },
+        { label: 'Com site HTTPS', value: hasUrl, note: 'unidades com URL institucional cadastrada' },
+        { label: 'IG confirmado', value: igCount.confirmed || 0, note: 'perfis validados pelo scanner' },
+        { label: 'Tier 1 (alta)', value: tierCount['1'] || 0, note: 'pró-reitorias e alta prioridade' },
+        { label: 'Tier 2 (média)', value: tierCount['2'] || 0, note: 'faculdades, institutos, escolas' },
+        { label: 'Tier 3 (baixa)', value: tierCount['3'] || 0, note: 'centros, hospitais, projetos' },
+      ],
+      sections: [
+        {
+          title: 'Sites UFG (lista filtrada)',
+          note: 'Tabela exportada a partir do estado atual da aba Sites UFG. Edite tier/observação inline e re-exporte para refletir mudanças.',
+          columns: [
+            { key: 'unidade', label: 'Unidade', width: 2 },
+            { key: 'tier', label: 'Tier', width: 1 },
+            { key: 'site', label: 'Site institucional', width: 4 },
+            { key: 'instagram', label: 'Instagram', width: 2 },
+            { key: 'ig_status', label: 'Status IG', width: 1 },
+            { key: 'categoria', label: 'Categoria', width: 2 },
+            { key: 'observacao', label: 'Observação', width: 3 },
+          ],
+          rows: rows,
+          maxPdfRows: 200,
+        },
+      ],
+    };
+  }
+
+  function buildFeedPdfReport() {
+    var items = state.allFeedItems || [];
+    var f = state.feedFilter || {};
+    var total = state.feedTotal || items.length;
+    var source = items.reduce(function (acc, it) {
+      var host = (it.source_host || (it.file_path || '').split('/')[0] || 'desconhecido');
+      acc[host] = (acc[host] || 0) + 1;
+      return acc;
+    }, {});
+    var topSources = Object.keys(source).sort(function (a, b) { return source[b] - source[a]; }).slice(0, 8);
+    var rows = items.map(function (it) {
+      return {
+        chunk: it.chunk_id ? it.chunk_id.slice(0, 16) : '—',
+        arquivo: it.file_path || '—',
+        titulo: it.heading || '(sem título)',
+        criado: fmtDate(it.created_at),
+        trecho: (it.snippet || '').slice(0, 600),
+      };
+    });
+    return {
+      title: 'KinoCampus — Memória indexada do Cadu (Feed Coletado)',
+      subtitle: 'Chunks recentes indexados pelo Cadu/OpenClaw (read-only, ' + total + ' chunks no total)',
+      source: 'admin/cadu.html — aba Feed Coletado (cadu-api /api/feed)',
+      generatedAt: new Date().toISOString(),
+      filters: {
+        pagina: (state.feedPage || 0) + 1,
+        limite: state.feedLimit || 20,
+        busca: f.q || '—',
+        chunks_listados: items.length,
+        chunks_total: total,
+      },
+      kpis: [
+        { label: 'Chunks listados', value: items.length, note: 'página atual' },
+        { label: 'Total na memória', value: total, note: 'todos os chunks indexados' },
+        { label: 'Página', value: ((state.feedPage || 0) + 1), note: 'paginação atual' },
+        { label: 'Limite', value: state.feedLimit || 20, note: 'itens por página' },
+        { label: 'Fontes no top 5', value: topSources.length, note: topSources.slice(0, 5).map(function (h) { return h + ' (' + source[h] + ')'; }).join(' · ') || '—' },
+      ],
+      sections: [
+        {
+          title: 'Chunks da página atual',
+          note: 'Trechos do que o Cadu (OpenClaw) tem indexado: posts coletados, respostas de IA, mensagens Telegram, logs da pipeline.',
+          columns: [
+            { key: 'chunk', label: 'Chunk ID', width: 1 },
+            { key: 'arquivo', label: 'Arquivo', width: 2 },
+            { key: 'titulo', label: 'Título', width: 3 },
+            { key: 'criado', label: 'Criado em', width: 1 },
+            { key: 'trecho', label: 'Trecho (até 600 chars)', width: 5 },
+          ],
+          rows: rows,
+          maxPdfRows: 200,
+        },
+      ],
+    };
+  }
+
+  async function exportSitesPdf(btn) {
+    var originalHtml = btn ? btn.innerHTML : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      }
+      var report = buildSitesPdfReport();
+      var date = new Date().toISOString().slice(0, 10);
+      var filename = 'kc-cadu-sites-' + date + '.pdf';
+      if (window.KCAdminExport && typeof window.KCAdminExport.exportReportPDF === 'function') {
+        await window.KCAdminExport.exportReportPDF(filename, report);
+      } else {
+        showCaduError('KCAdminExport.exportReportPDF indisponível nesta página. Verifique se assets/js/controllers/admin/admin-export.shared.js foi carregado.');
+      }
+    } catch (err) {
+      showCaduError('Erro ao exportar PDF: ' + (err && err.message ? err.message : err));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+  }
+
+  async function exportFeedPdf(btn) {
+    var originalHtml = btn ? btn.innerHtml : '';
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      }
+      var report = buildFeedPdfReport();
+      var date = new Date().toISOString().slice(0, 10);
+      var filename = 'kc-cadu-feed-' + date + '-p' + ((state.feedPage || 0) + 1) + '.pdf';
+      if (window.KCAdminExport && typeof window.KCAdminExport.exportReportPDF === 'function') {
+        await window.KCAdminExport.exportReportPDF(filename, report);
+      } else {
+        showCaduError('KCAdminExport.exportReportPDF indisponível nesta página. Verifique se assets/js/controllers/admin/admin-export.shared.js foi carregado.');
+      }
+    } catch (err) {
+      showCaduError('Erro ao exportar PDF: ' + (err && err.message ? err.message : err));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+  }
+
+  // ============================================================
+  // Tabs + eventos (bindEvents continua abaixo)
   // ============================================================
 
   function bindEvents() {
     $$('.kc-cadu-tab').forEach(function (tab) {
       tab.addEventListener('click', function () { switchTab(tab.getAttribute('data-tab')); });
+    });
+
+    // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
+    // data-kpi-tab: "sites" | "feed" | "pipeline" | "openclaw" | "" (status, não clicável)
+    // data-kpi-filter: "all" | "ig=confirmed" | "tier=1" (opcional)
+    $$('.kc-cadu-kpi[data-kpi-tab]').forEach(function (btn) {
+      var tabName = btn.getAttribute('data-kpi-tab');
+      if (!tabName) return; // kpi-api é status, não vira aba
+      btn.addEventListener('click', function () {
+        var filter = btn.getAttribute('data-kpi-filter') || '';
+        if (tabName === 'sites' && filter && filter !== 'all') {
+          var parts = filter.split('=');
+          var field = parts[0];
+          var value = parts[1];
+          if (field === 'tier' && sitesTier) { sitesTier.value = value; state.sitesFilter.tier = value; }
+          if (field === 'ig' && sitesIg) { sitesIg.value = value; state.sitesFilter.ig = value; }
+          applySitesFilter();
+        }
+        switchTab(tabName);
+      });
     });
 
     // Delegacao direta para "Perguntar Cadu" em qualquer container
@@ -1584,6 +1785,18 @@
     if (feedNext) feedNext.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
     var feedMore = $('#feed-load-more-btn');
     if (feedMore) feedMore.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
+    // pager bottom (espelha o topo)
+    var feedPrevB = $('#feed-prev-page-btn-bottom');
+    if (feedPrevB) feedPrevB.addEventListener('click', function () { loadFeedPage(state.feedPage - 1); });
+    var feedNextB = $('#feed-next-page-btn-bottom');
+    if (feedNextB) feedNextB.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
+    var feedMoreB = $('#feed-load-more-btn-bottom');
+    if (feedMoreB) feedMoreB.addEventListener('click', function () { loadFeedPage(state.feedPage + 1); });
+    // export PDF
+    var sitesExportPdf = $('#sites-export-pdf');
+    if (sitesExportPdf) sitesExportPdf.addEventListener('click', function () { exportSitesPdf(sitesExportPdf); });
+    var feedExportPdf = $('#feed-export-pdf');
+    if (feedExportPdf) feedExportPdf.addEventListener('click', function () { exportFeedPdf(feedExportPdf); });
 
     $('#cadu-refresh-btn').addEventListener('click', function () {
       refreshAll();

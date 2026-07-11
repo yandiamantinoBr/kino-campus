@@ -23,7 +23,12 @@
     .kc-cadu-hero .kc-cadu-status.is-down { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: #ef4444; }
     .kc-cadu-hero .kc-cadu-status.is-loading { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.3); color: #f59e0b; }
     .kc-cadu-kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
-    .kc-cadu-kpi { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 14px; min-width: 0; }
+    .kc-cadu-kpi { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 14px; min-width: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s, transform .12s, background .15s; display: block; width: 100%; }
+    .kc-cadu-kpi:hover { border-color: rgba(255,107,0,.45); transform: translateY(-1px); background: rgba(255,107,0,.025); }
+    .kc-cadu-kpi:focus { outline: none; border-color: rgba(255,107,0,.7); box-shadow: 0 0 0 3px rgba(255,107,0,.18); }
+    .kc-cadu-kpi[data-kpi-tab=""] { cursor: default; }
+    .kc-cadu-kpi[data-kpi-tab=""]:hover { transform: none; background: var(--kc-surface-dark); }
+    .kc-cadu-kpi__hint { display: flex; gap: 4px; align-items: center; font-size: .68rem; color: var(--kc-primary-brand); margin-top: 6px; opacity: .85; }
     .kc-cadu-kpi__label { display: flex; gap: 6px; align-items: center; color: var(--kc-text-dark-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
     .kc-cadu-kpi strong { display: block; font-size: 1.7rem; line-height: 1; }
     .kc-cadu-kpi small { display: block; margin-top: 6px; color: var(--kc-text-dark-secondary); font-size: .76rem; }
@@ -267,7 +272,21 @@
     .kc-cadu-badge--tier-2 { background: rgba(245,158,11,.12); color: #f59e0b; }
     .kc-cadu-badge--tier-3 { background: rgba(99,102,241,.12); color: #818cf8; }
     .kc-cadu-feed-item { padding: 12px; border: 1px solid var(--kc-border-dark); border-radius: 12px; margin-bottom: 10px; background: rgba(255,255,255,.01); }
-    .kc-cadu-feed-help { color: var(--kc-text-dark-secondary); font-size: .86rem; line-height: 1.45; margin: -2px 0 12px; max-width: 900px; }
+    .kc-cadu-feed-help { color: var(--kc-text-dark-secondary); font-size: .86rem; line-height: 1.45; margin: -2px 0 12px; max-width: 980px; background: rgba(255,255,255,.02); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px 14px; }
+    .kc-cadu-feed-help > strong { color: var(--kc-text-dark-primary); display: flex; align-items: center; gap: 6px; font-size: .92rem; margin-bottom: 6px; }
+    .kc-cadu-feed-help > p { margin: 4px 0 8px; }
+    .kc-cadu-feed-help__details { margin: 8px 0 4px; }
+    .kc-cadu-feed-help__details > summary { cursor: pointer; padding: 6px 10px; background: rgba(255,107,0,.06); border: 1px solid rgba(255,107,0,.22); border-radius: 8px; color: var(--kc-text-dark-primary); font-size: .84rem; font-weight: 600; list-style: none; display: inline-flex; gap: 6px; align-items: center; }
+    .kc-cadu-feed-help__details > summary::-webkit-details-marker { display: none; }
+    .kc-cadu-feed-help__details[open] > summary { background: rgba(255,107,0,.12); }
+    .kc-cadu-feed-help__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+    .kc-cadu-feed-help__card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 12px; font-size: .82rem; line-height: 1.45; }
+    .kc-cadu-feed-help__card strong { color: var(--kc-text-dark-primary); display: flex; align-items: center; gap: 6px; font-size: .85rem; margin-bottom: 4px; }
+    .kc-cadu-feed-help__card p { margin: 4px 0; }
+    .kc-cadu-feed-help__card small { color: var(--kc-text-dark-secondary); font-size: .72rem; display: block; margin-top: 6px; }
+    .kc-cadu-feed-help__card code { background: rgba(255,107,0,.08); padding: 1px 4px; border-radius: 3px; font-size: .76rem; }
+    .kc-cadu-feed-help__tip { color: var(--kc-text-dark-secondary); font-size: .82rem; margin: 8px 0 0; padding: 6px 10px; background: rgba(245,158,11,.06); border-left: 3px solid #f59e0b; border-radius: 0 8px 8px 0; }
+    .kc-cadu-feed-help__tip i { color: #f59e0b; }
     .kc-cadu-feed-item__head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .78rem; color: var(--kc-text-dark-secondary); margin-bottom: 6px; }
     .kc-cadu-feed-item__head code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; }
     .kc-cadu-feed-item__snippet { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .82rem; line-height: 1.5; color: var(--kc-text-dark-primary); max-height: 220px; overflow: auto; }
@@ -412,29 +431,33 @@
         </div>
       </section>
 
-      <!-- KPIs -->
+      <!-- KPIs (cada KPI é clicável e leva à aba correspondente) -->
       <div class="kc-cadu-kpi-strip">
-        <div class="kc-cadu-kpi">
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="all" title="Abrir aba Sites UFG (lista completa)">
           <div class="kc-cadu-kpi__label"><i class="fas fa-university"></i> Unidades UFG</div>
           <strong id="kpi-sites">—</strong>
           <small>no mapa curado pelo Cadu</small>
-        </div>
-        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Sites UFG</div>
+        </button>
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="ig=confirmed" title="Abrir aba Sites UFG filtrando por IG confirmado">
           <div class="kc-cadu-kpi__label"><i class="fab fa-instagram"></i> IG confirmado</div>
           <strong id="kpi-ig-confirmed">—</strong>
           <small id="kpi-ig-detail">perfis validados</small>
-        </div>
-        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
+        </button>
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por Tier 1">
           <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Tier 1</div>
           <strong id="kpi-tier1">—</strong>
           <small>pró-reitorias + alta prioridade</small>
-        </div>
-        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
+        </button>
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir aba Feed Coletado (memória do Cadu)">
           <div class="kc-cadu-kpi__label"><i class="fas fa-database"></i> Memória</div>
           <strong id="kpi-memory">—</strong>
           <small id="kpi-memory-detail">chunks indexados</small>
-        </div>
-        <div class="kc-cadu-kpi">
+          <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Feed Coletado</div>
+        </button>
+        <div class="kc-cadu-kpi" data-kpi-tab="" title="Status do cadu-api (FastAPI sidecar) — somente leitura">
           <div class="kc-cadu-kpi__label"><i class="fas fa-heart-pulse"></i> cadu-api</div>
           <strong id="kpi-api">—</strong>
           <small id="kpi-api-detail">FastAPI sidecar</small>
@@ -475,6 +498,7 @@
             <option value="unknown">desconhecido</option>
           </select>
           <button type="button" id="sites-export-csv"><i class="fas fa-file-csv"></i> CSV</button>
+          <button type="button" id="sites-export-pdf" title="Exportar mapa de sites em PDF (com KPIs + tabela filtrada)"><i class="fas fa-file-pdf"></i> PDF</button>
         </div>
         <div class="kc-cadu-table-wrap">
           <table class="kc-cadu-table" id="sites-table" aria-live="polite">
@@ -542,9 +566,31 @@
 
       <!-- ============== TAB: FEED ============== -->
       <section class="kc-cadu-section" id="tab-feed" role="tabpanel" style="display:none;">
-        <p class="kc-cadu-feed-help">
-          O Feed coletado mostra os chunks da memória indexada do Cadu/OpenClaw. Ele serve para auditar o contexto que o Cadu pode consultar e perguntar sobre trechos específicos; não é o feed público final de posts publicados.
-        </p>
+        <div class="kc-cadu-feed-help" id="feed-help-block">
+          <strong><i class="fas fa-info-circle"></i> O que é o Feed Coletado?</strong>
+          <p>O <strong>Feed Coletado</strong> mostra os <em>chunks</em> da memória indexada do Cadu (OpenClaw). Ele serve para auditar o contexto que o Cadu pode consultar e perguntar sobre trechos específicos. <strong>Não é o feed público final de posts publicados</strong> no KinoCampus — para ver os posts que saíram na timeline, use a página inicial do site.</p>
+          <details class="kc-cadu-feed-help__details">
+            <summary>De onde vêm esses chunks? (3 fontes)</summary>
+            <div class="kc-cadu-feed-help__grid">
+              <div class="kc-cadu-feed-help__card">
+                <strong><i class="fas fa-gears"></i> Pipeline Cadu</strong>
+                <p>Cada estágio (curador → scanner IG → duplicatas → formatador IA → publicador → enriquecimento) deixa um registro do que coletou, deduplicou, reformatou e publicou. Os chunks aqui vêm principalmente do <em>curador</em> (sites institucionais) e do <em>scanner IG</em> (perfis oficiais).</p>
+                <small>Saída do script <code>cadu-curador-v4.4.js</code> + <code>pipeline-kino.js</code>.</small>
+              </div>
+              <div class="kc-cadu-feed-help__card">
+                <strong><i class="fas fa-robot"></i> OpenAI / DeepSeek</strong>
+                <p>O <em>formatador IA</em> chama a API (DeepSeek V4 Pro → MiniMax M3 → GLM 5.2 como fallback) para reescrever cada item coletado em um post pronto pra publicar, com título, descrição, tags e CTA. Esses textos entram na memória junto com metadados de telemetria (modelo, tokens, latência).</p>
+                <small>Saída do <code>formatador-ia.js</code> + telemetria OpenAI/DeepSeek.</small>
+              </div>
+              <div class="kc-cadu-feed-help__card">
+                <strong><i class="fab fa-telegram"></i> Telegram</strong>
+                <p>Quando alguém pede algo pelo bot do Telegram (Yan ou admin), o Cadu responde usando o mesmo contexto. As mensagens mais relevantes ficam persistidas como chunks para que o Cadu "lembre" depois. Útil pra auditar decisões ou pedir follow-up.</p>
+                <small>Saída do canal Telegram do Cadu (bot <code>@cadu_ufg_bot</code>).</small>
+              </div>
+            </div>
+          </details>
+          <p class="kc-cadu-feed-help__tip"><i class="fas fa-lightbulb"></i> <strong>Dica:</strong> use o botão <i class="fas fa-robot"></i> <em>Perguntar Cadu</em> em qualquer chunk para abrir a aba OpenClaw e fazer uma pergunta específica sobre aquele trecho — a sessão fica preservada.</p>
+        </div>
         <div class="kc-cadu-feed-diagnostics" id="feed-diagnostics-card">
           <div class="kc-cadu-feed-diagnostics__head">
             <div class="kc-cadu-feed-diagnostics__title">
@@ -563,11 +609,13 @@
         <div class="kc-cadu-toolbar">
           <input id="feed-search" type="search" autocomplete="off" placeholder="Filtrar por conteúdo do chunk" data-i18n-placeholder="placeholder.cadu-feed-search" aria-label="Filtrar feed" data-i18n-aria-label="aria-label.cadu-feed-search">
           <select id="feed-limit" aria-label="Limite" data-i18n-aria-label="aria-label.cadu-feed-limit">
-            <option value="20">20 itens</option>
+            <option value="25">25 itens</option>
             <option value="50">50 itens</option>
             <option value="100">100 itens</option>
+            <option value="200">200 itens</option>
           </select>
           <button type="button" id="feed-refresh-btn"><i class="fas fa-rotate"></i> Recarregar</button>
+          <button type="button" id="feed-export-pdf" title="Exportar a página atual do feed em PDF (com KPIs + tabela)"><i class="fas fa-file-pdf"></i> PDF</button>
         </div>
         <div class="kc-cadu-feed-pager" aria-live="polite">
           <span id="feed-page-status">Carregando…</span>
@@ -578,6 +626,14 @@
         </div>
         <div id="feed-list" aria-live="polite">
           <div class="kc-cadu-empty">Carregando…</div>
+        </div>
+        <div class="kc-cadu-feed-pager kc-cadu-feed-pager--bottom" aria-live="polite" style="margin:14px 0 0;">
+          <span id="feed-page-status-bottom">—</span>
+          <div class="kc-cadu-feed-pager__actions">
+            <button type="button" id="feed-prev-page-btn-bottom" class="kc-btn-secondary"><i class="fas fa-arrow-left"></i> Anterior</button>
+            <button type="button" id="feed-next-page-btn-bottom" class="kc-btn-secondary">Próxima <i class="fas fa-arrow-right"></i></button>
+            <button type="button" id="feed-load-more-btn-bottom" class="kc-btn-secondary" title="Carregar mais 25 itens no fim da lista (concatena)"><i class="fas fa-plus"></i> Carregar mais</button>
+          </div>
         </div>
       </section>
 
@@ -733,6 +789,6 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260701.1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260710.1"></script>
 </body>
 </html>
