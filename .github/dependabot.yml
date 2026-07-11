@@ -22,16 +22,27 @@ updates:
           - major
           - minor
           - patch
-      babel-toolchain:
-        patterns:
-          - "@babel/core"
-          - "@babel/preset-env"
-        update-types:
-          - major
-          - minor
-          - patch
+      # Mavis 2026-07-11: babel-toolchain group desabilitado porque babel 8 quebra
+      # babel-preset-current-node-syntax@1.2.0 (peer dep em babel 7). Quando TODOS os
+      # pacotes do babel ecosystem suportarem babel 8 (babel-jest 31+,
+      # babel-preset-current-node-syntax 2+), reabilitar este grupo.
+      # babel-toolchain:
+      #   patterns:
+      #     - "@babel/core"
+      #     - "@babel/preset-env"
+      #   update-types:
+      #     - major
+      #     - minor
+      #     - patch
     commit-message:
       prefix: deps
+    # Mavis 2026-07-11: ignora major updates de @babel/core e @babel/preset-env ate
+    # babel-jest 31+ / babel-preset-current-node-syntax 2+ serem obrigatorios
+    ignore:
+      - dependency-name: "@babel/core"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@babel/preset-env"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
