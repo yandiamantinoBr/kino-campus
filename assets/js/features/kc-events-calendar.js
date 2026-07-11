@@ -266,7 +266,8 @@
       .is('legacy_id', null)                  // exclui posts de exemplo/demo (igual ao feed)
       .in('status', ['published', 'closed'])  // só status visíveis — remove deleted/hidden
       .order('created_at', { ascending: false })
-      .limit(500)
+      // Cap reduced from 500: large scans during DB pressure cause 504/statement timeouts.
+      .limit(120)
       .then(function (res) {
         if (!res.error && Array.isArray(res.data)) {
           calState.events = res.data;

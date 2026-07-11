@@ -217,14 +217,30 @@
   }
 
   async function fetchCountsFallback() {
-    if (!window.KCAPI || typeof window.KCAPI.getPosts !== 'function') return [];
     const counter = new Map();
+    const client = getClient();
 
     for (let index = 0; index < MODULE_KEYS.length; index += 1) {
       const moduleKey = MODULE_KEYS[index];
       let posts = [];
       try {
-        posts = await window.KCAPI.getPosts({ module: moduleKey, page: 1, limit: 200 });
+        // Prefer a lightweight select (no profile/media/comments embeds). Full getPosts
+        // with limit 200 per module stampede free-tier DB and cascade into 503/504.
+        if (client && typeof client.from === 'function') {
+          const res = await client
+            .from('posts')
+            .select('id, module, category, metadata')
+            .eq('module', moduleKey)
+            .is('legacy_id', null)
+            .in('status', ['published', 'closed'])
+            .order('created_at', { ascending: false })
+            .limit(40);
+          if (!(res && res.error) && Array.isArray(res && res.data)) {
+            posts = res.data;
+          }
+        } else if (window.KCAPI && typeof window.KCAPI.getPosts === 'function') {
+          posts = await window.KCAPI.getPosts({ module: moduleKey, page: 1, limit: 40 });
+        }
       } catch (_) {
         posts = [];
       }

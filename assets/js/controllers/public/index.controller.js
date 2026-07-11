@@ -418,14 +418,30 @@
   }
 
   async function bootstrapHome() {
+    // Paint feed first (kc_get_feed_cursor). Do NOT force-refresh category
+    // metrics in parallel with ranking — concurrent home RPCs stampeded free-tier DB.
     injectHomeFeed();
     renderCashbackPanel();
-    initRanking();
-    await Promise.all([
-      renderSidebarCategories({ force: true }),
-      renderPersonalPanel(),
-      renderCommunityPanel()
-    ]);
+
+    try {
+      await renderSidebarCategories({ force: false });
+    } catch (_) { }
+
+    // Secondary panels: sequential, reuse category cache (no force).
+    try {
+      await renderPersonalPanel();
+    } catch (_) { }
+    try {
+      await renderCommunityPanel();
+    } catch (_) { }
+
+    // Ranking is non-critical for first paint — defer after main metrics.
+    const scheduleRanking = (typeof window.requestIdleCallback === 'function')
+      ? function (fn) { window.requestIdleCallback(fn, { timeout: 2500 }); }
+      : function (fn) { window.setTimeout(fn, 400); };
+    scheduleRanking(function () {
+      try { initRanking(); } catch (_) { }
+    });
   }
 
   // ─── Top Contribuidores (ranking de engajamento) ──────────────────────────

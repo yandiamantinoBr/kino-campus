@@ -744,11 +744,20 @@
     state.fetched = true;
     const collected = [];
     try {
+      // Filter catalog only (not card rail). Use light selects + small page cap to
+      // avoid 20×100 full-embed getPosts that saturated Supabase free tier.
       if (window.KCAPI && typeof window.KCAPI.getPosts === 'function') {
-        for (let page = 1; page <= 20; page += 1) {
+        const pageLimit = 50;
+        const maxPages = 4;
+        for (let page = 1; page <= maxPages; page += 1) {
           let found = false;
           for (const moduleKey of Array.from(MODULES)) {
-            const batch = await window.KCAPI.getPosts({ module: moduleKey, page, limit: 100 });
+            const batch = await window.KCAPI.getPosts({
+              module: moduleKey,
+              page,
+              limit: pageLimit,
+              light: true,
+            });
             if (Array.isArray(batch) && batch.length) {
               collected.push(...batch);
               found = true;

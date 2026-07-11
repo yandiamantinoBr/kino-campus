@@ -57,7 +57,11 @@
     const limitRaw = (p.limit != null) ? parseInt(String(p.limit), 10) : 50;
 
     const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 50;
+    // Hard cap: module catalog loops historically used limit=100 × 20 pages and
+    // saturated free-tier Postgres (503/504). Cards should use getFeedCursor.
+    const limitUncapped = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 50;
+    const limit = Math.min(limitUncapped, 50);
+    const light = p.light === true || p.mode === 'light' || p.catalog === true;
 
     const norm = (v) => {
       if (v == null) return null;
@@ -92,7 +96,13 @@
       page,
       limit,
       sortBy,
+      light: !!light,
     };
+  }
+
+  /** Lightweight select for filter/catalog indexes — no profiles/media/comments embeds. */
+  function buildPostsCatalogSelect() {
+    return 'id, legacy_id, author_id, title, description, price, location, module, category, metadata, created_at, status, expires_at, bumped_at, highlight_score, votos';
   }
 
   const FEED_CURSOR_RESERVED_KEYS = new Set([
@@ -497,6 +507,25 @@
       return await q.range(from, to);
     };
 
+    // Catalog/filter path: no embeds — used by module sidebars (was 20×100 full embeds).
+    if (f.light) {
+      let lightRes = await run(buildPostsCatalogSelect(), f.module);
+      if (lightRes && lightRes.error) {
+        try { console.error('[KCSupabase] getPosts(light) erro:', lightRes.error); } catch (_) { }
+        return [];
+      }
+      let lightRows = (lightRes && Array.isArray(lightRes.data)) ? lightRes.data : [];
+      if (f.sortBy === 'recentes') {
+        lightRows = lightRows.slice().sort((a, b) => {
+          const aTime = new Date((a && (a.bumped_at || a.created_at)) || 0).getTime() || 0;
+          const bTime = new Date((b && (b.bumped_at || b.created_at)) || 0).getTime() || 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return String((b && b.id) || '').localeCompare(String((a && a.id) || ''));
+        });
+      }
+      return lightRows;
+    }
+
     // 1) tentativa padrão (post_media + profiles.verified)
     let mediaRel = 'post_media';
     let includeComments = true;
@@ -577,9 +606,9 @@
       });
     }
 
-    // Fallback resiliente: se o filtro module via eq não retornar linhas,
-    // tenta buscar sem filtro e filtra no client com normalização/aliases.
-    if (f.module && rows.length === 0) {
+    // Fallback resiliente (gated): empty module filter must NOT pull all modules
+    // with full embeds under load. Only allow for small first-page reads.
+    if (f.module && rows.length === 0 && f.page === 1 && f.limit <= 12) {
       const retryNoModule = await run(buildPostsSelect(true, mediaRel, includeComments), null);
       if (retryNoModule && retryNoModule.error && isMissingTokenError(retryNoModule.error, 'verified')) {
         const retryNoModuleNoVerified = await run(buildPostsSelect(false, mediaRel, includeComments), null);

@@ -1013,12 +1013,20 @@
     const collected = [];
 
     try {
+      // Filter catalog only — light rows, capped pages (was 20×100 full embeds).
       if (window.KCAPI && typeof window.KCAPI.getPosts === 'function') {
-        for (let page = 1; page <= 20; page += 1) {
-          const batch = await window.KCAPI.getPosts({ module: 'moradia', page, limit: 100 });
+        const pageLimit = 50;
+        const maxPages = 4;
+        for (let page = 1; page <= maxPages; page += 1) {
+          const batch = await window.KCAPI.getPosts({
+            module: 'moradia',
+            page,
+            limit: pageLimit,
+            light: true,
+          });
           if (!Array.isArray(batch) || !batch.length) break;
           collected.push(...batch);
-          if (batch.length < 100) break;
+          if (batch.length < pageLimit) break;
         }
       } else if (window.KCAPI && typeof window.KCAPI.getDatabaseNormalized === 'function') {
         const db = await window.KCAPI.getDatabaseNormalized();

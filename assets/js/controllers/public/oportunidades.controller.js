@@ -605,10 +605,17 @@
     const collected = [];
 
     try {
+      // Filter catalog only — light rows, capped pages (was 20×100 full embeds).
       if (window.KCAPI && typeof window.KCAPI.getPosts === 'function') {
-        const limit = 100;
-        for (let page = 1; page <= 20; page += 1) {
-          const batch = await window.KCAPI.getPosts({ module: 'oportunidades', page, limit });
+        const limit = 50;
+        const maxPages = 4;
+        for (let page = 1; page <= maxPages; page += 1) {
+          const batch = await window.KCAPI.getPosts({
+            module: 'oportunidades',
+            page,
+            limit,
+            light: true,
+          });
           if (!Array.isArray(batch) || batch.length === 0) break;
           collected.push(...batch);
           if (batch.length < limit) break;
