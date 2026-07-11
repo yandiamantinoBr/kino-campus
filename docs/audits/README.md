@@ -7,6 +7,10 @@ QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de rele
 
 ## Indice
 
+- `../CODEX-TECHNICAL-AUDIT-CONTINUATION-PROMPT-2026-07-11.md` — prompt operacional
+  autocontido com a auditoria dos PRs #638–#663, estado GitHub/Vercel/Supabase/VPS, divergencias
+  do inventario Cadu, amostra real de relevancia da pipeline e sequencia recomendada de PRs.
+
 | Auditoria | Data | Foco | Status |
 |---|---|---|---|
 | [technical-audit-production-parity-followup-2026-07-10.md](./technical-audit-production-parity-followup-2026-07-10.md) | 2026-07-10 | Pós-rollout Edge, paridade remota de migrations/RPCs e fronteira de segurança dos banners | Evidência remota atual; correção local validada, rollout de schema bloqueado |
