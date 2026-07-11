@@ -83,11 +83,40 @@
     }
 
     try {
+      // Bound hung REST calls when Postgres is saturated (503/504 hang without
+      // response). Avoids browser tabs piling open requests and worsening pool pressure.
+      const fetchWithTimeout = function (input, init) {
+        const timeoutMs = 18000;
+        const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        let timer = null;
+        if (controller) {
+          timer = setTimeout(function () {
+            try { controller.abort(); } catch (_) { }
+          }, timeoutMs);
+          if (init && init.signal) {
+            try {
+              if (init.signal.aborted) controller.abort();
+              else init.signal.addEventListener('abort', function () {
+                try { controller.abort(); } catch (_) { }
+              }, { once: true });
+            } catch (_) { }
+          }
+        }
+        const nextInit = Object.assign({}, init || {});
+        if (controller) nextInit.signal = controller.signal;
+        return fetch(input, nextInit).finally(function () {
+          if (timer) clearTimeout(timer);
+        });
+      };
+
       state.client = window.supabase.createClient(url, anonKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
+        },
+        global: {
+          fetch: fetchWithTimeout,
         },
       });
       return state.client;
