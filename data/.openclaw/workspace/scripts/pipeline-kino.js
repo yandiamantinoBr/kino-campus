@@ -25,6 +25,7 @@
 const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { resolveActionLabel } = require('./lib/curator-action-policy.js');
 const https = require('https');
 
 // ============================================================
@@ -845,7 +846,7 @@ async function main() {
           : [item.sourceUrl || item.url].filter(Boolean).map(url => ({ url, label: 'Fonte oficial', type: 'official' })),
         link: item.link || item.sourceUrl || item.url || '',
         linkAsCta: item.linkAsCta !== false,
-        actionLabel: item.actionLabel || '',
+        actionLabel: resolveActionLabel(item, item.formattedDescription || item.description || item.text || ''),
         actionKey: item.actionKey || '',
         contato: item.contato || '',
         score: item.score,

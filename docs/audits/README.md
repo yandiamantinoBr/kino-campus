@@ -13,6 +13,7 @@ QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de rele
 
 | Auditoria | Data | Foco | Status |
 |---|---|---|---|
+| [technical-audit-cadu-curator-relevance-2026-07-11.md](./technical-audit-cadu-curator-relevance-2026-07-11.md) | 2026-07-11 | Falsos positivos do curador, papéis temporais e dry-run explicável | Gate validado no espelho; rollout OpenClaw/VPS ainda não executado |
 | [technical-audit-production-parity-followup-2026-07-10.md](./technical-audit-production-parity-followup-2026-07-10.md) | 2026-07-10 | Pós-rollout Edge, paridade remota de migrations/RPCs e fronteira de segurança dos banners | Evidência remota atual; correção local validada, rollout de schema bloqueado |
 | [technical-audit-edge-auth-regression-2026-07-10.md](./technical-audit-edge-auth-regression-2026-07-10.md) | 2026-07-10 | Regressão de `verify_jwt` no dispatcher de notificações e hardening do deploy Edge | Incidente remediado pela PR #644; providers externos ainda desabilitados |
 | [technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md](./technical-audit-phase10-schema-ci-reconciliation-2026-07-10.md) | 2026-07-10 | Reconciliação local de schema, ACL, CI e Edge Functions | Validado localmente; rollout remoto bloqueado até branch Supabase |

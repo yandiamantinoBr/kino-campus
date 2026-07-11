@@ -17,6 +17,7 @@ const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 const { normalizeImageUrl: normalizeCmsUrl, isThumbnailUrl, validateImageUrl } = require('./lib/image-utils.js');
+const { resolveActionLabel } = require('./lib/curator-action-policy.js');
 
 const SUPABASE_URL = 'https://wacyrkwhkvzwkqpolrbg.supabase.co';
 
@@ -150,18 +151,9 @@ function recordToItem(rec) {
   const description = formattedDescription;
   const images = normalizeImages(rec);
   
-  // HARDENING 2026-06-04: actionLabel obrigatorio, inferir se vazio
-  let actionLabel = rec.actionLabel || '';
-  if (!actionLabel) {
-    const descLower = (formattedDescription || '').toLowerCase();
-    if (descLower.includes('inscreva') || descLower.includes('formulário') || descLower.includes('inscrições abertas')) actionLabel = 'Inscreva-se';
-    else if (descLower.includes('submeta') || descLower.includes('submissão')) actionLabel = 'Submeter trabalho';
-    else if (descLower.includes('acesse') || descLower.includes('edital')) actionLabel = 'Acessar edital';
-    else if (descLower.includes('candidate')) actionLabel = 'Candidate-se';
-    else if (descLower.includes('participe')) actionLabel = 'Participar';
-    else if (rec.module === 'eventos') actionLabel = 'Ver detalhes';
-    else if (rec.module === 'oportunidades') actionLabel = 'Saiba mais';
-  }
+  // Closed registration on a future event is informational, never an open
+  // application CTA. Other records preserve the historical inference.
+  const actionLabel = resolveActionLabel(rec, formattedDescription);
   
   // HARDENING 2026-06-04: contato padrao inferido
   let contato = rec.contato || '';

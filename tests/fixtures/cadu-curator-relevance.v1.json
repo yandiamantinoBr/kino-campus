@@ -1,0 +1,311 @@
+{
+  "referenceDate": "2026-07-11T12:00:00-03:00",
+  "sourceArtifact": {
+    "runId": "17ef149c-b433-4119-9a38-3bcf4ba6de06",
+    "sha256": "b3a83d904d90827d4faed0e0541e59fbd26f454c22ecefba4533441dd62faf85"
+  },
+  "cases": [
+    {
+      "id": "copa-news-with-future-tournament-date",
+      "title": "Professor da UFG estima que Copa de 2026 será a mais poluente da história",
+      "text": "A pesquisa discute mobilidade e a seleção das cidades-sede. O evento esportivo começa em 11 de junho de 2026 e termina em 19 de julho de 2026. A matéria não oferece inscrição, vaga, formulário ou atividade da UFG.",
+      "sourceName": "jornal-ufg",
+      "linkUrl": "https://jornal-ufg.ufg.br/n/202323",
+      "jsonItem": {
+        "created_at": "2026-06-30T08:20:34-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "news_without_action"
+      }
+    },
+    {
+      "id": "health-news-petiscos-long-term",
+      "title": "Futebol, petiscos e bebidas: como torcer sem descuidar da saúde",
+      "text": "A seleção de frutas, petiscos e bebidas pode ajudar a saúde no longo prazo. A pesquisa comenta alimentação durante um evento esportivo, sem chamada, inscrição ou serviço acionável.",
+      "sourceName": "jornal-ufg",
+      "linkUrl": "https://jornal-ufg.ufg.br/n/202481",
+      "jsonItem": {
+        "created_at": "2026-07-03T10:32:20-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "news_without_action",
+        "hasDeadline": false
+      }
+    },
+    {
+      "id": "fapeg-2024-without-current-window",
+      "title": "Chamada Pública Fapeg Nº 06/2024 - Bolsas de formação em mestrado e doutorado",
+      "text": "Inscrições até segunda-feira por e-mail. O prazo completo consta no edital.",
+      "html": "<a href=\"/documentos/chamada-06-2024.pdf\">Edital em PDF</a>",
+      "sourceName": "ppgeq",
+      "linkUrl": "https://ppgeq.ufg.br/n/180160",
+      "jsonItem": {
+        "created_at": "2024-03-27T16:15:39-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "old_without_current_window"
+      }
+    },
+    {
+      "id": "iptsp-future-event-closed-registration",
+      "title": "IPTSP Indica - Inscrições para XVIII Curso de Inverno em Imunologia estão abertas até dia 18 de maio",
+      "text": "As inscrições gratuitas encerram em 18 de maio de 2026 pelo formulário https://forms.example.edu/iptsp. O evento será realizado entre os dias 20 e 31 de julho de 2026, com palestras no IPTSP.",
+      "sourceName": "ppgmtsp",
+      "linkUrl": "https://ppgmtsp.ufg.br/n/200957",
+      "jsonItem": {
+        "created_at": "2026-05-13T11:22:49-03:00",
+        "sourceKind": "news",
+        "nativeCategories": ["curso"]
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "eventos",
+        "applicationDeadline": "2026-05-18",
+        "applicationStatus": "closed",
+        "eventStartsAt": "2026-07-20",
+        "eventEndsAt": "2026-07-31",
+        "eventStatus": "upcoming",
+        "canApply": false
+      }
+    },
+    {
+      "id": "profmat-structured-upcoming-event",
+      "title": "IV Workshop Online do PROFMAT nos dias 17, 18 e 19 de setembro de 2026",
+      "text": "Inscrições pelo formulário https://forms.example.edu/profmat até 15 de setembro de 2026. O evento virtual começa em 17 de setembro de 2026 e termina em 19 de setembro de 2026.",
+      "sourceName": "profmat",
+      "linkUrl": "https://profmat.ime.ufg.br/e/39200",
+      "jsonItem": {
+        "created_at": "2026-07-10T07:00:00-03:00",
+        "sourceKind": "event",
+        "nativeCategories": ["workshop"]
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "eventos",
+        "applicationDeadline": "2026-09-15",
+        "applicationStatus": "open",
+        "eventStartsAt": "2026-09-17",
+        "eventEndsAt": "2026-09-19",
+        "eventStatus": "upcoming",
+        "canApply": true
+      }
+    },
+    {
+      "id": "active-opportunity-with-form-and-deadline",
+      "title": "Edital 12/2026 oferece bolsas de iniciação científica",
+      "text": "Inscrições abertas pelo formulário https://forms.example.edu/apply até 30 de agosto de 2026.",
+      "sourceName": "prpi",
+      "linkUrl": "https://prpi.ufg.br/n/active",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "opportunity",
+        "nativeCategories": ["editais", "bolsas"]
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "oportunidades",
+        "applicationDeadline": "2026-08-30",
+        "applicationStatus": "open",
+        "canApply": true
+      }
+    },
+    {
+      "id": "old-correction-with-explicit-current-extension",
+      "title": "Retificação prorroga prazo da Chamada 04/2024",
+      "text": "Novo prazo: inscrições prorrogadas até 20 de agosto de 2026 pelo formulário https://forms.example.edu/extension.",
+      "sourceName": "prpi",
+      "linkUrl": "https://prpi.ufg.br/n/correction",
+      "jsonItem": {
+        "created_at": "2024-02-01T09:00:00-03:00",
+        "updated_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "opportunity"
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "oportunidades",
+        "applicationDeadline": "2026-08-20",
+        "applicationStatus": "open",
+        "canApply": true
+      }
+    },
+    {
+      "id": "news-mentions-course-with-future-dates",
+      "title": "Pesquisa avalia curso internacional previsto para agosto",
+      "text": "A reportagem analisa o curso internacional, que começa em 10 de agosto de 2026 e termina em 20 de agosto de 2026. A matéria é apenas uma análise acadêmica e não convida leitores.",
+      "sourceName": "jornal-ufg",
+      "linkUrl": "https://jornal-ufg.ufg.br/n/course-research",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "news_without_action"
+      }
+    },
+    {
+      "id": "news-about-existing-cohort-at-campus",
+      "title": "Nova etapa de especialização começa no Campus Cidade de Goiás",
+      "text": "A reportagem acompanha uma turma já constituída. O novo período do curso começa em 17 de julho de 2026 no Campus Cidade de Goiás, somente para estudantes já matriculados.",
+      "sourceName": "jornal-ufg",
+      "linkUrl": "https://jornal-ufg.ufg.br/n/cohort-campus",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "news_without_action"
+      }
+    },
+    {
+      "id": "news-event-with-active-listener-registration",
+      "title": "Estão abertas as submissões para o Seminário PIP/UFG",
+      "text": "O seminário será realizado entre os dias 9 e 13 de novembro de 2026. Inscrições como ouvinte até 12 de novembro de 2026.",
+      "sourceName": "prpi",
+      "linkUrl": "https://prpi.ufg.br/n/seminario-pip",
+      "jsonItem": {
+        "created_at": "2026-05-21T15:12:25-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "eventos",
+        "applicationDeadline": "2026-11-12",
+        "applicationStatus": "open",
+        "eventStartsAt": "2026-11-09",
+        "eventEndsAt": "2026-11-13",
+        "eventStatus": "upcoming",
+        "canApply": false
+      }
+    },
+    {
+      "id": "closed-course-window-before-future-classes",
+      "title": "Curso de Especialização em Perícia Ambiental - Turma 2026",
+      "text": "Estão abertas, entre os dias 6 de maio e 12 de junho de 2026, as inscrições para o curso. As aulas ocorrerão de 10 de agosto de 2026 a 13 de fevereiro de 2028.",
+      "sourceName": "eeec",
+      "linkUrl": "https://eeec.ufg.br/n/curso-pericia",
+      "jsonItem": {
+        "created_at": "2026-05-07T09:30:34-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "news_without_action",
+        "applicationDeadline": "2026-06-12",
+        "applicationStatus": "closed",
+        "eventStartsAt": "2026-08-10",
+        "eventEndsAt": "2028-02-13",
+        "eventStatus": "upcoming",
+        "canApply": false
+      }
+    },
+    {
+      "id": "long-term-context-with-future-date-and-form-word",
+      "title": "Estudo discute efeitos ambientais de longo prazo",
+      "text": "A reportagem discute efeitos no longo prazo até 30 de agosto de 2026 e menciona um formulário de pesquisa, sem candidatura ou inscrição.",
+      "sourceName": "jornal-ufg",
+      "linkUrl": "https://jornal-ufg.ufg.br/n/long-term",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "news"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "news_without_action",
+        "hasDeadline": false
+      }
+    },
+    {
+      "id": "current-open-status-with-action-url",
+      "title": "Edital 15/2026 recebe candidaturas para monitoria",
+      "text": "Candidaturas abertas no formulário https://forms.example.edu/monitoria. Confira os requisitos do edital.",
+      "sourceName": "prograd",
+      "linkUrl": "https://prograd.ufg.br/n/open-status",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "opportunity",
+        "nativeCategories": ["editais", "monitoria"]
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "oportunidades",
+        "applicationStatus": "open",
+        "canApply": true
+      }
+    },
+    {
+      "id": "html-only-action-url-with-deadline",
+      "title": "Processo seletivo para bolsa de extensão",
+      "text": "Inscrições até 25 de agosto de 2026.",
+      "html": "<a href=\"https://forms.gle/example\">Formulário de inscrição</a>",
+      "sourceName": "proex",
+      "linkUrl": "https://proex.ufg.br/n/html-action",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "opportunity"
+      },
+      "expected": {
+        "decision": "publish",
+        "module": "oportunidades",
+        "applicationDeadline": "2026-08-25",
+        "applicationStatus": "open",
+        "canApply": true
+      }
+    },
+    {
+      "id": "active-opportunity-with-edital-but-no-application-cta",
+      "title": "Edital 18/2026 para bolsa de extensão",
+      "text": "Inscrições até 28 de agosto de 2026. Consulte as regras no edital.",
+      "html": "<a href=\"https://files.example.edu/edital-18-2026.pdf\">Edital completo</a>",
+      "sourceName": "proex",
+      "linkUrl": "https://proex.ufg.br/n/edital-no-form",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "opportunity"
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "opportunity_without_active_window",
+        "applicationDeadline": "2026-08-28",
+        "applicationStatus": "open",
+        "canApply": false
+      }
+    },
+    {
+      "id": "active-opportunity-with-unrelated-contact-email",
+      "title": "Chamada 20/2026 para apoio estudantil",
+      "text": "Candidaturas até 29 de agosto de 2026. A página informa apenas o contato geral da unidade.",
+      "sourceName": "prae",
+      "linkUrl": "https://prae.ufg.br/n/chamada-no-form",
+      "jsonItem": {
+        "created_at": "2026-07-10T09:00:00-03:00",
+        "sourceKind": "opportunity",
+        "relevantLinks": {
+          "formularios": [],
+          "editais": [],
+          "paginasOficiais": [],
+          "outros": [
+            {
+              "url": "mailto:secretaria@example.edu",
+              "label": "Contato geral"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "decision": "discard",
+        "reason": "opportunity_without_active_window",
+        "applicationDeadline": "2026-08-29",
+        "applicationStatus": "open",
+        "canApply": false
+      }
+    }
+  ]
+}
