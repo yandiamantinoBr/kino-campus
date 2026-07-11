@@ -123,7 +123,10 @@ Deno.serve(async (req) => {
             await new Promise((res) => setTimeout(res, attempts[i] * 1000));
             continue;
           }
-          return { ok: false, error: { name: e.name, message: e.message, hint: "timeout/connection" } };
+          const error = e instanceof Error
+            ? { name: e.name, message: e.message }
+            : { name: "Error", message: String(e) };
+          return { ok: false, error: { ...error, hint: "timeout/connection" } };
         }
       }
       return { ok: false, error: { hint: "exhausted" } };

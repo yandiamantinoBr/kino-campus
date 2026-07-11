@@ -51,6 +51,9 @@ BEGIN
     PERFORM cron.unschedule('kc-refresh-highlight-scores');
   END IF;
 EXCEPTION
+  WHEN invalid_schema_name THEN
+    -- pg_cron not available in local/sandbox
+    NULL;
   WHEN undefined_table THEN
     -- pg_cron not available in local/sandbox
     NULL;
@@ -66,6 +69,9 @@ BEGIN
     $cron$ SELECT public.kc_refresh_highlight_scores(); $cron$
   );
 EXCEPTION
+  WHEN invalid_schema_name THEN
+    -- pg_cron not available in local/sandbox
+    NULL;
   WHEN undefined_table THEN
     NULL;
   WHEN undefined_function THEN
