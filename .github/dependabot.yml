@@ -11,6 +11,25 @@ updates:
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
     versioning-strategy: increase-if-necessary
+    groups:
+      jest-toolchain:
+        patterns:
+          - jest
+          - jest-*
+          - "@jest/*"
+          - babel-jest
+        update-types:
+          - major
+          - minor
+          - patch
+      babel-toolchain:
+        patterns:
+          - "@babel/core"
+          - "@babel/preset-env"
+        update-types:
+          - major
+          - minor
+          - patch
     commit-message:
       prefix: deps
 
