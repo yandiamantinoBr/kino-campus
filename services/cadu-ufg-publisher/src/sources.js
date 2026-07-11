@@ -7,7 +7,12 @@ const { canonicalizeUrl, slugify } = require('./utils');
 const DEFAULT_SOURCE_PATH = path.resolve(__dirname, '../config/sources.json');
 
 function loadSources(sourcePath = DEFAULT_SOURCE_PATH) {
-  const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+  const content = fs.readFileSync(sourcePath, 'utf8').replace(/^\uFEFF/, '');
+  const raw = JSON.parse(content);
+  if (!raw || !Array.isArray(raw.sources)) {
+    throw new TypeError(`Invalid Cadu source registry: expected sources[] in ${sourcePath}`);
+  }
+
   return raw.sources.map((source) => {
     const baseUrl = canonicalizeUrl(source.baseUrl);
     return {
