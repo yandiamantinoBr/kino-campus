@@ -63,6 +63,9 @@ describe('admin Cadu UX contracts', () => {
   test('pipeline action siblings are locked and restored as one operation', () => {
     expect(controller).toContain('function lockPipelineActionButtons(clickedButton)');
     expect(controller).toContain("parent.querySelectorAll('.kc-pipeline-stage__btn')");
+    expect(controller).toContain('state.pipelineStartPending = true;');
+    expect(controller).toContain('state.pipelineStartPending = false;');
+    expect(controller).toContain('renderPipelineStages(state.pipelineStages || []);');
     expect(controller).toContain('restoreButtons();');
   });
 

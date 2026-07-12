@@ -31,6 +31,7 @@
     pipelineStages: [],
     pipelineHistory: [],
     pipelineCapabilities: {},
+    pipelineStartPending: false,
     pipelineHealth: null,
     lastVersion: null
   };
@@ -2019,7 +2020,8 @@
     if (!capabilities || capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true) return null;
     if (profile.force_dry_run === true) return true;
     if (profile.dry_run_available !== true) return null;
-    return requestedDryRun === true;
+    if (requestedDryRun !== true && requestedDryRun !== false) return null;
+    return requestedDryRun;
   }
 
   function buildPipelineRunRequest(stageId, dryRun, capabilities) {
@@ -2157,9 +2159,12 @@
       var actionButtons = [];
       function actionButton(dryRun, label, danger) {
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
-        var btnTitle = canRun ? label + ' ' + s.id : 'Indisponivel: ' + blockedReason;
+        var disabled = !canRun || state.pipelineStartPending;
+        var btnTitle = state.pipelineStartPending
+          ? 'Aguardando resposta da solicitação anterior'
+          : (canRun ? label + ' ' + s.id : 'Indisponivel: ' + blockedReason);
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
-        return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (canRun ? '' : ' disabled') + '>' +
+        return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (dryRun === true ? 'fa-flask' : 'fa-play') + '"></i> ' + escapeHtml(label) +
         '</button>';
       }
@@ -2804,6 +2809,7 @@
   }
 
   async function runPipelineStage(stageId, dryRun, clickedButton) {
+    if (state.pipelineStartPending) return;
     var stage = findPipelineStage(stageId);
     var pf = stage && stage.preflight ? stage.preflight : null;
     if (pf && pf.can_run === false) {
@@ -2813,6 +2819,15 @@
     }
     var profile = pf && pf.profile ? pf.profile : {};
     dryRun = resolvePipelineDryRun(profile, dryRun, state.pipelineCapabilities);
+    var expectsExplicitMode = Boolean(
+      state.pipelineCapabilities.explicit_dry_run === true &&
+      state.pipelineCapabilities.explicit_run_mode_routes === true &&
+      profile.dry_run_available === true
+    );
+    if (expectsExplicitMode && typeof dryRun !== 'boolean') {
+      alert('Modo de execução ausente ou inválido. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
+      return;
+    }
     var warnings = pf ? (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n') : '';
     var modeLabel = dryRun === true
       ? 'DRY-RUN EXPLÍCITO (sem mutação de plataforma)'
@@ -2830,6 +2845,7 @@
       '\n\nLogs ficarão disponíveis em tempo real abaixo.';
     if (!confirm(msg)) return;
     var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
+    state.pipelineStartPending = true;
     var restoreButtons = lockPipelineActionButtons(btn);
     var request = buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities);
     var resp;
@@ -2840,7 +2856,11 @@
         body: JSON.stringify(request.payload),
       });
     } finally {
+      state.pipelineStartPending = false;
       restoreButtons();
+      // Um refresh pode ter substituído o grupo enquanto o POST aguardava.
+      // Reconstrói o DOM atual para não deixar botões novos presos/desbloqueados.
+      renderPipelineStages(state.pipelineStages || []);
     }
     if (resp && resp.run_id) {
       // Limpa log box pra nova execução

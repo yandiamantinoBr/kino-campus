@@ -38,6 +38,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     ['forced stage is always dry-run', { dry_run_available: true, force_dry_run: true }, false, explicitCapabilities, true],
     ['available stage preserves true', { dry_run_available: true }, true, explicitCapabilities, true],
     ['available stage preserves false', { dry_run_available: true }, false, explicitCapabilities, false],
+    ['available stage rejects an unknown mode', { dry_run_available: true }, null, explicitCapabilities, null],
     ['unavailable stage omits the field', { dry_run_available: false }, true, explicitCapabilities, null],
   ])('%s', (_label, profile, requested, capabilities, expected) => {
     expect(resolvePipelineDryRun(profile, requested, capabilities)).toBe(expected);
