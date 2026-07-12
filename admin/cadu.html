@@ -196,7 +196,9 @@
     .kc-pipeline-stage__chip.is-warning { border-color: rgba(245,158,11,.4); color: #fbbf24; background: rgba(245,158,11,.08); }
     .kc-pipeline-stage__chip.is-danger { border-color: rgba(239,68,68,.45); color: #f87171; background: rgba(239,68,68,.1); }
     .kc-pipeline-stage__script { font-family: monospace; font-size: .66rem; color: var(--kc-text-dark-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kc-pipeline-stage__actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .kc-pipeline-stage__btn { background: var(--kc-primary-brand); color: #fff; border: 0; border-radius: 8px; padding: 7px 10px; font-size: .82rem; cursor: pointer; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+    .kc-pipeline-stage__actions .kc-pipeline-stage__btn { flex: 1 1 110px; }
     .kc-pipeline-stage__btn:hover { filter: brightness(1.1); }
     .kc-pipeline-stage__btn:disabled { background: rgba(255,107,0,.3); cursor: not-allowed; }
     .kc-pipeline-stage__btn.is-danger { background: rgba(239,68,68,.85); }
@@ -789,6 +791,6 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260710.1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260712.1"></script>
 </body>
 </html>

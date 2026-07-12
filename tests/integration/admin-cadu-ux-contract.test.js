@@ -47,4 +47,22 @@ describe('admin Cadu UX contracts', () => {
       'tooltip.cadu-feed-load-more'
     ].forEach((key) => expect(html).toContain(`data-i18n-tooltip="${key}"`));
   });
+
+  test('pipeline actions make dry-run versus real execution explicit', () => {
+    expect(controller).toContain('data-dry-run="');
+    expect(controller).toContain("state.pipelineCapabilities = status.capabilities || {};");
+    expect(controller).toContain("state.pipelineCapabilities.explicit_dry_run === true");
+    expect(controller).toContain("profile.force_dry_run === true");
+    expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
+    expect(controller).toContain('buildPipelineRunPayload(stageId, dryRun, state.pipelineCapabilities)');
+    expect(controller).toContain("capabilities.explicit_dry_run === true && typeof dryRun === 'boolean'");
+    expect(controller).toContain('body: JSON.stringify(payload)');
+    expect(html).toContain('.kc-pipeline-stage__actions');
+  });
+
+  test('active pipeline card exposes the effective execution mode', () => {
+    expect(controller).toContain("typeof active.dry_run === 'boolean'");
+    expect(controller).toContain("active.dry_run ? 'simulação' : 'execução real'");
+    expect(controller).toContain("typeof r.dry_run === 'boolean'");
+  });
 });
