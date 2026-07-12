@@ -51,13 +51,19 @@ describe('admin Cadu UX contracts', () => {
   test('pipeline actions make dry-run versus real execution explicit', () => {
     expect(controller).toContain('data-dry-run="');
     expect(controller).toContain("state.pipelineCapabilities = status.capabilities || {};");
-    expect(controller).toContain("state.pipelineCapabilities.explicit_dry_run === true");
+    expect(controller).toContain("capabilities.explicit_run_mode_routes === true");
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
-    expect(controller).toContain('buildPipelineRunPayload(stageId, dryRun, state.pipelineCapabilities)');
-    expect(controller).toContain("capabilities.explicit_dry_run === true && typeof dryRun === 'boolean'");
-    expect(controller).toContain('body: JSON.stringify(payload)');
+    expect(controller).toContain('buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities)');
+    expect(controller).toContain("path += dryRun ? '/dry-run' : '/real'");
+    expect(controller).toContain('body: JSON.stringify(request.payload)');
     expect(html).toContain('.kc-pipeline-stage__actions');
+  });
+
+  test('pipeline action siblings are locked and restored as one operation', () => {
+    expect(controller).toContain('function lockPipelineActionButtons(clickedButton)');
+    expect(controller).toContain("parent.querySelectorAll('.kc-pipeline-stage__btn')");
+    expect(controller).toContain('restoreButtons();');
   });
 
   test('active pipeline card exposes the effective execution mode', () => {

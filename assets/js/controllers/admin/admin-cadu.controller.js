@@ -2016,18 +2016,60 @@
   // poderiam executar de verdade mesmo recebendo { dry_run: true }.
   function resolvePipelineDryRun(profile, requestedDryRun, capabilities) {
     profile = profile || {};
-    if (!capabilities || capabilities.explicit_dry_run !== true) return null;
+    if (!capabilities || capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true) return null;
     if (profile.force_dry_run === true) return true;
     if (profile.dry_run_available !== true) return null;
     return requestedDryRun === true;
   }
 
-  function buildPipelineRunPayload(stageId, dryRun, capabilities) {
-    var payload = { stage: stageId };
-    if (capabilities && capabilities.explicit_dry_run === true && typeof dryRun === 'boolean') {
-      payload.dry_run = dryRun;
+  function buildPipelineRunRequest(stageId, dryRun, capabilities) {
+    var path = '/api/cadu/pipeline/run';
+    if (capabilities && capabilities.explicit_dry_run === true && capabilities.explicit_run_mode_routes === true && typeof dryRun === 'boolean') {
+      // Estas rotas não existem na API antiga. Se houver rollback entre o GET
+      // de capabilities e este POST, o request falha com 404 em vez de uma
+      // versão antiga ignorar dry_run=true e executar de verdade.
+      path += dryRun ? '/dry-run' : '/real';
     }
-    return payload;
+    return { path: path, payload: { stage: stageId } };
+  }
+
+  function pipelineStageActionModes(profile, capabilities) {
+    profile = profile || {};
+    var supportsExplicitModes = Boolean(
+      capabilities &&
+      capabilities.explicit_dry_run === true &&
+      capabilities.explicit_run_mode_routes === true
+    );
+    if (supportsExplicitModes && profile.force_dry_run === true) {
+      return [{ dryRun: true, label: 'Simular', danger: false }];
+    }
+    if (supportsExplicitModes && profile.dry_run_available === true) {
+      return [
+        { dryRun: true, label: 'Dry-run', danger: false },
+        { dryRun: false, label: profile.mutates_platform ? 'Executar real' : 'Executar', danger: Boolean(profile.mutates_platform) }
+      ];
+    }
+    return [{
+      dryRun: null,
+      label: 'Executar',
+      danger: Boolean(profile.mutates_platform && !profile.default_dry_run)
+    }];
+  }
+
+  function lockPipelineActionButtons(clickedButton) {
+    var parent = clickedButton && clickedButton.parentElement;
+    var buttons = parent ? Array.prototype.slice.call(parent.querySelectorAll('.kc-pipeline-stage__btn')) : (clickedButton ? [clickedButton] : []);
+    var originals = buttons.map(function (button) {
+      return { button: button, disabled: button.disabled, html: button.innerHTML };
+    });
+    buttons.forEach(function (button) { button.disabled = true; });
+    if (clickedButton) clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…';
+    return function restorePipelineActionButtons() {
+      originals.forEach(function (original) {
+        original.button.disabled = original.disabled;
+        original.button.innerHTML = original.html;
+      });
+    };
   }
 
   function stageChip(text, level) {
@@ -2110,7 +2152,6 @@
       }
       var pf = s.preflight || {};
       var profile = pf.profile || {};
-      var supportsExplicitDryRun = state.pipelineCapabilities.explicit_dry_run === true;
       var canRun = pf.can_run !== false;
       var blockedReason = ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
       var actionButtons = [];
@@ -2122,16 +2163,9 @@
           '<i class="fas ' + (dryRun === true ? 'fa-flask' : 'fa-play') + '"></i> ' + escapeHtml(label) +
         '</button>';
       }
-      if (supportsExplicitDryRun && profile.force_dry_run === true) {
-        actionButtons.push(actionButton(true, 'Simular', false));
-      } else if (supportsExplicitDryRun && profile.dry_run_available === true) {
-        actionButtons.push(actionButton(true, 'Dry-run', false));
-        actionButtons.push(actionButton(false, profile.mutates_platform ? 'Executar real' : 'Executar', Boolean(profile.mutates_platform)));
-      } else {
-        // API antiga ou estágio sem dry-run: preserva o comportamento legado e
-        // nunca promete simulação sem um contrato verificável do servidor.
-        actionButtons.push(actionButton(null, 'Executar', Boolean(profile.mutates_platform && !profile.default_dry_run)));
-      }
+      pipelineStageActionModes(profile, state.pipelineCapabilities).forEach(function (action) {
+        actionButtons.push(actionButton(action.dryRun, action.label, action.danger));
+      });
       var lastSummary = s.last_run && s.last_run.summary ? renderRunSummary(s.last_run.summary) : '';
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
@@ -2795,16 +2829,19 @@
       (warnings ? '\n\nAvisos:\n' + warnings : '') +
       '\n\nLogs ficarão disponíveis em tempo real abaixo.';
     if (!confirm(msg)) return;
-    var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"][data-dry-run="' + dryRun + '"]')[0];
-    var btnOriginal = btn ? btn.innerHTML : '';
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…'; }
-    var payload = buildPipelineRunPayload(stageId, dryRun, state.pipelineCapabilities);
-    var resp = await apiFetch('/api/cadu/pipeline/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (btn) { btn.disabled = false; btn.innerHTML = btnOriginal; }
+    var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
+    var restoreButtons = lockPipelineActionButtons(btn);
+    var request = buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities);
+    var resp;
+    try {
+      resp = await apiFetch(request.path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request.payload),
+      });
+    } finally {
+      restoreButtons();
+    }
     if (resp && resp.run_id) {
       // Limpa log box pra nova execução
       var logBox = $('#pipeline-log');
@@ -2815,7 +2852,9 @@
     } else if (resp && resp.__error) {
       // Mensagens específicas por status code
       var msg = 'Falha ao iniciar.';
-      if (resp.status === 409) {
+      if (resp.status === 404 && typeof dryRun === 'boolean') {
+        msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
+      } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
         var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
         msg = '⛔ Já existe um run ativo para "' + stageId + '" (id ' + existingId + ').\n\nAguarde terminar ou pare-o via botão Parar antes de iniciar novo.';
