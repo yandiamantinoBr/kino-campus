@@ -3,6 +3,7 @@ const {
   validateProjection,
   buildCatalog,
   filterCatalog,
+  validateRegistryReadiness,
   instagramStatusGroup,
   selectUnambiguousConfirmedInstagram,
   buildFirstStableOverridePayload,
@@ -83,7 +84,9 @@ function source(id, entityId, revisionCharacter, nestedProfiles, tier) {
       status: item.status,
       enabled: item.enabled,
       shared: item.shared,
-      entityIds: item.entityIds
+      entityIds: item.entityIds,
+      viaSourceObservation: item.observations.some((observation) => observation.sourceId === id),
+      viaEntityIds: item.entityIds.filter((profileEntityId) => profileEntityId === entityId)
     })),
     executionModes: [],
     reviewState: 'reviewed',
@@ -216,6 +219,10 @@ describe('KCAdminCaduSources fail-closed projection', () => {
       entityIds: ['ufg.fac'],
       instagramProfileIds: ['ig.fac']
     });
+    expect(catalog.sources.find((item) => item.id === 'web.ufg.portal').instagramProfiles[0])
+      .toMatchObject({ viaSourceObservation: true, viaEntityIds: ['ufg.portal'] });
+    expect(catalog.sources.find((item) => item.id === 'web.ufg.fac').instagramProfiles[0])
+      .toMatchObject({ viaSourceObservation: false, viaEntityIds: ['ufg.fac'] });
     expect(catalog.deferred.map((item) => item.deferredKind)).toEqual([
       'ambiguous',
       'collision',
@@ -288,12 +295,46 @@ describe('KCAdminCaduSources fail-closed projection', () => {
   });
 
   test('selects an Instagram handle only when exactly one confirmed profile exists', () => {
-    const confirmed = { id: 'ig.one', status: 'confirmed' };
-    const pending = { id: 'ig.pending', status: 'pending_verification' };
+    const confirmed = { id: 'ig.one', status: 'confirmed', viaSourceObservation: true, shared: false };
+    const pending = { id: 'ig.pending', status: 'pending_verification', viaSourceObservation: true, shared: false };
     expect(selectUnambiguousConfirmedInstagram([pending])).toBeNull();
     expect(selectUnambiguousConfirmedInstagram([confirmed, pending])).toBe(confirmed);
-    expect(selectUnambiguousConfirmedInstagram([confirmed, { id: 'ig.two', status: 'confirmed' }]))
+    expect(selectUnambiguousConfirmedInstagram([confirmed, { id: 'ig.two', status: 'confirmed', viaSourceObservation: true, shared: false }]))
       .toBeNull();
+    expect(selectUnambiguousConfirmedInstagram([
+      { id: 'ig.inferred', status: 'confirmed', viaSourceObservation: false, shared: false }
+    ])).toBeNull();
+    expect(selectUnambiguousConfirmedInstagram([
+      { id: 'ig.shared', status: 'confirmed', viaSourceObservation: true, shared: true }
+    ])).toBeNull();
+  });
+
+  test('enables registry writes only for matching hash/version and a ready CAS contract', () => {
+    const input = fixture();
+    const catalog = buildCatalog(input, headers());
+    const readiness = {
+      ready: true,
+      contractVersion: 'cadu-unit-meta-cas-v1',
+      phase: 'phase-a',
+      checks: { table: true, stableRpc: true, legacyRpc: true },
+      metadataRowsValidated: 5,
+      registryVersion: input.registryVersion,
+      registrySha256: HASH
+    };
+    expect(validateRegistryReadiness(readiness, {
+      headers: { 'X-Cadu-Registry-Sha256': HASH }
+    }, catalog)).toMatchObject({ ready: true, metadataRowsValidated: 5 });
+
+    expectContractError(() => validateRegistryReadiness(
+      { ...readiness, registrySha256: '0'.repeat(64) },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'registry_hash_mismatch');
+    expectContractError(() => validateRegistryReadiness(
+      { ...readiness, checks: { table: true, stableRpc: false } },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'metadata_contract_not_ready');
   });
 
   test('rejects duplicate canonical IDs and duplicate source revisions/ETags', () => {

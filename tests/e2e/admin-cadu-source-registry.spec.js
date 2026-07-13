@@ -73,7 +73,9 @@ function registryProjection() {
         status: 'confirmed',
         enabled: false,
         shared: false,
-        entityIds: ['ufg.portal']
+        entityIds: ['ufg.portal'],
+        viaSourceObservation: true,
+        viaEntityIds: ['ufg.portal']
       }],
       executionModes: [],
       reviewState: 'reviewed',
@@ -178,7 +180,19 @@ async function installAdminSession(page) {
   });
 }
 
-async function mockCommonCaduRoutes(page, registryHandler) {
+function registryReadiness() {
+  return {
+    ready: true,
+    contractVersion: 'cadu-unit-meta-cas-v1',
+    phase: 'phase-a',
+    checks: { table: true, stableRpc: true, legacyRpc: true },
+    metadataRowsValidated: 2,
+    registryVersion: '2026-07-13.3',
+    registrySha256: HASH
+  };
+}
+
+async function mockCommonCaduRoutes(page, registryHandler, readinessHandler) {
   await page.route('**/api/cadu/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -193,6 +207,17 @@ async function mockCommonCaduRoutes(page, registryHandler) {
         json: {
           runs: [{ id: 'run-playwright-1', stage: 'publish', status: 'finished', started_at: Math.floor(Date.now() / 1000), exit_code: 0 }]
         }
+      });
+    }
+    if (path === '/api/cadu/sites/source-registry/readiness') {
+      if (readinessHandler) return readinessHandler(route, path);
+      return route.fulfill({
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-store',
+          'X-Cadu-Registry-Sha256': HASH
+        },
+        json: registryReadiness()
       });
     }
     if (path === '/api/cadu/sites/source-registry' || path === '/api/cadu/sites/source-registry/web.ufg.portal/override') {
@@ -263,6 +288,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await expect(page.locator('.kc-cadu-save-source-btn')).toBeDisabled();
     await expect(page.locator('.kc-cadu-publish-btn')).toBeDisabled();
     await expect(page.locator('.kc-cadu-publish-btn')).toContainText('Shadow');
+    await expect(page.locator('tr[data-source-id="web.ufg.portal"]')).toContainText('associação direta observada nesta fonte');
     await expect(page.locator('.kc-cadu-ask-btn[data-ask-kind="site"]'))
       .toHaveAttribute('data-ask-instagram', '@ufg_oficial (confirmed)');
     const desktopHeroLayout = await page.evaluate(() => {
@@ -479,9 +505,95 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     expect(patchRequests).toHaveLength(1);
   });
 
+  test('preserva a intenção explícita de limpar tier e nota após transição CAS para override estável', async ({ page }) => {
+    const patchRequests = [];
+    let registryReads = 0;
+    const initial = registryProjection();
+    Object.assign(initial.sources[0], {
+      overrideTier: null,
+      effectiveTier: 1,
+      overrideOrigin: 'base',
+      isInheritedLegacy: false,
+      overrideUnitId: null,
+      note: null,
+      updatedAt: null,
+      overrideRevision: null,
+      collision: false
+    });
+    initial.metaClassification = {
+      unambiguous: [], ambiguous: [], orphan: [], collisions: [],
+      counts: { rows: 0, unambiguous: 0, ambiguous: 0, orphan: 0, collisions: 0 }
+    };
+    const competing = registryProjection();
+    const competingRevision = 'e'.repeat(64);
+    Object.assign(competing.sources[0], {
+      overrideTier: 3,
+      effectiveTier: 3,
+      overrideOrigin: 'stable',
+      isInheritedLegacy: false,
+      overrideUnitId: 'web.ufg.portal',
+      note: 'Decisão concorrente',
+      updatedAt: '2026-07-13T13:00:00Z',
+      overrideRevision: 5,
+      collision: false,
+      revision: competingRevision,
+      etag: `"${competingRevision}"`
+    });
+    competing.metaClassification.unambiguous[0].unitId = 'web.ufg.portal';
+    competing.metaClassification.unambiguous[0].matchType = 'stable_source_id';
+    competing.metaClassification.unambiguous[0].row.unit_id = 'web.ufg.portal';
+    competing.metaClassification.unambiguous[0].row.tier = 3;
+    competing.metaClassification.unambiguous[0].row.note = 'Decisão concorrente';
+    competing.metaClassification.unambiguous[0].row.revision = 5;
+    competing.metaClassification.unambiguous[0].row.updated_at = '2026-07-13T13:00:00Z';
+    await mockCommonCaduRoutes(page, async (route, path) => {
+      if (path.endsWith('/override')) {
+        patchRequests.push(route.request().postDataJSON());
+        return route.fulfill({
+          status: 412,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' },
+          json: { detail: 'override changed' }
+        });
+      }
+      registryReads += 1;
+      return route.fulfill({
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-store',
+          ETag: LIST_ETAG,
+          'X-Cadu-Registry-Sha256': HASH
+        },
+        json: registryReads === 1 ? initial : competing
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    await page.locator('.kc-cadu-source-tier-select').selectOption('');
+    await page.locator('.kc-cadu-source-note-input').fill('temporária');
+    await page.locator('.kc-cadu-source-note-input').fill('');
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('.kc-cadu-save-source-btn').click();
+
+    await expect.poll(() => patchRequests.length).toBe(1);
+    expect(patchRequests[0]).toEqual({ tier: null, note: null });
+    await expect(page.locator('.kc-cadu-conflict-warning')).toContainText('Decisão concorrente');
+    await expect(page.locator('.kc-cadu-source-tier-select')).toHaveValue('');
+    await expect(page.locator('.kc-cadu-source-note-input')).toHaveValue('');
+    await expect(page.locator('.kc-cadu-save-source-btn')).toBeEnabled();
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('.kc-cadu-save-source-btn').click();
+    await expect.poll(() => patchRequests.length).toBe(2);
+    expect(patchRequests[1]).toEqual({ tier: null, note: null });
+  });
+
   test('falha fechado e mantém fallback legado somente leitura sem headers fortes', async ({ page }) => {
     const pageErrors = [];
+    const publishRequests = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/api/cadu/publish') publishRequests.push(request);
+    });
     await mockCommonCaduRoutes(page, async (route, path) => {
       if (path.endsWith('/override')) throw new Error('PATCH must not be reachable in fallback mode');
       return route.fulfill({
@@ -495,8 +607,46 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await expect(page.locator('#sites-view')).toBeDisabled();
     await expect(page.locator('#sites-tbody')).toContainText('UFG legado');
     await expect(page.locator('#sites-tbody')).toContainText('somente leitura');
+    await expect(page.locator('.kc-cadu-publish-btn')).toBeDisabled();
+    await expect(page.locator('.kc-cadu-publish-btn')).toContainText('Somente leitura');
     await expect(page.locator('.kc-cadu-save-source-btn')).toHaveCount(0);
     await expect(page.locator('.kc-cadu-source-note-input')).toHaveCount(0);
+    await page.locator('.kc-cadu-publish-btn').evaluate((button) => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await page.waitForTimeout(100);
+    expect(publishRequests).toHaveLength(0);
     expect(pageErrors).toEqual([]);
+  });
+
+  test('mantém o catálogo visível e bloqueia PATCH quando readiness/CAS falha', async ({ page }) => {
+    const patchRequests = [];
+    page.on('request', (request) => {
+      if (request.method() === 'PATCH') patchRequests.push(request);
+    });
+    await mockCommonCaduRoutes(page, async (route, path) => {
+      if (path.endsWith('/override')) throw new Error('PATCH must not be reachable without readiness');
+      return route.fulfill({
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-store',
+          ETag: LIST_ETAG,
+          'X-Cadu-Registry-Sha256': HASH
+        },
+        json: registryProjection()
+      });
+    }, async (route) => route.fulfill({
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' },
+      json: { error: 'cadu_api_error', status: 503 }
+    }));
+
+    await page.goto('/admin/cadu.html');
+    await expect(page.locator('#sites-registry-status')).toContainText('overrides em modo somente leitura');
+    await expect(page.locator('tr[data-source-id="web.ufg.portal"]')).toBeVisible();
+    await expect(page.locator('.kc-cadu-source-tier-select')).toBeDisabled();
+    await expect(page.locator('.kc-cadu-source-note-input')).toBeDisabled();
+    await expect(page.locator('.kc-cadu-save-source-btn')).toBeDisabled();
+    expect(patchRequests).toHaveLength(0);
   });
 });

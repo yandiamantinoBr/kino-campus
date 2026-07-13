@@ -230,6 +230,48 @@
     return responseEtag;
   }
 
+  function validateRegistryReadiness(payload, responseMeta, registry) {
+    requireObject(payload, 'readiness');
+    requireObject(registry, 'registry');
+    var expectedSha = requirePattern(
+      registry.registrySha256,
+      SHA256_PATTERN,
+      'registry.registrySha256',
+      'a lowercase SHA-256'
+    );
+    var expectedVersion = requireString(registry.registryVersion, 'registry.registryVersion');
+    var headerSha = readHeader(responseMeta, 'X-Cadu-Registry-Sha256');
+    if (!headerSha) {
+      fail('missing_registry_hash_header', 'headers.x-cadu-registry-sha256', 'required header is missing');
+    }
+    if (headerSha !== expectedSha || payload.registrySha256 !== expectedSha) {
+      fail('registry_hash_mismatch', 'readiness.registrySha256', 'readiness and list hashes must agree');
+    }
+    if (payload.registryVersion !== expectedVersion) {
+      fail('registry_version_mismatch', 'readiness.registryVersion', 'readiness and list versions must agree');
+    }
+    if (payload.ready !== true) fail('registry_not_ready', 'readiness.ready', 'expected true');
+    if (payload.contractVersion !== 'cadu-unit-meta-cas-v1' || payload.phase !== 'phase-a') {
+      fail('metadata_contract_mismatch', 'readiness', 'unsupported metadata contract');
+    }
+    requireObject(payload.checks, 'readiness.checks');
+    var checkNames = Object.keys(payload.checks);
+    if (!checkNames.length || checkNames.some(function (name) { return payload.checks[name] !== true; })) {
+      fail('metadata_contract_not_ready', 'readiness.checks', 'every reported contract check must be true');
+    }
+    if (!Number.isSafeInteger(payload.metadataRowsValidated) || payload.metadataRowsValidated < 0) {
+      fail('invalid_metadata_count', 'readiness.metadataRowsValidated', 'expected a non-negative integer');
+    }
+    return {
+      ready: true,
+      contractVersion: payload.contractVersion,
+      phase: payload.phase,
+      metadataRowsValidated: payload.metadataRowsValidated,
+      registryVersion: payload.registryVersion,
+      registrySha256: payload.registrySha256
+    };
+  }
+
   function validateEntityReferences(entities, entityIndex) {
     entities.forEach(function (entity, index) {
       var path = 'entities[' + index + ']';
@@ -374,7 +416,7 @@
   function selectUnambiguousConfirmedInstagram(profiles) {
     requireArray(profiles, 'instagramProfiles');
     var confirmed = profiles.filter(function (profile) {
-      return profile && profile.status === 'confirmed';
+      return profile && profile.status === 'confirmed' && profile.viaSourceObservation === true && profile.shared !== true;
     });
     return confirmed.length === 1 ? confirmed[0] : null;
   }
@@ -473,11 +515,21 @@
         requireUniqueTextStrings(profile.aliases, nestedPath + '.aliases');
         requireUniqueStrings(profile.entityIds, ENTITY_ID_PATTERN, nestedPath + '.entityIds');
         requireBoolean(profile.shared, nestedPath + '.shared');
+        requireBoolean(profile.viaSourceObservation, nestedPath + '.viaSourceObservation');
+        requireUniqueStrings(profile.viaEntityIds, ENTITY_ID_PATTERN, nestedPath + '.viaEntityIds');
+        var expectedDirect = canonicalProfile.observations.some(function (observation) {
+          return observation.sourceId === source.id;
+        });
+        var expectedViaEntityIds = source.entityIds.filter(function (entityId) {
+          return canonicalProfile.entityIds.indexOf(entityId) !== -1;
+        });
         if (
           profile.handle !== canonicalProfile.handle || profile.profileUrl !== canonicalProfile.profileUrl ||
           profile.status !== canonicalProfile.status || profile.shared !== canonicalProfile.shared ||
+          profile.viaSourceObservation !== expectedDirect ||
           !sameStringSet(profile.aliases, canonicalProfile.aliases) ||
-          !sameStringSet(profile.entityIds, canonicalProfile.entityIds)
+          !sameStringSet(profile.entityIds, canonicalProfile.entityIds) ||
+          !sameStringSet(profile.viaEntityIds, expectedViaEntityIds)
         ) {
           fail('association_mismatch', nestedPath, 'embedded profile differs from the canonical profile');
         }
@@ -774,7 +826,10 @@
         profileUrl: profile.profileUrl,
         status: profile.status,
         statusGroup: instagramStatusGroup(profile.status),
-        enabled: profile.enabled
+        enabled: profile.enabled,
+        shared: profile.shared,
+        viaSourceObservation: profile.viaSourceObservation === true,
+        viaEntityIds: cloneJson(profile.viaEntityIds || [])
       };
     }
 
@@ -790,13 +845,11 @@
     profiles.forEach(function (profile) { profileIndex[profile.id] = profile; });
 
     var sources = projection.sources.map(function (source) {
-      var profileIds = profiles.filter(function (profile) {
-        return profile.sourceIds.indexOf(source.id) !== -1;
-      }).map(function (profile) { return profile.id; });
+      var profileIds = source.instagramProfiles.map(function (profile) { return profile.id; });
       return Object.assign({}, source, {
         entities: source.entityIds.map(function (entityId) { return entityReference(entityIndex[entityId]); }),
         instagramProfileIds: profileIds,
-        instagramProfiles: profileIds.map(function (profileId) { return profileReference(profileIndex[profileId]); })
+        instagramProfiles: source.instagramProfiles.map(function (profile) { return profileReference(profile); })
       });
     });
     sources.forEach(function (source) { sourceIndex[source.id] = source; });
@@ -992,6 +1045,7 @@
     buildCatalog: buildCatalog,
     summarizeCatalog: summarizeCatalog,
     filterCatalog: filterCatalog,
+    validateRegistryReadiness: validateRegistryReadiness,
     instagramStatusGroup: instagramStatusGroup,
     selectUnambiguousConfirmedInstagram: selectUnambiguousConfirmedInstagram,
     buildFirstStableOverridePayload: buildFirstStableOverridePayload,

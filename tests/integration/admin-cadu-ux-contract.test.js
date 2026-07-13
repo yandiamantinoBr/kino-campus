@@ -97,6 +97,8 @@ describe('admin Cadu UX contracts', () => {
       expect(html).toContain(`<option value="${view}">`);
     });
     expect(controller).toContain("apiFetchResponse('/api/cadu/sites/source-registry')");
+    expect(controller).toContain("apiFetchResponse('/api/cadu/sites/source-registry/readiness')");
+    expect(controller).toContain('registryModel().validateRegistryReadiness(');
     expect(controller).toContain('registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope))');
     expect(controller).toContain("'X-Cadu-Registry-Sha256': envelope.headers.registrySha256");
     expect(controller).toContain("state.catalogMode = 'legacy-readonly'");
@@ -133,6 +135,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("revalidatedMode !== 'registry'");
     expect(controller).toContain('o catálogo canônico não pôde ser revalidado');
     expect(controller).toContain('var retainedDrafts = sourceDraftsForReload(options);');
+    expect(controller).toContain('var reloadDrafts = sourceDraftsForReload(opts);');
+    expect(controller).toContain('state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);');
     expect(controller).toContain('function sourceDraftIsDirtyWithoutSource(draft)');
   });
 
@@ -140,8 +144,9 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('registryModel().selectUnambiguousConfirmedInstagram(profiles)');
     expect(controller).toContain("return '@' + profile.handle + ' (' + profile.status + ')';");
     expect(controller).toContain('class="kc-cadu-publish-btn" disabled');
-    expect(controller).toContain("state.catalogMode === 'registry' || (site && site.sourceId)");
-    expect(controller).toContain('o catálogo canônico está em shadow');
+    expect(controller).toContain("state.catalogMode !== 'legacy-writable' || (site && (site.sourceId || site.source_id))");
+    expect(controller).toContain('fallback legado está em modo somente leitura');
+    expect(controller).toContain('fallback legado em modo somente leitura');
   });
 
   test('renders complete entity and Instagram coverage, including mapping gaps', () => {
@@ -153,6 +158,20 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('<option value="collision_evidence">qualquer evidência de colisão</option>');
     expect(controller).toContain("state.sitesOrigin === 'collision_evidence' && !source.collision");
     expect(controller).toContain('Colisão legada:');
+  });
+
+  test('preserves Instagram association provenance and explicit clear intent across CAS conflicts', () => {
+    expect(controller).toContain('associação direta observada nesta fonte');
+    expect(controller).toContain('associação indireta via entidade');
+    expect(controller).toContain('draft.noteTouched = true');
+    expect(controller).toContain('(draft.conflict && draft.tierTouched)');
+    expect(controller).toContain('(draft.conflict && draft.noteTouched)');
+    expect(controller).not.toContain('drafts[opts.conflictSourceId].tierTouched = true');
+  });
+
+  test('maps source-registry direct fallback to the real OpenClaw route', () => {
+    expect(controller).toContain("var registryPrefix = '/api/cadu/sites/source-registry'");
+    expect(controller).toContain("cfg.url + '/api/source-registry' + p.slice(registryPrefix.length)");
   });
 
   test('renders upstream error strings as text rather than HTML', () => {

@@ -34,6 +34,18 @@ node services/cadu-ufg-publisher/scripts/sync-candidate-source-registry.js \
 
 O importador rejeita commit inexistente ou ainda não publicado em `origin/main`, remoto divergente, caminho/objeto inesperado, schema inválido, hierarquia cíclica ou qualquer byte que não corresponda ao blob presente naquele commit.
 
-## Próximo gate
+## Estado do painel e próximo gate
 
-O loader permanece em `scripts/lib`, fora de `src`, e o teste de isolamento varre recursivamente todo o runtime. Nenhum consumidor deve importá-lo no fluxo normal até que existam API v2, migração não destrutiva dos overrides, shadow dos modos quick/daily/full/IG, deduplicação de alvos e rollback exercitado. A página `/admin/cadu.html` continuará usando o endpoint legado até esse contrato estar pronto.
+O loader espelhado permanece em `scripts/lib`, fora de `src`, e o publisher continua isolado do candidato. A página `/admin/cadu.html`, porém, já lê a projeção viva da API v2 em modo shadow. A escrita de tier/nota só é habilitada quando, na mesma carga:
+
+1. a lista possui ETag forte e SHA-256 coerente;
+2. `/api/source-registry/readiness` confirma `cadu-unit-meta-cas-v1`, fase A, todas as verificações verdadeiras e o mesmo SHA/versão;
+3. a fonte é escrita por ID estável com `If-Match` e o efeito é relido com o novo ETag.
+
+Se readiness/CAS falhar, o catálogo continua visível, mas os controles ficam somente leitura. Se o próprio contrato da lista falhar, o mapa legado também fica somente leitura e não pode chamar publicação. O boundary OpenClaw ainda deve rejeitar qualquer URL/perfil que pertença ao registro shadow, mesmo que um cliente contorne a UI.
+
+O painel agora preserva `viaSourceObservation` e `viaEntityIds`: um Instagram confirmado só pode ser selecionado como referência executável futura quando houver exatamente uma associação direta e não compartilhada. Conflitos CAS preservam a máscara explícita dos campos tocados, inclusive a intenção `tier:null`/`note:null`, sem retry automático.
+
+O fallback direto mapeia explicitamente `/api/cadu/sites/source-registry...` para `/api/source-registry...`; produção continua usando o proxy same-origin, sem expor `CADU_API_TOKEN` no navegador.
+
+Ainda não é gate de ativação: quick/daily/full/IG e a Pipeline Completa continuam nos inventários legados. A migração desses consumidores exige quarentena das fontes inseguras, transporte/endpoints verificados, deduplicação de alvos, rollout observável e rollback exercitado. Nenhuma fonte ou perfil do registro deve ser habilitado antes desses critérios.
