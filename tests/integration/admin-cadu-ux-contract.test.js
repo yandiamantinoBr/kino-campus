@@ -69,7 +69,10 @@ describe('admin Cadu UX contracts', () => {
 
   test('pipeline actions make dry-run versus real execution explicit', () => {
     expect(controller).toContain('data-dry-run="');
-    expect(controller).toContain("state.pipelineCapabilities = status.capabilities || {};");
+    expect(controller).toContain("state.pipelineCapabilities = validation.capabilities;");
+    expect(controller).toContain("status.contract_version !== PIPELINE_CONTROL_CONTRACT");
+    expect(controller).toContain("pf.can_run !== true");
+    expect(controller).toContain("if (!pipelineControlIsReady())");
     expect(controller).toContain("capabilities.explicit_run_mode_routes === true");
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
@@ -163,6 +166,11 @@ describe('admin Cadu UX contracts', () => {
   });
 
   test('renders complete entity and Instagram coverage, including mapping gaps', () => {
+    expect(controller).toContain("summary.entities, 'registros de entidade'");
+    expect(controller).toContain("summary.sources, 'fontes web candidatas'");
+    expect(controller).not.toContain("summary.sources, 'fontes web oficiais'");
+    expect(html).toContain('Registros de entidade');
+    expect(html).toContain('perfis mapeados');
     expect(controller).toContain("summary.entitiesWithoutWebSource");
     expect(controller).toContain("'entidades sem site associado'");
     expect(controller).toContain('sem fonte web associada');
