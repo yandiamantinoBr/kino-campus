@@ -1,0 +1,4332 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "2026-07-13.1",
+  "auditCutoff": "2026-07-13",
+  "generatedFrom": {
+    "generator": "scripts/reconcile-cadu-source-registry.js",
+    "seedContentSha256": "9418434a842d6866263071d44753d5e1276eddc4d26043b1dcf4820fda6fe8dc",
+    "schemaContentSha256": "f040ae6f01380ccc0bb1f6bd2ffb733fe01e11b389b444b849d12c58676707d9",
+    "inputs": [
+      {
+        "id": "kino_publisher",
+        "repository": "https://github.com/yandiamantinoBr/kino-campus",
+        "commit": "7df5eb9aaff6c4ceae3bf77156fc91269e83b230",
+        "path": "services/cadu-ufg-publisher/config/sources.json",
+        "contentSha256": "1acdfe73470ec9b830c6e06301f57be9ee331f7ec026e60338fb8265b1f357b0"
+      },
+      {
+        "id": "openclaw_curator",
+        "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
+        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+        "contentSha256": "690cb84cd18a1b135dd20c96238d7863402634cc1cc6ee719d69919a61b831d7"
+      },
+      {
+        "id": "instagram_scanner",
+        "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
+        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "path": "data/.openclaw/workspace/scripts/scan-ig-browser.js",
+        "contentSha256": "dc570f901f3ae633009192c99e4c77ebb9edf910a4a7a5c83f6f4d73e8a20454"
+      },
+      {
+        "id": "admin_markdown",
+        "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
+        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "path": "data/.openclaw/workspace/ufg-sites-map.md",
+        "contentSha256": "8915de43109eca6c869a6f2b6d965ca7b26f95deeb39f9b1fa8274c7f65852e4"
+      }
+    ]
+  },
+  "safety": {
+    "lifecycle": "candidate",
+    "runtimeActivated": false,
+    "publishAttempted": false,
+    "networkAccessRequired": false,
+    "note": "The generated registry is review-only. Every candidate source/profile remains disabled."
+  },
+  "inventoryMetrics": {
+    "publisher": {
+      "entries": 106,
+      "uniqueIds": 106,
+      "uniqueUrls": 106,
+      "tiers": {
+        "1": 92,
+        "2": 10,
+        "3": 4
+      },
+      "quick": 102,
+      "instagramAssociations": 62,
+      "uniqueInstagramHandles": 53
+    },
+    "curator": {
+      "entries": 156,
+      "uniqueIds": 147,
+      "uniqueUrls": 147,
+      "tiers": {
+        "1": 86,
+        "2": 40,
+        "3": 30
+      },
+      "modes": {
+        "quick": {
+          "declared": 86,
+          "unique": 86
+        },
+        "daily": {
+          "declared": 126,
+          "unique": 122
+        },
+        "full": {
+          "declared": 156,
+          "unique": 147
+        }
+      },
+      "instagramAssociations": 61,
+      "uniqueInstagramHandles": 51
+    },
+    "instagramScanner": {
+      "canonicalHandles": 51,
+      "aliases": 7,
+      "duplicatesSkipped": 0
+    },
+    "adminMapCompat": {
+      "entries": 86,
+      "uniqueNames": 82,
+      "uniqueUrls": 79,
+      "tiers": {
+        "1": 20,
+        "2": 23,
+        "3": 43
+      },
+      "realInstagramAssociations": 54,
+      "uniqueRealInstagramHandles": 47,
+      "falseNullHandles": 8
+    },
+    "overlap": {
+      "commonUniqueUrls": 98,
+      "publisherOnlyUrls": 8,
+      "curatorOnlyUrls": 49,
+      "commonIds": 91,
+      "publisherOnlyIds": 15,
+      "curatorOnlyIds": 56,
+      "tierConflictsOnCommonUrls": 51,
+      "declaredTierSetConflictsOnCommonUrls": 57,
+      "instagramConflictsOnCommonUrls": 21,
+      "sameUrlDifferentId": 7
+    }
+  },
+  "normalizedRegistry": {
+    "entities": 166,
+    "webSources": 194,
+    "instagramProfiles": 83,
+    "enabledWebSources": 0,
+    "enabledInstagramProfiles": 0,
+    "officiallyConfirmedWebSources": 128,
+    "officiallyDeclaredInstagramProfiles": 13,
+    "pendingWebSources": 66,
+    "transportUnverifiedWebSources": 185,
+    "endpointVerificationPendingWebSources": 194,
+    "tierConflictSources": 68,
+    "urlConflictSources": 15
+  },
+  "identityReconciliation": {
+    "authoritativeSeedEntities": 135,
+    "provisionalEntities": [
+      {
+        "id": "ufg.legacy.adm-face",
+        "name": "FACE - Administracao (grad)",
+        "legacyIds": [
+          "ADM.FACE",
+          "adm-face"
+        ]
+      },
+      {
+        "id": "ufg.legacy.ccufg",
+        "name": "CCUFG",
+        "legacyIds": [
+          "CCUFG",
+          "centrocultural"
+        ]
+      },
+      {
+        "id": "ufg.legacy.cei",
+        "name": "CEI",
+        "legacyIds": [
+          "CEI",
+          "cei"
+        ]
+      },
+      {
+        "id": "ufg.legacy.cepeconf",
+        "name": "CEPECONF/FACE",
+        "legacyIds": [
+          "CEPECONF",
+          "cepeconf"
+        ]
+      },
+      {
+        "id": "ufg.legacy.cerof",
+        "name": "CEROF",
+        "legacyIds": [
+          "CEROF",
+          "cerof"
+        ]
+      },
+      {
+        "id": "ufg.legacy.cl",
+        "name": "cl",
+        "legacyIds": [
+          "cl"
+        ]
+      },
+      {
+        "id": "ufg.legacy.contabeis-face",
+        "name": "FACE - CC (grad)",
+        "legacyIds": [
+          "CONTABEIS.FACE",
+          "contabeis-face"
+        ]
+      },
+      {
+        "id": "ufg.legacy.cpcbio",
+        "name": "CPCBio",
+        "legacyIds": [
+          "CPCBio",
+          "cpcbio"
+        ]
+      },
+      {
+        "id": "ufg.legacy.crti",
+        "name": "CRTI",
+        "legacyIds": [
+          "CRTI",
+          "crti"
+        ]
+      },
+      {
+        "id": "ufg.legacy.ead-face",
+        "name": "EAD FACE",
+        "legacyIds": [
+          "EAD FACE"
+        ]
+      },
+      {
+        "id": "ufg.legacy.eco-face",
+        "name": "FACE - Economia (grad)",
+        "legacyIds": [
+          "ECO.FACE",
+          "eco-face"
+        ]
+      },
+      {
+        "id": "ufg.legacy.iac",
+        "name": "IAC",
+        "legacyIds": [
+          "iac"
+        ]
+      },
+      {
+        "id": "ufg.legacy.idiomassemfronteiras",
+        "name": "idiomassemfronteiras",
+        "legacyIds": [
+          "idiomassemfronteiras"
+        ]
+      },
+      {
+        "id": "ufg.legacy.ipelab",
+        "name": "IPElab",
+        "legacyIds": [
+          "IPELAB",
+          "ipelab"
+        ]
+      },
+      {
+        "id": "ufg.legacy.jornal-ufg",
+        "name": "Jornal UFG",
+        "legacyIds": [
+          "JORNAL UFG",
+          "jornal-ufg"
+        ]
+      },
+      {
+        "id": "ufg.legacy.labmic",
+        "name": "LabMic",
+        "legacyIds": [
+          "LabMic",
+          "labmic"
+        ]
+      },
+      {
+        "id": "ufg.legacy.lam",
+        "name": "LAM/FACE",
+        "legacyIds": [
+          "LAM",
+          "lam"
+        ]
+      },
+      {
+        "id": "ufg.legacy.lamcad",
+        "name": "LaMCAD",
+        "legacyIds": [
+          "LaMCAD",
+          "lamcad"
+        ]
+      },
+      {
+        "id": "ufg.legacy.ouvidoria",
+        "name": "ouvidoria",
+        "legacyIds": [
+          "ouvidoria"
+        ]
+      },
+      {
+        "id": "ufg.legacy.patio-ciencia",
+        "name": "Patio Ciencia",
+        "legacyIds": [
+          "PATIO CIENCIA",
+          "patiodaciencia"
+        ]
+      },
+      {
+        "id": "ufg.legacy.pitt",
+        "name": "PITT",
+        "legacyIds": [
+          "PITT",
+          "pitt"
+        ]
+      },
+      {
+        "id": "ufg.legacy.pos-ufg",
+        "name": "POS UFG",
+        "legacyIds": [
+          "POS UFG",
+          "pos-ufg"
+        ]
+      },
+      {
+        "id": "ufg.legacy.pts",
+        "name": "PTS",
+        "legacyIds": [
+          "PTS",
+          "pts"
+        ]
+      },
+      {
+        "id": "ufg.legacy.radio-ufg",
+        "name": "Radio UFG",
+        "legacyIds": [
+          "RADIO UFG",
+          "radio-ufg"
+        ]
+      },
+      {
+        "id": "ufg.legacy.revistas-ufg",
+        "name": "revistas-ufg",
+        "legacyIds": [
+          "revistas-ufg"
+        ]
+      },
+      {
+        "id": "ufg.legacy.sape",
+        "name": "SAPE/FACE",
+        "legacyIds": [
+          "SAPE",
+          "sape"
+        ]
+      },
+      {
+        "id": "ufg.legacy.sea",
+        "name": "SEA",
+        "legacyIds": [
+          "SEA"
+        ]
+      },
+      {
+        "id": "ufg.legacy.seacult",
+        "name": "SEACULT",
+        "legacyIds": [
+          "SEACULT",
+          "seacult"
+        ]
+      },
+      {
+        "id": "ufg.legacy.tvufg",
+        "name": "TV UFG",
+        "legacyIds": [
+          "tvufg"
+        ]
+      },
+      {
+        "id": "ufg.legacy.uc",
+        "name": "UC",
+        "legacyIds": [
+          "UC",
+          "uc"
+        ]
+      },
+      {
+        "id": "ufg.legacy.verbena",
+        "name": "Instituto Verbena",
+        "legacyIds": [
+          "VERBENA",
+          "institutoverbena",
+          "verbena"
+        ]
+      }
+    ],
+    "legacySourcesAttachedToOfficialIdentity": [
+      {
+        "sourceId": "web.legacy.ppgac",
+        "entityIds": [
+          "ufg.ppg.ppgac"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac",
+        "legacyIds": [
+          "ppgac"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgacv",
+        "entityIds": [
+          "ufg.ppg.ppgacv"
+        ],
+        "url": "https://pos.ufg.br/p/programa-pos-graduacao-arte-cultura-visual-ppgacv",
+        "legacyIds": [
+          "ppgacv"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgban",
+        "entityIds": [
+          "ufg.ppg.ppgban"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-biodiversidade-animal-ppgban",
+        "legacyIds": [
+          "ppgban"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgbb",
+        "entityIds": [
+          "ufg.ppg.ppgbb"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-biotenologia-biodiversidade",
+        "legacyIds": [
+          "ppgbb"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgbm",
+        "entityIds": [
+          "ufg.ppg.ppgbm"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-genetica-biologia-molecular",
+        "legacyIds": [
+          "ppgbm"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgcb",
+        "entityIds": [
+          "ufg.ppg.ppgcb"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-biologicas-ppgcb",
+        "legacyIds": [
+          "ppgcb"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgciamb",
+        "entityIds": [
+          "ufg.ppg.ppgciamb"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-ambientais-ppgciamb",
+        "legacyIds": [
+          "ppgciamb"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgcpri",
+        "entityIds": [
+          "ufg.ppg.ppgcpri"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencia-politica-ppgcpri",
+        "legacyIds": [
+          "ppgcpri"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgcs",
+        "entityIds": [
+          "ufg.ppg.ppgcs"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-saude-ppgcs",
+        "legacyIds": [
+          "ppgcs"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgculturas",
+        "entityIds": [
+          "ufg.ppg.ppgact"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-performances-culturais-ppgpc",
+        "legacyIds": [
+          "ppgculturas"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgda",
+        "entityIds": [
+          "ufg.ppg.ppgda"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-direito-agrario-ppgda",
+        "legacyIds": [
+          "ppgda"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgdh",
+        "entityIds": [
+          "ufg.ppg.ppgdh"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-direitos-humanos-ppgdh",
+        "legacyIds": [
+          "ppgdh"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgdp",
+        "entityIds": [
+          "ufg.ppg.ppgdp"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-direito-politicas-publicas-ppgdp",
+        "legacyIds": [
+          "ppgdp"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppge",
+        "entityIds": [
+          "ufg.ppg.ppge"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-ppge",
+        "legacyIds": [
+          "ppge"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgec",
+        "entityIds": [
+          "ufg.ppg.ppgmat"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-matematica-ppgime",
+        "legacyIds": [
+          "ppgec"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgecm",
+        "entityIds": [
+          "ufg.ppg.ppgecm"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-ciencias-matematica-ppgecm",
+        "legacyIds": [
+          "ppgecm"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgecoevol",
+        "entityIds": [
+          "ufg.ppg.ppgecoevol"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ecologia-evolucao-ppgecoecvol",
+        "legacyIds": [
+          "ppgecoevol"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgeeb",
+        "entityIds": [
+          "ufg.ppg.ppgeeb"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-educacao-basica-ppgeeb",
+        "legacyIds": [
+          "ppgeeb"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgef",
+        "entityIds": [
+          "ufg.ppg.ppgef"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef",
+        "legacyIds": [
+          "ppgef"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgenf",
+        "entityIds": [
+          "ufg.ppg.ppgenfs"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
+        "legacyIds": [
+          "ppgenf"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppges",
+        "entityIds": [
+          "ufg.ppg.ppges"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-na-saude-ppges",
+        "legacyIds": [
+          "ppges"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgf",
+        "entityIds": [
+          "ufg.ppg.ppgf"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-fisica-ppgf",
+        "legacyIds": [
+          "ppgf"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgfil",
+        "entityIds": [
+          "ufg.ppg.ppgfil"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-filosofia-ppgfil",
+        "legacyIds": [
+          "ppgfil"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppggecon",
+        "entityIds": [
+          "ufg.ppg.ppggecon"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-geotecnia-estruturas-construcao-civil-ppggecon",
+        "legacyIds": [
+          "ppggecon"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgh",
+        "entityIds": [
+          "ufg.ppg.ppgh"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-historia-ppgh",
+        "legacyIds": [
+          "ppgh"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgll",
+        "entityIds": [
+          "ufg.ppg.ppgll"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-letras-linguistica-ppgll",
+        "legacyIds": [
+          "ppgll"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgmcf",
+        "entityIds": [
+          "ufg.ppg.ppgmcf"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-multicentrico-ciencias-fisiologicas-ppgmcf",
+        "legacyIds": [
+          "ppgmcf"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgo",
+        "entityIds": [
+          "ufg.ppg.ppgo"
+        ],
+        "url": "https://pos.ufg.br/p/programa-pos-graduacao-odontologia-ppgo",
+        "legacyIds": [
+          "ppgo"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgp",
+        "entityIds": [
+          "ufg.ppg.ppgp"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-psicologia-ppgp",
+        "legacyIds": [
+          "ppgp"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgpc",
+        "entityIds": [
+          "ufg.ppg.ppgprocidade"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-projeto-cidade-ppgprocidade",
+        "legacyIds": [
+          "ppgpc"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgrph",
+        "entityIds": [
+          "ufg.ppg.ppgbrph"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-biologia-relacao-parasito-hospedeiro",
+        "legacyIds": [
+          "ppgrph"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgs",
+        "entityIds": [
+          "ufg.ppg.ppgs"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-sociologia-ppgs",
+        "legacyIds": [
+          "ppgs"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.ppgsc",
+        "entityIds": [
+          "ufg.ppg.ppgsc"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-saude-coletiva-ppgsc",
+        "legacyIds": [
+          "ppgsc"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.proef",
+        "entityIds": [
+          "ufg.ppg.proef"
+        ],
+        "url": "https://pos.ufg.br/p/mestrado-profissional-educacao-fisica-rede-nacional-proef",
+        "legacyIds": [
+          "proef"
+        ]
+      },
+      {
+        "sourceId": "web.legacy.profhistoria",
+        "entityIds": [
+          "ufg.ppg.profhistoria"
+        ],
+        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-historia-profhistoria",
+        "legacyIds": [
+          "profhistoria"
+        ]
+      }
+    ],
+    "instagramProfilesWithoutEntity": [
+      "ig.cecasufg",
+      "ig.escoladeposufg",
+      "ig.floreser-ufg",
+      "ig.lacena-ufg",
+      "ig.lapigufg"
+    ],
+    "sharedInstagramProfiles": [
+      {
+        "id": "ig.campusgoiasufg",
+        "entityIds": [
+          "ufg.campus.goias",
+          "ufg.csa"
+        ]
+      },
+      {
+        "id": "ig.em-ufg",
+        "entityIds": [
+          "ufg.emac",
+          "ufg.legacy.iac"
+        ]
+      },
+      {
+        "id": "ig.face-ufg",
+        "entityIds": [
+          "ufg.face",
+          "ufg.legacy.contabeis-face",
+          "ufg.legacy.sape"
+        ]
+      },
+      {
+        "id": "ig.posufg",
+        "entityIds": [
+          "ufg.legacy.pos-ufg",
+          "ufg.prpg"
+        ]
+      },
+      {
+        "id": "ig.ufg-oficial",
+        "entityIds": [
+          "ufg.fe",
+          "ufg.fm",
+          "ufg.legacy.lamcad",
+          "ufg.portal",
+          "ufg.proad",
+          "ufg.secom",
+          "ufg.uaech"
+        ]
+      }
+    ]
+  },
+  "endpointEvidence": {
+    "kinoPublisherDeclaredAudit": {
+      "sources": 106,
+      "hasFeedRss": 102,
+      "explicitlyWithoutFeedRss": 4,
+      "hasEventsRss": 81,
+      "explicitlyWithoutEventsRss": 25,
+      "explicitFeedUrls": 102,
+      "auditDates": [
+        "2026-07-10"
+      ]
+    },
+    "note": "Legacy publisher declarations are preserved per observation and remain tentative until endpoint verification."
+  },
+  "instagramOverlap": {
+    "aliasResolutionApplied": true,
+    "uniqueHandles": {
+      "publisher": 53,
+      "curator": 51,
+      "scanner": 51
+    },
+    "commonAll": [
+      "campusaparecidaufg",
+      "campusgoiasufg",
+      "cei.ufg",
+      "centroculturalufg",
+      "cepae_ufg",
+      "cerofufg",
+      "ciar_ufg",
+      "direitoufg",
+      "ea.ufg",
+      "editora.ufg",
+      "em.ufg",
+      "emc_ufg",
+      "evzufg",
+      "face.ufg",
+      "fafilufg",
+      "fanutufg",
+      "fav_ufg",
+      "fcs_ufg",
+      "fen_ufg",
+      "firminopolis_ufg",
+      "ime_ufg",
+      "institutoverbenaufg",
+      "iptsp_ufg",
+      "iqufg",
+      "letras.ufg",
+      "museu_ufg",
+      "odontologia.ufg",
+      "pesquisaeinovacaoufg",
+      "planetario.ufg",
+      "posufg",
+      "praeufg",
+      "prograd_ufg",
+      "propessoas_ufg",
+      "sdh_ufg",
+      "sibi_ufg",
+      "sri_ufg",
+      "tvufg",
+      "ufg_oficial"
+    ],
+    "exclusive": {
+      "publisherOnly": [
+        "cepeconf_ufg",
+        "fl_ufg_oficial",
+        "herbarioufg",
+        "icb_acoes",
+        "iesa.ufg",
+        "inf.ufg",
+        "ipelab.ufg",
+        "jornalufg",
+        "labmic.ufg",
+        "patiodaciencia_ufg",
+        "ppgci.ufg",
+        "ppgcont.ufg",
+        "pts.ufg",
+        "radioufg"
+      ],
+      "curatorOnly": [
+        "campusocidentalufg",
+        "centrodelinguasflufg",
+        "ppgacv",
+        "ppgccufg",
+        "ppgnut.ufg"
+      ],
+      "scannerOnly": [
+        "cecasufg",
+        "escoladeposufg",
+        "floreser.ufg",
+        "lacena_ufg",
+        "lapigufg",
+        "patiodaciencia.ufg"
+      ]
+    },
+    "legacyNotScanned": [
+      "campusocidentalufg",
+      "centrodelinguasflufg",
+      "cepeconf_ufg",
+      "fl_ufg_oficial",
+      "herbarioufg",
+      "icb_acoes",
+      "iesa.ufg",
+      "inf.ufg",
+      "ipelab.ufg",
+      "jornalufg",
+      "labmic.ufg",
+      "patiodaciencia_ufg",
+      "ppgacv",
+      "ppgadm.ufg",
+      "ppgccufg",
+      "ppgci.ufg",
+      "ppgcont.ufg",
+      "ppgnut.ufg",
+      "pts.ufg",
+      "radioufg"
+    ],
+    "scannerWithoutEntity": [
+      "ig.cecasufg",
+      "ig.escoladeposufg",
+      "ig.floreser-ufg",
+      "ig.lacena-ufg",
+      "ig.lapigufg"
+    ]
+  },
+  "overlap": {
+    "publisherOnly": [
+      {
+        "url": "https://adm.face.ufg.br/",
+        "candidateSourceId": "web.legacy.adm-face",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://cepeconf.face.ufg.br/",
+        "candidateSourceId": "web.legacy.cepeconf",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://contabeis.face.ufg.br/",
+        "candidateSourceId": "web.legacy.contabeis-face",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://eco.face.ufg.br/",
+        "candidateSourceId": "web.legacy.eco-face",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://lam.face.ufg.br/",
+        "candidateSourceId": "web.legacy.lam",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://patiodaciencia.ufg.br/",
+        "candidateSourceId": "web.legacy.patio-ciencia",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://pos.letras.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgll",
+        "reviewState": "tier_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "kino_publisher"
+      },
+      {
+        "url": "https://sape.face.ufg.br/",
+        "candidateSourceId": "web.legacy.sape",
+        "reviewState": "tier_conflict",
+        "classification": "pending_verification",
+        "inventory": "kino_publisher"
+      }
+    ],
+    "curatorOnly": [
+      {
+        "url": "https://cidadeocidental.ufg.br/",
+        "candidateSourceId": "web.ufg.campus.cidade-ocidental",
+        "reviewState": "tier_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://cl.letras.ufg.br/",
+        "candidateSourceId": "web.legacy.cl",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://co.ufg.br/",
+        "candidateSourceId": "web.ufg.campus.cidade-ocidental",
+        "reviewState": "tier_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://eeca.ufg.br/",
+        "candidateSourceId": "web.ufg.eeca",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://em.ufg.br/",
+        "candidateSourceId": "web.ufg.emac",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://fef.ufg.br/",
+        "candidateSourceId": "web.ufg.fefd",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://fic.ufg.br/",
+        "candidateSourceId": "web.ufg.fic",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://idiomassemfronteiras.sri.ufg.br/",
+        "candidateSourceId": "web.legacy.idiomassemfronteiras",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ouvidoria.ufg.br/",
+        "candidateSourceId": "web.legacy.ouvidoria",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/mestrado-profissional-educacao-fisica-rede-nacional-proef",
+        "candidateSourceId": "web.legacy.proef",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac",
+        "candidateSourceId": "web.legacy.ppgac",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-biodiversidade-animal-ppgban",
+        "candidateSourceId": "web.legacy.ppgban",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-biologia-relacao-parasito-hospedeiro",
+        "candidateSourceId": "web.legacy.ppgrph",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-biotenologia-biodiversidade",
+        "candidateSourceId": "web.legacy.ppgbb",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencia-politica-ppgcpri",
+        "candidateSourceId": "web.legacy.ppgcpri",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-ambientais-ppgciamb",
+        "candidateSourceId": "web.legacy.ppgciamb",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-biologicas-ppgcb",
+        "candidateSourceId": "web.legacy.ppgcb",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-saude-ppgcs",
+        "candidateSourceId": "web.legacy.ppgcs",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-direito-agrario-ppgda",
+        "candidateSourceId": "web.legacy.ppgda",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-direito-politicas-publicas-ppgdp",
+        "candidateSourceId": "web.legacy.ppgdp",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-direitos-humanos-ppgdh",
+        "candidateSourceId": "web.legacy.ppgdh",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ecologia-evolucao-ppgecoecvol",
+        "candidateSourceId": "web.legacy.ppgecoevol",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-ciencias-matematica-ppgecm",
+        "candidateSourceId": "web.legacy.ppgecm",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef",
+        "candidateSourceId": "web.legacy.ppgef",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-ppge",
+        "candidateSourceId": "web.legacy.ppge",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
+        "candidateSourceId": "web.legacy.ppgenf",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-educacao-basica-ppgeeb",
+        "candidateSourceId": "web.legacy.ppgeeb",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-historia-profhistoria",
+        "candidateSourceId": "web.legacy.profhistoria",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-na-saude-ppges",
+        "candidateSourceId": "web.legacy.ppges",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-filosofia-ppgfil",
+        "candidateSourceId": "web.legacy.ppgfil",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-fisica-ppgf",
+        "candidateSourceId": "web.legacy.ppgf",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-genetica-biologia-molecular",
+        "candidateSourceId": "web.legacy.ppgbm",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-geotecnia-estruturas-construcao-civil-ppggecon",
+        "candidateSourceId": "web.legacy.ppggecon",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-historia-ppgh",
+        "candidateSourceId": "web.legacy.ppgh",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-letras-linguistica-ppgll",
+        "candidateSourceId": "web.legacy.ppgll",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-matematica-ppgime",
+        "candidateSourceId": "web.legacy.ppgec",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-multicentrico-ciencias-fisiologicas-ppgmcf",
+        "candidateSourceId": "web.legacy.ppgmcf",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-nanotecnologia-farmaceutica-ppgnanofarma",
+        "candidateSourceId": "web.ufg.ppg.ppgnanofarma.profile",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-performances-culturais-ppgpc",
+        "candidateSourceId": "web.legacy.ppgculturas",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-projeto-cidade-ppgprocidade",
+        "candidateSourceId": "web.legacy.ppgpc",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-psicologia-ppgp",
+        "candidateSourceId": "web.legacy.ppgp",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-saude-coletiva-ppgsc",
+        "candidateSourceId": "web.legacy.ppgsc",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/pos-graduacao-sociologia-ppgs",
+        "candidateSourceId": "web.legacy.ppgs",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/programa-pos-graduacao-arte-cultura-visual-ppgacv",
+        "candidateSourceId": "web.legacy.ppgacv",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.ufg.br/p/programa-pos-graduacao-odontologia-ppgo",
+        "candidateSourceId": "web.legacy.ppgo",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgmus.em.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgmus",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://proec.ufg.br/",
+        "candidateSourceId": "web.ufg.proec",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://proex.ufg.br/",
+        "candidateSourceId": "web.ufg.proec",
+        "reviewState": "url_conflict",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://revistas.ufg.br/",
+        "candidateSourceId": "web.legacy.revistas-ufg",
+        "reviewState": "pending_review",
+        "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      }
+    ]
+  },
+  "conflicts": {
+    "duplicateCuratorUrls": [
+      {
+        "url": "https://ciar.ufg.br/",
+        "occurrences": [
+          {
+            "id": "ciar",
+            "tier": 1
+          },
+          {
+            "id": "ciar",
+            "tier": 2
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://hospitalveterinario.evz.ufg.br/",
+        "occurrences": [
+          {
+            "id": "hospitalveterinario",
+            "tier": 2
+          },
+          {
+            "id": "hospitalveterinario",
+            "tier": 3
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://jornal.ufg.br/",
+        "occurrences": [
+          {
+            "id": "jornal-ufg",
+            "tier": 1
+          },
+          {
+            "id": "jornal-ufg",
+            "tier": 2
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://museu.ufg.br/",
+        "occurrences": [
+          {
+            "id": "museu",
+            "tier": 2
+          },
+          {
+            "id": "museu",
+            "tier": 3
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://planetario.ufg.br/",
+        "occurrences": [
+          {
+            "id": "planetario",
+            "tier": 2
+          },
+          {
+            "id": "planetario",
+            "tier": 3
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://propessoas.ufg.br/",
+        "occurrences": [
+          {
+            "id": "propessoas",
+            "tier": 1
+          },
+          {
+            "id": "propessoas",
+            "tier": 2
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://sdh.ufg.br/",
+        "occurrences": [
+          {
+            "id": "sdh",
+            "tier": 1
+          },
+          {
+            "id": "sdh",
+            "tier": 3
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://secplan.ufg.br/",
+        "occurrences": [
+          {
+            "id": "secplan",
+            "tier": 1
+          },
+          {
+            "id": "secplan",
+            "tier": 3
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      },
+      {
+        "url": "https://tvufg.org.br/",
+        "occurrences": [
+          {
+            "id": "tvufg",
+            "tier": 1
+          },
+          {
+            "id": "tvufg",
+            "tier": 2
+          }
+        ],
+        "action": "dedupe_network_target_before_runtime_migration"
+      }
+    ],
+    "tier": [
+      {
+        "url": "https://agro.ufg.br/",
+        "publisher": [
+          {
+            "id": "agro",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "agro",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://bc.ufg.br/",
+        "publisher": [
+          {
+            "id": "sibi",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "bc",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://cegraf.ufg.br/",
+        "publisher": [
+          {
+            "id": "cegraf",
+            "tier": 2
+          }
+        ],
+        "curator": [
+          {
+            "id": "cegraf",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://centrocultural.ufg.br/",
+        "publisher": [
+          {
+            "id": "centrocultural",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "centrocultural",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://cepae.ufg.br/",
+        "publisher": [
+          {
+            "id": "cepae",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "cepae",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://cerof.ufg.br/",
+        "publisher": [
+          {
+            "id": "cerof",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "cerof",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://ciar.ufg.br/",
+        "publisher": [
+          {
+            "id": "ciar",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "ciar",
+            "tier": 1
+          },
+          {
+            "id": "ciar",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://cidarq.ufg.br/",
+        "publisher": [
+          {
+            "id": "cidarq",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "cidarq",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://cpa.secplan.ufg.br/",
+        "publisher": [
+          {
+            "id": "cpa",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "cpa",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://csa.goias.ufg.br/",
+        "publisher": [
+          {
+            "id": "csa-goias",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "csa",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://direito.ufg.br/",
+        "publisher": [
+          {
+            "id": "fdir",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "direito",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://editora.ufg.br/",
+        "publisher": [
+          {
+            "id": "editora",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "editora",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://emc.ufg.br/",
+        "publisher": [
+          {
+            "id": "emc",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "emc",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://evz.ufg.br/",
+        "publisher": [
+          {
+            "id": "evz",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "evz",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://face.ufg.br/",
+        "publisher": [
+          {
+            "id": "face",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "face",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://fanut.ufg.br/",
+        "publisher": [
+          {
+            "id": "fanut",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "fanut",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://farmacia.ufg.br/",
+        "publisher": [
+          {
+            "id": "farmacia",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "farmacia",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://fav.ufg.br/",
+        "publisher": [
+          {
+            "id": "fav",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "fav",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://fcs.ufg.br/",
+        "publisher": [
+          {
+            "id": "fcs",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "fcs",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://fct.ufg.br/",
+        "publisher": [
+          {
+            "id": "fct",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "fct",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://fe.ufg.br/",
+        "publisher": [
+          {
+            "id": "fe",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "fe",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://fen.ufg.br/",
+        "publisher": [
+          {
+            "id": "fen",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "fen",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://filosofia.ufg.br/",
+        "publisher": [
+          {
+            "id": "fafil",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "filosofia",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://firminopolis.ufg.br/",
+        "publisher": [
+          {
+            "id": "cefis",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "cefis",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://goias.ufg.br/",
+        "publisher": [
+          {
+            "id": "goias",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "campusgoias",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://historia.ufg.br/",
+        "publisher": [
+          {
+            "id": "historia",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "historia",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://hospitalveterinario.evz.ufg.br/",
+        "publisher": [
+          {
+            "id": "hospitalveterinario",
+            "tier": 2
+          }
+        ],
+        "curator": [
+          {
+            "id": "hospitalveterinario",
+            "tier": 2
+          },
+          {
+            "id": "hospitalveterinario",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://iac.ufg.br/",
+        "publisher": [
+          {
+            "id": "iac",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "iac",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://icb.ufg.br/",
+        "publisher": [
+          {
+            "id": "icb",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "icb",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://iesa.ufg.br/",
+        "publisher": [
+          {
+            "id": "iesa",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "iesa",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://if.ufg.br/",
+        "publisher": [
+          {
+            "id": "if",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "if",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://ime.ufg.br/",
+        "publisher": [
+          {
+            "id": "ime",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "ime",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://inf.ufg.br/",
+        "publisher": [
+          {
+            "id": "inf",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "inf",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://iptsp.ufg.br/",
+        "publisher": [
+          {
+            "id": "iptsp",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "iptsp",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://jornal.ufg.br/",
+        "publisher": [
+          {
+            "id": "jornal-ufg",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "jornal-ufg",
+            "tier": 1
+          },
+          {
+            "id": "jornal-ufg",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://labmic.ufg.br/",
+        "publisher": [
+          {
+            "id": "labmic",
+            "tier": 3
+          }
+        ],
+        "curator": [
+          {
+            "id": "labmic",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://lamcad.ufg.br/",
+        "publisher": [
+          {
+            "id": "lamcad",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "lamcad",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://letras.ufg.br/",
+        "publisher": [
+          {
+            "id": "letras",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "letras",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://medicina.ufg.br/",
+        "publisher": [
+          {
+            "id": "medicina",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "medicina",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://museu.ufg.br/",
+        "publisher": [
+          {
+            "id": "museu",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "museu",
+            "tier": 2
+          },
+          {
+            "id": "museu",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://odonto.ufg.br/",
+        "publisher": [
+          {
+            "id": "odonto",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "odonto",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://pitt.prpi.ufg.br/",
+        "publisher": [
+          {
+            "id": "pitt",
+            "tier": 3
+          }
+        ],
+        "curator": [
+          {
+            "id": "pitt",
+            "tier": 1
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://planetario.ufg.br/",
+        "publisher": [
+          {
+            "id": "planetario",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "planetario",
+            "tier": 2
+          },
+          {
+            "id": "planetario",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://ppgdr.face.ufg.br/",
+        "publisher": [
+          {
+            "id": "ppgdr",
+            "tier": 2
+          }
+        ],
+        "curator": [
+          {
+            "id": "ppgdr",
+            "tier": 1
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://ppgif.farmacia.ufg.br/",
+        "publisher": [
+          {
+            "id": "ppgif",
+            "tier": 2
+          }
+        ],
+        "curator": [
+          {
+            "id": "ppgif",
+            "tier": 1
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://proad.ufg.br/",
+        "publisher": [
+          {
+            "id": "proad",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "proad",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://propessoas.ufg.br/",
+        "publisher": [
+          {
+            "id": "propessoas",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "propessoas",
+            "tier": 1
+          },
+          {
+            "id": "propessoas",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://quimica.ufg.br/",
+        "publisher": [
+          {
+            "id": "quimica",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "quimica",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://radio.ufg.br/",
+        "publisher": [
+          {
+            "id": "radio-ufg",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "radio-ufg",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://sdh.ufg.br/",
+        "publisher": [
+          {
+            "id": "sdh",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "sdh",
+            "tier": 1
+          },
+          {
+            "id": "sdh",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://secplan.ufg.br/",
+        "publisher": [
+          {
+            "id": "secplan",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "secplan",
+            "tier": 1
+          },
+          {
+            "id": "secplan",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://seinfra.ufg.br/",
+        "publisher": [
+          {
+            "id": "seinfra",
+            "tier": 2
+          }
+        ],
+        "curator": [
+          {
+            "id": "seinfra",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://seti.ufg.br/",
+        "publisher": [
+          {
+            "id": "seti",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "seti",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://sin.ufg.br/",
+        "publisher": [
+          {
+            "id": "sin",
+            "tier": 2
+          }
+        ],
+        "curator": [
+          {
+            "id": "sin",
+            "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://tvufg.org.br/",
+        "publisher": [
+          {
+            "id": "tvufg",
+            "tier": 3
+          }
+        ],
+        "curator": [
+          {
+            "id": "tvufg",
+            "tier": 1
+          },
+          {
+            "id": "tvufg",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://uaech.goias.ufg.br/",
+        "publisher": [
+          {
+            "id": "uaech-goias",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "uaech",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://uc.ufg.br/",
+        "publisher": [
+          {
+            "id": "uc",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "uc",
+            "tier": 2
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      }
+    ],
+    "effectiveLegacyTier": [
+      {
+        "url": "https://agro.ufg.br/",
+        "publisher": {
+          "id": "agro",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "agro",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://bc.ufg.br/",
+        "publisher": {
+          "id": "sibi",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "bc",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://cegraf.ufg.br/",
+        "publisher": {
+          "id": "cegraf",
+          "tier": 2
+        },
+        "curatorFirstMatch": {
+          "id": "cegraf",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://centrocultural.ufg.br/",
+        "publisher": {
+          "id": "centrocultural",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "centrocultural",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://cepae.ufg.br/",
+        "publisher": {
+          "id": "cepae",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "cepae",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://cerof.ufg.br/",
+        "publisher": {
+          "id": "cerof",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "cerof",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://cidarq.ufg.br/",
+        "publisher": {
+          "id": "cidarq",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "cidarq",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://cpa.secplan.ufg.br/",
+        "publisher": {
+          "id": "cpa",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "cpa",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://csa.goias.ufg.br/",
+        "publisher": {
+          "id": "csa-goias",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "csa",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://direito.ufg.br/",
+        "publisher": {
+          "id": "fdir",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "direito",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://editora.ufg.br/",
+        "publisher": {
+          "id": "editora",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "editora",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://emc.ufg.br/",
+        "publisher": {
+          "id": "emc",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "emc",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://evz.ufg.br/",
+        "publisher": {
+          "id": "evz",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "evz",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://face.ufg.br/",
+        "publisher": {
+          "id": "face",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "face",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://fanut.ufg.br/",
+        "publisher": {
+          "id": "fanut",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "fanut",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://farmacia.ufg.br/",
+        "publisher": {
+          "id": "farmacia",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "farmacia",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://fav.ufg.br/",
+        "publisher": {
+          "id": "fav",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "fav",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://fcs.ufg.br/",
+        "publisher": {
+          "id": "fcs",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "fcs",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://fct.ufg.br/",
+        "publisher": {
+          "id": "fct",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "fct",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://fe.ufg.br/",
+        "publisher": {
+          "id": "fe",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "fe",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://fen.ufg.br/",
+        "publisher": {
+          "id": "fen",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "fen",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://filosofia.ufg.br/",
+        "publisher": {
+          "id": "fafil",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "filosofia",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://firminopolis.ufg.br/",
+        "publisher": {
+          "id": "cefis",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "cefis",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://goias.ufg.br/",
+        "publisher": {
+          "id": "goias",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "campusgoias",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://historia.ufg.br/",
+        "publisher": {
+          "id": "historia",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "historia",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://iac.ufg.br/",
+        "publisher": {
+          "id": "iac",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "iac",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://icb.ufg.br/",
+        "publisher": {
+          "id": "icb",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "icb",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://iesa.ufg.br/",
+        "publisher": {
+          "id": "iesa",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "iesa",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://if.ufg.br/",
+        "publisher": {
+          "id": "if",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "if",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://ime.ufg.br/",
+        "publisher": {
+          "id": "ime",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "ime",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://inf.ufg.br/",
+        "publisher": {
+          "id": "inf",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "inf",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://iptsp.ufg.br/",
+        "publisher": {
+          "id": "iptsp",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "iptsp",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://labmic.ufg.br/",
+        "publisher": {
+          "id": "labmic",
+          "tier": 3
+        },
+        "curatorFirstMatch": {
+          "id": "labmic",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://lamcad.ufg.br/",
+        "publisher": {
+          "id": "lamcad",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "lamcad",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://letras.ufg.br/",
+        "publisher": {
+          "id": "letras",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "letras",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://medicina.ufg.br/",
+        "publisher": {
+          "id": "medicina",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "medicina",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://museu.ufg.br/",
+        "publisher": {
+          "id": "museu",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "museu",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://odonto.ufg.br/",
+        "publisher": {
+          "id": "odonto",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "odonto",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://pitt.prpi.ufg.br/",
+        "publisher": {
+          "id": "pitt",
+          "tier": 3
+        },
+        "curatorFirstMatch": {
+          "id": "pitt",
+          "tier": 1
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://planetario.ufg.br/",
+        "publisher": {
+          "id": "planetario",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "planetario",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://ppgdr.face.ufg.br/",
+        "publisher": {
+          "id": "ppgdr",
+          "tier": 2
+        },
+        "curatorFirstMatch": {
+          "id": "ppgdr",
+          "tier": 1
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://ppgif.farmacia.ufg.br/",
+        "publisher": {
+          "id": "ppgif",
+          "tier": 2
+        },
+        "curatorFirstMatch": {
+          "id": "ppgif",
+          "tier": 1
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://proad.ufg.br/",
+        "publisher": {
+          "id": "proad",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "proad",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://quimica.ufg.br/",
+        "publisher": {
+          "id": "quimica",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "quimica",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://radio.ufg.br/",
+        "publisher": {
+          "id": "radio-ufg",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "radio-ufg",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://seinfra.ufg.br/",
+        "publisher": {
+          "id": "seinfra",
+          "tier": 2
+        },
+        "curatorFirstMatch": {
+          "id": "seinfra",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://seti.ufg.br/",
+        "publisher": {
+          "id": "seti",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "seti",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://sin.ufg.br/",
+        "publisher": {
+          "id": "sin",
+          "tier": 2
+        },
+        "curatorFirstMatch": {
+          "id": "sin",
+          "tier": 3
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://tvufg.org.br/",
+        "publisher": {
+          "id": "tvufg",
+          "tier": 3
+        },
+        "curatorFirstMatch": {
+          "id": "tvufg",
+          "tier": 1
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://uaech.goias.ufg.br/",
+        "publisher": {
+          "id": "uaech-goias",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "uaech",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
+        "url": "https://uc.ufg.br/",
+        "publisher": {
+          "id": "uc",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "uc",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      }
+    ],
+    "instagram": [
+      {
+        "url": "https://fct.ufg.br/",
+        "publisher": [
+          "fct.ufg"
+        ],
+        "curator": [
+          "campusaparecidaufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://fe.ufg.br/",
+        "publisher": [
+          "ufg_oficial"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://iac.ufg.br/",
+        "publisher": [
+          "emacufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://icb.ufg.br/",
+        "publisher": [
+          "icb_acoes"
+        ],
+        "curator": [
+          "icb.ufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://iesa.ufg.br/",
+        "publisher": [
+          "iesa.ufg"
+        ],
+        "curator": [
+          "iesaufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://inf.ufg.br/",
+        "publisher": [
+          "inf.ufg"
+        ],
+        "curator": [
+          "infufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://ipelab.ufg.br/",
+        "publisher": [
+          "ipelab.ufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://jornal.ufg.br/",
+        "publisher": [
+          "jornalufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://labmic.ufg.br/",
+        "publisher": [
+          "labmic.ufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://lamcad.ufg.br/",
+        "publisher": [
+          "ufg_oficial"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://medicina.ufg.br/",
+        "publisher": [
+          "ufg_oficial"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://odonto.ufg.br/",
+        "publisher": [
+          "odontologiaufg"
+        ],
+        "curator": [
+          "odontologia.ufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://parquesamambaia.ufg.br/",
+        "publisher": [
+          "pts.ufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://ppgcc.inf.ufg.br/",
+        "publisher": [
+          "null"
+        ],
+        "curator": [
+          "ppgccufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://ppgci.fic.ufg.br/",
+        "publisher": [
+          "ppgci.ufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://ppgcont.face.ufg.br/",
+        "publisher": [
+          "ppgcont.ufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://ppgnut.fanut.ufg.br/",
+        "publisher": [
+          "null"
+        ],
+        "curator": [
+          "ppgnut.ufg"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://proad.ufg.br/",
+        "publisher": [
+          "ufg_oficial"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://radio.ufg.br/",
+        "publisher": [
+          "radioufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://uaech.goias.ufg.br/",
+        "publisher": [
+          "ufg_oficial"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://uc.ufg.br/",
+        "publisher": [
+          "herbarioufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      }
+    ],
+    "sameUrlDifferentId": [
+      {
+        "url": "https://bc.ufg.br/",
+        "publisher": [
+          "sibi"
+        ],
+        "curator": [
+          "bc"
+        ]
+      },
+      {
+        "url": "https://csa.goias.ufg.br/",
+        "publisher": [
+          "csa-goias"
+        ],
+        "curator": [
+          "csa"
+        ]
+      },
+      {
+        "url": "https://direito.ufg.br/",
+        "publisher": [
+          "fdir"
+        ],
+        "curator": [
+          "direito"
+        ]
+      },
+      {
+        "url": "https://filosofia.ufg.br/",
+        "publisher": [
+          "fafil"
+        ],
+        "curator": [
+          "filosofia"
+        ]
+      },
+      {
+        "url": "https://goias.ufg.br/",
+        "publisher": [
+          "goias"
+        ],
+        "curator": [
+          "campusgoias"
+        ]
+      },
+      {
+        "url": "https://institutoverbena.ufg.br/",
+        "publisher": [
+          "verbena"
+        ],
+        "curator": [
+          "institutoverbena"
+        ]
+      },
+      {
+        "url": "https://uaech.goias.ufg.br/",
+        "publisher": [
+          "uaech-goias"
+        ],
+        "curator": [
+          "uaech"
+        ]
+      }
+    ],
+    "institutionalUrlCandidates": [
+      {
+        "sourceId": "web.ufg.campus.cidade-ocidental",
+        "canonicalUrl": "https://cidadeocidental.ufg.br/",
+        "declaredUrl": "https://co.ufg.br/",
+        "legacyCandidates": [
+          "https://co.ufg.br/"
+        ],
+        "observedLegacyCandidates": [
+          "https://co.ufg.br/"
+        ],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.eeca",
+        "canonicalUrl": "https://eeca.ufg.br/",
+        "declaredUrl": "https://eec.ufg.br/",
+        "legacyCandidates": [
+          "https://eec.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.emac",
+        "canonicalUrl": "https://em.ufg.br/",
+        "declaredUrl": "https://emac.ufg.br/",
+        "legacyCandidates": [
+          "https://emac.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.emc",
+        "canonicalUrl": "https://emc.ufg.br/",
+        "declaredUrl": "https://www2.emc.ufg.br/",
+        "legacyCandidates": [
+          "https://www2.emc.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.fcs",
+        "canonicalUrl": "https://fcs.ufg.br/",
+        "declaredUrl": "https://cienciassociais.ufg.br/",
+        "legacyCandidates": [
+          "https://cienciassociais.ufg.br/"
+        ],
+        "observedLegacyCandidates": [
+          "https://cienciassociais.ufg.br/"
+        ],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.fefd",
+        "canonicalUrl": "https://fef.ufg.br/",
+        "declaredUrl": "https://fefd.ufg.br/",
+        "legacyCandidates": [
+          "https://fefd.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.fo",
+        "canonicalUrl": "https://odonto.ufg.br/",
+        "declaredUrl": "https://odonto.ufg.br/",
+        "legacyCandidates": [
+          "https://odontologia.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ime",
+        "canonicalUrl": "https://ime.ufg.br/",
+        "declaredUrl": "https://mat.ufg.br/",
+        "legacyCandidates": [
+          "https://mat.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ppg.ppgac.profile",
+        "canonicalUrl": "https://pos.ufg.br/p/programa-pos-graduacao-artes-cena-ppgac",
+        "declaredUrl": "https://artesdacenappg.emac.ufg.br/",
+        "legacyCandidates": [
+          "https://artesdacenappg.emac.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ppg.ppgef",
+        "canonicalUrl": "https://ppgef.fef.ufg.br/",
+        "declaredUrl": "https://ppgef.fefd.ufg.br/",
+        "legacyCandidates": [
+          "https://ppgef.fefd.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ppg.ppgmus",
+        "canonicalUrl": "https://ppgmus.em.ufg.br/",
+        "declaredUrl": "https://ppgmus.emac.ufg.br/",
+        "legacyCandidates": [
+          "https://ppgmus.emac.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ppg.ppgnanofarma.profile",
+        "canonicalUrl": "https://pos.ufg.br/p/pos-graduacao-nanotecnologia-farmaceutica-ppgnanofarma",
+        "declaredUrl": "https://www.ufrgs.br/farmacia/?page_id=1589",
+        "legacyCandidates": [
+          "https://www.ufrgs.br/farmacia/?page_id=1589"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ppg.proef",
+        "canonicalUrl": "https://pos.fef.ufg.br/p/36861-mestrado-profissional-em-educacao-fisica-em-rede-nacional-proef",
+        "declaredUrl": "https://pos.fefd.ufg.br/p/36861-mestrado-profissional-em-educacao-fisica-em-rede-nacional-proef",
+        "legacyCandidates": [
+          "https://pos.fefd.ufg.br/p/36861-mestrado-profissional-em-educacao-fisica-em-rede-nacional-proef"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.proec",
+        "canonicalUrl": "https://proex.ufg.br/",
+        "declaredUrl": "https://proec.ufg.br/",
+        "legacyCandidates": [
+          "https://proec.ufg.br/"
+        ],
+        "observedLegacyCandidates": [
+          "https://proec.ufg.br/"
+        ],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.uaech",
+        "canonicalUrl": "https://uaech.goias.ufg.br/",
+        "declaredUrl": "https://www.uaech.goias.ufg.br/",
+        "legacyCandidates": [
+          "https://www.uaech.goias.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      }
+    ]
+  },
+  "invalidObservations": {
+    "adminMapRejected": [
+      {
+        "legacyId": "**29 PPGs com site proprio REAL** descobertos",
+        "url": "https://ppgx.unidade.ufg.br/",
+        "reason": "placeholder_or_prose_parsed_as_source"
+      },
+      {
+        "legacyId": "Cerca de 30+ projetos de extensao cadastrados na PROEC",
+        "url": "https://proec.ufg.br/",
+        "reason": "narrative_prose_parsed_as_source"
+      }
+    ],
+    "adminMapFalseNullHandles": [
+      {
+        "legacyId": "FF",
+        "url": "https://farmacia.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "FH",
+        "url": "https://historia.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "IF",
+        "url": "https://if.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "HV",
+        "url": "https://hospitalveterinario.evz.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "CIDARQ",
+        "url": "https://cidarq.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "CEGRAF",
+        "url": "https://cegraf.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "CRTI",
+        "url": "https://crti.ufg.br/",
+        "raw": "null"
+      },
+      {
+        "legacyId": "CPCBio",
+        "url": "https://cpcbio.prpi.ufg.br/",
+        "raw": "null"
+      }
+    ]
+  },
+  "activationBlockers": [
+    {
+      "id": "candidate-not-activated",
+      "count": 277,
+      "requiredAction": "keep all enabled flags false until shadow and dry-run gates pass"
+    },
+    {
+      "id": "tier-conflicts",
+      "count": 68,
+      "sourceIds": [
+        "web.legacy.adm-face",
+        "web.legacy.ccufg",
+        "web.legacy.cepeconf",
+        "web.legacy.cerof",
+        "web.legacy.contabeis-face",
+        "web.legacy.cpcbio",
+        "web.legacy.crti",
+        "web.legacy.eco-face",
+        "web.legacy.iac",
+        "web.legacy.jornal-ufg",
+        "web.legacy.labmic",
+        "web.legacy.lam",
+        "web.legacy.lamcad",
+        "web.legacy.patio-ciencia",
+        "web.legacy.pitt",
+        "web.legacy.radio-ufg",
+        "web.legacy.sape",
+        "web.legacy.tvufg",
+        "web.legacy.uc",
+        "web.ufg.agro",
+        "web.ufg.bc",
+        "web.ufg.campus.cidade-ocidental",
+        "web.ufg.campus.goias",
+        "web.ufg.cefis",
+        "web.ufg.cegraf",
+        "web.ufg.cepae",
+        "web.ufg.ciar",
+        "web.ufg.cidarq",
+        "web.ufg.cpa",
+        "web.ufg.csa",
+        "web.ufg.editora",
+        "web.ufg.emc",
+        "web.ufg.evz",
+        "web.ufg.face",
+        "web.ufg.fafil",
+        "web.ufg.fanut",
+        "web.ufg.fav",
+        "web.ufg.fcs",
+        "web.ufg.fct",
+        "web.ufg.fd",
+        "web.ufg.fe",
+        "web.ufg.fen",
+        "web.ufg.ff",
+        "web.ufg.fh",
+        "web.ufg.fl",
+        "web.ufg.fm",
+        "web.ufg.fo",
+        "web.ufg.hospital.veterinario",
+        "web.ufg.icb",
+        "web.ufg.iesa",
+        "web.ufg.if",
+        "web.ufg.ime",
+        "web.ufg.inf",
+        "web.ufg.iptsp",
+        "web.ufg.iq",
+        "web.ufg.museu",
+        "web.ufg.planetario",
+        "web.ufg.ppg.ppgdr",
+        "web.ufg.ppg.ppgif",
+        "web.ufg.ppg.ppgll",
+        "web.ufg.proad",
+        "web.ufg.propessoas",
+        "web.ufg.sdh",
+        "web.ufg.secplan",
+        "web.ufg.seinfra",
+        "web.ufg.seti",
+        "web.ufg.sin",
+        "web.ufg.uaech"
+      ],
+      "commonUrlDeclaredSetCount": 57,
+      "commonUrlEffectiveLegacyCount": 51,
+      "requiredAction": "adjudicate tier and execution modes explicitly"
+    },
+    {
+      "id": "instagram-conflicts",
+      "count": 21,
+      "requiredAction": "collect official profile evidence; legacy majority is not evidence"
+    },
+    {
+      "id": "institutional-url-conflicts",
+      "count": 15,
+      "sourceIds": [
+        "web.ufg.campus.cidade-ocidental",
+        "web.ufg.eeca",
+        "web.ufg.emac",
+        "web.ufg.emc",
+        "web.ufg.fcs",
+        "web.ufg.fefd",
+        "web.ufg.fo",
+        "web.ufg.ime",
+        "web.ufg.ppg.ppgac.profile",
+        "web.ufg.ppg.ppgef",
+        "web.ufg.ppg.ppgmus",
+        "web.ufg.ppg.ppgnanofarma.profile",
+        "web.ufg.ppg.proef",
+        "web.ufg.proec",
+        "web.ufg.uaech"
+      ],
+      "requiredAction": "verify redirects and content equivalence without merging feeds blindly"
+    },
+    {
+      "id": "pending-source-audit",
+      "count": 66,
+      "sourceIds": [
+        "web.legacy.adm-face",
+        "web.legacy.ccufg",
+        "web.legacy.cei",
+        "web.legacy.cepeconf",
+        "web.legacy.cerof",
+        "web.legacy.cl",
+        "web.legacy.contabeis-face",
+        "web.legacy.cpcbio",
+        "web.legacy.crti",
+        "web.legacy.ead-face",
+        "web.legacy.eco-face",
+        "web.legacy.iac",
+        "web.legacy.idiomassemfronteiras",
+        "web.legacy.ipelab",
+        "web.legacy.jornal-ufg",
+        "web.legacy.labmic",
+        "web.legacy.lam",
+        "web.legacy.lamcad",
+        "web.legacy.ouvidoria",
+        "web.legacy.patio-ciencia",
+        "web.legacy.pitt",
+        "web.legacy.pos-ufg",
+        "web.legacy.ppgac",
+        "web.legacy.ppgacv",
+        "web.legacy.ppgban",
+        "web.legacy.ppgbb",
+        "web.legacy.ppgbm",
+        "web.legacy.ppgcb",
+        "web.legacy.ppgciamb",
+        "web.legacy.ppgcpri",
+        "web.legacy.ppgcs",
+        "web.legacy.ppgculturas",
+        "web.legacy.ppgda",
+        "web.legacy.ppgdh",
+        "web.legacy.ppgdp",
+        "web.legacy.ppge",
+        "web.legacy.ppgec",
+        "web.legacy.ppgecm",
+        "web.legacy.ppgecoevol",
+        "web.legacy.ppgeeb",
+        "web.legacy.ppgef",
+        "web.legacy.ppgenf",
+        "web.legacy.ppges",
+        "web.legacy.ppgf",
+        "web.legacy.ppgfil",
+        "web.legacy.ppggecon",
+        "web.legacy.ppgh",
+        "web.legacy.ppgll",
+        "web.legacy.ppgmcf",
+        "web.legacy.ppgo",
+        "web.legacy.ppgp",
+        "web.legacy.ppgpc",
+        "web.legacy.ppgrph",
+        "web.legacy.ppgs",
+        "web.legacy.ppgsc",
+        "web.legacy.proef",
+        "web.legacy.profhistoria",
+        "web.legacy.pts",
+        "web.legacy.radio-ufg",
+        "web.legacy.revistas-ufg",
+        "web.legacy.sape",
+        "web.legacy.sea",
+        "web.legacy.seacult",
+        "web.legacy.tvufg",
+        "web.legacy.uc",
+        "web.legacy.verbena"
+      ],
+      "requiredAction": "confirm institutional ownership from official evidence"
+    },
+    {
+      "id": "transport-unverified",
+      "count": 185,
+      "sourceIds": [
+        "web.legacy.adm-face",
+        "web.legacy.ccufg",
+        "web.legacy.cei",
+        "web.legacy.cepeconf",
+        "web.legacy.cerof",
+        "web.legacy.cl",
+        "web.legacy.contabeis-face",
+        "web.legacy.cpcbio",
+        "web.legacy.crti",
+        "web.legacy.ead-face",
+        "web.legacy.eco-face",
+        "web.legacy.iac",
+        "web.legacy.idiomassemfronteiras",
+        "web.legacy.ipelab",
+        "web.legacy.jornal-ufg",
+        "web.legacy.labmic",
+        "web.legacy.lam",
+        "web.legacy.lamcad",
+        "web.legacy.ouvidoria",
+        "web.legacy.patio-ciencia",
+        "web.legacy.pitt",
+        "web.legacy.pos-ufg",
+        "web.legacy.ppgac",
+        "web.legacy.ppgacv",
+        "web.legacy.ppgban",
+        "web.legacy.ppgbb",
+        "web.legacy.ppgbm",
+        "web.legacy.ppgcb",
+        "web.legacy.ppgciamb",
+        "web.legacy.ppgcpri",
+        "web.legacy.ppgcs",
+        "web.legacy.ppgculturas",
+        "web.legacy.ppgda",
+        "web.legacy.ppgdh",
+        "web.legacy.ppgdp",
+        "web.legacy.ppge",
+        "web.legacy.ppgec",
+        "web.legacy.ppgecm",
+        "web.legacy.ppgecoevol",
+        "web.legacy.ppgeeb",
+        "web.legacy.ppgef",
+        "web.legacy.ppgenf",
+        "web.legacy.ppges",
+        "web.legacy.ppgf",
+        "web.legacy.ppgfil",
+        "web.legacy.ppggecon",
+        "web.legacy.ppgh",
+        "web.legacy.ppgll",
+        "web.legacy.ppgmcf",
+        "web.legacy.ppgo",
+        "web.legacy.ppgp",
+        "web.legacy.ppgpc",
+        "web.legacy.ppgrph",
+        "web.legacy.ppgs",
+        "web.legacy.ppgsc",
+        "web.legacy.proef",
+        "web.legacy.profhistoria",
+        "web.legacy.pts",
+        "web.legacy.radio-ufg",
+        "web.legacy.revistas-ufg",
+        "web.legacy.sape",
+        "web.legacy.sea",
+        "web.legacy.seacult",
+        "web.legacy.tvufg",
+        "web.legacy.uc",
+        "web.legacy.verbena",
+        "web.ufg.agro",
+        "web.ufg.bc",
+        "web.ufg.campus.caldas-novas",
+        "web.ufg.campus.goias",
+        "web.ufg.cefis",
+        "web.ufg.cegraf",
+        "web.ufg.cepae",
+        "web.ufg.ciar",
+        "web.ufg.cidarq",
+        "web.ufg.cpa",
+        "web.ufg.csa",
+        "web.ufg.editora",
+        "web.ufg.evz",
+        "web.ufg.face",
+        "web.ufg.fafil",
+        "web.ufg.fanut",
+        "web.ufg.fav",
+        "web.ufg.fct",
+        "web.ufg.fd",
+        "web.ufg.fe",
+        "web.ufg.fen",
+        "web.ufg.ff",
+        "web.ufg.fh",
+        "web.ufg.fic",
+        "web.ufg.fl",
+        "web.ufg.fm",
+        "web.ufg.fo",
+        "web.ufg.hospital.clinicas",
+        "web.ufg.hospital.veterinario",
+        "web.ufg.icb",
+        "web.ufg.iesa",
+        "web.ufg.if",
+        "web.ufg.inf",
+        "web.ufg.iptsp",
+        "web.ufg.iq",
+        "web.ufg.museu",
+        "web.ufg.planetario",
+        "web.ufg.portal",
+        "web.ufg.pos.directory",
+        "web.ufg.ppg.dcc-ufms-ufg",
+        "web.ufg.ppg.ppga",
+        "web.ufg.ppg.ppgaas",
+        "web.ufg.ppg.ppgac.profile",
+        "web.ufg.ppg.ppgact",
+        "web.ufg.ppg.ppgacv",
+        "web.ufg.ppg.ppgadm",
+        "web.ufg.ppg.ppgagro",
+        "web.ufg.ppg.ppgas",
+        "web.ufg.ppg.ppgban",
+        "web.ufg.ppg.ppgbb",
+        "web.ufg.ppg.ppgbm",
+        "web.ufg.ppg.ppgbrph",
+        "web.ufg.ppg.ppgca",
+        "web.ufg.ppg.ppgcb",
+        "web.ufg.ppg.ppgcc",
+        "web.ufg.ppg.ppgcf",
+        "web.ufg.ppg.ppgci",
+        "web.ufg.ppg.ppgciamb",
+        "web.ufg.ppg.ppgcom",
+        "web.ufg.ppg.ppgcont",
+        "web.ufg.ppg.ppgcpri",
+        "web.ufg.ppg.ppgcs",
+        "web.ufg.ppg.ppgcta",
+        "web.ufg.ppg.ppgda",
+        "web.ufg.ppg.ppgdh",
+        "web.ufg.ppg.ppgdp",
+        "web.ufg.ppg.ppgdr",
+        "web.ufg.ppg.ppge",
+        "web.ufg.ppg.ppgea",
+        "web.ufg.ppg.ppgeas",
+        "web.ufg.ppg.ppgecm",
+        "web.ufg.ppg.ppgecoevol",
+        "web.ufg.ppg.ppgecon",
+        "web.ufg.ppg.ppgeeb",
+        "web.ufg.ppg.ppgeec",
+        "web.ufg.ppg.ppgef",
+        "web.ufg.ppg.ppgenfs",
+        "web.ufg.ppg.ppgeo",
+        "web.ufg.ppg.ppgep",
+        "web.ufg.ppg.ppgeq",
+        "web.ufg.ppg.ppges",
+        "web.ufg.ppg.ppgf",
+        "web.ufg.ppg.ppgfil",
+        "web.ufg.ppg.ppggecon",
+        "web.ufg.ppg.ppggmp",
+        "web.ufg.ppg.ppgh",
+        "web.ufg.ppg.ppgif",
+        "web.ufg.ppg.ppgll",
+        "web.ufg.ppg.ppgmat",
+        "web.ufg.ppg.ppgmcf",
+        "web.ufg.ppg.ppgmec",
+        "web.ufg.ppg.ppgmtsp",
+        "web.ufg.ppg.ppgmus",
+        "web.ufg.ppg.ppgnanofarma.profile",
+        "web.ufg.ppg.ppgnut",
+        "web.ufg.ppg.ppgo",
+        "web.ufg.ppg.ppgp",
+        "web.ufg.ppg.ppgprocidade",
+        "web.ufg.ppg.ppgq",
+        "web.ufg.ppg.ppgs",
+        "web.ufg.ppg.ppgsc",
+        "web.ufg.ppg.ppgz",
+        "web.ufg.ppg.proef",
+        "web.ufg.ppg.profhistoria",
+        "web.ufg.ppg.profiap",
+        "web.ufg.ppg.profmat",
+        "web.ufg.prae",
+        "web.ufg.proad",
+        "web.ufg.prograd",
+        "web.ufg.propessoas",
+        "web.ufg.prpg",
+        "web.ufg.prpi",
+        "web.ufg.sdh",
+        "web.ufg.secom",
+        "web.ufg.secplan",
+        "web.ufg.seinfra",
+        "web.ufg.seti",
+        "web.ufg.sin",
+        "web.ufg.sri"
+      ],
+      "requiredAction": "verify canonical URL transport, redirect target and HTTP result"
+    },
+    {
+      "id": "endpoint-verification-pending",
+      "count": 194,
+      "sourceIds": [
+        "web.legacy.adm-face",
+        "web.legacy.ccufg",
+        "web.legacy.cei",
+        "web.legacy.cepeconf",
+        "web.legacy.cerof",
+        "web.legacy.cl",
+        "web.legacy.contabeis-face",
+        "web.legacy.cpcbio",
+        "web.legacy.crti",
+        "web.legacy.ead-face",
+        "web.legacy.eco-face",
+        "web.legacy.iac",
+        "web.legacy.idiomassemfronteiras",
+        "web.legacy.ipelab",
+        "web.legacy.jornal-ufg",
+        "web.legacy.labmic",
+        "web.legacy.lam",
+        "web.legacy.lamcad",
+        "web.legacy.ouvidoria",
+        "web.legacy.patio-ciencia",
+        "web.legacy.pitt",
+        "web.legacy.pos-ufg",
+        "web.legacy.ppgac",
+        "web.legacy.ppgacv",
+        "web.legacy.ppgban",
+        "web.legacy.ppgbb",
+        "web.legacy.ppgbm",
+        "web.legacy.ppgcb",
+        "web.legacy.ppgciamb",
+        "web.legacy.ppgcpri",
+        "web.legacy.ppgcs",
+        "web.legacy.ppgculturas",
+        "web.legacy.ppgda",
+        "web.legacy.ppgdh",
+        "web.legacy.ppgdp",
+        "web.legacy.ppge",
+        "web.legacy.ppgec",
+        "web.legacy.ppgecm",
+        "web.legacy.ppgecoevol",
+        "web.legacy.ppgeeb",
+        "web.legacy.ppgef",
+        "web.legacy.ppgenf",
+        "web.legacy.ppges",
+        "web.legacy.ppgf",
+        "web.legacy.ppgfil",
+        "web.legacy.ppggecon",
+        "web.legacy.ppgh",
+        "web.legacy.ppgll",
+        "web.legacy.ppgmcf",
+        "web.legacy.ppgo",
+        "web.legacy.ppgp",
+        "web.legacy.ppgpc",
+        "web.legacy.ppgrph",
+        "web.legacy.ppgs",
+        "web.legacy.ppgsc",
+        "web.legacy.proef",
+        "web.legacy.profhistoria",
+        "web.legacy.pts",
+        "web.legacy.radio-ufg",
+        "web.legacy.revistas-ufg",
+        "web.legacy.sape",
+        "web.legacy.sea",
+        "web.legacy.seacult",
+        "web.legacy.tvufg",
+        "web.legacy.uc",
+        "web.legacy.verbena",
+        "web.ufg.agro",
+        "web.ufg.bc",
+        "web.ufg.campus.caldas-novas",
+        "web.ufg.campus.cidade-ocidental",
+        "web.ufg.campus.goias",
+        "web.ufg.cefis",
+        "web.ufg.cegraf",
+        "web.ufg.cepae",
+        "web.ufg.ciar",
+        "web.ufg.cidarq",
+        "web.ufg.cpa",
+        "web.ufg.csa",
+        "web.ufg.editora",
+        "web.ufg.eeca",
+        "web.ufg.emac",
+        "web.ufg.emc",
+        "web.ufg.evz",
+        "web.ufg.face",
+        "web.ufg.fafil",
+        "web.ufg.fanut",
+        "web.ufg.fav",
+        "web.ufg.fcs",
+        "web.ufg.fct",
+        "web.ufg.fd",
+        "web.ufg.fe",
+        "web.ufg.fefd",
+        "web.ufg.fen",
+        "web.ufg.ff",
+        "web.ufg.fh",
+        "web.ufg.fic",
+        "web.ufg.fl",
+        "web.ufg.fm",
+        "web.ufg.fo",
+        "web.ufg.hospital.clinicas",
+        "web.ufg.hospital.veterinario",
+        "web.ufg.icb",
+        "web.ufg.iesa",
+        "web.ufg.if",
+        "web.ufg.ime",
+        "web.ufg.inf",
+        "web.ufg.iptsp",
+        "web.ufg.iq",
+        "web.ufg.museu",
+        "web.ufg.planetario",
+        "web.ufg.portal",
+        "web.ufg.pos.directory",
+        "web.ufg.ppg.dcc-ufms-ufg",
+        "web.ufg.ppg.ppga",
+        "web.ufg.ppg.ppgaas",
+        "web.ufg.ppg.ppgac.profile",
+        "web.ufg.ppg.ppgact",
+        "web.ufg.ppg.ppgacv",
+        "web.ufg.ppg.ppgadm",
+        "web.ufg.ppg.ppgagro",
+        "web.ufg.ppg.ppgas",
+        "web.ufg.ppg.ppgban",
+        "web.ufg.ppg.ppgbb",
+        "web.ufg.ppg.ppgbm",
+        "web.ufg.ppg.ppgbrph",
+        "web.ufg.ppg.ppgca",
+        "web.ufg.ppg.ppgcb",
+        "web.ufg.ppg.ppgcc",
+        "web.ufg.ppg.ppgcf",
+        "web.ufg.ppg.ppgci",
+        "web.ufg.ppg.ppgciamb",
+        "web.ufg.ppg.ppgcom",
+        "web.ufg.ppg.ppgcont",
+        "web.ufg.ppg.ppgcpri",
+        "web.ufg.ppg.ppgcs",
+        "web.ufg.ppg.ppgcta",
+        "web.ufg.ppg.ppgda",
+        "web.ufg.ppg.ppgdh",
+        "web.ufg.ppg.ppgdp",
+        "web.ufg.ppg.ppgdr",
+        "web.ufg.ppg.ppge",
+        "web.ufg.ppg.ppgea",
+        "web.ufg.ppg.ppgeas",
+        "web.ufg.ppg.ppgecm",
+        "web.ufg.ppg.ppgecoevol",
+        "web.ufg.ppg.ppgecon",
+        "web.ufg.ppg.ppgeeb",
+        "web.ufg.ppg.ppgeec",
+        "web.ufg.ppg.ppgef",
+        "web.ufg.ppg.ppgenfs",
+        "web.ufg.ppg.ppgeo",
+        "web.ufg.ppg.ppgep",
+        "web.ufg.ppg.ppgeq",
+        "web.ufg.ppg.ppges",
+        "web.ufg.ppg.ppgf",
+        "web.ufg.ppg.ppgfil",
+        "web.ufg.ppg.ppggecon",
+        "web.ufg.ppg.ppggmp",
+        "web.ufg.ppg.ppgh",
+        "web.ufg.ppg.ppgif",
+        "web.ufg.ppg.ppgll",
+        "web.ufg.ppg.ppgmat",
+        "web.ufg.ppg.ppgmcf",
+        "web.ufg.ppg.ppgmec",
+        "web.ufg.ppg.ppgmtsp",
+        "web.ufg.ppg.ppgmus",
+        "web.ufg.ppg.ppgnanofarma.profile",
+        "web.ufg.ppg.ppgnut",
+        "web.ufg.ppg.ppgo",
+        "web.ufg.ppg.ppgp",
+        "web.ufg.ppg.ppgprocidade",
+        "web.ufg.ppg.ppgq",
+        "web.ufg.ppg.ppgs",
+        "web.ufg.ppg.ppgsc",
+        "web.ufg.ppg.ppgz",
+        "web.ufg.ppg.proef",
+        "web.ufg.ppg.profhistoria",
+        "web.ufg.ppg.profiap",
+        "web.ufg.ppg.profmat",
+        "web.ufg.prae",
+        "web.ufg.proad",
+        "web.ufg.proec",
+        "web.ufg.prograd",
+        "web.ufg.propessoas",
+        "web.ufg.prpg",
+        "web.ufg.prpi",
+        "web.ufg.sdh",
+        "web.ufg.secom",
+        "web.ufg.secplan",
+        "web.ufg.seinfra",
+        "web.ufg.seti",
+        "web.ufg.sin",
+        "web.ufg.sri",
+        "web.ufg.uaech"
+      ],
+      "requiredAction": "verify each declared collection endpoint before enabling a source"
+    },
+    {
+      "id": "provisional-entity-identity",
+      "count": 31,
+      "entityIds": [
+        "ufg.legacy.adm-face",
+        "ufg.legacy.ccufg",
+        "ufg.legacy.cei",
+        "ufg.legacy.cepeconf",
+        "ufg.legacy.cerof",
+        "ufg.legacy.cl",
+        "ufg.legacy.contabeis-face",
+        "ufg.legacy.cpcbio",
+        "ufg.legacy.crti",
+        "ufg.legacy.ead-face",
+        "ufg.legacy.eco-face",
+        "ufg.legacy.iac",
+        "ufg.legacy.idiomassemfronteiras",
+        "ufg.legacy.ipelab",
+        "ufg.legacy.jornal-ufg",
+        "ufg.legacy.labmic",
+        "ufg.legacy.lam",
+        "ufg.legacy.lamcad",
+        "ufg.legacy.ouvidoria",
+        "ufg.legacy.patio-ciencia",
+        "ufg.legacy.pitt",
+        "ufg.legacy.pos-ufg",
+        "ufg.legacy.pts",
+        "ufg.legacy.radio-ufg",
+        "ufg.legacy.revistas-ufg",
+        "ufg.legacy.sape",
+        "ufg.legacy.sea",
+        "ufg.legacy.seacult",
+        "ufg.legacy.tvufg",
+        "ufg.legacy.uc",
+        "ufg.legacy.verbena"
+      ],
+      "requiredAction": "find official evidence or explicitly retain as relevant affiliated/community source"
+    },
+    {
+      "id": "instagram-without-entity",
+      "count": 5,
+      "profileIds": [
+        "ig.cecasufg",
+        "ig.escoladeposufg",
+        "ig.floreser-ufg",
+        "ig.lacena-ufg",
+        "ig.lapigufg"
+      ],
+      "requiredAction": "associate to a stable entity or reject from the candidate inventory"
+    },
+    {
+      "id": "legacy-instagram-not-scanned",
+      "count": 20,
+      "handles": [
+        "campusocidentalufg",
+        "centrodelinguasflufg",
+        "cepeconf_ufg",
+        "fl_ufg_oficial",
+        "herbarioufg",
+        "icb_acoes",
+        "iesa.ufg",
+        "inf.ufg",
+        "ipelab.ufg",
+        "jornalufg",
+        "labmic.ufg",
+        "patiodaciencia_ufg",
+        "ppgacv",
+        "ppgadm.ufg",
+        "ppgccufg",
+        "ppgci.ufg",
+        "ppgcont.ufg",
+        "ppgnut.ufg",
+        "pts.ufg",
+        "radioufg"
+      ],
+      "requiredAction": "adjudicate alias or add the verified profile to scanner coverage before activation"
+    },
+    {
+      "id": "scanner-instagram-without-entity",
+      "count": 5,
+      "profileIds": [
+        "ig.cecasufg",
+        "ig.escoladeposufg",
+        "ig.floreser-ufg",
+        "ig.lacena-ufg",
+        "ig.lapigufg"
+      ],
+      "requiredAction": "associate scanner-only profiles to stable entities or remove them from scanner coverage"
+    },
+    {
+      "id": "instagram-profile-verification-pending",
+      "count": 83,
+      "profileIds": [
+        "ig.campusaparecidaufg",
+        "ig.campusgoiasufg",
+        "ig.campusocidentalufg",
+        "ig.cecasufg",
+        "ig.cei-ufg",
+        "ig.centroculturalufg",
+        "ig.centrodelinguasflufg",
+        "ig.cepae-ufg",
+        "ig.cepeconf-ufg",
+        "ig.cerofufg",
+        "ig.ciar-ufg",
+        "ig.direitoufg",
+        "ig.ea-ufg",
+        "ig.editora-ufg",
+        "ig.eeca-ufg",
+        "ig.em-ufg",
+        "ig.emc-ufg",
+        "ig.escoladeposufg",
+        "ig.evzufg",
+        "ig.face-ufg",
+        "ig.fafilufg",
+        "ig.fanutufg",
+        "ig.fav-ufg",
+        "ig.fcs-ufg",
+        "ig.fefufg",
+        "ig.fen-ufg",
+        "ig.fic-ufg",
+        "ig.firminopolis-ufg",
+        "ig.fl-ufg-oficial",
+        "ig.floreser-ufg",
+        "ig.herbarioufg",
+        "ig.icb-ufg",
+        "ig.icb-acoes",
+        "ig.iesa-ufg",
+        "ig.iesaufg",
+        "ig.ime-ufg",
+        "ig.inf-ufg",
+        "ig.infufg",
+        "ig.institutoverbenaufg",
+        "ig.ipelab-ufg",
+        "ig.iptsp-ufg",
+        "ig.iqufg",
+        "ig.jornalufg",
+        "ig.labmic-ufg",
+        "ig.lacena-ufg",
+        "ig.lapigufg",
+        "ig.letras-ufg",
+        "ig.museu-ufg",
+        "ig.odontologia-ufg",
+        "ig.patiodaciencia-ufg",
+        "ig.patiodaciencia-ufg-c66026d4",
+        "ig.pesquisaeinovacaoufg",
+        "ig.planetario-ufg",
+        "ig.poshistoriaufg",
+        "ig.posufg",
+        "ig.ppga-ufg",
+        "ig.ppgacv",
+        "ig.ppgacv-ufg",
+        "ig.ppgadm-ufg",
+        "ig.ppgban-ufg",
+        "ig.ppgca-ufg",
+        "ig.ppgcb-ufg",
+        "ig.ppgccufg",
+        "ig.ppgci-ufg",
+        "ig.ppgcont-ufg",
+        "ig.ppgcta-ufg",
+        "ig.ppgecoevolufg",
+        "ig.ppgeo-ufg",
+        "ig.ppggmp-ufg",
+        "ig.ppgnut-ufg",
+        "ig.ppgoufg",
+        "ig.ppgzufg",
+        "ig.praeufg",
+        "ig.proex-ufg",
+        "ig.prograd-ufg",
+        "ig.propessoas-ufg",
+        "ig.pts-ufg",
+        "ig.radioufg",
+        "ig.sdh-ufg",
+        "ig.sibi-ufg",
+        "ig.sri-ufg",
+        "ig.tvufg",
+        "ig.ufg-oficial"
+      ],
+      "requiredAction": "verify that each declared handle still resolves to the intended institutional profile"
+    },
+    {
+      "id": "instagram-evidence-missing",
+      "count": 70,
+      "profileIds": [
+        "ig.campusaparecidaufg",
+        "ig.campusgoiasufg",
+        "ig.campusocidentalufg",
+        "ig.cecasufg",
+        "ig.cei-ufg",
+        "ig.centroculturalufg",
+        "ig.centrodelinguasflufg",
+        "ig.cepae-ufg",
+        "ig.cepeconf-ufg",
+        "ig.cerofufg",
+        "ig.ciar-ufg",
+        "ig.direitoufg",
+        "ig.ea-ufg",
+        "ig.editora-ufg",
+        "ig.eeca-ufg",
+        "ig.em-ufg",
+        "ig.emc-ufg",
+        "ig.escoladeposufg",
+        "ig.evzufg",
+        "ig.face-ufg",
+        "ig.fafilufg",
+        "ig.fanutufg",
+        "ig.fav-ufg",
+        "ig.fcs-ufg",
+        "ig.fefufg",
+        "ig.fen-ufg",
+        "ig.fic-ufg",
+        "ig.firminopolis-ufg",
+        "ig.fl-ufg-oficial",
+        "ig.floreser-ufg",
+        "ig.herbarioufg",
+        "ig.icb-ufg",
+        "ig.icb-acoes",
+        "ig.iesa-ufg",
+        "ig.iesaufg",
+        "ig.ime-ufg",
+        "ig.inf-ufg",
+        "ig.infufg",
+        "ig.institutoverbenaufg",
+        "ig.ipelab-ufg",
+        "ig.iptsp-ufg",
+        "ig.iqufg",
+        "ig.jornalufg",
+        "ig.labmic-ufg",
+        "ig.lacena-ufg",
+        "ig.lapigufg",
+        "ig.letras-ufg",
+        "ig.museu-ufg",
+        "ig.odontologia-ufg",
+        "ig.patiodaciencia-ufg",
+        "ig.patiodaciencia-ufg-c66026d4",
+        "ig.pesquisaeinovacaoufg",
+        "ig.planetario-ufg",
+        "ig.posufg",
+        "ig.ppgacv",
+        "ig.ppgadm-ufg",
+        "ig.ppgccufg",
+        "ig.ppgci-ufg",
+        "ig.ppgcont-ufg",
+        "ig.praeufg",
+        "ig.proex-ufg",
+        "ig.prograd-ufg",
+        "ig.propessoas-ufg",
+        "ig.pts-ufg",
+        "ig.radioufg",
+        "ig.sdh-ufg",
+        "ig.sibi-ufg",
+        "ig.sri-ufg",
+        "ig.tvufg",
+        "ig.ufg-oficial"
+      ],
+      "requiredAction": "find an official institutional site or profile disclosure for each unsupported handle"
+    },
+    {
+      "id": "admin-map-parser-defects",
+      "count": 10,
+      "requiredAction": "migrate admin API away from Markdown parsing after stable-ID compatibility is shipped"
+    }
+  ]
+}

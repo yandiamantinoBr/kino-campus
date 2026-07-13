@@ -1,0 +1,412 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kino-campus.local/schemas/ufg-source-registry.schema.json",
+  "title": "KinoCampus UFG source registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "registryVersion",
+    "auditCutoff",
+    "activation",
+    "provenance",
+    "authoritativeDirectories",
+    "entities",
+    "webSources",
+    "instagramProfiles"
+  ],
+  "properties": {
+    "$schema": { "const": "./ufg-source-registry.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "registryVersion": { "type": "string", "pattern": "^20[0-9]{2}-[0-9]{2}-[0-9]{2}\\.[1-9][0-9]*$" },
+    "auditCutoff": { "type": "string", "format": "date" },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "runtimeConsumers"],
+      "properties": {
+        "state": { "enum": ["candidate", "shadow", "active", "retired"] },
+        "runtimeConsumers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["cadu-api", "curator", "instagram-scanner", "kino-publisher", "admin-cadu"] }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generator", "seedContentSha256", "schemaContentSha256", "inputs"],
+      "properties": {
+        "generator": { "type": "string", "minLength": 1 },
+        "seedContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "schemaContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/provenanceInput" }
+        }
+      }
+    },
+    "authoritativeDirectories": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/directory" }
+    },
+    "entities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entity" }
+    },
+    "webSources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/webSource" }
+    },
+    "instagramProfiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/instagramProfile" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "activation": {
+            "properties": { "state": { "const": "candidate" } },
+            "required": ["state"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "activation": {
+            "properties": { "runtimeConsumers": { "maxItems": 0 } }
+          },
+          "webSources": {
+            "items": { "properties": { "enabled": { "const": false } } }
+          },
+          "instagramProfiles": {
+            "items": { "properties": { "enabled": { "const": false } } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "httpsUrl": {
+      "type": "string",
+      "pattern": "^https://[^\\s/:?#@]+(?:/[^\\s?#]*)?$"
+    },
+    "declaredHttpsUrl": {
+      "type": "string",
+      "pattern": "^https://[^\\s/:?#@]+(?:/[^\\s#]*)?$"
+    },
+    "status": {
+      "enum": ["confirmed", "tentative", "missing", "retired", "pending_verification"]
+    },
+    "provenanceInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repository", "commit", "path", "contentSha256"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "repository": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{7,64}$" },
+        "path": { "type": "string", "minLength": 1 },
+        "contentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "directory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "url", "publisher", "checkedAt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "$ref": "#/$defs/httpsUrl" },
+        "publisher": { "const": "Universidade Federal de Goiás" },
+        "checkedAt": { "type": "string", "format": "date" },
+        "pageUpdatedAt": { "type": ["string", "null"], "format": "date" },
+        "scope": { "type": "string", "minLength": 1 }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "acronym", "kind", "parentId", "campus", "status", "observedIn", "legacyIds"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^ufg\\.[a-z0-9][a-z0-9.-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "acronym": { "type": ["string", "null"] },
+        "kind": {
+          "enum": [
+            "university",
+            "pro_reitoria",
+            "secretaria",
+            "academic_unit",
+            "campus",
+            "administrative_body",
+            "supplementary_body",
+            "graduate_program",
+            "research_body",
+            "extension_project",
+            "media",
+            "other"
+          ]
+        },
+        "parentId": { "type": ["string", "null"], "pattern": "^ufg\\.[a-z0-9][a-z0-9.-]*$" },
+        "campus": {
+          "type": ["string", "null"],
+          "enum": [null, "goiania", "aparecida_de_goiania", "goias", "cidade_ocidental", "caldas_novas", "firminopolis", "multi_campus"]
+        },
+        "status": { "enum": ["active", "pending_verification", "retired"] },
+        "observedIn": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" }
+        },
+        "legacyIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "url", "field", "observedValue", "checkedAt"],
+      "properties": {
+        "kind": { "enum": ["institutional_directory", "official_page", "legacy_snapshot"] },
+        "url": { "$ref": "#/$defs/httpsUrl" },
+        "field": { "type": "string", "minLength": 1 },
+        "observedValue": { "type": "string", "minLength": 1 },
+        "checkedAt": { "type": "string", "format": "date" }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "status"],
+      "properties": {
+        "url": { "$ref": "#/$defs/httpsUrl" },
+        "status": { "$ref": "#/$defs/status" }
+      }
+    },
+    "publisherDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hasFeedRss", "hasEventsRss", "feedRssUrl", "feedItemsCount", "qualityScore", "lastPostDate", "lastAudit"],
+      "properties": {
+        "hasFeedRss": { "type": "boolean" },
+        "hasEventsRss": { "type": "boolean" },
+        "feedRssUrl": { "anyOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }] },
+        "feedItemsCount": { "type": ["integer", "null"], "minimum": 0 },
+        "qualityScore": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "lastPostDate": { "type": ["string", "null"], "format": "date" },
+        "lastAudit": { "type": ["string", "null"], "format": "date" }
+      }
+    },
+    "webObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventory", "legacyId", "url", "tier", "instagram", "publisherDeclared"],
+      "properties": {
+        "inventory": { "enum": ["kino_publisher", "openclaw_curator", "admin_markdown"] },
+        "legacyId": { "type": "string", "minLength": 1 },
+        "name": { "type": ["string", "null"] },
+        "url": { "$ref": "#/$defs/httpsUrl" },
+        "tier": { "type": ["integer", "null"], "enum": [null, 1, 2, 3] },
+        "quick": { "type": ["boolean", "null"] },
+        "instagram": { "type": ["string", "null"] },
+        "forceDetailFetch": { "type": ["boolean", "null"] },
+        "maxItems": { "type": ["integer", "null"], "minimum": 1 },
+        "publisherDeclared": { "anyOf": [{ "$ref": "#/$defs/publisherDeclaration" }, { "type": "null" }] }
+      }
+    },
+    "webSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "entityIds",
+        "canonicalUrl",
+        "declaredUrl",
+        "aliases",
+        "role",
+        "sourceKind",
+        "enabled",
+        "baseTier",
+        "executionModes",
+        "endpoints",
+        "collection",
+        "allowPatterns",
+        "blockPatterns",
+        "reviewState",
+        "reviewIssues",
+        "audit",
+        "transport",
+        "observations"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^web\\.[a-z0-9][a-z0-9.-]*$" },
+        "entityIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^ufg\\.[a-z0-9][a-z0-9.-]*$" }
+        },
+        "canonicalUrl": { "$ref": "#/$defs/httpsUrl" },
+        "declaredUrl": { "anyOf": [{ "$ref": "#/$defs/declaredHttpsUrl" }, { "type": "null" }] },
+        "aliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/httpsUrl" }
+        },
+        "role": { "enum": ["primary_site", "official_profile", "directory", "shared_portal", "legacy_observation"] },
+        "sourceKind": { "enum": ["weby_site", "html_page", "external_site", "mixed"] },
+        "enabled": { "type": "boolean" },
+        "baseTier": { "type": ["integer", "null"], "enum": [null, 1, 2, 3] },
+        "executionModes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["quick", "daily", "full"] }
+        },
+        "endpoints": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "news": { "$ref": "#/$defs/endpoint" },
+            "events": { "$ref": "#/$defs/endpoint" },
+            "rss": { "$ref": "#/$defs/endpoint" },
+            "html": { "$ref": "#/$defs/endpoint" }
+          }
+        },
+        "collection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "maxItems", "forceDetailFetch", "dedupeTarget"],
+          "properties": {
+            "strategy": { "enum": ["weby_json_then_html", "html", "external"] },
+            "maxItems": { "type": "integer", "minimum": 1, "maximum": 200 },
+            "forceDetailFetch": { "type": "boolean" },
+            "dedupeTarget": { "$ref": "#/$defs/httpsUrl" }
+          }
+        },
+        "allowPatterns": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "blockPatterns": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "reviewState": { "enum": ["confirmed_official", "pending_review", "tier_conflict", "url_conflict", "retired"] },
+        "reviewIssues": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["tier_conflict", "url_conflict", "transport_unverified", "pending_official_evidence", "html_profile_not_feed"] }
+        },
+        "audit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "checkedAt", "evidence"],
+          "properties": {
+            "status": { "$ref": "#/$defs/status" },
+            "checkedAt": { "type": "string", "format": "date" },
+            "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+          }
+        },
+        "transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "checkedAt", "finalUrl", "httpStatus", "note"],
+          "properties": {
+            "status": { "enum": ["verified_200", "verified_redirect", "pending_verification", "unreachable", "tls_error", "http_error"] },
+            "checkedAt": { "type": "string", "format": "date" },
+            "finalUrl": { "anyOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }] },
+            "httpStatus": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+            "note": { "type": ["string", "null"] }
+          }
+        },
+        "observations": { "type": "array", "items": { "$ref": "#/$defs/webObservation" } }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "audit": {
+                "properties": { "status": { "const": "confirmed" } },
+                "required": ["status"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "audit": {
+                "properties": {
+                  "evidence": {
+                    "contains": {
+                      "properties": { "kind": { "enum": ["institutional_directory", "official_page"] } },
+                      "required": ["kind"]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "instagramObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inventory", "handle", "sourceId"],
+      "properties": {
+        "inventory": { "enum": ["kino_publisher", "openclaw_curator", "admin_markdown", "instagram_scanner", "official_ufg_page"] },
+        "handle": { "type": "string", "pattern": "^[a-z0-9._]+$" },
+        "sourceId": { "type": ["string", "null"] }
+      }
+    },
+    "instagramProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "handle", "profileUrl", "aliases", "entityIds", "shared", "enabled", "status", "executionModes", "audit", "observations"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^ig\\.[a-z0-9][a-z0-9.-]*$" },
+        "handle": { "type": "string", "pattern": "^[a-z0-9._]+$" },
+        "profileUrl": { "type": "string", "pattern": "^https://www\\.instagram\\.com/[a-z0-9._]+/$" },
+        "aliases": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9._]+$" } },
+        "entityIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^ufg\\.[a-z0-9][a-z0-9.-]*$" } },
+        "shared": { "type": "boolean" },
+        "enabled": { "type": "boolean" },
+        "status": { "$ref": "#/$defs/status" },
+        "executionModes": { "type": "array", "uniqueItems": true, "items": { "enum": ["full", "ig-only"] } },
+        "audit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["checkedAt", "evidence"],
+          "properties": {
+            "checkedAt": { "type": "string", "format": "date" },
+            "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+          }
+        },
+        "observations": { "type": "array", "items": { "$ref": "#/$defs/instagramObservation" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "confirmed" } } },
+          "then": {
+            "properties": {
+              "audit": {
+                "properties": {
+                  "evidence": {
+                    "contains": {
+                      "properties": { "kind": { "enum": ["institutional_directory", "official_page"] } },
+                      "required": ["kind"]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
