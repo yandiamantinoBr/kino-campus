@@ -2,3 +2,4 @@ services/cadu-ufg-publisher/config/cadu-source-registry/** text eol=lf
 services/cadu-ufg-publisher/scripts/lib/candidate-source-registry.js text eol=lf
 services/cadu-ufg-publisher/scripts/sync-candidate-source-registry.js text eol=lf
 tests/unit/cadu-candidate-source-registry.test.js text eol=lf
+supabase/migrations/*.sql text eol=lf

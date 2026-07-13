@@ -102,6 +102,12 @@ jobs:
       - name: Run pgTAP contracts
         run: supabase test db --local supabase/tests
 
+      - name: Prove Phase-A upgrade from linked schema fingerprint
+        run: npm run test:cadu:phase-a-upgrade
+
+      - name: Prove Phase-A PostgREST roles and CAS conflicts
+        run: npm run test:cadu:phase-a-postgrest
+
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup

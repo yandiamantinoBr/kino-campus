@@ -11,22 +11,23 @@
 
 begin;
 
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
+
 alter table public.kc_unit_meta
   add column if not exists revision bigint not null default 1;
 
-do $constraint$
-begin
-  if not exists (
-    select 1
-    from pg_catalog.pg_constraint
-    where conrelid = 'public.kc_unit_meta'::regclass
-      and conname = 'kc_unit_meta_revision_positive'
-  ) then
-    alter table public.kc_unit_meta
-      add constraint kc_unit_meta_revision_positive check (revision > 0);
-  end if;
-end
-$constraint$;
+alter table public.kc_unit_meta
+  drop constraint if exists kc_unit_meta_revision_positive;
+alter table public.kc_unit_meta
+  add constraint kc_unit_meta_revision_positive check (revision > 0);
+
+-- The production schema predates the consolidated 20260710 local baseline.
+-- Keep this pending migration independently upgrade-safe instead of assuming
+-- that the baseline-only covering index already exists.
+drop index if exists public.idx_kc_unit_meta_updated_by;
+create index idx_kc_unit_meta_updated_by
+  on public.kc_unit_meta (updated_by) where updated_by is not null;
 
 create or replace function public.kc_unit_meta_touch()
 returns trigger
@@ -49,6 +50,13 @@ drop trigger if exists kc_unit_meta_touch on public.kc_unit_meta;
 create trigger kc_unit_meta_touch
   before insert or update on public.kc_unit_meta
   for each row execute function public.kc_unit_meta_touch();
+
+-- CREATE OR REPLACE preserves an existing function ACL. The legacy production
+-- function is executable through PUBLIC, so its ACL must be reconciled here.
+revoke all on function public.kc_unit_meta_touch()
+  from public, anon, authenticated, service_role;
+grant execute on function public.kc_unit_meta_touch()
+  to service_role;
 
 create or replace function public.kc_cadu_upsert_source_override(
   p_source_id text,
@@ -284,9 +292,20 @@ $$;
 
 -- Browser JWTs use the authenticated Cadu proxy and no longer write this
 -- table directly. The single public read policy remains for compatibility.
+alter table public.kc_unit_meta enable row level security;
+drop policy if exists "anyone can read kc_unit_meta" on public.kc_unit_meta;
+drop policy if exists "admins can insert kc_unit_meta" on public.kc_unit_meta;
+drop policy if exists "admins can update kc_unit_meta" on public.kc_unit_meta;
+drop policy if exists "admins can delete kc_unit_meta" on public.kc_unit_meta;
+drop policy if exists kc_unit_meta_select_public on public.kc_unit_meta;
 drop policy if exists kc_unit_meta_insert_admin on public.kc_unit_meta;
 drop policy if exists kc_unit_meta_update_admin on public.kc_unit_meta;
 drop policy if exists kc_unit_meta_delete_admin on public.kc_unit_meta;
+
+create policy kc_unit_meta_select_public
+  on public.kc_unit_meta
+  for select to anon, authenticated
+  using (true);
 
 revoke all on table public.kc_unit_meta from public, anon, authenticated, service_role;
 revoke insert (unit_id, tier, note, updated_at, updated_by, source, revision),

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(85);
+select extensions.plan(88);
 
 select extensions.has_table('public', 'caronas_locations', 'caronas location table exists');
 select extensions.has_table('public', 'kc_unit_meta', 'Cadu unit metadata table exists');
@@ -59,6 +59,12 @@ select extensions.ok(has_function_privilege('service_role', 'public.kc_cadu_upse
 select extensions.ok(has_function_privilege('service_role', 'public.kc_cadu_upsert_legacy_override(text,text,integer,text,boolean,bigint)', 'execute'), 'service role can execute legacy Cadu CAS');
 select extensions.ok(has_table_privilege('service_role', 'public.kc_unit_meta', 'select,insert,update'), 'service role retains only the phase-A DML needed by old and new Cadu APIs');
 select extensions.ok(not has_table_privilege('service_role', 'public.kc_unit_meta', 'delete,truncate,references,trigger'), 'service role cannot perform destructive or DDL-adjacent table operations');
+select extensions.ok(
+  not has_table_privilege('anon', 'public.kc_unit_meta', 'maintain')
+  and not has_table_privilege('authenticated', 'public.kc_unit_meta', 'maintain')
+  and not has_table_privilege('service_role', 'public.kc_unit_meta', 'maintain'),
+  'browser and transitional service roles cannot maintain the metadata table'
+);
 select extensions.ok(
   not (select prosecdef from pg_proc where oid = 'public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)'::regprocedure),
   'stable Cadu CAS is security invoker during transition'
@@ -130,6 +136,36 @@ select extensions.is(
   'metadata deployment contract reports the complete phase-A boundary ready'
 );
 reset role;
+
+savepoint cadu_probe_cross_platform_eol;
+do $probe$
+declare
+  v_definition text;
+begin
+  for v_definition in
+    select pg_catalog.pg_get_functiondef(function_row.oid)
+    from pg_catalog.pg_proc as function_row
+    where function_row.oid in (
+      'public.kc_unit_meta_touch()'::regprocedure,
+      'public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)'::regprocedure,
+      'public.kc_cadu_upsert_legacy_override(text,text,integer,text,boolean,bigint)'::regprocedure
+    )
+  loop
+    execute pg_catalog.replace(
+      pg_catalog.replace(v_definition, E'\r\n', E'\n'),
+      E'\n',
+      E'\r\n'
+    );
+  end loop;
+end;
+$probe$;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() ->> 'ready')::boolean,
+  true,
+  'metadata contract normalizes CRLF function bodies before integrity hashing'
+);
+rollback to savepoint cadu_probe_cross_platform_eol;
+release savepoint cadu_probe_cross_platform_eol;
 
 savepoint cadu_probe_legacy_select_grant;
 revoke select on public.kc_unit_meta from anon;
@@ -338,6 +374,29 @@ select extensions.is(
 );
 rollback to savepoint cadu_probe_legacy_rpc_argument_names;
 release savepoint cadu_probe_legacy_rpc_argument_names;
+
+savepoint cadu_probe_rpc_overloads;
+create function public.kc_cadu_upsert_source_override(p_source_id text)
+returns jsonb
+language sql
+immutable
+security invoker
+set search_path = ''
+as $$ select pg_catalog.jsonb_build_object('sourceId', p_source_id) $$;
+create function public.kc_cadu_upsert_legacy_override(p_unit_id text)
+returns jsonb
+language sql
+immutable
+security invoker
+set search_path = ''
+as $$ select pg_catalog.jsonb_build_object('unitId', p_unit_id) $$;
+select extensions.ok(
+  not (public.kc_cadu_metadata_contract() #>> '{checks,stableRpc}')::boolean
+  and not (public.kc_cadu_metadata_contract() #>> '{checks,legacyRpc}')::boolean,
+  'metadata contract rejects overloaded PostgREST RPC names'
+);
+rollback to savepoint cadu_probe_rpc_overloads;
+release savepoint cadu_probe_rpc_overloads;
 
 savepoint cadu_probe_stable_rpc_extra_config;
 alter function public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)

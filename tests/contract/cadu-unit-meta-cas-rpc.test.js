@@ -14,6 +14,8 @@ describe('Cadu unit metadata transactional CAS boundary', () => {
   const normalized = sql.replace(/\s+/g, ' ').trim();
 
   test('adds a database-managed monotonic revision', () => {
+    expect(normalized).toContain("set local lock_timeout = '5s'");
+    expect(normalized).toContain("set local statement_timeout = '60s'");
     expect(normalized).toContain(
       'add column if not exists revision bigint not null default 1',
     );
@@ -24,6 +26,9 @@ describe('Cadu unit metadata transactional CAS boundary', () => {
     expect(normalized).toContain('new.revision := old.revision + 1;');
     expect(normalized).toContain(
       'before insert or update on public.kc_unit_meta',
+    );
+    expect(normalized).toContain(
+      'drop index if exists public.idx_kc_unit_meta_updated_by; create index idx_kc_unit_meta_updated_by on public.kc_unit_meta (updated_by) where updated_by is not null',
     );
   });
 
@@ -77,6 +82,22 @@ describe('Cadu unit metadata transactional CAS boundary', () => {
   });
 
   test('browser roles lose write bypass and only service_role executes RPCs', () => {
+    for (const legacyPolicy of [
+      '"anyone can read kc_unit_meta"',
+      '"admins can insert kc_unit_meta"',
+      '"admins can update kc_unit_meta"',
+      '"admins can delete kc_unit_meta"',
+    ]) {
+      expect(normalized).toContain(
+        `drop policy if exists ${legacyPolicy} on public.kc_unit_meta`,
+      );
+    }
+    expect(normalized).toContain(
+      'create policy kc_unit_meta_select_public on public.kc_unit_meta for select to anon, authenticated using (true)',
+    );
+    expect(normalized).toContain(
+      'alter table public.kc_unit_meta enable row level security',
+    );
     expect(normalized).toContain(
       'drop policy if exists kc_unit_meta_insert_admin on public.kc_unit_meta',
     );
@@ -90,6 +111,7 @@ describe('Cadu unit metadata transactional CAS boundary', () => {
       'grant select on public.kc_unit_meta to anon, authenticated',
     );
     for (const signature of [
+      'public.kc_unit_meta_touch()',
       'public.kc_cadu_upsert_source_override(text, integer, text, boolean, bigint, jsonb)',
       'public.kc_cadu_upsert_legacy_override(text, text, integer, text, boolean, bigint)',
     ]) {
