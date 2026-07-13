@@ -117,6 +117,9 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(classifyCaduSitesPath('source-registry')).toMatchObject({
       kind: 'registry_list', registry: true, allowedMethods: ['GET'],
     });
+    expect(classifyCaduSitesPath('source-registry/readiness')).toMatchObject({
+      kind: 'registry_readiness', registry: true, requiresStrongEtag: false, allowedMethods: ['GET'],
+    });
     expect(classifyCaduSitesPath('source-registry/web.ufg.proad')).toMatchObject({
       kind: 'registry_detail', sourceId: 'web.ufg.proad', allowedMethods: ['GET'],
     });
@@ -164,6 +167,9 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(buildCaduSitesTargetUrl(
       'https://cadu.example/', classifyCaduSitesPath('source-registry'),
     )).toBe('https://cadu.example/api/source-registry');
+    expect(buildCaduSitesTargetUrl(
+      'https://cadu.example/', classifyCaduSitesPath('source-registry/readiness'),
+    )).toBe('https://cadu.example/api/source-registry/readiness');
     expect(buildCaduSitesTargetUrl(
       'https://cadu.example/', classifyCaduSitesPath('source-registry/web.ufg.proad'),
     )).toBe('https://cadu.example/api/source-registry/web.ufg.proad');
@@ -324,6 +330,32 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.headers.get('etag')).toBe(ETAG);
     expect(res.headers.get('x-cadu-registry-sha256')).toBe(REGISTRY_SHA);
     expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  test('forwards readiness with registry hash but without inventing an ETag', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse({
+      body: { ready: true },
+      headers: { 'x-cadu-registry-sha256': REGISTRY_SHA },
+    }));
+    const res = createResponse();
+
+    await handler(request({ path: 'source-registry/readiness' }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(global.fetch.mock.calls[0][0]).toBe('https://cadu.example/api/source-registry/readiness');
+    expect(res.headers.get('x-cadu-registry-sha256')).toBe(REGISTRY_SHA);
+    expect(res.headers.get('etag')).toBeUndefined();
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  test('fails closed when readiness omits the registry hash', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse({ body: { ready: true } }));
+    const res = createResponse();
+
+    await handler(request({ path: 'source-registry/readiness' }), res);
+
+    expect(res.statusCode).toBe(502);
+    expect(res.body).toEqual({ error: 'invalid_cadu_registry_headers' });
   });
 
   test.each([

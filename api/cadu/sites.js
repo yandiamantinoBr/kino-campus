@@ -77,6 +77,11 @@ export function classifyCaduSitesPath(rawPath) {
     if (segments.length === 1) {
       return { kind: 'registry_list', registry: true, allowedMethods: ['GET'] };
     }
+    if (segments.length === 2 && segments[1] === 'readiness') {
+      return {
+        kind: 'registry_readiness', registry: true, requiresStrongEtag: false, allowedMethods: ['GET'],
+      };
+    }
     const sourceId = segments[1];
     if (!STABLE_WEB_SOURCE_ID.test(sourceId || '')) return null;
     if (segments.length === 2) {
@@ -127,6 +132,9 @@ export function buildCaduSitesTargetUrl(apiUrl, route) {
       break;
     case 'registry_list':
       path = '/api/source-registry';
+      break;
+    case 'registry_readiness':
+      path = '/api/source-registry/readiness';
       break;
     case 'registry_detail':
       if (!STABLE_WEB_SOURCE_ID.test(route.sourceId || '')) {
@@ -259,13 +267,14 @@ function readUpstreamHeader(upstream, name) {
   }
 }
 
-function forwardRegistryHeaders(upstream, res) {
+function forwardRegistryHeaders(upstream, res, requiresStrongEtag = true) {
   const etag = readUpstreamHeader(upstream, 'etag');
   const registrySha = readUpstreamHeader(upstream, 'x-cadu-registry-sha256');
-  if (!isStrongCaduEtag(etag) || !CADU_REGISTRY_SHA256.test(registrySha || '')) {
+  if ((requiresStrongEtag && !isStrongCaduEtag(etag))
+      || !CADU_REGISTRY_SHA256.test(registrySha || '')) {
     return false;
   }
-  res.setHeader('ETag', etag);
+  if (requiresStrongEtag) res.setHeader('ETag', etag);
   res.setHeader('X-Cadu-Registry-Sha256', registrySha);
   return true;
 }
@@ -363,7 +372,11 @@ export default async function handler(req, res) {
     }
 
     if (body === null) return sendProxyError(res, 502, 'invalid_cadu_api_response');
-    if (route.registry && !forwardRegistryHeaders(upstream, res)) {
+    if (route.registry && !forwardRegistryHeaders(
+      upstream,
+      res,
+      route.requiresStrongEtag !== false,
+    )) {
       return sendProxyError(res, 502, 'invalid_cadu_registry_headers');
     }
 

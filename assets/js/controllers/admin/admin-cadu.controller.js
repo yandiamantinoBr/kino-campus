@@ -18,6 +18,8 @@
     filteredCatalogRows: [],
     sourceCatalog: null,
     catalogMode: 'loading',
+    registryWritable: false,
+    registryReadiness: null,
     sitesView: 'sources',
     sitesOrigin: '',
     sourceDrafts: Object.create(null),
@@ -382,7 +384,9 @@
     status.className = 'kc-cadu-registry-status' + (kind ? ' is-' + kind : '');
     status.textContent = '';
     var icon = document.createElement('i');
-    icon.className = kind === 'ok' ? 'fas fa-circle-check' : (kind === 'error' ? 'fas fa-triangle-exclamation' : 'fas fa-spinner fa-spin');
+    icon.className = kind === 'ok'
+      ? 'fas fa-circle-check'
+      : (kind === 'error' || kind === 'fallback' ? 'fas fa-triangle-exclamation' : 'fas fa-spinner fa-spin');
     icon.setAttribute('aria-hidden', 'true');
     var copy = document.createElement('div');
     var strong = document.createElement('strong');
@@ -421,6 +425,8 @@
     appendCatalogMetric(container, summary.instagramProfiles, 'perfis Instagram mapeados');
     appendCatalogMetric(container, summary.instagramConfirmed, 'Instagram confirmados');
     appendCatalogMetric(container, summary.instagramPending, 'Instagram pendentes/tentativos');
+    appendCatalogMetric(container, summary.instagramMissing, 'Instagram indisponíveis');
+    appendCatalogMetric(container, summary.instagramRetired, 'Instagram aposentados');
     appendCatalogMetric(container, summary.entitiesWithoutWebSource, 'entidades sem site associado');
     appendCatalogMetric(container, summary.deferred, 'conciliações pendentes');
     container.style.display = '';
@@ -479,6 +485,11 @@
     return 'serviço indisponível';
   }
 
+  function normalizedConflictFields(fields) {
+    var values = Array.isArray(fields) ? fields : [];
+    return ['tier', 'note'].filter(function (field) { return values.indexOf(field) !== -1; });
+  }
+
   function sourceDraftsForReload(options) {
     var opts = options || {};
     var drafts = Object.create(null);
@@ -490,6 +501,9 @@
         (!source && (sourceDraftIsDirtyWithoutSource(draft) || draft.conflict))
       ) {
         drafts[sourceId] = Object.assign({}, draft);
+        if (source && !drafts[sourceId].conflictFields) {
+          drafts[sourceId].pendingFields = Object.keys(sourceDraftChanges(source, draft));
+        }
       }
     });
     Object.keys(opts.preserveDrafts || {}).forEach(function (sourceId) {
@@ -498,8 +512,8 @@
     if (opts.excludeDraftSourceId) delete drafts[opts.excludeDraftSourceId];
     if (opts.conflictSourceId && drafts[opts.conflictSourceId]) {
       drafts[opts.conflictSourceId].conflict = true;
-      drafts[opts.conflictSourceId].tierTouched = true;
       drafts[opts.conflictSourceId].conflictAcknowledged = false;
+      drafts[opts.conflictSourceId].conflictFields = normalizedConflictFields(opts.conflictFields);
     }
     return drafts;
   }
@@ -520,7 +534,9 @@
       if (draft.initialRevision && draft.initialRevision !== source.revision) {
         draft.conflict = true;
         draft.conflictAcknowledged = false;
+        if (!draft.conflictFields) draft.conflictFields = normalizedConflictFields(draft.pendingFields);
       }
+      delete draft.pendingFields;
       retained[sourceId] = draft;
     });
     return retained;
@@ -537,6 +553,8 @@
     }
     var retainedDrafts = sourceDraftsForReload(options);
     state.catalogMode = 'legacy-readonly';
+    state.registryWritable = false;
+    state.registryReadiness = null;
     state.sourceCatalog = null;
     state.sitesView = 'sources';
     state.sourceDrafts = retainedDrafts;
@@ -559,24 +577,75 @@
     var tbody = $('#sites-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Carregando e validando catálogo…</td></tr>';
     state.catalogMode = 'loading';
+    state.registryWritable = false;
+    state.registryReadiness = null;
     setRegistryStatus('loading', 'Validando catálogo canônico', 'Conferindo hash, ETag, IDs, associações e estado shadow.');
     var registryEnvelope = null;
     try {
+      var readinessEnvelopePromise = apiFetchResponse(
+        '/api/cadu/sites/source-registry/readiness',
+        { timeoutMs: 4000 }
+      );
       registryEnvelope = await apiFetchResponse('/api/cadu/sites/source-registry');
       if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
       if (!registryEnvelope.ok) throw new Error('registry_http_' + registryEnvelope.status);
       var catalog = registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope));
+      // Capture against the catalog that was visible when the edit began.
+      // Replacing sourceCatalog first can make an explicit null/null draft look
+      // clean against a competing stable override and silently discard intent.
+      var reloadDrafts = sourceDraftsForReload(opts);
+      // Install the validated catalog immediately in read-only mode. Readiness
+      // is a separate capability proof and must never hold the map hostage.
       state.sourceCatalog = catalog;
       state.catalogMode = 'registry';
+      state.registryReadiness = null;
+      state.registryWritable = false;
       state.allSites = catalog.sources.map(sourceAsLegacySite);
-      state.sourceDrafts = retainCatalogDrafts(catalog, sourceDraftsForReload(opts));
+      state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);
       var view = $('#sites-view');
       if (view) { view.disabled = false; view.value = state.sitesView; }
       setRegistryStatus(
-        'ok',
-        'Catálogo canônico validado em modo shadow',
-        catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · fontes e perfis permanecem desativados para execução.'
+        'loading',
+        'Catálogo canônico validado; verificando escrita',
+        catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · overrides permanecem bloqueados até a prova CAS.'
       );
+      renderCatalogSummary();
+      applySitesFilter();
+      computeKpis();
+      var readinessEnvelope = null;
+      try { readinessEnvelope = await readinessEnvelopePromise; } catch (readinessFetchError) {}
+      if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
+      var readiness = null;
+      var registryWritable = false;
+      try {
+        if (!readinessEnvelope || !readinessEnvelope.ok) {
+          throw new Error('readiness_http_' + String(readinessEnvelope && readinessEnvelope.status || 0));
+        }
+        readiness = registryModel().validateRegistryReadiness(
+          readinessEnvelope.data,
+          { headers: { 'X-Cadu-Registry-Sha256': readinessEnvelope.headers.registrySha256 } },
+          catalog
+        );
+        registryWritable = true;
+      } catch (readinessError) {
+        readiness = null;
+        registryWritable = false;
+      }
+      state.registryReadiness = readiness;
+      state.registryWritable = registryWritable;
+      if (state.registryWritable) {
+        setRegistryStatus(
+          'ok',
+          'Catálogo canônico validado em modo shadow',
+          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · contrato CAS pronto; fontes e perfis permanecem desativados para execução.'
+        );
+      } else {
+        setRegistryStatus(
+          'fallback',
+          'Catálogo canônico legível; overrides em modo somente leitura',
+          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · readiness/CAS não foi comprovado. Nenhuma escrita foi habilitada.'
+        );
+      }
       renderCatalogSummary();
     } catch (registryError) {
       if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
@@ -591,6 +660,8 @@
         if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
         var unavailableDrafts = sourceDraftsForReload(opts);
         state.catalogMode = 'error';
+        state.registryWritable = false;
+        state.registryReadiness = null;
         state.sourceCatalog = null;
         state.sourceDrafts = unavailableDrafts;
         state.allSites = [];
@@ -691,7 +762,12 @@
   function profileLinks(profiles) {
     if (!profiles || !profiles.length) return '<span class="kc-cadu-muted">sem perfil associado</span>';
     return profiles.map(function (profile) {
-      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(profile.status, profile.statusGroup) + '</div>';
+      var provenance = profile.viaSourceObservation
+        ? 'associação direta observada nesta fonte'
+        : 'associação indireta via entidade' + (profile.viaEntityIds && profile.viaEntityIds.length ? ': ' + profile.viaEntityIds.join(', ') : '');
+      if (profile.shared) provenance += ' · perfil compartilhado';
+      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(profile.status, profile.statusGroup)
+        + '<small class="kc-cadu-source-id">' + escapeHtml(provenance) + '</small></div>';
     }).join('');
   }
 
@@ -704,11 +780,13 @@
       tier: stable ? source.overrideTier : null,
       tierTouched: false,
       note: initialNote == null ? '' : initialNote,
+      noteTouched: false,
       initialTier: stable ? source.overrideTier : null,
       initialNote: initialNote,
       initialRevision: source.revision,
       conflict: false,
-      conflictAcknowledged: false
+      conflictAcknowledged: false,
+      conflictFields: null
     };
     state.sourceDrafts[source.id] = draft;
     return draft;
@@ -733,6 +811,7 @@
     if (!draft) return false;
     return Boolean(
       draft.tierTouched || draft.tier !== draft.initialTier ||
+      draft.noteTouched ||
       normalizedDraftNote(draft.note) !== draft.initialNote
     );
   }
@@ -744,10 +823,21 @@
       return { tier: draft.tier, note: normalizedDraftNote(draft.note) };
     }
     var changes = {};
-    if (draft.tier !== draft.initialTier) changes.tier = draft.tier;
+    var conflictFields = draft.conflict ? normalizedConflictFields(draft.conflictFields) : null;
+    if ((conflictFields && conflictFields.indexOf('tier') !== -1) || (!conflictFields && draft.tier !== draft.initialTier)) changes.tier = draft.tier;
     var nextNote = normalizedDraftNote(draft.note);
-    if (nextNote !== draft.initialNote) changes.note = nextNote;
+    if ((conflictFields && conflictFields.indexOf('note') !== -1) || (!conflictFields && nextNote !== draft.initialNote)) changes.note = nextNote;
     return changes;
+  }
+
+  function updateConflictFieldIntent(draft, field, differsFromServer) {
+    if (!draft.conflict) return;
+    var fields = normalizedConflictFields(draft.conflictFields);
+    var index = fields.indexOf(field);
+    if (differsFromServer && index === -1) fields.push(field);
+    if (!differsFromServer && index !== -1) fields.splice(index, 1);
+    draft.conflictFields = normalizedConflictFields(fields);
+    draft.conflictAcknowledged = false;
   }
 
   function sourceDraftCanSave(source, draft) {
@@ -757,13 +847,13 @@
   function sourceDraftIsDirty(source, draft) {
     var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
     if (stable) return sourceDraftCanSave(source, draft);
-    return draft.tierTouched || normalizedDraftNote(draft.note) !== null;
+    return draft.tierTouched || draft.noteTouched || normalizedDraftNote(draft.note) !== null;
   }
 
   function updateSourceSaveButton(source, draft) {
     var row = document.querySelector('tr[data-source-id="' + source.id + '"]');
     var button = row && row.querySelector('.kc-cadu-save-source-btn');
-    if (button) button.disabled = Boolean(state.sourceSaveChains[source.id]) || !sourceDraftCanSave(source, draft);
+    if (button) button.disabled = !state.registryWritable || Boolean(state.sourceSaveChains[source.id]) || !sourceDraftCanSave(source, draft);
   }
 
   function sourceConflictHtml(source, draft) {
@@ -787,7 +877,9 @@
       var site = sourceAsLegacySite(source);
       var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
       var draft = ensureSourceDraft(source);
-      var busy = Boolean(state.sourceSaveChains[source.id]);
+      var saving = Boolean(state.sourceSaveChains[source.id]);
+      var readOnly = !state.registryWritable;
+      var busy = readOnly || saving;
       var canSave = sourceDraftCanSave(source, draft);
       var inherited = !stable && source.note
         ? '<div class="kc-cadu-inherited-warning"><strong>Nota herdada (não será copiada):</strong> ' + escapeHtml(source.note) + '</div>'
@@ -808,7 +900,7 @@
         + '<td><div class="kc-cadu-note-cell">' + inherited + conflict
         + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Tier estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
         + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota estável explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
-        + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (busy ? 'Salvando…' : (stable ? 'Salvar override' : 'Criar override estável')) + '</button></div></td>'
+        + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar override' : 'Criar override estável'))) + '</button></div></td>'
         + '<td style="white-space:nowrap;">' + actions + '</td></tr>';
     }).join('');
   }
@@ -874,7 +966,7 @@
         + '<td>' + (safeUrl ? '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener">' + escapeHtml(safeUrl.replace(/^https?:\/\//, '')) + '</a>' : '—') + '</td>'
         + '<td>' + (instagramUrl ? '<a href="' + escapeHtml(instagramUrl) + '" target="_blank" rel="noopener">@' + escapeHtml(String(site.instagram).replace(/^@/, '')) + '</a>' : '—') + '</td>'
         + '<td>' + badgeHtml(site.instagram_status || 'unknown', site.instagram_status || 'unknown') + '</td><td>' + escapeHtml(site.note || '—') + '<small class="kc-cadu-source-id">somente leitura</small></td>'
-        + '<td><button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(site.name || '') + '"><i class="fas fa-paper-plane"></i><span>Sugerir</span></button> '
+        + '<td><button type="button" class="kc-cadu-publish-btn" disabled title="Publicação bloqueada: fallback legado em modo somente leitura"><i class="fas fa-lock"></i><span>Somente leitura</span></button> '
         + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name || '') + '" data-ask-url="' + escapeHtml(safeUrl) + '" data-ask-instagram="' + escapeHtml(site.instagram || '') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '"><i class="fas fa-robot"></i><span>Perguntar</span></button></td></tr>';
     }).join('');
   }
@@ -926,7 +1018,7 @@
   async function performSourceOverrideSave(sourceId, queuedEdit) {
     var source = sourceById(sourceId);
     var draft = queuedEdit && queuedEdit.draft;
-    if (!source || !draft || state.catalogMode !== 'registry') return;
+    if (!source || !draft || state.catalogMode !== 'registry' || !state.registryWritable) return;
     if (source.revision !== queuedEdit.baseRevision) {
       var currentDraft = state.sourceDrafts[sourceId];
       if (currentDraft) {
@@ -969,7 +1061,7 @@
       body: JSON.stringify(mutation.body)
     });
     if (envelope.status === 412 || envelope.status === 409) {
-      await loadSites({ conflictSourceId: sourceId });
+      await loadSites({ conflictSourceId: sourceId, conflictFields: Object.keys(changes) });
       showCaduError('Conflito de versão em ' + sourceId + '. O catálogo foi recarregado; compare os valores e decida manualmente antes de salvar novamente.');
       return;
     }
@@ -978,7 +1070,7 @@
       return;
     }
     if (!patchResponseIsValid(envelope, sourceId)) {
-      await loadSites({ conflictSourceId: sourceId });
+      await loadSites({ conflictSourceId: sourceId, conflictFields: Object.keys(changes) });
       showCaduError('A escrita respondeu com contrato inesperado. O catálogo foi recarregado e a operação não será repetida automaticamente.');
       return;
     }
@@ -1000,7 +1092,7 @@
   }
 
   function saveSourceOverride(sourceId) {
-    if (state.sourceSaveChains[sourceId]) return;
+    if (!state.registryWritable || state.sourceSaveChains[sourceId]) return;
     var source = sourceById(sourceId);
     var draft = source && state.sourceDrafts[sourceId];
     if (!source || !draft || !sourceDraftCanSave(source, draft)) return;
@@ -1024,7 +1116,9 @@
       var summary = state.sourceCatalog.summary;
       $('#kpi-sites').textContent = String(summary.entities);
       $('#kpi-ig-confirmed').textContent = String(summary.instagramConfirmed);
-      $('#kpi-ig-detail').textContent = summary.instagramConfirmed + ' confirmados · ' + summary.instagramPending + ' pendentes de revisão';
+      $('#kpi-ig-detail').textContent = summary.instagramConfirmed + ' confirmados · '
+        + summary.instagramPending + ' pendentes · ' + summary.instagramMissing + ' indisponíveis · '
+        + summary.instagramRetired + ' aposentados';
       $('#kpi-tier1').textContent = String(state.sourceCatalog.sources.filter(function (source) { return source.effectiveTier === 1; }).length);
       return;
     }
@@ -1071,8 +1165,8 @@
   // ============================================================
 
   async function publishSite(site) {
-    if (state.catalogMode === 'registry' || (site && site.sourceId)) {
-      showCaduError('Publicação bloqueada: o catálogo canônico está em shadow e todas as fontes permanecem desativadas para execução.');
+    if (state.catalogMode !== 'legacy-writable' || (site && (site.sourceId || site.source_id))) {
+      showCaduError('Publicação bloqueada: o catálogo canônico está em shadow ou o fallback legado está em modo somente leitura.');
       return;
     }
     var key = siteActionKey(site);
@@ -2411,6 +2505,7 @@
           draft.tier = tierSelect.value === '' ? null : parseInt(tierSelect.value, 10);
           draft.tierTouched = true;
         }
+        updateConflictFieldIntent(draft, 'tier', draft.tier !== source.overrideTier);
         renderSitesTable();
       });
       sitesTable.addEventListener('input', function (e) {
@@ -2420,6 +2515,8 @@
         if (source) {
           var draft = ensureSourceDraft(source);
           draft.note = noteInput.value;
+          draft.noteTouched = true;
+          updateConflictFieldIntent(draft, 'note', normalizedDraftNote(draft.note) !== source.note);
           updateSourceSaveButton(source, draft);
         }
       });
@@ -2485,6 +2582,10 @@
     var p = String(path || '');
     if (/^https?:\/\//i.test(p)) return p;
     if (cfg.direct) {
+      var registryPrefix = '/api/cadu/sites/source-registry';
+      if (p === registryPrefix || p.indexOf(registryPrefix + '/') === 0) {
+        return cfg.url + '/api/source-registry' + p.slice(registryPrefix.length);
+      }
       var mapped = p.replace(/^\/api\/cadu\/?/, '/api/');
       return cfg.url + mapped;
     }
@@ -2508,8 +2609,25 @@
 
   async function apiFetchResponse(path, opts) {
     var url = buildCaduApiUrl(path);
+    var requestOptions = Object.assign({}, opts || {});
+    var timeoutMs = Number(requestOptions.timeoutMs || 0);
+    delete requestOptions.timeoutMs;
+    var timeoutController = null;
+    var timeoutId = null;
+    var upstreamSignal = requestOptions.signal;
+    var upstreamAbort = null;
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0 && typeof AbortController === 'function') {
+      timeoutController = new AbortController();
+      if (upstreamSignal) {
+        upstreamAbort = function () { timeoutController.abort(upstreamSignal.reason); };
+        if (upstreamSignal.aborted) upstreamAbort();
+        else upstreamSignal.addEventListener('abort', upstreamAbort, { once: true });
+      }
+      requestOptions.signal = timeoutController.signal;
+      timeoutId = setTimeout(function () { timeoutController.abort(); }, timeoutMs);
+    }
     try {
-      var res = await caduFetchRaw(path, opts);
+      var res = await caduFetchRaw(path, requestOptions);
       var ct = res.headers.get('content-type') || '';
       var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
       var envelope = {
@@ -2535,6 +2653,9 @@
         headers: { etag: '', registrySha256: '', cacheControl: '' },
         message: String(e && e.message || e)
       };
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (upstreamSignal && upstreamAbort) upstreamSignal.removeEventListener('abort', upstreamAbort);
     }
   }
 

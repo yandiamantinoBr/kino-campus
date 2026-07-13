@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const controller = fs.readFileSync(
@@ -9,6 +10,17 @@ const controller = fs.readFileSync(
 const html = fs.readFileSync(path.join(ROOT, 'admin/cadu.html'), 'utf8');
 
 describe('admin Cadu UX contracts', () => {
+  test('content-addresses immutable Cadu JavaScript assets', () => {
+    [
+      'assets/js/controllers/admin/admin-cadu-sources.js',
+      'assets/js/controllers/admin/admin-cadu.controller.js'
+    ].forEach((relativePath) => {
+      const canonicalText = fs.readFileSync(path.join(ROOT, relativePath), 'utf8').replace(/\r\n/g, '\n');
+      const version = crypto.createHash('sha256').update(canonicalText, 'utf8').digest('hex').slice(0, 16);
+      expect(html).toContain(`src="../${relativePath}?v=${version}"`);
+    });
+  });
+
   test('keeps the feed page size aligned with the visible default', () => {
     expect(controller).toContain('var FEED_PAGE_SIZE = 25;');
     expect(controller).toContain('feedLimit: FEED_PAGE_SIZE');
@@ -97,6 +109,9 @@ describe('admin Cadu UX contracts', () => {
       expect(html).toContain(`<option value="${view}">`);
     });
     expect(controller).toContain("apiFetchResponse('/api/cadu/sites/source-registry')");
+    expect(controller).toContain("'/api/cadu/sites/source-registry/readiness',");
+    expect(controller).toContain('{ timeoutMs: 4000 }');
+    expect(controller).toContain('registryModel().validateRegistryReadiness(');
     expect(controller).toContain('registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope))');
     expect(controller).toContain("'X-Cadu-Registry-Sha256': envelope.headers.registrySha256");
     expect(controller).toContain("state.catalogMode = 'legacy-readonly'");
@@ -133,6 +148,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("revalidatedMode !== 'registry'");
     expect(controller).toContain('o catálogo canônico não pôde ser revalidado');
     expect(controller).toContain('var retainedDrafts = sourceDraftsForReload(options);');
+    expect(controller).toContain('var reloadDrafts = sourceDraftsForReload(opts);');
+    expect(controller).toContain('state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);');
     expect(controller).toContain('function sourceDraftIsDirtyWithoutSource(draft)');
   });
 
@@ -140,8 +157,9 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('registryModel().selectUnambiguousConfirmedInstagram(profiles)');
     expect(controller).toContain("return '@' + profile.handle + ' (' + profile.status + ')';");
     expect(controller).toContain('class="kc-cadu-publish-btn" disabled');
-    expect(controller).toContain("state.catalogMode === 'registry' || (site && site.sourceId)");
-    expect(controller).toContain('o catálogo canônico está em shadow');
+    expect(controller).toContain("state.catalogMode !== 'legacy-writable' || (site && (site.sourceId || site.source_id))");
+    expect(controller).toContain('fallback legado está em modo somente leitura');
+    expect(controller).toContain('fallback legado em modo somente leitura');
   });
 
   test('renders complete entity and Instagram coverage, including mapping gaps', () => {
@@ -153,6 +171,25 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('<option value="collision_evidence">qualquer evidência de colisão</option>');
     expect(controller).toContain("state.sitesOrigin === 'collision_evidence' && !source.collision");
     expect(controller).toContain('Colisão legada:');
+  });
+
+  test('preserves Instagram association provenance and explicit clear intent across CAS conflicts', () => {
+    expect(controller).toContain('associação direta observada nesta fonte');
+    expect(controller).toContain('associação indireta via entidade');
+    expect(controller).toContain("summary.instagramRetired, 'Instagram aposentados'");
+    expect(controller).toContain("summary.instagramMissing, 'Instagram indisponíveis'");
+    expect(controller).toContain('draft.noteTouched = true');
+    expect(controller).toContain('conflictFields: Object.keys(changes)');
+    expect(controller).toContain("conflictFields.indexOf('tier')");
+    expect(controller).toContain("conflictFields.indexOf('note')");
+    expect(controller).not.toContain('(draft.conflict && draft.tierTouched)');
+    expect(controller).not.toContain('(draft.conflict && draft.noteTouched)');
+    expect(controller).not.toContain('drafts[opts.conflictSourceId].tierTouched = true');
+  });
+
+  test('maps source-registry direct fallback to the real OpenClaw route', () => {
+    expect(controller).toContain("var registryPrefix = '/api/cadu/sites/source-registry'");
+    expect(controller).toContain("cfg.url + '/api/source-registry' + p.slice(registryPrefix.length)");
   });
 
   test('renders upstream error strings as text rather than HTML', () => {
