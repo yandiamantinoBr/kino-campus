@@ -1854,42 +1854,22 @@
     return p;
   }
 
-  function appendQuery(url, params) {
-    var pairs = [];
-    Object.keys(params || {}).forEach(function (key) {
-      var value = params[key];
-      if (value !== undefined && value !== null && value !== '') {
-        pairs.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(value)));
-      }
-    });
-    if (!pairs.length) return url;
-    return url + (url.indexOf('?') === -1 ? '?' : '&') + pairs.join('&');
-  }
-
-  async function buildCaduUrlForBrowser(path, params) {
+  async function caduFetchRaw(path, opts) {
     var cfg = getCaduConfig();
-    var query = Object.assign({}, params || {});
-    if (cfg.direct) {
-      if (cfg.token) query.token = cfg.token;
-    } else {
+    var headers = Object.assign({ 'Accept': 'application/json' }, (opts && opts.headers) || {});
+    if (cfg.direct && cfg.token) {
+      headers.Authorization = 'Bearer ' + cfg.token;
+    } else if (!cfg.direct) {
       var adminToken = await getAdminAccessToken();
-      if (adminToken) query.kc_admin_token = adminToken;
+      if (adminToken) headers.Authorization = 'Bearer ' + adminToken;
     }
-    return appendQuery(buildCaduApiUrl(path), query);
+    return fetch(buildCaduApiUrl(path), Object.assign({}, opts || {}, { headers: headers }));
   }
 
   async function apiFetch(path, opts) {
-    var cfg = getCaduConfig();
     var url = buildCaduApiUrl(path);
     try {
-      var headers = Object.assign({ 'Accept': 'application/json' }, (opts && opts.headers) || {});
-      if (cfg.direct && cfg.token) {
-        headers.Authorization = 'Bearer ' + cfg.token;
-      } else if (!cfg.direct) {
-        var adminToken = await getAdminAccessToken();
-        if (adminToken) headers.Authorization = 'Bearer ' + adminToken;
-      }
-      var res = await fetch(url, Object.assign({}, opts || {}, { headers: headers }));
+      var res = await caduFetchRaw(path, opts);
       var ct = res.headers.get('content-type') || '';
       var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
       if (!res.ok) {
@@ -1905,9 +1885,8 @@
     }
   }
 
-  var pipelineEventSource = null;
-  var pipelineLogPollTimer = null;
-  var pipelineLogPollRunId = null;
+  var pipelineStreamRequest = null;
+  var pipelineLogPollState = null;
 
   function fmtAgo(unix) {
     if (!unix) return '—';
@@ -1988,7 +1967,7 @@
         connectPipelineLogPolling(status.active_run.id);
       } else {
         stopPipelineLogPolling();
-        if (!pipelineEventSource || pipelineEventSource.runId !== status.active_run.id) {
+        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== status.active_run.id) {
           connectPipelineStream(status.active_run.id);
         }
       }
@@ -2207,7 +2186,7 @@
       card.className = 'kc-pipeline-active-card';
       card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.</div>';
       if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem run ativo'; }
-      if (logBox && (!pipelineEventSource) && (!pipelineLogPollTimer)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
+      if (logBox && (!pipelineStreamRequest) && (!pipelineLogPollState)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
       return;
     }
     var cls = 'is-' + active.status;
@@ -2403,8 +2382,31 @@
   }
 
   async function downloadRunLog(runId) {
-    var url = await buildCaduUrlForBrowser('/api/cadu/pipeline/' + runId + '/log', { download: 1 });
-    window.open(url, '_blank');
+    var objectUrl = '';
+    var anchor = null;
+    try {
+      var path = '/api/cadu/pipeline/' + encodeURIComponent(runId) + '/log?download=1';
+      var res = await caduFetchRaw(path, { headers: { 'Accept': 'text/plain' } });
+      if (!res.ok) {
+        var detail = await res.text().catch(function () { return ''; });
+        throw new Error('HTTP ' + res.status + (detail ? ': ' + detail.slice(0, 160) : ''));
+      }
+      var blob = await res.blob();
+      objectUrl = URL.createObjectURL(blob);
+      anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = 'pipeline-' + String(runId).replace(/[^a-zA-Z0-9_-]/g, '') + '.log';
+      document.body.appendChild(anchor);
+      anchor.click();
+    } catch (err) {
+      console.error('[cadu-api] download log falhou:', err);
+      alert('Erro ao baixar log: ' + (err && err.message || err));
+    } finally {
+      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
+      if (objectUrl) {
+        setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
+      }
+    }
   }
 
   function downloadRunExport(runId) {
@@ -2703,76 +2705,119 @@
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
-  async function refreshPipelineLogSnapshot(runId) {
-    var res = await apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=180');
-    if (!res || res.__error) {
-      appendLogLine('[log polling] falha ao buscar tail do log');
-      return;
+  async function refreshPipelineLogSnapshot(runId, pollState) {
+    if (!pollState || pipelineLogPollState !== pollState || pollState.inFlight) return;
+    pollState.inFlight = true;
+    try {
+      var res = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/log?tail=180');
+      if (pipelineLogPollState !== pollState) return;
+      if (!res || res.__error) {
+        appendLogLine('[log polling] falha ao buscar tail do log');
+        return;
+      }
+      renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'));
+    } finally {
+      if (pipelineLogPollState === pollState) pollState.inFlight = false;
     }
-    renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'));
   }
 
   function connectPipelineLogPolling(runId) {
     disconnectPipelineStream();
-    if (pipelineLogPollRunId === runId && pipelineLogPollTimer) return;
+    if (pipelineLogPollState && pipelineLogPollState.runId === runId) return;
     stopPipelineLogPolling();
-    pipelineLogPollRunId = runId;
-    refreshPipelineLogSnapshot(runId);
-    pipelineLogPollTimer = setInterval(function () {
-      if (pipelineLogPollRunId === runId) refreshPipelineLogSnapshot(runId);
+    var pollState = { runId: runId, inFlight: false, timer: null };
+    pipelineLogPollState = pollState;
+    refreshPipelineLogSnapshot(runId, pollState);
+    pollState.timer = setInterval(function () {
+      if (pipelineLogPollState === pollState) refreshPipelineLogSnapshot(runId, pollState);
     }, 5000);
   }
 
   function stopPipelineLogPolling() {
-    if (pipelineLogPollTimer) clearInterval(pipelineLogPollTimer);
-    pipelineLogPollTimer = null;
-    pipelineLogPollRunId = null;
+    var pollState = pipelineLogPollState;
+    pipelineLogPollState = null;
+    if (pollState && pollState.timer) clearInterval(pollState.timer);
   }
 
   async function connectPipelineStream(runId) {
     stopPipelineLogPolling();
     disconnectPipelineStream();
-    // v0.4.4: SSE via Vercel rewrite → pipeline-router.
-    // Vercel rewrite manda source path via query ?path=, router parseia e
-    // encaminha pra cadu-api com path completo.
-    var cfg = getCaduConfig();
-    if (!cfg.url) return;
-    var url;
-    if (cfg.url.replace(/\/$/, '').endsWith('/api/cadu')) {
-      // Vercel proxy: URL pública é /pipeline/{id}/stream (rewrite → pipeline-router)
-      url = cfg.url.replace(/\/$/, '') + '/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
-    } else {
-      // VPS direta
-      url = cfg.url.replace(/\/$/, '') + '/api/pipeline/' + runId + '/stream?follow=true&token=' + encodeURIComponent(cfg.token);
+    if (typeof AbortController !== 'function' || typeof TextDecoder !== 'function') {
+      appendLogLine('[stream indisponível] acompanhando por polling autenticado');
+      connectPipelineLogPolling(runId);
+      return;
     }
 
-    url = await buildCaduUrlForBrowser('/api/cadu/pipeline/' + runId + '/stream', { follow: 'true' });
-
+    var controller = new AbortController();
+    var request = { runId: runId, controller: controller };
+    pipelineStreamRequest = request;
+    var reader = null;
     try {
-      var es = new EventSource(url, { withCredentials: false });
-      pipelineEventSource = es;
-      pipelineEventSource.runId = runId;
-      es.addEventListener('log', function (e) {
-        try { var d = JSON.parse(e.data); if (d.line) appendLogLine(d.line); } catch (err) {}
+      var path = '/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stream?follow=true';
+      var res = await caduFetchRaw(path, {
+        signal: controller.signal,
+        headers: { 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' }
       });
-      es.addEventListener('done', function (e) {
-        try {
-          var d = JSON.parse(e.data);
-          appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
-        } catch (err) {}
-        es.close();
-        pipelineEventSource = null;
-        refreshPipeline();
-      });
-      es.addEventListener('error', function (e) {
-        appendLogLine('[stream error] reconectando em 2s…');
-        try { es.close(); } catch (err) {}
-        pipelineEventSource = null;
-        setTimeout(function () { refreshPipeline(); }, 2000);
-      });
+      if (pipelineStreamRequest !== request) return;
+      if (!res.ok || !res.body || typeof res.body.getReader !== 'function') {
+        throw new Error('stream HTTP ' + res.status);
+      }
+      reader = res.body.getReader();
+      var decoder = new TextDecoder('utf-8');
+      var buffer = '';
+      while (pipelineStreamRequest === request) {
+        var chunk = await reader.read();
+        if (pipelineStreamRequest !== request) return;
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var parsed = splitSSEBuffer(buffer);
+        buffer = parsed.remainder;
+        for (var i = 0; i < parsed.blocks.length; i++) {
+          if (parsed.blocks[i].length > 512 * 1024) {
+            throw new Error('stream frame excedeu o limite local');
+          }
+          var event = parseSSEBlock(parsed.blocks[i]);
+          if (event) handlePipelineSSEEvent(event);
+          if (event && event.type === 'done') return;
+        }
+        if (buffer.length > 512 * 1024) {
+          throw new Error('stream frame excedeu o limite local');
+        }
+      }
+      if (buffer.trim()) {
+        var finalEvent = parseSSEBlock(buffer);
+        if (finalEvent) handlePipelineSSEEvent(finalEvent);
+        if (finalEvent && finalEvent.type === 'done') return;
+      }
+      if (pipelineStreamRequest === request) {
+        throw new Error('stream terminou antes do evento done');
+      }
     } catch (err) {
-      console.warn('SSE connect falhou:', err);
+      if (pipelineStreamRequest !== request || (err && err.name === 'AbortError')) return;
+      console.warn('SSE via fetch falhou:', err);
+      appendLogLine('[stream indisponível] acompanhando por polling autenticado');
+      if (pipelineStreamRequest === request) pipelineStreamRequest = null;
+      connectPipelineLogPolling(runId);
+      setTimeout(function () { refreshPipeline(); }, 2000);
+    } finally {
+      if (reader) {
+        try { await reader.cancel(); } catch (e) {}
+      }
+      if (pipelineStreamRequest === request) pipelineStreamRequest = null;
     }
+  }
+
+  function splitSSEBuffer(buffer) {
+    var raw = String(buffer || '');
+    var blocks = [];
+    var cursor = 0;
+    var delimiter = /\r\n\r\n|\n\n|\r\r/g;
+    var match;
+    while ((match = delimiter.exec(raw)) !== null) {
+      blocks.push(raw.slice(cursor, match.index).replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
+      cursor = delimiter.lastIndex;
+    }
+    return { blocks: blocks, remainder: raw.slice(cursor) };
   }
 
   function parseSSEBlock(block) {
@@ -2786,25 +2831,30 @@
       else if (line.indexOf('data:') === 0) dataLines.push(line.substring(5).trim());
     }
     var dataStr = dataLines.join('\n');
-    if (!dataStr) return;
+    if (!dataStr) return null;
     try {
-      var d = JSON.parse(dataStr);
-      if (eventType === 'log' && d.line) appendLogLine(d.line);
-      else if (eventType === 'done') {
-        appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
-        disconnectPipelineStream();
-        refreshPipeline();
-        pollNotifActivity();
-      } else if (eventType === 'error') {
-        appendLogLine('[error] ' + (d.message || ''));
-      }
-    } catch (e) {}
+      return { type: eventType, data: JSON.parse(dataStr) };
+    } catch (e) { return null; }
+  }
+
+  function handlePipelineSSEEvent(event) {
+    var d = event && event.data ? event.data : {};
+    if (event.type === 'log' && d.line) appendLogLine(d.line);
+    else if (event.type === 'done') {
+      appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
+      disconnectPipelineStream();
+      refreshPipeline();
+      pollNotifActivity();
+    } else if (event.type === 'error') {
+      appendLogLine('[error] ' + (d.message || ''));
+    }
   }
 
   function disconnectPipelineStream() {
-    if (pipelineEventSource) {
-      try { pipelineEventSource.close(); } catch (e) {}
-      pipelineEventSource = null;
+    if (pipelineStreamRequest) {
+      var request = pipelineStreamRequest;
+      pipelineStreamRequest = null;
+      try { request.controller.abort(); } catch (e) {}
     }
   }
 

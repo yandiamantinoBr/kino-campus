@@ -55,8 +55,13 @@ export default async function handler(req, res) {
   try {
     // SSE: faz streaming do upstream body pro browser sem buffering
     if (isSSE) {
+      const upstreamController = new AbortController();
+      const abortUpstream = () => upstreamController.abort();
+      req.once('aborted', abortUpstream);
+      res.once('close', abortUpstream);
       const upstream = await fetch(targetUrl, {
         method: 'GET',
+        signal: upstreamController.signal,
         headers: {
           Authorization: `Bearer ${CADU_API_TOKEN}`,
           Accept: 'text/event-stream',
@@ -65,6 +70,8 @@ export default async function handler(req, res) {
       });
       if (!upstream.ok || !upstream.body) {
         const errBody = await upstream.text().catch(() => '');
+        req.off('aborted', abortUpstream);
+        res.off('close', abortUpstream);
         res.status(upstream.status).setHeader('Content-Type', 'application/json').end(errBody);
         return;
       }
@@ -88,9 +95,15 @@ export default async function handler(req, res) {
           }
         }
       } catch (e) {
-        console.error(`[api/cadu/pipeline] SSE stream error: ${e.message}`);
+        if (e && e.name !== 'AbortError') {
+          console.error(`[api/cadu/pipeline] SSE stream error: ${e.message}`);
+        }
       } finally {
-        res.end();
+        try { await reader.cancel(); } catch {}
+        req.off('aborted', abortUpstream);
+        res.off('close', abortUpstream);
+        abortUpstream();
+        if (!res.writableEnded && !res.destroyed) res.end();
       }
       return;
     }
@@ -113,6 +126,7 @@ export default async function handler(req, res) {
     const responseBody = await upstream.text();
     res.status(upstream.status).setHeader('Content-Type', ct).send(responseBody);
   } catch (e) {
+    if (res.writableEnded || res.destroyed) return;
     res.status(502).json({ ok: false, error: `Upstream unreachable: ${e.message}` });
   }
 }
