@@ -30,6 +30,8 @@
     pipelineActive: null,
     pipelineStages: [],
     pipelineHistory: [],
+    pipelineCapabilities: {},
+    pipelineStartPending: false,
     pipelineHealth: null,
     lastVersion: null
   };
@@ -1971,6 +1973,7 @@
     state.pipelineActive = status.active_run || null;
     state.pipelineStages = status.stages || [];
     state.pipelineHistory = status.history || [];
+    state.pipelineCapabilities = status.capabilities || {};
     state.pipelineHealth = status.health || state.pipelineHealth;
     renderPipelineStages(status.stages || []);
     renderPipelineActive(state.pipelineActive);
@@ -2007,6 +2010,68 @@
 
   function findPipelineStage(stageId) {
     return (state.pipelineStages || []).find(function (stage) { return stage && stage.id === stageId; }) || null;
+  }
+
+  // null significa que a API não oferece um contrato explícito para dry-run.
+  // Nesse caso o campo deve ser omitido: backends antigos ignoravam extras e
+  // poderiam executar de verdade mesmo recebendo { dry_run: true }.
+  function resolvePipelineDryRun(profile, requestedDryRun, capabilities) {
+    profile = profile || {};
+    if (!capabilities || capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true) return null;
+    if (profile.force_dry_run === true) return true;
+    if (profile.dry_run_available !== true) return null;
+    if (requestedDryRun !== true && requestedDryRun !== false) return null;
+    return requestedDryRun;
+  }
+
+  function buildPipelineRunRequest(stageId, dryRun, capabilities) {
+    var path = '/api/cadu/pipeline/run';
+    if (capabilities && capabilities.explicit_dry_run === true && capabilities.explicit_run_mode_routes === true && typeof dryRun === 'boolean') {
+      // Estas rotas não existem na API antiga. Se houver rollback entre o GET
+      // de capabilities e este POST, o request falha com 404 em vez de uma
+      // versão antiga ignorar dry_run=true e executar de verdade.
+      path += dryRun ? '/dry-run' : '/real';
+    }
+    return { path: path, payload: { stage: stageId } };
+  }
+
+  function pipelineStageActionModes(profile, capabilities) {
+    profile = profile || {};
+    var supportsExplicitModes = Boolean(
+      capabilities &&
+      capabilities.explicit_dry_run === true &&
+      capabilities.explicit_run_mode_routes === true
+    );
+    if (supportsExplicitModes && profile.force_dry_run === true) {
+      return [{ dryRun: true, label: 'Simular', danger: false }];
+    }
+    if (supportsExplicitModes && profile.dry_run_available === true) {
+      return [
+        { dryRun: true, label: 'Dry-run', danger: false },
+        { dryRun: false, label: profile.mutates_platform ? 'Executar real' : 'Executar', danger: Boolean(profile.mutates_platform) }
+      ];
+    }
+    return [{
+      dryRun: null,
+      label: 'Executar',
+      danger: Boolean(profile.mutates_platform && !profile.default_dry_run)
+    }];
+  }
+
+  function lockPipelineActionButtons(clickedButton) {
+    var parent = clickedButton && clickedButton.parentElement;
+    var buttons = parent ? Array.prototype.slice.call(parent.querySelectorAll('.kc-pipeline-stage__btn')) : (clickedButton ? [clickedButton] : []);
+    var originals = buttons.map(function (button) {
+      return { button: button, disabled: button.disabled, html: button.innerHTML };
+    });
+    buttons.forEach(function (button) { button.disabled = true; });
+    if (clickedButton) clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…';
+    return function restorePipelineActionButtons() {
+      originals.forEach(function (original) {
+        original.button.disabled = original.disabled;
+        original.button.innerHTML = original.html;
+      });
+    };
   }
 
   function stageChip(text, level) {
@@ -2090,9 +2155,22 @@
       var pf = s.preflight || {};
       var profile = pf.profile || {};
       var canRun = pf.can_run !== false;
-      var mutatesReal = profile.mutates_platform && !profile.default_dry_run;
-      var btnClass = 'kc-pipeline-stage__btn' + (mutatesReal ? ' is-danger' : '');
-      var btnTitle = canRun ? 'Executar ' + s.id : 'Indisponivel: ' + ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
+      var blockedReason = ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
+      var actionButtons = [];
+      function actionButton(dryRun, label, danger) {
+        var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
+        var disabled = !canRun || state.pipelineStartPending;
+        var btnTitle = state.pipelineStartPending
+          ? 'Aguardando resposta da solicitação anterior'
+          : (canRun ? label + ' ' + s.id : 'Indisponivel: ' + blockedReason);
+        var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
+        return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
+          '<i class="fas ' + (dryRun === true ? 'fa-flask' : 'fa-play') + '"></i> ' + escapeHtml(label) +
+        '</button>';
+      }
+      pipelineStageActionModes(profile, state.pipelineCapabilities).forEach(function (action) {
+        actionButtons.push(actionButton(action.dryRun, action.label, action.danger));
+      });
       var lastSummary = s.last_run && s.last_run.summary ? renderRunSummary(s.last_run.summary) : '';
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
@@ -2103,13 +2181,20 @@
           '<span style="margin-left:auto;">~' + s.estimated_sec + 's</span>' +
         '</div>' +
         lastSummary +
-        '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '" title="' + escapeHtml(btnTitle) + '"' + (canRun ? '' : ' disabled') + '><i class="fas fa-play"></i> ' + (canRun ? 'Executar' : 'Indisponivel') + '</button>' +
+        '<div class="kc-pipeline-stage__actions">' + actionButtons.join('') + '</div>' +
       '</div>';
     }).join('');
 
     // Bind botões (delegação não funciona pq innerHTML é reescrito)
     $$('#pipeline-stages-list .kc-pipeline-stage__btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { runPipelineStage(btn.getAttribute('data-stage')); });
+      btn.addEventListener('click', function () {
+        var requestedMode = btn.getAttribute('data-dry-run');
+        runPipelineStage(
+          btn.getAttribute('data-stage'),
+          requestedMode === 'true' ? true : (requestedMode === 'false' ? false : null),
+          btn
+        );
+      });
     });
   }
 
@@ -2141,6 +2226,7 @@
         '<span><i class="fas fa-fingerprint"></i> <code>' + active.id.slice(0, 8) + '</code></span>' +
         '<span><i class="fas fa-clock"></i> Iniciado ' + fmtAgo(active.started_at) + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> ' + fmtDur(active.started_at, active.finished_at) + '</span>' +
+        (typeof active.dry_run === 'boolean' ? '<span><i class="fas ' + (active.dry_run ? 'fa-flask' : 'fa-database') + '"></i> ' + (active.dry_run ? 'simulação' : 'execução real') + '</span>' : '') +
         (active.exit_code != null ? '<span><i class="fas fa-flag-checkered"></i> exit ' + active.exit_code + '</span>' : '') +
       '</div>' +
       renderRunSummary(active.summary);
@@ -2217,7 +2303,7 @@
           '<strong>' + escapeHtml(r.stage) + '</strong>' +
           '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +
         '</div>' +
-        '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
+        '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (typeof r.dry_run === 'boolean' ? (r.dry_run ? ' · simulação' : ' · execução real') : '') + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
         renderRunSummary(r.summary) +
         actions +
       '</div>';
@@ -2722,7 +2808,8 @@
     }
   }
 
-  async function runPipelineStage(stageId) {
+  async function runPipelineStage(stageId, dryRun, clickedButton) {
+    if (state.pipelineStartPending) return;
     var stage = findPipelineStage(stageId);
     var pf = stage && stage.preflight ? stage.preflight : null;
     if (pf && pf.can_run === false) {
@@ -2731,22 +2818,50 @@
       return;
     }
     var profile = pf && pf.profile ? pf.profile : {};
+    dryRun = resolvePipelineDryRun(profile, dryRun, state.pipelineCapabilities);
+    var expectsExplicitMode = Boolean(
+      state.pipelineCapabilities.explicit_dry_run === true &&
+      state.pipelineCapabilities.explicit_run_mode_routes === true &&
+      profile.dry_run_available === true
+    );
+    if (expectsExplicitMode && typeof dryRun !== 'boolean') {
+      alert('Modo de execução ausente ou inválido. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
+      return;
+    }
     var warnings = pf ? (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n') : '';
+    var modeLabel = dryRun === true
+      ? 'DRY-RUN EXPLÍCITO (sem mutação de plataforma)'
+      : (dryRun === false ? 'EXECUÇÃO REAL' : 'MODO PADRÃO DO SERVIDOR (dry-run explícito indisponível)');
+    var mutationNotice = dryRun === true
+      ? '\n\nNenhuma mutação de plataforma foi solicitada.'
+      : (profile.mutates_platform && (dryRun === false || !profile.default_dry_run)
+        ? '\n\nATENÇÃO: esta execução pode alterar dados reais/plataforma.'
+        : '\n\nO servidor aplicará o modo padrão deste estágio.');
     var msg = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + (pf && pf.command ? pf.command : 'node ' + stageId) +
       '\nRisco: ' + (profile.risk || 'n/d') +
-      (profile.mutates_platform ? '\n\nATENÇÃO: este estágio altera dados reais/plataforma.' : '\n\nEste estágio não declara mutação direta de plataforma.') +
-      (profile.default_dry_run ? '\nModo padrão: dry-run.' : '') +
+      '\nModo solicitado: ' + modeLabel +
+      mutationNotice +
       (warnings ? '\n\nAvisos:\n' + warnings : '') +
       '\n\nLogs ficarão disponíveis em tempo real abaixo.';
     if (!confirm(msg)) return;
-    var btn = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…'; }
-    var resp = await apiFetch('/api/cadu/pipeline/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stage: stageId }),
-    });
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-play"></i> Executar'; }
+    var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
+    state.pipelineStartPending = true;
+    var restoreButtons = lockPipelineActionButtons(btn);
+    var request = buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities);
+    var resp;
+    try {
+      resp = await apiFetch(request.path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request.payload),
+      });
+    } finally {
+      state.pipelineStartPending = false;
+      restoreButtons();
+      // Um refresh pode ter substituído o grupo enquanto o POST aguardava.
+      // Reconstrói o DOM atual para não deixar botões novos presos/desbloqueados.
+      renderPipelineStages(state.pipelineStages || []);
+    }
     if (resp && resp.run_id) {
       // Limpa log box pra nova execução
       var logBox = $('#pipeline-log');
@@ -2757,10 +2872,16 @@
     } else if (resp && resp.__error) {
       // Mensagens específicas por status code
       var msg = 'Falha ao iniciar.';
-      if (resp.status === 409) {
+      if (resp.status === 404 && typeof dryRun === 'boolean') {
+        msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
+      } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
         var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
         msg = '⛔ Já existe um run ativo para "' + stageId + '" (id ' + existingId + ').\n\nAguarde terminar ou pare-o via botão Parar antes de iniciar novo.';
+      } else if (resp.status === 400 || resp.status === 422) {
+        var validationDetail = resp.data && (resp.data.detail || resp.data);
+        msg = '⚠️ Requisição recusada pelo cadu-api (HTTP ' + resp.status + '): ' +
+          (typeof validationDetail === 'string' ? validationDetail : JSON.stringify(validationDetail || 'sem detalhe'));
       } else if (resp.status === 401) {
         msg = '🔒 Token inválido. Verifique KC_CADU_TOKEN.';
       } else if (resp.status === 503) {
