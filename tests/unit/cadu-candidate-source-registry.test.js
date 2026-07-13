@@ -121,6 +121,15 @@ describe('Cadu candidate source registry mirror', () => {
     const toolingAllowlist = new Set([
       path.resolve(SYNC_SCRIPT),
       path.resolve(ROOT, 'services', 'cadu-ufg-publisher', 'scripts', 'lib', 'candidate-source-registry.js'),
+      // The admin proxy only forwards the immutable OpenClaw shadow API; it
+      // never loads this repository's candidate artifact into the publisher.
+      path.resolve(ROOT, 'api', 'cadu', 'sites.js'),
+      // The admin projection validator consumes only the authenticated shadow
+      // API response and has no filesystem access to the candidate artifact.
+      path.resolve(ROOT, 'assets', 'js', 'controllers', 'admin', 'admin-cadu-sources.js'),
+      // The admin controller requests that validated projection through the
+      // proxy; it does not activate or import the publisher candidate.
+      path.resolve(ROOT, 'assets', 'js', 'controllers', 'admin', 'admin-cadu.controller.js'),
     ]);
     const executableRoots = ['api', 'assets', 'scripts', 'server', 'services', 'supabase']
       .map((directory) => path.join(ROOT, directory))
@@ -132,6 +141,19 @@ describe('Cadu candidate source registry mirror', () => {
       const content = fs.readFileSync(filePath, 'utf8');
       expect(content).not.toMatch(/(?:cadu-)?source-registry|candidate-source-registry/i);
     }
+    const adminProxy = fs.readFileSync(path.join(ROOT, 'api', 'cadu', 'sites.js'), 'utf8');
+    expect(adminProxy).toContain('/api/source-registry');
+    expect(adminProxy).not.toMatch(/config[\\/]+cadu-source-registry|ufg-source-registry\.candidate\.json/i);
+    const adminProjection = fs.readFileSync(
+      path.join(ROOT, 'assets', 'js', 'controllers', 'admin', 'admin-cadu-sources.js'),
+      'utf8'
+    );
+    expect(adminProjection).not.toMatch(/config[\\/]+cadu-source-registry|ufg-source-registry\.candidate\.json/i);
+    const adminController = fs.readFileSync(
+      path.join(ROOT, 'assets', 'js', 'controllers', 'admin', 'admin-cadu.controller.js'),
+      'utf8'
+    );
+    expect(adminController).not.toMatch(/config[\\/]+cadu-source-registry|ufg-source-registry\.candidate\.json/i);
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     expect(manifest.safety).toEqual(expect.objectContaining({
       lifecycle: 'candidate',

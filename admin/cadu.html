@@ -32,21 +32,26 @@
     .kc-cadu-kpi__label { display: flex; gap: 6px; align-items: center; color: var(--kc-text-dark-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
     .kc-cadu-kpi strong { display: block; font-size: 1.7rem; line-height: 1; }
     .kc-cadu-kpi small { display: block; margin-top: 6px; color: var(--kc-text-dark-secondary); font-size: .76rem; }
-    .kc-cadu-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--kc-border-dark); margin: 18px 0 12px; }
+    .kc-cadu-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--kc-border-dark); margin: 18px 0 12px; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
     .kc-cadu-tab { background: transparent; border: 0; padding: 10px 16px; color: var(--kc-text-dark-secondary); font-size: .92rem; cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; display: inline-flex; gap: 8px; align-items: center; }
     .kc-cadu-tab:hover { color: var(--kc-text-dark-primary); }
     .kc-cadu-tab.is-active { color: var(--kc-primary-brand); border-bottom-color: var(--kc-primary-brand); }
     .kc-cadu-tab__badge { background: var(--kc-border-dark); color: var(--kc-text-dark-secondary); border-radius: 10px; padding: 1px 8px; font-size: .74rem; font-weight: 600; }
     .kc-cadu-tab.is-active .kc-cadu-tab__badge { background: var(--kc-primary-brand); color: #fff; }
-    .kc-cadu-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .kc-cadu-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto auto auto; gap: 8px; align-items: center; margin-bottom: 12px; min-width: 0; }
+    #tab-sites > .kc-cadu-toolbar { grid-template-columns: minmax(140px,.8fr) minmax(240px,2fr) repeat(3,minmax(128px,.8fr)) auto auto; }
+    .kc-cadu-hero > .kc-cadu-toolbar { display: flex; flex-wrap: wrap; width: auto; }
     .kc-cadu-toolbar input, .kc-cadu-toolbar select { min-height: 38px; border: 1px solid var(--kc-border-dark); background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 7px 10px; font-size: .86rem; min-width: 0; }
     .kc-cadu-toolbar input { width: 100%; }
     .kc-cadu-toolbar select { width: 130px; }
+    #tab-sites > .kc-cadu-toolbar select { width: 100%; }
     .kc-cadu-toolbar button { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 7px 12px; font-size: .84rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
     .kc-cadu-toolbar button:hover { border-color: rgba(255,107,0,.45); }
     .kc-cadu-section { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 18px; padding: 16px; min-width: 0; }
     .kc-cadu-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; padding: 24px 0; text-align: center; }
-    .kc-cadu-table-wrap { overflow-x: auto; min-width: 0; }
+    .kc-cadu-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; overscroll-behavior-inline: contain; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
+    .kc-cadu-table-wrap:focus-visible { outline: 2px solid var(--kc-primary-brand); outline-offset: 3px; }
+    .kc-cadu-scroll-hint { display: none; margin: -2px 0 8px; color: var(--kc-text-dark-secondary); font-size: .74rem; }
 
 /* ===== OpenClaw section ===== */
 .kc-openclaw-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-top: 12px; }
@@ -171,6 +176,18 @@
 .kc-btn-primary { background: var(--kc-primary-brand, #ff6b00); color: #fff; border-color: var(--kc-primary-brand, #ff6b00); font-weight: 600; }
 .kc-btn-secondary:disabled, .kc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    #sites-table[data-view="sources"] { min-width: 1160px; table-layout: fixed; }
+    #sites-table[data-view="sources"] th:nth-child(1), #sites-table[data-view="sources"] td:nth-child(1) { width: 75px; }
+    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 130px; }
+    #sites-table[data-view="sources"] th:nth-child(3), #sites-table[data-view="sources"] td:nth-child(3) { width: 160px; }
+    #sites-table[data-view="sources"] th:nth-child(4), #sites-table[data-view="sources"] td:nth-child(4) { width: 140px; }
+    #sites-table[data-view="sources"] th:nth-child(5), #sites-table[data-view="sources"] td:nth-child(5) { width: 125px; }
+    #sites-table[data-view="sources"] th:nth-child(6), #sites-table[data-view="sources"] td:nth-child(6) { width: 320px; }
+    #sites-table[data-view="sources"] th:nth-child(7), #sites-table[data-view="sources"] td:nth-child(7) { width: 210px; }
+    #sites-table[data-view="entities"] { min-width: 880px; }
+    #sites-table[data-view="instagram"] { min-width: 860px; }
+    #sites-table[data-view="deferred"] { min-width: 760px; }
+    #sites-table[data-view="legacy"] { min-width: 1000px; }
     .kc-cadu-table th, .kc-cadu-table td { padding: 9px 8px; border-bottom: 1px solid var(--kc-border-dark); text-align: left; font-size: .85rem; vertical-align: top; }
     .kc-cadu-table th { font-weight: 600; color: var(--kc-text-dark-secondary); text-transform: uppercase; font-size: .74rem; letter-spacing: .05em; }
     .kc-cadu-table tbody tr:hover { background: rgba(255,107,0,.04); }
@@ -263,7 +280,7 @@
     .kc-cadu-ig-link:hover { text-decoration: underline; }
     .kc-cadu-url-link { color: var(--kc-text-dark-primary); text-decoration: none; }
     .kc-cadu-url-link:hover { color: var(--kc-primary-brand); text-decoration: underline; }
-    .kc-cadu-note-cell { display: flex; gap: 4px; align-items: flex-start; }
+    .kc-cadu-note-cell { display: grid; gap: 6px; min-width: 0; }
     .kc-cadu-note-input { background: rgba(255,255,255,.04); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 6px; padding: 4px 8px; font-size: .78rem; font-family: inherit; width: 100%; min-width: 180px; resize: vertical; min-height: 24px; max-height: 80px; line-height: 1.3; }
     .kc-cadu-note-input:focus { outline: none; border-color: rgba(255,107,0,.5); background: rgba(255,255,255,.08); }
     .kc-cadu-note-input::placeholder { color: var(--kc-text-dark-secondary); font-style: italic; }
@@ -331,23 +348,66 @@
     .kc-cadu-ask-btn:hover { background: rgba(79,195,247,.22); border-color: rgba(79,195,247,.55); }
     .kc-cadu-ask-btn:disabled { opacity: .55; cursor: not-allowed; }
     .kc-cadu-ask-btn i { font-size: .82rem; }
+    .kc-cadu-registry-status { margin: 0 0 14px; padding: 12px 14px; border: 1px solid rgba(79,195,247,.3); border-radius: 12px; background: rgba(79,195,247,.08); color: var(--kc-text-dark-primary); display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+    .kc-cadu-registry-status.is-fallback { border-color: rgba(245,158,11,.42); background: rgba(245,158,11,.10); }
+    .kc-cadu-registry-status.is-error { border-color: rgba(239,68,68,.42); background: rgba(239,68,68,.10); }
+    .kc-cadu-registry-status.is-ok { border-color: rgba(16,185,129,.42); background: rgba(16,185,129,.10); }
+    .kc-cadu-registry-status strong { display: block; margin-bottom: 2px; }
+    .kc-cadu-registry-status div { min-width: 0; }
+    .kc-cadu-registry-status small { color: var(--kc-text-dark-secondary); line-height: 1.45; overflow-wrap: anywhere; }
+    .kc-cadu-catalog-summary { display: grid; grid-template-columns: repeat(4,minmax(130px,1fr)); gap: 10px; margin: 0 0 14px; }
+    .kc-cadu-catalog-summary__item { border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 12px; background: rgba(255,255,255,.025); }
+    .kc-cadu-catalog-summary__item strong { display: block; font-size: 1.25rem; color: var(--kc-text-dark-primary); }
+    .kc-cadu-catalog-summary__item small { color: var(--kc-text-dark-secondary); }
+    .kc-cadu-map-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .kc-cadu-map-chip { display: inline-flex; align-items: center; border: 1px solid var(--kc-border-dark); border-radius: 999px; padding: 2px 7px; font-size: .72rem; color: var(--kc-text-dark-secondary); background: rgba(255,255,255,.03); }
+    .kc-cadu-source-id { display: block; margin-top: 4px; color: var(--kc-text-dark-secondary); font-size: .68rem; overflow-wrap: anywhere; }
+    .kc-cadu-tier-context { display: grid; gap: 3px; font-size: .72rem; color: var(--kc-text-dark-secondary); margin-top: 5px; }
+    .kc-cadu-source-note--inherited { display: block; margin-top: 5px; color: #f59e0b; font-size: .7rem; line-height: 1.35; }
+    .kc-cadu-save-source-btn { margin-top: 2px; border: 1px solid rgba(16,185,129,.38); background: rgba(16,185,129,.11); color: #10b981; border-radius: 7px; padding: 5px 8px; cursor: pointer; font-size: .75rem; justify-self: start; }
+    .kc-cadu-save-source-btn:disabled { opacity: .48; cursor: not-allowed; }
+    .kc-cadu-review-issues { color: var(--kc-text-dark-secondary); font-size: .74rem; line-height: 1.35; overflow-wrap: anywhere; }
+    .kc-cadu-muted { color: var(--kc-text-dark-secondary); font-size: .78rem; }
+    .kc-cadu-source-tier-select, .kc-cadu-source-note-input { width: 100%; min-width: 0; max-width: 100%; }
+    .kc-cadu-url-link { overflow-wrap: anywhere; }
+    .kc-cadu-inherited-warning, .kc-cadu-conflict-warning { margin-bottom: 6px; padding: 6px 7px; border-radius: 7px; font-size: .7rem; line-height: 1.35; }
+    .kc-cadu-inherited-warning { color: #f59e0b; background: rgba(245,158,11,.09); border: 1px solid rgba(245,158,11,.26); }
+    .kc-cadu-conflict-warning { color: #ef4444; background: rgba(239,68,68,.09); border: 1px solid rgba(239,68,68,.26); }
+    @media (max-width: 1050px) {
+      #tab-sites > .kc-cadu-toolbar { grid-template-columns: repeat(3,minmax(0,1fr)); }
+      #tab-sites > .kc-cadu-toolbar #sites-search { grid-column: span 2; }
+      #tab-sites > .kc-cadu-toolbar button { justify-content: center; }
+    }
+    @media (max-width: 760px) {
+      body.kc-admin-page--cadu main.kc-main-content, .kc-cadu-wrapper, .kc-cadu-section { width: 100%; max-width: 100%; min-width: 0; }
+      .kc-cadu-wrapper { padding-left: 10px; padding-right: 10px; }
+      .kc-cadu-section { padding: 12px; }
+      .kc-cadu-catalog-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      #tab-sites > .kc-cadu-toolbar { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      #tab-sites > .kc-cadu-toolbar #sites-view, #tab-sites > .kc-cadu-toolbar #sites-search, #tab-sites > .kc-cadu-toolbar #sites-origin { grid-column: 1 / -1; }
+      #tab-sites > .kc-cadu-toolbar input, #tab-sites > .kc-cadu-toolbar select, #tab-sites > .kc-cadu-toolbar button { width: 100%; max-width: 100%; }
+      .kc-cadu-scroll-hint { display: flex; align-items: center; gap: 6px; }
+      body.kc-admin-page--cadu .kc-mobile-nav { max-width: 100vw; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: none; }
+      body.kc-admin-page--cadu .kc-mobile-nav::-webkit-scrollbar { display: none; }
+    }
     /* notification bell + status indicator no hero */
-    .kc-notif-dropdown { position: absolute; right: 0; top: 100%; min-width: 320px; max-width: 380px; background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.45); margin-top: 8px; z-index: 9999; }
-    .kc-notif-dropdown__head { padding: 12px 14px; border-bottom: 1px solid var(--kc-border-dark); font-weight: 600; font-size: .85rem; color: var(--kc-text-dark-primary); }
-    .kc-notif-dropdown__list { max-height: 360px; overflow-y: auto; padding: 6px 0; }
-    .kc-notif-dropdown__list .kc-cadu-empty { padding: 20px; text-align: center; color: var(--kc-text-dark-secondary); font-size: .85rem; }
-    .kc-notif-dropdown__item { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.04); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
-    .kc-notif-dropdown__item:hover { background: rgba(255,107,0,.08); }
-    .kc-notif-dropdown__item:last-child { border-bottom: 0; }
-    .kc-notif-dropdown__item__title { font-size: .85rem; color: var(--kc-text-dark-primary); font-weight: 500; }
-    .kc-notif-dropdown__item__meta { font-size: .72rem; color: var(--kc-text-dark-secondary); display: flex; gap: 8px; align-items: center; }
-    .kc-notif-dropdown__item__meta .pill { padding: 1px 6px; border-radius: 6px; font-size: .68rem; font-weight: 600; }
-    .kc-notif-dropdown__item__meta .pill--finished { background: rgba(16,185,129,.18); color: #10b981; }
-    .kc-notif-dropdown__item__meta .pill--failed { background: rgba(239,68,68,.18); color: #ef4444; }
-    .kc-notif-dropdown__item__meta .pill--running { background: rgba(245,158,11,.18); color: #f59e0b; }
-    .kc-notif-dropdown__foot { padding: 10px 14px; border-top: 1px solid var(--kc-border-dark); text-align: center; font-size: .8rem; }
-    .kc-notif-dropdown__foot a { color: var(--kc-primary-brand); text-decoration: none; }
-    .kc-notif-dropdown__foot a:hover { text-decoration: underline; }
+    .kc-cadu-activity-dropdown { position: absolute; right: 0; top: 100%; width: min(360px,calc(100vw - 24px)); min-width: min(320px,calc(100vw - 24px)); max-width: 380px; background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.45); margin-top: 8px; z-index: 9999; }
+    .kc-cadu-activity-dropdown[hidden] { display: none !important; }
+    .kc-cadu-activity-dropdown__head { padding: 12px 14px; border-bottom: 1px solid var(--kc-border-dark); font-weight: 600; font-size: .85rem; color: var(--kc-text-dark-primary); }
+    .kc-cadu-activity-dropdown__list { max-height: 360px; overflow-y: auto; padding: 6px 0; }
+    .kc-cadu-activity-dropdown__list .kc-cadu-empty { padding: 20px; text-align: center; color: var(--kc-text-dark-secondary); font-size: .85rem; }
+    .kc-cadu-activity-dropdown__item { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.04); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .kc-cadu-activity-dropdown__item:hover { background: rgba(255,107,0,.08); }
+    .kc-cadu-activity-dropdown__item:last-child { border-bottom: 0; }
+    .kc-cadu-activity-dropdown__item__title { font-size: .85rem; color: var(--kc-text-dark-primary); font-weight: 500; }
+    .kc-cadu-activity-dropdown__item__meta { font-size: .72rem; color: var(--kc-text-dark-secondary); display: flex; gap: 8px; align-items: center; }
+    .kc-cadu-activity-dropdown__item__meta .pill { padding: 1px 6px; border-radius: 6px; font-size: .68rem; font-weight: 600; }
+    .kc-cadu-activity-dropdown__item__meta .pill--finished { background: rgba(16,185,129,.18); color: #10b981; }
+    .kc-cadu-activity-dropdown__item__meta .pill--failed { background: rgba(239,68,68,.18); color: #ef4444; }
+    .kc-cadu-activity-dropdown__item__meta .pill--running { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .kc-cadu-activity-dropdown__foot { padding: 10px 14px; border-top: 1px solid var(--kc-border-dark); text-align: center; font-size: .8rem; }
+    .kc-cadu-activity-dropdown__foot a { color: var(--kc-primary-brand); text-decoration: none; }
+    .kc-cadu-activity-dropdown__foot a:hover { text-decoration: underline; }
     .kc-user-actions { position: relative; }
     .kc-cadu-hero-stats { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .kc-cadu-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -384,13 +444,13 @@
         <a href="cadu.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-robot"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações Cadu" data-i18n-aria-label="aria-label.notifications" title="Notificações Cadu (runs recentes, publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <div id="kcNotifDropdown" class="kc-notif-dropdown" hidden>
-          <div class="kc-notif-dropdown__head">Atividade recente</div>
-          <div id="kcNotifList" class="kc-notif-dropdown__list">
+        <button class="kc-notif-bell" id="kcCaduActivityBell" aria-label="Atividade recente do Cadu" data-i18n-aria-label="aria-label.notifications" aria-expanded="false" aria-controls="kcCaduActivityDropdown" title="Atividade do Cadu (runs recentes e publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcCaduActivityBadge" style="display:none;">0</span></button>
+        <div id="kcCaduActivityDropdown" class="kc-cadu-activity-dropdown" hidden>
+          <div class="kc-cadu-activity-dropdown__head">Atividade recente do Cadu</div>
+          <div id="kcCaduActivityList" class="kc-cadu-activity-dropdown__list">
             <div class="kc-cadu-empty">Carregando…</div>
           </div>
-          <div class="kc-notif-dropdown__foot">
+          <div class="kc-cadu-activity-dropdown__foot">
             <a href="#tab-pipeline">Ver pipeline →</a>
           </div>
         </div>
@@ -438,7 +498,7 @@
         <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="all" title="Abrir aba Sites UFG (lista completa)" data-i18n-tooltip="tooltip.cadu-kpi-sites">
           <div class="kc-cadu-kpi__label"><i class="fas fa-university"></i> Unidades UFG</div>
           <strong id="kpi-sites">—</strong>
-          <small>no mapa curado pelo Cadu</small>
+          <small>entidades no catálogo canônico</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Sites UFG</div>
         </button>
         <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="ig=confirmed" title="Abrir aba Sites UFG filtrando por IG confirmado" data-i18n-tooltip="tooltip.cadu-kpi-instagram">
@@ -450,7 +510,7 @@
         <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por Tier 1" data-i18n-tooltip="tooltip.cadu-kpi-tier1">
           <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Tier 1</div>
           <strong id="kpi-tier1">—</strong>
-          <small>pró-reitorias + alta prioridade</small>
+          <small>fontes com tier efetivo 1</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
         <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir aba Feed Coletado (memória do Cadu)" data-i18n-tooltip="tooltip.cadu-kpi-feed">
@@ -469,7 +529,7 @@
       <!-- TABS -->
       <div class="kc-cadu-tabs" role="tablist">
         <button class="kc-cadu-tab is-active" data-tab="sites" role="tab">
-          <i class="fas fa-university"></i> Sites UFG <span class="kc-cadu-tab__badge" id="badge-sites">—</span>
+          <i class="fas fa-university"></i> Mapa UFG <span class="kc-cadu-tab__badge" id="badge-sites">—</span>
         </button>
         <button class="kc-cadu-tab" data-tab="feed" role="tab">
           <i class="fas fa-stream"></i> Feed coletado <span class="kc-cadu-tab__badge" id="badge-feed">—</span>
@@ -484,7 +544,18 @@
 
       <!-- ============== TAB: SITES ============== -->
       <section class="kc-cadu-section" id="tab-sites" role="tabpanel">
+        <div class="kc-cadu-registry-status" id="sites-registry-status" role="status" aria-live="polite">
+          <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+          <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e overrides.</small></div>
+        </div>
+        <div class="kc-cadu-catalog-summary" id="sites-catalog-summary" aria-label="Resumo do catálogo UFG" data-i18n-aria-label="aria-label.cadu-catalog-summary" style="display:none;"></div>
         <div class="kc-cadu-toolbar">
+          <select id="sites-view" aria-label="Escolher visão do catálogo" data-i18n-aria-label="aria-label.cadu-sites-view">
+            <option value="sources">Fontes web</option>
+            <option value="entities">Entidades UFG</option>
+            <option value="instagram">Perfis Instagram</option>
+            <option value="deferred">Pendências de conciliação</option>
+          </select>
           <input id="sites-search" type="search" autocomplete="off" placeholder="Filtrar por nome, site ou @instagram" data-i18n-placeholder="placeholder.cadu-sites-search" aria-label="Filtrar sites" data-i18n-aria-label="aria-label.cadu-sites-search">
           <select id="sites-tier" aria-label="Filtrar por tier" data-i18n-aria-label="aria-label.cadu-sites-tier">
             <option value="">Todos os tiers</option>
@@ -495,24 +566,34 @@
           <select id="sites-ig" aria-label="Filtrar por status Instagram" data-i18n-aria-label="aria-label.cadu-sites-ig">
             <option value="">IG: todos</option>
             <option value="confirmed">confirmado</option>
-            <option value="tentative">tentativa</option>
-            <option value="missing">sem perfil</option>
-            <option value="unknown">desconhecido</option>
+            <option value="pending_verification">pendente ou tentativo</option>
+            <option value="missing">sem perfil associado</option>
+            <option value="retired">perfil aposentado</option>
+          </select>
+          <select id="sites-origin" aria-label="Filtrar origem do tier" data-i18n-aria-label="aria-label.cadu-sites-origin">
+            <option value="">Override: todos</option>
+            <option value="stable">estável</option>
+            <option value="legacy_inherited">legado herdado</option>
+            <option value="base">somente base</option>
+            <option value="ambiguous">ambíguo</option>
+            <option value="collision">colisão</option>
+            <option value="collision_evidence">qualquer evidência de colisão</option>
           </select>
           <button type="button" id="sites-export-csv"><i class="fas fa-file-csv"></i> CSV</button>
           <button type="button" id="sites-export-pdf" title="Exportar mapa de sites em PDF (com KPIs + tabela filtrada)" data-i18n-tooltip="tooltip.cadu-sites-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
         </div>
-        <div class="kc-cadu-table-wrap">
-          <table class="kc-cadu-table" id="sites-table" aria-live="polite">
-            <thead>
+        <p class="kc-cadu-scroll-hint"><i class="fas fa-arrows-left-right" aria-hidden="true"></i> Deslize a tabela horizontalmente para consultar todas as colunas.</p>
+        <div class="kc-cadu-table-wrap" tabindex="0" role="region" aria-label="Mapa UFG em tabela rolável" data-i18n-aria-label="aria-label.cadu-sites-table">
+          <table class="kc-cadu-table" id="sites-table" data-view="sources" aria-live="polite">
+            <thead id="sites-thead">
               <tr>
                 <th style="width:90px;">Tier</th>
-                <th style="width:130px;">Nome</th>
+                <th>Entidade / fonte</th>
                 <th>Site institucional</th>
-                <th style="width:170px;">Instagram</th>
-                <th style="width:120px;">Status IG</th>
-                <th>Observação</th>
-                <th style="width:80px;">Ações</th>
+                <th>Instagram associado</th>
+                <th style="width:130px;">Revisão</th>
+                <th>Override / observação</th>
+                <th style="width:145px;">Ações</th>
               </tr>
             </thead>
             <tbody id="sites-tbody">
@@ -757,7 +838,7 @@
 
   <!-- Scripts -->
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.2"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.3"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -791,6 +872,7 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260712.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=kc-admin-20260713.1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=kc-admin-20260713.1"></script>
 </body>
 </html>

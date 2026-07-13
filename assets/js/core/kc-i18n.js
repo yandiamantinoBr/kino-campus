@@ -471,9 +471,13 @@
     // Admin
     'aria-label.admin-nav':             'Navegação admin',
     'aria-label.menu-mobile':           'Menu mobile',
+    'aria-label.cadu-catalog-summary':  'Resumo do catálogo UFG',
+    'aria-label.cadu-sites-view':       'Escolher visão do catálogo',
     'aria-label.cadu-sites-search':     'Filtrar sites',
     'aria-label.cadu-sites-ig':         'Perfil do Instagram',
     'aria-label.cadu-sites-tier':       'Filtrar por tier',
+    'aria-label.cadu-sites-origin':     'Filtrar origem do tier',
+    'aria-label.cadu-sites-table':      'Mapa UFG em tabela rolável',
     'aria-label.cadu-feed-search':      'Filtrar feed',
     'aria-label.cadu-feed-limit':       'Limite',
     'placeholder.cadu-sites-search':    'Filtrar por nome, site ou @instagram',
