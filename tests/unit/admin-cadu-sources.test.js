@@ -12,6 +12,17 @@ const {
 
 const HASH = 'a'.repeat(64);
 const LIST_ETAG = `"${'9'.repeat(64)}"`;
+const READINESS_CHECKS = {
+  metadataTable: true,
+  revisionColumn: true,
+  revisionConstraint: true,
+  touchTrigger: true,
+  stableRpc: true,
+  legacyRpc: true,
+  browserWritesRevoked: true,
+  legacyReadsPreserved: true,
+  serviceRolePhaseA: true
+};
 
 function rowEntry(unitId, rowKey, sourceIds, entityIds = [], tier = 2) {
   const entry = {
@@ -198,6 +209,8 @@ describe('KCAdminCaduSources fail-closed projection', () => {
       instagramProfiles: 3,
       instagramConfirmed: 1,
       instagramPending: 2,
+      instagramMissing: 0,
+      instagramRetired: 0,
       entitiesWithoutWebSource: 1,
       instagramWithoutWebSource: 1,
       deferred: 3,
@@ -316,7 +329,7 @@ describe('KCAdminCaduSources fail-closed projection', () => {
       ready: true,
       contractVersion: 'cadu-unit-meta-cas-v1',
       phase: 'phase-a',
-      checks: { table: true, stableRpc: true, legacyRpc: true },
+      checks: { ...READINESS_CHECKS },
       metadataRowsValidated: 5,
       registryVersion: input.registryVersion,
       registrySha256: HASH
@@ -331,7 +344,20 @@ describe('KCAdminCaduSources fail-closed projection', () => {
       catalog
     ), 'registry_hash_mismatch');
     expectContractError(() => validateRegistryReadiness(
-      { ...readiness, checks: { table: true, stableRpc: false } },
+      { ...readiness, checks: { ...READINESS_CHECKS, stableRpc: false } },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'metadata_contract_not_ready');
+    expectContractError(() => validateRegistryReadiness(
+      {
+        ...readiness,
+        checks: Object.fromEntries(Object.entries(READINESS_CHECKS).filter(([name]) => name !== 'stableRpc'))
+      },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'metadata_contract_not_ready');
+    expectContractError(() => validateRegistryReadiness(
+      { ...readiness, checks: { ...READINESS_CHECKS, irrelevant: true } },
       { headers: { 'X-Cadu-Registry-Sha256': HASH } },
       catalog
     ), 'metadata_contract_not_ready');

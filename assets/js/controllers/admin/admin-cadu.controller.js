@@ -425,6 +425,8 @@
     appendCatalogMetric(container, summary.instagramProfiles, 'perfis Instagram mapeados');
     appendCatalogMetric(container, summary.instagramConfirmed, 'Instagram confirmados');
     appendCatalogMetric(container, summary.instagramPending, 'Instagram pendentes/tentativos');
+    appendCatalogMetric(container, summary.instagramMissing, 'Instagram indisponíveis');
+    appendCatalogMetric(container, summary.instagramRetired, 'Instagram aposentados');
     appendCatalogMetric(container, summary.entitiesWithoutWebSource, 'entidades sem site associado');
     appendCatalogMetric(container, summary.deferred, 'conciliações pendentes');
     container.style.display = '';
@@ -483,6 +485,11 @@
     return 'serviço indisponível';
   }
 
+  function normalizedConflictFields(fields) {
+    var values = Array.isArray(fields) ? fields : [];
+    return ['tier', 'note'].filter(function (field) { return values.indexOf(field) !== -1; });
+  }
+
   function sourceDraftsForReload(options) {
     var opts = options || {};
     var drafts = Object.create(null);
@@ -494,6 +501,9 @@
         (!source && (sourceDraftIsDirtyWithoutSource(draft) || draft.conflict))
       ) {
         drafts[sourceId] = Object.assign({}, draft);
+        if (source && !drafts[sourceId].conflictFields) {
+          drafts[sourceId].pendingFields = Object.keys(sourceDraftChanges(source, draft));
+        }
       }
     });
     Object.keys(opts.preserveDrafts || {}).forEach(function (sourceId) {
@@ -503,6 +513,7 @@
     if (opts.conflictSourceId && drafts[opts.conflictSourceId]) {
       drafts[opts.conflictSourceId].conflict = true;
       drafts[opts.conflictSourceId].conflictAcknowledged = false;
+      drafts[opts.conflictSourceId].conflictFields = normalizedConflictFields(opts.conflictFields);
     }
     return drafts;
   }
@@ -523,7 +534,9 @@
       if (draft.initialRevision && draft.initialRevision !== source.revision) {
         draft.conflict = true;
         draft.conflictAcknowledged = false;
+        if (!draft.conflictFields) draft.conflictFields = normalizedConflictFields(draft.pendingFields);
       }
+      delete draft.pendingFields;
       retained[sourceId] = draft;
     });
     return retained;
@@ -569,7 +582,10 @@
     setRegistryStatus('loading', 'Validando catálogo canônico', 'Conferindo hash, ETag, IDs, associações e estado shadow.');
     var registryEnvelope = null;
     try {
-      var readinessEnvelopePromise = apiFetchResponse('/api/cadu/sites/source-registry/readiness');
+      var readinessEnvelopePromise = apiFetchResponse(
+        '/api/cadu/sites/source-registry/readiness',
+        { timeoutMs: 4000 }
+      );
       registryEnvelope = await apiFetchResponse('/api/cadu/sites/source-registry');
       if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
       if (!registryEnvelope.ok) throw new Error('registry_http_' + registryEnvelope.status);
@@ -578,6 +594,24 @@
       // Replacing sourceCatalog first can make an explicit null/null draft look
       // clean against a competing stable override and silently discard intent.
       var reloadDrafts = sourceDraftsForReload(opts);
+      // Install the validated catalog immediately in read-only mode. Readiness
+      // is a separate capability proof and must never hold the map hostage.
+      state.sourceCatalog = catalog;
+      state.catalogMode = 'registry';
+      state.registryReadiness = null;
+      state.registryWritable = false;
+      state.allSites = catalog.sources.map(sourceAsLegacySite);
+      state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);
+      var view = $('#sites-view');
+      if (view) { view.disabled = false; view.value = state.sitesView; }
+      setRegistryStatus(
+        'loading',
+        'Catálogo canônico validado; verificando escrita',
+        catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · overrides permanecem bloqueados até a prova CAS.'
+      );
+      renderCatalogSummary();
+      applySitesFilter();
+      computeKpis();
       var readinessEnvelope = null;
       try { readinessEnvelope = await readinessEnvelopePromise; } catch (readinessFetchError) {}
       if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
@@ -597,14 +631,8 @@
         readiness = null;
         registryWritable = false;
       }
-      state.sourceCatalog = catalog;
-      state.catalogMode = 'registry';
       state.registryReadiness = readiness;
       state.registryWritable = registryWritable;
-      state.allSites = catalog.sources.map(sourceAsLegacySite);
-      state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);
-      var view = $('#sites-view');
-      if (view) { view.disabled = false; view.value = state.sitesView; }
       if (state.registryWritable) {
         setRegistryStatus(
           'ok',
@@ -757,7 +785,8 @@
       initialNote: initialNote,
       initialRevision: source.revision,
       conflict: false,
-      conflictAcknowledged: false
+      conflictAcknowledged: false,
+      conflictFields: null
     };
     state.sourceDrafts[source.id] = draft;
     return draft;
@@ -794,10 +823,21 @@
       return { tier: draft.tier, note: normalizedDraftNote(draft.note) };
     }
     var changes = {};
-    if ((draft.conflict && draft.tierTouched) || draft.tier !== draft.initialTier) changes.tier = draft.tier;
+    var conflictFields = draft.conflict ? normalizedConflictFields(draft.conflictFields) : null;
+    if ((conflictFields && conflictFields.indexOf('tier') !== -1) || (!conflictFields && draft.tier !== draft.initialTier)) changes.tier = draft.tier;
     var nextNote = normalizedDraftNote(draft.note);
-    if ((draft.conflict && draft.noteTouched) || nextNote !== draft.initialNote) changes.note = nextNote;
+    if ((conflictFields && conflictFields.indexOf('note') !== -1) || (!conflictFields && nextNote !== draft.initialNote)) changes.note = nextNote;
     return changes;
+  }
+
+  function updateConflictFieldIntent(draft, field, differsFromServer) {
+    if (!draft.conflict) return;
+    var fields = normalizedConflictFields(draft.conflictFields);
+    var index = fields.indexOf(field);
+    if (differsFromServer && index === -1) fields.push(field);
+    if (!differsFromServer && index !== -1) fields.splice(index, 1);
+    draft.conflictFields = normalizedConflictFields(fields);
+    draft.conflictAcknowledged = false;
   }
 
   function sourceDraftCanSave(source, draft) {
@@ -837,7 +877,9 @@
       var site = sourceAsLegacySite(source);
       var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
       var draft = ensureSourceDraft(source);
-      var busy = !state.registryWritable || Boolean(state.sourceSaveChains[source.id]);
+      var saving = Boolean(state.sourceSaveChains[source.id]);
+      var readOnly = !state.registryWritable;
+      var busy = readOnly || saving;
       var canSave = sourceDraftCanSave(source, draft);
       var inherited = !stable && source.note
         ? '<div class="kc-cadu-inherited-warning"><strong>Nota herdada (não será copiada):</strong> ' + escapeHtml(source.note) + '</div>'
@@ -858,7 +900,7 @@
         + '<td><div class="kc-cadu-note-cell">' + inherited + conflict
         + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Tier estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
         + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota estável explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
-        + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (busy ? 'Salvando…' : (stable ? 'Salvar override' : 'Criar override estável')) + '</button></div></td>'
+        + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar override' : 'Criar override estável'))) + '</button></div></td>'
         + '<td style="white-space:nowrap;">' + actions + '</td></tr>';
     }).join('');
   }
@@ -1019,7 +1061,7 @@
       body: JSON.stringify(mutation.body)
     });
     if (envelope.status === 412 || envelope.status === 409) {
-      await loadSites({ conflictSourceId: sourceId });
+      await loadSites({ conflictSourceId: sourceId, conflictFields: Object.keys(changes) });
       showCaduError('Conflito de versão em ' + sourceId + '. O catálogo foi recarregado; compare os valores e decida manualmente antes de salvar novamente.');
       return;
     }
@@ -1028,7 +1070,7 @@
       return;
     }
     if (!patchResponseIsValid(envelope, sourceId)) {
-      await loadSites({ conflictSourceId: sourceId });
+      await loadSites({ conflictSourceId: sourceId, conflictFields: Object.keys(changes) });
       showCaduError('A escrita respondeu com contrato inesperado. O catálogo foi recarregado e a operação não será repetida automaticamente.');
       return;
     }
@@ -1074,7 +1116,9 @@
       var summary = state.sourceCatalog.summary;
       $('#kpi-sites').textContent = String(summary.entities);
       $('#kpi-ig-confirmed').textContent = String(summary.instagramConfirmed);
-      $('#kpi-ig-detail').textContent = summary.instagramConfirmed + ' confirmados · ' + summary.instagramPending + ' pendentes de revisão';
+      $('#kpi-ig-detail').textContent = summary.instagramConfirmed + ' confirmados · '
+        + summary.instagramPending + ' pendentes · ' + summary.instagramMissing + ' indisponíveis · '
+        + summary.instagramRetired + ' aposentados';
       $('#kpi-tier1').textContent = String(state.sourceCatalog.sources.filter(function (source) { return source.effectiveTier === 1; }).length);
       return;
     }
@@ -2461,6 +2505,7 @@
           draft.tier = tierSelect.value === '' ? null : parseInt(tierSelect.value, 10);
           draft.tierTouched = true;
         }
+        updateConflictFieldIntent(draft, 'tier', draft.tier !== source.overrideTier);
         renderSitesTable();
       });
       sitesTable.addEventListener('input', function (e) {
@@ -2471,6 +2516,7 @@
           var draft = ensureSourceDraft(source);
           draft.note = noteInput.value;
           draft.noteTouched = true;
+          updateConflictFieldIntent(draft, 'note', normalizedDraftNote(draft.note) !== source.note);
           updateSourceSaveButton(source, draft);
         }
       });
@@ -2563,8 +2609,25 @@
 
   async function apiFetchResponse(path, opts) {
     var url = buildCaduApiUrl(path);
+    var requestOptions = Object.assign({}, opts || {});
+    var timeoutMs = Number(requestOptions.timeoutMs || 0);
+    delete requestOptions.timeoutMs;
+    var timeoutController = null;
+    var timeoutId = null;
+    var upstreamSignal = requestOptions.signal;
+    var upstreamAbort = null;
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0 && typeof AbortController === 'function') {
+      timeoutController = new AbortController();
+      if (upstreamSignal) {
+        upstreamAbort = function () { timeoutController.abort(upstreamSignal.reason); };
+        if (upstreamSignal.aborted) upstreamAbort();
+        else upstreamSignal.addEventListener('abort', upstreamAbort, { once: true });
+      }
+      requestOptions.signal = timeoutController.signal;
+      timeoutId = setTimeout(function () { timeoutController.abort(); }, timeoutMs);
+    }
     try {
-      var res = await caduFetchRaw(path, opts);
+      var res = await caduFetchRaw(path, requestOptions);
       var ct = res.headers.get('content-type') || '';
       var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
       var envelope = {
@@ -2590,6 +2653,9 @@
         headers: { etag: '', registrySha256: '', cacheControl: '' },
         message: String(e && e.message || e)
       };
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (upstreamSignal && upstreamAbort) upstreamSignal.removeEventListener('abort', upstreamAbort);
     }
   }
 

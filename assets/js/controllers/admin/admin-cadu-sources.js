@@ -33,6 +33,17 @@
     'entity_identity',
     'orphan'
   ]);
+  var METADATA_READINESS_CHECKS = Object.freeze([
+    'metadataTable',
+    'revisionColumn',
+    'revisionConstraint',
+    'touchTrigger',
+    'stableRpc',
+    'legacyRpc',
+    'browserWritesRevoked',
+    'legacyReadsPreserved',
+    'serviceRolePhaseA'
+  ]);
   var VIEWS = Object.freeze(['sources', 'entities', 'instagram', 'deferred']);
 
   function SourceRegistryContractError(code, path, message) {
@@ -255,9 +266,15 @@
       fail('metadata_contract_mismatch', 'readiness', 'unsupported metadata contract');
     }
     requireObject(payload.checks, 'readiness.checks');
-    var checkNames = Object.keys(payload.checks);
-    if (!checkNames.length || checkNames.some(function (name) { return payload.checks[name] !== true; })) {
-      fail('metadata_contract_not_ready', 'readiness.checks', 'every reported contract check must be true');
+    var checkNames = Object.keys(payload.checks).sort();
+    var expectedCheckNames = METADATA_READINESS_CHECKS.slice().sort();
+    if (
+      checkNames.length !== expectedCheckNames.length ||
+      checkNames.some(function (name, index) {
+        return name !== expectedCheckNames[index] || payload.checks[name] !== true;
+      })
+    ) {
+      fail('metadata_contract_not_ready', 'readiness.checks', 'expected the exact phase-a check set with every value true');
     }
     if (!Number.isSafeInteger(payload.metadataRowsValidated) || payload.metadataRowsValidated < 0) {
       fail('invalid_metadata_count', 'readiness.metadataRowsValidated', 'expected a non-negative integer');
@@ -896,6 +913,8 @@
       instagramProfiles: profiles.length,
       instagramConfirmed: profiles.filter(function (profile) { return profile.status === 'confirmed'; }).length,
       instagramPending: profiles.filter(function (profile) { return profile.statusGroup === 'pending'; }).length,
+      instagramMissing: profiles.filter(function (profile) { return profile.statusGroup === 'missing'; }).length,
+      instagramRetired: profiles.filter(function (profile) { return profile.statusGroup === 'retired'; }).length,
       entitiesWithoutWebSource: entities.filter(function (entity) { return entity.sourceIds.length === 0; }).length,
       instagramWithoutWebSource: profiles.filter(function (profile) { return profile.sourceIds.length === 0; }).length,
       deferred: deferred.length,
