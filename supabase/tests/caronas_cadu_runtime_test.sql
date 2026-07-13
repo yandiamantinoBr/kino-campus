@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(61);
+select extensions.plan(85);
 
 select extensions.has_table('public', 'caronas_locations', 'caronas location table exists');
 select extensions.has_table('public', 'kc_unit_meta', 'Cadu unit metadata table exists');
@@ -76,6 +76,279 @@ select extensions.ok(
   (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)'::regprocedure),
   'stable Cadu CAS has an empty search path'
 );
+select extensions.has_function(
+  'public',
+  'kc_cadu_metadata_contract',
+  array[]::text[],
+  'Cadu metadata deployment contract probe exists'
+);
+select extensions.ok(
+  has_function_privilege('service_role', 'public.kc_cadu_metadata_contract()', 'execute'),
+  'service role can execute the metadata deployment contract probe'
+);
+select extensions.ok(
+  not has_function_privilege('anon', 'public.kc_cadu_metadata_contract()', 'execute'),
+  'anon cannot execute the metadata deployment contract probe'
+);
+select extensions.ok(
+  not has_function_privilege('authenticated', 'public.kc_cadu_metadata_contract()', 'execute'),
+  'authenticated cannot execute the metadata deployment contract probe'
+);
+select extensions.ok(
+  not (select prosecdef from pg_proc where oid = 'public.kc_cadu_metadata_contract()'::regprocedure),
+  'metadata deployment contract probe is security invoker'
+);
+select extensions.is(
+  (select provolatile::text from pg_proc where oid = 'public.kc_cadu_metadata_contract()'::regprocedure),
+  's',
+  'metadata deployment contract probe is stable'
+);
+select extensions.ok(
+  (select proconfig @> array['search_path=""'] from pg_proc where oid = 'public.kc_cadu_metadata_contract()'::regprocedure),
+  'metadata deployment contract probe has an empty search path'
+);
+
+set local role service_role;
+select extensions.is(
+  public.kc_cadu_metadata_contract(),
+  '{
+    "contractVersion": "cadu-unit-meta-cas-v1",
+    "phase": "phase-a",
+    "ready": true,
+    "checks": {
+      "metadataTable": true,
+      "revisionColumn": true,
+      "revisionConstraint": true,
+      "touchTrigger": true,
+      "stableRpc": true,
+      "legacyRpc": true,
+      "browserWritesRevoked": true,
+      "legacyReadsPreserved": true,
+      "serviceRolePhaseA": true
+    }
+  }'::jsonb,
+  'metadata deployment contract reports the complete phase-A boundary ready'
+);
+reset role;
+
+savepoint cadu_probe_legacy_select_grant;
+revoke select on public.kc_unit_meta from anon;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,legacyReadsPreserved}')::boolean,
+  false,
+  'metadata contract rejects a missing legacy browser SELECT grant'
+);
+rollback to savepoint cadu_probe_legacy_select_grant;
+release savepoint cadu_probe_legacy_select_grant;
+
+savepoint cadu_probe_legacy_select_policy;
+drop policy kc_unit_meta_select_public on public.kc_unit_meta;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,legacyReadsPreserved}')::boolean,
+  false,
+  'metadata contract rejects a missing legacy browser SELECT policy'
+);
+rollback to savepoint cadu_probe_legacy_select_policy;
+release savepoint cadu_probe_legacy_select_policy;
+
+savepoint cadu_probe_service_role_column_reference;
+grant references (unit_id) on public.kc_unit_meta to service_role;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,serviceRolePhaseA}')::boolean,
+  false,
+  'metadata contract rejects service-role REFERENCES granted at column scope'
+);
+rollback to savepoint cadu_probe_service_role_column_reference;
+release savepoint cadu_probe_service_role_column_reference;
+
+savepoint cadu_probe_unit_id_uniqueness;
+alter table public.kc_unit_meta drop constraint kc_unit_meta_pkey;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,metadataTable}')::boolean,
+  false,
+  'metadata contract rejects a table without a unit_id conflict arbiter'
+);
+rollback to savepoint cadu_probe_unit_id_uniqueness;
+release savepoint cadu_probe_unit_id_uniqueness;
+
+savepoint cadu_probe_extra_constraint;
+alter table public.kc_unit_meta
+  add constraint kc_unit_meta_probe_block_source
+  check (pg_catalog.char_length(source) < 3);
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,metadataTable}')::boolean,
+  false,
+  'metadata contract rejects an extra constraint that can block RPC writes'
+);
+rollback to savepoint cadu_probe_extra_constraint;
+release savepoint cadu_probe_extra_constraint;
+
+savepoint cadu_probe_extra_column;
+alter table public.kc_unit_meta add column probe_required text not null;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,metadataTable}')::boolean,
+  false,
+  'metadata contract rejects an extra required column omitted by the RPC insert'
+);
+rollback to savepoint cadu_probe_extra_column;
+release savepoint cadu_probe_extra_column;
+
+savepoint cadu_probe_extra_index;
+create unique index kc_unit_meta_probe_unique_tier
+  on public.kc_unit_meta (tier);
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,metadataTable}')::boolean,
+  false,
+  'metadata contract rejects an extra unique index that can block RPC writes'
+);
+rollback to savepoint cadu_probe_extra_index;
+release savepoint cadu_probe_extra_index;
+
+savepoint cadu_probe_column_acl;
+grant insert (unit_id, tier, note) on public.kc_unit_meta to authenticated;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,browserWritesRevoked}')::boolean,
+  false,
+  'metadata contract rejects browser writes granted at column scope'
+);
+rollback to savepoint cadu_probe_column_acl;
+release savepoint cadu_probe_column_acl;
+
+savepoint cadu_probe_rls;
+alter table public.kc_unit_meta disable row level security;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,browserWritesRevoked}')::boolean,
+  false,
+  'metadata contract rejects a metadata table with RLS disabled'
+);
+rollback to savepoint cadu_probe_rls;
+release savepoint cadu_probe_rls;
+
+savepoint cadu_probe_write_policy;
+create policy kc_unit_meta_probe_bad_insert
+  on public.kc_unit_meta for insert to authenticated with check (true);
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,browserWritesRevoked}')::boolean,
+  false,
+  'metadata contract rejects browser write policies even without a matching grant'
+);
+rollback to savepoint cadu_probe_write_policy;
+release savepoint cadu_probe_write_policy;
+
+savepoint cadu_probe_constraint_body;
+alter table public.kc_unit_meta drop constraint kc_unit_meta_revision_positive;
+alter table public.kc_unit_meta
+  add constraint kc_unit_meta_revision_positive check (revision < 1000000);
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,revisionConstraint}')::boolean,
+  false,
+  'metadata contract rejects a same-name revision constraint with different semantics'
+);
+rollback to savepoint cadu_probe_constraint_body;
+release savepoint cadu_probe_constraint_body;
+
+savepoint cadu_probe_trigger_body;
+create or replace function public.kc_unit_meta_touch()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  new.revision := 1;
+  new.updated_at := pg_catalog.clock_timestamp();
+  return new;
+end;
+$$;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,touchTrigger}')::boolean,
+  false,
+  'metadata contract rejects a same-OID trigger function with broken revision semantics'
+);
+rollback to savepoint cadu_probe_trigger_body;
+release savepoint cadu_probe_trigger_body;
+
+savepoint cadu_probe_stable_rpc_body;
+create or replace function public.kc_cadu_upsert_source_override(
+  p_source_id text,
+  p_tier integer,
+  p_note text,
+  p_expected_exists boolean,
+  p_expected_revision bigint,
+  p_expected_meta_revisions jsonb
+)
+returns jsonb
+language plpgsql
+volatile
+security invoker
+set search_path = ''
+as $$
+begin
+  return pg_catalog.jsonb_build_object('ok', true);
+end;
+$$;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,stableRpc}')::boolean,
+  false,
+  'metadata contract rejects a same-signature CAS RPC with a different body'
+);
+rollback to savepoint cadu_probe_stable_rpc_body;
+release savepoint cadu_probe_stable_rpc_body;
+
+savepoint cadu_probe_stable_rpc_argument_names;
+do $probe$
+declare
+  v_definition text;
+begin
+  select pg_catalog.pg_get_functiondef(
+    'public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)'::regprocedure
+  ) into v_definition;
+  execute 'drop function public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)';
+  execute pg_catalog.replace(v_definition, 'p_source_id text', 'x_source_id text');
+  execute 'revoke all on function public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb) from public, anon, authenticated';
+  execute 'grant execute on function public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb) to service_role';
+end;
+$probe$;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,stableRpc}')::boolean,
+  false,
+  'metadata contract rejects renamed stable RPC arguments used by PostgREST named calls'
+);
+rollback to savepoint cadu_probe_stable_rpc_argument_names;
+release savepoint cadu_probe_stable_rpc_argument_names;
+
+savepoint cadu_probe_legacy_rpc_argument_names;
+do $probe$
+declare
+  v_definition text;
+begin
+  select pg_catalog.pg_get_functiondef(
+    'public.kc_cadu_upsert_legacy_override(text,text,integer,text,boolean,bigint)'::regprocedure
+  ) into v_definition;
+  execute 'drop function public.kc_cadu_upsert_legacy_override(text,text,integer,text,boolean,bigint)';
+  execute pg_catalog.replace(v_definition, 'p_unit_id text', 'x_unit_id text');
+  execute 'revoke all on function public.kc_cadu_upsert_legacy_override(text,text,integer,text,boolean,bigint) from public, anon, authenticated';
+  execute 'grant execute on function public.kc_cadu_upsert_legacy_override(text,text,integer,text,boolean,bigint) to service_role';
+end;
+$probe$;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,legacyRpc}')::boolean,
+  false,
+  'metadata contract rejects renamed legacy RPC arguments used by PostgREST named calls'
+);
+rollback to savepoint cadu_probe_legacy_rpc_argument_names;
+release savepoint cadu_probe_legacy_rpc_argument_names;
+
+savepoint cadu_probe_stable_rpc_extra_config;
+alter function public.kc_cadu_upsert_source_override(text,integer,text,boolean,bigint,jsonb)
+  set role = 'anon';
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,stableRpc}')::boolean,
+  false,
+  'metadata contract rejects extra RPC configuration that changes execution privileges'
+);
+rollback to savepoint cadu_probe_stable_rpc_extra_config;
+release savepoint cadu_probe_stable_rpc_extra_config;
 
 set local role authenticated;
 select extensions.lives_ok(
