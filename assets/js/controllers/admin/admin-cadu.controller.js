@@ -15,6 +15,15 @@
   var state = {
     allSites: [],
     filteredSites: [],
+    filteredCatalogRows: [],
+    sourceCatalog: null,
+    catalogMode: 'loading',
+    sitesView: 'sources',
+    sitesOrigin: '',
+    sourceDrafts: Object.create(null),
+    sourceSaveChains: Object.create(null),
+    sourceMutationQueue: null,
+    catalogRequestGeneration: 0,
     allFeedItems: [],
     feedLimit: FEED_PAGE_SIZE,
     feedPage: 0,
@@ -87,7 +96,9 @@
     var wrap = $('#cadu-error');
     if (!wrap) return;
     wrap.style.display = 'block';
-    wrap.innerHTML = msg;  // aceita HTML (mensagens vêm com links)
+    // Error strings can contain upstream/operator-controlled data. Keep this
+    // surface text-only; callers that need richer UI must build explicit DOM.
+    wrap.textContent = String(msg == null ? '' : msg);
   }
 
   function hideCaduError() {
@@ -115,7 +126,10 @@
     var csv = rows.map(function (r) {
       return r.map(function (c) {
         var s = c == null ? '' : String(c);
-        if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+        // Prevent values controlled by upstream/admin notes from becoming a
+        // spreadsheet formula when the CSV is opened in Excel/LibreOffice.
+        if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+        if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
         return s;
       }).join(',');
     }).join('\n');
@@ -325,7 +339,7 @@
             state.openclawContext = ctx;
             if (contextPill) {
               contextPill.style.display = '';
-              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Context: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' chunks · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
+              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto legado: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' chunks · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
             }
           } else {
             state.openclawContext = null;
@@ -357,144 +371,699 @@
   // Sites
   // ============================================================
 
-  async function loadSites() {
-    var tbody = $('#sites-tbody');
-    tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Carregando…</td></tr>';
-    try {
-      var data = await apiFetch('/api/cadu/sites');
-      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
+  function registryModel() {
+    if (!window.KCAdminCaduSources) throw new Error('registry_model_unavailable');
+    return window.KCAdminCaduSources;
+  }
 
-      state.allSites = Array.isArray(data) ? data : (data.body || []);
-      $('#badge-sites').textContent = String(state.allSites.length);
-      applySitesFilter();
-      computeKpis();
-    } catch (err) {
-      tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Erro ao carregar: ' + escapeHtml(err.message || err) + '</td></tr>';
-      $('#badge-sites').textContent = '!';
+  function setRegistryStatus(kind, title, detail) {
+    var status = $('#sites-registry-status');
+    if (!status) return;
+    status.className = 'kc-cadu-registry-status' + (kind ? ' is-' + kind : '');
+    status.textContent = '';
+    var icon = document.createElement('i');
+    icon.className = kind === 'ok' ? 'fas fa-circle-check' : (kind === 'error' ? 'fas fa-triangle-exclamation' : 'fas fa-spinner fa-spin');
+    icon.setAttribute('aria-hidden', 'true');
+    var copy = document.createElement('div');
+    var strong = document.createElement('strong');
+    var small = document.createElement('small');
+    strong.textContent = title;
+    small.textContent = detail;
+    copy.appendChild(strong);
+    copy.appendChild(small);
+    status.appendChild(icon);
+    status.appendChild(copy);
+  }
+
+  function appendCatalogMetric(container, value, label) {
+    var item = document.createElement('div');
+    item.className = 'kc-cadu-catalog-summary__item';
+    var strong = document.createElement('strong');
+    var small = document.createElement('small');
+    strong.textContent = String(value);
+    small.textContent = label;
+    item.appendChild(strong);
+    item.appendChild(small);
+    container.appendChild(item);
+  }
+
+  function renderCatalogSummary() {
+    var container = $('#sites-catalog-summary');
+    if (!container) return;
+    container.textContent = '';
+    if (!state.sourceCatalog) {
+      container.style.display = 'none';
+      return;
+    }
+    var summary = state.sourceCatalog.summary;
+    appendCatalogMetric(container, summary.entities, 'entidades UFG');
+    appendCatalogMetric(container, summary.sources, 'fontes web oficiais');
+    appendCatalogMetric(container, summary.instagramProfiles, 'perfis Instagram mapeados');
+    appendCatalogMetric(container, summary.instagramConfirmed, 'Instagram confirmados');
+    appendCatalogMetric(container, summary.instagramPending, 'Instagram pendentes/tentativos');
+    appendCatalogMetric(container, summary.entitiesWithoutWebSource, 'entidades sem site associado');
+    appendCatalogMetric(container, summary.deferred, 'conciliações pendentes');
+    container.style.display = '';
+  }
+
+  function sourceName(source) {
+    var entities = (source && source.entities) || [];
+    if (!entities.length) return source && source.id ? source.id : 'Fonte sem entidade';
+    return entities.map(function (entity) {
+      return entity.acronym ? entity.acronym + ' — ' + entity.name : entity.name;
+    }).join(' / ');
+  }
+
+  function sourceInstagramStatus(source) {
+    var profiles = (source && source.instagramProfiles) || [];
+    if (!profiles.length || profiles.every(function (profile) { return profile.statusGroup === 'missing'; })) return 'missing';
+    if (profiles.some(function (profile) { return profile.status === 'confirmed'; })) return 'confirmed';
+    if (profiles.some(function (profile) { return profile.statusGroup === 'pending'; })) return 'pending_verification';
+    return profiles[0].status || 'unknown';
+  }
+
+  function sourceAsLegacySite(source) {
+    var profiles = source.instagramProfiles || [];
+    var publishProfile = registryModel().selectUnambiguousConfirmedInstagram(profiles);
+    var firstEntity = source.entities && source.entities[0];
+    return {
+      sourceId: source.id,
+      name: sourceName(source),
+      tier: source.effectiveTier,
+      category: firstEntity ? firstEntity.kind : source.sourceKind,
+      url: source.canonicalUrl,
+      instagram: publishProfile ? publishProfile.handle : '',
+      instagramContext: profiles.map(function (profile) {
+        return '@' + profile.handle + ' (' + profile.status + ')';
+      }).join(', '),
+      instagram_status: sourceInstagramStatus(source),
+      note: source.note,
+      override_origin: source.overrideOrigin,
+      collision: source.collision,
+      registrySource: source
+    };
+  }
+
+  function registryResponseMeta(envelope) {
+    return {
+      headers: {
+        ETag: envelope.headers.etag,
+        'X-Cadu-Registry-Sha256': envelope.headers.registrySha256
+      }
+    };
+  }
+
+  function registryFailureLabel(error, envelope) {
+    if (error && error.code) return 'contrato inválido (' + String(error.code).replace(/[^a-z0-9_-]/gi, '') + ')';
+    if (envelope && envelope.status) return 'HTTP ' + envelope.status;
+    return 'serviço indisponível';
+  }
+
+  function sourceDraftsForReload(options) {
+    var opts = options || {};
+    var drafts = Object.create(null);
+    Object.keys(state.sourceDrafts || {}).forEach(function (sourceId) {
+      var source = sourceById(sourceId);
+      var draft = state.sourceDrafts[sourceId];
+      if (
+        (source && (sourceDraftIsDirty(source, draft) || draft.conflict)) ||
+        (!source && (sourceDraftIsDirtyWithoutSource(draft) || draft.conflict))
+      ) {
+        drafts[sourceId] = Object.assign({}, draft);
+      }
+    });
+    Object.keys(opts.preserveDrafts || {}).forEach(function (sourceId) {
+      drafts[sourceId] = Object.assign({}, opts.preserveDrafts[sourceId]);
+    });
+    if (opts.excludeDraftSourceId) delete drafts[opts.excludeDraftSourceId];
+    if (opts.conflictSourceId && drafts[opts.conflictSourceId]) {
+      drafts[opts.conflictSourceId].conflict = true;
+      drafts[opts.conflictSourceId].tierTouched = true;
+      drafts[opts.conflictSourceId].conflictAcknowledged = false;
+    }
+    return drafts;
+  }
+
+  function retainCatalogDrafts(catalog, drafts) {
+    var retained = Object.create(null);
+    var sourceIds = Object.create(null);
+    (catalog && catalog.sources || []).forEach(function (source) { sourceIds[source.id] = source; });
+    Object.keys(drafts || {}).forEach(function (sourceId) {
+      var source = sourceIds[sourceId];
+      var draft = Object.assign({}, drafts[sourceId]);
+      if (!source) {
+        draft.conflict = true;
+        draft.conflictAcknowledged = false;
+        retained[sourceId] = draft;
+        return;
+      }
+      if (draft.initialRevision && draft.initialRevision !== source.revision) {
+        draft.conflict = true;
+        draft.conflictAcknowledged = false;
+      }
+      retained[sourceId] = draft;
+    });
+    return retained;
+  }
+
+  async function loadLegacySites(reason, requestGeneration, options) {
+    var legacy = await apiFetchResponse('/api/cadu/sites');
+    if (requestGeneration !== state.catalogRequestGeneration) return false;
+    var legacyRows = Array.isArray(legacy.data)
+      ? legacy.data
+      : (legacy.data && Array.isArray(legacy.data.body) ? legacy.data.body : null);
+    if (!legacy.ok || !legacyRows) {
+      throw new Error('legacy_sites_unavailable_' + String(legacy.status || 0));
+    }
+    var retainedDrafts = sourceDraftsForReload(options);
+    state.catalogMode = 'legacy-readonly';
+    state.sourceCatalog = null;
+    state.sitesView = 'sources';
+    state.sourceDrafts = retainedDrafts;
+    state.filteredCatalogRows = [];
+    state.allSites = legacyRows;
+    var view = $('#sites-view');
+    if (view) { view.value = 'sources'; view.disabled = true; }
+    setRegistryStatus(
+      'error',
+      'Catálogo canônico indisponível — mapa legado somente leitura',
+      'Motivo: ' + reason + '. Overrides estão bloqueados para evitar gravar por nomes ambíguos.'
+    );
+    renderCatalogSummary();
+    return true;
+  }
+
+  async function loadSites(options) {
+    var opts = options || {};
+    var requestGeneration = ++state.catalogRequestGeneration;
+    var tbody = $('#sites-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Carregando e validando catálogo…</td></tr>';
+    state.catalogMode = 'loading';
+    setRegistryStatus('loading', 'Validando catálogo canônico', 'Conferindo hash, ETag, IDs, associações e estado shadow.');
+    var registryEnvelope = null;
+    try {
+      registryEnvelope = await apiFetchResponse('/api/cadu/sites/source-registry');
+      if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
+      if (!registryEnvelope.ok) throw new Error('registry_http_' + registryEnvelope.status);
+      var catalog = registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope));
+      state.sourceCatalog = catalog;
+      state.catalogMode = 'registry';
+      state.allSites = catalog.sources.map(sourceAsLegacySite);
+      state.sourceDrafts = retainCatalogDrafts(catalog, sourceDraftsForReload(opts));
+      var view = $('#sites-view');
+      if (view) { view.disabled = false; view.value = state.sitesView; }
+      setRegistryStatus(
+        'ok',
+        'Catálogo canônico validado em modo shadow',
+        catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · fontes e perfis permanecem desativados para execução.'
+      );
+      renderCatalogSummary();
+    } catch (registryError) {
+      if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
+      try {
+        var legacyLoaded = await loadLegacySites(
+          registryFailureLabel(registryError, registryEnvelope),
+          requestGeneration,
+          opts
+        );
+        if (!legacyLoaded) return 'stale';
+      } catch (legacyError) {
+        if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
+        var unavailableDrafts = sourceDraftsForReload(opts);
+        state.catalogMode = 'error';
+        state.sourceCatalog = null;
+        state.sourceDrafts = unavailableDrafts;
+        state.allSites = [];
+        setRegistryStatus('error', 'Não foi possível carregar o mapa UFG', 'Catálogo canônico e fallback legado estão indisponíveis. Nenhuma edição foi habilitada.');
+        renderCatalogSummary();
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Mapa indisponível. Tente novamente após verificar o cadu-api.</td></tr>';
+        $('#badge-sites').textContent = '!';
+        computeKpis();
+        return 'error';
+      }
+    }
+    $('#badge-sites').textContent = state.sourceCatalog ? String(state.sourceCatalog.sources.length) : String(state.allSites.length);
+    applySitesFilter();
+    computeKpis();
+    return state.catalogMode;
+  }
+
+  function profilesMatchFilter(profiles, filter) {
+    if (!filter) return true;
+    var values = profiles || [];
+    if (filter === 'missing') return !values.length || values.every(function (profile) { return profile.statusGroup === 'missing'; });
+    if (filter === 'confirmed') return values.some(function (profile) { return profile.status === 'confirmed'; });
+    if (filter === 'pending_verification') return values.some(function (profile) { return profile.statusGroup === 'pending'; });
+    return values.some(function (profile) { return profile.status === filter || profile.statusGroup === filter; });
+  }
+
+  function updateSitesFilterControls() {
+    var sourceView = state.sitesView === 'sources';
+    var tier = $('#sites-tier');
+    var instagram = $('#sites-ig');
+    var origin = $('#sites-origin');
+    var pdf = $('#sites-export-pdf');
+    if (tier) tier.disabled = state.catalogMode === 'registry' ? !sourceView : false;
+    if (instagram) instagram.disabled = state.catalogMode === 'registry' && state.sitesView === 'deferred';
+    if (origin) origin.disabled = state.catalogMode !== 'registry' || !sourceView;
+    if (pdf) {
+      pdf.disabled = state.catalogMode === 'registry' && !sourceView;
+      pdf.title = pdf.disabled ? 'PDF disponível na visão Fontes web' : 'Exportar mapa de sites em PDF';
     }
   }
 
   function applySitesFilter() {
     var f = state.sitesFilter;
-    var q = (f.q || '').toLowerCase().trim();
-    state.filteredSites = state.allSites.filter(function (s) {
-      if (f.tier && String(s.tier || '') !== f.tier) return false;
-      if (f.ig && String(s.instagram_status || '') !== f.ig) return false;
-      if (q) {
-        var hay = (s.name + ' ' + (s.url || '') + ' ' + (s.instagram || '') + ' ' + (s.note || '')).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
+    updateSitesFilterControls();
+    if (state.catalogMode === 'registry' && state.sourceCatalog) {
+      var filters = { view: state.sitesView, query: f.q || '' };
+      if (state.sitesView === 'sources' && f.tier) filters.tier = f.tier;
+      if (state.sitesView === 'instagram' && f.ig) {
+        filters.status = f.ig === 'pending_verification' ? 'pending' : f.ig;
       }
-      return true;
-    });
+      var rows = registryModel().filterCatalog(state.sourceCatalog, filters);
+      if (state.sitesView === 'sources') {
+        rows = rows.filter(function (source) {
+          if (state.sitesOrigin === 'collision_evidence' && !source.collision) return false;
+          if (state.sitesOrigin && state.sitesOrigin !== 'collision_evidence' && source.overrideOrigin !== state.sitesOrigin) return false;
+          return profilesMatchFilter(source.instagramProfiles, f.ig);
+        });
+        state.filteredSites = rows.map(sourceAsLegacySite);
+      } else if (state.sitesView === 'entities') {
+        rows = rows.filter(function (entity) { return profilesMatchFilter(entity.instagramProfiles, f.ig); });
+        state.filteredSites = [];
+      } else {
+        state.filteredSites = [];
+      }
+      state.filteredCatalogRows = rows;
+    } else {
+      var q = (f.q || '').toLowerCase().trim();
+      state.filteredSites = state.allSites.filter(function (site) {
+        if (f.tier && String(site.tier || '') !== f.tier) return false;
+        if (f.ig && String(site.instagram_status || '') !== f.ig) return false;
+        if (!q) return true;
+        var hay = ((site.name || '') + ' ' + (site.url || '') + ' ' + (site.instagram || '') + ' ' + (site.note || '')).toLowerCase();
+        return hay.indexOf(q) !== -1;
+      });
+      state.filteredCatalogRows = [];
+    }
     renderSitesTable();
   }
 
-  // Auto-save debounce timers keyed by unit name
-  var _saveTimers = {};
-  function scheduleSiteSave(site, field, value) {
-    var key = site.name;
-    var pending = (_saveTimers[key] = _saveTimers[key] || {});
-    pending[field] = value;
-    clearTimeout(pending._t);
-    pending._t = setTimeout(function () {
-      commitSiteSave(site, pending);
-      delete _saveTimers[key];
-    }, 700);
-    var statusEl = document.querySelector('[data-site-save-status="' + cssEscape(key) + '"]');
-    if (statusEl) { statusEl.innerHTML = '<i class="fas fa-clock"></i>'; }
+  function setSitesTableHeaders(headers) {
+    var head = $('#sites-thead');
+    if (!head) return;
+    head.innerHTML = '<tr>' + headers.map(function (header) { return '<th>' + escapeHtml(header) + '</th>'; }).join('') + '</tr>';
   }
-  async function commitSiteSave(site, payload) {
-    var key = site.name;
-    var statusEl = document.querySelector('[data-site-save-status="' + cssEscape(key) + '"]');
-    try {
-      var body = {};
-      if (payload.tier !== undefined) body.tier = payload.tier;
-      if (payload.note !== undefined) body.note = payload.note;
-      var data = await apiFetch('/api/cadu/sites/' + encodeURIComponent(key) + '/meta', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (data && data.__error) throw new Error((data.data && (data.data.message || data.data.detail || data.data.error)) || ('status ' + data.status));
-      if (statusEl) { statusEl.innerHTML = '<i class="fas fa-check" style="color:#10b981;"></i>'; setTimeout(function(){ if (statusEl) statusEl.innerHTML = ''; }, 2500); }
-      if (data && data.tier !== undefined) site.tier = data.tier;
-      if (data && data.note !== undefined) site.note = data.note;
-      computeKpis();
-    } catch (err) {
-      if (statusEl) { statusEl.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:#ef4444;"></i>'; setTimeout(function(){ if (statusEl) statusEl.innerHTML = ''; }, 4000); }
-      showCaduError('Erro ao salvar ' + key + ': ' + (err && err.message ? err.message : err));
-      setTimeout(hideCaduError, 6000);
+
+  function badgeHtml(label, kind) {
+    var safeKind = String(kind || label || 'unknown').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    return '<span class="kc-cadu-badge kc-cadu-badge--' + safeKind + '">' + escapeHtml(label) + '</span>';
+  }
+
+  function entityChips(entities) {
+    if (!entities || !entities.length) return '<span class="kc-cadu-muted">sem entidade</span>';
+    return '<div class="kc-cadu-map-list">' + entities.map(function (entity) {
+      return '<span class="kc-cadu-map-chip" title="' + escapeHtml(entity.name) + '">' + escapeHtml(entity.acronym || entity.name) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function profileLinks(profiles) {
+    if (!profiles || !profiles.length) return '<span class="kc-cadu-muted">sem perfil associado</span>';
+    return profiles.map(function (profile) {
+      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(profile.status, profile.statusGroup) + '</div>';
+    }).join('');
+  }
+
+  function ensureSourceDraft(source) {
+    var existing = state.sourceDrafts[source.id];
+    if (existing) return existing;
+    var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+    var initialNote = stable && source.note != null ? String(source.note) : null;
+    var draft = {
+      tier: stable ? source.overrideTier : null,
+      tierTouched: false,
+      note: initialNote == null ? '' : initialNote,
+      initialTier: stable ? source.overrideTier : null,
+      initialNote: initialNote,
+      initialRevision: source.revision,
+      conflict: false,
+      conflictAcknowledged: false
+    };
+    state.sourceDrafts[source.id] = draft;
+    return draft;
+  }
+
+  function tierOptionsHtml(draft, firstStable) {
+    var html = '';
+    var hasTierChoice = !firstStable || draft.tierTouched;
+    if (firstStable && !draft.tierTouched) html += '<option value="__unset__" selected>Escolha explicitamente…</option>';
+    html += '<option value=""' + (hasTierChoice && draft.tier === null ? ' selected' : '') + '>Herdar tier base (sem override)</option>';
+    [1, 2, 3].forEach(function (tier) {
+      html += '<option value="' + tier + '"' + (hasTierChoice && draft.tier === tier ? ' selected' : '') + '>Tier ' + tier + '</option>';
+    });
+    return html;
+  }
+
+  function normalizedDraftNote(note) {
+    return String(note == null ? '' : note).trim() === '' ? null : String(note);
+  }
+
+  function sourceDraftIsDirtyWithoutSource(draft) {
+    if (!draft) return false;
+    return Boolean(
+      draft.tierTouched || draft.tier !== draft.initialTier ||
+      normalizedDraftNote(draft.note) !== draft.initialNote
+    );
+  }
+
+  function sourceDraftChanges(source, draft) {
+    var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+    if (!stable) {
+      if (!draft.tierTouched) return {};
+      return { tier: draft.tier, note: normalizedDraftNote(draft.note) };
     }
+    var changes = {};
+    if (draft.tier !== draft.initialTier) changes.tier = draft.tier;
+    var nextNote = normalizedDraftNote(draft.note);
+    if (nextNote !== draft.initialNote) changes.note = nextNote;
+    return changes;
+  }
+
+  function sourceDraftCanSave(source, draft) {
+    return Object.keys(sourceDraftChanges(source, draft)).length > 0;
+  }
+
+  function sourceDraftIsDirty(source, draft) {
+    var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+    if (stable) return sourceDraftCanSave(source, draft);
+    return draft.tierTouched || normalizedDraftNote(draft.note) !== null;
+  }
+
+  function updateSourceSaveButton(source, draft) {
+    var row = document.querySelector('tr[data-source-id="' + source.id + '"]');
+    var button = row && row.querySelector('.kc-cadu-save-source-btn');
+    if (button) button.disabled = Boolean(state.sourceSaveChains[source.id]) || !sourceDraftCanSave(source, draft);
+  }
+
+  function sourceConflictHtml(source, draft) {
+    if (!draft.conflict) return '';
+    var fields = Object.keys(sourceDraftChanges(source, draft));
+    var serverTier = source.overrideTier == null ? 'herdar base' : 'Tier ' + source.overrideTier;
+    var draftTier = draft.tier == null ? 'herdar base' : 'Tier ' + draft.tier;
+    var serverNote = source.note == null ? 'sem nota' : source.note;
+    var draftNote = normalizedDraftNote(draft.note) == null ? 'sem nota' : draft.note;
+    return '<div class="kc-cadu-conflict-warning">'
+      + '<strong>O servidor mudou desde o início da edição.</strong><br>'
+      + 'Atual: ' + escapeHtml(serverTier) + ' · ' + escapeHtml(serverNote) + ' · ETag ' + escapeHtml(source.revision.slice(0, 12)) + '…<br>'
+      + 'Rascunho: ' + escapeHtml(draftTier) + ' · ' + escapeHtml(draftNote) + '<br>'
+      + 'Campos propostos: ' + escapeHtml(fields.join(', ') || 'nenhum') + '. Compare novamente antes de confirmar.'
+      + '</div>';
+  }
+
+  function renderSourceRows(rows) {
+    setSitesTableHeaders(['Tier', 'Entidade / fonte', 'Site institucional', 'Instagram associado', 'Revisão', 'Override / observação', 'Ações']);
+    return rows.map(function (source) {
+      var site = sourceAsLegacySite(source);
+      var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+      var draft = ensureSourceDraft(source);
+      var busy = Boolean(state.sourceSaveChains[source.id]);
+      var canSave = sourceDraftCanSave(source, draft);
+      var inherited = !stable && source.note
+        ? '<div class="kc-cadu-inherited-warning"><strong>Nota herdada (não será copiada):</strong> ' + escapeHtml(source.note) + '</div>'
+        : '';
+      var conflict = sourceConflictHtml(source, draft);
+      var review = badgeHtml(source.reviewState, source.reviewState)
+        + '<span class="kc-cadu-source-id">ETag ' + escapeHtml(source.revision.slice(0, 12)) + '…</span>'
+        + (source.collision ? '<div class="kc-cadu-review-issues"><strong>Colisão legada:</strong> o override estável prevalece, mas as linhas concorrentes continuam em Pendências.</div>' : '')
+        + (source.reviewIssues.length ? '<div class="kc-cadu-review-issues">' + source.reviewIssues.map(escapeHtml).join('<br>') + '</div>' : '');
+      var actions = '<button type="button" class="kc-cadu-publish-btn" disabled title="Publicação bloqueada: esta fonte pertence ao catálogo shadow desativado"><i class="fas fa-lock"></i><span>Shadow</span></button>'
+        + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name) + '" data-ask-url="' + escapeHtml(site.url) + '" data-ask-instagram="' + escapeHtml(site.instagramContext || 'sem perfil associado') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '" title="Enviar todas as associações e seus status ao chat Cadu"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
+      return '<tr data-source-id="' + escapeHtml(source.id) + '">'
+        + '<td><strong>T' + escapeHtml(source.effectiveTier == null ? '—' : source.effectiveTier) + '</strong><small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : source.baseTier) + ' · ' + escapeHtml(source.overrideOrigin) + '</small></td>'
+        + '<td>' + entityChips(source.entities) + '<code class="kc-cadu-source-id">' + escapeHtml(source.id) + '</code></td>'
+        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(source.sourceKind) + ' · shadow</small></td>'
+        + '<td>' + profileLinks(source.instagramProfiles) + '</td>'
+        + '<td>' + review + '</td>'
+        + '<td><div class="kc-cadu-note-cell">' + inherited + conflict
+        + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Tier estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
+        + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota estável explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
+        + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (busy ? 'Salvando…' : (stable ? 'Salvar override' : 'Criar override estável')) + '</button></div></td>'
+        + '<td style="white-space:nowrap;">' + actions + '</td></tr>';
+    }).join('');
+  }
+
+  function renderEntityRows(rows) {
+    setSitesTableHeaders(['Entidade UFG', 'Tipo / campus', 'Sites associados', 'Instagram', 'Cobertura']);
+    return rows.map(function (entity) {
+      var sites = entity.sources.length ? entity.sources.map(function (source) {
+        return '<a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(source.id) + '</a>';
+      }).join('<br>') : '<span class="kc-cadu-muted">sem site associado</span>';
+      var entityLabel = entity.acronym ? entity.acronym + ' — ' + entity.name : entity.name;
+      return '<tr><td><strong>' + escapeHtml(entityLabel) + '</strong><code class="kc-cadu-source-id">' + escapeHtml(entity.id) + '</code></td>'
+        + '<td>' + escapeHtml(entity.kind) + '<small class="kc-cadu-source-id">' + escapeHtml(entity.campus || 'campus não informado') + '</small></td>'
+        + '<td>' + sites + '</td><td>' + profileLinks(entity.instagramProfiles) + '</td>'
+        + '<td>' + badgeHtml(entity.status, entity.status) + (entity.sources.length ? '' : '<div class="kc-cadu-review-issues">lacuna de fonte web</div>') + '</td></tr>';
+    }).join('');
+  }
+
+  function renderInstagramRows(rows) {
+    setSitesTableHeaders(['Perfil Instagram', 'Entidades', 'Sites associados', 'Status', 'Execução']);
+    return rows.map(function (profile) {
+      var sources = profile.sources.length ? profile.sources.map(function (source) {
+        return '<a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(source.id) + '</a>';
+      }).join('<br>') : '<span class="kc-cadu-muted">sem fonte web associada</span>';
+      return '<tr><td><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a><code class="kc-cadu-source-id">' + escapeHtml(profile.id) + '</code></td>'
+        + '<td>' + entityChips(profile.entities) + '</td><td>' + sources + '</td>'
+        + '<td>' + badgeHtml(profile.status, profile.statusGroup) + '</td>'
+        + '<td>' + badgeHtml(profile.enabled ? 'ativo' : 'shadow desativado', profile.enabled ? 'confirmed' : 'missing') + '<small class="kc-cadu-source-id">' + escapeHtml((profile.executionModes || []).join(', ') || 'sem modo') + '</small></td></tr>';
+    }).join('');
+  }
+
+  function renderDeferredRows(rows) {
+    setSitesTableHeaders(['Pendência', 'Identidades legadas', 'Fontes candidatas', 'Entidades', 'Metadata / evidência']);
+    return rows.map(function (item) {
+      var sourceId = item.sourceId || '';
+      var sourceIds = item.sourceIds || (sourceId ? [sourceId] : []);
+      var entityIds = item.entityIds || [];
+      var rowKeys = item.rowKeys || (item.rowKey ? [item.rowKey] : []);
+      var unitIds = item.unitIds || (item.unitId ? [item.unitId] : []);
+      var matchTypes = item.matchTypes || (item.matchType ? [item.matchType] : []);
+      var legacyRows = item.rows || (item.row ? [item.row] : []);
+      var metadata = legacyRows.map(function (row, index) {
+        var tier = row && row.tier != null ? 'T' + row.tier : 'tier —';
+        var revision = row && row.revision != null ? 'rev ' + row.revision : 'rev —';
+        var note = row && row.note ? ' · ' + row.note : '';
+        return '<div><strong>' + escapeHtml(unitIds[index] || (row && row.unit_id) || '—') + ':</strong> ' + escapeHtml(tier + ' · ' + revision + note) + '</div>';
+      }).join('');
+      return '<tr><td>' + badgeHtml(item.deferredKind, item.deferredKind) + '</td>'
+        + '<td>' + (unitIds.length ? unitIds.map(function (id, index) { return '<div><code>' + escapeHtml(id) + '</code><small class="kc-cadu-source-id">' + escapeHtml(matchTypes[index] || 'sem matchType') + '</small></div>'; }).join('') : '—') + '</td>'
+        + '<td>' + (sourceIds.length ? sourceIds.map(function (id) { return '<code class="kc-cadu-source-id">' + escapeHtml(id) + '</code>'; }).join('') : '—') + '</td>'
+        + '<td>' + (entityIds.length ? entityIds.map(function (id) { return '<span class="kc-cadu-map-chip">' + escapeHtml(id) + '</span>'; }).join(' ') : '—') + '</td>'
+        + '<td>' + (metadata || '<span class="kc-cadu-muted">sem metadata legada</span>') + rowKeys.map(function (key) { return '<code class="kc-cadu-source-id">hash ' + escapeHtml(String(key).slice(0, 16)) + '…</code>'; }).join('') + '</td></tr>';
+    }).join('');
+  }
+
+  function renderLegacyRows(rows) {
+    setSitesTableHeaders(['Tier', 'Unidade legada', 'Site institucional', 'Instagram', 'Status', 'Observação', 'Ações']);
+    return rows.map(function (site) {
+      var key = siteActionKey(site);
+      var safeUrl = normalizeSiteUrl(site.url);
+      var instagramUrl = normalizeInstagramUrl(site.instagram);
+      return '<tr><td>' + escapeHtml(site.tier ? 'T' + site.tier : '—') + '</td><td><code>' + escapeHtml(site.name || '—') + '</code></td>'
+        + '<td>' + (safeUrl ? '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener">' + escapeHtml(safeUrl.replace(/^https?:\/\//, '')) + '</a>' : '—') + '</td>'
+        + '<td>' + (instagramUrl ? '<a href="' + escapeHtml(instagramUrl) + '" target="_blank" rel="noopener">@' + escapeHtml(String(site.instagram).replace(/^@/, '')) + '</a>' : '—') + '</td>'
+        + '<td>' + badgeHtml(site.instagram_status || 'unknown', site.instagram_status || 'unknown') + '</td><td>' + escapeHtml(site.note || '—') + '<small class="kc-cadu-source-id">somente leitura</small></td>'
+        + '<td><button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(site.name || '') + '"><i class="fas fa-paper-plane"></i><span>Sugerir</span></button> '
+        + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name || '') + '" data-ask-url="' + escapeHtml(safeUrl) + '" data-ask-instagram="' + escapeHtml(site.instagram || '') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '"><i class="fas fa-robot"></i><span>Perguntar</span></button></td></tr>';
+    }).join('');
   }
 
   function renderSitesTable() {
     var tbody = $('#sites-tbody');
     if (!tbody) return;
-    if (!state.filteredSites.length) { tbody.innerHTML = '<tr><td colspan="7" class="kc-cadu-empty">Nenhuma unidade corresponde ao filtro.</td></tr>'; return; }
-    tbody.innerHTML = state.filteredSites.map(function (s) {
-      var key = siteActionKey(s);
-      // TIER: dropdown editável (T1/T2/T3/—)
-      var currentTier = s.tier ? String(s.tier) : '';
-      var tierHtml = '<select class="kc-cadu-tier-select" data-field="tier" data-name="' + escapeHtml(s.name) + '" title="Editar tier (1=alta prioridade, 3=baixa)">'
-        + '<option value="1"' + (currentTier === '1' ? ' selected' : '') + '>T1</option>'
-        + '<option value="2"' + (currentTier === '2' ? ' selected' : '') + '>T2</option>'
-        + '<option value="3"' + (currentTier === '3' ? ' selected' : '') + '>T3</option>'
-        + '<option value=""' + (currentTier === '' ? ' selected' : '') + '>—</option>'
-        + '</select>';
-      // IG: link clicável @handle
-      var igCell = s.instagram
-        ? '<a href="https://instagram.com/' + escapeHtml(s.instagram.replace(/^@/, '')) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(s.instagram.replace(/^@/, '')) + '</a>'
-        : '<span style="color:var(--kc-text-dark-secondary);">—</span>';
-      var igStatus = s.instagram_status || 'unknown';
-      var igBadgeHtml = '<span class="kc-cadu-badge kc-cadu-badge--' + igStatus + '">' + igStatus + '</span>';
-      // URL: link clicável
-      var urlCell = s.url
-        ? '<a href="' + escapeHtml(s.url) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(s.url.replace(/^https?:\/\//, '')) + '</a>'
-        : '<span style="color:var(--kc-text-dark-secondary);">—</span>';
-      // OBSERVAÇÃO: textarea editável com auto-save
-      var noteVal = s.note ? escapeHtml(s.note) : '';
-      var noteHtml = '<div class="kc-cadu-note-cell"><textarea class="kc-cadu-note-input" data-field="note" data-name="' + escapeHtml(s.name) + '" placeholder="Adicionar observação…" rows="1">' + noteVal + '</textarea><span class="kc-cadu-save-status" data-site-save-status="' + escapeHtml(s.name) + '"></span></div>';
-      var actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="Sugerir publicação deste site no feed KinoCampus"><i class="fas fa-paper-plane"></i></button>'
-        + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Perguntar ao Cadu sobre este site (vai para a aba OpenClaw)"><i class="fas fa-robot"></i></button>';
-      var publishUrl = getSitePublishUrl(s);
-      var publishTitle = publishUrl ? ('Sugerir publicação usando ' + publishUrl) : 'Sem URL HTTPS nem Instagram para sugerir publicação';
-      var publishDisabled = publishUrl ? '' : ' disabled aria-disabled="true"';
-      actionsHtml = '<button type="button" class="kc-cadu-publish-btn" data-key="' + escapeHtml(key) + '" data-name="' + escapeHtml(s.name) + '" title="' + escapeHtml(publishTitle) + '"' + publishDisabled + '><i class="fas fa-paper-plane"></i><span>Sugerir</span></button>'
-        + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(s.name) + '" data-ask-url="' + escapeHtml(s.url || '') + '" data-ask-instagram="' + escapeHtml(s.instagram || '') + '" data-ask-tier="' + escapeHtml(currentTier) + '" title="Enviar contexto deste site para o chat Cadu na aba OpenClaw"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
-      return '<tr data-site-name="' + escapeHtml(s.name) + '">'
-        + '<td>' + tierHtml + '</td>'
-        + '<td><code>' + escapeHtml(s.name) + '</code></td>'
-        + '<td>' + urlCell + '</td>'
-        + '<td>' + igCell + '</td>'
-        + '<td>' + igBadgeHtml + '</td>'
-        + '<td>' + noteHtml + '</td>'
-        + '<td style="white-space:nowrap;">' + actionsHtml + '</td>'
-        + '</tr>';
-    }).join('');
+    var table = $('#sites-table');
+    if (table) table.setAttribute('data-view', state.catalogMode === 'registry' ? state.sitesView : 'legacy');
+    var rows;
+    var html;
+    if (state.catalogMode === 'registry') {
+      rows = state.filteredCatalogRows;
+      if (state.sitesView === 'entities') html = renderEntityRows(rows);
+      else if (state.sitesView === 'instagram') html = renderInstagramRows(rows);
+      else if (state.sitesView === 'deferred') html = renderDeferredRows(rows);
+      else html = renderSourceRows(rows);
+    } else {
+      rows = state.filteredSites;
+      html = renderLegacyRows(rows);
+    }
+    tbody.innerHTML = html || '<tr><td colspan="7" class="kc-cadu-empty">Nenhum item corresponde aos filtros atuais.</td></tr>';
+  }
 
-    // Wire up auto-save handlers
-    tbody.querySelectorAll('select.kc-cadu-tier-select, textarea.kc-cadu-note-input').forEach(function (el) {
-      el.addEventListener('change', function () {
-        var field = el.getAttribute('data-field');
-        var name = el.getAttribute('data-name');
-        var site = state.allSites.find(function (x) { return x.name === name; });
-        if (!site) return;
-        var rawValue = el.value;
-        var value = (rawValue === '' || rawValue === '—') ? null : (field === 'tier' ? parseInt(rawValue, 10) : rawValue);
-        scheduleSiteSave(site, field, value);
-      });
+  function sourceById(sourceId) {
+    if (!state.sourceCatalog) return null;
+    return state.sourceCatalog.sources.find(function (source) { return source.id === sourceId; }) || null;
+  }
+
+  function patchResponseIsValid(envelope, sourceId) {
+    var data = envelope && envelope.data;
+    var etag = envelope && envelope.headers && envelope.headers.etag;
+    return Boolean(
+      data && typeof data === 'object' && data.id === sourceId &&
+      typeof etag === 'string' && /^"[0-9a-f]{64}"$/.test(etag) &&
+      data.etag === etag && state.sourceCatalog &&
+      envelope.headers.registrySha256 === state.sourceCatalog.registrySha256
+    );
+  }
+
+  function revalidatedSourceMatches(source, changes, expectedEtag) {
+    if (!source || source.overrideOrigin !== 'stable' || source.overrideUnitId !== source.id) return false;
+    if (source.etag !== expectedEtag || source.revision !== expectedEtag.slice(1, -1)) return false;
+    if (Object.prototype.hasOwnProperty.call(changes, 'tier') && source.overrideTier !== changes.tier) return false;
+    if (Object.prototype.hasOwnProperty.call(changes, 'note') && source.note !== changes.note) return false;
+    return true;
+  }
+
+  async function performSourceOverrideSave(sourceId, queuedEdit) {
+    var source = sourceById(sourceId);
+    var draft = queuedEdit && queuedEdit.draft;
+    if (!source || !draft || state.catalogMode !== 'registry') return;
+    if (source.revision !== queuedEdit.baseRevision) {
+      var currentDraft = state.sourceDrafts[sourceId];
+      if (currentDraft) {
+        currentDraft.conflict = true;
+        currentDraft.conflictAcknowledged = false;
+      }
+      renderSitesTable();
+      showCaduError('A fonte ' + sourceId + ' mudou enquanto a edição aguardava na fila. Revise o ETag atual; nenhuma escrita foi enviada.');
+      return;
+    }
+    var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+    if (!stable && !draft.tierTouched) {
+      showCaduError('Escolha explicitamente o tier do primeiro override estável.');
+      return;
+    }
+    var changes = sourceDraftChanges(source, draft);
+    if (!Object.keys(changes).length) {
+      showCaduError('Nenhuma alteração efetiva foi detectada para ' + sourceId + '.');
+      return;
+    }
+    if (draft.conflict && !draft.conflictAcknowledged) {
+      if (!window.confirm('O ETag de ' + sourceId + ' mudou desde o início desta edição. Você revisou a versão atual e deseja aplicar somente os campos alterados?')) return;
+      draft.conflictAcknowledged = true;
+    }
+    var mutation;
+    try {
+      mutation = registryModel().buildOverrideMutation(source, changes);
+    } catch (contractError) {
+      showCaduError('Override inválido: revise tier e nota antes de salvar.');
+      return;
+    }
+    if (mutation.isFirstStable) {
+      var inheritedWarning = source.isInheritedLegacy ? ' O valor legado exibido não será copiado automaticamente.' : '';
+      if (!window.confirm('Criar override estável para ' + source.id + '? Tier: ' + (changes.tier == null ? 'herdar base' : changes.tier) + '; nota: ' + (changes.note == null ? 'vazia' : 'informada') + '.' + inheritedWarning)) return;
+    }
+    renderSitesTable();
+    var envelope = await apiFetchResponse('/api/cadu/sites/' + mutation.path, {
+      method: mutation.method,
+      headers: mutation.headers,
+      body: JSON.stringify(mutation.body)
     });
+    if (envelope.status === 412 || envelope.status === 409) {
+      await loadSites({ conflictSourceId: sourceId });
+      showCaduError('Conflito de versão em ' + sourceId + '. O catálogo foi recarregado; compare os valores e decida manualmente antes de salvar novamente.');
+      return;
+    }
+    if (!envelope.ok) {
+      showCaduError('Não foi possível salvar ' + sourceId + ' (HTTP ' + String(envelope.status || 0) + '). Nenhuma repetição automática foi feita.');
+      return;
+    }
+    if (!patchResponseIsValid(envelope, sourceId)) {
+      await loadSites({ conflictSourceId: sourceId });
+      showCaduError('A escrita respondeu com contrato inesperado. O catálogo foi recarregado e a operação não será repetida automaticamente.');
+      return;
+    }
+    var expectedEtag = envelope.headers.etag;
+    var revalidatedMode = await loadSites();
+    if (revalidatedMode !== 'registry') {
+      showCaduError('A API confirmou a escrita de ' + sourceId + ', mas o catálogo canônico não pôde ser revalidado. O estado final não foi confirmado; nenhuma repetição automática será feita.');
+      return;
+    }
+    var revalidatedSource = sourceById(sourceId);
+    if (!revalidatedSourceMatches(revalidatedSource, changes, expectedEtag)) {
+      showCaduError('A API respondeu à escrita de ' + sourceId + ', mas a releitura não confirmou o mesmo ETag e os mesmos campos. Revise o conflito; nenhuma repetição automática será feita.');
+      return;
+    }
+    delete state.sourceDrafts[sourceId];
+    renderSitesTable();
+    showCaduError('Override de ' + sourceId + ' salvo com ETag/CAS e catálogo revalidado.');
+    setTimeout(hideCaduError, 5000);
+  }
+
+  function saveSourceOverride(sourceId) {
+    if (state.sourceSaveChains[sourceId]) return;
+    var source = sourceById(sourceId);
+    var draft = source && state.sourceDrafts[sourceId];
+    if (!source || !draft || !sourceDraftCanSave(source, draft)) return;
+    var queuedEdit = { baseRevision: source.revision, draft: Object.assign({}, draft) };
+    var previous = state.sourceMutationQueue || Promise.resolve();
+    var task = previous.catch(function () {}).then(function () {
+      return performSourceOverrideSave(sourceId, queuedEdit);
+    }).catch(function () {
+      showCaduError('Falha de rede ao salvar ' + sourceId + '. A operação não será repetida automaticamente.');
+    }).finally(function () {
+      delete state.sourceSaveChains[sourceId];
+      if (state.catalogMode === 'registry') renderSitesTable();
+    });
+    state.sourceSaveChains[sourceId] = task;
+    state.sourceMutationQueue = task.catch(function () {});
+    renderSitesTable();
   }
 
   function computeKpis() {
+    if (state.sourceCatalog) {
+      var summary = state.sourceCatalog.summary;
+      $('#kpi-sites').textContent = String(summary.entities);
+      $('#kpi-ig-confirmed').textContent = String(summary.instagramConfirmed);
+      $('#kpi-ig-detail').textContent = summary.instagramConfirmed + ' confirmados · ' + summary.instagramPending + ' pendentes de revisão';
+      $('#kpi-tier1').textContent = String(state.sourceCatalog.sources.filter(function (source) { return source.effectiveTier === 1; }).length);
+      return;
+    }
     var sites = state.allSites;
     $('#kpi-sites').textContent = String(sites.length);
-    var igConfirmed = sites.filter(function (s) { return s.instagram_status === 'confirmed'; }).length;
-    var igAttempted = sites.filter(function (s) { return s.instagram_status === 'tentative' || s.instagram_status === 'confirmed'; }).length;
+    var igConfirmed = sites.filter(function (site) { return site.instagram_status === 'confirmed'; }).length;
+    var igAttempted = sites.filter(function (site) { return site.instagram_status === 'tentative' || site.instagram_status === 'confirmed'; }).length;
     $('#kpi-ig-confirmed').textContent = String(igConfirmed);
-    $('#kpi-ig-detail').textContent = igAttempted + ' com perfil atribuído (confirmado ou tentativa)';
-    var t1 = sites.filter(function (s) { return String(s.tier) === '1'; }).length;
-    $('#kpi-tier1').textContent = String(t1);
+    $('#kpi-ig-detail').textContent = igAttempted + ' com perfil atribuído no mapa legado';
+    $('#kpi-tier1').textContent = String(sites.filter(function (site) { return String(site.tier) === '1'; }).length);
+  }
+
+  function buildSitesCsvRows() {
+    if (!state.sourceCatalog || state.catalogMode !== 'registry') {
+      var legacyRows = [['name','tier','category','url','instagram','instagram_status','note']];
+      state.filteredSites.forEach(function (site) {
+        legacyRows.push([site.name, site.tier || '', site.category || '', site.url || '', site.instagram || '', site.instagram_status || '', site.note || '']);
+      });
+      return legacyRows;
+    }
+    var rows = state.filteredCatalogRows;
+    if (state.sitesView === 'entities') {
+      return [['entity_id','name','acronym','kind','campus','status','source_ids','instagram_ids']].concat(rows.map(function (entity) {
+        return [entity.id, entity.name, entity.acronym || '', entity.kind, entity.campus || '', entity.status, entity.sourceIds.join(' '), entity.instagramProfileIds.join(' ')];
+      }));
+    }
+    if (state.sitesView === 'instagram') {
+      return [['instagram_id','handle','profile_url','status','status_group','entity_ids','source_ids','enabled']].concat(rows.map(function (profile) {
+        return [profile.id, profile.handle, profile.profileUrl, profile.status, profile.statusGroup, profile.entityIds.join(' '), profile.sourceIds.join(' '), profile.enabled];
+      }));
+    }
+    if (state.sitesView === 'deferred') {
+      return [['kind','unit_ids','match_types','source_id','candidate_source_ids','entity_ids','legacy_rows_json','row_keys']].concat(rows.map(function (item) {
+        return [item.deferredKind, (item.unitIds || (item.unitId ? [item.unitId] : [])).join(' '), (item.matchTypes || (item.matchType ? [item.matchType] : [])).join(' '), item.sourceId || '', (item.sourceIds || []).join(' '), (item.entityIds || []).join(' '), JSON.stringify(item.rows || (item.row ? [item.row] : [])), (item.rowKeys || (item.rowKey ? [item.rowKey] : [])).join(' ')];
+      }));
+    }
+    return [['source_id','entities','effective_tier','base_tier','override_tier','override_origin','canonical_url','instagram_handles','instagram_statuses','review_state','review_issues','note','revision']].concat(rows.map(function (source) {
+      return [source.id, source.entityIds.join(' '), source.effectiveTier == null ? '' : source.effectiveTier, source.baseTier == null ? '' : source.baseTier, source.overrideTier == null ? '' : source.overrideTier, source.overrideOrigin, source.canonicalUrl, source.instagramProfiles.map(function (profile) { return profile.handle; }).join(' '), source.instagramProfiles.map(function (profile) { return profile.status; }).join(' '), source.reviewState, source.reviewIssues.join(' | '), source.note || '', source.revision];
+    }));
   }
 
   // ============================================================
@@ -502,11 +1071,15 @@
   // ============================================================
 
   async function publishSite(site) {
+    if (state.catalogMode === 'registry' || (site && site.sourceId)) {
+      showCaduError('Publicação bloqueada: o catálogo canônico está em shadow e todas as fontes permanecem desativadas para execução.');
+      return;
+    }
     var key = siteActionKey(site);
     if (state.publishingKey === key) return;
     var publishUrl = getSitePublishUrl(site);
     if (!publishUrl) {
-      showCaduError('Nao foi possivel sugerir "' + escapeHtml(site.name) + '": informe uma URL HTTPS ou Instagram na fonte.');
+      showCaduError('Não foi possível sugerir "' + site.name + '": informe uma URL HTTPS ou Instagram na fonte.');
       setTimeout(hideCaduError, 6000);
       return;
     }
@@ -534,7 +1107,7 @@
       }
       var msg = (data && data.message) ? data.message : 'OK';
       var via = (data && data.published_via) ? ' (' + data.published_via + ')' : '';
-      showCaduError('<i class="fas fa-circle-check"></i> ' + escapeHtml(msg) + '<small style="opacity:.7;display:block;margin-top:4px;">via: ' + escapeHtml(via.replace(/[()]/g, '')) + '</small>');
+      showCaduError(msg + (via ? ' — via: ' + via.replace(/[()]/g, '') : ''));
       setTimeout(hideCaduError, 6000);
     } catch (err) {
       if (btn) {
@@ -1299,7 +1872,7 @@
         if (resp && !resp.__error) {
           showAskCaduResult('Perguntar sobre chunk: ' + (heading || chunkId), resp);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o chunk: ' + escapeHtml(resp && resp.status ? ('HTTP ' + resp.status) : 'sem resposta'));
+          showCaduError('Erro ao perguntar ao Cadu sobre o chunk: ' + (resp && resp.status ? ('HTTP ' + resp.status) : 'sem resposta'));
         }
       } else if (kind === 'feed-diagnostic') {
         var diagId = btn.getAttribute('data-ask-id') || '';
@@ -1321,7 +1894,7 @@
         if (diagResp && !diagResp.__error) {
           showAskCaduResult('Diagnóstico do feed: ' + (diagTitle || diagId), diagResp);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + escapeHtml(diagResp && diagResp.status ? ('HTTP ' + diagResp.status) : 'sem resposta'));
+          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + (diagResp && diagResp.status ? ('HTTP ' + diagResp.status) : 'sem resposta'));
         }
       } else if (kind === 'site') {
         var siteName = btn.getAttribute('data-ask-name') || '';
@@ -1337,7 +1910,7 @@
         if (resp2 && !resp2.__error) {
           showAskCaduResult('Perguntar sobre site: ' + siteName, resp2);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + escapeHtml(resp2 && resp2.status ? ('HTTP ' + resp2.status) : 'sem resposta'));
+          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + (resp2 && resp2.status ? ('HTTP ' + resp2.status) : 'sem resposta'));
         }
       } else if (kind === 'pipeline') {
         var runId = btn.getAttribute('data-ask-run-id') || '';
@@ -1352,7 +1925,7 @@
         if (resp3 && !resp3.__error) {
           showAskCaduResult('Perguntar sobre pipeline: ' + runId.slice(0, 8), resp3);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + escapeHtml(resp3 && resp3.status ? ('HTTP ' + resp3.status) : 'sem resposta'));
+          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + (resp3 && resp3.status ? ('HTTP ' + resp3.status) : 'sem resposta'));
         }
       }
     } catch (e) {
@@ -1372,9 +1945,9 @@
   var notifState = { lastCount: 0, runs: [], seen: {} };
 
   function pollNotifActivity() {
-    var bell = $('#kcNotifBell');
-    var badge = $('#kcNotifBadge');
-    var list = $('#kcNotifList');
+    var bell = $('#kcCaduActivityBell');
+    var badge = $('#kcCaduActivityBadge');
+    var list = $('#kcCaduActivityList');
     if (!bell || !badge) return;
 
     apiFetch('/api/cadu/pipeline/runs?limit=8')
@@ -1408,7 +1981,7 @@
           localStorage.setItem('kc_cadu_seen_runs', JSON.stringify(newSeen));
         } catch (e) {}
 
-        if (list && $('#kcNotifDropdown') && !$('#kcNotifDropdown').hasAttribute('hidden')) {
+        if (list && $('#kcCaduActivityDropdown') && !$('#kcCaduActivityDropdown').hasAttribute('hidden')) {
           if (data.runs.length === 0) {
             list.innerHTML = '<div class="kc-cadu-empty">Nenhuma run ainda.</div>';
             return;
@@ -1417,19 +1990,20 @@
             var stClass = r.status === 'finished' ? 'pill--finished'
                        : r.status === 'failed' ? 'pill--failed'
                        : r.status === 'running' ? 'pill--running' : '';
-            return '<div class="kc-notif-dropdown__item" data-run="' + r.id + '">'
-              + '<div class="kc-notif-dropdown__item__title">' + escapeHtml(r.stage) + '</div>'
-              + '<div class="kc-notif-dropdown__item__meta">'
+            return '<div class="kc-cadu-activity-dropdown__item" data-run="' + r.id + '">'
+              + '<div class="kc-cadu-activity-dropdown__item__title">' + escapeHtml(r.stage) + '</div>'
+              + '<div class="kc-cadu-activity-dropdown__item__meta">'
               + '<span class="pill ' + stClass + '">' + escapeHtml(r.status) + '</span>'
               + '<span>' + fmtAgo(r.started_at) + '</span>'
               + (r.exit_code != null ? '<span>exit ' + r.exit_code + '</span>' : '')
               + '</div>'
               + '</div>';
           }).join('');
-          $$('.kc-notif-dropdown__item', list).forEach(function (it) {
+          $$('.kc-cadu-activity-dropdown__item', list).forEach(function (it) {
             it.addEventListener('click', function () {
               switchTab('pipeline');
-              $('#kcNotifDropdown').setAttribute('hidden', '');
+              $('#kcCaduActivityDropdown').setAttribute('hidden', '');
+              bell.setAttribute('aria-expanded', 'false');
               var rid = it.getAttribute('data-run');
               setTimeout(function () {
                 var target = document.querySelector('[data-run-id="' + rid + '"]');
@@ -1464,9 +2038,12 @@
         unidade: s.name || '',
         tier: s.tier ? 'T' + s.tier : '—',
         site: s.url || '—',
-        instagram: s.instagram || '—',
+        instagram: s.instagramContext || s.instagram || '—',
         ig_status: s.instagram_status || '—',
         categoria: s.category || '—',
+        override: s.override_origin
+          ? s.override_origin + (s.collision ? ' · evidência de colisão' : '')
+          : 'legado somente leitura',
         observacao: s.note || '',
       };
     });
@@ -1479,20 +2056,22 @@
         busca: f.q || '—',
         tier: f.tier ? ('Tier ' + f.tier) : 'todos',
         ig_status: f.ig || 'todos',
+        override_origin: state.sitesOrigin || 'todos',
         total_filtrado: sites.length + ' de ' + (state.allSites || []).length,
       },
       kpis: [
         { label: 'Total filtrado', value: sites.length + ' / ' + (state.allSites || []).length, note: 'após aplicar busca, tier e status IG' },
         { label: 'Com site HTTPS', value: hasUrl, note: 'unidades com URL institucional cadastrada' },
-        { label: 'IG confirmado', value: igCount.confirmed || 0, note: 'perfis validados pelo scanner' },
-        { label: 'Tier 1 (alta)', value: tierCount['1'] || 0, note: 'pró-reitorias e alta prioridade' },
-        { label: 'Tier 2 (média)', value: tierCount['2'] || 0, note: 'faculdades, institutos, escolas' },
-        { label: 'Tier 3 (baixa)', value: tierCount['3'] || 0, note: 'centros, hospitais, projetos' },
+        { label: 'IG confirmado', value: igCount.confirmed || 0, note: 'perfil com evidência institucional confirmada' },
+        { label: 'IG pendente/tentativo', value: (igCount.pending_verification || 0) + (igCount.tentative || 0), note: 'exige verificação antes de qualquer ativação' },
+        { label: 'Tier efetivo 1', value: tierCount['1'] || 0, note: 'consulte origem e override antes de interpretar prioridade' },
+        { label: 'Tier efetivo 2', value: tierCount['2'] || 0, note: 'consulte origem e override antes de interpretar prioridade' },
+        { label: 'Tier efetivo 3', value: tierCount['3'] || 0, note: 'consulte origem e override antes de interpretar prioridade' },
       ],
       sections: [
         {
           title: 'Sites UFG (lista filtrada)',
-          note: 'Tabela exportada a partir do estado atual da aba Sites UFG. Edite tier/observação inline e re-exporte para refletir mudanças.',
+          note: 'Tabela exportada da visão Fontes web. Overrides exigem ID estável, confirmação explícita e ETag/CAS; valores legados não são promovidos automaticamente.',
           columns: [
             { key: 'unidade', label: 'Unidade', width: 2 },
             { key: 'tier', label: 'Tier', width: 1 },
@@ -1500,6 +2079,7 @@
             { key: 'instagram', label: 'Instagram', width: 2 },
             { key: 'ig_status', label: 'Status IG', width: 1 },
             { key: 'categoria', label: 'Categoria', width: 2 },
+            { key: 'override', label: 'Origem / colisão', width: 2 },
             { key: 'observacao', label: 'Observação', width: 3 },
           ],
           rows: rows,
@@ -1634,16 +2214,24 @@
         var filter = btn.getAttribute('data-kpi-filter') || '';
         if (tabName === 'sites' && filter) {
           state.sitesFilter = { q: '', tier: '', ig: '' };
+          state.sitesOrigin = '';
           if (sitesSearch) sitesSearch.value = '';
           if (sitesTier) sitesTier.value = '';
           if (sitesIg) sitesIg.value = '';
+          if (sitesOrigin) sitesOrigin.value = '';
+          state.sitesView = 'sources';
           if (filter !== 'all') {
             var parts = filter.split('=');
             var field = parts[0];
             var value = parts[1];
             if (field === 'tier' && sitesTier) { sitesTier.value = value; state.sitesFilter.tier = value; }
-            if (field === 'ig' && sitesIg) { sitesIg.value = value; state.sitesFilter.ig = value; }
+            if (field === 'ig' && sitesIg) {
+              sitesIg.value = value;
+              state.sitesFilter.ig = value;
+              if (state.catalogMode === 'registry') state.sitesView = 'instagram';
+            }
           }
+          if (sitesView) sitesView.value = state.sitesView;
           applySitesFilter();
         }
         switchTab(tabName);
@@ -1660,17 +2248,19 @@
     });
 
     // Notification bell: toggle dropdown + click-outside close
-    var notifBell = $('#kcNotifBell');
-    var notifDropdown = $('#kcNotifDropdown');
+    var notifBell = $('#kcCaduActivityBell');
+    var notifDropdown = $('#kcCaduActivityDropdown');
     if (notifBell && notifDropdown) {
       notifBell.addEventListener('click', function (ev) {
         ev.stopPropagation();
         var isHidden = notifDropdown.hasAttribute('hidden');
         if (isHidden) {
           notifDropdown.removeAttribute('hidden');
+          notifBell.setAttribute('aria-expanded', 'true');
           pollNotifActivity();
         } else {
           notifDropdown.setAttribute('hidden', '');
+          notifBell.setAttribute('aria-expanded', 'false');
         }
       });
       document.addEventListener('click', function (ev) {
@@ -1678,6 +2268,7 @@
             !notifDropdown.contains(ev.target) &&
             ev.target !== notifBell) {
           notifDropdown.setAttribute('hidden', '');
+          notifBell.setAttribute('aria-expanded', 'false');
         }
       });
     }
@@ -1712,9 +2303,26 @@
     var sitesSearch = $('#sites-search');
     var sitesTier = $('#sites-tier');
     var sitesIg = $('#sites-ig');
+    var sitesView = $('#sites-view');
+    var sitesOrigin = $('#sites-origin');
     sitesSearch.addEventListener('input', function () { state.sitesFilter.q = sitesSearch.value; applySitesFilter(); });
     sitesTier.addEventListener('change', function () { state.sitesFilter.tier = sitesTier.value; applySitesFilter(); });
     sitesIg.addEventListener('change', function () { state.sitesFilter.ig = sitesIg.value; applySitesFilter(); });
+    if (sitesOrigin) sitesOrigin.addEventListener('change', function () { state.sitesOrigin = sitesOrigin.value; applySitesFilter(); });
+    if (sitesView) sitesView.addEventListener('change', function () {
+      state.sitesView = sitesView.value;
+      if (state.sitesView !== 'sources') {
+        state.sitesFilter.tier = '';
+        state.sitesOrigin = '';
+        if (sitesTier) sitesTier.value = '';
+        if (sitesOrigin) sitesOrigin.value = '';
+      }
+      if (state.sitesView === 'deferred') {
+        state.sitesFilter.ig = '';
+        if (sitesIg) sitesIg.value = '';
+      }
+      applySitesFilter();
+    });
 
     // OpenClaw (v0.4.3)
     var ocRefresh = $('#openclaw-refresh-btn');
@@ -1763,25 +2371,57 @@
     }
 
     $('#sites-export-csv').addEventListener('click', function () {
-      var rows = [['name','tier','category','url','instagram','instagram_status','note']];
-      state.filteredSites.forEach(function (s) {
-        rows.push([s.name, s.tier || '', s.category || '', s.url || '', s.instagram || '', s.instagram_status || '', s.note || '']);
-      });
-      downloadCsv('cadu-sites-' + new Date().toISOString().slice(0, 10) + '.csv', rows);
+      downloadCsv('cadu-' + state.sitesView + '-' + new Date().toISOString().slice(0, 10) + '.csv', buildSitesCsvRows());
     });
 
-    // Delegação: clicar em qualquer botão de publicar
+    // Delegação: overrides explícitos e ações contextuais da tabela.
     var sitesTable = $('#sites-table');
     if (sitesTable) {
       sitesTable.addEventListener('click', function (e) {
+        var saveBtn = e.target.closest && e.target.closest('.kc-cadu-save-source-btn');
+        if (saveBtn) {
+          saveSourceOverride(saveBtn.getAttribute('data-source-id') || '');
+          return;
+        }
         var btn = e.target.closest && e.target.closest('.kc-cadu-publish-btn');
         if (!btn) return;
+        var sourceId = btn.getAttribute('data-source-id') || '';
+        if (sourceId) {
+          var mapped = state.allSites.find(function (site) { return site.sourceId === sourceId; });
+          if (mapped) { publishSite(mapped); return; }
+        }
         var key = btn.getAttribute('data-key') || '';
         var parts = key.split('|');
         var name = btn.getAttribute('data-name') || parts[0] || '';
         var url = parts[1] || '';
         var site = state.allSites.find(function (s) { return s.name === name && (s.url || '') === url; }) || { name: name, url: url, key: key };
         publishSite(site);
+      });
+      sitesTable.addEventListener('change', function (e) {
+        var tierSelect = e.target.closest && e.target.closest('.kc-cadu-source-tier-select');
+        if (!tierSelect) return;
+        var sourceId = tierSelect.getAttribute('data-source-id') || '';
+        var source = sourceById(sourceId);
+        if (!source) return;
+        var draft = ensureSourceDraft(source);
+        if (tierSelect.value === '__unset__') {
+          draft.tier = null;
+          draft.tierTouched = false;
+        } else {
+          draft.tier = tierSelect.value === '' ? null : parseInt(tierSelect.value, 10);
+          draft.tierTouched = true;
+        }
+        renderSitesTable();
+      });
+      sitesTable.addEventListener('input', function (e) {
+        var noteInput = e.target.closest && e.target.closest('.kc-cadu-source-note-input');
+        if (!noteInput) return;
+        var source = sourceById(noteInput.getAttribute('data-source-id') || '');
+        if (source) {
+          var draft = ensureSourceDraft(source);
+          draft.note = noteInput.value;
+          updateSourceSaveButton(source, draft);
+        }
       });
     }
 
@@ -1866,23 +2506,51 @@
     return fetch(buildCaduApiUrl(path), Object.assign({}, opts || {}, { headers: headers }));
   }
 
-  async function apiFetch(path, opts) {
+  async function apiFetchResponse(path, opts) {
     var url = buildCaduApiUrl(path);
     try {
       var res = await caduFetchRaw(path, opts);
       var ct = res.headers.get('content-type') || '';
       var data = ct.indexOf('application/json') !== -1 ? await res.json() : await res.text();
+      var envelope = {
+        ok: res.ok,
+        status: res.status,
+        data: data,
+        headers: {
+          etag: res.headers.get('etag') || '',
+          registrySha256: res.headers.get('x-cadu-registry-sha256') || '',
+          cacheControl: res.headers.get('cache-control') || ''
+        }
+      };
       if (!res.ok) {
         console.error('[cadu-api] ' + url + ' HTTP ' + res.status, data);
-        // Retorna estrutura com status pra handling de erros no caller
-        // (ex: 409 dedup mostra mensagem específica em vez de "sem resposta")
-        return { __error: true, status: res.status, data: data };
       }
-      return data;
+      return envelope;
     } catch (e) {
       console.error('[cadu-api] ' + url + ' error:', e);
-      return { __error: true, status: 0, data: null, message: String(e && e.message || e) };
+      return {
+        ok: false,
+        status: 0,
+        data: null,
+        headers: { etag: '', registrySha256: '', cacheControl: '' },
+        message: String(e && e.message || e)
+      };
     }
+  }
+
+  async function apiFetch(path, opts) {
+    var result = await apiFetchResponse(path, opts);
+    if (!result.ok) {
+      // Preserve the historical caller contract while registry consumers use
+      // apiFetchResponse to retain strong ETag/hash response metadata.
+      return {
+        __error: true,
+        status: result.status,
+        data: result.data,
+        message: result.message
+      };
+    }
+    return result.data;
   }
 
   var pipelineStreamRequest = null;

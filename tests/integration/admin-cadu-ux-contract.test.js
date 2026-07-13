@@ -30,6 +30,13 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('data-kpi-filter="tier=1"');
   });
 
+  test('labels canonical tier metrics separately from the legacy operational context', () => {
+    expect(html).toContain('fontes com tier efetivo 1');
+    expect(html).not.toContain('pró-reitorias + alta prioridade');
+    expect(controller).toContain('Contexto legado:');
+    expect(controller).not.toContain('> Context: ');
+  });
+
   test('PDF export restores the original button markup', () => {
     expect(controller).not.toContain('.innerHtml');
     expect(controller.match(/btn \? btn\.innerHTML : ''/g).length).toBeGreaterThanOrEqual(2);
@@ -73,5 +80,118 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("typeof active.dry_run === 'boolean'");
     expect(controller).toContain("active.dry_run ? 'simulação' : 'execução real'");
     expect(controller).toContain("typeof r.dry_run === 'boolean'");
+  });
+
+  test('PDF explains registry provenance without calling scanner evidence confirmation', () => {
+    expect(controller).not.toContain('perfis validados pelo scanner');
+    expect(controller).toContain('perfil com evidência institucional confirmada');
+    expect(controller).toContain("{ key: 'override', label: 'Origem / colisão'");
+    expect(controller).toContain('valores legados não são promovidos automaticamente');
+  });
+
+  test('loads and validates the canonical registry before enabling source views', () => {
+    expect(html.indexOf('src="../assets/js/controllers/admin/admin-cadu-sources.js')).toBeLessThan(
+      html.indexOf('src="../assets/js/controllers/admin/admin-cadu.controller.js')
+    );
+    ['sources', 'entities', 'instagram', 'deferred'].forEach((view) => {
+      expect(html).toContain(`<option value="${view}">`);
+    });
+    expect(controller).toContain("apiFetchResponse('/api/cadu/sites/source-registry')");
+    expect(controller).toContain('registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope))');
+    expect(controller).toContain("'X-Cadu-Registry-Sha256': envelope.headers.registrySha256");
+    expect(controller).toContain("state.catalogMode = 'legacy-readonly'");
+    expect(controller).toContain('Overrides estão bloqueados para evitar gravar por nomes ambíguos.');
+  });
+
+  test('never autosaves legacy names and writes stable source IDs with strong CAS', () => {
+    expect(controller).not.toContain('scheduleSiteSave');
+    expect(controller).not.toContain('commitSiteSave');
+    expect(controller).not.toContain("'/meta'");
+    expect(controller).toContain('registryModel().buildOverrideMutation(source, changes)');
+    expect(controller).toContain("apiFetchResponse('/api/cadu/sites/' + mutation.path");
+    expect(controller).toContain('mutation.headers');
+    expect(controller).toContain("envelope.status === 412 || envelope.status === 409");
+    expect(controller).toContain('Nenhuma repetição automática foi feita.');
+    expect(controller).toContain("state.sourceSaveChains[sourceId]");
+    expect(controller).toContain('window.confirm(\'Criar override estável para \' + source.id');
+  });
+
+  test('keeps inherited notes visibly separate and requires an explicit first tier', () => {
+    expect(controller).toContain('Nota herdada (não será copiada):');
+    expect(controller).toContain('Escolha explicitamente…');
+    expect(controller).toContain('function normalizedDraftNote(note)');
+    expect(controller).toContain("String(note == null ? '' : note).trim() === '' ? null : String(note)");
+    expect(controller).toContain('compare os valores e decida manualmente antes de salvar novamente');
+  });
+
+  test('serializes source writes, preserves dirty drafts and revalidates the exact effect', () => {
+    expect(controller).toContain('catalogRequestGeneration: 0');
+    expect(controller).toContain('requestGeneration !== state.catalogRequestGeneration');
+    expect(controller).toContain('state.sourceMutationQueue || Promise.resolve()');
+    expect(controller).toContain('baseRevision: source.revision, draft: Object.assign({}, draft)');
+    expect(controller).toContain('function revalidatedSourceMatches(source, changes, expectedEtag)');
+    expect(controller).toContain("revalidatedMode !== 'registry'");
+    expect(controller).toContain('o catálogo canônico não pôde ser revalidado');
+    expect(controller).toContain('var retainedDrafts = sourceDraftsForReload(options);');
+    expect(controller).toContain('function sourceDraftIsDirtyWithoutSource(draft)');
+  });
+
+  test('keeps shadow registry sources non-publishable and carries every Instagram status as context', () => {
+    expect(controller).toContain('registryModel().selectUnambiguousConfirmedInstagram(profiles)');
+    expect(controller).toContain("return '@' + profile.handle + ' (' + profile.status + ')';");
+    expect(controller).toContain('class="kc-cadu-publish-btn" disabled');
+    expect(controller).toContain("state.catalogMode === 'registry' || (site && site.sourceId)");
+    expect(controller).toContain('o catálogo canônico está em shadow');
+  });
+
+  test('renders complete entity and Instagram coverage, including mapping gaps', () => {
+    expect(controller).toContain("summary.entitiesWithoutWebSource");
+    expect(controller).toContain("'entidades sem site associado'");
+    expect(controller).toContain('sem fonte web associada');
+    expect(controller).toContain('renderDeferredRows');
+    expect(controller).toContain("state.sourceCatalog.sources.find(function (source) { return source.id === sourceId; })");
+    expect(html).toContain('<option value="collision_evidence">qualquer evidência de colisão</option>');
+    expect(controller).toContain("state.sitesOrigin === 'collision_evidence' && !source.collision");
+    expect(controller).toContain('Colisão legada:');
+  });
+
+  test('renders upstream error strings as text rather than HTML', () => {
+    expect(controller).toContain("wrap.textContent = String(msg == null ? '' : msg)");
+    expect(controller).not.toMatch(/function showCaduError[\s\S]{0,300}wrap\.innerHTML/);
+  });
+
+  test('owns a namespaced activity bell without colliding with global notifications', () => {
+    expect(html).toContain('id="kcCaduActivityBell"');
+    expect(html).toContain('data-i18n-aria-label="aria-label.notifications"');
+    expect(html).toContain('data-i18n-tooltip="tooltip.cadu-notifications"');
+    expect(html).toContain('id="kcCaduActivityDropdown"');
+    expect(html).toContain('id="kcCaduActivityList"');
+    expect(html).not.toContain('id="kcNotifBell"');
+    expect(html).not.toContain('id="kcNotifDropdown"');
+    expect(controller).toContain("$('#kcCaduActivityBell')");
+    expect(controller).toContain("notifBell.setAttribute('aria-expanded', 'true')");
+    expect(controller).not.toContain("$('#kcNotifDropdown')");
+  });
+
+  test('scopes the seven-column filter grid to the source map toolbar', () => {
+    expect(html).toContain('#tab-sites > .kc-cadu-toolbar { grid-template-columns:');
+    expect(html).toContain('.kc-cadu-hero > .kc-cadu-toolbar { display: flex;');
+    expect(html).toContain('.kc-cadu-activity-dropdown[hidden] { display: none !important; }');
+  });
+
+  test('exports deferred legacy identities and row metadata rather than hashes alone', () => {
+    expect(controller).toContain("['kind','unit_ids','match_types','source_id','candidate_source_ids','entity_ids','legacy_rows_json','row_keys']");
+    expect(controller).toContain("JSON.stringify(item.rows || (item.row ? [item.row] : []))");
+    expect(controller).toContain("var unitIds = item.unitIds || (item.unitId ? [item.unitId] : []);");
+    expect(controller).toContain("if (/^[\\t\\r ]*[=+\\-@]/.test(s)) s = \"'\" + s;");
+  });
+
+  test('keeps the registry model reviewable as text rather than a binary file', () => {
+    const model = fs.readFileSync(
+      path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-sources.js'),
+      'utf8'
+    );
+    expect(model).not.toContain('\u0000');
+    expect(model).toContain('/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/');
   });
 });
