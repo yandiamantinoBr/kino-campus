@@ -123,7 +123,7 @@ Na VPS, o path real da cadu-api é `/api/pipeline/*` e exige Bearer token (`CADU
 | GET    | `/api/cadu/pipeline/runs`                | Lista runs (mesmo que history no GET root) |
 | GET    | `/api/cadu/pipeline/:id`                 | Status de um run específico |
 | POST   | `/api/cadu/pipeline/:id/stop`            | Mata subprocess (SIGTERM no grupo de processos) |
-| GET    | `/api/cadu/pipeline/:id/stream`          | SSE com stdout linha-a-linha via proxy same-origin. Como `EventSource` não permite header customizado, o admin usa `kc_admin_token` contra o proxy; a VPS continua recebendo `CADU_API_TOKEN` apenas do servidor. |
+| GET    | `/api/cadu/pipeline/:id/stream`          | SSE com stdout linha-a-linha via `fetch` streaming same-origin e `Authorization: Bearer`; a VPS continua recebendo `CADU_API_TOKEN` apenas do servidor. |
 
 ## Persistência
 

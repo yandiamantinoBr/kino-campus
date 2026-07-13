@@ -24,13 +24,6 @@ function readBearer(req) {
   const header = req && req.headers ? (req.headers.authorization || req.headers.Authorization || '') : '';
   const match = String(header || '').match(/^Bearer\s+(.+)$/i);
   if (match && match[1]) return match[1].trim();
-
-  // EventSource/window.open cannot send custom headers. The admin controller uses
-  // this same-origin query parameter only for Cadu SSE/download routes; routers
-  // must strip it before forwarding to the VPS.
-  const queryToken = req && req.query ? req.query.kc_admin_token : '';
-  if (typeof queryToken === 'string' && queryToken.trim()) return queryToken.trim();
-  if (Array.isArray(queryToken) && queryToken[0]) return String(queryToken[0]).trim();
   return '';
 }
 
