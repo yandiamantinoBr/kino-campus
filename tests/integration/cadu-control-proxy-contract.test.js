@@ -12,7 +12,8 @@ const {
 } = require('../../server/cadu-control-proxy.js');
 const directPipelineHandler = require('../../api/cadu/pipeline.js').default;
 const pipelineHandler = require('../../api/cadu/pipeline-router.js').default;
-const openclawHandler = require('../../api/cadu/openclaw-router.js').default;
+const openclawModule = require('../../api/cadu/openclaw-router.js');
+const openclawHandler = openclawModule.default;
 
 function response() {
   const headers = new Map();
@@ -317,6 +318,31 @@ describe('strict Cadu control-plane proxy runtime', () => {
     expect(options.body).toBe('false');
     expect(options.redirect).toBe('error');
     expect(res.statusCode).toBe(200);
+  });
+
+  test('gives idempotent agent-send enough time for the bounded backend run', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse({ body: '{"ok":true}' }));
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    const body = {
+      message: 'olá',
+      request_id: '12345678-1234-4234-8234-123456789abc',
+      deliver: false,
+      inject_context: false,
+      inject_tiers: false,
+    };
+    const req = request({ method: 'POST', path: 'agent-send', body });
+    req.url = '/api/cadu/openclaw-router?path=agent-send';
+    const res = response();
+
+    try {
+      await openclawHandler(req, res);
+      expect(timeoutSpy).toHaveBeenCalledWith(285000);
+      expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toEqual(body);
+      expect(res.statusCode).toBe(200);
+      expect(openclawModule.config).toEqual({ maxDuration: 300 });
+    } finally {
+      timeoutSpy.mockRestore();
+    }
   });
 
   test('rejects traversal before auth and never attaches the service token', async () => {

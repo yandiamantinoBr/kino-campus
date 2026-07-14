@@ -1,4 +1,4 @@
-// api/cadu/feed.js — proxy admin para cadu-api /api/feed (chunks do Cadu)
+// api/cadu/feed.js — proxy admin para itens públicos dos artefatos do Curador.
 //
 // Endpoints expostos:
 // - GET  /api/cadu/feed?limit=N
@@ -6,6 +6,10 @@
 // - POST /api/cadu/feed?path={chunk_id}/ask
 
 import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
+
+export const config = {
+  maxDuration: 300,
+};
 
 export function classifyCaduFeedPath(subPath) {
   if (subPath === 'admin' || subPath.startsWith('admin/')) return 'retired_admin';
@@ -71,7 +75,7 @@ export default async function handler(req, res) {
       body: (req.method !== 'GET' && req.method !== 'HEAD')
         ? (req.body ? JSON.stringify(req.body) : undefined)
         : undefined,
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(routeKind === 'ask' ? 285000 : 30000),
     });
 
     const text = await upstream.text();

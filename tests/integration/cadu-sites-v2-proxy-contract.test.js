@@ -200,7 +200,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
       'Authorization, Content-Type, If-Match',
     );
     expect(res.headers.get('access-control-expose-headers')).toBe(
-      'ETag, X-Cadu-Registry-Sha256',
+      'ETag, X-Cadu-Registry-Sha256, X-Cadu-Registry-Origin, X-Cadu-Registry-Audit-Cutoff, X-Cadu-Upstream-Status',
     );
     expect(requireCaduAdmin).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
@@ -330,6 +330,74 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.headers.get('etag')).toBe(ETAG);
     expect(res.headers.get('x-cadu-registry-sha256')).toBe(REGISTRY_SHA);
     expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  test('serves the bundled canonical mirror read-only when the upstream registry route is missing', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse({
+      status: 404,
+      body: { detail: 'not found' },
+    }));
+    const res = createResponse();
+
+    await handler(request({ path: 'source-registry' }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      registryVersion: '2026-07-13.1',
+      activation: { state: 'candidate', runtimeConsumers: [] },
+    });
+    expect(res.body.sources.length).toBeGreaterThan(150);
+    expect(res.body.entities.length).toBeGreaterThan(150);
+    expect(res.body.instagramProfiles.length).toBeGreaterThan(50);
+    expect(res.headers.get('etag')).toMatch(/^"[a-f0-9]{64}"$/);
+    expect(res.headers.get('x-cadu-registry-sha256')).toMatch(/^[a-f0-9]{64}$/);
+    expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
+    expect(res.headers.get('x-cadu-registry-audit-cutoff')).toBe('2026-07-13');
+    expect(res.headers.get('x-cadu-upstream-status')).toBe('404');
+    expect(res.headers.get('cache-control')).toBe('private, max-age=300');
+  });
+
+  test('keeps the read-only map available when registry configuration is absent', async () => {
+    delete process.env.CADU_API_TOKEN;
+    const res = createResponse();
+
+    await handler(request({ path: 'source-registry' }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
+    expect(res.headers.get('x-cadu-upstream-status')).toBe('503');
+    expect(res.body.activation).toEqual({ state: 'candidate', runtimeConsumers: [] });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('keeps the read-only map available when the registry upstream is unreachable', async () => {
+    global.fetch.mockRejectedValue(new Error('connect ECONNREFUSED secret=must-not-leak'));
+    const res = createResponse();
+
+    await handler(request({ path: 'source-registry' }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
+    expect(res.headers.get('x-cadu-upstream-status')).toBe('502');
+    expect(JSON.stringify(res.body)).not.toMatch(/ECONNREFUSED|must-not-leak/);
+  });
+
+  test('never uses the mirror for readiness or mutations', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse({ status: 404 }));
+    const readiness = createResponse();
+    await handler(request({ path: 'source-registry/readiness' }), readiness);
+    expect(readiness.statusCode).toBe(404);
+    expect(readiness.body).toEqual({ error: 'cadu_api_error', status: 404 });
+
+    const mutation = createResponse();
+    await handler(request({
+      method: 'PATCH',
+      path: 'source-registry/web.ufg.proad/override',
+      headers: { 'if-match': ETAG },
+      body: { tier: 1, note: null },
+    }), mutation);
+    expect(mutation.statusCode).toBe(404);
+    expect(mutation.body).toEqual({ error: 'cadu_api_error', status: 404 });
   });
 
   test('forwards readiness with registry hash but without inventing an ETag', async () => {

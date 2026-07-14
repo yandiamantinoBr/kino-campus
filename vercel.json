@@ -5,6 +5,9 @@
   "functions": {
     "api/og-product.js": {
       "includeFiles": "_product.html"
+    },
+    "api/cadu/sites.js": {
+      "includeFiles": "services/cadu-ufg-publisher/config/cadu-source-registry/ufg-source-registry.candidate.json"
     }
   },
   "rewrites": [

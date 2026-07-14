@@ -10,6 +10,7 @@ const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_ERROR_RESPONSE_BYTES = 64 * 1024;
 const MAX_SSE_BYTES = 16 * 1024 * 1024;
 const NON_STREAM_TIMEOUT_MS = 25_000;
+const AGENT_SEND_TIMEOUT_MS = 285_000;
 const SSE_TIMEOUT_MS = 285_000;
 
 export class CaduProxyLimitError extends Error {
@@ -412,7 +413,7 @@ async function proxyNonStream(req, res, route, targetUrl, token) {
     },
     body,
     redirect: 'error',
-    signal: AbortSignal.timeout(NON_STREAM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(route.kind === 'agent-send' ? AGENT_SEND_TIMEOUT_MS : NON_STREAM_TIMEOUT_MS),
   });
   if (!upstream.ok) {
     const failure = await sanitizedUpstreamFailure(upstream);

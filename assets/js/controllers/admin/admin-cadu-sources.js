@@ -741,12 +741,23 @@
     requireString(payload.registryVersion, 'registryVersion');
     requirePattern(payload.registrySha256, SHA256_PATTERN, 'registrySha256', 'a lowercase SHA-256');
     var activation = requireObject(payload.activation, 'activation');
-    if (activation.state !== 'shadow') {
-      fail('registry_not_shadow', 'activation.state', 'expected shadow');
+    var registryOrigin = readHeader(responseMeta, 'X-Cadu-Registry-Origin') || 'cadu-api';
+    if (registryOrigin !== 'cadu-api' && registryOrigin !== 'kino-campus-mirror') {
+      fail('invalid_registry_origin', 'headers.x-cadu-registry-origin', 'unknown registry origin');
     }
     requireArray(activation.runtimeConsumers, 'activation.runtimeConsumers');
-    if (!sameStringSet(activation.runtimeConsumers, ['cadu-api'])) {
-      fail('unexpected_runtime_consumer', 'activation.runtimeConsumers', 'expected only cadu-api');
+    if (registryOrigin === 'kino-campus-mirror') {
+      if (activation.state !== 'candidate' || activation.runtimeConsumers.length !== 0) {
+        fail('invalid_mirror_activation', 'activation', 'the local mirror must be a non-runtime candidate');
+      }
+      requireString(payload.auditCutoff, 'auditCutoff');
+    } else {
+      if (activation.state !== 'shadow') {
+        fail('registry_not_shadow', 'activation.state', 'expected shadow');
+      }
+      if (!sameStringSet(activation.runtimeConsumers, ['cadu-api'])) {
+        fail('unexpected_runtime_consumer', 'activation.runtimeConsumers', 'expected only cadu-api');
+      }
     }
 
     var entities = requireArray(payload.entities, 'entities');
@@ -889,6 +900,8 @@
     var catalog = {
       registryVersion: projection.registryVersion,
       registrySha256: projection.registrySha256,
+      registryOrigin: readHeader(responseMeta, 'X-Cadu-Registry-Origin') || 'cadu-api',
+      auditCutoff: projection.auditCutoff || null,
       activation: cloneJson(projection.activation),
       responseEtag: readHeader(responseMeta, 'ETag'),
       sources: sources,
