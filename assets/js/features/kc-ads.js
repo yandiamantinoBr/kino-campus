@@ -19,8 +19,10 @@
   const INLINE_AFTER_FIRST = 6;
   const INLINE_INTERVAL = 6;
   const INLINE_MAX_PER_LIST = 8;
+  const INITIAL_LOAD_RETRY_DELAYS_MS = Object.freeze([250, 900, 2500, 8000]);
   let frequencyMemory = {};
   let initialLoadStarted = false;
+  let initialLoadCompleted = false;
   const safeSetTimeout = typeof root.setTimeout === 'function'
     ? root.setTimeout.bind(root)
     : (typeof setTimeout === 'function' ? setTimeout : function (fn) {
@@ -236,6 +238,16 @@
     return root.KCSupabase && typeof root.KCSupabase.getClient === 'function'
       ? root.KCSupabase.getClient()
       : null;
+  }
+
+  function isClientReady(client) {
+    return !!(client && typeof client.rpc === 'function');
+  }
+
+  function clientNotReadyError() {
+    const error = new Error('Supabase client is not ready');
+    error.code = 'CLIENT_NOT_READY';
+    return error;
   }
 
   function cacheKey(context) {
@@ -712,9 +724,9 @@
     cards.forEach((card) => observer.observe(card));
   }
 
-  async function fetchAds(context) {
-    const client = getClient();
-    if (!client || typeof client.rpc !== 'function') return [];
+  async function fetchAds(context, readyClient) {
+    const client = readyClient || getClient();
+    if (!isClientReady(client)) throw clientNotReadyError();
     const args = {
       p_page_path: context.page_path,
       p_module_key: context.module_key,
@@ -727,9 +739,9 @@
     return normalizeAdRows(response && response.data);
   }
 
-  async function fetchAdConfig(context) {
-    const client = getClient();
-    if (!client || typeof client.rpc !== 'function') return defaultAdConfig();
+  async function fetchAdConfig(context, readyClient) {
+    const client = readyClient || getClient();
+    if (!isClientReady(client)) throw clientNotReadyError();
     try {
       const response = await client.rpc('kc_get_feed_ad_config', {
         p_page_path: context.page_path,
@@ -768,14 +780,27 @@
       search_query: getSearchQuery(),
     };
     const cached = getCachedAds(context);
-    const config = await fetchAdConfig(context);
+    const client = getClient();
+    if (!isClientReady(client)) {
+      if (cached && cached.ads.length) {
+        const fallbackConfig = defaultAdConfig();
+        renderAllAds(cached.ads, context, null, fallbackConfig);
+        observeFeeds(cached.ads, context, fallbackConfig);
+      }
+      return {
+        ok: false,
+        code: 'CLIENT_NOT_READY',
+        source: cached && cached.ads.length ? 'stale-cache' : 'runtime',
+      };
+    }
+    const config = await fetchAdConfig(context, client);
     if (cached && cached.ads.length) {
       renderAllAds(cached.ads, context, null, config);
       observeFeeds(cached.ads, context, config);
       if (cached.isFresh) return { ok: true, source: 'cache' };
     }
     try {
-      const ads = await fetchAds(context);
+      const ads = await fetchAds(context, client);
       if (ads.length || config.enabled) {
         persistAds(context, ads);
         renderAllAds(ads, context, null, config);
@@ -783,6 +808,9 @@
       }
       return { ok: true, source: 'supabase', count: ads.length };
     } catch (error) {
+      if (error && error.code === 'CLIENT_NOT_READY') {
+        return { ok: false, code: 'CLIENT_NOT_READY', error };
+      }
       if (cached && cached.ads.length) return { ok: true, source: 'stale-cache', error };
       if (config.enabled) {
         renderAllAds([], context, null, config);
@@ -795,18 +823,55 @@
 
   function init() {
     if (!root.document || !isFeedPage()) return;
-    const run = function () {
-      if (initialLoadStarted) return;
-      if (!(root.KCSupabase && typeof root.KCSupabase.getClient === 'function' && root.KCSupabase.getClient())) return;
-      initialLoadStarted = true;
-      loadAndRender().catch(function () { });
+    let retryIndex = 0;
+    let retryTimer = null;
+
+    const cleanup = function () {
+      if (retryTimer !== null) safeClearTimeout(retryTimer);
+      retryTimer = null;
+      if (typeof root.document.removeEventListener === 'function') {
+        root.document.removeEventListener('kc:authchange', run);
+      }
     };
-    if (root.KCSupabase && typeof root.KCSupabase.getClient === 'function' && root.KCSupabase.getClient()) {
-      safeSetTimeout(run, 250);
-    } else {
-      root.document.addEventListener('kc:authchange', run, { once: true });
-      safeSetTimeout(run, 900);
-    }
+
+    const scheduleRetry = function () {
+      if (initialLoadCompleted || initialLoadStarted || retryTimer !== null) return;
+      if (retryIndex >= INITIAL_LOAD_RETRY_DELAYS_MS.length) return;
+      const delay = INITIAL_LOAD_RETRY_DELAYS_MS[retryIndex];
+      retryIndex += 1;
+      retryTimer = safeSetTimeout(function () {
+        retryTimer = null;
+        run();
+      }, delay);
+    };
+
+    const run = function () {
+      if (initialLoadCompleted || initialLoadStarted) return;
+      if (retryTimer !== null) safeClearTimeout(retryTimer);
+      retryTimer = null;
+      initialLoadStarted = true;
+      loadAndRender()
+        .then(function (result) {
+          if (result && result.ok === true) {
+            initialLoadCompleted = true;
+            cleanup();
+            return;
+          }
+          if (result && result.code === 'NOT_FEED_PAGE') {
+            initialLoadCompleted = true;
+            cleanup();
+            return;
+          }
+          initialLoadStarted = false;
+          scheduleRetry();
+        })
+        .catch(function () {
+          initialLoadStarted = false;
+          scheduleRetry();
+        });
+    };
+    root.document.addEventListener('kc:authchange', run);
+    scheduleRetry();
   }
 
   if (root && root.document) {

@@ -12,6 +12,8 @@
 
   const DB_FALLBACK_URL = 'data/database.json';
   const TRACK_BATCH_SIZE = 12;
+  const TRACKED_TERM_MAX_LENGTH = 160;
+  const SENSITIVE_SEARCH_TERM_RE = /(?:[\w.%+-]+@[\w.-]+\.[a-z]{2,}|https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,63}(?:[^a-z0-9_-]|$)|(?:access[_ -]?token|refresh[_ -]?token|id[_ -]?token|authorization|password|senha|otp|magiclink|api[_ -]?key)\s*[:=]|[A-Za-z0-9_-]{32,})/i;
   const SEARCH_SCRIPT_SRC = (document.currentScript && document.currentScript.src)
     ? String(document.currentScript.src)
     : '';
@@ -523,16 +525,6 @@
     return sid;
   }
 
-  async function getTrackedUserId() {
-    try {
-      if (window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function') {
-        const user = await window.KCAPI.getCurrentUser();
-        return user ? user.id : null;
-      }
-    } catch (_) {}
-    return null;
-  }
-
   function getQueryParam(name) {
     try {
       const url = new URL(window.location.href);
@@ -702,16 +694,22 @@
 
     const storage = getSearchStorage();
     const sessionId = getSearchSessionId(storage);
-    const userId = await getTrackedUserId();
-    const payload = entries.map((entry) => ({
-      term: entry.term,
-      session_id: sessionId,
-      user_id: userId
-    }));
+    const payload = entries
+      .map((entry) => String(entry && entry.term || '').replace(/\s+/g, ' ').trim())
+      .filter(isTrackableSearchTerm)
+      .slice(0, TRACK_BATCH_SIZE)
+      .map((term) => ({ term }));
+
+    // Invalid/sensitive legacy queue items are consumed without transmission.
+    if (!payload.length) return true;
 
     try {
-      const res = await client.from('search_queries').insert(payload);
-      return !res.error;
+      const res = await client.rpc('kc_ingest_search_queries', {
+        p_session_id: sessionId,
+        p_entries: payload,
+      });
+      if (res && res.error) return false;
+      return !(res && res.data && res.data.ok === false);
     } catch (_) {
       return false;
     }
@@ -740,6 +738,31 @@
     }, delay);
   }
 
+  function searchLengthBucket(length) {
+    const size = Math.max(0, Number(length) || 0);
+    if (size <= 4) return '2_4';
+    if (size <= 8) return '5_8';
+    if (size <= 16) return '9_16';
+    if (size <= 32) return '17_32';
+    return '33_plus';
+  }
+
+  function isTrackableSearchTerm(value) {
+    const rawTerm = String(value || '');
+    const term = rawTerm.replace(/\s+/g, ' ').trim();
+    if (/[\u0000-\u001F\u007F-\u009F]/.test(rawTerm)) return false;
+    if (term.length < 2 || term.length > TRACKED_TERM_MAX_LENGTH) return false;
+    if (SENSITIVE_SEARCH_TERM_RE.test(term)) return false;
+    if (/[0-9](?:[+() .-]*[0-9]){7,14}/.test(term)) return false;
+    return true;
+  }
+
+  function normalizeSearchAnalyticsSource(value) {
+    const source = String(value || '').trim().toLowerCase();
+    const allowed = ['dropdown-item', 'results-load', 'results-submit'];
+    return allowed.indexOf(source) !== -1 ? source : 'search';
+  }
+
   function trackSearch(term, meta = {}) {
     if (!hasAnalyticsConsent()) return false;
     const q = String(term || '').replace(/\s+/g, ' ').trim();
@@ -753,17 +776,21 @@
 
     try {
       if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+        const privacySource = normalizeSearchAnalyticsSource(meta && meta.source);
         window.KCPrivacyAnalytics.track('search', {
-          value: q,
-          source: meta && meta.source ? meta.source : 'search',
+          source: privacySource,
+          query_length_bucket: searchLengthBucket(q.length),
         }).catch(function () {});
       }
     } catch (_) {}
 
     try {
       if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-        var source = (meta && meta.source) ? String(meta.source) : 'search';
-        window.KCEvents.track('kc_search', { term: q, source: source });
+        var source = normalizeSearchAnalyticsSource(meta && meta.source);
+        window.KCEvents.track('kc_search', {
+          search_source: source,
+          query_length_bucket: searchLengthBucket(q.length),
+        });
       }
     } catch (_) {}
 
@@ -771,6 +798,10 @@
       insertTrackedTerms([{ term: q }]).catch(() => {});
       return true;
     }
+
+    // Search still works and aggregate events still fire, but a sensitive term
+    // never enters the raw-term analytics queue.
+    if (!isTrackableSearchTerm(q)) return true;
 
     const entry = KCSearchAnalytics.queueSearchTerm(
       getSearchStorage(),
@@ -1813,6 +1844,7 @@
       getSearchSessionId,
       getSearchStorage,
       insertTrackedTerms,
+      isTrackableSearchTerm,
       applyStructuredSearchPilot,
       isStructuredSearchRuntimeEnabled,
       isStructuredSearchPilotEnabled,

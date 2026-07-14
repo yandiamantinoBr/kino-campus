@@ -11,6 +11,82 @@ function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
 }
 
+function createTimerHarness() {
+  const timers = [];
+  let nextId = 1;
+  return {
+    setTimeout(callback, delay) {
+      const timer = { id: nextId++, callback, delay, active: true };
+      timers.push(timer);
+      return timer.id;
+    },
+    clearTimeout(timerId) {
+      const timer = timers.find((item) => item.id === timerId);
+      if (timer) timer.active = false;
+    },
+    run(delay) {
+      const timer = timers.find((item) => item.active && item.delay === delay);
+      if (!timer) throw new Error(`No active timer found for ${delay}ms`);
+      timer.active = false;
+      timer.callback();
+    },
+    hasPending(delay) {
+      return timers.some((item) => item.active && item.delay === delay);
+    },
+  };
+}
+
+async function flushMicrotasks(turns = 8) {
+  for (let index = 0; index < turns; index += 1) await Promise.resolve();
+}
+
+function createTimedGoogleTagRuntime(invoke) {
+  const source = read('assets/js/boot/kc-google-tag.js');
+  const calls = [];
+  const listeners = {};
+  const timers = createTimerHarness();
+  const context = {
+    window: {
+      dataLayer: [],
+      KCSupabase: {
+        getClient: () => ({
+          functions: {
+            invoke: invoke || (() => Promise.resolve({ data: null, error: null })),
+          },
+        }),
+      },
+      location: {
+        origin: 'https://www.kinocampus.com.br',
+        href: 'https://www.kinocampus.com.br/',
+      },
+      KCConsent: { hasConsent: (category) => category === 'analytics' },
+      addEventListener: () => {},
+      setTimeout: timers.setTimeout,
+      clearTimeout: timers.clearTimeout,
+    },
+    document: {
+      title: 'Kino Campus',
+      referrer: '',
+      addEventListener: (name, handler) => { listeners[name] = handler; },
+      getElementById: () => null,
+      createElement: () => ({}),
+      getElementsByTagName: () => [{ parentNode: { insertBefore: () => {} } }],
+      head: { appendChild: () => {} },
+    },
+    encodeURIComponent,
+    Date,
+    Promise,
+    URL,
+  };
+  context.window.dataLayer.push = function push(args) {
+    calls.push(Array.from(args));
+    return Array.prototype.push.call(this, args);
+  };
+
+  vm.runInNewContext(source, context);
+  return { calls, context, listeners, timers };
+}
+
 describe('Google tag e consentimento LGPD', () => {
   test('todas as paginas carregam Google tag depois do consentimento e antes da telemetria', () => {
     manifest.ALL_HTML_PAGES.forEach((file) => {
@@ -274,6 +350,79 @@ describe('Google tag e consentimento LGPD', () => {
     expect(context.window.KCGoogleTag.sanitizePageUrl(
       'https://www.kinocampus.com.br/product.html?id=4b39baaf-996b-49ca-a603-b122066946dd&with=user-id'
     )).toBe('https://www.kinocampus.com.br/product.html?id=4b39baaf-996b-49ca-a603-b122066946dd');
+  });
+
+  test('aguarda o User-ID pseudonimo antes do page_view inicial autenticado', async () => {
+    const subjectId = 'kc_0123456789abcdef0123456789abcdef';
+    const userId = '4b39baaf-996b-49ca-a603-b122066946dd';
+    let resolveSubject;
+    let invokeCalls = 0;
+    const subjectResponse = new Promise((resolve) => { resolveSubject = resolve; });
+    const runtime = createTimedGoogleTagRuntime((name) => {
+      invokeCalls += 1;
+      expect(name).toBe('kc-analytics-subject-id');
+      return subjectResponse;
+    });
+
+    expect(runtime.timers.hasPending(250)).toBe(true);
+    expect(runtime.calls.some((call) => call[0] === 'event' && call[1] === 'page_view')).toBe(false);
+
+    runtime.listeners['kc:authchange']({ detail: { user: { id: userId } } });
+    await flushMicrotasks();
+
+    expect(invokeCalls).toBe(1);
+    expect(runtime.timers.hasPending(750)).toBe(true);
+    expect(runtime.calls.some((call) => call[0] === 'event' && call[1] === 'page_view')).toBe(false);
+
+    resolveSubject({ data: { ok: true, subjectId }, error: null });
+    await flushMicrotasks();
+
+    const userIdIndex = runtime.calls.findIndex(
+      (call) => call[0] === 'set' && call[1] && call[1].user_id === subjectId
+    );
+    const pageViewIndex = runtime.calls.findIndex(
+      (call) => call[0] === 'event' && call[1] === 'page_view'
+    );
+    expect(userIdIndex).toBeGreaterThan(-1);
+    expect(pageViewIndex).toBeGreaterThan(userIdIndex);
+    expect(runtime.calls.filter((call) => call[0] === 'event' && call[1] === 'page_view')).toHaveLength(1);
+  });
+
+  test('libera anonimos assim que o estado auth e conhecido e limita a descoberta a 250ms', async () => {
+    const knownAnonymous = createTimedGoogleTagRuntime();
+    expect(knownAnonymous.timers.hasPending(250)).toBe(true);
+
+    knownAnonymous.listeners['kc:authchange']({ detail: { user: null } });
+    await flushMicrotasks();
+
+    expect(knownAnonymous.timers.hasPending(250)).toBe(false);
+    expect(knownAnonymous.calls.filter(
+      (call) => call[0] === 'event' && call[1] === 'page_view'
+    )).toHaveLength(1);
+
+    const noAuthSignal = createTimedGoogleTagRuntime();
+    noAuthSignal.timers.run(250);
+    await flushMicrotasks();
+    expect(noAuthSignal.calls.filter(
+      (call) => call[0] === 'event' && call[1] === 'page_view'
+    )).toHaveLength(1);
+  });
+
+  test('nao perde o page_view se a resolucao do User-ID ultrapassar 750ms', async () => {
+    const userId = '4b39baaf-996b-49ca-a603-b122066946dd';
+    const unresolvedSubject = new Promise(() => {});
+    const runtime = createTimedGoogleTagRuntime(() => unresolvedSubject);
+
+    runtime.listeners['kc:authchange']({ detail: { user: { id: userId } } });
+    await flushMicrotasks();
+    expect(runtime.timers.hasPending(750)).toBe(true);
+
+    runtime.timers.run(750);
+    await flushMicrotasks();
+
+    expect(runtime.calls.filter(
+      (call) => call[0] === 'event' && call[1] === 'page_view'
+    )).toHaveLength(1);
   });
 
   test('User-ID usa HMAC opaco do servidor, respeita consentimento e limpa no logout', async () => {

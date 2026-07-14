@@ -19,6 +19,11 @@
   var authenticatedUserPresent = false;
   var userIdRequestVersion = 0;
   var userIdRequest = null;
+  var initialPageViewRequest = null;
+  var authStateObserved = false;
+  var authStateWaiters = [];
+  var AUTH_DISCOVERY_WAIT_MS = 250;
+  var USER_ID_RESOLUTION_WAIT_MS = 750;
 
   var SAFE_CAMPAIGN_PARAMS = Object.freeze({
     utm_id: 'campaign_id',
@@ -202,6 +207,7 @@
     var userChanged = nextInternalUserId !== currentInternalUserId;
     currentInternalUserId = nextInternalUserId;
     authenticatedUserPresent = !!currentInternalUserId;
+    markAuthStateObserved();
     if (userChanged) clearPseudonymousUserId();
     if (!authenticatedUserPresent) return clearPseudonymousUserId();
     return requestPseudonymousUserId();
@@ -238,6 +244,78 @@
     window.dataLayer.push(arguments);
   }
 
+  function timerApi() {
+    if (typeof window.setTimeout === 'function') {
+      return {
+        set: function (callback, delay) { return window.setTimeout(callback, delay); },
+        clear: typeof window.clearTimeout === 'function'
+          ? function (timerId) { window.clearTimeout(timerId); }
+          : null,
+      };
+    }
+    if (typeof setTimeout === 'function') {
+      return {
+        set: function (callback, delay) { return setTimeout(callback, delay); },
+        clear: typeof clearTimeout === 'function'
+          ? function (timerId) { clearTimeout(timerId); }
+          : null,
+      };
+    }
+    return null;
+  }
+
+  function markAuthStateObserved() {
+    if (authStateObserved) return;
+    authStateObserved = true;
+    var waiters = authStateWaiters.slice();
+    authStateWaiters.length = 0;
+    waiters.forEach(function (finish) { finish(true); });
+  }
+
+  function waitForInitialAuthState() {
+    if (authStateObserved || authenticatedUserPresent) return Promise.resolve(true);
+    var timers = timerApi();
+    if (!timers) return Promise.resolve(false);
+
+    return new Promise(function (resolve) {
+      var settled = false;
+      var timerId = null;
+      function finish(observed) {
+        if (settled) return;
+        settled = true;
+        var index = authStateWaiters.indexOf(finish);
+        if (index >= 0) authStateWaiters.splice(index, 1);
+        if (timerId !== null && timers.clear) timers.clear(timerId);
+        resolve(!!observed);
+      }
+      authStateWaiters.push(finish);
+      timerId = timers.set(function () { finish(false); }, AUTH_DISCOVERY_WAIT_MS);
+    });
+  }
+
+  function waitForPseudonymousUserId() {
+    if (!authenticatedUserPresent || pseudonymousUserId) {
+      return Promise.resolve(pseudonymousUserId);
+    }
+
+    var request = requestPseudonymousUserId();
+    var timers = timerApi();
+    if (!timers) return request;
+
+    return new Promise(function (resolve) {
+      var settled = false;
+      var timerId = null;
+      function finish(subjectId) {
+        if (settled) return;
+        settled = true;
+        if (timerId !== null && timers.clear) timers.clear(timerId);
+        resolve(isValidPseudonymousUserId(subjectId) ? subjectId : null);
+      }
+      Promise.resolve(request).then(finish, function () { finish(null); });
+      timerId = timers.set(function () { finish(null); }, USER_ID_RESOLUTION_WAIT_MS);
+    });
+  }
+
   function consentPayload(analyticsGranted, advertisingGranted) {
     return {
       ad_storage: advertisingGranted ? 'granted' : 'denied',
@@ -267,7 +345,7 @@
   }
 
   function sendPageViewOnce() {
-    if (!isCollectionContextAllowed() || pageViewSent) return false;
+    if (!isCollectionContextAllowed() || !hasAnalyticsConsent() || pageViewSent) return false;
     var pageLocation = sanitizePageUrl(window.location && window.location.href);
     if (!pageLocation) return false;
     pageViewSent = true;
@@ -277,6 +355,32 @@
       page_title: safePageTitle(),
     });
     return true;
+  }
+
+  function scheduleInitialPageView() {
+    if (!isCollectionContextAllowed() || !hasAnalyticsConsent() || pageViewSent) {
+      return Promise.resolve(false);
+    }
+    if (initialPageViewRequest) return initialPageViewRequest;
+
+    // Test/non-browser contexts have no timer API. Keep the legacy immediate
+    // behavior there; real browsers always take the bounded auth-aware path.
+    if (!timerApi()) return Promise.resolve(sendPageViewOnce());
+
+    initialPageViewRequest = waitForInitialAuthState()
+      .then(function () {
+        return authenticatedUserPresent ? waitForPseudonymousUserId() : null;
+      })
+      .then(function () {
+        return sendPageViewOnce();
+      }, function () {
+        return sendPageViewOnce();
+      })
+      .then(function (sent) {
+        if (!sent && !pageViewSent) initialPageViewRequest = null;
+        return sent;
+      });
+    return initialPageViewRequest;
   }
 
   function updateConsent() {
@@ -302,10 +406,10 @@
       Object.assign(config, readCampaignConfig(window.location && window.location.href));
       if (pseudonymousUserId) config.user_id = pseudonymousUserId;
       gtag('config', MEASUREMENT_ID, config);
-      sendPageViewOnce();
     }
     if (authenticatedUserPresent) requestPseudonymousUserId();
     else applyUserId();
+    scheduleInitialPageView();
     return true;
   }
 

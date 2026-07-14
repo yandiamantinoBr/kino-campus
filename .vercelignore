@@ -1,1 +1,24 @@
+# Segredos e estado local nunca entram no contexto de build.
+.env
+.env.*
+.codex-remote-attachments/**
+.git/**
+.vercel/**
+node_modules/**
+coverage/**
+output/**
+test-results/**
+.lighthouseci/**
+.playwright-cli/**
+
+# Fontes internas que não participam do build/deploy estático.
+.github/**
+docs/**
+supabase/**
+tests/**
 services/cadu-ufg-publisher/**
+
+# Artefatos diagnósticos locais.
+test_ads_race.cjs
+yan-*.png
+dist/**

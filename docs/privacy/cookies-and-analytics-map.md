@@ -48,7 +48,15 @@ Métricas administrativas devem ser agregadas por padrão. A plataforma não dev
 - `help_submit`
 - `report_submit`
 
-O payload é sanitizado no cliente e validado novamente no Supabase. Chaves sensíveis como `cookie`, `token`, `password`, `authorization`, `email`, `ip` e `user_agent` são descartadas.
+O payload é sanitizado no cliente e validado novamente no Supabase. Chaves sensíveis como `cookie`, `token`, `password`, `authorization`, `email`, `ip` e `user_agent` são descartadas. Valores com e-mail, telefone, URL, protocolo arbitrário, credencial, token opaco longo ou caracteres de controle também são eliminados; destinos (`href`) não são persistidos nesse log agregado.
+
+### Busca interna
+
+Com consentimento de analytics, um termo normal da busca interna pode ser mantido por até seis meses em `search_queries`, exclusivamente para administradores identificarem lacunas de conteúdo. Cliente e banco rejeitam padrões de e-mail, telefone, URL, token, credencial e caracteres de controle antes da ingestão. O banco fixa `id` e `created_at`, mantém `user_id` sempre nulo e persiste apenas o hash SHA-256 da sessão efêmera; o identificador do navegador nunca é armazenado cru.
+
+O evento `search` de `KCPrivacyAnalytics` e o GA4 recebem somente origem controlada e faixa de tamanho. O termo não é duplicado nesses canais. Inserts diretos em `search_queries` e `privacy_analytics_events` ficam revogados; as gravações passam por RPCs `SECURITY DEFINER`, `search_path` vazio, allowlist e limites de lote.
+
+O rate limit por hash de `session_id` é uma defesa básica contra rajadas e corridas, não uma barreira forte contra abuso distribuído: um cliente hostil pode rotacionar o identificador local. Proteção forte adicional deve ficar no gateway/WAF, sem transformar IP bruto em identificador persistente de analytics.
 
 ### Google Analytics 4
 
@@ -113,7 +121,7 @@ Essas áreas podem usar os agregados para entender picos de uso:
 
 ## Banco E Segurança
 
-Migration: `supabase/migrations/v9.3.5.16_privacy_analytics.sql`
+Migrations: `supabase/migrations/20260710011442_reconcile_privacy_runtime.sql` e `supabase/migrations/20260714121506_harden_search_analytics_ingestion.sql`.
 
 Objetos criados:
 

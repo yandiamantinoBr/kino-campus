@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..', '..');
 const KCAds = require('../../assets/js/features/kc-ads.js');
@@ -323,8 +324,88 @@ describe('KCAds feed monetization', () => {
   test('protege a carga inicial contra corrida entre authchange e fallback', () => {
     const source = read('assets/js/features/kc-ads.js');
     expect(source).toContain('let initialLoadStarted = false;');
-    expect(source).toContain('if (initialLoadStarted) return;');
+    expect(source).toContain('let initialLoadCompleted = false;');
+    expect(source).toContain("code: 'CLIENT_NOT_READY'");
+    expect(source).toContain('if (initialLoadCompleted || initialLoadStarted) return;');
     expect(source).toContain('initialLoadStarted = true;');
+    expect(source).toContain("root.document.addEventListener('kc:authchange', run);");
+  });
+
+  test('tenta novamente no authchange quando o cliente Supabase fica pronto depois do fallback', async () => {
+    const listeners = new Map();
+    const timers = [];
+    const fakeDocument = {
+      readyState: 'complete',
+      addEventListener(type, listener) {
+        if (!listeners.has(type)) listeners.set(type, new Set());
+        listeners.get(type).add(listener);
+      },
+      removeEventListener(type, listener) {
+        if (listeners.has(type)) listeners.get(type).delete(listener);
+      },
+      dispatch(type) {
+        Array.from(listeners.get(type) || []).forEach((listener) => listener({ type }));
+      },
+      querySelectorAll() {
+        return [];
+      },
+    };
+    let client = null;
+    const runtime = {
+      document: fakeDocument,
+      location: {
+        pathname: '/eventos.html',
+        search: '',
+        origin: 'https://www.kinocampus.com.br',
+      },
+      KCSupabase: {
+        getClient: () => client,
+      },
+      setTimeout(callback, delay) {
+        const timer = { callback, delay, active: true };
+        timers.push(timer);
+        return timer;
+      },
+      clearTimeout(timer) {
+        if (timer) timer.active = false;
+      },
+    };
+    const moduleRef = { exports: {} };
+
+    vm.runInNewContext(read('assets/js/features/kc-ads.js'), {
+      window: runtime,
+      globalThis: runtime,
+      module: moduleRef,
+      URL,
+      URLSearchParams,
+    });
+
+    const firstAttempt = timers.find((timer) => timer.active);
+    expect(firstAttempt.delay).toBe(250);
+    firstAttempt.active = false;
+    firstAttempt.callback();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(listeners.get('kc:authchange').size).toBe(1);
+    expect(timers.some((timer) => timer.active && timer.delay === 900)).toBe(true);
+
+    client = {
+      rpc: jest.fn(async (name) => {
+        if (name === 'kc_get_feed_ad_config') {
+          return { data: { enabled: false, status: 'disabled' } };
+        }
+        return { data: [] };
+      }),
+    };
+    fakeDocument.dispatch('kc:authchange');
+    for (let index = 0; index < 10; index += 1) await Promise.resolve();
+
+    expect(client.rpc.mock.calls.map(([name]) => name)).toEqual([
+      'kc_get_feed_ad_config',
+      'kc_get_feed_ads',
+    ]);
+    expect(listeners.get('kc:authchange').size).toBe(0);
   });
 
   test('migration define tabela, RPCs e eventos de anuncios', () => {

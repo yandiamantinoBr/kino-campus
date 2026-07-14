@@ -1,7 +1,12 @@
 {
   "buildCommand": "node scripts/inject-env.js",
   "installCommand": "npm ci --omit=dev --no-audit --no-fund",
-  "outputDirectory": ".",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/og-product.js": {
+      "includeFiles": "_product.html"
+    }
+  },
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/feed.xml", "destination": "/api/feed" },

@@ -62,6 +62,7 @@ describe('GA4 call-site privacy contract', () => {
     const authCallback = read('assets/js/core/kc-auth-callback.js');
     const apiClient = read('assets/js/api/kc-api.client.js');
     const product = read('assets/js/controllers/public/product.controller.js');
+    const productAnalytics = read('assets/js/controllers/public/product.analytics.js');
 
     expect(auth).toContain("trackRecommended('login', { method: method })");
     expect(auth).toContain("trackRecommendedOnce('sign_up', { method: 'email', needs_confirmation: false })");
@@ -75,12 +76,13 @@ describe('GA4 call-site privacy contract', () => {
     expect(apiClient).toContain('native_share');
     expect(apiClient).toContain("track('kc_post_view', { post_id: postId })");
     expect(apiClient).toContain("track('kc_coupon_click', { post_id: postId })");
-    expect(product).toContain("trackRecommended('generate_lead'");
-    expect(product).toContain("content_type: 'post'");
-    expect(product).toContain('LEAD_CONTACT_TYPES[contactType]');
-    expect(product).toContain("contactType === 'view_profile'");
-    expect(product).toContain("window.KCEvents.track('kc_profile_cta_click', {");
-    expect(product).toContain("const publicPostId = String((currentPost && (currentPost.uuid || currentPost.id)) || '').trim();");
-    expect(product).not.toContain('item_id: authorId');
+    expect(productAnalytics).toContain("trackRecommended('generate_lead'");
+    expect(productAnalytics).toContain("content_type: 'post'");
+    expect(productAnalytics).toContain('LEAD_CONTACT_TYPES[contactType]');
+    expect(productAnalytics).toContain("contactType === 'view_profile'");
+    expect(productAnalytics).toContain("window.KCEvents.track('kc_profile_cta_click', {");
+    expect(productAnalytics).toContain("var publicPostId = String(getPostIdForMutation(post) || '').trim();");
+    expect(product).toContain('window._KCProduct.analytics.trackProfileCta(currentPost)');
+    expect(productAnalytics).not.toContain('item_id: authorId');
   });
 });

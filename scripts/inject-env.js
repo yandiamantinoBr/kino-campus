@@ -60,7 +60,6 @@ const SUPABASE_PUBLIC_KEY = resolveEnv([
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_PUBLIC_KEY',
   'NEXT_PUBLIC_SUPABASE_PUBLIC_KEY',
-  'SUPABASE_KEY',
   'VITE_SUPABASE_ANON_KEY',
   'REACT_APP_SUPABASE_ANON_KEY',
   'VITE_SUPABASE_PUBLIC_KEY',
@@ -71,6 +70,17 @@ function keyLogSummary(key, prefixLength = 6) {
   if (!key) return 'detected: no';
   const safePrefix = key.slice(0, prefixLength);
   return safePrefix ? `${safePrefix}***` : 'detected: yes';
+}
+
+function readLegacyJwtRole(key) {
+  try {
+    const parts = String(key || '').split('.');
+    if (parts.length !== 3) return '';
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    return String(payload && payload.role || '').trim().toLowerCase();
+  } catch (_) {
+    return '';
+  }
 }
 
 // ── Validação ───────────────────────────────────────────────────────────────
@@ -102,9 +112,10 @@ if (!SUPABASE_URL.startsWith('https://')) {
 
 const hasLegacyJwtPrefix = SUPABASE_PUBLIC_KEY.startsWith('eyJ');
 const hasPublishablePrefix = SUPABASE_PUBLIC_KEY.startsWith('sb_publishable_');
-if (!hasLegacyJwtPrefix && !hasPublishablePrefix) {
+const legacyJwtRole = hasLegacyJwtPrefix ? readLegacyJwtRole(SUPABASE_PUBLIC_KEY) : '';
+if ((!hasLegacyJwtPrefix && !hasPublishablePrefix) || (hasLegacyJwtPrefix && legacyJwtRole !== 'anon')) {
   console.error('❌ inject-env.js: chave pública do Supabase inválida.');
-  console.error('   Formatos aceitos: legado JWT (eyJ...) ou publishable key (sb_publishable_...).');
+  console.error('   Formatos aceitos: JWT legado com role anon ou publishable key (sb_publishable_...).');
   console.error('   Copie a chave em Supabase Dashboard → Project Settings → API (chave "anon" / "publishable").');
   process.exit(1);
 }
@@ -212,7 +223,7 @@ function applyAssetCacheBust() {
   ).replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
   if (!token) return;
 
-  const repoRoot = path.join(__dirname, '..');
+  const repoRoot = path.join(__dirname, '..', 'dist');
   // Coleta o HTML servido em TODA a árvore (raiz + subpastas como admin/).
   // Antes o cache-bust só cobria a raiz, então admin/*.html ficava com ?v fixo
   // e os usuários recorrentes nunca recebiam o JS/CSS novo do painel admin.
@@ -249,6 +260,15 @@ function applyAssetCacheBust() {
   });
   console.log(`🔄 inject-env.js: cache-bust de assets aplicado (?v=${token}) em ${changed} HTML.`);
 }
+
+// Cria primeiro o artefato público por allowlist. O cache-bust abaixo opera
+// apenas nessa cópia, mantendo fontes internas fora do diretório publicado.
+const { buildStaticOutput } = require('./build-static-output');
+const staticOutput = buildStaticOutput({
+  sourceRoot: path.join(__dirname, '..'),
+  outputRoot: path.join(__dirname, '..', 'dist'),
+});
+console.log(`Static output isolated in dist (${staticOutput.rootFiles} root files).`);
 
 try {
   applyAssetCacheBust();

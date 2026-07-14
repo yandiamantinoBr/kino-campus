@@ -45,6 +45,22 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(sql).toContain('public.kc_prune_old_analytics()');
   });
 
+  test('busca consentida usa RPC validada e nao duplica o termo em eventos', () => {
+    const search = read('assets/js/features/kc-search.js');
+    const privacy = read('assets/js/features/kc-privacy-analytics.js');
+    const sql = read('supabase/migrations/20260714121506_harden_search_analytics_ingestion.sql');
+
+    expect(search).toContain("client.rpc('kc_ingest_search_queries'");
+    expect(search).not.toContain("client.from('search_queries').insert");
+    expect(search).toContain('isTrackableSearchTerm');
+    expect(search).toContain('query_length_bucket: searchLengthBucket(q.length)');
+    expect(privacy).toContain("'query_length_bucket'");
+    expect(privacy).not.toMatch(/['"]value['"]\s*,/);
+    expect(sql).toContain('search_queries_user_id_anonymous_check');
+    expect(sql).toContain('revoke all privileges on table public.search_queries');
+    expect(sql).toContain('not public.kc_is_admin(v_uid)');
+  });
+
   test('admin possui pagina dedicada, nav e exportacao', () => {
     const page = read('admin/privacy-analytics.html');
     const dashboard = read('admin/index.html');

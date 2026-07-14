@@ -62,6 +62,72 @@
     return post.uuid || post.id || null;
   }
 
+  var LEAD_CONTACT_TYPES = Object.freeze({
+    whatsapp: true,
+    email_public: true,
+    instagram: true,
+    linkedin: true,
+    facebook: true,
+    chat_internal: true,
+    external_contact: true,
+  });
+
+  function resolveContactChannel(action) {
+    var href = String((action && action.href) || '');
+    if (/^https?:\/\/(api\.)?whatsapp\.com|^https:\/\/wa\.me\//i.test(href)) return 'whatsapp';
+    if (/^mailto:/i.test(href)) return 'email';
+    if (/^tel:/i.test(href)) return 'phone';
+    if (/mensagens\.html/i.test(href)) return 'chat_internal';
+    return 'external';
+  }
+
+  function trackContactAction(action, post) {
+    if (!window.KCEvents || !action) return false;
+    var pid = getPostIdForMutation(post);
+    var contactType = String(action.type || 'unknown');
+    var channel = resolveContactChannel(action);
+
+    if (LEAD_CONTACT_TYPES[contactType] && typeof window.KCEvents.trackRecommended === 'function') {
+      return window.KCEvents.trackRecommended('generate_lead', {
+        item_id: pid || null,
+        content_type: 'post',
+        contact_type: contactType,
+        channel: channel,
+      });
+    }
+    if (LEAD_CONTACT_TYPES[contactType] && typeof window.KCEvents.track === 'function') {
+      return window.KCEvents.track('kc_contact_click', {
+        post_id: pid || null,
+        contact_type: contactType,
+        channel: channel,
+      });
+    }
+    if (contactType === 'view_profile' && typeof window.KCEvents.track === 'function') {
+      return window.KCEvents.track('kc_profile_cta_click', { item_id: pid || null, content_type: 'post' });
+    }
+    if (contactType === 'external_link' && typeof window.KCEvents.track === 'function') {
+      return window.KCEvents.track('kc_external_cta_click', { item_id: pid || null, content_type: 'post' });
+    }
+    return false;
+  }
+
+  function trackContactFormOpen(action, post) {
+    if (!action || action.type !== 'real_form' || !window.KCEvents || typeof window.KCEvents.track !== 'function') return false;
+    return window.KCEvents.track('kc_contact_form_open', {
+      item_id: getPostIdForMutation(post),
+      content_type: 'post',
+    });
+  }
+
+  function trackProfileCta(post) {
+    if (!window.KCEvents || typeof window.KCEvents.track !== 'function') return false;
+    var publicPostId = String(getPostIdForMutation(post) || '').trim();
+    return window.KCEvents.track('kc_profile_cta_click', {
+      item_id: publicPostId || null,
+      content_type: 'post',
+    });
+  }
+
   function buildAuthorAnalyticsSignature(result) {
     var source = (result && typeof result === 'object') ? result : {};
     return [
@@ -147,5 +213,8 @@
 
   window._KCProduct.analytics = {
     renderAuthorAnalytics: renderAuthorAnalytics,
+    trackContactAction: trackContactAction,
+    trackContactFormOpen: trackContactFormOpen,
+    trackProfileCta: trackProfileCta,
   };
 })();

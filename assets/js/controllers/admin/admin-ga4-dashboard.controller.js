@@ -562,6 +562,7 @@
     var s = rows.shares || 0;
     var c = rows.contacts || 0;
     var ch = rows.chats || 0;
+    var viewsLabel = rows.viewsLabel || 'Visualiza\u00e7\u00f5es de publica\u00e7\u00f5es';
     var step = function (label, n, baseN) {
       var ratio = baseN ? Math.min(100, (n / baseN) * 100) : 0;
       return '<div class="kc-funnel-step">' +
@@ -570,7 +571,7 @@
         '<span class="kc-funnel-value">' + fmtNumber(n) + '</span>' +
       '</div>';
     };
-    el.innerHTML = step('Views de posts', v, v) +
+    el.innerHTML = step(viewsLabel, v, v) +
       step('Compartilhamentos', s, v) +
       step('Cliques em contato', c, v) +
       step('Aberturas de conversa', ch, v);
@@ -711,6 +712,14 @@
     return out;
   }
 
+  function sumPostPageViews(pages) {
+    return (Array.isArray(pages) ? pages : []).reduce(function (total, row) {
+      var path = String((row && row.path) || '').split(/[?#]/)[0].replace(/\/+$/, '');
+      if (!/(?:^|\/)_?product\.html$/i.test(path)) return total;
+      return total + Math.max(0, finiteNumber(row && row.views));
+    }, 0);
+  }
+
   function rowsToTrendMap(rows) {
     var out = [];
     if (!rows) return out;
@@ -824,7 +833,7 @@
       csv.push('step,count,conversion_pct');
       var f = snap.funnel;
       var base = f.views || 0;
-      csv.push(['Views de publicações', f.views || 0, '100.0'].join(','));
+      csv.push([f.viewsLabel || 'Visualiza\u00e7\u00f5es de publica\u00e7\u00f5es', f.views || 0, '100.0'].join(','));
       csv.push(['Compartilhamentos', f.shares || 0, base ? ((f.shares / base) * 100).toFixed(1) : '0.0'].join(','));
       csv.push(['Cliques em contato', f.contacts || 0, base ? ((f.contacts / base) * 100).toFixed(1) : '0.0'].join(','));
       csv.push(['Aberturas de conversa', f.chats || 0, base ? ((f.chats / base) * 100).toFixed(1) : '0.0'].join(','));
@@ -1111,10 +1120,15 @@
 
       // 6) Funnel: views / shares / contacts / chats
       var eventMap = rowsToEventMap(eventsRes.rows);
-      var totalViews = (eventMap.kc_post_view && eventMap.kc_post_view.count) ||
-        (snapshot.summary.sevenDays && snapshot.summary.sevenDays.views) || 0;
+      var trackedPostViews = (eventMap.kc_post_view && eventMap.kc_post_view.count) || 0;
+      var fallbackPostViews = sumPostPageViews(pagesList);
+      var hasTrackedPostViews = trackedPostViews > 0;
+      var totalViews = hasTrackedPostViews ? trackedPostViews : fallbackPostViews;
       var funnelSnapshot = {
         views: totalViews,
+        viewsLabel: hasTrackedPostViews
+          ? 'Visualiza\u00e7\u00f5es de publica\u00e7\u00f5es'
+          : 'Visualiza\u00e7\u00f5es das p\u00e1ginas de publica\u00e7\u00e3o (fallback)',
         shares: ((eventMap.share && eventMap.share.count) || 0) + ((eventMap.kc_share && eventMap.kc_share.count) || 0),
         contacts: ((eventMap.generate_lead && eventMap.generate_lead.count) || 0) + ((eventMap.kc_contact_click && eventMap.kc_contact_click.count) || 0),
         chats: (eventMap.kc_chat_open && eventMap.kc_chat_open.count) || 0,

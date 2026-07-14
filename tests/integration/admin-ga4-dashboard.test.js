@@ -35,6 +35,18 @@ describe('admin GA4 dashboard event rendering contract', () => {
     expect(SOURCE).toContain("eventMap.share");
   });
 
+  test('falls back only to product page views and labels that fallback explicitly', () => {
+    expect(SOURCE).toContain('function sumPostPageViews(pages)');
+    expect(SOURCE).toContain("split(/[?#]/)[0].replace(/\\/+$/, '')");
+    expect(SOURCE).toContain('_?product\\.html$/i.test(path)');
+    expect(SOURCE).toContain('var fallbackPostViews = sumPostPageViews(pagesList);');
+    expect(SOURCE).not.toContain('(snapshot.summary.sevenDays && snapshot.summary.sevenDays.views)');
+    expect(SOURCE).toContain('viewsLabel: hasTrackedPostViews');
+    expect(SOURCE).toContain("'Visualiza\\u00e7\\u00f5es das p\\u00e1ginas de publica\\u00e7\\u00e3o (fallback)'");
+    expect(SOURCE).toContain('step(viewsLabel, v, v)');
+    expect(SOURCE).toContain("f.viewsLabel || 'Visualiza\\u00e7\\u00f5es de publica\\u00e7\\u00f5es'");
+  });
+
   test('uses the full page result set for module totals but renders only the top ten', () => {
     expect(SOURCE).toContain('limit: 250');
     expect(SOURCE).toContain('renderPages(snapshot.pages.slice(0, 10));');
@@ -102,7 +114,7 @@ describe('admin GA4 dashboard refresh consistency', () => {
     expect(SOURCE).toContain('var REFRESH_INTERVAL_MS = 300_000;');
     expect(HTML).toContain('O painel atualiza a cada 5 minutos');
     expect(HTML).not.toContain('atualiza a cada 60 s');
-    expect(HTML).toContain('admin-ga4-dashboard.controller.js?v=8.6.9');
+    expect(HTML).toContain('admin-ga4-dashboard.controller.js?v=8.6.10');
   });
 
   test('coalesces overlapping manual and automatic refreshes into one promise', () => {

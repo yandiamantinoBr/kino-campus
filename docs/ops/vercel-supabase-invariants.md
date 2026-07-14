@@ -7,7 +7,11 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
 - Estado observado em 2026-07-10: o projeto Vercel `kino-campus` usa Node `24.x`; `package.json`
   e os workflows Node devem permanecer alinhados nesse major.
 - O build do projeto deve continuar usando `node scripts/inject-env.js`, conforme [vercel.json](/C:/Users/yan1n/Documents/GitHub/kino-campus/vercel.json).
-- A saída continua estática (`outputDirectory: "."`).
+- A saída continua estática, mas usa um allowlist isolado (`outputDirectory: "dist"`).
+  `scripts/inject-env.js` chama `scripts/build-static-output.js` depois da injeção e copia
+  somente HTMLs públicos, `admin/`, assets de runtime, `data/database.json`, `robots.txt`,
+  `ads.txt`, `llms.txt` e `sw.js`. Migrations, testes, workflows, scripts, docs, Markdown
+  interno e arquivos `.env` não podem aparecer no artefato servido.
 - O rewrite `/auth/callback -> /auth-callback.html` é obrigatório para o callback do Supabase Auth funcionar sem framework server-side.
 - Previews podem ficar protegidos por Vercel Authentication mesmo quando o deploy é publicado com sucesso.
 - A integração Git da Vercel promove pushes na base independentemente da conclusão de
@@ -58,6 +62,13 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - RPCs
   - Edge Functions
 - O contrato de perfil do frontend não deve tratar `profiles.email` como parte do perfil público sincronizado.
+- `kc_ingest_search_queries` e `kc_track_privacy_event` são exceções intencionais aos avisos
+  `0028/0029` do Database Linter: precisam ser `SECURITY DEFINER` porque inserts diretos nas
+  tabelas de analytics estão revogados. Ambas usam `search_path = ''`, allowlist, validação,
+  hash de sessão e rate limit; execução fica somente com `anon`/`authenticated`.
+- `kc_admin_search_trends` e `kc_admin_search_trends_classified` também aparecem no aviso
+  `0029`, mas validam `kc_is_admin(auth.uid())` dentro da função e não concedem acesso aos
+  workers privados. Alterações nessas exceções exigem os contratos pgTAP de analytics.
 
 ## 5. Avatar policy manual
 

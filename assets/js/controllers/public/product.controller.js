@@ -92,16 +92,6 @@
   }
 
   // resolveCurrentUserDisplayName / resolveCurrentUserAvatar → window._KCProduct.load
-  const LEAD_CONTACT_TYPES = Object.freeze({
-    whatsapp: true,
-    email_public: true,
-    instagram: true,
-    linkedin: true,
-    facebook: true,
-    chat_internal: true,
-    external_contact: true,
-  });
-
   function getContactActionPresentation(action, post) {
     const fallbackCta = post && post._kcCTA ? post._kcCTA : null;
     const iconMap = {
@@ -147,29 +137,8 @@
 
     if (action.href) {
       try {
-        if (window.KCEvents && (typeof window.KCEvents.trackRecommended === 'function' || typeof window.KCEvents.track === 'function')) {
-          var pid = post && (post.uuid || post.id);
-          var contactType = (action && action.type) ? String(action.type) : 'unknown';
-          var channel = 'external';
-          if (/^https?:\/\/(api\.)?whatsapp\.com|^https:\/\/wa\.me\//i.test(action.href)) channel = 'whatsapp';
-          else if (/^mailto:/i.test(action.href)) channel = 'email';
-          else if (/^tel:/i.test(action.href)) channel = 'phone';
-          else if (/mensagens\.html/i.test(action.href)) channel = 'chat_internal';
-          else if (/_blank/.test(action.target || '')) channel = 'external';
-          if (LEAD_CONTACT_TYPES[contactType] && typeof window.KCEvents.trackRecommended === 'function') {
-            window.KCEvents.trackRecommended('generate_lead', {
-              item_id: pid || null,
-              content_type: 'post',
-              contact_type: contactType,
-              channel: channel,
-            });
-          } else if (LEAD_CONTACT_TYPES[contactType] && typeof window.KCEvents.track === 'function') {
-            window.KCEvents.track('kc_contact_click', { post_id: pid || null, contact_type: contactType, channel: channel });
-          } else if (contactType === 'view_profile' && typeof window.KCEvents.track === 'function') {
-            window.KCEvents.track('kc_profile_cta_click', { item_id: pid || null, content_type: 'post' });
-          } else if (contactType === 'external_link' && typeof window.KCEvents.track === 'function') {
-            window.KCEvents.track('kc_external_cta_click', { item_id: pid || null, content_type: 'post' });
-          }
+        if (window._KCProduct.analytics && typeof window._KCProduct.analytics.trackContactAction === 'function') {
+          window._KCProduct.analytics.trackContactAction(action, post);
         }
       } catch (_) {}
       if (action.target === '_blank') {
@@ -182,11 +151,8 @@
 
     if (typeof action.handler === 'function') {
       try {
-        if (action.type === 'real_form' && window.KCEvents && typeof window.KCEvents.track === 'function') {
-          window.KCEvents.track('kc_contact_form_open', {
-            item_id: post && (post.uuid || post.id) || null,
-            content_type: 'post',
-          });
+        if (window._KCProduct.analytics && typeof window._KCProduct.analytics.trackContactFormOpen === 'function') {
+          window._KCProduct.analytics.trackContactFormOpen(action, post);
         }
       } catch (_) { }
       action.handler();
@@ -460,12 +426,8 @@
         const authorId = (window._KCProduct.render && window._KCProduct.render.getPostAuthorId ? window._KCProduct.render.getPostAuthorId(currentPost) : null);
         if (authorId) {
           try {
-            const publicPostId = String((currentPost && (currentPost.uuid || currentPost.id)) || '').trim();
-            if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-              window.KCEvents.track('kc_profile_cta_click', {
-                item_id: publicPostId || null,
-                content_type: 'post'
-              });
+            if (window._KCProduct.analytics && typeof window._KCProduct.analytics.trackProfileCta === 'function') {
+              window._KCProduct.analytics.trackProfileCta(currentPost);
             }
           } catch (_) {}
           window.location.href = 'profile.html?id=' + encodeURIComponent(authorId);
