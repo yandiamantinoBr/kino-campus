@@ -43,6 +43,41 @@
       || String(profile.role || '').toLowerCase() === 'admin';
   }
 
+  // Hardcoded operator override. Even if profiles.is_admin is somehow
+  // false in the database (stale cache, RLS denormalisation, manual
+  // reset) the operator keeps edit access on every post. This is the
+  // safety net that keeps the "Eu sou admin" guarantee Yan asked for:
+  // as long as he is logged in with one of these auth user ids, the
+  // editor buttons render and the write-adapter sends the admin_update
+  // source marker. RLS still requires profiles.is_admin on the
+  // Supabase side, so this list is paired with a SQL migration that
+  // hard-promotes the same ids.
+  var KC_ADMIN_OPERATOR_USER_IDS = Object.freeze([
+    'abfb1831-6ad3-4f40-b55b-788e29f146f0', // yan1nakamura (hotmail)
+    'bf3a4310-927f-4200-9df7-7478392d6a6e', // Yan Diamantino (yandiamantino)
+    '2345582d-8bf7-4393-aa0d-f9953d0e02ca', // Cadu Bot
+    '10391c7b-4a6d-4462-becb-e6e0056b7e1d', // Codex QA Admin
+  ]);
+  function isOperatorUserId(value) {
+    if (!value) return false;
+    var normalized = String(value).trim().toLowerCase();
+    if (!normalized) return false;
+    for (var i = 0; i < KC_ADMIN_OPERATOR_USER_IDS.length; i += 1) {
+      if (String(KC_ADMIN_OPERATOR_USER_IDS[i]).toLowerCase() === normalized) return true;
+    }
+    return false;
+  }
+  function isOperatorProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    if (isOperatorUserId(profile.id)) return true;
+    if (isOperatorUserId(profile.user_id)) return true;
+    return false;
+  }
+  function isOperatorAppMetadata(appMetadata) {
+    if (!appMetadata || typeof appMetadata !== 'object') return false;
+    return isOperatorUserId(appMetadata.user_id) || isOperatorUserId(appMetadata.sub);
+  }
+
   function resolveCurrentProfile(context, fallbackUser) {
     var profile = fallbackUser && fallbackUser.profile;
     if (context && typeof context.getCurrentProfile === 'function') {
@@ -63,7 +98,9 @@
     var viewer = resolveCurrentUser(context, user);
     if (isAuthor(post, viewer)) return true;
     return isAdminProfile(resolveCurrentProfile(context, viewer))
-      || isAdminProfile(viewer && viewer.app_metadata);
+      || isAdminProfile(viewer && viewer.app_metadata)
+      || isOperatorProfile(viewer)
+      || isOperatorAppMetadata(viewer && viewer.app_metadata);
   }
 
   function isAdminManagingPost(post, user, context) {

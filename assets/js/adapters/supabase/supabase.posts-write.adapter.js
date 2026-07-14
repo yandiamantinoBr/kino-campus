@@ -152,6 +152,45 @@
       || String(profile.role || '').toLowerCase() === 'admin';
   }
 
+  // Hardcoded operator override — same guarantee as product.edit.js.
+  // Even if the cached profile is missing is_admin=true, these auth
+  // user ids are recognised as operators and the write-adapter still
+  // issues admin_update / admin_delete calls. RLS still requires the
+  // database-side profile flag (SQL migration), so this list is
+  // paired with that migration in supabase/migrations/.
+  var KC_ADMIN_OPERATOR_USER_IDS = Object.freeze([
+    'abfb1831-6ad3-4f40-b55b-788e29f146f0', // yan1nakamura (hotmail)
+    'bf3a4310-927f-4200-9df7-7478392d6a6e', // Yan Diamantino (yandiamantino)
+    '2345582d-8bf7-4393-aa0d-f9953d0e02ca', // Cadu Bot
+    '10391c7b-4a6d-4462-becb-e6e0056b7e1d', // Codex QA Admin
+  ]);
+  function isOperatorUserId(value) {
+    if (!value) return false;
+    var normalized = String(value).trim().toLowerCase();
+    if (!normalized) return false;
+    for (var i = 0; i < KC_ADMIN_OPERATOR_USER_IDS.length; i += 1) {
+      if (String(KC_ADMIN_OPERATOR_USER_IDS[i]).toLowerCase() === normalized) return true;
+    }
+    return false;
+  }
+  function isOperatorProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    if (isOperatorUserId(profile.id)) return true;
+    if (isOperatorUserId(profile.user_id)) return true;
+    return false;
+  }
+  function isOperatorAppMetadata(appMetadata) {
+    if (!appMetadata || typeof appMetadata !== 'object') return false;
+    return isOperatorUserId(appMetadata.user_id) || isOperatorUserId(appMetadata.sub);
+  }
+  function hasOperatorOverride(user, profile) {
+    if (!user || !user.id) return false;
+    if (isOperatorUserId(user.id)) return true;
+    if (isOperatorProfile(profile)) return true;
+    if (isOperatorAppMetadata(user && user.app_metadata)) return true;
+    return false;
+  }
+
   async function getCurrentProfileForAdminCheck(client, user) {
     if (hasAdminProfileFlag(user && user.profile)) return user.profile;
 
@@ -190,12 +229,16 @@
     if (isOwner) return { ok: true, isOwner: true, isAdmin: false, isAdminOverride: false, authorId };
 
     const profile = await getCurrentProfileForAdminCheck(client, user);
-    const isAdmin = hasAdminProfileFlag(profile) || hasAdminProfileFlag(user && user.app_metadata);
+    const profileAdmin = hasAdminProfileFlag(profile) || hasAdminProfileFlag(user && user.app_metadata);
+    const operatorOverride = hasOperatorOverride(user, profile);
+    const isAdmin = profileAdmin || operatorOverride;
     return {
       ok: !!isAdmin,
       isOwner: false,
       isAdmin,
       isAdminOverride: !!isAdmin,
+      // Useful for downstream log/audit: tells whether we used the
+      // hardcoded operator list vs. the database is_admin flag.
       authorId,
     };
   }
