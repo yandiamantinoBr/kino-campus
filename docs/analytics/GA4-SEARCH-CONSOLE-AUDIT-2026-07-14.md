@@ -11,7 +11,26 @@ Nenhuma credencial, token, chave privada, endereço de conta ou identificador pe
 - O Search Console já está vinculado ao GA4, e a coleção de relatórios de pesquisa está publicada. Na janela de 16 de junho a 13 de julho, o relatório vinculado mostrou 1.116 impressões, 13 cliques, CTR de 1,16%, posição média de 7,31 e 92 consultas.
 - O sitemap foi enviado e processado com sucesso, com 100 páginas descobertas. A cobertura mostrava 75 páginas indexadas e 78 não indexadas, incluindo exclusões intencionais e alguns itens que exigem recrawl ou análise.
 - Configurações da propriedade foram ajustadas para evitar duplicidade e excesso de dados: retenção de eventos em 14 meses, desativação de pageviews por histórico do navegador, busca interna automática e interações automáticas de formulário, além de redação de parâmetros de URL.
-- A instrumentação em preparação no repositório restringe o GA4 às páginas públicas de produção, envia pageview manual sanitizado, usa User-ID pseudônimo somente após consentimento e elimina parâmetros que poderiam expor texto de busca, conversa ou identidade.
+- A instrumentação implantada restringe o GA4 às páginas públicas de produção, envia pageview manual sanitizado, usa User-ID pseudônimo somente após consentimento e elimina parâmetros que poderiam expor texto de busca, conversa ou identidade.
+
+### Correção operacional confirmada em produção
+
+O erro `invalid_sa_key` do painel administrativo não era uma rejeição das contas
+técnicas pelo Google. Os dois arquivos locais válidos obtiveram OAuth e resposta `200`
+nas APIs oficiais; os valores remotos, porém, tinham digests diferentes. A causa foi a
+perda das aspas do JSON ao interpolar o conteúdo em uma linha de comando PowerShell.
+
+As credenciais foram republicadas por arquivo de ambiente temporário, sem expor o
+conteúdo em argumentos ou logs. Depois da correção:
+
+- `kc-ga4-reports` e `kc-search-console-reports` passaram de respostas `503` para
+  respostas `200` nos logs remotos;
+- o dashboard administrativo completou o ciclo e exibiu métricas reais das duas
+  fontes, sem `invalid_sa_key` e sem falha global de atualização;
+- um utilitário seguro e testado foi adicionado para impedir regressão nesse processo;
+- os seis avisos de funções `SECURITY DEFINER` expostas foram eliminados pelo desenho
+  `public SECURITY INVOKER -> kc_private SECURITY DEFINER`, preservando os RPCs e as
+  regras de validação existentes; o Security Advisor remoto retornou zero avisos.
 
 ## 1. Diagnóstico do erro em tempo real
 
@@ -87,7 +106,7 @@ Eventos recomendados pelo Google, como `login`, `sign_up`, `share` e `generate_l
 - A coleção de relatórios do Search Console está publicada no GA4.
 - A Search Console API foi habilitada no projeto de nuvem usado pela integração.
 - A integração usa conta técnica exclusiva do Search Console, separada da credencial de runtime do GA4, com acesso de leitura suficiente e sem registrar credenciais no repositório.
-- Uma função server-side autenticada foi preparada para consultar métricas, sitemaps e inspeção de URL sem expor credenciais ao navegador.
+- Uma função server-side autenticada foi publicada e validada para consultar métricas, sitemaps e inspeção de URL sem expor credenciais ao navegador.
 
 ### Desempenho observado
 
@@ -114,9 +133,9 @@ Consultas de busca podem conter texto livre e, excepcionalmente, dado pessoal di
 - Havia uma ocorrência de dado estruturado não interpretável por “caractere Unicode truncado”. A página ao vivo respondeu com JSON-LD válido no momento da auditoria, sugerindo dado antigo ou falha transitória. É necessário solicitar nova validação e acompanhar o relatório.
 - Os aprimoramentos mostravam 24 breadcrumbs válidos, 2 eventos válidos e 3 anúncios de emprego válidos.
 
-## 5. Alterações preparadas no repositório
+## 5. Alterações implantadas e verificadas
 
-As mudanças abaixo estavam no worktree desta intervenção e ainda precisam passar pela validação completa e pelo fluxo de deploy:
+As mudanças abaixo foram integradas ao fluxo de produção e verificadas por testes automatizados, APIs oficiais, logs remotos e smoke test autenticado do painel:
 
 - correção da chamada server-side à GA4 Data API e normalização das respostas consumidas pelo dashboard;
 - filtros de domínio de produção e exclusão de rotas administrativas nos relatórios;
@@ -131,7 +150,9 @@ As mudanças abaixo estavam no worktree desta intervenção e ainda precisam pas
 - headers e metadados `noindex` para rotas administrativas, além de correções no `robots.txt`;
 - nova Edge Function autenticada e somente leitura para Search Console, com CORS, validação, cache, limites e mensagens de erro seguras.
 
-Nenhuma dessas mudanças deve ser considerada em produção até o deploy ser concluído e verificado.
+O monitoramento pós-deploy continua necessário porque GA4 e Search Console têm
+latências próprias de processamento, mas a disponibilidade da integração foi confirmada
+diretamente nas duas APIs e no painel administrativo.
 
 ## 6. Privacidade e minimização
 

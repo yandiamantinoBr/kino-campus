@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(30);
+select extensions.plan(40);
 
 select extensions.has_table('public', 'search_queries', 'search analytics table exists');
 select extensions.ok(
@@ -46,6 +46,69 @@ select extensions.ok(
   not has_function_privilege('service_role', 'public.kc_track_privacy_event(text,text,text,text,text,text,jsonb)', 'execute'),
   'service role is not an undocumented privacy event ingestion caller'
 );
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_proc procedure_row
+    where procedure_row.oid = any (array[
+      to_regprocedure('public.kc_ingest_search_queries(text,jsonb)'),
+      to_regprocedure('public.kc_track_privacy_event(text,text,text,text,text,text,jsonb)'),
+      to_regprocedure('public.kc_admin_search_trends(integer,timestamp with time zone)'),
+      to_regprocedure('public.kc_admin_search_trends_classified(integer,timestamp with time zone)')
+    ]::oid[])
+      and not procedure_row.prosecdef
+  ),
+  4,
+  'all exposed analytics RPCs are security invoker'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_proc procedure_row
+    where procedure_row.oid = any (array[
+      to_regprocedure('kc_private.kc_ingest_search_queries_impl(text,jsonb)'),
+      to_regprocedure('kc_private.kc_track_privacy_event_impl(text,text,text,text,text,text,jsonb)'),
+      to_regprocedure('kc_private.kc_admin_search_trends_impl(integer,timestamp with time zone)'),
+      to_regprocedure('kc_private.kc_admin_search_trends_classified_impl(integer,timestamp with time zone)')
+    ]::oid[])
+      and procedure_row.prosecdef
+  ),
+  4,
+  'privileged analytics implementations are security definer in kc_private'
+);
+select extensions.ok(
+  coalesce(current_setting('pgrst.db_schemas', true), '') !~ '(^|,)[[:space:]]*kc_private([[:space:]]*,|$)',
+  'kc_private is not exposed through PostgREST'
+);
+select extensions.ok(
+  has_function_privilege('anon', 'kc_private.kc_ingest_search_queries_impl(text,jsonb)', 'execute'),
+  'anon wrapper can execute private search ingestion implementation'
+);
+select extensions.ok(
+  has_function_privilege('authenticated', 'kc_private.kc_ingest_search_queries_impl(text,jsonb)', 'execute'),
+  'authenticated wrapper can execute private search ingestion implementation'
+);
+select extensions.ok(
+  has_function_privilege('anon', 'kc_private.kc_track_privacy_event_impl(text,text,text,text,text,text,jsonb)', 'execute'),
+  'anon wrapper can execute private privacy-event implementation'
+);
+select extensions.ok(
+  has_function_privilege('authenticated', 'kc_private.kc_track_privacy_event_impl(text,text,text,text,text,text,jsonb)', 'execute'),
+  'authenticated wrapper can execute private privacy-event implementation'
+);
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'kc_private.kc_admin_search_trends_impl(integer,timestamp with time zone)',
+    'execute'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'kc_private.kc_admin_search_trends_classified_impl(integer,timestamp with time zone)',
+    'execute'
+  ),
+  'authenticated admin wrappers can execute private trend implementations'
+);
 select extensions.ok(
   to_regprocedure('kc_private.kc_admin_search_trends(integer,timestamp with time zone)') is null
   or not has_function_privilege(
@@ -64,6 +127,17 @@ select extensions.ok(
   ),
   'authenticated cannot execute the private classified trends worker'
 );
+
+set local role anon;
+select extensions.lives_ok(
+  $$select public.kc_ingest_search_queries('short', '[]'::jsonb)$$,
+  'anon can reach the public search ingestion wrapper'
+);
+select extensions.lives_ok(
+  $$select public.kc_track_privacy_event('invalid', 'short')$$,
+  'anon can reach the public privacy-event wrapper'
+);
+reset role;
 
 select extensions.is(
   (public.kc_ingest_search_queries(

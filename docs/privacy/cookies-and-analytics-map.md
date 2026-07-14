@@ -136,7 +136,8 @@ Regras:
 
 - RLS habilitado nas tabelas.
 - `SELECT` direto somente para administradores.
-- Inserts públicos passam por RPC `security definer`.
+- Inserts públicos passam por RPC `security invoker`; somente a implementação interna no
+  schema não exposto `kc_private` usa `security definer`.
 - Funções usam `SET search_path = ''`.
 - `session_id` nunca é armazenado cru; o banco salva `encode(digest(session_id, 'sha256'), 'hex')`.
 
