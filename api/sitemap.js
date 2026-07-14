@@ -17,6 +17,7 @@ const STATIC_ROUTES = [
   { path: '/caronas-feed.html', changefreq: 'daily', priority: '0.8' },
   { path: '/achados-perdidos.html', changefreq: 'daily', priority: '0.8' },
   { path: '/sobre.html', changefreq: 'monthly', priority: '0.6' },
+  { path: '/apresentacao-institucional.html', changefreq: 'monthly', priority: '0.7' },
   { path: '/editorial.html', changefreq: 'monthly', priority: '0.6' },
   { path: '/ajuda.html', changefreq: 'monthly', priority: '0.5' },
   { path: '/ods.html', changefreq: 'monthly', priority: '0.5' },

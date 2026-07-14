@@ -33,6 +33,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
   <link href="assets/css/styles.css?v=8.6.6" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.2" />
+  <link rel="stylesheet" href="assets/css/kc-pitch-links.css?v=1.0.0" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 </head>
@@ -324,7 +325,17 @@
         <details class="kc-sidebar-context">
           <summary>Ver contexto da plataforma</summary>
           <p>O KinoCampus reúne publicações de usuários e conteúdos curados a partir de fontes públicas, priorizando prazos, links oficiais, contatos e informações úteis para a decisão.</p>
-          <a href="sobre.html">Conhecer missão e curadoria</a>
+          <div class="kc-context-pitch-links">
+            <a href="sobre.html">Conhecer missão e curadoria</a>
+            <a class="kc-context-pitch-card" href="apresentacao-institucional.html">
+              <span class="kc-context-pitch-card__mark" aria-hidden="true"><img src="assets/favicon.svg" alt="" aria-hidden="true" /></span>
+              <span class="kc-context-pitch-card__copy">
+                <strong>Apresentação institucional</strong>
+                <small>Conheça a proposta em 5, 15 ou 30 minutos</small>
+              </span>
+              <span class="kc-context-pitch-card__arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
         </details>
       </div>
 
@@ -588,4 +599,3 @@
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
 </body>
 </html>
-
