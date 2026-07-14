@@ -117,6 +117,29 @@ Inventario versionado no repo. O estado remoto deve ser confirmado antes de qual
 
 As três integrações de medição exigem JWT no gateway e repetem a validação de autenticação no handler. GA4 e Search Console usam contas técnicas diferentes e com o menor privilégio de leitura compatível. `KC_ANALYTICS_ID_SECRET` nunca deve ser reutilizado como outra credencial; sua rotação cria novos pseudônimos e interrompe intencionalmente a continuidade histórica de User-ID.
 
+### Atualização segura das credenciais Google
+
+Credenciais JSON não devem ser interpoladas diretamente em um comando PowerShell de
+`supabase secrets set`: a passagem por uma string de linha de comando pode remover as
+aspas do JSON e produzir `invalid_sa_key` mesmo quando o arquivo original é válido.
+
+Use o utilitário versionado, que valida a estrutura das duas contas técnicas, assina o
+JWT, consulta as APIs oficiais, grava um arquivo temporário com permissão restrita,
+publica via `--env-file`, confere os digests remotos e remove o arquivo temporário:
+
+```powershell
+npm run analytics:secrets:set -- `
+  --project-ref <project-ref> `
+  --ga-key <caminho-do-json-ga4> `
+  --ga-property <property-id> `
+  --search-console-key <caminho-do-json-search-console> `
+  --search-console-site <site-url>
+```
+
+O comando não imprime chaves privadas nem endereços das contas técnicas. A execução
+deve terminar com respostas `200` das duas APIs e confirmação de digests; qualquer
+divergência interrompe o processo com erro.
+
 Verificação V76 (2026-06-15): `notify-admin-reports-threshold` foi publicada no projeto
 Supabase remoto (`wacyrkwhkvzwkqpolrbg`) como Edge Function `ACTIVE`, versão 1,
 `verify_jwt=true`, sha `374ec4256c0daf825ce1976fdf6afc58ee818ab20ddb743cde149dc5655a4476`.
