@@ -933,6 +933,43 @@
       try {
         const finalImages = await syncPostMediaForUpdate(client, postUuid, user.id, newImages);
         const coverImageUrl = resolveFirstImageUrl(finalImages);
+
+        // v13.6.3 fix: sincronizar metadata.gallery_image_urls (e
+        // gallery_count) com a galeria final. Sem isso, o
+        // setGallery / KCAPI.normalizePost continuava mostrando a
+        // galeria antiga porque o metadata persistido não tinha
+        // sido atualizado junto com post_media. O write-adapter
+        // aqui é o source of truth final (após uploads e remoções
+        // de imagens), então copiamos o array resolvido de volta
+        // para metadata — não confiamos apenas no payload do
+        // frontend, que pode estar desincronizado com o estado de
+        // post_media após uploadAsync.
+        if (Array.isArray(finalImages)) {
+          const nextMetadata = Object.assign({}, parsed.data.metadata || {}, {
+            gallery_image_urls: finalImages.slice(),
+            gallery_count: finalImages.length,
+          });
+          if (coverImageUrl) {
+            nextMetadata.cover_url = coverImageUrl;
+            nextMetadata.image_url = coverImageUrl;
+          } else {
+            delete nextMetadata.cover_url;
+            delete nextMetadata.image_url;
+            nextMetadata.gallery_count = 0;
+          }
+          // PATCH the row again so metadata reflects the final gallery
+          // (best-effort; non-blocking if it fails since text was saved)
+          const metaPatch = await client
+            .from('posts')
+            .update({ metadata: nextMetadata, image_url: coverImageUrl || null })
+            .eq('id', postUuid)
+            .select('id')
+            .maybeSingle();
+          if (metaPatch && metaPatch.error) {
+            console.warn('[KCAPI][Supabase] updatePost metadata gallery sync falhou:', metaPatch.error);
+          }
+        }
+
         const coverUpdate = await updatePostCoverImage(client, postUuid, parsed.data.metadata, coverImageUrl);
         if (coverUpdate && coverUpdate.error) {
           console.warn('[KCAPI][Supabase] updatePost image_url fallback update falhou:', coverUpdate.error);

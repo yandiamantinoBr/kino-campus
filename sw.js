@@ -15,7 +15,7 @@
 
 'use strict';
 
-var CACHE_VERSION = 'kc-shell-v12.12.0';
+var CACHE_VERSION = 'kc-shell-v12.13.0';
 var RUNTIME_VERSION = '8.6.1';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';

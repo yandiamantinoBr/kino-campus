@@ -385,7 +385,25 @@
       const tagKeys = Array.from(tagMap.keys()).filter(Boolean);
       const tagLabels = Array.from(tagMap.values()).filter(Boolean);
 
+      // Imagens ordenadas: cover primeiro, depois o resto. O
+      // supabase.posts-write.adapter.updatePost injeta essas URLs
+      // em post_media + atualiza image_url/cover_url, mas o frontend
+      // (product.render.setGallery + KCAPI.normalizePost) ainda lê
+      // a galeria via metadata.gallery_image_urls. Por isso precisamos
+      // propagar a lista também para metadata, com a primeira URL
+      // sendo a capa, para que o render permaneça correto mesmo
+      // antes de post_media ser re-derivado.
       const imagens = kcGetOrderedCreateImages();
+      // Em modo edição o kcGetOrderedCreateImages pode devolver
+      // data: URLs que ainda não foram enviadas (uploads pendentes);
+      // o write-adapter trata desses via uploadImages antes do
+      // syncPostMediaForUpdate. Aqui só persistimos URLs absolutas.
+      const publicImages = (Array.isArray(imagens) ? imagens : [])
+        .map((item) => (item && typeof item === 'object' && item.dataUrl) ? item.dataUrl : item)
+        .map((value) => String(value || '').trim())
+        .filter((value) => /^https?:\/\//i.test(value));
+      const coverImageUrl = publicImages[0] || '';
+      const galleryImageUrls = publicImages.slice();
 
       // Payload do formulário (contrato legado) - o driver decide como persistir.
       // IMPORTANTE: categoria/subcategoria devem ser persistidos como *keys* para
@@ -447,6 +465,16 @@
 
         // metadata (modo local e Supabase): usado para filtros JSONB
         metadata: {
+          // galeria de imagens espelhada (v13.6.3): o render.js /
+          // KCAPI.normalizePost lê metadata.gallery_image_urls quando
+          // a tabela post_media ainda não foi consultada, então a
+          // galeria tem que estar presente no metadata já no
+          // payload — caso contrário o setGallery continua mostrando
+          // a galeria antiga no /product.html mesmo após o
+          // syncPostMediaForUpdate.
+          ...(galleryImageUrls.length ? { gallery_image_urls: galleryImageUrls, gallery_count: galleryImageUrls.length } : { gallery_image_urls: [], gallery_count: 0 }),
+          ...(coverImageUrl ? { cover_url: coverImageUrl, image_url: coverImageUrl } : {}),
+
           // subcategory (filtro): chave esperada pelos controllers (.eq('metadata->>subcategory', ...))
           subcategory: filterSubKey || '',
           subcategoryLabel: filterSubLabel || '',
@@ -695,6 +723,22 @@
       }
 
       showToast('Publicado com sucesso!', 'success', 2200);
+
+      // Conversao centralizada: todas as paginas usam este mesmo pipeline de envio.
+      // Identifica apenas conteudo publico; nunca inclui dados do autor ou o texto publicado.
+      try {
+        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+          const publicPostId = post && (post.uuid || post.id || post.legacyId)
+            ? String(post.uuid || post.id || post.legacyId)
+            : null;
+          window.KCEvents.track('kc_post_create', {
+            item_id: publicPostId,
+            module: kcCreateState.moduleKey || payload.modulo || 'unknown',
+            content_type: 'post',
+            publication_status: post && post._kcPending ? 'pending_review' : 'published',
+          });
+        }
+      } catch (_) { }
 
       // Audit log: registra criação do post (fire-and-forget)
       try {
