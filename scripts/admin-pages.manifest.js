@@ -18,6 +18,7 @@ const PUBLIC_PAGES = Object.freeze([
   'my-posts.html',
   'ods.html',
   'oportunidades.html',
+  'apresentacao-institucional.html',
   'profile.html',
   'privacidade.html',
   'search-results.html',

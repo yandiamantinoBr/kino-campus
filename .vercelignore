@@ -17,6 +17,7 @@ docs/**
 supabase/**
 tests/**
 services/cadu-ufg-publisher/**
+apps/pitch-institucional/**
 
 # Artefatos diagnósticos locais.
 test_ads_race.cjs
