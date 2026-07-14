@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Admin GA4 + Search Console Dashboard Controller (V8.6.9)
+  KinoCampus - Admin GA4 + Search Console Dashboard Controller (V8.6.11)
 
   Reads from Edge Functions kc-ga4-reports and kc-search-console-reports,
   which proxy Google read-only APIs. Requires admin access
@@ -161,10 +161,47 @@
     var json = null;
     try { json = JSON.parse(text); } catch (_) {}
     if (!res.ok) {
-      var msg = (json && (json.error || json.message)) || ('HTTP ' + res.status);
-      throw new Error(msg);
+      var code = (json && typeof json.error === 'string' && json.error) || ('http_' + res.status);
+      throw createGa4Error(code, res.status);
     }
     return json && json.data;
+  }
+
+  function createGa4Error(code, status) {
+    var safeCode = code || 'ga4_error';
+    var error = new Error(safeCode);
+    error.code = safeCode;
+    error.status = status || 0;
+    return error;
+  }
+
+  function friendlyGa4Error(error) {
+    var code = error && error.code ? String(error.code) : '';
+    if (code === 'missing_config' || code === 'invalid_property_id' || code === 'invalid_sa_key' || code === 'no_supabase_url') {
+      return 'O Google Analytics 4 n\u00e3o p\u00f4de ser carregado porque a integra\u00e7\u00e3o do servidor precisa ser configurada novamente.';
+    }
+    if (code === 'service_account_auth_failed') {
+      return 'O Google Analytics 4 rejeitou a credencial t\u00e9cnica configurada no servidor.';
+    }
+    if (code === 'ga4_not_authorized') {
+      return 'A conta t\u00e9cnica do Google Analytics 4 n\u00e3o tem permiss\u00e3o para consultar esta propriedade.';
+    }
+    if (code === 'ga4_rate_limited') {
+      return 'A cota tempor\u00e1ria do Google Analytics 4 foi atingida. Tente atualizar novamente em alguns minutos.';
+    }
+    if (code === 'ga4_unavailable' || code === 'google_timeout' || code === 'google_unavailable') {
+      return 'O Google Analytics 4 est\u00e1 temporariamente indispon\u00edvel. Os dados do Search Console continuam independentes.';
+    }
+    if (code === 'no_session' || code === 'http_401') {
+      return 'A sess\u00e3o administrativa expirou. Entre novamente para consultar o Google Analytics 4.';
+    }
+    if (code === 'admin_required' || code === 'http_403') {
+      return 'Seu acesso atual n\u00e3o permite consultar o Google Analytics 4.';
+    }
+    if (code === 'http_404') {
+      return 'A integra\u00e7\u00e3o do Google Analytics 4 ainda n\u00e3o foi publicada neste ambiente.';
+    }
+    return 'N\u00e3o foi poss\u00edvel carregar o Google Analytics 4 agora. O Search Console continua dispon\u00edvel separadamente.';
   }
 
   async function callSearchConsoleReports(body, authContext) {
@@ -793,7 +830,9 @@
     if (!snap || !snap.startedAt) return null;
     var csv = [];
     csv.push('# KinoCampus GA4 dashboard snapshot');
-    csv.push('# Generated: ' + snap.startedAt);
+    csv.push('# Cycle started: ' + snap.startedAt);
+    csv.push('# GA4 loaded: ' + (snap.ga4LoadedAt || 'unavailable'));
+    csv.push('# Search Console loaded: ' + (snap.searchConsoleLoadedAt || 'unavailable'));
     csv.push('');
 
     // Section: Summary (today vs yesterday)
@@ -1013,6 +1052,41 @@
     window.__KCGa4Data = snapshot;
   }
 
+  function commitSearchConsoleFallback(previousSnapshot, searchConsoleResult) {
+    var effectiveResult = searchConsoleResult;
+    var nextSnapshot = previousSnapshot;
+    var refreshedAt = new Date().toISOString();
+
+    if (searchConsoleResult && searchConsoleResult.ok && searchConsoleResult.data) {
+      // Preserve the last complete GA4 blocks, but publish the fresh Search
+      // Console payload too. This keeps the visible table and CSV atomic even
+      // when only one upstream completed the current refresh cycle.
+      nextSnapshot = Object.assign({}, previousSnapshot || {}, {
+        startedAt: previousSnapshot && previousSnapshot.startedAt
+          ? previousSnapshot.startedAt
+          : refreshedAt,
+        loadedAt: previousSnapshot && previousSnapshot.loadedAt
+          ? previousSnapshot.loadedAt
+          : refreshedAt,
+        ga4LoadedAt: previousSnapshot
+          ? (previousSnapshot.ga4LoadedAt || previousSnapshot.loadedAt || null)
+          : null,
+        searchConsole: searchConsoleResult.data,
+        searchConsoleLoadedAt: refreshedAt,
+      });
+      window.__KCGa4Data = nextSnapshot;
+    } else if (previousSnapshot && previousSnapshot.searchConsole) {
+      effectiveResult = {
+        ok: true,
+        data: previousSnapshot.searchConsole,
+        statusText: 'Não foi possível atualizar a Busca Google; os dados anteriores foram preservados.',
+      };
+    }
+
+    renderSearchConsoleSnapshot(effectiveResult);
+    return nextSnapshot;
+  }
+
   async function performDashboardLoad() {
     clearError();
     setStatus('Carregando métricas...');
@@ -1027,9 +1101,9 @@
       // Share one refreshed admin JWT across this refresh cycle. Besides being
       // cheaper, this avoids overlapping refresh-token rotations.
       var token = await getAccessToken();
-      if (!token) throw new Error('no_session');
+      if (!token) throw createGa4Error('no_session', 401);
       var baseUrl = getSupabaseUrl();
-      if (!baseUrl) throw new Error('no_supabase_url');
+      if (!baseUrl) throw createGa4Error('no_supabase_url', 0);
       var authContext = { token: token, baseUrl: baseUrl };
       var ga4Report = function (body, options) {
         return callGa4Reports(body, options, authContext);
@@ -1185,19 +1259,19 @@
       var searchConsoleResult = await searchConsolePromise;
       snapshot.searchConsole = searchConsoleResult.data;
       snapshot.loadedAt = new Date().toISOString();
+      snapshot.ga4LoadedAt = snapshot.loadedAt;
+      snapshot.searchConsoleLoadedAt = searchConsoleResult.ok ? snapshot.loadedAt : null;
       commitDashboardSnapshot(snapshot, searchConsoleResult);
       setStatus('Atualizado às ' + new Date().toLocaleTimeString('pt-BR'));
       return snapshot;
     } catch (err) {
-      if (searchConsolePromise) await searchConsolePromise;
-      var msg = err && err.message ? err.message : String(err);
-      setError('Falha ao carregar: ' + msg);
-      setStatus('Erro às ' + new Date().toLocaleTimeString('pt-BR'));
-      if (!previousSnapshot) renderSearchConsoleUnavailable();
-      setSearchConsoleState('error', previousSnapshot
-        ? 'Atualização interrompida; os dados exibidos foram preservados.'
-        : 'Não foi possível concluir este ciclo de atualização.');
-      return previousSnapshot;
+      // GA4 and Search Console are separate upstreams. A GA4 failure must not
+      // discard a Search Console result that was already loading in parallel.
+      var searchConsoleResult = searchConsolePromise ? await searchConsolePromise : null;
+      var fallbackSnapshot = commitSearchConsoleFallback(previousSnapshot, searchConsoleResult);
+      setError(friendlyGa4Error(err));
+      setStatus('GA4 indispon\u00edvel \u00e0s ' + new Date().toLocaleTimeString('pt-BR'));
+      return fallbackSnapshot;
     }
   }
 

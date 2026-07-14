@@ -20,6 +20,14 @@ const CLASSIFIER_LINT_FIX = fs.readFileSync(
   path.join(ROOT, 'supabase/migrations/20260714134000_fix_search_classifier_lint.sql'),
   'utf8'
 ).toLowerCase();
+const BOUNDARY_MIGRATION = fs.readFileSync(
+  path.join(ROOT, 'supabase/migrations/20260714141147_move_analytics_definers_private.sql'),
+  'utf8'
+).toLowerCase();
+const SUPABASE_CONFIG = fs.readFileSync(
+  path.join(ROOT, 'supabase/config.toml'),
+  'utf8'
+).toLowerCase();
 const SearchAnalytics = require('../../assets/js/shared/search-analytics.shared.js');
 
 function createSearchRuntime(rpc) {
@@ -140,5 +148,21 @@ describe('migration de ingestao da busca', () => {
     expect(CLASSIFIER_LINT_FIX).toContain("v_worker_schema text := 'kc_private'");
     expect(CLASSIFIER_LINT_FIX).toContain('from %i.%i($1, $2) as result');
     expect(CLASSIFIER_LINT_FIX).toContain('not public.kc_is_admin(v_uid)');
+  });
+
+  test('isola privilegios em schema nao exposto e mantem wrappers invoker', () => {
+    expect(BOUNDARY_MIGRATION).toContain('set schema kc_private');
+    expect(BOUNDARY_MIGRATION).toContain('kc_ingest_search_queries_impl');
+    expect(BOUNDARY_MIGRATION).toContain('kc_track_privacy_event_impl');
+    expect(BOUNDARY_MIGRATION).toContain('kc_admin_search_trends_impl');
+    expect(BOUNDARY_MIGRATION).toContain('kc_admin_search_trends_classified_impl');
+    expect((BOUNDARY_MIGRATION.match(/\nsecurity invoker\n/g) || [])).toHaveLength(4);
+    expect(BOUNDARY_MIGRATION).toContain('grant usage on schema kc_private to anon, authenticated, service_role');
+    expect(BOUNDARY_MIGRATION).not.toMatch(/grant\s+create\s+on\s+schema\s+kc_private/);
+    expect(BOUNDARY_MIGRATION).toContain("notify pgrst, 'reload schema'");
+
+    const exposedSchemas = SUPABASE_CONFIG.match(/schemas\s*=\s*\[([^\]]+)\]/);
+    expect(exposedSchemas).not.toBeNull();
+    expect(exposedSchemas[1]).not.toContain('kc_private');
   });
 });

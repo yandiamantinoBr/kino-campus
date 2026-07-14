@@ -62,13 +62,13 @@ Este documento resume os invariantes operacionais que precisam permanecer alinha
   - RPCs
   - Edge Functions
 - O contrato de perfil do frontend não deve tratar `profiles.email` como parte do perfil público sincronizado.
-- `kc_ingest_search_queries` e `kc_track_privacy_event` são exceções intencionais aos avisos
-  `0028/0029` do Database Linter: precisam ser `SECURITY DEFINER` porque inserts diretos nas
-  tabelas de analytics estão revogados. Ambas usam `search_path = ''`, allowlist, validação,
-  hash de sessão e rate limit; execução fica somente com `anon`/`authenticated`.
-- `kc_admin_search_trends` e `kc_admin_search_trends_classified` também aparecem no aviso
-  `0029`, mas validam `kc_is_admin(auth.uid())` dentro da função e não concedem acesso aos
-  workers privados. Alterações nessas exceções exigem os contratos pgTAP de analytics.
+- `kc_ingest_search_queries`, `kc_track_privacy_event`, `kc_admin_search_trends` e
+  `kc_admin_search_trends_classified` permanecem no schema exposto apenas como wrappers
+  `SECURITY INVOKER`. As implementações privilegiadas ficam em `kc_private`, schema que não
+  integra `pgrst.db_schemas`, com `search_path = ''` e ACLs explícitas.
+- Inserts diretos nas tabelas de analytics continuam revogados. Os wrappers preservam
+  allowlist, validação, hash de sessão, rate limit e `kc_is_admin(auth.uid())`; o Database
+  Advisor não deve voltar a reportar `0028/0029` para esses quatro contratos.
 
 ## 5. Avatar policy manual
 

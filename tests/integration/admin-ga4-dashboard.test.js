@@ -110,11 +110,51 @@ describe('admin Search Console dashboard integration', () => {
 });
 
 describe('admin GA4 dashboard refresh consistency', () => {
+  test('does not expose raw Edge or Google errors in the GA4 banner', () => {
+    expect(SOURCE).toContain("throw createGa4Error(code, res.status);");
+    expect(SOURCE).toContain('function friendlyGa4Error(error)');
+    expect(SOURCE).toContain("code === 'invalid_sa_key'");
+    expect(SOURCE).toContain("code === 'ga4_not_authorized'");
+    expect(SOURCE).toContain("throw createGa4Error('no_session', 401);");
+    expect(SOURCE).toContain("throw createGa4Error('no_supabase_url', 0);");
+    expect(SOURCE).not.toContain("(json.error || json.message)");
+    expect(SOURCE).not.toContain("setError('Falha ao carregar: ' + msg)");
+  });
+
+  test('renders Search Console even when the GA4 refresh fails', () => {
+    var loaderStart = SOURCE.indexOf('async function performDashboardLoad');
+    var loaderEnd = SOURCE.indexOf('\n  function loadDashboard', loaderStart);
+    var loader = SOURCE.slice(loaderStart, loaderEnd);
+    var failureStart = loader.lastIndexOf('} catch (err) {');
+    var failure = loader.slice(failureStart);
+
+    expect(failure).toContain('var searchConsoleResult = searchConsolePromise ? await searchConsolePromise : null;');
+    expect(failure).toContain('commitSearchConsoleFallback(previousSnapshot, searchConsoleResult);');
+    expect(failure).toContain('setError(friendlyGa4Error(err));');
+    expect(failure).not.toContain('renderSearchConsoleUnavailable();');
+    expect(failure).not.toContain("setSearchConsoleState('error'");
+  });
+
+  test('keeps Search Console UI and CSV on the same partial snapshot', () => {
+    var fallbackStart = SOURCE.indexOf('function commitSearchConsoleFallback');
+    var fallbackEnd = SOURCE.indexOf('\n  async function performDashboardLoad', fallbackStart);
+    var fallback = SOURCE.slice(fallbackStart, fallbackEnd);
+
+    expect(fallback).toContain('nextSnapshot = Object.assign({}, previousSnapshot || {}, {');
+    expect(fallback).toContain('searchConsole: searchConsoleResult.data');
+    expect(fallback).toContain('searchConsoleLoadedAt: refreshedAt');
+    expect(fallback).toContain('window.__KCGa4Data = nextSnapshot;');
+    expect(fallback).toContain('data: previousSnapshot.searchConsole');
+    expect(SOURCE).toContain("csv.push('# GA4 loaded: ' + (snap.ga4LoadedAt || 'unavailable'));");
+    expect(SOURCE).toContain("csv.push('# Search Console loaded: ' + (snap.searchConsoleLoadedAt || 'unavailable'));");
+  });
+
   test('aligns the UI and auto-refresh interval to the five-minute Edge cache', () => {
     expect(SOURCE).toContain('var REFRESH_INTERVAL_MS = 300_000;');
     expect(HTML).toContain('O painel atualiza a cada 5 minutos');
     expect(HTML).not.toContain('atualiza a cada 60 s');
-    expect(HTML).toContain('admin-ga4-dashboard.controller.js?v=8.6.10');
+    expect(HTML).toContain('admin-ga4-dashboard.controller.js?v=8.6.11');
+    expect(SOURCE).toContain('Dashboard Controller (V8.6.11)');
   });
 
   test('coalesces overlapping manual and automatic refreshes into one promise', () => {
@@ -133,12 +173,13 @@ describe('admin GA4 dashboard refresh consistency', () => {
     expect(SOURCE).toContain('if (!snap || !snap.loadedAt)');
   });
 
-  test('builds one local GA4/Search Console snapshot and publishes it once', () => {
+  test('publishes complete and partial snapshots only through atomic assignments', () => {
     expect(SOURCE).toContain("var snapshot = { startedAt: new Date().toISOString() };");
     expect(SOURCE).toContain('snapshot.searchConsole = searchConsoleResult.data;');
     expect(SOURCE).toContain('commitDashboardSnapshot(snapshot, searchConsoleResult);');
-    expect((SOURCE.match(/window\.__KCGa4Data\s*=/g) || [])).toHaveLength(1);
+    expect((SOURCE.match(/window\.__KCGa4Data\s*=/g) || [])).toHaveLength(2);
     expect(SOURCE).toContain('window.__KCGa4Data = snapshot;');
+    expect(SOURCE).toContain('window.__KCGa4Data = nextSnapshot;');
     expect(SOURCE).not.toMatch(/window\.__KCGa4Data\.[A-Za-z]+\s*=/);
   });
 });
