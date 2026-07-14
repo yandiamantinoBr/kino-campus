@@ -112,7 +112,7 @@ describe('Cadu candidate source registry mirror', () => {
     expect(report.instagramOverlap.scannerWithoutEntity).toHaveLength(5);
   });
 
-  test('keeps the legacy publisher registry as the only active loader', () => {
+  test('keeps the legacy registry as the only active publisher input', () => {
     const legacy = loadSources(DEFAULT_SOURCE_PATH);
     expect(legacy).toHaveLength(106);
     expect(selectSources(legacy, 'quick')).toHaveLength(102);
@@ -130,6 +130,10 @@ describe('Cadu candidate source registry mirror', () => {
       // The admin controller requests that validated projection through the
       // proxy; it does not activate or import the publisher candidate.
       path.resolve(ROOT, 'assets', 'js', 'controllers', 'admin', 'admin-cadu.controller.js'),
+      // The server-side admin mirror projects the pinned candidate exclusively
+      // as a disabled, read-only fallback. API contract tests prove that it is
+      // unavailable to readiness and mutation routes.
+      path.resolve(ROOT, 'server', 'cadu-source-registry-mirror.js'),
     ]);
     const executableRoots = ['api', 'assets', 'scripts', 'server', 'services', 'supabase']
       .map((directory) => path.join(ROOT, directory))
@@ -154,6 +158,14 @@ describe('Cadu candidate source registry mirror', () => {
       'utf8'
     );
     expect(adminController).not.toMatch(/config[\\/]+cadu-source-registry|ufg-source-registry\.candidate\.json/i);
+    const adminMirror = fs.readFileSync(
+      path.join(ROOT, 'server', 'cadu-source-registry-mirror.js'),
+      'utf8'
+    );
+    expect(adminMirror).toContain('ufg-source-registry.candidate.json');
+    expect(adminMirror).toContain("state: 'candidate'");
+    expect(adminMirror).toContain('runtimeConsumers: []');
+    expect(adminMirror.match(/enabled: false/g)).toHaveLength(3);
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
     expect(manifest.safety).toEqual(expect.objectContaining({
       lifecycle: 'candidate',

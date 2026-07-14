@@ -5,6 +5,7 @@
 // into the upstream URL: every accepted route is rebuilt from known segments.
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
+import { getCaduSourceRegistryMirror } from '../../server/cadu-source-registry-mirror.js';
 
 const STRONG_CADU_ETAG = /^"[a-f0-9]{64}"$/;
 const CADU_REGISTRY_SHA256 = /^[a-f0-9]{64}$/;
@@ -237,7 +238,27 @@ function configureCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, If-Match');
-  res.setHeader('Access-Control-Expose-Headers', 'ETag, X-Cadu-Registry-Sha256');
+  res.setHeader(
+    'Access-Control-Expose-Headers',
+    'ETag, X-Cadu-Registry-Sha256, X-Cadu-Registry-Origin, X-Cadu-Registry-Audit-Cutoff, X-Cadu-Upstream-Status',
+  );
+}
+
+function serveRegistryMirror(res, upstreamStatus) {
+  try {
+    const mirror = getCaduSourceRegistryMirror();
+    res.setHeader('ETag', mirror.etag);
+    res.setHeader('X-Cadu-Registry-Sha256', mirror.registrySha256);
+    res.setHeader('X-Cadu-Registry-Origin', 'kino-campus-mirror');
+    res.setHeader('X-Cadu-Registry-Audit-Cutoff', mirror.auditCutoff);
+    if (Number.isInteger(upstreamStatus) && upstreamStatus >= 400 && upstreamStatus <= 599) {
+      res.setHeader('X-Cadu-Upstream-Status', String(upstreamStatus));
+    }
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.status(200).json(mirror.payload);
+  } catch {
+    return null;
+  }
 }
 
 function sanitizedAuthResponse(res) {
@@ -313,7 +334,13 @@ export default async function handler(req, res) {
   const token = typeof process.env.CADU_API_TOKEN === 'string'
     ? process.env.CADU_API_TOKEN.trim()
     : '';
-  if (!apiUrl || !token) return sendProxyError(res, 503, 'cadu_api_not_configured');
+  if (!apiUrl || !token) {
+    if (route.kind === 'registry_list') {
+      const mirrorResponse = serveRegistryMirror(res, 503);
+      if (mirrorResponse) return mirrorResponse;
+    }
+    return sendProxyError(res, 503, 'cadu_api_not_configured');
+  }
 
   let ifMatch = '';
   if (route.kind === 'registry_override') {
@@ -332,6 +359,10 @@ export default async function handler(req, res) {
   try {
     targetUrl = buildCaduSitesTargetUrl(apiUrl, route);
   } catch {
+    if (route.kind === 'registry_list') {
+      const mirrorResponse = serveRegistryMirror(res, 503);
+      if (mirrorResponse) return mirrorResponse;
+    }
     return sendProxyError(res, 503, 'cadu_api_not_configured');
   }
 
@@ -365,6 +396,10 @@ export default async function handler(req, res) {
         && upstream.status >= 400 && upstream.status <= 599
         ? upstream.status
         : 502;
+      if (route.kind === 'registry_list' && [404, 410, 501, 502, 503, 504].includes(status)) {
+        const mirrorResponse = serveRegistryMirror(res, status);
+        if (mirrorResponse) return mirrorResponse;
+      }
       const payload = { error: 'cadu_api_error', status };
       const detail = sanitizeCaduErrorDetail(body);
       if (detail) payload.detail = detail;
@@ -388,6 +423,10 @@ export default async function handler(req, res) {
     }
     return res.status(upstream.status).json(body);
   } catch {
+    if (route.kind === 'registry_list') {
+      const mirrorResponse = serveRegistryMirror(res, 502);
+      if (mirrorResponse) return mirrorResponse;
+    }
     return sendProxyError(res, 502, 'cadu_api_unreachable');
   }
 }

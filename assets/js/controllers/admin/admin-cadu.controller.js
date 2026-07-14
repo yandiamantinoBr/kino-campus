@@ -10,9 +10,12 @@
   'use strict';
 
   var FEED_PAGE_SIZE = 25;
+  var FEED_STALE_AFTER_MS = 26 * 60 * 60 * 1000;
   var STORAGE_TAB = 'kc:cadu:tab';
   var PIPELINE_CONTROL_CONTRACT = 'cadu-pipeline-control-v1';
   var PIPELINE_SNAPSHOT_TTL_MS = 15000;
+  var OPENCLAW_POLL_INTERVAL_MS = 60000;
+  var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
 
   var state = {
     allSites: [],
@@ -33,6 +36,7 @@
     feedPage: 0,
     feedTotal: 0,
     feedHasMore: false,
+    feedLatestAt: null,
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
     sitesFilter: { q: '', tier: '', ig: '' },
@@ -45,9 +49,10 @@
     pipelineHistory: [],
     pipelineCapabilities: {},
     pipelineControlReady: false,
-    pipelineControlReason: 'snapshot ainda nao validado',
+    pipelineControlReason: 'snapshot ainda não validado',
     pipelineSnapshotExpiresAt: 0,
     pipelineRequestGeneration: 0,
+    pipelineRefreshPromise: null,
     pipelineStartPending: false,
     pipelineHealth: null,
     lastVersion: null
@@ -340,9 +345,12 @@
         $('#kpi-api-detail').textContent = 'ts ' + new Date(data.ts * 1000).toLocaleTimeString('pt-BR');
         if (versionText) versionText.textContent = 'v' + (data.version || '?');
         if (versionPill) versionPill.style.display = '';
-        // Probe se context endpoint existe (cadu-api v0.4.6+)
+        // O endpoint de contexto também consulta o OpenClaw. Na aba OpenClaw,
+        // o refresh dedicado já fornece o estado e evitamos CLIs concorrentes.
         try {
-          var ctx = await apiFetch('/api/cadu/openclaw/context');
+          var ctx = state.currentTab === 'openclaw'
+            ? null
+            : await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
           if (ctx && !ctx.__error) {
             state.openclawContext = ctx;
             if (contextPill) {
@@ -480,9 +488,16 @@
     return {
       headers: {
         ETag: envelope.headers.etag,
-        'X-Cadu-Registry-Sha256': envelope.headers.registrySha256
+        'X-Cadu-Registry-Sha256': envelope.headers.registrySha256,
+        'X-Cadu-Registry-Origin': envelope.headers.registryOrigin
       }
     };
+  }
+
+  function formatAuditCutoff(value) {
+    if (!/^20\d{2}-\d{2}-\d{2}$/.test(String(value || ''))) return 'data de auditoria não informada';
+    var parts = String(value).split('-');
+    return 'auditado até ' + parts[2] + '/' + parts[1] + '/' + parts[0];
   }
 
   function registryFailureLabel(error, envelope) {
@@ -610,11 +625,25 @@
       state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);
       var view = $('#sites-view');
       if (view) { view.disabled = false; view.value = state.sitesView; }
-      setRegistryStatus(
-        'loading',
-        'Catálogo canônico validado; verificando escrita',
-        catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · overrides permanecem bloqueados até a prova CAS.'
-      );
+      var usingMirror = catalog.registryOrigin === 'kino-campus-mirror';
+      if (usingMirror) {
+        var upstreamMirrorStatus = registryEnvelope.headers.upstreamStatus
+          ? 'rota canônica do cadu-api retornou HTTP ' + registryEnvelope.headers.upstreamStatus
+          : 'rota canônica ainda não disponível no backend atual';
+        setRegistryStatus(
+          'fallback',
+          'Espelho canônico local validado — somente leitura',
+          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · ' +
+          formatAuditCutoff(catalog.auditCutoff) + ' · ' + upstreamMirrorStatus +
+          '. Sites e perfis podem ser consultados; overrides permanecem bloqueados.'
+        );
+      } else {
+        setRegistryStatus(
+          'loading',
+          'Catálogo canônico validado; verificando escrita',
+          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · overrides permanecem bloqueados até a prova CAS.'
+        );
+      }
       renderCatalogSummary();
       applySitesFilter();
       computeKpis();
@@ -624,6 +653,7 @@
       var readiness = null;
       var registryWritable = false;
       try {
+        if (usingMirror) throw new Error('mirror_read_only');
         if (!readinessEnvelope || !readinessEnvelope.ok) {
           throw new Error('readiness_http_' + String(readinessEnvelope && readinessEnvelope.status || 0));
         }
@@ -639,7 +669,10 @@
       }
       state.registryReadiness = readiness;
       state.registryWritable = registryWritable;
-      if (state.registryWritable) {
+      if (usingMirror) {
+        // O espelho é deliberadamente candidato e nunca pode habilitar escrita.
+        // O status detalhado já foi instalado antes do probe de readiness.
+      } else if (state.registryWritable) {
         setRegistryStatus(
           'ok',
           'Catálogo canônico validado em modo shadow',
@@ -1245,6 +1278,49 @@
     return loadFeed(false, state.feedPage + loadedPages);
   }
 
+  function feedTimestampMs(value) {
+    if (value == null || value === '') return null;
+    if (typeof value === 'number' || /^\d+(?:\.\d+)?$/.test(String(value))) {
+      var numeric = Number(value);
+      if (!Number.isFinite(numeric) || numeric <= 0) return null;
+      return numeric < 1e12 ? numeric * 1000 : numeric;
+    }
+    var parsed = Date.parse(String(value));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function newestFeedTimestamp(items) {
+    return (items || []).reduce(function (latest, item) {
+      var timestamp = feedTimestampMs(item && (item.created_at || item.updated_at || item.indexed_at));
+      return timestamp && (!latest || timestamp > latest) ? timestamp : latest;
+    }, null);
+  }
+
+  function renderFeedFreshness(error) {
+    var box = $('#feed-freshness-status');
+    if (!box) return;
+    box.classList.remove('is-fresh', 'is-stale', 'is-error');
+    var copy = '';
+    if (error) {
+      box.classList.add('is-error');
+      copy = '<strong>Não foi possível conferir a sincronização.</strong> A consulta ao índice falhou; nenhuma coleta foi iniciada.';
+    } else if (!state.feedLatestAt) {
+      box.classList.add('is-stale');
+      copy = '<strong>Índice sem data recente.</strong> Recarregar apenas consulta o cadu-api; para coletar novos dados, abra a pipeline.';
+    } else {
+      var ageMs = Math.max(0, Date.now() - state.feedLatestAt);
+      var stale = ageMs > FEED_STALE_AFTER_MS;
+      box.classList.add(stale ? 'is-stale' : 'is-fresh');
+      copy = '<strong>' + (stale ? 'Feed possivelmente desatualizado.' : 'Feed atualizado recentemente.') + '</strong> ' +
+        'Chunk mais recente: ' + escapeHtml(new Date(state.feedLatestAt).toLocaleString('pt-BR')) +
+        ' (' + escapeHtml(fmtAgeMs(ageMs)) + '). Recarregar consulta o índice; a coleta é executada pela pipeline.';
+    }
+    var button = '<button type="button" id="feed-open-pipeline-btn" class="kc-btn-secondary"><i class="fas fa-gears"></i> Abrir pipeline</button>';
+    box.innerHTML = '<span><i class="fas fa-clock"></i> ' + copy + '</span>' + button;
+    var openPipeline = $('#feed-open-pipeline-btn');
+    if (openPipeline) openPipeline.addEventListener('click', function () { switchTab('pipeline'); });
+  }
+
   async function loadFeed(initial, appendPage) {
     var list = $('#feed-list');
     if (initial) {
@@ -1257,19 +1333,25 @@
     var requestPage = shouldAppend ? appendPage : state.feedPage;
     var offset = requestPage * limit;
     try {
-      var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true');
+      var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true', {
+        cache: 'no-store',
+        timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS
+      });
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
       var items = Array.isArray(data) ? data : (data.items || data.body || []);
       state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
+      state.feedLatestAt = newestFeedTimestamp(state.allFeedItems);
       state.feedTotal = Array.isArray(data) ? Math.max(offset + items.length, state.allFeedItems.length) : (data.total || state.allFeedItems.length);
       state.feedHasMore = Array.isArray(data) ? items.length >= limit : !!data.has_more;
       $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
       $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
       $('#kpi-memory-detail').textContent = 'memória indexada do Cadu; página ' + (state.feedPage + 1);
+      renderFeedFreshness(null);
       applyFeedFilter();
     } catch (err) {
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
       $('#badge-feed').textContent = '!';
+      renderFeedFreshness(err);
       updateFeedPager(0);
     }
   }
@@ -1284,13 +1366,13 @@
       : state.allFeedItems;
 
     if (!items.length) {
-      $('#feed-list').innerHTML = '<div class="kc-cadu-empty">Nenhum item corresponde ao filtro nesta pagina.</div>';
+      $('#feed-list').innerHTML = '<div class="kc-cadu-empty">Nenhum item corresponde ao filtro nesta página.</div>';
       updateFeedPager(0);
       return;
     }
 
     $('#feed-list').innerHTML = items.map(function (it) {
-      var heading = it.heading ? escapeHtml(it.heading) : '<span style="color:var(--kc-text-dark-secondary);">sem titulo</span>';
+      var heading = it.heading ? escapeHtml(it.heading) : '<span style="color:var(--kc-text-dark-secondary);">sem título</span>';
       var dt = fmtDate(it.created_at);
       var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : 'sem id';
       var snippet = it.snippet || '(sem conteúdo)';
@@ -1322,7 +1404,7 @@
     var end = state.feedPage * limit + state.allFeedItems.length;
     var visible = filteredCount == null ? state.allFeedItems.length : filteredCount;
     var statusText = state.feedTotal
-      ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' chunks' + (visible !== state.allFeedItems.length ? ' (' + visible + ' apos filtro)' : ''))
+      ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' chunks' + (visible !== state.allFeedItems.length ? ' (' + visible + ' após filtro)' : ''))
       : ('Mostrando ' + visible + ' chunks');
     if (status) status.textContent = statusText;
     if (statusB) statusB.textContent = statusText;
@@ -1446,10 +1528,14 @@
   // ============================================================
 
   function switchTab(name) {
+    if (['sites', 'feed', 'pipeline', 'openclaw'].indexOf(name) === -1) name = 'sites';
     state.currentTab = name;
     try { localStorage.setItem(STORAGE_TAB, name); } catch (e) {}
     $$('.kc-cadu-tab').forEach(function (t) {
-      t.classList.toggle('is-active', t.getAttribute('data-tab') === name);
+      var selected = t.getAttribute('data-tab') === name;
+      t.classList.toggle('is-active', selected);
+      t.setAttribute('aria-selected', selected ? 'true' : 'false');
+      t.setAttribute('tabindex', selected ? '0' : '-1');
     });
     $('#tab-sites').style.display = name === 'sites' ? '' : 'none';
     $('#tab-feed').style.display = name === 'feed' ? '' : 'none';
@@ -1481,6 +1567,8 @@
     selectedSession: null,
     chatFocused: false,
     busy: false,
+    refreshPromise: null,
+    lastRefreshStartedAt: 0,
   };
 
   function fmtAgeMs(ms) {
@@ -1602,7 +1690,28 @@
       '</div>';
   }
 
-  async function refreshOpenclaw() {
+  function openclawStatusData(statusResponse) {
+    var command = statusResponse && statusResponse.status;
+    if (!command || command.ok !== true) return null;
+    var data = command.data || command.result || command;
+    return data && typeof data === 'object' && !Array.isArray(data) ? data : null;
+  }
+
+  function renderOpenclawUnavailable(reason) {
+    var statusBadge = $('#badge-openclaw');
+    var agentEl = $('#openclaw-stat-agent');
+    var agentHint = $('#openclaw-stat-agent-hint');
+    var tgEl = $('#openclaw-stat-telegram');
+    var tgHint = $('#openclaw-stat-telegram-hint');
+    if (statusBadge) statusBadge.textContent = '!';
+    if (agentEl) agentEl.innerHTML = '<i class="fas fa-circle-xmark"></i> indisponível';
+    if (agentHint) agentHint.textContent = reason || 'status real não confirmado';
+    if (tgEl) tgEl.innerHTML = '<i class="fas fa-circle-question"></i> não confirmado';
+    if (tgEl) tgEl.style.color = '#f59e0b';
+    if (tgHint) tgHint.textContent = 'aguardando health válido do Gateway';
+  }
+
+  async function performOpenclawRefresh() {
     var statusBadge = $('#badge-openclaw');
     var agentEl = $('#openclaw-stat-agent');
     var tgEl = $('#openclaw-stat-telegram');
@@ -1615,25 +1724,30 @@
 
     try {
       // 1. Status (consolidado: openclaw status --json + health)
-      var statusResp = await apiFetch('/api/cadu/openclaw/status');
+      var statusResp = await apiFetch('/api/cadu/openclaw/status', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
       if (!statusResp || statusResp.__error) {
-        if (statusBadge) statusBadge.textContent = '!';
-        if (agentEl) agentEl.textContent = 'offline';
-        if (agentHint) agentHint.textContent = statusResp && statusResp.data ? 'cadu-api sem permissão' : 'erro cadu-api';
+        renderOpenclawUnavailable(statusResp && statusResp.status ? 'cadu-api respondeu HTTP ' + statusResp.status : 'erro de comunicação com o cadu-api');
         return;
       }
-      var st = statusResp.status || statusResp.data || statusResp;
-      var rawData = st.data || st;
+      var rawData = openclawStatusData(statusResp);
+      if (!rawData) {
+        renderOpenclawUnavailable('comando de status do OpenClaw falhou ou não comprovou ok=true');
+        return;
+      }
       var agents = rawData.agents && rawData.agents.agents ? rawData.agents.agents : [];
       var defaultAgent = (rawData.heartbeat && rawData.heartbeat.defaultAgentId) || (rawData.agents && rawData.agents.defaultId) || 'main';
       var mainAgent = agents.find(function (a) { return a.id === defaultAgent; }) || agents[0];
       var recentSessions = rawData.sessions && rawData.sessions.recent ? rawData.sessions.recent : [];
-      var lastActiveMs = mainAgent ? (mainAgent.lastActiveAgeMs || 0) : (recentSessions[0] ? (recentSessions[0].ageMs || recentSessions[0].age || 0) : 0);
+      var lastActiveMs = mainAgent && Number.isFinite(Number(mainAgent.lastActiveAgeMs))
+        ? Number(mainAgent.lastActiveAgeMs)
+        : (recentSessions[0] ? Number(recentSessions[0].ageMs || recentSessions[0].age || 0) : 0);
       var hb = rawData.heartbeat || {};
       var hbEvery = hb.agents && hb.agents[0] ? hb.agents[0].every : '—';
       var sessionDefaults = rawData.sessions && rawData.sessions.defaults ? rawData.sessions.defaults : {};
-      var modelHint = sessionDefaults.model || (mainAgent && mainAgent.model) || 'deepseek-v4-pro';
-      var contextHint = sessionDefaults.contextTokens ? ('ctx ' + Math.round(sessionDefaults.contextTokens / 1000000) + 'M') : 'ctx 1M';
+      var modelHint = sessionDefaults.model || (mainAgent && mainAgent.model) || 'modelo não informado';
+      var contextHint = sessionDefaults.contextTokens
+        ? ('ctx ' + Math.round(sessionDefaults.contextTokens / 1000000) + 'M')
+        : 'ctx não informado';
 
       // Agent
       if (agentEl) agentEl.innerHTML = '<i class="fas fa-circle-check"></i> online';
@@ -1651,23 +1765,29 @@
       if (tasksHint) tasksHint.innerHTML = succeeded + ' OK · ' + failures + ' falhas';
 
       // 2. Health (heartbeat, telegram)
-      var healthText = statusResp.health && statusResp.health.stdout ? statusResp.health.stdout : '';
-      var tgOk = /Telegram:\s*configured/i.test(healthText);
-      var hbOk = /Heartbeat/i.test(healthText);
+      var healthCommand = statusResp.health;
+      var healthText = healthCommand && healthCommand.ok === true && healthCommand.stdout ? healthCommand.stdout : '';
+      var tgConnected = /Telegram[^\n]*(?:connected|healthy|\bok\b)/i.test(healthText);
+      var tgConfigured = tgConnected || /Telegram[^\n]*configured/i.test(healthText);
+      var heartbeatDisabled = /^(?:0|off|disabled|desativado)/i.test(String(hbEvery || ''));
       if (tgEl) {
-        tgEl.innerHTML = tgOk ? '<i class="fas fa-circle-check"></i> ON' : '<i class="fas fa-circle-xmark"></i> off';
-        tgEl.style.color = tgOk ? '#4caf50' : '#f44336';
+        tgEl.innerHTML = tgConnected
+          ? '<i class="fas fa-circle-check"></i> conectado'
+          : (tgConfigured ? '<i class="fas fa-circle-exclamation"></i> configurado' : '<i class="fas fa-circle-xmark"></i> não confirmado');
+        tgEl.style.color = tgConnected ? '#4caf50' : (tgConfigured ? '#f59e0b' : '#f44336');
       }
-      if (tgHint) tgHint.innerHTML = 'Bot: 8746…f8DM · 1/1 account';
+      if (tgHint) tgHint.textContent = tgConnected ? 'conexão confirmada pelo health do Gateway' : 'o health não confirmou uma conexão ativa';
       if (hbEl) {
-        hbEl.innerHTML = hbOk ? '<i class="fas fa-circle-check"></i> ' + hbEvery : '—';
+        hbEl.innerHTML = heartbeatDisabled
+          ? '<i class="fas fa-pause-circle"></i> desativado'
+          : '<i class="fas fa-clock"></i> ' + escapeHtml(hbEvery || 'não informado');
       }
       if (hbHint) hbHint.innerHTML = mainAgent ? ('última atividade: ' + fmtAgeMs(lastActiveMs)) : '—';
 
       if (statusBadge) statusBadge.textContent = tasks.active > 0 ? '●' : 'ok';
 
       // 3. Sessions recentes
-      var sessResp = await apiFetch('/api/cadu/openclaw/sessions?limit=8');
+      var sessResp = await apiFetch('/api/cadu/openclaw/sessions?limit=8', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
       var sessList = $('#openclaw-sessions-list');
       if (sessResp && !sessResp.__error && sessResp.data && sessResp.data.sessions) {
         var sessions = sessResp.data.sessions;
@@ -1734,9 +1854,23 @@
       }
 
     } catch (e) {
-      if (agentEl) agentEl.textContent = 'erro';
-      if (agentHint) agentHint.textContent = String(e && e.message || e);
+      renderOpenclawUnavailable(String(e && e.message || e));
     }
+  }
+
+  function refreshOpenclaw(options) {
+    var opts = options || {};
+    if (typeof document !== 'undefined' && document.hidden) return Promise.resolve({ skipped: 'hidden' });
+    if (openclawState.refreshPromise) return openclawState.refreshPromise;
+    var now = Date.now();
+    if (opts.force !== true && now - openclawState.lastRefreshStartedAt < OPENCLAW_POLL_INTERVAL_MS) {
+      return Promise.resolve({ skipped: 'cooldown' });
+    }
+    openclawState.lastRefreshStartedAt = now;
+    openclawState.refreshPromise = performOpenclawRefresh().finally(function () {
+      openclawState.refreshPromise = null;
+    });
+    return openclawState.refreshPromise;
   }
 
   async function openclawSendChat(ev) {
@@ -2373,9 +2507,19 @@
         }
       });
     }
+    var activityPipelineLink = $('#cadu-activity-pipeline-link');
+    if (activityPipelineLink) {
+      activityPipelineLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        switchTab('pipeline');
+        if (notifDropdown) notifDropdown.setAttribute('hidden', '');
+        if (notifBell) notifBell.setAttribute('aria-expanded', 'false');
+      });
+    }
 
-    // Periodic status poll (a cada 30s): atualiza cadu-api/version pills + activity bell
+    // Poll leve do sidecar. Abas em segundo plano não geram tráfego operacional.
     setInterval(function () {
+      if (document.hidden) return;
       // Poll silencioso: atualiza health e atividade recente quando a API está saudável.
       fetch('/api/cadu/health', { headers: { Accept: 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : null; })
@@ -2396,7 +2540,7 @@
           }
         })
         .catch(function () {});
-    }, 30000);
+    }, 60000);
 
     // First poll (assíncrono, não bloqueia init)
     setTimeout(pollNotifActivity, 2000);
@@ -2562,7 +2706,7 @@
     if (feedExportPdf) feedExportPdf.addEventListener('click', function () { exportFeedPdf(feedExportPdf); });
 
     $('#cadu-refresh-btn').addEventListener('click', function () {
-      refreshAll();
+      refreshAll({ forceOperational: true });
     });
   }
 
@@ -2644,6 +2788,9 @@
         headers: {
           etag: res.headers.get('etag') || '',
           registrySha256: res.headers.get('x-cadu-registry-sha256') || '',
+          registryOrigin: res.headers.get('x-cadu-registry-origin') || '',
+          auditCutoff: res.headers.get('x-cadu-registry-audit-cutoff') || '',
+          upstreamStatus: res.headers.get('x-cadu-upstream-status') || '',
           cacheControl: res.headers.get('cache-control') || ''
         }
       };
@@ -2657,7 +2804,7 @@
         ok: false,
         status: 0,
         data: null,
-        headers: { etag: '', registrySha256: '', cacheControl: '' },
+        headers: { etag: '', registrySha256: '', registryOrigin: '', auditCutoff: '', upstreamStatus: '', cacheControl: '' },
         message: String(e && e.message || e)
       };
     } finally {
@@ -2922,14 +3069,44 @@
     };
   }
 
+  function normalizePipelineStageForDisplay(stage) {
+    if (!stage || typeof stage !== 'object' || Array.isArray(stage) ||
+        !isSafePipelineStageId(stage.id) || typeof stage.name !== 'string' ||
+        !stage.name.trim() || stage.name.length > 120 || typeof stage.description !== 'string' ||
+        stage.description.length > 500 || typeof stage.script !== 'string' ||
+        stage.script.length > 500 || ['scan', 'process', 'publish', 'maintenance'].indexOf(stage.category) < 0) return null;
+    var estimatedSeconds = Number(stage.estimated_sec);
+    if (!Number.isFinite(estimatedSeconds) || estimatedSeconds < 0 || estimatedSeconds > 86400) return null;
+    return {
+      id: stage.id,
+      name: stage.name,
+      description: stage.description,
+      script: stage.script,
+      estimated_sec: estimatedSeconds,
+      category: stage.category,
+      last_run: stage.last_run == null ? null : normalizePipelineRun(stage.last_run),
+      preflight: null,
+    };
+  }
+
+  function pipelineStagesForDisplay(status) {
+    if (!status || !Array.isArray(status.stages)) return [];
+    var seen = Object.create(null);
+    return status.stages.map(normalizePipelineStageForDisplay).filter(function (stage) {
+      if (!stage || seen[stage.id]) return false;
+      seen[stage.id] = true;
+      return true;
+    }).slice(0, 64);
+  }
+
   function validatePipelineControlSnapshot(status, nowMs) {
     nowMs = Number.isFinite(nowMs) ? nowMs : Date.now();
     if (!status || typeof status !== 'object' || Array.isArray(status)) return { ok: false, reason: 'payload ausente' };
-    if (status.contract_version !== PIPELINE_CONTROL_CONTRACT) return { ok: false, reason: 'versao de contrato ausente ou incompatível' };
+    if (status.contract_version !== PIPELINE_CONTROL_CONTRACT) return { ok: false, reason: 'versão de contrato ausente ou incompatível' };
     var generatedAt = Date.parse(status.generated_at || '');
-    if (!Number.isFinite(generatedAt)) return { ok: false, reason: 'timestamp do snapshot invalido' };
+    if (!Number.isFinite(generatedAt)) return { ok: false, reason: 'timestamp do snapshot inválido' };
     if (generatedAt > nowMs + 5000 || nowMs - generatedAt > PIPELINE_SNAPSHOT_TTL_MS) {
-      return { ok: false, reason: 'snapshot expirado ou com relogio inconsistente' };
+      return { ok: false, reason: 'snapshot expirado ou com relógio inconsistente' };
     }
     var capabilities = status.capabilities;
     if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities) ||
@@ -2938,16 +3115,16 @@
       return { ok: false, reason: 'capabilities explicitas ausentes' };
     }
     if (!Array.isArray(status.stages) || status.stages.length === 0 || status.stages.length > 64) {
-      return { ok: false, reason: 'catalogo de estagios invalido' };
+      return { ok: false, reason: 'catálogo de estágios inválido' };
     }
     var seen = Object.create(null);
     var normalizedStages = [];
     for (var index = 0; index < status.stages.length; index += 1) {
       var stage = status.stages[index];
-      if (!stage || !isSafePipelineStageId(stage.id) || seen[stage.id]) return { ok: false, reason: 'identidade de estagio invalida' };
+      if (!stage || !isSafePipelineStageId(stage.id) || seen[stage.id]) return { ok: false, reason: 'identidade de estágio inválida' };
       seen[stage.id] = true;
       var normalizedStage = normalizePipelineStage(stage, nowMs);
-      if (!normalizedStage) return { ok: false, reason: 'preflight incompleto ou invalido para ' + stage.id };
+      if (!normalizedStage) return { ok: false, reason: 'preflight incompleto ou inválido para ' + stage.id };
       normalizedStages.push(normalizedStage);
     }
     return {
@@ -2969,12 +3146,12 @@
 
   function invalidatePipelineControl(reason) {
     state.pipelineControlReady = false;
-    state.pipelineControlReason = String(reason || 'contrato de controle indisponivel').slice(0, 240);
+    state.pipelineControlReason = String(reason || 'contrato de controle indisponível').slice(0, 240);
     state.pipelineSnapshotExpiresAt = 0;
     state.pipelineCapabilities = {};
   }
 
-  async function refreshPipeline() {
+  async function performPipelineRefresh() {
     var requestGeneration = ++state.pipelineRequestGeneration;
     var status = await apiFetch('/api/cadu/pipeline', { timeoutMs: 5000 });
     if (requestGeneration !== state.pipelineRequestGeneration) return;
@@ -2986,7 +3163,17 @@
     var validation = validatePipelineControlSnapshot(status, Date.now());
     if (!validation.ok) {
       invalidatePipelineControl(validation.reason);
-      renderPipelineStages(state.pipelineStages || []);
+      state.pipelineStages = pipelineStagesForDisplay(status);
+      state.pipelineActive = status.active_run == null ? null : normalizePipelineRun(status.active_run);
+      state.pipelineHistory = Array.isArray(status.history)
+        ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
+        : [];
+      renderPipelineStages(state.pipelineStages);
+      renderPipelineActive(state.pipelineActive);
+      renderPipelineHistory(state.pipelineHistory);
+      updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
+      if (status.health) renderPipelineHealth(status.health);
+      else refreshPipelineHealth();
       return;
     }
     var normalizedStages = validation.stages;
@@ -3010,7 +3197,7 @@
       renderPipelineHistory(state.pipelineHistory);
       updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
     } catch (error) {
-      invalidatePipelineControl('snapshot rejeitado durante a renderizacao');
+      invalidatePipelineControl('snapshot rejeitado durante a renderização');
       state.pipelineStages = [];
       state.pipelineActive = null;
       state.pipelineHistory = [];
@@ -3036,6 +3223,15 @@
       disconnectPipelineStream();
       stopPipelineLogPolling();
     }
+  }
+
+  function refreshPipeline() {
+    if (document.hidden) return Promise.resolve({ skipped: 'hidden' });
+    if (state.pipelineRefreshPromise) return state.pipelineRefreshPromise;
+    state.pipelineRefreshPromise = performPipelineRefresh().finally(function () {
+      state.pipelineRefreshPromise = null;
+    });
+    return state.pipelineRefreshPromise;
   }
 
   async function refreshPipelineHealth() {
@@ -3140,6 +3336,11 @@
   }
 
   function renderStagePreflight(s) {
+    if (!s.preflight) {
+      return '<div class="kc-pipeline-stage__preflight">' + stageChip('preflight indisponível', 'danger') +
+        stageChip('somente leitura', 'warning') + '</div>' +
+        '<div class="kc-pipeline-stage__script" title="' + escapeHtml(s.script || '') + '"><i class="fas fa-file-code"></i> ' + escapeHtml(s.script || 'script não informado') + '</div>';
+    }
     var pf = s.preflight || {};
     var profile = pf.profile || {};
     var checks = pf.checks || [];
@@ -3164,7 +3365,7 @@
     if (!summary || !summary.metrics) return '';
     var m = summary.metrics || {};
     var parts = [];
-    if (m.publishable != null) parts.push('<span>publicaveis ' + escapeHtml(m.publishable) + '</span>');
+    if (m.publishable != null) parts.push('<span>publicáveis ' + escapeHtml(m.publishable) + '</span>');
     if (m.published != null) {
       var cls = (Number(m.published) === 0 && Number(m.publishable || 0) > 0) ? ' class="is-warning"' : '';
       parts.push('<span' + cls + '>publicados ' + escapeHtml(m.published) + '</span>');
@@ -3177,7 +3378,7 @@
     }
     if (m.ig_new_posts != null) parts.push('<span>IG novos ' + escapeHtml(m.ig_new_posts) + '</span>');
     if (m.ig_relevant_posts != null) parts.push('<span>IG relevantes ' + escapeHtml(m.ig_relevant_posts) + '</span>');
-    if (m.ig_seen_skipped != null) parts.push('<span>IG ja vistos ' + escapeHtml(m.ig_seen_skipped) + '</span>');
+    if (m.ig_seen_skipped != null) parts.push('<span>IG já vistos ' + escapeHtml(m.ig_seen_skipped) + '</span>');
     if (summary.duration_sec != null) parts.push('<span>' + escapeHtml(Math.round(Number(summary.duration_sec))) + 's</span>');
     if ((summary.warnings || []).length) parts.push('<span class="is-warning">avisos ' + summary.warnings.length + '</span>');
     return parts.length ? '<div class="kc-pipeline-history-item__summary">' + parts.join('') + '</div>' : '';
@@ -3188,7 +3389,10 @@
     if (!container) return;
     var controlReady = pipelineControlIsReady();
     var controlGuard = controlReady ? '' : '<div class="kc-cadu-empty">Controles bloqueados: ' + escapeHtml(state.pipelineControlReason || 'snapshot expirado') + '</div>';
-    if (!stages.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem estágios disponíveis.</div>'; return; }
+    if (!stages.length) {
+      container.innerHTML = controlGuard + '<div class="kc-cadu-empty">O cadu-api não informou estágios seguros para exibição.</div>';
+      return;
+    }
     container.innerHTML = controlGuard + stages.map(function (s) {
       var lastTxt = '— sem runs —';
       var lastCls = '';
@@ -3208,7 +3412,7 @@
         var disabled = !canRun || state.pipelineStartPending;
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
-          : (canRun ? label + ' ' + s.id : 'Indisponivel: ' + blockedReason);
+          : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason);
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (dryRun === true ? 'fa-flask' : 'fa-play') + '"></i> ' + escapeHtml(label) +
@@ -3217,6 +3421,7 @@
       pipelineStageActionModes(profile, state.pipelineCapabilities).forEach(function (action) {
         actionButtons.push(actionButton(action.dryRun, action.label, action.danger));
       });
+      if (!actionButtons.length) actionButtons.push(actionButton(null, 'Execução bloqueada', false));
       var lastSummary = s.last_run && s.last_run.summary ? renderRunSummary(s.last_run.summary) : '';
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
@@ -3722,7 +3927,11 @@
     var badge = $('#badge-pipeline');
     if (!badge) return;
     var running = status.active_run && status.active_run.status === 'running';
-    badge.textContent = running ? '● running' : (status.history ? status.history.length : 0);
+    var stageCount = Array.isArray(state.pipelineStages) ? state.pipelineStages.length : 0;
+    badge.textContent = running ? '● em execução' : String(stageCount);
+    badge.title = running
+      ? 'Há uma execução ativa'
+      : stageCount + (stageCount === 1 ? ' estágio disponível' : ' estágios disponíveis');
   }
 
   function appendLogLine(text) {
@@ -3933,7 +4142,7 @@
     if (!pipelineControlIsReady()) {
       invalidatePipelineControl('snapshot expirado; atualize o painel');
       renderPipelineStages(state.pipelineStages || []);
-      alert('Controles da pipeline bloqueados: o contrato/preflight esta ausente ou expirou. Atualize o painel; nenhum run foi iniciado.');
+      alert('Controles da pipeline bloqueados: o contrato/preflight está ausente ou expirou. Atualize o painel; nenhuma execução foi iniciada.');
       return;
     }
     var stage = findPipelineStage(stageId);
@@ -3966,7 +4175,7 @@
       '\n\nLogs ficarão disponíveis em tempo real abaixo.';
     if (!confirm(msg)) return;
     if (!pipelineControlIsReady()) {
-      invalidatePipelineControl('snapshot expirou durante a confirmacao');
+      invalidatePipelineControl('snapshot expirou durante a confirmação');
       renderPipelineStages(state.pipelineStages || []);
       alert('O snapshot expirou antes do envio. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
       return;
@@ -3978,9 +4187,9 @@
     if (!request) {
       state.pipelineStartPending = false;
       restoreButtons();
-      invalidatePipelineControl('rota explicita de execucao indisponivel');
+      invalidatePipelineControl('rota explícita de execução indisponível');
       renderPipelineStages(state.pipelineStages || []);
-      alert('Rota explicita de execucao indisponivel. Nenhum pipeline foi iniciado.');
+      alert('Rota explícita de execução indisponível. Nenhuma pipeline foi iniciada.');
       return;
     }
     var resp;
@@ -4058,17 +4267,36 @@
     if (state.currentTab === 'pipeline') refreshPipeline();
   }, 5000);
 
-  // Auto-refresh do OpenClaw a cada 15s quando na aba
+  // O status do OpenClaw envolve CLI/SQLite no backend. Um minuto, singleflight
+  // e suspensão em background evitam tempestades de processos por aba aberta.
   setInterval(function () {
-    if (state.currentTab === 'openclaw') refreshOpenclaw();
-  }, 15000);
+    if (!document.hidden && state.currentTab === 'openclaw') refreshOpenclaw();
+  }, OPENCLAW_POLL_INTERVAL_MS);
 
-  async function refreshAll() {
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    if (state.currentTab === 'openclaw') refreshOpenclaw();
+    if (state.currentTab === 'pipeline') refreshPipeline();
+  });
+
+  async function refreshAll(options) {
+    var opts = options || {};
     var loading = $('#cadu-loading');
     if (loading) loading.style.display = 'flex';
     $('#cadu-status-pill').classList.add('is-loading');
     $('#cadu-status-pill').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando…';
-    await Promise.all([checkHealth(), loadSites(), state.currentTab === 'feed' ? loadFeed(true) : Promise.resolve()]);
+    var operationalRefresh = Promise.resolve();
+    if (state.currentTab === 'openclaw') {
+      operationalRefresh = refreshOpenclaw({ force: opts.forceOperational === true });
+    } else if (state.currentTab === 'pipeline') {
+      operationalRefresh = refreshPipeline();
+    }
+    await Promise.all([
+      checkHealth(),
+      loadSites(),
+      state.currentTab === 'feed' ? loadFeed(true) : Promise.resolve(),
+      operationalRefresh,
+    ]);
     if (state.currentTab !== 'feed') loadFeed(true); // atualiza contagem mesmo com tab sites
     if (loading) loading.style.display = 'none';
   }
