@@ -177,9 +177,9 @@
 .kc-btn-primary { background: var(--kc-primary-brand, #ff6b00); color: #fff; border-color: var(--kc-primary-brand, #ff6b00); font-weight: 600; }
 .kc-btn-secondary:disabled, .kc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-    #sites-table[data-view="sources"] { min-width: 1160px; table-layout: fixed; }
+    #sites-table[data-view="sources"] { min-width: 1280px; table-layout: fixed; }
     #sites-table[data-view="sources"] th:nth-child(1), #sites-table[data-view="sources"] td:nth-child(1) { width: 75px; }
-    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 130px; }
+    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 250px; }
     #sites-table[data-view="sources"] th:nth-child(3), #sites-table[data-view="sources"] td:nth-child(3) { width: 160px; }
     #sites-table[data-view="sources"] th:nth-child(4), #sites-table[data-view="sources"] td:nth-child(4) { width: 140px; }
     #sites-table[data-view="sources"] th:nth-child(5), #sites-table[data-view="sources"] td:nth-child(5) { width: 125px; }
@@ -195,7 +195,17 @@
     .kc-cadu-table code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; font-size: .82rem; }
     .kc-cadu-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; }
     .kc-cadu-badge--confirmed { background: rgba(16,185,129,.12); color: #10b981; }
+    .kc-cadu-badge--confirmed_official,
+    .kc-cadu-badge--reviewed,
+    .kc-cadu-badge--complete { background: rgba(16,185,129,.12); color: #34d399; }
     .kc-cadu-badge--tentative { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .kc-cadu-badge--pending,
+    .kc-cadu-badge--pending_review,
+    .kc-cadu-badge--pending_verification,
+    .kc-cadu-badge--partial { background: rgba(245,158,11,.12); color: #fbbf24; }
+    .kc-cadu-badge--tier_conflict,
+    .kc-cadu-badge--url_conflict,
+    .kc-cadu-badge--quarantined { background: rgba(239,68,68,.12); color: #f87171; }
 
     /* ===== Pipeline tab (v0.4.0) ===== */
     .kc-pipeline-grid { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(220px, 280px); gap: 16px; min-width: 0; }
@@ -223,7 +233,9 @@
     .kc-pipeline-active-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; margin-bottom: 10px; min-width: 0; }
     .kc-pipeline-active-card.is-running { border-color: rgba(255,107,0,.45); box-shadow: 0 0 0 1px rgba(255,107,0,.18); }
     .kc-pipeline-active-card.is-failed { border-color: rgba(239,68,68,.45); }
-    .kc-pipeline-active-card.is-finished { border-color: rgba(16,185,129,.45); }
+    .kc-pipeline-active-card.is-success { border-color: rgba(16,185,129,.45); }
+    .kc-pipeline-active-card.is-partial { border-color: rgba(245,158,11,.5); }
+    .kc-pipeline-active-card.is-finished { border-color: rgba(148,163,184,.4); border-style: dashed; }
     .kc-pipeline-active-card__head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .kc-pipeline-active-card__head strong { font-size: 1rem; }
     .kc-pipeline-active-card__meta { font-size: .76rem; color: var(--kc-text-dark-secondary); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
@@ -250,12 +262,16 @@
     .kc-pipeline-log .kc-log-line--ok { color: #34d399; }
     .kc-pipeline-status-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); display: inline-block; margin-left: 6px; vertical-align: middle; transition: background .15s; }
     .kc-pipeline-status-dot.is-running { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.18); animation: kc-pulse 1.4s infinite; }
-    .kc-pipeline-status-dot.is-finished { background: #10b981; }
+    .kc-pipeline-status-dot.is-success { background: #10b981; }
+    .kc-pipeline-status-dot.is-partial { background: #f59e0b; }
+    .kc-pipeline-status-dot.is-finished { background: #94a3b8; }
     .kc-pipeline-status-dot.is-failed { background: #ef4444; }
     @keyframes kc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
     .kc-pipeline-history-item { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 8px 10px; font-size: .78rem; display: flex; flex-direction: column; gap: 4px; }
     .kc-pipeline-history-item.is-running { border-color: rgba(245,158,11,.45); }
-    .kc-pipeline-history-item.is-finished { border-color: rgba(16,185,129,.35); }
+    .kc-pipeline-history-item.is-success { border-color: rgba(16,185,129,.35); }
+    .kc-pipeline-history-item.is-partial { border-color: rgba(245,158,11,.45); }
+    .kc-pipeline-history-item.is-finished { border-color: rgba(148,163,184,.35); border-style: dashed; }
     .kc-pipeline-history-item.is-failed { border-color: rgba(239,68,68,.35); }
     .kc-pipeline-history-item__head { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
     .kc-pipeline-history-item__id { font-family: monospace; font-size: .68rem; color: var(--kc-text-dark-secondary); }
@@ -343,7 +359,7 @@
     #cadu-access-denied { background: rgba(244,67,54,.06); border: 1px solid rgba(244,67,54,.25); border-radius: 14px; color: var(--kc-text-dark-primary); text-align: center; }
     #cadu-access-denied i.fa-lock { color: #ef9a9a; }
     #cadu-error { display: none; background: rgba(76,175,80,.12); border: 1px solid rgba(76,175,80,.35); color: #a5d6a7; border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: .9rem; }
-    /* ===== Botão publicar por site ===== */
+    /* ===== Ação editorial por site ===== */
     .kc-cadu-publish-btn { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.3); color: var(--kc-primary-brand); border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
     .kc-cadu-publish-btn:hover { background: rgba(255,107,0,.2); border-color: rgba(255,107,0,.5); }
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
@@ -366,8 +382,11 @@
     .kc-cadu-catalog-summary__item { border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 12px; background: rgba(255,255,255,.025); }
     .kc-cadu-catalog-summary__item strong { display: block; font-size: 1.25rem; color: var(--kc-text-dark-primary); }
     .kc-cadu-catalog-summary__item small { color: var(--kc-text-dark-secondary); }
+    .kc-cadu-review-policy { margin: -2px 0 12px; padding: 10px 12px; border-left: 3px solid #f59e0b; border-radius: 7px; background: rgba(245,158,11,.08); color: var(--kc-text-dark-secondary); font-size: .78rem; line-height: 1.5; }
+    .kc-cadu-review-policy strong { color: var(--kc-text-dark-primary); }
     .kc-cadu-map-list { display: flex; flex-wrap: wrap; gap: 4px; }
-    .kc-cadu-map-chip { display: inline-flex; align-items: center; border: 1px solid var(--kc-border-dark); border-radius: 999px; padding: 2px 7px; font-size: .72rem; color: var(--kc-text-dark-secondary); background: rgba(255,255,255,.03); }
+    .kc-cadu-map-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 1px solid var(--kc-border-dark); border-radius: 8px; padding: 5px 8px; font-size: .72rem; line-height: 1.25; color: var(--kc-text-dark-secondary); background: rgba(255,255,255,.03); }
+    .kc-cadu-map-chip strong { color: var(--kc-text-dark-primary); font-size: .76rem; }
     .kc-cadu-source-id { display: block; margin-top: 4px; color: var(--kc-text-dark-secondary); font-size: .68rem; overflow-wrap: anywhere; }
     .kc-cadu-tier-context { display: grid; gap: 3px; font-size: .72rem; color: var(--kc-text-dark-secondary); margin-top: 5px; }
     .kc-cadu-source-note--inherited { display: block; margin-top: 5px; color: #f59e0b; font-size: .7rem; line-height: 1.35; }
@@ -409,7 +428,8 @@
     .kc-cadu-activity-dropdown__item__title { font-size: .85rem; color: var(--kc-text-dark-primary); font-weight: 500; }
     .kc-cadu-activity-dropdown__item__meta { font-size: .72rem; color: var(--kc-text-dark-secondary); display: flex; gap: 8px; align-items: center; }
     .kc-cadu-activity-dropdown__item__meta .pill { padding: 1px 6px; border-radius: 6px; font-size: .68rem; font-weight: 600; }
-    .kc-cadu-activity-dropdown__item__meta .pill--finished { background: rgba(16,185,129,.18); color: #10b981; }
+    .kc-cadu-activity-dropdown__item__meta .pill--success { background: rgba(16,185,129,.18); color: #10b981; }
+    .kc-cadu-activity-dropdown__item__meta .pill--partial { background: rgba(245,158,11,.18); color: #f59e0b; }
     .kc-cadu-activity-dropdown__item__meta .pill--failed { background: rgba(239,68,68,.18); color: #ef4444; }
     .kc-cadu-activity-dropdown__item__meta .pill--running { background: rgba(245,158,11,.18); color: #f59e0b; }
     .kc-cadu-activity-dropdown__foot { padding: 10px 14px; border-top: 1px solid var(--kc-border-dark); text-align: center; font-size: .8rem; }
@@ -556,6 +576,7 @@
           <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e overrides.</small></div>
         </div>
         <div class="kc-cadu-catalog-summary" id="sites-catalog-summary" aria-label="Resumo do catálogo UFG" data-i18n-aria-label="aria-label.cadu-catalog-summary" style="display:none;"></div>
+        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, override estável, sem colisão nem pendência crítica. A ação cria uma entrada durável em <code>pending</code> e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
         <div class="kc-cadu-toolbar">
           <select id="sites-view" aria-label="Escolher visão do catálogo" data-i18n-aria-label="aria-label.cadu-sites-view">
             <option value="sources">Fontes web</option>
@@ -891,6 +912,6 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=f9059e88ac04e1c0"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=a339ad86dd66d3e2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=df1e2e51d5770490"></script>
 </body>
 </html>

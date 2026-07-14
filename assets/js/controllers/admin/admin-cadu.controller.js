@@ -46,7 +46,7 @@
     feedFilter: { q: '' },
     currentTab: 'sites',
     apiHealthy: false,
-    publishingKey: null,  // chave do site sendo publicado (evita duplo-clique)
+    publishingKey: null,  // chave da ação editorial em curso (evita duplo-clique)
     pipelineActive: null,
     pipelineStages: [],
     pipelineHistory: [],
@@ -331,6 +331,21 @@
   // Health
   // ============================================================
 
+  function openclawReachableFromContext(context) {
+    if (!context || typeof context !== 'object' || Array.isArray(context)) return null;
+    var canonical = context.cadu_api;
+    if (canonical && typeof canonical === 'object' && !Array.isArray(canonical) &&
+        typeof canonical.openclaw_reachable === 'boolean') {
+      return canonical.openclaw_reachable;
+    }
+    var legacy = context.openclaw;
+    if (legacy && typeof legacy === 'object' && !Array.isArray(legacy) &&
+        typeof legacy.openclaw_reachable === 'boolean') {
+      return legacy.openclaw_reachable;
+    }
+    return null;
+  }
+
   async function checkHealth() {
     var pill = $('#cadu-status-pill');
     var contextPill = $('#cadu-context-pill');
@@ -357,8 +372,9 @@
           if (ctx && !ctx.__error) {
             state.openclawContext = ctx;
             if (contextPill) {
+              var openclawReachable = openclawReachableFromContext(ctx);
               contextPill.style.display = '';
-              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
+              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (openclawReachable === true ? 'OpenClaw OK' : 'OpenClaw ?');
             }
           } else {
             state.openclawContext = null;
@@ -457,6 +473,63 @@
     }).join(' / ');
   }
 
+  var CATALOG_LABELS_PT_BR = Object.freeze({
+    confirmed: 'Confirmado',
+    confirmed_official: 'Identidade oficial confirmada',
+    reviewed: 'Revisado',
+    pending: 'Pendente',
+    pending_review: 'Revisão pendente',
+    pending_verification: 'Verificação pendente',
+    tentative: 'Tentativo',
+    missing: 'Não informado',
+    retired: 'Aposentado',
+    unknown: 'Não classificado',
+    quarantined: 'Em quarentena',
+    tier_conflict: 'Conflito de prioridade',
+    url_conflict: 'URL canônica pendente de decisão',
+    transport_unverified: 'Transporte ainda não verificado',
+    pending_official_evidence: 'Evidência oficial pendente',
+    html_profile_not_feed: 'Página HTML sem feed estruturado',
+    http_error: 'Erro HTTP na verificação',
+    unreachable: 'Origem indisponível',
+    content_integrity_violation: 'Falha de integridade do conteúdo',
+    platform_misclassified: 'Plataforma classificada incorretamente',
+    stable: 'Override estável',
+    base: 'Base canônica',
+    legacy_inherited: 'Herdado do mapa legado',
+    collision_evidence: 'Evidência de colisão',
+    weby_site: 'Site institucional Weby',
+    ojs_site: 'Portal de periódicos OJS',
+    html_page: 'Página institucional HTML',
+    external_site: 'Site institucional externo',
+    mixed: 'Fonte institucional mista',
+    primary_site: 'Site institucional principal',
+    official_profile: 'Perfil institucional oficial',
+    legacy_observation: 'Observação legada',
+    university: 'Universidade',
+    pro_reitoria: 'Pró-reitoria',
+    secretaria: 'Secretaria',
+    academic_unit: 'Unidade acadêmica',
+    administrative_body: 'Órgão administrativo',
+    supplementary_body: 'Órgão suplementar',
+    graduate_program: 'Programa de pós-graduação',
+    campus: 'Câmpus',
+    other: 'Outra entidade',
+    shadow: 'Modo de validação',
+    active: 'Ativo',
+    complete: 'Cobertura completa',
+    partial: 'Cobertura parcial',
+    no_source: 'Sem fonte associada'
+  });
+
+  function catalogLabel(value) {
+    var code = String(value == null ? '' : value).trim();
+    if (!code) return 'Não informado';
+    if (CATALOG_LABELS_PT_BR[code]) return CATALOG_LABELS_PT_BR[code];
+    var humanized = code.replace(/[_-]+/g, ' ').trim();
+    return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+  }
+
   function sourceInstagramStatus(source) {
     var profiles = (source && source.instagramProfiles) || [];
     if (!profiles.length || profiles.every(function (profile) { return profile.statusGroup === 'missing'; })) return 'missing';
@@ -484,6 +557,100 @@
       override_origin: source.overrideOrigin,
       collision: source.collision,
       registrySource: source
+    };
+  }
+
+  function sourceReviewCanonicalInstagram(source) {
+    var profiles = source && Array.isArray(source.instagramProfiles) ? source.instagramProfiles : [];
+    var pending = profiles.some(function (profile) {
+      return profile && (profile.status === 'tentative' || profile.status === 'pending_verification');
+    });
+    if (pending) return { ok: false, handle: null, reason: 'Há perfil do Instagram aguardando verificação.' };
+
+    var confirmedExclusive = profiles.filter(function (profile) {
+      return profile && profile.status === 'confirmed' &&
+        profile.viaSourceObservation === true && profile.shared !== true;
+    });
+    if (confirmedExclusive.length > 1) {
+      return { ok: false, handle: null, reason: 'Há mais de um Instagram direto e exclusivo confirmado para a mesma fonte.' };
+    }
+    if (confirmedExclusive.length === 1) return { ok: true, handle: confirmedExclusive[0].handle, reason: '' };
+    // Perfis confirmados compartilhados/indiretos continuam visíveis como
+    // evidência do catálogo, mas não são enviados como identidade exclusiva.
+    return { ok: true, handle: null, reason: '' };
+  }
+
+  function sourceReviewCanonicalUrl(value) {
+    try {
+      var parsed = new URL(String(value || '').trim());
+      if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password) return '';
+      return parsed.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function sourceReviewEligibility(source) {
+    if (!source || typeof source !== 'object') {
+      return { allowed: false, reason: 'Fonte canônica ausente.', instagramHandle: null };
+    }
+    if (source.role !== 'primary_site') {
+      return { allowed: false, reason: 'A ação aceita somente a fonte primária institucional.', instagramHandle: null };
+    }
+    if (['weby_site', 'ojs_site', 'html_page', 'external_site', 'mixed'].indexOf(source.sourceKind) < 0) {
+      return { allowed: false, reason: 'O tipo da fonte primária não é elegível para revisão institucional.', instagramHandle: null };
+    }
+    if (source.overrideOrigin !== 'stable' || source.overrideUnitId !== source.id) {
+      return { allowed: false, reason: 'Crie primeiro um override estável com identidade canônica.', instagramHandle: null };
+    }
+    if (source.collision) {
+      return { allowed: false, reason: 'Resolva a colisão de identidades antes de enviar.', instagramHandle: null };
+    }
+    if (Array.isArray(source.reviewIssues) && source.reviewIssues.length) {
+      return { allowed: false, reason: 'Resolva as pendências críticas listadas na revisão.', instagramHandle: null };
+    }
+    if (['reviewed', 'confirmed_official'].indexOf(source.reviewState) < 0) {
+      return { allowed: false, reason: 'A fonte ainda não foi confirmada como oficial.', instagramHandle: null };
+    }
+    if (!sourceReviewCanonicalUrl(source.canonicalUrl)) {
+      return { allowed: false, reason: 'A URL institucional canônica não é HTTPS.', instagramHandle: null };
+    }
+    if (!/^[a-f0-9]{64}$/.test(String(source.revision || '')) ||
+        !/^[a-f0-9]{64}$/.test(String(source.registrySha256 || ''))) {
+      return { allowed: false, reason: 'A revisão não está vinculada a uma versão canônica íntegra.', instagramHandle: null };
+    }
+    var instagram = sourceReviewCanonicalInstagram(source);
+    if (!instagram.ok) {
+      return { allowed: false, reason: instagram.reason, instagramHandle: null };
+    }
+    return { allowed: true, reason: '', instagramHandle: instagram.handle };
+  }
+
+  function sourceReviewIdempotencyKey(source) {
+    return 'map-ufg-review:' + source.id + ':' + source.revision;
+  }
+
+  function buildSourceReviewRequest(source) {
+    var eligibility = sourceReviewEligibility(source);
+    if (!eligibility.allowed) throw new Error(eligibility.reason || 'Fonte não elegível para revisão.');
+    var firstEntity = source.entities && source.entities[0];
+    var canonicalUrl = sourceReviewCanonicalUrl(source.canonicalUrl);
+    return {
+      action: 'review',
+      intent: 'review',
+      source_id: source.id,
+      source_url: canonicalUrl,
+      content_url: canonicalUrl,
+      instagram_handle: eligibility.instagramHandle || null,
+      content_kind: 'institutional_site',
+      idempotency_key: sourceReviewIdempotencyKey(source),
+      source_revision: source.revision,
+      registry_sha256: source.registrySha256,
+      name: sourceName(source),
+      note: source.note == null ? null : source.note,
+      tier: source.effectiveTier == null ? null : source.effectiveTier,
+      category: firstEntity ? firstEntity.kind : source.sourceKind,
+      source: 'cadu-admin-map-ufg'
     };
   }
 
@@ -589,7 +756,7 @@
     setRegistryStatus(
       'error',
       'Catálogo canônico indisponível — mapa legado somente leitura',
-      'Motivo: ' + reason + '. Overrides estão bloqueados para evitar gravar por nomes ambíguos.'
+      'Motivo: ' + reason + '. Escritas estão bloqueadas porque a API não confirmou o catálogo canônico e suas revisões estáveis.'
     );
     renderCatalogSummary();
     return true;
@@ -797,7 +964,9 @@
   function entityChips(entities) {
     if (!entities || !entities.length) return '<span class="kc-cadu-muted">sem entidade</span>';
     return '<div class="kc-cadu-map-list">' + entities.map(function (entity) {
-      return '<span class="kc-cadu-map-chip" title="' + escapeHtml(entity.name) + '">' + escapeHtml(entity.acronym || entity.name) + '</span>';
+      var acronym = entity.acronym ? '<strong>' + escapeHtml(entity.acronym) + '</strong>' : '';
+      var name = '<span>' + escapeHtml(entity.name) + '</span>';
+      return '<span class="kc-cadu-map-chip" title="' + escapeHtml(entity.name) + '">' + acronym + name + '</span>';
     }).join('') + '</div>';
   }
 
@@ -808,7 +977,7 @@
         ? 'associação direta observada nesta fonte'
         : 'associação indireta via entidade' + (profile.viaEntityIds && profile.viaEntityIds.length ? ': ' + profile.viaEntityIds.join(', ') : '');
       if (profile.shared) provenance += ' · perfil compartilhado';
-      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(profile.status, profile.statusGroup)
+      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(catalogLabel(profile.status), profile.statusGroup)
         + '<small class="kc-cadu-source-id">' + escapeHtml(provenance) + '</small></div>';
     }).join('');
   }
@@ -927,16 +1096,21 @@
         ? '<div class="kc-cadu-inherited-warning"><strong>Nota herdada (não será copiada):</strong> ' + escapeHtml(source.note) + '</div>'
         : '';
       var conflict = sourceConflictHtml(source, draft);
-      var review = badgeHtml(source.reviewState, source.reviewState)
+      var review = badgeHtml(catalogLabel(source.reviewState), source.reviewState)
         + '<span class="kc-cadu-source-id">ETag ' + escapeHtml(source.revision.slice(0, 12)) + '…</span>'
         + (source.collision ? '<div class="kc-cadu-review-issues"><strong>Colisão legada:</strong> o override estável prevalece, mas as linhas concorrentes continuam em Pendências.</div>' : '')
-        + (source.reviewIssues.length ? '<div class="kc-cadu-review-issues">' + source.reviewIssues.map(escapeHtml).join('<br>') + '</div>' : '');
-      var actions = '<button type="button" class="kc-cadu-publish-btn" disabled title="Publicação bloqueada: esta fonte pertence ao catálogo shadow desativado"><i class="fas fa-lock"></i><span>Shadow</span></button>'
+        + (source.reviewIssues.length ? '<div class="kc-cadu-review-issues">' + source.reviewIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '');
+      var reviewEligibility = sourceReviewEligibility(source);
+      var reviewTitle = reviewEligibility.allowed
+        ? 'Cria uma sugestão durável pendente para revisão; não publica automaticamente.'
+        : 'Revisão bloqueada: ' + reviewEligibility.reason;
+      var actions = '<button type="button" class="kc-cadu-publish-btn" data-source-id="' + escapeHtml(source.id) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewEligibility.allowed ? '' : ' disabled') + '>'
+        + '<i class="fas ' + (reviewEligibility.allowed ? 'fa-clipboard-check' : 'fa-lock') + '"></i><span>' + (reviewEligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada') + '</span></button>'
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name) + '" data-ask-url="' + escapeHtml(site.url) + '" data-ask-instagram="' + escapeHtml(site.instagramContext || 'sem perfil associado') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '" title="Enviar todas as associações e seus status ao chat Cadu"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
       return '<tr data-source-id="' + escapeHtml(source.id) + '">'
-        + '<td><strong>T' + escapeHtml(source.effectiveTier == null ? '—' : source.effectiveTier) + '</strong><small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : source.baseTier) + ' · ' + escapeHtml(source.overrideOrigin) + '</small></td>'
+        + '<td><strong>T' + escapeHtml(source.effectiveTier == null ? '—' : source.effectiveTier) + '</strong><small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : source.baseTier) + ' · ' + escapeHtml(catalogLabel(source.overrideOrigin)) + '</small></td>'
         + '<td>' + entityChips(source.entities) + '<code class="kc-cadu-source-id">' + escapeHtml(source.id) + '</code></td>'
-        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(source.sourceKind) + ' · shadow</small></td>'
+        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(catalogLabel(source.sourceKind)) + ' · ' + escapeHtml(catalogLabel('shadow')) + '</small></td>'
         + '<td>' + profileLinks(source.instagramProfiles) + '</td>'
         + '<td>' + review + '</td>'
         + '<td><div class="kc-cadu-note-cell">' + inherited + conflict
@@ -955,9 +1129,9 @@
       }).join('<br>') : '<span class="kc-cadu-muted">sem site associado</span>';
       var entityLabel = entity.acronym ? entity.acronym + ' — ' + entity.name : entity.name;
       return '<tr><td><strong>' + escapeHtml(entityLabel) + '</strong><code class="kc-cadu-source-id">' + escapeHtml(entity.id) + '</code></td>'
-        + '<td>' + escapeHtml(entity.kind) + '<small class="kc-cadu-source-id">' + escapeHtml(entity.campus || 'campus não informado') + '</small></td>'
+        + '<td>' + escapeHtml(catalogLabel(entity.kind)) + '<small class="kc-cadu-source-id">' + escapeHtml(entity.campus || 'câmpus não informado') + '</small></td>'
         + '<td>' + sites + '</td><td>' + profileLinks(entity.instagramProfiles) + '</td>'
-        + '<td>' + badgeHtml(entity.status, entity.status) + (entity.sources.length ? '' : '<div class="kc-cadu-review-issues">lacuna de fonte web</div>') + '</td></tr>';
+        + '<td>' + badgeHtml(catalogLabel(entity.status), entity.status) + (entity.sources.length ? '' : '<div class="kc-cadu-review-issues">Lacuna de fonte web</div>') + '</td></tr>';
     }).join('');
   }
 
@@ -969,7 +1143,7 @@
       }).join('<br>') : '<span class="kc-cadu-muted">sem fonte web associada</span>';
       return '<tr><td><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a><code class="kc-cadu-source-id">' + escapeHtml(profile.id) + '</code></td>'
         + '<td>' + entityChips(profile.entities) + '</td><td>' + sources + '</td>'
-        + '<td>' + badgeHtml(profile.status, profile.statusGroup) + '</td>'
+        + '<td>' + badgeHtml(catalogLabel(profile.status), profile.statusGroup) + '</td>'
         + '<td>' + badgeHtml(profile.enabled ? 'ativo' : 'shadow desativado', profile.enabled ? 'confirmed' : 'missing') + '<small class="kc-cadu-source-id">' + escapeHtml((profile.executionModes || []).join(', ') || 'sem modo') + '</small></td></tr>';
     }).join('');
   }
@@ -990,7 +1164,7 @@
         var note = row && row.note ? ' · ' + row.note : '';
         return '<div><strong>' + escapeHtml(unitIds[index] || (row && row.unit_id) || '—') + ':</strong> ' + escapeHtml(tier + ' · ' + revision + note) + '</div>';
       }).join('');
-      return '<tr><td>' + badgeHtml(item.deferredKind, item.deferredKind) + '</td>'
+      return '<tr><td>' + badgeHtml(catalogLabel(item.deferredKind), item.deferredKind) + '</td>'
         + '<td>' + (unitIds.length ? unitIds.map(function (id, index) { return '<div><code>' + escapeHtml(id) + '</code><small class="kc-cadu-source-id">' + escapeHtml(matchTypes[index] || 'sem matchType') + '</small></div>'; }).join('') : '—') + '</td>'
         + '<td>' + (sourceIds.length ? sourceIds.map(function (id) { return '<code class="kc-cadu-source-id">' + escapeHtml(id) + '</code>'; }).join('') : '—') + '</td>'
         + '<td>' + (entityIds.length ? entityIds.map(function (id) { return '<span class="kc-cadu-map-chip">' + escapeHtml(id) + '</span>'; }).join(' ') : '—') + '</td>'
@@ -1007,7 +1181,7 @@
       return '<tr><td>' + escapeHtml(site.tier ? 'T' + site.tier : '—') + '</td><td><code>' + escapeHtml(site.name || '—') + '</code></td>'
         + '<td>' + (safeUrl ? '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener">' + escapeHtml(safeUrl.replace(/^https?:\/\//, '')) + '</a>' : '—') + '</td>'
         + '<td>' + (instagramUrl ? '<a href="' + escapeHtml(instagramUrl) + '" target="_blank" rel="noopener">@' + escapeHtml(String(site.instagram).replace(/^@/, '')) + '</a>' : '—') + '</td>'
-        + '<td>' + badgeHtml(site.instagram_status || 'unknown', site.instagram_status || 'unknown') + '</td><td>' + escapeHtml(site.note || '—') + '<small class="kc-cadu-source-id">somente leitura</small></td>'
+        + '<td>' + badgeHtml(catalogLabel(site.instagram_status || 'unknown'), site.instagram_status || 'unknown') + '</td><td>' + escapeHtml(site.note || '—') + '<small class="kc-cadu-source-id">somente leitura</small></td>'
         + '<td><button type="button" class="kc-cadu-publish-btn" disabled title="Publicação bloqueada: fallback legado em modo somente leitura"><i class="fas fa-lock"></i><span>Somente leitura</span></button> '
         + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name || '') + '" data-ask-url="' + escapeHtml(safeUrl) + '" data-ask-instagram="' + escapeHtml(site.instagram || '') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '"><i class="fas fa-robot"></i><span>Perguntar</span></button></td></tr>';
     }).join('');
@@ -1231,6 +1405,90 @@
     // Fail closed when flags disagree: an ok=true envelope is not evidence
     // that a post actually reached the KinoCampus feed.
     throw new Error('O backend retornou um estado de publicação inconsistente.');
+  }
+
+  function normalizeReviewOutcome(data, request) {
+    var reviewId = data && String(data.review_id || '').trim();
+    var postId = data && String(data.post_id || '').trim();
+    var durableReviewId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId);
+    var consistent = data && typeof data === 'object' && !Array.isArray(data) &&
+      data.ok === true && data.published === false && data.pending === true &&
+      data.status === 'pending' && data.code === 'PENDING' &&
+      data.policy_code === 'INSTITUTIONAL_SOURCE_REVIEW' &&
+      data.published_via === 'edge-function' && durableReviewId && postId === reviewId &&
+      data.intent === 'review' && data.content_kind === 'institutional_site' &&
+      data.source_id === request.source_id && data.source_url === request.source_url &&
+      data.content_url === request.content_url &&
+      (data.instagram_handle == null ? null : data.instagram_handle) === request.instagram_handle &&
+      data.source_revision === request.source_revision &&
+      data.registry_sha256 === request.registry_sha256 &&
+      data.idempotency_key === request.idempotency_key;
+    if (!consistent) {
+      throw new Error('O backend não confirmou a persistência pendente da revisão institucional.');
+    }
+    return {
+      kind: 'pending',
+      via: 'edge-function',
+      code: 'PENDING',
+      policyCode: 'INSTITUTIONAL_SOURCE_REVIEW',
+      reviewId: reviewId,
+      postId: postId,
+      replayed: data.replayed === true
+    };
+  }
+
+  async function submitSourceReview(source) {
+    var eligibility = sourceReviewEligibility(source);
+    if (!eligibility.allowed) {
+      showCaduError('Revisão bloqueada: ' + eligibility.reason);
+      setTimeout(hideCaduError, 6000);
+      return;
+    }
+    var request;
+    try {
+      request = buildSourceReviewRequest(source);
+    } catch (err) {
+      showCaduError('Revisão bloqueada: ' + (err && err.message ? err.message : err));
+      return;
+    }
+    var key = 'review|' + source.id + '|' + source.revision;
+    if (state.publishingKey === key) return;
+    state.publishingKey = key;
+    var btn = document.querySelector('.kc-cadu-publish-btn[data-source-id="' + cssEscape(source.id) + '"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando…</span>';
+    }
+    try {
+      var data = await apiFetch('/api/cadu/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(request)
+      });
+      if (data && data.__error) {
+        throw new Error((data.data && (data.data.message || data.data.error)) || ('status ' + data.status));
+      }
+      if (data && data.ok === false) throw new Error(data.message || data.code || 'A revisão foi recusada.');
+      var outcome = normalizeReviewOutcome(data, request);
+      if (btn) {
+        btn.classList.remove('is-err');
+        btn.classList.add('is-pending');
+        btn.innerHTML = '<i class="fas fa-clock"></i><span>' + (outcome.replayed ? 'Já pendente' : 'Revisão pendente') + '</span>';
+      }
+      showCaduError((outcome.replayed ? 'A revisão já estava persistida' : 'Fonte enviada à revisão') +
+        '. Ela permanece pendente e não foi publicada. Código: ' + outcome.policyCode + '.');
+      setTimeout(hideCaduError, 7000);
+    } catch (err) {
+      if (btn) {
+        btn.classList.remove('is-pending');
+        btn.classList.add('is-err');
+        btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i><span>Falha no envio</span>';
+      }
+      showCaduError('Erro ao enviar para revisão: ' + (err && err.message ? err.message : err));
+    } finally {
+      state.publishingKey = null;
+      setTimeout(function () { renderSitesTable(); }, 3500);
+    }
   }
 
   async function publishSite(site) {
@@ -2142,18 +2400,62 @@
     return Array.prototype.map.call(bytes, function (value) { return value.toString(16).padStart(2, '0'); }).join('');
   }
 
+  function openclawResponseIsRetryable(response) {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) return false;
+    if (response.retryable === true) return true;
+    var data = response.data;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+    if (data.retryable === true) return true;
+    return !!(data.detail && typeof data.detail === 'object' &&
+      !Array.isArray(data.detail) && data.detail.retryable === true);
+  }
+
   function normalizeOpenclawAgentResponse(response) {
+    var retryable = openclawResponseIsRetryable(response);
     if (!response || typeof response !== 'object' || Array.isArray(response) || response.ok !== true) {
       return {
         ok: false,
+        retryable: retryable,
         error: String(response && response.error || 'o backend não confirmou a execução do agente').slice(0, 240),
       };
     }
     var data = response.data;
-    if (!data || typeof data !== 'object' || Array.isArray(data) || data.status === 'in_flight') {
-      return { ok: false, error: 'o backend não retornou um resultado final válido do agente' };
+    var result = data && data.result;
+    var payloads = result && result.payloads;
+    var meta = result && result.meta;
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.status !== 'ok' ||
+        !result || typeof result !== 'object' || Array.isArray(result) ||
+        !Array.isArray(payloads) || payloads.length === 0 || payloads.length > 64 ||
+        !meta || typeof meta !== 'object' || Array.isArray(meta)) {
+      return {
+        ok: false,
+        retryable: retryable,
+        error: 'o backend não retornou o contrato terminal oficial do agente',
+      };
     }
-    return { ok: true, data: data };
+    var visibleTexts = [];
+    var totalTextLength = 0;
+    for (var index = 0; index < payloads.length; index += 1) {
+      var payload = payloads[index];
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
+          typeof payload.text !== 'string' || !payload.text.trim()) continue;
+      if (payload.text.length > 100000) {
+        return { ok: false, retryable: retryable, error: 'a resposta do agente excedeu o limite seguro' };
+      }
+      totalTextLength += payload.text.length;
+      if (totalTextLength > 200000) {
+        return { ok: false, retryable: retryable, error: 'a resposta do agente excedeu o limite seguro' };
+      }
+      visibleTexts.push(payload.text);
+    }
+    if (!visibleTexts.length) {
+      return {
+        ok: false,
+        retryable: retryable,
+        error: 'o agente terminou sem texto visível confirmado',
+      };
+    }
+    return { ok: true, retryable: false, data: data, text: visibleTexts.join('\n').trim() };
   }
 
   function setOpenclawRetryRequest(request) {
@@ -2217,29 +2519,28 @@
 
       if (!resp || resp.__error) {
         var httpStatus = resp && resp.status ? ' (HTTP ' + resp.status + ')' : '';
-        appendChatMsg('cadu', 'A solicitação não foi confirmada' + httpStatus + '. Use “Tentar novamente” para reaproveitar com segurança o mesmo identificador; não há repetição automática.', null);
-        if (status) status.textContent = '❌ Falhou' + httpStatus + ' — tentativa segura disponível';
-        setOpenclawRetryRequest(request);
+        var httpRetryable = openclawResponseIsRetryable(resp);
+        appendChatMsg('cadu', 'A solicitação não foi confirmada' + httpStatus + '. ' + (httpRetryable
+          ? 'O backend autorizou repetir com o mesmo identificador; não há repetição automática.'
+          : 'A repetição foi bloqueada porque o backend não a marcou como segura; isso evita executar ou cobrar a mesma solicitação novamente.'), null);
+        if (status) status.textContent = '❌ Falhou' + httpStatus + (httpRetryable ? ' — tentativa segura disponível' : ' — repetição bloqueada');
+        setOpenclawRetryRequest(httpRetryable ? request : null);
         return false;
       }
       var agentResponse = normalizeOpenclawAgentResponse(resp);
       if (!agentResponse.ok) {
-        appendChatMsg('cadu', 'A execução não foi confirmada pelo OpenClaw (' + agentResponse.error + '). Use “Tentar novamente” para reaproveitar com segurança o mesmo identificador; não há repetição automática.', null);
-        if (status) status.textContent = '❌ OpenClaw não confirmou a execução — tentativa segura disponível';
-        setOpenclawRetryRequest(request);
+        appendChatMsg('cadu', 'A execução não foi confirmada pelo OpenClaw (' + agentResponse.error + '). ' + (agentResponse.retryable
+          ? 'O backend autorizou repetir com o mesmo identificador; não há repetição automática.'
+          : 'A repetição foi bloqueada para evitar execução ou cobrança duplicada.'), null);
+        if (status) status.textContent = '❌ OpenClaw não confirmou a execução' + (agentResponse.retryable ? ' — tentativa segura disponível' : ' — repetição bloqueada');
+        setOpenclawRetryRequest(agentResponse.retryable ? request : null);
         return false;
       }
       var data = agentResponse.data;
-      var payloads = (data.result && data.result.payloads) || [];
-      var text = '';
-      for (var i = 0; i < payloads.length; i++) {
-        if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
-      }
-      if (!text && data.summary) text = '(sem texto de retorno — summary: ' + data.summary + ')';
       var meta = (data.result && data.result.meta) || {};
       var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '?s';
       var usage = meta.agentMeta ? (' · in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
-      appendChatMsg('cadu', text.trim() || '(resposta vazia)', dur + usage);
+      appendChatMsg('cadu', agentResponse.text, dur + usage);
 
       // Uma resposta pode criar nova sessão, mas nunca substitui a sessão
       // explicitamente fixada pelo operador.
@@ -2250,11 +2551,11 @@
       }
       setOpenclawRetryRequest(null);
       completed = true;
-      if (status) status.textContent = '✅ ' + (data.summary || 'ok') + ' (' + dur + ')';
+      if (status) status.textContent = '✅ Resposta confirmada (' + dur + ')';
     } catch (e) {
-      appendChatMsg('cadu', 'A conexão terminou sem confirmação. Nenhuma repetição automática foi feita; use “Tentar novamente” para manter o mesmo identificador.', null);
-      if (status) status.textContent = '❌ Conexão interrompida — tentativa segura disponível';
-      setOpenclawRetryRequest(request);
+      appendChatMsg('cadu', 'A conexão terminou sem confirmação. A repetição foi bloqueada porque não houve autorização explícita do backend; isso evita execução ou cobrança duplicada.', null);
+      if (status) status.textContent = '❌ Conexão interrompida — repetição bloqueada';
+      setOpenclawRetryRequest(null);
     } finally {
       openclawState.busy = false;
       if (btn) btn.disabled = false;
@@ -2286,17 +2587,10 @@
     var normalized = normalizeOpenclawAgentResponse(resp);
     if (!normalized.ok) return { text: 'A execução não foi confirmada: ' + normalized.error, meta: 'falha' };
     var data = normalized.data;
-    var payloads = (data && data.result && data.result.payloads) || [];
-    var text = '';
-    for (var i = 0; i < payloads.length; i++) {
-      if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
-    }
-    if (!text && data && data.summary) text = data.summary;
-    if (!text && resp && resp.stderr) text = 'Sem texto de retorno. stderr: ' + resp.stderr;
     var meta = (data && data.result && data.result.meta) || {};
     var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '';
     var usage = meta.agentMeta ? ('in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
-    return { text: (text || '(resposta vazia)').trim(), meta: [dur, usage].filter(Boolean).join(' - ') };
+    return { text: normalized.text, meta: [dur, usage].filter(Boolean).join(' - ') };
   }
 
   function showAskCaduResult(label, resp) {
@@ -2437,6 +2731,14 @@
     if (button) button.__kcCaduAgentRequest = null;
   }
 
+  function contextualAgentRetryHint(button, response) {
+    if (openclawResponseIsRetryable(response)) {
+      return ' O backend autorizou repetir: clique novamente para reutilizar o mesmo identificador idempotente.';
+    }
+    clearContextualAgentPayload(button);
+    return ' A repetição idempotente foi bloqueada porque o backend não a marcou como segura, evitando execução ou cobrança duplicada.';
+  }
+
   function contextualAgentSucceeded(response) {
     return !!normalizeOpenclawAgentResponse(response).ok;
   }
@@ -2472,7 +2774,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Perguntar sobre chunk: ' + (heading || chunkId), resp);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o item público: ' + contextualAgentError(resp) + '. Clique novamente para repetir com o mesmo identificador idempotente; nenhum fallback com conteúdo inline foi executado.');
+          showCaduError('Erro ao perguntar ao Cadu sobre o item público: ' + contextualAgentError(resp) + '.' + contextualAgentRetryHint(btn, resp) + ' Nenhum fallback com conteúdo inline foi executado.');
         }
       } else if (kind === 'feed-diagnostic') {
         var diagId = btn.getAttribute('data-ask-id') || '';
@@ -2499,7 +2801,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Diagnóstico do feed: ' + (diagTitle || diagId), diagResp);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + contextualAgentError(diagResp) + '. Clique novamente para repetir com o mesmo identificador idempotente.');
+          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + contextualAgentError(diagResp) + '.' + contextualAgentRetryHint(btn, diagResp));
         }
       } else if (kind === 'site') {
         var siteName = btn.getAttribute('data-ask-name') || '';
@@ -2522,7 +2824,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Perguntar sobre site: ' + siteName, resp2);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + contextualAgentError(resp2) + '. Clique novamente para repetir com o mesmo identificador idempotente.');
+          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + contextualAgentError(resp2) + '.' + contextualAgentRetryHint(btn, resp2));
         }
       } else if (kind === 'pipeline') {
         var runId = btn.getAttribute('data-ask-run-id') || '';
@@ -2544,7 +2846,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Perguntar sobre pipeline: ' + runId.slice(0, 8), resp3);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + contextualAgentError(resp3) + '. Clique novamente para repetir com o mesmo identificador idempotente.');
+          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + contextualAgentError(resp3) + '.' + contextualAgentRetryHint(btn, resp3));
         }
       }
     } catch (e) {
@@ -2607,13 +2909,15 @@
             return;
           }
           list.innerHTML = safeRuns.slice(0, 8).map(function (r) {
-            var stClass = r.status === 'finished' ? 'pill--finished'
-                       : r.status === 'failed' ? 'pill--failed'
-                       : r.status === 'running' ? 'pill--running' : '';
+            var displayStatus = pipelineRunDisplayStatus(r);
+            var stClass = displayStatus === 'success' ? 'pill--success'
+                       : displayStatus === 'partial' ? 'pill--partial'
+                       : displayStatus === 'failed' ? 'pill--failed'
+                       : displayStatus === 'running' ? 'pill--running' : '';
             return '<div class="kc-cadu-activity-dropdown__item" data-run="' + r.id + '">'
               + '<div class="kc-cadu-activity-dropdown__item__title">' + escapeHtml(r.stage) + '</div>'
               + '<div class="kc-cadu-activity-dropdown__item__meta">'
-              + '<span class="pill ' + stClass + '">' + escapeHtml(r.status) + '</span>'
+              + '<span class="pill ' + stClass + '">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>'
               + '<span>' + fmtAgo(r.started_at) + '</span>'
               + (r.exit_code != null ? '<span>exit ' + r.exit_code + '</span>' : '')
               + '</div>'
@@ -3039,8 +3343,8 @@
         if (!btn) return;
         var sourceId = btn.getAttribute('data-source-id') || '';
         if (sourceId) {
-          var mapped = state.allSites.find(function (site) { return site.sourceId === sourceId; });
-          if (mapped) { publishSite(mapped); return; }
+          var canonicalSource = sourceById(sourceId);
+          if (canonicalSource) { submitSourceReview(canonicalSource); return; }
         }
         var key = btn.getAttribute('data-key') || '';
         var parts = key.split('|');
@@ -3309,6 +3613,15 @@
     if (!isSafePipelineRunId(run.id) || !isSafePipelineStageId(run.stage)) return null;
     var status = String(run.status || '');
     if (['pending', 'running', 'stopping', 'finished', 'failed', 'cancelled'].indexOf(status) === -1) return null;
+    var outcomeStatus = run.outcome_status == null ? null : String(run.outcome_status);
+    if (outcomeStatus !== null && ['success', 'partial', 'failed'].indexOf(outcomeStatus) === -1) return null;
+    if (['pending', 'running', 'stopping'].indexOf(status) >= 0 && outcomeStatus !== null) return null;
+    var expectedEffectiveStatus = status;
+    if (status === 'finished' && outcomeStatus !== null) expectedEffectiveStatus = outcomeStatus;
+    var suppliedEffectiveStatus = run.effective_status == null ? null : String(run.effective_status);
+    if (suppliedEffectiveStatus !== null &&
+        ['pending', 'running', 'stopping', 'finished', 'failed', 'cancelled', 'success', 'partial'].indexOf(suppliedEffectiveStatus) === -1) return null;
+    if (suppliedEffectiveStatus !== null && suppliedEffectiveStatus !== expectedEffectiveStatus) return null;
     var startedAt = Number(run.started_at);
     var finishedAt = run.finished_at == null ? null : Number(run.finished_at);
     var exitCode = run.exit_code == null ? null : Number(run.exit_code);
@@ -3319,6 +3632,8 @@
       id: run.id,
       stage: run.stage,
       status: status,
+      effective_status: expectedEffectiveStatus,
+      outcome_status: outcomeStatus,
       started_at: startedAt,
       finished_at: finishedAt,
       exit_code: exitCode,
@@ -3494,6 +3809,23 @@
       last_run: stage.last_run == null ? null : normalizePipelineRun(stage.last_run),
       preflight: null,
     };
+  }
+
+  function pipelineRunDisplayStatus(run) {
+    return run && run.effective_status ? run.effective_status : (run && run.status ? run.status : 'unknown');
+  }
+
+  function pipelineStatusLabel(status) {
+    return ({
+      pending: 'pendente',
+      running: 'em execução',
+      stopping: 'encerrando',
+      finished: 'concluída sem resultado verificado',
+      success: 'sucesso',
+      partial: 'parcial',
+      failed: 'falhou',
+      cancelled: 'cancelada',
+    })[status] || 'desconhecido';
   }
 
   function pipelineStagesForDisplay(status) {
@@ -3804,8 +4136,9 @@
       var lastTxt = '— sem runs —';
       var lastCls = '';
       if (s.last_run) {
-        lastTxt = fmtAgo(s.last_run.started_at) + ' (' + (s.last_run.status || '') + ')';
-        lastCls = 'is-' + (s.last_run.status || '');
+        var lastStatus = pipelineRunDisplayStatus(s.last_run);
+        lastTxt = fmtAgo(s.last_run.started_at) + ' (' + pipelineStatusLabel(lastStatus) + ')';
+        lastCls = 'is-' + lastStatus;
       }
       var pf = s.preflight || {};
       var profile = pf.profile || {};
@@ -3868,16 +4201,17 @@
       if (logBox && (!pipelineStreamRequest) && (!pipelineLogPollState)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
       return;
     }
-    var cls = 'is-' + active.status;
+    var displayStatus = pipelineRunDisplayStatus(active);
+    var cls = 'is-' + displayStatus;
     card.className = 'kc-pipeline-active-card ' + cls;
-    if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = active.status + ' (' + fmtAgo(active.started_at) + ')'; }
+    if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = pipelineStatusLabel(displayStatus) + ' (' + fmtAgo(active.started_at) + ')'; }
     var stopBtn = active.status === 'running'
       ? '<button class="kc-pipeline-active-card__stop" data-stop="' + active.id + '"><i class="fas fa-stop"></i> Parar</button>'
       : '';
     card.innerHTML =
       '<div class="kc-pipeline-active-card__head">' +
         '<strong>' + escapeHtml(active.stage) + '</strong>' +
-        '<span class="kc-cadu-badge ' + cls + '" style="background:rgba(255,107,0,.12);color:#ff6b00;">' + escapeHtml(active.status) + '</span>' +
+        '<span class="kc-cadu-badge ' + cls + '" style="background:rgba(255,107,0,.12);color:#ff6b00;">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>' +
         stopBtn +
       '</div>' +
       '<div class="kc-pipeline-active-card__meta">' +
@@ -3915,7 +4249,7 @@
       critical: 'crítico'
     }[level] || level;
     var lastSuccess = health.last_successful_all_run || null;
-    var latest = health.latest_run || null;
+    var latest = health.latest_run ? normalizePipelineRun(health.latest_run) : null;
     var since = fmtSecondsWindow(health.seconds_since_successful_all);
     var failures = Number.isFinite(Number(health.failures_recent_count)) ? Math.max(0, Math.floor(Number(health.failures_recent_count))) : 0;
     var issues = Array.isArray(health.issues) ? health.issues.slice(0, 3) : [];
@@ -3932,7 +4266,7 @@
         '<span><i class="fas fa-rotate"></i> all ok: ' + (lastSuccess ? fmtAgo(lastSuccess.finished_at || lastSuccess.started_at) : 'nunca') + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> atraso: ' + escapeHtml(since) + '</span>' +
         '<span><i class="fas fa-triangle-exclamation"></i> falhas 24h: ' + failures + '</span>' +
-        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(latest.stage || '?') + ' ' + escapeHtml(latest.status || '?') + '</span>' : '') +
+        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(latest.stage || '?') + ' ' + escapeHtml(pipelineStatusLabel(pipelineRunDisplayStatus(latest))) + '</span>' : '') +
       '</div>' +
       issueHtml +
       (health.recommendation ? '<div class="kc-pipeline-health-card__meta"><span><i class="fas fa-screwdriver-wrench"></i> ' + escapeHtml(health.recommendation) + '</span></div>' : '');
@@ -3943,7 +4277,8 @@
     if (!container) return;
     if (!history.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem runs anteriores.</div>'; return; }
     container.innerHTML = history.slice(0, 20).map(function (r) {
-      var cls = 'is-' + (r.status || 'unknown');
+      var displayStatus = pipelineRunDisplayStatus(r);
+      var cls = 'is-' + displayStatus;
       var actions = '';
       // só mostra ações pra runs terminados
       if (r.status === 'finished' || r.status === 'failed' || r.status === 'cancelled') {
@@ -3959,7 +4294,7 @@
       return '<div class="kc-pipeline-history-item ' + cls + '" data-run-id="' + r.id + '">' +
         '<div class="kc-pipeline-history-item__head">' +
           '<strong>' + escapeHtml(r.stage) + '</strong>' +
-          '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +
+          '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>' +
         '</div>' +
         '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (typeof r.dry_run === 'boolean' ? (r.dry_run ? ' · simulação' : ' · execução real') : '') + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
         renderRunSummary(r.summary) +
@@ -4319,7 +4654,7 @@
       'data-ask-kind': 'pipeline',
       'data-ask-run-id': run.id || runId,
       'data-ask-stage': run.stage || 'pipeline',
-      'data-ask-status': run.status || 'unknown'
+      'data-ask-status': pipelineRunDisplayStatus(run)
     };
     return askCaduContext({
       preventDefault: function () {},
@@ -4527,7 +4862,9 @@
     var d = event && event.data ? event.data : {};
     if (event.type === 'log' && d.line) appendLogLine(d.line);
     else if (event.type === 'done') {
-      appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
+      var eventStatus = String(d.effective_status || d.status || 'unknown');
+      if (['success', 'partial', 'failed', 'cancelled', 'finished'].indexOf(eventStatus) === -1) eventStatus = 'unknown';
+      appendLogLine('— run concluída (' + pipelineStatusLabel(eventStatus) + ', exit=' + d.exit_code + ') —');
       disconnectPipelineStream();
       refreshPipeline();
       pollNotifActivity();

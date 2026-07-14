@@ -13,16 +13,25 @@
 //
 // Acoes (POST /functions/v1/cadu-publish):
 //   { action: "publish", item, options? }   -> cria post + capa
+//   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
 //   { action: "edit", postId, fields?, metadata?, image?, images? } -> edita
 //   { action: "list", filters? }            -> lista posts do Cadu (filtra)
 //   { action: "check", sourceUrl?, sourceId? } -> dedup (ja postado?)
 //
 // Headers: Authorization: Bearer <access_token da conta do Cadu>
-// NOTA: verify_jwt fica desabilitado no gateway; a funcao valida o JWT internamente.
+// NOTA: verify_jwt permanece habilitado no gateway. A funcao revalida o JWT e
+// a allowlist internamente como defesa em profundidade; nao implantar com
+// --no-verify-jwt.
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { CaduItem, validateItem } from "./schema.ts";
 import { deepMergeMetadata, mapItemToPost, MAX_IMAGE_COUNT } from "./mapper.ts";
+import {
+  INSTITUTIONAL_REVIEW_POLICY_CODE,
+  institutionalReviewRpcArguments,
+  parseInstitutionalReview,
+  type InstitutionalReviewInput,
+} from "./review.ts";
 import {
   canPersistExternalImageUrl,
   hostOf,
@@ -48,6 +57,8 @@ const STORAGE_BUCKET = "kino-media";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
 const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"));
+const INSTITUTIONAL_REVIEW_ENABLED =
+  Deno.env.get("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -647,6 +658,155 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
   });
 }
 
+interface InstitutionalReviewRow {
+  id: string;
+  requested_by: string;
+  source_id: string;
+  source_url: string;
+  content_url: string;
+  instagram_handle: string | null;
+  content_kind: string;
+  intent: string;
+  idempotency_key: string;
+  source_revision: string;
+  registry_sha256: string;
+  name: string;
+  note: string | null;
+  tier: number | null;
+  category: string;
+  origin: string;
+  state: string;
+  created_at: string;
+  replayed: boolean;
+}
+
+function validUuid(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(value);
+}
+
+function institutionalReviewRowMatches(
+  row: unknown,
+  review: InstitutionalReviewInput,
+  requestedBy: string,
+): row is InstitutionalReviewRow {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+  const value = row as Record<string, unknown>;
+  return validUuid(value.id) &&
+    value.requested_by === requestedBy &&
+    value.source_id === review.sourceId &&
+    value.source_url === review.sourceUrl &&
+    value.content_url === review.contentUrl &&
+    value.instagram_handle === review.instagramHandle &&
+    value.content_kind === review.contentKind &&
+    value.intent === review.intent &&
+    value.idempotency_key === review.idempotencyKey &&
+    value.source_revision === review.sourceRevision &&
+    value.registry_sha256 === review.registrySha256 &&
+    value.name === review.name &&
+    value.note === review.note &&
+    value.tier === review.tier &&
+    value.category === review.category &&
+    value.origin === review.origin &&
+    value.state === "pending" &&
+    typeof value.created_at === "string" &&
+    Number.isFinite(Date.parse(value.created_at)) &&
+    typeof value.replayed === "boolean";
+}
+
+function pendingInstitutionalReviewResponse(
+  review: InstitutionalReviewInput,
+  persisted: InstitutionalReviewRow,
+) {
+  return json(200, {
+    ok: true,
+    code: "PENDING",
+    policy_code: INSTITUTIONAL_REVIEW_POLICY_CODE,
+    review_id: persisted.id,
+    // Compatibility alias for the cadu-api/front contract. The UUID belongs
+    // to the dedicated review queue and is never a public.posts row.
+    post_id: persisted.id,
+    status: "pending",
+    pending: true,
+    published: false,
+    published_via: "edge-function",
+    pending_reason: "institutional_source_review",
+    intent: review.intent,
+    content_kind: review.contentKind,
+    source_id: review.sourceId,
+    source_url: review.sourceUrl,
+    content_url: review.contentUrl,
+    instagram_handle: review.instagramHandle,
+    source_revision: review.sourceRevision,
+    registry_sha256: review.registrySha256,
+    idempotency_key: review.idempotencyKey,
+    replayed: persisted.replayed,
+  });
+}
+
+// ── review ───────────────────────────────────────────────────────────────────
+// Review is stored through one transactional RPC in a dedicated typed queue.
+// It never touches posts, post_media, publication deduplication or post flood.
+async function handleReview(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
+  const parsed = parseInstitutionalReview(body);
+  if (!parsed.ok) {
+    return json(422, {
+      ok: false,
+      code: "REVIEW_VALIDATION_FAILED",
+      policy_code: INSTITUTIONAL_REVIEW_POLICY_CODE,
+      message: parsed.errors.join(" "),
+      errors: parsed.errors,
+    });
+  }
+  const review = parsed.value;
+  const { data, error } = await admin.rpc(
+    "kc_create_institutional_source_review",
+    institutionalReviewRpcArguments(review, userId),
+  );
+  if (error) {
+    const reason = String(error.message || "");
+    const conflict = /idempotency|already_pending|terminal/.test(reason);
+    const limited = reason.includes("rate_limit");
+    const forbidden = error.code === "42501" || reason.includes("not_trusted");
+    return json(
+      forbidden ? 403 : limited ? 429 : conflict ? 409 : 500,
+      {
+        ok: false,
+        code: forbidden
+          ? "REVIEW_NOT_AUTHORIZED"
+          : limited
+          ? "REVIEW_RATE_LIMITED"
+          : conflict
+          ? "REVIEW_CONFLICT"
+          : "REVIEW_PERSISTENCE_FAILED",
+        policy_code: INSTITUTIONAL_REVIEW_POLICY_CODE,
+        message: forbidden
+          ? "Conta nao autorizada para a fila de revisao."
+          : limited
+          ? "Limite horario da fila de revisao atingido."
+          : conflict
+          ? "A fonte ou chave ja possui uma revisao incompatível."
+          : "A fila editorial nao confirmou a revisao.",
+      },
+    );
+  }
+
+  const rows = Array.isArray(data) ? data : [];
+  if (
+    rows.length !== 1 ||
+    !institutionalReviewRowMatches(rows[0], review, userId)
+  ) {
+    return json(502, {
+      ok: false,
+      code: "REVIEW_RECEIPT_INVALID",
+      policy_code: INSTITUTIONAL_REVIEW_POLICY_CODE,
+      message: "A fila editorial retornou uma confirmacao inconsistente.",
+    });
+  }
+  return pendingInstitutionalReviewResponse(review, rows[0]);
+}
+
 // ── edit ────────────────────────────────────────────────────────────────────
 const EDITABLE_FIELDS = ["title", "description", "price", "location", "category", "visibility", "status"] as const;
 
@@ -824,6 +984,16 @@ Deno.serve(async (req) => {
     switch (action) {
       case "publish":
         return await handlePublish(admin, user.id, body);
+      case "review":
+        if (!INSTITUTIONAL_REVIEW_ENABLED) {
+          return json(503, {
+            ok: false,
+            code: "REVIEW_DISABLED",
+            policy_code: INSTITUTIONAL_REVIEW_POLICY_CODE,
+            message: "A fila institucional ainda nao foi habilitada neste ambiente.",
+          });
+        }
+        return await handleReview(admin, user.id, body);
       case "edit":
         return await handleEdit(admin, user.id, body);
       case "list":

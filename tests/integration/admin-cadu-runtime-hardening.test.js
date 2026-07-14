@@ -176,6 +176,22 @@ describe('admin Cadu runtime hardening', () => {
     })).toMatchObject({ connected: false, configured: true, structured: true, detail: 'offline' });
   });
 
+  test('reads OpenClaw reachability from canonical cadu_api context with legacy fallback', () => {
+    const openclawReachableFromContext = isolatedFunction('openclawReachableFromContext');
+    expect(openclawReachableFromContext({
+      cadu_api: { openclaw_reachable: true },
+      openclaw: { openclaw_reachable: false },
+    })).toBe(true);
+    expect(openclawReachableFromContext({
+      cadu_api: { openclaw_reachable: false },
+      openclaw: { openclaw_reachable: true },
+    })).toBe(false);
+    expect(openclawReachableFromContext({ openclaw: { openclaw_reachable: true } })).toBe(true);
+    expect(openclawReachableFromContext({ cadu_api: { openclaw_reachable: 'true' } })).toBeNull();
+    expect(openclawReachableFromContext(null)).toBeNull();
+    expect(controller).toContain('openclawReachableFromContext(ctx)');
+  });
+
   test('keeps simple admin chat local, context opt-in, idempotent and retry-only', () => {
     expect(html).toContain('id="openclaw-chat-context"');
     expect(html).toContain('id="openclaw-chat-deliver" disabled');
@@ -190,24 +206,76 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('não há repetição automática');
   });
 
-  test('accepts only a final ok=true OpenClaw agent envelope', () => {
-    const normalizeOpenclawAgentResponse = isolatedFunction('normalizeOpenclawAgentResponse');
+  test('accepts only the official terminal OpenClaw agent contract with visible text', () => {
+    const normalizeOpenclawAgentResponse = isolatedFunction(
+      'normalizeOpenclawAgentResponse',
+      ['openclawResponseIsRetryable'],
+    );
+    const validData = {
+      status: 'ok',
+      summary: 'ok',
+      result: { payloads: [{ text: 'resposta' }], meta: {} },
+    };
     expect(normalizeOpenclawAgentResponse({
       ok: true,
-      data: { summary: 'ok', result: { payloads: [{ text: 'resposta' }] } },
-    })).toEqual({
-      ok: true,
-      data: { summary: 'ok', result: { payloads: [{ text: 'resposta' }] } },
-    });
+      data: validData,
+    })).toEqual({ ok: true, retryable: false, data: validData, text: 'resposta' });
     expect(normalizeOpenclawAgentResponse({
       ok: false,
       error: 'Gateway unavailable; embedded fallback was not accepted',
+      retryable: false,
       data: { result: { payloads: [{ text: 'fallback caro' }] } },
-    })).toMatchObject({ ok: false, error: expect.stringContaining('embedded fallback') });
-    expect(normalizeOpenclawAgentResponse({ ok: true, data: { status: 'in_flight' } }))
-      .toMatchObject({ ok: false });
+    })).toMatchObject({ ok: false, retryable: false, error: expect.stringContaining('embedded fallback') });
+    expect(normalizeOpenclawAgentResponse({ ok: true, retryable: true, data: { status: 'in_flight' } }))
+      .toMatchObject({ ok: false, retryable: true });
+    expect(normalizeOpenclawAgentResponse({
+      ok: true,
+      data: { status: 'ok', result: { payloads: [{ text: '   ' }], meta: {} } },
+    })).toMatchObject({ ok: false, error: expect.stringContaining('sem texto visível') });
+    expect(normalizeOpenclawAgentResponse({
+      ok: true,
+      data: { status: 'ok', result: { payloads: [{ text: 'texto' }] } },
+    })).toMatchObject({ ok: false, error: expect.stringContaining('contrato terminal oficial') });
     expect(normalizeOpenclawAgentResponse({ data: { summary: 'sem confirmação' } }))
       .toMatchObject({ ok: false });
+  });
+
+  test('allows same-id retry only when the backend explicitly marks it retryable', () => {
+    const openclawResponseIsRetryable = isolatedFunction('openclawResponseIsRetryable');
+    expect(openclawResponseIsRetryable({ retryable: true })).toBe(true);
+    expect(openclawResponseIsRetryable({ data: { retryable: true } })).toBe(true);
+    expect(openclawResponseIsRetryable({ data: { detail: { retryable: true } } })).toBe(true);
+    expect(openclawResponseIsRetryable({ status: 504 })).toBe(false);
+    expect(openclawResponseIsRetryable({ retryable: 'true' })).toBe(false);
+    expect(controller).toContain('setOpenclawRetryRequest(httpRetryable ? request : null)');
+    expect(controller).toContain('setOpenclawRetryRequest(agentResponse.retryable ? request : null)');
+    expect(controller).toContain('Conexão interrompida — repetição bloqueada');
+  });
+
+  test('normalizes and renders signed pipeline outcomes without promoting wrapper finished', () => {
+    const normalizePipelineRun = isolatedFunction('normalizePipelineRun', [
+      'isSafePipelineStageId',
+      'isSafePipelineRunId',
+    ]);
+    const base = {
+      id: 'run-outcome-1', stage: 'all', status: 'finished',
+      started_at: 1_783_960_000, finished_at: 1_783_960_010, exit_code: 0,
+    };
+    expect(normalizePipelineRun({ ...base, outcome_status: 'partial', effective_status: 'partial' }))
+      .toMatchObject({ status: 'finished', outcome_status: 'partial', effective_status: 'partial' });
+    expect(normalizePipelineRun({ ...base, outcome_status: 'failed', effective_status: 'failed' }))
+      .toMatchObject({ status: 'finished', outcome_status: 'failed', effective_status: 'failed' });
+    expect(normalizePipelineRun(base))
+      .toMatchObject({ status: 'finished', outcome_status: null, effective_status: 'finished' });
+    expect(normalizePipelineRun({ ...base, effective_status: 'success' })).toBeNull();
+    expect(normalizePipelineRun({
+      ...base, status: 'running', finished_at: null,
+      outcome_status: 'failed', effective_status: 'failed',
+    })).toBeNull();
+    expect(controller).toContain('pipelineStatusLabel(displayStatus)');
+    expect(html).toContain('.kc-pipeline-history-item.is-success');
+    expect(html).toContain('.kc-pipeline-history-item.is-partial');
+    expect(html).toContain('.kc-pipeline-history-item.is-finished');
   });
 
   test('keeps contextual asks idempotent and removes the inline public-content fallback', () => {
@@ -223,7 +291,8 @@ describe('admin Cadu runtime hardening', () => {
     expect(prompt).toContain('\\u003c/site-context\\u003e');
     expect(controller).toContain('contextualAgentPayload(btn, message, sessionId)');
     expect(controller).toContain('button.__kcCaduAgentRequest.payload');
-    expect(controller).toContain('Clique novamente para repetir com o mesmo identificador idempotente');
+    expect(controller).toContain('O backend autorizou repetir: clique novamente para reutilizar o mesmo identificador idempotente.');
+    expect(controller).toContain('A repetição idempotente foi bloqueada porque o backend não a marcou como segura');
     expect(controller).not.toContain("message = '<chunk-context");
     expect(controller).not.toContain("btn.getAttribute('data-ask-snippet')");
   });
@@ -260,6 +329,167 @@ describe('admin Cadu runtime hardening', () => {
       ok: true, published: true, status: 'published', code: 'PUBLISHED', published_via: 'edge-function'
     })).toThrow(/inconsistente/);
     expect(controller).toContain('a notificação não equivale a publicação');
+  });
+
+  test('only builds durable institutional reviews from stable conflict-free canonical sources', () => {
+    const sourceReviewEligibility = isolatedFunction('sourceReviewEligibility', [
+      'sourceReviewCanonicalInstagram',
+      'sourceReviewCanonicalUrl',
+    ]);
+    const buildSourceReviewRequest = isolatedFunction('buildSourceReviewRequest', [
+      'sourceName',
+      'sourceReviewCanonicalInstagram',
+      'sourceReviewCanonicalUrl',
+      'sourceReviewEligibility',
+      'sourceReviewIdempotencyKey',
+    ]);
+    const revision = 'b'.repeat(64);
+    const registrySha256 = 'a'.repeat(64);
+    const stable = {
+      id: 'web.ufg.portal',
+      registrySha256,
+      canonicalUrl: 'https://ufg.br/',
+      role: 'primary_site',
+      sourceKind: 'weby_site',
+      overrideOrigin: 'stable',
+      overrideUnitId: 'web.ufg.portal',
+      collision: false,
+      reviewState: 'reviewed',
+      reviewIssues: [],
+      revision,
+      effectiveTier: 1,
+      note: 'Fonte oficial validada',
+      entities: [{ name: 'Universidade Federal de Goiás', acronym: 'UFG', kind: 'university' }],
+      instagramProfiles: [{
+        handle: 'ufg_oficial', status: 'confirmed', viaSourceObservation: true, shared: false,
+      }],
+    };
+
+    expect(sourceReviewEligibility(stable)).toEqual({
+      allowed: true, reason: '', instagramHandle: 'ufg_oficial',
+    });
+    ['weby_site', 'ojs_site', 'html_page', 'external_site', 'mixed'].forEach((sourceKind) => {
+      expect(sourceReviewEligibility({ ...stable, sourceKind })).toMatchObject({ allowed: true });
+    });
+    ['legacy_observation', 'official_profile'].forEach((role) => {
+      expect(sourceReviewEligibility({ ...stable, role })).toMatchObject({
+        allowed: false,
+        reason: expect.stringContaining('fonte primária'),
+      });
+    });
+    expect(sourceReviewEligibility({ ...stable, sourceKind: 'institutional_site' })).toMatchObject({
+      allowed: false,
+      reason: expect.stringContaining('tipo da fonte primária'),
+    });
+    expect(sourceReviewEligibility({ ...stable, collision: true })).toMatchObject({ allowed: false });
+    expect(sourceReviewEligibility({ ...stable, reviewIssues: ['url_conflict'] })).toMatchObject({ allowed: false });
+    expect(sourceReviewEligibility({ ...stable, overrideOrigin: 'legacy_inherited' })).toMatchObject({ allowed: false });
+    expect(sourceReviewEligibility({
+      ...stable,
+      instagramProfiles: [{ handle: 'candidato', status: 'pending_verification', viaSourceObservation: true, shared: false }],
+    })).toMatchObject({ allowed: false });
+    expect(sourceReviewEligibility({
+      ...stable,
+      instagramProfiles: [
+        { handle: 'ufg_oficial', status: 'confirmed', viaSourceObservation: true, shared: false },
+        { handle: 'ufg_indireto', status: 'confirmed', viaSourceObservation: false, shared: false },
+      ],
+    })).toEqual({ allowed: true, reason: '', instagramHandle: 'ufg_oficial' });
+    expect(sourceReviewEligibility({
+      ...stable,
+      instagramProfiles: [
+        { handle: 'ufg_1', status: 'confirmed', viaSourceObservation: true, shared: false },
+        { handle: 'ufg_2', status: 'confirmed', viaSourceObservation: true, shared: false },
+      ],
+    })).toMatchObject({ allowed: false, reason: expect.stringContaining('direto e exclusivo') });
+    expect(sourceReviewEligibility({
+      ...stable,
+      instagramProfiles: [
+        { handle: 'ufg_oficial', status: 'confirmed', viaSourceObservation: false, shared: true },
+      ],
+    })).toEqual({ allowed: true, reason: '', instagramHandle: null });
+
+    expect(buildSourceReviewRequest(stable)).toEqual({
+      action: 'review',
+      intent: 'review',
+      source_id: stable.id,
+      source_url: stable.canonicalUrl,
+      content_url: stable.canonicalUrl,
+      instagram_handle: 'ufg_oficial',
+      content_kind: 'institutional_site',
+      idempotency_key: `map-ufg-review:${stable.id}:${revision}`,
+      source_revision: revision,
+      registry_sha256: registrySha256,
+      name: 'UFG — Universidade Federal de Goiás',
+      note: stable.note,
+      tier: 1,
+      category: 'university',
+      source: 'cadu-admin-map-ufg',
+    });
+    expect(buildSourceReviewRequest({
+      ...stable,
+      instagramProfiles: [
+        { handle: 'ufg_oficial', status: 'confirmed', viaSourceObservation: false, shared: true },
+      ],
+    }).instagram_handle).toBeNull();
+    expect(controller).toContain('Enviar à revisão');
+    expect(controller).toContain('submitSourceReview(canonicalSource)');
+  });
+
+  test('renders canonical catalog metadata in pt-BR with full institutional names', () => {
+    expect(controller).toContain("confirmed_official: 'Identidade oficial confirmada'");
+    expect(controller).toContain("transport_unverified: 'Transporte ainda não verificado'");
+    expect(controller).toContain("legacy_inherited: 'Herdado do mapa legado'");
+    expect(controller).toContain("weby_site: 'Site institucional Weby'");
+    expect(controller).toContain("pro_reitoria: 'Pró-reitoria'");
+    expect(controller).toContain("escapeHtml(entity.name) + '</span>'");
+    expect(controller).toContain("catalogLabel(source.overrideOrigin)");
+    expect(controller).toContain("catalogLabel(source.sourceKind)");
+    expect(controller).not.toContain('Overrides estão bloqueados para evitar gravar por nomes ambíguos.');
+  });
+
+  test('accepts review success only with an echoed durable PENDING policy contract', () => {
+    const normalizeReviewOutcome = isolatedFunction('normalizeReviewOutcome');
+    const request = {
+      source_id: 'web.ufg.portal',
+      source_url: 'https://ufg.br/',
+      content_url: 'https://ufg.br/',
+      instagram_handle: 'ufg_oficial',
+      source_revision: 'b'.repeat(64),
+      registry_sha256: 'a'.repeat(64),
+      idempotency_key: `map-ufg-review:web.ufg.portal:${'b'.repeat(64)}`,
+    };
+    const response = {
+      ok: true,
+      code: 'PENDING',
+      policy_code: 'INSTITUTIONAL_SOURCE_REVIEW',
+      review_id: '123e4567-e89b-42d3-a456-426614174000',
+      post_id: '123e4567-e89b-42d3-a456-426614174000',
+      status: 'pending',
+      pending: true,
+      published: false,
+      published_via: 'edge-function',
+      intent: 'review',
+      content_kind: 'institutional_site',
+      source_id: request.source_id,
+      source_url: request.source_url,
+      content_url: request.content_url,
+      instagram_handle: request.instagram_handle,
+      source_revision: request.source_revision,
+      registry_sha256: request.registry_sha256,
+      idempotency_key: request.idempotency_key,
+      replayed: false,
+    };
+    expect(normalizeReviewOutcome(response, request)).toEqual({
+      kind: 'pending', via: 'edge-function', code: 'PENDING',
+      policyCode: 'INSTITUTIONAL_SOURCE_REVIEW',
+      reviewId: response.review_id,
+      postId: response.post_id, replayed: false,
+    });
+    expect(() => normalizeReviewOutcome({ ...response, published: true }, request)).toThrow(/não confirmou/);
+    expect(() => normalizeReviewOutcome({ ...response, policy_code: 'PUBLISHED' }, request)).toThrow(/não confirmou/);
+    expect(() => normalizeReviewOutcome({ ...response, review_id: '223e4567-e89b-42d3-a456-426614174000' }, request)).toThrow(/não confirmou/);
+    expect(() => normalizeReviewOutcome({ ...response, source_revision: 'c'.repeat(64) }, request)).toThrow(/não confirmou/);
   });
 
   test('feed operator copy describes public Curator artifacts, not private channels', () => {

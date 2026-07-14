@@ -62,7 +62,7 @@ function registryProjection() {
       declaredUrl: 'https://ufg.br/',
       aliases: [],
       role: 'official_portal',
-      sourceKind: 'institutional_site',
+      sourceKind: 'weby_site',
       enabled: false,
       baseTier: 1,
       overrideTier: 2,
@@ -153,6 +153,33 @@ function registryProjection() {
   };
 }
 
+function stableReviewProjection() {
+  const projection = registryProjection();
+  const source = projection.sources[0];
+  Object.assign(source, {
+    role: 'primary_site',
+    overrideOrigin: 'stable',
+    isInheritedLegacy: false,
+    overrideUnitId: source.id,
+    note: 'Fonte canônica confirmada para revisão editorial',
+    collision: false,
+    reviewState: 'reviewed',
+    reviewIssues: []
+  });
+  Object.assign(projection.metaClassification.unambiguous[0], {
+    unitId: source.id,
+    matchType: 'stable_source_id'
+  });
+  Object.assign(projection.metaClassification.unambiguous[0].row, {
+    unit_id: source.id,
+    tier: source.overrideTier,
+    note: source.note,
+    revision: source.overrideRevision,
+    updated_at: source.updatedAt
+  });
+  return projection;
+}
+
 async function installAdminSession(page) {
   await page.addInitScript(() => {
     const session = {
@@ -203,7 +230,7 @@ function registryReadiness() {
   };
 }
 
-async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, openclawHandler, feedHandler) {
+async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, openclawHandler, feedHandler, publishHandler) {
   await page.route('**/api/cadu/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -211,7 +238,10 @@ async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, ope
       return route.fulfill({ json: { status: 'ok', version: 'test', ts: 1783960000 } });
     }
     if (path === '/api/cadu/openclaw/context') {
-      return route.fulfill({ json: { sites: { count: 1 }, feed: { count: 0 }, openclaw: { openclaw_reachable: true } } });
+      return route.fulfill({ json: { sites: { count: 1 }, feed: { count: 0 }, cadu_api: { openclaw_reachable: true } } });
+    }
+    if (path === '/api/cadu/publish' && publishHandler) {
+      return publishHandler(route, path);
     }
     if (openclawHandler && path.startsWith('/api/cadu/openclaw/')) {
       return openclawHandler(route, path);
@@ -302,6 +332,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
 
     await page.goto('/admin/cadu.html');
     await dismissConsentBanner(page);
+    await expect(page.locator('#cadu-context-pill')).toContainText('OpenClaw OK');
     await expect(page.locator('#sites-registry-status')).toContainText('Catálogo canônico validado em modo shadow');
     await expect(page.locator('#kpi-sites')).toHaveText('2');
     await expect(page.locator('#sites-catalog-summary')).toContainText('2registros de entidade');
@@ -310,7 +341,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await expect(page.locator('.kc-cadu-source-note-input')).toHaveValue('');
     await expect(page.locator('.kc-cadu-save-source-btn')).toBeDisabled();
     await expect(page.locator('.kc-cadu-publish-btn')).toBeDisabled();
-    await expect(page.locator('.kc-cadu-publish-btn')).toContainText('Shadow');
+    await expect(page.locator('.kc-cadu-publish-btn')).toContainText('Revisão bloqueada');
     await expect(page.locator('tr[data-source-id="web.ufg.portal"]')).toContainText('associação direta observada nesta fonte');
     await expect(page.locator('.kc-cadu-ask-btn[data-ask-kind="site"]'))
       .toHaveAttribute('data-ask-instagram', '@ufg_oficial (confirmed)');
@@ -786,6 +817,74 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     expect(patchRequests).toHaveLength(0);
   });
 
+  test('envia fonte estável à revisão durável com identidade e revisões canônicas', async ({ page }) => {
+    const requests = [];
+    const projection = stableReviewProjection();
+    await mockCommonCaduRoutes(page, async (route) => route.fulfill({
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        ETag: LIST_ETAG,
+        'X-Cadu-Registry-Sha256': HASH
+      },
+      json: projection
+    }), null, null, null, async (route) => {
+      const request = route.request().postDataJSON();
+      requests.push(request);
+      return route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          code: 'PENDING',
+          policy_code: 'INSTITUTIONAL_SOURCE_REVIEW',
+          review_id: '123e4567-e89b-42d3-a456-426614174000',
+          post_id: '123e4567-e89b-42d3-a456-426614174000',
+          status: 'pending',
+          pending: true,
+          published: false,
+          published_via: 'edge-function',
+          intent: request.intent,
+          content_kind: request.content_kind,
+          source_id: request.source_id,
+          source_url: request.source_url,
+          content_url: request.content_url,
+          instagram_handle: request.instagram_handle,
+          source_revision: request.source_revision,
+          registry_sha256: request.registry_sha256,
+          idempotency_key: request.idempotency_key,
+          replayed: false
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    const button = page.locator('tr[data-source-id="web.ufg.portal"] .kc-cadu-publish-btn');
+    await expect(button).toBeEnabled();
+    await expect(button).toContainText('Enviar à revisão');
+    await button.click();
+
+    await expect.poll(() => requests.length).toBe(1);
+    expect(requests[0]).toEqual({
+      action: 'review',
+      intent: 'review',
+      source_id: 'web.ufg.portal',
+      source_url: 'https://ufg.br/',
+      content_url: 'https://ufg.br/',
+      instagram_handle: 'ufg_oficial',
+      content_kind: 'institutional_site',
+      idempotency_key: `map-ufg-review:web.ufg.portal:${SOURCE_REVISION}`,
+      source_revision: SOURCE_REVISION,
+      registry_sha256: HASH,
+      name: 'UFG — Universidade Federal de Goiás',
+      note: 'Fonte canônica confirmada para revisão editorial',
+      tier: 2,
+      category: 'university',
+      source: 'cadu-admin-map-ufg'
+    });
+    await expect(button).toContainText('Revisão pendente');
+    await expect(page.locator('#cadu-error')).toContainText('permanece pendente e não foi publicada');
+  });
+
   test('chat OpenClaw usa health estruturado, sessão fixada e retry idempotente sem envio real', async ({ page }) => {
     const sentPayloads = [];
     let statusReads = 0;
@@ -839,14 +938,15 @@ test.describe('Admin Cadu — catálogo canônico', () => {
           return new Promise((resolve) => { pendingFirstSend = { route, resolve }; });
         }
         if (sentPayloads.length === 2) {
-          return route.fulfill({ status: 504, json: { ok: false, error: 'cadu_api_timeout' } });
+          return route.fulfill({ status: 504, json: { ok: false, error: 'cadu_api_timeout', retryable: true } });
         }
         if (sentPayloads.length === 4) {
           return route.fulfill({
             json: {
               ok: false,
               error: 'Gateway unavailable; embedded fallback was not accepted',
-              fallback_executed: true
+              fallback_executed: true,
+              retryable: false
             }
           });
         }
@@ -854,6 +954,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
           json: {
             ok: true,
             data: {
+              status: 'ok',
               summary: 'ok',
               runId: 'run-test',
               result: {
@@ -899,13 +1000,14 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       json: {
         ok: true,
         data: {
+          status: 'ok',
           summary: 'ok', runId: 'run-one',
           result: { payloads: [{ text: 'Primeira resposta' }], meta: { durationMs: 50, agentMeta: { sessionId: '44444444-session-created', usage: { input: 1, output: 1 } } } }
         }
       }
     });
     pendingFirstSend.resolve();
-    await expect(page.locator('#openclaw-chat-status')).toContainText('ok');
+    await expect(page.locator('#openclaw-chat-status')).toContainText('confirmada');
     await expect(page.locator('#openclaw-last-session')).toHaveText(pinnedLabel);
 
     await page.locator('#openclaw-refresh-btn').click();
@@ -936,13 +1038,10 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await page.locator('#openclaw-chat-send-btn').click();
     await expect.poll(() => sentPayloads.length).toBe(4);
     await expect(page.locator('#openclaw-chat-status')).toContainText('não confirmou');
-    await expect(page.locator('#openclaw-chat-retry-btn')).toBeVisible();
-    expect(await page.locator('#openclaw-chat-log').textContent()).not.toContain('✅');
-
-    await page.locator('#openclaw-chat-retry-btn').click();
-    await expect.poll(() => sentPayloads.length).toBe(5);
-    expect(sentPayloads[4]).toEqual(sentPayloads[3]);
     await expect(page.locator('#openclaw-chat-retry-btn')).toBeHidden();
+    expect(await page.locator('#openclaw-chat-log').textContent()).not.toContain('✅');
+    await page.waitForTimeout(150);
+    expect(sentPayloads).toHaveLength(4);
   });
 
   test('ask de item público falha fechado e reutiliza request_id sem fallback inline', async ({ page }) => {
@@ -966,12 +1065,13 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       if (request.method() === 'POST' && target.searchParams.get('path') === 'a1b2c3d4e5f60708/ask') {
         askPayloads.push(request.postDataJSON());
         if (askPayloads.length === 1) {
-          return route.fulfill({ status: 404, json: { ok: false, error: 'version_skew' } });
+          return route.fulfill({ status: 404, json: { ok: false, error: 'version_skew', retryable: true } });
         }
         return route.fulfill({
           json: {
             ok: true,
             data: {
+              status: 'ok',
               summary: 'ok',
               result: { payloads: [{ text: 'Resposta segura do item público' }], meta: {} }
             }
@@ -1004,7 +1104,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
 
     await askButton.click();
     await expect.poll(() => askPayloads.length).toBe(1);
-    await expect(page.locator('#cadu-error')).toContainText('nenhum fallback com conteúdo inline foi executado');
+    await expect(page.locator('#cadu-error')).toContainText('Nenhum fallback com conteúdo inline foi executado');
     expect(directAgentCalls).toBe(0);
 
     await askButton.click();

@@ -118,7 +118,9 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope))');
     expect(controller).toContain("'X-Cadu-Registry-Sha256': envelope.headers.registrySha256");
     expect(controller).toContain("state.catalogMode = 'legacy-readonly'");
-    expect(controller).toContain('Overrides estão bloqueados para evitar gravar por nomes ambíguos.');
+    expect(controller).toContain(
+      'Escritas estão bloqueadas porque a API não confirmou o catálogo canônico e suas revisões estáveis.'
+    );
   });
 
   test('never autosaves legacy names and writes stable source IDs with strong CAS', () => {

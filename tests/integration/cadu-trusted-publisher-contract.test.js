@@ -14,6 +14,19 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const r = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
+function functionSource(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`${name} not found`);
+  const bodyStart = source.indexOf('{', start);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}') depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`${name} incomplete`);
+}
+
 describe('Cadu trusted publisher — migration', () => {
   let sql;
   beforeAll(() => {
@@ -53,10 +66,12 @@ describe('Cadu publish — Edge Function', () => {
   let index;
   let mapper;
   let schema;
+  let review;
   beforeAll(() => {
     index = r('supabase/functions/cadu-publish/index.ts');
     mapper = r('supabase/functions/cadu-publish/mapper.ts');
     schema = r('supabase/functions/cadu-publish/schema.ts');
+    review = r('supabase/functions/cadu-publish/review.ts');
   });
 
   test('valida JWT e exige conta confiavel (allowlist)', () => {
@@ -71,8 +86,9 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('status: "published"');
   });
 
-  test('expoe as acoes publish/edit/list/check', () => {
+  test('expoe as acoes publish/review/edit/list/check', () => {
     expect(index).toContain('case "publish"');
+    expect(index).toContain('case "review"');
     expect(index).toContain('case "edit"');
     expect(index).toContain('case "list"');
     expect(index).toContain('case "check"');
@@ -175,6 +191,117 @@ describe('Cadu publish — Edge Function', () => {
     ['eventos', 'oportunidades', 'moradia', 'compra-venda', 'caronas', 'achados-perdidos'].forEach((m) => {
       expect(schema).toContain(`"${m}"`);
     });
+  });
+
+  test('review usa exclusivamente a fila transacional dedicada e nunca toca publicações', () => {
+    const start = index.indexOf('async function handleReview');
+    const end = index.indexOf('// ── edit', start);
+    const handler = index.slice(start, end);
+    expect(start).toBeGreaterThan(0);
+    expect(handler).toContain('parseInstitutionalReview(body)');
+    expect(handler).toContain('admin.rpc(');
+    expect(handler).toContain('"kc_create_institutional_source_review"');
+    expect(handler).toContain('institutionalReviewRpcArguments(review, userId)');
+    expect(handler).toContain('institutionalReviewRowMatches(rows[0], review, userId)');
+    expect(handler).toContain('pendingInstitutionalReviewResponse(review, rows[0])');
+    expect(handler).not.toContain('.from("posts")');
+    expect(handler).not.toContain('mapItemToPost(');
+    expect(handler).not.toContain('findExisting(');
+    expect(handler).not.toContain('status: "published"');
+    expect(handler).not.toContain('applyImages(');
+    expect(handler).not.toContain('audit(');
+    expect(index).toContain('review_id: persisted.id');
+    expect(index).toContain('published: false');
+  });
+
+  test('review exige identidade canônica vinculada às revisões e chave idempotente determinística', () => {
+    expect(review).toContain('INSTITUTIONAL_REVIEW_POLICY_CODE = "INSTITUTIONAL_SOURCE_REVIEW"');
+    expect(review).toContain('body.source_id');
+    expect(review).toContain('body.source_url');
+    expect(review).toContain('body.content_url');
+    expect(review).toContain('body.instagram_handle');
+    expect(review).toContain('body.source_revision');
+    expect(review).toContain('body.registry_sha256');
+    expect(review).toMatch(/institutionalReviewIdempotencyKey\(\s*sourceId,\s*sourceRevision,/);
+    expect(review).toContain('institutionalReviewRpcArguments');
+    expect(review).toContain('p_source_id: review.sourceId');
+    expect(review).not.toContain('module: "oportunidades"');
+    expect(review).not.toContain('formattedDescription');
+  });
+
+  test('fila institucional permanece desabilitada por padrão até migração e rollout explícito', () => {
+    expect(index).toContain('Deno.env.get("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1"');
+    expect(index).toContain('if (!INSTITUTIONAL_REVIEW_ENABLED)');
+    expect(index).toContain('code: "REVIEW_DISABLED"');
+    expect(index).toContain('return await handleReview(admin, user.id, body)');
+  });
+});
+
+describe('Cadu institutional review — durable database and admin proxy', () => {
+  const migration = r('supabase/migrations/20260714204500_cadu_institutional_review_pending.sql');
+  const proxy = r('api/cadu/publish.js');
+
+  test('database isola a revisão em fila tipada e serializa retry, fonte e limite', () => {
+    expect(migration).toContain('create table if not exists public.cadu_institutional_source_reviews');
+    expect(migration).not.toContain('alter table public.posts');
+    expect(migration).not.toContain('insert into public.posts');
+    expect(migration).toContain('cadu_institutional_reviews_idempotency_uq');
+    expect(migration).toContain('cadu_institutional_reviews_source_revision_uq');
+    expect(migration).toContain('cadu_institutional_reviews_one_pending_source_uq');
+    expect(migration).toContain("where state = 'pending'");
+    expect(migration).toContain('kc_guard_cadu_institutional_review');
+    expect(migration).toContain('cadu_review_envelope_is_immutable');
+    expect(migration).toContain('cadu_review_terminal_state_is_immutable');
+    expect(migration).toContain('kc_create_institutional_source_review');
+    expect(migration).toContain('kc_resolve_institutional_source_review');
+    expect(migration).toContain("'cadu-review-key:' || p_idempotency_key");
+    expect(migration).toContain("'cadu-review-source:' || p_source_id");
+    expect(migration).toContain("'cadu-review-rate:' || p_requested_by::text");
+    expect(migration).toContain('if v_rate_count >= 60 then');
+    expect(migration).toContain('v_existing.requested_by is distinct from p_requested_by');
+    expect(migration).toContain("'cadu_institutional_source_review_requested'");
+    expect(migration).toContain("'cadu_institutional_source_review_' || p_decision");
+    expect(migration).toContain('alter table public.cadu_institutional_source_reviews enable row level security');
+    expect(migration).toContain('grant execute on function public.kc_create_institutional_source_review');
+    expect(migration).toContain('grant execute on function public.kc_resolve_institutional_source_review');
+  });
+
+  test('proxy forwards the exact review envelope while retaining legacy publish', () => {
+    [
+      'action', 'intent', 'source_id', 'source_url', 'content_url',
+      'instagram_handle', 'content_kind', 'idempotency_key',
+      'source_revision', 'registry_sha256', 'name', 'note', 'tier',
+      'category', 'source',
+    ].forEach((field) => expect(proxy).toContain(`${field}:`));
+    expect(proxy).toContain("action === 'review'");
+    expect(proxy).toContain("source: REVIEW_POLICY.origin");
+    expect(proxy).toContain('body: JSON.stringify(upstreamBody)');
+    expect(proxy).toContain("body.source || 'cadu-admin'");
+    expect(proxy).toContain('instagram: body.instagram || null');
+  });
+
+  test('proxy normalizes a valid review and rejects mismatched content/revision identity', () => {
+    const build = Function(
+      '"use strict";\n' +
+      "const REVIEW_POLICY = Object.freeze({ intent:'review', contentKind:'institutional_site', origin:'cadu-admin-map-ufg' });\n" +
+      functionSource(proxy, 'canonicalHttpsUrl') + '\n' +
+      functionSource(proxy, 'institutionalReviewPayload') + '\n' +
+      'return institutionalReviewPayload;',
+    )();
+    const revision = 'b'.repeat(64);
+    const input = {
+      action: 'review', intent: 'review', content_kind: 'institutional_site',
+      source_id: 'web.ufg.portal', source_url: 'https://ufg.br/', content_url: 'https://ufg.br/',
+      instagram_handle: 'ufg_oficial', source_revision: revision, registry_sha256: 'a'.repeat(64),
+      idempotency_key: `map-ufg-review:web.ufg.portal:${revision}`,
+      name: 'UFG — Universidade Federal de Goiás', note: null, tier: 1,
+      category: 'university', source: 'cadu-admin-map-ufg',
+    };
+    expect(build(input)).toEqual({ payload: input });
+    expect(build({ ...input, content_url: 'https://outra.ufg.br/' })).toEqual({
+      error: 'content_url deve coincidir com source_url nesta política',
+    });
+    expect(build({ ...input, source_revision: 'c'.repeat(64) }).error).toMatch(/idempotency_key/);
   });
 });
 
