@@ -7,6 +7,15 @@
 */
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  canonicalPostId,
+  cleanText,
+  dateOnly,
+  getPostDeadline,
+  isoDate,
+  metadataOf,
+  shouldIndexPost,
+} from './_lib/product-seo-policy.js';
 
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -16,6 +25,13 @@ const META_DESCRIPTION_MAX_LENGTH = 180;
 const SEO_TITLE_MAX_LENGTH = 70;
 
 let cachedHtml = null;
+
+class BackendUnavailableError extends Error {
+  constructor(message, cause) {
+    super(message, cause ? { cause } : undefined);
+    this.name = 'BackendUnavailableError';
+  }
+}
 
 function getProductHtml() {
   if (!cachedHtml) {
@@ -43,7 +59,7 @@ async function fetchPost(id) {
   const { url, key } = getSupabaseConfig();
   if (!url || !key) {
     console.error('[og-product] Supabase config missing - url:', url ? 'OK' : 'EMPTY', '| key:', key ? 'OK' : 'EMPTY');
-    return null;
+    throw new BackendUnavailableError('Supabase configuration unavailable');
   }
 
   const select = [
@@ -79,8 +95,11 @@ async function fetchPost(id) {
   try {
     let response = await fetch(primaryEndpoint, { headers });
     if (!response.ok && response.status === 400) response = await fetch(primaryCompat, { headers });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      throw new BackendUnavailableError(`Supabase request failed with status ${response.status}`);
+    }
     const rows = await response.json();
+    if (!Array.isArray(rows)) throw new BackendUnavailableError('Supabase returned an invalid post payload');
     if (Array.isArray(rows) && rows.length > 0) return rows[0];
 
     if (isUuid) {
@@ -89,43 +108,19 @@ async function fetchPost(id) {
       const fallbackCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${fallbackFilter}&status=eq.published&limit=1`;
       let fallback = await fetch(fallbackEndpoint, { headers });
       if (!fallback.ok && fallback.status === 400) fallback = await fetch(fallbackCompat, { headers });
-      if (!fallback.ok) return null;
+      if (!fallback.ok) {
+        throw new BackendUnavailableError(`Supabase fallback request failed with status ${fallback.status}`);
+      }
       const fallbackRows = await fallback.json();
-      return Array.isArray(fallbackRows) && fallbackRows.length > 0 ? fallbackRows[0] : null;
+      if (!Array.isArray(fallbackRows)) throw new BackendUnavailableError('Supabase returned an invalid fallback payload');
+      return fallbackRows.length > 0 ? fallbackRows[0] : null;
     }
     return null;
   } catch (err) {
     console.error('[og-product] fetchPost error:', err && err.message ? err.message : err);
-    return null;
+    if (err instanceof BackendUnavailableError) throw err;
+    throw new BackendUnavailableError('Supabase post lookup failed', err);
   }
-}
-
-function metadataOf(post) {
-  return post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)
-    ? post.metadata
-    : {};
-}
-
-function stripHtml(value) {
-  return String(value || '').replace(/<[^>]*>/g, ' ');
-}
-
-function stripMarkdown(value) {
-  return String(value || '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/~~([^~]+)~~/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\[(.+?)\]\(https?:\/\/[^\s)]+\)/g, '$1')
-    .replace(/^>\s?/gm, '')
-    .replace(/^[-*]\s+/gm, '• ');
-}
-
-function cleanText(value) {
-  return stripMarkdown(stripHtml(String(value || '')))
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 function escapeHtml(value) {
@@ -163,10 +158,6 @@ function wordCount(value) {
   const text = cleanText(value);
   if (!text) return 0;
   return text.split(/\s+/).filter(Boolean).length;
-}
-
-function canonicalPostId(post) {
-  return String((post && post.id) || (post && post.legacy_id) || '').trim();
 }
 
 function isHttpUrl(value) {
@@ -252,39 +243,6 @@ function formatPrice(price) {
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function parseDateLike(value) {
-  if (!value) return null;
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
-
-  const text = String(value).trim();
-  if (!text) return null;
-
-  const isoDateMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoDateMatch) {
-    const [, year, month, day] = isoDateMatch;
-    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  }
-
-  const brDateMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+.*)?$/);
-  if (brDateMatch) {
-    const [, day, month, year] = brDateMatch;
-    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  }
-
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function isoDate(value) {
-  const date = parseDateLike(value);
-  return date ? date.toISOString() : '';
-}
-
-function dateOnly(value) {
-  const iso = isoDate(value);
-  return iso ? iso.slice(0, 10) : '';
-}
-
 function joinDateAndTime(date, time) {
   const day = dateOnly(date);
   const cleanTime = String(time || '').match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/)?.[0] || '';
@@ -293,8 +251,7 @@ function joinDateAndTime(date, time) {
 }
 
 function getDeadline(post) {
-  const metadata = metadataOf(post);
-  return metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || post.expires_at || '';
+  return getPostDeadline(post);
 }
 
 function getEventDate(post) {
@@ -324,22 +281,6 @@ function getSourceUrl(post, values) {
     values && values.actionLink,
   ];
   return candidates.find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
-}
-
-function isExpired(post) {
-  const deadline = getDeadline(post);
-  if (!deadline) return false;
-  const date = parseDateLike(deadline);
-  if (!date) return false;
-  return date.getTime() < Date.now() - 24 * 60 * 60 * 1000;
-}
-
-function shouldIndexPost(post, values) {
-  if (!post || String(post.status || '').toLowerCase() !== 'published') return false;
-  if (isExpired(post)) return false;
-  if (!canonicalPostId(post)) return false;
-  if (!cleanText(values && values.title)) return false;
-  return cleanText(post.description).length >= 24;
 }
 
 function paragraphHtml(text) {
@@ -530,27 +471,46 @@ function injectVisibleProductContent(html, post, values) {
   return modified;
 }
 
-function buildArticleAuthor(post, values) {
+function buildArticleAuthor(post) {
   const metadata = metadataOf(post);
-  const sourceUrl = getSourceUrl(post, values);
-  const name = cleanText(
-    metadata.source_unit
-      || metadata.sourceUnit
-      || metadata.orgao
-      || metadata.organizer
-      || metadata.publisher
-      || metadata.author_name
+  const personName = cleanText(
+    metadata.author_name
       || metadata.authorName
       || metadata.source_author
       || metadata.sourceAuthor
-      || 'Comunidade UFG'
   );
-  const author = {
+  if (personName) {
+    const personUrl = [metadata.author_url, metadata.authorUrl]
+      .find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
+    return {
+      '@type': 'Person',
+      name: personName,
+      url: personUrl || undefined,
+    };
+  }
+
+  const organizer = metadata.organizer;
+  const publisher = metadata.publisher;
+  const organizationName = cleanText(
+    metadata.source_unit
+      || metadata.sourceUnit
+      || metadata.orgao
+      || (organizer && typeof organizer === 'object' ? organizer.name : organizer)
+      || (publisher && typeof publisher === 'object' ? publisher.name : publisher)
+  );
+  if (!organizationName) return undefined;
+
+  const organizationUrl = [
+    organizer && typeof organizer === 'object' ? organizer.url : '',
+    publisher && typeof publisher === 'object' ? publisher.url : '',
+    metadata.publisher_url,
+    metadata.publisherUrl,
+  ].find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
+  return {
     '@type': 'Organization',
-    name: name || 'Comunidade UFG',
+    name: organizationName,
+    url: organizationUrl || undefined,
   };
-  if (sourceUrl) author.url = sourceUrl;
-  return author;
 }
 
 function buildArticle(post, values) {
@@ -571,7 +531,7 @@ function buildArticle(post, values) {
     inLanguage: 'pt-BR',
     datePublished: isoDate(post.created_at) || undefined,
     dateModified: isoDate(post.updated_at || post.created_at) || undefined,
-    author: buildArticleAuthor(post, values),
+    author: buildArticleAuthor(post),
     publisher: { '@id': `${SITE_ORIGIN}/#organization` },
     isAccessibleForFree: true,
     wordCount: wordCount(body) || undefined,
@@ -586,67 +546,306 @@ function buildArticle(post, values) {
   return entity;
 }
 
+function cleanScalar(value) {
+  return (typeof value === 'string' || typeof value === 'number') ? cleanText(value) : '';
+}
+
+function firstCleanScalar(candidates) {
+  for (const candidate of candidates) {
+    const value = cleanScalar(candidate);
+    if (value) return value;
+  }
+  return '';
+}
+
+function buildExplicitPostalAddress(metadata, scope) {
+  const isEvent = scope === 'event';
+  const rawAddress = [
+    isEvent ? metadata.event_address : metadata.job_address,
+    isEvent ? metadata.eventAddress : metadata.jobAddress,
+    metadata.address,
+    metadata.endereco,
+  ].find((value) => value && (typeof value === 'string' || (typeof value === 'object' && !Array.isArray(value))));
+  const structured = rawAddress && typeof rawAddress === 'object' ? rawAddress : {};
+  const stringAddress = typeof rawAddress === 'string' ? rawAddress : '';
+
+  const streetAddress = firstCleanScalar([
+    structured.streetAddress,
+    structured.street_address,
+    stringAddress,
+    isEvent ? metadata.event_street_address : metadata.job_street_address,
+    isEvent ? metadata.eventStreetAddress : metadata.jobStreetAddress,
+    metadata.street_address,
+    metadata.streetAddress,
+  ]);
+  const addressLocality = firstCleanScalar([
+    structured.addressLocality,
+    structured.city,
+    structured.cidade,
+    isEvent ? metadata.event_city : metadata.job_city,
+    isEvent ? metadata.eventCity : metadata.jobCity,
+    metadata.addressLocality,
+    metadata.city,
+    metadata.cidade,
+  ]);
+  const addressRegion = firstCleanScalar([
+    structured.addressRegion,
+    structured.state,
+    structured.estado,
+    isEvent ? metadata.event_state : metadata.job_state,
+    isEvent ? metadata.eventState : metadata.jobState,
+    metadata.addressRegion,
+    metadata.state,
+    metadata.estado,
+  ]);
+  const postalCode = firstCleanScalar([
+    structured.postalCode,
+    structured.postal_code,
+    structured.cep,
+    isEvent ? metadata.event_postal_code : metadata.job_postal_code,
+    isEvent ? metadata.eventPostalCode : metadata.jobPostalCode,
+    metadata.postalCode,
+    metadata.postal_code,
+    metadata.cep,
+  ]);
+  const addressCountry = firstCleanScalar([
+    structured.addressCountry,
+    structured.country,
+    isEvent ? metadata.event_country : metadata.job_country,
+    isEvent ? metadata.eventCountry : metadata.jobCountry,
+    metadata.addressCountry,
+    metadata.country,
+  ]) || 'BR';
+
+  // A venue/campus label alone is not a postal address. Events require an
+  // explicit street/full-address value; jobs may use an explicit city.
+  if (isEvent ? !streetAddress : (!streetAddress && !addressLocality)) return null;
+
+  return {
+    '@type': 'PostalAddress',
+    streetAddress: streetAddress || undefined,
+    addressLocality: addressLocality || undefined,
+    addressRegion: addressRegion || undefined,
+    postalCode: postalCode || undefined,
+    addressCountry,
+  };
+}
+
+function firstExplicitNumber(candidates) {
+  for (const candidate of candidates) {
+    if (candidate === null || candidate === undefined || candidate === '') continue;
+    const value = Number(candidate);
+    if (Number.isFinite(value) && value >= 0) return value;
+  }
+  return null;
+}
+
+function buildExplicitEventOffer(post, metadata) {
+  const offerUrl = [
+    metadata.ticket_url,
+    metadata.ticketUrl,
+    metadata.offer_url,
+    metadata.offerUrl,
+    metadata.registration_url,
+    metadata.inscricao_url,
+    metadata.cta_url,
+    metadata.link,
+  ].find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
+  if (!offerUrl) return undefined;
+  const explicitPrice = firstExplicitNumber([
+    post.price,
+    metadata.ticket_price,
+    metadata.ticketPrice,
+    metadata.preco,
+    metadata.price,
+  ]);
+  const price = metadata.gratuito === true ? 0 : explicitPrice;
+  if (price === null || (metadata.gratuito === false && price <= 0)) return undefined;
+  const currency = firstCleanScalar([metadata.priceCurrency, metadata.price_currency, metadata.currency]).toUpperCase();
+
+  return {
+    '@type': 'Offer',
+    url: offerUrl,
+    price,
+    priceCurrency: /^[A-Z]{3}$/.test(currency) ? currency : 'BRL',
+  };
+}
+
 function buildEvent(post, values) {
   const metadata = metadataOf(post);
   const startDate = joinDateAndTime(values.eventDate, metadata.hora_evento || metadata.horaEvento || metadata.time);
-  if (post.module !== 'eventos' || !startDate) return null;
+  const address = buildExplicitPostalAddress(metadata, 'event');
+  const locationName = firstCleanScalar([
+    metadata.event_venue,
+    metadata.eventVenue,
+    metadata.event_location,
+    metadata.eventLocation,
+    post.location,
+    address && address.streetAddress,
+  ]);
+  const description = cleanText(post.description);
+  if (post.module !== 'eventos' || !startDate || !address || !locationName || !cleanText(post.title) || !description) {
+    return null;
+  }
+
+  const organizer = metadata.organizer;
+  const organizerName = cleanText(
+    metadata.source_unit
+      || (organizer && typeof organizer === 'object' ? organizer.name : organizer)
+  );
+  const organizerUrl = [
+    organizer && typeof organizer === 'object' ? organizer.url : '',
+    metadata.organizer_url,
+    metadata.organizerUrl,
+  ]
+    .find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
+
   return {
     '@type': 'Event',
     '@id': `${values.canonicalUrl}#event`,
     name: values.title,
-    description: values.description,
+    description,
     image: [values.image],
     url: values.canonicalUrl,
     startDate,
     endDate: joinDateAndTime(metadata.data_evento_fim || metadata.endDate || metadata.date_end_at, metadata.hora_evento_fim || metadata.endTime) || undefined,
-    eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    isAccessibleForFree: metadata.gratuito !== false,
-    location: post.location ? { '@type': 'Place', name: String(post.location) } : undefined,
-    organizer: {
-      '@type': 'Organization',
-      name: metadata.source_unit || metadata.organizer || 'Comunidade UFG',
-      url: metadata.source_url || values.actionLink || SITE_ORIGIN,
+    isAccessibleForFree: typeof metadata.gratuito === 'boolean' ? metadata.gratuito : undefined,
+    location: {
+      '@type': 'Place',
+      name: locationName,
+      address,
     },
-    offers: values.actionLink ? {
-      '@type': 'Offer',
-      url: values.actionLink,
-      price: 0,
-      priceCurrency: 'BRL',
-      availability: 'https://schema.org/InStock',
+    organizer: organizerName ? {
+      '@type': 'Organization',
+      name: organizerName,
+      url: organizerUrl || undefined,
     } : undefined,
+    offers: buildExplicitEventOffer(post, metadata),
   };
+}
+
+function normalizedKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+}
+
+function hasExplicitJobSignal(post, metadata) {
+  const explicitFlag = [
+    metadata.is_job,
+    metadata.isJob,
+    metadata.is_job_posting,
+    metadata.isJobPosting,
+    metadata.job_posting,
+    metadata.jobPosting,
+  ].some((value) => value === true || String(value).trim().toLowerCase() === 'true');
+  const schemaType = normalizedKey(metadata.schema_type || metadata.schemaType || metadata.structured_data_type);
+  const employmentType = cleanScalar(metadata.employmentType || metadata.employment_type || metadata.regimeContratacao);
+  const categoryCandidates = [
+    post.category,
+    metadata.category,
+    metadata.categoriaKey,
+    metadata.subcategory,
+    metadata.subcategoriaKey,
+    metadata.opportunity_type,
+    metadata.opportunityType,
+  ].map(normalizedKey);
+  const employmentCategories = new Set([
+    'emprego',
+    'empregos',
+    'estagio',
+    'estagios',
+    'freelancer',
+    'trainee',
+    'jovem-aprendiz',
+  ]);
+
+  return explicitFlag
+    || schemaType === 'jobposting'
+    || Boolean(employmentType)
+    || categoryCandidates.some((category) => employmentCategories.has(category));
 }
 
 function buildJobPosting(post, values) {
   const metadata = metadataOf(post);
   const moduleKey = String(post.module || '');
-  const categoryText = `${post.category || ''} ${values.title}`.toLowerCase();
+  const datePosted = dateOnly(post.created_at || post.updated_at);
+  const validThrough = joinDateAndTime(values.deadline, '23:59');
+  const hiringOrganization = metadata.hiringOrganization || metadata.hiring_organization;
+  const jobOrganizer = metadata.organizer;
+  const hiringOrganizationName = cleanText(
+    (hiringOrganization && typeof hiringOrganization === 'object'
+      ? hiringOrganization.name
+      : hiringOrganization)
+      || metadata.source_unit
+      || metadata.orgao
+      || (jobOrganizer && typeof jobOrganizer === 'object' ? jobOrganizer.name : jobOrganizer)
+  );
+  const hiringOrganizationUrl = [
+    hiringOrganization && typeof hiringOrganization === 'object'
+      ? hiringOrganization.sameAs || hiringOrganization.url
+      : '',
+    metadata.hiring_organization_url,
+    metadata.hiringOrganizationUrl,
+  ].find((url) => /^https?:\/\//i.test(String(url || ''))) || '';
+  const address = buildExplicitPostalAddress(metadata, 'job');
+  const locationName = firstCleanScalar([
+    metadata.job_location,
+    metadata.jobLocation,
+    metadata.workplace,
+    address && address.addressLocality,
+    address && address.streetAddress,
+    post.location,
+  ]);
+  const description = cleanText(post.description);
+  const employmentType = String(metadata.employmentType || '').trim().toUpperCase();
+  const supportedEmploymentTypes = new Set([
+    'FULL_TIME',
+    'PART_TIME',
+    'CONTRACTOR',
+    'TEMPORARY',
+    'INTERN',
+    'VOLUNTEER',
+    'PER_DIEM',
+    'OTHER',
+  ]);
+
   if (moduleKey !== 'oportunidades') return null;
-  if (!/(emprego|vaga|professor|substituto|contrata|sele[cç][aã]o|processo seletivo)/i.test(categoryText)) return null;
-  if (!values.actionLink || !values.deadline) return null;
+  if (!hasExplicitJobSignal(post, metadata)) return null;
+  if (
+    !values.actionLink
+    || !validThrough
+    || !datePosted
+    || !hiringOrganizationName
+    || !address
+    || !locationName
+    || !cleanText(post.title)
+    || !description
+  ) return null;
+
   return {
     '@type': 'JobPosting',
     '@id': `${values.canonicalUrl}#job`,
     title: values.title,
-    description: values.description,
-    datePosted: dateOnly(post.created_at || post.updated_at) || dateOnly(new Date()),
-    validThrough: joinDateAndTime(values.deadline, '23:59'),
-    employmentType: metadata.employmentType || 'CONTRACTOR',
+    description,
+    datePosted,
+    validThrough,
+    employmentType: supportedEmploymentTypes.has(employmentType) ? employmentType : undefined,
     hiringOrganization: {
       '@type': 'Organization',
-      name: metadata.source_unit || metadata.orgao || metadata.organizer || 'Universidade Federal de Goiás',
-      sameAs: metadata.source_url || values.actionLink || SITE_ORIGIN,
+      name: hiringOrganizationName,
+      sameAs: hiringOrganizationUrl || undefined,
     },
-    jobLocation: post.location ? {
+    jobLocation: {
       '@type': 'Place',
+      name: locationName,
       address: {
-        '@type': 'PostalAddress',
-        addressLocality: String(post.location),
-        addressCountry: 'BR',
+        ...address,
       },
-    } : undefined,
-    directApply: false,
+    },
     url: values.actionLink,
   };
 }
@@ -740,8 +939,17 @@ function buildProductJsonLd(post, values) {
   });
 }
 
+function serializeJsonForHtml(data) {
+  return JSON.stringify(data)
+    .replace(/&/g, '\\u0026')
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 function replaceOrInsertProductJsonLd(html, data) {
-  const script = `<script type="application/ld+json" data-kc-product-structured-data="true">${JSON.stringify(data)}</script>`;
+  const script = `<script type="application/ld+json" data-kc-product-structured-data="true">${serializeJsonForHtml(data)}</script>`;
   if (/data-kc-product-structured-data="true"/i.test(html)) {
     return html.replace(/<script\s+type="application\/ld\+json"\s+data-kc-product-structured-data="true">[\s\S]*?<\/script>/i, script);
   }
@@ -778,43 +986,65 @@ function applyIndexableMeta(html, post, values) {
   return replaceOrInsertProductJsonLd(modified, buildProductJsonLd(post, values));
 }
 
+function sendHtmlResponse(res, status, body, cacheControl, retryAfter) {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', cacheControl);
+  if (retryAfter) res.setHeader('Retry-After', String(retryAfter));
+  if (typeof res.status === 'function') res.status(status);
+  else res.statusCode = status;
+  return res.send(body);
+}
+
 export default async function handler(req, res) {
   const html = getProductHtml();
   const id = req && req.query ? req.query.id : '';
 
   if (!id) {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-    return res.send(applyNoindexMeta(html, `${SITE_ORIGIN}/product.html`));
+    return sendHtmlResponse(
+      res,
+      404,
+      applyNoindexMeta(html, `${SITE_ORIGIN}/product.html`),
+      'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+    );
   }
 
   try {
     const post = await fetchPost(String(id));
     if (!post) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
-      return res.send(applyNoindexMeta(html, `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(String(id))}`));
+      return sendHtmlResponse(
+        res,
+        404,
+        applyNoindexMeta(html, `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(String(id))}`),
+        'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+      );
     }
 
     const values = buildProductValues(post);
     let modified = applyNoindexMeta(html, values.canonicalUrl);
-    if (shouldIndexPost(post, values)) {
+    // Use the raw shared policy input here. buildProductValues intentionally
+    // has a display fallback title, which must never make an untitled record
+    // indexable only in SSR while sitemap/RSS exclude it.
+    if (shouldIndexPost(post)) {
       modified = applyIndexableMeta(modified, post, values);
       modified = injectVisibleProductContent(modified, post, values);
     }
 
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(modified);
+    return sendHtmlResponse(res, 200, modified, 'public, max-age=0, s-maxage=300, stale-while-revalidate=600');
   } catch (err) {
     console.error('[og-product] Handler error:', err && err.message ? err.message : err);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(applyNoindexMeta(html, `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(String(id))}`));
+    return sendHtmlResponse(
+      res,
+      503,
+      applyNoindexMeta(html, `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(String(id))}`),
+      'private, no-store, max-age=0, s-maxage=0, must-revalidate',
+      60
+    );
   }
 }
 
 export {
   buildProductJsonLd,
   buildProductValues,
+  serializeJsonForHtml,
   shouldIndexPost,
 };

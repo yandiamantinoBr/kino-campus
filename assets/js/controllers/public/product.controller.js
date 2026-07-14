@@ -104,6 +104,7 @@
       login_required: 'fas fa-right-to-bracket',
       view_profile: 'fas fa-id-badge',
       external_link: 'fas fa-arrow-up-right-from-square',
+      external_contact: 'fas fa-arrow-up-right-from-square',
       real_form: 'fas fa-paper-plane',
       safe_fallback: 'fas fa-circle-info'
     };
@@ -136,16 +137,8 @@
 
     if (action.href) {
       try {
-        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-          var pid = post && (post.uuid || post.id);
-          var contactType = (action && action.type) ? String(action.type) : 'unknown';
-          var channel = 'external';
-          if (/^https?:\/\/(api\.)?whatsapp\.com|^https:\/\/wa\.me\//i.test(action.href)) channel = 'whatsapp';
-          else if (/^mailto:/i.test(action.href)) channel = 'email';
-          else if (/^tel:/i.test(action.href)) channel = 'phone';
-          else if (/mensagens\.html/i.test(action.href)) channel = 'chat_internal';
-          else if (/_blank/.test(action.target || '')) channel = 'external';
-          window.KCEvents.track('kc_contact_click', { post_id: pid || null, contact_type: contactType, channel: channel });
+        if (window._KCProduct.analytics && typeof window._KCProduct.analytics.trackContactAction === 'function') {
+          window._KCProduct.analytics.trackContactAction(action, post);
         }
       } catch (_) {}
       if (action.target === '_blank') {
@@ -157,6 +150,11 @@
     }
 
     if (typeof action.handler === 'function') {
+      try {
+        if (window._KCProduct.analytics && typeof window._KCProduct.analytics.trackContactFormOpen === 'function') {
+          window._KCProduct.analytics.trackContactFormOpen(action, post);
+        }
+      } catch (_) { }
       action.handler();
       return true;
     }
@@ -253,7 +251,7 @@
         return { type: 'login_required', label: 'Entrar para contatar' };
       }
       return {
-        type: 'external_link',
+        type: 'external_contact',
         label: 'Abrir canal de contato',
         href: externalUrl,
         target: '_blank',
@@ -427,6 +425,11 @@
         event.preventDefault();
         const authorId = (window._KCProduct.render && window._KCProduct.render.getPostAuthorId ? window._KCProduct.render.getPostAuthorId(currentPost) : null);
         if (authorId) {
+          try {
+            if (window._KCProduct.analytics && typeof window._KCProduct.analytics.trackProfileCta === 'function') {
+              window._KCProduct.analytics.trackProfileCta(currentPost);
+            }
+          } catch (_) {}
           window.location.href = 'profile.html?id=' + encodeURIComponent(authorId);
         } else {
           toast('Perfil indisponível para esta publicação.', 'warn', 2000);

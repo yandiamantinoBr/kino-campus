@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -225,11 +225,12 @@ function auditGoogleTag(errors) {
   }
   Object.keys(INDEXABLE).concat(NOINDEX).forEach((file) => {
     const html = read(file);
-    if (!html.includes('assets/js/boot/kc-google-tag.js?v=8.6.4')) {
+    const googleTagMatch = html.match(/assets\/js\/boot\/kc-google-tag\.js\?v=[0-9A-Za-z._-]+/);
+    if (!googleTagMatch) {
       errors.push(`${file}: tag GA4 consent-aware ausente.`);
     }
     const consentIndex = html.indexOf('assets/js/core/kc-consent.js?v=8.6.4');
-    const googleIndex = html.indexOf('assets/js/boot/kc-google-tag.js?v=8.6.4');
+    const googleIndex = googleTagMatch ? googleTagMatch.index : -1;
     const telemetryIndex = html.indexOf('assets/js/boot/kc-telemetry.js?v=8.6.1');
     if (consentIndex !== -1 && googleIndex !== -1 && telemetryIndex !== -1 && !(consentIndex < googleIndex && googleIndex < telemetryIndex)) {
       errors.push(`${file}: ordem de scripts consent -> google-tag -> telemetry incorreta.`);

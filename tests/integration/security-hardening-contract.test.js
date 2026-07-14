@@ -65,8 +65,13 @@ describe('security hardening contract', () => {
 
   test('vercel production build installs only runtime dependencies', () => {
     const config = JSON.parse(read(VERCEL_CONFIG));
+    const injectEnv = read(path.join(ROOT, 'scripts', 'inject-env.js'));
     expect(config.buildCommand).toBe('node scripts/inject-env.js');
     expect(config.installCommand).toBe('npm ci --omit=dev --no-audit --no-fund');
+    expect(config.outputDirectory).toBe('dist');
+    expect(injectEnv).not.toContain("'SUPABASE_KEY',");
+    expect(injectEnv).toContain('function readLegacyJwtRole(key)');
+    expect(injectEnv).toContain("legacyJwtRole !== 'anon'");
   });
 
   test('vercel CSP keeps baseline hardening directives', () => {

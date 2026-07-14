@@ -35,6 +35,17 @@ const NOINDEX_PAGES = [
   '_product.html',
 ];
 
+const ADMIN_NOINDEX_PAGES = [
+  'admin/banners.html',
+  'admin/cadu.html',
+  'admin/ga4-dashboard.html',
+  'admin/help-requests.html',
+  'admin/index.html',
+  'admin/moderation.html',
+  'admin/privacy-analytics.html',
+  'admin/reports.html',
+];
+
 describe('SEO e indexacao publica', () => {
   test('robots.txt aponta sitemap e bloqueia rotas privadas', () => {
     const robots = read('robots.txt');
@@ -46,6 +57,7 @@ describe('SEO e indexacao publica', () => {
     expect(robots).toMatch(/User-agent:\s*GPTBot\s+Disallow:\s*\//);
     expect(robots).toContain('Disallow: /admin/');
     expect(robots).toContain('Disallow: /search-results.html');
+    expect(robots).not.toContain('User-agent: Googlebot');
   });
 
   test('sitemap dinamico lista paginas estaticas e posts published', () => {
@@ -95,6 +107,7 @@ describe('SEO e indexacao publica', () => {
   test('feed RSS publico esta roteado e filtra apenas publicacoes publicadas', () => {
     const vercel = read('vercel.json');
     const feed = read('api/feed.js');
+    const policy = read('api/_lib/product-seo-policy.js');
 
     expect(vercel).toContain('"source": "/feed.xml"');
     expect(feed).toContain('<rss version="2.0"');
@@ -102,7 +115,8 @@ describe('SEO e indexacao publica', () => {
     expect(feed).toContain('limit=30');
     expect(feed).toContain('status=eq.published');
     expect(feed).toContain('/product.html?id=');
-    expect(feed).toContain('isFutureOrUnknown');
+    expect(feed).toContain('shouldIndexPost(post, buildIndexabilityValues(post))');
+    expect(policy).toContain('function shouldIndexPost');
   });
 
   test('home contem verificacao do Google Search Console', () => {
@@ -133,6 +147,17 @@ describe('SEO e indexacao publica', () => {
     });
   });
 
+  test('paginas administrativas usam noindex no HTML e no header de producao', () => {
+    ADMIN_NOINDEX_PAGES.forEach((file) => {
+      expect(read(file)).toContain('<meta name="robots" content="noindex,nofollow" />');
+    });
+
+    const vercel = read('vercel.json');
+    expect(vercel).toContain('"source": "/admin/(.*)"');
+    expect(vercel).toContain('"key": "X-Robots-Tag"');
+    expect(vercel).toContain('"value": "noindex, nofollow"');
+  });
+
   test('dados estruturados compartilhados incluem WebSite SearchAction e BreadcrumbList', () => {
     const source = read('assets/js/boot/kc-seo-structured-data.js');
 
@@ -151,6 +176,7 @@ describe('SEO e indexacao publica', () => {
 
   test('SSR de product.html injeta conteudo inicial, canonical, robots e JSON-LD rico', () => {
     const source = read('api/og-product.js');
+    const policy = read('api/_lib/product-seo-policy.js');
 
     expect(source).toContain('replaceOrInsertCanonical');
     expect(source).toContain('replaceOrInsertRobots');
@@ -170,7 +196,8 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain("'@type': 'JobPosting'");
     expect(source).toContain("'@type': 'Product'");
     expect(source).toContain('shouldIndexPost');
-    expect(source).toContain("status || '').toLowerCase() !== 'published'");
+    expect(source).toContain("from './_lib/product-seo-policy.js'");
+    expect(policy).toContain("status || '').toLowerCase() !== 'published'");
     expect(source).toContain("const canonicalUrl = `${SITE_ORIGIN}/product.html?id=");
     expect(source).not.toContain("req.headers['x-forwarded-host']");
     expect(source).toContain('META_DESCRIPTION_MAX_LENGTH = 180');

@@ -287,13 +287,15 @@
 |--------|------|-----------|
 | `id` | UUID PK | |
 | `term` | TEXT | Termo buscado |
-| `session_id` | TEXT | ID da sessão do browser |
-| `user_id` | UUID | FK opcional (se autenticado) |
-| `created_at` | TIMESTAMPTZ | |
+| `session_id` | TEXT | Hash SHA-256 da sessão efêmera; o valor cru não é persistido |
+| `user_id` | UUID | Coluna legada, obrigada a `NULL` por constraint |
+| `created_at` | TIMESTAMPTZ | Definido pelo servidor |
 
-**RLS:** INSERT qualquer um; SELECT somente admin.
+**RLS/ACL:** SELECT somente admin. INSERT direto de `anon`/`authenticated` revogado; a ingestão consentida usa `kc_ingest_search_queries(text, jsonb)` com validação de lote, rejeição de PII/URL/credencial, dedupe e rate limit básico por hash de sessão.
 **Retenção:** `kc_prune_old_analytics()` remove entradas com `created_at < now() - interval '6 months'` — pg_cron mensal (v9.0.4).
-**Índice:** `idx_search_queries_created_at` — para DELETE eficiente na retenção.
+**Índices:** `idx_search_queries_created_at` para retenção e `idx_search_queries_session_created_at` para dedupe/rate limit.
+
+O rate limit por sessão reduz rajadas, mas pode ser contornado pela rotação do identificador local. Ele não deve ser tratado como proteção forte contra abuso distribuído.
 
 ---
 

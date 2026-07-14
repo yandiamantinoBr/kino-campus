@@ -14,7 +14,7 @@ describe('product controller popover hardening', () => {
   test('reuses the shared clipboard helper and tracks successful copy shares', () => {
     expect(popoversSource).toContain('window.KCUtils.copyTextToClipboard');
     expect(popoversSource).toContain("throw new Error('copy_unavailable')");
-    expect(popoversSource).toContain('trackCurrentPostShare();');
+    expect(popoversSource).toContain("trackCurrentPostShare('copy_link');");
   });
 
   test('centralizes Escape handling for the main product action popovers', () => {

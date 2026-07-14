@@ -31,8 +31,8 @@ select extensions.ok(
 );
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'privacy_analytics_events'),
-  2,
-  'privacy analytics events has insert and admin select policies'
+  1,
+  'privacy analytics events keeps only the admin select policy'
 );
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'privacy_consent_events'),
@@ -45,8 +45,8 @@ select extensions.ok(
   'anon cannot read privacy analytics events'
 );
 select extensions.ok(
-  has_column_privilege('anon', 'public.privacy_analytics_events', 'event_name', 'insert'),
-  'anon can insert validated analytics columns'
+  not has_column_privilege('anon', 'public.privacy_analytics_events', 'event_name', 'insert'),
+  'anon cannot bypass the validated analytics RPC with direct inserts'
 );
 select extensions.ok(
   not has_column_privilege('anon', 'public.privacy_analytics_events', 'created_at', 'insert'),

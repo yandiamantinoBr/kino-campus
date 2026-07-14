@@ -9,7 +9,7 @@
 }(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null), function (root) {
   'use strict';
 
-  const VERSION = '2026-05-22';
+  const VERSION = '2026-07-14';
   const SESSION_KEY = 'kc_privacy_analytics_session_v1';
   const CONSENT_SIGNATURE_KEY = 'kc_privacy_consent_recorded_v1';
   const EVENT_NAMES = Object.freeze([
@@ -26,7 +26,6 @@
   ]);
   const ALLOWED_METADATA_KEYS = Object.freeze([
     'source',
-    'value',
     'status',
     'reason',
     'module_key',
@@ -34,11 +33,13 @@
     'category_key',
     'category',
     'entity_label',
-    'href',
     'period',
     'consent_source',
+    'query_length_bucket',
   ]);
   const SENSITIVE_KEY_RE = /(cookie|token|password|secret|authorization|session|email|user_agent|useragent|ip|jwt|supabase|refresh)/i;
+  const SENSITIVE_VALUE_RE = /[\u0000-\u001f\u007f]|[\w.%+-]+@[\w.-]+\.[a-z]{2,}|(?:https?:\/\/|www\.|javascript:|data:)|(?:access[_ -]?token|refresh[_ -]?token|id[_ -]?token|authorization|password|senha|otp|magiclink|api[_ -]?key)\s*[:=]|[0-9](?:[+() .-]*[0-9]){7,14}|[A-Za-z0-9_-]{32,}/i;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   const memoryStorage = (function () {
     const state = {};
@@ -131,16 +132,16 @@
     }
   }
 
-  function sanitizeUrl(value) {
-    if (!value) return '';
-    try {
-      const url = new URL(String(value), root.location && root.location.origin ? root.location.origin : 'https://kinocampus.com.br');
-      url.hash = '';
-      url.search = '';
-      return sanitizeScalar(url.href, 260);
-    } catch (_) {
-      return '';
-    }
+  function sanitizeMetadataValue(value, maxLength) {
+    const scalar = sanitizeScalar(value, maxLength);
+    return scalar && !SENSITIVE_VALUE_RE.test(scalar) ? scalar : '';
+  }
+
+  function sanitizeEntityId(value) {
+    const scalar = sanitizeScalar(value, 128);
+    if (!scalar) return '';
+    if (UUID_RE.test(scalar)) return scalar;
+    return SENSITIVE_VALUE_RE.test(scalar) ? '' : scalar;
   }
 
   function sanitizeMetadata(input) {
@@ -150,16 +151,18 @@
       if (SENSITIVE_KEY_RE.test(key)) return;
       const value = source[key];
       if (value == null || value === '') return;
-      if (key === 'href') {
-        const href = sanitizeUrl(value);
-        if (href) output.href = href;
-        return;
-      }
-      output[key] = sanitizeScalar(value, key === 'value' || key === 'entity_label' ? 180 : 80);
+      const sanitized = sanitizeMetadataValue(value, key === 'entity_label' ? 180 : 80);
+      if (sanitized) output[key] = sanitized;
     });
 
-    if (!output.module_key && source.moduleKey) output.module_key = sanitizeScalar(source.moduleKey, 64);
-    if (!output.category_key && source.categoryKey) output.category_key = sanitizeScalar(source.categoryKey, 64);
+    if (!output.module_key && source.moduleKey) {
+      const moduleKey = sanitizeMetadataValue(source.moduleKey, 64);
+      if (moduleKey) output.module_key = moduleKey;
+    }
+    if (!output.category_key && source.categoryKey) {
+      const categoryKey = sanitizeMetadataValue(source.categoryKey, 64);
+      if (categoryKey) output.category_key = categoryKey;
+    }
     return output;
   }
 
@@ -177,7 +180,7 @@
       p_session_id: getSessionId(),
       p_page_path: sanitizePath(source.page_path || source.pagePath),
       p_entity_type: sanitizeScalar(source.entity_type || source.entityType, 64) || null,
-      p_entity_id: sanitizeScalar(source.entity_id || source.entityId, 128) || null,
+      p_entity_id: sanitizeEntityId(source.entity_id || source.entityId) || null,
       p_module_key: sanitizeScalar(source.module_key || source.moduleKey || source.module, 64) || null,
       p_metadata: sanitizeMetadata(source),
     };

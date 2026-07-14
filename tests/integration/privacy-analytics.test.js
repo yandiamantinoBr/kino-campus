@@ -37,6 +37,7 @@ describe('kc-privacy-analytics.js', () => {
     const api = loadPrivacyAnalytics();
     const result = await api.track('search', {
       value: 'edital bolsa',
+      query_length_bucket: '9_16',
       email: 'nao@exportar.test',
       token: 'secret',
       href: 'https://kinocampus.com.br/eventos.html?token=secret#x',
@@ -54,12 +55,34 @@ describe('kc-privacy-analytics.js', () => {
     });
     expect(rpc.mock.calls[0][1].p_session_id).toMatch(/^pa_/);
     expect(rpc.mock.calls[0][1].p_metadata).toMatchObject({
-      value: 'edital bolsa',
-      href: 'https://kinocampus.com.br/eventos.html',
       module_key: 'eventos',
+      query_length_bucket: '9_16',
     });
+    expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('href');
+    expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('value');
     expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('email');
     expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('token');
+  });
+
+  test('nunca encaminha termo bruto em evento de busca', async () => {
+    const rpc = jest.fn(() => Promise.resolve({ data: { ok: true }, error: null }));
+    window.KCConsent = { hasConsent: jest.fn(() => true) };
+    window.KCSupabase = { getClient: () => ({ rpc }) };
+
+    const api = loadPrivacyAnalytics();
+    const result = await api.track('search', {
+      value: 'termo que nao pode sair',
+      term: 'outro termo',
+      query: 'consulta',
+      source: 'results-submit',
+      query_length_bucket: '17_32',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(rpc.mock.calls[0][1].p_metadata).toEqual({
+      source: 'results-submit',
+      query_length_bucket: '17_32',
+    });
   });
 
   test('aceita eventos agregados de anuncios sem dados sensiveis', async () => {
@@ -89,6 +112,26 @@ describe('kc-privacy-analytics.js', () => {
     });
     expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('token');
     expect(rpc.mock.calls[0][1].p_metadata).not.toHaveProperty('email');
+  });
+
+  test('descarta telefone, token longo e destino arbitrario antes da RPC', async () => {
+    const rpc = jest.fn(() => Promise.resolve({ data: { ok: true }, error: null }));
+    window.KCConsent = { hasConsent: jest.fn(() => true) };
+    window.KCSupabase = { getClient: () => ({ rpc }) };
+
+    const api = loadPrivacyAnalytics();
+    const result = await api.track('ad_click', {
+      entity_type: 'ad_campaign',
+      entity_id: '11 99999-9999',
+      entity_label: 'Contato 11 99999-9999',
+      source: 'feed_inline',
+      reason: 'A'.repeat(40),
+      href: 'javascript:alert(1)',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(rpc.mock.calls[0][1].p_entity_id).toBeNull();
+    expect(rpc.mock.calls[0][1].p_metadata).toEqual({ source: 'feed_inline' });
   });
 
   test('registra consentimento uma vez por assinatura de preferencias', async () => {

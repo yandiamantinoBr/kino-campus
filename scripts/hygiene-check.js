@@ -473,6 +473,14 @@ function runDeployInvariantChecks() {
   if (vercel.buildCommand !== 'node scripts/inject-env.js') {
     errors.push('vercel.json must keep buildCommand = node scripts/inject-env.js');
   }
+  if (vercel.outputDirectory !== 'dist') {
+    errors.push('vercel.json must publish only the isolated dist directory');
+  }
+
+  const buildScript = read('scripts/inject-env.js');
+  if (!buildScript.includes("require('./build-static-output')")) {
+    errors.push('inject-env.js must build the static public allowlist before deploy');
+  }
 
   const hasAuthCallbackRewrite = Array.isArray(vercel.rewrites) && vercel.rewrites.some((rewrite) =>
     rewrite &&

@@ -1,8 +1,9 @@
 /*
-  KinoCampus - Admin GA4 Dashboard Controller (V8.6.4)
+  KinoCampus - Admin GA4 + Search Console Dashboard Controller (V8.6.9)
 
-  Reads from Edge Function kc-ga4-reports which proxies Google Analytics 4
-  Data API. Requires admin access (profiles.is_admin = true).
+  Reads from Edge Functions kc-ga4-reports and kc-search-console-reports,
+  which proxy Google read-only APIs. Requires admin access
+  (profiles.is_admin = true).
 
   Phase 3 of GA4-AUDIT-2026-07-08.
 
@@ -13,13 +14,14 @@
   - Top pages by views
   - Module breakdown (by pagePath regex)
   - Engagement funnel (views -> shares -> contacts)
-  - Auto-refresh every 60s (paused when tab is hidden)
+  - Search Console 28-day summary, top queries and top landing pages
+  - Auto-refresh every 5 min (aligned with the server cache; paused when hidden)
 */
 
 (function () {
   'use strict';
 
-  var REFRESH_INTERVAL_MS = 60_000;
+  var REFRESH_INTERVAL_MS = 300_000;
   var MODULE_PATTERNS = [
     { key: 'eventos', label: 'Eventos', test: function (p) { return /^\/eventos\.html/.test(p); } },
     { key: 'oportunidades', label: 'Oportunidades', test: function (p) { return /^\/oportunidades\.html/.test(p); } },
@@ -107,12 +109,70 @@
     return '';
   }
 
-  async function callGa4Reports(body) {
-    var token = await getAccessToken();
+  function addProductionFilter(body, options) {
+    var filters = [{
+      filter: {
+        fieldName: 'hostName',
+        inListFilter: {
+          values: ['www.kinocampus.com.br', 'kinocampus.com.br'],
+          caseSensitive: false,
+        },
+      },
+    }];
+    if (options && options.excludeAdmin) {
+      filters.push({
+        notExpression: {
+          filter: {
+            fieldName: 'pagePath',
+            stringFilter: { value: '/admin', matchType: 'EXACT', caseSensitive: false },
+          },
+        },
+      });
+      filters.push({
+        notExpression: {
+          filter: {
+            fieldName: 'pagePath',
+            stringFilter: { value: '/admin/', matchType: 'BEGINS_WITH', caseSensitive: false },
+          },
+        },
+      });
+    }
+    if (body && body.dimensionFilter) filters.push(body.dimensionFilter);
+    return Object.assign({}, body, {
+      dimensionFilter: filters.length === 1 ? filters[0] : { andGroup: { expressions: filters } },
+    });
+  }
+
+  async function callGa4Reports(body, options, authContext) {
+    var token = authContext && authContext.token ? authContext.token : await getAccessToken();
     if (!token) throw new Error('no_session');
-    var baseUrl = getSupabaseUrl();
+    var baseUrl = authContext && authContext.baseUrl ? authContext.baseUrl : getSupabaseUrl();
     if (!baseUrl) throw new Error('no_supabase_url');
     var url = baseUrl.replace(/\/+$/, '') + '/functions/v1/kc-ga4-reports';
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(addProductionFilter(body, options)),
+    });
+    var text = await res.text();
+    var json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+    if (!res.ok) {
+      var msg = (json && (json.error || json.message)) || ('HTTP ' + res.status);
+      throw new Error(msg);
+    }
+    return json && json.data;
+  }
+
+  async function callSearchConsoleReports(body, authContext) {
+    var token = authContext && authContext.token ? authContext.token : await getAccessToken();
+    if (!token) throw createSearchConsoleError('no_session', 401, 'no_session');
+    var baseUrl = authContext && authContext.baseUrl ? authContext.baseUrl : getSupabaseUrl();
+    if (!baseUrl) throw createSearchConsoleError('no_supabase_url', 0, 'no_supabase_url');
+    var url = baseUrl.replace(/\/+$/, '') + '/functions/v1/kc-search-console-reports';
     var res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -125,10 +185,18 @@
     var json = null;
     try { json = JSON.parse(text); } catch (_) {}
     if (!res.ok) {
-      var msg = (json && (json.error || json.message)) || ('HTTP ' + res.status);
-      throw new Error(msg);
+      var code = (json && json.error) || ('http_' + res.status);
+      var msg = (json && (json.detail || json.message || json.error)) || ('HTTP ' + res.status);
+      throw createSearchConsoleError(code, res.status, msg);
     }
     return json && json.data;
+  }
+
+  function createSearchConsoleError(code, status, message) {
+    var error = new Error(message || code || 'search_console_error');
+    error.code = code || 'search_console_error';
+    error.status = status || 0;
+    return error;
   }
 
   // ── Renderers ──────────────────────────────────────────────────────────
@@ -150,6 +218,223 @@
   function setStatus(text) {
     var el = $('#ga4LastSync');
     if (el) el.textContent = text;
+  }
+
+  function setSearchConsoleState(state, text) {
+    var status = $('#searchConsoleStatus');
+    if (status) {
+      status.textContent = text;
+      status.className = 'kc-search-console-status' + (state ? ' is-' + state : '');
+    }
+    var panel = $('#searchConsolePanel');
+    if (panel) panel.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+  }
+
+  function searchConsoleMetricCard(label, value, help) {
+    return '<div class="kc-privacy-metric">' +
+      '<span>' + escapeHtml(label) + '</span>' +
+      '<strong>' + escapeHtml(value) + '</strong>' +
+      '<small>' + escapeHtml(help) + '</small>' +
+    '</div>';
+  }
+
+  function fmtSearchConsolePct(value) {
+    if (typeof value !== 'number' || !isFinite(value)) return '—';
+    return (value * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+  }
+
+  function fmtSearchConsolePosition(value) {
+    if (typeof value !== 'number' || !isFinite(value)) return '—';
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function renderSearchConsoleSummary(summary) {
+    var el = $('#searchConsoleSummary');
+    if (!el) return;
+    var loading = !!(summary && summary.loading);
+    var unavailable = !!(summary && summary.unavailable);
+    var hasData = !!(summary && summary.hasData);
+    var pending = loading ? '…' : '—';
+    var clicks = unavailable ? '—' : (loading ? pending : fmtNumber((summary && summary.clicks) || 0));
+    var impressions = unavailable ? '—' : (loading ? pending : fmtNumber((summary && summary.impressions) || 0));
+    var ctr = loading || unavailable || !hasData ? pending : fmtSearchConsolePct(summary.ctr);
+    var position = loading || unavailable || !hasData ? pending : fmtSearchConsolePosition(summary.position);
+    el.innerHTML =
+      searchConsoleMetricCard('Cliques', clicks, 'Visitas vindas da Busca Google') +
+      searchConsoleMetricCard('Impressões', impressions, 'Exibições nos resultados de busca') +
+      searchConsoleMetricCard('CTR médio', ctr, 'Cliques divididos por impressões') +
+      searchConsoleMetricCard('Posição média', position, 'Quanto menor, mais perto do topo');
+  }
+
+  function renderSearchConsoleTable(selector, rows, emptyMessage) {
+    var el = $(selector);
+    if (!el) return;
+    if (!rows || rows.length === 0) {
+      el.innerHTML = '<tr><td colspan="5" class="kc-admin-empty">' + escapeHtml(emptyMessage || 'Sem dados no período.') + '</td></tr>';
+      return;
+    }
+    el.innerHTML = rows.map(function (row) {
+      return '<tr>' +
+        '<td><code>' + escapeHtml(row.key) + '</code></td>' +
+        '<td>' + fmtNumber(row.clicks) + '</td>' +
+        '<td>' + fmtNumber(row.impressions) + '</td>' +
+        '<td>' + fmtSearchConsolePct(row.ctr) + '</td>' +
+        '<td>' + fmtSearchConsolePosition(row.position) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderSearchConsoleLoading() {
+    renderSearchConsoleSummary({ loading: true });
+    renderSearchConsoleTable('#searchConsoleQueriesBody', [], 'Carregando...');
+    renderSearchConsoleTable('#searchConsolePagesBody', [], 'Carregando...');
+  }
+
+  function renderSearchConsoleUnavailable() {
+    renderSearchConsoleSummary({ unavailable: true });
+    renderSearchConsoleTable('#searchConsoleQueriesBody', [], 'Indisponível no momento.');
+    renderSearchConsoleTable('#searchConsolePagesBody', [], 'Indisponível no momento.');
+  }
+
+  function searchConsoleDateRange(now) {
+    var end = new Date((now || new Date()).getTime());
+    end.setHours(12, 0, 0, 0);
+    end.setDate(end.getDate() - 1);
+    var start = new Date(end.getTime());
+    start.setDate(start.getDate() - 27);
+    var iso = function (date) {
+      var month = String(date.getMonth() + 1).padStart(2, '0');
+      var day = String(date.getDate()).padStart(2, '0');
+      return date.getFullYear() + '-' + month + '-' + day;
+    };
+    return { startDate: iso(start), endDate: iso(end), start: start, end: end };
+  }
+
+  function finiteNumber(value) {
+    var number = Number(value);
+    return isFinite(number) ? number : 0;
+  }
+
+  function normalizeSearchConsoleSummary(data) {
+    var rows = data && Array.isArray(data.rows) ? data.rows : [];
+    var row = rows.length > 0 ? rows[0] : null;
+    return {
+      hasData: !!row,
+      clicks: row ? finiteNumber(row.clicks) : 0,
+      impressions: row ? finiteNumber(row.impressions) : 0,
+      ctr: row ? finiteNumber(row.ctr) : 0,
+      position: row ? finiteNumber(row.position) : 0,
+    };
+  }
+
+  function normalizeSearchConsoleRows(data) {
+    var rows = data && Array.isArray(data.rows) ? data.rows : [];
+    return rows.map(function (row) {
+      return {
+        key: String(row && Array.isArray(row.keys) && row.keys[0] != null ? row.keys[0] : ''),
+        clicks: finiteNumber(row && row.clicks),
+        impressions: finiteNumber(row && row.impressions),
+        ctr: finiteNumber(row && row.ctr),
+        position: finiteNumber(row && row.position),
+      };
+    }).filter(function (row) {
+      return row.key !== '';
+    }).sort(function (a, b) {
+      return (b.clicks - a.clicks) || (b.impressions - a.impressions);
+    }).slice(0, 10);
+  }
+
+  function friendlySearchConsoleError(error) {
+    var code = error && error.code ? String(error.code) : '';
+    if (code === 'missing_config' || code === 'invalid_site_config' || code === 'search_console_not_ready') {
+      return 'Search Console ainda não está configurado neste ambiente. As métricas do GA4 continuam disponíveis normalmente.';
+    }
+    if (code === 'invalid_service_account_config' || code === 'service_account_auth_failed') {
+      return 'As credenciais do Search Console precisam ser revisadas. As métricas do GA4 não foram afetadas.';
+    }
+    if (code === 'search_console_rate_limited') {
+      return 'A cota temporária do Search Console foi atingida. Tente atualizar novamente em alguns minutos.';
+    }
+    if (code === 'no_session') {
+      return 'A sessão administrativa expirou. Entre novamente para consultar o Search Console.';
+    }
+    if ((error && error.status === 404) || code === 'http_404') {
+      return 'A integração do Search Console ainda não foi publicada neste ambiente. O GA4 continua disponível.';
+    }
+    return 'Não foi possível carregar o Search Console agora. O restante do painel continua disponível.';
+  }
+
+  async function loadSearchConsole(authContext) {
+    var range = searchConsoleDateRange(new Date());
+    try {
+      var token = authContext && authContext.token ? authContext.token : await getAccessToken();
+      if (!token) throw createSearchConsoleError('no_session', 401, 'no_session');
+      var baseUrl = authContext && authContext.baseUrl ? authContext.baseUrl : getSupabaseUrl();
+      if (!baseUrl) throw createSearchConsoleError('no_supabase_url', 0, 'no_supabase_url');
+      var requestContext = { token: token, baseUrl: baseUrl };
+      var results = await Promise.all([
+        callSearchConsoleReports({
+          action: 'searchAnalytics',
+          startDate: range.startDate,
+          endDate: range.endDate,
+          dimensions: [],
+          rowLimit: 1,
+          type: 'web',
+        }, requestContext),
+        callSearchConsoleReports({
+          action: 'searchAnalytics',
+          startDate: range.startDate,
+          endDate: range.endDate,
+          dimensions: ['query'],
+          rowLimit: 10,
+          type: 'web',
+        }, requestContext),
+        callSearchConsoleReports({
+          action: 'searchAnalytics',
+          startDate: range.startDate,
+          endDate: range.endDate,
+          dimensions: ['page'],
+          rowLimit: 10,
+          type: 'web',
+        }, requestContext),
+      ]);
+      var summary = normalizeSearchConsoleSummary(results[0]);
+      var queries = normalizeSearchConsoleRows(results[1]);
+      var pages = normalizeSearchConsoleRows(results[2]);
+      var data = {
+          range: { startDate: range.startDate, endDate: range.endDate },
+          summary: summary,
+          queries: queries,
+          pages: pages,
+      };
+      var humanStart = range.start.toLocaleDateString('pt-BR');
+      var humanEnd = range.end.toLocaleDateString('pt-BR');
+      var prefix = summary.hasData || queries.length || pages.length ? 'Atualizado' : 'Sem dados orgânicos';
+      return {
+        ok: true,
+        data: data,
+        statusText: prefix + ': ' + humanStart + ' a ' + humanEnd + '. O Google pode levar alguns dias para consolidar resultados recentes.',
+      };
+    } catch (error) {
+      console.warn('[ga4-dashboard] Search Console unavailable:', error && error.code ? error.code : 'unknown_error');
+      return {
+        ok: false,
+        data: null,
+        statusText: friendlySearchConsoleError(error),
+      };
+    }
+  }
+
+  function renderSearchConsoleSnapshot(result) {
+    if (result && result.ok && result.data) {
+      renderSearchConsoleSummary(result.data.summary);
+      renderSearchConsoleTable('#searchConsoleQueriesBody', result.data.queries, 'Sem consultas no período.');
+      renderSearchConsoleTable('#searchConsolePagesBody', result.data.pages, 'Sem páginas no período.');
+      setSearchConsoleState('ready', result.statusText);
+      return;
+    }
+    renderSearchConsoleUnavailable();
+    setSearchConsoleState('error', (result && result.statusText) || friendlySearchConsoleError());
   }
 
   function renderSummary(rows) {
@@ -189,7 +474,7 @@
         var arrow = delta >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
         deltaHtml = '<small class="' + cls + '"><i class="fas ' + arrow + '"></i> ' + fmtPct(delta) + ' vs ontem</small>';
       } else {
-        deltaHtml = '<small>vs ' + fmtNumber(prev || 0) + ' ontem</small>';
+        deltaHtml = '<small>janela móvel de 7 dias</small>';
       }
       return '<div class="kc-privacy-metric">' +
         '<span>' + escapeHtml(label) + '</span>' +
@@ -221,13 +506,14 @@
   function renderEvents(rows) {
     var el = $('#ga4EventsBody');
     if (!el) return;
-    if (!rows || rows.length === 0) {
+    var list = Array.isArray(rows) ? rows : [];
+    if (list.length === 0) {
       el.innerHTML = '<tr><td colspan="3" class="kc-admin-empty">Sem eventos customizados no período.</td></tr>';
       return;
     }
-    el.innerHTML = rows.map(function (r) {
-      var name = String(r.event || '').replace(/^kc_/, '');
-      var nameHtml = '<code>kc_' + escapeHtml(name) + '</code>';
+    el.innerHTML = list.map(function (r) {
+      var name = String(r.key || r.event || '');
+      var nameHtml = '<code>' + escapeHtml(name) + '</code>';
       return '<tr>' +
         '<td>' + nameHtml + '</td>' +
         '<td>' + fmtNumber(r.count || 0) + '</td>' +
@@ -276,6 +562,7 @@
     var s = rows.shares || 0;
     var c = rows.contacts || 0;
     var ch = rows.chats || 0;
+    var viewsLabel = rows.viewsLabel || 'Visualiza\u00e7\u00f5es de publica\u00e7\u00f5es';
     var step = function (label, n, baseN) {
       var ratio = baseN ? Math.min(100, (n / baseN) * 100) : 0;
       return '<div class="kc-funnel-step">' +
@@ -284,10 +571,10 @@
         '<span class="kc-funnel-value">' + fmtNumber(n) + '</span>' +
       '</div>';
     };
-      el.innerHTML = step('Visualizações', v, v) +
+    el.innerHTML = step(viewsLabel, v, v) +
       step('Compartilhamentos', s, v) +
       step('Cliques em contato', c, v) +
-      step('Conversas iniciadas', ch, v);
+      step('Aberturas de conversa', ch, v);
   }
 
   function fmtDuration(seconds) {
@@ -331,9 +618,11 @@
     }
     var newPct = total ? ((m.new / total) * 100).toFixed(1) : '0.0';
     var retPct = total ? ((m.returning / total) * 100).toFixed(1) : '0.0';
+    var unknownPct = total ? (((m.unknown || 0) / total) * 100).toFixed(1) : '0.0';
     el.innerHTML =
       '<tr><td><i class="fas fa-user-plus"></i> Novos</td><td>' + fmtNumber(m.new) + ' <small>(' + newPct + '%)</small></td></tr>' +
-      '<tr><td><i class="fas fa-user-check"></i> Recorrentes</td><td>' + fmtNumber(m.returning) + ' <small>(' + retPct + '%)</small></td></tr>';
+      '<tr><td><i class="fas fa-user-check"></i> Recorrentes</td><td>' + fmtNumber(m.returning) + ' <small>(' + retPct + '%)</small></td></tr>' +
+      '<tr><td><i class="fas fa-circle-question"></i> Não classificado</td><td>' + fmtNumber(m.unknown || 0) + ' <small>(' + unknownPct + '%)</small></td></tr>';
   }
 
   function renderDevices(rows) {
@@ -423,6 +712,14 @@
     return out;
   }
 
+  function sumPostPageViews(pages) {
+    return (Array.isArray(pages) ? pages : []).reduce(function (total, row) {
+      var path = String((row && row.path) || '').split(/[?#]/)[0].replace(/\/+$/, '');
+      if (!/(?:^|\/)_?product\.html$/i.test(path)) return total;
+      return total + Math.max(0, finiteNumber(row && row.views));
+    }, 0);
+  }
+
   function rowsToTrendMap(rows) {
     var out = [];
     if (!rows) return out;
@@ -465,13 +762,14 @@
   }
 
   function rowsToNewVsReturningMap(rows) {
-    var out = { new: 0, returning: 0, total: 0 };
+    var out = { new: 0, returning: 0, unknown: 0, total: 0 };
     if (!rows) return out;
     rows.forEach(function (r) {
       var dim = r.dimensionValues && r.dimensionValues[0] ? String(r.dimensionValues[0].value).toLowerCase() : '';
       var val = r.metricValues && r.metricValues[0] ? parseInt(r.metricValues[0].value, 10) || 0 : 0;
       if (dim === 'new') out.new += val;
       else if (dim === 'returning') out.returning += val;
+      else out.unknown += val;
       out.total += val;
     });
     return out;
@@ -535,10 +833,10 @@
       csv.push('step,count,conversion_pct');
       var f = snap.funnel;
       var base = f.views || 0;
-      csv.push(['Visualizações', f.views || 0, '100.0'].join(','));
+      csv.push([f.viewsLabel || 'Visualiza\u00e7\u00f5es de publica\u00e7\u00f5es', f.views || 0, '100.0'].join(','));
       csv.push(['Compartilhamentos', f.shares || 0, base ? ((f.shares / base) * 100).toFixed(1) : '0.0'].join(','));
       csv.push(['Cliques em contato', f.contacts || 0, base ? ((f.contacts / base) * 100).toFixed(1) : '0.0'].join(','));
-      csv.push(['Conversas iniciadas', f.chats || 0, base ? ((f.chats / base) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push(['Aberturas de conversa', f.chats || 0, base ? ((f.chats / base) * 100).toFixed(1) : '0.0'].join(','));
       csv.push('');
     }
 
@@ -573,9 +871,10 @@
       var n = snap.newReturning;
       csv.push('== New vs Returning (7 days) ==');
       csv.push('type,users,pct');
-      var total = (n.new || 0) + (n.returning || 0);
+      var total = n.total || ((n.new || 0) + (n.returning || 0) + (n.unknown || 0));
       csv.push(['Novos', n.new || 0, total ? ((n.new / total) * 100).toFixed(1) : '0.0'].join(','));
       csv.push(['Recorrentes', n.returning || 0, total ? ((n.returning / total) * 100).toFixed(1) : '0.0'].join(','));
+      csv.push(['Não classificado', n.unknown || 0, total ? (((n.unknown || 0) / total) * 100).toFixed(1) : '0.0'].join(','));
       csv.push('');
     }
 
@@ -595,6 +894,40 @@
       csv.push('');
     }
 
+    // Search Console (independent from GA4; omitted when not configured).
+    if (snap.searchConsole) {
+      var sc = snap.searchConsole;
+      csv.push('== Search Console summary (28 days) ==');
+      csv.push('start_date,end_date,clicks,impressions,ctr_pct,avg_position');
+      csv.push([
+        sc.range.startDate,
+        sc.range.endDate,
+        sc.summary.clicks,
+        sc.summary.impressions,
+        (sc.summary.ctr * 100).toFixed(2),
+        sc.summary.position.toFixed(2),
+      ].join(','));
+      csv.push('');
+      csv.push('== Search Console top queries (28 days) ==');
+      csv.push('query,clicks,impressions,ctr_pct,avg_position');
+      sc.queries.forEach(function (row) {
+        csv.push([
+          csvEscape(row.key), row.clicks, row.impressions,
+          (row.ctr * 100).toFixed(2), row.position.toFixed(2),
+        ].join(','));
+      });
+      csv.push('');
+      csv.push('== Search Console top pages (28 days) ==');
+      csv.push('page,clicks,impressions,ctr_pct,avg_position');
+      sc.pages.forEach(function (row) {
+        csv.push([
+          csvEscape(row.key), row.clicks, row.impressions,
+          (row.ctr * 100).toFixed(2), row.position.toFixed(2),
+        ].join(','));
+      });
+      csv.push('');
+    }
+
     // Engagement
     if (snap.engagement) {
       csv.push('== Engagement (7 days) ==');
@@ -610,13 +943,35 @@
 
   function csvEscape(v) {
     var s = String(v == null ? '' : v);
+    // Search queries are external input. Prevent spreadsheet formula
+    // execution when an administrator opens the exported CSV in Excel/Sheets.
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     if (/[,"\n]/.test(s)) return '"' + s.replaceAll('"', '""') + '"';
     return s;
   }
 
+  var dashboardLoadPromise = null;
+
+  function hasExportableSnapshot() {
+    return !!(window.__KCGa4Data && window.__KCGa4Data.loadedAt);
+  }
+
+  function setDashboardBusy(isBusy) {
+    var refreshBtn = $('#ga4RefreshButton');
+    if (refreshBtn) {
+      refreshBtn.disabled = isBusy;
+      refreshBtn.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+    }
+    var csvBtn = $('#ga4ExportCsv');
+    if (csvBtn) csvBtn.disabled = isBusy || !hasExportableSnapshot();
+    var content = $('#admin-content');
+    if (content) content.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+  }
+
   function exportCsv() {
+    if (dashboardLoadPromise) return;
     var snap = window.__KCGa4Data;
-    if (!snap || !snap.startedAt) {
+    if (!snap || !snap.loadedAt) {
       setError('Sem dados para exportar. Aguarde o carregamento inicial.');
       return;
     }
@@ -640,18 +995,49 @@
     }
   }
 
-  async function loadDashboard() {
+  function commitDashboardSnapshot(snapshot, searchConsoleResult) {
+    renderSummary(snapshot.summary);
+    renderTrend(snapshot.trend);
+    renderEvents(snapshot.events);
+    renderPages(snapshot.pages.slice(0, 10));
+    renderModuleBreakdown(snapshot.modules);
+    renderFunnel(snapshot.funnel);
+    renderEngagement(snapshot.engagement);
+    renderNewVsReturning(snapshot.newReturning);
+    renderDevices(snapshot.devices);
+    renderTrafficSources(snapshot.sources);
+    renderSearchConsoleSnapshot(searchConsoleResult);
+
+    // Publish the complete cycle once. CSV and subsequent renders never see a
+    // mixture of old GA4 blocks, new GA4 blocks, and Search Console results.
+    window.__KCGa4Data = snapshot;
+  }
+
+  async function performDashboardLoad() {
     clearError();
     setStatus('Carregando métricas...');
+    var previousSnapshot = hasExportableSnapshot() ? window.__KCGa4Data : null;
+    var snapshot = { startedAt: new Date().toISOString() };
+    var searchConsolePromise = null;
 
-    // Reset snapshot for CSV export
-    if (!window.__KCGa4Data) window.__KCGa4Data = {};
-    window.__KCGa4Data.startedAt = new Date().toISOString();
-    window.__KCGa4Data.queries = {};
+    if (!previousSnapshot) renderSearchConsoleLoading();
+    setSearchConsoleState('loading', 'Atualizando dados da Busca Google...');
 
     try {
-      // 1) Today + yesterday + 7d (single batch of 3 calls)
-      var todayRes = await callGa4Reports({
+      // Share one refreshed admin JWT across this refresh cycle. Besides being
+      // cheaper, this avoids overlapping refresh-token rotations.
+      var token = await getAccessToken();
+      if (!token) throw new Error('no_session');
+      var baseUrl = getSupabaseUrl();
+      if (!baseUrl) throw new Error('no_supabase_url');
+      var authContext = { token: token, baseUrl: baseUrl };
+      var ga4Report = function (body, options) {
+        return callGa4Reports(body, options, authContext);
+      };
+      searchConsolePromise = loadSearchConsole(authContext);
+
+      // 1) Today + yesterday + inclusive 7-day window.
+      var todayRes = await ga4Report({
         dateRanges: [{ startDate: 'today', endDate: 'today' }],
         metrics: [
           { name: 'screenPageViews' },
@@ -659,9 +1045,9 @@
           { name: 'eventCount' },
           { name: 'sessions' },
         ],
-      });
+      }, { excludeAdmin: true });
 
-      var yesterdayRes = await callGa4Reports({
+      var yesterdayRes = await ga4Report({
         dateRanges: [{ startDate: 'yesterday', endDate: 'yesterday' }],
         metrics: [
           { name: 'screenPageViews' },
@@ -669,93 +1055,89 @@
           { name: 'eventCount' },
           { name: 'sessions' },
         ],
-      });
+      }, { excludeAdmin: true });
 
-      var sevenDaysRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var sevenDaysRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         metrics: [
           { name: 'screenPageViews' },
           { name: 'totalUsers' },
           { name: 'eventCount' },
         ],
-      });
+      }, { excludeAdmin: true });
 
-      renderSummary({
-        today: rowsToMetricsMap(todayRes.rows),
-        yesterday: rowsToMetricsMap(yesterdayRes.rows),
-        sevenDays: rowsToMetricsMap(sevenDaysRes.rows),
-      });
-      window.__KCGa4Data.summary = {
+      snapshot.summary = {
         today: rowsToMetricsMap(todayRes.rows),
         yesterday: rowsToMetricsMap(yesterdayRes.rows),
         sevenDays: rowsToMetricsMap(sevenDaysRes.rows),
       };
 
       // 2) 7-day trend
-      var trendRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var trendRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'date' }],
         metrics: [{ name: 'screenPageViews' }],
         orderBys: [{ dimension: { dimensionName: 'date' } }],
-        limit: 8,
-      });
+        limit: 7,
+      }, { excludeAdmin: true });
       var trendList = rowsToTrendMap(trendRes.rows);
-      renderTrend(trendList);
-      window.__KCGa4Data.trend = trendList;
+      snapshot.trend = trendList;
 
-      // 3) Top events (filter kc_*)
-      var eventsRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      // 3) Product events (legacy kc_* + GA4 recommended names)
+      var eventsRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'eventName' }],
         metrics: [{ name: 'eventCount' }, { name: 'totalUsers' }],
         dimensionFilter: {
-          filter: {
-            fieldName: 'eventName',
-            stringFilter: { value: 'kc_', matchType: 'BEGINS_WITH' },
+          orGroup: {
+            expressions: [
+              { filter: { fieldName: 'eventName', stringFilter: { value: 'kc_', matchType: 'BEGINS_WITH' } } },
+              { filter: { fieldName: 'eventName', inListFilter: { values: ['login', 'sign_up', 'search', 'share', 'generate_lead'] } } },
+            ],
           },
         },
         orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-        limit: 20,
-      });
+        limit: 30,
+      }, { excludeAdmin: true });
       var eventsList = rowsToEventMap(eventsRes.rows);
       var eventsListArr = Object.keys(eventsList).map(function (k) { return { key: k, count: eventsList[k].count, users: eventsList[k].users }; }).sort(function (a, b) { return b.count - a.count; });
-      renderEvents(eventsList);
-      window.__KCGa4Data.events = eventsListArr;
+      snapshot.events = eventsListArr;
 
       // 4) Top pages
-      var pagesRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var pagesRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'pagePath' }],
         metrics: [{ name: 'screenPageViews' }],
         orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-        limit: 10,
-      });
+        limit: 250,
+      }, { excludeAdmin: true });
       var pagesList = rowsToPagesMap(pagesRes.rows);
-      renderPages(pagesList);
-      window.__KCGa4Data.pages = pagesList;
+      snapshot.pages = pagesList;
 
       // 5) Module breakdown
       var modulesList = aggregateModuleBreakdown(pagesList);
-      renderModuleBreakdown(modulesList);
-      window.__KCGa4Data.modules = modulesList;
+      snapshot.modules = modulesList;
 
       // 6) Funnel: views / shares / contacts / chats
       var eventMap = rowsToEventMap(eventsRes.rows);
-      var pagesMap = {};
-      pagesList.forEach(function (p) { pagesMap[p.path] = p.views; });
-      var totalViews = pagesList.reduce(function (acc, p) { return acc + (p.views || 0); }, 0);
+      var trackedPostViews = (eventMap.kc_post_view && eventMap.kc_post_view.count) || 0;
+      var fallbackPostViews = sumPostPageViews(pagesList);
+      var hasTrackedPostViews = trackedPostViews > 0;
+      var totalViews = hasTrackedPostViews ? trackedPostViews : fallbackPostViews;
       var funnelSnapshot = {
         views: totalViews,
-        shares: (eventMap.kc_share && eventMap.kc_share.count) || 0,
-        contacts: (eventMap.kc_contact_click && eventMap.kc_contact_click.count) || 0,
+        viewsLabel: hasTrackedPostViews
+          ? 'Visualiza\u00e7\u00f5es de publica\u00e7\u00f5es'
+          : 'Visualiza\u00e7\u00f5es das p\u00e1ginas de publica\u00e7\u00e3o (fallback)',
+        shares: ((eventMap.share && eventMap.share.count) || 0) + ((eventMap.kc_share && eventMap.kc_share.count) || 0),
+        contacts: ((eventMap.generate_lead && eventMap.generate_lead.count) || 0) + ((eventMap.kc_contact_click && eventMap.kc_contact_click.count) || 0),
         chats: (eventMap.kc_chat_open && eventMap.kc_chat_open.count) || 0,
       };
-      renderFunnel(funnelSnapshot);
-      window.__KCGa4Data.funnel = funnelSnapshot;
+      snapshot.funnel = funnelSnapshot;
 
       // 7) Engagement metrics (7d): avg engagement time, bounce rate, engagement rate
-      var engagementRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var engagementRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         metrics: [
           { name: 'averageSessionDuration' },
           { name: 'bounceRate' },
@@ -763,57 +1145,70 @@
           { name: 'engagedSessions' },
           { name: 'sessionsPerUser' },
         ],
-      });
+      }, { excludeAdmin: true });
       var engagementMap = rowsToEngagementMap(engagementRes.rows);
-      renderEngagement(engagementMap);
-      window.__KCGa4Data.engagement = engagementMap;
+      snapshot.engagement = engagementMap;
 
       // 8) New vs Returning users (7d)
-      var newVsReturningRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var newVsReturningRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'newVsReturning' }],
         metrics: [{ name: 'totalUsers' }],
         orderBys: [{ metric: { metricName: 'totalUsers' }, desc: true }],
         limit: 5,
-      });
+      }, { excludeAdmin: true });
       var nrMap = rowsToNewVsReturningMap(newVsReturningRes.rows);
-      renderNewVsReturning(nrMap);
-      window.__KCGa4Data.newReturning = nrMap;
+      snapshot.newReturning = nrMap;
 
       // 9) Device breakdown (7d)
-      var devicesRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var devicesRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'deviceCategory' }],
         metrics: [{ name: 'screenPageViews' }],
         orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
         limit: 10,
-      });
+      }, { excludeAdmin: true });
       var devicesList = rowsToDimensionCountMap(devicesRes.rows);
-      renderDevices(devicesList);
-      window.__KCGa4Data.devices = devicesList;
+      snapshot.devices = devicesList;
 
       // 10) Traffic sources (7d)
-      var sourcesRes = await callGa4Reports({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
+      var sourcesRes = await ga4Report({
+        dateRanges: [{ startDate: '6daysAgo', endDate: 'today' }],
         dimensions: [{ name: 'sessionDefaultChannelGroup' }],
         metrics: [{ name: 'sessions' }],
         orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
         limit: 10,
-      });
+      }, { excludeAdmin: true });
       var sourcesList = rowsToDimensionCountMap(sourcesRes.rows);
-      renderTrafficSources(sourcesList);
-      window.__KCGa4Data.sources = sourcesList;
+      snapshot.sources = sourcesList;
 
-      window.__KCGa4Data.loadedAt = new Date().toISOString();
+      var searchConsoleResult = await searchConsolePromise;
+      snapshot.searchConsole = searchConsoleResult.data;
+      snapshot.loadedAt = new Date().toISOString();
+      commitDashboardSnapshot(snapshot, searchConsoleResult);
       setStatus('Atualizado às ' + new Date().toLocaleTimeString('pt-BR'));
-      // Update button enabled state
-      var csvBtn = $('#ga4ExportCsv');
-      if (csvBtn) csvBtn.disabled = false;
+      return snapshot;
     } catch (err) {
+      if (searchConsolePromise) await searchConsolePromise;
       var msg = err && err.message ? err.message : String(err);
       setError('Falha ao carregar: ' + msg);
       setStatus('Erro às ' + new Date().toLocaleTimeString('pt-BR'));
+      if (!previousSnapshot) renderSearchConsoleUnavailable();
+      setSearchConsoleState('error', previousSnapshot
+        ? 'Atualização interrompida; os dados exibidos foram preservados.'
+        : 'Não foi possível concluir este ciclo de atualização.');
+      return previousSnapshot;
     }
+  }
+
+  function loadDashboard() {
+    if (dashboardLoadPromise) return dashboardLoadPromise;
+    setDashboardBusy(true);
+    dashboardLoadPromise = performDashboardLoad().finally(function () {
+      dashboardLoadPromise = null;
+      setDashboardBusy(false);
+    });
+    return dashboardLoadPromise;
   }
 
   // ── Bootstrap ──────────────────────────────────────────────────────────
@@ -846,7 +1241,7 @@
 
     await loadDashboard();
 
-    // Auto-refresh every 60s, paused when tab hidden
+    // Auto-refresh every 5 min, aligned with Edge cache and paused when hidden.
     function scheduleRefresh() {
       if (refreshTimer) clearInterval(refreshTimer);
       refreshTimer = setInterval(function () {

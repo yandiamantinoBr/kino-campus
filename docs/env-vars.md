@@ -92,6 +92,17 @@ Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e aut
 | `KC_NOTIFICATION_WHATSAPP_RATE_LIMIT_MAX_PER_WINDOW` | maximo de envios por usuario na janela do canal WhatsApp |
 | `KC_NOTIFICATION_DISPATCH_BATCH_LIMIT` | limite padrao de rows por execucao do dispatcher |
 | `AUTO_PUBLISH_SCORE_MIN` | limiar da barreira editorial do `cadu-publish`, entre `0` e `1`; padrao e fallback seguro `0.70` |
+| `KC_GA4_SA_KEY` | JSON da conta técnica exclusiva de runtime do GA4, com acesso somente leitura; nunca expor ao frontend |
+| `KC_GA4_PROPERTY_ID` | ID numérico fixo da propriedade GA4 consultada |
+| `KC_GA4_ALLOWED_ORIGINS` | allowlist opcional de origens HTTPS, separadas por vírgula |
+| `KC_GA4_CACHE_TTL_SEC` | TTL do cache efêmero do proxy GA4; padrão 300 segundos |
+| `KC_GA4_MAX_LIMIT` | limite operacional de linhas, sujeito ao hard cap da função |
+| `KC_SEARCH_CONSOLE_SA_KEY` | JSON de conta técnica exclusiva e separada para leitura do Search Console |
+| `KC_SEARCH_CONSOLE_SITE_URL` | propriedade fixa autorizada, por exemplo uma propriedade de domínio |
+| `KC_SEARCH_CONSOLE_ALLOWED_ORIGINS` | allowlist opcional de origens HTTPS do painel |
+| `KC_SEARCH_CONSOLE_CACHE_TTL_SEC` | TTL do cache efêmero do Search Console; padrão 300 segundos |
+| `KC_ANALYTICS_ID_SECRET` | segredo aleatório de no mínimo 32 bytes usado somente no HMAC-SHA-256 do User-ID pseudônimo |
+| `KC_ANALYTICS_ID_ALLOWED_ORIGINS` | allowlist opcional de origens HTTPS da função de User-ID |
 
 ### Edge Functions relevantes
 
@@ -100,6 +111,11 @@ Inventario versionado no repo. O estado remoto deve ser confirmado antes de qual
 - `notify-admin-reports-threshold`
 - `kc-invite-user`
 - `kc-dispatch-notification-outbox`
+- `kc-ga4-reports`
+- `kc-search-console-reports`
+- `kc-analytics-subject-id`
+
+As três integrações de medição exigem JWT no gateway e repetem a validação de autenticação no handler. GA4 e Search Console usam contas técnicas diferentes e com o menor privilégio de leitura compatível. `KC_ANALYTICS_ID_SECRET` nunca deve ser reutilizado como outra credencial; sua rotação cria novos pseudônimos e interrompe intencionalmente a continuidade histórica de User-ID.
 
 Verificação V76 (2026-06-15): `notify-admin-reports-threshold` foi publicada no projeto
 Supabase remoto (`wacyrkwhkvzwkqpolrbg`) como Edge Function `ACTIVE`, versão 1,
@@ -115,6 +131,9 @@ Para publicar ou republicar:
 supabase functions deploy notify-admin-reports-threshold
 supabase functions deploy kc-invite-user
 supabase functions deploy kc-dispatch-notification-outbox
+supabase functions deploy kc-ga4-reports
+supabase functions deploy kc-search-console-reports
+supabase functions deploy kc-analytics-subject-id
 ```
 
 ### Runtime de banco fora do git

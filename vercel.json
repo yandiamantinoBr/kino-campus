@@ -1,7 +1,12 @@
 {
   "buildCommand": "node scripts/inject-env.js",
   "installCommand": "npm ci --omit=dev --no-audit --no-fund",
-  "outputDirectory": ".",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/og-product.js": {
+      "includeFiles": "_product.html"
+    }
+  },
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/feed.xml", "destination": "/api/feed" },
@@ -14,6 +19,15 @@
     { "source": "/api/cadu/openclaw/(.+)", "destination": "/api/cadu/openclaw-router?path=$1" }
   ],
   "headers": [
+    {
+      "source": "/admin/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [

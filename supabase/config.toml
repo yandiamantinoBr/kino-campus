@@ -388,6 +388,16 @@ verify_jwt = false
 [functions.kc-invite-user]
 verify_jwt = false
 
+# Search Console reports require a valid user JWT at the gateway and repeat
+# the authorization check inside the handler to enforce profiles.is_admin.
+[functions.kc-search-console-reports]
+verify_jwt = true
+
+# Generates an HMAC User-ID after validating the caller twice. Consent gating
+# happens in the browser; the raw Supabase UUID is never returned by the server.
+[functions.kc-analytics-subject-id]
+verify_jwt = true
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

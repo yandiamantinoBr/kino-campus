@@ -337,11 +337,15 @@ Posts com maior `highlight_score` de um usuário.
 
 ---
 
-### `kc_insert_search_query(p_term text, p_session_id text, p_user_id uuid) → void`
+### `kc_ingest_search_queries(p_session_id text, p_entries jsonb) → JSONB` *(20260714121506)*
 
-Registra busca para analytics.
+Ingere um lote consentido de buscas internas. A RPC define IDs e timestamps no servidor, persiste somente hash SHA-256 da sessão, mantém `user_id` nulo e rejeita PII, URL, credencial, controle, lote inválido, duplicata curta e excesso por sessão.
 
-**Chamado em:** `kc-search.js` em cada busca realizada.
+**Chamado em:** `kc-search.js`; EXECUTE para `anon` e `authenticated`, sem INSERT direto na tabela.
+
+### `kc_admin_search_trends(...)` / `kc_admin_search_trends_classified(...)`
+
+Retornam termos agregados exclusivamente depois de validar `kc_is_admin(auth.uid())` dentro da função. Os workers privados não são executáveis por clientes.
 
 ---
 
@@ -737,7 +741,7 @@ post_votes_voter_id_idx        ON post_votes(voter_id)
 
 -- Analytics
 idx_search_queries_term    ON search_queries(term)
-idx_search_queries_user    ON search_queries(user_id, created_at)  -- v9.0.4
+idx_search_queries_session_created_at ON search_queries(session_id, created_at DESC) WHERE session_id IS NOT NULL
 
 -- Notificações (v9.1.0)
 idx_notifications_user_unread ON notifications(user_id, read) WHERE read = false

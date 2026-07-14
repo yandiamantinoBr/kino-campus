@@ -97,11 +97,11 @@
     return result;
   }
 
-  async function trackShare(postId, deps) {
+  async function trackShare(postId, method, deps) {
     if (deps === undefined) deps = {};
     var driver = getActiveDriverOrNull(deps);
     if (!driver || typeof driver.trackShare !== 'function') return { ok: false };
-    var result = await driver.trackShare(postId);
+    var result = await driver.trackShare(postId, method);
     if (result && result.ok) invalidatePostAnalyticsCache(postId, deps);
     return result;
   }

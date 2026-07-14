@@ -237,7 +237,7 @@ describe('profile.html - ordem canonica dos scripts do split', () => {
       '<script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>',
       '<script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>',
       '<script defer src="assets/js/core/kc-public-shell.js?v=8.6.2"></script>',
-      '<script defer src="assets/js/core/kc-auth.ui.js?v=8.6.1"></script>',
+      '<script defer src="assets/js/core/kc-auth.ui.js?v=8.6.2"></script>',
       '<script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>',
       '<script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>',
       '<script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>',

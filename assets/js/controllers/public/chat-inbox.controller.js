@@ -822,7 +822,10 @@
     try {
       if (window.KCEvents && typeof window.KCEvents.track === 'function') {
         var isNew = !!(r.data && r.data.is_new);
-        window.KCEvents.track('kc_chat_open', { conversation_id: convId, peer_id: otherUserId, is_new: isNew });
+        window.KCEvents.track('kc_chat_open', {
+          is_new: isNew,
+          context: 'member_to_member',
+        });
       }
     } catch (_) {}
     selectConversation(convId);
@@ -1379,6 +1382,8 @@
     var content = (input && input.value || '').trim();
     var hasFile = !!state.pendingFile;
     var replyToId = state.pendingReply ? state.pendingReply.msgId : null;
+    var sentId = null;
+    var sentMessageType = hasFile ? 'file' : 'text';
 
     if (!content && !hasFile) return;
 
@@ -1411,6 +1416,8 @@
           toast((sendMedia && sendMedia.error && sendMedia.error.message) || 'Falha ao enviar arquivo.', 'error');
           return;
         }
+        sentId = sendMedia.data && sendMedia.data.message_id;
+        sentMessageType = msgType;
         appendMessage({
           message_id: sendMedia.data.message_id,
           sender_id: state.me.id,
@@ -1432,6 +1439,7 @@
           toast(msg, 'error');
           return;
         }
+        sentId = sendTxt.data && sendTxt.data.message_id;
         appendMessage({
           message_id: sendTxt.data.message_id,
           sender_id: state.me.id,
@@ -1448,14 +1456,23 @@
       state.pendingFile = null;
       renderComposerPreview();
       updateSendBtnState();
+      try {
+        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+          window.KCEvents.track('kc_message_send', {
+            message_type: sentMessageType,
+            has_attachment: hasFile,
+            has_text: !!content,
+            is_reply: !!replyToId,
+            context: 'member_to_member',
+          });
+        }
+      } catch (_) { }
       // Cancela broadcast de "digitando..." pendente após envio
       if (state.typingBroadcastTimer) {
         clearTimeout(state.typingBroadcastTimer);
         state.typingBroadcastTimer = null;
       }
       // V76.53: se era resposta, marca reply_to_id na mensagem enviada e limpa preview
-      var sentId = hasImage ? (sendImg && sendImg.data && sendImg.data.message_id)
-                            : (sendTxt && sendTxt.data && sendTxt.data.message_id);
       if (replyToId && sentId && window.KCAPI && window.KCAPI.chat && typeof window.KCAPI.chat.setMessageReply === 'function') {
         window.KCAPI.chat.setMessageReply(sentId, replyToId).then(function (r) {
           if (r && r.ok) {

@@ -73,6 +73,26 @@
     };
   }
 
+  function shouldTrackConfirmedSignup(user) {
+    if (!user || typeof user !== 'object') return false;
+    var confirmedValue = user.email_confirmed_at || user.confirmed_at || '';
+    var createdValue = user.created_at || '';
+    var confirmedAt = Date.parse(String(confirmedValue));
+    var createdAt = Date.parse(String(createdValue));
+    var now = Date.now();
+    if (!Number.isFinite(confirmedAt) || !Number.isFinite(createdAt)) return false;
+    if (createdAt > confirmedAt || confirmedAt > (now + 2 * 60 * 1000)) return false;
+    if ((now - confirmedAt) > 15 * 60 * 1000) return false;
+
+    try {
+      var dedupeKey = 'kc_signup_conversion_v1';
+      var fingerprint = new Date(confirmedAt).toISOString();
+      if (window.sessionStorage && window.sessionStorage.getItem(dedupeKey) === fingerprint) return false;
+      if (window.sessionStorage) window.sessionStorage.setItem(dedupeKey, fingerprint);
+    } catch (_) { }
+    return true;
+  }
+
   function startRedirect(nextPath, label) {
     const countdown = $('cbCountdown');
     const progressBar = $('cbProgressBar');
@@ -274,6 +294,18 @@
           });
         }
         return;
+      }
+
+      if (authType === 'signup' && shouldTrackConfirmedSignup(user)) {
+        try {
+          if (window.KCEvents && typeof window.KCEvents.trackRecommendedOnce === 'function') {
+            window.KCEvents.trackRecommendedOnce('sign_up', { method: 'email', needs_confirmation: true });
+          } else if (window.KCEvents && typeof window.KCEvents.trackRecommended === 'function') {
+            window.KCEvents.trackRecommended('sign_up', { method: 'email', needs_confirmation: true });
+          } else if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+            window.KCEvents.track('kc_sign_up', { method: 'email', needs_confirmation: true });
+          }
+        } catch (_) { }
       }
 
       await completeAuthFlow(nextPath, 'Conta confirmada');
