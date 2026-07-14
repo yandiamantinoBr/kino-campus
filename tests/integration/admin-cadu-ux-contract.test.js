@@ -42,10 +42,10 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('data-kpi-filter="tier=1"');
   });
 
-  test('labels canonical tier metrics separately from the legacy operational context', () => {
+  test('labels canonical tier metrics separately from the operational context', () => {
     expect(html).toContain('fontes com tier efetivo 1');
     expect(html).not.toContain('pró-reitorias + alta prioridade');
-    expect(controller).toContain('Contexto legado:');
+    expect(controller).toContain('Contexto operacional:');
     expect(controller).not.toContain('> Context: ');
   });
 
@@ -170,7 +170,7 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("summary.sources, 'fontes web candidatas'");
     expect(controller).not.toContain("summary.sources, 'fontes web oficiais'");
     expect(html).toContain('Registros de entidade');
-    expect(html).toContain('perfis mapeados');
+    expect(html).toContain('<option value="instagram">Perfis Instagram</option>');
     expect(controller).toContain("summary.entitiesWithoutWebSource");
     expect(controller).toContain("'entidades sem site associado'");
     expect(controller).toContain('sem fonte web associada');

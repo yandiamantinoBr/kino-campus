@@ -53,4 +53,9 @@ describe('Cadu proxy security boundary', () => {
     expect(feed).toContain("error: 'method_not_allowed_for_cadu_feed_path'");
     expect(feed).toContain("/api/feed${subPath ? '/' + subPath : ''}");
   });
+
+  test('feed ask uses the long bounded timeout without slowing read-only listing', () => {
+    expect(feed).toContain('maxDuration: 300');
+    expect(feed).toContain("AbortSignal.timeout(routeKind === 'ask' ? 285000 : 30000)");
+  });
 });

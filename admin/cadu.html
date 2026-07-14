@@ -348,6 +348,7 @@
     .kc-cadu-publish-btn:hover { background: rgba(255,107,0,.2); border-color: rgba(255,107,0,.5); }
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
     .kc-cadu-publish-btn.is-ok { background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.4); color: #10b981; }
+    .kc-cadu-publish-btn.is-pending { background: rgba(245,158,11,.18); border-color: rgba(245,158,11,.4); color: #f59e0b; }
     .kc-cadu-publish-btn.is-err { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.4); color: #ef4444; }
     /* ===== Botão "Perguntar Cadu" (cross-tab) ===== */
     .kc-cadu-ask-btn { background: rgba(79,195,247,.10); border: 1px solid rgba(79,195,247,.32); color: #4fc3f7; border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
@@ -519,10 +520,10 @@
           <small>fontes com tier efetivo 1</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir aba Feed Coletado (memória do Cadu)" data-i18n-tooltip="tooltip.cadu-kpi-feed">
-          <div class="kc-cadu-kpi__label"><i class="fas fa-database"></i> Memória</div>
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir itens públicos coletados pelo Curador" data-i18n-tooltip="tooltip.cadu-kpi-feed">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-database"></i> Itens do Curador</div>
           <strong id="kpi-memory">—</strong>
-          <small id="kpi-memory-detail">chunks indexados</small>
+          <small id="kpi-memory-detail">itens públicos analisados</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Feed Coletado</div>
         </button>
         <div class="kc-cadu-kpi" data-kpi-tab="" title="Status do cadu-api (FastAPI sidecar) — somente leitura" data-i18n-tooltip="tooltip.cadu-kpi-api">
@@ -657,28 +658,28 @@
       <section class="kc-cadu-section" id="tab-feed" role="tabpanel" style="display:none;">
         <div class="kc-cadu-feed-help" id="feed-help-block">
           <strong><i class="fas fa-info-circle"></i> O que é o Feed Coletado?</strong>
-          <p>O <strong>Feed Coletado</strong> mostra os <em>chunks</em> da memória indexada do Cadu (OpenClaw). Ele serve para auditar o contexto que o Cadu pode consultar e perguntar sobre trechos específicos. <strong>Não é o feed público final de posts publicados</strong> no KinoCampus — para ver os posts que saíram na timeline, use a página inicial do site.</p>
+          <p>O <strong>Feed Coletado</strong> mostra somente itens públicos extraídos dos artefatos gerados pelo Curador a partir de fontes institucionais. Ele permite conferir coleta, classificação e encaminhamento editorial antes da publicação. <strong>Dados privados do agente e registros operacionais internos ficam fora deste recorte</strong>, que também não é a timeline final do KinoCampus.</p>
           <details class="kc-cadu-feed-help__details">
-            <summary>De onde vêm esses chunks? (3 fontes)</summary>
+            <summary>Como esses itens são produzidos e protegidos?</summary>
             <div class="kc-cadu-feed-help__grid">
               <div class="kc-cadu-feed-help__card">
-                <strong><i class="fas fa-gears"></i> Pipeline Cadu</strong>
-                <p>Cada estágio (curador → scanner IG → duplicatas → formatador IA → publicador → enriquecimento) deixa um registro do que coletou, deduplicou, reformatou e publicou. Os chunks aqui vêm principalmente do <em>curador</em> (sites institucionais) e do <em>scanner IG</em> (perfis mapeados, ainda sujeitos à validação de ownership).</p>
+                <strong><i class="fas fa-building-columns"></i> Fontes institucionais</strong>
+                <p>O Curador consulta sites e perfis oficiais habilitados pelo catálogo canônico. Cada item mantém o link público de origem e a identificação da entidade para permitir verificação editorial.</p>
                 <small>A versão e o script ativos são informados pelo preflight do cadu-api; o painel não presume uma versão fixa do curador.</small>
               </div>
               <div class="kc-cadu-feed-help__card">
-                <strong><i class="fas fa-robot"></i> Formatação por IA</strong>
-                <p>O <em>formatador IA</em> usa o provedor e os fallbacks ativos no OpenClaw para reescrever cada item coletado em um post pronto para revisão, com título, descrição, tags e chamada para ação. O modelo efetivo deve ser conferido na telemetria da execução, sem presumir uma versão fixa.</p>
-                <small>Saída do <code>formatador-ia.js</code> e telemetria registrada pela pipeline.</small>
+                <strong><i class="fas fa-filter-circle-check"></i> Curadoria e qualidade</strong>
+                <p>Os artefatos separam itens publicáveis, revisáveis e descartados. Esta aba apresenta apenas campos editoriais públicos e ajuda a identificar quando a última coleta ficou desatualizada.</p>
+                <small>Recarregar consulta os artefatos existentes; uma nova coleta só é iniciada pela Pipeline.</small>
               </div>
               <div class="kc-cadu-feed-help__card">
-                <strong><i class="fab fa-telegram"></i> Telegram</strong>
-                <p>Quando alguém pede algo pelo bot do Telegram (Yan ou admin), o Cadu responde usando o mesmo contexto. As mensagens mais relevantes ficam persistidas como chunks para que o Cadu "lembre" depois. Útil pra auditar decisões ou pedir follow-up.</p>
-                <small>Saída do canal Telegram do Cadu (bot <code>@cadu_ufg_bot</code>).</small>
+                <strong><i class="fas fa-shield-halved"></i> Recorte público</strong>
+                <p>O cadu-api aplica uma lista explícita de campos permitidos. Conteúdo de sessões, credenciais, histórico privado e dados operacionais internos ficam fora deste feed.</p>
+                <small>Origem esperada: artefatos públicos do Curador, em modo somente leitura nesta aba.</small>
               </div>
             </div>
           </details>
-          <p class="kc-cadu-feed-help__tip"><i class="fas fa-lightbulb"></i> <strong>Dica:</strong> use o botão <i class="fas fa-robot"></i> <em>Perguntar Cadu</em> em qualquer chunk para abrir a aba OpenClaw e fazer uma pergunta específica sobre aquele trecho — a sessão fica preservada.</p>
+          <p class="kc-cadu-feed-help__tip"><i class="fas fa-lightbulb"></i> <strong>Dica:</strong> use <i class="fas fa-robot"></i> <em>Perguntar Cadu</em> para analisar um item público específico. A sessão escolhida no OpenClaw permanece fixada até você desafixá-la.</p>
         </div>
         <div class="kc-cadu-feed-diagnostics" id="feed-diagnostics-card">
           <div class="kc-cadu-feed-diagnostics__head">
@@ -696,11 +697,11 @@
           </div>
         </div>
         <div id="feed-freshness-status" class="kc-cadu-feed-freshness" role="status" aria-live="polite">
-          <span><i class="fas fa-clock"></i> Conferindo a atualização mais recente do índice…</span>
+          <span><i class="fas fa-clock"></i> Conferindo o artefato público mais recente do Curador…</span>
           <button type="button" id="feed-open-pipeline-btn" class="kc-btn-secondary"><i class="fas fa-gears"></i> Abrir pipeline</button>
         </div>
         <div class="kc-cadu-toolbar">
-          <input id="feed-search" type="search" autocomplete="off" placeholder="Filtrar por conteúdo do chunk" data-i18n-placeholder="placeholder.cadu-feed-search" aria-label="Filtrar feed" data-i18n-aria-label="aria-label.cadu-feed-search">
+          <input id="feed-search" type="search" autocomplete="off" placeholder="Filtrar por título, fonte ou conteúdo público" data-i18n-placeholder="placeholder.cadu-feed-search" aria-label="Filtrar feed" data-i18n-aria-label="aria-label.cadu-feed-search">
           <select id="feed-limit" aria-label="Limite" data-i18n-aria-label="aria-label.cadu-feed-limit">
             <option value="25">25 itens</option>
             <option value="50">50 itens</option>
@@ -772,8 +773,8 @@
               </button>
             </div>
             <p class="kc-cadu-empty-sub">
-              Envia mensagem direta para o agente. Cadu responde usando as skills disponíveis no OpenClaw.
-              <br>Última sessão: <code id="openclaw-last-session">—</code>
+              Envia mensagem direta para o agente. Por padrão, não anexa o mapa/pipeline e não encaminha a resposta para canais externos.
+              <br>Sessão do próximo envio: <code id="openclaw-last-session">—</code>
             </p>
             <div id="openclaw-chat-log" class="kc-openclaw-chat-log" aria-live="polite">
               <div class="kc-cadu-empty">Sem mensagens ainda. Envia algo abaixo.</div>
@@ -783,11 +784,18 @@
                 placeholder="Ex: 'Quais posts do IG da UFG foram publicados hoje?' ou 'Sincroniza o SIGAA'…" data-i18n-placeholder="placeholder.cadu-openclaw-input"></textarea>
               <div class="kc-openclaw-chat-form-row">
                 <label>
-                  <input type="checkbox" id="openclaw-chat-deliver">
-                  Enviar resposta também pelo Telegram
+                  <input type="checkbox" id="openclaw-chat-context">
+                  Incluir contexto operacional (pipeline e tiers)
+                </label>
+                <label>
+                  <input type="checkbox" id="openclaw-chat-deliver" disabled>
+                  Responder somente neste painel
                 </label>
                 <button type="submit" id="openclaw-chat-send-btn" class="kc-btn-primary">
                   <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+                <button type="button" id="openclaw-chat-retry-btn" class="kc-btn-secondary" hidden>
+                  <i class="fas fa-rotate-right"></i> Tentar novamente
                 </button>
               </div>
               <div class="kc-openclaw-chat-status" id="openclaw-chat-status"></div>
@@ -883,6 +891,6 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=f9059e88ac04e1c0"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=dd7f9a1705165f5a"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=f169a98845c50eb3"></script>
 </body>
 </html>

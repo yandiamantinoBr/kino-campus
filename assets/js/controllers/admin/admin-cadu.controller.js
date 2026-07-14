@@ -16,6 +16,8 @@
   var PIPELINE_SNAPSHOT_TTL_MS = 15000;
   var OPENCLAW_POLL_INTERVAL_MS = 60000;
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
+  var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
+  var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
 
   var state = {
     allSites: [],
@@ -37,6 +39,7 @@
     feedTotal: 0,
     feedHasMore: false,
     feedLatestAt: null,
+    feedMeta: null,
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
     sitesFilter: { q: '', tier: '', ig: '' },
@@ -355,7 +358,7 @@
             state.openclawContext = ctx;
             if (contextPill) {
               contextPill.style.display = '';
-              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto legado: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' chunks · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
+              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
             }
           } else {
             state.openclawContext = null;
@@ -1203,6 +1206,29 @@
   // Publish (sugerir um site pra aparecer no feed KinoCampus)
   // ============================================================
 
+  function normalizePublishOutcome(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.ok !== true ||
+        typeof data.published !== 'boolean' ||
+        ['published', 'pending', 'notified_for_review'].indexOf(data.status) < 0) {
+      throw new Error('O backend não confirmou o contrato de publicação.');
+    }
+    var via = String(data.published_via || '').trim();
+    var code = String(data.code || '').trim();
+    var notificationOnly = data.status === 'notified_for_review' || /telegram|notifi/i.test(via);
+    if (data.published === true && data.status === 'published' && !notificationOnly) {
+      return { kind: 'published', via: via, code: code };
+    }
+    if (data.published === false && data.status === 'pending' && !notificationOnly) {
+      return { kind: 'pending', via: via, code: code };
+    }
+    if (data.published === false && notificationOnly) {
+      return { kind: 'notified', via: via, code: code };
+    }
+    // Fail closed when flags disagree: an ok=true envelope is not evidence
+    // that a post actually reached the KinoCampus feed.
+    throw new Error('O backend retornou um estado de publicação inconsistente.');
+  }
+
   async function publishSite(site) {
     if (state.catalogMode !== 'legacy-writable' || (site && (site.sourceId || site.source_id))) {
       showCaduError('Publicação bloqueada: o catálogo canônico está em shadow ou o fallback legado está em modo somente leitura.');
@@ -1229,23 +1255,31 @@
         body: JSON.stringify({ name: site.name, url: publishUrl, instagram: site.instagram, note: site.note, tier: site.tier, category: site.category, source: 'cadu-admin' })
       });
       if (data && data.__error) throw new Error((data.data && (data.data.message || data.data.error)) || ('status ' + data.status));
+      var outcome = normalizePublishOutcome(data);
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check"></i>';
-        btn.classList.add('is-ok');
+        btn.classList.remove('is-ok', 'is-pending', 'is-err');
+        btn.innerHTML = outcome.kind === 'published'
+          ? '<i class="fas fa-check"></i>'
+          : (outcome.kind === 'pending' ? '<i class="fas fa-clock"></i>' : '<i class="fas fa-bell"></i>');
+        btn.classList.add(outcome.kind === 'published' ? 'is-ok' : 'is-pending');
         setTimeout(function () {
           btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-          btn.classList.remove('is-ok');
+          btn.classList.remove('is-ok', 'is-pending');
         }, 2500);
       }
-      var msg = (data && data.message) ? data.message : 'OK';
-      var via = (data && data.published_via) ? ' (' + data.published_via + ')' : '';
-      showCaduError(msg + (via ? ' — via: ' + via.replace(/[()]/g, '') : ''));
+      var msg = outcome.kind === 'published'
+        ? 'Publicação confirmada no KinoCampus.'
+        : (outcome.kind === 'pending'
+          ? 'Item recebido e pendente de publicação/revisão; ainda não foi publicado.'
+          : 'Revisão notificada; a notificação não equivale a publicação no KinoCampus.');
+      showCaduError(msg + (outcome.via ? ' Via: ' + outcome.via + '.' : '') + (outcome.code ? ' Código: ' + outcome.code + '.' : ''));
       setTimeout(hideCaduError, 6000);
     } catch (err) {
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i>';
+        btn.classList.remove('is-ok', 'is-pending');
         btn.classList.add('is-err');
         setTimeout(function () {
           btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
@@ -1296,6 +1330,58 @@
     }, null);
   }
 
+  function normalizePublicFeedItem(item) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+    var chunkId = String(item.chunk_id || '');
+    var status = String(item.status || '');
+    if (!/^[a-f0-9]{16}$/i.test(chunkId) || ['publicável', 'revisão'].indexOf(status) < 0) return null;
+    function bounded(value, max) {
+      var text = String(value == null ? '' : value);
+      return text.length <= max ? text : text.slice(0, max);
+    }
+    var rawUrl = String(item.url || '').trim();
+    var url = /^https:\/\//i.test(rawUrl) ? rawUrl : '';
+    return {
+      chunk_id: chunkId,
+      file_path: bounded(item.file_path, 300),
+      heading: bounded(item.heading, 500),
+      snippet: bounded(item.snippet, 5000),
+      created_at: item.created_at,
+      url: url,
+      site: bounded(item.site, 240),
+      category: bounded(item.category, 120),
+      status: status,
+      artifact: bounded(item.artifact, 240),
+    };
+  }
+
+  function normalizePublicFeedResponse(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data) ||
+        data.source !== 'curator_artifacts' || data.privacy !== 'public_only' ||
+        data.legacy_memory_feed_retired !== true || !Array.isArray(data.items)) {
+      throw new Error('O cadu-api não confirmou o contrato de feed público do Curador; itens foram ocultados por segurança.');
+    }
+    var items = data.items.map(normalizePublicFeedItem).filter(Boolean);
+    var total = Number(data.total);
+    var latestCollectionAt = feedTimestampMs(data.latest_collection_at);
+    return {
+      items: items,
+      total: Number.isSafeInteger(total) && total >= items.length ? total : items.length,
+      hasMore: data.has_more === true,
+      meta: {
+        source: data.source,
+        privacy: data.privacy,
+        status: ['ready', 'degraded', 'unavailable'].indexOf(data.status) >= 0 ? data.status : 'unavailable',
+        stale: data.stale === true,
+        latestCollectionAt: latestCollectionAt,
+        ageSeconds: Number.isFinite(Number(data.age_seconds)) && Number(data.age_seconds) >= 0 ? Number(data.age_seconds) : null,
+        artifactsScanned: Number.isSafeInteger(Number(data.artifacts_scanned)) ? Number(data.artifacts_scanned) : 0,
+        invalidArtifacts: Number.isSafeInteger(Number(data.invalid_artifacts)) ? Number(data.invalid_artifacts) : 0,
+        futureTimestamps: Number.isSafeInteger(Number(data.future_timestamps)) ? Number(data.future_timestamps) : 0,
+      },
+    };
+  }
+
   function renderFeedFreshness(error) {
     var box = $('#feed-freshness-status');
     if (!box) return;
@@ -1303,17 +1389,26 @@
     var copy = '';
     if (error) {
       box.classList.add('is-error');
-      copy = '<strong>Não foi possível conferir a sincronização.</strong> A consulta ao índice falhou; nenhuma coleta foi iniciada.';
+      copy = '<strong>Não foi possível conferir a coleta.</strong> A consulta aos artefatos públicos falhou; nenhuma coleta foi iniciada.';
+    } else if (state.feedMeta && state.feedMeta.status === 'unavailable') {
+      box.classList.add('is-error');
+      copy = '<strong>Coleta pública indisponível.</strong> O cadu-api não encontrou artefatos válidos do Curador; recarregar não inicia uma nova coleta.';
     } else if (!state.feedLatestAt) {
       box.classList.add('is-stale');
-      copy = '<strong>Índice sem data recente.</strong> Recarregar apenas consulta o cadu-api; para coletar novos dados, abra a pipeline.';
+      copy = '<strong>Nenhum artefato público válido foi encontrado.</strong> Recarregar apenas consulta o cadu-api; para coletar novos dados, abra a pipeline.';
     } else {
-      var ageMs = Math.max(0, Date.now() - state.feedLatestAt);
-      var stale = ageMs > FEED_STALE_AFTER_MS;
-      box.classList.add(stale ? 'is-stale' : 'is-fresh');
-      copy = '<strong>' + (stale ? 'Feed possivelmente desatualizado.' : 'Feed atualizado recentemente.') + '</strong> ' +
-        'Chunk mais recente: ' + escapeHtml(new Date(state.feedLatestAt).toLocaleString('pt-BR')) +
-        ' (' + escapeHtml(fmtAgeMs(ageMs)) + '). Recarregar consulta o índice; a coleta é executada pela pipeline.';
+      var meta = state.feedMeta || {};
+      var ageMs = meta.ageSeconds == null
+        ? Math.max(0, Date.now() - state.feedLatestAt)
+        : meta.ageSeconds * 1000;
+      var stale = meta.stale === true || meta.status === 'degraded' || ageMs > FEED_STALE_AFTER_MS;
+      var unavailable = meta.status === 'unavailable';
+      box.classList.add(unavailable ? 'is-error' : (stale ? 'is-stale' : 'is-fresh'));
+      copy = '<strong>' + (unavailable ? 'Coleta pública indisponível.' : (stale ? 'Coleta do Curador desatualizada.' : 'Coleta do Curador atualizada.')) + '</strong> ' +
+        'Última coleta: ' + escapeHtml(new Date(state.feedLatestAt).toLocaleString('pt-BR')) +
+        ' (' + escapeHtml(fmtAgeMs(ageMs)) + '). Recarregar consulta os artefatos; a coleta é executada pela pipeline.' +
+        (meta.invalidArtifacts ? ' ' + escapeHtml(meta.invalidArtifacts) + ' artefato(s) inválido(s) foram ignorados.' : '') +
+        (meta.futureTimestamps ? ' ' + escapeHtml(meta.futureTimestamps) + ' data(s) futura(s) foram rejeitadas.' : '');
     }
     var button = '<button type="button" id="feed-open-pipeline-btn" class="kc-btn-secondary"><i class="fas fa-gears"></i> Abrir pipeline</button>';
     box.innerHTML = '<span><i class="fas fa-clock"></i> ' + copy + '</span>' + button;
@@ -1327,6 +1422,8 @@
       state.feedPage = 0;
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Carregando…</div>';
       state.allFeedItems = [];
+      state.feedMeta = null;
+      state.feedLatestAt = null;
     }
     var limit = state.feedLimit || FEED_PAGE_SIZE;
     var shouldAppend = typeof appendPage === 'number';
@@ -1338,14 +1435,16 @@
         timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS
       });
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
-      var items = Array.isArray(data) ? data : (data.items || data.body || []);
+      var feed = normalizePublicFeedResponse(data);
+      var items = feed.items;
       state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
-      state.feedLatestAt = newestFeedTimestamp(state.allFeedItems);
-      state.feedTotal = Array.isArray(data) ? Math.max(offset + items.length, state.allFeedItems.length) : (data.total || state.allFeedItems.length);
-      state.feedHasMore = Array.isArray(data) ? items.length >= limit : !!data.has_more;
+      state.feedMeta = feed.meta;
+      state.feedLatestAt = feed.meta.latestCollectionAt || newestFeedTimestamp(state.allFeedItems);
+      state.feedTotal = feed.total;
+      state.feedHasMore = feed.hasMore;
       $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
       $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
-      $('#kpi-memory-detail').textContent = 'memória indexada do Cadu; página ' + (state.feedPage + 1);
+      $('#kpi-memory-detail').textContent = 'itens públicos do Curador; página ' + (state.feedPage + 1);
       renderFeedFreshness(null);
       applyFeedFilter();
     } catch (err) {
@@ -1360,7 +1459,8 @@
     var q = (state.feedFilter.q || '').toLowerCase().trim();
     var items = q
       ? state.allFeedItems.filter(function (it) {
-          var hay = ((it.snippet || '') + ' ' + (it.heading || '') + ' ' + (it.chunk_id || '') + ' ' + (it.file_path || '')).toLowerCase();
+          var hay = ((it.snippet || '') + ' ' + (it.heading || '') + ' ' + (it.chunk_id || '') + ' ' +
+            (it.site || '') + ' ' + (it.category || '') + ' ' + (it.status || '') + ' ' + (it.artifact || '')).toLowerCase();
           return hay.indexOf(q) !== -1;
         })
       : state.allFeedItems;
@@ -1376,12 +1476,18 @@
       var dt = fmtDate(it.created_at);
       var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : 'sem id';
       var snippet = it.snippet || '(sem conteúdo)';
-      var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml((it.heading || '').replace(/"/g, '&quot;')) + '" data-ask-snippet="' + escapeHtml(String(snippet).slice(0, 900)) + '" title="Enviar esse chunk para o chat Cadu na aba OpenClaw"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
+      var sourceLink = it.url
+        ? '<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square"></i> Fonte oficial</a>'
+        : '';
+      var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml((it.heading || '').replace(/"/g, '&quot;')) + '" data-ask-snippet="' + escapeHtml(String(snippet).slice(0, 900)) + '" title="Perguntar ao Cadu sobre este item público"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
       return '<article class="kc-cadu-feed-item">'
         + '<div class="kc-cadu-feed-item__head">'
         + '<i class="fas fa-hashtag"></i><code>' + escapeHtml(hash) + '</code>'
         + '<span>-</span><span>' + heading + '</span>'
         + '<span>-</span><span><i class="far fa-clock"></i> ' + dt + '</span>'
+        + (it.site ? '<span>-</span><span><i class="fas fa-building-columns"></i> ' + escapeHtml(it.site) + '</span>' : '')
+        + '<span class="kc-cadu-feed-diagnostics__chip">' + escapeHtml(it.status) + '</span>'
+        + (sourceLink ? '<span>' + sourceLink + '</span>' : '')
         + '<span style="margin-left:auto;">' + askBtn + '</span>'
         + '</div>'
         + '<pre class="kc-cadu-feed-item__snippet">' + escapeHtml(snippet) + '</pre>'
@@ -1404,8 +1510,8 @@
     var end = state.feedPage * limit + state.allFeedItems.length;
     var visible = filteredCount == null ? state.allFeedItems.length : filteredCount;
     var statusText = state.feedTotal
-      ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' chunks' + (visible !== state.allFeedItems.length ? ' (' + visible + ' após filtro)' : ''))
-      : ('Mostrando ' + visible + ' chunks');
+      ? ('Mostrando ' + start + '-' + end + ' de ' + state.feedTotal + ' itens públicos' + (visible !== state.allFeedItems.length ? ' (' + visible + ' após filtro)' : ''))
+      : ('Mostrando ' + visible + ' itens públicos');
     if (status) status.textContent = statusText;
     if (statusB) statusB.textContent = statusText;
     var prevDisabled = state.feedPage <= 0;
@@ -1565,10 +1671,15 @@
   var openclawState = {
     lastSessionId: null,
     selectedSession: null,
+    pinnedSessionId: null,
+    latestDirectSessionId: null,
     chatFocused: false,
     busy: false,
     refreshPromise: null,
     lastRefreshStartedAt: 0,
+    nextRefreshAt: 0,
+    refreshFailures: 0,
+    retryRequest: null,
   };
 
   function fmtAgeMs(ms) {
@@ -1587,6 +1698,67 @@
 
   function getOpenclawSessionId(session) {
     return session ? String(session.sessionId || session.session_id || session.id || '') : '';
+  }
+
+  function parseOpenclawCommandJson(command) {
+    if (!command || command.ok !== true) return null;
+    var value = command.data != null ? command.data : (command.result != null ? command.result : command.json);
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (_) { value = null; }
+    }
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    if (typeof command.stdout === 'string' && command.stdout.trim()) {
+      try {
+        var parsed = JSON.parse(command.stdout);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  function openclawTelegramHealth(healthCommand) {
+    var health = parseOpenclawCommandJson(healthCommand);
+    var nodes = [];
+    function visit(value, telegramBranch, depth) {
+      if (!value || typeof value !== 'object' || depth > 8) return;
+      var ownIdentity = !Array.isArray(value) && /telegram/i.test(String(value.id || value.channel || value.name || value.label || ''));
+      var branch = telegramBranch || ownIdentity;
+      if (branch && !Array.isArray(value)) nodes.push(value);
+      Object.keys(value).forEach(function (key) {
+        var child = value[key];
+        var isTelegram = branch || /telegram/i.test(key);
+        if (child && typeof child === 'object') visit(child, isTelegram, depth + 1);
+      });
+    }
+    if (health) visit(health, false, 0);
+    function hasTrue(keys) {
+      return nodes.some(function (node) {
+        return keys.some(function (key) { return node[key] === true; });
+      });
+    }
+    function hasState(values) {
+      return nodes.some(function (node) {
+        var stateValue = String(node.status || node.state || '').toLowerCase();
+        return values.indexOf(stateValue) >= 0;
+      });
+    }
+    var connected = hasTrue(['connected', 'running', 'healthy', 'active']) ||
+      nodes.some(function (node) { return node.probe && node.probe.ok === true; }) ||
+      hasState(['connected', 'running', 'healthy', 'ok', 'ready']);
+    var configured = connected || hasTrue(['configured', 'enabled']) || hasState(['configured', 'enabled']);
+    var text = healthCommand && healthCommand.ok === true && typeof healthCommand.stdout === 'string'
+      ? healthCommand.stdout : '';
+    if (!nodes.length && text) {
+      connected = /Telegram[^\n]*(?:connected|healthy|running|\bok\b)/i.test(text);
+      configured = connected || /Telegram[^\n]*(?:configured|enabled)/i.test(text);
+    }
+    var errors = nodes.map(function (node) { return node.lastError || node.error || ''; }).filter(Boolean);
+    return {
+      connected: connected,
+      configured: configured,
+      structured: !!nodes.length,
+      detail: errors.length ? String(errors[0]).slice(0, 160) : '',
+    };
   }
 
   function setOpenclawActionStatus(message, kind) {
@@ -1672,10 +1844,11 @@
     }
     var pct = session.percentUsed != null ? escapeHtml(String(session.percentUsed)) + '% do contexto' : 'contexto n/d';
     var age = fmtAgeMs(session.ageMs || (session.age ? session.age * 1000 : 0));
+    var pinned = openclawState.pinnedSessionId === sid;
     box.hidden = false;
     box.innerHTML =
-      '<div class="kc-openclaw-session-detail__title"><i class="fas fa-circle-info"></i> Sessão selecionada: <code>' + escapeHtml(fmtSessionId(sid)) + '</code></div>' +
-      '<div>O próximo envio do chat incluirá <code>session_id=' + escapeHtml(sid) + '</code>, permitindo continuar o contexto salvo pelo OpenClaw quando a sessão ainda existir no agente.</div>' +
+      '<div class="kc-openclaw-session-detail__title"><i class="fas fa-' + (pinned ? 'thumbtack' : 'circle-info') + '"></i> Sessão ' + (pinned ? 'fixada' : 'selecionada') + ': <code>' + escapeHtml(fmtSessionId(sid)) + '</code></div>' +
+      '<div>O próximo envio do chat incluirá <code>session_id=' + escapeHtml(sid) + '</code>. Atualizações automáticas não substituem uma sessão fixada.</div>' +
       '<div class="kc-openclaw-session-detail__meta">' +
         '<span>' + escapeHtml(session.kind || 'tipo n/d') + '</span>' +
         '<span>' + escapeHtml(session.model || 'modelo n/d') + '</span>' +
@@ -1687,14 +1860,13 @@
         '<button type="button" id="openclaw-session-chat-btn" class="kc-btn-secondary"><i class="fas fa-comments"></i> Usar no chat</button>' +
         '<button type="button" id="openclaw-session-resume-btn" class="kc-btn-secondary"><i class="fas fa-rotate-right"></i> Continuar sessão</button>' +
         '<button type="button" id="openclaw-session-logs-btn" class="kc-btn-secondary"><i class="fas fa-file-lines"></i> Ver logs desta sessão</button>' +
+        (pinned ? '<button type="button" id="openclaw-session-unpin-btn" class="kc-btn-secondary"><i class="fas fa-link-slash"></i> Desafixar</button>' : '') +
       '</div>';
   }
 
   function openclawStatusData(statusResponse) {
     var command = statusResponse && statusResponse.status;
-    if (!command || command.ok !== true) return null;
-    var data = command.data || command.result || command;
-    return data && typeof data === 'object' && !Array.isArray(data) ? data : null;
+    return parseOpenclawCommandJson(command);
   }
 
   function renderOpenclawUnavailable(reason) {
@@ -1709,6 +1881,91 @@
     if (tgEl) tgEl.innerHTML = '<i class="fas fa-circle-question"></i> não confirmado';
     if (tgEl) tgEl.style.color = '#f59e0b';
     if (tgHint) tgHint.textContent = 'aguardando health válido do Gateway';
+  }
+
+  function renderOpenclawSessions(sessions) {
+    var sessList = $('#openclaw-sessions-list');
+    if (!sessList) return;
+    sessions = Array.isArray(sessions) ? sessions : [];
+    var lastDirect = sessions.find(function (session) { return session && session.kind === 'direct' && getOpenclawSessionId(session); });
+    openclawState.latestDirectSessionId = lastDirect ? getOpenclawSessionId(lastDirect) : null;
+
+    if (openclawState.pinnedSessionId) {
+      openclawState.lastSessionId = openclawState.pinnedSessionId;
+    } else if (!openclawState.busy && openclawState.latestDirectSessionId) {
+      openclawState.lastSessionId = openclawState.latestDirectSessionId;
+    }
+    var selectedLabel = $('#openclaw-last-session');
+    if (selectedLabel) selectedLabel.textContent = fmtSessionId(openclawState.lastSessionId);
+
+    if (!sessions.length) {
+      sessList.innerHTML = openclawState.pinnedSessionId
+        ? '<div class="kc-cadu-empty">Nenhuma sessão recente foi retornada. A sessão fixada foi preservada.</div>'
+        : '<div class="kc-cadu-empty">Nenhuma sessão recente.</div>';
+      if (openclawState.pinnedSessionId && openclawState.selectedSession) {
+        renderOpenclawSessionDetail(openclawState.selectedSession);
+      } else if (!openclawState.busy) {
+        renderOpenclawSessionDetail(null);
+      }
+      return;
+    }
+
+    var selectedId = openclawState.pinnedSessionId || getOpenclawSessionId(openclawState.selectedSession);
+    sessList.innerHTML = sessions.map(function (session) {
+      var kindIcon = session.kind === 'cron' ? 'fa-clock' : (session.kind === 'direct' ? 'fa-comments' : 'fa-circle');
+      var pct = session.percentUsed != null ? (' · ' + session.percentUsed + '% ctx') : '';
+      var sessionId = getOpenclawSessionId(session);
+      var selectedClass = selectedId && selectedId === sessionId ? ' is-selected' : '';
+      return '<div class="kc-openclaw-list-item' + selectedClass + '" data-session-id="' + escapeHtml(sessionId) + '">' +
+        '<div class="kc-openclaw-list-item__title"><i class="fas ' + kindIcon + '"></i> ' +
+        escapeHtml(session.kind || '?') + ' · ' + escapeHtml((session.model || '?').toString()) + '</div>' +
+        '<div class="kc-openclaw-list-item__meta">' +
+        escapeHtml((session.key || '').slice(0, 60)) +
+        ' · ' + fmtAgeMs(session.ageMs || (session.age ? session.age * 1000 : 0)) +
+        pct +
+        '</div></div>';
+    }).join('');
+
+    $$('.kc-openclaw-list-item', sessList).forEach(function (item, idx) {
+      var session = sessions[idx] || {};
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-pressed', item.classList.contains('is-selected') ? 'true' : 'false');
+      item.setAttribute('title', 'Fixar sessão para o próximo envio e ver detalhes');
+      function selectSession() {
+        if (openclawState.busy) {
+          setOpenclawActionStatus('Aguarde o envio atual terminar antes de trocar a sessão fixada.', 'loading');
+          return;
+        }
+        var sid = getOpenclawSessionId(session);
+        if (!sid) return;
+        openclawState.lastSessionId = sid;
+        openclawState.pinnedSessionId = sid;
+        openclawState.selectedSession = session;
+        var selected = $('#openclaw-last-session');
+        if (selected) selected.textContent = fmtSessionId(sid);
+        var chatStatus = $('#openclaw-chat-status');
+        if (chatStatus) chatStatus.textContent = 'Sessão fixada para o próximo envio: ' + fmtSessionId(sid);
+        setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(sid)) + '</code> fixada. Atualizações automáticas não trocarão essa seleção.', 'ok');
+        renderOpenclawSessionDetail(session);
+        $$('.kc-openclaw-list-item', sessList).forEach(function (element) {
+          var isSelected = element === item;
+          element.classList.toggle('is-selected', isSelected);
+          element.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        });
+      }
+      item.addEventListener('click', selectSession);
+      item.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectSession();
+        }
+      });
+    });
+
+    if (openclawState.pinnedSessionId && openclawState.selectedSession) {
+      renderOpenclawSessionDetail(openclawState.selectedSession);
+    }
   }
 
   async function performOpenclawRefresh() {
@@ -1727,12 +1984,12 @@
       var statusResp = await apiFetch('/api/cadu/openclaw/status', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
       if (!statusResp || statusResp.__error) {
         renderOpenclawUnavailable(statusResp && statusResp.status ? 'cadu-api respondeu HTTP ' + statusResp.status : 'erro de comunicação com o cadu-api');
-        return;
+        return { ok: false };
       }
       var rawData = openclawStatusData(statusResp);
       if (!rawData) {
         renderOpenclawUnavailable('comando de status do OpenClaw falhou ou não comprovou ok=true');
-        return;
+        return { ok: false };
       }
       var agents = rawData.agents && rawData.agents.agents ? rawData.agents.agents : [];
       var defaultAgent = (rawData.heartbeat && rawData.heartbeat.defaultAgentId) || (rawData.agents && rawData.agents.defaultId) || 'main';
@@ -1766,9 +2023,9 @@
 
       // 2. Health (heartbeat, telegram)
       var healthCommand = statusResp.health;
-      var healthText = healthCommand && healthCommand.ok === true && healthCommand.stdout ? healthCommand.stdout : '';
-      var tgConnected = /Telegram[^\n]*(?:connected|healthy|\bok\b)/i.test(healthText);
-      var tgConfigured = tgConnected || /Telegram[^\n]*configured/i.test(healthText);
+      var telegramHealth = openclawTelegramHealth(healthCommand);
+      var tgConnected = telegramHealth.connected;
+      var tgConfigured = telegramHealth.configured;
       var heartbeatDisabled = /^(?:0|off|disabled|desativado)/i.test(String(hbEvery || ''));
       if (tgEl) {
         tgEl.innerHTML = tgConnected
@@ -1776,7 +2033,13 @@
           : (tgConfigured ? '<i class="fas fa-circle-exclamation"></i> configurado' : '<i class="fas fa-circle-xmark"></i> não confirmado');
         tgEl.style.color = tgConnected ? '#4caf50' : (tgConfigured ? '#f59e0b' : '#f44336');
       }
-      if (tgHint) tgHint.textContent = tgConnected ? 'conexão confirmada pelo health do Gateway' : 'o health não confirmou uma conexão ativa';
+      if (tgHint) {
+        tgHint.textContent = tgConnected
+          ? 'conexão confirmada pelo health JSON do Gateway'
+          : (tgConfigured
+            ? 'configurado, mas sem conexão ativa confirmada' + (telegramHealth.detail ? ': ' + telegramHealth.detail : '')
+            : 'o health não confirmou configuração ou conexão ativa');
+      }
       if (hbEl) {
         hbEl.innerHTML = heartbeatDisabled
           ? '<i class="fas fa-pause-circle"></i> desativado'
@@ -1786,158 +2049,154 @@
 
       if (statusBadge) statusBadge.textContent = tasks.active > 0 ? '●' : 'ok';
 
-      // 3. Sessions recentes
-      var sessResp = await apiFetch('/api/cadu/openclaw/sessions?limit=8', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
-      var sessList = $('#openclaw-sessions-list');
-      if (sessResp && !sessResp.__error && sessResp.data && sessResp.data.sessions) {
-        var sessions = sessResp.data.sessions;
-        // lembrar a sessão mais recente "direct" para próxima mensagem
-        var lastDirect = sessions.find(function (s) { return s.kind === 'direct'; });
-        if (lastDirect) {
-          openclawState.lastSessionId = getOpenclawSessionId(lastDirect);
-          var ls = $('#openclaw-last-session');
-          if (ls) ls.textContent = fmtSessionId(openclawState.lastSessionId);
-        }
-        if (sessList) {
-          if (sessions.length === 0) {
-            sessList.innerHTML = '<div class="kc-cadu-empty">Nenhuma sessão.</div>';
-            openclawState.selectedSession = null;
-            renderOpenclawSessionDetail(null);
-          } else {
-            sessList.innerHTML = sessions.map(function (s) {
-              var kindIcon = s.kind === 'cron' ? 'fa-clock' : (s.kind === 'direct' ? 'fa-comments' : 'fa-circle');
-              var pct = s.percentUsed != null ? (' · ' + s.percentUsed + '% ctx') : '';
-              var selectedClass = openclawState.selectedSession && getOpenclawSessionId(openclawState.selectedSession) === getOpenclawSessionId(s) ? ' is-selected' : '';
-              return '<div class="kc-openclaw-list-item' + selectedClass + '">' +
-                '<div class="kc-openclaw-list-item__title"><i class="fas ' + kindIcon + '"></i> ' +
-                escapeHtml(s.kind || '?') + ' · ' + escapeHtml((s.model || '?').toString()) + '</div>' +
-                '<div class="kc-openclaw-list-item__meta">' +
-                escapeHtml((s.key || '').slice(0, 60)) +
-                ' · ' + fmtAgeMs(s.ageMs || (s.age ? s.age * 1000 : 0)) +
-                pct +
-                '</div></div>';
-            }).join('');
-            $$('.kc-openclaw-list-item', sessList).forEach(function (item, idx) {
-              var session = sessions[idx] || {};
-              item.setAttribute('role', 'button');
-              item.setAttribute('tabindex', '0');
-              item.setAttribute('title', 'Selecionar sessão e ver detalhes');
-              function selectSession() {
-                var sid = getOpenclawSessionId(session);
-                if (!sid) return;
-                openclawState.lastSessionId = sid;
-                openclawState.selectedSession = session;
-                var selected = $('#openclaw-last-session');
-                if (selected) selected.textContent = fmtSessionId(sid);
-                var chatStatus = $('#openclaw-chat-status');
-                if (chatStatus) chatStatus.textContent = 'Sessão selecionada para o próximo envio: ' + fmtSessionId(sid);
-                setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(sid)) + '</code> selecionada. Você pode usá-la no chat ou filtrar logs por ela.', 'ok');
-                renderOpenclawSessionDetail(session);
-                $$('.kc-openclaw-list-item', sessList).forEach(function (el) { el.classList.toggle('is-selected', el === item); });
-              }
-              item.addEventListener('click', selectSession);
-              item.addEventListener('keydown', function (ev) {
-                if (ev.key === 'Enter' || ev.key === ' ') {
-                  ev.preventDefault();
-                  selectSession();
-                }
-              });
-            });
-            if (openclawState.selectedSession && getOpenclawSessionId(openclawState.selectedSession)) {
-              var stillExists = sessions.some(function (s) { return getOpenclawSessionId(s) === getOpenclawSessionId(openclawState.selectedSession); });
-              if (!stillExists) renderOpenclawSessionDetail(openclawState.selectedSession);
-            }
-          }
-        }
-      } else if (sessList) {
-        sessList.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar sessões.</div>';
-      }
-
+      // 3. Sessões recentes já fazem parte do snapshot de status. Evitar uma
+      // segunda CLI por refresh reduz carga e impede corridas de seleção.
+      renderOpenclawSessions(recentSessions);
+      return { ok: true };
     } catch (e) {
       renderOpenclawUnavailable(String(e && e.message || e));
+      return { ok: false };
     }
   }
 
   function refreshOpenclaw(options) {
     var opts = options || {};
     if (typeof document !== 'undefined' && document.hidden) return Promise.resolve({ skipped: 'hidden' });
+    if (openclawState.busy) return Promise.resolve({ skipped: 'busy' });
     if (openclawState.refreshPromise) return openclawState.refreshPromise;
     var now = Date.now();
-    if (opts.force !== true && now - openclawState.lastRefreshStartedAt < OPENCLAW_POLL_INTERVAL_MS) {
+    if (opts.force !== true && now < openclawState.nextRefreshAt) {
       return Promise.resolve({ skipped: 'cooldown' });
     }
     openclawState.lastRefreshStartedAt = now;
-    openclawState.refreshPromise = performOpenclawRefresh().finally(function () {
-      openclawState.refreshPromise = null;
-    });
+    openclawState.refreshPromise = performOpenclawRefresh()
+      .then(function (result) {
+        var success = !!(result && result.ok === true);
+        openclawState.refreshFailures = success ? 0 : openclawState.refreshFailures + 1;
+        var multiplier = success ? 1 : Math.pow(2, Math.max(0, openclawState.refreshFailures - 1));
+        var delay = Math.min(OPENCLAW_MAX_BACKOFF_MS, OPENCLAW_POLL_INTERVAL_MS * multiplier);
+        openclawState.nextRefreshAt = Date.now() + delay;
+        return result;
+      })
+      .finally(function () {
+        openclawState.refreshPromise = null;
+      });
     return openclawState.refreshPromise;
   }
 
-  async function openclawSendChat(ev) {
+  function newOpenclawRequestId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    var bytes = new Uint8Array(16);
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      window.crypto.getRandomValues(bytes);
+    } else {
+      for (var index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+    }
+    return Array.prototype.map.call(bytes, function (value) { return value.toString(16).padStart(2, '0'); }).join('');
+  }
+
+  function setOpenclawRetryRequest(request) {
+    openclawState.retryRequest = request || null;
+    var retryButton = $('#openclaw-chat-retry-btn');
+    if (retryButton) {
+      retryButton.hidden = !request;
+      retryButton.disabled = openclawState.busy || !request;
+    }
+  }
+
+  async function openclawSendChat(ev, options) {
     if (ev) ev.preventDefault();
     if (openclawState.busy) return false;
+    var opts = options || {};
     var input = $('#openclaw-chat-input');
     var log = $('#openclaw-chat-log');
     var status = $('#openclaw-chat-status');
     var btn = $('#openclaw-chat-send-btn');
-    var deliverEl = $('#openclaw-chat-deliver');
+    var contextEl = $('#openclaw-chat-context');
     if (!input || !log) return false;
-    var msg = (input.value || '').trim();
-    if (!msg) {
-      if (status) status.textContent = '⚠️ mensagem vazia';
+
+    var request = opts.retry === true ? openclawState.retryRequest : null;
+    var msg = request ? request.message : (input.value || '').trim();
+    if (!msg || (opts.retry === true && !request)) {
+      if (status) status.textContent = opts.retry === true ? '⚠️ nenhuma tentativa disponível' : '⚠️ mensagem vazia';
       return false;
     }
+    if (!request) {
+      var includeContext = !!(contextEl && contextEl.checked);
+      var payload = {
+        message: msg,
+        agent: 'main',
+        request_id: newOpenclawRequestId(),
+        deliver: false,
+        inject_context: includeContext,
+        inject_tiers: includeContext,
+      };
+      if (openclawState.lastSessionId) payload.session_id = openclawState.lastSessionId;
+      request = { message: msg, payload: payload };
+      setOpenclawRetryRequest(null);
+      appendChatMsg('user', msg, includeContext ? 'contexto operacional incluído por opção explícita' : 'mensagem simples, sem contexto automático');
+      input.value = '';
+      if (contextEl) contextEl.checked = false;
+    }
+
     openclawState.busy = true;
     if (btn) btn.disabled = true;
-    if (status) status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadu pensando…';
-
-    // Render user msg
-    appendChatMsg('user', msg, null);
-    input.value = '';
+    if (contextEl) contextEl.disabled = true;
+    setOpenclawRetryRequest(opts.retry === true ? request : null);
+    if (status) status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (opts.retry === true ? 'Repetindo a mesma solicitação com idempotência…' : 'Cadu pensando…');
+    var completed = false;
 
     try {
-      var payload = { message: msg, agent: 'main' };
-      if (openclawState.lastSessionId) payload.session_id = openclawState.lastSessionId;
-      if (deliverEl && deliverEl.checked) payload.deliver = true;
-
       var resp = await apiFetch('/api/cadu/openclaw/agent-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(request.payload),
+        timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS,
       });
 
       if (!resp || resp.__error) {
-        appendChatMsg('cadu', '[erro: ' + (resp ? JSON.stringify(resp.data || resp.message || resp) : 'sem resposta') + ']', null);
-        if (status) status.textContent = '❌ Falhou';
+        var httpStatus = resp && resp.status ? ' (HTTP ' + resp.status + ')' : '';
+        appendChatMsg('cadu', 'A solicitação não foi confirmada' + httpStatus + '. Use “Tentar novamente” para reaproveitar com segurança o mesmo identificador; não há repetição automática.', null);
+        if (status) status.textContent = '❌ Falhou' + httpStatus + ' — tentativa segura disponível';
+        setOpenclawRetryRequest(request);
         return false;
       }
-      var data = resp.data || {};
+      var data = resp.data || resp || {};
+      if (data.data && data.data.result) data = data.data;
       var payloads = (data.result && data.result.payloads) || [];
       var text = '';
       for (var i = 0; i < payloads.length; i++) {
         if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
       }
-      if (!text && data.summary) text = '(sem texto de retorno — summary: ' + escapeHtml(data.summary) + ')';
+      if (!text && data.summary) text = '(sem texto de retorno — summary: ' + data.summary + ')';
       var meta = (data.result && data.result.meta) || {};
       var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '?s';
       var usage = meta.agentMeta ? (' · in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
       appendChatMsg('cadu', text.trim() || '(resposta vazia)', dur + usage);
 
-      // atualizar session_id se o run criou nova
-      if (data.runId && meta.agentMeta && meta.agentMeta.sessionId) {
+      // Uma resposta pode criar nova sessão, mas nunca substitui a sessão
+      // explicitamente fixada pelo operador.
+      if (!openclawState.pinnedSessionId && meta.agentMeta && meta.agentMeta.sessionId) {
         openclawState.lastSessionId = meta.agentMeta.sessionId;
         var ls = $('#openclaw-last-session');
         if (ls) ls.textContent = fmtSessionId(meta.agentMeta.sessionId);
       }
+      setOpenclawRetryRequest(null);
+      completed = true;
       if (status) status.textContent = '✅ ' + (data.summary || 'ok') + ' (' + dur + ')';
-      // re-render status pra atualizar lastActive
-      setTimeout(refreshOpenclaw, 1500);
     } catch (e) {
-      appendChatMsg('cadu', '[exception: ' + String(e && e.message || e) + ']', null);
-      if (status) status.textContent = '❌ Exception';
+      appendChatMsg('cadu', 'A conexão terminou sem confirmação. Nenhuma repetição automática foi feita; use “Tentar novamente” para manter o mesmo identificador.', null);
+      if (status) status.textContent = '❌ Conexão interrompida — tentativa segura disponível';
+      setOpenclawRetryRequest(request);
     } finally {
       openclawState.busy = false;
       if (btn) btn.disabled = false;
+      if (contextEl) contextEl.disabled = false;
+      var retryButton = $('#openclaw-chat-retry-btn');
+      if (retryButton) retryButton.disabled = !openclawState.retryRequest;
+      if (completed) setTimeout(function () { refreshOpenclaw({ force: true }); }, 1500);
     }
     return false;
   }
@@ -2072,6 +2331,19 @@
   // Cross-tab: "Perguntar Cadu" a partir de Sites/Feed/Pipeline
   // ============================================================
 
+  function buildExplicitContextAgentPayload(message, sessionId) {
+    var payload = {
+      message: message,
+      agent: 'main',
+      request_id: newOpenclawRequestId(),
+      deliver: false,
+      inject_context: false,
+      inject_tiers: false,
+    };
+    if (sessionId) payload.session_id = sessionId;
+    return payload;
+  }
+
   async function askCaduContext(ev) {
     if (ev) ev.preventDefault();
     var btn = ev && ev.currentTarget;
@@ -2080,7 +2352,6 @@
     try {
       var kind = btn.getAttribute('data-ask-kind') || 'raw';
       var sessionId = openclawState.lastSessionId || null;
-      var agentReq = 'main';
       var message = '';
 
       if (kind === 'feed') {
@@ -2092,15 +2363,17 @@
         var resp = await apiFetch('/api/cadu/feed?path=' + encodeURIComponent(chunkId + '/ask'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+          body: JSON.stringify(buildExplicitContextAgentPayload(message, sessionId)),
+          timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS,
         });
-        if (!resp || resp.__error) {
+        if (resp && resp.__error && (resp.status === 404 || resp.status === 405)) {
           // Fallback: monta contexto inline + agent-send
           message = '<chunk-context id="' + chunkId + '" heading="' + heading.replace(/"/g, "'") + '">' + (btn.getAttribute('data-ask-snippet') || '(conteúdo será carregado pelo Cadu)') + '</chunk-context>\n\n' + message;
           resp = await apiFetch('/api/cadu/openclaw/agent-send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+            body: JSON.stringify(buildExplicitContextAgentPayload(message, sessionId)),
+            timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS,
           });
         }
         if (resp && !resp.__error) {
@@ -2123,7 +2396,8 @@
         var diagResp = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+          body: JSON.stringify(buildExplicitContextAgentPayload(message, sessionId)),
+          timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS,
         });
         if (diagResp && !diagResp.__error) {
           showAskCaduResult('Diagnóstico do feed: ' + (diagTitle || diagId), diagResp);
@@ -2139,7 +2413,8 @@
         var resp2 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+          body: JSON.stringify(buildExplicitContextAgentPayload(message, sessionId)),
+          timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS,
         });
         if (resp2 && !resp2.__error) {
           showAskCaduResult('Perguntar sobre site: ' + siteName, resp2);
@@ -2154,7 +2429,8 @@
         var resp3 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message, session_id: sessionId, agent: agentReq }),
+          body: JSON.stringify(buildExplicitContextAgentPayload(message, sessionId)),
+          timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS,
         });
         if (resp3 && !resp3.__error) {
           showAskCaduResult('Perguntar sobre pipeline: ' + runId.slice(0, 8), resp3);
@@ -2329,47 +2605,51 @@
     var f = state.feedFilter || {};
     var total = state.feedTotal || items.length;
     var source = items.reduce(function (acc, it) {
-      var host = (it.source_host || (it.file_path || '').split('/')[0] || 'desconhecido');
+      var host = it.site || 'fonte não identificada';
       acc[host] = (acc[host] || 0) + 1;
       return acc;
     }, {});
     var topSources = Object.keys(source).sort(function (a, b) { return source[b] - source[a]; }).slice(0, 5);
     var rows = items.map(function (it) {
       return {
-        chunk: it.chunk_id ? it.chunk_id.slice(0, 16) : '—',
-        arquivo: it.file_path || '—',
+        item: it.chunk_id ? it.chunk_id.slice(0, 16) : '—',
+        artefato: it.artifact || '—',
         titulo: it.heading || '(sem título)',
+        fonte: it.site || it.url || '—',
+        status: it.status || '—',
         criado: fmtDate(it.created_at),
         trecho: (it.snippet || '').slice(0, 600),
       };
     });
     return {
-      title: 'KinoCampus — Memória indexada do Cadu (Feed Coletado)',
-      subtitle: 'Chunks recentes indexados pelo Cadu/OpenClaw (read-only, ' + total + ' chunks no total)',
+      title: 'KinoCampus — Itens públicos coletados pelo Curador',
+      subtitle: 'Recorte editorial público e somente leitura (' + total + ' itens no total)',
       source: 'admin/cadu.html — aba Feed Coletado (cadu-api /api/feed)',
       generatedAt: new Date().toISOString(),
       filters: {
         pagina: (state.feedPage || 0) + 1,
         limite: state.feedLimit || FEED_PAGE_SIZE,
         busca: f.q || '—',
-        chunks_listados: items.length,
-        chunks_total: total,
+        itens_listados: items.length,
+        itens_total: total,
       },
       kpis: [
-        { label: 'Chunks listados', value: items.length, note: 'página atual' },
-        { label: 'Total na memória', value: total, note: 'todos os chunks indexados' },
+        { label: 'Itens listados', value: items.length, note: 'página atual' },
+        { label: 'Total público', value: total, note: 'artefatos válidos do Curador' },
         { label: 'Página', value: ((state.feedPage || 0) + 1), note: 'paginação atual' },
         { label: 'Limite', value: state.feedLimit || FEED_PAGE_SIZE, note: 'itens por página' },
         { label: 'Fontes no top 5', value: topSources.length, note: topSources.slice(0, 5).map(function (h) { return h + ' (' + source[h] + ')'; }).join(' · ') || '—' },
       ],
       sections: [
         {
-          title: 'Chunks da página atual',
-          note: 'Trechos do que o Cadu (OpenClaw) tem indexado: posts coletados, respostas de IA, mensagens Telegram, logs da pipeline.',
+          title: 'Itens públicos da página atual',
+          note: 'Campos públicos permitidos dos artefatos do Curador; dados privados e registros operacionais internos não fazem parte deste relatório.',
           columns: [
-            { key: 'chunk', label: 'Chunk ID', width: 1 },
-            { key: 'arquivo', label: 'Arquivo', width: 2 },
+            { key: 'item', label: 'Item ID', width: 1 },
+            { key: 'artefato', label: 'Artefato', width: 2 },
             { key: 'titulo', label: 'Título', width: 3 },
+            { key: 'fonte', label: 'Fonte', width: 2 },
+            { key: 'status', label: 'Status', width: 1 },
             { key: 'criado', label: 'Criado em', width: 1 },
             { key: 'trecho', label: 'Trecho (até 600 chars)', width: 5 },
           ],
@@ -2571,9 +2851,11 @@
 
     // OpenClaw (v0.4.3)
     var ocRefresh = $('#openclaw-refresh-btn');
-    if (ocRefresh) ocRefresh.addEventListener('click', refreshOpenclaw);
+    if (ocRefresh) ocRefresh.addEventListener('click', function () { refreshOpenclaw({ force: true }); });
     var ocForm = $('#openclaw-chat-form');
     if (ocForm) ocForm.addEventListener('submit', openclawSendChat);
+    var ocRetry = $('#openclaw-chat-retry-btn');
+    if (ocRetry) ocRetry.addEventListener('click', function () { openclawSendChat(null, { retry: true }); });
     var ocHeartbeat = $('#openclaw-trigger-heartbeat-btn');
     if (ocHeartbeat) ocHeartbeat.addEventListener('click', openclawTriggerHeartbeat);
     var ocLogs = $('#openclaw-show-logs-btn');
@@ -2587,12 +2869,19 @@
       ocSessionDetail.addEventListener('click', function (ev) {
         var target = ev.target && ev.target.closest ? ev.target.closest('button') : null;
         if (!target || !openclawState.selectedSession) return;
+        if (openclawState.busy && target.id !== 'openclaw-session-logs-btn') {
+          setOpenclawActionStatus('Aguarde o envio atual terminar antes de alterar a sessão fixada.', 'loading');
+          return;
+        }
         if (target.id === 'openclaw-session-chat-btn') {
           openclawState.lastSessionId = getOpenclawSessionId(openclawState.selectedSession);
+          openclawState.pinnedSessionId = openclawState.lastSessionId;
+          renderOpenclawSessionDetail(openclawState.selectedSession);
           setOpenclawActionStatus('Sessão <code>' + escapeHtml(fmtSessionId(openclawState.lastSessionId)) + '</code> pronta para o próximo envio no chat. O payload incluirá <code>session_id=' + escapeHtml(openclawState.lastSessionId) + '</code>.', 'ok');
           focusOpenclawChat();
         } else if (target.id === 'openclaw-session-resume-btn') {
           openclawState.lastSessionId = getOpenclawSessionId(openclawState.selectedSession);
+          openclawState.pinnedSessionId = openclawState.lastSessionId;
           var input = $('#openclaw-chat-input');
           if (input) {
             input.value = 'Continue a sessão ' + openclawState.lastSessionId + '. Resuma o histórico/contexto recente disponível, diga o que ficou pendente e proponha o próximo passo operacional no KinoCampus/Cadu.';
@@ -2601,6 +2890,15 @@
           openclawSendChat();
         } else if (target.id === 'openclaw-session-logs-btn') {
           openclawShowLogs({ session: openclawState.selectedSession });
+        } else if (target.id === 'openclaw-session-unpin-btn') {
+          openclawState.pinnedSessionId = null;
+          openclawState.selectedSession = null;
+          openclawState.lastSessionId = openclawState.latestDirectSessionId;
+          var sessionLabel = $('#openclaw-last-session');
+          if (sessionLabel) sessionLabel.textContent = fmtSessionId(openclawState.lastSessionId);
+          renderOpenclawSessionDetail(null);
+          setOpenclawActionStatus('Sessão desafixada. O próximo envio usará a sessão direta mais recente, se disponível.', 'ok');
+          refreshOpenclaw({ force: true });
         }
       });
     }

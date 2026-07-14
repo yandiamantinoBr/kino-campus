@@ -33,11 +33,13 @@ function isolatedFunction(name, dependencies = []) {
 
 describe('admin Cadu runtime hardening', () => {
   test('marks OpenClaw online only after the command proves ok=true', () => {
-    const openclawStatusData = isolatedFunction('openclawStatusData');
+    const openclawStatusData = isolatedFunction('openclawStatusData', ['parseOpenclawCommandJson']);
     expect(openclawStatusData({ status: { ok: false, data: { agents: {} } } })).toBeNull();
     expect(openclawStatusData({ status: { data: { agents: {} } } })).toBeNull();
     expect(openclawStatusData({ data: { agents: {} } })).toBeNull();
     expect(openclawStatusData({ status: { ok: true, data: { agents: { defaultId: 'main' } } } }))
+      .toEqual({ agents: { defaultId: 'main' } });
+    expect(openclawStatusData({ status: { ok: true, stdout: '{"agents":{"defaultId":"main"}}' } }))
       .toEqual({ agents: { defaultId: 'main' } });
     expect(controller).not.toContain("|| 'deepseek-v4-pro'");
     expect(controller).not.toContain("'ctx 1M'");
@@ -77,8 +79,10 @@ describe('admin Cadu runtime hardening', () => {
   test('polls OpenClaw at most once per minute, singleflight, and only while visible', () => {
     expect(controller).toContain('var OPENCLAW_POLL_INTERVAL_MS = 60000;');
     expect(controller).toContain('if (openclawState.refreshPromise) return openclawState.refreshPromise;');
-    expect(controller).toContain('now - openclawState.lastRefreshStartedAt < OPENCLAW_POLL_INTERVAL_MS');
+    expect(controller).toContain('if (openclawState.busy)');
+    expect(controller).toContain('now < openclawState.nextRefreshAt');
     expect(controller).toContain("return Promise.resolve({ skipped: 'cooldown' });");
+    expect(controller).toContain('OPENCLAW_MAX_BACKOFF_MS');
     expect(controller).toContain("if (typeof document !== 'undefined' && document.hidden)");
     expect(controller).toContain("document.addEventListener('visibilitychange'");
     expect(controller).toContain('refreshAll({ forceOperational: true });');
@@ -106,7 +110,111 @@ describe('admin Cadu runtime hardening', () => {
       { created_at: '2026-07-11T12:00:00Z' },
     ])).toBe(Date.parse('2026-07-11T12:00:00Z'));
     expect(html).toContain('id="feed-freshness-status"');
-    expect(controller).toContain('Recarregar consulta o índice; a coleta é executada pela pipeline.');
+    expect(controller).toContain('Recarregar consulta os artefatos; a coleta é executada pela pipeline.');
+  });
+
+  test('accepts only the explicit public Curator feed contract', () => {
+    const normalizePublicFeedResponse = isolatedFunction('normalizePublicFeedResponse', [
+      'feedTimestampMs',
+      'normalizePublicFeedItem',
+    ]);
+    const valid = normalizePublicFeedResponse({
+      source: 'curator_artifacts',
+      privacy: 'public_only',
+      legacy_memory_feed_retired: true,
+      status: 'ready',
+      stale: false,
+      latest_collection_at: 1_783_960_000,
+      age_seconds: 20,
+      artifacts_scanned: 2,
+      invalid_artifacts: 0,
+      future_timestamps: 0,
+      total: 1,
+      has_more: false,
+      items: [{
+        chunk_id: 'a1b2c3d4e5f60708',
+        heading: 'Edital público',
+        snippet: 'Conteúdo institucional',
+        created_at: 1_783_960_000,
+        url: 'https://ufg.br/noticia',
+        site: 'UFG',
+        category: 'edital',
+        status: 'publicável',
+        artifact: 'curadoria-v4.4-daily-2026-07-14.json',
+      }],
+    });
+    expect(valid).toMatchObject({
+      total: 1,
+      hasMore: false,
+      meta: { source: 'curator_artifacts', privacy: 'public_only', status: 'ready' },
+    });
+    expect(valid.items[0]).toMatchObject({ heading: 'Edital público', status: 'publicável' });
+    expect(() => normalizePublicFeedResponse({ items: [], total: 0 }))
+      .toThrow(/contrato de feed público/);
+  });
+
+  test('reads Telegram connectivity from structured health JSON before text fallback', () => {
+    const openclawTelegramHealth = isolatedFunction('openclawTelegramHealth', ['parseOpenclawCommandJson']);
+    expect(openclawTelegramHealth({
+      ok: true,
+      data: { channels: { telegram: { configured: true, running: true, probe: { ok: true } } } },
+    })).toMatchObject({ connected: true, configured: true, structured: true });
+    expect(openclawTelegramHealth({
+      ok: true,
+      data: { channels: { telegram: { configured: true, running: false, lastError: 'offline' } } },
+    })).toMatchObject({ connected: false, configured: true, structured: true, detail: 'offline' });
+  });
+
+  test('keeps simple admin chat local, context opt-in, idempotent and retry-only', () => {
+    expect(html).toContain('id="openclaw-chat-context"');
+    expect(html).toContain('id="openclaw-chat-deliver" disabled');
+    expect(html).toContain('id="openclaw-chat-retry-btn"');
+    expect(controller).toContain('request_id: newOpenclawRequestId()');
+    expect(controller).toContain('deliver: false');
+    expect(controller).toContain('inject_context: includeContext');
+    expect(controller).toContain('inject_tiers: includeContext');
+    expect(controller).toContain('if (contextEl) contextEl.checked = false;');
+    expect(controller).toContain('timeoutMs: OPENCLAW_AGENT_SEND_TIMEOUT_MS');
+    expect(controller).toContain("opts.retry === true ? openclawState.retryRequest : null");
+    expect(controller).toContain('não há repetição automática');
+  });
+
+  test('pins an operator-selected session across refresh and busy state', () => {
+    expect(controller).toContain('pinnedSessionId: null');
+    expect(controller).toContain('if (openclawState.pinnedSessionId)');
+    expect(controller).toContain('Atualizações automáticas não trocarão essa seleção.');
+    expect(controller).toContain("return Promise.resolve({ skipped: 'busy' });");
+    expect(controller).not.toContain('openclawState.selectedSession = null;\n            renderOpenclawSessionDetail(null);');
+  });
+
+  test('never treats ok=true or a Telegram notification as confirmed publication', () => {
+    const normalizePublishOutcome = isolatedFunction('normalizePublishOutcome');
+    expect(normalizePublishOutcome({
+      ok: true, published: true, status: 'published', code: 'created', published_via: 'supabase'
+    })).toEqual({ kind: 'published', code: 'created', via: 'supabase' });
+    expect(normalizePublishOutcome({
+      ok: true, published: false, status: 'pending', code: 'queued', published_via: 'review_queue'
+    })).toEqual({ kind: 'pending', code: 'queued', via: 'review_queue' });
+    expect(normalizePublishOutcome({
+      ok: true, published: false, status: 'notified_for_review', code: 'notified', published_via: 'telegram'
+    })).toEqual({ kind: 'notified', code: 'notified', via: 'telegram' });
+    expect(() => normalizePublishOutcome({ ok: true })).toThrow(/não confirmou/);
+    expect(() => normalizePublishOutcome({
+      ok: true, published: true, status: 'published', published_via: 'telegram'
+    })).toThrow(/inconsistente/);
+    expect(controller).toContain('a notificação não equivale a publicação');
+  });
+
+  test('feed operator copy describes public Curator artifacts, not private channels', () => {
+    const start = html.indexOf('id="feed-help-block"');
+    const end = html.indexOf('id="feed-diagnostics-card"');
+    const feedHelp = html.slice(start, end);
+    expect(feedHelp).toContain('artefatos gerados pelo Curador');
+    expect(feedHelp).toContain('Recorte público');
+    expect(feedHelp).not.toMatch(/Telegram|memória do OpenClaw/i);
+    const report = functionSource('buildFeedPdfReport');
+    expect(report).toContain('Itens públicos coletados pelo Curador');
+    expect(report).not.toMatch(/Telegram|memória indexada/i);
   });
 
   test('does not hardcode an obsolete curator version in the operator explanation', () => {
