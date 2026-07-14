@@ -16,6 +16,10 @@ const MIGRATION_SOURCE = fs.readFileSync(
   path.join(ROOT, 'supabase/migrations/20260714121506_harden_search_analytics_ingestion.sql'),
   'utf8'
 ).toLowerCase();
+const CLASSIFIER_LINT_FIX = fs.readFileSync(
+  path.join(ROOT, 'supabase/migrations/20260714134000_fix_search_classifier_lint.sql'),
+  'utf8'
+).toLowerCase();
 const SearchAnalytics = require('../../assets/js/shared/search-analytics.shared.js');
 
 function createSearchRuntime(rpc) {
@@ -133,5 +137,8 @@ describe('migration de ingestao da busca', () => {
     expect((MIGRATION_SOURCE.match(/not public\.kc_is_admin\(v_uid\)/g) || [])).toHaveLength(2);
     expect(MIGRATION_SOURCE).toContain("raise insufficient_privilege using message = 'admin access required'");
     expect(MIGRATION_SOURCE).toContain('revoke all on function kc_private.kc_admin_search_trends_classified');
+    expect(CLASSIFIER_LINT_FIX).toContain("v_worker_schema text := 'kc_private'");
+    expect(CLASSIFIER_LINT_FIX).toContain('from %i.%i($1, $2) as result');
+    expect(CLASSIFIER_LINT_FIX).toContain('not public.kc_is_admin(v_uid)');
   });
 });
