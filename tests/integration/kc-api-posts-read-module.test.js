@@ -93,7 +93,7 @@ describe('kc-api.posts-read.js — fallbacks sem driver', () => {
   });
 
   test('trackShare retorna { ok: false } sem driver', async () => {
-    const result = await postsRead.trackShare('post-1', {});
+    const result = await postsRead.trackShare('post-1', 'copy_link', {});
     expect(result).toEqual({ ok: false });
   });
 

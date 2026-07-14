@@ -1,6 +1,3 @@
-User-agent: Googlebot
-Allow: /ads.txt
-
 User-agent: *
 Allow: /
 Disallow: /admin/

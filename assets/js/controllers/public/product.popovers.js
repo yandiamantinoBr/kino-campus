@@ -166,12 +166,12 @@
     document.addEventListener('keydown', handleProductGlobalKeydown, { passive: true });
   }
 
-  function trackCurrentPostShare() {
+  function trackCurrentPostShare(method) {
     try {
       var post = getCurrentPost();
       var postId = post && (post.uuid || post.id);
       if (postId && window.KCAPI && typeof window.KCAPI.trackShare === 'function') {
-        window.KCAPI.trackShare(postId).catch(function () { });
+        window.KCAPI.trackShare(postId, method).catch(function () { });
       }
     } catch (_) { }
   }
@@ -237,7 +237,7 @@
         url = window.location.href;
         text = title + '\n' + url;
         window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
-        trackCurrentPostShare();
+        trackCurrentPostShare('whatsapp');
       });
     }
 
@@ -246,7 +246,7 @@
         closeSharePopover();
         copyCurrentPostLink().then(function (copied) {
           if (!copied) throw new Error('copy_unavailable');
-          trackCurrentPostShare();
+          trackCurrentPostShare('copy_link');
           toast('Link copiado!', 'info', 1800);
         }).catch(function () {
           toast('N\u00E3o foi poss\u00EDvel copiar automaticamente. Tente novamente ou copie o link pela barra do navegador.', 'error', 2600);

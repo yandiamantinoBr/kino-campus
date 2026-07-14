@@ -524,7 +524,7 @@ describe('kc-api.client.js - caches, SWR and diagnostics', () => {
     expect(source).toContain('return postsReadModule.refreshPostAnalytics(postId, options, buildPostsReadDeps());');
     expect(source).toContain('return postsReadModule.getPostAnalytics(postId, options, buildPostsReadDeps());');
     expect(source).toContain('return postsReadModule.trackView(postId, buildPostsReadDeps());');
-    expect(source).toContain('return postsReadModule.trackShare(postId, buildPostsReadDeps());');
+    expect(source).toContain('return postsReadModule.trackShare(postId, method, buildPostsReadDeps());');
     expect(source).toContain('return postsReadModule.trackCouponClick(postId, buildPostsReadDeps());');
   });
 

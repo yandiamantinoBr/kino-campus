@@ -1,3 +1,12 @@
+import {
+  buildIndexabilityValues,
+  canonicalPostId,
+  cleanText,
+  metadataOf,
+  parseDateLike,
+  shouldIndexPost,
+} from './_lib/product-seo-policy.js';
+
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const FEED_URL = `${SITE_ORIGIN}/feed.xml`;
 
@@ -25,28 +34,6 @@ function escapeXml(value) {
     .replace(/'/g, '&apos;');
 }
 
-function stripHtml(value) {
-  return String(value || '').replace(/<[^>]*>/g, ' ');
-}
-
-function stripMarkdown(value) {
-  return String(value || '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/__([^_]+)__/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/~~([^~]+)~~/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\[(.+?)\]\(https?:\/\/[^\s)]+\)/g, '$1')
-    .replace(/^>\s?/gm, '')
-    .replace(/^[-*]\s+/gm, '- ');
-}
-
-function cleanText(value) {
-  return stripMarkdown(stripHtml(value))
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function truncate(value, max) {
   const text = cleanText(value);
   if (text.length <= max) return text;
@@ -54,27 +41,9 @@ function truncate(value, max) {
 }
 
 function isoDate(value) {
-  const date = value ? new Date(value) : new Date();
+  const date = parseDateLike(value) || new Date();
   if (Number.isNaN(date.getTime())) return new Date().toUTCString();
   return date.toUTCString();
-}
-
-function isFutureOrUnknown(value) {
-  if (!value) return true;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return true;
-  return date.getTime() >= Date.now() - 24 * 60 * 60 * 1000;
-}
-
-function metadataOf(post) {
-  return post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)
-    ? post.metadata
-    : {};
-}
-
-function getPostExpiry(post) {
-  const metadata = metadataOf(post);
-  return post.expires_at || metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || '';
 }
 
 function getPostDescription(post) {
@@ -109,15 +78,14 @@ async function fetchPublishedPosts() {
     const rows = await response.json();
     if (!Array.isArray(rows)) return [];
     return rows
-      .filter((post) => post && (post.id || post.legacy_id) && String(post.status || '').toLowerCase() === 'published')
-      .filter((post) => isFutureOrUnknown(getPostExpiry(post)));
+      .filter((post) => shouldIndexPost(post, buildIndexabilityValues(post)));
   } catch (_) {
     return [];
   }
 }
 
 function buildItem(post) {
-  const id = encodeURIComponent(String(post.id || post.legacy_id));
+  const id = encodeURIComponent(canonicalPostId(post));
   const url = `${SITE_ORIGIN}/product.html?id=${id}`;
   const title = cleanText(post.title || 'Publicação no KinoCampus');
   const description = getPostDescription(post);

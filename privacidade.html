@@ -74,7 +74,7 @@
       <span class="kc-help-eyebrow">LGPD e transparência</span>
       <h1>Declaração de Privacidade</h1>
       <p>Esta declaração explica, em linguagem direta, como o KinoCampus trata dados pessoais para operar a plataforma da comunidade UFG, responder solicitações e manter a experiência segura.</p>
-      <p class="kc-legal-updated">Versão 2026-06-20. Controlador operacional: KinoCampus / Yan Diamantino. Contato: <a href="mailto:contato@kinocampus.com.br">contato@kinocampus.com.br</a>. Veja também a <a href="transparencia.html">Central de Transparência</a>.</p>
+      <p class="kc-legal-updated">Versão 2026-07-14. Controlador operacional: KinoCampus / Yan Diamantino. Contato: <a href="mailto:contato@kinocampus.com.br">contato@kinocampus.com.br</a>. Veja também a <a href="transparencia.html">Central de Transparência</a>.</p>
     </section>
 
     <section class="kc-legal-grid">
@@ -93,7 +93,10 @@
       <article class="kc-legal-section">
         <h2>Cookies e armazenamento local</h2>
         <p>Cookies e armazenamento local necessários sustentam autenticação, segurança e funcionamento básico. Cookies opcionais de preferências e análises só são usados conforme sua escolha.</p>
-        <p>Quando você autoriza métricas, o KinoCampus pode usar Google Analytics 4 para entender acessos agregados, páginas mais visitadas, origem de tráfego e desempenho do site. A categoria Publicidade controla o carregamento de redes externas, como Google AdSense. A personalização individual de anúncios permanece desativada nesta fase.</p>
+        <p>Quando você autoriza métricas, o KinoCampus pode usar Google Analytics 4 para entender acessos agregados, páginas mais visitadas, origem de tráfego e desempenho do site. Essa coleta fica desativada nas páginas administrativas, em ambientes locais e em previews. URLs e referenciadores são sanitizados para remover fragmentos, credenciais e parâmetros arbitrários ou sensíveis; somente o identificador validado de uma publicação pública pode permanecer na URL medida.</p>
+        <p>Se você estiver autenticado e autorizar analytics, o Google Analytics pode receber um User-ID pseudônimo calculado no servidor por HMAC-SHA-256, com segredo exclusivo, a partir do identificador interno da conta. O identificador bruto e o segredo não são enviados ao Google, e o vínculo é removido quando não há sessão ou consentimento. Esse pseudônimo não é anonimização e continua protegido pelas regras desta declaração.</p>
+        <p>Dados agregados do Google Search Console podem ser usados para avaliar impressões, cliques, posição e consultas que levaram pessoas da Busca Google ao site. As consultas ficam restritas a administradores, podem conter texto informado à própria Busca Google e só são exportadas por uma ação administrativa explícita.</p>
+        <p>A categoria Publicidade controla o carregamento de redes externas, como Google AdSense. A personalização individual de anúncios permanece desativada nesta fase.</p>
         <button type="button" class="kc-btn-primary" data-kc-cookie-preferences><i class="fas fa-sliders"></i> Gerenciar preferências de cookies</button>
       </article>
       <article class="kc-legal-section">
@@ -145,8 +148,8 @@
   <script defer src="assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
   <script defer src="assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-consent.js?v=8.6.4"></script>
-  <script defer src="assets/js/boot/kc-google-tag.js?v=8.6.4"></script>
-  <script defer src="assets/js/boot/kc-events.js?v=8.6.4"></script>
+  <script defer src="assets/js/boot/kc-google-tag.js?v=8.6.5"></script>
+  <script defer src="assets/js/boot/kc-events.js?v=8.6.5"></script>
   <script defer src="assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="assets/js/api/kc-supabase.client.js?v=8.6.7"></script>
@@ -155,7 +158,7 @@
   <script defer src="assets/js/api/kc-api.notifications.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.saved.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.help.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.posts-read.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.posts-read.js?v=8.6.2"></script>
   <script defer src="assets/js/api/kc-api.comments-votes.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.ratings.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.posts-feed.js?v=8.6.1"></script>
@@ -168,7 +171,7 @@
   <script defer src="assets/js/api/kc-api.filters.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.authors.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.posts-normalize.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.client.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.client.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
   <script defer src="assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
@@ -177,7 +180,7 @@
   <script defer src="assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.2"></script>
   <script defer src="assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
@@ -193,7 +196,7 @@
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-public-shell.js?v=8.6.2"></script>
-  <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.1"></script>
+  <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.2"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
 </body>

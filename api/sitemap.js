@@ -1,3 +1,11 @@
+import {
+  buildIndexabilityValues,
+  canonicalPostId,
+  isoDate,
+  metadataOf,
+  shouldIndexPost,
+} from './_lib/product-seo-policy.js';
+
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 
 const STATIC_ROUTES = [
@@ -41,25 +49,6 @@ function escapeXml(value) {
     .replace(/'/g, '&apos;');
 }
 
-function isoDate(value) {
-  const date = value ? new Date(value) : new Date();
-  if (Number.isNaN(date.getTime())) return new Date().toISOString();
-  return date.toISOString();
-}
-
-function isFutureOrUnknown(value) {
-  if (!value) return true;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return true;
-  return date.getTime() >= Date.now() - 24 * 60 * 60 * 1000;
-}
-
-function metadataOf(post) {
-  return post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)
-    ? post.metadata
-    : {};
-}
-
 function getPostImage(post) {
   const metadata = metadataOf(post);
   const image = post.image_url || metadata.cover_url || metadata.coverUrl || metadata.image_url || metadata.imageUrl || '';
@@ -68,16 +57,11 @@ function getPostImage(post) {
     : '';
 }
 
-function getPostExpiry(post) {
-  const metadata = metadataOf(post);
-  return post.expires_at || metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || '';
-}
-
 function buildUrlNode(entry) {
   return [
     '  <url>',
     `    <loc>${escapeXml(SITE_ORIGIN + entry.path)}</loc>`,
-    entry.lastmod ? `    <lastmod>${escapeXml(isoDate(entry.lastmod))}</lastmod>` : '',
+    entry.lastmod && isoDate(entry.lastmod) ? `    <lastmod>${escapeXml(isoDate(entry.lastmod))}</lastmod>` : '',
     entry.changefreq ? `    <changefreq>${escapeXml(entry.changefreq)}</changefreq>` : '',
     entry.priority ? `    <priority>${escapeXml(entry.priority)}</priority>` : '',
     entry.image ? `    <image:image>\n      <image:loc>${escapeXml(entry.image)}</image:loc>\n    </image:image>` : '',
@@ -89,8 +73,8 @@ async function fetchPublishedPostRoutes() {
   const { url, key } = getSupabaseConfig();
   if (!url || !key) return [];
 
-  const select = 'id,title,updated_at,created_at,expires_at,status,image_url,metadata';
-  const selectCompat = 'id,title,updated_at,created_at,expires_at,status,metadata';
+  const select = 'id,legacy_id,title,description,updated_at,created_at,expires_at,status,image_url,metadata';
+  const selectCompat = 'id,legacy_id,title,description,updated_at,created_at,expires_at,status,metadata';
   const endpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
   const endpointCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
   try {
@@ -114,10 +98,9 @@ async function fetchPublishedPostRoutes() {
     const rows = await response.json();
     if (!Array.isArray(rows)) return [];
     return rows
-      .filter((post) => post && post.id && String(post.status || '').toLowerCase() === 'published')
-      .filter((post) => isFutureOrUnknown(getPostExpiry(post)))
+      .filter((post) => shouldIndexPost(post, buildIndexabilityValues(post)))
       .map((post) => ({
-        path: `/product.html?id=${encodeURIComponent(String(post.id))}`,
+        path: `/product.html?id=${encodeURIComponent(canonicalPostId(post))}`,
         lastmod: post.updated_at || post.created_at,
         changefreq: 'weekly',
         priority: '0.7',

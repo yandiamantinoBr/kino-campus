@@ -703,6 +703,11 @@
   }
 
   async function trackCouponClick(postId) {
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track('kc_coupon_click', { post_id: postId });
+      }
+    } catch (_) { }
     const postsReadModule = getPostsReadModule();
     if (postsReadModule && typeof postsReadModule.trackCouponClick === 'function') {
       return postsReadModule.trackCouponClick(postId, buildPostsReadDeps());
@@ -710,10 +715,19 @@
     return { ok: false };
   }
 
-  async function trackShare(postId) {
+  async function trackShare(postId, method) {
+    try {
+      var safeMethod = String(method || '').trim().toLowerCase();
+      if (!/^(?:whatsapp|copy_link|native_share)$/.test(safeMethod)) safeMethod = 'unknown';
+      if (window.KCEvents && typeof window.KCEvents.trackRecommended === 'function') {
+        window.KCEvents.trackRecommended('share', { item_id: postId, content_type: 'post', method: safeMethod });
+      } else if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track('kc_share', { post_id: postId, method: safeMethod });
+      }
+    } catch (_) { }
     const postsReadModule = getPostsReadModule();
     if (postsReadModule && typeof postsReadModule.trackShare === 'function') {
-      return postsReadModule.trackShare(postId, buildPostsReadDeps());
+      return postsReadModule.trackShare(postId, method, buildPostsReadDeps());
     }
     return { ok: false };
   }
@@ -730,6 +744,11 @@
 
   // ── Analytics de post (v9.3.1) — delegados via getPostsReadModule() ──
   async function trackView(postId) {
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track('kc_post_view', { post_id: postId });
+      }
+    } catch (_) { }
     const postsReadModule = getPostsReadModule();
     if (postsReadModule && typeof postsReadModule.trackView === 'function') {
       return postsReadModule.trackView(postId, buildPostsReadDeps());

@@ -510,20 +510,20 @@
     var text = title + (url ? '\n' + url : '');
     var api = window.KCAPI;
 
-    function trackShare() {
+    function trackShare(method) {
       if (api && typeof api.trackShare === 'function') {
-        api.trackShare(uuid).catch(function () { });
+        api.trackShare(uuid, method).catch(function () { });
       }
     }
 
     function done(copied) {
-      if (copied !== false) trackShare();
+      if (copied !== false) trackShare('copy_link');
       showToastMsg(copied === false ? 'Não foi possível copiar o link.' : 'Link da publicação copiado.', copied === false ? 'error' : 'info', 2200);
     }
 
     if (window.navigator && typeof window.navigator.share === 'function' && window.isSecureContext) {
       window.navigator.share({ title: title, text: title, url: url }).then(function () {
-        trackShare();
+        trackShare('native_share');
       }).catch(function (err) {
         if (err && err.name === 'AbortError') return;
         if (window.KCUtils && typeof window.KCUtils.copyTextToClipboard === 'function') {

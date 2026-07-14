@@ -22,7 +22,9 @@ describe('my-posts.controller — ações de publicação', () => {
   });
 
   test('usa APIs existentes para compartilhar, encerrar e reativar', () => {
-    expect(source).toContain('api.trackShare(uuid)');
+    expect(source).toContain('api.trackShare(uuid, method)');
+    expect(source).toContain("trackShare('native_share')");
+    expect(source).toContain("trackShare('copy_link')");
     expect(source).toContain('api.closePost(uuid');
     expect(source).toContain('api.reactivatePost(uuid)');
   });

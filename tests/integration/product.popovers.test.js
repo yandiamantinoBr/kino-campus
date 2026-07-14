@@ -47,8 +47,10 @@ describe('product.popovers.js - estado e helpers locais', () => {
 
 describe('product.popovers.js - share wiring', () => {
   test('define tracking e copia do link atual', () => {
-    expect(source).toContain('function trackCurrentPostShare()');
+    expect(source).toContain('function trackCurrentPostShare(method)');
     expect(source).toContain('window.KCAPI.trackShare');
+    expect(source).toContain("trackCurrentPostShare('whatsapp')");
+    expect(source).toContain("trackCurrentPostShare('copy_link')");
     expect(source).toContain('function copyCurrentPostLink(options)');
     expect(source).toContain('window.KCUtils.copyTextToClipboard');
   });

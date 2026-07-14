@@ -92,6 +92,16 @@
   }
 
   // resolveCurrentUserDisplayName / resolveCurrentUserAvatar → window._KCProduct.load
+  const LEAD_CONTACT_TYPES = Object.freeze({
+    whatsapp: true,
+    email_public: true,
+    instagram: true,
+    linkedin: true,
+    facebook: true,
+    chat_internal: true,
+    external_contact: true,
+  });
+
   function getContactActionPresentation(action, post) {
     const fallbackCta = post && post._kcCTA ? post._kcCTA : null;
     const iconMap = {
@@ -104,6 +114,7 @@
       login_required: 'fas fa-right-to-bracket',
       view_profile: 'fas fa-id-badge',
       external_link: 'fas fa-arrow-up-right-from-square',
+      external_contact: 'fas fa-arrow-up-right-from-square',
       real_form: 'fas fa-paper-plane',
       safe_fallback: 'fas fa-circle-info'
     };
@@ -136,7 +147,7 @@
 
     if (action.href) {
       try {
-        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        if (window.KCEvents && (typeof window.KCEvents.trackRecommended === 'function' || typeof window.KCEvents.track === 'function')) {
           var pid = post && (post.uuid || post.id);
           var contactType = (action && action.type) ? String(action.type) : 'unknown';
           var channel = 'external';
@@ -145,7 +156,20 @@
           else if (/^tel:/i.test(action.href)) channel = 'phone';
           else if (/mensagens\.html/i.test(action.href)) channel = 'chat_internal';
           else if (/_blank/.test(action.target || '')) channel = 'external';
-          window.KCEvents.track('kc_contact_click', { post_id: pid || null, contact_type: contactType, channel: channel });
+          if (LEAD_CONTACT_TYPES[contactType] && typeof window.KCEvents.trackRecommended === 'function') {
+            window.KCEvents.trackRecommended('generate_lead', {
+              item_id: pid || null,
+              content_type: 'post',
+              contact_type: contactType,
+              channel: channel,
+            });
+          } else if (LEAD_CONTACT_TYPES[contactType] && typeof window.KCEvents.track === 'function') {
+            window.KCEvents.track('kc_contact_click', { post_id: pid || null, contact_type: contactType, channel: channel });
+          } else if (contactType === 'view_profile' && typeof window.KCEvents.track === 'function') {
+            window.KCEvents.track('kc_profile_cta_click', { item_id: pid || null, content_type: 'post' });
+          } else if (contactType === 'external_link' && typeof window.KCEvents.track === 'function') {
+            window.KCEvents.track('kc_external_cta_click', { item_id: pid || null, content_type: 'post' });
+          }
         }
       } catch (_) {}
       if (action.target === '_blank') {
@@ -157,6 +181,14 @@
     }
 
     if (typeof action.handler === 'function') {
+      try {
+        if (action.type === 'real_form' && window.KCEvents && typeof window.KCEvents.track === 'function') {
+          window.KCEvents.track('kc_contact_form_open', {
+            item_id: post && (post.uuid || post.id) || null,
+            content_type: 'post',
+          });
+        }
+      } catch (_) { }
       action.handler();
       return true;
     }
@@ -253,7 +285,7 @@
         return { type: 'login_required', label: 'Entrar para contatar' };
       }
       return {
-        type: 'external_link',
+        type: 'external_contact',
         label: 'Abrir canal de contato',
         href: externalUrl,
         target: '_blank',
@@ -427,6 +459,15 @@
         event.preventDefault();
         const authorId = (window._KCProduct.render && window._KCProduct.render.getPostAuthorId ? window._KCProduct.render.getPostAuthorId(currentPost) : null);
         if (authorId) {
+          try {
+            const publicPostId = String((currentPost && (currentPost.uuid || currentPost.id)) || '').trim();
+            if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+              window.KCEvents.track('kc_profile_cta_click', {
+                item_id: publicPostId || null,
+                content_type: 'post'
+              });
+            }
+          } catch (_) {}
           window.location.href = 'profile.html?id=' + encodeURIComponent(authorId);
         } else {
           toast('Perfil indisponível para esta publicação.', 'warn', 2000);

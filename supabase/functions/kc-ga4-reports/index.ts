@@ -23,7 +23,7 @@
 //
 // Optional:
 //   - KC_GA4_CACHE_TTL_SEC     default 300 (5 min)
-//   - KC_GA4_ALLOWED_ORIGINS   default "*" (frontend pages in same origin)
+//   - KC_GA4_ALLOWED_ORIGINS   comma-separated HTTPS origins
 //   - KC_GA4_MAX_LIMIT         default 1000 (hard cap 10000)
 //
 // Auth for the caller:
@@ -31,11 +31,12 @@
 // - The function reads Authorization: Bearer <supabase_jwt> and validates
 //   via service-role client. Non-admin requests get 403.
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 // ── Constants ────────────────────────────────────────────────────────────
 const COMMON_CORS_HEADERS = {
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Cache-Control": "no-store",
 };
@@ -48,31 +49,50 @@ const HARD_MAX_LIMIT = 10000;
 const DEFAULT_CACHE_TTL_SEC = 300;
 const MAX_CACHE_TTL_SEC = 3600;
 const MAX_RESPONSE_CACHE_ENTRIES = 50;
+const GOOGLE_REQUEST_TIMEOUT_MS = 15_000;
+const MAX_REQUEST_BODY_BYTES = 32 * 1024;
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://www.kinocampus.com.br",
+  "https://kinocampus.com.br",
+];
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 function readAllowedOrigins(): string[] {
-  const raw = (Deno.env.get("KC_GA4_ALLOWED_ORIGINS") ?? "*").trim() || "*";
-  return raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+  const raw = (Deno.env.get("KC_GA4_ALLOWED_ORIGINS") ?? "").trim();
+  if (!raw) return [...DEFAULT_ALLOWED_ORIGINS];
+  const origins = raw.split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin !== "*")
+    .map((origin) => {
+      try {
+        const parsed = new URL(origin);
+        if (
+          parsed.protocol !== "https:" || parsed.username || parsed.password ||
+          parsed.pathname !== "/" || parsed.search || parsed.hash
+        ) return null;
+        return parsed.origin;
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter((origin): origin is string => origin !== null);
+  return origins.length > 0
+    ? [...new Set(origins)]
+    : [...DEFAULT_ALLOWED_ORIGINS];
 }
 
 function isOriginAllowed(req: Request): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return true;
-  const allowed = readAllowedOrigins();
-  return allowed.includes("*") || allowed.includes(origin);
+  return readAllowedOrigins().includes(origin);
 }
 
 function corsHeadersFor(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
   const allowed = readAllowedOrigins();
   const headers: Record<string, string> = { ...COMMON_CORS_HEADERS };
-  if (allowed.includes("*")) {
-    headers["Access-Control-Allow-Origin"] = "*";
-  } else if (origin && allowed.includes(origin)) {
+  if (origin && allowed.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
-    headers["Vary"] = "Origin";
-  } else if (!origin && allowed.length > 0) {
-    headers["Access-Control-Allow-Origin"] = allowed[0];
     headers["Vary"] = "Origin";
   }
   return headers;
@@ -81,18 +101,15 @@ function corsHeadersFor(req: Request): Record<string, string> {
 function json(req: Request, status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeadersFor(req) },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...corsHeadersFor(req),
+    },
   });
 }
 
 function getEnv(name: string, fallback = ""): string {
   return (Deno.env.get(name) ?? "").trim() || fallback;
-}
-
-function asText(v: unknown): string {
-  if (typeof v === "string") return v.trim();
-  if (v == null) return "";
-  return String(v).trim();
 }
 
 function asNumber(v: unknown, fallback = 0): number {
@@ -105,9 +122,24 @@ function clampInteger(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.floor(n)));
 }
 
-// Strip trailing slashes for URL joining
-function trimPath(p: string): string {
-  return p.replace(/\/+$/, "");
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    GOOGLE_REQUEST_TIMEOUT_MS,
+  );
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (_) {
+    throw new Error(
+      controller.signal.aborted ? "google_timeout" : "google_unavailable",
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ── Service Account JWT → OAuth2 token ───────────────────────────────────
@@ -131,11 +163,16 @@ function base64url(input: ArrayBuffer | Uint8Array | string): string {
     bytes = new Uint8Array(input);
   }
   let bin = "";
-  for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  for (let i = 0; i < bytes.byteLength; i++) {
+    bin += String.fromCharCode(bytes[i]);
+  }
+  return btoa(bin).replaceAll("+", "-").replaceAll("/", "_").replaceAll(
+    "=",
+    "",
+  );
 }
 
-async function importPrivateKey(pem: string): Promise<CryptoKey> {
+function importPrivateKey(pem: string): Promise<CryptoKey> {
   // Strip PEM envelope and whitespace
   const body = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, "")
@@ -165,7 +202,7 @@ async function getAccessToken(saKey: ServiceAccountKey): Promise<string> {
   const claim = base64url(JSON.stringify({
     iss: saKey.client_email,
     scope: GA4_SCOPE,
-    aud: saKey.token_uri || TOKEN_URL,
+    aud: TOKEN_URL,
     iat,
     exp,
   }));
@@ -178,7 +215,7 @@ async function getAccessToken(saKey: ServiceAccountKey): Promise<string> {
   );
   const jwt = `${signingInput}.${base64url(signature)}`;
 
-  const tokenRes = await fetch(saKey.token_uri || TOKEN_URL, {
+  const tokenRes = await fetchWithTimeout(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -188,11 +225,15 @@ async function getAccessToken(saKey: ServiceAccountKey): Promise<string> {
   });
 
   if (!tokenRes.ok) {
-    const errText = await tokenRes.text();
-    throw new Error(`token_exchange_failed ${tokenRes.status}: ${errText.slice(0, 200)}`);
+    throw new Error("service_account_auth_failed");
   }
-  const data = await tokenRes.json() as { access_token?: string; expires_in?: number };
-  if (!data.access_token) throw new Error("token_response_missing_access_token");
+  const data = await tokenRes.json() as {
+    access_token?: string;
+    expires_in?: number;
+  };
+  if (!data.access_token) {
+    throw new Error("token_response_missing_access_token");
+  }
 
   cachedToken = {
     token: data.access_token,
@@ -239,7 +280,10 @@ async function resolveCaller(req: Request): Promise<CallerContext> {
 }
 
 // ── Cache ────────────────────────────────────────────────────────────────
-interface CacheEntry { body: unknown; expiresAtMs: number }
+interface CacheEntry {
+  body: unknown;
+  expiresAtMs: number;
+}
 const responseCache = new Map<string, CacheEntry>();
 
 function cacheGet(key: string): unknown | null {
@@ -253,9 +297,12 @@ function cacheGet(key: string): unknown | null {
 }
 
 function cacheSet(key: string, body: unknown, ttlSec: number): void {
-  if (responseCache.size > MAX_RESPONSE_CACHE_ENTRIES) {
+  while (
+    !responseCache.has(key) && responseCache.size >= MAX_RESPONSE_CACHE_ENTRIES
+  ) {
     const firstKey = responseCache.keys().next().value;
     if (firstKey !== undefined) responseCache.delete(firstKey);
+    else break;
   }
   responseCache.set(key, { body, expiresAtMs: Date.now() + ttlSec * 1000 });
 }
@@ -264,25 +311,27 @@ function cacheSet(key: string, body: unknown, ttlSec: number): void {
 async function callDataApi(
   saKey: ServiceAccountKey,
   propertyId: string,
-  path: string,
   body: RunReportRequest,
 ): Promise<unknown> {
   const token = await getAccessToken(saKey);
-  const url = `${DATA_API_BASE}/${trimPath(path)}:runReport`;
-  const res = await fetch(url, {
+  const url = `${DATA_API_BASE}/properties/${
+    encodeURIComponent(propertyId)
+  }:runReport`;
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      ...body,
-      property: `properties/${propertyId}`,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`ga4_data_api_${res.status}: ${errText.slice(0, 400)}`);
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("ga4_not_authorized");
+    }
+    if (res.status === 429) throw new Error("ga4_rate_limited");
+    if (res.status >= 500) throw new Error("ga4_unavailable");
+    throw new Error("ga4_request_rejected");
   }
   return await res.json();
 }
@@ -299,7 +348,11 @@ function stableStringify(value: unknown): string {
   const entries = Object.entries(value as Record<string, unknown>)
     .filter(([, item]) => item !== undefined)
     .sort(([a], [b]) => a.localeCompare(b));
-  return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(",")}}`;
+  return `{${
+    entries.map(([key, item]) =>
+      `${JSON.stringify(key)}:${stableStringify(item)}`
+    ).join(",")
+  }}`;
 }
 
 function buildRequestKey(body: unknown): string {
@@ -322,40 +375,130 @@ interface RunReportRequest {
   metricFilter?: Record<string, unknown>;
 }
 
-function validateRequest(input: unknown, maxLimit: number): { ok: true; value: RunReportRequest } | { ok: false; error: string } {
-  if (!input || typeof input !== "object") return { ok: false, error: "body must be object" };
+function validateRequest(
+  input: unknown,
+  maxLimit: number,
+): { ok: true; value: RunReportRequest } | { ok: false; error: string } {
+  if (!input || typeof input !== "object") {
+    return { ok: false, error: "body must be object" };
+  }
   const v = input as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "dateRanges",
+    "metrics",
+    "dimensions",
+    "limit",
+    "offset",
+    "orderBys",
+    "dimensionFilter",
+    "metricFilter",
+  ]);
+  if (Object.keys(v).some((key) => !allowedKeys.has(key))) {
+    return { ok: false, error: "unsupported request field" };
+  }
 
-  if (!Array.isArray(v.dateRanges) || v.dateRanges.length === 0) {
-    return { ok: false, error: "dateRanges[] required" };
+  if (
+    !Array.isArray(v.dateRanges) || v.dateRanges.length === 0 ||
+    v.dateRanges.length > 4
+  ) {
+    return { ok: false, error: "dateRanges must contain 1..4 items" };
   }
   for (const dr of v.dateRanges) {
-    if (!dr || typeof dr !== "object" || typeof (dr as Record<string, unknown>).startDate !== "string" || typeof (dr as Record<string, unknown>).endDate !== "string") {
+    if (!dr || typeof dr !== "object") {
       return { ok: false, error: "each dateRange needs startDate and endDate" };
     }
+    const dateRange = dr as Record<string, unknown>;
+    const keys = Object.keys(dateRange);
+    const validDate = (value: unknown): boolean => {
+      if (typeof value !== "string") return false;
+      if (/^(?:today|yesterday|\d{1,4}daysAgo)$/.test(value)) return true;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const parsed = new Date(`${value}T00:00:00Z`);
+      return !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === value;
+    };
+    if (
+      keys.some((key) =>
+        key !== "startDate" && key !== "endDate" && key !== "name"
+      ) ||
+      !validDate(dateRange.startDate) ||
+      !validDate(dateRange.endDate) ||
+      (dateRange.name !== undefined &&
+        (typeof dateRange.name !== "string" ||
+          !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(dateRange.name)))
+    ) return { ok: false, error: "invalid dateRange" };
   }
 
-  if (!Array.isArray(v.metrics) || v.metrics.length === 0) {
-    return { ok: false, error: "metrics[] required" };
+  const validFieldName = (value: unknown): boolean =>
+    typeof value === "string" && /^[A-Za-z][A-Za-z0-9_]{0,127}$/.test(value);
+
+  if (
+    !Array.isArray(v.metrics) || v.metrics.length === 0 || v.metrics.length > 10
+  ) {
+    return { ok: false, error: "metrics must contain 1..10 items" };
   }
   for (const m of v.metrics) {
-    if (!m || typeof m !== "object" || typeof (m as Record<string, unknown>).name !== "string") {
+    if (
+      !m ||
+      typeof m !== "object" ||
+      Object.keys(m as Record<string, unknown>).some((key) => key !== "name") ||
+      !validFieldName((m as Record<string, unknown>).name)
+    ) {
       return { ok: false, error: "each metric needs {name}" };
     }
   }
 
-  if (v.dimensions !== undefined && !Array.isArray(v.dimensions)) {
-    return { ok: false, error: "dimensions must be array" };
+  if (v.dimensions !== undefined) {
+    if (!Array.isArray(v.dimensions) || v.dimensions.length > 9) {
+      return { ok: false, error: "dimensions must contain 0..9 items" };
+    }
+    for (const dimension of v.dimensions) {
+      if (
+        !dimension ||
+        typeof dimension !== "object" ||
+        Object.keys(dimension as Record<string, unknown>).some((key) =>
+          key !== "name"
+        ) ||
+        !validFieldName((dimension as Record<string, unknown>).name)
+      ) return { ok: false, error: "each dimension needs {name}" };
+    }
+  }
+
+  if (
+    v.orderBys !== undefined &&
+    (!Array.isArray(v.orderBys) || v.orderBys.length > 10)
+  ) {
+    return { ok: false, error: "orderBys must contain 0..10 items" };
+  }
+  if (
+    v.dimensionFilter !== undefined &&
+    (!v.dimensionFilter || typeof v.dimensionFilter !== "object" ||
+      Array.isArray(v.dimensionFilter))
+  ) {
+    return { ok: false, error: "dimensionFilter must be object" };
+  }
+  if (
+    v.metricFilter !== undefined &&
+    (!v.metricFilter || typeof v.metricFilter !== "object" ||
+      Array.isArray(v.metricFilter))
+  ) {
+    return { ok: false, error: "metricFilter must be object" };
   }
 
   if (v.limit !== undefined) {
-    if (typeof v.limit !== "number" || !Number.isInteger(v.limit) || v.limit < 1 || v.limit > maxLimit) {
+    if (
+      typeof v.limit !== "number" || !Number.isInteger(v.limit) ||
+      v.limit < 1 || v.limit > maxLimit
+    ) {
       return { ok: false, error: `limit must be integer 1..${maxLimit}` };
     }
   }
 
   if (v.offset !== undefined) {
-    if (typeof v.offset !== "number" || !Number.isInteger(v.offset) || v.offset < 0 || v.offset > 100000) {
+    if (
+      typeof v.offset !== "number" || !Number.isInteger(v.offset) ||
+      v.offset < 0 || v.offset > 100000
+    ) {
       return { ok: false, error: "offset must be integer 0..100000" };
     }
   }
@@ -369,23 +512,51 @@ async function handleRunReport(
   propertyId: string,
   body: unknown,
 ): Promise<Response> {
-  const maxLimit = clampInteger(asNumber(getEnv("KC_GA4_MAX_LIMIT", String(DEFAULT_MAX_LIMIT)), DEFAULT_MAX_LIMIT), 1, HARD_MAX_LIMIT);
+  const maxLimit = clampInteger(
+    asNumber(
+      getEnv("KC_GA4_MAX_LIMIT", String(DEFAULT_MAX_LIMIT)),
+      DEFAULT_MAX_LIMIT,
+    ),
+    1,
+    HARD_MAX_LIMIT,
+  );
   const validation = validateRequest(body, maxLimit);
   if (!validation.ok) return json(req, 400, { error: validation.error });
 
-  const cacheTtl = clampInteger(asNumber(getEnv("KC_GA4_CACHE_TTL_SEC", String(DEFAULT_CACHE_TTL_SEC)), DEFAULT_CACHE_TTL_SEC), 0, MAX_CACHE_TTL_SEC);
+  const cacheTtl = clampInteger(
+    asNumber(
+      getEnv("KC_GA4_CACHE_TTL_SEC", String(DEFAULT_CACHE_TTL_SEC)),
+      DEFAULT_CACHE_TTL_SEC,
+    ),
+    0,
+    MAX_CACHE_TTL_SEC,
+  );
   const cacheKey = buildRequestKey(validation.value);
   const cached = cacheGet(cacheKey);
   if (cached) return json(req, 200, { ok: true, cached: true, data: cached });
 
   try {
-    const data = await callDataApi(saKey, propertyId, "", validation.value);
+    const data = await callDataApi(saKey, propertyId, validation.value);
     cacheSet(cacheKey, data, cacheTtl);
     return json(req, 200, { ok: true, cached: false, data });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const isAuth = msg.includes("401") || msg.includes("403") || msg.includes("token");
-    return json(req, isAuth ? 502 : 500, { ok: false, error: msg });
+    const knownCodes = new Set([
+      "service_account_auth_failed",
+      "ga4_not_authorized",
+      "ga4_rate_limited",
+      "ga4_unavailable",
+      "ga4_request_rejected",
+      "google_timeout",
+      "google_unavailable",
+    ]);
+    const code = knownCodes.has(msg) ? msg : "ga4_internal_error";
+    const status = code === "ga4_rate_limited"
+      ? 503
+      : code === "ga4_internal_error"
+      ? 500
+      : 502;
+    return json(req, status, { ok: false, error: code });
   }
 }
 
@@ -403,7 +574,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const path = new URL(req.url).pathname.replace(/\/$/, "");
-  const isRunReport = path.endsWith("/runReport") || path === "" || path.endsWith("/kc-ga4-reports");
+  const isRunReport = path.endsWith("/runReport") || path === "" ||
+    path.endsWith("/kc-ga4-reports");
 
   if (req.method !== "POST" || !isRunReport) {
     return json(req, 405, { error: "method_not_allowed" });
@@ -419,23 +591,43 @@ Deno.serve(async (req: Request) => {
   if (!saKeyJson || !propertyId) {
     return json(req, 503, {
       error: "missing_config",
-      detail: "Set KC_GA4_SA_KEY and KC_GA4_PROPERTY_ID via supabase secrets set",
+      detail:
+        "Set KC_GA4_SA_KEY and KC_GA4_PROPERTY_ID via supabase secrets set",
     });
+  }
+  if (!/^\d{6,20}$/.test(propertyId)) {
+    return json(req, 503, { error: "invalid_property_id" });
   }
 
   let saKey: ServiceAccountKey;
   try {
     saKey = JSON.parse(saKeyJson) as ServiceAccountKey;
-    if (!saKey.private_key || !saKey.client_email) {
-      throw new Error("SA key missing private_key or client_email");
+    if (
+      saKey.type !== "service_account" ||
+      !saKey.private_key ||
+      !saKey.private_key.includes("-----BEGIN PRIVATE KEY-----") ||
+      !saKey.private_key.includes("-----END PRIVATE KEY-----") ||
+      !/^[^@\s]+@[^@\s]+\.gserviceaccount\.com$/i.test(saKey.client_email)
+    ) {
+      throw new Error("invalid service account shape");
     }
-  } catch (e) {
-    return json(req, 503, { error: "invalid_sa_key", detail: e instanceof Error ? e.message : String(e) });
+  } catch (_) {
+    return json(req, 503, { error: "invalid_sa_key" });
   }
 
   let body: unknown;
   try {
-    body = await req.json();
+    const declaredLength = Number(req.headers.get("content-length"));
+    if (
+      Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES
+    ) {
+      return json(req, 413, { error: "body_too_large" });
+    }
+    const text = await req.text();
+    if (new TextEncoder().encode(text).byteLength > MAX_REQUEST_BODY_BYTES) {
+      return json(req, 413, { error: "body_too_large" });
+    }
+    body = JSON.parse(text);
   } catch (_) {
     return json(req, 400, { error: "invalid_json" });
   }

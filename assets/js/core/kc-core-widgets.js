@@ -114,11 +114,12 @@
   function kcOpenWhatsAppShare(url, title) {
     const u = kcNormalizeShareUrl(url);
     const t = String(title || '').trim();
-    if (!u) return;
+    if (!u) return false;
   
     const text = (t ? (t + '\n') : '') + u;
     const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(wa, '_blank', 'noopener,noreferrer');
+    return true;
   }
   
   function kcInitWhatsAppShare() {
@@ -138,9 +139,12 @@
   
       const url = btn.dataset.shareUrl || fallback.url;
       const title = btn.dataset.shareTitle || fallback.title;
+      const postId = card && card.dataset ? String(card.dataset.postId || '').trim() : '';
   
       if (!url) return;
-      kcOpenWhatsAppShare(url, title);
+      if (kcOpenWhatsAppShare(url, title) && postId && window.KCAPI && typeof window.KCAPI.trackShare === 'function') {
+        window.KCAPI.trackShare(postId, 'whatsapp').catch(function () { });
+      }
     });
   
     // 3) Observer: novos cards injetados pelos controllers (feeds)

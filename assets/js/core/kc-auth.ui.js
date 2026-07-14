@@ -173,9 +173,12 @@
     return `${path}${window.location.search || ''}${window.location.hash || ''}`;
   }
 
-  function buildCallbackUrl(nextPath) {
+  function buildCallbackUrl(nextPath, authType) {
     const url = new URL('/auth-callback.html', window.location.origin);
     url.searchParams.set('next', normalizeNextPath(nextPath || buildCurrentPath()));
+    if (authType === 'signup' || authType === 'recovery' || authType === 'invite') {
+      url.searchParams.set('mode', authType);
+    }
     return url.toString();
   }
 
@@ -789,9 +792,11 @@
     if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.login-failed') : 'Não foi possível entrar.')), 'error'); return; }
     setStatus(window.KCi18n ? window.KCi18n.t('auth.login-success') : 'Login realizado com sucesso.', 'success');
     try {
-      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+      if (window.KCEvents && typeof window.KCEvents.trackRecommended === 'function') {
         var method = (window.KCAPI && window.KCAPI.authProvider) ? String(window.KCAPI.authProvider) : 'email';
-        window.KCEvents.track('kc_login', { method: method });
+        window.KCEvents.trackRecommended('login', { method: method });
+      } else if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track('kc_login', { method: 'email' });
       }
     } catch (_) {}
     await handlePostAuthSuccess(modalState.nextPath);
@@ -817,13 +822,20 @@
     toggleExternalAccessPrompt('', false);
     setStatus(window.KCi18n ? window.KCi18n.t('auth.creating-account') : 'Criando sua conta...', 'info');
     const result = await window.KCAPI.signUp(email, password, {
-      emailRedirectTo: buildCallbackUrl(modalState.nextPath),
+      emailRedirectTo: buildCallbackUrl(modalState.nextPath, 'signup'),
       data: buildLegalAcceptanceMetadata(email)
     });
     if (!result || result.error) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.signup-failed') : 'Não foi possível criar sua conta.')), 'error'); return; }
     try {
-      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-        window.KCEvents.track('kc_sign_up', { method: 'email', needs_confirmation: !result.session });
+      if (result.session && window.KCEvents && typeof window.KCEvents.trackRecommendedOnce === 'function') {
+        window.KCEvents.trackRecommendedOnce('sign_up', { method: 'email', needs_confirmation: false });
+      } else if (result.session && window.KCEvents && typeof window.KCEvents.trackRecommended === 'function') {
+        window.KCEvents.trackRecommended('sign_up', { method: 'email', needs_confirmation: false });
+      } else if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track(result.session ? 'kc_sign_up' : 'kc_sign_up_submit', {
+          method: 'email',
+          needs_confirmation: !result.session,
+        });
       }
     } catch (_) {}
     if (result.session) {
@@ -903,7 +915,7 @@
     const email = normalizeEmail(form.email.value);
     if (!email) { setStatus(window.KCi18n ? window.KCi18n.t('auth.email-required') : 'Informe o e-mail da sua conta.', 'warn'); return; }
     setStatus(window.KCi18n ? window.KCi18n.t('auth.sending-reset') : 'Enviando link de redefinição...', 'info');
-    const result = await window.KCAPI.requestPasswordReset(email, { redirectTo: buildCallbackUrl(modalState.nextPath) });
+    const result = await window.KCAPI.requestPasswordReset(email, { redirectTo: buildCallbackUrl(modalState.nextPath, 'recovery') });
     if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.reset-failed') : 'Não foi possível enviar o link.')), 'error'); return; }
     setStatus(window.KCi18n ? window.KCi18n.t('auth.reset-sent') : 'Pronto. Enviamos um e-mail com o link para redefinir sua senha.', 'success');
   }
@@ -914,7 +926,7 @@
     if (!email) { setStatus(window.KCi18n ? window.KCi18n.t('auth.resend-email-required') : 'Informe o e-mail usado no cadastro.', 'warn'); return; }
     // Não bloquear e-mails convidados: o Supabase retorna erro se o e-mail não existe ou já foi confirmado
     setStatus(window.KCi18n ? window.KCi18n.t('auth.resending') : 'Reenviando confirmação...', 'info');
-    const result = await window.KCAPI.resendConfirmation(email, { emailRedirectTo: buildCallbackUrl(modalState.nextPath) });
+    const result = await window.KCAPI.resendConfirmation(email, { emailRedirectTo: buildCallbackUrl(modalState.nextPath, 'signup') });
     if (!result || result.error || result.ok === false) { setStatus(translateAuthError((result && result.error && result.error.message) || (window.KCi18n ? window.KCi18n.t('auth.resend-failed') : 'Não foi possível reenviar a confirmação.')), 'error'); return; }
     setStatus(window.KCi18n ? window.KCi18n.t('auth.resend-sent') : 'Novo e-mail enviado. Abra o link recebido para concluir o cadastro.', 'success');
   }

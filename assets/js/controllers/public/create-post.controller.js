@@ -112,13 +112,6 @@
         if (isSupabase) {
           console.log(LOG_TAG + ' Publicacao concluida com sucesso.', summary);
         }
-        try {
-          if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-            var newPostId = (result && (result.id || result.uuid)) || null;
-            var moduleKey = payload && payload.modulo ? String(payload.modulo) : null;
-            window.KCEvents.track('kc_post_create', { post_id: newPostId, module: moduleKey });
-          }
-        } catch (_) {}
         return result;
       }
 

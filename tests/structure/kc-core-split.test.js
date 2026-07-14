@@ -115,6 +115,12 @@ describe('kc-user-posts.js — contrato estático', () => {
 // ── 3. kc-core-widgets.js — contrato estático ─────────────────────────────────
 
 describe('kc-core-widgets.js — contrato estático', () => {
+  test('compartilhamento WhatsApp dos cards registra método e publicação uma vez', () => {
+    const source = fs.readFileSync(WIDGETS, 'utf8');
+    expect(source).toContain("card.dataset.postId");
+    expect(source).toContain("window.KCAPI.trackShare(postId, 'whatsapp')");
+    expect(source.match(/trackShare\(postId, 'whatsapp'\)/g)).toHaveLength(1);
+  });
   let code;
   beforeAll(() => { code = readFile(WIDGETS); });
 
