@@ -292,7 +292,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await dismissConsentBanner(page);
     await expect(page.locator('#sites-registry-status')).toContainText('Catálogo canônico validado em modo shadow');
     await expect(page.locator('#kpi-sites')).toHaveText('2');
-    await expect(page.locator('#sites-catalog-summary')).toContainText('2entidades UFG');
+    await expect(page.locator('#sites-catalog-summary')).toContainText('2registros de entidade');
     await expect(page.locator('tr[data-source-id="web.ufg.portal"]')).toBeVisible();
     await expect(page.locator('.kc-cadu-inherited-warning')).toContainText('não será copiada');
     await expect(page.locator('.kc-cadu-source-note-input')).toHaveValue('');

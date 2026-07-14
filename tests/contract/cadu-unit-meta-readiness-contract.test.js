@@ -40,6 +40,9 @@ describe('Cadu metadata deployment readiness contract', () => {
     expect(normalized).toContain("'contractVersion', 'cadu-unit-meta-cas-v1'");
     expect(normalized).toContain("'phase', 'phase-a'");
     expect(normalized).toContain("function_row.proconfig = array['search_path=\"\"']");
+    expect(
+      (normalized.match(/pg_catalog\.replace\( pg_catalog\.replace\(function_row\.prosrc, E'\\r\\n', E'\\n'\), E'\\r', E'\\n' \)/g) || []),
+    ).toHaveLength(3);
     expect(normalized).toContain("function_row.proargnames = array[ 'p_source_id'");
     expect(normalized).toContain("function_row.proargnames = array[ 'p_unit_id'");
     expect(normalized).toContain('function_row.pronargdefaults = 0');
@@ -52,6 +55,9 @@ describe('Cadu metadata deployment readiness contract', () => {
     expect(normalized).toContain("'service_role', 'public.kc_unit_meta', 'references'");
     expect(normalized).toContain("policy_row.polname = 'kc_unit_meta_select_public'");
     expect(normalized).toContain("policy_row.polcmd = 'r'");
+    expect(normalized).toContain("named_function.proname = 'kc_cadu_upsert_source_override'");
+    expect(normalized).toContain("named_function.proname = 'kc_cadu_upsert_legacy_override'");
+    expect((normalized.match(/'maintain'/g) || [])).toHaveLength(3);
     expect(normalized).toContain('live_attribute.attnum > 0');
     expect(normalized).toContain(') = 7 and not exists');
     expect(normalized).toContain('kc_unit_meta_updated_by_fkey|f|true|false|false');

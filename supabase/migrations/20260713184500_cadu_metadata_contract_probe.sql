@@ -195,7 +195,13 @@ as $$
           and function_row.proparallel = 'u'
           and function_row.proconfig = array['search_path=""']
           and language_row.lanname = 'plpgsql'
-          and pg_catalog.md5(function_row.prosrc) =
+          and pg_catalog.md5(
+            pg_catalog.replace(
+              pg_catalog.replace(function_row.prosrc, E'\r\n', E'\n'),
+              E'\r',
+              E'\n'
+            )
+          ) =
             'f62c2001b838efab4de4985b6a9e4fc1'
           and not pg_catalog.has_function_privilege(
             'anon', function_row.oid, 'execute'
@@ -242,8 +248,22 @@ as $$
           and function_row.proparallel = 'u'
           and function_row.proconfig = array['search_path=""']
           and language_row.lanname = 'plpgsql'
-          and pg_catalog.md5(function_row.prosrc) =
+          and pg_catalog.md5(
+            pg_catalog.replace(
+              pg_catalog.replace(function_row.prosrc, E'\r\n', E'\n'),
+              E'\r',
+              E'\n'
+            )
+          ) =
             '7326c723f5eba96059ed69c959d2c4a8'
+          and (
+            select pg_catalog.count(*)
+            from pg_catalog.pg_proc as named_function
+            join pg_catalog.pg_namespace as named_schema
+              on named_schema.oid = named_function.pronamespace
+            where named_schema.nspname = 'public'
+              and named_function.proname = 'kc_cadu_upsert_source_override'
+          ) = 1
           and pg_catalog.has_function_privilege(
             'service_role', function_row.oid, 'execute'
           )
@@ -285,8 +305,22 @@ as $$
           and function_row.proparallel = 'u'
           and function_row.proconfig = array['search_path=""']
           and language_row.lanname = 'plpgsql'
-          and pg_catalog.md5(function_row.prosrc) =
+          and pg_catalog.md5(
+            pg_catalog.replace(
+              pg_catalog.replace(function_row.prosrc, E'\r\n', E'\n'),
+              E'\r',
+              E'\n'
+            )
+          ) =
             'd42bfede3b7399d16b647e26004eedf2'
+          and (
+            select pg_catalog.count(*)
+            from pg_catalog.pg_proc as named_function
+            join pg_catalog.pg_namespace as named_schema
+              on named_schema.oid = named_function.pronamespace
+            where named_schema.nspname = 'public'
+              and named_function.proname = 'kc_cadu_upsert_legacy_override'
+          ) = 1
           and pg_catalog.has_function_privilege(
             'service_role', function_row.oid, 'execute'
           )
@@ -321,6 +355,9 @@ as $$
           and not pg_catalog.has_table_privilege(
             'anon', table_row.oid, 'trigger'
           )
+          and not pg_catalog.has_table_privilege(
+            'anon', table_row.oid, 'maintain'
+          )
           and not pg_catalog.has_any_column_privilege(
             'authenticated', table_row.oid, 'insert'
           )
@@ -338,6 +375,9 @@ as $$
           )
           and not pg_catalog.has_table_privilege(
             'authenticated', table_row.oid, 'trigger'
+          )
+          and not pg_catalog.has_table_privilege(
+            'authenticated', table_row.oid, 'maintain'
           )
           and not exists (
             select 1
@@ -414,6 +454,9 @@ as $$
           )
           and not pg_catalog.has_table_privilege(
             'service_role', 'public.kc_unit_meta', 'trigger'
+          )
+          and not pg_catalog.has_table_privilege(
+            'service_role', 'public.kc_unit_meta', 'maintain'
           )
         from pg_catalog.pg_roles as service_role_row
         where service_role_row.rolname = 'service_role'

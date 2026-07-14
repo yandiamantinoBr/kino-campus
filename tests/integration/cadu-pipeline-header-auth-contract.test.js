@@ -25,6 +25,10 @@ function extractFunction(name) {
 describe('Cadu pipeline header authentication contract', () => {
   const splitSSEBuffer = extractFunction('splitSSEBuffer');
   const parseSSEBlock = extractFunction('parseSSEBlock');
+  const proxy = fs.readFileSync(
+    path.join(ROOT, 'server/cadu-control-proxy.js'),
+    'utf8'
+  );
 
   test('admin credentials are never added to browser URLs', () => {
     expect(controller).not.toContain('buildCaduUrlForBrowser');
@@ -56,18 +60,20 @@ describe('Cadu pipeline header authentication contract', () => {
     expect(controller).toContain('if (pipelineLogPollState === pollState) pollState.inFlight = false;');
   });
 
-  test.each(['api/cadu/pipeline.js', 'api/cadu/pipeline-router.js'])(
-    '%s aborts the upstream SSE when the browser disconnects',
-    (relativePath) => {
-      const proxy = fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
-      expect(proxy).toContain('const upstreamController = new AbortController();');
-      expect(proxy).toContain("req.once('aborted', abortUpstream)");
-      expect(proxy).toContain("res.once('close', abortUpstream)");
-      expect(proxy).toContain('signal: upstreamController.signal');
-      expect(proxy).toContain('await reader.cancel()');
-      expect(proxy).toContain('if (!res.writableEnded && !res.destroyed) res.end()');
-    }
-  );
+  test('both pipeline entry points share an abortable, bounded SSE implementation', () => {
+    ['api/cadu/pipeline.js', 'api/cadu/pipeline-router.js'].forEach((relativePath) => {
+      const entry = fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+      expect(entry).toContain('handleCaduPipelineProxy');
+    });
+    expect(proxy).toContain('const upstreamController = new AbortController();');
+    expect(proxy).toContain("req.once('aborted', abortUpstream)");
+    expect(proxy).toContain("res.once('close', abortUpstream)");
+    expect(proxy).toContain('signal: upstreamController.signal');
+    expect(proxy).toContain("redirect: 'error'");
+    expect(proxy).toContain('MAX_SSE_BYTES');
+    expect(proxy).toContain('await reader.cancel()');
+    expect(proxy).toContain('if (streamStarted && !res.writableEnded && !res.destroyed) res.end()');
+  });
 
   test('log download uses an authenticated fetch and a local Blob', () => {
     const start = controller.indexOf('async function downloadRunLog(');

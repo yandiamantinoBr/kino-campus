@@ -11,6 +11,8 @@
 
   var FEED_PAGE_SIZE = 25;
   var STORAGE_TAB = 'kc:cadu:tab';
+  var PIPELINE_CONTROL_CONTRACT = 'cadu-pipeline-control-v1';
+  var PIPELINE_SNAPSHOT_TTL_MS = 15000;
 
   var state = {
     allSites: [],
@@ -42,6 +44,10 @@
     pipelineStages: [],
     pipelineHistory: [],
     pipelineCapabilities: {},
+    pipelineControlReady: false,
+    pipelineControlReason: 'snapshot ainda nao validado',
+    pipelineSnapshotExpiresAt: 0,
+    pipelineRequestGeneration: 0,
     pipelineStartPending: false,
     pipelineHealth: null,
     lastVersion: null
@@ -420,8 +426,8 @@
       return;
     }
     var summary = state.sourceCatalog.summary;
-    appendCatalogMetric(container, summary.entities, 'entidades UFG');
-    appendCatalogMetric(container, summary.sources, 'fontes web oficiais');
+    appendCatalogMetric(container, summary.entities, 'registros de entidade');
+    appendCatalogMetric(container, summary.sources, 'fontes web candidatas');
     appendCatalogMetric(container, summary.instagramProfiles, 'perfis Instagram mapeados');
     appendCatalogMetric(container, summary.instagramConfirmed, 'Instagram confirmados');
     appendCatalogMetric(container, summary.instagramPending, 'Instagram pendentes/tentativos');
@@ -2048,14 +2054,15 @@
       .then(function (r) { return r && !r.__error ? r : null; })
       .then(function (data) {
         if (!data || !Array.isArray(data.runs)) return;
-        notifState.runs = data.runs;
+        var safeRuns = data.runs.map(normalizePipelineRun).filter(Boolean).slice(0, 20);
+        notifState.runs = safeRuns;
 
         var dayAgo = Math.floor(Date.now() / 1000) - 86400;
-        var recent24h = data.runs.filter(function (r) { return (r.started_at || 0) >= dayAgo; });
+        var recent24h = safeRuns.filter(function (r) { return (r.started_at || 0) >= dayAgo; });
 
         try {
           var seenIds = JSON.parse(localStorage.getItem('kc_cadu_seen_runs') || '{}');
-          var newOnes = data.runs.filter(function (r) { return !seenIds[r.id]; });
+          var newOnes = safeRuns.filter(function (r) { return !seenIds[r.id]; });
           if (Object.keys(seenIds).length > 0 && newOnes.length > 0) {
             badge.textContent = newOnes.length > 9 ? '9+' : String(newOnes.length);
             badge.style.display = '';
@@ -2071,16 +2078,16 @@
 
         try {
           var newSeen = {};
-          data.runs.slice(0, 20).forEach(function (r) { newSeen[r.id] = Date.now(); });
+          safeRuns.forEach(function (r) { newSeen[r.id] = Date.now(); });
           localStorage.setItem('kc_cadu_seen_runs', JSON.stringify(newSeen));
         } catch (e) {}
 
         if (list && $('#kcCaduActivityDropdown') && !$('#kcCaduActivityDropdown').hasAttribute('hidden')) {
-          if (data.runs.length === 0) {
+          if (safeRuns.length === 0) {
             list.innerHTML = '<div class="kc-cadu-empty">Nenhuma run ainda.</div>';
             return;
           }
-          list.innerHTML = data.runs.slice(0, 8).map(function (r) {
+          list.innerHTML = safeRuns.slice(0, 8).map(function (r) {
             var stClass = r.status === 'finished' ? 'pill--finished'
                        : r.status === 'failed' ? 'pill--failed'
                        : r.status === 'running' ? 'pill--running' : '';
@@ -2735,29 +2742,294 @@
     return map[category] || 'fa-circle-play';
   }
 
+  function isSafePipelineStageId(value) {
+    return typeof value === 'string' && /^[a-z][a-z0-9_-]{0,63}$/.test(value);
+  }
+
+  function isSafePipelineRunId(value) {
+    return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value);
+  }
+
+  function normalizePipelineRun(run) {
+    if (!run || typeof run !== 'object' || Array.isArray(run)) return null;
+    if (!isSafePipelineRunId(run.id) || !isSafePipelineStageId(run.stage)) return null;
+    var status = String(run.status || '');
+    if (['pending', 'running', 'stopping', 'finished', 'failed', 'cancelled'].indexOf(status) === -1) return null;
+    var startedAt = Number(run.started_at);
+    var finishedAt = run.finished_at == null ? null : Number(run.finished_at);
+    var exitCode = run.exit_code == null ? null : Number(run.exit_code);
+    if (!Number.isFinite(startedAt) || startedAt <= 0) return null;
+    if (finishedAt != null && (!Number.isFinite(finishedAt) || finishedAt < startedAt)) return null;
+    if (exitCode != null && (!Number.isInteger(exitCode) || Math.abs(exitCode) > 1024)) exitCode = null;
+    return {
+      id: run.id,
+      stage: run.stage,
+      status: status,
+      started_at: startedAt,
+      finished_at: finishedAt,
+      exit_code: exitCode,
+      dry_run: typeof run.dry_run === 'boolean' ? run.dry_run : null,
+      summary: run.summary && typeof run.summary === 'object' && !Array.isArray(run.summary) ? run.summary : null,
+    };
+  }
+
+  function normalizePipelineStringList(values, maxItems, maxLength, identifiersOnly) {
+    if (!Array.isArray(values) || values.length > maxItems) return null;
+    var normalized = [];
+    for (var index = 0; index < values.length; index += 1) {
+      var value = values[index];
+      if (typeof value !== 'string' || value.length > maxLength ||
+          (identifiersOnly && !/^[a-z][a-z0-9_-]{0,63}$/.test(value))) return null;
+      normalized.push(value);
+    }
+    return normalized;
+  }
+
+  function normalizePipelineCheck(check) {
+    if (!check || typeof check !== 'object' || Array.isArray(check) ||
+        !isSafePipelineStageId(check.id) || typeof check.label !== 'string' ||
+        check.label.length > 160 || typeof check.detail !== 'string' ||
+        check.detail.length > 1000 || typeof check.blocking !== 'boolean' ||
+        ['ok', 'missing', 'warning', 'unchecked', 'error'].indexOf(check.status) < 0) return null;
+    return {
+      id: check.id,
+      label: check.label,
+      detail: check.detail,
+      blocking: check.blocking,
+      status: check.status,
+    };
+  }
+
+  function normalizePipelineCheckList(values, maxItems) {
+    if (!Array.isArray(values) || values.length > maxItems) return null;
+    var normalized = [];
+    var seen = Object.create(null);
+    for (var index = 0; index < values.length; index += 1) {
+      var check = normalizePipelineCheck(values[index]);
+      if (!check || seen[check.id]) return null;
+      seen[check.id] = true;
+      normalized.push(check);
+    }
+    return normalized;
+  }
+
+  function normalizePipelinePreflight(preflight, stageId, nowMs) {
+    if (!preflight || typeof preflight !== 'object' || Array.isArray(preflight) ||
+        preflight.stage !== stageId || typeof preflight.can_run !== 'boolean' ||
+        typeof preflight.command !== 'string' || !preflight.command.trim() ||
+        preflight.command.length > 1500 || /[\u0000-\u001f\u007f]/.test(preflight.command)) return null;
+    var checkedAt = Number(preflight.checked_at) * 1000;
+    if (!Number.isFinite(checkedAt) || checkedAt > nowMs + 5000 ||
+        nowMs - checkedAt > PIPELINE_SNAPSHOT_TTL_MS) return null;
+
+    var profile = preflight.profile;
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile) ||
+        ['low', 'medium', 'high', 'unknown'].indexOf(profile.risk) < 0 ||
+        !isSafePipelineStageId(profile.mode) ||
+        typeof profile.dry_run_available !== 'boolean' ||
+        typeof profile.default_dry_run !== 'boolean' ||
+        typeof profile.force_dry_run !== 'boolean' ||
+        typeof profile.mutates_platform !== 'boolean') return null;
+    var effects = normalizePipelineStringList(profile.effects, 32, 64, true);
+    var notes = normalizePipelineStringList(profile.notes, 16, 500, false);
+    if (!effects || !notes ||
+        (profile.force_dry_run && !profile.dry_run_available) ||
+        (profile.default_dry_run && !profile.dry_run_available)) return null;
+
+    var checks = normalizePipelineCheckList(preflight.checks, 128);
+    var blockers = normalizePipelineCheckList(preflight.blockers, 128);
+    var warnings = normalizePipelineCheckList(preflight.warnings, 128);
+    if (!checks || checks.length === 0 || !blockers || !warnings) return null;
+    var derivedBlockers = checks.filter(function (check) {
+      return check.blocking === true && check.status !== 'ok';
+    });
+    var derivedWarnings = checks.filter(function (check) {
+      return check.blocking === false && ['missing', 'warning'].indexOf(check.status) >= 0;
+    });
+    function sameChecks(actual, expected) {
+      if (actual.length !== expected.length) return false;
+      return actual.every(function (check, index) {
+        var source = expected[index];
+        return check.id === source.id && check.label === source.label &&
+          check.detail === source.detail && check.blocking === source.blocking &&
+          check.status === source.status;
+      });
+    }
+    if (!sameChecks(blockers, derivedBlockers) || !sameChecks(warnings, derivedWarnings) ||
+        preflight.can_run !== (derivedBlockers.length === 0)) return null;
+
+    var script = preflight.script;
+    if (!script || typeof script !== 'object' || Array.isArray(script) ||
+        typeof script.exists !== 'boolean' || typeof script.path !== 'string' ||
+        !script.path || script.path.length > 1000 || typeof script.relative_path !== 'string' ||
+        !script.relative_path || script.relative_path.length > 500) return null;
+    var scriptCheck = checks.find(function (check) { return check.id === 'script'; });
+    if (!scriptCheck || scriptCheck.blocking !== true ||
+        scriptCheck.detail !== script.relative_path ||
+        (script.exists && scriptCheck.status !== 'ok') ||
+        (!script.exists && scriptCheck.status !== 'missing')) return null;
+    var expectedCommandPrefix = 'node ' + script.relative_path;
+    if (preflight.command !== expectedCommandPrefix &&
+        preflight.command.indexOf(expectedCommandPrefix + ' ') !== 0) return null;
+
+    return {
+      stage: stageId,
+      checked_at: checkedAt / 1000,
+      can_run: preflight.can_run,
+      command: preflight.command,
+      profile: {
+        risk: profile.risk,
+        mode: profile.mode,
+        dry_run_available: profile.dry_run_available,
+        default_dry_run: profile.default_dry_run,
+        force_dry_run: profile.force_dry_run,
+        mutates_platform: profile.mutates_platform,
+        effects: effects,
+        notes: notes,
+      },
+      checks: checks,
+      blockers: derivedBlockers,
+      warnings: derivedWarnings,
+      script: {
+        exists: script.exists,
+        path: script.path,
+        relative_path: script.relative_path,
+      },
+    };
+  }
+
+  function normalizePipelineStage(stage, nowMs) {
+    if (!stage || typeof stage !== 'object' || Array.isArray(stage) ||
+        !isSafePipelineStageId(stage.id) || typeof stage.name !== 'string' ||
+        stage.name.length > 120 || typeof stage.description !== 'string' ||
+        stage.description.length > 500 || typeof stage.script !== 'string' ||
+        stage.script.length > 500 || ['scan', 'process', 'publish', 'maintenance'].indexOf(stage.category) < 0) return null;
+    var estimatedSeconds = Number(stage.estimated_sec);
+    if (!Number.isFinite(estimatedSeconds) || estimatedSeconds < 0 || estimatedSeconds > 86400) return null;
+    var lastRun = stage.last_run == null ? null : normalizePipelineRun(stage.last_run);
+    if (stage.last_run != null && !lastRun) return null;
+    var preflight = normalizePipelinePreflight(stage.preflight, stage.id, nowMs);
+    if (!preflight || preflight.script.relative_path !== stage.script) return null;
+    return {
+      id: stage.id,
+      name: stage.name,
+      description: stage.description,
+      script: stage.script,
+      estimated_sec: estimatedSeconds,
+      category: stage.category,
+      last_run: lastRun,
+      preflight: preflight,
+    };
+  }
+
+  function validatePipelineControlSnapshot(status, nowMs) {
+    nowMs = Number.isFinite(nowMs) ? nowMs : Date.now();
+    if (!status || typeof status !== 'object' || Array.isArray(status)) return { ok: false, reason: 'payload ausente' };
+    if (status.contract_version !== PIPELINE_CONTROL_CONTRACT) return { ok: false, reason: 'versao de contrato ausente ou incompatível' };
+    var generatedAt = Date.parse(status.generated_at || '');
+    if (!Number.isFinite(generatedAt)) return { ok: false, reason: 'timestamp do snapshot invalido' };
+    if (generatedAt > nowMs + 5000 || nowMs - generatedAt > PIPELINE_SNAPSHOT_TTL_MS) {
+      return { ok: false, reason: 'snapshot expirado ou com relogio inconsistente' };
+    }
+    var capabilities = status.capabilities;
+    if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities) ||
+        Object.keys(capabilities).sort().join('|') !== 'explicit_dry_run|explicit_run_mode_routes' ||
+        capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true) {
+      return { ok: false, reason: 'capabilities explicitas ausentes' };
+    }
+    if (!Array.isArray(status.stages) || status.stages.length === 0 || status.stages.length > 64) {
+      return { ok: false, reason: 'catalogo de estagios invalido' };
+    }
+    var seen = Object.create(null);
+    var normalizedStages = [];
+    for (var index = 0; index < status.stages.length; index += 1) {
+      var stage = status.stages[index];
+      if (!stage || !isSafePipelineStageId(stage.id) || seen[stage.id]) return { ok: false, reason: 'identidade de estagio invalida' };
+      seen[stage.id] = true;
+      var normalizedStage = normalizePipelineStage(stage, nowMs);
+      if (!normalizedStage) return { ok: false, reason: 'preflight incompleto ou invalido para ' + stage.id };
+      normalizedStages.push(normalizedStage);
+    }
+    return {
+      ok: true,
+      generatedAt: generatedAt,
+      expiresAt: Math.min(nowMs + PIPELINE_SNAPSHOT_TTL_MS, generatedAt + PIPELINE_SNAPSHOT_TTL_MS),
+      capabilities: {
+        explicit_dry_run: true,
+        explicit_run_mode_routes: true,
+      },
+      stages: normalizedStages,
+    };
+  }
+
+  function pipelineControlIsReady(nowMs) {
+    return state.pipelineControlReady === true &&
+      (Number.isFinite(nowMs) ? nowMs : Date.now()) <= state.pipelineSnapshotExpiresAt;
+  }
+
+  function invalidatePipelineControl(reason) {
+    state.pipelineControlReady = false;
+    state.pipelineControlReason = String(reason || 'contrato de controle indisponivel').slice(0, 240);
+    state.pipelineSnapshotExpiresAt = 0;
+    state.pipelineCapabilities = {};
+  }
+
   async function refreshPipeline() {
-    var status = await apiFetch('/api/cadu/pipeline');
-    if (!status || status.__error) return;
-    state.pipelineActive = status.active_run || null;
-    state.pipelineStages = status.stages || [];
-    state.pipelineHistory = status.history || [];
-    state.pipelineCapabilities = status.capabilities || {};
+    var requestGeneration = ++state.pipelineRequestGeneration;
+    var status = await apiFetch('/api/cadu/pipeline', { timeoutMs: 5000 });
+    if (requestGeneration !== state.pipelineRequestGeneration) return;
+    if (!status || status.__error) {
+      invalidatePipelineControl('falha ao atualizar o snapshot da pipeline');
+      renderPipelineStages(state.pipelineStages || []);
+      return;
+    }
+    var validation = validatePipelineControlSnapshot(status, Date.now());
+    if (!validation.ok) {
+      invalidatePipelineControl(validation.reason);
+      renderPipelineStages(state.pipelineStages || []);
+      return;
+    }
+    var normalizedStages = validation.stages;
+    var normalizedActive = status.active_run == null ? null : normalizePipelineRun(status.active_run);
+    var normalizedHistory = Array.isArray(status.history)
+      ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
+      : [];
+    state.pipelineActive = normalizedActive;
+    state.pipelineStages = normalizedStages;
+    state.pipelineHistory = normalizedHistory;
+    state.pipelineCapabilities = validation.capabilities;
+    state.pipelineControlReady = true;
+    state.pipelineControlReason = '';
+    state.pipelineSnapshotExpiresAt = validation.expiresAt;
     state.pipelineHealth = status.health || state.pipelineHealth;
-    renderPipelineStages(status.stages || []);
-    renderPipelineActive(state.pipelineActive);
-    if (status.health) renderPipelineHealth(status.health);
-    else refreshPipelineHealth();
-    renderPipelineHistory(state.pipelineHistory);
-    updatePipelineBadge(status);
+    try {
+      renderPipelineStages(state.pipelineStages);
+      renderPipelineActive(state.pipelineActive);
+      if (status.health) renderPipelineHealth(status.health);
+      else refreshPipelineHealth();
+      renderPipelineHistory(state.pipelineHistory);
+      updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
+    } catch (error) {
+      invalidatePipelineControl('snapshot rejeitado durante a renderizacao');
+      state.pipelineStages = [];
+      state.pipelineActive = null;
+      state.pipelineHistory = [];
+      renderPipelineStages([]);
+      renderPipelineActive(null);
+      renderPipelineHistory([]);
+      disconnectPipelineStream();
+      stopPipelineLogPolling();
+      return;
+    }
 
     // Se ha run ativo, acompanha por SSE curto ou polling para runs longos.
-    if (status.active_run && status.active_run.status === 'running') {
-      if (shouldUsePipelineLogPolling(status.active_run)) {
-        connectPipelineLogPolling(status.active_run.id);
+    if (state.pipelineActive && state.pipelineActive.status === 'running') {
+      if (shouldUsePipelineLogPolling(state.pipelineActive)) {
+        connectPipelineLogPolling(state.pipelineActive.id);
       } else {
         stopPipelineLogPolling();
-        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== status.active_run.id) {
-          connectPipelineStream(status.active_run.id);
+        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== state.pipelineActive.id) {
+          connectPipelineStream(state.pipelineActive.id);
         }
       }
     } else {
@@ -2787,14 +3059,15 @@
     profile = profile || {};
     if (!capabilities || capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true) return null;
     if (profile.force_dry_run === true) return true;
-    if (profile.dry_run_available !== true) return null;
     if (requestedDryRun !== true && requestedDryRun !== false) return null;
+    if (requestedDryRun === true && profile.dry_run_available !== true) return null;
     return requestedDryRun;
   }
 
   function buildPipelineRunRequest(stageId, dryRun, capabilities) {
+    if (!capabilities || capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true || typeof dryRun !== 'boolean') return null;
     var path = '/api/cadu/pipeline/run';
-    if (capabilities && capabilities.explicit_dry_run === true && capabilities.explicit_run_mode_routes === true && typeof dryRun === 'boolean') {
+    if (typeof dryRun === 'boolean') {
       // Estas rotas não existem na API antiga. Se houver rollback entre o GET
       // de capabilities e este POST, o request falha com 404 em vez de uma
       // versão antiga ignorar dry_run=true e executar de verdade.
@@ -2810,6 +3083,7 @@
       capabilities.explicit_dry_run === true &&
       capabilities.explicit_run_mode_routes === true
     );
+    if (!supportsExplicitModes) return [];
     if (supportsExplicitModes && profile.force_dry_run === true) {
       return [{ dryRun: true, label: 'Simular', danger: false }];
     }
@@ -2820,9 +3094,9 @@
       ];
     }
     return [{
-      dryRun: null,
-      label: 'Executar',
-      danger: Boolean(profile.mutates_platform && !profile.default_dry_run)
+      dryRun: false,
+      label: profile.mutates_platform ? 'Executar real' : 'Executar',
+      danger: Boolean(profile.mutates_platform)
     }];
   }
 
@@ -2912,8 +3186,10 @@
   function renderPipelineStages(stages) {
     var container = $('#pipeline-stages-list');
     if (!container) return;
+    var controlReady = pipelineControlIsReady();
+    var controlGuard = controlReady ? '' : '<div class="kc-cadu-empty">Controles bloqueados: ' + escapeHtml(state.pipelineControlReason || 'snapshot expirado') + '</div>';
     if (!stages.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem estágios disponíveis.</div>'; return; }
-    container.innerHTML = stages.map(function (s) {
+    container.innerHTML = controlGuard + stages.map(function (s) {
       var lastTxt = '— sem runs —';
       var lastCls = '';
       if (s.last_run) {
@@ -2922,8 +3198,10 @@
       }
       var pf = s.preflight || {};
       var profile = pf.profile || {};
-      var canRun = pf.can_run !== false;
-      var blockedReason = ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
+      var canRun = controlReady && pf && pf.can_run === true;
+      var blockedReason = !controlReady
+        ? (state.pipelineControlReason || 'snapshot expirado')
+        : ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
       var actionButtons = [];
       function actionButton(dryRun, label, danger) {
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
@@ -2945,8 +3223,8 @@
         '<div class="kc-pipeline-stage__desc">' + escapeHtml(s.description) + '</div>' +
         renderStagePreflight(s) +
         '<div class="kc-pipeline-stage__meta">' +
-          '<span class="kc-pipeline-history-item ' + lastCls + '" style="border:none;padding:2px 6px;"><i class="fas fa-clock"></i> ' + lastTxt + '</span>' +
-          '<span style="margin-left:auto;">~' + s.estimated_sec + 's</span>' +
+          '<span class="kc-pipeline-history-item ' + lastCls + '" style="border:none;padding:2px 6px;"><i class="fas fa-clock"></i> ' + escapeHtml(lastTxt) + '</span>' +
+          '<span style="margin-left:auto;">~' + escapeHtml(s.estimated_sec) + 's</span>' +
         '</div>' +
         lastSummary +
         '<div class="kc-pipeline-stage__actions">' + actionButtons.join('') + '</div>' +
@@ -3027,8 +3305,8 @@
     var lastSuccess = health.last_successful_all_run || null;
     var latest = health.latest_run || null;
     var since = fmtSecondsWindow(health.seconds_since_successful_all);
-    var failures = health.failures_recent_count || 0;
-    var issues = (health.issues || []).slice(0, 3);
+    var failures = Number.isFinite(Number(health.failures_recent_count)) ? Math.max(0, Math.floor(Number(health.failures_recent_count))) : 0;
+    var issues = Array.isArray(health.issues) ? health.issues.slice(0, 3) : [];
     var issueHtml = issues.length
       ? '<ul class="kc-pipeline-health-card__issues">' + issues.map(function (issue) { return '<li>' + escapeHtml(issue) + '</li>'; }).join('') + '</ul>'
       : '';
@@ -3101,9 +3379,11 @@
       apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
       apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) { return r.data || r; }),
     ]).then(function (res) {
-      var arts = res[0].artifacts || [];
-      var log = res[1].content || '';
-      var exp = res[2] || {};
+      var arts = Array.isArray(res[0] && res[0].artifacts)
+        ? res[0].artifacts.filter(function (artifact) { return artifact && typeof artifact === 'object'; }).slice(0, 200)
+        : [];
+      var log = String(res[1] && res[1].content || '').slice(0, 512000);
+      var exp = res[2] && typeof res[2] === 'object' ? res[2] : {};
       var exportSummary = {
         metrics: exp.summary_metrics || {},
         warnings: exp.summary_warnings || [],
@@ -3117,7 +3397,7 @@
               '<span class="kc-pipeline-artifact__kind">' + escapeHtml(a.kind || 'other') + '</span>' +
               ' <span class="kc-pipeline-artifact__name">' + escapeHtml(a.name) + '</span>' +
               (a.stale_for_run ? ' <span class="kc-pipeline-artifact__kind" title="Arquivo do mesmo dia, mas anterior ao inicio deste run">antes do run</span>' : '') +
-              ' <span style="color:var(--kc-text-dark-secondary);font-size:.7rem;">' + (a.size_bytes / 1024).toFixed(1) + ' KB</span>' +
+              ' <span style="color:var(--kc-text-dark-secondary);font-size:.7rem;">' + escapeHtml((Number(a.size_bytes) > 0 ? Number(a.size_bytes) / 1024 : 0).toFixed(1)) + ' KB</span>' +
             '</div>';
           }).join('')
         : '<div class="kc-cadu-empty">Nenhum artefato encontrado.</div>';
@@ -3448,6 +3728,7 @@
   function appendLogLine(text) {
     var logBox = $('#pipeline-log');
     if (!logBox) return;
+    text = String(text == null ? '' : text).slice(0, 20000);
     // Limpa mensagem inicial se for a primeira linha
     if (logBox.querySelector('.kc-cadu-empty')) logBox.innerHTML = '';
     var lineClass = 'kc-log-line';
@@ -3649,21 +3930,22 @@
 
   async function runPipelineStage(stageId, dryRun, clickedButton) {
     if (state.pipelineStartPending) return;
+    if (!pipelineControlIsReady()) {
+      invalidatePipelineControl('snapshot expirado; atualize o painel');
+      renderPipelineStages(state.pipelineStages || []);
+      alert('Controles da pipeline bloqueados: o contrato/preflight esta ausente ou expirou. Atualize o painel; nenhum run foi iniciado.');
+      return;
+    }
     var stage = findPipelineStage(stageId);
     var pf = stage && stage.preflight ? stage.preflight : null;
-    if (pf && pf.can_run === false) {
-      var blockers = (pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou';
+    if (!stage || !pf || pf.can_run !== true) {
+      var blockers = ((pf && pf.blockers) || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou';
       alert('Estágio indisponível: ' + blockers);
       return;
     }
     var profile = pf && pf.profile ? pf.profile : {};
     dryRun = resolvePipelineDryRun(profile, dryRun, state.pipelineCapabilities);
-    var expectsExplicitMode = Boolean(
-      state.pipelineCapabilities.explicit_dry_run === true &&
-      state.pipelineCapabilities.explicit_run_mode_routes === true &&
-      profile.dry_run_available === true
-    );
-    if (expectsExplicitMode && typeof dryRun !== 'boolean') {
+    if (typeof dryRun !== 'boolean') {
       alert('Modo de execução ausente ou inválido. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
       return;
     }
@@ -3683,10 +3965,24 @@
       (warnings ? '\n\nAvisos:\n' + warnings : '') +
       '\n\nLogs ficarão disponíveis em tempo real abaixo.';
     if (!confirm(msg)) return;
+    if (!pipelineControlIsReady()) {
+      invalidatePipelineControl('snapshot expirou durante a confirmacao');
+      renderPipelineStages(state.pipelineStages || []);
+      alert('O snapshot expirou antes do envio. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
+      return;
+    }
     var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
     state.pipelineStartPending = true;
     var restoreButtons = lockPipelineActionButtons(btn);
     var request = buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities);
+    if (!request) {
+      state.pipelineStartPending = false;
+      restoreButtons();
+      invalidatePipelineControl('rota explicita de execucao indisponivel');
+      renderPipelineStages(state.pipelineStages || []);
+      alert('Rota explicita de execucao indisponivel. Nenhum pipeline foi iniciado.');
+      return;
+    }
     var resp;
     try {
       resp = await apiFetch(request.path, {

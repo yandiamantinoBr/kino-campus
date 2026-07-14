@@ -38,6 +38,8 @@
     "cadu:refresh-cache": "node services/cadu-ufg-publisher/scripts/regenerate-posts-cache.js",
     "test:cadu": "jest tests/unit/cadu-ufg-publisher.test.js tests/unit/cadu-openclaw-curator.test.js --runInBand",
     "test:cadu:registry": "jest tests/unit/cadu-candidate-source-registry.test.js --runInBand",
+    "test:cadu:phase-a-upgrade": "node scripts/test-cadu-phase-a-legacy-upgrade.js",
+    "test:cadu:phase-a-postgrest": "node scripts/test-cadu-phase-a-postgrest.js",
     "cadu:audit": "node tests/manual/cadu-site-health-probe.js"
   },
   "repository": {
