@@ -1,6 +1,6 @@
 # Espelho somente leitura do catálogo de fontes UFG
 
-Data de corte dos dados: 2026-07-13
+Data de corte atual dos dados: 2026-07-15 (registro `2026-07-15.8`)
 
 O KinoCampus mantém uma cópia byte a byte dos três artefatos canônicos publicados pelo OpenClaw Cadu. O commit upstream, os Git blob OIDs, os SHA-256 e os tamanhos válidos estão no arquivo `upstream-manifest.json`; a documentação não duplica esses valores para evitar duas fontes de verdade.
 

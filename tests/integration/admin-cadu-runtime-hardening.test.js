@@ -63,6 +63,19 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).not.toContain("'ctx 1M'");
   });
 
+  test('treats the OpenClaw CLI session age as milliseconds', () => {
+    const openclawSessionAgeMs = isolatedFunction('openclawSessionAgeMs');
+    expect(openclawSessionAgeMs({ age: 7_078_201 })).toBe(7_078_201);
+    expect(openclawSessionAgeMs({ ageMs: 12_345, age: 7_078_201 })).toBe(12_345);
+    expect(openclawSessionAgeMs({ ageMs: null, age: 90_000 })).toBe(90_000);
+    expect(openclawSessionAgeMs({ age: -1 })).toBe(0);
+    expect(openclawSessionAgeMs(null)).toBe(0);
+    expect(controller).not.toContain('session.age * 1000');
+    expect(functionSource('renderOpenclawSessions')).toContain('fmtAgeMs(openclawSessionAgeMs(session))');
+    expect(functionSource('renderOpenclawSessionDetail')).toContain('fmtAgeMs(openclawSessionAgeMs(session))');
+    expect(functionSource('performOpenclawRefresh')).toContain('openclawSessionAgeMs(recentSessions[0])');
+  });
+
   test('confirms heartbeat only with an explicit successful command contract', () => {
     const confirmed = isolatedFunction('openclawHeartbeatConfirmed');
     expect(confirmed({ ok: true, exit_code: 0 })).toBe(true);

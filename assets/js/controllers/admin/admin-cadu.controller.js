@@ -2213,6 +2213,21 @@
     return Math.floor(s / 86400) + 'd atrás';
   }
 
+  function openclawSessionAgeMs(session) {
+    if (!session || typeof session !== 'object') return 0;
+    if (session.ageMs != null) {
+      var explicitAgeMs = Number(session.ageMs);
+      if (Number.isFinite(explicitAgeMs) && explicitAgeMs >= 0) return explicitAgeMs;
+    }
+    // `openclaw status --json` chama o campo de `age`, mas o valor já está em
+    // milissegundos. Multiplicá-lo por 1000 fazia horas aparecerem como meses.
+    if (session.age != null) {
+      var statusAgeMs = Number(session.age);
+      if (Number.isFinite(statusAgeMs) && statusAgeMs >= 0) return statusAgeMs;
+    }
+    return 0;
+  }
+
   function fmtSessionId(sessionId) {
     var sid = String(sessionId || '');
     return sid ? sid.slice(0, 8) + '…' : '—';
@@ -2402,7 +2417,7 @@
       return;
     }
     var pct = session.percentUsed != null ? escapeHtml(String(session.percentUsed)) + '% do contexto' : 'contexto n/d';
-    var age = fmtAgeMs(session.ageMs || (session.age ? session.age * 1000 : 0));
+    var age = fmtAgeMs(openclawSessionAgeMs(session));
     var pinned = openclawState.pinnedSessionId === sid;
     box.hidden = false;
     box.innerHTML =
@@ -2518,7 +2533,7 @@
         escapeHtml(session.kind || '?') + ' · ' + escapeHtml((session.model || '?').toString()) + '</div>' +
         '<div class="kc-openclaw-list-item__meta">' +
         escapeHtml((session.key || '').slice(0, 60)) +
-        ' · ' + fmtAgeMs(session.ageMs || (session.age ? session.age * 1000 : 0)) +
+        ' · ' + fmtAgeMs(openclawSessionAgeMs(session)) +
         pct +
         '</div></div>';
     }).join('');
@@ -2611,7 +2626,7 @@
       var recentSessions = rawData.sessions && rawData.sessions.recent ? rawData.sessions.recent : [];
       var lastActiveMs = mainAgent && Number.isFinite(Number(mainAgent.lastActiveAgeMs))
         ? Number(mainAgent.lastActiveAgeMs)
-        : (recentSessions[0] ? Number(recentSessions[0].ageMs || recentSessions[0].age || 0) : 0);
+        : (recentSessions[0] ? openclawSessionAgeMs(recentSessions[0]) : 0);
       var hb = rawData.heartbeat || {};
       var hbEvery = hb.agents && hb.agents[0] ? hb.agents[0].every : '—';
       var sessionDefaults = rawData.sessions && rawData.sessions.defaults ? rawData.sessions.defaults : {};
