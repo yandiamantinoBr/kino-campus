@@ -471,6 +471,7 @@
     // Admin
     'aria-label.admin-nav':             'Navegação admin',
     'aria-label.menu-mobile':           'Menu mobile',
+    'aria-label.cadu-tabs':             'Áreas operacionais do Cadu',
     'aria-label.cadu-catalog-summary':  'Resumo do catálogo UFG',
     'aria-label.cadu-sites-view':       'Escolher visão do catálogo',
     'aria-label.cadu-sites-search':     'Filtrar sites',
@@ -480,6 +481,7 @@
     'aria-label.cadu-sites-table':      'Mapa UFG em tabela rolável',
     'aria-label.cadu-feed-search':      'Filtrar feed',
     'aria-label.cadu-feed-limit':       'Limite',
+    'aria-label.cadu-openclaw-message': 'Mensagem para o Cadu',
     'placeholder.cadu-sites-search':    'Filtrar por nome, site ou @instagram',
     'placeholder.cadu-feed-search':     'Filtrar por conteúdo do chunk',
     'placeholder.cadu-openclaw-input':  'Pergunte ao Cadu sobre a automação, pipeline ou fontes UFG...',

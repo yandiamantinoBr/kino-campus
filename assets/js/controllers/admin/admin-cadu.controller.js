@@ -40,6 +40,9 @@
     feedHasMore: false,
     feedLatestAt: null,
     feedMeta: null,
+    feedRequestGeneration: 0,
+    feedRequestController: null,
+    feedLoading: false,
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
     sitesFilter: { q: '', tier: '', ig: '' },
@@ -110,10 +113,15 @@
     pill.innerHTML = html;
   }
 
-  function showCaduError(msg) {
+  function showCaduError(msg, tone) {
     var wrap = $('#cadu-error');
     if (!wrap) return;
+    var normalizedTone = tone === 'success' || tone === 'info' ? tone : 'error';
     wrap.style.display = 'block';
+    wrap.classList.remove('is-error', 'is-success', 'is-info');
+    wrap.classList.add('is-' + normalizedTone);
+    wrap.setAttribute('role', normalizedTone === 'error' ? 'alert' : 'status');
+    wrap.setAttribute('aria-live', normalizedTone === 'error' ? 'assertive' : 'polite');
     // Error strings can contain upstream/operator-controlled data. Keep this
     // surface text-only; callers that need richer UI must build explicit DOM.
     wrap.textContent = String(msg == null ? '' : msg);
@@ -124,6 +132,9 @@
     if (!wrap) return;
     wrap.style.display = 'none';
     wrap.textContent = '';
+    wrap.classList.remove('is-error', 'is-success', 'is-info');
+    wrap.setAttribute('role', 'status');
+    wrap.setAttribute('aria-live', 'polite');
   }
 
   function showAccessDenied(msg) {
@@ -387,6 +398,7 @@
           }
         } catch (_) {
           state.openclawContext = null;
+          if (contextPill) contextPill.style.display = 'none';
         }
       } else {
         state.apiHealthy = false;
@@ -396,6 +408,7 @@
         $('#kpi-api-detail').textContent = (data && data.error) || 'ver logs';
         if (contextPill) contextPill.style.display = 'none';
         if (versionPill) versionPill.style.display = 'none';
+        hideTelegramHeroStatus();
       }
     } catch (err) {
       state.apiHealthy = false;
@@ -404,6 +417,7 @@
       $('#kpi-api-detail').textContent = 'fetch falhou';
       if (contextPill) contextPill.style.display = 'none';
       if (versionPill) versionPill.style.display = 'none';
+      hideTelegramHeroStatus();
     }
   }
 
@@ -519,7 +533,7 @@
     supplementary_body: 'Órgão suplementar',
     affiliated_foundation: 'Fundação vinculada',
     graduate_program: 'Programa de pós-graduação',
-    campus: 'Câmpus',
+    campus: 'Campus',
     other: 'Outra entidade',
     shadow: 'Modo de validação',
     active: 'Ativo',
@@ -546,6 +560,37 @@
     if (CATALOG_LABELS_PT_BR[code]) return CATALOG_LABELS_PT_BR[code];
     var humanized = code.replace(/[_-]+/g, ' ').trim();
     return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+  }
+
+  function formatCampusLabel(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return 'Campus não informado';
+    raw = raw.replace(/^c[aâ]mpus\s+/i, '').trim();
+    var key = raw.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    var officialLabels = {
+      aparecida_de_goiania: 'Aparecida de Goiânia',
+      caldas_novas: 'Caldas Novas',
+      cidade_de_goias: 'Cidade de Goiás',
+      cidade_ocidental: 'Cidade Ocidental',
+      colemar_natal_e_silva: 'Colemar Natal e Silva',
+      firminopolis: 'Firminópolis',
+      goiania: 'Goiânia',
+      goias: 'Goiás',
+      samambaia: 'Samambaia'
+    };
+    if (officialLabels[key]) return 'Campus ' + officialLabels[key];
+    var words = raw.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').split(' ');
+    var lowerWords = { da: true, de: true, do: true, das: true, dos: true, e: true };
+    var display = words.map(function (word, index) {
+      var lower = word.toLowerCase();
+      if (index > 0 && lowerWords[lower]) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join(' ');
+    return 'Campus ' + display;
   }
 
   function sourceInstagramStatus(source) {
@@ -1196,7 +1241,7 @@
       var administrativeEditor = administrativeMetadataAvailable
         ? inherited + conflict
           + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Prioridade estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
-          + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota administrativa explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
+          + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" aria-label="Nota administrativa de ' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota administrativa explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
           + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar ajuste' : 'Criar ajuste estável'))) + '</button>'
         : '<div class="kc-cadu-inherited-warning"><strong>Não incluídos neste espelho.</strong><br>Prioridade efetiva, nota e origem do ajuste administrativo só aparecem quando a rota canônica do Cadu está disponível.</div>';
       return '<tr data-source-id="' + escapeHtml(source.id) + '">'
@@ -1211,14 +1256,14 @@
   }
 
   function renderEntityRows(rows) {
-    setSitesTableHeaders(['Entidade UFG', 'Tipo / campus', 'Sites associados', 'Instagram', 'Cobertura']);
+    setSitesTableHeaders(['Entidade UFG', 'Tipo / Campus', 'Sites associados', 'Instagram', 'Cobertura']);
     return rows.map(function (entity) {
       var sites = entity.sources.length ? entity.sources.map(function (source) {
         return '<a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(source.id) + '</a>';
       }).join('<br>') : '<span class="kc-cadu-muted">sem site associado</span>';
       var entityLabel = entity.acronym ? entity.acronym + ' — ' + entity.name : entity.name;
       return '<tr><td><strong>' + escapeHtml(entityLabel) + '</strong><code class="kc-cadu-source-id">' + escapeHtml(entity.id) + '</code></td>'
-        + '<td>' + escapeHtml(catalogLabel(entity.kind)) + '<small class="kc-cadu-source-id">' + escapeHtml(entity.campus || 'câmpus não informado') + '</small></td>'
+        + '<td>' + escapeHtml(catalogLabel(entity.kind)) + '<small class="kc-cadu-source-id">' + escapeHtml(formatCampusLabel(entity.campus)) + '</small></td>'
         + '<td>' + sites + '</td><td>' + profileLinks(entity.instagramProfiles) + '</td>'
         + '<td>' + badgeHtml(catalogLabel(entity.status), entity.status) + (entity.sources.length ? '' : '<div class="kc-cadu-review-issues">Lacuna de fonte web</div>') + '</td></tr>';
     }).join('');
@@ -1392,7 +1437,7 @@
     }
     delete state.sourceDrafts[sourceId];
     renderSitesTable();
-    showCaduError('Ajuste de ' + sourceId + ' salvo com ETag/CAS e catálogo revalidado.');
+    showCaduError('Ajuste de ' + sourceId + ' salvo com ETag/CAS e catálogo revalidado.', 'success');
     setTimeout(hideCaduError, 5000);
   }
 
@@ -1462,8 +1507,8 @@
     }
     var rows = state.filteredCatalogRows;
     if (state.sitesView === 'entities') {
-      return [['ID da entidade', 'Nome', 'Sigla', 'Tipo', 'Câmpus', 'Status', 'IDs das fontes', 'IDs do Instagram']].concat(rows.map(function (entity) {
-        return [entity.id, entity.name, entity.acronym || '', catalogLabel(entity.kind), entity.campus || '', catalogLabel(entity.status), entity.sourceIds.join(' '), entity.instagramProfileIds.join(' ')];
+      return [['ID da entidade', 'Nome', 'Sigla', 'Tipo', 'Campus', 'Status', 'IDs das fontes', 'IDs do Instagram']].concat(rows.map(function (entity) {
+        return [entity.id, entity.name, entity.acronym || '', catalogLabel(entity.kind), formatCampusLabel(entity.campus), catalogLabel(entity.status), entity.sourceIds.join(' '), entity.instagramProfileIds.join(' ')];
       }));
     }
     if (state.sitesView === 'instagram') {
@@ -1598,7 +1643,7 @@
         btn.innerHTML = '<i class="fas fa-clock"></i><span>' + (outcome.replayed ? 'Já pendente' : 'Revisão pendente') + '</span>';
       }
       showCaduError((outcome.replayed ? 'A revisão já estava persistida' : 'Fonte enviada à revisão') +
-        '. Ela permanece pendente e não foi publicada. Código: ' + outcome.policyCode + '.');
+        '. Ela permanece pendente e não foi publicada. Código: ' + outcome.policyCode + '.', 'info');
       setTimeout(hideCaduError, 7000);
     } catch (err) {
       if (btn) {
@@ -1657,7 +1702,10 @@
         : (outcome.kind === 'pending'
           ? 'Item recebido e pendente de publicação/revisão; ainda não foi publicado.'
           : 'Revisão notificada; a notificação não equivale a publicação no KinoCampus.');
-      showCaduError(msg + (outcome.via ? ' Via: ' + outcome.via + '.' : '') + (outcome.code ? ' Código: ' + outcome.code + '.' : ''));
+      showCaduError(
+        msg + (outcome.via ? ' Via: ' + outcome.via + '.' : '') + (outcome.code ? ' Código: ' + outcome.code + '.' : ''),
+        outcome.kind === 'published' ? 'success' : 'info'
+      );
       setTimeout(hideCaduError, 6000);
     } catch (err) {
       if (btn) {
@@ -1858,6 +1906,13 @@
 
   async function loadFeed(initial, appendPage) {
     var list = $('#feed-list');
+    var requestGeneration = ++state.feedRequestGeneration;
+    if (state.feedRequestController && typeof state.feedRequestController.abort === 'function') {
+      state.feedRequestController.abort();
+    }
+    var requestController = typeof AbortController === 'function' ? new AbortController() : null;
+    state.feedRequestController = requestController;
+    state.feedLoading = true;
     if (initial) {
       state.feedPage = 0;
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Carregando…</div>';
@@ -1872,10 +1927,13 @@
     try {
       var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true', {
         cache: 'no-store',
-        timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS
+        timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS,
+        signal: requestController ? requestController.signal : undefined
       });
+      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
       var feed = normalizePublicFeedResponse(data);
+      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
       var items = feed.items;
       state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
       state.feedMeta = feed.meta;
@@ -1887,11 +1945,19 @@
       $('#kpi-memory-detail').textContent = 'itens públicos do Curador; ' + feed.meta.validArtifacts + '/' + feed.meta.artifactsScanned + ' artefatos válidos; página ' + (state.feedPage + 1);
       renderFeedFreshness(null);
       applyFeedFilter();
+      return { ok: true, page: requestPage };
     } catch (err) {
+      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
       $('#badge-feed').textContent = '!';
       renderFeedFreshness(err);
       updateFeedPager(0);
+      return { ok: false, error: err };
+    } finally {
+      if (requestGeneration === state.feedRequestGeneration) {
+        state.feedLoading = false;
+        state.feedRequestController = null;
+      }
     }
   }
 
@@ -1916,8 +1982,9 @@
       var dt = fmtDate(it.created_at);
       var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : 'sem id';
       var snippet = it.snippet || '(sem conteúdo)';
-      var sourceLink = it.url
-        ? '<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square"></i> Fonte oficial</a>'
+      var feedSourceUrl = sourceReviewCanonicalUrl(it.url);
+      var sourceLink = feedSourceUrl
+        ? '<a href="' + escapeHtml(feedSourceUrl) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square"></i> Fonte oficial</a>'
         : '';
       var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml(it.heading || '') + '" title="Perguntar ao Cadu sobre este item público"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
       return '<article class="kc-cadu-feed-item">'
@@ -2005,7 +2072,7 @@
       var title = item.title || item.id || 'Item sem título';
       var action = item.repairAction || 'review_metadata';
       var reason = (item.reasons || []).join(', ') || 'review';
-      var source = item.source || '';
+      var source = sourceReviewCanonicalUrl(item.source || '');
       var host = item.sourceHost || '';
       var repair = suggestionById[item.id] || {};
       var metadataPatch = repair.metadataPatch || {};
@@ -2030,10 +2097,10 @@
         + (source ? '<a href="' + escapeHtml(source) + '" target="_blank" rel="noopener" class="kc-cadu-feed-diagnostics__chip">Fonte</a>' : '')
         + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed-diagnostic"'
         + ' data-ask-id="' + escapeHtml(item.id || '') + '"'
-        + ' data-ask-title="' + escapeHtml(title.replace(/"/g, '&quot;')) + '"'
-        + ' data-ask-source="' + escapeHtml(source.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-title="' + escapeHtml(title) + '"'
+        + ' data-ask-source="' + escapeHtml(source) + '"'
         + ' data-ask-action="' + escapeHtml(action) + '"'
-        + ' data-ask-reason="' + escapeHtml(reason.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-reason="' + escapeHtml(reason) + '"'
         + ' data-ask-patch="' + escapeHtml(patchPayload) + '">'
         + '<i class="fas fa-robot"></i> Perguntar Cadu</button>'
         + '</div>'
@@ -2083,21 +2150,24 @@
       t.setAttribute('aria-selected', selected ? 'true' : 'false');
       t.setAttribute('tabindex', selected ? '0' : '-1');
     });
-    $('#tab-sites').style.display = name === 'sites' ? '' : 'none';
-    $('#tab-feed').style.display = name === 'feed' ? '' : 'none';
+    ['sites', 'feed', 'pipeline', 'openclaw'].forEach(function (panelName) {
+      var panel = $('#tab-' + panelName);
+      if (!panel) return;
+      var selected = panelName === name;
+      panel.hidden = !selected;
+      panel.style.display = selected ? '' : 'none';
+    });
     if (name === 'feed' && !state.feedDiagnostics && !state.feedDiagnosticsLoading) {
       loadFeedDiagnostics();
     }
     var tabPipeline = $('#tab-pipeline');
     if (tabPipeline) {
-      tabPipeline.style.display = name === 'pipeline' ? '' : 'none';
       if (name === 'pipeline') {
         refreshPipeline();
       }
     }
     var tabOpenclaw = $('#tab-openclaw');
     if (tabOpenclaw) {
-      tabOpenclaw.style.display = name === 'openclaw' ? '' : 'none';
       if (name === 'openclaw') {
         refreshOpenclaw();
       }
@@ -2154,6 +2224,42 @@
       } catch (_) {}
     }
     return null;
+  }
+
+  function normalizeOpenclawStatusSnapshot(statusResponse, nowMs) {
+    if (!statusResponse || typeof statusResponse !== 'object' || Array.isArray(statusResponse)) return null;
+    var checkedAt = Number(statusResponse.checked_at);
+    if (!Number.isFinite(checkedAt) || checkedAt <= 0) return null;
+    var checkedAtMs = checkedAt < 1e12 ? checkedAt * 1000 : checkedAt;
+    var currentMs = Number.isFinite(nowMs) ? nowMs : Date.now();
+    if (checkedAtMs > currentMs + 5000 || currentMs - checkedAtMs > 120000) return null;
+
+    var value = parseOpenclawCommandJson(statusResponse.status);
+    if (!value) return null;
+    var gateway = value.gateway;
+    var agents = value.agents;
+    var heartbeat = value.heartbeat;
+    var sessions = value.sessions;
+    var tasks = value.tasks;
+    if (!gateway || typeof gateway !== 'object' || Array.isArray(gateway) || gateway.reachable !== true) return null;
+    if (!agents || typeof agents !== 'object' || Array.isArray(agents) ||
+        typeof agents.defaultId !== 'string' || !/^[A-Za-z0-9._-]{1,64}$/.test(agents.defaultId) ||
+        !Array.isArray(agents.agents) || agents.agents.length === 0 || agents.agents.length > 64 ||
+        !agents.agents.some(function (agent) { return agent && agent.id === agents.defaultId; })) return null;
+    if (!heartbeat || typeof heartbeat !== 'object' || Array.isArray(heartbeat) ||
+        heartbeat.defaultAgentId !== agents.defaultId || !Array.isArray(heartbeat.agents) ||
+        !heartbeat.agents.some(function (agent) {
+          return agent && agent.agentId === agents.defaultId && typeof agent.enabled === 'boolean' && typeof agent.every === 'string';
+        })) return null;
+    if (!sessions || typeof sessions !== 'object' || Array.isArray(sessions) ||
+        !sessions.defaults || typeof sessions.defaults !== 'object' || Array.isArray(sessions.defaults) ||
+        !Array.isArray(sessions.recent) || sessions.recent.length > 100) return null;
+    if (!tasks || typeof tasks !== 'object' || Array.isArray(tasks) ||
+        !Number.isSafeInteger(tasks.active) || tasks.active < 0 ||
+        !Number.isSafeInteger(tasks.total) || tasks.total < 0 || tasks.active > tasks.total ||
+        !Number.isSafeInteger(tasks.failures) || tasks.failures < 0 ||
+        !tasks.byStatus || typeof tasks.byStatus !== 'object' || Array.isArray(tasks.byStatus)) return null;
+    return value;
   }
 
   function openclawTelegramHealth(healthCommand) {
@@ -2269,6 +2375,7 @@
       btn.innerHTML = next
         ? '<i class="fas fa-compress"></i> Recolher'
         : '<i class="fas fa-expand"></i> Foco';
+      btn.setAttribute('aria-pressed', next ? 'true' : 'false');
     }
     focusOpenclawChat();
   }
@@ -2304,9 +2411,26 @@
       '</div>';
   }
 
-  function openclawStatusData(statusResponse) {
-    var command = statusResponse && statusResponse.status;
-    return parseOpenclawCommandJson(command);
+  function openclawStatusData(statusResponse, nowMs) {
+    return normalizeOpenclawStatusSnapshot(statusResponse, nowMs);
+  }
+
+  function renderTelegramHeroStatus(connected, configured) {
+    var pill = $('#cadu-bot-pill');
+    if (!pill) return;
+    pill.style.display = '';
+    pill.classList.toggle('is-down', connected !== true);
+    pill.innerHTML = connected === true
+      ? '<span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo'
+      : '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fab fa-telegram"></i> ' +
+        (configured === true ? 'Telegram sem conexão confirmada' : 'Telegram não confirmado');
+  }
+
+  function hideTelegramHeroStatus() {
+    var pill = $('#cadu-bot-pill');
+    if (!pill) return;
+    pill.style.display = 'none';
+    pill.classList.remove('is-down');
   }
 
   function renderOpenclawUnavailable(reason) {
@@ -2315,12 +2439,33 @@
     var agentHint = $('#openclaw-stat-agent-hint');
     var tgEl = $('#openclaw-stat-telegram');
     var tgHint = $('#openclaw-stat-telegram-hint');
+    var heartbeatEl = $('#openclaw-stat-heartbeat');
+    var heartbeatHint = $('#openclaw-stat-heartbeat-hint');
+    var tasksEl = $('#openclaw-stat-tasks');
+    var tasksHint = $('#openclaw-stat-tasks-hint');
+    var sessionsList = $('#openclaw-sessions-list');
+    var lastSession = $('#openclaw-last-session');
     if (statusBadge) statusBadge.textContent = '!';
     if (agentEl) agentEl.innerHTML = '<i class="fas fa-circle-xmark"></i> indisponível';
     if (agentHint) agentHint.textContent = reason || 'status real não confirmado';
     if (tgEl) tgEl.innerHTML = '<i class="fas fa-circle-question"></i> não confirmado';
     if (tgEl) tgEl.style.color = '#f59e0b';
     if (tgHint) tgHint.textContent = 'aguardando health válido do Gateway';
+    if (heartbeatEl) heartbeatEl.textContent = '—';
+    if (heartbeatHint) heartbeatHint.textContent = 'status anterior descartado';
+    if (tasksEl) {
+      tasksEl.textContent = '—';
+      tasksEl.style.color = '';
+    }
+    if (tasksHint) tasksHint.textContent = 'status anterior descartado';
+    openclawState.lastSessionId = null;
+    openclawState.selectedSession = null;
+    openclawState.pinnedSessionId = null;
+    openclawState.latestDirectSessionId = null;
+    if (lastSession) lastSession.textContent = '—';
+    if (sessionsList) sessionsList.innerHTML = '<div class="kc-cadu-empty" role="status">Sessões indisponíveis; o estado anterior foi descartado.</div>';
+    renderOpenclawSessionDetail(null);
+    hideTelegramHeroStatus();
   }
 
   function renderOpenclawSessions(sessions) {
@@ -2408,6 +2553,23 @@
     }
   }
 
+  function handleTabKeydown(event, currentTab) {
+    var keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+    if (keys.indexOf(event.key) === -1) return;
+    var tabs = $$('.kc-cadu-tab');
+    var currentIndex = tabs.indexOf(currentTab);
+    if (currentIndex < 0 || !tabs.length) return;
+    event.preventDefault();
+    var nextIndex = currentIndex;
+    if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else nextIndex = (currentIndex + 1) % tabs.length;
+    var target = tabs[nextIndex];
+    switchTab(target.getAttribute('data-tab'));
+    target.focus();
+  }
+
   async function performOpenclawRefresh() {
     var statusBadge = $('#badge-openclaw');
     var agentEl = $('#openclaw-stat-agent');
@@ -2480,6 +2642,7 @@
             ? 'configurado, mas sem conexão ativa confirmada' + (telegramHealth.detail ? ': ' + telegramHealth.detail : '')
             : 'o health não confirmou configuração ou conexão ativa');
       }
+      renderTelegramHeroStatus(tgConnected, tgConfigured);
       if (hbEl) {
         hbEl.innerHTML = heartbeatDisabled
           ? '<i class="fas fa-pause-circle"></i> desativado'
@@ -2738,12 +2901,18 @@
     setTimeout(refreshOpenclaw, 800);
   }
 
+  function openclawHeartbeatConfirmed(response) {
+    var data = response && (response.data || response);
+    return !!(response && !response.__error && data && data.ok === true &&
+      Number.isSafeInteger(data.exit_code) && data.exit_code === 0);
+  }
+
   async function openclawTriggerHeartbeat() {
     var btn = $('#openclaw-trigger-heartbeat-btn');
     var status = $('#openclaw-chat-status');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Trigger Heartbeat';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Solicitando sinal de vida…';
     }
     if (status) status.textContent = 'Enviando evento de heartbeat…';
     setOpenclawActionStatus('<i class="fas fa-spinner fa-spin"></i> Enviando heartbeat para o agente principal…', 'loading');
@@ -2754,7 +2923,7 @@
         body: JSON.stringify({ text: 'Admin trigger from KinoCampus UI', agent: 'main', mode: 'now' }),
       });
       var data = resp && (resp.data || resp);
-      var ok = !!(resp && !resp.__error && data && data.ok !== false && Number(data.exit_code || 0) === 0);
+      var ok = openclawHeartbeatConfirmed(resp);
       if (ok) {
         var sentAt = new Date().toLocaleTimeString('pt-BR');
         var stdout = data && data.stdout ? String(data.stdout).trim().slice(0, 180) : '';
@@ -2780,7 +2949,7 @@
     finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-heart-pulse"></i> Trigger Heartbeat';
+        btn.innerHTML = '<i class="fas fa-heart-pulse"></i> Solicitar sinal de vida';
       }
     }
   }
@@ -2965,13 +3134,16 @@
         }
       } else if (kind === 'pipeline') {
         var runId = btn.getAttribute('data-ask-run-id') || '';
+        if (!isSafePipelineRunId(runId)) {
+          throw new Error('ID de execução da pipeline inválido.');
+        }
         var stage = btn.getAttribute('data-ask-stage') || '';
         var status = btn.getAttribute('data-ask-status') || '';
         message = buildUntrustedContextPrompt('run-context', {
           id: runId,
           stage: stage,
           status: status,
-          exportPath: '/api/cadu/pipeline/' + runId + '/export',
+          exportPath: '/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export',
         }, 'Analise esta execução da pipeline, confira o export indicado e proponha o próximo passo operacional seguro.');
         var resp3 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
@@ -3060,9 +3232,15 @@
     if (!bell || !badge) return;
 
     apiFetch('/api/cadu/pipeline/runs?limit=8')
-      .then(function (r) { return r && !r.__error ? r : null; })
+      .then(function (r) {
+        if (!r || r.__error) {
+          var detail = r && (r.message || (r.data && (r.data.message || r.data.error)));
+          throw new Error(detail || 'atividade recente indisponível');
+        }
+        return r;
+      })
       .then(function (data) {
-        if (!data || !Array.isArray(data.runs)) return;
+        if (!data || !Array.isArray(data.runs)) throw new Error('contrato de atividade recente inválido');
         var safeRuns = data.runs.map(normalizePipelineRun).filter(Boolean).slice(0, 20);
         notifState.runs = safeRuns;
 
@@ -3095,14 +3273,14 @@
                        : displayStatus === 'partial' ? 'pill--partial'
                        : displayStatus === 'failed' ? 'pill--failed'
                        : displayStatus === 'running' ? 'pill--running' : '';
-            return '<div class="kc-cadu-activity-dropdown__item" data-run="' + r.id + '">'
+            return '<button type="button" class="kc-cadu-activity-dropdown__item" data-run="' + escapeHtml(r.id) + '" aria-label="Abrir ' + escapeHtml(pipelineActivityStageLabel(r.stage, state.pipelineStages)) + ' na pipeline">'
               + '<div class="kc-cadu-activity-dropdown__item__title">' + escapeHtml(pipelineActivityStageLabel(r.stage, state.pipelineStages)) + '</div>'
               + '<div class="kc-cadu-activity-dropdown__item__meta">'
               + '<span class="pill ' + stClass + '">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>'
               + '<span>' + fmtAgo(r.started_at) + '</span>'
               + (r.exit_code != null ? '<span>código de saída ' + r.exit_code + '</span>' : '')
               + '</div>'
-              + '</div>';
+              + '</button>';
           }).join('');
           $$('.kc-cadu-activity-dropdown__item', list).forEach(function (it) {
             it.addEventListener('click', function () {
@@ -3118,7 +3296,15 @@
           });
         }
       })
-      .catch(function () {});
+      .catch(function (error) {
+        var dropdown = $('#kcCaduActivityDropdown');
+        if (!list || !dropdown || dropdown.hasAttribute('hidden')) return;
+        list.innerHTML = '<div class="kc-cadu-empty" role="alert">Não foi possível carregar a atividade recente.<br><small>' +
+          escapeHtml(error && error.message ? error.message : error) + '</small><br>' +
+          '<button type="button" class="kc-btn-secondary" id="kcCaduActivityRetry">Tentar novamente</button></div>';
+        var retry = $('#kcCaduActivityRetry');
+        if (retry) retry.addEventListener('click', function () { pollNotifActivity({ markSeen: false }); });
+      });
   }
 
   // ============================================================
@@ -3329,6 +3515,7 @@
   function bindEvents() {
     $$('.kc-cadu-tab').forEach(function (tab) {
       tab.addEventListener('click', function () { switchTab(tab.getAttribute('data-tab')); });
+      tab.addEventListener('keydown', function (event) { handleTabKeydown(event, tab); });
     });
 
     // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
@@ -4079,6 +4266,16 @@
       normalizedStages.push(normalizedStage);
       expiresAt = Math.min(expiresAt, normalizedStage.preflight.checked_at * 1000 + PIPELINE_SNAPSHOT_TTL_MS);
     }
+    if (!Object.prototype.hasOwnProperty.call(status, 'active_run')) {
+      return { ok: false, reason: 'estado da execução ativa ausente' };
+    }
+    var activeRun = null;
+    if (status.active_run !== null) {
+      activeRun = normalizePipelineRun(status.active_run);
+      if (!activeRun || !seen[activeRun.stage] || ['pending', 'running', 'stopping'].indexOf(activeRun.status) < 0) {
+        return { ok: false, reason: 'estado da execução ativa inválido' };
+      }
+    }
     return {
       ok: true,
       generatedAt: generatedAt,
@@ -4088,6 +4285,7 @@
         explicit_run_mode_routes: true,
       },
       stages: normalizedStages,
+      activeRun: activeRun,
     };
   }
 
@@ -4157,7 +4355,7 @@
       return;
     }
     var normalizedStages = validation.stages;
-    var normalizedActive = status.active_run == null ? null : normalizePipelineRun(status.active_run);
+    var normalizedActive = validation.activeRun;
     var normalizedHistory = Array.isArray(status.history)
       ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
       : [];
@@ -4476,19 +4674,20 @@
     }
     var displayStatus = pipelineRunDisplayStatus(active);
     var cls = 'is-' + displayStatus;
+    var escapedActiveRunId = escapeHtml(active.id);
     card.className = 'kc-pipeline-active-card ' + cls;
     if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = pipelineStatusLabel(displayStatus) + ' (' + fmtAgo(active.started_at) + ')'; }
     var stopBtn = active.status === 'running'
-      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + active.id + '"><i class="fas fa-stop"></i> Parar</button>'
+      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + escapedActiveRunId + '"><i class="fas fa-stop"></i> Parar</button>'
       : '';
     card.innerHTML =
       '<div class="kc-pipeline-active-card__head">' +
-        '<strong>' + escapeHtml(active.stage) + '</strong>' +
+        '<strong>' + escapeHtml(pipelineActivityStageLabel(active.stage, state.pipelineStages)) + '</strong>' +
         '<span class="kc-cadu-badge ' + cls + '" style="background:rgba(255,107,0,.12);color:#ff6b00;">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>' +
         stopBtn +
       '</div>' +
       '<div class="kc-pipeline-active-card__meta">' +
-        '<span><i class="fas fa-fingerprint"></i> <code>' + active.id.slice(0, 8) + '</code></span>' +
+        '<span><i class="fas fa-fingerprint"></i> <code>' + escapeHtml(active.id.slice(0, 8)) + '</code></span>' +
         '<span><i class="fas fa-clock"></i> Iniciado ' + fmtAgo(active.started_at) + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> ' + fmtDur(active.started_at, active.finished_at) + '</span>' +
         (typeof active.dry_run === 'boolean' ? '<span><i class="fas ' + (active.dry_run ? 'fa-flask' : 'fa-database') + '"></i> ' + (active.dry_run ? 'simulação' : 'execução real') + '</span>' : '') +
@@ -4539,7 +4738,7 @@
         '<span><i class="fas fa-rotate"></i> all ok: ' + (lastSuccess ? fmtAgo(lastSuccess.finished_at || lastSuccess.started_at) : 'nunca') + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> atraso: ' + escapeHtml(since) + '</span>' +
         '<span><i class="fas fa-triangle-exclamation"></i> falhas 24h: ' + failures + '</span>' +
-        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(latest.stage || '?') + ' ' + escapeHtml(pipelineStatusLabel(pipelineRunDisplayStatus(latest))) + '</span>' : '') +
+        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(pipelineActivityStageLabel(latest.stage, state.pipelineStages)) + ' ' + escapeHtml(pipelineStatusLabel(pipelineRunDisplayStatus(latest))) + '</span>' : '') +
       '</div>' +
       issueHtml +
       (health.recommendation ? '<div class="kc-pipeline-health-card__meta"><span><i class="fas fa-screwdriver-wrench"></i> ' + escapeHtml(health.recommendation) + '</span></div>' : '');
@@ -4552,24 +4751,25 @@
     container.innerHTML = history.slice(0, 20).map(function (r) {
       var displayStatus = pipelineRunDisplayStatus(r);
       var cls = 'is-' + displayStatus;
+      var escapedRunId = escapeHtml(r.id);
       var actions = '';
       // só mostra ações pra runs terminados
       if (r.status === 'finished' || r.status === 'failed' || r.status === 'cancelled') {
         actions =
           '<div class="kc-pipeline-history-item__actions">' +
-            '<button class="kc-pipeline-history-btn" data-action="view" data-run="' + r.id + '" title="Ver artefatos + log"><i class="fas fa-eye"></i></button>' +
-            '<button class="kc-pipeline-history-btn" data-action="download-log" data-run="' + r.id + '" title="Baixar log completo (.log)"><i class="fas fa-download"></i></button>' +
-            '<button class="kc-pipeline-history-btn" data-action="export" data-run="' + r.id + '" title="Exportação consolidada (JSON)"><i class="fas fa-file-export"></i></button>' +
-            '<button class="kc-pipeline-history-btn" data-action="export-pdf" data-run="' + r.id + '" title="Exportação visual em PDF"><i class="fas fa-file-pdf"></i></button>' +
-            '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + r.id + '" title="Perguntar ao Cadu sobre esta execução"><i class="fas fa-robot"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="view" data-run="' + escapedRunId + '" aria-label="Ver artefatos e log" title="Ver artefatos + log"><i class="fas fa-eye"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="download-log" data-run="' + escapedRunId + '" aria-label="Baixar log completo" title="Baixar log completo (.log)"><i class="fas fa-download"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="export" data-run="' + escapedRunId + '" aria-label="Exportar JSON consolidado" title="Exportação consolidada (JSON)"><i class="fas fa-file-export"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="export-pdf" data-run="' + escapedRunId + '" aria-label="Exportar PDF" title="Exportação visual em PDF"><i class="fas fa-file-pdf"></i></button>' +
+            '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + escapedRunId + '" aria-label="Perguntar ao Cadu sobre esta execução" title="Perguntar ao Cadu sobre esta execução"><i class="fas fa-robot"></i></button>' +
           '</div>';
       }
-      return '<div class="kc-pipeline-history-item ' + cls + '" data-run-id="' + r.id + '">' +
+      return '<div class="kc-pipeline-history-item ' + cls + '" data-run-id="' + escapedRunId + '">' +
         '<div class="kc-pipeline-history-item__head">' +
-          '<strong>' + escapeHtml(r.stage) + '</strong>' +
+          '<strong>' + escapeHtml(pipelineActivityStageLabel(r.stage, state.pipelineStages)) + '</strong>' +
           '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>' +
         '</div>' +
-        '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (typeof r.dry_run === 'boolean' ? (r.dry_run ? ' · simulação' : ' · execução real') : '') + (r.exit_code != null ? ' · código de saída ' + r.exit_code : '') + '</div>' +
+        '<div class="kc-pipeline-history-item__id">' + escapeHtml(r.id.slice(0, 8)) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (typeof r.dry_run === 'boolean' ? (r.dry_run ? ' · simulação' : ' · execução real') : '') + (r.exit_code != null ? ' · código de saída ' + r.exit_code : '') + '</div>' +
         renderRunSummary(r.summary) +
         actions +
       '</div>';
@@ -4588,17 +4788,52 @@
     });
   }
 
+  function pipelineApiDataOrThrow(response, label) {
+    if (!response || response.__error) {
+      var payload = response && response.data;
+      var detail = response && response.message;
+      if (!detail && payload && typeof payload === 'object') detail = payload.message || payload.error || payload.detail;
+      var status = response && response.status ? ' (HTTP ' + response.status + ')' : '';
+      throw new Error(label + ' falhou' + status + (detail ? ': ' + String(detail).slice(0, 240) : ''));
+    }
+    if (response && typeof response === 'object' && !Array.isArray(response) &&
+        Object.prototype.hasOwnProperty.call(response, 'data') && response.data != null) {
+      return response.data;
+    }
+    return response;
+  }
+
+  function closeRunDetailsModal(modal) {
+    if (!modal || !modal.el) return;
+    modal.el.__kcRequestGeneration = (modal.el.__kcRequestGeneration || 0) + 1;
+    modal.el.style.display = 'none';
+    modal.el.setAttribute('hidden', '');
+    var returnFocus = modal.el.__kcReturnFocus;
+    modal.el.__kcReturnFocus = null;
+    if (returnFocus && document.contains(returnFocus) && typeof returnFocus.focus === 'function') returnFocus.focus();
+  }
+
   function openRunDetailsModal(runId) {
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Identificador de execução inválido; detalhes não foram solicitados.');
+      return;
+    }
     var modal = ensureRunDetailsModal();
+    var requestGeneration = (modal.el.__kcRequestGeneration || 0) + 1;
+    modal.el.__kcRequestGeneration = requestGeneration;
     modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos…</div>';
     modal.title.textContent = 'Execução ' + runId.slice(0, 8);
+    modal.el.__kcReturnFocus = document.activeElement;
+    modal.el.removeAttribute('hidden');
     modal.el.style.display = 'flex';
+    setTimeout(function () { if (modal.close) modal.close.focus(); }, 0);
     // fetch artifacts + log tail in parallel
     Promise.all([
-      apiFetch('/api/cadu/pipeline/' + runId + '/artifacts').then(function (r) { return r.data || r; }),
-      apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
-      apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) { return r.data || r; }),
+      apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/artifacts').then(function (r) { return pipelineApiDataOrThrow(r, 'Artefatos'); }),
+      apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/log?tail=80').then(function (r) { return pipelineApiDataOrThrow(r, 'Log'); }),
+      apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export').then(function (r) { return pipelineApiDataOrThrow(r, 'Exportação'); }),
     ]).then(function (res) {
+      if (modal.el.__kcRequestGeneration !== requestGeneration) return;
       var arts = Array.isArray(res[0] && res[0].artifacts)
         ? res[0].artifacts.filter(function (artifact) { return artifact && typeof artifact === 'object'; }).slice(0, 200)
         : [];
@@ -4630,16 +4865,16 @@
         '<h4 style="margin:14px 0 8px;font-size:.85rem;">Log (últimas 80 linhas)</h4>' +
         logHtml +
         '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
-          '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" id="modal-ask-cadu" data-run="' + runId + '"><i class="fas fa-robot"></i> Perguntar ao Cadu</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-download-log" data-run="' + runId + '"><i class="fas fa-download"></i> Baixar log</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-export" data-run="' + runId + '"><i class="fas fa-file-export"></i> Exportar JSON</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-export-pdf" data-run="' + runId + '"><i class="fas fa-file-pdf"></i> Exportar PDF</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-close" style="margin-left:auto;"><i class="fas fa-times"></i> Fechar</button>' +
+          '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" id="modal-ask-cadu" data-run="' + escapeHtml(runId) + '"><i class="fas fa-robot"></i> Perguntar ao Cadu</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-download-log" data-run="' + escapeHtml(runId) + '"><i class="fas fa-download"></i> Baixar log</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-export" data-run="' + escapeHtml(runId) + '"><i class="fas fa-file-export"></i> Exportar JSON</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-export-pdf" data-run="' + escapeHtml(runId) + '"><i class="fas fa-file-pdf"></i> Exportar PDF</button>' +
+          '<button class="kc-pipeline-history-btn" data-modal-close style="margin-left:auto;"><i class="fas fa-times"></i> Fechar</button>' +
         '</div>';
-      var closeBtn = document.getElementById('modal-close');
-      if (closeBtn) closeBtn.addEventListener('click', function () { modal.el.style.display = 'none'; });
+      var closeBtn = modal.body.querySelector('[data-modal-close]');
+      if (closeBtn) closeBtn.addEventListener('click', function () { closeRunDetailsModal(modal); });
       var askBtn = document.getElementById('modal-ask-cadu');
-      if (askBtn) askBtn.addEventListener('click', function () { modal.el.style.display = 'none'; askCaduAboutRun(runId); });
+      if (askBtn) askBtn.addEventListener('click', function () { closeRunDetailsModal(modal); askCaduAboutRun(runId); });
       var dlBtn = document.getElementById('modal-download-log');
       if (dlBtn) dlBtn.addEventListener('click', function () { downloadRunLog(runId); });
       var expBtn = document.getElementById('modal-export');
@@ -4647,33 +4882,72 @@
       var pdfBtn = document.getElementById('modal-export-pdf');
       if (pdfBtn) pdfBtn.addEventListener('click', function () { exportRunPdf(runId, pdfBtn); });
     }).catch(function (err) {
-      modal.body.innerHTML = '<div style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>';
+      if (modal.el.__kcRequestGeneration !== requestGeneration) return;
+      modal.body.innerHTML = '<div role="alert" style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>' +
+        '<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="kc-pipeline-history-btn" data-modal-close><i class="fas fa-times"></i> Fechar</button></div>';
+      var errorClose = modal.body.querySelector('[data-modal-close]');
+      if (errorClose) errorClose.addEventListener('click', function () { closeRunDetailsModal(modal); });
     });
   }
 
   function ensureRunDetailsModal() {
     var el = document.getElementById('run-details-modal');
-    if (el) return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
+    if (el) return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body'), close: el.querySelector('.kc-modal__close') };
     el = document.createElement('div');
     el.id = 'run-details-modal';
     el.className = 'kc-modal';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-labelledby', 'run-details-modal-title');
+    el.setAttribute('hidden', '');
     el.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:20px;';
     el.innerHTML =
       '<div class="kc-modal__inner" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:14px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;">' +
         '<div class="kc-modal__head" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--kc-border-dark);">' +
-          '<h3 class="kc-modal__title" style="margin:0;font-size:1rem;">Run</h3>' +
+          '<h3 class="kc-modal__title" id="run-details-modal-title" style="margin:0;font-size:1rem;">Execução</h3>' +
+          '<button type="button" class="kc-pipeline-history-btn kc-modal__close" aria-label="Fechar detalhes da execução"><i class="fas fa-times" aria-hidden="true"></i></button>' +
         '</div>' +
         '<div class="kc-modal__body" style="padding:18px;overflow:auto;flex:1;"></div>' +
       '</div>';
-    el.addEventListener('click', function (e) { if (e.target === el) el.style.display = 'none'; });
+    var closeButton = el.querySelector('.kc-modal__close');
+    var modal = { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body'), close: closeButton };
+    if (closeButton) closeButton.addEventListener('click', function () { closeRunDetailsModal(modal); });
+    el.addEventListener('click', function (e) { if (e.target === el) closeRunDetailsModal(modal); });
+    el.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRunDetailsModal(modal);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      var focusable = Array.prototype.slice.call(el.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'))
+        .filter(function (node) { return !node.hidden && node.offsetParent !== null; });
+      if (!focusable.length) {
+        event.preventDefault();
+        if (closeButton) closeButton.focus();
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
     document.body.appendChild(el);
-    return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
+    return modal;
   }
 
   async function downloadRunLog(runId) {
     var objectUrl = '';
     var anchor = null;
     try {
+      if (!isSafePipelineRunId(runId)) {
+        throw new Error('ID de execução da pipeline inválido.');
+      }
       var path = '/api/cadu/pipeline/' + encodeURIComponent(runId) + '/log?download=1';
       var res = await caduFetchRaw(path, { headers: { 'Accept': 'text/plain' } });
       if (!res.ok) {
@@ -4699,16 +4973,20 @@
   }
 
   function downloadRunExport(runId) {
-    apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) {
-      var data = r.data || r;
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Não foi possível exportar: ID de execução da pipeline inválido.');
+      return;
+    }
+    apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export').then(function (r) {
+      var data = pipelineApiDataOrThrow(r, 'Exportação');
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
-      a.href = url; a.download = 'pipeline-' + runId + '.json';
+      a.href = url; a.download = 'pipeline-' + String(runId).replace(/[^a-zA-Z0-9_-]/g, '') + '.json';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     }).catch(function (err) {
-      alert('Erro ao exportar: ' + (err && err.message || err));
+      showCaduError('Erro ao exportar JSON da pipeline: ' + (err && err.message || err));
     });
   }
 
@@ -4893,13 +5171,15 @@
   async function exportRunPdf(runId, btn) {
     var originalHtml = btn ? btn.innerHTML : '';
     try {
+      if (!isSafePipelineRunId(runId)) {
+        throw new Error('ID de execução da pipeline inválido.');
+      }
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       }
-      var r = await apiFetch('/api/cadu/pipeline/' + runId + '/export');
-      var data = r.data || r;
-      if (!data || data.__error) throw new Error(data && (data.message || data.error) || 'export indisponível');
+      var r = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export');
+      var data = pipelineApiDataOrThrow(r, 'Exportação PDF');
       if (window.KCAdminExport && typeof window.KCAdminExport.exportReportPDF === 'function') {
         var date = new Date().toISOString().slice(0, 10);
         await window.KCAdminExport.exportReportPDF('kc-cadu-pipeline-' + date + '-' + runId.slice(0, 8) + '.pdf', buildPipelinePdfReport(data, runId));
@@ -4922,6 +5202,10 @@
   }
 
   function askCaduAboutRun(runId) {
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Não foi possível consultar o Cadu: ID de execução da pipeline inválido.');
+      return false;
+    }
     var run = findPipelineRun(runId) || { id: runId, stage: 'pipeline', status: 'unknown' };
     var attrs = {
       'data-ask-kind': 'pipeline',
@@ -5280,9 +5564,13 @@
   }
 
   async function stopPipelineRun(runId) {
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Não foi possível parar: ID de execução da pipeline inválido.');
+      return;
+    }
     if (!confirm('Parar esta execução? O processo será encerrado de forma controlada (SIGTERM).')) return;
     // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
-    var resp = await apiFetch('/api/cadu/pipeline/' + runId + '/stop', { method: 'POST' });
+    var resp = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stop', { method: 'POST' });
     if (resp && resp.ok) {
       refreshPipeline();
     } else if (resp && resp.__error) {

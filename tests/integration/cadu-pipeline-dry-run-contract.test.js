@@ -103,6 +103,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
       contract_version: 'cadu-pipeline-control-v1',
       generated_at: new Date(now).toISOString(),
       capabilities: explicitCapabilities,
+      active_run: null,
       stages: [{
         id: 'all',
         name: 'Pipeline completa',
@@ -140,8 +141,28 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(validatePipelineControlSnapshot(snapshot, now)).toMatchObject({
       ok: true,
       expiresAt: now + 15000,
+      activeRun: null,
       stages: [{ preflight: { command: 'node scripts/pipeline-kino.js all' } }],
     });
+    const activeRun = {
+      id: 'run-1',
+      stage: 'all',
+      status: 'running',
+      started_at: now / 1000,
+    };
+    expect(validatePipelineControlSnapshot({ ...snapshot, active_run: activeRun }, now))
+      .toMatchObject({ ok: true, activeRun });
+    const { active_run: _omitted, ...withoutActiveRun } = snapshot;
+    expect(validatePipelineControlSnapshot(withoutActiveRun, now).ok).toBe(false);
+    expect(validatePipelineControlSnapshot({ ...snapshot, active_run: {} }, now).ok).toBe(false);
+    expect(validatePipelineControlSnapshot({
+      ...snapshot,
+      active_run: { ...activeRun, stage: 'publish' },
+    }, now).ok).toBe(false);
+    expect(validatePipelineControlSnapshot({
+      ...snapshot,
+      active_run: { ...activeRun, status: 'finished', finished_at: now / 1000 },
+    }, now).ok).toBe(false);
     expect(validatePipelineControlSnapshot({
       ...snapshot,
       stages: [{

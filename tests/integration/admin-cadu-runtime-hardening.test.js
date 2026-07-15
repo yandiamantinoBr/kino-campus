@@ -37,17 +37,42 @@ function isolatedFunction(name, dependencies = []) {
 }
 
 describe('admin Cadu runtime hardening', () => {
-  test('marks OpenClaw online only after the command proves ok=true', () => {
-    const openclawStatusData = isolatedFunction('openclawStatusData', ['parseOpenclawCommandJson']);
+  test('marks OpenClaw online only after a fresh and complete status snapshot', () => {
+    const openclawStatusData = isolatedFunction('openclawStatusData', [
+      'parseOpenclawCommandJson',
+      'normalizeOpenclawStatusSnapshot',
+    ]);
+    const now = Date.parse('2026-07-15T03:00:00.000Z');
+    const data = {
+      gateway: { reachable: true },
+      agents: { defaultId: 'main', agents: [{ id: 'main' }] },
+      heartbeat: { defaultAgentId: 'main', agents: [{ agentId: 'main', enabled: false, every: '0m' }] },
+      sessions: { defaults: { model: 'test-model' }, recent: [] },
+      tasks: { active: 0, total: 2, failures: 0, byStatus: { succeeded: 2 } },
+    };
     expect(openclawStatusData({ status: { ok: false, data: { agents: {} } } })).toBeNull();
     expect(openclawStatusData({ status: { data: { agents: {} } } })).toBeNull();
     expect(openclawStatusData({ data: { agents: {} } })).toBeNull();
-    expect(openclawStatusData({ status: { ok: true, data: { agents: { defaultId: 'main' } } } }))
-      .toEqual({ agents: { defaultId: 'main' } });
-    expect(openclawStatusData({ status: { ok: true, stdout: '{"agents":{"defaultId":"main"}}' } }))
-      .toEqual({ agents: { defaultId: 'main' } });
+    expect(openclawStatusData({ checked_at: now / 1000, status: { ok: true, data: {} } }, now)).toBeNull();
+    expect(openclawStatusData({ checked_at: (now - 121000) / 1000, status: { ok: true, data } }, now)).toBeNull();
+    expect(openclawStatusData({ checked_at: now / 1000, status: { ok: true, data: { ...data, gateway: { reachable: false } } } }, now)).toBeNull();
+    expect(openclawStatusData({ checked_at: now / 1000, status: { ok: true, data: { ...data, tasks: {} } } }, now)).toBeNull();
+    expect(openclawStatusData({ checked_at: now / 1000, status: { ok: true, data } }, now)).toEqual(data);
+    expect(openclawStatusData({ checked_at: now / 1000, status: { ok: true, stdout: JSON.stringify(data) } }, now)).toEqual(data);
     expect(controller).not.toContain("|| 'deepseek-v4-pro'");
     expect(controller).not.toContain("'ctx 1M'");
+  });
+
+  test('confirms heartbeat only with an explicit successful command contract', () => {
+    const confirmed = isolatedFunction('openclawHeartbeatConfirmed');
+    expect(confirmed({ ok: true, exit_code: 0 })).toBe(true);
+    expect(confirmed({ data: { ok: true, exit_code: 0 } })).toBe(true);
+    expect(confirmed({})).toBe(false);
+    expect(confirmed({ ok: true })).toBe(false);
+    expect(confirmed({ exit_code: 0 })).toBe(false);
+    expect(confirmed({ ok: true, exit_code: '0' })).toBe(false);
+    expect(confirmed({ ok: true, exit_code: 1 })).toBe(false);
+    expect(confirmed({ __error: true, data: { ok: true, exit_code: 0 } })).toBe(false);
   });
 
   test('keeps legacy pipeline stages visible while their actions remain fail-closed', () => {
@@ -151,6 +176,17 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('Recarregar consulta os artefatos; a coleta é executada pela pipeline.');
   });
 
+  test('invalidates superseded feed requests before they can overwrite newer state', () => {
+    const source = functionSource('loadFeed');
+    expect(source).toContain('var requestGeneration = ++state.feedRequestGeneration;');
+    expect(source).toContain('state.feedRequestController.abort();');
+    expect(source).toContain('signal: requestController ? requestController.signal : undefined');
+    expect(source.match(/requestGeneration !== state\.feedRequestGeneration/g)).toHaveLength(3);
+    expect(source).toContain("return { stale: true }");
+    expect(source).toContain('if (requestGeneration === state.feedRequestGeneration)');
+    expect(functionSource('applyFeedFilter')).toContain('sourceReviewCanonicalUrl(it.url)');
+  });
+
   test('keeps a fresh degraded feed current while surfacing integrity warnings', () => {
     const classifyFeedFreshness = isolatedFunction('classifyFeedFreshness');
     const staleAfter = 25 * 60 * 60 * 1000;
@@ -236,6 +272,20 @@ describe('admin Cadu runtime hardening', () => {
       ok: true,
       data: { channels: { telegram: { configured: true, running: false, lastError: 'offline' } } },
     })).toMatchObject({ connected: false, configured: true, structured: true, detail: 'offline' });
+  });
+
+  test('clears stale OpenClaw UI state and controls the Telegram hero status', () => {
+    const unavailable = functionSource('renderOpenclawUnavailable');
+    expect(unavailable).toContain("heartbeatEl.textContent = '—'");
+    expect(unavailable).toContain("tasksEl.textContent = '—'");
+    expect(unavailable).toContain('openclawState.lastSessionId = null');
+    expect(unavailable).toContain('openclawState.pinnedSessionId = null');
+    expect(unavailable).toContain('estado anterior foi descartado');
+    expect(unavailable).toContain('hideTelegramHeroStatus();');
+    expect(functionSource('performOpenclawRefresh')).toContain('renderTelegramHeroStatus(tgConnected, tgConfigured);');
+    expect(functionSource('checkHealth')).toContain("if (contextPill) contextPill.style.display = 'none';");
+    expect(controller).not.toContain('Trigger Heartbeat');
+    expect(controller).toContain('Solicitar sinal de vida');
   });
 
   test('reads OpenClaw reachability from canonical cadu_api context with legacy fallback', () => {
@@ -340,6 +390,32 @@ describe('admin Cadu runtime hardening', () => {
     expect(html).toContain('.kc-pipeline-history-item.is-finished');
   });
 
+  test('rejects pipeline HTTP error envelopes and keeps the run modal accessible in every state', () => {
+    const unwrap = isolatedFunction('pipelineApiDataOrThrow');
+    expect(unwrap({ data: { artifacts: [] } }, 'Artefatos')).toEqual({ artifacts: [] });
+    expect(unwrap({ ok: true }, 'Artefatos')).toEqual({ ok: true });
+    expect(() => unwrap({ __error: true, status: 500, data: { error: 'boom' } }, 'Artefatos'))
+      .toThrow(/Artefatos falhou \(HTTP 500\): boom/);
+    expect(() => unwrap(null, 'Exportação')).toThrow(/Exportação falhou/);
+    const modal = functionSource('ensureRunDetailsModal');
+    expect(modal).toContain("el.setAttribute('role', 'dialog')");
+    expect(modal).toContain("el.setAttribute('aria-modal', 'true')");
+    expect(modal).toContain("event.key === 'Escape'");
+    expect(modal).toContain("event.key !== 'Tab'");
+    expect(functionSource('closeRunDetailsModal')).toContain('returnFocus.focus()');
+    const details = functionSource('openRunDetailsModal');
+    expect(details).toContain("pipelineApiDataOrThrow(r, 'Artefatos')");
+    expect(details).toContain("pipelineApiDataOrThrow(r, 'Log')");
+    expect(details).toContain("pipelineApiDataOrThrow(r, 'Exportação')");
+    expect(details).toContain('data-modal-close');
+    expect(details).toContain('if (!isSafePipelineRunId(runId))');
+    expect(functionSource('downloadRunExport')).toContain("pipelineApiDataOrThrow(r, 'Exportação')");
+    expect(functionSource('downloadRunExport')).toContain('if (!isSafePipelineRunId(runId))');
+    expect(functionSource('exportRunPdf')).toContain("encodeURIComponent(runId) + '/export'");
+    expect(functionSource('stopPipelineRun')).toContain("encodeURIComponent(runId) + '/stop'");
+    expect(functionSource('renderPipelineHistory')).toContain('var escapedRunId = escapeHtml(r.id)');
+  });
+
   test('keeps contextual asks idempotent and removes the inline public-content fallback', () => {
     const buildUntrustedContextPrompt = isolatedFunction('buildUntrustedContextPrompt');
     const prompt = buildUntrustedContextPrompt(
@@ -405,6 +481,28 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('pollNotifActivity({ markSeen: true });');
     expect(controller).not.toContain('var recent24h = safeRuns.filter');
     expect(controller).not.toContain('safeRuns.forEach(function (r) { newSeen[r.id] = Date.now(); });');
+    expect(functionSource('pollNotifActivity')).toContain('Não foi possível carregar a atividade recente.');
+    expect(functionSource('pollNotifActivity')).toContain('<button type="button" class="kc-cadu-activity-dropdown__item"');
+  });
+
+  test('implements keyboard tabs, status tones and accessible chat controls', () => {
+    expect(html).toContain('id="cadu-tab-sites" data-tab="sites" role="tab" aria-controls="tab-sites"');
+    expect(html).toContain('id="tab-sites" role="tabpanel" aria-labelledby="cadu-tab-sites"');
+    const tabKeyboard = functionSource('handleTabKeydown');
+    ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].forEach((key) => {
+      expect(tabKeyboard).toContain(key);
+    });
+    expect(controller).toContain("tab.addEventListener('keydown'");
+    expect(html).toContain('id="openclaw-chat-input" rows="2" maxlength="4000" aria-label="Mensagem para o Cadu"');
+    expect(html).toContain('id="openclaw-chat-focus-btn" class="kc-btn-secondary" aria-pressed="false"');
+    expect(functionSource('toggleOpenclawChatFocus')).toContain("btn.setAttribute('aria-pressed'");
+    const message = functionSource('showCaduError');
+    expect(message).toContain("wrap.classList.add('is-' + normalizedTone)");
+    expect(message).toContain("normalizedTone === 'error' ? 'alert' : 'status'");
+    expect(html).toContain('#cadu-error.is-error');
+    expect(html).toContain('#cadu-error.is-success');
+    expect(functionSource('submitSourceReview')).toContain("outcome.policyCode + '.', 'info'");
+    expect(functionSource('publishSite')).toContain("outcome.kind === 'published' ? 'success' : 'info'");
   });
 
   test('baselines first activity access with a prototype-free seen map', () => {
@@ -578,6 +676,7 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain("weby_site: 'Site institucional Weby'");
     expect(controller).toContain("pro_reitoria: 'Pró-reitoria'");
     expect(controller).toContain("affiliated_foundation: 'Fundação vinculada'");
+    expect(controller).toContain("campus: 'Campus'");
     expect(controller).toContain("stable_source_id: 'ID canônico estável'");
     expect(controller).toContain("'ig-only': 'Somente Instagram'");
     expect(controller).toContain('Observação informativa:');
@@ -592,6 +691,29 @@ describe('admin Cadu runtime hardening', () => {
     expect(functionSource('computeKpis')).toContain('tierKpiButton.disabled = !administrativeMetadataAvailable');
     expect(sourceModel).toContain('administrativeMetadataAvailable: administrativeMetadataAvailable');
     expect(controller).not.toContain('Overrides estão bloqueados para evitar gravar por nomes ambíguos.');
+  });
+
+  test('formats Campus labels in pt-BR without altering canonical entity names', () => {
+    const formatCampusLabel = isolatedFunction('formatCampusLabel');
+    expect(formatCampusLabel('aparecida_de_goiania')).toBe('Campus Aparecida de Goiânia');
+    expect(formatCampusLabel('Câmpus Cidade de Goiás')).toBe('Campus Cidade de Goiás');
+    expect(formatCampusLabel('firminopolis')).toBe('Campus Firminópolis');
+    expect(formatCampusLabel('')).toBe('Campus não informado');
+    expect(functionSource('renderEntityRows')).toContain('formatCampusLabel(entity.campus)');
+    expect(functionSource('buildSitesCsvRows')).toContain('formatCampusLabel(entity.campus)');
+    expect(functionSource('renderPipelineHistory')).toContain('pipelineActivityStageLabel(r.stage, state.pipelineStages)');
+    expect(functionSource('renderPipelineActive')).toContain('pipelineActivityStageLabel(active.stage, state.pipelineStages)');
+  });
+
+  test('keeps diagnostic attributes single-encoded and source links HTTPS-only', () => {
+    const diagnostics = functionSource('renderFeedDiagnostics');
+    expect(diagnostics).toContain("var source = sourceReviewCanonicalUrl(item.source || '')");
+    expect(diagnostics).toContain("data-ask-title=\"' + escapeHtml(title)");
+    expect(diagnostics).not.toContain("replace(/\"/g, '&quot;')");
+    const canonicalUrl = isolatedFunction('sourceReviewCanonicalUrl');
+    expect(canonicalUrl('https://ufg.br/noticia')).toBe('https://ufg.br/noticia');
+    expect(canonicalUrl('javascript:alert(1)')).toBe('');
+    expect(canonicalUrl('http://ufg.br/')).toBe('');
   });
 
   test('omits unavailable administrative metadata from mirror CSV and PDF exports', () => {
