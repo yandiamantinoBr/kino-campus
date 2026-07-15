@@ -395,6 +395,30 @@ describe('KCAdminCaduSources fail-closed projection', () => {
     );
   });
 
+  test('accepts a strong canonical CAS header when transport weakens the HTTP ETag', () => {
+    const catalog = buildCatalog(fixture(), headers({
+      ETag: `W/${LIST_ETAG}`,
+      'X-Cadu-Canonical-ETag': LIST_ETAG
+    }));
+    expect(catalog.registrySha256).toBe(HASH);
+    expect(catalog.responseEtag).toBe(LIST_ETAG);
+
+    expectContractError(
+      () => validateProjection(fixture(), headers({
+        ETag: LIST_ETAG,
+        'X-Cadu-Canonical-ETag': `W/${LIST_ETAG}`
+      })),
+      'invalid_response_etag'
+    );
+    expectContractError(
+      () => validateProjection(fixture(), headers({
+        ETag: LIST_ETAG,
+        'X-Cadu-Canonical-ETag': ''
+      })),
+      'invalid_response_etag'
+    );
+  });
+
   test('rejects activated registries and any enabled shadow source or profile', () => {
     const active = fixture();
     active.activation.state = 'active';

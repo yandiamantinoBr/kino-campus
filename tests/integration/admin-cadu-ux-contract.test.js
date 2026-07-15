@@ -131,6 +131,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('{ timeoutMs: 4000 }');
     expect(controller).toContain('registryModel().validateRegistryReadiness(');
     expect(controller).toContain('registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope))');
+    expect(controller).toContain("'X-Cadu-Canonical-ETag': envelope.headers.canonicalEtag");
+    expect(controller).toContain("canonicalEtag: res.headers.get('x-cadu-canonical-etag')");
     expect(controller).toContain("'X-Cadu-Registry-Sha256': envelope.headers.registrySha256");
     expect(controller).toContain("state.catalogMode = 'legacy-readonly'");
     expect(controller).toContain(
@@ -146,6 +148,7 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("apiFetchResponse('/api/cadu/sites/' + mutation.path");
     expect(controller).toContain('mutation.headers');
     expect(controller).toContain("envelope.status === 412 || envelope.status === 409");
+    expect(controller).toContain('var expectedEtag = canonicalResponseEtag(envelope)');
     expect(controller).toContain('Nenhuma repetição automática foi feita.');
     expect(controller).toContain("state.sourceSaveChains[sourceId]");
     expect(controller).toContain('window.confirm(\'Criar ajuste administrativo estável para \' + source.id');

@@ -744,6 +744,7 @@
     return {
       headers: {
         ETag: envelope.headers.etag,
+        'X-Cadu-Canonical-ETag': envelope.headers.canonicalEtag,
         'X-Cadu-Registry-Sha256': envelope.headers.registrySha256,
         'X-Cadu-Registry-Origin': envelope.headers.registryOrigin
       }
@@ -1348,13 +1349,24 @@
 
   function patchResponseIsValid(envelope, sourceId) {
     var data = envelope && envelope.data;
-    var etag = envelope && envelope.headers && envelope.headers.etag;
+    var etag = canonicalResponseEtag(envelope);
     return Boolean(
       data && typeof data === 'object' && data.id === sourceId &&
       typeof etag === 'string' && /^"[0-9a-f]{64}"$/.test(etag) &&
       data.etag === etag && state.sourceCatalog &&
       envelope.headers.registrySha256 === state.sourceCatalog.registrySha256
     );
+  }
+
+  function canonicalResponseEtag(envelope) {
+    var headers = envelope && envelope.headers;
+    if (!headers) return '';
+    if (headers.canonicalEtag !== null && headers.canonicalEtag !== undefined) {
+      var canonical = typeof headers.canonicalEtag === 'string' ? headers.canonicalEtag.trim() : '';
+      return /^"[0-9a-f]{64}"$/.test(canonical) ? canonical : '';
+    }
+    var transport = typeof headers.etag === 'string' ? headers.etag.trim() : '';
+    return /^"[0-9a-f]{64}"$/.test(transport) ? transport : '';
   }
 
   function revalidatedSourceMatches(source, changes, expectedEtag) {
@@ -1424,7 +1436,7 @@
       showCaduError('A escrita respondeu com contrato inesperado. O catálogo foi recarregado e a operação não será repetida automaticamente.');
       return;
     }
-    var expectedEtag = envelope.headers.etag;
+    var expectedEtag = canonicalResponseEtag(envelope);
     var revalidatedMode = await loadSites();
     if (revalidatedMode !== 'registry') {
       showCaduError('A API confirmou a escrita de ' + sourceId + ', mas o catálogo canônico não pôde ser revalidado. O estado final não foi confirmado; nenhuma repetição automática será feita.');
@@ -3896,6 +3908,7 @@
         data: data,
         headers: {
           etag: res.headers.get('etag') || '',
+          canonicalEtag: res.headers.get('x-cadu-canonical-etag'),
           registrySha256: res.headers.get('x-cadu-registry-sha256') || '',
           registryOrigin: res.headers.get('x-cadu-registry-origin') || '',
           auditCutoff: res.headers.get('x-cadu-registry-audit-cutoff') || '',
@@ -3913,7 +3926,7 @@
         ok: false,
         status: 0,
         data: null,
-        headers: { etag: '', registrySha256: '', registryOrigin: '', auditCutoff: '', upstreamStatus: '', cacheControl: '' },
+        headers: { etag: '', canonicalEtag: null, registrySha256: '', registryOrigin: '', auditCutoff: '', upstreamStatus: '', cacheControl: '' },
         message: String(e && e.message || e)
       };
     } finally {

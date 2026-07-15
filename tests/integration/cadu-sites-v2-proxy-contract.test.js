@@ -205,7 +205,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
       'Authorization, Content-Type, If-Match',
     );
     expect(res.headers.get('access-control-expose-headers')).toBe(
-      'ETag, X-Cadu-Registry-Sha256, X-Cadu-Registry-Origin, X-Cadu-Registry-Audit-Cutoff, X-Cadu-Upstream-Status',
+      'ETag, X-Cadu-Canonical-ETag, X-Cadu-Registry-Sha256, X-Cadu-Registry-Origin, X-Cadu-Registry-Audit-Cutoff, X-Cadu-Upstream-Status',
     );
     expect(requireCaduAdmin).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
@@ -360,6 +360,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.statusCode).toBe(200);
     expect(global.fetch.mock.calls[0][0]).toBe(url);
     expect(res.headers.get('etag')).toBe(ETAG);
+    expect(res.headers.get('x-cadu-canonical-etag')).toBe(ETAG);
     expect(res.headers.get('x-cadu-registry-sha256')).toBe(REGISTRY_SHA);
     expect(res.headers.get('cache-control')).toBe('private, no-store');
   });
@@ -387,6 +388,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.body.entities.length).toBeGreaterThan(150);
     expect(res.body.instagramProfiles.length).toBeGreaterThan(50);
     expect(res.headers.get('etag')).toMatch(/^"[a-f0-9]{64}"$/);
+    expect(res.headers.get('x-cadu-canonical-etag')).toBe(res.headers.get('etag'));
     expect(res.headers.get('x-cadu-registry-sha256')).toMatch(/^[a-f0-9]{64}$/);
     expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
     expect(res.headers.get('x-cadu-registry-audit-cutoff')).toBe('2026-07-13');
@@ -531,6 +533,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(options.headers['If-Match']).toBe(ETAG);
     expect(JSON.parse(options.body)).toEqual({ tier: 1, note: 'linha 1\nlinha 2' });
     expect(res.headers.get('etag')).toBe(NEXT_ETAG);
+    expect(res.headers.get('x-cadu-canonical-etag')).toBe(NEXT_ETAG);
     expect(res.headers.get('x-cadu-registry-sha256')).toBe(REGISTRY_SHA);
     expect(res.headers.get('cache-control')).toBe('private, no-store');
   });
@@ -622,6 +625,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.statusCode).toBe(502);
     expect(res.body).toEqual({ error: 'invalid_cadu_registry_headers' });
     expect(res.headers.get('etag')).toBeUndefined();
+    expect(res.headers.get('x-cadu-canonical-etag')).toBeUndefined();
     expect(res.headers.get('x-cadu-registry-sha256')).toBeUndefined();
     expect(res.headers.get('cache-control')).toBe('private, no-store');
   });
