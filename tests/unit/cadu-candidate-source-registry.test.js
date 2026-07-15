@@ -454,12 +454,12 @@ describe('Cadu candidate source registry mirror', () => {
     const { manifest } = verifyMirroredRegistry();
     expect(manifest.upstream).toEqual({
       repository: 'https://github.com/yandiamantinoBr/openclaw-cadu',
-      commit: '78d1d237e0a83ecfda05376f99c78d81c368dbe8',
+      commit: '2d363b7ff3ee44bee533c69cfe13ba2d46076440',
     });
     expect(Object.fromEntries(manifest.artifacts.map((artifact) => [artifact.id, artifact.upstreamGitBlobOid]))).toEqual({
-      candidate: 'f513bcd894de146b1e81b6b428656d0c9a44f10f',
+      candidate: 'd923c5efe3c5c12a3b7b5391f9efebb13e9097fa',
       schema: '7dd8eceb528ac0afcaa00e496cfeb404989561d4',
-      'reconciliation-report': '49981c550058e5666bdc101df7a7c19230ebda35',
+      'reconciliation-report': 'ec1e7b52983587c0b9726176f8b58d0a8a5960ce',
     });
   });
 
@@ -498,11 +498,11 @@ describe('Cadu candidate source registry mirror', () => {
       /duplicate directory id/,
     );
     rejectMutation(
-      (candidate) => { candidate.authoritativeDirectories[0].checkedAt = '2026-07-14'; },
+      (candidate) => { candidate.authoritativeDirectories[0].checkedAt = '2026-07-16'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.authoritativeDirectories[0].pageUpdatedAt = '2026-07-14'; },
+      (candidate) => { candidate.authoritativeDirectories[0].pageUpdatedAt = '2026-07-16'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -532,18 +532,18 @@ describe('Cadu candidate source registry mirror', () => {
       /executionModes order drift/,
     );
     rejectMutation(
-      (candidate) => { candidate.webSources[0].audit.checkedAt = '2026-07-14'; },
+      (candidate) => { candidate.webSources[0].audit.checkedAt = '2026-07-16'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
       (candidate) => {
         const source = candidate.webSources.find((entry) => entry.audit.evidence.length > 0);
-        source.audit.evidence[0].checkedAt = '2026-07-14';
+        source.audit.evidence[0].checkedAt = '2026-07-16';
       },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.webSources[0].transport.checkedAt = '2026-07-14'; },
+      (candidate) => { candidate.webSources[0].transport.checkedAt = '2026-07-16'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -551,12 +551,12 @@ describe('Cadu candidate source registry mirror', () => {
         const observation = candidate.webSources
           .flatMap((source) => source.observations)
           .find((entry) => entry.publisherDeclared !== null);
-        observation.publisherDeclared.lastAudit = '2026-07-14';
+        observation.publisherDeclared.lastAudit = '2026-07-16';
       },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.instagramProfiles[0].audit.checkedAt = '2026-07-14'; },
+      (candidate) => { candidate.instagramProfiles[0].audit.checkedAt = '2026-07-16'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -762,8 +762,8 @@ describe('Cadu candidate source registry mirror', () => {
       const bundledInput = bundledRegistry.provenance.inputs
         .find((input) => input.id === 'kino_publisher');
       expect(bundledInput).toEqual(expect.objectContaining({
-        commit: '7df5eb9aaff6c4ceae3bf77156fc91269e83b230',
-        contentSha256: '1acdfe73470ec9b830c6e06301f57be9ee331f7ec026e60338fb8265b1f357b0',
+        commit: 'd8f31d3984d781ed167f637c3fa2455a028c1d07',
+        contentSha256: 'ff41a4d9d71d1c6f3af46388bf0000bfbf76c15c562f084359da58f4bd18af49',
       }));
 
       const fixture = createKinoPublisherFixture(tempRoot);
@@ -951,12 +951,13 @@ describe('Cadu candidate source registry mirror', () => {
     const sources = new Map(registry.webSources.map((source) => [source.id, source]));
     const proec = sources.get('web.ufg.proec');
     expect(proec).toEqual(expect.objectContaining({
-      declaredUrl: 'https://proec.ufg.br/',
+      declaredUrl: 'https://proex.ufg.br/',
       canonicalUrl: 'https://proex.ufg.br/',
       enabled: false,
     }));
-    expect(proec.transport.status).toBe('verified_redirect');
-    expect(proec.audit.evidence[0].field).toBe('entity_and_declared_url');
+    expect(proec.aliases).toContain('https://proec.ufg.br/');
+    expect(proec.transport.status).toBe('verified_200');
+    expect(proec.audit.evidence[0].field).toBe('entity_and_canonical_url');
 
     const nanofarma = sources.get('web.ufg.ppg.ppgnanofarma.profile');
     expect(nanofarma.declaredUrl).toBe('https://www.ufrgs.br/farmacia/?page_id=1589');
@@ -967,11 +968,11 @@ describe('Cadu candidate source registry mirror', () => {
     const publisherObservations = registry.webSources
       .flatMap((source) => source.observations)
       .filter((observation) => observation.inventory === 'kino_publisher');
-    expect(publisherObservations).toHaveLength(106);
+    expect(publisherObservations).toHaveLength(107);
     expect(publisherObservations.every((observation) => observation.publisherDeclared)).toBe(true);
-    expect(publisherObservations.filter((observation) => observation.publisherDeclared.hasFeedRss)).toHaveLength(102);
+    expect(publisherObservations.filter((observation) => observation.publisherDeclared.hasFeedRss)).toHaveLength(103);
 
-    expect(registry.instagramProfiles.filter((profile) => profile.audit.evidence.length > 0)).toHaveLength(19);
+    expect(registry.instagramProfiles.filter((profile) => profile.audit.evidence.length > 0)).toHaveLength(22);
     expect(report.instagramOverlap.legacyNotScanned).toHaveLength(20);
     expect(report.instagramOverlap.scannerWithoutEntity).toHaveLength(5);
   });

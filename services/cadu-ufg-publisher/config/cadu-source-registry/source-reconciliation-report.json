@@ -1,26 +1,26 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-13.7",
-  "auditCutoff": "2026-07-13",
+  "registryVersion": "2026-07-15.8",
+  "auditCutoff": "2026-07-15",
   "generatedFrom": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "b1eda586b8448efe09738e59c02eb9f1ff55ca6680b29ba4e34f1fff430f3296",
-    "adjudicationContentSha256": "9d6b9219d2369f485ccbfb8a519d3a660ca41955ab3f357ed3be724dd47f0249",
+    "seedContentSha256": "3ceb76e97f992a59df00ec735148602fd1c275a363ecd051160de05b76f46523",
+    "adjudicationContentSha256": "af7fd5562d9437b9863cd364ae582421acdc728d72476aa05d3373ca2409b06a",
     "schemaContentSha256": "da6d367be46bf4bca8509dc07ead5c655fb147c576b021484df305f918afbf04",
     "inputs": [
       {
         "id": "kino_publisher",
         "repository": "https://github.com/yandiamantinoBr/kino-campus",
-        "commit": "7df5eb9aaff6c4ceae3bf77156fc91269e83b230",
+        "commit": "d8f31d3984d781ed167f637c3fa2455a028c1d07",
         "path": "services/cadu-ufg-publisher/config/sources.json",
-        "contentSha256": "1acdfe73470ec9b830c6e06301f57be9ee331f7ec026e60338fb8265b1f357b0"
+        "contentSha256": "ff41a4d9d71d1c6f3af46388bf0000bfbf76c15c562f084359da58f4bd18af49"
       },
       {
         "id": "openclaw_curator",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "75efea5046c0e1df3eb1529188be8c2da671482b",
+        "commit": "fbc97c41e581f33a13f573f19010b443a9663902",
         "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
-        "contentSha256": "906af5b223d3ddded064bdabb852547a723da06982eecb8b6f217238124d6242"
+        "contentSha256": "03a27544b0a7ff7b005e60218e413ea981101d8b75c1408ea1f9c1265d7748dc"
       },
       {
         "id": "instagram_scanner",
@@ -32,9 +32,9 @@
       {
         "id": "admin_markdown",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "0e30c1f815ad8276631037592816d21a48b73627",
+        "commit": "fbc97c41e581f33a13f573f19010b443a9663902",
         "path": "data/.openclaw/workspace/ufg-sites-map.md",
-        "contentSha256": "8915de43109eca6c869a6f2b6d965ca7b26f95deeb39f9b1fa8274c7f65852e4"
+        "contentSha256": "d4569de4c53542b1894bd72dea282c9e397abc91fe7fb5d08928416eb689d2f7"
       }
     ]
   },
@@ -48,42 +48,42 @@
   },
   "inventoryMetrics": {
     "publisher": {
-      "entries": 106,
-      "uniqueIds": 106,
-      "uniqueUrls": 106,
+      "entries": 107,
+      "uniqueIds": 107,
+      "uniqueUrls": 107,
       "tiers": {
-        "1": 92,
+        "1": 93,
         "2": 10,
         "3": 4
       },
-      "quick": 102,
-      "instagramAssociations": 62,
-      "uniqueInstagramHandles": 53
+      "quick": 103,
+      "instagramAssociations": 63,
+      "uniqueInstagramHandles": 54
     },
     "curator": {
-      "entries": 156,
-      "uniqueIds": 147,
-      "uniqueUrls": 147,
+      "entries": 146,
+      "uniqueIds": 146,
+      "uniqueUrls": 146,
       "tiers": {
-        "1": 86,
-        "2": 40,
-        "3": 30
+        "1": 85,
+        "2": 36,
+        "3": 25
       },
       "modes": {
         "quick": {
-          "declared": 86,
-          "unique": 86
+          "declared": 85,
+          "unique": 85
         },
         "daily": {
-          "declared": 126,
-          "unique": 122
+          "declared": 121,
+          "unique": 121
         },
         "full": {
-          "declared": 156,
-          "unique": 147
+          "declared": 146,
+          "unique": 146
         }
       },
-      "instagramAssociations": 61,
+      "instagramAssociations": 54,
       "uniqueInstagramHandles": 51
     },
     "instagramScanner": {
@@ -92,27 +92,27 @@
       "duplicatesSkipped": 0
     },
     "adminMapCompat": {
-      "entries": 86,
-      "uniqueNames": 82,
+      "entries": 85,
+      "uniqueNames": 81,
       "uniqueUrls": 79,
       "tiers": {
         "1": 20,
         "2": 23,
-        "3": 43
+        "3": 42
       },
       "realInstagramAssociations": 54,
       "uniqueRealInstagramHandles": 47,
       "falseNullHandles": 8
     },
     "overlap": {
-      "commonUniqueUrls": 98,
+      "commonUniqueUrls": 99,
       "publisherOnlyUrls": 8,
-      "curatorOnlyUrls": 49,
-      "commonIds": 91,
+      "curatorOnlyUrls": 47,
+      "commonIds": 92,
       "publisherOnlyIds": 15,
-      "curatorOnlyIds": 56,
+      "curatorOnlyIds": 54,
       "tierConflictsOnCommonUrls": 51,
-      "declaredTierSetConflictsOnCommonUrls": 57,
+      "declaredTierSetConflictsOnCommonUrls": 51,
       "instagramConflictsOnCommonUrls": 21,
       "sameUrlDifferentId": 7
     }
@@ -123,18 +123,18 @@
     "instagramProfiles": 86,
     "enabledWebSources": 0,
     "enabledInstagramProfiles": 0,
-    "officiallyConfirmedWebSources": 131,
-    "officiallyDeclaredInstagramProfiles": 18,
+    "officiallyConfirmedWebSources": 133,
+    "officiallyDeclaredInstagramProfiles": 21,
     "quarantinedWebSources": 6,
     "retiredInstagramProfiles": 1,
-    "pendingWebSources": 66,
-    "transportUnverifiedWebSources": 184,
+    "pendingWebSources": 64,
+    "transportUnverifiedWebSources": 181,
     "endpointVerificationPendingWebSources": 194,
-    "tierConflictSources": 68,
+    "tierConflictSources": 63,
     "urlConflictSources": 18
   },
   "identityReconciliation": {
-    "authoritativeSeedEntities": 139,
+    "authoritativeSeedEntities": 141,
     "provisionalEntities": [
       {
         "id": "ufg.legacy.adm-face",
@@ -142,14 +142,6 @@
         "legacyIds": [
           "ADM.FACE",
           "adm-face"
-        ]
-      },
-      {
-        "id": "ufg.legacy.ccufg",
-        "name": "CCUFG",
-        "legacyIds": [
-          "CCUFG",
-          "centrocultural"
         ]
       },
       {
@@ -343,14 +335,6 @@
         "name": "SEA",
         "legacyIds": [
           "SEA"
-        ]
-      },
-      {
-        "id": "ufg.legacy.seacult",
-        "name": "SEACULT",
-        "legacyIds": [
-          "SEACULT",
-          "seacult"
         ]
       },
       {
@@ -796,14 +780,15 @@
   },
   "endpointEvidence": {
     "kinoPublisherDeclaredAudit": {
-      "sources": 106,
-      "hasFeedRss": 102,
+      "sources": 107,
+      "hasFeedRss": 103,
       "explicitlyWithoutFeedRss": 4,
-      "hasEventsRss": 81,
+      "hasEventsRss": 82,
       "explicitlyWithoutEventsRss": 25,
-      "explicitFeedUrls": 102,
+      "explicitFeedUrls": 103,
       "auditDates": [
-        "2026-07-10"
+        "2026-07-10",
+        "2026-07-15"
       ]
     },
     "note": "Legacy publisher declarations are preserved per observation and remain tentative until endpoint verification."
@@ -811,7 +796,7 @@
   "instagramOverlap": {
     "aliasResolutionApplied": true,
     "uniqueHandles": {
-      "publisher": 53,
+      "publisher": 54,
       "curator": 51,
       "scanner": 51
     },
@@ -847,6 +832,7 @@
       "planetario.ufg",
       "posufg",
       "praeufg",
+      "proex.ufg",
       "prograd_ufg",
       "propessoas_ufg",
       "sdh_ufg",
@@ -1301,20 +1287,6 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://proec.ufg.br/",
-        "candidateSourceId": "web.ufg.proec",
-        "reviewState": "url_conflict",
-        "classification": "officially_confirmed_but_policy_unresolved",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://proex.ufg.br/",
-        "candidateSourceId": "web.ufg.proec",
-        "reviewState": "url_conflict",
-        "classification": "officially_confirmed_but_policy_unresolved",
-        "inventory": "openclaw_curator"
-      },
-      {
         "url": "https://revistas.ufg.br/",
         "candidateSourceId": "web.legacy.revistas-ufg",
         "reviewState": "quarantined",
@@ -1324,134 +1296,7 @@
     ]
   },
   "conflicts": {
-    "duplicateCuratorUrls": [
-      {
-        "url": "https://ciar.ufg.br/",
-        "occurrences": [
-          {
-            "id": "ciar",
-            "tier": 1
-          },
-          {
-            "id": "ciar",
-            "tier": 2
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://hospitalveterinario.evz.ufg.br/",
-        "occurrences": [
-          {
-            "id": "hospitalveterinario",
-            "tier": 2
-          },
-          {
-            "id": "hospitalveterinario",
-            "tier": 3
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://jornal.ufg.br/",
-        "occurrences": [
-          {
-            "id": "jornal-ufg",
-            "tier": 1
-          },
-          {
-            "id": "jornal-ufg",
-            "tier": 2
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://museu.ufg.br/",
-        "occurrences": [
-          {
-            "id": "museu",
-            "tier": 2
-          },
-          {
-            "id": "museu",
-            "tier": 3
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://planetario.ufg.br/",
-        "occurrences": [
-          {
-            "id": "planetario",
-            "tier": 2
-          },
-          {
-            "id": "planetario",
-            "tier": 3
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://propessoas.ufg.br/",
-        "occurrences": [
-          {
-            "id": "propessoas",
-            "tier": 1
-          },
-          {
-            "id": "propessoas",
-            "tier": 2
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://sdh.ufg.br/",
-        "occurrences": [
-          {
-            "id": "sdh",
-            "tier": 1
-          },
-          {
-            "id": "sdh",
-            "tier": 3
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://secplan.ufg.br/",
-        "occurrences": [
-          {
-            "id": "secplan",
-            "tier": 1
-          },
-          {
-            "id": "secplan",
-            "tier": 3
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      },
-      {
-        "url": "https://tvufg.org.br/",
-        "occurrences": [
-          {
-            "id": "tvufg",
-            "tier": 1
-          },
-          {
-            "id": "tvufg",
-            "tier": 2
-          }
-        ],
-        "action": "dedupe_network_target_before_runtime_migration"
-      }
-    ],
+    "duplicateCuratorUrls": [],
     "tier": [
       {
         "url": "https://agro.ufg.br/",
@@ -1544,26 +1389,6 @@
         "curator": [
           {
             "id": "cerof",
-            "tier": 2
-          }
-        ],
-        "action": "adjudicate_before_activation"
-      },
-      {
-        "url": "https://ciar.ufg.br/",
-        "publisher": [
-          {
-            "id": "ciar",
-            "tier": 1
-          }
-        ],
-        "curator": [
-          {
-            "id": "ciar",
-            "tier": 1
-          },
-          {
-            "id": "ciar",
             "tier": 2
           }
         ],
@@ -1874,26 +1699,6 @@
         "action": "adjudicate_before_activation"
       },
       {
-        "url": "https://hospitalveterinario.evz.ufg.br/",
-        "publisher": [
-          {
-            "id": "hospitalveterinario",
-            "tier": 2
-          }
-        ],
-        "curator": [
-          {
-            "id": "hospitalveterinario",
-            "tier": 2
-          },
-          {
-            "id": "hospitalveterinario",
-            "tier": 3
-          }
-        ],
-        "action": "adjudicate_before_activation"
-      },
-      {
         "url": "https://iac.ufg.br/",
         "publisher": [
           {
@@ -2006,26 +1811,6 @@
         "action": "adjudicate_before_activation"
       },
       {
-        "url": "https://jornal.ufg.br/",
-        "publisher": [
-          {
-            "id": "jornal-ufg",
-            "tier": 1
-          }
-        ],
-        "curator": [
-          {
-            "id": "jornal-ufg",
-            "tier": 1
-          },
-          {
-            "id": "jornal-ufg",
-            "tier": 2
-          }
-        ],
-        "action": "adjudicate_before_activation"
-      },
-      {
         "url": "https://labmic.ufg.br/",
         "publisher": [
           {
@@ -2101,10 +1886,6 @@
           {
             "id": "museu",
             "tier": 2
-          },
-          {
-            "id": "museu",
-            "tier": 3
           }
         ],
         "action": "adjudicate_before_activation"
@@ -2153,10 +1934,6 @@
           {
             "id": "planetario",
             "tier": 2
-          },
-          {
-            "id": "planetario",
-            "tier": 3
           }
         ],
         "action": "adjudicate_before_activation"
@@ -2210,26 +1987,6 @@
         "action": "adjudicate_before_activation"
       },
       {
-        "url": "https://propessoas.ufg.br/",
-        "publisher": [
-          {
-            "id": "propessoas",
-            "tier": 1
-          }
-        ],
-        "curator": [
-          {
-            "id": "propessoas",
-            "tier": 1
-          },
-          {
-            "id": "propessoas",
-            "tier": 2
-          }
-        ],
-        "action": "adjudicate_before_activation"
-      },
-      {
         "url": "https://quimica.ufg.br/",
         "publisher": [
           {
@@ -2257,46 +2014,6 @@
           {
             "id": "radio-ufg",
             "tier": 2
-          }
-        ],
-        "action": "adjudicate_before_activation"
-      },
-      {
-        "url": "https://sdh.ufg.br/",
-        "publisher": [
-          {
-            "id": "sdh",
-            "tier": 1
-          }
-        ],
-        "curator": [
-          {
-            "id": "sdh",
-            "tier": 1
-          },
-          {
-            "id": "sdh",
-            "tier": 3
-          }
-        ],
-        "action": "adjudicate_before_activation"
-      },
-      {
-        "url": "https://secplan.ufg.br/",
-        "publisher": [
-          {
-            "id": "secplan",
-            "tier": 1
-          }
-        ],
-        "curator": [
-          {
-            "id": "secplan",
-            "tier": 1
-          },
-          {
-            "id": "secplan",
-            "tier": 3
           }
         ],
         "action": "adjudicate_before_activation"
@@ -2361,10 +2078,6 @@
           {
             "id": "tvufg",
             "tier": 1
-          },
-          {
-            "id": "tvufg",
-            "tier": 2
           }
         ],
         "action": "adjudicate_before_activation"
@@ -3461,13 +3174,11 @@
       {
         "sourceId": "web.ufg.proec",
         "canonicalUrl": "https://proex.ufg.br/",
-        "declaredUrl": "https://proec.ufg.br/",
+        "declaredUrl": "https://proex.ufg.br/",
         "legacyCandidates": [
           "https://proec.ufg.br/"
         ],
-        "observedLegacyCandidates": [
-          "https://proec.ufg.br/"
-        ],
+        "observedLegacyCandidates": [],
         "action": "verify_redirect_and_content_equivalence"
       },
       {
@@ -3488,11 +3199,6 @@
         "legacyId": "**29 PPGs com site proprio REAL** descobertos",
         "url": "https://ppgx.unidade.ufg.br/",
         "reason": "placeholder_or_prose_parsed_as_source"
-      },
-      {
-        "legacyId": "Cerca de 30+ projetos de extensao cadastrados na PROEC",
-        "url": "https://proec.ufg.br/",
-        "reason": "narrative_prose_parsed_as_source"
       }
     ],
     "adminMapFalseNullHandles": [
@@ -3546,7 +3252,7 @@
     },
     {
       "id": "tier-conflicts",
-      "count": 68,
+      "count": 63,
       "sourceIds": [
         "web.legacy.adm-face",
         "web.legacy.ccufg",
@@ -3557,7 +3263,6 @@
         "web.legacy.crti",
         "web.legacy.eco-face",
         "web.legacy.iac",
-        "web.legacy.jornal-ufg",
         "web.legacy.labmic",
         "web.legacy.lam",
         "web.legacy.lamcad",
@@ -3574,7 +3279,6 @@
         "web.ufg.cefis",
         "web.ufg.cegraf",
         "web.ufg.cepae",
-        "web.ufg.ciar",
         "web.ufg.cidarq",
         "web.ufg.cpa",
         "web.ufg.csa",
@@ -3609,15 +3313,12 @@
         "web.ufg.ppg.ppgif",
         "web.ufg.ppg.ppgll",
         "web.ufg.proad",
-        "web.ufg.propessoas",
-        "web.ufg.sdh",
-        "web.ufg.secplan",
         "web.ufg.seinfra",
         "web.ufg.seti",
         "web.ufg.sin",
         "web.ufg.uaech"
       ],
-      "commonUrlDeclaredSetCount": 57,
+      "commonUrlDeclaredSetCount": 51,
       "commonUrlEffectiveLegacyCount": 51,
       "requiredAction": "adjudicate tier and execution modes explicitly"
     },
@@ -3653,10 +3354,9 @@
     },
     {
       "id": "pending-source-audit",
-      "count": 66,
+      "count": 64,
       "sourceIds": [
         "web.legacy.adm-face",
-        "web.legacy.ccufg",
         "web.legacy.cei",
         "web.legacy.cepeconf",
         "web.legacy.cerof",
@@ -3717,7 +3417,6 @@
         "web.legacy.revistas-ufg",
         "web.legacy.sape",
         "web.legacy.sea",
-        "web.legacy.seacult",
         "web.legacy.tvufg",
         "web.legacy.uc",
         "web.legacy.verbena"
@@ -3739,10 +3438,9 @@
     },
     {
       "id": "transport-unverified",
-      "count": 184,
+      "count": 181,
       "sourceIds": [
         "web.legacy.adm-face",
-        "web.legacy.ccufg",
         "web.legacy.cei",
         "web.legacy.cepeconf",
         "web.legacy.cerof",
@@ -3802,7 +3500,6 @@
         "web.legacy.radio-ufg",
         "web.legacy.sape",
         "web.legacy.sea",
-        "web.legacy.seacult",
         "web.legacy.tvufg",
         "web.legacy.uc",
         "web.legacy.verbena",
@@ -3841,7 +3538,6 @@
         "web.ufg.inf",
         "web.ufg.iptsp",
         "web.ufg.iq",
-        "web.ufg.museu",
         "web.ufg.planetario",
         "web.ufg.portal",
         "web.ufg.pos.directory",
@@ -4131,10 +3827,9 @@
     },
     {
       "id": "provisional-entity-identity",
-      "count": 31,
+      "count": 29,
       "entityIds": [
         "ufg.legacy.adm-face",
-        "ufg.legacy.ccufg",
         "ufg.legacy.cei",
         "ufg.legacy.cepeconf",
         "ufg.legacy.cerof",
@@ -4160,7 +3855,6 @@
         "ufg.legacy.revistas-ufg",
         "ufg.legacy.sape",
         "ufg.legacy.sea",
-        "ufg.legacy.seacult",
         "ufg.legacy.tvufg",
         "ufg.legacy.uc",
         "ufg.legacy.verbena"
@@ -4312,13 +4006,12 @@
     },
     {
       "id": "instagram-evidence-missing",
-      "count": 67,
+      "count": 64,
       "profileIds": [
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
         "ig.cecasufg",
         "ig.cei-ufg",
-        "ig.centroculturalufg",
         "ig.centrodelinguasflufg",
         "ig.cepae-ufg",
         "ig.cepeconf-ufg",
@@ -4358,7 +4051,6 @@
         "ig.lacena-ufg",
         "ig.lapigufg",
         "ig.letras-ufg",
-        "ig.museu-ufg",
         "ig.odontologia-ufg",
         "ig.patiodaciencia-ufg",
         "ig.patiodaciencia-ufg-c66026d4",
@@ -4371,7 +4063,6 @@
         "ig.ppgci-ufg",
         "ig.ppgcont-ufg",
         "ig.praeufg",
-        "ig.proex-ufg",
         "ig.prograd-ufg",
         "ig.propessoas-ufg",
         "ig.pts-ufg",
@@ -4386,7 +4077,7 @@
     },
     {
       "id": "admin-map-parser-defects",
-      "count": 10,
+      "count": 9,
       "requiredAction": "migrate admin API away from Markdown parsing after stable-ID compatibility is shipped"
     }
   ]
