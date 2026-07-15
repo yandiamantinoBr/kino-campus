@@ -240,7 +240,7 @@ function configureCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, If-Match');
   res.setHeader(
     'Access-Control-Expose-Headers',
-    'ETag, X-Cadu-Registry-Sha256, X-Cadu-Registry-Origin, X-Cadu-Registry-Audit-Cutoff, X-Cadu-Upstream-Status',
+    'ETag, X-Cadu-Canonical-ETag, X-Cadu-Registry-Sha256, X-Cadu-Registry-Origin, X-Cadu-Registry-Audit-Cutoff, X-Cadu-Upstream-Status',
   );
 }
 
@@ -265,6 +265,9 @@ function serveRegistryMirror(res, upstreamStatus) {
   try {
     const mirror = getCaduSourceRegistryMirror();
     res.setHeader('ETag', mirror.etag);
+    // Vercel may replace the HTTP entity ETag with a weak response-body ETag.
+    // Keep the exact strong CAS token in a dedicated end-to-end header.
+    res.setHeader('X-Cadu-Canonical-ETag', mirror.etag);
     res.setHeader('X-Cadu-Registry-Sha256', mirror.registrySha256);
     res.setHeader('X-Cadu-Registry-Origin', 'kino-campus-mirror');
     res.setHeader('X-Cadu-Registry-Audit-Cutoff', mirror.auditCutoff);
@@ -320,7 +323,10 @@ function forwardRegistryHeaders(upstream, res, requiresStrongEtag = true) {
       || !CADU_REGISTRY_SHA256.test(registrySha || '')) {
     return false;
   }
-  if (requiresStrongEtag) res.setHeader('ETag', etag);
+  if (requiresStrongEtag) {
+    res.setHeader('ETag', etag);
+    res.setHeader('X-Cadu-Canonical-ETag', etag);
+  }
   res.setHeader('X-Cadu-Registry-Sha256', registrySha);
   return true;
 }

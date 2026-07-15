@@ -228,7 +228,8 @@
 
   function requireResponseHeaders(responseMeta, registrySha256) {
     var registryHeader = readHeader(responseMeta, 'X-Cadu-Registry-Sha256');
-    var responseEtag = readHeader(responseMeta, 'ETag');
+    var canonicalEtag = readHeader(responseMeta, 'X-Cadu-Canonical-ETag');
+    var responseEtag = canonicalEtag === null ? readHeader(responseMeta, 'ETag') : canonicalEtag;
     if (!registryHeader) {
       fail('missing_registry_hash_header', 'headers.x-cadu-registry-sha256', 'required header is missing');
     }
@@ -236,7 +237,11 @@
       fail('registry_hash_mismatch', 'headers.x-cadu-registry-sha256', 'does not match payload.registrySha256');
     }
     if (!responseEtag || !STRONG_ETAG_PATTERN.test(responseEtag)) {
-      fail('invalid_response_etag', 'headers.etag', 'expected a strong SHA-256 ETag');
+      fail(
+        'invalid_response_etag',
+        canonicalEtag ? 'headers.x-cadu-canonical-etag' : 'headers.etag',
+        'expected a strong SHA-256 ETag'
+      );
     }
     return responseEtag;
   }
@@ -831,6 +836,7 @@
 
   function buildCatalog(payload, responseMeta) {
     var projection = validateProjection(payload, responseMeta);
+    var responseEtag = requireResponseHeaders(responseMeta, projection.registrySha256);
     var registryOrigin = readHeader(responseMeta, 'X-Cadu-Registry-Origin') || 'cadu-api';
     var administrativeMetadataAvailable = registryOrigin !== 'kino-campus-mirror';
     var entityIndex = Object.create(null);
@@ -928,7 +934,7 @@
         : cloneJson(projection.administrativeMetadata),
       administrativeMetadataAvailable: administrativeMetadataAvailable,
       activation: cloneJson(projection.activation),
-      responseEtag: readHeader(responseMeta, 'ETag'),
+      responseEtag: responseEtag,
       sources: sources,
       entities: entities,
       instagram: profiles,

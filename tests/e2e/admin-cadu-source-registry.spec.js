@@ -324,7 +324,8 @@ test.describe('Admin Cadu — catálogo canônico', () => {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'private, no-store',
-          ETag: LIST_ETAG,
+          ETag: `W/${LIST_ETAG}`,
+          'X-Cadu-Canonical-ETag': LIST_ETAG,
           'X-Cadu-Registry-Sha256': HASH
         },
         json: registryProjection()
@@ -541,7 +542,8 @@ test.describe('Admin Cadu — catálogo canônico', () => {
           headers: {
             'Content-Type': 'application/json',
             'Cache-Control': 'private, no-store',
-            ETag: committedEtag,
+            ETag: `W/${committedEtag}`,
+            'X-Cadu-Canonical-ETag': committedEtag,
             'X-Cadu-Registry-Sha256': HASH
           },
           json: { id: 'web.ufg.portal', etag: committedEtag }
@@ -585,6 +587,82 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await expect(page.locator('.kc-cadu-source-note-input')).toHaveValue('Rascunho que não pode ser perdido');
     await expect(page.locator('.kc-cadu-save-source-btn')).toBeEnabled();
     expect(patchRequests).toHaveLength(1);
+  });
+
+  test('confirma PATCH CAS após ETag de transporte enfraquecido e releitura canônica', async ({ page }) => {
+    const patchRequests = [];
+    let registryReads = 0;
+    const committedRevision = 'f'.repeat(64);
+    const committedEtag = `"${committedRevision}"`;
+    const committed = registryProjection();
+    Object.assign(committed.sources[0], {
+      overrideTier: 1,
+      effectiveTier: 1,
+      overrideOrigin: 'stable',
+      isInheritedLegacy: false,
+      overrideUnitId: 'web.ufg.portal',
+      note: 'Ajuste canônico',
+      updatedAt: '2026-07-15T04:30:00Z',
+      overrideRevision: 5,
+      revision: committedRevision,
+      etag: committedEtag
+    });
+    Object.assign(committed.metaClassification.unambiguous[0], {
+      unitId: 'web.ufg.portal',
+      matchType: 'stable_source_id'
+    });
+    Object.assign(committed.metaClassification.unambiguous[0].row, {
+      unit_id: 'web.ufg.portal',
+      tier: 1,
+      note: 'Ajuste canônico',
+      revision: 5,
+      updated_at: '2026-07-15T04:30:00Z'
+    });
+
+    await mockCommonCaduRoutes(page, async (route, path) => {
+      if (path.endsWith('/override')) {
+        patchRequests.push({
+          headers: route.request().headers(),
+          body: route.request().postDataJSON()
+        });
+        return route.fulfill({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'private, no-store',
+            ETag: `W/${committedEtag}`,
+            'X-Cadu-Canonical-ETag': committedEtag,
+            'X-Cadu-Registry-Sha256': HASH
+          },
+          json: { id: 'web.ufg.portal', etag: committedEtag }
+        });
+      }
+      registryReads += 1;
+      return route.fulfill({
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-store',
+          ETag: LIST_ETAG,
+          'X-Cadu-Registry-Sha256': HASH
+        },
+        json: registryReads === 1 ? registryProjection() : committed
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    await expect(page.locator('#sites-registry-status')).toContainText('Catálogo canônico validado');
+    await page.locator('.kc-cadu-source-tier-select').selectOption('1');
+    await page.locator('.kc-cadu-source-note-input').fill('Ajuste canônico');
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('.kc-cadu-save-source-btn').click();
+
+    await expect.poll(() => patchRequests.length).toBe(1);
+    expect(patchRequests[0].headers['if-match']).toBe(SOURCE_ETAG);
+    expect(patchRequests[0].body).toEqual({ tier: 1, note: 'Ajuste canônico' });
+    await expect(page.locator('#cadu-error')).toContainText('salvo com ETag/CAS e catálogo revalidado');
+    await expect(page.locator('.kc-cadu-source-tier-select')).toHaveValue('1');
+    await expect(page.locator('.kc-cadu-source-note-input')).toHaveValue('Ajuste canônico');
+    await expect(page.locator('.kc-cadu-save-source-btn')).toBeDisabled();
   });
 
   test('preserva a intenção explícita de limpar tier e nota após transição CAS para override estável', async ({ page }) => {
