@@ -615,13 +615,32 @@ function acquireImportLock(registryDir) {
 function withImportLock(registryDir, callback) {
   assert.strictEqual(typeof callback, 'function', 'import lock callback must be a function');
   const lock = acquireImportLock(registryDir);
+  let result;
+  let primaryError = null;
   try {
-    const result = callback(lock);
+    result = callback(lock);
     assert(!result || typeof result.then !== 'function', 'import lock callback must be synchronous');
-    return result;
-  } finally {
-    releaseImportLock(lock);
+  } catch (error) {
+    primaryError = error;
   }
+
+  let releaseFailure = null;
+  try {
+    releaseImportLock(lock);
+  } catch (cause) {
+    releaseFailure = new Error(`failed to release source registry import lock: ${cause.message}`, { cause });
+  }
+  if (releaseFailure) {
+    throw new AggregateError(
+      primaryError ? [primaryError, releaseFailure] : [releaseFailure],
+      primaryError
+        ? `source registry operation failed and lock release was incomplete: ${primaryError.message}`
+        : 'source registry operation completed but lock release was incomplete',
+      { cause: primaryError || releaseFailure },
+    );
+  }
+  if (primaryError) throw primaryError;
+  return result;
 }
 
 function rollbackImport(staged) {
@@ -631,8 +650,15 @@ function rollbackImport(staged) {
       if (item.installed && fs.existsSync(item.destination)) {
         unlinkFileWithRetry(item.destination);
       }
-      if (item.backedUp && fs.existsSync(item.backup)) {
+      if (item.backedUp) {
+        assert(fs.existsSync(item.backup), `rollback backup disappeared: ${item.backup}`);
         fs.renameSync(item.backup, item.destination);
+        assert(fs.existsSync(item.destination), `rollback destination was not restored: ${item.destination}`);
+        assert.strictEqual(
+          sha256(fs.readFileSync(item.destination)),
+          item.originalContentSha256,
+          `rollback content hash drift: ${item.destination}`,
+        );
       }
       item.installed = false;
       item.backedUp = false;
@@ -669,9 +695,13 @@ function replaceImportAtomically(registryDir, contents, manifest, verifyInstalle
       bytes,
       backedUp: false,
       installed: false,
+      originalContentSha256: null,
     };
   });
   let completed = false;
+  let rollbackCompleted = false;
+  let verifiedResult;
+  let primaryError = null;
 
   try {
     for (const item of staged) fs.writeFileSync(item.temporary, item.bytes, { flag: 'wx' });
@@ -680,35 +710,76 @@ function replaceImportAtomically(registryDir, contents, manifest, verifyInstalle
     // partially updated artifact set.
     for (const item of staged) {
       if (fs.existsSync(item.destination)) {
+        item.originalContentSha256 = sha256(fs.readFileSync(item.destination));
         fs.renameSync(item.destination, item.backup);
         item.backedUp = true;
       }
       fs.renameSync(item.temporary, item.destination);
       item.installed = true;
     }
-    const verified = verifyInstalled({ registryDir: resolvedRegistryDir });
+    verifiedResult = verifyInstalled({ registryDir: resolvedRegistryDir });
     assert(
-      !verified || typeof verified.then !== 'function',
+      !verifiedResult || typeof verifiedResult.then !== 'function',
       'installed mirror verifier must be synchronous',
     );
     completed = true;
-    return verified;
   } catch (error) {
     const rollbackFailures = rollbackImport(staged);
+    rollbackCompleted = rollbackFailures.length === 0;
     if (rollbackFailures.length > 0) {
-      throw new AggregateError(
+      primaryError = new AggregateError(
         [error, ...rollbackFailures],
         `source registry import failed and rollback was incomplete: ${error.message}`,
         { cause: error },
       );
-    }
-    throw error;
-  } finally {
-    for (const item of staged) {
-      unlinkFileWithRetry(item.temporary);
-      if (completed) unlinkFileWithRetry(item.backup);
+    } else {
+      primaryError = error;
     }
   }
+
+  const cleanupFailures = [];
+  for (const item of staged) {
+    try {
+      unlinkFileWithRetry(item.temporary);
+      if (completed) unlinkFileWithRetry(item.backup);
+    } catch (cause) {
+      cleanupFailures.push(new Error(
+        `failed to clean transaction files for ${path.basename(item.destination)}: ${cause.message}`,
+        { cause },
+      ));
+    }
+  }
+  // Windows filesystem filters can leave a case-variant `<backup>.tmp`
+  // after a replace/rollback. Remove only residue carrying this exact,
+  // cryptographically random transaction token. Preserve every backup when
+  // rollback itself was incomplete so --repair can recover it.
+  if (completed || rollbackCompleted) {
+    try {
+      cleanupTransactionResidues(resolvedRegistryDir, token);
+    } catch (cause) {
+      cleanupFailures.push(new Error(`failed to clean source registry transaction residue: ${cause.message}`, { cause }));
+    }
+  }
+  if (cleanupFailures.length > 0 && (completed || rollbackCompleted)) {
+    try {
+      if (transactionResiduePaths(resolvedRegistryDir, token).length === 0) cleanupFailures.length = 0;
+    } catch (cause) {
+      cleanupFailures.push(new Error(`failed to verify source registry transaction cleanup: ${cause.message}`, { cause }));
+    }
+  }
+
+  if (cleanupFailures.length > 0) {
+    const errors = primaryError ? [primaryError, ...cleanupFailures] : cleanupFailures;
+    throw new AggregateError(
+      errors,
+      primaryError
+        ? `source registry import failed and cleanup was incomplete: ${primaryError.message}`
+        : 'source registry import committed but cleanup was incomplete',
+      { cause: primaryError || cleanupFailures[0] },
+    );
+  }
+  if (primaryError) throw primaryError;
+  return verifiedResult;
 }
 
 function writeImportAtomically(
@@ -723,14 +794,22 @@ function writeImportAtomically(
   );
 }
 
-function transactionResiduePaths(registryDir) {
+function transactionResiduePaths(registryDir, transactionToken) {
   const resolvedRegistryDir = path.resolve(registryDir);
   if (!fs.existsSync(resolvedRegistryDir)) return [];
   const escapedNames = [
     ...SPECS.map((spec) => spec.file),
     'upstream-manifest.json',
   ].map((file) => file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const pattern = new RegExp(`^(?:${escapedNames.join('|')})\\.\\d+-\\d+-[0-9a-f]{16}\\.(?:tmp|bak)$`);
+  let tokenPattern = '\\d+-\\d+-[0-9a-f]{16}';
+  if (transactionToken != null) {
+    assert(/^\d+-\d+-[0-9a-f]{16}$/.test(transactionToken), 'invalid source registry transaction token');
+    tokenPattern = transactionToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  const pattern = new RegExp(
+    `^(?:${escapedNames.join('|')})\\.${tokenPattern}\\.(?:tmp|bak(?:\\.tmp)?)$`,
+    'i',
+  );
   return fs.readdirSync(resolvedRegistryDir)
     .filter((file) => pattern.test(file))
     .map((file) => path.join(resolvedRegistryDir, file));
@@ -775,7 +854,7 @@ function collectMirrorBaselines(registryDir, repair) {
 
   if (repair) {
     for (const residuePath of transactionResiduePaths(resolvedRegistryDir)) {
-      if (!/^upstream-manifest\.json\./.test(path.basename(residuePath))) continue;
+      if (!/^upstream-manifest\.json\./i.test(path.basename(residuePath))) continue;
       const manifest = readManifestIfValid(residuePath);
       if (manifest) baselines.push(manifest);
     }
@@ -829,8 +908,10 @@ function enforceMonotonicImport(manifest, baselines, git, allowDowngrade) {
   }
 }
 
-function cleanupTransactionResidues(registryDir) {
-  for (const residuePath of transactionResiduePaths(registryDir)) unlinkFileWithRetry(residuePath);
+function cleanupTransactionResidues(registryDir, transactionToken) {
+  for (const residuePath of transactionResiduePaths(registryDir, transactionToken)) {
+    unlinkFileWithRetry(residuePath);
+  }
 }
 
 function validateOpenClawProvenance(registry, git, artifactCommit) {

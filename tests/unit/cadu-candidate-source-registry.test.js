@@ -454,12 +454,12 @@ describe('Cadu candidate source registry mirror', () => {
     const { manifest } = verifyMirroredRegistry();
     expect(manifest.upstream).toEqual({
       repository: 'https://github.com/yandiamantinoBr/openclaw-cadu',
-      commit: '0e30c1f815ad8276631037592816d21a48b73627',
+      commit: '78d1d237e0a83ecfda05376f99c78d81c368dbe8',
     });
     expect(Object.fromEntries(manifest.artifacts.map((artifact) => [artifact.id, artifact.upstreamGitBlobOid]))).toEqual({
-      candidate: '5b75f7209c43ce2e6390b6531fcec1954cdd4b3d',
+      candidate: 'f513bcd894de146b1e81b6b428656d0c9a44f10f',
       schema: '7dd8eceb528ac0afcaa00e496cfeb404989561d4',
-      'reconciliation-report': '1bf94004406057c1cc25dd33dd921749860140ae',
+      'reconciliation-report': '49981c550058e5666bdc101df7a7c19230ebda35',
     });
   });
 
@@ -1119,7 +1119,16 @@ describe('Cadu candidate source registry mirror', () => {
 
       for (const [file, bytes] of Object.entries(originals)) fs.writeFileSync(path.join(tempDir, file), bytes);
       let injected = false;
+      let caseVariantNestedResidue = null;
       const failureSpy = jest.spyOn(fs, 'renameSync').mockImplementation((source, destination) => {
+        if (!caseVariantNestedResidue && /\.bak$/i.test(String(destination))
+            && path.basename(source) === artifactFiles[0]) {
+          caseVariantNestedResidue = path.join(
+            path.dirname(destination),
+            `${path.basename(destination).toUpperCase()}.tmp`,
+          );
+          fs.writeFileSync(caseVariantNestedResidue, 'simulated Windows filesystem-filter residue');
+        }
         if (!injected && /\.tmp$/.test(source)
             && path.basename(destination) === 'ufg-source-registry.schema.json') {
           injected = true;
@@ -1137,6 +1146,7 @@ describe('Cadu candidate source registry mirror', () => {
       } finally {
         failureSpy.mockRestore();
       }
+      expect(caseVariantNestedResidue).not.toBeNull();
       for (const [file, bytes] of Object.entries(originals)) {
         expect(fs.readFileSync(path.join(tempDir, file))).toEqual(bytes);
       }
@@ -1209,6 +1219,278 @@ describe('Cadu candidate source registry mirror', () => {
       expect(fs.readdirSync(emptyDir).filter((file) => /\.(?:tmp|bak)$/i.test(file))).toEqual([]);
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('preserves a sole case-variant nested backup when rollback cannot prove restoration', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-missing-rollback-backup-'));
+    const artifactFiles = [
+      'ufg-source-registry.candidate.json',
+      'ufg-source-registry.schema.json',
+      'source-reconciliation-report.json',
+    ];
+    const allFiles = [...artifactFiles, 'upstream-manifest.json'];
+    const originals = Object.fromEntries(allFiles.map((file) => [file, Buffer.from(`old:${file}`)]));
+    const contents = new Map(artifactFiles.map((file) => [file, Buffer.from(`new:${file}`)]));
+    const manifest = { marker: 'new manifest' };
+    try {
+      for (const [file, bytes] of Object.entries(originals)) fs.writeFileSync(path.join(tempDir, file), bytes);
+      const realRename = fs.renameSync.bind(fs);
+      let soleBackupPath = null;
+      let installFailureInjected = false;
+      const renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation((source, destination) => {
+        if (!soleBackupPath && /\.bak$/i.test(String(destination))
+            && path.basename(source) === artifactFiles[0]) {
+          const result = realRename(source, destination);
+          soleBackupPath = path.join(
+            path.dirname(destination),
+            `${path.basename(destination).toUpperCase()}.tmp`,
+          );
+          realRename(destination, soleBackupPath);
+          return result;
+        }
+        if (!installFailureInjected && /\.tmp$/.test(source)
+            && path.basename(destination) === artifactFiles[1]) {
+          installFailureInjected = true;
+          throw new Error('injected artifact installation failure');
+        }
+        return realRename(source, destination);
+      });
+      let thrown;
+      try {
+        writeImportAtomically(tempDir, contents, manifest, () => ({ verified: true }));
+      } catch (error) {
+        thrown = error;
+      } finally {
+        renameSpy.mockRestore();
+      }
+
+      expect(installFailureInjected).toBe(true);
+      expect(soleBackupPath).not.toBeNull();
+      expect(thrown).toBeInstanceOf(AggregateError);
+      expect(thrown.message).toMatch(/rollback was incomplete/);
+      expect(thrown.errors.map((error) => error.message).join('\n'))
+        .toMatch(/artifact installation failure[\s\S]*rollback backup disappeared/);
+      expect(fs.existsSync(path.join(tempDir, artifactFiles[0]))).toBe(false);
+      expect(fs.readFileSync(soleBackupPath)).toEqual(originals[artifactFiles[0]]);
+      for (const file of allFiles.filter((file) => file !== artifactFiles[0])) {
+        expect(fs.readFileSync(path.join(tempDir, file))).toEqual(originals[file]);
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('aggregates cleanup failures without masking the primary import failure', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-cleanup-failure-'));
+    const artifactFiles = [
+      'ufg-source-registry.candidate.json',
+      'ufg-source-registry.schema.json',
+      'source-reconciliation-report.json',
+    ];
+    const allFiles = [...artifactFiles, 'upstream-manifest.json'];
+    const contents = new Map(artifactFiles.map((file) => [file, Buffer.from(`new:${file}`)]));
+    try {
+      for (const file of allFiles) fs.writeFileSync(path.join(tempDir, file), `old:${file}`);
+      const realRename = fs.renameSync.bind(fs);
+      const realUnlink = fs.unlinkSync.bind(fs);
+      let installFailureInjected = false;
+      const renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation((source, destination) => {
+        if (!installFailureInjected && /\.tmp$/.test(source)
+            && path.basename(destination) === artifactFiles[1]) {
+          installFailureInjected = true;
+          throw new Error('injected primary installation failure');
+        }
+        return realRename(source, destination);
+      });
+      const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+        const basename = path.basename(String(target));
+        if (basename.startsWith(`${artifactFiles[1]}.`) && /\.tmp$/i.test(basename)) {
+          const error = new Error('injected persistent temporary cleanup failure');
+          error.code = 'EBUSY';
+          throw error;
+        }
+        return realUnlink(target);
+      });
+      let thrown;
+      try {
+        writeImportAtomically(tempDir, contents, { marker: 'new manifest' }, () => ({ verified: true }));
+      } catch (error) {
+        thrown = error;
+      } finally {
+        unlinkSpy.mockRestore();
+        renameSpy.mockRestore();
+      }
+
+      expect(installFailureInjected).toBe(true);
+      expect(thrown).toBeInstanceOf(AggregateError);
+      expect(thrown.message).toMatch(/import failed and cleanup was incomplete/);
+      expect(thrown.errors[0].message).toMatch(/primary installation failure/);
+      expect(thrown.errors.slice(1).map((error) => error.message).join('\n'))
+        .toMatch(/temporary cleanup failure/);
+      for (const file of allFiles) {
+        expect(fs.readFileSync(path.join(tempDir, file), 'utf8')).toBe(`old:${file}`);
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('accepts cleanup recovered by the token sweep and preserves the primary failure', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-cleanup-recovered-'));
+    const artifactFiles = [
+      'ufg-source-registry.candidate.json',
+      'ufg-source-registry.schema.json',
+      'source-reconciliation-report.json',
+    ];
+    const allFiles = [...artifactFiles, 'upstream-manifest.json'];
+    const contents = new Map(artifactFiles.map((file) => [file, Buffer.from(`new:${file}`)]));
+    try {
+      for (const file of allFiles) fs.writeFileSync(path.join(tempDir, file), `old:${file}`);
+      const realRename = fs.renameSync.bind(fs);
+      const realUnlink = fs.unlinkSync.bind(fs);
+      let installFailureInjected = false;
+      let transientCleanupAttempts = 0;
+      const renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation((source, destination) => {
+        if (!installFailureInjected && /\.tmp$/.test(source)
+            && path.basename(destination) === artifactFiles[1]) {
+          installFailureInjected = true;
+          throw new Error('injected primary installation failure');
+        }
+        return realRename(source, destination);
+      });
+      const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+        const basename = path.basename(String(target));
+        if (basename.startsWith(`${artifactFiles[1]}.`) && /\.tmp$/i.test(basename)
+            && transientCleanupAttempts < 9) {
+          transientCleanupAttempts += 1;
+          const error = new Error('injected first-pass cleanup contention');
+          error.code = 'EBUSY';
+          throw error;
+        }
+        return realUnlink(target);
+      });
+      let thrown;
+      try {
+        writeImportAtomically(tempDir, contents, { marker: 'new manifest' }, () => ({ verified: true }));
+      } catch (error) {
+        thrown = error;
+      } finally {
+        unlinkSpy.mockRestore();
+        renameSpy.mockRestore();
+      }
+
+      expect(installFailureInjected).toBe(true);
+      expect(transientCleanupAttempts).toBe(9);
+      expect(thrown).toBeInstanceOf(Error);
+      expect(thrown).not.toBeInstanceOf(AggregateError);
+      expect(thrown.message).toMatch(/primary installation failure/);
+      expect(fs.readdirSync(tempDir).filter((file) => /\.(?:tmp|bak)$/i.test(file))).toEqual([]);
+      for (const file of allFiles) {
+        expect(fs.readFileSync(path.join(tempDir, file), 'utf8')).toBe(`old:${file}`);
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('reports persistent cleanup failure after a verified commit without reverting canonical files', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-post-commit-cleanup-'));
+    const artifactFiles = [
+      'ufg-source-registry.candidate.json',
+      'ufg-source-registry.schema.json',
+      'source-reconciliation-report.json',
+    ];
+    const allFiles = [...artifactFiles, 'upstream-manifest.json'];
+    const contents = new Map(artifactFiles.map((file) => [file, Buffer.from(`new:${file}`)]));
+    const manifest = { marker: 'verified commit' };
+    try {
+      for (const file of allFiles) fs.writeFileSync(path.join(tempDir, file), `old:${file}`);
+      const realUnlink = fs.unlinkSync.bind(fs);
+      const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+        const basename = path.basename(String(target));
+        if (basename.startsWith(`${artifactFiles[1]}.`) && /\.bak$/i.test(basename)) {
+          const error = new Error('injected persistent committed-backup cleanup failure');
+          error.code = 'EBUSY';
+          throw error;
+        }
+        return realUnlink(target);
+      });
+      let thrown;
+      try {
+        writeImportAtomically(tempDir, contents, manifest, () => ({ verified: true }));
+      } catch (error) {
+        thrown = error;
+      } finally {
+        unlinkSpy.mockRestore();
+      }
+
+      expect(thrown).toBeInstanceOf(AggregateError);
+      expect(thrown.message).toMatch(/import committed but cleanup was incomplete/);
+      expect(thrown.errors.map((error) => error.message).join('\n'))
+        .toMatch(/committed-backup cleanup failure/);
+      for (const file of artifactFiles) {
+        expect(fs.readFileSync(path.join(tempDir, file), 'utf8')).toBe(`new:${file}`);
+      }
+      expect(JSON.parse(fs.readFileSync(path.join(tempDir, 'upstream-manifest.json'), 'utf8')))
+        .toEqual(manifest);
+      const residualBackups = fs.readdirSync(tempDir).filter((file) => /\.bak$/i.test(file));
+      expect(residualBackups).toHaveLength(1);
+      expect(fs.readFileSync(path.join(tempDir, residualBackups[0]), 'utf8'))
+        .toBe(`old:${artifactFiles[1]}`);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects a rollback whose restored content no longer matches the original hash', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-rollback-hash-drift-'));
+    const artifactFiles = [
+      'ufg-source-registry.candidate.json',
+      'ufg-source-registry.schema.json',
+      'source-reconciliation-report.json',
+    ];
+    const allFiles = [...artifactFiles, 'upstream-manifest.json'];
+    const originals = Object.fromEntries(allFiles.map((file) => [file, Buffer.from(`old:${file}`)]));
+    const contents = new Map(artifactFiles.map((file) => [file, Buffer.from(`new:${file}`)]));
+    try {
+      for (const [file, bytes] of Object.entries(originals)) fs.writeFileSync(path.join(tempDir, file), bytes);
+      const realRename = fs.renameSync.bind(fs);
+      let backupTampered = false;
+      const renameSpy = jest.spyOn(fs, 'renameSync').mockImplementation((source, destination) => {
+        if (!backupTampered && /\.bak$/i.test(String(source))
+            && path.basename(destination) === artifactFiles[0]) {
+          backupTampered = true;
+          fs.writeFileSync(source, 'tampered rollback bytes');
+        }
+        return realRename(source, destination);
+      });
+      let thrown;
+      try {
+        writeImportAtomically(
+          tempDir,
+          contents,
+          { marker: 'new manifest' },
+          () => { throw new Error('injected post-install verification failure'); },
+        );
+      } catch (error) {
+        thrown = error;
+      } finally {
+        renameSpy.mockRestore();
+      }
+
+      expect(backupTampered).toBe(true);
+      expect(thrown).toBeInstanceOf(AggregateError);
+      expect(thrown.message).toMatch(/rollback was incomplete/);
+      expect(thrown.errors.map((error) => error.message).join('\n'))
+        .toMatch(/post-install verification failure[\s\S]*rollback content hash drift/);
+      expect(fs.readFileSync(path.join(tempDir, artifactFiles[0]), 'utf8'))
+        .toBe('tampered rollback bytes');
+      for (const file of allFiles.filter((file) => file !== artifactFiles[0])) {
+        expect(fs.readFileSync(path.join(tempDir, file))).toEqual(originals[file]);
+      }
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
@@ -1343,6 +1625,47 @@ describe('Cadu candidate source registry mirror', () => {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
   }, 10_000);
+
+  test('does not let lock-release failure mask callback success or failure', () => {
+    const successDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-lock-release-success-'));
+    const failureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-lock-release-failure-'));
+    const realUnlink = fs.unlinkSync.bind(fs);
+    const unlinkSpy = jest.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+      if (path.basename(String(target)).startsWith(`${IMPORT_LOCK_FILE}.ticket.`)) {
+        const error = new Error('injected persistent ticket cleanup failure');
+        error.code = 'EBUSY';
+        throw error;
+      }
+      return realUnlink(target);
+    });
+    try {
+      let successThrown;
+      try {
+        withImportLock(successDir, () => 'committed result');
+      } catch (error) {
+        successThrown = error;
+      }
+      expect(successThrown).toBeInstanceOf(AggregateError);
+      expect(successThrown.message).toMatch(/operation completed but lock release was incomplete/);
+      expect(successThrown.errors.map((error) => error.message).join('\n'))
+        .toMatch(/ticket cleanup failure/);
+
+      let failureThrown;
+      try {
+        withImportLock(failureDir, () => { throw new Error('primary callback failure'); });
+      } catch (error) {
+        failureThrown = error;
+      }
+      expect(failureThrown).toBeInstanceOf(AggregateError);
+      expect(failureThrown.message).toMatch(/operation failed and lock release was incomplete/);
+      expect(failureThrown.errors[0].message).toBe('primary callback failure');
+      expect(failureThrown.errors[1].message).toMatch(/ticket cleanup failure/);
+    } finally {
+      unlinkSpy.mockRestore();
+      fs.rmSync(successDir, { recursive: true, force: true });
+      fs.rmSync(failureDir, { recursive: true, force: true });
+    }
+  });
 
   test('derives artifact bytes and blob OIDs from the declared OpenClaw commit', () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-cadu-upstream-git-'));
@@ -1518,7 +1841,9 @@ describe('Cadu candidate source registry mirror', () => {
       fs.cpSync(outputDir, monotonicRepairDir, { recursive: true });
       const futureManifestPath = path.join(monotonicRepairDir, 'upstream-manifest.json');
       const futureManifest = JSON.parse(fs.readFileSync(futureManifestPath, 'utf8'));
-      futureManifest.registryVersion = '2026-07-13.7';
+      const futureVersionMatch = futureManifest.registryVersion.match(/^(\d{4}-\d{2}-\d{2}\.)(\d+)$/);
+      expect(futureVersionMatch).not.toBeNull();
+      futureManifest.registryVersion = `${futureVersionMatch[1]}${BigInt(futureVersionMatch[2]) + 1n}`;
       fs.writeFileSync(futureManifestPath, `${JSON.stringify(futureManifest, null, 2)}\n`, 'utf8');
       fs.writeFileSync(path.join(monotonicRepairDir, 'ufg-source-registry.candidate.json'), '{}\n', 'utf8');
       expect(() => importRegistry(
