@@ -37,4 +37,3 @@ export const responses = sqliteTable(
     index("pitch_responses_session_idx").on(table.sessionCode),
   ],
 );
-

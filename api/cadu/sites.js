@@ -244,6 +244,23 @@ function configureCors(res) {
   );
 }
 
+export function classifyRegistryMirrorFailure(error) {
+  const name = error && typeof error.name === 'string' && /^[A-Za-z][A-Za-z0-9]{0,39}$/.test(error.name)
+    ? error.name
+    : 'Error';
+  const code = error && typeof error.code === 'string' && /^[A-Z0-9_]{1,32}$/.test(error.code)
+    ? error.code
+    : null;
+  const message = error && typeof error.message === 'string' ? error.message : '';
+  let reason = 'validation_failed';
+  if (code === 'ENOENT') reason = 'missing_artifact';
+  else if (name === 'SyntaxError') reason = 'invalid_json';
+  else if (/content drift|does not match/i.test(message)) reason = 'integrity_drift';
+  else if (/manifest/i.test(message)) reason = 'invalid_manifest';
+  else if (/enabled|shadow|activation/i.test(message)) reason = 'unsafe_activation';
+  return { reason, errorName: name, errorCode: code };
+}
+
 function serveRegistryMirror(res, upstreamStatus) {
   try {
     const mirror = getCaduSourceRegistryMirror();
@@ -254,9 +271,17 @@ function serveRegistryMirror(res, upstreamStatus) {
     if (Number.isInteger(upstreamStatus) && upstreamStatus >= 400 && upstreamStatus <= 599) {
       res.setHeader('X-Cadu-Upstream-Status', String(upstreamStatus));
     }
-    res.setHeader('Cache-Control', 'private, max-age=300');
+    // A mirror is a continuity view, not the authoritative recovery signal.
+    // Never let a browser/CDN retain it after the VPS registry comes back.
+    res.setHeader('Cache-Control', 'private, no-store');
     return res.status(200).json(mirror.payload);
-  } catch {
+  } catch (error) {
+    try {
+      console.error(
+        '[KinoCampus:Cadu] registry_mirror_unavailable',
+        classifyRegistryMirrorFailure(error),
+      );
+    } catch (_) { /* logging must never change fail-closed behavior */ }
     return null;
   }
 }
@@ -300,6 +325,10 @@ function forwardRegistryHeaders(upstream, res, requiresStrongEtag = true) {
   return true;
 }
 
+function legacyMetaWritesEnabled() {
+  return process.env.CADU_LEGACY_META_WRITE_ENABLED === '1';
+}
+
 export default async function handler(req, res) {
   configureCors(res);
   // Failures and metadata are never cacheable. The legacy sites list replaces
@@ -327,6 +356,11 @@ export default async function handler(req, res) {
     return sendProxyError(res, 502, 'admin_auth_unreachable');
   }
   if (!admin) return undefined;
+
+  if (route.kind === 'legacy_meta' && req.method === 'PATCH' && !legacyMetaWritesEnabled()) {
+    res.setHeader('Allow', 'GET, OPTIONS');
+    return sendProxyError(res, 405, 'legacy_cadu_meta_writes_disabled');
+  }
 
   const apiUrl = typeof process.env.CADU_API_URL === 'string'
     ? process.env.CADU_API_URL.trim()
@@ -379,6 +413,7 @@ export default async function handler(req, res) {
       method: req.method,
       headers: upstreamHeaders,
       body: requestBody,
+      cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(25000),
     });

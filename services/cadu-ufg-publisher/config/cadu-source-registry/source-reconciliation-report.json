@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-13.1",
+  "registryVersion": "2026-07-13.7",
   "auditCutoff": "2026-07-13",
   "generatedFrom": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "9418434a842d6866263071d44753d5e1276eddc4d26043b1dcf4820fda6fe8dc",
-    "schemaContentSha256": "f040ae6f01380ccc0bb1f6bd2ffb733fe01e11b389b444b849d12c58676707d9",
+    "seedContentSha256": "b1eda586b8448efe09738e59c02eb9f1ff55ca6680b29ba4e34f1fff430f3296",
+    "adjudicationContentSha256": "9d6b9219d2369f485ccbfb8a519d3a660ca41955ab3f357ed3be724dd47f0249",
+    "schemaContentSha256": "da6d367be46bf4bca8509dc07ead5c655fb147c576b021484df305f918afbf04",
     "inputs": [
       {
         "id": "kino_publisher",
@@ -17,32 +18,33 @@
       {
         "id": "openclaw_curator",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "commit": "75efea5046c0e1df3eb1529188be8c2da671482b",
         "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
-        "contentSha256": "690cb84cd18a1b135dd20c96238d7863402634cc1cc6ee719d69919a61b831d7"
+        "contentSha256": "906af5b223d3ddded064bdabb852547a723da06982eecb8b6f217238124d6242"
       },
       {
         "id": "instagram_scanner",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "commit": "0e30c1f815ad8276631037592816d21a48b73627",
         "path": "data/.openclaw/workspace/scripts/scan-ig-browser.js",
-        "contentSha256": "dc570f901f3ae633009192c99e4c77ebb9edf910a4a7a5c83f6f4d73e8a20454"
+        "contentSha256": "8323e9b99a2bc71fc0b3be4e28f43176c3015acbd0a77f813529d94700793efc"
       },
       {
         "id": "admin_markdown",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "commit": "0e30c1f815ad8276631037592816d21a48b73627",
         "path": "data/.openclaw/workspace/ufg-sites-map.md",
         "contentSha256": "8915de43109eca6c869a6f2b6d965ca7b26f95deeb39f9b1fa8274c7f65852e4"
       }
     ]
   },
   "safety": {
-    "lifecycle": "candidate",
-    "runtimeActivated": false,
+    "lifecycle": "shadow",
+    "runtimeActivated": true,
+    "collectionActivated": false,
     "publishAttempted": false,
     "networkAccessRequired": false,
-    "note": "The generated registry is review-only. Every candidate source/profile remains disabled."
+    "note": "The immutable registry is visible to cadu-api for review and override reconciliation only. Every source/profile remains disabled."
   },
   "inventoryMetrics": {
     "publisher": {
@@ -116,21 +118,23 @@
     }
   },
   "normalizedRegistry": {
-    "entities": 166,
-    "webSources": 194,
-    "instagramProfiles": 83,
+    "entities": 170,
+    "webSources": 197,
+    "instagramProfiles": 86,
     "enabledWebSources": 0,
     "enabledInstagramProfiles": 0,
-    "officiallyConfirmedWebSources": 128,
-    "officiallyDeclaredInstagramProfiles": 13,
+    "officiallyConfirmedWebSources": 131,
+    "officiallyDeclaredInstagramProfiles": 18,
+    "quarantinedWebSources": 6,
+    "retiredInstagramProfiles": 1,
     "pendingWebSources": 66,
-    "transportUnverifiedWebSources": 185,
+    "transportUnverifiedWebSources": 184,
     "endpointVerificationPendingWebSources": 194,
     "tierConflictSources": 68,
-    "urlConflictSources": 15
+    "urlConflictSources": 18
   },
   "identityReconciliation": {
-    "authoritativeSeedEntities": 135,
+    "authoritativeSeedEntities": 139,
     "provisionalEntities": [
       {
         "id": "ufg.legacy.adm-face",
@@ -742,6 +746,13 @@
         ]
       },
       {
+        "id": "ig.campusocidentalufg",
+        "entityIds": [
+          "ufg.campus.cidade-ocidental",
+          "ufg.iig"
+        ]
+      },
+      {
         "id": "ig.em-ufg",
         "entityIds": [
           "ufg.emac",
@@ -774,6 +785,12 @@
           "ufg.secom",
           "ufg.uaech"
         ]
+      }
+    ],
+    "reassignedInstagramProfiles": [
+      {
+        "id": "ig.infufg",
+        "supersededBy": "ig.inf-ufg"
       }
     ]
   },
@@ -1034,7 +1051,7 @@
       {
         "url": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac",
         "candidateSourceId": "web.legacy.ppgac",
-        "reviewState": "pending_review",
+        "reviewState": "quarantined",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
       },
@@ -1125,7 +1142,7 @@
       {
         "url": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef",
         "candidateSourceId": "web.legacy.ppgef",
-        "reviewState": "pending_review",
+        "reviewState": "quarantined",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
       },
@@ -1139,7 +1156,7 @@
       {
         "url": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
         "candidateSourceId": "web.legacy.ppgenf",
-        "reviewState": "pending_review",
+        "reviewState": "quarantined",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
       },
@@ -1300,7 +1317,7 @@
       {
         "url": "https://revistas.ufg.br/",
         "candidateSourceId": "web.legacy.revistas-ufg",
-        "reviewState": "pending_review",
+        "reviewState": "quarantined",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
       }
@@ -3278,6 +3295,36 @@
     ],
     "institutionalUrlCandidates": [
       {
+        "sourceId": "web.affiliated.fagep",
+        "canonicalUrl": "https://fagep.org.br/",
+        "declaredUrl": "https://fagep.org.br/",
+        "legacyCandidates": [
+          "https://fundahc.hc.ufg.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.affiliated.funape",
+        "canonicalUrl": "https://site.funape.org.br/",
+        "declaredUrl": "https://www.funape.org.br/",
+        "legacyCandidates": [
+          "https://www.funape.org.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.affiliated.rtve",
+        "canonicalUrl": "https://rtve.org.br/",
+        "declaredUrl": "https://www.rtve.org.br/",
+        "legacyCandidates": [
+          "https://www.rtve.org.br/"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
         "sourceId": "web.ufg.campus.cidade-ocidental",
         "canonicalUrl": "https://cidadeocidental.ufg.br/",
         "declaredUrl": "https://co.ufg.br/",
@@ -3493,8 +3540,8 @@
   },
   "activationBlockers": [
     {
-      "id": "candidate-not-activated",
-      "count": 277,
+      "id": "collection-not-activated",
+      "count": 283,
       "requiredAction": "keep all enabled flags false until shadow and dry-run gates pass"
     },
     {
@@ -3581,8 +3628,11 @@
     },
     {
       "id": "institutional-url-conflicts",
-      "count": 15,
+      "count": 18,
       "sourceIds": [
+        "web.affiliated.fagep",
+        "web.affiliated.funape",
+        "web.affiliated.rtve",
         "web.ufg.campus.cidade-ocidental",
         "web.ufg.eeca",
         "web.ufg.emac",
@@ -3675,8 +3725,21 @@
       "requiredAction": "confirm institutional ownership from official evidence"
     },
     {
+      "id": "quarantined-sources",
+      "count": 6,
+      "sourceIds": [
+        "web.legacy.ead-face",
+        "web.legacy.ppgac",
+        "web.legacy.ppgef",
+        "web.legacy.ppgenf",
+        "web.legacy.revistas-ufg",
+        "web.legacy.sea"
+      ],
+      "requiredAction": "keep collection disabled until a new dated human adjudication clears every quarantine reason"
+    },
+    {
       "id": "transport-unverified",
-      "count": 185,
+      "count": 184,
       "sourceIds": [
         "web.legacy.adm-face",
         "web.legacy.ccufg",
@@ -3737,7 +3800,6 @@
         "web.legacy.profhistoria",
         "web.legacy.pts",
         "web.legacy.radio-ufg",
-        "web.legacy.revistas-ufg",
         "web.legacy.sape",
         "web.legacy.sea",
         "web.legacy.seacult",
@@ -4158,7 +4220,7 @@
     },
     {
       "id": "instagram-profile-verification-pending",
-      "count": 83,
+      "count": 85,
       "profileIds": [
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
@@ -4190,6 +4252,9 @@
         "ig.firminopolis-ufg",
         "ig.fl-ufg-oficial",
         "ig.floreser-ufg",
+        "ig.funapeufg",
+        "ig.fundacaofagep",
+        "ig.fundacaortve",
         "ig.herbarioufg",
         "ig.icb-ufg",
         "ig.icb-acoes",
@@ -4197,7 +4262,6 @@
         "ig.iesaufg",
         "ig.ime-ufg",
         "ig.inf-ufg",
-        "ig.infufg",
         "ig.institutoverbenaufg",
         "ig.ipelab-ufg",
         "ig.iptsp-ufg",
@@ -4248,11 +4312,10 @@
     },
     {
       "id": "instagram-evidence-missing",
-      "count": 70,
+      "count": 67,
       "profileIds": [
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
-        "ig.campusocidentalufg",
         "ig.cecasufg",
         "ig.cei-ufg",
         "ig.centroculturalufg",
@@ -4286,8 +4349,6 @@
         "ig.iesa-ufg",
         "ig.iesaufg",
         "ig.ime-ufg",
-        "ig.inf-ufg",
-        "ig.infufg",
         "ig.institutoverbenaufg",
         "ig.ipelab-ufg",
         "ig.iptsp-ufg",

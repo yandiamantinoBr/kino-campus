@@ -20,6 +20,10 @@ const files = [
   'tests/sql/cadu-phase-a-linked-schema-fixture.sql',
   'supabase/migrations/20260713183000_cadu_unit_meta_cas_rpc.sql',
   'supabase/migrations/20260713184500_cadu_metadata_contract_probe.sql',
+  'supabase/migrations/20260714193000_cadu_source_override_collision_cas.sql',
+  'supabase/migrations/20260714224000_cadu_metadata_contract_collision_cas.sql',
+  // Reapply directly to prove the guarded post-rewrite no-op path.
+  'supabase/migrations/20260714224000_cadu_metadata_contract_collision_cas.sql',
 ];
 
 function runSql(label, sql) {

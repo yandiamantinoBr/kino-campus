@@ -171,7 +171,7 @@ async function main() {
       p_note: 'Concurrent CAS proof',
       p_expected_exists: true,
       p_expected_revision: 1,
-      p_expected_meta_revisions: null,
+      p_expected_meta_revisions: revisionSnapshot,
     };
     const concurrent = await Promise.all([
       request('/rpc/kc_cadu_upsert_source_override', { ...service, method: 'POST', body: concurrentPayload }),

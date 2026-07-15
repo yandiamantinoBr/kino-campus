@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Cache-Control', 'private, no-store');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
     const upstream = await fetch(`${apiUrl.replace(/\/$/, '')}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json', 'User-Agent': 'KinoCampus-Admin/1.0' },
+      cache: 'no-store',
       signal: AbortSignal.timeout(15000)
     });
 

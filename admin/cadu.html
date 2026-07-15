@@ -26,6 +26,7 @@
     .kc-cadu-kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
     .kc-cadu-kpi { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 14px; min-width: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s, transform .12s, background .15s; display: block; width: 100%; }
     .kc-cadu-kpi:hover { border-color: rgba(255,107,0,.45); transform: translateY(-1px); background: rgba(255,107,0,.025); }
+    .kc-cadu-kpi:disabled { opacity: .62; cursor: not-allowed; transform: none; }
     .kc-cadu-kpi:focus { outline: none; border-color: rgba(255,107,0,.7); box-shadow: 0 0 0 3px rgba(255,107,0,.18); }
     .kc-cadu-kpi[data-kpi-tab=""] { cursor: default; }
     .kc-cadu-kpi[data-kpi-tab=""]:hover { transform: none; background: var(--kc-surface-dark); }
@@ -173,13 +174,14 @@
 }
 .kc-cadu-stat-card__hint { color: #888; font-size: 0.74rem; margin-top: 4px; min-height: 18px; }
 .kc-btn-secondary, .kc-btn-primary { cursor: pointer; border-radius: 6px; padding: 7px 12px; font-size: 0.85rem; border: 1px solid var(--kc-border-dark, #444); }
-.kc-btn-secondary { background: rgba(255,255,255,.04); color: #e0e0e0; }
+.kc-btn-secondary { background: var(--kc-surface-dark, #333); color: var(--kc-text-dark-primary, #e9eaed); }
+.kc-btn-secondary:hover { background: var(--kc-surface-dark-hover, #444); color: var(--kc-text-dark-primary, #fff); }
 .kc-btn-primary { background: var(--kc-primary-brand, #ff6b00); color: #fff; border-color: var(--kc-primary-brand, #ff6b00); font-weight: 600; }
 .kc-btn-secondary:disabled, .kc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-    #sites-table[data-view="sources"] { min-width: 1160px; table-layout: fixed; }
+    #sites-table[data-view="sources"] { min-width: 1280px; table-layout: fixed; }
     #sites-table[data-view="sources"] th:nth-child(1), #sites-table[data-view="sources"] td:nth-child(1) { width: 75px; }
-    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 130px; }
+    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 250px; }
     #sites-table[data-view="sources"] th:nth-child(3), #sites-table[data-view="sources"] td:nth-child(3) { width: 160px; }
     #sites-table[data-view="sources"] th:nth-child(4), #sites-table[data-view="sources"] td:nth-child(4) { width: 140px; }
     #sites-table[data-view="sources"] th:nth-child(5), #sites-table[data-view="sources"] td:nth-child(5) { width: 125px; }
@@ -195,7 +197,17 @@
     .kc-cadu-table code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; font-size: .82rem; }
     .kc-cadu-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; }
     .kc-cadu-badge--confirmed { background: rgba(16,185,129,.12); color: #10b981; }
+    .kc-cadu-badge--confirmed_official,
+    .kc-cadu-badge--reviewed,
+    .kc-cadu-badge--complete { background: rgba(16,185,129,.12); color: #34d399; }
     .kc-cadu-badge--tentative { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .kc-cadu-badge--pending,
+    .kc-cadu-badge--pending_review,
+    .kc-cadu-badge--pending_verification,
+    .kc-cadu-badge--partial { background: rgba(245,158,11,.12); color: #fbbf24; }
+    .kc-cadu-badge--tier_conflict,
+    .kc-cadu-badge--url_conflict,
+    .kc-cadu-badge--quarantined { background: rgba(239,68,68,.12); color: #f87171; }
 
     /* ===== Pipeline tab (v0.4.0) ===== */
     .kc-pipeline-grid { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(220px, 280px); gap: 16px; min-width: 0; }
@@ -223,7 +235,9 @@
     .kc-pipeline-active-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; margin-bottom: 10px; min-width: 0; }
     .kc-pipeline-active-card.is-running { border-color: rgba(255,107,0,.45); box-shadow: 0 0 0 1px rgba(255,107,0,.18); }
     .kc-pipeline-active-card.is-failed { border-color: rgba(239,68,68,.45); }
-    .kc-pipeline-active-card.is-finished { border-color: rgba(16,185,129,.45); }
+    .kc-pipeline-active-card.is-success { border-color: rgba(16,185,129,.45); }
+    .kc-pipeline-active-card.is-partial { border-color: rgba(245,158,11,.5); }
+    .kc-pipeline-active-card.is-finished { border-color: rgba(148,163,184,.4); border-style: dashed; }
     .kc-pipeline-active-card__head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .kc-pipeline-active-card__head strong { font-size: 1rem; }
     .kc-pipeline-active-card__meta { font-size: .76rem; color: var(--kc-text-dark-secondary); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
@@ -250,12 +264,16 @@
     .kc-pipeline-log .kc-log-line--ok { color: #34d399; }
     .kc-pipeline-status-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); display: inline-block; margin-left: 6px; vertical-align: middle; transition: background .15s; }
     .kc-pipeline-status-dot.is-running { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.18); animation: kc-pulse 1.4s infinite; }
-    .kc-pipeline-status-dot.is-finished { background: #10b981; }
+    .kc-pipeline-status-dot.is-success { background: #10b981; }
+    .kc-pipeline-status-dot.is-partial { background: #f59e0b; }
+    .kc-pipeline-status-dot.is-finished { background: #94a3b8; }
     .kc-pipeline-status-dot.is-failed { background: #ef4444; }
     @keyframes kc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
     .kc-pipeline-history-item { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 8px 10px; font-size: .78rem; display: flex; flex-direction: column; gap: 4px; }
     .kc-pipeline-history-item.is-running { border-color: rgba(245,158,11,.45); }
-    .kc-pipeline-history-item.is-finished { border-color: rgba(16,185,129,.35); }
+    .kc-pipeline-history-item.is-success { border-color: rgba(16,185,129,.35); }
+    .kc-pipeline-history-item.is-partial { border-color: rgba(245,158,11,.45); }
+    .kc-pipeline-history-item.is-finished { border-color: rgba(148,163,184,.35); border-style: dashed; }
     .kc-pipeline-history-item.is-failed { border-color: rgba(239,68,68,.35); }
     .kc-pipeline-history-item__head { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
     .kc-pipeline-history-item__id { font-family: monospace; font-size: .68rem; color: var(--kc-text-dark-secondary); }
@@ -274,17 +292,17 @@
     .kc-pipeline-log-tail { background: rgba(0,0,0,.4); border: 1px solid var(--kc-border-dark); border-radius: 8px; padding: 10px; font-family: monospace; font-size: .72rem; max-height: 300px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
 
     /* Sites UFG: tier dropdown + editable note + IG link */
-    .kc-cadu-tier-select { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.4); color: #ff8c42; border-radius: 6px; padding: 2px 6px; font-size: .72rem; cursor: pointer; font-weight: 600; }
-    .kc-cadu-tier-select:focus { outline: none; border-color: rgba(255,107,0,.8); }
-    .kc-cadu-tier-select:hover { background: rgba(255,107,0,.2); }
+    .kc-cadu-tier-select, .kc-cadu-source-tier-select { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.4); color: var(--kc-text-dark-primary); border-radius: 6px; padding: 4px 6px; font-size: .72rem; cursor: pointer; font-weight: 600; }
+    .kc-cadu-tier-select:focus, .kc-cadu-source-tier-select:focus { outline: 2px solid rgba(255,107,0,.45); outline-offset: 1px; border-color: rgba(255,107,0,.8); }
+    .kc-cadu-tier-select:hover, .kc-cadu-source-tier-select:hover { background: rgba(255,107,0,.2); }
     .kc-cadu-ig-link { color: #e1306c; text-decoration: none; font-weight: 500; }
     .kc-cadu-ig-link:hover { text-decoration: underline; }
     .kc-cadu-url-link { color: var(--kc-text-dark-primary); text-decoration: none; }
     .kc-cadu-url-link:hover { color: var(--kc-primary-brand); text-decoration: underline; }
     .kc-cadu-note-cell { display: grid; gap: 6px; min-width: 0; }
-    .kc-cadu-note-input { background: rgba(255,255,255,.04); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 6px; padding: 4px 8px; font-size: .78rem; font-family: inherit; width: 100%; min-width: 180px; resize: vertical; min-height: 24px; max-height: 80px; line-height: 1.3; }
-    .kc-cadu-note-input:focus { outline: none; border-color: rgba(255,107,0,.5); background: rgba(255,255,255,.08); }
-    .kc-cadu-note-input::placeholder { color: var(--kc-text-dark-secondary); font-style: italic; }
+    .kc-cadu-note-input, .kc-cadu-source-note-input { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 6px; padding: 4px 8px; font-size: .78rem; font-family: inherit; width: 100%; min-width: 180px; resize: vertical; min-height: 24px; max-height: 80px; line-height: 1.3; }
+    .kc-cadu-note-input:focus, .kc-cadu-source-note-input:focus { outline: 2px solid rgba(255,107,0,.35); outline-offset: 1px; border-color: rgba(255,107,0,.5); background: var(--kc-surface-dark-hover); }
+    .kc-cadu-note-input::placeholder, .kc-cadu-source-note-input::placeholder { color: var(--kc-text-dark-secondary); font-style: italic; }
     .kc-cadu-save-status { display: inline-flex; align-items: center; min-width: 16px; font-size: .8rem; flex-shrink: 0; padding-top: 4px; }
     .kc-cadu-badge--missing { background: rgba(148,163,184,.12); color: #94a3b8; }
     .kc-cadu-badge--unknown { background: rgba(99,102,241,.12); color: #818cf8; }
@@ -318,6 +336,7 @@
     .kc-cadu-feed-pager__actions { display:flex; gap:8px; flex-wrap:wrap; }
     .kc-cadu-feed-freshness { border:1px solid rgba(79,195,247,.3); background:rgba(79,195,247,.07); border-radius:10px; padding:10px 12px; margin:0 0 12px; color:var(--kc-text-dark-secondary); font-size:.82rem; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
     .kc-cadu-feed-freshness.is-fresh { border-color:rgba(16,185,129,.38); background:rgba(16,185,129,.08); }
+    .kc-cadu-feed-freshness.is-warning { border-color:rgba(245,158,11,.44); background:rgba(245,158,11,.09); }
     .kc-cadu-feed-freshness.is-stale { border-color:rgba(245,158,11,.44); background:rgba(245,158,11,.09); }
     .kc-cadu-feed-freshness.is-error { border-color:rgba(239,68,68,.44); background:rgba(239,68,68,.09); }
     .kc-cadu-feed-freshness strong { color:var(--kc-text-dark-primary); }
@@ -342,8 +361,11 @@
     #cadu-loading i.fa-spinner { font-size: 1.6rem; margin-bottom: 10px; color: var(--kc-primary-brand); }
     #cadu-access-denied { background: rgba(244,67,54,.06); border: 1px solid rgba(244,67,54,.25); border-radius: 14px; color: var(--kc-text-dark-primary); text-align: center; }
     #cadu-access-denied i.fa-lock { color: #ef9a9a; }
-    #cadu-error { display: none; background: rgba(76,175,80,.12); border: 1px solid rgba(76,175,80,.35); color: #a5d6a7; border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: .9rem; }
-    /* ===== Botão publicar por site ===== */
+    #cadu-error { display: none; border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: .9rem; }
+    #cadu-error.is-error { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color: var(--kc-text-dark-primary); }
+    #cadu-error.is-success { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.4); color: var(--kc-text-dark-primary); }
+    #cadu-error.is-info { background: rgba(65,181,211,.12); border-color: rgba(65,181,211,.4); color: var(--kc-text-dark-primary); }
+    /* ===== Ação editorial por site ===== */
     .kc-cadu-publish-btn { background: rgba(255,107,0,.12); border: 1px solid rgba(255,107,0,.3); color: var(--kc-primary-brand); border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
     .kc-cadu-publish-btn:hover { background: rgba(255,107,0,.2); border-color: rgba(255,107,0,.5); }
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
@@ -366,8 +388,11 @@
     .kc-cadu-catalog-summary__item { border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 12px; background: rgba(255,255,255,.025); }
     .kc-cadu-catalog-summary__item strong { display: block; font-size: 1.25rem; color: var(--kc-text-dark-primary); }
     .kc-cadu-catalog-summary__item small { color: var(--kc-text-dark-secondary); }
+    .kc-cadu-review-policy { margin: -2px 0 12px; padding: 10px 12px; border-left: 3px solid #f59e0b; border-radius: 7px; background: rgba(245,158,11,.08); color: var(--kc-text-dark-secondary); font-size: .78rem; line-height: 1.5; }
+    .kc-cadu-review-policy strong { color: var(--kc-text-dark-primary); }
     .kc-cadu-map-list { display: flex; flex-wrap: wrap; gap: 4px; }
-    .kc-cadu-map-chip { display: inline-flex; align-items: center; border: 1px solid var(--kc-border-dark); border-radius: 999px; padding: 2px 7px; font-size: .72rem; color: var(--kc-text-dark-secondary); background: rgba(255,255,255,.03); }
+    .kc-cadu-map-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 1px solid var(--kc-border-dark); border-radius: 8px; padding: 5px 8px; font-size: .72rem; line-height: 1.25; color: var(--kc-text-dark-secondary); background: rgba(255,255,255,.03); }
+    .kc-cadu-map-chip strong { color: var(--kc-text-dark-primary); font-size: .76rem; }
     .kc-cadu-source-id { display: block; margin-top: 4px; color: var(--kc-text-dark-secondary); font-size: .68rem; overflow-wrap: anywhere; }
     .kc-cadu-tier-context { display: grid; gap: 3px; font-size: .72rem; color: var(--kc-text-dark-secondary); margin-top: 5px; }
     .kc-cadu-source-note--inherited { display: block; margin-top: 5px; color: #f59e0b; font-size: .7rem; line-height: 1.35; }
@@ -403,13 +428,15 @@
     .kc-cadu-activity-dropdown__head { padding: 12px 14px; border-bottom: 1px solid var(--kc-border-dark); font-weight: 600; font-size: .85rem; color: var(--kc-text-dark-primary); }
     .kc-cadu-activity-dropdown__list { max-height: 360px; overflow-y: auto; padding: 6px 0; }
     .kc-cadu-activity-dropdown__list .kc-cadu-empty { padding: 20px; text-align: center; color: var(--kc-text-dark-secondary); font-size: .85rem; }
-    .kc-cadu-activity-dropdown__item { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.04); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .kc-cadu-activity-dropdown__item { width: 100%; padding: 10px 14px; border: 0; border-bottom: 1px solid var(--kc-border-dark); cursor: pointer; display: flex; flex-direction: column; gap: 4px; background: transparent; color: inherit; font: inherit; text-align: left; }
     .kc-cadu-activity-dropdown__item:hover { background: rgba(255,107,0,.08); }
+    .kc-cadu-activity-dropdown__item:focus-visible { outline: 2px solid var(--kc-primary-brand); outline-offset: -2px; background: rgba(255,107,0,.08); }
     .kc-cadu-activity-dropdown__item:last-child { border-bottom: 0; }
     .kc-cadu-activity-dropdown__item__title { font-size: .85rem; color: var(--kc-text-dark-primary); font-weight: 500; }
     .kc-cadu-activity-dropdown__item__meta { font-size: .72rem; color: var(--kc-text-dark-secondary); display: flex; gap: 8px; align-items: center; }
     .kc-cadu-activity-dropdown__item__meta .pill { padding: 1px 6px; border-radius: 6px; font-size: .68rem; font-weight: 600; }
-    .kc-cadu-activity-dropdown__item__meta .pill--finished { background: rgba(16,185,129,.18); color: #10b981; }
+    .kc-cadu-activity-dropdown__item__meta .pill--success { background: rgba(16,185,129,.18); color: #10b981; }
+    .kc-cadu-activity-dropdown__item__meta .pill--partial { background: rgba(245,158,11,.18); color: #f59e0b; }
     .kc-cadu-activity-dropdown__item__meta .pill--failed { background: rgba(239,68,68,.18); color: #ef4444; }
     .kc-cadu-activity-dropdown__item__meta .pill--running { background: rgba(245,158,11,.18); color: #f59e0b; }
     .kc-cadu-activity-dropdown__foot { padding: 10px 14px; border-top: 1px solid var(--kc-border-dark); text-align: center; font-size: .8rem; }
@@ -451,9 +478,9 @@
         <a href="cadu.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-robot"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcCaduActivityBell" aria-label="Atividade recente do Cadu" data-i18n-aria-label="aria-label.notifications" aria-expanded="false" aria-controls="kcCaduActivityDropdown" title="Atividade do Cadu (runs recentes e publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcCaduActivityBadge" style="display:none;">0</span></button>
-        <div id="kcCaduActivityDropdown" class="kc-cadu-activity-dropdown" hidden>
-          <div class="kc-cadu-activity-dropdown__head">Atividade recente do Cadu</div>
+        <button class="kc-notif-bell" id="kcCaduActivityBell" aria-label="Atividade recente do Cadu" data-i18n-aria-label="aria-label.notifications" aria-expanded="false" aria-controls="kcCaduActivityDropdown" title="Atividade do Cadu (execuções recentes e publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcCaduActivityBadge" style="display:none;">0</span></button>
+        <div id="kcCaduActivityDropdown" class="kc-cadu-activity-dropdown" role="dialog" aria-labelledby="kcCaduActivityTitle" hidden>
+          <div class="kc-cadu-activity-dropdown__head" id="kcCaduActivityTitle">Atividade recente do Cadu</div>
           <div id="kcCaduActivityList" class="kc-cadu-activity-dropdown__list">
             <div class="kc-cadu-empty">Carregando…</div>
           </div>
@@ -488,14 +515,14 @@
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
             <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
-            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites+pipeline+feed+openclaw em 1 request)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> Context API</span>
+            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites, pipeline, feed e OpenClaw em uma requisição)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> API de contexto</span>
             <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api" data-i18n-tooltip="tooltip.cadu-version"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
           </div>
         </div>
         <div class="kc-cadu-toolbar" style="margin:0;">
           <button type="button" id="cadu-refresh-btn" title="Atualizar" data-i18n-tooltip="tooltip.cadu-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
           <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);color:var(--kc-text-dark-primary);border-radius:10px;padding:7px 12px;font-size:.84rem;text-decoration:none;display:inline-flex;gap:6px;align-items:center;">
-            <i class="fab fa-github"></i> Repo
+            <i class="fab fa-github"></i> Repositório
           </a>
         </div>
       </section>
@@ -514,10 +541,10 @@
           <small id="kpi-ig-detail">perfis validados</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por Tier 1" data-i18n-tooltip="tooltip.cadu-kpi-tier1">
-          <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Tier 1</div>
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por prioridade T1" data-i18n-tooltip="tooltip.cadu-kpi-tier1">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Prioridade T1</div>
           <strong id="kpi-tier1">—</strong>
-          <small>fontes com tier efetivo 1</small>
+          <small>fontes com prioridade efetiva T1, quando disponível</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
         <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir itens públicos coletados pelo Curador" data-i18n-tooltip="tooltip.cadu-kpi-feed">
@@ -534,28 +561,29 @@
       </div>
 
       <!-- TABS -->
-      <div class="kc-cadu-tabs" role="tablist">
-        <button class="kc-cadu-tab is-active" data-tab="sites" role="tab">
+      <div class="kc-cadu-tabs" role="tablist" aria-label="Áreas operacionais do Cadu" data-i18n-aria-label="aria-label.cadu-tabs">
+        <button class="kc-cadu-tab is-active" id="cadu-tab-sites" data-tab="sites" role="tab" aria-controls="tab-sites" aria-selected="true" tabindex="0">
           <i class="fas fa-university"></i> Mapa UFG <span class="kc-cadu-tab__badge" id="badge-sites">—</span>
         </button>
-        <button class="kc-cadu-tab" data-tab="feed" role="tab">
+        <button class="kc-cadu-tab" id="cadu-tab-feed" data-tab="feed" role="tab" aria-controls="tab-feed" aria-selected="false" tabindex="-1">
           <i class="fas fa-stream"></i> Feed coletado <span class="kc-cadu-tab__badge" id="badge-feed">—</span>
         </button>
-        <button class="kc-cadu-tab" data-tab="pipeline" role="tab">
+        <button class="kc-cadu-tab" id="cadu-tab-pipeline" data-tab="pipeline" role="tab" aria-controls="tab-pipeline" aria-selected="false" tabindex="-1">
           <i class="fas fa-gears"></i> Pipeline <span class="kc-cadu-tab__badge" id="badge-pipeline">—</span>
         </button>
-        <button class="kc-cadu-tab" data-tab="openclaw" role="tab">
+        <button class="kc-cadu-tab" id="cadu-tab-openclaw" data-tab="openclaw" role="tab" aria-controls="tab-openclaw" aria-selected="false" tabindex="-1">
           <i class="fas fa-robot"></i> OpenClaw <span class="kc-cadu-tab__badge" id="badge-openclaw">—</span>
         </button>
       </div>
 
       <!-- ============== TAB: SITES ============== -->
-      <section class="kc-cadu-section" id="tab-sites" role="tabpanel">
+      <section class="kc-cadu-section" id="tab-sites" role="tabpanel" aria-labelledby="cadu-tab-sites">
         <div class="kc-cadu-registry-status" id="sites-registry-status" role="status" aria-live="polite">
           <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-          <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e overrides.</small></div>
+          <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e ajustes administrativos.</small></div>
         </div>
         <div class="kc-cadu-catalog-summary" id="sites-catalog-summary" aria-label="Resumo do catálogo UFG" data-i18n-aria-label="aria-label.cadu-catalog-summary" style="display:none;"></div>
+        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, ajuste administrativo estável, sem colisão nem pendência crítica. A ação cria uma entrada durável no estado pendente (<code>pending</code>) e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
         <div class="kc-cadu-toolbar">
           <select id="sites-view" aria-label="Escolher visão do catálogo" data-i18n-aria-label="aria-label.cadu-sites-view">
             <option value="sources">Fontes web</option>
@@ -564,11 +592,11 @@
             <option value="deferred">Pendências de conciliação</option>
           </select>
           <input id="sites-search" type="search" autocomplete="off" placeholder="Filtrar por nome, site ou @instagram" data-i18n-placeholder="placeholder.cadu-sites-search" aria-label="Filtrar sites" data-i18n-aria-label="aria-label.cadu-sites-search">
-          <select id="sites-tier" aria-label="Filtrar por tier" data-i18n-aria-label="aria-label.cadu-sites-tier">
-            <option value="">Todos os tiers</option>
-            <option value="1">Tier 1</option>
-            <option value="2">Tier 2</option>
-            <option value="3">Tier 3</option>
+          <select id="sites-tier" aria-label="Filtrar por prioridade" data-i18n-aria-label="aria-label.cadu-sites-tier">
+            <option value="">Todas as prioridades</option>
+            <option value="1">Prioridade T1</option>
+            <option value="2">Prioridade T2</option>
+            <option value="3">Prioridade T3</option>
           </select>
           <select id="sites-ig" aria-label="Filtrar por status Instagram" data-i18n-aria-label="aria-label.cadu-sites-ig">
             <option value="">IG: todos</option>
@@ -577,11 +605,11 @@
             <option value="missing">sem perfil associado</option>
             <option value="retired">perfil aposentado</option>
           </select>
-          <select id="sites-origin" aria-label="Filtrar origem do tier" data-i18n-aria-label="aria-label.cadu-sites-origin">
-            <option value="">Override: todos</option>
-            <option value="stable">estável</option>
-            <option value="legacy_inherited">legado herdado</option>
-            <option value="base">somente base</option>
+          <select id="sites-origin" aria-label="Filtrar origem do ajuste administrativo" data-i18n-aria-label="aria-label.cadu-sites-origin">
+            <option value="">Ajuste: todos</option>
+            <option value="stable">ajuste estável</option>
+            <option value="legacy_inherited">ajuste legado herdado</option>
+            <option value="base">prioridade base</option>
             <option value="ambiguous">ambíguo</option>
             <option value="collision">colisão</option>
             <option value="collision_evidence">qualquer evidência de colisão</option>
@@ -594,12 +622,12 @@
           <table class="kc-cadu-table" id="sites-table" data-view="sources" aria-live="polite">
             <thead id="sites-thead">
               <tr>
-                <th style="width:90px;">Tier</th>
+                <th style="width:90px;">Prioridade</th>
                 <th>Entidade / fonte</th>
                 <th>Site institucional</th>
                 <th>Instagram associado</th>
                 <th style="width:130px;">Revisão</th>
-                <th>Override / observação</th>
+                <th>Ajuste administrativo / observação</th>
                 <th style="width:145px;">Ações</th>
               </tr>
             </thead>
@@ -611,7 +639,7 @@
       </section>
 
       <!-- ============== TAB: PIPELINE (v0.4.0) ============== -->
-      <section class="kc-cadu-section" id="tab-pipeline" role="tabpanel" style="display:none;">
+      <section class="kc-cadu-section" id="tab-pipeline" role="tabpanel" aria-labelledby="cadu-tab-pipeline" hidden style="display:none;">
         <div class="kc-pipeline-grid">
           <!-- Coluna 1: lista de estágios + botões -->
           <div class="kc-pipeline-stages">
@@ -623,22 +651,22 @@
             </div>
           </div>
 
-          <!-- Coluna 2: run ativo + log stream -->
+          <!-- Coluna 2: execução ativa + fluxo de log -->
           <div class="kc-pipeline-runner">
             <h3 style="margin-top:0;font-size:1rem;color:var(--kc-text-dark-secondary);text-transform:uppercase;letter-spacing:.06em;">
               <i class="fas fa-play"></i> Execução atual
-              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" title="Sem run ativo" data-i18n-tooltip="tooltip.cadu-pipeline-idle"></span>
+              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" title="Sem execução ativa" data-i18n-tooltip="tooltip.cadu-pipeline-idle"></span>
             </h3>
             <div id="pipeline-active-card" class="kc-pipeline-active-card">
               <div class="kc-cadu-empty">
-                <i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.
+                <i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.
               </div>
             </div>
             <div id="pipeline-health-card" class="kc-pipeline-health-card">
               <div class="kc-cadu-empty"><i class="fas fa-heart-pulse"></i> Carregando saúde da automação…</div>
             </div>
             <div class="kc-pipeline-log" id="pipeline-log">
-              <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>
+              <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>
             </div>
           </div>
 
@@ -655,7 +683,7 @@
       </section>
 
       <!-- ============== TAB: FEED ============== -->
-      <section class="kc-cadu-section" id="tab-feed" role="tabpanel" style="display:none;">
+      <section class="kc-cadu-section" id="tab-feed" role="tabpanel" aria-labelledby="cadu-tab-feed" hidden style="display:none;">
         <div class="kc-cadu-feed-help" id="feed-help-block">
           <strong><i class="fas fa-info-circle"></i> O que é o Feed Coletado?</strong>
           <p>O <strong>Feed Coletado</strong> mostra somente itens públicos extraídos dos artefatos gerados pelo Curador a partir de fontes institucionais. Ele permite conferir coleta, classificação e encaminhamento editorial antes da publicação. <strong>Dados privados do agente e registros operacionais internos ficam fora deste recorte</strong>, que também não é a timeline final do KinoCampus.</p>
@@ -664,8 +692,8 @@
             <div class="kc-cadu-feed-help__grid">
               <div class="kc-cadu-feed-help__card">
                 <strong><i class="fas fa-building-columns"></i> Fontes institucionais</strong>
-                <p>O Curador consulta sites e perfis oficiais habilitados pelo catálogo canônico. Cada item mantém o link público de origem e a identificação da entidade para permitir verificação editorial.</p>
-                <small>A versão exibida no cabeçalho identifica o serviço <code>cadu-api</code>; já <strong>Curador 4.4</strong> identifica o contrato dos artefatos. São componentes diferentes e suas numerações não precisam coincidir. O script efetivo é informado pelo preflight.</small>
+                <p>O Curador em produção ainda consulta os inventários operacionais legados validados. O catálogo canônico desta aba permanece em modo de validação (<code>shadow</code>), com as fontes desabilitadas, e orienta a migração segura sem ativar coleta ou publicação. Cada item mantém o link público de origem para verificação editorial.</p>
+                <small>A versão exibida no cabeçalho identifica o serviço <code>cadu-api</code>; já <strong>Curador 4.4</strong> identifica o contrato dos artefatos. São componentes diferentes e suas numerações não precisam coincidir. O script efetivo é informado pela verificação prévia (<code>preflight</code>).</small>
               </div>
               <div class="kc-cadu-feed-help__card">
                 <strong><i class="fas fa-filter-circle-check"></i> Curadoria e qualidade</strong>
@@ -693,7 +721,7 @@
             <span class="kc-cadu-feed-diagnostics__chip">Ainda não carregado</span>
           </div>
           <div id="feed-diagnostics-list" class="kc-cadu-feed-diagnostics__list">
-            <div class="kc-cadu-feed-diagnostics__empty">Use o botão acima para consultar a amostra pública read-only do Supabase.</div>
+            <div class="kc-cadu-feed-diagnostics__empty">Use o botão acima para consultar a amostra pública do Supabase em modo somente leitura.</div>
           </div>
         </div>
         <div id="feed-freshness-status" class="kc-cadu-feed-freshness" role="status" aria-live="polite">
@@ -731,9 +759,9 @@
         </div>
       </section>
 
-      <section class="kc-cadu-section" id="tab-openclaw" role="tabpanel" style="display:none;">
+      <section class="kc-cadu-section" id="tab-openclaw" role="tabpanel" aria-labelledby="cadu-tab-openclaw" hidden style="display:none;">
         <div class="kc-cadu-section-header">
-          <h2><i class="fas fa-robot"></i> OpenClaw (Cadu agent)</h2>
+          <h2><i class="fas fa-robot"></i> OpenClaw (agente Cadu)</h2>
           <div class="kc-cadu-section-actions">
             <button type="button" id="openclaw-refresh-btn" class="kc-btn-secondary"><i class="fas fa-rotate"></i> Atualizar</button>
           </div>
@@ -742,7 +770,7 @@
         <!-- Status cards (4 KPIs OpenClaw) -->
         <div class="kc-cadu-stats">
           <div class="kc-cadu-stat-card">
-            <div class="kc-cadu-stat-card__label"><i class="fas fa-robot"></i> AGENT</div>
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-robot"></i> AGENTE</div>
             <div class="kc-cadu-stat-card__value" id="openclaw-stat-agent">—</div>
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-agent-hint">—</div>
           </div>
@@ -752,12 +780,12 @@
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-telegram-hint">—</div>
           </div>
           <div class="kc-cadu-stat-card">
-            <div class="kc-cadu-stat-card__label"><i class="fas fa-heartbeat"></i> HEARTBEAT</div>
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-heartbeat"></i> SINAL DE VIDA</div>
             <div class="kc-cadu-stat-card__value" id="openclaw-stat-heartbeat">—</div>
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-heartbeat-hint">—</div>
           </div>
           <div class="kc-cadu-stat-card">
-            <div class="kc-cadu-stat-card__label"><i class="fas fa-tasks"></i> TASKS</div>
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-tasks"></i> TAREFAS</div>
             <div class="kc-cadu-stat-card__value" id="openclaw-stat-tasks">—</div>
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-tasks-hint">—</div>
           </div>
@@ -768,7 +796,7 @@
           <div class="kc-openclaw-panel kc-openclaw-chat">
             <div class="kc-openclaw-panel__head">
               <h3><i class="fas fa-comments"></i> Chat com Cadu</h3>
-              <button type="button" id="openclaw-chat-focus-btn" class="kc-btn-secondary" title="Expandir ou recolher o chat" data-i18n-tooltip="tooltip.cadu-openclaw-chat-focus">
+              <button type="button" id="openclaw-chat-focus-btn" class="kc-btn-secondary" aria-pressed="false" title="Expandir ou recolher o chat" data-i18n-tooltip="tooltip.cadu-openclaw-chat-focus">
                 <i class="fas fa-expand"></i> Foco
               </button>
             </div>
@@ -780,12 +808,12 @@
               <div class="kc-cadu-empty">Sem mensagens ainda. Envia algo abaixo.</div>
             </div>
             <form id="openclaw-chat-form" class="kc-openclaw-chat-form" autocomplete="off">
-              <textarea id="openclaw-chat-input" rows="2" maxlength="4000"
+              <textarea id="openclaw-chat-input" rows="2" maxlength="4000" aria-label="Mensagem para o Cadu" data-i18n-aria-label="aria-label.cadu-openclaw-message"
                 placeholder="Ex: 'Quais posts do IG da UFG foram publicados hoje?' ou 'Sincroniza o SIGAA'…" data-i18n-placeholder="placeholder.cadu-openclaw-input"></textarea>
               <div class="kc-openclaw-chat-form-row">
                 <label>
                   <input type="checkbox" id="openclaw-chat-context">
-                  Incluir contexto operacional (pipeline e tiers)
+                  Incluir contexto operacional (pipeline e prioridades)
                 </label>
                 <label>
                   <input type="checkbox" id="openclaw-chat-deliver" disabled>
@@ -798,7 +826,7 @@
                   <i class="fas fa-rotate-right"></i> Tentar novamente
                 </button>
               </div>
-              <div class="kc-openclaw-chat-status" id="openclaw-chat-status"></div>
+              <div class="kc-openclaw-chat-status" id="openclaw-chat-status" role="status" aria-live="polite"></div>
             </form>
           </div>
 
@@ -813,7 +841,7 @@
             <h3 style="margin-top:18px;"><i class="fas fa-bolt"></i> Ações rápidas</h3>
             <div class="kc-openclaw-actions">
               <button type="button" id="openclaw-trigger-heartbeat-btn" class="kc-btn-secondary">
-                <i class="fas fa-heart-pulse"></i> Trigger Heartbeat
+                <i class="fas fa-heart-pulse"></i> Solicitar sinal de vida
               </button>
               <button type="button" id="openclaw-show-logs-btn" class="kc-btn-secondary">
                 <i class="fas fa-file-lines"></i> Ver logs do Gateway
@@ -834,8 +862,8 @@
 
       <div class="kc-cadu-footer">
         cadu-api rodando na VPS <code>srv1597083.hstgr.cloud</code> ·
-        <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="color:inherit;">repo</a>
-        · <a href="docs/INTEGRATION-KINOCAMPUS.md" style="color:inherit;">docs</a>
+        <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="color:inherit;">repositório</a>
+        · <a href="https://github.com/yandiamantinoBr/openclaw-cadu/blob/main/docs/INTEGRATION-KINOCAMPUS.md" target="_blank" rel="noopener" style="color:inherit;">documentação</a>
       </div>
 
       </div><!-- /#cadu-content -->
@@ -890,7 +918,7 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=f9059e88ac04e1c0"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=a339ad86dd66d3e2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=0bc027e84cb674bc"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=992604200b3ed66d"></script>
 </body>
 </html>

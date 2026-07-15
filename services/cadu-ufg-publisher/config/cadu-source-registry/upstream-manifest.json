@@ -1,39 +1,40 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-13.1",
+  "registryVersion": "2026-07-13.7",
   "auditCutoff": "2026-07-13",
   "upstream": {
     "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-    "commit": "2d579048a5e013572a1270742db48ba8aa465ca9"
+    "commit": "78d1d237e0a83ecfda05376f99c78d81c368dbe8"
   },
   "artifacts": [
     {
       "id": "candidate",
       "file": "ufg-source-registry.candidate.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.candidate.json",
-      "upstreamGitBlobOid": "220b0cafeb0df3d60b5f826432e48d4c9a99a74f",
-      "contentSha256": "540dca8fec98a387bc7d14b67c9c981f74db50f4b6032d666f06853fd8163bf4",
-      "byteLength": 676142
+      "upstreamGitBlobOid": "f513bcd894de146b1e81b6b428656d0c9a44f10f",
+      "contentSha256": "6d7e838d4cc534a239a3db2a5e7c97867e351ab02f1fd6bbe9ef72e6c74ff6bf",
+      "byteLength": 697978
     },
     {
       "id": "schema",
       "file": "ufg-source-registry.schema.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.schema.json",
-      "upstreamGitBlobOid": "e7a041d450338a4c58a00f915c19612344451e30",
-      "contentSha256": "f040ae6f01380ccc0bb1f6bd2ffb733fe01e11b389b444b849d12c58676707d9",
-      "byteLength": 15525
+      "upstreamGitBlobOid": "7dd8eceb528ac0afcaa00e496cfeb404989561d4",
+      "contentSha256": "da6d367be46bf4bca8509dc07ead5c655fb147c576b021484df305f918afbf04",
+      "byteLength": 22387
     },
     {
       "id": "reconciliation-report",
       "file": "source-reconciliation-report.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/source-reconciliation-report.json",
-      "upstreamGitBlobOid": "e0604368f4f74cb79d12213d2471a4b388ac49f4",
-      "contentSha256": "0a538b817e6a9f6683017be26623a5091e5769ecf5799297c4a093671446bb99",
-      "byteLength": 111315
+      "upstreamGitBlobOid": "49981c550058e5666bdc101df7a7c19230ebda35",
+      "contentSha256": "bb1b4863796c1c69ac457e9cd2df84b865c31a189dc57f5bb5bdc7cb26f30b36",
+      "byteLength": 113277
     }
   ],
   "safety": {
-    "lifecycle": "candidate",
+    "lifecycle": "shadow",
+    "readOnlyMirror": true,
     "runtimeActivated": false,
     "publisherUsesLegacySources": true,
     "activePublisherRegistry": "services/cadu-ufg-publisher/config/sources.json"

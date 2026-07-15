@@ -750,6 +750,19 @@
       if (activation.state !== 'candidate' || activation.runtimeConsumers.length !== 0) {
         fail('invalid_mirror_activation', 'activation', 'the local mirror must be a non-runtime candidate');
       }
+      var administrativeMetadata = requireObject(
+        payload.administrativeMetadata,
+        'administrativeMetadata'
+      );
+      if (administrativeMetadata.available !== false ||
+          administrativeMetadata.state !== 'unavailable' ||
+          administrativeMetadata.reason !== 'mirror_excludes_runtime_overrides') {
+        fail(
+          'invalid_mirror_administrative_metadata',
+          'administrativeMetadata',
+          'the local mirror must declare runtime overrides unavailable'
+        );
+      }
       requireString(payload.auditCutoff, 'auditCutoff');
     } else {
       if (activation.state !== 'shadow') {
@@ -818,6 +831,8 @@
 
   function buildCatalog(payload, responseMeta) {
     var projection = validateProjection(payload, responseMeta);
+    var registryOrigin = readHeader(responseMeta, 'X-Cadu-Registry-Origin') || 'cadu-api';
+    var administrativeMetadataAvailable = registryOrigin !== 'kino-campus-mirror';
     var entityIndex = Object.create(null);
     var sourceIndex = Object.create(null);
     var profileIndex = Object.create(null);
@@ -840,7 +855,7 @@
       return {
         id: source.id,
         canonicalUrl: source.canonicalUrl,
-        effectiveTier: source.effectiveTier,
+        effectiveTier: administrativeMetadataAvailable ? source.effectiveTier : null,
         reviewState: source.reviewState,
         enabled: source.enabled,
         etag: source.etag
@@ -875,6 +890,12 @@
     var sources = projection.sources.map(function (source) {
       var profileIds = source.instagramProfiles.map(function (profile) { return profile.id; });
       return Object.assign({}, source, {
+        administrativeMetadataAvailable: administrativeMetadataAvailable,
+        effectiveTier: administrativeMetadataAvailable ? source.effectiveTier : null,
+        overrideTier: administrativeMetadataAvailable ? source.overrideTier : null,
+        overrideOrigin: administrativeMetadataAvailable ? source.overrideOrigin : 'metadata_unavailable',
+        overrideUnitId: administrativeMetadataAvailable ? source.overrideUnitId : null,
+        note: administrativeMetadataAvailable ? source.note : null,
         entities: source.entityIds.map(function (entityId) { return entityReference(entityIndex[entityId]); }),
         instagramProfileIds: profileIds,
         instagramProfiles: source.instagramProfiles.map(function (profile) { return profileReference(profile); })
@@ -900,8 +921,12 @@
     var catalog = {
       registryVersion: projection.registryVersion,
       registrySha256: projection.registrySha256,
-      registryOrigin: readHeader(responseMeta, 'X-Cadu-Registry-Origin') || 'cadu-api',
+      registryOrigin: registryOrigin,
       auditCutoff: projection.auditCutoff || null,
+      administrativeMetadata: administrativeMetadataAvailable
+        ? { available: true, state: 'available', reason: null }
+        : cloneJson(projection.administrativeMetadata),
+      administrativeMetadataAvailable: administrativeMetadataAvailable,
       activation: cloneJson(projection.activation),
       responseEtag: readHeader(responseMeta, 'ETag'),
       sources: sources,

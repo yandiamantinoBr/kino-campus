@@ -7,6 +7,7 @@ jest.mock('../../server/cadu-auth.mjs', () => ({
 const { requireCaduAdmin } = require('../../server/cadu-auth.mjs');
 const {
   buildCaduSitesTargetUrl,
+  classifyRegistryMirrorFailure,
   classifyCaduSitesPath,
   default: handler,
   isStrongCaduEtag,
@@ -87,10 +88,12 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
   const originalFetch = global.fetch;
   const originalApiUrl = process.env.CADU_API_URL;
   const originalApiToken = process.env.CADU_API_TOKEN;
+  const originalLegacyMetaWriteEnabled = process.env.CADU_LEGACY_META_WRITE_ENABLED;
 
   beforeEach(() => {
     process.env.CADU_API_URL = 'https://cadu.example/';
     process.env.CADU_API_TOKEN = 'server-secret';
+    delete process.env.CADU_LEGACY_META_WRITE_ENABLED;
     global.fetch = jest.fn();
     requireCaduAdmin.mockReset();
     requireCaduAdmin.mockResolvedValue({ id: 'admin-user' });
@@ -102,6 +105,8 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     else process.env.CADU_API_URL = originalApiUrl;
     if (originalApiToken === undefined) delete process.env.CADU_API_TOKEN;
     else process.env.CADU_API_TOKEN = originalApiToken;
+    if (originalLegacyMetaWriteEnabled === undefined) delete process.env.CADU_LEGACY_META_WRITE_ENABLED;
+    else process.env.CADU_LEGACY_META_WRITE_ENABLED = originalLegacyMetaWriteEnabled;
   });
 
   test('classifies only the compatibility and registry route shapes', () => {
@@ -289,7 +294,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(options.redirect).toBe('error');
   });
 
-  test('preserves legacy GET/PATCH meta and never forwards If-Match to it', async () => {
+  test('keeps legacy GET but requires an explicit compatibility flag for legacy PATCH', async () => {
     global.fetch
       .mockResolvedValueOnce(upstreamResponse({ body: { unit_id: 'PRPG', tier: 2 } }))
       .mockResolvedValueOnce(upstreamResponse({ body: { unit_id: 'PRPG', tier: 1 } }));
@@ -306,11 +311,38 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
       headers: { 'if-match': ETAG },
       body: { tier: 1, note: 'linha 1\nlinha 2' },
     }), patchRes);
+    expect(patchRes.statusCode).toBe(405);
+    expect(patchRes.body).toEqual({ error: 'legacy_cadu_meta_writes_disabled' });
+    expect(patchRes.headers.get('allow')).toBe('GET, OPTIONS');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    process.env.CADU_LEGACY_META_WRITE_ENABLED = '1';
+    const compatibilityRes = createResponse();
+    await handler(request({
+      method: 'PATCH',
+      path: 'PRPG/meta',
+      headers: { 'if-match': ETAG },
+      body: { tier: 1, note: 'linha 1\nlinha 2' },
+    }), compatibilityRes);
     const [, patchOptions] = global.fetch.mock.calls[1];
     expect(patchOptions.method).toBe('PATCH');
     expect(patchOptions.headers['If-Match']).toBeUndefined();
     expect(JSON.parse(patchOptions.body)).toEqual({ tier: 1, note: 'linha 1\nlinha 2' });
-    expect(patchRes.headers.get('cache-control')).toBe('private, no-store');
+    expect(compatibilityRes.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  test('classifies mirror failures without logging paths, artifact bytes or secrets', () => {
+    const missing = new Error('ENOENT at C:\\private\\token=secret\\upstream-manifest.json');
+    missing.code = 'ENOENT';
+    expect(classifyRegistryMirrorFailure(missing)).toEqual({
+      reason: 'missing_artifact', errorName: 'Error', errorCode: 'ENOENT',
+    });
+    expect(JSON.stringify(classifyRegistryMirrorFailure(missing)))
+      .not.toMatch(/private|token|manifest\.json/);
+
+    expect(classifyRegistryMirrorFailure(new SyntaxError('{secret-json'))).toEqual({
+      reason: 'invalid_json', errorName: 'SyntaxError', errorCode: null,
+    });
   });
 
   test.each([
@@ -343,8 +375,13 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toMatchObject({
-      registryVersion: '2026-07-13.1',
+      registryVersion: '2026-07-13.7',
       activation: { state: 'candidate', runtimeConsumers: [] },
+      administrativeMetadata: {
+        available: false,
+        state: 'unavailable',
+        reason: 'mirror_excludes_runtime_overrides',
+      },
     });
     expect(res.body.sources.length).toBeGreaterThan(150);
     expect(res.body.entities.length).toBeGreaterThan(150);
@@ -354,7 +391,8 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
     expect(res.headers.get('x-cadu-registry-audit-cutoff')).toBe('2026-07-13');
     expect(res.headers.get('x-cadu-upstream-status')).toBe('404');
-    expect(res.headers.get('cache-control')).toBe('private, max-age=300');
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+    expect(global.fetch.mock.calls[0][1].cache).toBe('no-store');
   });
 
   test('keeps the read-only map available when registry configuration is absent', async () => {
@@ -367,6 +405,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
     expect(res.headers.get('x-cadu-upstream-status')).toBe('503');
     expect(res.body.activation).toEqual({ state: 'candidate', runtimeConsumers: [] });
+    expect(res.body.administrativeMetadata.available).toBe(false);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

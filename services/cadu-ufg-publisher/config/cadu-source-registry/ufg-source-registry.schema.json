@@ -37,14 +37,23 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generator", "seedContentSha256", "schemaContentSha256", "inputs"],
+      "required": ["generator", "seedContentSha256", "adjudicationContentSha256", "schemaContentSha256", "inputs"],
       "properties": {
         "generator": { "type": "string", "minLength": 1 },
         "seedContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "adjudicationContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "schemaContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "inputs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/provenanceInput" }
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            { "allOf": [{ "$ref": "#/$defs/provenanceInput" }, { "properties": { "id": { "const": "kino_publisher" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/provenanceInput" }, { "properties": { "id": { "const": "openclaw_curator" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/provenanceInput" }, { "properties": { "id": { "const": "instagram_scanner" } } }] },
+            { "allOf": [{ "$ref": "#/$defs/provenanceInput" }, { "properties": { "id": { "const": "admin_markdown" } } }] }
+          ],
+          "items": false
         }
       }
     },
@@ -88,6 +97,29 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "activation": {
+            "properties": { "state": { "const": "shadow" } },
+            "required": ["state"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "activation": {
+            "properties": { "runtimeConsumers": { "const": ["cadu-api"] } }
+          },
+          "webSources": {
+            "items": { "properties": { "enabled": { "const": false } } }
+          },
+          "instagramProfiles": {
+            "items": { "properties": { "enabled": { "const": false } } }
+          }
+        }
+      }
     }
   ],
   "$defs": {
@@ -101,6 +133,13 @@
     },
     "status": {
       "enum": ["confirmed", "tentative", "missing", "retired", "pending_verification"]
+    },
+    "instagramHandle": {
+      "type": "string",
+      "pattern": "^[a-z0-9._]{1,30}$",
+      "not": {
+        "enum": ["about", "accounts", "api", "challenge", "developer", "direct", "explore", "graphql", "legal", "null", "p", "privacy", "reel", "reels", "stories", "web"]
+      }
     },
     "provenanceInput": {
       "type": "object",
@@ -149,6 +188,7 @@
             "research_body",
             "extension_project",
             "media",
+            "affiliated_foundation",
             "other"
           ]
         },
@@ -175,7 +215,7 @@
       "additionalProperties": false,
       "required": ["kind", "url", "field", "observedValue", "checkedAt"],
       "properties": {
-        "kind": { "enum": ["institutional_directory", "official_page", "legacy_snapshot"] },
+        "kind": { "enum": ["institutional_directory", "official_page", "legacy_snapshot", "direct_verification"] },
         "url": { "$ref": "#/$defs/httpsUrl" },
         "field": { "type": "string", "minLength": 1 },
         "observedValue": { "type": "string", "minLength": 1 },
@@ -216,7 +256,7 @@
         "url": { "$ref": "#/$defs/httpsUrl" },
         "tier": { "type": ["integer", "null"], "enum": [null, 1, 2, 3] },
         "quick": { "type": ["boolean", "null"] },
-        "instagram": { "type": ["string", "null"] },
+        "instagram": { "anyOf": [{ "$ref": "#/$defs/instagramHandle" }, { "type": "null" }] },
         "forceDetailFetch": { "type": ["boolean", "null"] },
         "maxItems": { "type": ["integer", "null"], "minimum": 1 },
         "publisherDeclared": { "anyOf": [{ "$ref": "#/$defs/publisherDeclaration" }, { "type": "null" }] }
@@ -262,7 +302,7 @@
           "items": { "$ref": "#/$defs/httpsUrl" }
         },
         "role": { "enum": ["primary_site", "official_profile", "directory", "shared_portal", "legacy_observation"] },
-        "sourceKind": { "enum": ["weby_site", "html_page", "external_site", "mixed"] },
+        "sourceKind": { "enum": ["weby_site", "ojs_site", "html_page", "external_site", "mixed"] },
         "enabled": { "type": "boolean" },
         "baseTier": { "type": ["integer", "null"], "enum": [null, 1, 2, 3] },
         "executionModes": {
@@ -286,7 +326,7 @@
           "additionalProperties": false,
           "required": ["strategy", "maxItems", "forceDetailFetch", "dedupeTarget"],
           "properties": {
-            "strategy": { "enum": ["weby_json_then_html", "html", "external"] },
+            "strategy": { "enum": ["weby_json_then_html", "html", "external", "disabled"] },
             "maxItems": { "type": "integer", "minimum": 1, "maximum": 200 },
             "forceDetailFetch": { "type": "boolean" },
             "dedupeTarget": { "$ref": "#/$defs/httpsUrl" }
@@ -294,11 +334,11 @@
         },
         "allowPatterns": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
         "blockPatterns": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
-        "reviewState": { "enum": ["confirmed_official", "pending_review", "tier_conflict", "url_conflict", "retired"] },
+        "reviewState": { "enum": ["confirmed_official", "pending_review", "tier_conflict", "url_conflict", "quarantined", "retired"] },
         "reviewIssues": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "enum": ["tier_conflict", "url_conflict", "transport_unverified", "pending_official_evidence", "html_profile_not_feed"] }
+          "items": { "enum": ["content_integrity_violation", "http_error", "platform_misclassified", "tier_conflict", "url_conflict", "transport_unverified", "pending_official_evidence", "html_profile_not_feed", "unreachable"] }
         },
         "audit": {
           "type": "object",
@@ -349,6 +389,116 @@
               }
             }
           }
+        },
+        {
+          "if": { "properties": { "reviewState": { "const": "quarantined" } } },
+          "then": {
+            "properties": {
+              "enabled": { "const": false },
+              "executionModes": { "maxItems": 0 },
+              "reviewIssues": { "minItems": 1 },
+              "collection": {
+                "properties": { "strategy": { "const": "disabled" } }
+              },
+              "audit": {
+                "properties": {
+                  "evidence": {
+                    "contains": {
+                      "properties": { "kind": { "const": "direct_verification" } },
+                      "required": ["kind"]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "sourceKind": { "const": "ojs_site" } } },
+          "then": {
+            "properties": {
+              "endpoints": { "properties": { "html": true }, "required": ["html"], "maxProperties": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": { "status": { "enum": ["verified_200", "verified_redirect"] } },
+                "required": ["status"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transport": {
+                "properties": {
+                  "finalUrl": { "$ref": "#/$defs/httpsUrl" },
+                  "httpStatus": { "const": 200 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": { "status": { "const": "http_error" } },
+                "required": ["status"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transport": {
+                "properties": {
+                  "finalUrl": { "$ref": "#/$defs/httpsUrl" },
+                  "httpStatus": { "type": "integer", "minimum": 400, "maximum": 599 },
+                  "note": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": { "status": { "enum": ["pending_verification", "unreachable", "tls_error"] } },
+                "required": ["status"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transport": {
+                "properties": {
+                  "finalUrl": { "type": "null" },
+                  "httpStatus": { "type": "null" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "properties": { "status": { "enum": ["unreachable", "tls_error"] } },
+                "required": ["status"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transport": {
+                "properties": { "note": { "type": "string", "minLength": 1 } }
+              }
+            }
+          }
         }
       ]
     },
@@ -358,23 +508,25 @@
       "required": ["inventory", "handle", "sourceId"],
       "properties": {
         "inventory": { "enum": ["kino_publisher", "openclaw_curator", "admin_markdown", "instagram_scanner", "official_ufg_page"] },
-        "handle": { "type": "string", "pattern": "^[a-z0-9._]+$" },
+        "handle": { "$ref": "#/$defs/instagramHandle" },
         "sourceId": { "type": ["string", "null"] }
       }
     },
     "instagramProfile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "handle", "profileUrl", "aliases", "entityIds", "shared", "enabled", "status", "executionModes", "audit", "observations"],
+      "required": ["id", "handle", "profileUrl", "aliases", "entityIds", "shared", "enabled", "status", "identityStatus", "supersededBy", "executionModes", "audit", "observations"],
       "properties": {
         "id": { "type": "string", "pattern": "^ig\\.[a-z0-9][a-z0-9.-]*$" },
-        "handle": { "type": "string", "pattern": "^[a-z0-9._]+$" },
-        "profileUrl": { "type": "string", "pattern": "^https://www\\.instagram\\.com/[a-z0-9._]+/$" },
-        "aliases": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9._]+$" } },
+        "handle": { "$ref": "#/$defs/instagramHandle" },
+        "profileUrl": { "type": "string", "pattern": "^https://www\\.instagram\\.com/[a-z0-9._]{1,30}/$" },
+        "aliases": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/instagramHandle" } },
         "entityIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^ufg\\.[a-z0-9][a-z0-9.-]*$" } },
         "shared": { "type": "boolean" },
         "enabled": { "type": "boolean" },
         "status": { "$ref": "#/$defs/status" },
+        "identityStatus": { "enum": ["unverified", "officially_declared", "reassigned"] },
+        "supersededBy": { "type": ["string", "null"], "pattern": "^ig\\.[a-z0-9][a-z0-9.-]*$" },
         "executionModes": { "type": "array", "uniqueItems": true, "items": { "enum": ["full", "ig-only"] } },
         "audit": {
           "type": "object",
@@ -404,6 +556,54 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": { "properties": { "identityStatus": { "const": "officially_declared" } } },
+          "then": {
+            "properties": {
+              "audit": {
+                "properties": {
+                  "evidence": {
+                    "contains": {
+                      "properties": {
+                        "kind": { "const": "official_page" },
+                        "field": { "const": "instagram_handle" }
+                      },
+                      "required": ["kind", "field"]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "identityStatus": { "const": "reassigned" } } },
+          "then": {
+            "properties": {
+              "status": { "const": "retired" },
+              "supersededBy": { "type": "string" },
+              "executionModes": { "maxItems": 0 },
+              "audit": {
+                "properties": {
+                  "evidence": {
+                    "contains": {
+                      "properties": {
+                        "kind": { "const": "official_page" },
+                        "field": { "const": "instagram_identity_transition" }
+                      },
+                      "required": ["kind", "field"]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": { "supersededBy": { "type": "null" } }
           }
         }
       ]

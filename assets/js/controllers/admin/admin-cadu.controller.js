@@ -40,13 +40,16 @@
     feedHasMore: false,
     feedLatestAt: null,
     feedMeta: null,
+    feedRequestGeneration: 0,
+    feedRequestController: null,
+    feedLoading: false,
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
     sitesFilter: { q: '', tier: '', ig: '' },
     feedFilter: { q: '' },
     currentTab: 'sites',
     apiHealthy: false,
-    publishingKey: null,  // chave do site sendo publicado (evita duplo-clique)
+    publishingKey: null,  // chave da ação editorial em curso (evita duplo-clique)
     pipelineActive: null,
     pipelineStages: [],
     pipelineHistory: [],
@@ -56,6 +59,8 @@
     pipelineSnapshotExpiresAt: 0,
     pipelineRequestGeneration: 0,
     pipelineRefreshPromise: null,
+    pipelineExpiryTimer: null,
+    pipelineExpiryGeneration: 0,
     pipelineStartPending: false,
     pipelineHealth: null,
     lastVersion: null
@@ -108,10 +113,15 @@
     pill.innerHTML = html;
   }
 
-  function showCaduError(msg) {
+  function showCaduError(msg, tone) {
     var wrap = $('#cadu-error');
     if (!wrap) return;
+    var normalizedTone = tone === 'success' || tone === 'info' ? tone : 'error';
     wrap.style.display = 'block';
+    wrap.classList.remove('is-error', 'is-success', 'is-info');
+    wrap.classList.add('is-' + normalizedTone);
+    wrap.setAttribute('role', normalizedTone === 'error' ? 'alert' : 'status');
+    wrap.setAttribute('aria-live', normalizedTone === 'error' ? 'assertive' : 'polite');
     // Error strings can contain upstream/operator-controlled data. Keep this
     // surface text-only; callers that need richer UI must build explicit DOM.
     wrap.textContent = String(msg == null ? '' : msg);
@@ -122,6 +132,9 @@
     if (!wrap) return;
     wrap.style.display = 'none';
     wrap.textContent = '';
+    wrap.classList.remove('is-error', 'is-success', 'is-info');
+    wrap.setAttribute('role', 'status');
+    wrap.setAttribute('aria-live', 'polite');
   }
 
   function showAccessDenied(msg) {
@@ -331,13 +344,31 @@
   // Health
   // ============================================================
 
+  function openclawReachableFromContext(context) {
+    if (!context || typeof context !== 'object' || Array.isArray(context)) return null;
+    var canonical = context.cadu_api;
+    if (canonical && typeof canonical === 'object' && !Array.isArray(canonical) &&
+        typeof canonical.openclaw_reachable === 'boolean') {
+      return canonical.openclaw_reachable;
+    }
+    var legacy = context.openclaw;
+    if (legacy && typeof legacy === 'object' && !Array.isArray(legacy) &&
+        typeof legacy.openclaw_reachable === 'boolean') {
+      return legacy.openclaw_reachable;
+    }
+    return null;
+  }
+
   async function checkHealth() {
     var pill = $('#cadu-status-pill');
     var contextPill = $('#cadu-context-pill');
     var versionPill = $('#cadu-version-pill');
     var versionText = $('#cadu-version-text');
     try {
-      var res = await fetch('/api/cadu/health', { headers: { Accept: 'application/json' } });
+      var res = await fetch('/api/cadu/health', {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
       var data = await res.json();
       if (res.ok && data && data.status === 'ok') {
         state.apiHealthy = true;
@@ -357,8 +388,9 @@
           if (ctx && !ctx.__error) {
             state.openclawContext = ctx;
             if (contextPill) {
+              var openclawReachable = openclawReachableFromContext(ctx);
               contextPill.style.display = '';
-              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (ctx.openclaw.openclaw_reachable ? 'OpenClaw OK' : 'OpenClaw ?');
+              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (openclawReachable === true ? 'OpenClaw OK' : 'OpenClaw ?');
             }
           } else {
             state.openclawContext = null;
@@ -366,6 +398,7 @@
           }
         } catch (_) {
           state.openclawContext = null;
+          if (contextPill) contextPill.style.display = 'none';
         }
       } else {
         state.apiHealthy = false;
@@ -375,6 +408,7 @@
         $('#kpi-api-detail').textContent = (data && data.error) || 'ver logs';
         if (contextPill) contextPill.style.display = 'none';
         if (versionPill) versionPill.style.display = 'none';
+        hideTelegramHeroStatus();
       }
     } catch (err) {
       state.apiHealthy = false;
@@ -383,6 +417,7 @@
       $('#kpi-api-detail').textContent = 'fetch falhou';
       if (contextPill) contextPill.style.display = 'none';
       if (versionPill) versionPill.style.display = 'none';
+      hideTelegramHeroStatus();
     }
   }
 
@@ -457,6 +492,107 @@
     }).join(' / ');
   }
 
+  var CATALOG_LABELS_PT_BR = Object.freeze({
+    confirmed: 'Confirmado',
+    confirmed_official: 'Identidade oficial confirmada',
+    reviewed: 'Revisado',
+    pending: 'Pendente',
+    pending_review: 'Revisão pendente',
+    pending_verification: 'Verificação pendente',
+    tentative: 'Tentativo',
+    missing: 'Não informado',
+    retired: 'Aposentado',
+    unknown: 'Não classificado',
+    quarantined: 'Em quarentena',
+    tier_conflict: 'Conflito de prioridade',
+    url_conflict: 'URL canônica pendente de decisão',
+    transport_unverified: 'Transporte ainda não verificado',
+    pending_official_evidence: 'Evidência oficial pendente',
+    html_profile_not_feed: 'Página HTML sem feed estruturado',
+    http_error: 'Erro HTTP na verificação',
+    unreachable: 'Origem indisponível',
+    content_integrity_violation: 'Falha de integridade do conteúdo',
+    platform_misclassified: 'Plataforma classificada incorretamente',
+    stable: 'Ajuste administrativo estável',
+    base: 'Base canônica',
+    legacy_inherited: 'Ajuste herdado do mapa legado',
+    collision_evidence: 'Evidência de colisão',
+    weby_site: 'Site institucional Weby',
+    ojs_site: 'Portal de periódicos OJS',
+    html_page: 'Página institucional HTML',
+    external_site: 'Site institucional externo',
+    mixed: 'Fonte institucional mista',
+    primary_site: 'Site institucional principal',
+    official_profile: 'Perfil institucional oficial',
+    legacy_observation: 'Observação legada',
+    university: 'Universidade',
+    pro_reitoria: 'Pró-reitoria',
+    secretaria: 'Secretaria',
+    academic_unit: 'Unidade acadêmica',
+    administrative_body: 'Órgão administrativo',
+    supplementary_body: 'Órgão suplementar',
+    affiliated_foundation: 'Fundação vinculada',
+    graduate_program: 'Programa de pós-graduação',
+    campus: 'Campus',
+    other: 'Outra entidade',
+    shadow: 'Modo de validação',
+    active: 'Ativo',
+    complete: 'Cobertura completa',
+    partial: 'Cobertura parcial',
+    no_source: 'Sem fonte associada',
+    collision: 'Colisão de identidades',
+    ambiguous: 'Associação ambígua',
+    orphan: 'Registro legado sem associação',
+    stable_source_id: 'ID canônico estável',
+    admin_observation: 'Observação administrativa legada',
+    entity_identity: 'Identidade da entidade',
+    metadata_unavailable: 'Metadados administrativos indisponíveis',
+    mirror_excludes_runtime_overrides: 'Metadados administrativos não incluídos no espelho',
+    daily: 'Execução diária',
+    full: 'Execução completa',
+    'ig-only': 'Somente Instagram',
+    quick: 'Execução rápida'
+  });
+
+  function catalogLabel(value) {
+    var code = String(value == null ? '' : value).trim();
+    if (!code) return 'Não informado';
+    if (CATALOG_LABELS_PT_BR[code]) return CATALOG_LABELS_PT_BR[code];
+    var humanized = code.replace(/[_-]+/g, ' ').trim();
+    return humanized.charAt(0).toUpperCase() + humanized.slice(1);
+  }
+
+  function formatCampusLabel(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return 'Campus não informado';
+    raw = raw.replace(/^c[aâ]mpus\s+/i, '').trim();
+    var key = raw.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    var officialLabels = {
+      aparecida_de_goiania: 'Aparecida de Goiânia',
+      caldas_novas: 'Caldas Novas',
+      cidade_de_goias: 'Cidade de Goiás',
+      cidade_ocidental: 'Cidade Ocidental',
+      colemar_natal_e_silva: 'Colemar Natal e Silva',
+      firminopolis: 'Firminópolis',
+      goiania: 'Goiânia',
+      goias: 'Goiás',
+      samambaia: 'Samambaia'
+    };
+    if (officialLabels[key]) return 'Campus ' + officialLabels[key];
+    var words = raw.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').split(' ');
+    var lowerWords = { da: true, de: true, do: true, das: true, dos: true, e: true };
+    var display = words.map(function (word, index) {
+      var lower = word.toLowerCase();
+      if (index > 0 && lowerWords[lower]) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join(' ');
+    return 'Campus ' + display;
+  }
+
   function sourceInstagramStatus(source) {
     var profiles = (source && source.instagramProfiles) || [];
     if (!profiles.length || profiles.every(function (profile) { return profile.statusGroup === 'missing'; })) return 'missing';
@@ -469,21 +605,138 @@
     var profiles = source.instagramProfiles || [];
     var publishProfile = registryModel().selectUnambiguousConfirmedInstagram(profiles);
     var firstEntity = source.entities && source.entities[0];
+    var administrativeMetadataAvailable = source.administrativeMetadataAvailable !== false;
     return {
       sourceId: source.id,
       name: sourceName(source),
-      tier: source.effectiveTier,
+      tier: administrativeMetadataAvailable ? source.effectiveTier : null,
       category: firstEntity ? firstEntity.kind : source.sourceKind,
       url: source.canonicalUrl,
       instagram: publishProfile ? publishProfile.handle : '',
       instagramContext: profiles.map(function (profile) {
-        return '@' + profile.handle + ' (' + profile.status + ')';
+        return '@' + profile.handle + ' (' + catalogLabel(profile.status) + ')';
       }).join(', '),
       instagram_status: sourceInstagramStatus(source),
-      note: source.note,
-      override_origin: source.overrideOrigin,
-      collision: source.collision,
+      note: administrativeMetadataAvailable ? source.note : null,
+      override_origin: administrativeMetadataAvailable ? source.overrideOrigin : 'metadata_unavailable',
+      collision: administrativeMetadataAvailable ? source.collision : false,
+      administrativeMetadataAvailable: administrativeMetadataAvailable,
       registrySource: source
+    };
+  }
+
+  function sourceReviewCanonicalInstagram(source) {
+    var profiles = source && Array.isArray(source.instagramProfiles) ? source.instagramProfiles : [];
+    var pending = profiles.some(function (profile) {
+      return profile && (profile.status === 'tentative' || profile.status === 'pending_verification');
+    });
+    if (pending) return { ok: false, handle: null, reason: 'Há perfil do Instagram aguardando verificação.' };
+
+    var confirmedExclusive = profiles.filter(function (profile) {
+      return profile && profile.status === 'confirmed' &&
+        profile.viaSourceObservation === true && profile.shared !== true;
+    });
+    if (confirmedExclusive.length > 1) {
+      return { ok: false, handle: null, reason: 'Há mais de um Instagram direto e exclusivo confirmado para a mesma fonte.' };
+    }
+    if (confirmedExclusive.length === 1) return { ok: true, handle: confirmedExclusive[0].handle, reason: '' };
+    // Perfis confirmados compartilhados/indiretos continuam visíveis como
+    // evidência do catálogo, mas não são enviados como identidade exclusiva.
+    return { ok: true, handle: null, reason: '' };
+  }
+
+  function sourceReviewCanonicalUrl(value) {
+    try {
+      var parsed = new URL(String(value || '').trim());
+      if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password) return '';
+      return parsed.toString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function sourceReviewBlockingIssues(source) {
+    // These describe collection/transport capability and remain visible to the
+    // reviewer, but they do not make a confirmed institutional identity unsafe
+    // to place in the dedicated (non-publishing) review queue.
+    var informational = ['transport_unverified', 'html_profile_not_feed'];
+    return (source && Array.isArray(source.reviewIssues) ? source.reviewIssues : [])
+      .filter(function (issue) { return informational.indexOf(issue) === -1; });
+  }
+
+  function sourceReviewEligibility(source, draft, saving) {
+    if (!source || typeof source !== 'object') {
+      return { allowed: false, reason: 'Fonte canônica ausente.', instagramHandle: null };
+    }
+    if (source.administrativeMetadataAvailable === false) {
+      return { allowed: false, reason: 'Os metadados administrativos não estão incluídos neste espelho.', instagramHandle: null };
+    }
+    if (source.role !== 'primary_site') {
+      return { allowed: false, reason: 'A ação aceita somente a fonte primária institucional.', instagramHandle: null };
+    }
+    if (['weby_site', 'ojs_site', 'html_page', 'external_site', 'mixed'].indexOf(source.sourceKind) < 0) {
+      return { allowed: false, reason: 'O tipo da fonte primária não é elegível para revisão institucional.', instagramHandle: null };
+    }
+    if (source.overrideOrigin !== 'stable' || source.overrideUnitId !== source.id) {
+      return { allowed: false, reason: 'Crie primeiro um ajuste administrativo estável com identidade canônica.', instagramHandle: null };
+    }
+    if (source.collision) {
+      return { allowed: false, reason: 'Resolva a colisão de identidades antes de enviar.', instagramHandle: null };
+    }
+    if (sourceReviewBlockingIssues(source).length) {
+      return { allowed: false, reason: 'Resolva as pendências críticas listadas na revisão.', instagramHandle: null };
+    }
+    if (['reviewed', 'confirmed_official'].indexOf(source.reviewState) < 0) {
+      return { allowed: false, reason: 'A fonte ainda não foi confirmada como oficial.', instagramHandle: null };
+    }
+    if (!sourceReviewCanonicalUrl(source.canonicalUrl)) {
+      return { allowed: false, reason: 'A URL institucional canônica não é HTTPS.', instagramHandle: null };
+    }
+    if (!/^[a-f0-9]{64}$/.test(String(source.revision || '')) ||
+        !/^[a-f0-9]{64}$/.test(String(source.registrySha256 || ''))) {
+      return { allowed: false, reason: 'A revisão não está vinculada a uma versão canônica íntegra.', instagramHandle: null };
+    }
+    if (saving) {
+      return { allowed: false, reason: 'Aguarde o salvamento do ajuste administrativo antes de enviar.', instagramHandle: null };
+    }
+    if (draft && draft.conflict) {
+      return { allowed: false, reason: 'Resolva o conflito do rascunho antes de enviar.', instagramHandle: null };
+    }
+    if (draft && sourceDraftIsDirty(source, draft)) {
+      return { allowed: false, reason: 'Salve ou descarte o rascunho antes de enviar.', instagramHandle: null };
+    }
+    var instagram = sourceReviewCanonicalInstagram(source);
+    if (!instagram.ok) {
+      return { allowed: false, reason: instagram.reason, instagramHandle: null };
+    }
+    return { allowed: true, reason: '', instagramHandle: instagram.handle };
+  }
+
+  function sourceReviewIdempotencyKey(source) {
+    return 'map-ufg-review:' + source.id + ':' + source.revision;
+  }
+
+  function buildSourceReviewRequest(source, draft, saving) {
+    var eligibility = sourceReviewEligibility(source, draft, saving);
+    if (!eligibility.allowed) throw new Error(eligibility.reason || 'Fonte não elegível para revisão.');
+    var firstEntity = source.entities && source.entities[0];
+    var canonicalUrl = sourceReviewCanonicalUrl(source.canonicalUrl);
+    return {
+      action: 'review',
+      intent: 'review',
+      source_id: source.id,
+      source_url: canonicalUrl,
+      content_url: canonicalUrl,
+      instagram_handle: eligibility.instagramHandle || null,
+      content_kind: 'institutional_site',
+      idempotency_key: sourceReviewIdempotencyKey(source),
+      source_revision: source.revision,
+      registry_sha256: source.registrySha256,
+      name: sourceName(source),
+      note: source.note == null ? null : source.note,
+      tier: source.effectiveTier == null ? null : source.effectiveTier,
+      category: firstEntity ? firstEntity.kind : source.sourceKind,
+      source: 'cadu-admin-map-ufg'
     };
   }
 
@@ -589,7 +842,7 @@
     setRegistryStatus(
       'error',
       'Catálogo canônico indisponível — mapa legado somente leitura',
-      'Motivo: ' + reason + '. Overrides estão bloqueados para evitar gravar por nomes ambíguos.'
+      'Motivo: ' + reason + '. Escritas estão bloqueadas porque a API não confirmou o catálogo canônico e suas revisões estáveis.'
     );
     renderCatalogSummary();
     return true;
@@ -603,7 +856,7 @@
     state.catalogMode = 'loading';
     state.registryWritable = false;
     state.registryReadiness = null;
-    setRegistryStatus('loading', 'Validando catálogo canônico', 'Conferindo hash, ETag, IDs, associações e estado shadow.');
+    setRegistryStatus('loading', 'Validando catálogo canônico', 'Conferindo hash, ETag, IDs, associações e modo de validação.');
     var registryEnvelope = null;
     try {
       var readinessEnvelopePromise = apiFetchResponse(
@@ -628,6 +881,9 @@
       state.sourceDrafts = retainCatalogDrafts(catalog, reloadDrafts);
       var view = $('#sites-view');
       if (view) { view.disabled = false; view.value = state.sitesView; }
+      // The bundled artifact was audited upstream in shadow by cadu-api, but
+      // the KinoCampus fallback deliberately projects it as candidate with no
+      // runtime consumers. Its origin header is therefore a hard write gate.
       var usingMirror = catalog.registryOrigin === 'kino-campus-mirror';
       if (usingMirror) {
         var upstreamMirrorStatus = registryEnvelope.headers.upstreamStatus
@@ -635,16 +891,16 @@
           : 'rota canônica ainda não disponível no backend atual';
         setRegistryStatus(
           'fallback',
-          'Espelho canônico local validado — somente leitura',
+          'Espelho institucional auditado — metadados administrativos indisponíveis',
           catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · ' +
           formatAuditCutoff(catalog.auditCutoff) + ' · ' + upstreamMirrorStatus +
-          '. Sites e perfis podem ser consultados; overrides permanecem bloqueados.'
+          '. Sites e perfis podem ser consultados. Prioridades efetivas, notas e ajustes administrativos do banco não fazem parte deste espelho e não serão exibidos.'
         );
       } else {
         setRegistryStatus(
           'loading',
           'Catálogo canônico validado; verificando escrita',
-          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · overrides permanecem bloqueados até a prova CAS.'
+          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · ajustes administrativos permanecem bloqueados até a prova CAS.'
         );
       }
       renderCatalogSummary();
@@ -678,14 +934,14 @@
       } else if (state.registryWritable) {
         setRegistryStatus(
           'ok',
-          'Catálogo canônico validado em modo shadow',
+          'Catálogo canônico validado em modo de validação',
           catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · contrato CAS pronto; fontes e perfis permanecem desativados para execução.'
         );
       } else {
         setRegistryStatus(
           'fallback',
-          'Catálogo canônico legível; overrides em modo somente leitura',
-          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · readiness/CAS não foi comprovado. Nenhuma escrita foi habilitada.'
+          'Catálogo canônico legível; ajustes administrativos em modo somente leitura',
+          catalog.registryVersion + ' · SHA ' + catalog.registrySha256.slice(0, 12) + '… · a prontidão de escrita (readiness/CAS) não foi comprovada. Nenhuma escrita foi habilitada.'
         );
       }
       renderCatalogSummary();
@@ -732,13 +988,26 @@
 
   function updateSitesFilterControls() {
     var sourceView = state.sitesView === 'sources';
+    var administrativeMetadataAvailable = !state.sourceCatalog || state.sourceCatalog.administrativeMetadataAvailable !== false;
     var tier = $('#sites-tier');
     var instagram = $('#sites-ig');
     var origin = $('#sites-origin');
     var pdf = $('#sites-export-pdf');
-    if (tier) tier.disabled = state.catalogMode === 'registry' ? !sourceView : false;
+    if (tier) {
+      tier.disabled = state.catalogMode === 'registry' ? (!sourceView || !administrativeMetadataAvailable) : false;
+      if (!administrativeMetadataAvailable) {
+        tier.value = '';
+        state.sitesFilter.tier = '';
+      }
+    }
     if (instagram) instagram.disabled = state.catalogMode === 'registry' && state.sitesView === 'deferred';
-    if (origin) origin.disabled = state.catalogMode !== 'registry' || !sourceView;
+    if (origin) {
+      origin.disabled = state.catalogMode !== 'registry' || !sourceView || !administrativeMetadataAvailable;
+      if (!administrativeMetadataAvailable) {
+        origin.value = '';
+        state.sitesOrigin = '';
+      }
+    }
     if (pdf) {
       pdf.disabled = state.catalogMode === 'registry' && !sourceView;
       pdf.title = pdf.disabled ? 'PDF disponível na visão Fontes web' : 'Exportar mapa de sites em PDF';
@@ -750,15 +1019,16 @@
     updateSitesFilterControls();
     if (state.catalogMode === 'registry' && state.sourceCatalog) {
       var filters = { view: state.sitesView, query: f.q || '' };
-      if (state.sitesView === 'sources' && f.tier) filters.tier = f.tier;
+      var administrativeMetadataAvailable = state.sourceCatalog.administrativeMetadataAvailable !== false;
+      if (state.sitesView === 'sources' && administrativeMetadataAvailable && f.tier) filters.tier = f.tier;
       if (state.sitesView === 'instagram' && f.ig) {
         filters.status = f.ig === 'pending_verification' ? 'pending' : f.ig;
       }
       var rows = registryModel().filterCatalog(state.sourceCatalog, filters);
       if (state.sitesView === 'sources') {
         rows = rows.filter(function (source) {
-          if (state.sitesOrigin === 'collision_evidence' && !source.collision) return false;
-          if (state.sitesOrigin && state.sitesOrigin !== 'collision_evidence' && source.overrideOrigin !== state.sitesOrigin) return false;
+          if (administrativeMetadataAvailable && state.sitesOrigin === 'collision_evidence' && !source.collision) return false;
+          if (administrativeMetadataAvailable && state.sitesOrigin && state.sitesOrigin !== 'collision_evidence' && source.overrideOrigin !== state.sitesOrigin) return false;
           return profilesMatchFilter(source.instagramProfiles, f.ig);
         });
         state.filteredSites = rows.map(sourceAsLegacySite);
@@ -797,7 +1067,9 @@
   function entityChips(entities) {
     if (!entities || !entities.length) return '<span class="kc-cadu-muted">sem entidade</span>';
     return '<div class="kc-cadu-map-list">' + entities.map(function (entity) {
-      return '<span class="kc-cadu-map-chip" title="' + escapeHtml(entity.name) + '">' + escapeHtml(entity.acronym || entity.name) + '</span>';
+      var acronym = entity.acronym ? '<strong>' + escapeHtml(entity.acronym) + '</strong>' : '';
+      var name = '<strong class="kc-cadu-entity-name">' + escapeHtml(entity.name) + '</strong>';
+      return '<span class="kc-cadu-map-chip" title="' + escapeHtml(entity.name) + '">' + acronym + name + '</span>';
     }).join('') + '</div>';
   }
 
@@ -808,7 +1080,7 @@
         ? 'associação direta observada nesta fonte'
         : 'associação indireta via entidade' + (profile.viaEntityIds && profile.viaEntityIds.length ? ': ' + profile.viaEntityIds.join(', ') : '');
       if (profile.shared) provenance += ' · perfil compartilhado';
-      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(profile.status, profile.statusGroup)
+      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(catalogLabel(profile.status), profile.statusGroup)
         + '<small class="kc-cadu-source-id">' + escapeHtml(provenance) + '</small></div>';
     }).join('');
   }
@@ -837,10 +1109,10 @@
   function tierOptionsHtml(draft, firstStable) {
     var html = '';
     var hasTierChoice = !firstStable || draft.tierTouched;
-    if (firstStable && !draft.tierTouched) html += '<option value="__unset__" selected>Escolha explicitamente…</option>';
-    html += '<option value=""' + (hasTierChoice && draft.tier === null ? ' selected' : '') + '>Herdar tier base (sem override)</option>';
+    if (firstStable && !draft.tierTouched) html += '<option value="__unset__" selected>Escolha a prioridade explicitamente…</option>';
+    html += '<option value=""' + (hasTierChoice && draft.tier === null ? ' selected' : '') + '>Herdar prioridade base (sem ajuste)</option>';
     [1, 2, 3].forEach(function (tier) {
-      html += '<option value="' + tier + '"' + (hasTierChoice && draft.tier === tier ? ' selected' : '') + '>Tier ' + tier + '</option>';
+      html += '<option value="' + tier + '"' + (hasTierChoice && draft.tier === tier ? ' selected' : '') + '>Prioridade T' + tier + '</option>';
     });
     return html;
   }
@@ -896,13 +1168,32 @@
     var row = document.querySelector('tr[data-source-id="' + source.id + '"]');
     var button = row && row.querySelector('.kc-cadu-save-source-btn');
     if (button) button.disabled = !state.registryWritable || Boolean(state.sourceSaveChains[source.id]) || !sourceDraftCanSave(source, draft);
+    updateSourceReviewButton(source, draft);
+  }
+
+  function updateSourceReviewButton(source, draft) {
+    var row = document.querySelector('tr[data-source-id="' + source.id + '"]');
+    var button = row && row.querySelector('.kc-cadu-publish-btn[data-source-id="' + source.id + '"]');
+    if (!button) return;
+    var eligibility = sourceReviewEligibility(
+      source,
+      draft,
+      Boolean(state.sourceSaveChains[source.id])
+    );
+    button.disabled = !eligibility.allowed;
+    button.title = eligibility.allowed
+      ? 'Cria uma sugestão durável pendente para revisão; não publica automaticamente.'
+      : 'Revisão bloqueada: ' + eligibility.reason;
+    button.classList.remove('is-ok', 'is-pending', 'is-err');
+    button.innerHTML = '<i class="fas ' + (eligibility.allowed ? 'fa-clipboard-check' : 'fa-lock') + '"></i><span>' +
+      (eligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada') + '</span>';
   }
 
   function sourceConflictHtml(source, draft) {
     if (!draft.conflict) return '';
     var fields = Object.keys(sourceDraftChanges(source, draft));
-    var serverTier = source.overrideTier == null ? 'herdar base' : 'Tier ' + source.overrideTier;
-    var draftTier = draft.tier == null ? 'herdar base' : 'Tier ' + draft.tier;
+    var serverTier = source.overrideTier == null ? 'herdar prioridade base' : 'Prioridade T' + source.overrideTier;
+    var draftTier = draft.tier == null ? 'herdar prioridade base' : 'Prioridade T' + draft.tier;
     var serverNote = source.note == null ? 'sem nota' : source.note;
     var draftNote = normalizedDraftNote(draft.note) == null ? 'sem nota' : draft.note;
     return '<div class="kc-cadu-conflict-warning">'
@@ -914,50 +1205,67 @@
   }
 
   function renderSourceRows(rows) {
-    setSitesTableHeaders(['Tier', 'Entidade / fonte', 'Site institucional', 'Instagram associado', 'Revisão', 'Override / observação', 'Ações']);
+    setSitesTableHeaders(['Prioridade', 'Entidade / fonte', 'Site institucional', 'Instagram associado', 'Revisão', 'Ajuste administrativo / observação', 'Ações']);
     return rows.map(function (source) {
       var site = sourceAsLegacySite(source);
-      var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+      var administrativeMetadataAvailable = source.administrativeMetadataAvailable !== false;
+      var stable = administrativeMetadataAvailable && source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
       var draft = ensureSourceDraft(source);
       var saving = Boolean(state.sourceSaveChains[source.id]);
       var readOnly = !state.registryWritable;
       var busy = readOnly || saving;
       var canSave = sourceDraftCanSave(source, draft);
-      var inherited = !stable && source.note
+      var inherited = administrativeMetadataAvailable && !stable && source.note
         ? '<div class="kc-cadu-inherited-warning"><strong>Nota herdada (não será copiada):</strong> ' + escapeHtml(source.note) + '</div>'
         : '';
-      var conflict = sourceConflictHtml(source, draft);
-      var review = badgeHtml(source.reviewState, source.reviewState)
+      var conflict = administrativeMetadataAvailable ? sourceConflictHtml(source, draft) : '';
+      var blockingIssues = sourceReviewBlockingIssues(source);
+      var informationalIssues = source.reviewIssues.filter(function (issue) {
+        return blockingIssues.indexOf(issue) === -1;
+      });
+      var review = badgeHtml(catalogLabel(source.reviewState), source.reviewState)
         + '<span class="kc-cadu-source-id">ETag ' + escapeHtml(source.revision.slice(0, 12)) + '…</span>'
-        + (source.collision ? '<div class="kc-cadu-review-issues"><strong>Colisão legada:</strong> o override estável prevalece, mas as linhas concorrentes continuam em Pendências.</div>' : '')
-        + (source.reviewIssues.length ? '<div class="kc-cadu-review-issues">' + source.reviewIssues.map(escapeHtml).join('<br>') + '</div>' : '');
-      var actions = '<button type="button" class="kc-cadu-publish-btn" disabled title="Publicação bloqueada: esta fonte pertence ao catálogo shadow desativado"><i class="fas fa-lock"></i><span>Shadow</span></button>'
+        + (source.collision ? '<div class="kc-cadu-review-issues"><strong>Colisão legada:</strong> o ajuste estável prevalece, mas as linhas concorrentes continuam em Pendências.</div>' : '')
+        + (blockingIssues.length ? '<div class="kc-cadu-review-issues"><strong>Pendência crítica:</strong><br>' + blockingIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '')
+        + (informationalIssues.length ? '<div class="kc-cadu-review-issues"><strong>Observação informativa:</strong><br>' + informationalIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '');
+      var reviewEligibility = sourceReviewEligibility(source, draft, saving);
+      var reviewTitle = reviewEligibility.allowed
+        ? 'Cria uma sugestão durável pendente para revisão; não publica automaticamente.'
+        : 'Revisão bloqueada: ' + reviewEligibility.reason;
+      var actions = '<button type="button" class="kc-cadu-publish-btn" data-source-id="' + escapeHtml(source.id) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewEligibility.allowed ? '' : ' disabled') + '>'
+        + '<i class="fas ' + (reviewEligibility.allowed ? 'fa-clipboard-check' : 'fa-lock') + '"></i><span>' + (reviewEligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada') + '</span></button>'
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name) + '" data-ask-url="' + escapeHtml(site.url) + '" data-ask-instagram="' + escapeHtml(site.instagramContext || 'sem perfil associado') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '" title="Enviar todas as associações e seus status ao chat Cadu"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
+      var priorityCell = administrativeMetadataAvailable
+        ? '<strong>T' + escapeHtml(source.effectiveTier == null ? '—' : source.effectiveTier) + '</strong><small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : source.baseTier) + ' · ' + escapeHtml(catalogLabel(source.overrideOrigin)) + '</small>'
+        : '<strong>—</strong><small class="kc-cadu-source-id">metadados administrativos indisponíveis no espelho</small>';
+      var administrativeEditor = administrativeMetadataAvailable
+        ? inherited + conflict
+          + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Prioridade estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
+          + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" aria-label="Nota administrativa de ' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota administrativa explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
+          + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar ajuste' : 'Criar ajuste estável'))) + '</button>'
+        : '<div class="kc-cadu-inherited-warning"><strong>Não incluídos neste espelho.</strong><br>Prioridade efetiva, nota e origem do ajuste administrativo só aparecem quando a rota canônica do Cadu está disponível.</div>';
       return '<tr data-source-id="' + escapeHtml(source.id) + '">'
-        + '<td><strong>T' + escapeHtml(source.effectiveTier == null ? '—' : source.effectiveTier) + '</strong><small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : source.baseTier) + ' · ' + escapeHtml(source.overrideOrigin) + '</small></td>'
+        + '<td>' + priorityCell + '</td>'
         + '<td>' + entityChips(source.entities) + '<code class="kc-cadu-source-id">' + escapeHtml(source.id) + '</code></td>'
-        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(source.sourceKind) + ' · shadow</small></td>'
+        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(catalogLabel(source.sourceKind)) + ' · ' + escapeHtml(catalogLabel('shadow')) + '</small></td>'
         + '<td>' + profileLinks(source.instagramProfiles) + '</td>'
         + '<td>' + review + '</td>'
-        + '<td><div class="kc-cadu-note-cell">' + inherited + conflict
-        + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Tier estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
-        + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota estável explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
-        + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar override' : 'Criar override estável'))) + '</button></div></td>'
+        + '<td><div class="kc-cadu-note-cell">' + administrativeEditor + '</div></td>'
         + '<td style="white-space:nowrap;">' + actions + '</td></tr>';
     }).join('');
   }
 
   function renderEntityRows(rows) {
-    setSitesTableHeaders(['Entidade UFG', 'Tipo / campus', 'Sites associados', 'Instagram', 'Cobertura']);
+    setSitesTableHeaders(['Entidade UFG', 'Tipo / Campus', 'Sites associados', 'Instagram', 'Cobertura']);
     return rows.map(function (entity) {
       var sites = entity.sources.length ? entity.sources.map(function (source) {
         return '<a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(source.id) + '</a>';
       }).join('<br>') : '<span class="kc-cadu-muted">sem site associado</span>';
       var entityLabel = entity.acronym ? entity.acronym + ' — ' + entity.name : entity.name;
       return '<tr><td><strong>' + escapeHtml(entityLabel) + '</strong><code class="kc-cadu-source-id">' + escapeHtml(entity.id) + '</code></td>'
-        + '<td>' + escapeHtml(entity.kind) + '<small class="kc-cadu-source-id">' + escapeHtml(entity.campus || 'campus não informado') + '</small></td>'
+        + '<td>' + escapeHtml(catalogLabel(entity.kind)) + '<small class="kc-cadu-source-id">' + escapeHtml(formatCampusLabel(entity.campus)) + '</small></td>'
         + '<td>' + sites + '</td><td>' + profileLinks(entity.instagramProfiles) + '</td>'
-        + '<td>' + badgeHtml(entity.status, entity.status) + (entity.sources.length ? '' : '<div class="kc-cadu-review-issues">lacuna de fonte web</div>') + '</td></tr>';
+        + '<td>' + badgeHtml(catalogLabel(entity.status), entity.status) + (entity.sources.length ? '' : '<div class="kc-cadu-review-issues">Lacuna de fonte web</div>') + '</td></tr>';
     }).join('');
   }
 
@@ -969,13 +1277,13 @@
       }).join('<br>') : '<span class="kc-cadu-muted">sem fonte web associada</span>';
       return '<tr><td><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a><code class="kc-cadu-source-id">' + escapeHtml(profile.id) + '</code></td>'
         + '<td>' + entityChips(profile.entities) + '</td><td>' + sources + '</td>'
-        + '<td>' + badgeHtml(profile.status, profile.statusGroup) + '</td>'
-        + '<td>' + badgeHtml(profile.enabled ? 'ativo' : 'shadow desativado', profile.enabled ? 'confirmed' : 'missing') + '<small class="kc-cadu-source-id">' + escapeHtml((profile.executionModes || []).join(', ') || 'sem modo') + '</small></td></tr>';
+        + '<td>' + badgeHtml(catalogLabel(profile.status), profile.statusGroup) + '</td>'
+        + '<td>' + badgeHtml(profile.enabled ? 'Ativo' : 'Desativado no modo de validação', profile.enabled ? 'confirmed' : 'missing') + '<small class="kc-cadu-source-id">' + escapeHtml((profile.executionModes || []).map(catalogLabel).join(', ') || 'sem modo de execução') + '</small></td></tr>';
     }).join('');
   }
 
   function renderDeferredRows(rows) {
-    setSitesTableHeaders(['Pendência', 'Identidades legadas', 'Fontes candidatas', 'Entidades', 'Metadata / evidência']);
+    setSitesTableHeaders(['Pendência', 'Identidades legadas', 'Fontes candidatas', 'Entidades', 'Metadados / evidências']);
     return rows.map(function (item) {
       var sourceId = item.sourceId || '';
       var sourceIds = item.sourceIds || (sourceId ? [sourceId] : []);
@@ -985,21 +1293,21 @@
       var matchTypes = item.matchTypes || (item.matchType ? [item.matchType] : []);
       var legacyRows = item.rows || (item.row ? [item.row] : []);
       var metadata = legacyRows.map(function (row, index) {
-        var tier = row && row.tier != null ? 'T' + row.tier : 'tier —';
-        var revision = row && row.revision != null ? 'rev ' + row.revision : 'rev —';
+        var tier = row && row.tier != null ? 'Prioridade T' + row.tier : 'prioridade —';
+        var revision = row && row.revision != null ? 'revisão ' + row.revision : 'revisão —';
         var note = row && row.note ? ' · ' + row.note : '';
         return '<div><strong>' + escapeHtml(unitIds[index] || (row && row.unit_id) || '—') + ':</strong> ' + escapeHtml(tier + ' · ' + revision + note) + '</div>';
       }).join('');
-      return '<tr><td>' + badgeHtml(item.deferredKind, item.deferredKind) + '</td>'
-        + '<td>' + (unitIds.length ? unitIds.map(function (id, index) { return '<div><code>' + escapeHtml(id) + '</code><small class="kc-cadu-source-id">' + escapeHtml(matchTypes[index] || 'sem matchType') + '</small></div>'; }).join('') : '—') + '</td>'
+      return '<tr><td>' + badgeHtml(catalogLabel(item.deferredKind), item.deferredKind) + '</td>'
+        + '<td>' + (unitIds.length ? unitIds.map(function (id, index) { return '<div><code>' + escapeHtml(id) + '</code><small class="kc-cadu-source-id">' + escapeHtml(matchTypes[index] ? catalogLabel(matchTypes[index]) : 'sem tipo de associação') + '</small></div>'; }).join('') : '—') + '</td>'
         + '<td>' + (sourceIds.length ? sourceIds.map(function (id) { return '<code class="kc-cadu-source-id">' + escapeHtml(id) + '</code>'; }).join('') : '—') + '</td>'
         + '<td>' + (entityIds.length ? entityIds.map(function (id) { return '<span class="kc-cadu-map-chip">' + escapeHtml(id) + '</span>'; }).join(' ') : '—') + '</td>'
-        + '<td>' + (metadata || '<span class="kc-cadu-muted">sem metadata legada</span>') + rowKeys.map(function (key) { return '<code class="kc-cadu-source-id">hash ' + escapeHtml(String(key).slice(0, 16)) + '…</code>'; }).join('') + '</td></tr>';
+        + '<td>' + (metadata || '<span class="kc-cadu-muted">sem metadados legados</span>') + rowKeys.map(function (key) { return '<code class="kc-cadu-source-id">hash ' + escapeHtml(String(key).slice(0, 16)) + '…</code>'; }).join('') + '</td></tr>';
     }).join('');
   }
 
   function renderLegacyRows(rows) {
-    setSitesTableHeaders(['Tier', 'Unidade legada', 'Site institucional', 'Instagram', 'Status', 'Observação', 'Ações']);
+    setSitesTableHeaders(['Prioridade', 'Unidade legada', 'Site institucional', 'Instagram', 'Status', 'Observação', 'Ações']);
     return rows.map(function (site) {
       var key = siteActionKey(site);
       var safeUrl = normalizeSiteUrl(site.url);
@@ -1007,7 +1315,7 @@
       return '<tr><td>' + escapeHtml(site.tier ? 'T' + site.tier : '—') + '</td><td><code>' + escapeHtml(site.name || '—') + '</code></td>'
         + '<td>' + (safeUrl ? '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener">' + escapeHtml(safeUrl.replace(/^https?:\/\//, '')) + '</a>' : '—') + '</td>'
         + '<td>' + (instagramUrl ? '<a href="' + escapeHtml(instagramUrl) + '" target="_blank" rel="noopener">@' + escapeHtml(String(site.instagram).replace(/^@/, '')) + '</a>' : '—') + '</td>'
-        + '<td>' + badgeHtml(site.instagram_status || 'unknown', site.instagram_status || 'unknown') + '</td><td>' + escapeHtml(site.note || '—') + '<small class="kc-cadu-source-id">somente leitura</small></td>'
+        + '<td>' + badgeHtml(catalogLabel(site.instagram_status || 'unknown'), site.instagram_status || 'unknown') + '</td><td>' + escapeHtml(site.note || '—') + '<small class="kc-cadu-source-id">somente leitura</small></td>'
         + '<td><button type="button" class="kc-cadu-publish-btn" disabled title="Publicação bloqueada: fallback legado em modo somente leitura"><i class="fas fa-lock"></i><span>Somente leitura</span></button> '
         + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name || '') + '" data-ask-url="' + escapeHtml(safeUrl) + '" data-ask-instagram="' + escapeHtml(site.instagram || '') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '"><i class="fas fa-robot"></i><span>Perguntar</span></button></td></tr>';
     }).join('');
@@ -1073,7 +1381,7 @@
     }
     var stable = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
     if (!stable && !draft.tierTouched) {
-      showCaduError('Escolha explicitamente o tier do primeiro override estável.');
+      showCaduError('Escolha explicitamente a prioridade do primeiro ajuste administrativo estável.');
       return;
     }
     var changes = sourceDraftChanges(source, draft);
@@ -1089,12 +1397,12 @@
     try {
       mutation = registryModel().buildOverrideMutation(source, changes);
     } catch (contractError) {
-      showCaduError('Override inválido: revise tier e nota antes de salvar.');
+      showCaduError('Ajuste administrativo inválido: revise a prioridade e a nota antes de salvar.');
       return;
     }
     if (mutation.isFirstStable) {
       var inheritedWarning = source.isInheritedLegacy ? ' O valor legado exibido não será copiado automaticamente.' : '';
-      if (!window.confirm('Criar override estável para ' + source.id + '? Tier: ' + (changes.tier == null ? 'herdar base' : changes.tier) + '; nota: ' + (changes.note == null ? 'vazia' : 'informada') + '.' + inheritedWarning)) return;
+      if (!window.confirm('Criar ajuste administrativo estável para ' + source.id + '? Prioridade: ' + (changes.tier == null ? 'herdar base' : 'T' + changes.tier) + '; nota: ' + (changes.note == null ? 'vazia' : 'informada') + '.' + inheritedWarning)) return;
     }
     renderSitesTable();
     var envelope = await apiFetchResponse('/api/cadu/sites/' + mutation.path, {
@@ -1129,7 +1437,7 @@
     }
     delete state.sourceDrafts[sourceId];
     renderSitesTable();
-    showCaduError('Override de ' + sourceId + ' salvo com ETag/CAS e catálogo revalidado.');
+    showCaduError('Ajuste de ' + sourceId + ' salvo com ETag/CAS e catálogo revalidado.', 'success');
     setTimeout(hideCaduError, 5000);
   }
 
@@ -1156,12 +1464,23 @@
   function computeKpis() {
     if (state.sourceCatalog) {
       var summary = state.sourceCatalog.summary;
+      var administrativeMetadataAvailable = state.sourceCatalog.administrativeMetadataAvailable !== false;
+      var tierKpiValue = $('#kpi-tier1');
+      var tierKpiButton = tierKpiValue && tierKpiValue.parentElement;
       $('#kpi-sites').textContent = String(summary.entities);
       $('#kpi-ig-confirmed').textContent = String(summary.instagramConfirmed);
       $('#kpi-ig-detail').textContent = summary.instagramConfirmed + ' confirmados · '
         + summary.instagramPending + ' pendentes · ' + summary.instagramMissing + ' indisponíveis · '
         + summary.instagramRetired + ' aposentados';
-      $('#kpi-tier1').textContent = String(state.sourceCatalog.sources.filter(function (source) { return source.effectiveTier === 1; }).length);
+      tierKpiValue.textContent = !administrativeMetadataAvailable
+        ? '—'
+        : String(state.sourceCatalog.sources.filter(function (source) { return source.effectiveTier === 1; }).length);
+      if (tierKpiButton) {
+        tierKpiButton.disabled = !administrativeMetadataAvailable;
+        tierKpiButton.title = administrativeMetadataAvailable
+          ? 'Abrir aba Sites UFG filtrando por prioridade T1'
+          : 'Prioridades efetivas não estão disponíveis no espelho institucional';
+      }
       return;
     }
     var sites = state.allSites;
@@ -1171,34 +1490,54 @@
     $('#kpi-ig-confirmed').textContent = String(igConfirmed);
     $('#kpi-ig-detail').textContent = igAttempted + ' com perfil atribuído no mapa legado';
     $('#kpi-tier1').textContent = String(sites.filter(function (site) { return String(site.tier) === '1'; }).length);
+    var legacyTierKpiButton = $('#kpi-tier1') && $('#kpi-tier1').parentElement;
+    if (legacyTierKpiButton) {
+      legacyTierKpiButton.disabled = false;
+      legacyTierKpiButton.title = 'Abrir aba Sites UFG filtrando por prioridade T1';
+    }
   }
 
   function buildSitesCsvRows() {
     if (!state.sourceCatalog || state.catalogMode !== 'registry') {
-      var legacyRows = [['name','tier','category','url','instagram','instagram_status','note']];
+      var legacyRows = [['Nome', 'Prioridade', 'Categoria', 'URL institucional', 'Instagram', 'Status do Instagram', 'Observação']];
       state.filteredSites.forEach(function (site) {
-        legacyRows.push([site.name, site.tier || '', site.category || '', site.url || '', site.instagram || '', site.instagram_status || '', site.note || '']);
+        legacyRows.push([site.name, site.tier ? 'T' + site.tier : '', catalogLabel(site.category), site.url || '', site.instagram || '', catalogLabel(site.instagram_status), site.note || '']);
       });
       return legacyRows;
     }
     var rows = state.filteredCatalogRows;
     if (state.sitesView === 'entities') {
-      return [['entity_id','name','acronym','kind','campus','status','source_ids','instagram_ids']].concat(rows.map(function (entity) {
-        return [entity.id, entity.name, entity.acronym || '', entity.kind, entity.campus || '', entity.status, entity.sourceIds.join(' '), entity.instagramProfileIds.join(' ')];
+      return [['ID da entidade', 'Nome', 'Sigla', 'Tipo', 'Campus', 'Status', 'IDs das fontes', 'IDs do Instagram']].concat(rows.map(function (entity) {
+        return [entity.id, entity.name, entity.acronym || '', catalogLabel(entity.kind), formatCampusLabel(entity.campus), catalogLabel(entity.status), entity.sourceIds.join(' '), entity.instagramProfileIds.join(' ')];
       }));
     }
     if (state.sitesView === 'instagram') {
-      return [['instagram_id','handle','profile_url','status','status_group','entity_ids','source_ids','enabled']].concat(rows.map(function (profile) {
-        return [profile.id, profile.handle, profile.profileUrl, profile.status, profile.statusGroup, profile.entityIds.join(' '), profile.sourceIds.join(' '), profile.enabled];
+      return [['ID do Instagram', 'Perfil', 'URL do perfil', 'Status', 'Grupo de status', 'IDs das entidades', 'IDs das fontes', 'Ativo']].concat(rows.map(function (profile) {
+        return [profile.id, profile.handle, profile.profileUrl, catalogLabel(profile.status), catalogLabel(profile.statusGroup), profile.entityIds.join(' '), profile.sourceIds.join(' '), profile.enabled ? 'Sim' : 'Não'];
       }));
     }
     if (state.sitesView === 'deferred') {
-      return [['kind','unit_ids','match_types','source_id','candidate_source_ids','entity_ids','legacy_rows_json','row_keys']].concat(rows.map(function (item) {
-        return [item.deferredKind, (item.unitIds || (item.unitId ? [item.unitId] : [])).join(' '), (item.matchTypes || (item.matchType ? [item.matchType] : [])).join(' '), item.sourceId || '', (item.sourceIds || []).join(' '), (item.entityIds || []).join(' '), JSON.stringify(item.rows || (item.row ? [item.row] : [])), (item.rowKeys || (item.rowKey ? [item.rowKey] : [])).join(' ')];
+      return [['Pendência', 'IDs legados', 'Tipos de associação', 'ID da fonte', 'Fontes candidatas', 'IDs das entidades', 'Linhas legadas (JSON)', 'Hashes das linhas']].concat(rows.map(function (item) {
+        return [catalogLabel(item.deferredKind), (item.unitIds || (item.unitId ? [item.unitId] : [])).join(' '), (item.matchTypes || (item.matchType ? [item.matchType] : [])).map(catalogLabel).join(' '), item.sourceId || '', (item.sourceIds || []).join(' '), (item.entityIds || []).join(' '), JSON.stringify(item.rows || (item.row ? [item.row] : [])), (item.rowKeys || (item.rowKey ? [item.rowKey] : [])).join(' ')];
       }));
     }
-    return [['source_id','entities','effective_tier','base_tier','override_tier','override_origin','canonical_url','instagram_handles','instagram_statuses','review_state','review_issues','note','revision']].concat(rows.map(function (source) {
-      return [source.id, source.entityIds.join(' '), source.effectiveTier == null ? '' : source.effectiveTier, source.baseTier == null ? '' : source.baseTier, source.overrideTier == null ? '' : source.overrideTier, source.overrideOrigin, source.canonicalUrl, source.instagramProfiles.map(function (profile) { return profile.handle; }).join(' '), source.instagramProfiles.map(function (profile) { return profile.status; }).join(' '), source.reviewState, source.reviewIssues.join(' | '), source.note || '', source.revision];
+    return [['ID da fonte', 'Entidades', 'Prioridade efetiva', 'Prioridade base', 'Prioridade do ajuste', 'Origem do ajuste', 'URL canônica', 'Perfis do Instagram', 'Status dos perfis', 'Estado da revisão', 'Pendências da revisão', 'Observação', 'Revisão técnica']].concat(rows.map(function (source) {
+      var administrativeMetadataAvailable = source.administrativeMetadataAvailable !== false;
+      return [
+        source.id,
+        source.entityIds.join(' '),
+        administrativeMetadataAvailable && source.effectiveTier != null ? 'T' + source.effectiveTier : '',
+        administrativeMetadataAvailable && source.baseTier != null ? 'T' + source.baseTier : '',
+        administrativeMetadataAvailable && source.overrideTier != null ? 'T' + source.overrideTier : '',
+        administrativeMetadataAvailable ? catalogLabel(source.overrideOrigin) : catalogLabel('metadata_unavailable'),
+        source.canonicalUrl,
+        source.instagramProfiles.map(function (profile) { return profile.handle; }).join(' '),
+        source.instagramProfiles.map(function (profile) { return catalogLabel(profile.status); }).join(' | '),
+        catalogLabel(source.reviewState),
+        source.reviewIssues.map(catalogLabel).join(' | '),
+        administrativeMetadataAvailable ? (source.note || '') : '',
+        source.revision
+      ];
     }));
   }
 
@@ -1231,6 +1570,92 @@
     // Fail closed when flags disagree: an ok=true envelope is not evidence
     // that a post actually reached the KinoCampus feed.
     throw new Error('O backend retornou um estado de publicação inconsistente.');
+  }
+
+  function normalizeReviewOutcome(data, request) {
+    var reviewId = data && String(data.review_id || '').trim();
+    var postId = data && String(data.post_id || '').trim();
+    var durableReviewId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reviewId);
+    var consistent = data && typeof data === 'object' && !Array.isArray(data) &&
+      data.ok === true && data.published === false && data.pending === true &&
+      data.status === 'pending' && data.code === 'PENDING' &&
+      data.policy_code === 'INSTITUTIONAL_SOURCE_REVIEW' &&
+      data.published_via === 'edge-function' && durableReviewId && postId === reviewId &&
+      data.intent === 'review' && data.content_kind === 'institutional_site' &&
+      data.source_id === request.source_id && data.source_url === request.source_url &&
+      data.content_url === request.content_url &&
+      (data.instagram_handle == null ? null : data.instagram_handle) === request.instagram_handle &&
+      data.source_revision === request.source_revision &&
+      data.registry_sha256 === request.registry_sha256 &&
+      data.idempotency_key === request.idempotency_key;
+    if (!consistent) {
+      throw new Error('O backend não confirmou a persistência pendente da revisão institucional.');
+    }
+    return {
+      kind: 'pending',
+      via: 'edge-function',
+      code: 'PENDING',
+      policyCode: 'INSTITUTIONAL_SOURCE_REVIEW',
+      reviewId: reviewId,
+      postId: postId,
+      replayed: data.replayed === true
+    };
+  }
+
+  async function submitSourceReview(source) {
+    var draft = state.sourceDrafts[source.id];
+    var saving = Boolean(state.sourceSaveChains[source.id]);
+    var eligibility = sourceReviewEligibility(source, draft, saving);
+    if (!eligibility.allowed) {
+      showCaduError('Revisão bloqueada: ' + eligibility.reason);
+      setTimeout(hideCaduError, 6000);
+      return;
+    }
+    var request;
+    try {
+      request = buildSourceReviewRequest(source, draft, saving);
+    } catch (err) {
+      showCaduError('Revisão bloqueada: ' + (err && err.message ? err.message : err));
+      return;
+    }
+    var key = 'review|' + source.id + '|' + source.revision;
+    if (state.publishingKey === key) return;
+    state.publishingKey = key;
+    var btn = document.querySelector('.kc-cadu-publish-btn[data-source-id="' + cssEscape(source.id) + '"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando…</span>';
+    }
+    try {
+      var data = await apiFetch('/api/cadu/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(request)
+      });
+      if (data && data.__error) {
+        throw new Error((data.data && (data.data.message || data.data.error)) || ('status ' + data.status));
+      }
+      if (data && data.ok === false) throw new Error(data.message || data.code || 'A revisão foi recusada.');
+      var outcome = normalizeReviewOutcome(data, request);
+      if (btn) {
+        btn.classList.remove('is-err');
+        btn.classList.add('is-pending');
+        btn.innerHTML = '<i class="fas fa-clock"></i><span>' + (outcome.replayed ? 'Já pendente' : 'Revisão pendente') + '</span>';
+      }
+      showCaduError((outcome.replayed ? 'A revisão já estava persistida' : 'Fonte enviada à revisão') +
+        '. Ela permanece pendente e não foi publicada. Código: ' + outcome.policyCode + '.', 'info');
+      setTimeout(hideCaduError, 7000);
+    } catch (err) {
+      if (btn) {
+        btn.classList.remove('is-pending');
+        btn.classList.add('is-err');
+        btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i><span>Falha no envio</span>';
+      }
+      showCaduError('Erro ao enviar para revisão: ' + (err && err.message ? err.message : err));
+    } finally {
+      state.publishingKey = null;
+      setTimeout(function () { renderSitesTable(); }, 3500);
+    }
   }
 
   async function publishSite(site) {
@@ -1277,7 +1702,10 @@
         : (outcome.kind === 'pending'
           ? 'Item recebido e pendente de publicação/revisão; ainda não foi publicado.'
           : 'Revisão notificada; a notificação não equivale a publicação no KinoCampus.');
-      showCaduError(msg + (outcome.via ? ' Via: ' + outcome.via + '.' : '') + (outcome.code ? ' Código: ' + outcome.code + '.' : ''));
+      showCaduError(
+        msg + (outcome.via ? ' Via: ' + outcome.via + '.' : '') + (outcome.code ? ' Código: ' + outcome.code + '.' : ''),
+        outcome.kind === 'published' ? 'success' : 'info'
+      );
       setTimeout(hideCaduError, 6000);
     } catch (err) {
       if (btn) {
@@ -1368,14 +1796,14 @@
     function requiredCount(key) {
       var value = data[key];
       if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-        throw new Error('O cadu-api retornou metadata inválida para ' + key + '.');
+        throw new Error('O cadu-api retornou metadados inválidos para ' + key + '.');
       }
       return value;
     }
     var status = String(data.status || '');
     if (['ready', 'degraded', 'unavailable'].indexOf(status) < 0 ||
         typeof data.stale !== 'boolean' || typeof data.has_more !== 'boolean') {
-      throw new Error('O cadu-api retornou metadata de disponibilidade inválida.');
+      throw new Error('O cadu-api retornou metadados de disponibilidade inválidos.');
     }
     var items = data.items.map(normalizePublicFeedItem);
     if (items.some(function (item) { return item === null; })) {
@@ -1421,10 +1849,26 @@
     };
   }
 
+  function classifyFeedFreshness(meta, ageMs, staleAfterMs) {
+    meta = meta || {};
+    var unavailable = meta.status === 'unavailable';
+    var stale = meta.stale === true || ageMs > staleAfterMs;
+    if (unavailable) {
+      return { tone: 'error', label: 'Coleta pública indisponível.' };
+    }
+    if (stale) {
+      return { tone: 'stale', label: 'Coleta do Curador desatualizada.' };
+    }
+    if (meta.status === 'degraded') {
+      return { tone: 'warning', label: 'Coleta do Curador atualizada com alertas de integridade.' };
+    }
+    return { tone: 'fresh', label: 'Coleta do Curador atualizada.' };
+  }
+
   function renderFeedFreshness(error) {
     var box = $('#feed-freshness-status');
     if (!box) return;
-    box.classList.remove('is-fresh', 'is-stale', 'is-error');
+    box.classList.remove('is-fresh', 'is-warning', 'is-stale', 'is-error');
     var copy = '';
     if (error) {
       box.classList.add('is-error');
@@ -1444,10 +1888,9 @@
       var ageMs = meta.ageSeconds == null
         ? Math.max(0, Date.now() - state.feedLatestAt)
         : meta.ageSeconds * 1000;
-      var stale = meta.stale === true || meta.status === 'degraded' || ageMs > FEED_STALE_AFTER_MS;
-      var unavailable = meta.status === 'unavailable';
-      box.classList.add(unavailable ? 'is-error' : (stale ? 'is-stale' : 'is-fresh'));
-      copy = '<strong>' + (unavailable ? 'Coleta pública indisponível.' : (stale ? 'Coleta do Curador desatualizada.' : 'Coleta do Curador atualizada.')) + '</strong> ' +
+      var freshness = classifyFeedFreshness(meta, ageMs, FEED_STALE_AFTER_MS);
+      box.classList.add('is-' + freshness.tone);
+      copy = '<strong>' + freshness.label + '</strong> ' +
         'Última coleta: ' + escapeHtml(new Date(state.feedLatestAt).toLocaleString('pt-BR')) +
         ' (' + escapeHtml(fmtAgeMs(ageMs)) + '). Recarregar consulta os artefatos; a coleta é executada pela pipeline.' +
         ' ' + escapeHtml(meta.validArtifacts || 0) + ' artefato(s) válido(s) de ' + escapeHtml(meta.artifactsScanned || 0) + ' analisado(s).' +
@@ -1463,6 +1906,13 @@
 
   async function loadFeed(initial, appendPage) {
     var list = $('#feed-list');
+    var requestGeneration = ++state.feedRequestGeneration;
+    if (state.feedRequestController && typeof state.feedRequestController.abort === 'function') {
+      state.feedRequestController.abort();
+    }
+    var requestController = typeof AbortController === 'function' ? new AbortController() : null;
+    state.feedRequestController = requestController;
+    state.feedLoading = true;
     if (initial) {
       state.feedPage = 0;
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Carregando…</div>';
@@ -1477,10 +1927,13 @@
     try {
       var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true', {
         cache: 'no-store',
-        timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS
+        timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS,
+        signal: requestController ? requestController.signal : undefined
       });
+      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
       var feed = normalizePublicFeedResponse(data);
+      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
       var items = feed.items;
       state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
       state.feedMeta = feed.meta;
@@ -1492,11 +1945,19 @@
       $('#kpi-memory-detail').textContent = 'itens públicos do Curador; ' + feed.meta.validArtifacts + '/' + feed.meta.artifactsScanned + ' artefatos válidos; página ' + (state.feedPage + 1);
       renderFeedFreshness(null);
       applyFeedFilter();
+      return { ok: true, page: requestPage };
     } catch (err) {
+      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
       if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
       $('#badge-feed').textContent = '!';
       renderFeedFreshness(err);
       updateFeedPager(0);
+      return { ok: false, error: err };
+    } finally {
+      if (requestGeneration === state.feedRequestGeneration) {
+        state.feedLoading = false;
+        state.feedRequestController = null;
+      }
     }
   }
 
@@ -1521,8 +1982,9 @@
       var dt = fmtDate(it.created_at);
       var hash = it.chunk_id ? it.chunk_id.slice(0, 16) : 'sem id';
       var snippet = it.snippet || '(sem conteúdo)';
-      var sourceLink = it.url
-        ? '<a href="' + escapeHtml(it.url) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square"></i> Fonte oficial</a>'
+      var feedSourceUrl = sourceReviewCanonicalUrl(it.url);
+      var sourceLink = feedSourceUrl
+        ? '<a href="' + escapeHtml(feedSourceUrl) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square"></i> Fonte oficial</a>'
         : '';
       var askBtn = '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed" data-ask-id="' + escapeHtml(it.chunk_id) + '" data-ask-heading="' + escapeHtml(it.heading || '') + '" title="Perguntar ao Cadu sobre este item público"><i class="fas fa-robot"></i> Perguntar Cadu</button>';
       return '<article class="kc-cadu-feed-item">'
@@ -1610,7 +2072,7 @@
       var title = item.title || item.id || 'Item sem título';
       var action = item.repairAction || 'review_metadata';
       var reason = (item.reasons || []).join(', ') || 'review';
-      var source = item.source || '';
+      var source = sourceReviewCanonicalUrl(item.source || '');
       var host = item.sourceHost || '';
       var repair = suggestionById[item.id] || {};
       var metadataPatch = repair.metadataPatch || {};
@@ -1635,10 +2097,10 @@
         + (source ? '<a href="' + escapeHtml(source) + '" target="_blank" rel="noopener" class="kc-cadu-feed-diagnostics__chip">Fonte</a>' : '')
         + '<button type="button" class="kc-cadu-ask-btn" data-ask-kind="feed-diagnostic"'
         + ' data-ask-id="' + escapeHtml(item.id || '') + '"'
-        + ' data-ask-title="' + escapeHtml(title.replace(/"/g, '&quot;')) + '"'
-        + ' data-ask-source="' + escapeHtml(source.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-title="' + escapeHtml(title) + '"'
+        + ' data-ask-source="' + escapeHtml(source) + '"'
         + ' data-ask-action="' + escapeHtml(action) + '"'
-        + ' data-ask-reason="' + escapeHtml(reason.replace(/"/g, '&quot;')) + '"'
+        + ' data-ask-reason="' + escapeHtml(reason) + '"'
         + ' data-ask-patch="' + escapeHtml(patchPayload) + '">'
         + '<i class="fas fa-robot"></i> Perguntar Cadu</button>'
         + '</div>'
@@ -1656,7 +2118,7 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
     }
-    if (summaryEl) summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Consultando Supabase read-only...</span>';
+    if (summaryEl) summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Consultando o Supabase em modo somente leitura…</span>';
     try {
       var data = await apiFetch('/api/cadu/feed-diagnostics?limit=80&rpcLimit=10&triageLimit=12&repairLimit=100');
       if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
@@ -1688,21 +2150,24 @@
       t.setAttribute('aria-selected', selected ? 'true' : 'false');
       t.setAttribute('tabindex', selected ? '0' : '-1');
     });
-    $('#tab-sites').style.display = name === 'sites' ? '' : 'none';
-    $('#tab-feed').style.display = name === 'feed' ? '' : 'none';
+    ['sites', 'feed', 'pipeline', 'openclaw'].forEach(function (panelName) {
+      var panel = $('#tab-' + panelName);
+      if (!panel) return;
+      var selected = panelName === name;
+      panel.hidden = !selected;
+      panel.style.display = selected ? '' : 'none';
+    });
     if (name === 'feed' && !state.feedDiagnostics && !state.feedDiagnosticsLoading) {
       loadFeedDiagnostics();
     }
     var tabPipeline = $('#tab-pipeline');
     if (tabPipeline) {
-      tabPipeline.style.display = name === 'pipeline' ? '' : 'none';
       if (name === 'pipeline') {
         refreshPipeline();
       }
     }
     var tabOpenclaw = $('#tab-openclaw');
     if (tabOpenclaw) {
-      tabOpenclaw.style.display = name === 'openclaw' ? '' : 'none';
       if (name === 'openclaw') {
         refreshOpenclaw();
       }
@@ -1759,6 +2224,42 @@
       } catch (_) {}
     }
     return null;
+  }
+
+  function normalizeOpenclawStatusSnapshot(statusResponse, nowMs) {
+    if (!statusResponse || typeof statusResponse !== 'object' || Array.isArray(statusResponse)) return null;
+    var checkedAt = Number(statusResponse.checked_at);
+    if (!Number.isFinite(checkedAt) || checkedAt <= 0) return null;
+    var checkedAtMs = checkedAt < 1e12 ? checkedAt * 1000 : checkedAt;
+    var currentMs = Number.isFinite(nowMs) ? nowMs : Date.now();
+    if (checkedAtMs > currentMs + 5000 || currentMs - checkedAtMs > 120000) return null;
+
+    var value = parseOpenclawCommandJson(statusResponse.status);
+    if (!value) return null;
+    var gateway = value.gateway;
+    var agents = value.agents;
+    var heartbeat = value.heartbeat;
+    var sessions = value.sessions;
+    var tasks = value.tasks;
+    if (!gateway || typeof gateway !== 'object' || Array.isArray(gateway) || gateway.reachable !== true) return null;
+    if (!agents || typeof agents !== 'object' || Array.isArray(agents) ||
+        typeof agents.defaultId !== 'string' || !/^[A-Za-z0-9._-]{1,64}$/.test(agents.defaultId) ||
+        !Array.isArray(agents.agents) || agents.agents.length === 0 || agents.agents.length > 64 ||
+        !agents.agents.some(function (agent) { return agent && agent.id === agents.defaultId; })) return null;
+    if (!heartbeat || typeof heartbeat !== 'object' || Array.isArray(heartbeat) ||
+        heartbeat.defaultAgentId !== agents.defaultId || !Array.isArray(heartbeat.agents) ||
+        !heartbeat.agents.some(function (agent) {
+          return agent && agent.agentId === agents.defaultId && typeof agent.enabled === 'boolean' && typeof agent.every === 'string';
+        })) return null;
+    if (!sessions || typeof sessions !== 'object' || Array.isArray(sessions) ||
+        !sessions.defaults || typeof sessions.defaults !== 'object' || Array.isArray(sessions.defaults) ||
+        !Array.isArray(sessions.recent) || sessions.recent.length > 100) return null;
+    if (!tasks || typeof tasks !== 'object' || Array.isArray(tasks) ||
+        !Number.isSafeInteger(tasks.active) || tasks.active < 0 ||
+        !Number.isSafeInteger(tasks.total) || tasks.total < 0 || tasks.active > tasks.total ||
+        !Number.isSafeInteger(tasks.failures) || tasks.failures < 0 ||
+        !tasks.byStatus || typeof tasks.byStatus !== 'object' || Array.isArray(tasks.byStatus)) return null;
+    return value;
   }
 
   function openclawTelegramHealth(healthCommand) {
@@ -1874,6 +2375,7 @@
       btn.innerHTML = next
         ? '<i class="fas fa-compress"></i> Recolher'
         : '<i class="fas fa-expand"></i> Foco';
+      btn.setAttribute('aria-pressed', next ? 'true' : 'false');
     }
     focusOpenclawChat();
   }
@@ -1909,9 +2411,26 @@
       '</div>';
   }
 
-  function openclawStatusData(statusResponse) {
-    var command = statusResponse && statusResponse.status;
-    return parseOpenclawCommandJson(command);
+  function openclawStatusData(statusResponse, nowMs) {
+    return normalizeOpenclawStatusSnapshot(statusResponse, nowMs);
+  }
+
+  function renderTelegramHeroStatus(connected, configured) {
+    var pill = $('#cadu-bot-pill');
+    if (!pill) return;
+    pill.style.display = '';
+    pill.classList.toggle('is-down', connected !== true);
+    pill.innerHTML = connected === true
+      ? '<span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo'
+      : '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fab fa-telegram"></i> ' +
+        (configured === true ? 'Telegram sem conexão confirmada' : 'Telegram não confirmado');
+  }
+
+  function hideTelegramHeroStatus() {
+    var pill = $('#cadu-bot-pill');
+    if (!pill) return;
+    pill.style.display = 'none';
+    pill.classList.remove('is-down');
   }
 
   function renderOpenclawUnavailable(reason) {
@@ -1920,12 +2439,33 @@
     var agentHint = $('#openclaw-stat-agent-hint');
     var tgEl = $('#openclaw-stat-telegram');
     var tgHint = $('#openclaw-stat-telegram-hint');
+    var heartbeatEl = $('#openclaw-stat-heartbeat');
+    var heartbeatHint = $('#openclaw-stat-heartbeat-hint');
+    var tasksEl = $('#openclaw-stat-tasks');
+    var tasksHint = $('#openclaw-stat-tasks-hint');
+    var sessionsList = $('#openclaw-sessions-list');
+    var lastSession = $('#openclaw-last-session');
     if (statusBadge) statusBadge.textContent = '!';
     if (agentEl) agentEl.innerHTML = '<i class="fas fa-circle-xmark"></i> indisponível';
     if (agentHint) agentHint.textContent = reason || 'status real não confirmado';
     if (tgEl) tgEl.innerHTML = '<i class="fas fa-circle-question"></i> não confirmado';
     if (tgEl) tgEl.style.color = '#f59e0b';
     if (tgHint) tgHint.textContent = 'aguardando health válido do Gateway';
+    if (heartbeatEl) heartbeatEl.textContent = '—';
+    if (heartbeatHint) heartbeatHint.textContent = 'status anterior descartado';
+    if (tasksEl) {
+      tasksEl.textContent = '—';
+      tasksEl.style.color = '';
+    }
+    if (tasksHint) tasksHint.textContent = 'status anterior descartado';
+    openclawState.lastSessionId = null;
+    openclawState.selectedSession = null;
+    openclawState.pinnedSessionId = null;
+    openclawState.latestDirectSessionId = null;
+    if (lastSession) lastSession.textContent = '—';
+    if (sessionsList) sessionsList.innerHTML = '<div class="kc-cadu-empty" role="status">Sessões indisponíveis; o estado anterior foi descartado.</div>';
+    renderOpenclawSessionDetail(null);
+    hideTelegramHeroStatus();
   }
 
   function renderOpenclawSessions(sessions) {
@@ -2013,6 +2553,23 @@
     }
   }
 
+  function handleTabKeydown(event, currentTab) {
+    var keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+    if (keys.indexOf(event.key) === -1) return;
+    var tabs = $$('.kc-cadu-tab');
+    var currentIndex = tabs.indexOf(currentTab);
+    if (currentIndex < 0 || !tabs.length) return;
+    event.preventDefault();
+    var nextIndex = currentIndex;
+    if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else nextIndex = (currentIndex + 1) % tabs.length;
+    var target = tabs[nextIndex];
+    switchTab(target.getAttribute('data-tab'));
+    target.focus();
+  }
+
   async function performOpenclawRefresh() {
     var statusBadge = $('#badge-openclaw');
     var agentEl = $('#openclaw-stat-agent');
@@ -2085,6 +2642,7 @@
             ? 'configurado, mas sem conexão ativa confirmada' + (telegramHealth.detail ? ': ' + telegramHealth.detail : '')
             : 'o health não confirmou configuração ou conexão ativa');
       }
+      renderTelegramHeroStatus(tgConnected, tgConfigured);
       if (hbEl) {
         hbEl.innerHTML = heartbeatDisabled
           ? '<i class="fas fa-pause-circle"></i> desativado'
@@ -2142,18 +2700,62 @@
     return Array.prototype.map.call(bytes, function (value) { return value.toString(16).padStart(2, '0'); }).join('');
   }
 
+  function openclawResponseIsRetryable(response) {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) return false;
+    if (response.retryable === true) return true;
+    var data = response.data;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+    if (data.retryable === true) return true;
+    return !!(data.detail && typeof data.detail === 'object' &&
+      !Array.isArray(data.detail) && data.detail.retryable === true);
+  }
+
   function normalizeOpenclawAgentResponse(response) {
+    var retryable = openclawResponseIsRetryable(response);
     if (!response || typeof response !== 'object' || Array.isArray(response) || response.ok !== true) {
       return {
         ok: false,
+        retryable: retryable,
         error: String(response && response.error || 'o backend não confirmou a execução do agente').slice(0, 240),
       };
     }
     var data = response.data;
-    if (!data || typeof data !== 'object' || Array.isArray(data) || data.status === 'in_flight') {
-      return { ok: false, error: 'o backend não retornou um resultado final válido do agente' };
+    var result = data && data.result;
+    var payloads = result && result.payloads;
+    var meta = result && result.meta;
+    if (!data || typeof data !== 'object' || Array.isArray(data) || data.status !== 'ok' ||
+        !result || typeof result !== 'object' || Array.isArray(result) ||
+        !Array.isArray(payloads) || payloads.length === 0 || payloads.length > 64 ||
+        !meta || typeof meta !== 'object' || Array.isArray(meta)) {
+      return {
+        ok: false,
+        retryable: retryable,
+        error: 'o backend não retornou o contrato terminal oficial do agente',
+      };
     }
-    return { ok: true, data: data };
+    var visibleTexts = [];
+    var totalTextLength = 0;
+    for (var index = 0; index < payloads.length; index += 1) {
+      var payload = payloads[index];
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
+          typeof payload.text !== 'string' || !payload.text.trim()) continue;
+      if (payload.text.length > 100000) {
+        return { ok: false, retryable: retryable, error: 'a resposta do agente excedeu o limite seguro' };
+      }
+      totalTextLength += payload.text.length;
+      if (totalTextLength > 200000) {
+        return { ok: false, retryable: retryable, error: 'a resposta do agente excedeu o limite seguro' };
+      }
+      visibleTexts.push(payload.text);
+    }
+    if (!visibleTexts.length) {
+      return {
+        ok: false,
+        retryable: retryable,
+        error: 'o agente terminou sem texto visível confirmado',
+      };
+    }
+    return { ok: true, retryable: false, data: data, text: visibleTexts.join('\n').trim() };
   }
 
   function setOpenclawRetryRequest(request) {
@@ -2217,29 +2819,28 @@
 
       if (!resp || resp.__error) {
         var httpStatus = resp && resp.status ? ' (HTTP ' + resp.status + ')' : '';
-        appendChatMsg('cadu', 'A solicitação não foi confirmada' + httpStatus + '. Use “Tentar novamente” para reaproveitar com segurança o mesmo identificador; não há repetição automática.', null);
-        if (status) status.textContent = '❌ Falhou' + httpStatus + ' — tentativa segura disponível';
-        setOpenclawRetryRequest(request);
+        var httpRetryable = openclawResponseIsRetryable(resp);
+        appendChatMsg('cadu', 'A solicitação não foi confirmada' + httpStatus + '. ' + (httpRetryable
+          ? 'O backend autorizou repetir com o mesmo identificador; não há repetição automática.'
+          : 'A repetição foi bloqueada porque o backend não a marcou como segura; isso evita executar ou cobrar a mesma solicitação novamente.'), null);
+        if (status) status.textContent = '❌ Falhou' + httpStatus + (httpRetryable ? ' — tentativa segura disponível' : ' — repetição bloqueada');
+        setOpenclawRetryRequest(httpRetryable ? request : null);
         return false;
       }
       var agentResponse = normalizeOpenclawAgentResponse(resp);
       if (!agentResponse.ok) {
-        appendChatMsg('cadu', 'A execução não foi confirmada pelo OpenClaw (' + agentResponse.error + '). Use “Tentar novamente” para reaproveitar com segurança o mesmo identificador; não há repetição automática.', null);
-        if (status) status.textContent = '❌ OpenClaw não confirmou a execução — tentativa segura disponível';
-        setOpenclawRetryRequest(request);
+        appendChatMsg('cadu', 'A execução não foi confirmada pelo OpenClaw (' + agentResponse.error + '). ' + (agentResponse.retryable
+          ? 'O backend autorizou repetir com o mesmo identificador; não há repetição automática.'
+          : 'A repetição foi bloqueada para evitar execução ou cobrança duplicada.'), null);
+        if (status) status.textContent = '❌ OpenClaw não confirmou a execução' + (agentResponse.retryable ? ' — tentativa segura disponível' : ' — repetição bloqueada');
+        setOpenclawRetryRequest(agentResponse.retryable ? request : null);
         return false;
       }
       var data = agentResponse.data;
-      var payloads = (data.result && data.result.payloads) || [];
-      var text = '';
-      for (var i = 0; i < payloads.length; i++) {
-        if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
-      }
-      if (!text && data.summary) text = '(sem texto de retorno — summary: ' + data.summary + ')';
       var meta = (data.result && data.result.meta) || {};
       var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '?s';
       var usage = meta.agentMeta ? (' · in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
-      appendChatMsg('cadu', text.trim() || '(resposta vazia)', dur + usage);
+      appendChatMsg('cadu', agentResponse.text, dur + usage);
 
       // Uma resposta pode criar nova sessão, mas nunca substitui a sessão
       // explicitamente fixada pelo operador.
@@ -2250,11 +2851,11 @@
       }
       setOpenclawRetryRequest(null);
       completed = true;
-      if (status) status.textContent = '✅ ' + (data.summary || 'ok') + ' (' + dur + ')';
+      if (status) status.textContent = '✅ Resposta confirmada (' + dur + ')';
     } catch (e) {
-      appendChatMsg('cadu', 'A conexão terminou sem confirmação. Nenhuma repetição automática foi feita; use “Tentar novamente” para manter o mesmo identificador.', null);
-      if (status) status.textContent = '❌ Conexão interrompida — tentativa segura disponível';
-      setOpenclawRetryRequest(request);
+      appendChatMsg('cadu', 'A conexão terminou sem confirmação. A repetição foi bloqueada porque não houve autorização explícita do backend; isso evita execução ou cobrança duplicada.', null);
+      if (status) status.textContent = '❌ Conexão interrompida — repetição bloqueada';
+      setOpenclawRetryRequest(null);
     } finally {
       openclawState.busy = false;
       if (btn) btn.disabled = false;
@@ -2286,17 +2887,10 @@
     var normalized = normalizeOpenclawAgentResponse(resp);
     if (!normalized.ok) return { text: 'A execução não foi confirmada: ' + normalized.error, meta: 'falha' };
     var data = normalized.data;
-    var payloads = (data && data.result && data.result.payloads) || [];
-    var text = '';
-    for (var i = 0; i < payloads.length; i++) {
-      if (payloads[i] && payloads[i].text) text += payloads[i].text + '\n';
-    }
-    if (!text && data && data.summary) text = data.summary;
-    if (!text && resp && resp.stderr) text = 'Sem texto de retorno. stderr: ' + resp.stderr;
     var meta = (data && data.result && data.result.meta) || {};
     var dur = meta.durationMs ? Math.round(meta.durationMs / 1000) + 's' : '';
     var usage = meta.agentMeta ? ('in ' + (meta.agentMeta.usage ? meta.agentMeta.usage.input : '?') + ' / out ' + (meta.agentMeta.usage ? meta.agentMeta.usage.output : '?')) : '';
-    return { text: (text || '(resposta vazia)').trim(), meta: [dur, usage].filter(Boolean).join(' - ') };
+    return { text: normalized.text, meta: [dur, usage].filter(Boolean).join(' - ') };
   }
 
   function showAskCaduResult(label, resp) {
@@ -2307,12 +2901,18 @@
     setTimeout(refreshOpenclaw, 800);
   }
 
+  function openclawHeartbeatConfirmed(response) {
+    var data = response && (response.data || response);
+    return !!(response && !response.__error && data && data.ok === true &&
+      Number.isSafeInteger(data.exit_code) && data.exit_code === 0);
+  }
+
   async function openclawTriggerHeartbeat() {
     var btn = $('#openclaw-trigger-heartbeat-btn');
     var status = $('#openclaw-chat-status');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Trigger Heartbeat';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Solicitando sinal de vida…';
     }
     if (status) status.textContent = 'Enviando evento de heartbeat…';
     setOpenclawActionStatus('<i class="fas fa-spinner fa-spin"></i> Enviando heartbeat para o agente principal…', 'loading');
@@ -2323,7 +2923,7 @@
         body: JSON.stringify({ text: 'Admin trigger from KinoCampus UI', agent: 'main', mode: 'now' }),
       });
       var data = resp && (resp.data || resp);
-      var ok = !!(resp && !resp.__error && data && data.ok !== false && Number(data.exit_code || 0) === 0);
+      var ok = openclawHeartbeatConfirmed(resp);
       if (ok) {
         var sentAt = new Date().toLocaleTimeString('pt-BR');
         var stdout = data && data.stdout ? String(data.stdout).trim().slice(0, 180) : '';
@@ -2349,7 +2949,7 @@
     finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-heart-pulse"></i> Trigger Heartbeat';
+        btn.innerHTML = '<i class="fas fa-heart-pulse"></i> Solicitar sinal de vida';
       }
     }
   }
@@ -2437,6 +3037,14 @@
     if (button) button.__kcCaduAgentRequest = null;
   }
 
+  function contextualAgentRetryHint(button, response) {
+    if (openclawResponseIsRetryable(response)) {
+      return ' O backend autorizou repetir: clique novamente para reutilizar o mesmo identificador idempotente.';
+    }
+    clearContextualAgentPayload(button);
+    return ' A repetição idempotente foi bloqueada porque o backend não a marcou como segura, evitando execução ou cobrança duplicada.';
+  }
+
   function contextualAgentSucceeded(response) {
     return !!normalizeOpenclawAgentResponse(response).ok;
   }
@@ -2472,7 +3080,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Perguntar sobre chunk: ' + (heading || chunkId), resp);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o item público: ' + contextualAgentError(resp) + '. Clique novamente para repetir com o mesmo identificador idempotente; nenhum fallback com conteúdo inline foi executado.');
+          showCaduError('Erro ao perguntar ao Cadu sobre o item público: ' + contextualAgentError(resp) + '.' + contextualAgentRetryHint(btn, resp) + ' Nenhum fallback com conteúdo inline foi executado.');
         }
       } else if (kind === 'feed-diagnostic') {
         var diagId = btn.getAttribute('data-ask-id') || '';
@@ -2488,7 +3096,7 @@
           action: diagAction,
           reason: diagReason,
           dryRunPatch: diagPatch,
-        }, 'Analise o problema do feed público e diga exatamente qual metadata deve ser corrigida: prazo, data de evento, reclassificação ou arquivamento. Use a fonte oficial quando disponível.');
+        }, 'Analise o problema do feed público e diga exatamente quais metadados devem ser corrigidos: prazo, data de evento, reclassificação ou arquivamento. Use a fonte oficial quando disponível.');
         var diagResp = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2499,7 +3107,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Diagnóstico do feed: ' + (diagTitle || diagId), diagResp);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + contextualAgentError(diagResp) + '. Clique novamente para repetir com o mesmo identificador idempotente.');
+          showCaduError('Erro ao perguntar ao Cadu sobre o diagnóstico: ' + contextualAgentError(diagResp) + '.' + contextualAgentRetryHint(btn, diagResp));
         }
       } else if (kind === 'site') {
         var siteName = btn.getAttribute('data-ask-name') || '';
@@ -2511,7 +3119,7 @@
           url: siteUrl,
           instagram: siteIg,
           tier: siteTier,
-        }, 'Resuma a entidade e indique o que vale destacar. Considere os tiers e notas disponíveis, mas valide qualquer afirmação pela fonte oficial.');
+        }, 'Resuma a entidade e indique o que vale destacar. Considere as prioridades e notas disponíveis, mas valide qualquer afirmação pela fonte oficial.');
         var resp2 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2522,17 +3130,20 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Perguntar sobre site: ' + siteName, resp2);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + contextualAgentError(resp2) + '. Clique novamente para repetir com o mesmo identificador idempotente.');
+          showCaduError('Erro ao perguntar ao Cadu sobre o site: ' + contextualAgentError(resp2) + '.' + contextualAgentRetryHint(btn, resp2));
         }
       } else if (kind === 'pipeline') {
         var runId = btn.getAttribute('data-ask-run-id') || '';
+        if (!isSafePipelineRunId(runId)) {
+          throw new Error('ID de execução da pipeline inválido.');
+        }
         var stage = btn.getAttribute('data-ask-stage') || '';
         var status = btn.getAttribute('data-ask-status') || '';
         message = buildUntrustedContextPrompt('run-context', {
           id: runId,
           stage: stage,
           status: status,
-          exportPath: '/api/cadu/pipeline/' + runId + '/export',
+          exportPath: '/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export',
         }, 'Analise esta execução da pipeline, confira o export indicado e proponha o próximo passo operacional seguro.');
         var resp3 = await apiFetch('/api/cadu/openclaw/agent-send', {
           method: 'POST',
@@ -2544,7 +3155,7 @@
           clearContextualAgentPayload(btn);
           showAskCaduResult('Perguntar sobre pipeline: ' + runId.slice(0, 8), resp3);
         } else {
-          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + contextualAgentError(resp3) + '. Clique novamente para repetir com o mesmo identificador idempotente.');
+          showCaduError('Erro ao perguntar ao Cadu sobre a pipeline: ' + contextualAgentError(resp3) + '.' + contextualAgentRetryHint(btn, resp3));
         }
       }
     } catch (e) {
@@ -2563,61 +3174,113 @@
 
   var notifState = { lastCount: 0, runs: [], seen: {} };
 
-  function pollNotifActivity() {
+  function readSeenCaduRuns() {
+    try {
+      var raw = localStorage.getItem('kc_cadu_seen_runs');
+      var parsed = JSON.parse(raw || '{}');
+      var ids = Object.create(null);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        Object.keys(parsed).forEach(function (id) {
+          var seenAt = Number(parsed[id]);
+          if (isSafePipelineRunId(id) && Number.isFinite(seenAt) && seenAt > 0) ids[id] = seenAt;
+        });
+      }
+      return { initialized: raw !== null, ids: ids };
+    } catch (_) {
+      return { initialized: false, ids: Object.create(null) };
+    }
+  }
+
+  function markCaduRunsSeen(runs) {
+    var seen = readSeenCaduRuns().ids;
+    var now = Date.now();
+    (Array.isArray(runs) ? runs : []).forEach(function (run) {
+      if (run && isSafePipelineRunId(run.id)) seen[run.id] = now;
+    });
+    var ids = Object.keys(seen).sort(function (left, right) {
+      return Number(seen[right] || 0) - Number(seen[left] || 0);
+    }).slice(0, 100);
+    var bounded = Object.create(null);
+    ids.forEach(function (id) { bounded[id] = seen[id]; });
+    try { localStorage.setItem('kc_cadu_seen_runs', JSON.stringify(bounded)); } catch (_) {}
+  }
+
+  function pipelineActivityStageLabel(stageId, stages) {
+    var live = (Array.isArray(stages) ? stages : []).find(function (stage) {
+      return stage && stage.id === stageId && typeof stage.name === 'string' && stage.name.trim();
+    });
+    if (live) return live.name.trim();
+    var labels = {
+      curator: 'Curador UFG',
+      ig: 'Scanner do Instagram',
+      duplicates: 'Enriquecimento de duplicatas',
+      format: 'Formatação com IA',
+      publish: 'Publicação',
+      enrich: 'Enriquecimento de imagens',
+      dedup: 'Deduplicação visual e textual',
+      sigaa: 'Sincronização SIGAA → Google Agenda',
+      all: 'Pipeline completa'
+    };
+    return labels[stageId] || stageId;
+  }
+
+  function pollNotifActivity(options) {
+    var markSeen = Boolean(options && options.markSeen);
     var bell = $('#kcCaduActivityBell');
     var badge = $('#kcCaduActivityBadge');
     var list = $('#kcCaduActivityList');
     if (!bell || !badge) return;
 
     apiFetch('/api/cadu/pipeline/runs?limit=8')
-      .then(function (r) { return r && !r.__error ? r : null; })
+      .then(function (r) {
+        if (!r || r.__error) {
+          var detail = r && (r.message || (r.data && (r.data.message || r.data.error)));
+          throw new Error(detail || 'atividade recente indisponível');
+        }
+        return r;
+      })
       .then(function (data) {
-        if (!data || !Array.isArray(data.runs)) return;
+        if (!data || !Array.isArray(data.runs)) throw new Error('contrato de atividade recente inválido');
         var safeRuns = data.runs.map(normalizePipelineRun).filter(Boolean).slice(0, 20);
         notifState.runs = safeRuns;
 
-        var dayAgo = Math.floor(Date.now() / 1000) - 86400;
-        var recent24h = safeRuns.filter(function (r) { return (r.started_at || 0) >= dayAgo; });
-
-        try {
-          var seenIds = JSON.parse(localStorage.getItem('kc_cadu_seen_runs') || '{}');
-          var newOnes = safeRuns.filter(function (r) { return !seenIds[r.id]; });
-          if (Object.keys(seenIds).length > 0 && newOnes.length > 0) {
-            badge.textContent = newOnes.length > 9 ? '9+' : String(newOnes.length);
-            badge.style.display = '';
-          } else if (recent24h.length > 0) {
-            badge.textContent = recent24h.length > 9 ? '9+' : String(recent24h.length);
-            badge.style.display = '';
-          } else {
-            badge.style.display = 'none';
-          }
-        } catch (e) {
+        var seenState = readSeenCaduRuns();
+        var unseenRuns = seenState.initialized
+          ? safeRuns.filter(function (r) {
+            return !Object.prototype.hasOwnProperty.call(seenState.ids, r.id);
+          })
+          : [];
+        if (!seenState.initialized || markSeen) {
+          markCaduRunsSeen(safeRuns);
+          unseenRuns = [];
+        }
+        if (unseenRuns.length > 0) {
+          badge.textContent = unseenRuns.length > 9 ? '9+' : String(unseenRuns.length);
+          badge.style.display = '';
+        } else {
+          badge.textContent = '0';
           badge.style.display = 'none';
         }
 
-        try {
-          var newSeen = {};
-          safeRuns.forEach(function (r) { newSeen[r.id] = Date.now(); });
-          localStorage.setItem('kc_cadu_seen_runs', JSON.stringify(newSeen));
-        } catch (e) {}
-
         if (list && $('#kcCaduActivityDropdown') && !$('#kcCaduActivityDropdown').hasAttribute('hidden')) {
           if (safeRuns.length === 0) {
-            list.innerHTML = '<div class="kc-cadu-empty">Nenhuma run ainda.</div>';
+            list.innerHTML = '<div class="kc-cadu-empty">Nenhuma execução registrada.</div>';
             return;
           }
           list.innerHTML = safeRuns.slice(0, 8).map(function (r) {
-            var stClass = r.status === 'finished' ? 'pill--finished'
-                       : r.status === 'failed' ? 'pill--failed'
-                       : r.status === 'running' ? 'pill--running' : '';
-            return '<div class="kc-cadu-activity-dropdown__item" data-run="' + r.id + '">'
-              + '<div class="kc-cadu-activity-dropdown__item__title">' + escapeHtml(r.stage) + '</div>'
+            var displayStatus = pipelineRunDisplayStatus(r);
+            var stClass = displayStatus === 'success' ? 'pill--success'
+                       : displayStatus === 'partial' ? 'pill--partial'
+                       : displayStatus === 'failed' ? 'pill--failed'
+                       : displayStatus === 'running' ? 'pill--running' : '';
+            return '<button type="button" class="kc-cadu-activity-dropdown__item" data-run="' + escapeHtml(r.id) + '" aria-label="Abrir ' + escapeHtml(pipelineActivityStageLabel(r.stage, state.pipelineStages)) + ' na pipeline">'
+              + '<div class="kc-cadu-activity-dropdown__item__title">' + escapeHtml(pipelineActivityStageLabel(r.stage, state.pipelineStages)) + '</div>'
               + '<div class="kc-cadu-activity-dropdown__item__meta">'
-              + '<span class="pill ' + stClass + '">' + escapeHtml(r.status) + '</span>'
+              + '<span class="pill ' + stClass + '">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>'
               + '<span>' + fmtAgo(r.started_at) + '</span>'
-              + (r.exit_code != null ? '<span>exit ' + r.exit_code + '</span>' : '')
+              + (r.exit_code != null ? '<span>código de saída ' + r.exit_code + '</span>' : '')
               + '</div>'
-              + '</div>';
+              + '</button>';
           }).join('');
           $$('.kc-cadu-activity-dropdown__item', list).forEach(function (it) {
             it.addEventListener('click', function () {
@@ -2633,7 +3296,15 @@
           });
         }
       })
-      .catch(function () {});
+      .catch(function (error) {
+        var dropdown = $('#kcCaduActivityDropdown');
+        if (!list || !dropdown || dropdown.hasAttribute('hidden')) return;
+        list.innerHTML = '<div class="kc-cadu-empty" role="alert">Não foi possível carregar a atividade recente.<br><small>' +
+          escapeHtml(error && error.message ? error.message : error) + '</small><br>' +
+          '<button type="button" class="kc-btn-secondary" id="kcCaduActivityRetry">Tentar novamente</button></div>';
+        var retry = $('#kcCaduActivityRetry');
+        if (retry) retry.addEventListener('click', function () { pollNotifActivity({ markSeen: false }); });
+      });
   }
 
   // ============================================================
@@ -2643,6 +3314,7 @@
   function buildSitesPdfReport() {
     var f = state.sitesFilter || {};
     var sites = state.filteredSites || state.allSites || [];
+    var administrativeMetadataAvailable = !(state.sourceCatalog && state.sourceCatalog.administrativeMetadataAvailable === false);
     var tierCount = { '1': 0, '2': 0, '3': 0, '': 0 };
     var igCount = { confirmed: 0, tentative: 0, missing: 0, unknown: 0 };
     var hasUrl = 0;
@@ -2656,17 +3328,40 @@
     var rows = sites.map(function (s) {
       return {
         unidade: s.name || '',
-        tier: s.tier ? 'T' + s.tier : '—',
+        prioridade: administrativeMetadataAvailable
+          ? (s.tier ? 'T' + s.tier : '—')
+          : 'Indisponível no espelho',
         site: s.url || '—',
         instagram: s.instagramContext || s.instagram || '—',
-        ig_status: s.instagram_status || '—',
-        categoria: s.category || '—',
-        override: s.override_origin
-          ? s.override_origin + (s.collision ? ' · evidência de colisão' : '')
-          : 'legado somente leitura',
-        observacao: s.note || '',
+        ig_status: catalogLabel(s.instagram_status),
+        categoria: catalogLabel(s.category),
+        ajuste: administrativeMetadataAvailable
+          ? (s.override_origin
+            ? catalogLabel(s.override_origin) + (s.collision ? ' · evidência de colisão' : '')
+            : 'Legado somente leitura')
+          : catalogLabel('metadata_unavailable'),
+        observacao: administrativeMetadataAvailable ? (s.note || '') : '',
       };
     });
+    var kpis = [
+      { label: 'Total filtrado', value: sites.length + ' / ' + (state.allSites || []).length, note: 'após aplicar busca, prioridade e status do Instagram' },
+      { label: 'Com site HTTPS', value: hasUrl, note: 'unidades com URL institucional cadastrada' },
+      { label: 'Instagram confirmado', value: igCount.confirmed || 0, note: 'perfil com evidência institucional confirmada' },
+      { label: 'Instagram pendente/tentativo', value: (igCount.pending_verification || 0) + (igCount.tentative || 0), note: 'exige verificação antes de qualquer ativação' },
+    ];
+    if (administrativeMetadataAvailable) {
+      kpis.push(
+        { label: 'Prioridade efetiva T1', value: tierCount['1'] || 0, note: 'consulte a origem do ajuste antes de interpretar a prioridade' },
+        { label: 'Prioridade efetiva T2', value: tierCount['2'] || 0, note: 'consulte a origem do ajuste antes de interpretar a prioridade' },
+        { label: 'Prioridade efetiva T3', value: tierCount['3'] || 0, note: 'consulte a origem do ajuste antes de interpretar a prioridade' }
+      );
+    } else {
+      kpis.push({
+        label: 'Metadados administrativos',
+        value: 'Indisponíveis',
+        note: 'o espelho não inclui prioridades efetivas, notas nem ajustes do banco do Cadu'
+      });
+    }
     return {
       title: 'KinoCampus — Mapa de Sites UFG (Cadu)',
       subtitle: 'Inventário institucional curado pelo Cadu (OpenClaw)',
@@ -2674,32 +3369,26 @@
       generatedAt: new Date().toISOString(),
       filters: {
         busca: f.q || '—',
-        tier: f.tier ? ('Tier ' + f.tier) : 'todos',
-        ig_status: f.ig || 'todos',
-        override_origin: state.sitesOrigin || 'todos',
+        prioridade: f.tier ? ('T' + f.tier) : 'todas',
+        status_instagram: f.ig ? catalogLabel(f.ig) : 'todos',
+        origem_ajuste: state.sitesOrigin ? catalogLabel(state.sitesOrigin) : 'todas',
         total_filtrado: sites.length + ' de ' + (state.allSites || []).length,
       },
-      kpis: [
-        { label: 'Total filtrado', value: sites.length + ' / ' + (state.allSites || []).length, note: 'após aplicar busca, tier e status IG' },
-        { label: 'Com site HTTPS', value: hasUrl, note: 'unidades com URL institucional cadastrada' },
-        { label: 'IG confirmado', value: igCount.confirmed || 0, note: 'perfil com evidência institucional confirmada' },
-        { label: 'IG pendente/tentativo', value: (igCount.pending_verification || 0) + (igCount.tentative || 0), note: 'exige verificação antes de qualquer ativação' },
-        { label: 'Tier efetivo 1', value: tierCount['1'] || 0, note: 'consulte origem e override antes de interpretar prioridade' },
-        { label: 'Tier efetivo 2', value: tierCount['2'] || 0, note: 'consulte origem e override antes de interpretar prioridade' },
-        { label: 'Tier efetivo 3', value: tierCount['3'] || 0, note: 'consulte origem e override antes de interpretar prioridade' },
-      ],
+      kpis: kpis,
       sections: [
         {
           title: 'Sites UFG (lista filtrada)',
-          note: 'Tabela exportada da visão Fontes web. Overrides exigem ID estável, confirmação explícita e ETag/CAS; valores legados não são promovidos automaticamente.',
+          note: administrativeMetadataAvailable
+            ? 'Tabela exportada da visão Fontes web. Ajustes administrativos exigem ID estável, confirmação explícita e ETag/CAS; valores legados não são promovidos automaticamente.'
+            : 'Tabela exportada do espelho institucional auditado. Prioridades efetivas, notas e ajustes administrativos não estão disponíveis neste artefato e foram omitidos.',
           columns: [
             { key: 'unidade', label: 'Unidade', width: 2 },
-            { key: 'tier', label: 'Tier', width: 1 },
+            { key: 'prioridade', label: 'Prioridade', width: 1 },
             { key: 'site', label: 'Site institucional', width: 4 },
             { key: 'instagram', label: 'Instagram', width: 2 },
-            { key: 'ig_status', label: 'Status IG', width: 1 },
+            { key: 'ig_status', label: 'Status do Instagram', width: 1 },
             { key: 'categoria', label: 'Categoria', width: 2 },
-            { key: 'override', label: 'Origem / colisão', width: 2 },
+            { key: 'ajuste', label: 'Ajuste / colisão', width: 2 },
             { key: 'observacao', label: 'Observação', width: 3 },
           ],
           rows: rows,
@@ -2826,6 +3515,7 @@
   function bindEvents() {
     $$('.kc-cadu-tab').forEach(function (tab) {
       tab.addEventListener('click', function () { switchTab(tab.getAttribute('data-tab')); });
+      tab.addEventListener('keydown', function (event) { handleTabKeydown(event, tab); });
     });
 
     // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
@@ -2881,7 +3571,7 @@
         if (isHidden) {
           notifDropdown.removeAttribute('hidden');
           notifBell.setAttribute('aria-expanded', 'true');
-          pollNotifActivity();
+          pollNotifActivity({ markSeen: true });
         } else {
           notifDropdown.setAttribute('hidden', '');
           notifBell.setAttribute('aria-expanded', 'false');
@@ -2910,7 +3600,10 @@
     setInterval(function () {
       if (document.hidden) return;
       // Poll silencioso: atualiza health e atividade recente quando a API está saudável.
-      fetch('/api/cadu/health', { headers: { Accept: 'application/json' } })
+      fetch('/api/cadu/health', {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (data) {
           if (!data) return;
@@ -3039,8 +3732,8 @@
         if (!btn) return;
         var sourceId = btn.getAttribute('data-source-id') || '';
         if (sourceId) {
-          var mapped = state.allSites.find(function (site) { return site.sourceId === sourceId; });
-          if (mapped) { publishSite(mapped); return; }
+          var canonicalSource = sourceById(sourceId);
+          if (canonicalSource) { submitSourceReview(canonicalSource); return; }
         }
         var key = btn.getAttribute('data-key') || '';
         var parts = key.split('|');
@@ -3122,16 +3815,21 @@
   // ============================================================
 
   function getCaduConfig() {
-    // v0.4.3: usa Vercel proxy (mesmo domínio = CSP OK + Edge Function SSE).
-    // Fallback pra VPS direta se explicitamente configurado.
+    // Em produção, usa o proxy autenticado do mesmo domínio e nunca expõe o
+    // token da VPS no navegador. O acesso direto existe só no desenvolvimento
+    // local e exige um token explícito.
     var env = window.KC_ENV || {};
     var direct = env.CADU_API_DIRECT_URL;
     var baseUrl = direct || window.KC_API_URL || '/api/cadu';
     var localDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    var localToken = localDev ? (env.CADU_API_TOKEN || window.KC_API_TOKEN || '') : '';
     return {
       url: String(baseUrl || '').replace(/\/$/, ''),
       direct: !!direct,
-      token: localDev ? (env.CADU_API_TOKEN || window.KC_API_TOKEN || '') : '',
+      token: localToken,
+      configurationError: direct && (!localDev || !localToken)
+        ? 'CADU_API_DIRECT_URL exige desenvolvimento local e token explícito; em produção use o proxy autenticado do KinoCampus.'
+        : ''
     };
   }
 
@@ -3155,14 +3853,18 @@
 
   async function caduFetchRaw(path, opts) {
     var cfg = getCaduConfig();
+    if (cfg.configurationError) throw new Error(cfg.configurationError);
     var headers = Object.assign({ 'Accept': 'application/json' }, (opts && opts.headers) || {});
     if (cfg.direct && cfg.token) {
       headers.Authorization = 'Bearer ' + cfg.token;
-    } else if (!cfg.direct) {
+    } else if (!cfg.direct && !headers.Authorization) {
       var adminToken = await getAdminAccessToken();
       if (adminToken) headers.Authorization = 'Bearer ' + adminToken;
     }
-    return fetch(buildCaduApiUrl(path), Object.assign({}, opts || {}, { headers: headers }));
+    return fetch(buildCaduApiUrl(path), Object.assign({}, opts || {}, {
+      cache: 'no-store',
+      headers: headers
+    }));
   }
 
   async function apiFetchResponse(path, opts) {
@@ -3309,6 +4011,15 @@
     if (!isSafePipelineRunId(run.id) || !isSafePipelineStageId(run.stage)) return null;
     var status = String(run.status || '');
     if (['pending', 'running', 'stopping', 'finished', 'failed', 'cancelled'].indexOf(status) === -1) return null;
+    var outcomeStatus = run.outcome_status == null ? null : String(run.outcome_status);
+    if (outcomeStatus !== null && ['success', 'partial', 'failed'].indexOf(outcomeStatus) === -1) return null;
+    if (['pending', 'running', 'stopping'].indexOf(status) >= 0 && outcomeStatus !== null) return null;
+    var expectedEffectiveStatus = status;
+    if (status === 'finished' && outcomeStatus !== null) expectedEffectiveStatus = outcomeStatus;
+    var suppliedEffectiveStatus = run.effective_status == null ? null : String(run.effective_status);
+    if (suppliedEffectiveStatus !== null &&
+        ['pending', 'running', 'stopping', 'finished', 'failed', 'cancelled', 'success', 'partial'].indexOf(suppliedEffectiveStatus) === -1) return null;
+    if (suppliedEffectiveStatus !== null && suppliedEffectiveStatus !== expectedEffectiveStatus) return null;
     var startedAt = Number(run.started_at);
     var finishedAt = run.finished_at == null ? null : Number(run.finished_at);
     var exitCode = run.exit_code == null ? null : Number(run.exit_code);
@@ -3319,6 +4030,8 @@
       id: run.id,
       stage: run.stage,
       status: status,
+      effective_status: expectedEffectiveStatus,
+      outcome_status: outcomeStatus,
       started_at: startedAt,
       finished_at: finishedAt,
       exit_code: exitCode,
@@ -3496,6 +4209,23 @@
     };
   }
 
+  function pipelineRunDisplayStatus(run) {
+    return run && run.effective_status ? run.effective_status : (run && run.status ? run.status : 'unknown');
+  }
+
+  function pipelineStatusLabel(status) {
+    return ({
+      pending: 'pendente',
+      running: 'em execução',
+      stopping: 'encerrando',
+      finished: 'concluída sem resultado verificado',
+      success: 'sucesso',
+      partial: 'parcial',
+      failed: 'falhou',
+      cancelled: 'cancelada',
+    })[status] || 'desconhecido';
+  }
+
   function pipelineStagesForDisplay(status) {
     if (!status || !Array.isArray(status.stages)) return [];
     var seen = Object.create(null);
@@ -3526,23 +4256,36 @@
     }
     var seen = Object.create(null);
     var normalizedStages = [];
+    var expiresAt = Math.min(nowMs + PIPELINE_SNAPSHOT_TTL_MS, generatedAt + PIPELINE_SNAPSHOT_TTL_MS);
     for (var index = 0; index < status.stages.length; index += 1) {
       var stage = status.stages[index];
       if (!stage || !isSafePipelineStageId(stage.id) || seen[stage.id]) return { ok: false, reason: 'identidade de estágio inválida' };
       seen[stage.id] = true;
       var normalizedStage = normalizePipelineStage(stage, nowMs);
-      if (!normalizedStage) return { ok: false, reason: 'preflight incompleto ou inválido para ' + stage.id };
+      if (!normalizedStage) return { ok: false, reason: 'verificação prévia incompleta ou inválida para ' + stage.id };
       normalizedStages.push(normalizedStage);
+      expiresAt = Math.min(expiresAt, normalizedStage.preflight.checked_at * 1000 + PIPELINE_SNAPSHOT_TTL_MS);
+    }
+    if (!Object.prototype.hasOwnProperty.call(status, 'active_run')) {
+      return { ok: false, reason: 'estado da execução ativa ausente' };
+    }
+    var activeRun = null;
+    if (status.active_run !== null) {
+      activeRun = normalizePipelineRun(status.active_run);
+      if (!activeRun || !seen[activeRun.stage] || ['pending', 'running', 'stopping'].indexOf(activeRun.status) < 0) {
+        return { ok: false, reason: 'estado da execução ativa inválido' };
+      }
     }
     return {
       ok: true,
       generatedAt: generatedAt,
-      expiresAt: Math.min(nowMs + PIPELINE_SNAPSHOT_TTL_MS, generatedAt + PIPELINE_SNAPSHOT_TTL_MS),
+      expiresAt: expiresAt,
       capabilities: {
         explicit_dry_run: true,
         explicit_run_mode_routes: true,
       },
       stages: normalizedStages,
+      activeRun: activeRun,
     };
   }
 
@@ -3552,10 +4295,38 @@
   }
 
   function invalidatePipelineControl(reason) {
+    state.pipelineExpiryGeneration += 1;
+    if (state.pipelineExpiryTimer != null) {
+      clearTimeout(state.pipelineExpiryTimer);
+      state.pipelineExpiryTimer = null;
+    }
     state.pipelineControlReady = false;
     state.pipelineControlReason = String(reason || 'contrato de controle indisponível').slice(0, 240);
     state.pipelineSnapshotExpiresAt = 0;
     state.pipelineCapabilities = {};
+  }
+
+  function schedulePipelineControlExpiry() {
+    state.pipelineExpiryGeneration += 1;
+    if (state.pipelineExpiryTimer != null) clearTimeout(state.pipelineExpiryTimer);
+    state.pipelineExpiryTimer = null;
+    if (state.pipelineControlReady !== true || !Number.isFinite(state.pipelineSnapshotExpiresAt)) return;
+
+    var expiresAt = state.pipelineSnapshotExpiresAt;
+    var expiryGeneration = state.pipelineExpiryGeneration;
+    function expirePipelineControl() {
+      if (expiryGeneration !== state.pipelineExpiryGeneration ||
+          state.pipelineControlReady !== true || state.pipelineSnapshotExpiresAt !== expiresAt) return;
+      var remainingMs = expiresAt - Date.now();
+      if (remainingMs >= 0) {
+        state.pipelineExpiryTimer = setTimeout(expirePipelineControl, remainingMs + 1);
+        return;
+      }
+      state.pipelineExpiryTimer = null;
+      invalidatePipelineControl('dados de controle expirados; a verificação prévia será renovada no próximo clique');
+      renderPipelineStages(state.pipelineStages || []);
+    }
+    state.pipelineExpiryTimer = setTimeout(expirePipelineControl, Math.max(0, expiresAt - Date.now() + 1));
   }
 
   async function performPipelineRefresh() {
@@ -3584,7 +4355,7 @@
       return;
     }
     var normalizedStages = validation.stages;
-    var normalizedActive = status.active_run == null ? null : normalizePipelineRun(status.active_run);
+    var normalizedActive = validation.activeRun;
     var normalizedHistory = Array.isArray(status.history)
       ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
       : [];
@@ -3603,6 +4374,7 @@
       else refreshPipelineHealth();
       renderPipelineHistory(state.pipelineHistory);
       updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
+      schedulePipelineControlExpiry();
     } catch (error) {
       invalidatePipelineControl('snapshot rejeitado durante a renderização');
       state.pipelineStages = [];
@@ -3632,13 +4404,33 @@
     }
   }
 
-  function refreshPipeline() {
-    if (document.hidden) return Promise.resolve({ skipped: 'hidden' });
+  function refreshPipeline(options) {
+    var opts = options || {};
+    if (document.hidden && opts.force !== true) return Promise.resolve({ skipped: 'hidden' });
     if (state.pipelineRefreshPromise) return state.pipelineRefreshPromise;
     state.pipelineRefreshPromise = performPipelineRefresh().finally(function () {
       state.pipelineRefreshPromise = null;
     });
     return state.pipelineRefreshPromise;
+  }
+
+  async function ensureFreshPipelineControl() {
+    try {
+      // Se o polling de 5 s já estiver renovando, o clique participa da mesma
+      // singleflight e nunca decide com o snapshot anterior enquanto há um GET
+      // mais novo em trânsito.
+      if (state.pipelineRefreshPromise) await state.pipelineRefreshPromise;
+      if (pipelineControlIsReady()) return true;
+
+      invalidatePipelineControl('renovando o contrato e a verificação prévia da pipeline…');
+      renderPipelineStages(state.pipelineStages || []);
+      await refreshPipeline({ force: true });
+      if (pipelineControlIsReady()) return true;
+    } catch (error) {
+      invalidatePipelineControl('falha ao renovar o contrato e a verificação prévia da pipeline');
+    }
+    renderPipelineStages(state.pipelineStages || []);
+    return false;
   }
 
   async function refreshPipelineHealth() {
@@ -3692,7 +4484,7 @@
     }
     if (supportsExplicitModes && profile.dry_run_available === true) {
       return [
-        { dryRun: true, label: 'Dry-run', danger: false },
+        { dryRun: true, label: 'Simular', danger: false },
         { dryRun: false, label: profile.mutates_platform ? 'Executar real' : 'Executar', danger: Boolean(profile.mutates_platform) }
       ];
     }
@@ -3744,7 +4536,7 @@
 
   function renderStagePreflight(s) {
     if (!s.preflight) {
-      return '<div class="kc-pipeline-stage__preflight">' + stageChip('preflight indisponível', 'danger') +
+      return '<div class="kc-pipeline-stage__preflight">' + stageChip('verificação prévia indisponível', 'danger') +
         stageChip('somente leitura', 'warning') + '</div>' +
         '<div class="kc-pipeline-stage__script" title="' + escapeHtml(s.script || '') + '"><i class="fas fa-file-code"></i> ' + escapeHtml(s.script || 'script não informado') + '</div>';
     }
@@ -3754,9 +4546,9 @@
     var missing = checks.filter(function (check) { return check.status === 'missing'; });
     var level = pf.can_run === false ? 'danger' : (missing.length ? 'warning' : 'ok');
     var chips = [];
-    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atenção' : 'preflight ok'), level));
+    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atenção' : 'verificação prévia aprovada'), level));
     chips.push(stageChip('risco ' + (profile.risk || 'n/d'), profile.risk === 'high' ? 'danger' : (profile.risk === 'medium' ? 'warning' : 'ok')));
-    if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'dry-run padrão' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
+    if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'simulação padrão' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
     else chips.push(stageChip('sem mutação direta', 'ok'));
     (profile.effects || []).slice(0, 3).forEach(function (effect) { chips.push(stageChip(effectLabel(effect), '')); });
     if ((profile.effects || []).length > 3) chips.push(stageChip('+' + ((profile.effects || []).length - 3), ''));
@@ -3801,31 +4593,43 @@
       return;
     }
     container.innerHTML = controlGuard + stages.map(function (s) {
-      var lastTxt = '— sem runs —';
+      var lastTxt = '— sem execuções —';
       var lastCls = '';
       if (s.last_run) {
-        lastTxt = fmtAgo(s.last_run.started_at) + ' (' + (s.last_run.status || '') + ')';
-        lastCls = 'is-' + (s.last_run.status || '');
+        var lastStatus = pipelineRunDisplayStatus(s.last_run);
+        lastTxt = fmtAgo(s.last_run.started_at) + ' (' + pipelineStatusLabel(lastStatus) + ')';
+        lastCls = 'is-' + lastStatus;
       }
       var pf = s.preflight || {};
       var profile = pf.profile || {};
       var canRun = controlReady && pf && pf.can_run === true;
+      // Um estágio com preflight presente veio de um snapshot que já passou
+      // pela validação estrita. Após o TTL, suas ações viram gatilhos de
+      // renovação (não autorização): runPipelineStage relê tudo e resolve o
+      // modo novamente antes de mostrar a confirmação fresca.
+      var canRefreshControl = !controlReady && Boolean(s.preflight);
+      var displayCapabilities = canRefreshControl
+        ? { explicit_dry_run: true, explicit_run_mode_routes: true }
+        : state.pipelineCapabilities;
       var blockedReason = !controlReady
         ? (state.pipelineControlReason || 'snapshot expirado')
-        : ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou');
+        : ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'a verificação prévia falhou');
       var actionButtons = [];
       function actionButton(dryRun, label, danger) {
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
-        var disabled = !canRun || state.pipelineStartPending;
+        var disabled = (!canRun && !canRefreshControl) || state.pipelineStartPending;
+        var displayLabel = canRefreshControl ? 'Renovar · ' + label : label;
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
-          : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason);
+          : (canRun
+            ? label + ' ' + s.id
+            : (canRefreshControl ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase() : 'Indisponível: ' + blockedReason));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
-          '<i class="fas ' + (dryRun === true ? 'fa-flask' : 'fa-play') + '"></i> ' + escapeHtml(label) +
+          '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
         '</button>';
       }
-      pipelineStageActionModes(profile, state.pipelineCapabilities).forEach(function (action) {
+      pipelineStageActionModes(profile, displayCapabilities).forEach(function (action) {
         actionButtons.push(actionButton(action.dryRun, action.label, action.danger));
       });
       if (!actionButtons.length) actionButtons.push(actionButton(null, 'Execução bloqueada', false));
@@ -3863,29 +4667,31 @@
     if (!card) return;
     if (!active) {
       card.className = 'kc-pipeline-active-card';
-      card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.</div>';
-      if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem run ativo'; }
-      if (logBox && (!pipelineStreamRequest) && (!pipelineLogPollState)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>';
+      card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.</div>';
+      if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem execução ativa'; }
+      if (logBox && (!pipelineStreamRequest) && (!pipelineLogPollState)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>';
       return;
     }
-    var cls = 'is-' + active.status;
+    var displayStatus = pipelineRunDisplayStatus(active);
+    var cls = 'is-' + displayStatus;
+    var escapedActiveRunId = escapeHtml(active.id);
     card.className = 'kc-pipeline-active-card ' + cls;
-    if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = active.status + ' (' + fmtAgo(active.started_at) + ')'; }
+    if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = pipelineStatusLabel(displayStatus) + ' (' + fmtAgo(active.started_at) + ')'; }
     var stopBtn = active.status === 'running'
-      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + active.id + '"><i class="fas fa-stop"></i> Parar</button>'
+      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + escapedActiveRunId + '"><i class="fas fa-stop"></i> Parar</button>'
       : '';
     card.innerHTML =
       '<div class="kc-pipeline-active-card__head">' +
-        '<strong>' + escapeHtml(active.stage) + '</strong>' +
-        '<span class="kc-cadu-badge ' + cls + '" style="background:rgba(255,107,0,.12);color:#ff6b00;">' + escapeHtml(active.status) + '</span>' +
+        '<strong>' + escapeHtml(pipelineActivityStageLabel(active.stage, state.pipelineStages)) + '</strong>' +
+        '<span class="kc-cadu-badge ' + cls + '" style="background:rgba(255,107,0,.12);color:#ff6b00;">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>' +
         stopBtn +
       '</div>' +
       '<div class="kc-pipeline-active-card__meta">' +
-        '<span><i class="fas fa-fingerprint"></i> <code>' + active.id.slice(0, 8) + '</code></span>' +
+        '<span><i class="fas fa-fingerprint"></i> <code>' + escapeHtml(active.id.slice(0, 8)) + '</code></span>' +
         '<span><i class="fas fa-clock"></i> Iniciado ' + fmtAgo(active.started_at) + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> ' + fmtDur(active.started_at, active.finished_at) + '</span>' +
         (typeof active.dry_run === 'boolean' ? '<span><i class="fas ' + (active.dry_run ? 'fa-flask' : 'fa-database') + '"></i> ' + (active.dry_run ? 'simulação' : 'execução real') + '</span>' : '') +
-        (active.exit_code != null ? '<span><i class="fas fa-flag-checkered"></i> exit ' + active.exit_code + '</span>' : '') +
+        (active.exit_code != null ? '<span><i class="fas fa-flag-checkered"></i> código de saída ' + active.exit_code + '</span>' : '') +
       '</div>' +
       renderRunSummary(active.summary);
     var stopEl = card.querySelector('[data-stop]');
@@ -3915,7 +4721,7 @@
       critical: 'crítico'
     }[level] || level;
     var lastSuccess = health.last_successful_all_run || null;
-    var latest = health.latest_run || null;
+    var latest = health.latest_run ? normalizePipelineRun(health.latest_run) : null;
     var since = fmtSecondsWindow(health.seconds_since_successful_all);
     var failures = Number.isFinite(Number(health.failures_recent_count)) ? Math.max(0, Math.floor(Number(health.failures_recent_count))) : 0;
     var issues = Array.isArray(health.issues) ? health.issues.slice(0, 3) : [];
@@ -3932,7 +4738,7 @@
         '<span><i class="fas fa-rotate"></i> all ok: ' + (lastSuccess ? fmtAgo(lastSuccess.finished_at || lastSuccess.started_at) : 'nunca') + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> atraso: ' + escapeHtml(since) + '</span>' +
         '<span><i class="fas fa-triangle-exclamation"></i> falhas 24h: ' + failures + '</span>' +
-        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(latest.stage || '?') + ' ' + escapeHtml(latest.status || '?') + '</span>' : '') +
+        (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(pipelineActivityStageLabel(latest.stage, state.pipelineStages)) + ' ' + escapeHtml(pipelineStatusLabel(pipelineRunDisplayStatus(latest))) + '</span>' : '') +
       '</div>' +
       issueHtml +
       (health.recommendation ? '<div class="kc-pipeline-health-card__meta"><span><i class="fas fa-screwdriver-wrench"></i> ' + escapeHtml(health.recommendation) + '</span></div>' : '');
@@ -3941,27 +4747,29 @@
   function renderPipelineHistory(history) {
     var container = $('#pipeline-history-list');
     if (!container) return;
-    if (!history.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem runs anteriores.</div>'; return; }
+    if (!history.length) { container.innerHTML = '<div class="kc-cadu-empty">Sem execuções anteriores.</div>'; return; }
     container.innerHTML = history.slice(0, 20).map(function (r) {
-      var cls = 'is-' + (r.status || 'unknown');
+      var displayStatus = pipelineRunDisplayStatus(r);
+      var cls = 'is-' + displayStatus;
+      var escapedRunId = escapeHtml(r.id);
       var actions = '';
       // só mostra ações pra runs terminados
       if (r.status === 'finished' || r.status === 'failed' || r.status === 'cancelled') {
         actions =
           '<div class="kc-pipeline-history-item__actions">' +
-            '<button class="kc-pipeline-history-btn" data-action="view" data-run="' + r.id + '" title="Ver artefatos + log"><i class="fas fa-eye"></i></button>' +
-            '<button class="kc-pipeline-history-btn" data-action="download-log" data-run="' + r.id + '" title="Baixar log completo (.log)"><i class="fas fa-download"></i></button>' +
-            '<button class="kc-pipeline-history-btn" data-action="export" data-run="' + r.id + '" title="Export consolidado (JSON)"><i class="fas fa-file-export"></i></button>' +
-            '<button class="kc-pipeline-history-btn" data-action="export-pdf" data-run="' + r.id + '" title="Export visual em PDF"><i class="fas fa-file-pdf"></i></button>' +
-            '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + r.id + '" title="Perguntar ao Cadu sobre esta run"><i class="fas fa-robot"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="view" data-run="' + escapedRunId + '" aria-label="Ver artefatos e log" title="Ver artefatos + log"><i class="fas fa-eye"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="download-log" data-run="' + escapedRunId + '" aria-label="Baixar log completo" title="Baixar log completo (.log)"><i class="fas fa-download"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="export" data-run="' + escapedRunId + '" aria-label="Exportar JSON consolidado" title="Exportação consolidada (JSON)"><i class="fas fa-file-export"></i></button>' +
+            '<button class="kc-pipeline-history-btn" data-action="export-pdf" data-run="' + escapedRunId + '" aria-label="Exportar PDF" title="Exportação visual em PDF"><i class="fas fa-file-pdf"></i></button>' +
+            '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" data-action="ask-cadu" data-run="' + escapedRunId + '" aria-label="Perguntar ao Cadu sobre esta execução" title="Perguntar ao Cadu sobre esta execução"><i class="fas fa-robot"></i></button>' +
           '</div>';
       }
-      return '<div class="kc-pipeline-history-item ' + cls + '" data-run-id="' + r.id + '">' +
+      return '<div class="kc-pipeline-history-item ' + cls + '" data-run-id="' + escapedRunId + '">' +
         '<div class="kc-pipeline-history-item__head">' +
-          '<strong>' + escapeHtml(r.stage) + '</strong>' +
-          '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(r.status) + '</span>' +
+          '<strong>' + escapeHtml(pipelineActivityStageLabel(r.stage, state.pipelineStages)) + '</strong>' +
+          '<span style="font-size:.7rem;color:var(--kc-text-dark-secondary);">' + escapeHtml(pipelineStatusLabel(displayStatus)) + '</span>' +
         '</div>' +
-        '<div class="kc-pipeline-history-item__id">' + r.id.slice(0, 8) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (typeof r.dry_run === 'boolean' ? (r.dry_run ? ' · simulação' : ' · execução real') : '') + (r.exit_code != null ? ' · exit ' + r.exit_code : '') + '</div>' +
+        '<div class="kc-pipeline-history-item__id">' + escapeHtml(r.id.slice(0, 8)) + ' · ' + fmtAgo(r.started_at) + ' · ' + fmtDur(r.started_at, r.finished_at) + (typeof r.dry_run === 'boolean' ? (r.dry_run ? ' · simulação' : ' · execução real') : '') + (r.exit_code != null ? ' · código de saída ' + r.exit_code : '') + '</div>' +
         renderRunSummary(r.summary) +
         actions +
       '</div>';
@@ -3980,17 +4788,52 @@
     });
   }
 
+  function pipelineApiDataOrThrow(response, label) {
+    if (!response || response.__error) {
+      var payload = response && response.data;
+      var detail = response && response.message;
+      if (!detail && payload && typeof payload === 'object') detail = payload.message || payload.error || payload.detail;
+      var status = response && response.status ? ' (HTTP ' + response.status + ')' : '';
+      throw new Error(label + ' falhou' + status + (detail ? ': ' + String(detail).slice(0, 240) : ''));
+    }
+    if (response && typeof response === 'object' && !Array.isArray(response) &&
+        Object.prototype.hasOwnProperty.call(response, 'data') && response.data != null) {
+      return response.data;
+    }
+    return response;
+  }
+
+  function closeRunDetailsModal(modal) {
+    if (!modal || !modal.el) return;
+    modal.el.__kcRequestGeneration = (modal.el.__kcRequestGeneration || 0) + 1;
+    modal.el.style.display = 'none';
+    modal.el.setAttribute('hidden', '');
+    var returnFocus = modal.el.__kcReturnFocus;
+    modal.el.__kcReturnFocus = null;
+    if (returnFocus && document.contains(returnFocus) && typeof returnFocus.focus === 'function') returnFocus.focus();
+  }
+
   function openRunDetailsModal(runId) {
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Identificador de execução inválido; detalhes não foram solicitados.');
+      return;
+    }
     var modal = ensureRunDetailsModal();
+    var requestGeneration = (modal.el.__kcRequestGeneration || 0) + 1;
+    modal.el.__kcRequestGeneration = requestGeneration;
     modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos…</div>';
-    modal.title.textContent = 'Run ' + runId.slice(0, 8);
+    modal.title.textContent = 'Execução ' + runId.slice(0, 8);
+    modal.el.__kcReturnFocus = document.activeElement;
+    modal.el.removeAttribute('hidden');
     modal.el.style.display = 'flex';
+    setTimeout(function () { if (modal.close) modal.close.focus(); }, 0);
     // fetch artifacts + log tail in parallel
     Promise.all([
-      apiFetch('/api/cadu/pipeline/' + runId + '/artifacts').then(function (r) { return r.data || r; }),
-      apiFetch('/api/cadu/pipeline/' + runId + '/log?tail=80').then(function (r) { return r.data || r; }),
-      apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) { return r.data || r; }),
+      apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/artifacts').then(function (r) { return pipelineApiDataOrThrow(r, 'Artefatos'); }),
+      apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/log?tail=80').then(function (r) { return pipelineApiDataOrThrow(r, 'Log'); }),
+      apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export').then(function (r) { return pipelineApiDataOrThrow(r, 'Exportação'); }),
     ]).then(function (res) {
+      if (modal.el.__kcRequestGeneration !== requestGeneration) return;
       var arts = Array.isArray(res[0] && res[0].artifacts)
         ? res[0].artifacts.filter(function (artifact) { return artifact && typeof artifact === 'object'; }).slice(0, 200)
         : [];
@@ -4008,7 +4851,7 @@
               '<i class="fas fa-file-code"></i> ' +
               '<span class="kc-pipeline-artifact__kind">' + escapeHtml(a.kind || 'other') + '</span>' +
               ' <span class="kc-pipeline-artifact__name">' + escapeHtml(a.name) + '</span>' +
-              (a.stale_for_run ? ' <span class="kc-pipeline-artifact__kind" title="Arquivo do mesmo dia, mas anterior ao inicio deste run">antes do run</span>' : '') +
+              (a.stale_for_run ? ' <span class="kc-pipeline-artifact__kind" title="Arquivo do mesmo dia, mas anterior ao início desta execução">antes da execução</span>' : '') +
               ' <span style="color:var(--kc-text-dark-secondary);font-size:.7rem;">' + escapeHtml((Number(a.size_bytes) > 0 ? Number(a.size_bytes) / 1024 : 0).toFixed(1)) + ' KB</span>' +
             '</div>';
           }).join('')
@@ -4022,16 +4865,16 @@
         '<h4 style="margin:14px 0 8px;font-size:.85rem;">Log (últimas 80 linhas)</h4>' +
         logHtml +
         '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">' +
-          '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" id="modal-ask-cadu" data-run="' + runId + '"><i class="fas fa-robot"></i> Perguntar ao Cadu</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-download-log" data-run="' + runId + '"><i class="fas fa-download"></i> Baixar log</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-export" data-run="' + runId + '"><i class="fas fa-file-export"></i> Export JSON</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-export-pdf" data-run="' + runId + '"><i class="fas fa-file-pdf"></i> Export PDF</button>' +
-          '<button class="kc-pipeline-history-btn" id="modal-close" style="margin-left:auto;"><i class="fas fa-times"></i> Fechar</button>' +
+          '<button class="kc-pipeline-history-btn kc-pipeline-history-btn--ask" id="modal-ask-cadu" data-run="' + escapeHtml(runId) + '"><i class="fas fa-robot"></i> Perguntar ao Cadu</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-download-log" data-run="' + escapeHtml(runId) + '"><i class="fas fa-download"></i> Baixar log</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-export" data-run="' + escapeHtml(runId) + '"><i class="fas fa-file-export"></i> Exportar JSON</button>' +
+          '<button class="kc-pipeline-history-btn" id="modal-export-pdf" data-run="' + escapeHtml(runId) + '"><i class="fas fa-file-pdf"></i> Exportar PDF</button>' +
+          '<button class="kc-pipeline-history-btn" data-modal-close style="margin-left:auto;"><i class="fas fa-times"></i> Fechar</button>' +
         '</div>';
-      var closeBtn = document.getElementById('modal-close');
-      if (closeBtn) closeBtn.addEventListener('click', function () { modal.el.style.display = 'none'; });
+      var closeBtn = modal.body.querySelector('[data-modal-close]');
+      if (closeBtn) closeBtn.addEventListener('click', function () { closeRunDetailsModal(modal); });
       var askBtn = document.getElementById('modal-ask-cadu');
-      if (askBtn) askBtn.addEventListener('click', function () { modal.el.style.display = 'none'; askCaduAboutRun(runId); });
+      if (askBtn) askBtn.addEventListener('click', function () { closeRunDetailsModal(modal); askCaduAboutRun(runId); });
       var dlBtn = document.getElementById('modal-download-log');
       if (dlBtn) dlBtn.addEventListener('click', function () { downloadRunLog(runId); });
       var expBtn = document.getElementById('modal-export');
@@ -4039,33 +4882,72 @@
       var pdfBtn = document.getElementById('modal-export-pdf');
       if (pdfBtn) pdfBtn.addEventListener('click', function () { exportRunPdf(runId, pdfBtn); });
     }).catch(function (err) {
-      modal.body.innerHTML = '<div style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>';
+      if (modal.el.__kcRequestGeneration !== requestGeneration) return;
+      modal.body.innerHTML = '<div role="alert" style="color:#ef4444;">Erro ao carregar: ' + escapeHtml(err && err.message || String(err)) + '</div>' +
+        '<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button type="button" class="kc-pipeline-history-btn" data-modal-close><i class="fas fa-times"></i> Fechar</button></div>';
+      var errorClose = modal.body.querySelector('[data-modal-close]');
+      if (errorClose) errorClose.addEventListener('click', function () { closeRunDetailsModal(modal); });
     });
   }
 
   function ensureRunDetailsModal() {
     var el = document.getElementById('run-details-modal');
-    if (el) return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
+    if (el) return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body'), close: el.querySelector('.kc-modal__close') };
     el = document.createElement('div');
     el.id = 'run-details-modal';
     el.className = 'kc-modal';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-labelledby', 'run-details-modal-title');
+    el.setAttribute('hidden', '');
     el.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:20px;';
     el.innerHTML =
       '<div class="kc-modal__inner" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:14px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;">' +
         '<div class="kc-modal__head" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--kc-border-dark);">' +
-          '<h3 class="kc-modal__title" style="margin:0;font-size:1rem;">Run</h3>' +
+          '<h3 class="kc-modal__title" id="run-details-modal-title" style="margin:0;font-size:1rem;">Execução</h3>' +
+          '<button type="button" class="kc-pipeline-history-btn kc-modal__close" aria-label="Fechar detalhes da execução"><i class="fas fa-times" aria-hidden="true"></i></button>' +
         '</div>' +
         '<div class="kc-modal__body" style="padding:18px;overflow:auto;flex:1;"></div>' +
       '</div>';
-    el.addEventListener('click', function (e) { if (e.target === el) el.style.display = 'none'; });
+    var closeButton = el.querySelector('.kc-modal__close');
+    var modal = { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body'), close: closeButton };
+    if (closeButton) closeButton.addEventListener('click', function () { closeRunDetailsModal(modal); });
+    el.addEventListener('click', function (e) { if (e.target === el) closeRunDetailsModal(modal); });
+    el.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeRunDetailsModal(modal);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      var focusable = Array.prototype.slice.call(el.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'))
+        .filter(function (node) { return !node.hidden && node.offsetParent !== null; });
+      if (!focusable.length) {
+        event.preventDefault();
+        if (closeButton) closeButton.focus();
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
     document.body.appendChild(el);
-    return { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body') };
+    return modal;
   }
 
   async function downloadRunLog(runId) {
     var objectUrl = '';
     var anchor = null;
     try {
+      if (!isSafePipelineRunId(runId)) {
+        throw new Error('ID de execução da pipeline inválido.');
+      }
       var path = '/api/cadu/pipeline/' + encodeURIComponent(runId) + '/log?download=1';
       var res = await caduFetchRaw(path, { headers: { 'Accept': 'text/plain' } });
       if (!res.ok) {
@@ -4091,16 +4973,20 @@
   }
 
   function downloadRunExport(runId) {
-    apiFetch('/api/cadu/pipeline/' + runId + '/export').then(function (r) {
-      var data = r.data || r;
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Não foi possível exportar: ID de execução da pipeline inválido.');
+      return;
+    }
+    apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export').then(function (r) {
+      var data = pipelineApiDataOrThrow(r, 'Exportação');
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
-      a.href = url; a.download = 'pipeline-' + runId + '.json';
+      a.href = url; a.download = 'pipeline-' + String(runId).replace(/[^a-zA-Z0-9_-]/g, '') + '.json';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
     }).catch(function (err) {
-      alert('Erro ao exportar: ' + (err && err.message || err));
+      showCaduError('Erro ao exportar JSON da pipeline: ' + (err && err.message || err));
     });
   }
 
@@ -4121,7 +5007,7 @@
       ig_ok: 'Perfis IG OK',
       ig_failed: 'Perfis IG com falha',
       duration_sec: 'Duração (s)',
-      exit_code: 'Exit code',
+      exit_code: 'Código de saída',
     };
     if (labels[key]) return labels[key];
     return String(key || '')
@@ -4170,7 +5056,7 @@
         arquivo: a.name || '',
         tamanho_kb: a.size_bytes != null ? (Number(a.size_bytes) / 1024).toFixed(1) : '',
         durante_run: a.produced_during_run ? 'sim' : 'não',
-        observação: a.stale_for_run ? 'Arquivo anterior ao início desta run' : '',
+        observação: a.stale_for_run ? 'Arquivo anterior ao início desta execução' : '',
       };
     });
     var warningRows = warnings.map(function (warning, index) {
@@ -4191,21 +5077,21 @@
       },
       kpis: [
         { label: 'Estágio', value: runStage, note: 'Stage executado' },
-        { label: 'Status', value: statusPt(runStatus), note: run.exit_code != null ? ('exit ' + run.exit_code) : 'sem exit code' },
+        { label: 'Status', value: statusPt(runStatus), note: run.exit_code != null ? ('código de saída ' + run.exit_code) : 'sem código de saída' },
         { label: 'Duração', value: duration, note: fmtDate(run.started_at) + ' até ' + fmtDate(run.finished_at) },
         { label: 'Publicáveis', value: exportValue(metrics.publishable != null ? metrics.publishable : metrics.publicaveis), note: 'Itens aprovados para publicação' },
         { label: 'Publicados', value: exportValue(metrics.published), note: 'Posts efetivamente publicados' },
-        { label: 'Artefatos', value: artifacts.length, note: 'Arquivos associados à run' },
+        { label: 'Artefatos', value: artifacts.length, note: 'Arquivos associados à execução' },
       ],
       sections: [
         {
           title: 'Status da execução',
           note: 'Identificação e tempos principais da execução selecionada no histórico recente.',
           rows: [
-            { campo: 'Run ID', valor: runId },
+            { campo: 'ID da execução', valor: runId },
             { campo: 'Estágio', valor: runStage },
             { campo: 'Status', valor: statusPt(runStatus) },
-            { campo: 'Exit code', valor: run.exit_code == null ? '—' : run.exit_code },
+            { campo: 'Código de saída', valor: run.exit_code == null ? '—' : run.exit_code },
             { campo: 'Início', valor: fmtDate(run.started_at) },
             { campo: 'Fim', valor: fmtDate(run.finished_at) },
             { campo: 'Duração', valor: duration },
@@ -4215,7 +5101,7 @@
         },
         {
           title: 'Métricas',
-          note: metricRows.length ? 'Métricas consolidadas extraídas do export operacional da pipeline.' : 'Nenhuma métrica foi detectada no export desta run.',
+          note: metricRows.length ? 'Métricas consolidadas extraídas da exportação operacional da pipeline.' : 'Nenhuma métrica foi detectada na exportação desta execução.',
           rows: metricRows,
           pdfColumns: [{ key: 'métrica', label: 'Métrica' }, { key: 'valor', label: 'Valor' }],
           xlsxColumns: [{ key: 'chave', label: 'Chave técnica' }, { key: 'métrica', label: 'Métrica' }, { key: 'valor', label: 'Valor' }],
@@ -4235,13 +5121,13 @@
           pdfColumns: [
             { key: 'tipo', label: 'Tipo' },
             { key: 'arquivo', label: 'Arquivo' },
-            { key: 'durante_run', label: 'Durante a run' },
+            { key: 'durante_run', label: 'Durante a execução' },
           ],
           xlsxColumns: [
             { key: 'tipo', label: 'Tipo' },
             { key: 'arquivo', label: 'Arquivo' },
             { key: 'tamanho_kb', label: 'Tamanho (KB)' },
-            { key: 'durante_run', label: 'Durante a run' },
+            { key: 'durante_run', label: 'Durante a execução' },
             { key: 'observação', label: 'Observação' },
           ],
           maxPdfRows: 24,
@@ -4285,13 +5171,15 @@
   async function exportRunPdf(runId, btn) {
     var originalHtml = btn ? btn.innerHTML : '';
     try {
+      if (!isSafePipelineRunId(runId)) {
+        throw new Error('ID de execução da pipeline inválido.');
+      }
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       }
-      var r = await apiFetch('/api/cadu/pipeline/' + runId + '/export');
-      var data = r.data || r;
-      if (!data || data.__error) throw new Error(data && (data.message || data.error) || 'export indisponível');
+      var r = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export');
+      var data = pipelineApiDataOrThrow(r, 'Exportação PDF');
       if (window.KCAdminExport && typeof window.KCAdminExport.exportReportPDF === 'function') {
         var date = new Date().toISOString().slice(0, 10);
         await window.KCAdminExport.exportReportPDF('kc-cadu-pipeline-' + date + '-' + runId.slice(0, 8) + '.pdf', buildPipelinePdfReport(data, runId));
@@ -4314,12 +5202,16 @@
   }
 
   function askCaduAboutRun(runId) {
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Não foi possível consultar o Cadu: ID de execução da pipeline inválido.');
+      return false;
+    }
     var run = findPipelineRun(runId) || { id: runId, stage: 'pipeline', status: 'unknown' };
     var attrs = {
       'data-ask-kind': 'pipeline',
       'data-ask-run-id': run.id || runId,
       'data-ask-stage': run.stage || 'pipeline',
-      'data-ask-status': run.status || 'unknown'
+      'data-ask-status': pipelineRunDisplayStatus(run)
     };
     return askCaduContext({
       preventDefault: function () {},
@@ -4527,7 +5419,9 @@
     var d = event && event.data ? event.data : {};
     if (event.type === 'log' && d.line) appendLogLine(d.line);
     else if (event.type === 'done') {
-      appendLogLine('— run finished (' + d.status + ', exit=' + d.exit_code + ') —');
+      var eventStatus = String(d.effective_status || d.status || 'unknown');
+      if (['success', 'partial', 'failed', 'cancelled', 'finished'].indexOf(eventStatus) === -1) eventStatus = 'unknown';
+      appendLogLine('— execução concluída (' + pipelineStatusLabel(eventStatus) + ', código de saída=' + d.exit_code + ') —');
       disconnectPipelineStream();
       refreshPipeline();
       pollNotifActivity();
@@ -4546,66 +5440,87 @@
 
   async function runPipelineStage(stageId, dryRun, clickedButton) {
     if (state.pipelineStartPending) return;
-    if (!pipelineControlIsReady()) {
-      invalidatePipelineControl('snapshot expirado; atualize o painel');
-      renderPipelineStages(state.pipelineStages || []);
-      alert('Controles da pipeline bloqueados: o contrato/preflight está ausente ou expirou. Atualize o painel; nenhuma execução foi iniciada.');
-      return;
-    }
-    var stage = findPipelineStage(stageId);
-    var pf = stage && stage.preflight ? stage.preflight : null;
-    if (!stage || !pf || pf.can_run !== true) {
-      var blockers = ((pf && pf.blockers) || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'preflight falhou';
-      alert('Estágio indisponível: ' + blockers);
-      return;
-    }
-    var profile = pf && pf.profile ? pf.profile : {};
-    dryRun = resolvePipelineDryRun(profile, dryRun, state.pipelineCapabilities);
-    if (typeof dryRun !== 'boolean') {
-      alert('Modo de execução ausente ou inválido. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
-      return;
-    }
-    var warnings = pf ? (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n') : '';
-    var modeLabel = dryRun === true
-      ? 'DRY-RUN EXPLÍCITO (sem mutação de plataforma)'
-      : (dryRun === false ? 'EXECUÇÃO REAL' : 'MODO PADRÃO DO SERVIDOR (dry-run explícito indisponível)');
-    var mutationNotice = dryRun === true
-      ? '\n\nNenhuma mutação de plataforma foi solicitada.'
-      : (profile.mutates_platform && (dryRun === false || !profile.default_dry_run)
-        ? '\n\nATENÇÃO: esta execução pode alterar dados reais/plataforma.'
-        : '\n\nO servidor aplicará o modo padrão deste estágio.');
-    var msg = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + (pf && pf.command ? pf.command : 'node ' + stageId) +
-      '\nRisco: ' + (profile.risk || 'n/d') +
-      '\nModo solicitado: ' + modeLabel +
-      mutationNotice +
-      (warnings ? '\n\nAvisos:\n' + warnings : '') +
-      '\n\nLogs ficarão disponíveis em tempo real abaixo.';
-    if (!confirm(msg)) return;
-    if (!pipelineControlIsReady()) {
-      invalidatePipelineControl('snapshot expirou durante a confirmação');
-      renderPipelineStages(state.pipelineStages || []);
-      alert('O snapshot expirou antes do envio. Nenhum pipeline foi iniciado; atualize o painel e tente novamente.');
-      return;
-    }
     var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
     state.pipelineStartPending = true;
     var restoreButtons = lockPipelineActionButtons(btn);
-    var request = buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities);
-    if (!request) {
-      state.pipelineStartPending = false;
-      restoreButtons();
-      invalidatePipelineControl('rota explícita de execução indisponível');
-      renderPipelineStages(state.pipelineStages || []);
-      alert('Rota explícita de execução indisponível. Nenhuma pipeline foi iniciada.');
-      return;
-    }
+    var requestedDryRun = dryRun;
     var resp;
     try {
-      resp = await apiFetch(request.path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request.payload),
-      });
+      // A confirmação é vinculada a uma geração e prazo exatos. Se o diálogo
+      // permanecer aberto além do TTL, o laço renova, relê o estágio e pede
+      // nova confirmação; a confirmação antiga jamais autoriza o POST.
+      while (true) {
+        var requestHeaders = { 'Content-Type': 'application/json' };
+        if (!getCaduConfig().direct) {
+          // Resolve o JWT antes de validar o preflight. caduFetchRaw reconhece
+          // este header e chega ao fetch sem outro await no caminho do POST.
+          var adminToken = await getAdminAccessToken();
+          if (!adminToken) {
+            alert('Sessão administrativa indisponível. Nenhuma execução foi iniciada.');
+            return;
+          }
+          requestHeaders.Authorization = 'Bearer ' + adminToken;
+        }
+        if (!await ensureFreshPipelineControl()) {
+          alert('Não foi possível renovar o contrato e a verificação prévia da pipeline. Nenhuma execução foi iniciada.');
+          return;
+        }
+
+        var snapshotGeneration = state.pipelineRequestGeneration;
+        var snapshotExpiresAt = state.pipelineSnapshotExpiresAt;
+        var stage = findPipelineStage(stageId);
+        var pf = stage && stage.preflight ? stage.preflight : null;
+        if (!stage || !pf || pf.can_run !== true) {
+          var blockers = ((pf && pf.blockers) || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'a verificação prévia falhou';
+          alert('Estágio indisponível após renovar a verificação prévia: ' + blockers);
+          return;
+        }
+        var profile = pf.profile || {};
+        dryRun = resolvePipelineDryRun(profile, requestedDryRun, state.pipelineCapabilities);
+        if (typeof dryRun !== 'boolean') {
+          alert('Modo de execução ausente ou inválido no contrato renovado. Nenhuma pipeline foi iniciada.');
+          return;
+        }
+        var warnings = (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n');
+        var modeLabel = dryRun === true
+          ? 'SIMULAÇÃO EXPLÍCITA (dry-run, sem mutação de plataforma)'
+          : 'EXECUÇÃO REAL';
+        var mutationNotice = dryRun === true
+          ? '\n\nNenhuma mutação de plataforma foi solicitada.'
+          : (profile.mutates_platform
+            ? '\n\nATENÇÃO: esta execução pode alterar dados reais/plataforma.'
+            : '\n\nEste estágio não declara mutação direta de plataforma.');
+        var message = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + pf.command +
+          '\nRisco: ' + (profile.risk || 'n/d') +
+          '\nModo solicitado: ' + modeLabel +
+          mutationNotice +
+          (warnings ? '\n\nAvisos:\n' + warnings : '') +
+          '\n\nEsta verificação prévia expira em até 15 segundos. Os logs ficarão disponíveis em tempo real abaixo.';
+        if (!confirm(message)) return;
+
+        // Não há await entre esta verificação e apiFetch: timers/polling não
+        // conseguem trocar o snapshot nessa janela síncrona.
+        if (!pipelineControlIsReady() ||
+            snapshotGeneration !== state.pipelineRequestGeneration ||
+            snapshotExpiresAt !== state.pipelineSnapshotExpiresAt) {
+          invalidatePipelineControl('os dados de controle expiraram ou mudaram durante a confirmação; renovando a verificação prévia…');
+          renderPipelineStages(state.pipelineStages || []);
+          continue;
+        }
+        var request = buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities);
+        if (!request) {
+          invalidatePipelineControl('rota explícita de execução indisponível');
+          renderPipelineStages(state.pipelineStages || []);
+          alert('Rota explícita de execução indisponível. Nenhuma pipeline foi iniciada.');
+          return;
+        }
+        resp = await apiFetch(request.path, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: JSON.stringify(request.payload),
+        });
+        break;
+      }
     } finally {
       state.pipelineStartPending = false;
       restoreButtons();
@@ -4628,7 +5543,7 @@
       } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
         var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
-        msg = '⛔ Já existe um run ativo para "' + stageId + '" (id ' + existingId + ').\n\nAguarde terminar ou pare-o via botão Parar antes de iniciar novo.';
+        msg = '⛔ Já existe uma execução ativa para "' + stageId + '" (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
       } else if (resp.status === 400 || resp.status === 422) {
         var validationDetail = resp.data && (resp.data.detail || resp.data);
         msg = '⚠️ Requisição recusada pelo cadu-api (HTTP ' + resp.status + '): ' +
@@ -4649,17 +5564,21 @@
   }
 
   async function stopPipelineRun(runId) {
-    if (!confirm('Parar este run? O subprocess será morto via SIGTERM.')) return;
+    if (!isSafePipelineRunId(runId)) {
+      showCaduError('Não foi possível parar: ID de execução da pipeline inválido.');
+      return;
+    }
+    if (!confirm('Parar esta execução? O processo será encerrado de forma controlada (SIGTERM).')) return;
     // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
-    var resp = await apiFetch('/api/cadu/pipeline/' + runId + '/stop', { method: 'POST' });
+    var resp = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stop', { method: 'POST' });
     if (resp && resp.ok) {
       refreshPipeline();
     } else if (resp && resp.__error) {
       var msg = 'Falha ao parar.';
       if (resp.status === 409) {
-        msg = '⛔ Run não está mais ativo (já terminou ou foi parado).';
+        msg = '⛔ A execução não está mais ativa (já terminou ou foi interrompida).';
       } else if (resp.status === 404) {
-        msg = '❓ Run não encontrado no cadu-api.';
+        msg = '❓ Execução não encontrada no cadu-api.';
       } else {
         msg = 'Erro ao parar (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
       }

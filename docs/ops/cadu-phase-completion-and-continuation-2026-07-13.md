@@ -2,6 +2,13 @@
 
 Data de corte: 2026-07-13, America/Sao_Paulo
 
+> **Nota de continuidade (2026-07-14):** este documento preserva uma fotografia histórica. A linha
+> “Espelho versionado no Kino” da seção 2 não deve ser usada como configuração corrente. A fonte de
+> verdade operacional passou a ser `services/cadu-ufg-publisher/config/cadu-source-registry/upstream-manifest.json`,
+> sob o contrato descrito em `docs/CADU-SOURCE-REGISTRY-MIRROR-2026-07-13.md`. O novo importador só
+> aceita um commit já alcançável em `origin/main`, catálogo upstream `shadow` consumido exclusivamente
+> por `cadu-api`, zero fontes/perfis habilitados e projeção local `candidate` estritamente somente leitura.
+
 ## 1. Decisão executiva
 
 Esta fase pode ser encerrada como **implementação local pronta para revisão**, condicionada à
