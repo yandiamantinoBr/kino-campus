@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const { analyzeTemporalRelevance, classifyItem } = require('../../services/cadu-ufg-publisher/src/classifier');
 const { cleanTitle, extractFirstImageUrl, extractLinksFromHtml, normalizeWebyItem } = require('../../services/cadu-ufg-publisher/src/extractors');
 const { HttpClient } = require('../../services/cadu-ufg-publisher/src/http-client');
@@ -12,10 +15,131 @@ const { collectReviews, formatReviews, resolveReviewKey } = require('../../servi
 const { isAllowedByRobots, parseRobotsTxt } = require('../../services/cadu-ufg-publisher/src/robots');
 const { discoverFromWebyJson } = require('../../services/cadu-ufg-publisher/src/runner');
 const { StateStore } = require('../../services/cadu-ufg-publisher/src/state');
+const { loadSources, selectSources } = require('../../services/cadu-ufg-publisher/src/sources');
 const { normalizeWhitespace } = require('../../services/cadu-ufg-publisher/src/utils');
 const { parseFeed, parseSitemap } = require('../../services/cadu-ufg-publisher/src/xml');
+const { canonicalJsonSha256 } = require('../../services/cadu-ufg-publisher/scripts/sync-candidate-source-registry');
+
+const SOURCE_REGISTRY_PATH = path.resolve(__dirname, '../../services/cadu-ufg-publisher/config/sources.json');
+const EXPECTED_SOURCE_REGISTRY_SHA256 = 'ff41a4d9d71d1c6f3af46388bf0000bfbf76c15c562f084359da58f4bd18af49';
+
+function readSourceRegistry() {
+  return JSON.parse(fs.readFileSync(SOURCE_REGISTRY_PATH, 'utf8').replace(/^\uFEFF/, ''));
+}
 
 describe('cadu-ufg-publisher', () => {
+  test('publisher source registry metadata matches its canonical source counts and hash', () => {
+    const registry = readSourceRegistry();
+    const counts = {
+      totalSites: registry.sources.length,
+      tier1: registry.sources.filter((source) => source.tier === 1).length,
+      tier2: registry.sources.filter((source) => source.tier === 2).length,
+      tier3: registry.sources.filter((source) => source.tier === 3).length,
+      quick: registry.sources.filter((source) => source.quick === true).length,
+      withInstagram: registry.sources.filter((source) => Boolean(source.instagram)).length,
+      withFeedRss: registry.sources.filter((source) => source.hasFeedRss === true).length,
+    };
+
+    expect(registry.meta).toEqual({
+      lastAudit: '2026-07-15',
+      tier1: 93,
+      withInstagram: 63,
+      totalSites: 107,
+      quick: 103,
+      tier2: 10,
+      version: '3.1',
+      withFeedRss: 103,
+      tier3: 4,
+    });
+    expect(counts).toEqual({
+      totalSites: registry.meta.totalSites,
+      tier1: registry.meta.tier1,
+      tier2: registry.meta.tier2,
+      tier3: registry.meta.tier3,
+      quick: registry.meta.quick,
+      withInstagram: registry.meta.withInstagram,
+      withFeedRss: registry.meta.withFeedRss,
+    });
+    expect(canonicalJsonSha256({ meta: registry.meta, sources: registry.sources }))
+      .toBe(EXPECTED_SOURCE_REGISTRY_SHA256);
+  });
+
+  test('publisher source IDs are unique, codepoint-sorted, and contain no competing PROEC source', () => {
+    const { sources } = readSourceRegistry();
+    const ids = sources.map((source) => source.id);
+    const sortedIds = [...ids].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(sortedIds);
+    expect(ids).not.toContain('proec');
+    expect(sources.filter((source) => new URL(source.baseUrl).hostname === 'proec.ufg.br')).toEqual([]);
+  });
+
+  test('publisher quick inventory includes the historical PROEX ID at its current official source', () => {
+    const { sources } = readSourceRegistry();
+    const proex = sources.find((source) => source.id === 'proex');
+    const runtimeSources = loadSources(SOURCE_REGISTRY_PATH);
+    const runtimeProex = runtimeSources.find((source) => source.id === 'proex');
+    const quickIds = selectSources(runtimeSources, 'quick').map((source) => source.id);
+
+    expect(proex).toEqual({
+      id: 'proex',
+      name: 'Pró-Reitoria de Extensão (PROEX)',
+      baseUrl: 'https://proex.ufg.br',
+      tier: 1,
+      quick: true,
+      hasFeedRss: true,
+      hasEventsRss: true,
+      feedRssUrl: 'https://proex.ufg.br/feed',
+      feedItemsCount: 10,
+      instagram: 'proex.ufg',
+      lastPostDate: '2026-07-13',
+      qualityScore: 1,
+      lastAudit: '2026-07-15',
+    });
+    expect(runtimeProex).toMatchObject({
+      id: 'proex',
+      name: 'Pró-Reitoria de Extensão (PROEX)',
+      baseUrl: 'https://proex.ufg.br/',
+      tier: 1,
+      quick: true,
+      enabled: true,
+    });
+    expect(quickIds).toContain('proex');
+  });
+
+  test('publisher preserves cultural source IDs and URLs with audited Portuguese labels', () => {
+    const { sources } = readSourceRegistry();
+    const byId = new Map(sources.map((source) => [source.id, source]));
+
+    expect(byId.get('centrocultural')).toMatchObject({
+      id: 'centrocultural',
+      name: 'Centro Cultural UFG (CCUFG)',
+      baseUrl: 'https://centrocultural.ufg.br',
+      instagram: 'centroculturalufg',
+      lastAudit: '2026-07-15',
+    });
+    expect(byId.get('museu')).toMatchObject({
+      id: 'museu',
+      name: 'Museu Antropológico da UFG (MA)',
+      baseUrl: 'https://museu.ufg.br',
+      instagram: 'museu_ufg',
+      lastAudit: '2026-07-15',
+    });
+    expect(byId.get('seacult')).toMatchObject({
+      id: 'seacult',
+      name: 'Secretaria de Arte e Cultura (SEACULT)',
+      baseUrl: 'https://seacult.ufg.br',
+      tier: 3,
+      quick: false,
+      hasFeedRss: false,
+      hasEventsRss: false,
+      feedRssUrl: null,
+      instagram: null,
+      lastAudit: '2026-07-15',
+    });
+  });
+
   test('extractor strips UFG site suffix from titles', () => {
     expect(cleanTitle('PRPI UFG divulga quatro editais abertos da Fapeg | UFG - Universidade Federal de Goiás'))
       .toBe('PRPI UFG divulga quatro editais abertos da Fapeg');

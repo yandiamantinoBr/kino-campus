@@ -978,9 +978,16 @@ describe('Cadu candidate source registry mirror', () => {
 
   test('keeps the legacy registry as the only active publisher input', () => {
     const legacy = loadSources(DEFAULT_SOURCE_PATH);
-    expect(legacy).toHaveLength(106);
-    expect(selectSources(legacy, 'quick')).toHaveLength(102);
-    expect(selectSources(legacy, 'full')).toHaveLength(106);
+    expect(legacy).toHaveLength(107);
+    expect(selectSources(legacy, 'quick')).toHaveLength(103);
+    expect(selectSources(legacy, 'full')).toHaveLength(107);
+    expect(legacy.find((source) => source.id === 'proex')).toMatchObject({
+      name: 'Pró-Reitoria de Extensão (PROEX)',
+      baseUrl: 'https://proex.ufg.br/',
+      tier: 1,
+      quick: true,
+      enabled: true,
+    });
 
     const toolingAllowlist = new Set([
       path.resolve(SYNC_SCRIPT),
