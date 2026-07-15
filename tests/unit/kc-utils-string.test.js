@@ -247,4 +247,53 @@ describe('_KCU.string.renderMarkdownInline', () => {
     expect(result).toContain('<a href="mailto:edital@ufg.br">Contato</a>');
     expect(result).not.toContain('target="_blank"');
   });
+
+  // ── v13.7.0: tabelas, hr, headings ──────────────────────────────────────
+
+  test('converte headings # / ## / ### / ####', () => {
+    expect(fn('# Título')).toContain('<h1>Título</h1>');
+    expect(fn('## Seção')).toContain('<h2>Seção</h2>');
+    expect(fn('### Subseção')).toContain('<h3>Subseção</h3>');
+    expect(fn('#### Detalhe')).toContain('<h4>Detalhe</h4>');
+  });
+
+  test('converte --- para <hr>', () => {
+    const result = fn('Texto acima\n\n---\n\nTexto abaixo');
+    expect(result).toContain('<hr>');
+  });
+
+  test('renderiza tabela markdown com thead e tbody', () => {
+    const md = '| Coluna A | Coluna B |\n|----------|----------|\n| L1A | L1B |\n| L2A | L2B |';
+    const result = fn(md);
+    expect(result).toContain('<table>');
+    expect(result).toContain('<thead>');
+    expect(result).toContain('<th>Coluna A</th>');
+    expect(result).toContain('<th>Coluna B</th>');
+    expect(result).toContain('<tbody>');
+    expect(result).toContain('<td>L1A</td>');
+    expect(result).toContain('<td>L2B</td>');
+  });
+
+  // ── v13.7.1: sem <br> excessivo ao redor de block elements ──────────────
+
+  test('não acumula <br> antes de heading', () => {
+    const result = fn('Texto\n\n### Título');
+    expect(result).not.toMatch(/<br>\s*<h3>/);
+  });
+
+  test('não acumula <br> depois de heading', () => {
+    const result = fn('### Título\n\nTexto');
+    expect(result).not.toMatch(/<\/h3>\s*<br>/);
+  });
+
+  test('não acumula <br> ao redor de <hr>', () => {
+    const result = fn('A\n\n---\n\nB');
+    expect(result).not.toMatch(/<br>\s*<hr>/);
+    expect(result).not.toMatch(/<hr>\s*<br>/);
+  });
+
+  test('preserva <br> entre parágrafos de texto puro', () => {
+    const result = fn('Primeiro.\n\nSegundo.');
+    expect(result).toContain('<br>');
+  });
 });

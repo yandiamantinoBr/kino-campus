@@ -156,6 +156,19 @@
 
     html = html.replace(/\n/g, '<br>');
 
+    // v13.7.1: Limpar <br> redundantes ao redor de elementos de bloco
+    // (h1-h4, ul, blockquote, hr, table). Sem isso, cada \n vira <br> e se acumula
+    // com a margin do elemento, criando espaçamento excessivo entre seções.
+    html = html
+      // <br> antes de abrir block element
+      .replace(/(?:<br>\s*)+(<(?:h[1-4]|ul|ol|blockquote|hr|table)\b)/gi, '$1')
+      // <br> depois de fechar block element
+      .replace(/(<\/(?:h[1-4]|ul|ol|blockquote|table)>)(?:\s*<br>)+/gi, '$1')
+      // <hr> é void — limpa <br> depois dele também
+      .replace(/(<hr>)(?:\s*<br>)+/gi, '$1')
+      // Colapsar 3+ <br> consecutivos em 2 (parágrafo, não abismo)
+      .replace(/(<br>){3,}/gi, '$1$1');
+
     // Restore links before applying underline (__ delimiters would corrupt tokens)
     links.forEach((tag, idx) => {
       html = html.replace(`__KC_LINK_${idx}__`, tag);
