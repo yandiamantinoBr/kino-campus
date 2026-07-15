@@ -353,9 +353,18 @@ async function findExistingPostsClient(supabase, item) {
  * Mescla formatação de um item em um post existente.
  * Regra: manter o ID do post existente (que é o mais antigo, canônico).
  * Atualiza com: description mais completa, image maior, link da fonte mais recente.
+ *
+ * FIX 2026-07-15: Se o winner estiver `closed` (auto-close por data passada
+ * ou admin_close), o item NOVO é evidência de que a UFG republicou o evento.
+ * Reativar para `published` é a ação correta (regra Yan: "as pessoas
+ * podem ter visto a mais antiga, eu não quero que na hora que vai ver não
+ * tenha mais"). Caso contrário, o item novo vira `hidden` e nunca aparece
+ * no KinoCampus — a UI mostra o post closed como encerrado, e o item
+ * "novo" some. Sem reativação, o sistema parece "zero publish" mesmo
+ * com N publicáveis identificados.
  */
 async function mergeIntoExisting(supabase, postId, item, opts = {}) {
-  const { reactivateIfHidden = true } = opts;
+  const { reactivateIfHidden = true, reactivateIfClosed = true } = opts;
   // Pega o post existente
   const { data: existing } = await supabase
     .from('posts')
@@ -381,9 +390,20 @@ async function mergeIntoExisting(supabase, postId, item, opts = {}) {
   const manualImage = existingMeta.manual_image === true || existingMeta.manual_image === 'true';
 
   const patch = {};
-  // Status: reativar se hidden
+  // Status: reativar se hidden ou closed
   if (reactivateIfHidden && existing.status === 'hidden') {
     patch.status = 'published';
+  }
+  // FIX 2026-07-15: reativar `closed` (auto-close por data passada) quando
+  // há um item NOVO para o mesmo source. Caso contrário o item novo vira
+  // `hidden` e o post closed fica inativo — UI mostra "encerrado" e nada
+  // é publicado, mesmo com N publicáveis identificados pelo curador.
+  if (reactivateIfClosed && existing.status === 'closed') {
+    patch.status = 'published';
+    // Anotar no metadata que o post foi reativado por novo item do curador
+    // (audit trail — útil para debug futuro).
+    patch._reactivated_from_closed_at = new Date().toISOString();
+    patch._reactivated_from_closed_by = 'cadu-publish-merge';
   }
 
   // Description: pegar a mais completa, MAS respeitar manual edits
