@@ -5120,6 +5120,105 @@ body.kc-scroll-locked {
     text-decoration: underline;
 }
 
+/* v13.7.0: Headings dentro do conteúdo — espaçamento harmonioso e compacto */
+.kc-description-content h1,
+.kc-desc-preview h1 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    margin: 14px 0 6px;
+    line-height: 1.3;
+}
+
+.kc-description-content h2,
+.kc-desc-preview h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 12px 0 5px;
+    line-height: 1.3;
+}
+
+.kc-description-content h3,
+.kc-desc-preview h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 10px 0 4px;
+    line-height: 1.35;
+}
+
+.kc-description-content h4,
+.kc-desc-preview h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 8px 0 3px;
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
+/* Primeiro heading não tem margem superior */
+.kc-description-content > h1:first-child,
+.kc-description-content > h2:first-child,
+.kc-description-content > h3:first-child,
+.kc-description-content > h4:first-child,
+.kc-desc-preview > h1:first-child,
+.kc-desc-preview > h2:first-child,
+.kc-desc-preview > h3:first-child,
+.kc-desc-preview > h4:first-child {
+    margin-top: 0;
+}
+
+/* v13.7.0: Tabelas Markdown */
+.kc-description-content table,
+.kc-desc-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 0.88rem;
+    overflow-x: auto;
+    display: block;
+}
+
+.kc-description-content thead,
+.kc-desc-preview thead { display: table; width: 100%; table-layout: fixed; }
+.kc-description-content tbody,
+.kc-desc-preview tbody { display: table; width: 100%; table-layout: fixed; }
+
+.kc-description-content th,
+.kc-desc-preview th {
+    background: rgba(255, 107, 0, 0.1);
+    color: inherit;
+    font-weight: 700;
+    text-align: left;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 107, 0, 0.2);
+    border-radius: 4px;
+}
+
+.kc-description-content td,
+.kc-desc-preview td {
+    padding: 6px 10px;
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    vertical-align: top;
+}
+
+.kc-description-content tr:nth-child(even),
+.kc-desc-preview tr:nth-child(even) {
+    background: rgba(128, 128, 128, 0.05);
+}
+
+/* v13.7.0: Linha horizontal (---) */
+.kc-description-content hr,
+.kc-desc-preview hr {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(128, 128, 128, 0.3), transparent);
+    margin: 12px 0;
+}
+
+[data-theme="light"] .kc-description-content th,
+[data-theme="light"] .kc-desc-preview th {
+    background: rgba(255, 107, 0, 0.08);
+}
+
 .kc-check {
     display: flex;
     gap: 10px;

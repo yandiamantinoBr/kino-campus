@@ -122,6 +122,38 @@
     // v13.6.3: agrupar TODOS os <li> consecutivos em um único <ul> (antes, cada li
     // virava um <ul> próprio, gerando listas de 1 item — visualmente confuso).
     html = html.replace(/(?:<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>');
+
+    // v13.7.0: Horizontal rules (--- / *** / ___) → <hr>
+    // Tem que vir ANTES do \n→<br> para não virar texto literal.
+    html = html.replace(/(?:^|\n)(?:-{3,}|\*{3,}|_{3,})\s*(?=\n|$)/g, '\n<hr>\n');
+
+    // v13.7.0: Tabelas Markdown (| col1 | col2 | com separador ---)
+    // Detecta blocos de tabela: linha de header, linha separadora com ---, linhas de dados.
+    html = html.replace(
+      /((?:^\|[^\n]+\|\s*\n)+)\|[\s:|-]+\|\s*\n((?:^\|[^\n]+\|\s*\n?)+)/gm,
+      function (match, headerRows, bodyRows) {
+        // Parse header
+        var headers = headerRows.trim().split('\n').pop().split('|')
+          .map(function (c) { return c.trim(); })
+          .filter(function (c, i, a) { return !(i === 0 && !c) && !(i === a.length - 1 && !c); });
+        // Parse body rows
+        var rows = bodyRows.trim().split('\n').filter(function (l) { return l.trim(); });
+        var tableHtml = '<table><thead><tr>';
+        headers.forEach(function (h) { tableHtml += '<th>' + h + '</th>'; });
+        tableHtml += '</tr></thead><tbody>';
+        rows.forEach(function (row) {
+          var cells = row.split('|')
+            .map(function (c) { return c.trim(); })
+            .filter(function (c, i, a) { return !(i === 0 && !c) && !(i === a.length - 1 && !c); });
+          tableHtml += '<tr>';
+          cells.forEach(function (c) { tableHtml += '<td>' + c + '</td>'; });
+          tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+        return '\n' + tableHtml + '\n';
+      }
+    );
+
     html = html.replace(/\n/g, '<br>');
 
     // Restore links before applying underline (__ delimiters would corrupt tokens)
