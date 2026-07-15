@@ -151,6 +151,30 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('Recarregar consulta os artefatos; a coleta é executada pela pipeline.');
   });
 
+  test('keeps a fresh degraded feed current while surfacing integrity warnings', () => {
+    const classifyFeedFreshness = isolatedFunction('classifyFeedFreshness');
+    const staleAfter = 25 * 60 * 60 * 1000;
+    expect(classifyFeedFreshness(
+      { status: 'degraded', stale: false },
+      60 * 1000,
+      staleAfter,
+    )).toEqual({
+      tone: 'warning',
+      label: 'Coleta do Curador atualizada com alertas de integridade.',
+    });
+    expect(classifyFeedFreshness(
+      { status: 'degraded', stale: true },
+      60 * 1000,
+      staleAfter,
+    )).toEqual({ tone: 'stale', label: 'Coleta do Curador desatualizada.' });
+    expect(classifyFeedFreshness(
+      { status: 'ready', stale: false },
+      staleAfter + 1,
+      staleAfter,
+    )).toEqual({ tone: 'stale', label: 'Coleta do Curador desatualizada.' });
+    expect(html).toContain('.kc-cadu-feed-freshness.is-warning');
+  });
+
   test('accepts only the explicit public Curator feed contract', () => {
     const normalizePublicFeedResponse = isolatedFunction('normalizePublicFeedResponse', [
       'feedTimestampMs',

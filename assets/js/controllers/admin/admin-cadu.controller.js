@@ -1801,10 +1801,26 @@
     };
   }
 
+  function classifyFeedFreshness(meta, ageMs, staleAfterMs) {
+    meta = meta || {};
+    var unavailable = meta.status === 'unavailable';
+    var stale = meta.stale === true || ageMs > staleAfterMs;
+    if (unavailable) {
+      return { tone: 'error', label: 'Coleta pública indisponível.' };
+    }
+    if (stale) {
+      return { tone: 'stale', label: 'Coleta do Curador desatualizada.' };
+    }
+    if (meta.status === 'degraded') {
+      return { tone: 'warning', label: 'Coleta do Curador atualizada com alertas de integridade.' };
+    }
+    return { tone: 'fresh', label: 'Coleta do Curador atualizada.' };
+  }
+
   function renderFeedFreshness(error) {
     var box = $('#feed-freshness-status');
     if (!box) return;
-    box.classList.remove('is-fresh', 'is-stale', 'is-error');
+    box.classList.remove('is-fresh', 'is-warning', 'is-stale', 'is-error');
     var copy = '';
     if (error) {
       box.classList.add('is-error');
@@ -1824,10 +1840,9 @@
       var ageMs = meta.ageSeconds == null
         ? Math.max(0, Date.now() - state.feedLatestAt)
         : meta.ageSeconds * 1000;
-      var stale = meta.stale === true || meta.status === 'degraded' || ageMs > FEED_STALE_AFTER_MS;
-      var unavailable = meta.status === 'unavailable';
-      box.classList.add(unavailable ? 'is-error' : (stale ? 'is-stale' : 'is-fresh'));
-      copy = '<strong>' + (unavailable ? 'Coleta pública indisponível.' : (stale ? 'Coleta do Curador desatualizada.' : 'Coleta do Curador atualizada.')) + '</strong> ' +
+      var freshness = classifyFeedFreshness(meta, ageMs, FEED_STALE_AFTER_MS);
+      box.classList.add('is-' + freshness.tone);
+      copy = '<strong>' + freshness.label + '</strong> ' +
         'Última coleta: ' + escapeHtml(new Date(state.feedLatestAt).toLocaleString('pt-BR')) +
         ' (' + escapeHtml(fmtAgeMs(ageMs)) + '). Recarregar consulta os artefatos; a coleta é executada pela pipeline.' +
         ' ' + escapeHtml(meta.validArtifacts || 0) + ' artefato(s) válido(s) de ' + escapeHtml(meta.artifactsScanned || 0) + ' analisado(s).' +
