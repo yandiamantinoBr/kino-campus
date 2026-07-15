@@ -456,14 +456,20 @@ select extensions.is(
 );
 select extensions.is(
   (public.kc_cadu_upsert_source_override(
-    'web.pgtap', 3, 'updated', true, 1, null
+    'web.pgtap', 3, 'updated', true, 1,
+    (select coalesce(jsonb_object_agg(unit_id, revision), '{}'::jsonb)
+       from public.kc_unit_meta
+      where unit_id <> 'web.pgtap')
   )->>'revision')::bigint,
   2::bigint,
   'stable Cadu CAS increments the revision'
 );
 select extensions.throws_ok(
   $$select public.kc_cadu_upsert_source_override(
-    'web.pgtap', 1, 'stale', true, 1, null
+    'web.pgtap', 1, 'stale', true, 1,
+    (select coalesce(jsonb_object_agg(unit_id, revision), '{}'::jsonb)
+       from public.kc_unit_meta
+      where unit_id <> 'web.pgtap')
   )$$,
   'PT412',
   'SOURCE_OVERRIDE_PRECONDITION_FAILED',
@@ -472,7 +478,9 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$select public.kc_cadu_upsert_source_override(
     'web.pgtap', 1, 'duplicate create', false, null,
-    (select coalesce(jsonb_object_agg(unit_id, revision), '{}'::jsonb) from public.kc_unit_meta)
+    (select coalesce(jsonb_object_agg(unit_id, revision), '{}'::jsonb)
+       from public.kc_unit_meta
+      where unit_id <> 'web.pgtap')
   )$$,
   'PT412',
   'SOURCE_OVERRIDE_PRECONDITION_FAILED',
@@ -480,7 +488,9 @@ select extensions.throws_ok(
 );
 select extensions.throws_ok(
   $$select public.kc_cadu_upsert_source_override(
-    'web.pgtap.missing', 1, 'missing', true, 1, null
+    'web.pgtap.missing', 1, 'missing', true, 1,
+    (select coalesce(jsonb_object_agg(unit_id, revision), '{}'::jsonb)
+       from public.kc_unit_meta)
   )$$,
   'PT412',
   'SOURCE_OVERRIDE_PRECONDITION_FAILED',
