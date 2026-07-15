@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-15.9",
+  "registryVersion": "2026-07-15.10",
   "auditCutoff": "2026-07-15",
   "generatedFrom": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "e8cda05127728f78d66635c9b1801448d42785f9602f5dabc48d76ebcff61481",
-    "adjudicationContentSha256": "9a59515e50bd2de306c30e6b35d3109fff8f246920ef9ebebb56d65ff23b6aa9",
+    "seedContentSha256": "bb97502364717f99131915020bc8dabff7e37a7173451c3e50d7543d2d41b95f",
+    "adjudicationContentSha256": "1c8b4f3dc0896b375d36630b237375fd7f84886535a33de30914eed8b8321c87",
     "schemaContentSha256": "da6d367be46bf4bca8509dc07ead5c655fb147c576b021484df305f918afbf04",
     "inputs": [
       {
@@ -130,7 +130,7 @@
     "pendingWebSources": 64,
     "transportUnverifiedWebSources": 181,
     "endpointVerificationPendingWebSources": 194,
-    "tierConflictSources": 63,
+    "tierConflictSources": 0,
     "urlConflictSources": 18
   },
   "identityReconciliation": {
@@ -910,56 +910,56 @@
       {
         "url": "https://adm.face.ufg.br/",
         "candidateSourceId": "web.legacy.adm-face",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://cepeconf.face.ufg.br/",
         "candidateSourceId": "web.legacy.cepeconf",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://contabeis.face.ufg.br/",
         "candidateSourceId": "web.legacy.contabeis-face",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://eco.face.ufg.br/",
         "candidateSourceId": "web.legacy.eco-face",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://lam.face.ufg.br/",
         "candidateSourceId": "web.legacy.lam",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://patiodaciencia.ufg.br/",
         "candidateSourceId": "web.legacy.patio-ciencia",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://pos.letras.ufg.br/",
         "candidateSourceId": "web.ufg.ppg.ppgll",
-        "reviewState": "tier_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "kino_publisher"
       },
       {
         "url": "https://sape.face.ufg.br/",
         "candidateSourceId": "web.legacy.sape",
-        "reviewState": "tier_conflict",
+        "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "kino_publisher"
       }
@@ -968,7 +968,7 @@
       {
         "url": "https://cidadeocidental.ufg.br/",
         "candidateSourceId": "web.ufg.campus.cidade-ocidental",
-        "reviewState": "tier_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
@@ -982,28 +982,28 @@
       {
         "url": "https://co.ufg.br/",
         "candidateSourceId": "web.ufg.campus.cidade-ocidental",
-        "reviewState": "tier_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
       {
         "url": "https://eeca.ufg.br/",
         "candidateSourceId": "web.ufg.eeca",
-        "reviewState": "url_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
       {
         "url": "https://em.ufg.br/",
         "candidateSourceId": "web.ufg.emac",
-        "reviewState": "url_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
       {
         "url": "https://fef.ufg.br/",
         "candidateSourceId": "web.ufg.fefd",
-        "reviewState": "url_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
@@ -1227,7 +1227,7 @@
       {
         "url": "https://pos.ufg.br/p/pos-graduacao-nanotecnologia-farmaceutica-ppgnanofarma",
         "candidateSourceId": "web.ufg.ppg.ppgnanofarma.profile",
-        "reviewState": "url_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
@@ -1283,7 +1283,7 @@
       {
         "url": "https://ppgmus.em.ufg.br/",
         "candidateSourceId": "web.ufg.ppg.ppgmus",
-        "reviewState": "url_conflict",
+        "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
@@ -3247,72 +3247,8 @@
     },
     {
       "id": "tier-conflicts",
-      "count": 63,
-      "sourceIds": [
-        "web.legacy.adm-face",
-        "web.legacy.ccufg",
-        "web.legacy.cepeconf",
-        "web.legacy.cerof",
-        "web.legacy.contabeis-face",
-        "web.legacy.cpcbio",
-        "web.legacy.crti",
-        "web.legacy.eco-face",
-        "web.legacy.iac",
-        "web.legacy.labmic",
-        "web.legacy.lam",
-        "web.legacy.lamcad",
-        "web.legacy.patio-ciencia",
-        "web.legacy.pitt",
-        "web.legacy.radio-ufg",
-        "web.legacy.sape",
-        "web.legacy.tvufg",
-        "web.legacy.uc",
-        "web.ufg.agro",
-        "web.ufg.bc",
-        "web.ufg.campus.cidade-ocidental",
-        "web.ufg.campus.goias",
-        "web.ufg.cefis",
-        "web.ufg.cegraf",
-        "web.ufg.cepae",
-        "web.ufg.cidarq",
-        "web.ufg.cpa",
-        "web.ufg.csa",
-        "web.ufg.editora",
-        "web.ufg.emc",
-        "web.ufg.evz",
-        "web.ufg.face",
-        "web.ufg.fafil",
-        "web.ufg.fanut",
-        "web.ufg.fav",
-        "web.ufg.fcs",
-        "web.ufg.fct",
-        "web.ufg.fd",
-        "web.ufg.fe",
-        "web.ufg.fen",
-        "web.ufg.ff",
-        "web.ufg.fh",
-        "web.ufg.fl",
-        "web.ufg.fm",
-        "web.ufg.fo",
-        "web.ufg.hospital.veterinario",
-        "web.ufg.icb",
-        "web.ufg.iesa",
-        "web.ufg.if",
-        "web.ufg.ime",
-        "web.ufg.inf",
-        "web.ufg.iptsp",
-        "web.ufg.iq",
-        "web.ufg.museu",
-        "web.ufg.planetario",
-        "web.ufg.ppg.ppgdr",
-        "web.ufg.ppg.ppgif",
-        "web.ufg.ppg.ppgll",
-        "web.ufg.proad",
-        "web.ufg.seinfra",
-        "web.ufg.seti",
-        "web.ufg.sin",
-        "web.ufg.uaech"
-      ],
+      "count": 0,
+      "sourceIds": [],
       "commonUrlDeclaredSetCount": 51,
       "commonUrlEffectiveLegacyCount": 51,
       "requiredAction": "adjudicate tier and execution modes explicitly"

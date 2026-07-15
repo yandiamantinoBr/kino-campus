@@ -612,10 +612,12 @@ describe('admin Cadu runtime hardening', () => {
       reason: expect.stringContaining('tipo da fonte primária'),
     });
     expect(sourceReviewEligibility({ ...stable, collision: true })).toMatchObject({ allowed: false });
-    expect(sourceReviewEligibility({ ...stable, reviewIssues: ['url_conflict'] })).toMatchObject({ allowed: false });
+    // Documented institutional renames (proec→proex, etc.) are informational once
+    // the source is confirmed_official; they must not block the review queue.
+    expect(sourceReviewEligibility({ ...stable, reviewIssues: ['url_conflict'] })).toMatchObject({ allowed: true });
     expect(sourceReviewEligibility({ ...stable, reviewIssues: ['transport_unverified'] })).toMatchObject({ allowed: true });
     expect(sourceReviewEligibility({
-      ...stable, reviewIssues: ['html_profile_not_feed', 'transport_unverified'],
+      ...stable, reviewIssues: ['html_profile_not_feed', 'transport_unverified', 'url_conflict'],
     })).toMatchObject({ allowed: true });
     expect(sourceReviewEligibility(stable, {
       tier: 2, initialTier: 1, note: stable.note, initialNote: stable.note,

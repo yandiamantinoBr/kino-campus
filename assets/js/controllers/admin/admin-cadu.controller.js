@@ -658,10 +658,13 @@
   }
 
   function sourceReviewBlockingIssues(source) {
-    // These describe collection/transport capability and remain visible to the
-    // reviewer, but they do not make a confirmed institutional identity unsafe
-    // to place in the dedicated (non-publishing) review queue.
-    var informational = ['transport_unverified', 'html_profile_not_feed'];
+    // These describe collection/transport capability or documented institutional
+    // renames and remain visible to the reviewer, but they do not make a
+    // confirmed institutional identity unsafe to place in the dedicated
+    // (non-publishing) review queue.
+    // url_conflict: intentional official aliases (proec→proex, eec→eeca, etc.)
+    // stay as audit notes once reviewState is confirmed_official.
+    var informational = ['transport_unverified', 'html_profile_not_feed', 'url_conflict'];
     return (source && Array.isArray(source.reviewIssues) ? source.reviewIssues : [])
       .filter(function (issue) { return informational.indexOf(issue) === -1; });
   }
