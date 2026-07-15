@@ -18,6 +18,7 @@ const INDEXABLE = {
   'caronas-feed.html': '/caronas-feed.html',
   'achados-perdidos.html': '/achados-perdidos.html',
   'sobre.html': '/sobre.html',
+  'apresentacao-institucional.html': '/apresentacao-institucional.html',
   'editorial.html': '/editorial.html',
   'ajuda.html': '/ajuda.html',
   'ods.html': '/ods.html',

@@ -21,6 +21,7 @@ Este arquivo é um mapa auxiliar para agentes e ferramentas de IA. A fonte prim�
 - [Caronas](https://www.kinocampus.com.br/caronas-feed.html) — ofertas e pedidos de carona.
 - [Achados e perdidos](https://www.kinocampus.com.br/achados-perdidos.html) — itens perdidos ou encontrados.
 - [Sobre o KinoCampus](https://www.kinocampus.com.br/sobre.html) — missão, governança, curadoria, privacidade, publicidade e canais oficiais.
+- [Apresentação institucional](https://www.kinocampus.com.br/apresentacao-institucional.html) — seis percursos expositivos e interativos para conhecer a plataforma e sua proposta de parceria com a UFG.
 - [Política editorial](https://www.kinocampus.com.br/editorial.html) — fontes, critérios de curadoria, correções, publicidade e responsabilidade editorial.
 - [Central de ajuda](https://www.kinocampus.com.br/ajuda.html) — suporte, dúvidas e pedidos administrativos.
 - [ODS](https://www.kinocampus.com.br/ods.html) — relação da plataforma com sustentabilidade e impacto comunitário.

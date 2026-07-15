@@ -318,6 +318,7 @@
     'meta-title.search-results':       'Resultados de Busca - KinoCampus',
     'meta-title.settings':             'KinoCampus - Configurações',
     'meta-title.sobre':                'Sobre o KinoCampus - Comunidade UFG',
+    'meta-title.apresentacao-institucional': 'Apresentação institucional do KinoCampus',
     'meta-title.transparencia':         'Transparência - KinoCampus',
     'meta-title.termos':               'Termos de Uso - KinoCampus',
     'meta-title.product':              'KinoCampus - Detalhes',
@@ -351,6 +352,7 @@
     'meta-description.search-results':      'Busca no KinoCampus — encontre publicações, eventos, oportunidades e mais na comunidade da UFG.',
     'meta-description.settings':            'Configurações da sua conta no KinoCampus — comunidade universitária da UFG.',
     'meta-description.sobre':               'Conheça o KinoCampus: plataforma comunitária independente da UFG, sua missão, governança, processo de curadoria e canais oficiais.',
+    'meta-description.apresentacao-institucional': 'Conheça o pitch institucional interativo do KinoCampus, com percursos de 5, 15 e 30 minutos para apresentar a plataforma e propor parcerias à UFG.',
     'meta-description.transparencia':        'Central de Transparência do KinoCampus: privacidade, termos, cookies, suporte, LGPD e canais de contato.',
     'meta-description.termos':              'Termos de Uso do KinoCampus: regras da comunidade, conta, publicações, moderação e responsabilidades.',
     'meta-description.product':             'KinoCampus — plataforma da comunidade universitária da UFG. Compra e venda, caronas, moradia, eventos, oportunidades e achados/perdidos entre estudantes.',
@@ -387,6 +389,10 @@
     'aria-label.privacy-cookie-notice': 'Aviso de privacidade e cookies',
     'aria-label.close-cookie-preferences': 'Fechar preferências de cookies',
     'aria-label.about-kinocampus':     'Sobre o KinoCampus',
+    'aria-label.pitch-actions':        'Ações da apresentação',
+    'aria-label.pitch-fullscreen':     'Abrir apresentação em tela cheia',
+    'aria-label.pitch-direct':         'Abrir apresentação em uma nova guia',
+    'aria-label.pitch-formats':        'Formatos disponíveis',
 
     // Feed / module rails
     'aria-label.feed-sort':             'Ordenação do feed',
@@ -641,6 +647,9 @@
     // ── Tooltips (atributo title em botões, selects e links) ──────────────
     // Tema
     'tooltip.theme-toggle':             'Alternar tema',
+    'tooltip.pitch-home':               'Ir para o KinoCampus',
+    'tooltip.pitch-fullscreen':         'Abrir em tela cheia',
+    'tooltip.pitch-frame':              'Apresentação institucional interativa do KinoCampus',
     'tooltip.banners-metrics-period':   'Período das métricas',
     // Ranking / info
     'tooltip.how-it-works':             'Como funciona?',

@@ -83,6 +83,12 @@
       section: 'Sobre',
       description: 'Missao, governanca, curadoria, privacidade, publicidade e canais oficiais do KinoCampus.',
     },
+    '/apresentacao-institucional.html': {
+      type: 'WebPage',
+      name: 'Apresentacao institucional do KinoCampus',
+      section: 'Apresentacao institucional',
+      description: 'Seis percursos expositivos e interativos para conhecer o KinoCampus e sua proposta de parceria com a UFG.',
+    },
     '/editorial.html': {
       type: 'WebPage',
       name: 'Política editorial do KinoCampus',

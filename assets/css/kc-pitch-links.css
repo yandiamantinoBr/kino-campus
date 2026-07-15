@@ -1,0 +1,234 @@
+.kc-context-pitch-links {
+  display: grid;
+  gap: 11px;
+}
+
+.kc-context-pitch-links > a:first-child {
+  width: max-content;
+}
+
+.kc-sidebar-context .kc-context-pitch-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 28%, var(--kc-border-dark));
+  border-radius: 13px;
+  color: var(--kc-text-dark-primary);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--kc-primary-brand) 9%, transparent), color-mix(in srgb, var(--kc-secondary-brand) 7%, transparent)),
+    var(--kc-surface-dark);
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.kc-sidebar-context .kc-context-pitch-card:hover {
+  border-color: color-mix(in srgb, var(--kc-primary-brand) 55%, var(--kc-border-dark));
+  box-shadow: 0 10px 24px rgba(7, 26, 61, 0.1);
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.kc-context-pitch-card__mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(7, 26, 61, 0.14);
+  transform: rotate(-3deg);
+  transition: transform 180ms ease;
+}
+
+.kc-context-pitch-card:hover .kc-context-pitch-card__mark {
+  transform: rotate(0deg);
+}
+
+.kc-context-pitch-card__mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.kc-context-pitch-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.kc-context-pitch-card__copy strong {
+  color: var(--kc-text-dark-primary);
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.kc-context-pitch-card__copy small {
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.73rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.kc-context-pitch-card__arrow {
+  color: var(--kc-primary-brand);
+  font-size: 1.05rem;
+}
+
+.kc-pitch-invitation {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 30%, var(--kc-border-dark));
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(22px, 4vw, 48px);
+  background:
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--kc-secondary-brand) 16%, transparent), transparent 28%),
+    radial-gradient(circle at 72% 82%, color-mix(in srgb, var(--kc-tertiary-color) 15%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--kc-primary-brand) 8%, var(--kc-surface-dark)), var(--kc-surface-dark));
+}
+
+.kc-pitch-invitation__copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 11px;
+}
+
+.kc-pitch-invitation__eyebrow {
+  color: var(--kc-primary-brand);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kc-pitch-invitation h2 {
+  margin: 0;
+  max-width: 720px;
+  color: var(--kc-text-dark-primary);
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  line-height: 1.12;
+}
+
+.kc-pitch-invitation p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.7;
+}
+
+.kc-pitch-invitation__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kc-pitch-invitation__meta span {
+  padding: 6px 9px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  color: var(--kc-text-dark-secondary);
+  background: color-mix(in srgb, var(--kc-surface-dark) 82%, transparent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.kc-pitch-invitation__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.kc-pitch-invitation__actions .kc-btn-primary,
+.kc-pitch-invitation__actions .kc-pitch-secondary-action {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.kc-pitch-invitation__actions .kc-pitch-secondary-action {
+  border: 1px solid var(--kc-border-dark);
+  color: var(--kc-text-dark-primary);
+  background: var(--kc-surface-dark);
+}
+
+.kc-pitch-invitation__actions a:hover {
+  text-decoration: none;
+}
+
+.kc-pitch-invitation__visual {
+  position: relative;
+  z-index: 1;
+  width: clamp(130px, 16vw, 188px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.kc-pitch-invitation__visual::before,
+.kc-pitch-invitation__visual::after {
+  content: "";
+  position: absolute;
+  border-radius: 28px;
+}
+
+.kc-pitch-invitation__visual::before {
+  inset: 8%;
+  background: color-mix(in srgb, var(--kc-secondary-brand) 34%, transparent);
+  transform: rotate(8deg);
+}
+
+.kc-pitch-invitation__visual::after {
+  inset: 22% 0 0 24%;
+  background: color-mix(in srgb, var(--kc-tertiary-color) 35%, transparent);
+  transform: rotate(-8deg);
+}
+
+.kc-pitch-invitation__visual img {
+  position: relative;
+  z-index: 2;
+  width: 72%;
+  height: 72%;
+  border-radius: 24px;
+  box-shadow: 0 24px 50px rgba(7, 26, 61, 0.2);
+  transform: rotate(-3deg);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.kc-pitch-invitation:hover .kc-pitch-invitation__visual img {
+  box-shadow: 0 28px 60px rgba(7, 26, 61, 0.24);
+  transform: rotate(0deg) scale(1.02);
+}
+
+@media (max-width: 700px) {
+  .kc-pitch-invitation {
+    grid-template-columns: 1fr;
+  }
+
+  .kc-pitch-invitation__visual {
+    display: none;
+  }
+
+  .kc-pitch-invitation__actions > * {
+    flex: 1 1 210px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kc-context-pitch-card,
+  .kc-context-pitch-card__mark,
+  .kc-pitch-invitation__visual img {
+    transition: none;
+  }
+}

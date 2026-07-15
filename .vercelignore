@@ -23,6 +23,7 @@ services/cadu-ufg-publisher/**
 !services/cadu-ufg-publisher/config/cadu-source-registry/ufg-source-registry.candidate.json
 !services/cadu-ufg-publisher/config/cadu-source-registry/ufg-source-registry.schema.json
 !services/cadu-ufg-publisher/config/cadu-source-registry/upstream-manifest.json
+apps/pitch-institucional/**
 
 # Artefatos diagnósticos locais.
 test_ads_race.cjs
