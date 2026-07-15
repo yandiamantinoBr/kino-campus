@@ -1,16 +1,19 @@
 {
   "$schema": "./ufg-source-registry.schema.json",
   "schemaVersion": 1,
-  "registryVersion": "2026-07-13.1",
+  "registryVersion": "2026-07-13.7",
   "auditCutoff": "2026-07-13",
   "activation": {
-    "state": "candidate",
-    "runtimeConsumers": []
+    "state": "shadow",
+    "runtimeConsumers": [
+      "cadu-api"
+    ]
   },
   "provenance": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "9418434a842d6866263071d44753d5e1276eddc4d26043b1dcf4820fda6fe8dc",
-    "schemaContentSha256": "f040ae6f01380ccc0bb1f6bd2ffb733fe01e11b389b444b849d12c58676707d9",
+    "seedContentSha256": "b1eda586b8448efe09738e59c02eb9f1ff55ca6680b29ba4e34f1fff430f3296",
+    "adjudicationContentSha256": "9d6b9219d2369f485ccbfb8a519d3a660ca41955ab3f357ed3be724dd47f0249",
+    "schemaContentSha256": "da6d367be46bf4bca8509dc07ead5c655fb147c576b021484df305f918afbf04",
     "inputs": [
       {
         "id": "kino_publisher",
@@ -22,21 +25,21 @@
       {
         "id": "openclaw_curator",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "commit": "75efea5046c0e1df3eb1529188be8c2da671482b",
         "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
-        "contentSha256": "690cb84cd18a1b135dd20c96238d7863402634cc1cc6ee719d69919a61b831d7"
+        "contentSha256": "906af5b223d3ddded064bdabb852547a723da06982eecb8b6f217238124d6242"
       },
       {
         "id": "instagram_scanner",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "commit": "0e30c1f815ad8276631037592816d21a48b73627",
         "path": "data/.openclaw/workspace/scripts/scan-ig-browser.js",
-        "contentSha256": "dc570f901f3ae633009192c99e4c77ebb9edf910a4a7a5c83f6f4d73e8a20454"
+        "contentSha256": "8323e9b99a2bc71fc0b3be4e28f43176c3015acbd0a77f813529d94700793efc"
       },
       {
         "id": "admin_markdown",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "80cdbd2d7e7822604ae241465d39ef2aca6da286",
+        "commit": "0e30c1f815ad8276631037592816d21a48b73627",
         "path": "data/.openclaw/workspace/ufg-sites-map.md",
         "contentSha256": "8915de43109eca6c869a6f2b6d965ca7b26f95deeb39f9b1fa8274c7f65852e4"
       }
@@ -87,6 +90,42 @@
       "checkedAt": "2026-07-13",
       "pageUpdatedAt": "2026-06-17",
       "scope": "câmpus e agrupamentos territoriais"
+    },
+    {
+      "id": "ufg-iig-2026",
+      "title": "Instituto de Inovação em Gestão da UFG recebe alunos do ensino médio",
+      "url": "https://ufg.br/n/200749-instituto-de-inovacao-em-gestao-da-ufg-recebe-alunos-do-ensino-medio",
+      "publisher": "Universidade Federal de Goiás",
+      "checkedAt": "2026-07-13",
+      "pageUpdatedAt": "2026-05-06",
+      "scope": "Instituto de Inovação em Gestão como unidade acadêmica do Campus Cidade Ocidental"
+    },
+    {
+      "id": "ufg-support-foundations-2026",
+      "title": "Reitoria participa do IV Seminário das Fundações de Apoio à UFG",
+      "url": "https://ufg.br/n/200086-reitoria-participa-do-iv-seminario-das-fundacoes-de-apoio-a-ufg",
+      "publisher": "Universidade Federal de Goiás",
+      "checkedAt": "2026-07-13",
+      "pageUpdatedAt": "2026-04-10",
+      "scope": "fundações de apoio atuais: Funape, Fagep e RTVE"
+    },
+    {
+      "id": "ufg-fagep-rename-2025",
+      "title": "Fundação muda de nome para refletir nova identidade",
+      "url": "https://ufg.br/n/196754-fundacao-muda-de-nome-para-refletir-nova-identidade",
+      "publisher": "Universidade Federal de Goiás",
+      "checkedAt": "2026-07-13",
+      "pageUpdatedAt": "2025-11-26",
+      "scope": "mudança de Fundahc para Fundação de Apoio à Gestão de Serviços e Projetos em Saúde (Fagep)"
+    },
+    {
+      "id": "ufg-support-foundations-proad",
+      "title": "Relação com as Fundações de Apoio",
+      "url": "https://proad.ufg.br/p/17466-relacao-com-as-fundacoes-de-apoio",
+      "publisher": "Universidade Federal de Goiás",
+      "checkedAt": "2026-07-13",
+      "pageUpdatedAt": null,
+      "scope": "relação institucional, natureza jurídica e endereços declarados das fundações de apoio"
     }
   ],
   "entities": [
@@ -785,6 +824,52 @@
       ]
     },
     {
+      "id": "ufg.foundation.fagep",
+      "name": "Fundação de Apoio à Gestão de Serviços e Projetos em Saúde",
+      "acronym": "FAGEP",
+      "kind": "affiliated_foundation",
+      "parentId": null,
+      "campus": null,
+      "status": "active",
+      "observedIn": [
+        "official_seed"
+      ],
+      "legacyIds": [
+        "fagep",
+        "fundahc"
+      ]
+    },
+    {
+      "id": "ufg.foundation.funape",
+      "name": "Fundação de Apoio à Pesquisa",
+      "acronym": "FUNAPE",
+      "kind": "affiliated_foundation",
+      "parentId": null,
+      "campus": null,
+      "status": "active",
+      "observedIn": [
+        "official_seed"
+      ],
+      "legacyIds": [
+        "funape"
+      ]
+    },
+    {
+      "id": "ufg.foundation.rtve",
+      "name": "Fundação Rádio e Televisão Educativa e Cultural",
+      "acronym": "RTVE",
+      "kind": "affiliated_foundation",
+      "parentId": null,
+      "campus": null,
+      "status": "active",
+      "observedIn": [
+        "official_seed"
+      ],
+      "legacyIds": [
+        "rtve"
+      ]
+    },
+    {
       "id": "ufg.hospital.clinicas",
       "name": "Hospital das Clínicas da UFG/EBSERH",
       "acronym": "HC-UFG",
@@ -795,7 +880,9 @@
       "observedIn": [
         "official_seed"
       ],
-      "legacyIds": []
+      "legacyIds": [
+        "HC"
+      ]
     },
     {
       "id": "ufg.hospital.veterinario",
@@ -872,6 +959,21 @@
       "legacyIds": [
         "IF",
         "if"
+      ]
+    },
+    {
+      "id": "ufg.iig",
+      "name": "Instituto de Inovação em Gestão",
+      "acronym": "IIG",
+      "kind": "academic_unit",
+      "parentId": "ufg.campus.cidade-ocidental",
+      "campus": "cidade_ocidental",
+      "status": "active",
+      "observedIn": [
+        "official_seed"
+      ],
+      "legacyIds": [
+        "iig"
       ]
     },
     {
@@ -2951,12 +3053,213 @@
       ],
       "legacyIds": [
         "UAECH",
+        "UECH",
         "uaech",
         "uaech-goias"
       ]
     }
   ],
   "webSources": [
+    {
+      "id": "web.affiliated.fagep",
+      "entityIds": [
+        "ufg.foundation.fagep"
+      ],
+      "canonicalUrl": "https://fagep.org.br/",
+      "declaredUrl": "https://fagep.org.br/",
+      "aliases": [
+        "https://fundahc.hc.ufg.br/"
+      ],
+      "role": "primary_site",
+      "sourceKind": "external_site",
+      "enabled": false,
+      "baseTier": null,
+      "executionModes": [],
+      "endpoints": {
+        "html": {
+          "url": "https://fagep.org.br/",
+          "status": "confirmed"
+        }
+      },
+      "collection": {
+        "strategy": "external",
+        "maxItems": 20,
+        "forceDetailFetch": false,
+        "dedupeTarget": "https://fagep.org.br/"
+      },
+      "allowPatterns": [],
+      "blockPatterns": [],
+      "reviewState": "url_conflict",
+      "reviewIssues": [
+        "url_conflict"
+      ],
+      "audit": {
+        "status": "confirmed",
+        "checkedAt": "2026-07-13",
+        "evidence": [
+          {
+            "kind": "institutional_directory",
+            "url": "https://ufg.br/n/196754-fundacao-muda-de-nome-para-refletir-nova-identidade",
+            "field": "entity",
+            "observedValue": "Fundação de Apoio à Gestão de Serviços e Projetos em Saúde (Fagep), antiga Fundahc",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "official_page",
+            "url": "https://fagep.org.br/",
+            "field": "canonical_url",
+            "observedValue": "Fundação de Apoio à Gestão de Serviços e Projetos em Saúde — FAGEP",
+            "checkedAt": "2026-07-13"
+          }
+        ]
+      },
+      "transport": {
+        "status": "verified_200",
+        "checkedAt": "2026-07-13",
+        "finalUrl": "https://fagep.org.br/",
+        "httpStatus": 200,
+        "note": "Portal institucional atual verificado após a mudança de nome de Fundahc para Fagep."
+      },
+      "observations": []
+    },
+    {
+      "id": "web.affiliated.funape",
+      "entityIds": [
+        "ufg.foundation.funape"
+      ],
+      "canonicalUrl": "https://site.funape.org.br/",
+      "declaredUrl": "https://www.funape.org.br/",
+      "aliases": [
+        "https://www.funape.org.br/"
+      ],
+      "role": "primary_site",
+      "sourceKind": "external_site",
+      "enabled": false,
+      "baseTier": null,
+      "executionModes": [],
+      "endpoints": {
+        "html": {
+          "url": "https://site.funape.org.br/",
+          "status": "confirmed"
+        }
+      },
+      "collection": {
+        "strategy": "external",
+        "maxItems": 20,
+        "forceDetailFetch": false,
+        "dedupeTarget": "https://site.funape.org.br/"
+      },
+      "allowPatterns": [],
+      "blockPatterns": [],
+      "reviewState": "url_conflict",
+      "reviewIssues": [
+        "url_conflict"
+      ],
+      "audit": {
+        "status": "confirmed",
+        "checkedAt": "2026-07-13",
+        "evidence": [
+          {
+            "kind": "institutional_directory",
+            "url": "https://proad.ufg.br/p/17466-relacao-com-as-fundacoes-de-apoio",
+            "field": "declared_url",
+            "observedValue": "FUNAPE — http://www.funape.org.br",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "institutional_directory",
+            "url": "https://ufg.br/n/200086-reitoria-participa-do-iv-seminario-das-fundacoes-de-apoio-a-ufg",
+            "field": "entity",
+            "observedValue": "Fundação de Apoio à Pesquisa — Funape",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "official_page",
+            "url": "https://site.funape.org.br/",
+            "field": "canonical_url",
+            "observedValue": "Fundação de Apoio à Pesquisa — FUNAPE",
+            "checkedAt": "2026-07-13"
+          }
+        ]
+      },
+      "transport": {
+        "status": "verified_200",
+        "checkedAt": "2026-07-13",
+        "finalUrl": "https://site.funape.org.br/",
+        "httpStatus": 200,
+        "note": "O endereço www declarado pela PROAD não resolve; o portal institucional atual opera em site.funape.org.br."
+      },
+      "observations": []
+    },
+    {
+      "id": "web.affiliated.rtve",
+      "entityIds": [
+        "ufg.foundation.rtve"
+      ],
+      "canonicalUrl": "https://rtve.org.br/",
+      "declaredUrl": "https://www.rtve.org.br/",
+      "aliases": [
+        "https://www.rtve.org.br/"
+      ],
+      "role": "primary_site",
+      "sourceKind": "external_site",
+      "enabled": false,
+      "baseTier": null,
+      "executionModes": [],
+      "endpoints": {
+        "html": {
+          "url": "https://rtve.org.br/",
+          "status": "confirmed"
+        }
+      },
+      "collection": {
+        "strategy": "external",
+        "maxItems": 20,
+        "forceDetailFetch": false,
+        "dedupeTarget": "https://rtve.org.br/"
+      },
+      "allowPatterns": [],
+      "blockPatterns": [],
+      "reviewState": "url_conflict",
+      "reviewIssues": [
+        "url_conflict"
+      ],
+      "audit": {
+        "status": "confirmed",
+        "checkedAt": "2026-07-13",
+        "evidence": [
+          {
+            "kind": "institutional_directory",
+            "url": "https://proad.ufg.br/p/17466-relacao-com-as-fundacoes-de-apoio",
+            "field": "declared_url",
+            "observedValue": "RTVE — http://www.rtve.org.br",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "institutional_directory",
+            "url": "https://ufg.br/n/200086-reitoria-participa-do-iv-seminario-das-fundacoes-de-apoio-a-ufg",
+            "field": "entity",
+            "observedValue": "Fundação Rádio e Televisão Educativa e Cultural — RTVE",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "official_page",
+            "url": "https://rtve.org.br/",
+            "field": "canonical_url",
+            "observedValue": "Fundação Rádio e Televisão Educativa e Cultural — RTVE",
+            "checkedAt": "2026-07-13"
+          }
+        ]
+      },
+      "transport": {
+        "status": "verified_redirect",
+        "checkedAt": "2026-07-13",
+        "finalUrl": "https://rtve.org.br/",
+        "httpStatus": 200,
+        "note": "A variante www declarada pela PROAD redireciona para o portal institucional sem www."
+      },
+      "observations": []
+    },
     {
       "id": "web.legacy.adm-face",
       "entityIds": [
@@ -3011,7 +3314,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3122,7 +3425,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3136,7 +3439,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3251,7 +3554,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3265,7 +3568,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3380,7 +3683,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3491,7 +3794,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3505,7 +3808,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3618,7 +3921,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3701,7 +4004,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3812,7 +4115,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 2 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3826,7 +4129,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3954,7 +4257,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 2 observation(s)",
             "checkedAt": "2026-07-13"
@@ -3968,7 +4271,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4073,25 +4376,33 @@
         }
       },
       "collection": {
-        "strategy": "weby_json_then_html",
+        "strategy": "disabled",
         "maxItems": 20,
         "forceDetailFetch": false,
         "dedupeTarget": "https://ead.face.ufg.br/"
       },
       "allowPatterns": [],
       "blockPatterns": [],
-      "reviewState": "pending_review",
+      "reviewState": "quarantined",
       "reviewIssues": [
         "pending_official_evidence",
-        "transport_unverified"
+        "transport_unverified",
+        "unreachable"
       ],
       "audit": {
         "status": "pending_verification",
         "checkedAt": "2026-07-13",
         "evidence": [
           {
+            "kind": "direct_verification",
+            "url": "https://ead.face.ufg.br/",
+            "field": "transport_result",
+            "observedValue": "curl error 7; HTTP 000; connection to port 443 failed",
+            "checkedAt": "2026-07-13"
+          },
+          {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4099,11 +4410,11 @@
         ]
       },
       "transport": {
-        "status": "pending_verification",
+        "status": "unreachable",
         "checkedAt": "2026-07-13",
         "finalUrl": null,
         "httpStatus": null,
-        "note": null
+        "note": "Direct curl verification could not connect to ead.face.ufg.br on TCP port 443."
       },
       "observations": [
         {
@@ -4174,7 +4485,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4292,7 +4603,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4394,7 +4705,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4477,7 +4788,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4491,7 +4802,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4607,7 +4918,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4621,7 +4932,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 2 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4740,7 +5051,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4754,7 +5065,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4869,7 +5180,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4980,7 +5291,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -4994,7 +5305,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5107,7 +5418,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5190,7 +5501,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5293,7 +5604,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 2 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5307,7 +5618,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5434,7 +5745,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5448,7 +5759,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5521,11 +5832,7 @@
       "sourceKind": "html_page",
       "enabled": false,
       "baseTier": 1,
-      "executionModes": [
-        "quick",
-        "daily",
-        "full"
-      ],
+      "executionModes": [],
       "endpoints": {
         "html": {
           "url": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac",
@@ -5533,16 +5840,17 @@
         }
       },
       "collection": {
-        "strategy": "html",
+        "strategy": "disabled",
         "maxItems": 50,
         "forceDetailFetch": false,
         "dedupeTarget": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac"
       },
       "allowPatterns": [],
       "blockPatterns": [],
-      "reviewState": "pending_review",
+      "reviewState": "quarantined",
       "reviewIssues": [
         "html_profile_not_feed",
+        "http_error",
         "pending_official_evidence",
         "transport_unverified"
       ],
@@ -5551,8 +5859,15 @@
         "checkedAt": "2026-07-13",
         "evidence": [
           {
+            "kind": "direct_verification",
+            "url": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac",
+            "field": "http_status",
+            "observedValue": "HTTP 500",
+            "checkedAt": "2026-07-13"
+          },
+          {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5560,11 +5875,11 @@
         ]
       },
       "transport": {
-        "status": "pending_verification",
+        "status": "http_error",
         "checkedAt": "2026-07-13",
-        "finalUrl": null,
-        "httpStatus": null,
-        "note": null
+        "finalUrl": "https://pos.ufg.br/p/pos-graduacao-artes-cena-ppgac",
+        "httpStatus": 500,
+        "note": "Direct curl verification returned HTTP 500 from the legacy PPG profile."
       },
       "observations": [
         {
@@ -5624,7 +5939,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5696,7 +6011,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5768,7 +6083,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5840,7 +6155,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5912,7 +6227,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -5984,7 +6299,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6056,7 +6371,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6128,7 +6443,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6200,7 +6515,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6272,7 +6587,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6344,7 +6659,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6416,7 +6731,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6488,7 +6803,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6560,7 +6875,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6632,7 +6947,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6704,7 +7019,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6776,7 +7091,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6817,11 +7132,7 @@
       "sourceKind": "html_page",
       "enabled": false,
       "baseTier": 1,
-      "executionModes": [
-        "quick",
-        "daily",
-        "full"
-      ],
+      "executionModes": [],
       "endpoints": {
         "html": {
           "url": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef",
@@ -6829,16 +7140,17 @@
         }
       },
       "collection": {
-        "strategy": "html",
+        "strategy": "disabled",
         "maxItems": 50,
         "forceDetailFetch": false,
         "dedupeTarget": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef"
       },
       "allowPatterns": [],
       "blockPatterns": [],
-      "reviewState": "pending_review",
+      "reviewState": "quarantined",
       "reviewIssues": [
         "html_profile_not_feed",
+        "http_error",
         "pending_official_evidence",
         "transport_unverified"
       ],
@@ -6847,8 +7159,15 @@
         "checkedAt": "2026-07-13",
         "evidence": [
           {
+            "kind": "direct_verification",
+            "url": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef",
+            "field": "http_status",
+            "observedValue": "HTTP 500",
+            "checkedAt": "2026-07-13"
+          },
+          {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6856,11 +7175,11 @@
         ]
       },
       "transport": {
-        "status": "pending_verification",
+        "status": "http_error",
         "checkedAt": "2026-07-13",
-        "finalUrl": null,
-        "httpStatus": null,
-        "note": null
+        "finalUrl": "https://pos.ufg.br/p/pos-graduacao-educacao-fisica-ppgef",
+        "httpStatus": 500,
+        "note": "Direct curl verification returned HTTP 500 from the legacy PPG profile."
       },
       "observations": [
         {
@@ -6889,11 +7208,7 @@
       "sourceKind": "html_page",
       "enabled": false,
       "baseTier": 1,
-      "executionModes": [
-        "quick",
-        "daily",
-        "full"
-      ],
+      "executionModes": [],
       "endpoints": {
         "html": {
           "url": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
@@ -6901,16 +7216,17 @@
         }
       },
       "collection": {
-        "strategy": "html",
+        "strategy": "disabled",
         "maxItems": 50,
         "forceDetailFetch": false,
         "dedupeTarget": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf"
       },
       "allowPatterns": [],
       "blockPatterns": [],
-      "reviewState": "pending_review",
+      "reviewState": "quarantined",
       "reviewIssues": [
         "html_profile_not_feed",
+        "http_error",
         "pending_official_evidence",
         "transport_unverified"
       ],
@@ -6919,8 +7235,15 @@
         "checkedAt": "2026-07-13",
         "evidence": [
           {
+            "kind": "direct_verification",
+            "url": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
+            "field": "http_status",
+            "observedValue": "HTTP 500",
+            "checkedAt": "2026-07-13"
+          },
+          {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -6928,11 +7251,11 @@
         ]
       },
       "transport": {
-        "status": "pending_verification",
+        "status": "http_error",
         "checkedAt": "2026-07-13",
-        "finalUrl": null,
-        "httpStatus": null,
-        "note": null
+        "finalUrl": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
+        "httpStatus": 500,
+        "note": "Direct curl verification returned HTTP 500 from the legacy PPG profile."
       },
       "observations": [
         {
@@ -6992,7 +7315,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7064,7 +7387,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7136,7 +7459,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7208,7 +7531,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7280,7 +7603,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7352,7 +7675,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7424,7 +7747,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7496,7 +7819,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7568,7 +7891,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7640,7 +7963,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7712,7 +8035,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7784,7 +8107,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7856,7 +8179,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -7928,7 +8251,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8000,7 +8323,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8083,7 +8406,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8097,7 +8420,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8213,7 +8536,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8227,7 +8550,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8297,51 +8620,44 @@
       "declaredUrl": "https://revistas.ufg.br/",
       "aliases": [],
       "role": "legacy_observation",
-      "sourceKind": "weby_site",
+      "sourceKind": "ojs_site",
       "enabled": false,
       "baseTier": 2,
-      "executionModes": [
-        "daily",
-        "full"
-      ],
+      "executionModes": [],
       "endpoints": {
-        "events": {
-          "url": "https://revistas.ufg.br/events.json",
-          "status": "pending_verification"
-        },
         "html": {
           "url": "https://revistas.ufg.br/",
-          "status": "pending_verification"
-        },
-        "news": {
-          "url": "https://revistas.ufg.br/news.json",
-          "status": "pending_verification"
-        },
-        "rss": {
-          "url": "https://revistas.ufg.br/feed",
-          "status": "pending_verification"
+          "status": "tentative"
         }
       },
       "collection": {
-        "strategy": "weby_json_then_html",
+        "strategy": "disabled",
         "maxItems": 30,
         "forceDetailFetch": false,
         "dedupeTarget": "https://revistas.ufg.br/"
       },
       "allowPatterns": [],
       "blockPatterns": [],
-      "reviewState": "pending_review",
+      "reviewState": "quarantined",
       "reviewIssues": [
+        "content_integrity_violation",
         "pending_official_evidence",
-        "transport_unverified"
+        "platform_misclassified"
       ],
       "audit": {
         "status": "pending_verification",
         "checkedAt": "2026-07-13",
         "evidence": [
           {
+            "kind": "direct_verification",
+            "url": "https://revistas.ufg.br/",
+            "field": "content_integrity",
+            "observedValue": "HTTP 200 page contained gambling SEO terms including slot gacor, SEWUTOTO and spotbet",
+            "checkedAt": "2026-07-13"
+          },
+          {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8349,11 +8665,11 @@
         ]
       },
       "transport": {
-        "status": "pending_verification",
+        "status": "verified_200",
         "checkedAt": "2026-07-13",
-        "finalUrl": null,
-        "httpStatus": null,
-        "note": null
+        "finalUrl": "https://revistas.ufg.br/",
+        "httpStatus": 200,
+        "note": "Transport succeeds, but the rendered OJS portal contains gambling SEO spam and unsafe external links."
       },
       "observations": [
         {
@@ -8424,7 +8740,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8512,15 +8828,16 @@
         }
       },
       "collection": {
-        "strategy": "weby_json_then_html",
+        "strategy": "disabled",
         "maxItems": 20,
         "forceDetailFetch": false,
         "dedupeTarget": "https://sea.face.ufg.br/"
       },
       "allowPatterns": [],
       "blockPatterns": [],
-      "reviewState": "pending_review",
+      "reviewState": "quarantined",
       "reviewIssues": [
+        "http_error",
         "pending_official_evidence",
         "transport_unverified"
       ],
@@ -8529,8 +8846,15 @@
         "checkedAt": "2026-07-13",
         "evidence": [
           {
+            "kind": "direct_verification",
+            "url": "https://sea.face.ufg.br/",
+            "field": "http_status",
+            "observedValue": "HTTP 404",
+            "checkedAt": "2026-07-13"
+          },
+          {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8538,11 +8862,11 @@
         ]
       },
       "transport": {
-        "status": "pending_verification",
+        "status": "http_error",
         "checkedAt": "2026-07-13",
-        "finalUrl": null,
-        "httpStatus": null,
-        "note": null
+        "finalUrl": "https://sea.face.ufg.br/",
+        "httpStatus": 404,
+        "note": "Direct curl verification returned HTTP 404 from the legacy SEA site."
       },
       "observations": [
         {
@@ -8603,7 +8927,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8617,7 +8941,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8728,7 +9052,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 2 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8844,7 +9168,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8858,7 +9182,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8973,7 +9297,7 @@
         "evidence": [
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/ufg-sites-map.md",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/0e30c1f815ad8276631037592816d21a48b73627/data/.openclaw/workspace/ufg-sites-map.md",
             "field": "legacy_source_observation",
             "observedValue": "admin_markdown: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -8987,7 +9311,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/80cdbd2d7e7822604ae241465d39ef2aca6da286/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/75efea5046c0e1df3eb1529188be8c2da671482b/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-13"
@@ -9345,7 +9669,8 @@
     {
       "id": "web.ufg.campus.cidade-ocidental",
       "entityIds": [
-        "ufg.campus.cidade-ocidental"
+        "ufg.campus.cidade-ocidental",
+        "ufg.iig"
       ],
       "canonicalUrl": "https://cidadeocidental.ufg.br/",
       "declaredUrl": "https://co.ufg.br/",
@@ -9400,6 +9725,13 @@
             "url": "https://ufg.br/p/27153-campus",
             "field": "entity_and_declared_url",
             "observedValue": "Campus Cidade Ocidental",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "official_page",
+            "url": "https://cidadeocidental.ufg.br/",
+            "field": "shared_entity",
+            "observedValue": "Portal oficial do Campus Cidade Ocidental publica as atividades e atos do IIG/UFG",
             "checkedAt": "2026-07-13"
           }
         ]
@@ -21164,6 +21496,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21207,6 +21541,8 @@
       "shared": true,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21259,23 +21595,46 @@
       "profileUrl": "https://www.instagram.com/campusocidentalufg/",
       "aliases": [],
       "entityIds": [
-        "ufg.campus.cidade-ocidental"
+        "ufg.campus.cidade-ocidental",
+        "ufg.iig"
       ],
-      "shared": false,
+      "shared": true,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
       "audit": {
         "checkedAt": "2026-07-13",
-        "evidence": []
+        "evidence": [
+          {
+            "kind": "official_page",
+            "url": "https://cidadeocidental.ufg.br/",
+            "field": "instagram_handle",
+            "observedValue": "campusocidentalufg",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "official_page",
+            "url": "https://cidadeocidental.ufg.br/n/hackathon-cidade-ocidental",
+            "field": "instagram_handle",
+            "observedValue": "campusocidentalufg",
+            "checkedAt": "2026-07-13"
+          }
+        ]
       },
       "observations": [
         {
           "inventory": "admin_markdown",
           "handle": "campusocidentalufg",
           "sourceId": "web.ufg.campus.cidade-ocidental"
+        },
+        {
+          "inventory": "official_ufg_page",
+          "handle": "campusocidentalufg",
+          "sourceId": null
         },
         {
           "inventory": "openclaw_curator",
@@ -21295,6 +21654,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "ig-only"
       ],
@@ -21321,6 +21682,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21365,6 +21728,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21407,6 +21772,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -21433,6 +21800,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21475,6 +21844,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -21501,6 +21872,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21543,6 +21916,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21585,6 +21960,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21627,6 +22004,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21669,6 +22048,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21711,6 +22092,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21746,6 +22129,8 @@
       "shared": true,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21783,6 +22168,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21823,6 +22210,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "ig-only"
       ],
@@ -21849,6 +22238,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21893,6 +22284,8 @@
       "shared": true,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21945,6 +22338,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -21987,6 +22382,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22029,6 +22426,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22071,6 +22470,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22115,6 +22516,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22147,6 +22550,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22189,6 +22594,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22221,6 +22628,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22263,6 +22672,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22292,6 +22703,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "ig-only"
       ],
@@ -22308,6 +22721,114 @@
       ]
     },
     {
+      "id": "ig.funapeufg",
+      "handle": "funapeufg",
+      "profileUrl": "https://www.instagram.com/funapeufg/",
+      "aliases": [],
+      "entityIds": [
+        "ufg.foundation.funape"
+      ],
+      "shared": false,
+      "enabled": false,
+      "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
+      "executionModes": [
+        "full"
+      ],
+      "audit": {
+        "checkedAt": "2026-07-13",
+        "evidence": [
+          {
+            "kind": "official_page",
+            "url": "https://site.funape.org.br/",
+            "field": "instagram_handle",
+            "observedValue": "funapeufg",
+            "checkedAt": "2026-07-13"
+          }
+        ]
+      },
+      "observations": [
+        {
+          "inventory": "official_ufg_page",
+          "handle": "funapeufg",
+          "sourceId": null
+        }
+      ]
+    },
+    {
+      "id": "ig.fundacaofagep",
+      "handle": "fundacaofagep",
+      "profileUrl": "https://www.instagram.com/fundacaofagep/",
+      "aliases": [],
+      "entityIds": [
+        "ufg.foundation.fagep"
+      ],
+      "shared": false,
+      "enabled": false,
+      "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
+      "executionModes": [
+        "full"
+      ],
+      "audit": {
+        "checkedAt": "2026-07-13",
+        "evidence": [
+          {
+            "kind": "official_page",
+            "url": "https://fagep.org.br/",
+            "field": "instagram_handle",
+            "observedValue": "fundacaofagep",
+            "checkedAt": "2026-07-13"
+          }
+        ]
+      },
+      "observations": [
+        {
+          "inventory": "official_ufg_page",
+          "handle": "fundacaofagep",
+          "sourceId": null
+        }
+      ]
+    },
+    {
+      "id": "ig.fundacaortve",
+      "handle": "fundacaortve",
+      "profileUrl": "https://www.instagram.com/fundacaortve/",
+      "aliases": [],
+      "entityIds": [
+        "ufg.foundation.rtve"
+      ],
+      "shared": false,
+      "enabled": false,
+      "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
+      "executionModes": [
+        "full"
+      ],
+      "audit": {
+        "checkedAt": "2026-07-13",
+        "evidence": [
+          {
+            "kind": "official_page",
+            "url": "https://rtve.org.br/",
+            "field": "instagram_handle",
+            "observedValue": "fundacaortve",
+            "checkedAt": "2026-07-13"
+          }
+        ]
+      },
+      "observations": [
+        {
+          "inventory": "official_ufg_page",
+          "handle": "fundacaortve",
+          "sourceId": null
+        }
+      ]
+    },
+    {
       "id": "ig.herbarioufg",
       "handle": "herbarioufg",
       "profileUrl": "https://www.instagram.com/herbarioufg/",
@@ -22318,6 +22839,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22351,6 +22874,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22383,6 +22908,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22414,6 +22941,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22445,6 +22974,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22477,6 +23008,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22519,18 +23052,33 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
       "audit": {
         "checkedAt": "2026-07-13",
-        "evidence": []
+        "evidence": [
+          {
+            "kind": "official_page",
+            "url": "https://inf.ufg.br/n/165349-o-instituto-de-informatica-esta-com-novo-instagram",
+            "field": "instagram_handle",
+            "observedValue": "inf.ufg",
+            "checkedAt": "2026-07-13"
+          }
+        ]
       },
       "observations": [
         {
           "inventory": "kino_publisher",
           "handle": "inf.ufg",
           "sourceId": "web.ufg.inf"
+        },
+        {
+          "inventory": "official_ufg_page",
+          "handle": "inf.ufg",
+          "sourceId": null
         }
       ]
     },
@@ -22544,14 +23092,28 @@
       ],
       "shared": false,
       "enabled": false,
-      "status": "pending_verification",
-      "executionModes": [
-        "full",
-        "ig-only"
-      ],
+      "status": "retired",
+      "identityStatus": "reassigned",
+      "supersededBy": "ig.inf-ufg",
+      "executionModes": [],
       "audit": {
         "checkedAt": "2026-07-13",
-        "evidence": []
+        "evidence": [
+          {
+            "kind": "direct_verification",
+            "url": "https://www.instagram.com/infufg",
+            "field": "current_profile_identity",
+            "observedValue": "The public @infufg profile no longer identifies itself as the UFG Institute of Informatics",
+            "checkedAt": "2026-07-13"
+          },
+          {
+            "kind": "official_page",
+            "url": "https://inf.ufg.br/n/165349-o-instituto-de-informatica-esta-com-novo-instagram",
+            "field": "instagram_identity_transition",
+            "observedValue": "Old @infufg account was suspended; the official replacement is @inf.ufg",
+            "checkedAt": "2026-07-13"
+          }
+        ]
       },
       "observations": [
         {
@@ -22582,6 +23144,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22624,6 +23188,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22650,6 +23216,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22692,6 +23260,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22734,6 +23304,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22760,6 +23332,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -22789,6 +23363,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "ig-only"
       ],
@@ -22813,6 +23389,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "ig-only"
       ],
@@ -22839,6 +23417,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22881,6 +23461,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22925,6 +23507,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22967,6 +23551,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -22999,6 +23585,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23025,6 +23613,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23067,6 +23657,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23109,6 +23701,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23144,6 +23738,8 @@
       "shared": true,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23201,6 +23797,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23235,6 +23833,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23266,6 +23866,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23300,6 +23902,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23331,6 +23935,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23365,6 +23971,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23399,6 +24007,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23433,6 +24043,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23459,6 +24071,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23485,6 +24099,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23511,6 +24127,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23545,6 +24163,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23579,6 +24199,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23613,6 +24235,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23647,6 +24271,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23686,6 +24312,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23720,6 +24348,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "officially_declared",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23754,6 +24384,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23796,6 +24428,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23833,6 +24467,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23875,6 +24511,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -23917,6 +24555,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23943,6 +24583,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full"
       ],
@@ -23974,6 +24616,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -24016,6 +24660,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -24058,6 +24704,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -24100,6 +24748,8 @@
       "shared": false,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
@@ -24143,6 +24793,8 @@
       "shared": true,
       "enabled": false,
       "status": "pending_verification",
+      "identityStatus": "unverified",
+      "supersededBy": null,
       "executionModes": [
         "full",
         "ig-only"
