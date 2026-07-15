@@ -42,8 +42,8 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('data-kpi-filter="tier=1"');
   });
 
-  test('labels canonical tier metrics separately from the operational context', () => {
-    expect(html).toContain('fontes com tier efetivo 1');
+  test('labels canonical priority metrics separately from the operational context', () => {
+    expect(html).toContain('fontes com prioridade efetiva T1, quando disponível');
     expect(html).not.toContain('pró-reitorias + alta prioridade');
     expect(controller).toContain('Contexto operacional:');
     expect(controller).not.toContain('> Context: ');
@@ -67,12 +67,20 @@ describe('admin Cadu UX contracts', () => {
     ].forEach((key) => expect(html).toContain(`data-i18n-tooltip="${key}"`));
   });
 
+  test('links the Cadu integration documentation to the real repository path', () => {
+    expect(html).toContain('https://github.com/yandiamantinoBr/openclaw-cadu/blob/main/docs/INTEGRATION-KINOCAMPUS.md');
+    expect(html).not.toContain('href="docs/INTEGRATION-KINOCAMPUS.md"');
+  });
+
   test('pipeline actions make dry-run versus real execution explicit', () => {
     expect(controller).toContain('data-dry-run="');
     expect(controller).toContain("state.pipelineCapabilities = validation.capabilities;");
     expect(controller).toContain("status.contract_version !== PIPELINE_CONTROL_CONTRACT");
     expect(controller).toContain("pf.can_run !== true");
-    expect(controller).toContain("if (!pipelineControlIsReady())");
+    expect(controller).toContain('if (!await ensureFreshPipelineControl())');
+    expect(controller).toContain('schedulePipelineControlExpiry();');
+    expect(controller).toContain('snapshotGeneration !== state.pipelineRequestGeneration');
+    expect(controller).toContain("var displayLabel = canRefreshControl ? 'Renovar · ' + label : label;");
     expect(controller).toContain("capabilities.explicit_run_mode_routes === true");
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
@@ -100,8 +108,9 @@ describe('admin Cadu UX contracts', () => {
   test('PDF explains registry provenance without calling scanner evidence confirmation', () => {
     expect(controller).not.toContain('perfis validados pelo scanner');
     expect(controller).toContain('perfil com evidência institucional confirmada');
-    expect(controller).toContain("{ key: 'override', label: 'Origem / colisão'");
+    expect(controller).toContain("{ key: 'ajuste', label: 'Ajuste / colisão'");
     expect(controller).toContain('valores legados não são promovidos automaticamente');
+    expect(controller).toContain('Prioridades efetivas, notas e ajustes administrativos não estão disponíveis neste artefato');
   });
 
   test('loads and validates the canonical registry before enabling source views', () => {
@@ -133,12 +142,12 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("envelope.status === 412 || envelope.status === 409");
     expect(controller).toContain('Nenhuma repetição automática foi feita.');
     expect(controller).toContain("state.sourceSaveChains[sourceId]");
-    expect(controller).toContain('window.confirm(\'Criar override estável para \' + source.id');
+    expect(controller).toContain('window.confirm(\'Criar ajuste administrativo estável para \' + source.id');
   });
 
   test('keeps inherited notes visibly separate and requires an explicit first tier', () => {
     expect(controller).toContain('Nota herdada (não será copiada):');
-    expect(controller).toContain('Escolha explicitamente…');
+    expect(controller).toContain('Escolha a prioridade explicitamente…');
     expect(controller).toContain('function normalizedDraftNote(note)');
     expect(controller).toContain("String(note == null ? '' : note).trim() === '' ? null : String(note)");
     expect(controller).toContain('compare os valores e decida manualmente antes de salvar novamente');
@@ -160,7 +169,7 @@ describe('admin Cadu UX contracts', () => {
 
   test('keeps shadow registry sources non-publishable and carries every Instagram status as context', () => {
     expect(controller).toContain('registryModel().selectUnambiguousConfirmedInstagram(profiles)');
-    expect(controller).toContain("return '@' + profile.handle + ' (' + profile.status + ')';");
+    expect(controller).toContain("return '@' + profile.handle + ' (' + catalogLabel(profile.status) + ')';");
     expect(controller).toContain('class="kc-cadu-publish-btn" disabled');
     expect(controller).toContain("state.catalogMode !== 'legacy-writable' || (site && (site.sourceId || site.source_id))");
     expect(controller).toContain('fallback legado está em modo somente leitura');
@@ -227,7 +236,7 @@ describe('admin Cadu UX contracts', () => {
   });
 
   test('exports deferred legacy identities and row metadata rather than hashes alone', () => {
-    expect(controller).toContain("['kind','unit_ids','match_types','source_id','candidate_source_ids','entity_ids','legacy_rows_json','row_keys']");
+    expect(controller).toContain("['Pendência', 'IDs legados', 'Tipos de associação', 'ID da fonte', 'Fontes candidatas', 'IDs das entidades', 'Linhas legadas (JSON)', 'Hashes das linhas']");
     expect(controller).toContain("JSON.stringify(item.rows || (item.row ? [item.row] : []))");
     expect(controller).toContain("var unitIds = item.unitIds || (item.unitId ? [item.unitId] : []);");
     expect(controller).toContain("if (/^[\\t\\r ]*[=+\\-@]/.test(s)) s = \"'\" + s;");

@@ -26,6 +26,7 @@
     .kc-cadu-kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
     .kc-cadu-kpi { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 14px; padding: 14px; min-width: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s, transform .12s, background .15s; display: block; width: 100%; }
     .kc-cadu-kpi:hover { border-color: rgba(255,107,0,.45); transform: translateY(-1px); background: rgba(255,107,0,.025); }
+    .kc-cadu-kpi:disabled { opacity: .62; cursor: not-allowed; transform: none; }
     .kc-cadu-kpi:focus { outline: none; border-color: rgba(255,107,0,.7); box-shadow: 0 0 0 3px rgba(255,107,0,.18); }
     .kc-cadu-kpi[data-kpi-tab=""] { cursor: default; }
     .kc-cadu-kpi[data-kpi-tab=""]:hover { transform: none; background: var(--kc-surface-dark); }
@@ -471,7 +472,7 @@
         <a href="cadu.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-robot"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcCaduActivityBell" aria-label="Atividade recente do Cadu" data-i18n-aria-label="aria-label.notifications" aria-expanded="false" aria-controls="kcCaduActivityDropdown" title="Atividade do Cadu (runs recentes e publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcCaduActivityBadge" style="display:none;">0</span></button>
+        <button class="kc-notif-bell" id="kcCaduActivityBell" aria-label="Atividade recente do Cadu" data-i18n-aria-label="aria-label.notifications" aria-expanded="false" aria-controls="kcCaduActivityDropdown" title="Atividade do Cadu (execuções recentes e publicações)" data-i18n-tooltip="tooltip.cadu-notifications"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcCaduActivityBadge" style="display:none;">0</span></button>
         <div id="kcCaduActivityDropdown" class="kc-cadu-activity-dropdown" hidden>
           <div class="kc-cadu-activity-dropdown__head">Atividade recente do Cadu</div>
           <div id="kcCaduActivityList" class="kc-cadu-activity-dropdown__list">
@@ -508,14 +509,14 @@
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
             <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
-            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites+pipeline+feed+openclaw em 1 request)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> Context API</span>
+            <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites, pipeline, feed e OpenClaw em uma requisição)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> API de contexto</span>
             <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api" data-i18n-tooltip="tooltip.cadu-version"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
           </div>
         </div>
         <div class="kc-cadu-toolbar" style="margin:0;">
           <button type="button" id="cadu-refresh-btn" title="Atualizar" data-i18n-tooltip="tooltip.cadu-refresh"><i class="fas fa-rotate"></i> Atualizar</button>
           <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);color:var(--kc-text-dark-primary);border-radius:10px;padding:7px 12px;font-size:.84rem;text-decoration:none;display:inline-flex;gap:6px;align-items:center;">
-            <i class="fab fa-github"></i> Repo
+            <i class="fab fa-github"></i> Repositório
           </a>
         </div>
       </section>
@@ -534,10 +535,10 @@
           <small id="kpi-ig-detail">perfis validados</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
-        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por Tier 1" data-i18n-tooltip="tooltip.cadu-kpi-tier1">
-          <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Tier 1</div>
+        <button type="button" class="kc-cadu-kpi" data-kpi-tab="sites" data-kpi-filter="tier=1" title="Abrir aba Sites UFG filtrando por prioridade T1" data-i18n-tooltip="tooltip.cadu-kpi-tier1">
+          <div class="kc-cadu-kpi__label"><i class="fas fa-layer-group"></i> Prioridade T1</div>
           <strong id="kpi-tier1">—</strong>
-          <small>fontes com tier efetivo 1</small>
+          <small>fontes com prioridade efetiva T1, quando disponível</small>
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> filtrar Sites UFG</div>
         </button>
         <button type="button" class="kc-cadu-kpi" data-kpi-tab="feed" title="Abrir itens públicos coletados pelo Curador" data-i18n-tooltip="tooltip.cadu-kpi-feed">
@@ -573,10 +574,10 @@
       <section class="kc-cadu-section" id="tab-sites" role="tabpanel">
         <div class="kc-cadu-registry-status" id="sites-registry-status" role="status" aria-live="polite">
           <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-          <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e overrides.</small></div>
+          <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e ajustes administrativos.</small></div>
         </div>
         <div class="kc-cadu-catalog-summary" id="sites-catalog-summary" aria-label="Resumo do catálogo UFG" data-i18n-aria-label="aria-label.cadu-catalog-summary" style="display:none;"></div>
-        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, override estável, sem colisão nem pendência crítica. A ação cria uma entrada durável em <code>pending</code> e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
+        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, ajuste administrativo estável, sem colisão nem pendência crítica. A ação cria uma entrada durável no estado pendente (<code>pending</code>) e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
         <div class="kc-cadu-toolbar">
           <select id="sites-view" aria-label="Escolher visão do catálogo" data-i18n-aria-label="aria-label.cadu-sites-view">
             <option value="sources">Fontes web</option>
@@ -585,11 +586,11 @@
             <option value="deferred">Pendências de conciliação</option>
           </select>
           <input id="sites-search" type="search" autocomplete="off" placeholder="Filtrar por nome, site ou @instagram" data-i18n-placeholder="placeholder.cadu-sites-search" aria-label="Filtrar sites" data-i18n-aria-label="aria-label.cadu-sites-search">
-          <select id="sites-tier" aria-label="Filtrar por tier" data-i18n-aria-label="aria-label.cadu-sites-tier">
-            <option value="">Todos os tiers</option>
-            <option value="1">Tier 1</option>
-            <option value="2">Tier 2</option>
-            <option value="3">Tier 3</option>
+          <select id="sites-tier" aria-label="Filtrar por prioridade" data-i18n-aria-label="aria-label.cadu-sites-tier">
+            <option value="">Todas as prioridades</option>
+            <option value="1">Prioridade T1</option>
+            <option value="2">Prioridade T2</option>
+            <option value="3">Prioridade T3</option>
           </select>
           <select id="sites-ig" aria-label="Filtrar por status Instagram" data-i18n-aria-label="aria-label.cadu-sites-ig">
             <option value="">IG: todos</option>
@@ -598,11 +599,11 @@
             <option value="missing">sem perfil associado</option>
             <option value="retired">perfil aposentado</option>
           </select>
-          <select id="sites-origin" aria-label="Filtrar origem do tier" data-i18n-aria-label="aria-label.cadu-sites-origin">
-            <option value="">Override: todos</option>
-            <option value="stable">estável</option>
-            <option value="legacy_inherited">legado herdado</option>
-            <option value="base">somente base</option>
+          <select id="sites-origin" aria-label="Filtrar origem do ajuste administrativo" data-i18n-aria-label="aria-label.cadu-sites-origin">
+            <option value="">Ajuste: todos</option>
+            <option value="stable">ajuste estável</option>
+            <option value="legacy_inherited">ajuste legado herdado</option>
+            <option value="base">prioridade base</option>
             <option value="ambiguous">ambíguo</option>
             <option value="collision">colisão</option>
             <option value="collision_evidence">qualquer evidência de colisão</option>
@@ -615,12 +616,12 @@
           <table class="kc-cadu-table" id="sites-table" data-view="sources" aria-live="polite">
             <thead id="sites-thead">
               <tr>
-                <th style="width:90px;">Tier</th>
+                <th style="width:90px;">Prioridade</th>
                 <th>Entidade / fonte</th>
                 <th>Site institucional</th>
                 <th>Instagram associado</th>
                 <th style="width:130px;">Revisão</th>
-                <th>Override / observação</th>
+                <th>Ajuste administrativo / observação</th>
                 <th style="width:145px;">Ações</th>
               </tr>
             </thead>
@@ -644,22 +645,22 @@
             </div>
           </div>
 
-          <!-- Coluna 2: run ativo + log stream -->
+          <!-- Coluna 2: execução ativa + fluxo de log -->
           <div class="kc-pipeline-runner">
             <h3 style="margin-top:0;font-size:1rem;color:var(--kc-text-dark-secondary);text-transform:uppercase;letter-spacing:.06em;">
               <i class="fas fa-play"></i> Execução atual
-              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" title="Sem run ativo" data-i18n-tooltip="tooltip.cadu-pipeline-idle"></span>
+              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" title="Sem execução ativa" data-i18n-tooltip="tooltip.cadu-pipeline-idle"></span>
             </h3>
             <div id="pipeline-active-card" class="kc-pipeline-active-card">
               <div class="kc-cadu-empty">
-                <i class="fas fa-moon"></i> Nenhum run ativo. Clique em um estágio à esquerda para iniciar.
+                <i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.
               </div>
             </div>
             <div id="pipeline-health-card" class="kc-pipeline-health-card">
               <div class="kc-cadu-empty"><i class="fas fa-heart-pulse"></i> Carregando saúde da automação…</div>
             </div>
             <div class="kc-pipeline-log" id="pipeline-log">
-              <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início do run…</div>
+              <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>
             </div>
           </div>
 
@@ -686,7 +687,7 @@
               <div class="kc-cadu-feed-help__card">
                 <strong><i class="fas fa-building-columns"></i> Fontes institucionais</strong>
                 <p>O Curador consulta sites e perfis oficiais habilitados pelo catálogo canônico. Cada item mantém o link público de origem e a identificação da entidade para permitir verificação editorial.</p>
-                <small>A versão exibida no cabeçalho identifica o serviço <code>cadu-api</code>; já <strong>Curador 4.4</strong> identifica o contrato dos artefatos. São componentes diferentes e suas numerações não precisam coincidir. O script efetivo é informado pelo preflight.</small>
+                <small>A versão exibida no cabeçalho identifica o serviço <code>cadu-api</code>; já <strong>Curador 4.4</strong> identifica o contrato dos artefatos. São componentes diferentes e suas numerações não precisam coincidir. O script efetivo é informado pela verificação prévia (<code>preflight</code>).</small>
               </div>
               <div class="kc-cadu-feed-help__card">
                 <strong><i class="fas fa-filter-circle-check"></i> Curadoria e qualidade</strong>
@@ -714,7 +715,7 @@
             <span class="kc-cadu-feed-diagnostics__chip">Ainda não carregado</span>
           </div>
           <div id="feed-diagnostics-list" class="kc-cadu-feed-diagnostics__list">
-            <div class="kc-cadu-feed-diagnostics__empty">Use o botão acima para consultar a amostra pública read-only do Supabase.</div>
+            <div class="kc-cadu-feed-diagnostics__empty">Use o botão acima para consultar a amostra pública do Supabase em modo somente leitura.</div>
           </div>
         </div>
         <div id="feed-freshness-status" class="kc-cadu-feed-freshness" role="status" aria-live="polite">
@@ -754,7 +755,7 @@
 
       <section class="kc-cadu-section" id="tab-openclaw" role="tabpanel" style="display:none;">
         <div class="kc-cadu-section-header">
-          <h2><i class="fas fa-robot"></i> OpenClaw (Cadu agent)</h2>
+          <h2><i class="fas fa-robot"></i> OpenClaw (agente Cadu)</h2>
           <div class="kc-cadu-section-actions">
             <button type="button" id="openclaw-refresh-btn" class="kc-btn-secondary"><i class="fas fa-rotate"></i> Atualizar</button>
           </div>
@@ -763,7 +764,7 @@
         <!-- Status cards (4 KPIs OpenClaw) -->
         <div class="kc-cadu-stats">
           <div class="kc-cadu-stat-card">
-            <div class="kc-cadu-stat-card__label"><i class="fas fa-robot"></i> AGENT</div>
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-robot"></i> AGENTE</div>
             <div class="kc-cadu-stat-card__value" id="openclaw-stat-agent">—</div>
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-agent-hint">—</div>
           </div>
@@ -773,12 +774,12 @@
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-telegram-hint">—</div>
           </div>
           <div class="kc-cadu-stat-card">
-            <div class="kc-cadu-stat-card__label"><i class="fas fa-heartbeat"></i> HEARTBEAT</div>
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-heartbeat"></i> SINAL DE VIDA</div>
             <div class="kc-cadu-stat-card__value" id="openclaw-stat-heartbeat">—</div>
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-heartbeat-hint">—</div>
           </div>
           <div class="kc-cadu-stat-card">
-            <div class="kc-cadu-stat-card__label"><i class="fas fa-tasks"></i> TASKS</div>
+            <div class="kc-cadu-stat-card__label"><i class="fas fa-tasks"></i> TAREFAS</div>
             <div class="kc-cadu-stat-card__value" id="openclaw-stat-tasks">—</div>
             <div class="kc-cadu-stat-card__hint" id="openclaw-stat-tasks-hint">—</div>
           </div>
@@ -806,7 +807,7 @@
               <div class="kc-openclaw-chat-form-row">
                 <label>
                   <input type="checkbox" id="openclaw-chat-context">
-                  Incluir contexto operacional (pipeline e tiers)
+                  Incluir contexto operacional (pipeline e prioridades)
                 </label>
                 <label>
                   <input type="checkbox" id="openclaw-chat-deliver" disabled>
@@ -834,7 +835,7 @@
             <h3 style="margin-top:18px;"><i class="fas fa-bolt"></i> Ações rápidas</h3>
             <div class="kc-openclaw-actions">
               <button type="button" id="openclaw-trigger-heartbeat-btn" class="kc-btn-secondary">
-                <i class="fas fa-heart-pulse"></i> Trigger Heartbeat
+                <i class="fas fa-heart-pulse"></i> Solicitar sinal de vida
               </button>
               <button type="button" id="openclaw-show-logs-btn" class="kc-btn-secondary">
                 <i class="fas fa-file-lines"></i> Ver logs do Gateway
@@ -855,8 +856,8 @@
 
       <div class="kc-cadu-footer">
         cadu-api rodando na VPS <code>srv1597083.hstgr.cloud</code> ·
-        <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="color:inherit;">repo</a>
-        · <a href="docs/INTEGRATION-KINOCAMPUS.md" style="color:inherit;">docs</a>
+        <a href="https://github.com/yandiamantinoBr/openclaw-cadu" target="_blank" rel="noopener" style="color:inherit;">repositório</a>
+        · <a href="https://github.com/yandiamantinoBr/openclaw-cadu/blob/main/docs/INTEGRATION-KINOCAMPUS.md" target="_blank" rel="noopener" style="color:inherit;">documentação</a>
       </div>
 
       </div><!-- /#cadu-content -->
@@ -911,7 +912,7 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=f9059e88ac04e1c0"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=df1e2e51d5770490"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=0bc027e84cb674bc"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=a86b9ba6a12a7450"></script>
 </body>
 </html>

@@ -2,10 +2,28 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const CANDIDATE_REGISTRY_PATH = resolve(
+const MIRROR_DIRECTORY = resolve(
   process.cwd(),
-  'services/cadu-ufg-publisher/config/cadu-source-registry/ufg-source-registry.candidate.json',
+  'services/cadu-ufg-publisher/config/cadu-source-registry',
 );
+const MIRROR_MANIFEST_PATH = resolve(MIRROR_DIRECTORY, 'upstream-manifest.json');
+const EXPECTED_ARTIFACT_LOCATIONS = Object.freeze({
+  candidate: Object.freeze({
+    file: 'ufg-source-registry.candidate.json',
+    upstreamPath: 'data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.candidate.json',
+  }),
+  schema: Object.freeze({
+    file: 'ufg-source-registry.schema.json',
+    upstreamPath: 'data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.schema.json',
+  }),
+  'reconciliation-report': Object.freeze({
+    file: 'source-reconciliation-report.json',
+    upstreamPath: 'data/.openclaw/workspace/config/cadu-source-registry/source-reconciliation-report.json',
+  }),
+});
+const EXPECTED_ACTIVE_PUBLISHER_REGISTRY = 'services/cadu-ufg-publisher/config/sources.json';
+const MIRRORED_ARTIFACT_PATHS = new Map(Object.entries(EXPECTED_ARTIFACT_LOCATIONS)
+  .map(([id, artifact]) => [id, resolve(MIRROR_DIRECTORY, artifact.file)]));
 
 let cachedMirror = null;
 
@@ -13,8 +31,113 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function gitBlobOid(value) {
+  return createHash('sha1')
+    .update(Buffer.from(`blob ${value.length}\0`, 'utf8'))
+    .update(value)
+    .digest('hex');
+}
+
 function jsonClone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function assertObject(value, context) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${context} must be an object`);
+  }
+}
+
+function assertExactKeys(value, expectedKeys, context) {
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
+    throw new TypeError(`${context} has unexpected fields`);
+  }
+}
+
+function validateUpstreamShadowRegistry(candidate) {
+  assertObject(candidate, 'upstream source registry');
+  assertObject(candidate.activation, 'upstream activation');
+  assertExactKeys(candidate.activation, ['state', 'runtimeConsumers'], 'upstream activation');
+  if (candidate.activation.state !== 'shadow'
+      || !Array.isArray(candidate.activation.runtimeConsumers)
+      || candidate.activation.runtimeConsumers.length !== 1
+      || candidate.activation.runtimeConsumers[0] !== 'cadu-api') {
+    throw new TypeError('upstream registry must be shadowed only by cadu-api');
+  }
+  if (!Array.isArray(candidate.entities) || !Array.isArray(candidate.webSources)
+      || !Array.isArray(candidate.instagramProfiles)) {
+    throw new TypeError('incomplete upstream source registry');
+  }
+  if (candidate.webSources.some((source) => !source || source.enabled !== false)) {
+    throw new TypeError('upstream shadow registry contains an enabled web source');
+  }
+  if (candidate.instagramProfiles.some((profile) => !profile || profile.enabled !== false)) {
+    throw new TypeError('upstream shadow registry contains an enabled Instagram profile');
+  }
+  return candidate;
+}
+
+function validateMirrorManifest(manifest, candidate, artifactBytes, registrySha256) {
+  assertObject(manifest, 'source registry mirror manifest');
+  if (!(artifactBytes instanceof Map)) throw new TypeError('mirror artifact bytes must be a Map');
+  if (manifest.schemaVersion !== 1) throw new TypeError('unexpected mirror manifest schemaVersion');
+  if (!manifest.upstream || !/^[0-9a-f]{40}$/.test(manifest.upstream.commit || '')) {
+    throw new TypeError('mirror manifest requires a full upstream commit');
+  }
+  if (manifest.upstream.repository !== 'https://github.com/yandiamantinoBr/openclaw-cadu') {
+    throw new TypeError('unexpected mirror upstream repository');
+  }
+  assertObject(manifest.safety, 'mirror safety policy');
+  assertExactKeys(manifest.safety, [
+    'lifecycle',
+    'readOnlyMirror',
+    'runtimeActivated',
+    'publisherUsesLegacySources',
+    'activePublisherRegistry',
+  ], 'mirror safety policy');
+  if (manifest.safety.lifecycle !== 'shadow'
+      || manifest.safety.readOnlyMirror !== true
+      || manifest.safety.runtimeActivated !== false
+      || manifest.safety.publisherUsesLegacySources !== true
+      || manifest.safety.activePublisherRegistry !== EXPECTED_ACTIVE_PUBLISHER_REGISTRY) {
+    throw new TypeError('unsafe source registry mirror policy');
+  }
+  if (manifest.registryVersion !== candidate.registryVersion
+      || manifest.auditCutoff !== candidate.auditCutoff) {
+    throw new TypeError('mirror manifest metadata drift');
+  }
+  if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length !== 3) {
+    throw new TypeError('mirror manifest must contain exactly three artifacts');
+  }
+  const artifacts = new Map();
+  for (const artifact of manifest.artifacts) {
+    assertObject(artifact, 'mirror artifact');
+    if (artifacts.has(artifact.id)) throw new TypeError(`duplicate mirror artifact ${artifact.id}`);
+    const expected = EXPECTED_ARTIFACT_LOCATIONS[artifact.id];
+    if (!expected || artifact.file !== expected.file || artifact.upstreamPath !== expected.upstreamPath) {
+      throw new TypeError(`mirror artifact location drift: ${artifact.id}`);
+    }
+    const bytes = artifactBytes.get(artifact.id);
+    if (!Buffer.isBuffer(bytes)
+        || artifact.contentSha256 !== sha256(bytes)
+        || artifact.upstreamGitBlobOid !== gitBlobOid(bytes)
+        || artifact.byteLength !== bytes.length) {
+      throw new TypeError(`mirror artifact content drift: ${artifact.id}`);
+    }
+    artifacts.set(artifact.id, artifact);
+  }
+  if (artifacts.size !== 3
+      || !artifacts.has('candidate')
+      || !artifacts.has('schema')
+      || !artifacts.has('reconciliation-report')) {
+    throw new TypeError('mirror manifest artifact set drift');
+  }
+  if (artifacts.get('candidate').contentSha256 !== registrySha256) {
+    throw new TypeError('candidate artifact does not match mirror manifest');
+  }
+  return manifest;
 }
 
 function entityReference(entity) {
@@ -65,13 +188,8 @@ function sourceRevision(registrySha256, source) {
 }
 
 function buildMirror(candidate, registrySha256) {
-  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
-    throw new TypeError('invalid candidate source registry');
-  }
-  if (!Array.isArray(candidate.entities) || !Array.isArray(candidate.webSources)
-      || !Array.isArray(candidate.instagramProfiles)) {
-    throw new TypeError('incomplete candidate source registry');
-  }
+  validateUpstreamShadowRegistry(candidate);
+  if (!/^[0-9a-f]{64}$/.test(registrySha256 || '')) throw new TypeError('invalid registry SHA-256');
 
   const entityIndex = new Map(candidate.entities.map((entity) => [entity.id, entity]));
   const profiles = candidate.instagramProfiles.map((profile) => ({
@@ -110,6 +228,11 @@ function buildMirror(candidate, registrySha256) {
     registryVersion: candidate.registryVersion,
     registrySha256,
     auditCutoff: candidate.auditCutoff,
+    administrativeMetadata: {
+      available: false,
+      state: 'unavailable',
+      reason: 'mirror_excludes_runtime_overrides',
+    },
     activation: {
       state: 'candidate',
       runtimeConsumers: [],
@@ -135,9 +258,14 @@ function buildMirror(candidate, registrySha256) {
 
 export function getCaduSourceRegistryMirror() {
   if (cachedMirror) return cachedMirror;
-  const sourceBytes = readFileSync(CANDIDATE_REGISTRY_PATH);
+  const artifactBytes = new Map([...MIRRORED_ARTIFACT_PATHS]
+    .map(([id, filePath]) => [id, readFileSync(filePath)]));
+  const sourceBytes = artifactBytes.get('candidate');
+  const manifest = JSON.parse(readFileSync(MIRROR_MANIFEST_PATH, 'utf8'));
   const candidate = JSON.parse(sourceBytes.toString('utf8'));
   const registrySha256 = sha256(sourceBytes);
+  validateUpstreamShadowRegistry(candidate);
+  validateMirrorManifest(manifest, candidate, artifactBytes, registrySha256);
   const payload = buildMirror(candidate, registrySha256);
   cachedMirror = Object.freeze({
     payload,
@@ -148,4 +276,9 @@ export function getCaduSourceRegistryMirror() {
   return cachedMirror;
 }
 
-export const __test = Object.freeze({ buildMirror, sourceRevision });
+export const __test = Object.freeze({
+  buildMirror,
+  sourceRevision,
+  validateMirrorManifest,
+  validateUpstreamShadowRegistry,
+});

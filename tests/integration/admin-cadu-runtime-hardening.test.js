@@ -9,6 +9,11 @@ const controller = fs.readFileSync(
   'utf8',
 );
 const html = fs.readFileSync(path.join(ROOT, 'admin/cadu.html'), 'utf8');
+const healthProxy = fs.readFileSync(path.join(ROOT, 'api/cadu/health.js'), 'utf8');
+const sourceModel = fs.readFileSync(
+  path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-sources.js'),
+  'utf8',
+);
 
 function functionSource(name) {
   const start = controller.indexOf(`function ${name}(`);
@@ -88,6 +93,39 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('refreshAll({ forceOperational: true });');
     expect(controller).not.toContain('}, 15000);');
     expect(controller).not.toContain('Bot: 8746');
+  });
+
+  test('never caches Cadu health and rejects browser-direct production configuration', () => {
+    expect(controller.match(/fetch\('\/api\/cadu\/health', \{\s*cache: 'no-store'/g)).toHaveLength(2);
+    expect(healthProxy).toContain("res.setHeader('Cache-Control', 'private, no-store')");
+    expect(healthProxy).toMatch(/fetch\(`\$\{apiUrl\.replace[\s\S]*?cache: 'no-store'/);
+    const configSource = functionSource('getCaduConfig');
+    expect(configSource).toContain('direct && (!localDev || !localToken)');
+    expect(configSource).toContain('em produção use o proxy autenticado do KinoCampus');
+    expect(functionSource('caduFetchRaw')).toContain('if (cfg.configurationError) throw new Error(cfg.configurationError)');
+
+    const configFor = Function('window', 'location', `"use strict"; return (${configSource})();`);
+    const productionWindow = {
+      KC_ENV: { CADU_API_DIRECT_URL: 'https://vps.example', CADU_API_TOKEN: 'must-not-reach-browser' },
+      location: { hostname: 'kinocampus.example' },
+    };
+    const production = configFor(productionWindow, productionWindow.location);
+    expect(production).toMatchObject({ direct: true, token: '' });
+    expect(production.configurationError).toMatch(/em produção use o proxy autenticado/);
+
+    const localMissingTokenWindow = {
+      KC_ENV: { CADU_API_DIRECT_URL: 'http://127.0.0.1:8000' },
+      location: { hostname: 'localhost' },
+    };
+    const localMissingToken = configFor(localMissingTokenWindow, localMissingTokenWindow.location);
+    expect(localMissingToken.configurationError).toMatch(/token explícito/);
+
+    const localAuthenticatedWindow = {
+      KC_ENV: { CADU_API_DIRECT_URL: 'http://127.0.0.1:8000', CADU_API_TOKEN: 'local-only' },
+      location: { hostname: '127.0.0.1' },
+    };
+    expect(configFor(localAuthenticatedWindow, localAuthenticatedWindow.location))
+      .toMatchObject({ direct: true, token: 'local-only', configurationError: '' });
   });
 
   test('does not leave pipeline health indefinitely loading on a legacy snapshot', () => {
@@ -331,17 +369,72 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('a notificação não equivale a publicação');
   });
 
+  test('notification bell counts only unseen runs and renders stage names in pt-BR', () => {
+    const pipelineActivityStageLabel = isolatedFunction('pipelineActivityStageLabel');
+    expect(pipelineActivityStageLabel('all', [])).toBe('Pipeline completa');
+    expect(pipelineActivityStageLabel('duplicates', [])).toBe('Enriquecimento de duplicatas');
+    expect(pipelineActivityStageLabel('curator', [{ id: 'curator', name: 'Curador UFG 4.4' }]))
+      .toBe('Curador UFG 4.4');
+    expect(controller).toContain('var unseenRuns = seenState.initialized');
+    expect(controller).toContain('Object.prototype.hasOwnProperty.call(seenState.ids, r.id)');
+    expect(controller).toContain('if (!seenState.initialized || markSeen)');
+    expect(controller).toContain('pollNotifActivity({ markSeen: true });');
+    expect(controller).not.toContain('var recent24h = safeRuns.filter');
+    expect(controller).not.toContain('safeRuns.forEach(function (r) { newSeen[r.id] = Date.now(); });');
+  });
+
+  test('baselines first activity access with a prototype-free seen map', () => {
+    const readSeenCaduRuns = isolatedFunction('readSeenCaduRuns', ['isSafePipelineRunId']);
+    const previousDescriptor = Object.getOwnPropertyDescriptor(global, 'localStorage');
+    const getItem = jest.fn(() => null);
+    try {
+      Object.defineProperty(global, 'localStorage', {
+        configurable: true,
+        value: { getItem },
+      });
+      const firstAccess = readSeenCaduRuns();
+      expect(firstAccess.initialized).toBe(false);
+      expect(Object.getPrototypeOf(firstAccess.ids)).toBeNull();
+      expect(firstAccess.ids.constructor).toBeUndefined();
+
+      getItem.mockReturnValue(JSON.stringify({
+        'run-safe_1': 1234,
+        'bad run': 5678,
+        invalidTimestamp: 0,
+      }));
+      const stored = readSeenCaduRuns();
+      expect(stored.initialized).toBe(true);
+      expect(Object.getPrototypeOf(stored.ids)).toBeNull();
+      expect(Object.keys(stored.ids)).toEqual(['run-safe_1']);
+    } finally {
+      if (previousDescriptor) Object.defineProperty(global, 'localStorage', previousDescriptor);
+      else delete global.localStorage;
+    }
+  });
+
   test('only builds durable institutional reviews from stable conflict-free canonical sources', () => {
     const sourceReviewEligibility = isolatedFunction('sourceReviewEligibility', [
       'sourceReviewCanonicalInstagram',
       'sourceReviewCanonicalUrl',
+      'sourceReviewBlockingIssues',
+      'normalizedConflictFields',
+      'normalizedDraftNote',
+      'sourceDraftChanges',
+      'sourceDraftCanSave',
+      'sourceDraftIsDirty',
     ]);
     const buildSourceReviewRequest = isolatedFunction('buildSourceReviewRequest', [
       'sourceName',
       'sourceReviewCanonicalInstagram',
       'sourceReviewCanonicalUrl',
+      'sourceReviewBlockingIssues',
       'sourceReviewEligibility',
       'sourceReviewIdempotencyKey',
+      'normalizedConflictFields',
+      'normalizedDraftNote',
+      'sourceDraftChanges',
+      'sourceDraftCanSave',
+      'sourceDraftIsDirty',
     ]);
     const revision = 'b'.repeat(64);
     const registrySha256 = 'a'.repeat(64);
@@ -368,6 +461,8 @@ describe('admin Cadu runtime hardening', () => {
     expect(sourceReviewEligibility(stable)).toEqual({
       allowed: true, reason: '', instagramHandle: 'ufg_oficial',
     });
+    expect(sourceReviewEligibility({ ...stable, administrativeMetadataAvailable: false }))
+      .toMatchObject({ allowed: false, reason: expect.stringContaining('metadados administrativos') });
     ['weby_site', 'ojs_site', 'html_page', 'external_site', 'mixed'].forEach((sourceKind) => {
       expect(sourceReviewEligibility({ ...stable, sourceKind })).toMatchObject({ allowed: true });
     });
@@ -383,6 +478,19 @@ describe('admin Cadu runtime hardening', () => {
     });
     expect(sourceReviewEligibility({ ...stable, collision: true })).toMatchObject({ allowed: false });
     expect(sourceReviewEligibility({ ...stable, reviewIssues: ['url_conflict'] })).toMatchObject({ allowed: false });
+    expect(sourceReviewEligibility({ ...stable, reviewIssues: ['transport_unverified'] })).toMatchObject({ allowed: true });
+    expect(sourceReviewEligibility({
+      ...stable, reviewIssues: ['html_profile_not_feed', 'transport_unverified'],
+    })).toMatchObject({ allowed: true });
+    expect(sourceReviewEligibility(stable, {
+      tier: 2, initialTier: 1, note: stable.note, initialNote: stable.note,
+    }, false)).toMatchObject({ allowed: false, reason: expect.stringContaining('rascunho') });
+    expect(sourceReviewEligibility(stable, {
+      tier: 1, initialTier: 1, note: stable.note, initialNote: stable.note, conflict: true,
+    }, false)).toMatchObject({ allowed: false, reason: expect.stringContaining('conflito') });
+    expect(sourceReviewEligibility(stable, null, true)).toMatchObject({
+      allowed: false, reason: expect.stringContaining('salvamento'),
+    });
     expect(sourceReviewEligibility({ ...stable, overrideOrigin: 'legacy_inherited' })).toMatchObject({ allowed: false });
     expect(sourceReviewEligibility({
       ...stable,
@@ -434,18 +542,104 @@ describe('admin Cadu runtime hardening', () => {
     }).instagram_handle).toBeNull();
     expect(controller).toContain('Enviar à revisão');
     expect(controller).toContain('submitSourceReview(canonicalSource)');
+    expect(functionSource('updateSourceSaveButton')).toContain('updateSourceReviewButton(source, draft)');
+    expect(functionSource('updateSourceReviewButton')).toContain('sourceReviewEligibility(');
+    expect(functionSource('updateSourceReviewButton')).toContain("classList.remove('is-ok', 'is-pending', 'is-err')");
   });
 
   test('renders canonical catalog metadata in pt-BR with full institutional names', () => {
     expect(controller).toContain("confirmed_official: 'Identidade oficial confirmada'");
     expect(controller).toContain("transport_unverified: 'Transporte ainda não verificado'");
-    expect(controller).toContain("legacy_inherited: 'Herdado do mapa legado'");
+    expect(controller).toContain("legacy_inherited: 'Ajuste herdado do mapa legado'");
     expect(controller).toContain("weby_site: 'Site institucional Weby'");
     expect(controller).toContain("pro_reitoria: 'Pró-reitoria'");
-    expect(controller).toContain("escapeHtml(entity.name) + '</span>'");
+    expect(controller).toContain("affiliated_foundation: 'Fundação vinculada'");
+    expect(controller).toContain("stable_source_id: 'ID canônico estável'");
+    expect(controller).toContain("'ig-only': 'Somente Instagram'");
+    expect(controller).toContain('Observação informativa:');
+    expect(controller).toContain('Pendência crítica:');
+    expect(controller).toContain("'<strong class=\"kc-cadu-entity-name\">' + escapeHtml(entity.name) + '</strong>'");
     expect(controller).toContain("catalogLabel(source.overrideOrigin)");
     expect(controller).toContain("catalogLabel(source.sourceKind)");
+    expect(controller).toContain("['ID da fonte', 'Entidades', 'Prioridade efetiva'");
+    expect(controller).toContain("administrativeMetadataAvailable ? (source.note || '') : ''");
+    expect(controller).toContain("label: 'Metadados administrativos'");
+    expect(functionSource('updateSitesFilterControls')).toContain('!sourceView || !administrativeMetadataAvailable');
+    expect(functionSource('computeKpis')).toContain('tierKpiButton.disabled = !administrativeMetadataAvailable');
+    expect(sourceModel).toContain('administrativeMetadataAvailable: administrativeMetadataAvailable');
     expect(controller).not.toContain('Overrides estão bloqueados para evitar gravar por nomes ambíguos.');
+  });
+
+  test('omits unavailable administrative metadata from mirror CSV and PDF exports', () => {
+    const label = (value) => ({
+      metadata_unavailable: 'Metadados administrativos indisponíveis',
+      confirmed: 'Confirmado',
+      university: 'Universidade',
+      reviewed: 'Revisado',
+    }[value] || String(value || 'Não informado'));
+    const source = {
+      id: 'web.ufg.portal',
+      entityIds: ['entity.ufg'],
+      administrativeMetadataAvailable: false,
+      effectiveTier: 1,
+      baseTier: 1,
+      overrideTier: 2,
+      overrideOrigin: 'stable',
+      canonicalUrl: 'https://ufg.br/',
+      instagramProfiles: [{ handle: 'ufg_oficial', status: 'confirmed' }],
+      reviewState: 'reviewed',
+      reviewIssues: [],
+      note: 'não pode vazar',
+      revision: 'a'.repeat(64),
+    };
+    const csvState = {
+      sourceCatalog: { administrativeMetadataAvailable: false },
+      catalogMode: 'registry',
+      sitesView: 'sources',
+      filteredCatalogRows: [source],
+    };
+    const buildCsv = Function(
+      'state', 'catalogLabel',
+      `"use strict"; return (${functionSource('buildSitesCsvRows')});`,
+    )(csvState, label);
+    const csv = buildCsv();
+    expect(csv[0]).toEqual(expect.arrayContaining(['Prioridade efetiva', 'Origem do ajuste', 'Observação']));
+    expect(csv[1][2]).toBe('');
+    expect(csv[1][3]).toBe('');
+    expect(csv[1][4]).toBe('');
+    expect(csv[1][5]).toBe('Metadados administrativos indisponíveis');
+    expect(csv[1][11]).toBe('');
+
+    const pdfState = {
+      sourceCatalog: { administrativeMetadataAvailable: false },
+      sitesFilter: {},
+      sitesOrigin: '',
+      filteredSites: [{
+        name: 'UFG — Universidade Federal de Goiás',
+        tier: 1,
+        url: 'https://ufg.br/',
+        instagramContext: '@ufg_oficial (Confirmado)',
+        instagram_status: 'confirmed',
+        category: 'university',
+        override_origin: 'stable',
+        note: 'não pode vazar',
+      }],
+      allSites: [{}],
+    };
+    const buildPdf = Function(
+      'state', 'catalogLabel',
+      `"use strict"; return (${functionSource('buildSitesPdfReport')});`,
+    )(pdfState, label);
+    const pdf = buildPdf();
+    expect(pdf.kpis).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: 'Metadados administrativos', value: 'Indisponíveis' }),
+    ]));
+    expect(pdf.kpis.some((item) => /Prioridade efetiva/.test(item.label))).toBe(false);
+    expect(pdf.sections[0].rows[0]).toMatchObject({
+      prioridade: 'Indisponível no espelho',
+      ajuste: 'Metadados administrativos indisponíveis',
+      observacao: '',
+    });
   });
 
   test('accepts review success only with an echoed durable PENDING policy contract', () => {
@@ -510,6 +704,6 @@ describe('admin Cadu runtime hardening', () => {
     expect(html).toContain('identifica o serviço <code>cadu-api</code>');
     expect(html).toContain('<strong>Curador 4.4</strong> identifica o contrato dos artefatos');
     expect(html).toContain('suas numerações não precisam coincidir');
-    expect(html).toContain('O script efetivo é informado pelo preflight');
+    expect(html).toContain('O script efetivo é informado pela verificação prévia (<code>preflight</code>)');
   });
 });

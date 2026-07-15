@@ -86,7 +86,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
   test('stage actions follow old/new/forced/unavailable contracts', () => {
     expect(pipelineStageActionModes({ dry_run_available: true, mutates_platform: true }, {})).toEqual([]);
     expect(pipelineStageActionModes({ dry_run_available: true, mutates_platform: true }, explicitCapabilities)).toEqual([
-      { dryRun: true, label: 'Dry-run', danger: false },
+      { dryRun: true, label: 'Simular', danger: false },
       { dryRun: false, label: 'Executar real', danger: true },
     ]);
     expect(pipelineStageActionModes({ dry_run_available: true, force_dry_run: true }, explicitCapabilities)).toEqual([
@@ -139,8 +139,16 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     };
     expect(validatePipelineControlSnapshot(snapshot, now)).toMatchObject({
       ok: true,
+      expiresAt: now + 15000,
       stages: [{ preflight: { command: 'node scripts/pipeline-kino.js all' } }],
     });
+    expect(validatePipelineControlSnapshot({
+      ...snapshot,
+      stages: [{
+        ...snapshot.stages[0],
+        preflight: { ...snapshot.stages[0].preflight, checked_at: (now - 14000) / 1000 },
+      }],
+    }, now)).toMatchObject({ ok: true, expiresAt: now + 1000 });
     expect(validatePipelineControlSnapshot({ ...snapshot, contract_version: 'legacy' }, now).ok).toBe(false);
     expect(validatePipelineControlSnapshot({ ...snapshot, generated_at: new Date(now - 16000).toISOString() }, now).ok).toBe(false);
     expect(validatePipelineControlSnapshot({ ...snapshot, capabilities: { explicit_dry_run: true } }, now).ok).toBe(false);
