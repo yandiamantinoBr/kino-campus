@@ -113,6 +113,12 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('Prioridades efetivas, notas e ajustes administrativos não estão disponíveis neste artefato');
   });
 
+  test('does not claim that the shadow registry already drives production collection', () => {
+    expect(html).toContain('O Curador em produção ainda consulta os inventários operacionais legados validados.');
+    expect(html).toContain('permanece em modo de validação (<code>shadow</code>), com as fontes desabilitadas');
+    expect(html).not.toContain('perfis oficiais habilitados pelo catálogo canônico');
+  });
+
   test('loads and validates the canonical registry before enabling source views', () => {
     expect(html.indexOf('src="../assets/js/controllers/admin/admin-cadu-sources.js')).toBeLessThan(
       html.indexOf('src="../assets/js/controllers/admin/admin-cadu.controller.js')
