@@ -45,15 +45,76 @@
     .kc-cadu-hero > .kc-cadu-toolbar { display: flex; flex-wrap: wrap; width: auto; }
     .kc-cadu-toolbar input, .kc-cadu-toolbar select { min-height: 38px; border: 1px solid var(--kc-border-dark); background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 7px 10px; font-size: .86rem; min-width: 0; }
     .kc-cadu-toolbar input { width: 100%; }
-    .kc-cadu-toolbar select { width: 130px; }
+    .kc-cadu-toolbar select { width: 130px; color-scheme: dark; }
     #tab-sites > .kc-cadu-toolbar select { width: 100%; }
+    .kc-cadu-toolbar select option,
+    .kc-cadu-source-tier-select option {
+      background: #1a1b20;
+      color: #e9eaed;
+    }
+    .kc-cadu-toolbar select option:disabled,
+    .kc-cadu-source-tier-select option[value="__unset__"] {
+      background: #25262c;
+      color: #fbbf24;
+      font-style: italic;
+    }
     .kc-cadu-toolbar button { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); color: var(--kc-text-dark-primary); border-radius: 10px; padding: 7px 12px; font-size: .84rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
     .kc-cadu-toolbar button:hover { border-color: rgba(255,107,0,.45); }
     .kc-cadu-section { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 18px; padding: 16px; min-width: 0; }
     .kc-cadu-empty { color: var(--kc-text-dark-secondary); font-size: .9rem; padding: 24px 0; text-align: center; }
-    .kc-cadu-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; overscroll-behavior-inline: contain; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
+    .kc-cadu-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; overscroll-behavior-inline: contain; scrollbar-gutter: stable both-edges; -webkit-overflow-scrolling: touch; }
     .kc-cadu-table-wrap:focus-visible { outline: 2px solid var(--kc-primary-brand); outline-offset: 3px; }
     .kc-cadu-scroll-hint { display: none; margin: -2px 0 8px; color: var(--kc-text-dark-secondary); font-size: .74rem; }
+    .kc-cadu-pagination {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--kc-border-dark);
+      color: var(--kc-text-dark-secondary); font-size: .8rem;
+    }
+    .kc-cadu-pagination__meta { min-width: 0; }
+    .kc-cadu-pagination__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .kc-cadu-pagination__controls button {
+      min-height: 34px; border-radius: 8px; border: 1px solid var(--kc-border-dark);
+      background: var(--kc-surface-dark); color: var(--kc-text-dark-primary);
+      padding: 5px 10px; cursor: pointer; font-size: .78rem;
+    }
+    .kc-cadu-pagination__controls button:disabled { opacity: .45; cursor: not-allowed; }
+    .kc-cadu-pagination__controls select {
+      min-height: 34px; border-radius: 8px; border: 1px solid var(--kc-border-dark);
+      background: #1a1b20; color: #e9eaed; color-scheme: dark; padding: 4px 8px; font-size: .78rem;
+    }
+    .kc-cadu-pagination__controls select option { background: #1a1b20; color: #e9eaed; }
+    .kc-cadu-priority-legend {
+      display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 10px;
+      color: var(--kc-text-dark-secondary); font-size: .74rem; line-height: 1.4;
+    }
+    .kc-cadu-priority-legend strong { color: var(--kc-text-dark-primary); font-weight: 600; }
+    .kc-cadu-priority-pill {
+      display: inline-flex; align-items: center; gap: 4px; border-radius: 999px;
+      padding: 2px 8px; font-size: .72rem; font-weight: 700; letter-spacing: .02em;
+    }
+    .kc-cadu-priority-pill--1 { background: rgba(16,185,129,.14); color: #34d399; }
+    .kc-cadu-priority-pill--2 { background: rgba(79,195,247,.14); color: #4fc3f7; }
+    .kc-cadu-priority-pill--3 { background: rgba(167,139,250,.14); color: #c4b5fd; }
+    .kc-cadu-priority-pill--na { background: rgba(255,255,255,.06); color: var(--kc-text-dark-secondary); }
+    .kc-cadu-actions-stack { display: grid; gap: 6px; min-width: 0; }
+    .kc-cadu-actions-stack .kc-cadu-publish-btn,
+    .kc-cadu-actions-stack .kc-cadu-ask-btn,
+    .kc-cadu-actions-stack .kc-cadu-save-source-btn { width: 100%; justify-content: center; white-space: normal; }
+    .kc-cadu-note-cell { display: grid; gap: 6px; min-width: 0; }
+    .kc-cadu-source-tier-select {
+      width: 100%; min-height: 36px; border-radius: 8px; border: 1px solid var(--kc-border-dark);
+      background: #1a1b20; color: #e9eaed; color-scheme: dark; padding: 6px 8px; font-size: .78rem;
+    }
+    .kc-cadu-source-note-input {
+      width: 100%; border-radius: 8px; border: 1px solid var(--kc-border-dark);
+      background: #15161a; color: #e9eaed; color-scheme: dark; padding: 7px 8px; font-size: .78rem;
+      resize: vertical; min-height: 52px;
+    }
+    .kc-cadu-source-tier-select:focus-visible,
+    .kc-cadu-source-note-input:focus-visible,
+    .kc-cadu-pagination__controls select:focus-visible {
+      outline: 2px solid var(--kc-primary-brand); outline-offset: 1px;
+    }
 
 /* ===== OpenClaw section ===== */
 .kc-openclaw-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-top: 12px; }
@@ -178,20 +239,24 @@
 .kc-btn-secondary:hover { background: var(--kc-surface-dark-hover, #444); color: var(--kc-text-dark-primary, #fff); }
 .kc-btn-primary { background: var(--kc-primary-brand, #ff6b00); color: #fff; border-color: var(--kc-primary-brand, #ff6b00); font-weight: 600; }
 .kc-btn-secondary:disabled, .kc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 700px; }
-    #sites-table[data-view="sources"] { min-width: 1280px; table-layout: fixed; }
-    #sites-table[data-view="sources"] th:nth-child(1), #sites-table[data-view="sources"] td:nth-child(1) { width: 75px; }
-    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 250px; }
-    #sites-table[data-view="sources"] th:nth-child(3), #sites-table[data-view="sources"] td:nth-child(3) { width: 160px; }
-    #sites-table[data-view="sources"] th:nth-child(4), #sites-table[data-view="sources"] td:nth-child(4) { width: 140px; }
-    #sites-table[data-view="sources"] th:nth-child(5), #sites-table[data-view="sources"] td:nth-child(5) { width: 125px; }
-    #sites-table[data-view="sources"] th:nth-child(6), #sites-table[data-view="sources"] td:nth-child(6) { width: 320px; }
-    #sites-table[data-view="sources"] th:nth-child(7), #sites-table[data-view="sources"] td:nth-child(7) { width: 210px; }
-    #sites-table[data-view="entities"] { min-width: 880px; }
-    #sites-table[data-view="instagram"] { min-width: 860px; }
-    #sites-table[data-view="deferred"] { min-width: 760px; }
-    #sites-table[data-view="legacy"] { min-width: 1000px; }
-    .kc-cadu-table th, .kc-cadu-table td { padding: 9px 8px; border-bottom: 1px solid var(--kc-border-dark); text-align: left; font-size: .85rem; vertical-align: top; }
+    .kc-cadu-table { width: 100%; border-collapse: collapse; min-width: 0; table-layout: fixed; }
+    /* Prefer vertical packing over wide horizontal min-widths (Mapa UFG UX 2026-07-15). */
+    #sites-table[data-view="sources"] { min-width: 0; }
+    #sites-table[data-view="sources"] th:nth-child(1), #sites-table[data-view="sources"] td:nth-child(1) { width: 9%; }
+    #sites-table[data-view="sources"] th:nth-child(2), #sites-table[data-view="sources"] td:nth-child(2) { width: 18%; }
+    #sites-table[data-view="sources"] th:nth-child(3), #sites-table[data-view="sources"] td:nth-child(3) { width: 16%; }
+    #sites-table[data-view="sources"] th:nth-child(4), #sites-table[data-view="sources"] td:nth-child(4) { width: 14%; }
+    #sites-table[data-view="sources"] th:nth-child(5), #sites-table[data-view="sources"] td:nth-child(5) { width: 12%; }
+    #sites-table[data-view="sources"] th:nth-child(6), #sites-table[data-view="sources"] td:nth-child(6) { width: 18%; }
+    #sites-table[data-view="sources"] th:nth-child(7), #sites-table[data-view="sources"] td:nth-child(7) { width: 13%; }
+    #sites-table[data-view="entities"],
+    #sites-table[data-view="instagram"],
+    #sites-table[data-view="deferred"],
+    #sites-table[data-view="legacy"] { min-width: 0; }
+    .kc-cadu-table th, .kc-cadu-table td {
+      padding: 8px 6px; border-bottom: 1px solid var(--kc-border-dark); text-align: left;
+      font-size: .8rem; vertical-align: top; overflow-wrap: anywhere; word-break: break-word;
+    }
     .kc-cadu-table th { font-weight: 600; color: var(--kc-text-dark-secondary); text-transform: uppercase; font-size: .74rem; letter-spacing: .05em; }
     .kc-cadu-table tbody tr:hover { background: rgba(255,107,0,.04); }
     .kc-cadu-table code { background: rgba(255,107,0,.08); padding: 1px 6px; border-radius: 4px; font-size: .82rem; }
@@ -594,9 +659,9 @@
           <input id="sites-search" type="search" autocomplete="off" placeholder="Filtrar por nome, site ou @instagram" data-i18n-placeholder="placeholder.cadu-sites-search" aria-label="Filtrar sites" data-i18n-aria-label="aria-label.cadu-sites-search">
           <select id="sites-tier" aria-label="Filtrar por prioridade" data-i18n-aria-label="aria-label.cadu-sites-tier">
             <option value="">Todas as prioridades</option>
-            <option value="1">Prioridade T1</option>
-            <option value="2">Prioridade T2</option>
-            <option value="3">Prioridade T3</option>
+            <option value="1">T1 · Diária (crítico)</option>
+            <option value="2">T2 · Frequente</option>
+            <option value="3">T3 · Suplementar</option>
           </select>
           <select id="sites-ig" aria-label="Filtrar por status Instagram" data-i18n-aria-label="aria-label.cadu-sites-ig">
             <option value="">IG: todos</option>
@@ -617,24 +682,45 @@
           <button type="button" id="sites-export-csv"><i class="fas fa-file-csv"></i> CSV</button>
           <button type="button" id="sites-export-pdf" title="Exportar mapa de sites em PDF (com KPIs + tabela filtrada)" data-i18n-tooltip="tooltip.cadu-sites-export-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
         </div>
-        <p class="kc-cadu-scroll-hint"><i class="fas fa-arrows-left-right" aria-hidden="true"></i> Deslize a tabela horizontalmente para consultar todas as colunas.</p>
-        <div class="kc-cadu-table-wrap" tabindex="0" role="region" aria-label="Mapa UFG em tabela rolável" data-i18n-aria-label="aria-label.cadu-sites-table">
+        <div class="kc-cadu-priority-legend" aria-label="Legenda de prioridades do Mapa UFG">
+          <span><span class="kc-cadu-priority-pill kc-cadu-priority-pill--1">T1</span> <strong>Diária</strong> — pró-reitorias, portal, PPGs com feed (coleta diária)</span>
+          <span><span class="kc-cadu-priority-pill kc-cadu-priority-pill--2">T2</span> <strong>Frequente</strong> — unidades acadêmicas e centros com alta relevância</span>
+          <span><span class="kc-cadu-priority-pill kc-cadu-priority-pill--3">T3</span> <strong>Suplementar</strong> — varredura semanal / descoberta</span>
+        </div>
+        <p class="kc-cadu-scroll-hint" id="sites-scroll-hint"><i class="fas fa-arrows-up-down" aria-hidden="true"></i> Use a paginação abaixo para navegar; a tabela prioriza caber na largura da tela.</p>
+        <div class="kc-cadu-table-wrap" tabindex="0" role="region" aria-label="Mapa UFG em tabela" data-i18n-aria-label="aria-label.cadu-sites-table">
           <table class="kc-cadu-table" id="sites-table" data-view="sources" aria-live="polite">
             <thead id="sites-thead">
               <tr>
-                <th style="width:90px;">Prioridade</th>
+                <th>Prioridade</th>
                 <th>Entidade / fonte</th>
                 <th>Site institucional</th>
-                <th>Instagram associado</th>
-                <th style="width:130px;">Revisão</th>
-                <th>Ajuste administrativo / observação</th>
-                <th style="width:145px;">Ações</th>
+                <th>Instagram</th>
+                <th>Revisão</th>
+                <th>Ajuste administrativo</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody id="sites-tbody">
               <tr><td colspan="7" class="kc-cadu-empty">Carregando…</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="kc-cadu-pagination" id="sites-pagination" hidden>
+          <div class="kc-cadu-pagination__meta" id="sites-pagination-meta">—</div>
+          <div class="kc-cadu-pagination__controls">
+            <label for="sites-page-size">Por página
+              <select id="sites-page-size" aria-label="Itens por página no Mapa UFG">
+                <option value="15">15</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <button type="button" id="sites-page-prev" aria-label="Página anterior"><i class="fas fa-chevron-left"></i> Anterior</button>
+            <span id="sites-page-label" aria-live="polite">1 / 1</span>
+            <button type="button" id="sites-page-next" aria-label="Próxima página">Próxima <i class="fas fa-chevron-right"></i></button>
+          </div>
         </div>
       </section>
 

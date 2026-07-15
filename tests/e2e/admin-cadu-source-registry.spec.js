@@ -517,11 +517,14 @@ test.describe('Admin Cadu — catálogo canônico', () => {
 
     await page.locator('#sites-view').selectOption('sources');
     await expect(page.locator('#sites-table')).toHaveAttribute('data-view', 'sources');
+    // 2026-07-15: Mapa UFG prefers fitting width + pagination over forced wide min-width.
     const sourceTableWidths = await page.locator('.kc-cadu-table-wrap').evaluate((element) => ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth
     }));
-    expect(sourceTableWidths.scrollWidth).toBeGreaterThan(sourceTableWidths.clientWidth * 2);
+    expect(sourceTableWidths.scrollWidth).toBeLessThanOrEqual(sourceTableWidths.clientWidth * 1.25);
+    await expect(page.locator('#sites-pagination')).toBeVisible();
+    await expect(page.locator('#sites-page-size')).toBeVisible();
     if (process.env.CADU_VISUAL_CAPTURE === '1') {
       await page.screenshot({ path: testInfo.outputPath('cadu-sources-mobile.png'), fullPage: true });
     }

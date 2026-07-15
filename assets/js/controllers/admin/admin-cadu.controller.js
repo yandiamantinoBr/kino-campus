@@ -46,6 +46,8 @@
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
     sitesFilter: { q: '', tier: '', ig: '' },
+    sitesPage: 0,
+    sitesPageSize: 25,
     feedFilter: { q: '' },
     currentTab: 'sites',
     apiHealthy: false,
@@ -1015,7 +1017,8 @@
     }
   }
 
-  function applySitesFilter() {
+  function applySitesFilter(options) {
+    var opts = options || {};
     var f = state.sitesFilter;
     updateSitesFilterControls();
     if (state.catalogMode === 'registry' && state.sourceCatalog) {
@@ -1032,9 +1035,18 @@
           if (administrativeMetadataAvailable && state.sitesOrigin && state.sitesOrigin !== 'collision_evidence' && source.overrideOrigin !== state.sitesOrigin) return false;
           return profilesMatchFilter(source.instagramProfiles, f.ig);
         });
+        rows = rows.slice().sort(compareSourcesByPriority);
         state.filteredSites = rows.map(sourceAsLegacySite);
       } else if (state.sitesView === 'entities') {
         rows = rows.filter(function (entity) { return profilesMatchFilter(entity.instagramProfiles, f.ig); });
+        rows = rows.slice().sort(function (a, b) {
+          return String(a.name || a.id).localeCompare(String(b.name || b.id), 'pt-BR');
+        });
+        state.filteredSites = [];
+      } else if (state.sitesView === 'instagram') {
+        rows = rows.slice().sort(function (a, b) {
+          return String(a.handle || '').localeCompare(String(b.handle || ''), 'pt-BR');
+        });
         state.filteredSites = [];
       } else {
         state.filteredSites = [];
@@ -1048,9 +1060,10 @@
         if (!q) return true;
         var hay = ((site.name || '') + ' ' + (site.url || '') + ' ' + (site.instagram || '') + ' ' + (site.note || '')).toLowerCase();
         return hay.indexOf(q) !== -1;
-      });
+      }).slice().sort(compareLegacySitesByPriority);
       state.filteredCatalogRows = [];
     }
+    if (!opts.keepPage) state.sitesPage = 0;
     renderSitesTable();
   }
 
@@ -1107,15 +1120,93 @@
     return draft;
   }
 
+  function tierPriorityLabel(tier) {
+    var n = Number(tier);
+    if (n === 1) return 'T1 · Diária';
+    if (n === 2) return 'T2 · Frequente';
+    if (n === 3) return 'T3 · Suplementar';
+    return 'T—';
+  }
+
+  function tierPriorityHint(tier) {
+    var n = Number(tier);
+    if (n === 1) return 'Coleta diária (crítico)';
+    if (n === 2) return 'Coleta frequente (2–3×/semana)';
+    if (n === 3) return 'Varredura suplementar / semanal';
+    return 'Sem prioridade efetiva';
+  }
+
+  function compareSourcesByPriority(a, b) {
+    var ta = a && a.effectiveTier != null ? Number(a.effectiveTier) : 99;
+    var tb = b && b.effectiveTier != null ? Number(b.effectiveTier) : 99;
+    if (ta !== tb) return ta - tb;
+    var na = String((a && a.id) || '');
+    var nb = String((b && b.id) || '');
+    return na < nb ? -1 : (na > nb ? 1 : 0);
+  }
+
+  function compareLegacySitesByPriority(a, b) {
+    var ta = a && a.tier != null && a.tier !== '' ? Number(a.tier) : 99;
+    var tb = b && b.tier != null && b.tier !== '' ? Number(b.tier) : 99;
+    if (ta !== tb) return ta - tb;
+    var na = String((a && a.name) || '');
+    var nb = String((b && b.name) || '');
+    return na.localeCompare(nb, 'pt-BR');
+  }
+
   function tierOptionsHtml(draft, firstStable) {
     var html = '';
     var hasTierChoice = !firstStable || draft.tierTouched;
-    if (firstStable && !draft.tierTouched) html += '<option value="__unset__" selected>Escolha a prioridade explicitamente…</option>';
-    html += '<option value=""' + (hasTierChoice && draft.tier === null ? ' selected' : '') + '>Herdar prioridade base (sem ajuste)</option>';
+    if (firstStable && !draft.tierTouched) {
+      // Keep selectable so the value stays __unset__ until the admin chooses.
+      html += '<option value="__unset__" selected>⚠ Escolha a prioridade…</option>';
+    }
+    html += '<option value=""' + (hasTierChoice && draft.tier === null ? ' selected' : '') + '>Herdar base (sem ajuste estável)</option>';
     [1, 2, 3].forEach(function (tier) {
-      html += '<option value="' + tier + '"' + (hasTierChoice && draft.tier === tier ? ' selected' : '') + '>Prioridade T' + tier + '</option>';
+      html += '<option value="' + tier + '"' + (hasTierChoice && draft.tier === tier ? ' selected' : '') + '>'
+        + tierPriorityLabel(tier) + '</option>';
     });
     return html;
+  }
+
+  function paginateRows(rows) {
+    var list = Array.isArray(rows) ? rows : [];
+    var size = Math.max(5, Math.min(200, Number(state.sitesPageSize) || 25));
+    var total = list.length;
+    var pages = Math.max(1, Math.ceil(total / size) || 1);
+    if (state.sitesPage >= pages) state.sitesPage = pages - 1;
+    if (state.sitesPage < 0) state.sitesPage = 0;
+    var start = state.sitesPage * size;
+    return {
+      rows: list.slice(start, start + size),
+      total: total,
+      page: state.sitesPage,
+      pages: pages,
+      size: size,
+      from: total === 0 ? 0 : start + 1,
+      to: Math.min(total, start + size)
+    };
+  }
+
+  function updateSitesPagination(meta) {
+    var bar = $('#sites-pagination');
+    var label = $('#sites-page-label');
+    var info = $('#sites-pagination-meta');
+    var prev = $('#sites-page-prev');
+    var next = $('#sites-page-next');
+    var sizeSelect = $('#sites-page-size');
+    if (!bar) return;
+    var total = meta && meta.total != null ? meta.total : 0;
+    bar.hidden = false;
+    if (sizeSelect && String(sizeSelect.value) !== String(meta.size)) sizeSelect.value = String(meta.size);
+    if (label) label.textContent = (meta.page + 1) + ' / ' + meta.pages;
+    if (info) {
+      info.textContent = total
+        ? ('Exibindo ' + meta.from + '–' + meta.to + ' de ' + total + ' itens filtrados · ordenados por prioridade (T1→T3)')
+        : 'Nenhum item nos filtros atuais';
+    }
+    if (prev) prev.disabled = meta.page <= 0 || total === 0;
+    if (next) next.disabled = meta.page >= meta.pages - 1 || total === 0;
   }
 
   function normalizedDraftNote(note) {
@@ -1236,23 +1327,32 @@
       var actions = '<button type="button" class="kc-cadu-publish-btn" data-source-id="' + escapeHtml(source.id) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewEligibility.allowed ? '' : ' disabled') + '>'
         + '<i class="fas ' + (reviewEligibility.allowed ? 'fa-clipboard-check' : 'fa-lock') + '"></i><span>' + (reviewEligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada') + '</span></button>'
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name) + '" data-ask-url="' + escapeHtml(site.url) + '" data-ask-instagram="' + escapeHtml(site.instagramContext || 'sem perfil associado') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '" title="Enviar todas as associações e seus status ao chat Cadu"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
+      var tierClass = source.effectiveTier == null ? 'na' : String(source.effectiveTier);
       var priorityCell = administrativeMetadataAvailable
-        ? '<strong>T' + escapeHtml(source.effectiveTier == null ? '—' : source.effectiveTier) + '</strong><small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : source.baseTier) + ' · ' + escapeHtml(catalogLabel(source.overrideOrigin)) + '</small>'
-        : '<strong>—</strong><small class="kc-cadu-source-id">metadados administrativos indisponíveis no espelho</small>';
+        ? '<span class="kc-cadu-priority-pill kc-cadu-priority-pill--' + escapeHtml(tierClass) + '" title="' + escapeHtml(tierPriorityHint(source.effectiveTier)) + '">'
+          + escapeHtml(tierPriorityLabel(source.effectiveTier)) + '</span>'
+          + '<small class="kc-cadu-source-id">base ' + escapeHtml(source.baseTier == null ? '—' : ('T' + source.baseTier))
+          + ' · ' + escapeHtml(catalogLabel(source.overrideOrigin))
+          + (source.baseTier != null && source.effectiveTier != null && Number(source.baseTier) !== Number(source.effectiveTier)
+            ? ' · efetiva ≠ base'
+            : '')
+          + '</small>'
+        : '<span class="kc-cadu-priority-pill kc-cadu-priority-pill--na">—</span><small class="kc-cadu-source-id">metadados administrativos indisponíveis no espelho</small>';
       var administrativeEditor = administrativeMetadataAvailable
         ? inherited + conflict
-          + '<select class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Prioridade estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
+          + '<label class="kc-cadu-muted" for="tier-' + escapeHtml(source.id) + '">Prioridade do ajuste</label>'
+          + '<select id="tier-' + escapeHtml(source.id) + '" class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Prioridade estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
           + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" aria-label="Nota administrativa de ' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota administrativa explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
           + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar ajuste' : 'Criar ajuste estável'))) + '</button>'
         : '<div class="kc-cadu-inherited-warning"><strong>Não incluídos neste espelho.</strong><br>Prioridade efetiva, nota e origem do ajuste administrativo só aparecem quando a rota canônica do Cadu está disponível.</div>';
       return '<tr data-source-id="' + escapeHtml(source.id) + '">'
         + '<td>' + priorityCell + '</td>'
         + '<td>' + entityChips(source.entities) + '<code class="kc-cadu-source-id">' + escapeHtml(source.id) + '</code></td>'
-        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(catalogLabel(source.sourceKind)) + ' · ' + escapeHtml(catalogLabel('shadow')) + '</small></td>'
+        + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(catalogLabel(source.sourceKind)) + ' · shadow</small></td>'
         + '<td>' + profileLinks(source.instagramProfiles) + '</td>'
         + '<td>' + review + '</td>'
         + '<td><div class="kc-cadu-note-cell">' + administrativeEditor + '</div></td>'
-        + '<td style="white-space:nowrap;">' + actions + '</td></tr>';
+        + '<td><div class="kc-cadu-actions-stack">' + actions + '</div></td></tr>';
     }).join('');
   }
 
@@ -1327,17 +1427,22 @@
     if (!tbody) return;
     var table = $('#sites-table');
     if (table) table.setAttribute('data-view', state.catalogMode === 'registry' ? state.sitesView : 'legacy');
-    var rows;
+    var allRows;
     var html;
     if (state.catalogMode === 'registry') {
-      rows = state.filteredCatalogRows;
+      allRows = state.filteredCatalogRows;
+      var page = paginateRows(allRows);
+      updateSitesPagination(page);
+      var rows = page.rows;
       if (state.sitesView === 'entities') html = renderEntityRows(rows);
       else if (state.sitesView === 'instagram') html = renderInstagramRows(rows);
       else if (state.sitesView === 'deferred') html = renderDeferredRows(rows);
       else html = renderSourceRows(rows);
     } else {
-      rows = state.filteredSites;
-      html = renderLegacyRows(rows);
+      allRows = state.filteredSites;
+      var legacyPage = paginateRows(allRows);
+      updateSitesPagination(legacyPage);
+      html = renderLegacyRows(legacyPage.rows);
     }
     tbody.innerHTML = html || '<tr><td colspan="7" class="kc-cadu-empty">Nenhum item corresponde aos filtros atuais.</td></tr>';
   }
@@ -1533,16 +1638,39 @@
         return [catalogLabel(item.deferredKind), (item.unitIds || (item.unitId ? [item.unitId] : [])).join(' '), (item.matchTypes || (item.matchType ? [item.matchType] : [])).map(catalogLabel).join(' '), item.sourceId || '', (item.sourceIds || []).join(' '), (item.entityIds || []).join(' '), JSON.stringify(item.rows || (item.row ? [item.row] : [])), (item.rowKeys || (item.rowKey ? [item.rowKey] : [])).join(' ')];
       }));
     }
-    return [['ID da fonte', 'Entidades', 'Prioridade efetiva', 'Prioridade base', 'Prioridade do ajuste', 'Origem do ajuste', 'URL canônica', 'Perfis do Instagram', 'Status dos perfis', 'Estado da revisão', 'Pendências da revisão', 'Observação', 'Revisão técnica']].concat(rows.map(function (source) {
+    return [[
+      'ID da fonte',
+      'Nome das entidades',
+      'IDs das entidades',
+      'Prioridade efetiva',
+      'Rótulo prioridade',
+      'Prioridade base',
+      'Prioridade do ajuste',
+      'Origem do ajuste',
+      'URL canônica',
+      'Tipo de fonte',
+      'Perfis do Instagram',
+      'Status dos perfis',
+      'Estado da revisão',
+      'Pendências da revisão',
+      'Observação',
+      'Revisão técnica (ETag)'
+    ]].concat(rows.map(function (source) {
       var administrativeMetadataAvailable = source.administrativeMetadataAvailable !== false;
+      var entityNames = (source.entities || []).map(function (entity) {
+        return entity.acronym ? (entity.acronym + ' — ' + entity.name) : entity.name;
+      }).join(' | ');
       return [
         source.id,
+        entityNames,
         source.entityIds.join(' '),
         administrativeMetadataAvailable && source.effectiveTier != null ? 'T' + source.effectiveTier : '',
+        administrativeMetadataAvailable && source.effectiveTier != null ? tierPriorityLabel(source.effectiveTier) : '',
         administrativeMetadataAvailable && source.baseTier != null ? 'T' + source.baseTier : '',
         administrativeMetadataAvailable && source.overrideTier != null ? 'T' + source.overrideTier : '',
         administrativeMetadataAvailable ? catalogLabel(source.overrideOrigin) : catalogLabel('metadata_unavailable'),
         source.canonicalUrl,
+        catalogLabel(source.sourceKind),
         source.instagramProfiles.map(function (profile) { return profile.handle; }).join(' '),
         source.instagramProfiles.map(function (profile) { return catalogLabel(profile.status); }).join(' | '),
         catalogLabel(source.reviewState),
@@ -3340,10 +3468,68 @@
 
   function buildSitesPdfReport() {
     var f = state.sitesFilter || {};
-    var sites = state.filteredSites || state.allSites || [];
     var administrativeMetadataAvailable = !(state.sourceCatalog && state.sourceCatalog.administrativeMetadataAvailable === false);
+    var sites = [];
+    var totalUniverse = 0;
+    // Export the full filtered set (not only the current UI page).
+    if (state.catalogMode === 'registry' && state.sourceCatalog) {
+      totalUniverse = (state.sourceCatalog.sources || []).length;
+      if (state.sitesView === 'sources') {
+        sites = (state.filteredCatalogRows || []).map(sourceAsLegacySite);
+      } else if (state.sitesView === 'entities') {
+        sites = (state.filteredCatalogRows || []).map(function (entity) {
+          return {
+            name: entity.acronym ? (entity.acronym + ' — ' + entity.name) : entity.name,
+            tier: null,
+            category: entity.kind,
+            url: (entity.sources && entity.sources[0] && entity.sources[0].canonicalUrl) || '',
+            instagramContext: (entity.instagramProfiles || []).map(function (p) { return '@' + p.handle; }).join(', '),
+            instagram_status: sourceInstagramStatus({ instagramProfiles: entity.instagramProfiles || [] }),
+            note: entity.id,
+            override_origin: null,
+            collision: false,
+            administrativeMetadataAvailable: false
+          };
+        });
+        totalUniverse = (state.sourceCatalog.entities || []).length;
+      } else if (state.sitesView === 'instagram') {
+        sites = (state.filteredCatalogRows || []).map(function (profile) {
+          return {
+            name: '@' + String(profile.handle || '').replace(/^@/, ''),
+            tier: null,
+            category: 'instagram',
+            url: profile.profileUrl || '',
+            instagramContext: profile.id,
+            instagram_status: profile.status,
+            note: (profile.entityIds || []).join(' '),
+            override_origin: null,
+            collision: false,
+            administrativeMetadataAvailable: false
+          };
+        });
+        totalUniverse = (state.sourceCatalog.instagramProfiles || []).length;
+      } else {
+        sites = (state.filteredCatalogRows || []).map(function (item) {
+          return {
+            name: catalogLabel(item.deferredKind),
+            tier: null,
+            category: 'deferred',
+            url: '',
+            instagramContext: (item.sourceIds || []).join(' '),
+            instagram_status: 'unknown',
+            note: (item.unitIds || []).join(' '),
+            override_origin: null,
+            collision: true,
+            administrativeMetadataAvailable: false
+          };
+        });
+      }
+    } else {
+      sites = state.filteredSites || state.allSites || [];
+      totalUniverse = (state.allSites || []).length;
+    }
     var tierCount = { '1': 0, '2': 0, '3': 0, '': 0 };
-    var igCount = { confirmed: 0, tentative: 0, missing: 0, unknown: 0 };
+    var igCount = { confirmed: 0, tentative: 0, pending_verification: 0, missing: 0, unknown: 0 };
     var hasUrl = 0;
     sites.forEach(function (s) {
       var t = s.tier != null ? String(s.tier) : '';
@@ -3355,34 +3541,34 @@
     var rows = sites.map(function (s) {
       return {
         unidade: s.name || '',
-        prioridade: administrativeMetadataAvailable
-          ? (s.tier ? 'T' + s.tier : '—')
-          : 'Indisponível no espelho',
+        prioridade: administrativeMetadataAvailable && state.sitesView === 'sources'
+          ? (s.tier != null && s.tier !== '' ? tierPriorityLabel(s.tier) : '—')
+          : (state.sitesView === 'sources' ? 'Indisponível no espelho' : '—'),
         site: s.url || '—',
         instagram: s.instagramContext || s.instagram || '—',
         ig_status: catalogLabel(s.instagram_status),
         categoria: catalogLabel(s.category),
-        ajuste: administrativeMetadataAvailable
+        ajuste: administrativeMetadataAvailable && state.sitesView === 'sources'
           ? (s.override_origin
             ? catalogLabel(s.override_origin) + (s.collision ? ' · evidência de colisão' : '')
             : 'Legado somente leitura')
-          : catalogLabel('metadata_unavailable'),
-        observacao: administrativeMetadataAvailable ? (s.note || '') : '',
+          : (state.sitesView === 'sources' ? catalogLabel('metadata_unavailable') : '—'),
+        observacao: administrativeMetadataAvailable && state.sitesView === 'sources' ? (s.note || '') : (s.note || ''),
       };
     });
     var kpis = [
-      { label: 'Total filtrado', value: sites.length + ' / ' + (state.allSites || []).length, note: 'após aplicar busca, prioridade e status do Instagram' },
-      { label: 'Com site HTTPS', value: hasUrl, note: 'unidades com URL institucional cadastrada' },
+      { label: 'Total filtrado', value: sites.length + ' / ' + totalUniverse, note: 'exporta o filtro completo, não só a página da UI' },
+      { label: 'Com URL', value: hasUrl, note: 'itens com URL institucional/perfil' },
       { label: 'Instagram confirmado', value: igCount.confirmed || 0, note: 'perfil com evidência institucional confirmada' },
       { label: 'Instagram pendente/tentativo', value: (igCount.pending_verification || 0) + (igCount.tentative || 0), note: 'exige verificação antes de qualquer ativação' },
     ];
-    if (administrativeMetadataAvailable) {
+    if (administrativeMetadataAvailable && state.sitesView === 'sources') {
       kpis.push(
-        { label: 'Prioridade efetiva T1', value: tierCount['1'] || 0, note: 'consulte a origem do ajuste antes de interpretar a prioridade' },
-        { label: 'Prioridade efetiva T2', value: tierCount['2'] || 0, note: 'consulte a origem do ajuste antes de interpretar a prioridade' },
-        { label: 'Prioridade efetiva T3', value: tierCount['3'] || 0, note: 'consulte a origem do ajuste antes de interpretar a prioridade' }
+        { label: 'Prioridade efetiva T1 (diária)', value: tierCount['1'] || 0, note: 'pró-reitorias, portal e PPGs de alta frequência' },
+        { label: 'Prioridade efetiva T2 (frequente)', value: tierCount['2'] || 0, note: 'unidades acadêmicas e centros' },
+        { label: 'Prioridade efetiva T3 (suplementar)', value: tierCount['3'] || 0, note: 'varredura semanal / descoberta' }
       );
-    } else {
+    } else if (state.sitesView === 'sources') {
       kpis.push({
         label: 'Metadados administrativos',
         value: 'Indisponíveis',
@@ -3390,36 +3576,37 @@
       });
     }
     return {
-      title: 'KinoCampus — Mapa de Sites UFG (Cadu)',
-      subtitle: 'Inventário institucional curado pelo Cadu (OpenClaw)',
-      source: 'admin/cadu.html — aba Sites UFG',
+      title: 'KinoCampus — Mapa UFG (Cadu)',
+      subtitle: 'Inventário institucional · visão ' + (state.sitesView || 'sources') + ' · ordenado por prioridade',
+      source: 'admin/cadu.html — aba Mapa UFG',
       generatedAt: new Date().toISOString(),
       filters: {
+        visao: state.sitesView || 'sources',
         busca: f.q || '—',
-        prioridade: f.tier ? ('T' + f.tier) : 'todas',
+        prioridade: f.tier ? tierPriorityLabel(f.tier) : 'todas',
         status_instagram: f.ig ? catalogLabel(f.ig) : 'todos',
         origem_ajuste: state.sitesOrigin ? catalogLabel(state.sitesOrigin) : 'todas',
-        total_filtrado: sites.length + ' de ' + (state.allSites || []).length,
+        total_filtrado: sites.length + ' de ' + totalUniverse,
       },
       kpis: kpis,
       sections: [
         {
-          title: 'Sites UFG (lista filtrada)',
+          title: 'Mapa UFG (lista filtrada completa)',
           note: administrativeMetadataAvailable
-            ? 'Tabela exportada da visão Fontes web. Ajustes administrativos exigem ID estável, confirmação explícita e ETag/CAS; valores legados não são promovidos automaticamente.'
-            : 'Tabela exportada do espelho institucional auditado. Prioridades efetivas, notas e ajustes administrativos não estão disponíveis neste artefato e foram omitidos.',
+            ? 'Exporta todos os itens do filtro atual (não apenas a página). T1=diária, T2=frequente, T3=suplementar. Ajustes estáveis exigem ETag/CAS.'
+            : 'Exporta o filtro atual. Prioridades efetivas e notas administrativas podem estar omitidas no espelho.',
           columns: [
-            { key: 'unidade', label: 'Unidade', width: 2 },
+            { key: 'unidade', label: 'Unidade / item', width: 2 },
             { key: 'prioridade', label: 'Prioridade', width: 1 },
-            { key: 'site', label: 'Site institucional', width: 4 },
+            { key: 'site', label: 'Site / URL', width: 4 },
             { key: 'instagram', label: 'Instagram', width: 2 },
-            { key: 'ig_status', label: 'Status do Instagram', width: 1 },
+            { key: 'ig_status', label: 'Status IG', width: 1 },
             { key: 'categoria', label: 'Categoria', width: 2 },
-            { key: 'ajuste', label: 'Ajuste / colisão', width: 2 },
+            { key: 'ajuste', label: 'Ajuste', width: 2 },
             { key: 'observacao', label: 'Observação', width: 3 },
           ],
           rows: rows,
-          maxPdfRows: 200,
+          maxPdfRows: 500,
         },
       ],
     };
@@ -3677,6 +3864,30 @@
       }
       applySitesFilter();
     });
+    var sitesPagePrev = $('#sites-page-prev');
+    var sitesPageNext = $('#sites-page-next');
+    var sitesPageSize = $('#sites-page-size');
+    if (sitesPagePrev) {
+      sitesPagePrev.addEventListener('click', function () {
+        if (state.sitesPage <= 0) return;
+        state.sitesPage -= 1;
+        renderSitesTable();
+      });
+    }
+    if (sitesPageNext) {
+      sitesPageNext.addEventListener('click', function () {
+        state.sitesPage += 1;
+        renderSitesTable();
+      });
+    }
+    if (sitesPageSize) {
+      sitesPageSize.addEventListener('change', function () {
+        var next = parseInt(sitesPageSize.value, 10);
+        state.sitesPageSize = Number.isFinite(next) ? next : 25;
+        state.sitesPage = 0;
+        renderSitesTable();
+      });
+    }
 
     // OpenClaw (v0.4.3)
     var ocRefresh = $('#openclaw-refresh-btn');
