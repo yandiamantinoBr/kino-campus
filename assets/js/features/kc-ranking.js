@@ -31,6 +31,7 @@
   // Cache: module -> { period -> { users, signature, timestamp, source } }
   var rankCache = {};
   var rankRequests = {};
+  var infoModalReturnFocus = null;
 
   function getSessionStore() {
     return window.KCSessionStore && typeof window.KCSessionStore.get === 'function'
@@ -44,6 +45,47 @@
 
   function normalizeUsers(users) {
     return Array.isArray(users) ? users.filter(function (user) { return user && typeof user === 'object'; }) : [];
+  }
+
+  function escapeHtml(value) {
+    if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
+      return window.KCUtils.escapeHtml(String(value == null ? '' : value));
+    }
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[character];
+    });
+  }
+
+  function getSafeAvatarUrl(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw || raw.length > 2048) return '';
+    try {
+      var base = (window.location && window.location.origin)
+        ? window.location.origin
+        : 'https://www.kinocampus.com.br';
+      var parsed = new URL(raw, base);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return '';
+      parsed.username = '';
+      parsed.password = '';
+      return parsed.href;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function getSafeProfileHref(userId) {
+    return 'profile.html?id=' + encodeURIComponent(String(userId == null ? '' : userId).trim().slice(0, 160));
+  }
+
+  function getSafeScore(value) {
+    var score = Number(value);
+    return Number.isFinite(score) ? score : 0;
   }
 
   function buildRankingSignature(users) {
@@ -170,16 +212,17 @@
     }
 
     var markup = normalized.map(function (u, i) {
-      var name = u.display_name || 'Usuario';
-      var avatarSrc = u.avatar_url || '';
+      var name = String(u.display_name || 'Usuario');
+      var avatarSrc = getSafeAvatarUrl(u.avatar_url);
+      var safeName = escapeHtml(name);
       var avatarHtml = avatarSrc
-        ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
+        ? '<img src="' + escapeHtml(avatarSrc) + '" alt="' + safeName + '" loading="lazy">'
         : '<i class="fas fa-user" aria-hidden="true"></i>';
-      return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-sidebar-item">' +
-        '<span class="kc-ranking-sidebar-item__pos"><i class="' + iconClass + '" style="font-size:0.85em;margin-right:2px;"></i>' + (i + 1) + '</span>' +
+      return '<a href="' + escapeHtml(getSafeProfileHref(u.user_id)) + '" class="kc-ranking-sidebar-item">' +
+        '<span class="kc-ranking-sidebar-item__pos"><i class="' + iconClass + '" style="font-size:0.85em;margin-right:2px;" aria-hidden="true"></i>' + (i + 1) + '</span>' +
         '<span class="kc-ranking-sidebar-item__avatar">' + avatarHtml + '</span>' +
-        '<span class="kc-ranking-sidebar-item__name">' + name + '</span>' +
-        '<span class="kc-ranking-sidebar-item__score">' + u.score + ' pts</span>' +
+        '<span class="kc-ranking-sidebar-item__name">' + safeName + '</span>' +
+        '<span class="kc-ranking-sidebar-item__score">' + getSafeScore(u.score) + ' pts</span>' +
       '</a>';
     }).join('');
 
@@ -199,17 +242,19 @@
     }
 
     var markup = normalized.map(function (u, i) {
-      var name = u.display_name || 'Usuario';
-      var avatarSrc = u.avatar_url || '';
+      var name = String(u.display_name || 'Usuario');
+      var avatarSrc = getSafeAvatarUrl(u.avatar_url);
+      var safeName = escapeHtml(name);
+      var score = getSafeScore(u.score);
       var avatarHtml = avatarSrc
-        ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
+        ? '<img src="' + escapeHtml(avatarSrc) + '" alt="' + safeName + '" loading="lazy">'
         : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);" aria-hidden="true"></i>';
-      return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-user" title="' + name + ' - ' + u.score + ' pts">' +
+      return '<a href="' + escapeHtml(getSafeProfileHref(u.user_id)) + '" class="kc-ranking-user" title="' + safeName + ' - ' + score + ' pts">' +
         '<div class="kc-ranking-user-avatar">' + avatarHtml +
-          '<span class="kc-ranking-user-position"><i class="' + iconClass + '"></i>' + (i + 1) + '</span>' +
+          '<span class="kc-ranking-user-position"><i class="' + iconClass + '" aria-hidden="true"></i>' + (i + 1) + '</span>' +
         '</div>' +
-        '<span class="kc-ranking-user-name">' + name + '</span>' +
-        '<span class="kc-ranking-user-score">' + u.score + ' pts</span>' +
+        '<span class="kc-ranking-user-name">' + safeName + '</span>' +
+        '<span class="kc-ranking-user-score">' + score + ' pts</span>' +
       '</a>';
     }).join('');
 
@@ -225,21 +270,71 @@
     return MODULE_LABELS[mod] || '';
   }
 
+  function getVisibleModalFocusables(modal) {
+    if (!modal || typeof modal.querySelectorAll !== 'function') return [];
+    return Array.prototype.slice.call(modal.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    )).filter(function (element) {
+      if (element.hidden || (element.hasAttribute && element.hasAttribute('hidden'))) return false;
+      if (element.closest && element.closest('[aria-hidden="true"]')) return false;
+      var style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+      if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+      return typeof element.getClientRects !== 'function' || element.getClientRects().length > 0;
+    });
+  }
+
+  function closeInfoModal() {
+    var modal = document.getElementById('kcRankingInfoModal');
+    if (!modal) return;
+    modal.setAttribute('aria-hidden', 'true');
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(false);
+    }
+    var returnFocus = infoModalReturnFocus;
+    infoModalReturnFocus = null;
+    if (returnFocus && typeof returnFocus.focus === 'function') {
+      try { returnFocus.focus(); } catch (_) {}
+    }
+  }
+
+  function openInfoModal(trigger) {
+    ensureInfoModal();
+    var modal = document.getElementById('kcRankingInfoModal');
+    if (!modal) return;
+    infoModalReturnFocus = trigger || document.activeElement || null;
+    modal.setAttribute('aria-hidden', 'false');
+    if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
+      window.KCAdminShell.setModalOpen(true);
+    }
+    window.setTimeout(function () {
+      var focusable = getVisibleModalFocusables(modal);
+      var target = focusable[0] || modal;
+      if (target && typeof target.focus === 'function') {
+        try { target.focus(); } catch (_) {}
+      }
+    }, 40);
+  }
+
   function ensureInfoModal() {
     if (document.getElementById('kcRankingInfoModal')) return;
     var modal = document.createElement('div');
     modal.id = 'kcRankingInfoModal';
     modal.className = 'kc-ranking-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'kcRankingInfoTitle');
+    modal.setAttribute('aria-describedby', 'kcRankingInfoDescription');
     modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('tabindex', '-1');
     modal.innerHTML =
-      '<div class="kc-ranking-modal__backdrop" data-kc-ranking-modal-close></div>' +
+      '<div class="kc-ranking-modal__backdrop" data-kc-ranking-modal-close aria-hidden="true"></div>' +
       '<div class="kc-ranking-modal__content">' +
         '<div class="kc-ranking-modal__header">' +
-          '<h3><i class="fas fa-trophy" style="color:var(--kc-primary-brand);" aria-hidden="true"></i> Como funciona o ranking?</h3>' +
+          '<h3 id="kcRankingInfoTitle"><i class="fas fa-trophy" style="color:var(--kc-primary-brand);" aria-hidden="true"></i> Como funciona o ranking?</h3>' +
           '<button type="button" data-kc-ranking-modal-close aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>' +
         '</div>' +
         '<div class="kc-ranking-modal__body">' +
-          '<p>O ranking pontua os usuários mais ativos e úteis da comunidade. Cada ação é contabilizada <strong>uma única vez por publicação</strong> — ações repetidas no mesmo post não somam pontos extras.</p>' +
+          '<p id="kcRankingInfoDescription">O recorte seleciona publicações criadas e comentários feitos no período. Votos, cliques e compartilhamentos usam os totais atuais das publicações selecionadas; cada comentário escrito conta individualmente.</p>' +
           '<div class="kc-ranking-table-wrapper">' +
           '<table class="kc-ranking-score-table">' +
             '<thead><tr><th>Ação</th><th>Pontos</th></tr></thead>' +
@@ -249,11 +344,11 @@
               '<tr><td><i class="fas fa-comment" aria-hidden="true"></i> Comentário escrito</td><td class="kc-ranking-pts">+5</td></tr>' +
               '<tr><td><i class="fas fa-hand-pointer" aria-hidden="true"></i> Anúncio acessado por alguém</td><td class="kc-ranking-pts">+4</td></tr>' +
               '<tr><td><i class="fas fa-share-alt" aria-hidden="true"></i> Publicação compartilhada</td><td class="kc-ranking-pts">+3</td></tr>' +
-              '<tr><td><i class="fas fa-flag" aria-hidden="true"></i> Denúncia confirmada (penalidade)</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
+              '<tr><td><i class="fas fa-flag" aria-hidden="true"></i> Denúncia confirmada (visão administrativa)</td><td class="kc-ranking-pts kc-ranking-pts--neg">-50</td></tr>' +
             '</tbody>' +
           '</table>' +
           '</div>' +
-          '<p style="font-size:0.85em;color:var(--kc-text-dark-secondary);margin-top:10px;">Filtrável por período (hoje, semana ou mês) e por módulo nas páginas de cada categoria.</p>' +
+          '<p style="font-size:0.85em;color:var(--kc-text-dark-secondary);margin-top:10px;">No dashboard administrativo, o ranking aceita hoje, 7, 30, 90 ou 365 dias e pode ser filtrado por módulo.</p>' +
         '</div>' +
         '<div class="kc-ranking-modal__footer">' +
           '<button type="button" class="kc-btn-primary" data-kc-ranking-modal-close><i class="fas fa-check" aria-hidden="true"></i> Entendido</button>' +
@@ -263,9 +358,31 @@
 
     // Wire close buttons on newly created modal
     modal.querySelectorAll('[data-kc-ranking-modal-close]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        modal.setAttribute('aria-hidden', 'true');
-      });
+      el.addEventListener('click', closeInfoModal);
+    });
+    modal.addEventListener('keydown', function (event) {
+      if (modal.getAttribute('aria-hidden') !== 'false') return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeInfoModal();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      var focusable = getVisibleModalFocusables(modal);
+      if (!focusable.length) {
+        event.preventDefault();
+        modal.focus();
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     });
   }
 
@@ -296,73 +413,16 @@
 
       section.querySelectorAll('[data-kc-ranking-info]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          ensureInfoModal();
-          var modal = document.getElementById('kcRankingInfoModal');
-          if (modal) modal.setAttribute('aria-hidden', 'false');
+          openInfoModal(btn);
         });
       });
 
       loadSidebarRanking(usersEl, currentPeriod, module);
     });
 
-    // Wire modal close buttons (global)
-    document.querySelectorAll('[data-kc-ranking-modal-close]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        var modal = el.closest('.kc-ranking-modal');
-        if (modal) modal.setAttribute('aria-hidden', 'true');
-      });
-    });
   }
 
-  function loadSidebarRanking(container, period, module, _retries) {
-    var api = window.KCAPI;
-    if (!api || typeof api.getTopContributors !== 'function') {
-      var attempt = _retries || 0;
-      if (attempt < 3) {
-        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
-        setTimeout(function () { loadSidebarRanking(container, period, module, attempt + 1); }, 350);
-        return;
-      }
-      container.innerHTML = '<span class="kc-ranking-empty">Indisponível.</span>';
-      return;
-    }
-
-    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
-    var iconClass = getModuleIcon(module);
-
-    api.getTopContributors(period, module, 10).then(function (users) {
-      if (!users || users.length === 0) {
-        container.innerHTML = '<span class="kc-ranking-empty">Nenhum contribuidor no período.</span>';
-        return;
-      }
-
-      // Cache results
-      var cacheKey = module || '__general__';
-      if (!rankCache[cacheKey]) rankCache[cacheKey] = {};
-      rankCache[cacheKey][period] = users;
-
-      container.innerHTML = users.map(function (u, i) {
-        var name = u.display_name || 'Usuário';
-        var avatarSrc = u.avatar_url || '';
-        var avatarHtml = avatarSrc
-          ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
-          : '<i class="fas fa-user" aria-hidden="true"></i>';
-        return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-sidebar-item">' +
-          '<span class="kc-ranking-sidebar-item__pos"><i class="' + iconClass + '" style="font-size:0.85em;margin-right:2px;"></i>' + (i + 1) + '</span>' +
-          '<span class="kc-ranking-sidebar-item__avatar">' + avatarHtml + '</span>' +
-          '<span class="kc-ranking-sidebar-item__name">' + name + '</span>' +
-          '<span class="kc-ranking-sidebar-item__score">' + u.score + ' pts</span>' +
-        '</a>';
-      }).join('');
-
-      // Decorate avatars in the page after data loads
-      decorateAuthorAvatars(users, module);
-    }).catch(function () {
-      container.innerHTML = '<span class="kc-ranking-empty">Erro ao carregar.</span>';
-    });
-  }
-
-  // Override legacy loader with session-backed stale-while-revalidate behavior.
+  // Session-backed stale-while-revalidate loader.
   function loadSidebarRanking(container, period, module, _retries) {
     var api = window.KCAPI;
     var cached = getCachedRanking(period, module);
@@ -470,7 +530,7 @@
       var badge = document.createElement('span');
       badge.className = 'kc-rank-badge';
       badge.title = 'Top ' + rankMap[authorId] + (module ? ' ' + getModuleLabel(module) : ' Geral');
-      badge.innerHTML = '<i class="' + iconClass + '"></i>' + rankMap[authorId];
+      badge.innerHTML = '<i class="' + iconClass + '" aria-hidden="true"></i>' + rankMap[authorId];
       el.appendChild(badge);
     });
 
@@ -501,37 +561,11 @@
           badge.className = 'kc-rank-badge';
           badge.dataset.rankModule = modKey;
           badge.title = 'Top ' + rankMap[profileId] + (module ? ' ' + getModuleLabel(module) : ' Geral');
-          badge.innerHTML = '<i class="' + iconClass + '"></i>' + rankMap[profileId];
+          badge.innerHTML = '<i class="' + iconClass + '" aria-hidden="true"></i>' + rankMap[profileId];
           container.appendChild(badge);
         }
       }
     }
-  }
-
-  /**
-   * Get cached rank data for a user across all loaded modules.
-   * Returns array: [ { module, rank, icon } ]
-   */
-  function getUserRanks(userId) {
-    var results = [];
-    Object.keys(rankCache).forEach(function (mod) {
-      var periods = rankCache[mod];
-      // Use 'month' as default, fallback to any available period
-      var users = periods['month'] || periods[Object.keys(periods)[0]];
-      if (!users) return;
-      for (var i = 0; i < users.length; i++) {
-        if (users[i].user_id === userId) {
-          var realMod = mod === '__general__' ? null : mod;
-          results.push({
-            module: realMod,
-            rank: i + 1,
-            icon: getModuleIcon(realMod)
-          });
-          break;
-        }
-      }
-    });
-    return results;
   }
 
   function getUserRanks(userId) {
@@ -570,6 +604,8 @@
     getCachedRanking: getCachedRanking,
     fetchRanking: requestRanking,
     getCacheKey: getRankingCacheKey,
+    openInfoModal: openInfoModal,
+    closeInfoModal: closeInfoModal,
   };
 
   // Suporta carregamento via defer (DOMContentLoaded pendente) e lazy (DOM já pronto)

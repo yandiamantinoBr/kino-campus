@@ -83,6 +83,15 @@ describe('index.controller — source contracts', () => {
   test('usa dataset attr data-kc-ranking-period', () => {
     expect(source).toContain('data-kc-ranking-period');
   });
+
+  test('fallback do ranking monta dados externos com DOM seguro', () => {
+    expect(source).toContain('getSafeRankingAvatarUrl');
+    expect(source).toContain("parsed.protocol !== 'http:' && parsed.protocol !== 'https:'");
+    expect(source).toContain('nameEl.textContent = name');
+    expect(source).toContain("link.href = 'profile.html?id=' + encodeURIComponent");
+    expect(source).not.toContain("'<img src=\"' + avatarSrc");
+    expect(source).not.toContain("'<span class=\"kc-ranking-user-name\">' + name");
+  });
 });
 
 describe('index.controller — runtime: carregamento sem lançar', () => {

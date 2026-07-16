@@ -3631,6 +3631,13 @@ main {
     }
 }
 
+/* Mantém os spinners Font Awesome perceptíveis sem criar animação paralela.
+   O próprio Font Awesome continua respeitando prefers-reduced-motion. */
+.fa-spinner.fa-spin {
+    --fa-animation-duration: 1.1s;
+    --fa-animation-timing: linear;
+}
+
 /* Toast Notifications */
 .kc-toast {
     position: fixed;
