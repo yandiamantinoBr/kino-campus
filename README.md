@@ -188,7 +188,7 @@ Padrão de produção sério com 4 status e retry desacoplado:
 | **Google AdSense** | Monetização via anúncios em feeds (frequency cap explícito) | `ads.txt` + `supabase/migrations/20260605010000_feed_ads.sql` + `adsense_admin_monetization_runtime.sql` |
 | **Google Tag Manager** | Telemetria consent-aware (LGPD) | `assets/js/boot/kc-google-tag.js` + `assets/js/boot/kc-consent.js` (consent banner) |
 | **Vercel Speed Insights** | Core Web Vitals | `@vercel/speed-insights@2.0.0`; CSP permite `va.vercel-scripts.com` e `vitals.vercel-insights.com`. PR #549 merged em 2026-06-11 |
-| **Vercel Analytics** | Page views e engagement | `<script defer src="https://cdn.vercel-insights.com/v1/script.js">` em todos os HTMLs |
+| **Vercel Analytics** | Page views e engagement | `<script defer src="/_vercel/insights/script.js">` em todos os HTMLs; rota first-party validada em produção |
 | **Google Search Console** | Indexação e SEO monitoring | Verification meta em `index.html`; documentado em `docs/seo/` |
 | **Service Worker** | Cache offline com kill-switch | `sw.js`; `kc-env.js:55` define `flags['sw.enabled'] = false` por default |
 

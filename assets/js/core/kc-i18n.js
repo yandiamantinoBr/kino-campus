@@ -512,10 +512,14 @@
     'tooltip.cadu-feed-export-pdf':     'Exportar a página atual do feed em PDF (com KPIs + tabela)',
     'tooltip.cadu-feed-load-more':      'Carregar mais 25 itens no fim da lista (concatena)',
     'aria-label.admin-insights':        'Insights do dashboard',
+    'aria-label.admin-period-filter':   'Selecionar período do dashboard',
     'aria-label.series-picker':         'Configurar séries do gráfico',
     'aria-label.audit-log':             'Audit log de ações administrativas',
     'aria-label.audit-log-filters':     'Filtros do audit log',
+    'aria-label.admin-audit-action-filter': 'Filtrar audit log por ação',
+    'aria-label.admin-audit-entity-filter': 'Filtrar audit log por entidade',
     'aria-label.audit-actor-filter':    'Filtrar por ator',
+    'aria-label.admin-ranking-module-filter': 'Filtrar ranking por módulo',
     'aria-label.chart-modal-close':     'Fechar gráfico ampliado',
     'aria-label.filter-entity':         'Filtrar por entidade',
     'aria-label.filter-action':         'Filtrar por ação',
@@ -562,6 +566,7 @@
     'aria-label.admin-flood-user-max':      'Máximo de publicações na janela do usuário',
     'aria-label.admin-flood-user-window':   'Janela do usuário em minutos',
     'aria-label.refresh-list':             'Atualizar lista',
+    'aria-label.refresh-dashboard':        'Atualizar dashboard',
 
     // ── Placeholder estático (v12.7.1 — fase 2 i18n runtime) ──────────────────
     // Busca principal por módulo

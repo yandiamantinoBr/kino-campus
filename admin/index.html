@@ -8,9 +8,9 @@
   <meta name="description" content="Painel administrativo do KinoCampus — comunidade universitária da UFG." />
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
-<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <title>KinoCampus - Dashboard Admin</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.6" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.10" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -252,7 +252,8 @@
       box-shadow: 0 12px 28px rgba(17, 24, 39, .04);
     }
 
-    .kc-admin-section h3 {
+    .kc-admin-section > h2,
+    .kc-admin-section > h3 {
       margin: 0 0 10px;
       font-size: 1.04rem;
       line-height: 1.2;
@@ -823,7 +824,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.2" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.10" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -831,7 +832,7 @@
     <div class="kc-header-container">
       <div class="kc-logo">
         <a href="../index.html" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
-          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground" aria-hidden="true"></i></span>
           <span class="kc-logo-text">
             <span class="kc-logo-name">Kino<span>Campus</span></span>
             <span class="kc-logo-sub">Comunidade UFG</span>
@@ -839,18 +840,18 @@
         </a>
       </div>
       <nav class="kc-admin-nav" aria-label="Navegação admin" data-i18n-aria-label="aria-label.admin-nav">
-        <a href="index.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
-        <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
-        <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
-        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart"></i> Privacidade</a>
-        <a href="ga4-dashboard.html" class="kc-admin-nav__link"><i class="fab fa-google"></i> GA4</a>
-        <a href="cadu.html" class="kc-admin-nav__link"><i class="fas fa-robot"></i> Cadu</a>
+        <a href="index.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+        <a href="moderation.html" class="kc-admin-nav__link"><i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag" aria-hidden="true"></i> Denúncias</a>
+        <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images" aria-hidden="true"></i> Banners</a>
+        <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring" aria-hidden="true"></i> Pedidos de ajuda</a>
+        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart" aria-hidden="true"></i> Privacidade</a>
+        <a href="ga4-dashboard.html" class="kc-admin-nav__link"><i class="fab fa-google" aria-hidden="true"></i> GA4</a>
+        <a href="cadu.html" class="kc-admin-nav__link"><i class="fas fa-robot" aria-hidden="true"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell" aria-hidden="true"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun" aria-hidden="true"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -858,7 +859,9 @@
 
   <main class="kc-main-content" id="kc-main">
     <div class="kc-admin-wrapper">
-      <div id="admin-loading"><i class="fas fa-spinner fa-spin"></i><span>Carregando dashboard...</span></div>
+      <div id="admin-loading" role="status" aria-live="polite" aria-atomic="true">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Carregando dashboard...</span>
+      </div>
       <div id="admin-error" role="alert"></div>
 
       <section id="admin-content" class="kc-admin-dashboard">
@@ -866,50 +869,50 @@
           <div class="kc-admin-primary">
             <section class="kc-admin-hero">
               <div>
-                <h1><i class="fas fa-chart-line"></i> Dashboard Administrativo</h1>
-                <p>Métricas consolidadas de denúncias, moderação, atividade, buscas e saúde operacional em tempo real.</p>
+                <h1><i class="fas fa-chart-line" aria-hidden="true"></i> Dashboard Administrativo</h1>
+                <p>Métricas consolidadas de denúncias, moderação, atividade, buscas e saúde operacional, atualizadas sob demanda.</p>
               </div>
               <div class="kc-admin-toolbar">
-                <select id="admin-period-filter" title="Período" data-i18n-tooltip="tooltip.period-filter">
+                <select id="admin-period-filter" title="Período" aria-label="Selecionar período do dashboard" data-i18n-aria-label="aria-label.admin-period-filter" data-i18n-tooltip="tooltip.period-filter">
                   <option value="1">Hoje</option>
-                  <option value="7">Esta semana</option>
+                  <option value="7">Últimos 7 dias</option>
                   <option value="30" selected>Últimos 30 dias</option>
                   <option value="90">Últimos 90 dias</option>
-                  <option value="365">Este ano</option>
+                  <option value="365">Últimos 365 dias</option>
                 </select>
-                <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate"></i> Atualizar</button>
-                <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel"></i> XLSX</button>
-                <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf"></i> PDF</button>
+                <button type="button" id="admin-refresh-btn"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar</button>
+                <button type="button" class="xlsx" id="admin-export-xlsx" disabled><i class="fas fa-file-excel" aria-hidden="true"></i> XLSX</button>
+                <button type="button" class="pdf" id="admin-export-pdf" disabled><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</button>
               </div>
             </section>
 
-            <div id="admin-last-sync" aria-live="polite"></div>
+            <div id="admin-last-sync" role="button" tabindex="0" aria-live="polite" aria-label="Atualizar dashboard" data-i18n-aria-label="aria-label.refresh-dashboard"></div>
 
-            <div class="kc-admin-section-title" id="admin-executive-title"><i class="fas fa-gauge-high"></i> Resumo agora</div>
+            <h2 class="kc-admin-section-title" id="admin-executive-title"><i class="fas fa-gauge-high" aria-hidden="true"></i> Resumo agora</h2>
             <div class="kc-admin-grid kc-admin-grid--executive" id="admin-executive-metrics"></div>
 
-            <div class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved"></i> Moderação</div>
+            <h2 class="kc-admin-section-title" id="admin-moderation-title"><i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação</h2>
             <div class="kc-admin-grid" id="admin-metrics"></div>
 
-            <div class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar"></i> Atividade da plataforma</div>
+            <h2 class="kc-admin-section-title" id="admin-activity-title"><i class="fas fa-chart-bar" aria-hidden="true"></i> Atividade da plataforma</h2>
             <div class="kc-admin-grid" id="admin-activity-metrics"></div>
 
-            <div class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users"></i> Comunidade</div>
+            <h2 class="kc-admin-section-title" id="admin-community-title"><i class="fas fa-users" aria-hidden="true"></i> Comunidade</h2>
             <div class="kc-admin-grid" id="admin-community-metrics"></div>
 
-            <div class="kc-admin-section-title" id="admin-privacy-title"><i class="fas fa-shield-heart"></i> Privacidade e métricas</div>
+            <h2 class="kc-admin-section-title" id="admin-privacy-title"><i class="fas fa-shield-heart" aria-hidden="true"></i> Privacidade e métricas</h2>
             <div class="kc-admin-grid" id="admin-privacy-metrics">
-              <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin"></i> Carregando privacidade</div><strong>...</strong></article>
+              <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando privacidade</div><strong>...</strong></article>
             </div>
 
-            <div class="kc-admin-section-title" id="admin-monetization-title"><i class="fas fa-rectangle-ad"></i> Monetização</div>
+            <h2 class="kc-admin-section-title" id="admin-monetization-title"><i class="fas fa-rectangle-ad" aria-hidden="true"></i> Monetização</h2>
             <div class="kc-admin-grid" id="admin-monetization-metrics">
-              <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin"></i> Carregando monetização</div><strong>...</strong></article>
+              <article class="kc-admin-card"><div class="kc-admin-card__label"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando monetização</div><strong>...</strong></article>
             </div>
 
             <section class="kc-admin-section" id="admin-health-section">
               <div class="kc-admin-section__eyebrow">Sa&uacute;de do Admin</div>
-              <h3><i class="fas fa-stethoscope"></i> Status operacional</h3>
+              <h2><i class="fas fa-stethoscope" aria-hidden="true"></i> Status operacional</h2>
               <p class="kc-admin-section__intro">Leitura r&aacute;pida das rotas admin, exporta&ccedil;&otilde;es e RPCs cr&iacute;ticas usadas pelo painel.</p>
               <div id="admin-health-list" class="kc-admin-kpi-strip">
                 <div class="kc-admin-empty">Verificando sa&uacute;de administrativa...</div>
@@ -917,8 +920,8 @@
             </section>
 
             <section class="kc-admin-section">
-              <h3 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart"></i> Tendências de busca</h3>
-              <div class="kc-trend-module-title"><i class="fas fa-list-ol"></i> Top termos buscados <span id="admin-trends-coverage" class="kc-trend-coverage"></span></div>
+              <h2 id="admin-trends-title"><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Tendências de busca</h2>
+              <div class="kc-trend-module-title"><i class="fas fa-list-ol" aria-hidden="true"></i> Top termos buscados <span id="admin-trends-coverage" class="kc-trend-coverage"></span></div>
               <div class="kc-trends-toolbar" aria-label="Filtros das tend&ecirc;ncias de busca" data-i18n-aria-label="aria-label.admin-trends-filters">
                 <input id="admin-trends-query" type="search" autocomplete="off" placeholder="Filtrar termo, m&oacute;dulo ou entidade" aria-label="Filtrar tend&ecirc;ncias de busca" data-i18n-placeholder="placeholder.admin-trends-query" data-i18n-aria-label="aria-label.admin-trends-query">
                 <select id="admin-trends-page-size" aria-label="Linhas por p&aacute;gina em tend&ecirc;ncias de busca" data-i18n-aria-label="aria-label.admin-trends-page-size">
@@ -932,18 +935,18 @@
               </ul>
               <div id="admin-trends-summary" class="kc-trend-summary" aria-live="polite"></div>
               <div id="admin-trends-pagination" class="kc-trend-pagination" aria-label="Pagina&ccedil;&atilde;o das tend&ecirc;ncias de busca" data-i18n-aria-label="aria-label.admin-trends-pagination">
-                <button type="button" id="admin-trends-prev"><i class="fas fa-chevron-left"></i> Anterior</button>
-                <span id="admin-trends-page-label" class="kc-trend-page-label">P&aacute;gina 1 de 1</span>
-                <button type="button" id="admin-trends-next">Pr&oacute;xima <i class="fas fa-chevron-right"></i></button>
+                <button type="button" id="admin-trends-prev"><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+                <span id="admin-trends-page-label" class="kc-trend-page-label" aria-live="polite">P&aacute;gina 1 de 1</span>
+                <button type="button" id="admin-trends-next">Pr&oacute;xima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
               </div>
               <div id="admin-trends-modules" class="kc-trend-modules" style="display:none;">
               </div>
             </section>
 
             <section class="kc-admin-section">
-              <h3 id="admin-audit-title"><i class="fas fa-clock-rotate-left"></i> Audit log</h3>
+              <h2 id="admin-audit-title"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Audit log</h2>
               <div class="kc-admin-audit-controls" aria-label="Filtros do audit log" data-i18n-aria-label="aria-label.audit-log-filters">
-                <select id="admin-audit-filter" title="Filtrar por ação" data-i18n-tooltip="tooltip.audit-action-filter">
+                <select id="admin-audit-filter" title="Filtrar por ação" aria-label="Filtrar audit log por ação" data-i18n-aria-label="aria-label.admin-audit-action-filter" data-i18n-tooltip="tooltip.audit-action-filter">
                   <option value="all">Todas as ações</option>
                   <option value="post_status_changed">Status alterado</option>
                   <option value="post_edited">Post editado</option>
@@ -952,6 +955,11 @@
                   <option value="post_renewed">Post renovado</option>
                   <option value="post_bumped">Post impulsionado</option>
                   <option value="post_deleted">Post deletado</option>
+                  <option value="post_admin_status_changed">Status alterado por admin</option>
+                  <option value="post_auto_moderated">Post moderado automaticamente</option>
+                  <option value="posts_auto_closed">Posts encerrados automaticamente</option>
+                  <option value="post_limit_changed">Limite de posts alterado</option>
+                  <option value="post_flood_limit_changed">Limite anti-flood alterado</option>
                   <option value="ad_campaign_created">Campanha criada</option>
                   <option value="ad_campaign_updated">Campanha atualizada</option>
                   <option value="ad_campaign_activated">Campanha ativada</option>
@@ -959,20 +967,25 @@
                   <option value="ad_campaign_archived">Campanha arquivada</option>
                   <option value="ad_network_settings_updated">Configuração de anúncios</option>
                   <option value="report_closed">Denúncia fechada</option>
+                  <option value="invite_revoked">Convite revogado</option>
+                  <option value="analytics_pruned">Retenção de analytics executada</option>
                 </select>
-                <select id="admin-audit-entity-filter" title="Filtrar por entidade" data-i18n-tooltip="tooltip.audit-entity-filter">
+                <select id="admin-audit-entity-filter" title="Filtrar por entidade" aria-label="Filtrar audit log por entidade" data-i18n-aria-label="aria-label.admin-audit-entity-filter" data-i18n-tooltip="tooltip.audit-entity-filter">
                   <option value="all">Todas as entidades</option>
                   <option value="posts">Posts</option>
                   <option value="reports">Denúncias</option>
                   <option value="profiles">Perfis</option>
                   <option value="ad_campaigns">Campanhas de anúncio</option>
                   <option value="ad_network_settings">Configuração de anúncios</option>
+                  <option value="post_limits">Limites de posts</option>
+                  <option value="post_flood_limits">Limites anti-flood</option>
+                  <option value="invites">Convites</option>
                   <option value="system">Sistema</option>
                 </select>
                 <input id="admin-audit-actor-filter" type="search" autocomplete="off" placeholder="Ator: nome ou UUID" aria-label="Filtrar por ator" data-i18n-placeholder="placeholder.audit-actor-filter" data-i18n-aria-label="aria-label.audit-actor-filter">
-                <button type="button" id="admin-audit-apply-filter"><i class="fas fa-filter"></i> Filtrar</button>
-                <button type="button" id="admin-audit-clear-filter"><i class="fas fa-eraser"></i> Limpar</button>
-                <button type="button" id="admin-audit-export-csv" disabled><i class="fas fa-file-csv"></i> CSV</button>
+                <button type="button" id="admin-audit-apply-filter"><i class="fas fa-filter" aria-hidden="true"></i> Filtrar</button>
+                <button type="button" id="admin-audit-clear-filter"><i class="fas fa-eraser" aria-hidden="true"></i> Limpar</button>
+                <button type="button" id="admin-audit-export-csv" disabled><i class="fas fa-file-csv" aria-hidden="true"></i> CSV</button>
               </div>
               <div id="admin-audit-summary" class="kc-admin-audit-summary" aria-live="polite"></div>
               <div class="kc-admin-audit-wrap">
@@ -992,7 +1005,7 @@
               </div>
               <div style="text-align:center;margin-top:10px;">
                 <button type="button" id="admin-audit-load-more" style="padding:8px 18px;border-radius:8px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark-primary);font-size:.85rem;cursor:pointer;">
-                  <i class="fas fa-chevron-down"></i> Carregar mais
+                  <i class="fas fa-chevron-down" aria-hidden="true"></i> Carregar mais
                 </button>
               </div>
             </section>
@@ -1001,7 +1014,7 @@
           <aside class="kc-admin-sidebar" aria-label="Insights do dashboard" data-i18n-aria-label="aria-label.admin-insights">
             <section class="kc-admin-section">
               <div class="kc-admin-section__eyebrow">Pulso operacional</div>
-              <h3 id="admin-activity-pulse-title"><i class="fas fa-wave-square"></i> Pulso diário</h3>
+              <h2 id="admin-activity-pulse-title"><i class="fas fa-wave-square" aria-hidden="true"></i> Pulso diário</h2>
               <p class="kc-admin-section__intro">Leitura visual da atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.</p>
               <div id="admin-daily-activity-summary" class="kc-admin-kpi-strip">
                 <div class="kc-admin-empty">Carregando indicadores...</div>
@@ -1011,10 +1024,10 @@
                   <span class="kc-admin-chart-shell__title">Séries por dia</span>
                   <div class="kc-admin-chart-shell__actions">
                     <button type="button" id="admin-series-config-btn" class="kc-admin-chart-expand" aria-expanded="false" aria-controls="admin-series-picker" title="Escolher quais séries exibir e suas cores" data-i18n-tooltip="tooltip.series-config">
-                      <i class="fas fa-sliders"></i> Configurar séries
+                      <i class="fas fa-sliders" aria-hidden="true"></i> Configurar séries
                     </button>
-                    <button type="button" id="admin-chart-expand-btn" class="kc-admin-chart-expand">
-                      <i class="fas fa-expand"></i> Expandir
+                    <button type="button" id="admin-chart-expand-btn" class="kc-admin-chart-expand" aria-haspopup="dialog" aria-controls="admin-chart-modal" aria-expanded="false">
+                      <i class="fas fa-expand" aria-hidden="true"></i> Expandir
                     </button>
                   </div>
                 </div>
@@ -1028,8 +1041,8 @@
 
             <section class="kc-admin-section">
               <div class="kc-admin-section__eyebrow">Participação de demanda</div>
-              <h3 id="admin-module-share-title"><i class="fas fa-table-cells"></i> Top módulos</h3>
-              <p class="kc-admin-section__intro">Participação dos módulos na demanda de busca, com share e principais termos do período.</p>
+              <h2 id="admin-module-share-title"><i class="fas fa-table-cells" aria-hidden="true"></i> Top módulos</h2>
+              <p class="kc-admin-section__intro">Participação no volume de buscas classificadas por módulo, com share e principais termos do período.</p>
               <div id="admin-module-share-table" class="kc-admin-table-shell">
                 <div class="kc-admin-empty">Carregando tabela...</div>
               </div>
@@ -1037,27 +1050,28 @@
 
             <section class="kc-admin-section">
               <div class="kc-admin-section__eyebrow">Ação priorizada</div>
-              <h3><i class="fas fa-siren-on"></i> Alertas e ações</h3>
+              <h2><i class="fas fa-siren-on" aria-hidden="true"></i> Alertas e ações</h2>
               <p class="kc-admin-section__intro">Resumo de pontos que merecem atenção imediata e atalhos para manter a operação fluindo.</p>
               <ul id="admin-operational-alerts" class="kc-admin-alert-list">
                 <li class="kc-admin-empty">Carregando alertas...</li>
               </ul>
               <div class="kc-admin-quick-actions">
-                <a href="reports.html"><i class="fas fa-flag"></i> Denúncias</a>
-                <a href="moderation.html"><i class="fas fa-shield-halved"></i> Moderação</a>
-                <a href="banners.html"><i class="fas fa-images"></i> Banners</a>
-                <a href="cadu.html"><i class="fas fa-robot"></i> Cadu</a>
-                <a href="../index.html"><i class="fas fa-home"></i> Ir ao site</a>
+                <a href="reports.html"><i class="fas fa-flag" aria-hidden="true"></i> Denúncias</a>
+                <a href="moderation.html"><i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação</a>
+                <a href="banners.html"><i class="fas fa-images" aria-hidden="true"></i> Banners</a>
+                <a href="cadu.html"><i class="fas fa-robot" aria-hidden="true"></i> Cadu</a>
+                <a href="../index.html"><i class="fas fa-home" aria-hidden="true"></i> Ir ao site</a>
               </div>
             </section>
 
             <!-- Top Contribuidores — ranking de engajamento -->
             <section class="kc-admin-section">
               <div class="kc-admin-section__eyebrow">Engajamento</div>
-              <h3><i class="fas fa-trophy" style="color:var(--kc-yellow-badge);"></i> Top Contribuidores</h3>
-              <p class="kc-admin-section__intro">Ranking de usuários por engajamento na plataforma, sincronizado com o período selecionado.</p>
+              <h2><i class="fas fa-trophy" style="color:var(--kc-yellow-badge);" aria-hidden="true"></i> Top Contribuidores</h2>
+              <p class="kc-admin-section__intro">Ranking por publicações criadas e comentários do período; votos, cliques e compartilhamentos refletem os totais atuais dessas publicações.</p>
+              <div id="admin-ranking-period-note" class="kc-trend-summary" aria-live="polite"></div>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
-                <select id="admin-ranking-module-filter" class="kc-admin-period-filter" title="Filtrar por módulo" data-i18n-tooltip="tooltip.filter-module" style="flex:1;min-width:0;">
+                <select id="admin-ranking-module-filter" class="kc-admin-period-filter" title="Filtrar por módulo" aria-label="Filtrar ranking por módulo" data-i18n-aria-label="aria-label.admin-ranking-module-filter" data-i18n-tooltip="tooltip.filter-module" style="flex:1;min-width:0;">
                   <option value="">Todos os módulos</option>
                   <option value="compra-venda">Compra e Venda</option>
                   <option value="eventos">Eventos</option>
@@ -1065,14 +1079,15 @@
                   <option value="caronas">Caronas</option>
                   <option value="oportunidades">Oportunidades</option>
                   <option value="achados-perdidos">Achados/Perdidos</option>
+                  <option value="livros">Livros</option>
                 </select>
-                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" aria-label="Como funciona o ranking?" data-i18n-aria-label="aria-label.how-ranking-works" data-i18n-tooltip="tooltip.how-ranking-works" id="admin-ranking-info-btn"><i class="fas fa-circle-info"></i></button>
+                <button type="button" class="kc-ranking-info-btn" title="Como funciona o ranking?" aria-label="Como funciona o ranking?" data-i18n-aria-label="aria-label.how-ranking-works" data-i18n-tooltip="tooltip.how-ranking-works" id="admin-ranking-info-btn"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
               </div>
               <div id="admin-ranking-table">
                 <div class="kc-admin-empty">Carregando ranking...</div>
               </div>
-              <button id="admin-ranking-show-all" class="kc-admin-btn-outline" style="width:100%;margin-top:8px;display:none;">
-                <i class="fas fa-chevron-down"></i> Mostrar todos
+              <button type="button" id="admin-ranking-show-all" class="kc-admin-btn-outline" aria-expanded="false" style="width:100%;margin-top:8px;display:none;">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i> Mostrar todos
               </button>
             </section>
 
@@ -1086,11 +1101,11 @@
     <div class="kc-admin-chart-modal" role="dialog" aria-modal="true" aria-labelledby="admin-chart-modal-title">
       <div class="kc-admin-chart-modal__header">
         <div>
-          <h3 id="admin-chart-modal-title">Pulso diário ampliado</h3>
+          <h2 id="admin-chart-modal-title">Pulso diário ampliado</h2>
           <p id="admin-chart-modal-meta" class="kc-admin-chart-modal__meta">Visualização detalhada da atividade consolidada por período.</p>
         </div>
         <button type="button" id="admin-chart-modal-close" class="kc-admin-chart-modal__close" aria-label="Fechar gráfico ampliado" data-i18n-aria-label="aria-label.chart-modal-close">
-          <i class="fas fa-xmark"></i>
+          <i class="fas fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
       <div class="kc-admin-chart-modal__body">
@@ -1103,19 +1118,19 @@
   </div>
 
   <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
-    <a class="active" href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
-    <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
-    <a href="help-requests.html"><i class="fas fa-life-ring"></i><span>Ajuda</span></a>
-    <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i><span>Privac.</span></a>
-    <a href="cadu.html"><i class="fas fa-robot"></i><span>Cadu</span></a>
-    <a href="ga4-dashboard.html"><i class="fab fa-google"></i><span>GA4</span></a>
+    <a class="active" href="index.html" aria-current="page"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Dashboard</span></a>
+    <a href="moderation.html"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag" aria-hidden="true"></i><span>Denúncias</span></a>
+    <a href="banners.html"><i class="fas fa-images" aria-hidden="true"></i><span>Banners</span></a>
+    <a href="help-requests.html"><i class="fas fa-life-ring" aria-hidden="true"></i><span>Ajuda</span></a>
+    <a href="privacy-analytics.html"><i class="fas fa-shield-heart" aria-hidden="true"></i><span>Privac.</span></a>
+    <a href="cadu.html"><i class="fas fa-robot" aria-hidden="true"></i><span>Cadu</span></a>
+    <a href="ga4-dashboard.html"><i class="fab fa-google" aria-hidden="true"></i><span>GA4</span></a>
   
   </nav>
 
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.2"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.10"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
     <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -1160,7 +1175,7 @@
   <script defer src="../assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
-  <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.2"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
@@ -1176,14 +1191,14 @@
   <script defer src="../assets/js/core/kc-auth.ui.js?v=8.6.2"></script>
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
-  <script defer src="../assets/js/api/admin-shell.js?v=8.6.2"></script>
-    <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.7"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6"></script>
-    <script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>
-    <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6"></script>
+  <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.10"></script>
+  <script defer src="../assets/js/features/kc-ranking.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.10"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@
   const MAX_CELL_LENGTH = 1200;
   const MAX_PDF_ROWS = 60;
   const MAX_PDF_CELL_LINES = 3;
+  const SCRIPT_LOAD_TIMEOUT_MS = 8000;
   const CHART_PALETTE = Object.freeze([
     [255, 107, 0],
     [37, 99, 235],
@@ -25,6 +26,12 @@
     [79, 70, 229],
   ]);
   const LABELS_PT_BR = Object.freeze({
+    fim: 'Fim',
+    inicio: 'Início',
+    ranking_limite: 'Limite do ranking',
+    ranking_modulo: 'Módulo do ranking',
+    tendencias_busca: 'Busca nas tendências',
+    tendencias_modulo: 'Módulo das tendências',
     acao: 'Ação',
     acoes_da_sessao: 'Ações da sessão',
     actor_id: 'ID do ator',
@@ -214,7 +221,8 @@
       ['Ã‰', 'É'], ['ÃŠ', 'Ê'], ['Ã', 'Í'],
       ['Ã“', 'Ó'], ['Ã”', 'Ô'], ['Ã•', 'Õ'],
       ['Ãš', 'Ú'], ['Ã‡', 'Ç'],
-      ['Âº', 'º'], ['Âª', 'ª'], ['Â°', '°'], ['Â', ''],
+      ['Âº', 'º'], ['Âª', 'ª'], ['Â°', '°'], ['Â ', ' '], ['Â·', '·'],
+      ['Â«', '«'], ['Â»', '»'], ['Â©', '©'], ['Â®', '®'], ['Âµ', 'µ'],
       ['â€œ', '“'], ['â€', '”'], ['â€\x9d', '”'],
       ['â€˜', '‘'], ['â€™', '’'], ['â€“', '–'],
       ['â€”', '—'], ['â€¢', '•'], ['â€¦', '…'],
@@ -257,13 +265,31 @@
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
+      let settled = false;
+      let timer = null;
+
+      function finish(error) {
+        if (settled) return;
+        settled = true;
+        if (timer) window.clearTimeout(timer);
+        if (error) reject(error);
+        else resolve();
+      }
+
       const needle = src.replace(/^\.\.\//, '');
       const existing = Array.from(document.scripts || []).find(function (script) {
         return script.src && script.src.indexOf(needle) >= 0;
       });
       if (existing) {
-        if (existing.dataset.kcLoaded === '1' || existing.readyState === 'complete') resolve();
-        else existing.addEventListener('load', resolve, { once: true });
+        if (existing.dataset.kcLoaded === '1' || existing.readyState === 'complete') {
+          finish();
+          return;
+        }
+        existing.addEventListener('load', function () { finish(); }, { once: true });
+        existing.addEventListener('error', function () { finish(new Error('Falha ao carregar ' + src)); }, { once: true });
+        timer = window.setTimeout(function () {
+          finish(new Error('Timeout ao carregar ' + src));
+        }, SCRIPT_LOAD_TIMEOUT_MS);
         return;
       }
 
@@ -272,9 +298,17 @@
       script.defer = true;
       script.onload = function () {
         script.dataset.kcLoaded = '1';
-        resolve();
+        finish();
       };
-      script.onerror = reject;
+      script.onerror = function () {
+        finish(new Error('Falha ao carregar ' + src));
+      };
+      timer = window.setTimeout(function () {
+        try {
+          if (script.parentNode) script.parentNode.removeChild(script);
+        } catch (_) { }
+        finish(new Error('Timeout ao carregar ' + src));
+      }, SCRIPT_LOAD_TIMEOUT_MS);
       document.head.appendChild(script);
     });
   }
@@ -367,7 +401,9 @@
       return typeof item === 'object' && item !== null ? sanitizeExportObject(item) : sanitizeExportValue(item);
     }).join('; '));
     if (typeof value === 'object') return truncate(JSON.stringify(sanitizeExportObject(value)));
-    return truncate(normalizeUnicode(value));
+    var normalized = normalizeUnicode(value);
+    if (typeof value === 'string' && /^[\s]*[=+\-@]/.test(normalized)) normalized = "'" + normalized;
+    return truncate(normalized);
   }
 
   function normalizeColumn(column) {
@@ -476,7 +512,7 @@
         return {
           Indicador: sanitizeExportValue(item && (item.label || item.name || item.key || 'Indicador')),
           Valor: sanitizeExportValue(item && item.value),
-          Contexto: sanitizeExportValue(item && (item.note || item.context || item.description || '')),
+          Contexto: sanitizeExportValue(item && (item.note || item.context || item.description || item.detail || '')),
         };
       });
     }
@@ -502,6 +538,7 @@
         chart: normalizeChart(section && section.chart, section && section.rows),
         maxPdfRows: Number(section && section.maxPdfRows) || null,
         note: normalizeUnicode(section && section.note || ''),
+        emptyMessage: normalizeUnicode(section && section.emptyMessage || 'Sem dados para os filtros selecionados'),
       };
     });
   }
@@ -549,9 +586,9 @@
     worksheet['!freeze'] = { xSplit: 0, ySplit: 1 };
   }
 
-  function appendSheet(XLSX, workbook, name, rows, columns) {
+  function appendSheet(XLSX, workbook, name, rows, columns, emptyMessage) {
     const normalized = normalizeRows(rows, columns);
-    const safeRows = normalized.length ? normalized : [{ Status: 'Sem dados para os filtros selecionados' }];
+    const safeRows = normalized.length ? normalized : [{ Status: emptyMessage || 'Sem dados para os filtros selecionados' }];
     const worksheet = XLSX.utils.json_to_sheet(safeRows);
     applyWorksheetLayout(worksheet, safeRows);
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName(name), true);
@@ -573,7 +610,7 @@
       const rows = normalizeRows(section.rows || [], section.xlsxColumns.length ? section.xlsxColumns : section.columns);
       const headers = rows.length ? Object.keys(rows[0]) : ['Status'];
       lines.push(headers.map(csvCell).join(','));
-      (rows.length ? rows : [{ Status: 'Sem dados' }]).forEach(function (row) {
+      (rows.length ? rows : [{ Status: section.emptyMessage || 'Sem dados para os filtros selecionados' }]).forEach(function (row) {
         lines.push(headers.map(function (key) { return csvCell(row[key]); }).join(','));
       });
     });
@@ -581,7 +618,9 @@
   }
 
   function csvCell(value) {
-    return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
+    var text = String(value == null ? '' : value);
+    if (typeof value === 'string' && /^[\s]*[=+\-@]/.test(text)) text = "'" + text;
+    return '"' + text.replace(/"/g, '""') + '"';
   }
 
   function downloadText(filename, text, mime) {
@@ -656,11 +695,12 @@
     }
   }
 
-  function addExcelSection(workbook, name, columns, rows) {
+  function addExcelSection(workbook, name, columns, rows, emptyMessage) {
     const normalizedColumns = normalizeColumns(columns);
     const normalizedRows = normalizeRows(rows, columns);
-    const safeRows = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
-    const headers = normalizedColumns.length
+    const hasRows = normalizedRows.length > 0;
+    const safeRows = hasRows ? normalizedRows : [{ Status: emptyMessage || 'Sem dados para os filtros selecionados' }];
+    const headers = hasRows && normalizedColumns.length
       ? normalizedColumns.map(function (column) { return column.label; })
       : Object.keys(safeRows[0]);
 
@@ -669,7 +709,7 @@
       const sampleMax = safeRows.slice(0, 80).reduce(function (acc, row) {
         return Math.max(acc, String(row && row[header] == null ? '' : row[header]).length);
       }, String(header).length);
-      const declared = normalizedColumns[index] && Number(normalizedColumns[index].width) > 0
+      const declared = hasRows && normalizedColumns[index] && Number(normalizedColumns[index].width) > 0
         ? Number(normalizedColumns[index].width) * 12 : 0;
       return { header: header, key: 'c' + index, width: Math.max(12, Math.min(54, Math.max(sampleMax + 2, declared))) };
     });
@@ -827,7 +867,13 @@
     addExcelCover(workbook, normalized);
     normalized.sections.forEach(function (section, index) {
       if (section.chart) addExcelChartSheet(workbook, section);
-      addExcelSection(workbook, section.title || ('Dados ' + (index + 1)), section.xlsxColumns.length ? section.xlsxColumns : section.columns, section.rows);
+      addExcelSection(
+        workbook,
+        section.title || ('Dados ' + (index + 1)),
+        section.xlsxColumns.length ? section.xlsxColumns : section.columns,
+        section.rows,
+        section.emptyMessage
+      );
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -867,7 +913,14 @@
           };
         }), ['serie', 'total', 'pico', 'tendencia', 'ultimo_valor']);
       }
-      appendSheet(XLSX, workbook, section.title || ('Dados ' + (index + 1)), section.rows, section.xlsxColumns.length ? section.xlsxColumns : section.columns);
+      appendSheet(
+        XLSX,
+        workbook,
+        section.title || ('Dados ' + (index + 1)),
+        section.rows,
+        section.xlsxColumns.length ? section.xlsxColumns : section.columns,
+        section.emptyMessage
+      );
     });
     XLSX.writeFile(workbook, filename);
   }
@@ -923,6 +976,15 @@
     }
   }
 
+  function addPdfPageChrome(doc, report) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    // As margens de tabelas e seções começam abaixo de 90 pt.
+    addPdfHeader(doc, report, pageWidth);
+  }
+
   async function exportReportPDF(filename, report) {
     const normalized = normalizeReport(report);
     try {
@@ -932,11 +994,26 @@
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 42;
       let y = 102;
+      const pagesWithChrome = {};
+
+      function ensureCurrentPageChrome() {
+        const pageInfo = doc.internal && typeof doc.internal.getCurrentPageInfo === 'function'
+          ? doc.internal.getCurrentPageInfo()
+          : null;
+        const pageNumber = pageInfo && Number(pageInfo.pageNumber)
+          ? Number(pageInfo.pageNumber)
+          : doc.internal.getNumberOfPages();
+        if (pagesWithChrome[pageNumber]) return;
+        addPdfPageChrome(doc, normalized);
+        pagesWithChrome[pageNumber] = true;
+      }
+
+      ensureCurrentPageChrome();
 
       function addPageIfNeeded(height) {
         if (y + height <= pageHeight - 48) return;
         doc.addPage();
-        addPdfHeader(doc, normalized, pageWidth);
+        ensureCurrentPageChrome();
         y = 102;
       }
 
@@ -1001,14 +1078,16 @@
         }
       }
 
-      function drawRows(rows, maxRows, columns) {
+      function drawRows(rows, maxRows, columns, emptyMessage) {
         const normalizedColumns = normalizeColumns(columns);
         const normalizedRows = normalizeRows(rows, columns);
         const limit = maxRows || MAX_PDF_ROWS;
-        const fullList = normalizedRows.length ? normalizedRows : [{ Status: 'Sem dados para os filtros selecionados' }];
+        const hasRows = normalizedRows.length > 0;
+        const effectiveColumns = hasRows ? normalizedColumns : [];
+        const fullList = hasRows ? normalizedRows : [{ Status: emptyMessage || 'Sem dados para os filtros selecionados' }];
         const list = fullList.slice(0, limit);
-        const headers = normalizedColumns.length
-          ? normalizedColumns.map(function (column) { return column.label; })
+        const headers = effectiveColumns.length
+          ? effectiveColumns.map(function (column) { return column.label; })
           : Object.keys(list[0]).slice(0, 6);
         const head = [headers];
         const body = list.map(function (row) {
@@ -1016,17 +1095,16 @@
         });
 
         const tableWidth = pageWidth - margin * 2;
-        const totalWeight = normalizedColumns.reduce(function (sum, column) {
+        const totalWeight = effectiveColumns.reduce(function (sum, column) {
           return sum + (Number(column.width) > 0 ? Number(column.width) : 1);
         }, 0) || headers.length || 1;
         const columnStyles = {};
-        if (normalizedColumns.length) {
-          normalizedColumns.forEach(function (column, index) {
+        if (effectiveColumns.length) {
+          effectiveColumns.forEach(function (column, index) {
             const weight = Number(column.width) > 0 ? Number(column.width) : 1;
             columnStyles[index] = { cellWidth: tableWidth * (weight / totalWeight) };
           });
         }
-
         doc.autoTable({
           head: head,
           body: body,
@@ -1037,7 +1115,7 @@
           headStyles: { fillColor: BRAND.orange, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
           alternateRowStyles: { fillColor: [249, 250, 251] },
           columnStyles: columnStyles,
-          didDrawPage: function () { addPdfHeader(doc, normalized, pageWidth); },
+          willDrawPage: ensureCurrentPageChrome,
         });
 
         y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 14;
@@ -1065,7 +1143,7 @@
         const padLeft = 42;
         const padRight = 14;
         const padTop = 18;
-        const padBottom = 32;
+        const padBottom = 38;
         const innerWidth = chartWidth - padLeft - padRight;
         const innerHeight = chartHeight - padTop - padBottom;
         const rows = chart.rows;
@@ -1130,12 +1208,13 @@
           if (rows.length > 9 && index !== 0 && index !== rows.length - 1 && index % Math.ceil(rows.length / 6) !== 0) return;
           const pointX = chartX + padLeft + (step * index);
           const label = sanitizeExportValue(row && row[chart.xKey]);
-          doc.text(pdfLines(doc, label, 34, 1), pointX, chartY + chartHeight - 10, { align: 'center' });
+          const align = index === 0 ? 'left' : (index === rows.length - 1 ? 'right' : 'center');
+          doc.text(pdfLines(doc, label, 34, 1), pointX, chartY + padTop + innerHeight + 13, { align: align });
         });
 
         doc.setFontSize(8);
         doc.text(chart.yLabel || 'Total', chartX + 8, chartY + 12);
-        doc.text(chart.xLabel || 'Dia', chartX + chartWidth - padRight, chartY + chartHeight - 10, { align: 'right' });
+        doc.text(chart.xLabel || 'Dia', chartX + padLeft + (innerWidth / 2), chartY + chartHeight - 5, { align: 'center' });
 
         y += chartHeight + 10;
         const legendWidth = (chartWidth - 12) / 2;
@@ -1155,8 +1234,6 @@
         });
         y += legendHeight + 10;
       }
-
-      addPdfHeader(doc, normalized, pageWidth);
 
       setTextColor(doc, BRAND.muted);
       doc.setFont('helvetica', 'normal');
@@ -1181,7 +1258,12 @@
       normalized.sections.forEach(function (section) {
         drawSectionTitle(section.title, section.note);
         if (section.chart) drawLineChart(section.chart);
-        drawRows(section.rows, section.maxPdfRows || MAX_PDF_ROWS, section.pdfColumns.length ? section.pdfColumns : section.columns);
+        drawRows(
+          section.rows,
+          section.maxPdfRows || MAX_PDF_ROWS,
+          section.pdfColumns.length ? section.pdfColumns : section.columns,
+          section.emptyMessage
+        );
       });
 
       addPdfFooter(doc);

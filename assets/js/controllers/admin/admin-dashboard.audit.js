@@ -4,6 +4,7 @@
   window._KCAD = window._KCAD || {};
 
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  var SENSITIVE_AUDIT_KEY_RE = /(token|cookie|authorization|apikey|api_key|password|secret|refresh|access_token|refresh_token|user_agent|user-agent|ip_address|ip\b)/i;
   var XLSX_URLS = [
     '../assets/vendor/xlsx.full.min.js',
     'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
@@ -38,6 +39,11 @@
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+  function exportMetricValue(deps, value) {
+    if (value === null || typeof value === 'undefined') return 'Indisponível';
+    return toNumberValue(deps, value);
+  }
+
   function formatDateTimeBRValue(deps, value) {
     if (deps && typeof deps.formatDateTimeBR === 'function') return deps.formatDateTimeBR(value);
     if (!value) return '-';
@@ -57,9 +63,9 @@
   function getPeriodLabelValue(deps, days) {
     if (deps && typeof deps.getPeriodLabel === 'function') return deps.getPeriodLabel(days);
     if (days === 1) return 'hoje';
-    if (days === 7) return 'esta semana';
+    if (days === 7) return 'últimos 7 dias';
     if (days === 90) return 'últimos 90 dias';
-    if (days === 365) return 'este ano';
+    if (days === 365) return 'últimos 365 dias';
     return 'últimos ' + (days || 30) + ' dias';
   }
 
@@ -96,6 +102,37 @@
   function getStateBucket() {
     window._KCAD.__adminAuditState = window._KCAD.__adminAuditState || {};
     return window._KCAD.__adminAuditState;
+  }
+
+  function bumpAuditRequestSeq() {
+    var state = getStateBucket();
+    state.requestSeq = (Number(state.requestSeq) || 0) + 1;
+    return state.requestSeq;
+  }
+
+  function isCurrentAuditRequest(requestSeq) {
+    return Number(getStateBucket().requestSeq) === Number(requestSeq);
+  }
+
+  function tagAuditRowsAvailability(rows, available, source) {
+    var list = Array.isArray(rows) ? rows : [];
+    try {
+      Object.defineProperty(list, '__kcAvailable', {
+        value: available !== false,
+        enumerable: false,
+        configurable: true
+      });
+      Object.defineProperty(list, '__kcSource', {
+        value: source || (available === false ? 'unavailable' : 'unknown'),
+        enumerable: false,
+        configurable: true
+      });
+    } catch (_) { }
+    return list;
+  }
+
+  function areAuditRowsAvailable(rows) {
+    return !(rows && rows.__kcAvailable === false);
   }
 
   function getActorCache(deps) {
@@ -203,9 +240,77 @@
     return moduleKey || '';
   }
 
+  function getExportModuleLabel(deps, moduleKey) {
+    if (!moduleKey) return 'Não classificado';
+    return getModuleLabelValue(deps, moduleKey) || 'Não classificado';
+  }
+
+  function getFilterDisplayValue(value, allLabel) {
+    var normalized = String(value == null ? '' : value).trim();
+    return !normalized || normalized.toLowerCase() === 'all' ? allLabel : normalized;
+  }
+
+  function getAdStatusLabel(value) {
+    var normalized = String(value == null ? '' : value).trim().toLowerCase();
+    if (!normalized) return 'Indisponível';
+    if (normalized === 'active' || normalized === 'enabled') return 'Ativo';
+    if (normalized === 'disabled') return 'Desativado';
+    if (normalized === 'paused') return 'Pausado';
+    return String(value);
+  }
+
+  function getAdProviderLabel(value) {
+    var normalized = String(value == null ? '' : value).trim().toLowerCase();
+    if (!normalized) return 'Indisponível';
+    if (normalized === 'direct') return 'Direto';
+    if (normalized === 'adsense') return 'Google AdSense';
+    return String(value);
+  }
+
+  function getAdBooleanLabel(value) {
+    if (value === null || typeof value === 'undefined') return 'Indisponível';
+    return value ? 'Ativado' : 'Desativado';
+  }
+
+  function getAdCtrLabel(deps, value) {
+    if (value === null || typeof value === 'undefined') return 'CTR indisponível';
+    return 'CTR ' + toNumberValue(deps, value) + '%';
+  }
+
+  function getAlertToneLabel(value) {
+    var normalized = String(value == null ? '' : value).trim().toLowerCase();
+    if (normalized === 'warning' || normalized === 'warn') return 'Atenção';
+    if (normalized === 'info' || normalized === 'neutral') return 'Informativo';
+    if (normalized === 'positive' || normalized === 'success') return 'Positivo';
+    if (normalized === 'error' || normalized === 'danger' || normalized === 'critical') return 'Crítico';
+    return String(value || 'Informativo');
+  }
+
   function classifyTermToModuleValue(deps, term) {
     if (deps && typeof deps.classifyTermToModule === 'function') return deps.classifyTermToModule(term);
     return null;
+  }
+
+  function resolveTermModuleValue(deps, item) {
+    if (deps && typeof deps.resolveTermModule === 'function') return deps.resolveTermModule(item);
+    return classifyTermToModuleValue(deps, item && item.term);
+  }
+
+  function getRankingContext(deps) {
+    if (deps && typeof deps.getRankingContext === 'function') return deps.getRankingContext() || {};
+    return {};
+  }
+
+  function getTrendExportSnapshot(deps, fallbackRows) {
+    if (deps && typeof deps.getTrendExportSnapshot === 'function') {
+      var snapshot = deps.getTrendExportSnapshot();
+      if (snapshot && Array.isArray(snapshot.rows)) return snapshot;
+    }
+    return { rows: Array.isArray(fallbackRows) ? fallbackRows : [], module: '', query: '' };
+  }
+
+  function isDashboardBusy(deps) {
+    return !!(deps && typeof deps.isDashboardBusy === 'function' && deps.isDashboardBusy());
   }
 
   function getSeriesMeta(deps) {
@@ -297,6 +402,38 @@
     });
   }
 
+  function getAppliedAuditFilters(deps) {
+    var data = getData(deps);
+    if (data && data.auditFilters) return normalizeAuditFilters(data.auditFilters);
+    var state = getStateBucket();
+    if (state.appliedFilters) return normalizeAuditFilters(state.appliedFilters);
+    return readAuditFilters(deps);
+  }
+
+  function setAppliedAuditFilters(filters, deps) {
+    var normalized = normalizeAuditFilters(filters);
+    var state = getStateBucket();
+    state.appliedFilters = normalized;
+    var data = getData(deps);
+    if (data && typeof data === 'object') {
+      data.auditFilters = normalized;
+      setData(deps, data);
+    }
+    return normalized;
+  }
+
+  function setAuditPending(requestSeq, pending, deps) {
+    var state = getStateBucket();
+    if (pending) {
+      state.pending = true;
+      state.pendingRequestSeq = requestSeq;
+    } else if (Number(state.pendingRequestSeq) === Number(requestSeq)) {
+      state.pending = false;
+      state.pendingRequestSeq = null;
+    }
+    enableExport(deps);
+  }
+
   function auditFiltersLabel(filters) {
     var f = normalizeAuditFilters(filters);
     var parts = [];
@@ -306,8 +443,25 @@
     return parts.length ? parts.join(' · ') : 'sem filtros ativos';
   }
 
+  function sanitizeAuditPayload(value, depth) {
+    var currentDepth = Number(depth) || 0;
+    if (currentDepth > 6) return '[conteúdo truncado]';
+    if (Array.isArray(value)) {
+      return value.slice(0, 50).map(function (item) {
+        return sanitizeAuditPayload(item, currentDepth + 1);
+      });
+    }
+    if (!value || typeof value !== 'object') return value;
+    var clean = {};
+    Object.keys(value).forEach(function (key) {
+      if (SENSITIVE_AUDIT_KEY_RE.test(key)) return;
+      clean[key] = sanitizeAuditPayload(value[key], currentDepth + 1);
+    });
+    return clean;
+  }
+
   function compactAuditPayload(payload) {
-    var source = payload && typeof payload === 'object' ? payload : null;
+    var source = payload && typeof payload === 'object' ? sanitizeAuditPayload(payload, 0) : null;
     var parts = [];
     var keys;
     if (!source) return '';
@@ -332,6 +486,10 @@
     var el = select(deps, '#admin-audit-summary');
     var list = Array.isArray(rows) ? rows : [];
     if (!el) return;
+    if (!areAuditRowsAvailable(rows)) {
+      el.textContent = 'Auditoria indisponível · ' + auditFiltersLabel(filters);
+      return;
+    }
     el.textContent = list.length + (list.length === 1 ? ' evento carregado' : ' eventos carregados') + ' · ' + auditFiltersLabel(filters);
   }
 
@@ -420,7 +578,9 @@
 
       if (canUseDirectActorFilter) {
         var result = await query;
-        if (!result.error) return Array.isArray(result.data) ? result.data : [];
+        if (!result.error) {
+          return tagAuditRowsAvailability(Array.isArray(result.data) ? result.data : [], true, 'audit_table');
+        }
         if (!isPermissionError(result.error)) {
           console.warn('[Admin audit] Direct query failed:', result.error.message || result.error);
         }
@@ -438,7 +598,9 @@
         p_offset: offset,
         p_since: since || null
       });
-      if (!rpc.error && Array.isArray(rpc.data)) return rpc.data;
+      if (!rpc.error && Array.isArray(rpc.data)) {
+        return tagAuditRowsAvailability(rpc.data, true, 'audit_rpc');
+      }
       if (!(isFunctionMissing(rpc.error) || isFunctionAmbiguityError(rpc.error))) {
         console.warn('[Admin audit] New RPC failed:', rpc.error && (rpc.error.message || rpc.error));
       }
@@ -454,7 +616,11 @@
         p_limit: Math.max(limit + offset, 150)
       });
       if (!legacyRpc.error && Array.isArray(legacyRpc.data)) {
-        return filterRows(legacyRpc.data).slice(offset, offset + limit);
+        return tagAuditRowsAvailability(
+          filterRows(legacyRpc.data).slice(offset, offset + limit),
+          true,
+          'audit_rpc_legacy'
+        );
       }
       if (legacyRpc.error) {
         console.warn('[Admin audit] Legacy RPC failed:', legacyRpc.error.message || legacyRpc.error);
@@ -463,7 +629,7 @@
       console.warn('[Admin audit] Legacy RPC exception:', error3 && error3.message ? error3.message : error3);
     }
 
-    return [];
+    return tagAuditRowsAvailability([], false, 'unavailable');
   }
 
   function auditActionBadge(action, deps) {
@@ -475,10 +641,13 @@
     else if (a.includes('bump')) { cls = 'kc-audit-badge--restored'; label = 'Impulsionado'; }
     else if (a.includes('reactivat')) { cls = 'kc-audit-badge--restored'; label = 'Reativado'; }
     else if (a === 'post_closed') { cls = 'kc-audit-badge--hidden'; label = 'Encerrado'; }
+    else if (a === 'posts_auto_closed' || a === 'post_auto_closed') { cls = 'kc-audit-badge--hidden'; label = 'Encerramento automático'; }
+    else if (a === 'post_auto_moderated') { cls = 'kc-audit-badge--hidden'; label = 'Moderação automática'; }
     else if (a.includes('delet')) { cls = 'kc-audit-badge--deleted'; label = 'Deletado'; }
     else if (a.includes('hidden') || a.includes('oculto')) { cls = 'kc-audit-badge--hidden'; label = 'Ocultado'; }
     else if (a.includes('restored') || a.includes('restaur')) { cls = 'kc-audit-badge--restored'; label = 'Restaurado'; }
-    else if (a.includes('report') || a.includes('closed')) { cls = 'kc-audit-badge--report'; label = 'Denúncia'; }
+    else if (a.includes('report')) { cls = 'kc-audit-badge--report'; label = 'Denúncia'; }
+    else if (a.includes('closed')) { cls = 'kc-audit-badge--hidden'; label = 'Encerrado'; }
     else if (a.includes('ad_network')) { cls = 'kc-audit-badge--restored'; label = 'AdSense'; }
     else if (a.includes('ad_campaign')) { cls = 'kc-audit-badge--restored'; label = 'Anúncio'; }
     else if (a.includes('status')) { cls = 'kc-audit-badge--hidden'; label = 'Status'; }
@@ -489,6 +658,12 @@
     var auditBody = select(deps, '#admin-audit-body');
     if (!auditBody) return;
     var list = Array.isArray(rows) ? rows : [];
+    if (!areAuditRowsAvailable(rows)) {
+      auditBody.innerHTML = '<tr><td colspan="6" style="padding:20px 8px;"><p class="kc-empty" style="margin:0;color:var(--kc-text-dark-secondary);">Auditoria indisponível neste carregamento. Tente atualizar novamente.</p></td></tr>';
+      setAuditLoadMoreState({ visible: true, disabled: true, label: 'Auditoria indisponível', preserveLabel: true }, deps);
+      renderAuditSummary(rows, getAppliedAuditFilters(deps), deps);
+      return;
+    }
     if (append && !list.length) {
       setAuditLoadMoreState({ visible: true, disabled: true, label: 'Fim do histórico', preserveLabel: true }, deps);
       return;
@@ -526,7 +701,7 @@
     }, deps);
     renderAuditSummary(
       append ? ((getData(deps) && Array.isArray(getData(deps).auditRows)) ? getData(deps).auditRows.concat(list) : list) : list,
-      readAuditFilters(deps),
+      getAppliedAuditFilters(deps),
       deps
     );
   }
@@ -624,6 +799,7 @@
   }
 
   function buildSummarySheetRows(data, periodLabel, generatedAt, deps) {
+    var dailyAvailable = data.dailyAvailable !== false;
     return [
       ['KinoCampus - Dashboard Administrativo'],
       ['Gerado em', generatedAt],
@@ -633,32 +809,38 @@
       [],
       ['Seção', 'Métrica', 'Valor'],
       ['Resumo agora', 'Ativos agora', data.activeSessions15m && data.activeSessions15m.available ? toNumberValue(deps, data.activeSessions15m.value) : 'Indisponível'],
-      ['Resumo agora', 'Publicações visíveis', toNumberValue(deps, data.visiblePosts)],
-      ['Moderação', 'Denúncias abertas', toNumberValue(deps, data.reportMetrics && data.reportMetrics.open)],
-      ['Moderação', 'Total de denúncias', toNumberValue(deps, data.reportMetrics && data.reportMetrics.total)],
-      ['Moderação', 'Posts ocultados', toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden)],
-      ['Moderação', 'Posts deletados', toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted)],
-      ['Atividade', 'Total de posts', toNumberValue(deps, data.postsTotal)],
-      ['Atividade', 'Posts publicados', toNumberValue(deps, data.postsCreated)],
-      ['Atividade', 'Posts editados', toNumberValue(deps, data.postsEdited)],
-      ['Atividade', 'Comentários', toNumberValue(deps, data.commentsCount)],
-      ['Atividade', 'Buscas realizadas', toNumberValue(deps, data.searchCount)],
-      ['Comunidade', 'Total de usuários', toNumberValue(deps, data.usersTotal)],
-      ['Comunidade', 'Novos usuários', toNumberValue(deps, data.usersNew)],
-      ['Comunidade', 'Votos', toNumberValue(deps, data.votesCount)],
-      ['Comunidade', 'Posts salvos', toNumberValue(deps, data.savedPostsCount)],
-      ['Pulso diário', 'Pico diário', toNumberValue(deps, data.dailySummary && data.dailySummary.peakTotal)],
-      ['Pulso diário', 'Média diária', data.dailySummary ? (data.dailySummary.averageTotal || 0) : 0],
-      ['Pulso diário', 'Último dia', toNumberValue(deps, data.dailySummary && data.dailySummary.lastDayTotal)],
-      ['Pulso diário', 'Total de buscas', toNumberValue(deps, data.dailySummary && data.dailySummary.totals && data.dailySummary.totals.searches_count)]
+      ['Resumo agora', 'Publicações visíveis', exportMetricValue(deps, data.visiblePosts)],
+      ['Moderação', 'Denúncias abertas (backlog)', exportMetricValue(deps, data.reportMetrics && data.reportMetrics.open)],
+      ['Moderação', 'Denúncias recebidas', exportMetricValue(deps, data.reportMetrics && data.reportMetrics.total)],
+      ['Moderação', 'Posts ocultos atualizados', exportMetricValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden)],
+      ['Moderação', 'Posts deletados atualizados', exportMetricValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted)],
+      ['Atividade', 'Total de posts', exportMetricValue(deps, data.postsTotal)],
+      ['Atividade', 'Posts criados', exportMetricValue(deps, data.postsCreated)],
+      ['Atividade', 'Posts anteriores atualizados', exportMetricValue(deps, data.postsEdited)],
+      ['Atividade', 'Comentários', exportMetricValue(deps, data.commentsCount)],
+      ['Atividade', 'Buscas realizadas', exportMetricValue(deps, data.searchCount)],
+      ['Comunidade', 'Total de usuários', exportMetricValue(deps, data.usersTotal)],
+      ['Comunidade', 'Novos usuários', exportMetricValue(deps, data.usersNew)],
+      ['Comunidade', 'Votos', exportMetricValue(deps, data.votesCount)],
+      ['Comunidade', 'Posts salvos', exportMetricValue(deps, data.savedPostsCount)],
+      ['Pulso diário', 'Pico diário', dailyAvailable ? toNumberValue(deps, data.dailySummary && data.dailySummary.peakTotal) : 'Indisponível'],
+      ['Pulso diário', 'Média diária', dailyAvailable ? (data.dailySummary ? (data.dailySummary.averageTotal || 0) : 0) : 'Indisponível'],
+      ['Pulso diário', 'Último dia', dailyAvailable ? toNumberValue(deps, data.dailySummary && data.dailySummary.lastDayTotal) : 'Indisponível'],
+      ['Pulso diário', 'Total de buscas', dailyAvailable ? toNumberValue(deps, data.dailySummary && data.dailySummary.totals && data.dailySummary.totals.searches_count) : 'Indisponível']
     ];
   }
 
   function buildTrendRows(data, deps) {
+    if (data.trendsAvailable === false) {
+      return [
+        ['Posição', 'Termo', 'Buscas', 'Módulo'],
+        ['', 'Tendências indisponíveis neste carregamento', '', '']
+      ];
+    }
     return [
       ['Posição', 'Termo', 'Buscas', 'Módulo'],
       ...(data.trends || []).map(function (item, index) {
-        var moduleKey = classifyTermToModuleValue(deps, item && item.term);
+        var moduleKey = resolveTermModuleValue(deps, item);
         return [
           index + 1,
           item && item.term ? item.term : '',
@@ -670,6 +852,12 @@
   }
 
   function buildDailyRows(data, deps) {
+    if (data.dailyAvailable === false) {
+      return [
+        ['Dia', 'Rótulo', 'Posts', 'Comentários', 'Buscas', 'Votos', 'Ações admin', 'Total'],
+        ['', 'Pulso diário indisponível neste carregamento', '', '', '', '', '', '']
+      ];
+    }
     return [
       ['Dia', 'Rótulo', 'Posts', 'Comentários', 'Buscas', 'Votos', 'Ações admin', 'Total'],
       ...(data.dailyMetrics || []).map(function (row) {
@@ -688,6 +876,12 @@
   }
 
   function buildSeriesTotalsRows(data, deps) {
+    if (data.dailyAvailable === false) {
+      return [
+        ['Série', 'Total', 'Cor'],
+        ['Totais das séries indisponíveis neste carregamento', '', '']
+      ];
+    }
     var totals = getSeriesTotalsValue(deps, data.dailyMetrics || []);
     return [
       ['Série', 'Total', 'Cor'],
@@ -698,6 +892,12 @@
   }
 
   function buildModuleRows(data, deps) {
+    if (data.trendsAvailable === false) {
+      return [
+        ['Módulo', 'Share (%)', 'Volume', 'Top termos'],
+        ['Participação por módulo indisponível neste carregamento', '', '', '']
+      ];
+    }
     return [
       ['Módulo', 'Share (%)', 'Volume', 'Top termos'],
       ...(data.moduleShareRows || []).map(function (row) {
@@ -721,6 +921,12 @@
   }
 
   function buildAuditRows(data, deps) {
+    if (data.auditAvailable === false || !areAuditRowsAvailable(data.auditRows)) {
+      return [
+        ['Data', 'Ação', 'Entidade', 'Entity ID', 'Ator', 'Detalhes'],
+        ['', 'Audit log indisponível neste carregamento', '', '', '', '']
+      ];
+    }
     return [
       ['Data', 'Ação', 'Entidade', 'Entity ID', 'Ator', 'Detalhes'],
       ...(data.auditRows || []).map(function (row) {
@@ -739,11 +945,14 @@
   function buildDashboardExportReport(data, deps) {
     var periodLabel = data.periodLabel || getPeriodLabelValue(deps, data.periodDays || 30);
     var auditFilters = {};
-    try { auditFilters = readAuditFilters(deps) || {}; } catch (_) { auditFilters = {}; }
+    try { auditFilters = getAppliedAuditFilters(deps) || {}; } catch (_) { auditFilters = {}; }
     var periodStart = formatDateBRValue(deps, data.periodStart);
     var periodEnd = formatDateBRValue(deps, data.periodEnd);
     var activeSessions = data.activeSessions15m || {};
     var activeAvailable = activeSessions && activeSessions.available;
+    var auditAvailable = data.auditAvailable !== false && areAuditRowsAvailable(data.auditRows);
+    var dailyAvailable = data.dailyAvailable !== false;
+    var trendsAvailable = data.trendsAvailable !== false;
     var adOverview = data.adOverview || {};
     var adSettings = adOverview.settings || {};
     var adCampaigns = adOverview.campaigns || {};
@@ -757,9 +966,12 @@
     if (!visibleSeriesKeys.length) visibleSeriesKeys = seriesMetaList.map(function (m) { return m.key; });
     var pulseColumns = [{ key: 'dia', label: 'Dia' }].concat(visibleSeriesKeys.map(function (k) {
       return { key: k, label: (metaByKey[k] && metaByKey[k].label) || k };
-    })).concat([{ key: 'total', label: 'Total' }]);
-    var pulseRows = (data.dailyMetrics || []).map(function (row) {
-      var r = { dia: row.label || row.day || '', total: toNumberValue(deps, row.total_count) };
+    })).concat([{ key: 'total', label: 'Total das séries exibidas' }]);
+    var pulseRows = (dailyAvailable ? (data.dailyMetrics || []) : []).map(function (row) {
+      var visibleTotal = visibleSeriesKeys.reduce(function (sum, key) {
+        return sum + toNumberValue(deps, row && row[key]);
+      }, 0);
+      var r = { dia: row.label || row.day || '', total: visibleTotal };
       visibleSeriesKeys.forEach(function (k) { r[k] = toNumberValue(deps, row[k]); });
       return r;
     });
@@ -770,17 +982,31 @@
         color: (metaByKey[k] && metaByKey[k].color) || '#ff6b00'
       };
     });
-    var seriesTotalsRows = visibleSeriesKeys.map(function (k) {
+    var seriesTotalsRows = dailyAvailable ? visibleSeriesKeys.map(function (k) {
       return {
         serie: (metaByKey[k] && metaByKey[k].label) || k,
         total: (data.dailyMetrics || []).reduce(function (s, row) { return s + toNumberValue(deps, row[k]); }, 0)
       };
-    });
+    }) : [];
     var rankingRows = (typeof deps.getRankingRows === 'function' && deps.getRankingRows()) || [];
+    var rankingContext = getRankingContext(deps);
+    var trendSnapshot = getTrendExportSnapshot(deps, data.trends || []);
+    var trendRows = trendsAvailable ? trendSnapshot.rows : [];
+    var rankingModuleLabel = rankingContext.module ? getModuleLabelValue(deps, rankingContext.module) : 'Todos os módulos';
+    var rankingLimit = Number(rankingContext.limit) || (rankingContext.expanded ? 100 : 10);
+    var rankingPeriodLabel = rankingContext.periodLabel || 'Janela móvel do ranking';
+    var rankingAvailable = rankingContext.available !== false;
     var rankingSection = {
       title: 'Top Contribuidores',
-      note: 'Ranking de engajamento conforme o período e o módulo selecionados no painel.',
-      rows: rankingRows.map(function (u, i) {
+      note: rankingAvailable
+        ? 'Ranking carregado no painel: ' + rankingPeriodLabel + ', ' + rankingModuleLabel + ', top ' + rankingLimit
+          + '. A janela é móvel e não usa o corte por dia civil do restante do dashboard.'
+        : 'Ranking indisponível neste carregamento para ' + rankingPeriodLabel + ', ' + rankingModuleLabel
+          + '. A ausência de linhas não representa ausência de contribuidores.',
+      emptyMessage: rankingAvailable
+        ? 'Nenhum contribuidor encontrado para os filtros selecionados'
+        : 'Ranking indisponível neste carregamento; tente atualizar novamente',
+      rows: (rankingAvailable ? rankingRows : []).map(function (u, i) {
         return {
           posicao: toNumberValue(deps, u && u.rank) || (i + 1),
           usuario: (u && u.display_name) ? u.display_name : 'Usuário',
@@ -805,23 +1031,32 @@
         periodo: periodLabel,
         inicio: periodStart,
         fim: periodEnd,
-        audit_action: auditFilters.action || 'all',
-        audit_entity_type: auditFilters.entityType || auditFilters.entity || 'all',
-        audit_actor: auditFilters.actorQuery || auditFilters.actor || '',
+        audit_action: getFilterDisplayValue(auditFilters.action, 'Todas as ações'),
+        audit_entity_type: getFilterDisplayValue(auditFilters.entityType || auditFilters.entity, 'Todas as entidades'),
+        audit_actor: getFilterDisplayValue(auditFilters.actorQuery || auditFilters.actor, 'Todos os atores'),
+        audit_disponibilidade: auditAvailable ? 'Disponível' : 'Indisponível',
+        tendencias_modulo: trendSnapshot.module ? getExportModuleLabel(deps, trendSnapshot.module) : 'Todos os módulos',
+        tendencias_busca: getFilterDisplayValue(trendSnapshot.query, 'Todos os termos'),
+        tendencias_disponibilidade: trendsAvailable ? 'Disponível' : 'Indisponível',
+        pulso_disponibilidade: dailyAvailable ? 'Disponível' : 'Indisponível',
+        ranking_periodo: rankingPeriodLabel,
+        ranking_modulo: rankingContext.module ? getExportModuleLabel(deps, rankingContext.module) : 'Todos os módulos',
+        ranking_limite: rankingLimit,
+        ranking_disponibilidade: rankingAvailable ? 'Disponível' : 'Indisponível',
       },
       kpis: [
         { label: 'Ativos agora', value: activeAvailable ? toNumberValue(deps, activeSessions.value) : 'Indisponível', detail: 'sessões agregadas em 15 min' },
-        { label: 'Publicações visíveis', value: toNumberValue(deps, data.visiblePosts), detail: 'published + closed' },
-        { label: 'Denúncias abertas', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
-        { label: 'Total de denúncias', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
-        { label: 'Posts ocultados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
-        { label: 'Posts deletados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
-        { label: 'Buscas registradas', value: toNumberValue(deps, data.searchCount), detail: periodLabel },
-        { label: 'Votos', value: toNumberValue(deps, data.votesCount), detail: periodLabel },
-        { label: 'Novos usuários', value: toNumberValue(deps, data.usersNew), detail: periodLabel },
-        { label: 'Posts salvos', value: toNumberValue(deps, data.savedPostsCount), detail: periodLabel },
-        { label: 'Campanhas ativas', value: toNumberValue(deps, adCampaigns.active), detail: 'monetização' },
-        { label: 'Cliques em anúncios', value: toNumberValue(deps, adMetrics.clicks), detail: 'CTR ' + (adMetrics.ctr || 0) + '%' },
+        { label: 'Publicações visíveis', value: exportMetricValue(deps, data.visiblePosts), detail: 'publicadas + encerradas' },
+        { label: 'Denúncias abertas', value: exportMetricValue(deps, data.reportMetrics && data.reportMetrics.open), detail: 'backlog atual, sem recorte temporal' },
+        { label: 'Denúncias recebidas', value: exportMetricValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
+        { label: 'Posts ocultos atualizados', value: exportMetricValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
+        { label: 'Posts deletados atualizados', value: exportMetricValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
+        { label: 'Buscas registradas', value: exportMetricValue(deps, data.searchCount), detail: periodLabel },
+        { label: 'Votos', value: exportMetricValue(deps, data.votesCount), detail: periodLabel },
+        { label: 'Novos usuários', value: exportMetricValue(deps, data.usersNew), detail: periodLabel },
+        { label: 'Posts salvos', value: exportMetricValue(deps, data.savedPostsCount), detail: periodLabel },
+        { label: 'Campanhas ativas', value: exportMetricValue(deps, adCampaigns.active), detail: 'monetização' },
+        { label: 'Cliques em anúncios', value: exportMetricValue(deps, adMetrics.clicks), detail: getAdCtrLabel(deps, adMetrics.ctr) },
       ],
       sections: [
         {
@@ -829,47 +1064,63 @@
           note: 'Indicadores principais da seleção atual do Dashboard.',
           rows: [
             { indicador: 'Janela analisada', valor: periodStart + ' até ' + periodEnd, contexto: periodLabel },
-            { indicador: 'Ativos agora', valor: activeAvailable ? String(activeSessions.value) : 'Indisponível', contexto: activeSessions.source || '-' },
-            { indicador: 'Publicações visíveis', valor: toNumberValue(deps, data.visiblePosts), contexto: 'Posts publicados ou encerrados visíveis' },
-            { indicador: 'Denúncias abertas', valor: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), contexto: periodLabel },
-            { indicador: 'Buscas registradas', valor: toNumberValue(deps, data.searchCount), contexto: periodLabel },
-            { indicador: 'Novos usuários', valor: toNumberValue(deps, data.usersNew), contexto: periodLabel },
-            { indicador: 'Posts salvos', valor: toNumberValue(deps, data.savedPostsCount), contexto: periodLabel },
-            { indicador: 'Votos', valor: toNumberValue(deps, data.votesCount), contexto: periodLabel },
-            { indicador: 'Modo de anúncios', valor: adSettings.status || 'disabled', contexto: adSettings.provider || 'direct' },
-            { indicador: 'Campanhas ativas', valor: toNumberValue(deps, adCampaigns.active), contexto: 'Monetização' },
-            { indicador: 'Cliques em anúncios', valor: toNumberValue(deps, adMetrics.clicks), contexto: 'CTR ' + (adMetrics.ctr || 0) + '%' },
+            { indicador: 'Ativos agora', valor: activeAvailable ? String(activeSessions.value) : 'Indisponível', contexto: activeSessions.label || activeSessions.source || '-' },
+            { indicador: 'Publicações visíveis', valor: exportMetricValue(deps, data.visiblePosts), contexto: 'Posts publicados ou encerrados visíveis' },
+            { indicador: 'Denúncias abertas', valor: exportMetricValue(deps, data.reportMetrics && data.reportMetrics.open), contexto: 'Backlog atual, sem recorte temporal' },
+            { indicador: 'Buscas registradas', valor: exportMetricValue(deps, data.searchCount), contexto: periodLabel },
+            { indicador: 'Novos usuários', valor: exportMetricValue(deps, data.usersNew), contexto: periodLabel },
+            { indicador: 'Posts salvos', valor: exportMetricValue(deps, data.savedPostsCount), contexto: periodLabel },
+            { indicador: 'Votos', valor: exportMetricValue(deps, data.votesCount), contexto: periodLabel },
+            { indicador: 'Modo de anúncios', valor: getAdStatusLabel(adSettings.status), contexto: getAdProviderLabel(adSettings.provider) },
+            { indicador: 'Campanhas ativas', valor: exportMetricValue(deps, adCampaigns.active), contexto: 'Monetização' },
+            { indicador: 'Cliques em anúncios', valor: exportMetricValue(deps, adMetrics.clicks), contexto: getAdCtrLabel(deps, adMetrics.ctr) },
             { indicador: 'Alertas operacionais', valor: (data.alerts || []).length, contexto: 'Alertas do Dashboard' },
-            { indicador: 'Eventos no audit log', valor: (data.auditRows || []).length, contexto: 'Linhas carregadas no painel' },
+            { indicador: 'Eventos no audit log', valor: auditAvailable ? (data.auditRows || []).length : 'Indisponível', contexto: auditAvailable ? 'Linhas carregadas no painel' : 'A fonte de auditoria não respondeu' },
           ],
           columns: ['indicador', 'valor', 'contexto'],
           maxPdfRows: 12,
         },
         {
           title: 'Pulso operacional',
-          note: 'Atividade diária das séries selecionadas no gráfico do Dashboard.',
+          note: dailyAvailable
+            ? 'Atividade diária das séries selecionadas no gráfico do Dashboard.'
+            : 'Fonte do pulso diário indisponível neste carregamento; a ausência de linhas não representa zero atividade.',
+          emptyMessage: dailyAvailable
+            ? 'Nenhuma atividade diária encontrada para o período selecionado'
+            : 'Pulso diário indisponível neste carregamento; tente atualizar novamente',
           rows: pulseRows,
           columns: pulseColumns,
-          chart: {
+          chart: dailyAvailable ? {
             type: 'line',
             xKey: 'dia',
             xLabel: 'Dia',
             yLabel: 'Eventos',
             rows: pulseRows,
             series: pulseChartSeries
-          },
+          } : null,
           maxPdfRows: 18,
         },
         {
           title: 'Séries (totais no período)',
-          note: 'Soma de cada série visível no período selecionado.',
+          note: dailyAvailable
+            ? 'Soma de cada série visível no período selecionado.'
+            : 'Totais não calculados porque a fonte do pulso diário não respondeu.',
+          emptyMessage: dailyAvailable
+            ? 'Nenhuma série diária encontrada para o período selecionado'
+            : 'Totais das séries indisponíveis neste carregamento',
           rows: seriesTotalsRows,
           columns: [{ key: 'serie', label: 'Série' }, { key: 'total', label: 'Total' }],
           maxPdfRows: 14,
         },
         {
           title: 'Módulos',
-          rows: (data.moduleShareRows || []).map(function (row) {
+          note: trendsAvailable
+            ? 'Participação no volume de buscas classificadas por módulo.'
+            : 'Participação por módulo indisponível porque a fonte de tendências não respondeu.',
+          emptyMessage: trendsAvailable
+            ? 'Nenhuma busca classificada por módulo no período selecionado'
+            : 'Participação por módulo indisponível neste carregamento',
+          rows: (trendsAvailable ? (data.moduleShareRows || []) : []).map(function (row) {
             return {
               modulo: row.label || row.module || '',
               participacao_percentual: String(row.share || 0) + '%',
@@ -883,12 +1134,19 @@
         },
         {
           title: 'Tendências',
-          rows: (data.trends || []).slice(0, 50).map(function (item, index) {
+          note: trendsAvailable
+            ? 'Respeita o filtro local de texto e módulo aplicado no painel.'
+            : 'Fonte de tendências indisponível neste carregamento; a ausência de linhas não representa zero buscas.',
+          emptyMessage: trendsAvailable
+            ? 'Nenhuma tendência encontrada para os filtros selecionados'
+            : 'Tendências de busca indisponíveis neste carregamento',
+          rows: trendRows.slice(0, 50).map(function (item, index) {
+            var moduleKey = resolveTermModuleValue(deps, item);
             return {
               posicao: index + 1,
               termo: item && item.term ? item.term : '',
               buscas: toNumberValue(deps, item && item.count),
-              modulo: getModuleLabelValue(deps, classifyTermToModuleValue(deps, item && item.term)),
+              modulo: getExportModuleLabel(deps, moduleKey),
             };
           }),
           columns: ['posicao', 'termo', 'buscas', 'modulo'],
@@ -898,12 +1156,12 @@
           title: 'Monetização',
           note: 'Resumo de campanhas próprias, AdSense controlado e eventos agregados de publicidade.',
           rows: [
-            { indicador: 'Status AdSense', valor: adSettings.status || 'disabled', contexto: adSettings.provider || 'direct' },
-            { indicador: 'Auto ads', valor: adSettings.auto_ads_enabled ? 'Ativado' : 'Desativado', contexto: 'Recomendado: desativado' },
-            { indicador: 'Campanhas totais', valor: toNumberValue(deps, adCampaigns.total), contexto: 'ad_campaigns' },
-            { indicador: 'Campanhas ativas', valor: toNumberValue(deps, adCampaigns.active), contexto: 'disponíveis para feed' },
-            { indicador: 'Impressões', valor: toNumberValue(deps, adMetrics.impressions), contexto: periodLabel },
-            { indicador: 'Cliques', valor: toNumberValue(deps, adMetrics.clicks), contexto: 'CTR ' + (adMetrics.ctr || 0) + '%' },
+            { indicador: 'Status AdSense', valor: getAdStatusLabel(adSettings.status), contexto: getAdProviderLabel(adSettings.provider) },
+            { indicador: 'Auto ads', valor: getAdBooleanLabel(adSettings.auto_ads_enabled), contexto: 'Recomendado: desativado' },
+            { indicador: 'Campanhas totais', valor: exportMetricValue(deps, adCampaigns.total), contexto: 'ad_campaigns' },
+            { indicador: 'Campanhas ativas', valor: exportMetricValue(deps, adCampaigns.active), contexto: 'disponíveis para feed' },
+            { indicador: 'Impressões', valor: exportMetricValue(deps, adMetrics.impressions), contexto: periodLabel },
+            { indicador: 'Cliques', valor: exportMetricValue(deps, adMetrics.clicks), contexto: getAdCtrLabel(deps, adMetrics.ctr) },
           ],
           columns: ['indicador', 'valor', 'contexto'],
           maxPdfRows: 8,
@@ -912,7 +1170,7 @@
           title: 'Alertas',
           rows: (data.alerts || []).map(function (alert) {
             return {
-              tom: alert && alert.tone ? alert.tone : 'neutral',
+              tom: getAlertToneLabel(alert && alert.tone),
               titulo: alert && alert.title ? alert.title : '',
               descricao: alert && alert.body ? alert.body : '',
             };
@@ -932,15 +1190,33 @@
             },
             {
               indicador: 'Rotas admin',
-              estado: '6 páginas oficiais',
+              estado: '8 páginas oficiais',
               fonte: 'manifesto admin',
-              observacao: 'Dashboard, Moderação, Denúncias, Banners, Ajuda e Privacidade'
+              observacao: 'Dashboard, Moderação, Denúncias, Banners, Ajuda, Privacidade, GA4 e Cadu'
             },
             {
               indicador: 'Exportações',
-              estado: 'PDF executivo + XLSX completo',
+              estado: 'PDF/XLSX do snapshot carregado',
               fonte: 'KCAdminExport',
-              observacao: 'Dados sanitizados e filtros preservados'
+              observacao: 'Dados sanitizados; tendências, ranking e audit log refletem as linhas carregadas no painel'
+            },
+            {
+              indicador: 'Pulso diário',
+              estado: dailyAvailable ? 'Disponível' : 'Indisponível',
+              fonte: 'dailyMetrics',
+              observacao: dailyAvailable ? 'Série temporal confirmada.' : 'A ausência de linhas não representa zero atividade.'
+            },
+            {
+              indicador: 'Tendências',
+              estado: trendsAvailable ? 'Disponível' : 'Indisponível',
+              fonte: 'search trends',
+              observacao: trendsAvailable ? 'Consultas confirmadas para o período.' : 'A ausência de linhas não representa zero buscas.'
+            },
+            {
+              indicador: 'Ranking',
+              estado: rankingAvailable ? 'Disponível' : 'Indisponível',
+              fonte: rankingContext.status || 'ranking',
+              observacao: rankingAvailable ? rankingPeriodLabel : 'A ausência de linhas não representa ausência de contribuidores.'
             }
           ],
           columns: ['indicador', 'estado', 'fonte', 'observacao'],
@@ -949,7 +1225,12 @@
         rankingSection,
         {
           title: 'Audit log',
-          note: 'Amostra dos eventos administrativos carregados no Dashboard para o período e filtros selecionados.',
+          note: auditAvailable
+            ? 'Amostra dos eventos administrativos carregados no Dashboard para o período e filtros selecionados.'
+            : 'Fonte de auditoria indisponível neste carregamento; a ausência de linhas não representa zero eventos.',
+          emptyMessage: auditAvailable
+            ? 'Nenhum evento de auditoria encontrado para os filtros selecionados'
+            : 'Audit log indisponível neste carregamento; tente atualizar novamente',
           rows: (data.auditRows || []).map(function (row) {
             return {
               data: formatDateTimeBRValue(deps, row && row.created_at),
@@ -977,6 +1258,9 @@
     var workbook = XLSX.utils.book_new();
     var generatedAt = formatDateTimeBRValue(deps, new Date());
     var periodLabel = data.periodLabel || getPeriodLabelValue(deps, data.periodDays || 30);
+    var dailyAvailable = data.dailyAvailable !== false;
+    var trendsAvailable = data.trendsAvailable !== false;
+    var auditAvailable = data.auditAvailable !== false && areAuditRowsAvailable(data.auditRows);
 
     var summarySheet = XLSX.utils.aoa_to_sheet(buildSummarySheetRows(data, periodLabel, generatedAt, deps));
     summarySheet['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 16 }];
@@ -1018,11 +1302,18 @@
     var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     var generatedAt = formatDateTimeBRValue(deps, new Date());
     var periodLabel = data.periodLabel || getPeriodLabelValue(deps, data.periodDays || 30);
+    var dailyAvailable = data.dailyAvailable !== false;
+    var trendsAvailable = data.trendsAvailable !== false;
+    var auditAvailable = data.auditAvailable !== false && areAuditRowsAvailable(data.auditRows);
     var pageWidth = doc.internal.pageSize.getWidth();
     var pageHeight = doc.internal.pageSize.getHeight();
     var margin = 14;
     var usableWidth = pageWidth - (margin * 2);
     var y = 18;
+    var visibleSeriesKeys = (typeof deps.getVisibleSeriesKeys === 'function' && deps.getVisibleSeriesKeys()) || getSeriesKeysValue(deps);
+    var visibleSeriesMeta = getSeriesMeta(deps).filter(function (meta) {
+      return visibleSeriesKeys.indexOf(meta.key) !== -1;
+    });
 
     function checkPage(requiredHeight) {
       if (y + (requiredHeight || 0) <= pageHeight - 18) return;
@@ -1090,7 +1381,7 @@
       var maxValue = 0;
 
       series.forEach(function (row) {
-        getSeriesKeysValue(deps).forEach(function (key) {
+        visibleSeriesKeys.forEach(function (key) {
           maxValue = Math.max(maxValue, toNumberValue(deps, row[key]));
         });
       });
@@ -1107,7 +1398,7 @@
         doc.line(chartX + paddingHorizontal, gridY, chartX + chartWidth - paddingHorizontal, gridY);
       }
 
-      getSeriesMeta(deps).forEach(function (meta) {
+      visibleSeriesMeta.forEach(function (meta) {
         var rgb = hexToRgbValue(deps, meta.color);
         doc.setDrawColor(rgb.r, rgb.g, rgb.b);
         doc.setLineWidth(0.55);
@@ -1126,8 +1417,9 @@
 
       doc.setFontSize(7);
       doc.setTextColor(100, 116, 139);
+      var labelStride = Math.max(1, Math.ceil(series.length / 12));
       series.forEach(function (row, index) {
-        if (series.length > 14 && index % 2 === 1 && index !== series.length - 1) return;
+        if (index !== 0 && index !== series.length - 1 && index % labelStride !== 0) return;
         var step = series.length > 1 ? innerWidth / (series.length - 1) : innerWidth;
         var x = chartX + paddingHorizontal + (step * index);
         doc.text(row.label || '', x, chartY + chartHeight - 2, { align: 'center' });
@@ -1137,7 +1429,7 @@
 
       var totals = getSeriesTotalsValue(deps, series);
       var legendWidth = (usableWidth - 6) / 2;
-      getSeriesMeta(deps).forEach(function (meta, index) {
+      visibleSeriesMeta.forEach(function (meta, index) {
         checkPage(8);
         var rgb = hexToRgbValue(deps, meta.color);
         var rowIndex = Math.floor(index / 2);
@@ -1150,7 +1442,7 @@
         doc.setTextColor(31, 41, 55);
         doc.text(meta.label + ': ' + toNumberValue(deps, totals[meta.key]), x + 6, itemY + 2.4);
       });
-      y += Math.ceil(getSeriesMeta(deps).length / 2) * 6 + 4;
+      y += Math.ceil(visibleSeriesMeta.length / 2) * 6 + 4;
     }
 
     function drawWrappedList(title, items, emptyMessage) {
@@ -1185,26 +1477,41 @@
 
     drawSectionHeader('Resumo executivo', 'Janela analisada de ' + formatDateBRValue(deps, data.periodStart) + ' até ' + formatDateBRValue(deps, data.periodEnd) + '.');
     drawMetricCards([
-      { label: 'Denúncias abertas', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.open), detail: periodLabel },
-      { label: 'Total de denúncias', value: toNumberValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
-      { label: 'Posts ocultados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
-      { label: 'Posts deletados', value: toNumberValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
-      { label: 'Buscas registradas', value: toNumberValue(deps, data.searchCount), detail: periodLabel },
-      { label: 'Votos', value: toNumberValue(deps, data.votesCount), detail: periodLabel },
-      { label: 'Novos usuários', value: toNumberValue(deps, data.usersNew), detail: periodLabel },
-      { label: 'Posts salvos', value: toNumberValue(deps, data.savedPostsCount), detail: periodLabel }
+      { label: 'Denúncias abertas', value: exportMetricValue(deps, data.reportMetrics && data.reportMetrics.open), detail: 'Backlog atual' },
+      { label: 'Denúncias recebidas', value: exportMetricValue(deps, data.reportMetrics && data.reportMetrics.total), detail: periodLabel },
+      { label: 'Posts ocultos atualizados', value: exportMetricValue(deps, data.postStatusMetrics && data.postStatusMetrics.hidden), detail: periodLabel },
+      { label: 'Posts deletados atualizados', value: exportMetricValue(deps, data.postStatusMetrics && data.postStatusMetrics.deleted), detail: periodLabel },
+      { label: 'Buscas registradas', value: exportMetricValue(deps, data.searchCount), detail: periodLabel },
+      { label: 'Votos', value: exportMetricValue(deps, data.votesCount), detail: periodLabel },
+      { label: 'Novos usuários', value: exportMetricValue(deps, data.usersNew), detail: periodLabel },
+      { label: 'Posts salvos', value: exportMetricValue(deps, data.savedPostsCount), detail: periodLabel }
     ]);
 
     drawSectionHeader('Pulso diário', 'Atividade consolidada por dia para posts, comentários, buscas, votos e ações administrativas.');
-    drawDailyChart(data.dailyMetrics || []);
+    if (!dailyAvailable || !(data.dailyMetrics || []).length) {
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        dailyAvailable
+          ? 'Nenhuma atividade diária encontrada no período selecionado.'
+          : 'Pulso diário indisponível neste carregamento; a ausência de série não representa zero atividade.',
+        margin,
+        y
+      );
+      y += 6;
+    } else {
+      drawDailyChart(data.dailyMetrics || []);
+    }
 
     drawWrappedList(
       'Top módulos por demanda',
-      (data.moduleShareRows || []).map(function (row) {
+      (trendsAvailable ? (data.moduleShareRows || []) : []).map(function (row) {
         var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? ' | Termos: ' + row.topTerms.join(', ') : '';
         return (row.label || row.module || 'Módulo') + ' - ' + (row.share || 0) + '% - ' + toNumberValue(deps, row.count) + ' buscas' + topTerms;
       }),
-      'Sem dados suficientes para participação por módulo.'
+      trendsAvailable
+        ? 'Sem dados suficientes para participação por módulo.'
+        : 'Participação por módulo indisponível neste carregamento.'
     );
 
     drawWrappedList(
@@ -1217,12 +1524,14 @@
 
     drawWrappedList(
       'Tendências de busca',
-      (data.trends || []).slice(0, 12).map(function (item, index) {
-        var moduleKey = classifyTermToModuleValue(deps, item && item.term);
+      (trendsAvailable ? (data.trends || []) : []).slice(0, 12).map(function (item, index) {
+        var moduleKey = resolveTermModuleValue(deps, item);
         return (index + 1) + '. ' + String((item && item.term) || '') + ' - ' + toNumberValue(deps, item && item.count) +
           (moduleKey ? ' (' + getModuleLabelValue(deps, moduleKey) + ')' : '');
       }),
-      'Nenhuma busca registrada no período selecionado.'
+      trendsAvailable
+        ? 'Nenhuma busca registrada no período selecionado.'
+        : 'Tendências de busca indisponíveis neste carregamento; a ausência de linhas não representa zero buscas.'
     );
 
     drawSectionHeader('Audit log', 'Apêndice com os eventos administrativos carregados na tela para o período selecionado.');
@@ -1237,7 +1546,13 @@
     if (!auditLines.length) {
       doc.setFontSize(9);
       doc.setTextColor(100, 116, 139);
-      doc.text('Nenhum evento encontrado.', margin, y);
+      doc.text(
+        auditAvailable
+          ? 'Nenhum evento encontrado para os filtros selecionados.'
+          : 'Audit log indisponível neste carregamento; a ausência de linhas não representa zero eventos.',
+        margin,
+        y
+      );
       y += 6;
     } else {
       auditLines.forEach(function (line) {
@@ -1263,6 +1578,7 @@
 
   function csvCell(value) {
     var text = String(value == null ? '' : value);
+    if (typeof value === 'string' && /^[\s]*[=+\-@]/.test(text)) text = "'" + text;
     return '"' + text.replace(/"/g, '""') + '"';
   }
 
@@ -1321,10 +1637,14 @@
       });
     }
     if (csvBtn) {
-      csvBtn.disabled = !getData(deps);
+      var initialData = getData(deps);
+      csvBtn.disabled = !initialData
+        || initialData.auditAvailable === false
+        || !areAuditRowsAvailable(initialData.auditRows)
+        || isDashboardBusy(deps);
       csvBtn.addEventListener('click', function () {
         var data = getData(deps);
-        if (!data) return;
+        if (!data || data.auditAvailable === false || !areAuditRowsAvailable(data.auditRows) || isDashboardBusy(deps)) return;
         exportAuditCSV(data, deps);
       });
     }
@@ -1335,18 +1655,21 @@
     var pdfBtn = select(deps, '#admin-export-pdf');
     var csvBtn = select(deps, '#admin-audit-export-csv');
     var currentData = getData(deps);
+    var canExport = !!currentData && !isDashboardBusy(deps);
+    var canExportAudit = canExport
+      && currentData.auditAvailable !== false
+      && areAuditRowsAvailable(currentData.auditRows);
 
-    if (xlsxBtn) xlsxBtn.disabled = !currentData;
-    if (pdfBtn) pdfBtn.disabled = !currentData;
-    if (csvBtn) csvBtn.disabled = !currentData;
+    if (xlsxBtn) xlsxBtn.disabled = !canExport;
+    if (pdfBtn) pdfBtn.disabled = !canExport;
+    if (csvBtn) csvBtn.disabled = !canExportAudit;
     if (getExportBound(deps)) return;
     setExportBound(deps, true);
 
     if (xlsxBtn) {
-      xlsxBtn.disabled = false;
       xlsxBtn.addEventListener('click', async function () {
         var data = getData(deps);
-        if (!data) return;
+        if (!data || isDashboardBusy(deps)) return;
         xlsxBtn.disabled = true;
         var originalHtml = xlsxBtn.innerHTML;
         xlsxBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
@@ -1357,16 +1680,15 @@
           showError(deps, 'Falha ao gerar XLSX. Verifique sua conexão e tente novamente.');
         } finally {
           xlsxBtn.innerHTML = originalHtml;
-          xlsxBtn.disabled = false;
+          xlsxBtn.disabled = isDashboardBusy(deps) || !getData(deps);
         }
       });
     }
 
     if (pdfBtn) {
-      pdfBtn.disabled = false;
       pdfBtn.addEventListener('click', async function () {
         var data = getData(deps);
-        if (!data) return;
+        if (!data || isDashboardBusy(deps)) return;
         pdfBtn.disabled = true;
         var originalHtml = pdfBtn.innerHTML;
         pdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
@@ -1377,25 +1699,30 @@
           showError(deps, 'Falha ao gerar PDF. Verifique sua conexão e tente novamente.');
         } finally {
           pdfBtn.innerHTML = originalHtml;
-          pdfBtn.disabled = false;
+          pdfBtn.disabled = isDashboardBusy(deps) || !getData(deps);
         }
       });
     }
   }
 
   async function loadMoreAudit(deps) {
+    if (getStateBucket().pending) return;
     var client = getClient(deps);
     if (!client) return;
-    var auditFilters = readAuditFilters(deps);
+    var auditFilters = getAppliedAuditFilters(deps);
     var periodDays = getSelectedPeriodDaysValue(deps);
     var since = getPeriodRangeValue(deps, periodDays).since;
     var btn = select(deps, '#admin-audit-load-more');
     var pageSize = getAuditPageSize(deps);
+    var requestSeq = bumpAuditRequestSeq();
+    setAuditPending(requestSeq, true, deps);
     setAuditLoadMoreState({ visible: true, disabled: true, label: 'Carregando...', preserveLabel: true }, deps);
 
     try {
       var rows = await loadAuditLog(client, pageSize, getAuditOffset(deps), auditFilters, since, deps);
+      if (!areAuditRowsAvailable(rows)) throw new Error('Audit log unavailable');
       await loadActorsById(client, rows.map(function (row) { return row && row.actor_id; }), deps);
+      if (!isCurrentAuditRequest(requestSeq)) return;
       setAuditOffset(deps, getAuditOffset(deps) + rows.length);
       renderAuditRows(rows, true, deps);
       if (rows.length < pageSize) {
@@ -1408,12 +1735,14 @@
         renderAuditSummary(data.auditRows, auditFilters, deps);
       }
     } catch (error) {
+      if (!isCurrentAuditRequest(requestSeq)) return;
       console.error('[Admin audit] loadMore:', error);
       setAuditLoadMoreState({ visible: true, disabled: false }, deps);
     } finally {
-      if (btn && btn.textContent === 'Carregando...') {
+      if (isCurrentAuditRequest(requestSeq) && btn && btn.textContent === 'Carregando...') {
         setAuditLoadMoreState({ visible: true, disabled: false }, deps);
       }
+      setAuditPending(requestSeq, false, deps);
     }
   }
 
@@ -1424,28 +1753,49 @@
     var periodDays = getSelectedPeriodDaysValue(deps);
     var since = getPeriodRangeValue(deps, periodDays).since;
     var pageSize = getAuditPageSize(deps);
+    var requestSeq = bumpAuditRequestSeq();
+    var previousOffset = getAuditOffset(deps);
+    var btn = select(deps, '#admin-audit-load-more');
+    var previousButtonState = btn ? {
+      visible: btn.style.display !== 'none',
+      disabled: !!btn.disabled,
+      label: btn.textContent || 'Carregar mais',
+      preserveLabel: true
+    } : null;
+    setAuditPending(requestSeq, true, deps);
     setAuditOffset(deps, 0);
+    setAuditLoadMoreState({ visible: true, disabled: true, label: 'Filtrando...', preserveLabel: true }, deps);
 
     try {
       var rows = await loadAuditLog(client, pageSize, 0, auditFilters, since, deps);
+      if (!areAuditRowsAvailable(rows)) throw new Error('Audit log unavailable');
       await loadActorsById(client, rows.map(function (row) { return row && row.actor_id; }), deps);
+      if (!isCurrentAuditRequest(requestSeq)) return;
       setAuditOffset(deps, rows.length);
+      var data = getData(deps) || {};
+      data.auditRows = rows;
+      setData(deps, data);
+      setAppliedAuditFilters(auditFilters, deps);
       renderAuditRows(rows, false, deps);
       renderAuditSummary(rows, auditFilters, deps);
       if (!rows.length) {
         setAuditLoadMoreState({ visible: true, disabled: true, label: 'Sem mais resultados', preserveLabel: true }, deps);
       }
-      var data = getData(deps);
-      if (data) {
-        data.auditRows = rows;
-        setData(deps, data);
-      }
     } catch (error) {
+      if (!isCurrentAuditRequest(requestSeq)) return;
       console.error('[Admin audit] filter:', error);
+      setAuditOffset(deps, previousOffset);
+      setAuditLoadMoreState(previousButtonState || { visible: true, disabled: false }, deps);
+    } finally {
+      if (isCurrentAuditRequest(requestSeq) && btn && btn.textContent === 'Filtrando...') {
+        setAuditLoadMoreState({ visible: true, disabled: false }, deps);
+      }
+      setAuditPending(requestSeq, false, deps);
     }
   }
 
   window._KCAD.audit = {
+    beginRequest: bumpAuditRequestSeq,
     bindAuditControls: bindAuditControls,
     enableExport: enableExport,
     exportAuditCSV: exportAuditCSV,
@@ -1456,6 +1806,7 @@
     loadActorsById: loadActorsById,
     loadAuditLog: loadAuditLog,
     loadMoreAudit: loadMoreAudit,
+    isCurrentRequest: isCurrentAuditRequest,
     normalizeAuditFilters: normalizeAuditFilters,
     readAuditFilters: readAuditFilters,
     renderAuditRows: renderAuditRows

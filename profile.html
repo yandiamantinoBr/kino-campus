@@ -10,11 +10,11 @@
   <meta name="description" content="Perfil de usuário no KinoCampus — comunidade universitária da UFG." />
   <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.1">
   <script src="assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
-<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+<script defer src="/_vercel/insights/script.js"></script>
   <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.1"></script>
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
   <title>KinoCampus — Perfil</title>
-  <link rel="stylesheet" href="assets/css/styles.css?v=8.6.7" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.10" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -693,7 +693,7 @@
 
       <!-- Loading state -->
       <div id="profile-loading" class="kc-profile-loading">
-        <i class="fas fa-spinner fa-spin"></i> Carregando perfil...
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando perfil...
       </div>
 
       <!-- Hero card (aparece após carregamento) -->
@@ -810,7 +810,7 @@
             <span class="kc-profile-toolbar-title">Atividades</span>
           </div>
           <div id="activities-loading" class="kc-profile-loading" style="display:none;">
-            <i class="fas fa-spinner fa-spin"></i> Carregando...
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...
           </div>
           <div id="activities-list" class="kc-profile-activity-list"></div>
           <div id="activities-empty" class="kc-profile-empty" style="display:none;">
@@ -834,7 +834,7 @@
             </select>
           </div>
           <div id="posts-loading" class="kc-profile-loading" style="display:none;">
-            <i class="fas fa-spinner fa-spin"></i> Carregando...
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...
           </div>
           <div id="posts-list" class="kc-profile-posts-list"></div>
           <div id="posts-empty" class="kc-profile-empty" style="display:none;">
@@ -853,7 +853,7 @@
             <span class="kc-profile-toolbar-title">Comentários</span>
           </div>
           <div id="comments-loading" class="kc-profile-loading" style="display:none;">
-            <i class="fas fa-spinner fa-spin"></i> Carregando...
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...
           </div>
           <div id="comments-list" class="kc-profile-comments-list"></div>
           <div id="comments-empty" class="kc-profile-empty" style="display:none;">
@@ -879,7 +879,7 @@
             </select>
           </div>
           <div id="saved-loading" class="kc-profile-loading" style="display:none;">
-            <i class="fas fa-spinner fa-spin"></i> Carregando...
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...
           </div>
           <div id="saved-list" class="kc-profile-posts-list"></div>
           <div id="saved-empty" class="kc-profile-empty" style="display:none;">
@@ -897,7 +897,7 @@
             <span class="kc-profile-toolbar-title">Avaliações</span>
           </div>
           <div id="ratings-loading" class="kc-profile-loading" style="display:none;">
-            <i class="fas fa-spinner fa-spin"></i> Carregando...
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando...
           </div>
           <div id="ratings-list" class="kc-profile-ratings-list"></div>
           <div id="ratings-empty" class="kc-profile-empty" style="display:none;">
@@ -915,7 +915,7 @@
   </main>
 
   <script defer src="assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="assets/js/core/kc-i18n.js?v=8.6.2"></script>
+<script defer src="assets/js/core/kc-i18n.js?v=8.6.10"></script>
   <script defer src="assets/js/utils/kc-utils.string.js?v=8.6.3"></script>
   <script defer src="assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
     <script defer src="assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -960,7 +960,7 @@
   <script defer src="assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.2"></script>
+<script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
   <script defer src="assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
@@ -986,7 +986,7 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.7"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/features/kc-ranking.js?v=8.6.1"></script>
+<script defer src="assets/js/features/kc-ranking.js?v=8.6.10"></script>
   <script defer src="assets/js/controllers/public/profile.presentation.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.2"></script>
   <script defer src="assets/js/controllers/public/profile.ratings.js?v=8.6.1"></script>

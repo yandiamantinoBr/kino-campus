@@ -500,3 +500,21 @@ describe('v75.0.0 - icones decorativos em kc-ranking.js', () => {
     expect(ranking).toContain('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>');
   });
 });
+
+describe('v76.0.0 - contrato completo de icones decorativos do dashboard admin', () => {
+  test.each([
+    'admin/index.html',
+    'assets/js/controllers/admin/admin-dashboard.audit.js',
+    'assets/js/controllers/admin/admin-dashboard.charts.js',
+    'assets/js/controllers/admin/admin-dashboard.controller.js',
+    'assets/js/controllers/admin/admin-dashboard.metrics.js',
+    'assets/js/controllers/admin/admin-dashboard.privacy.js',
+    'assets/js/features/kc-ranking.js',
+  ])('%s nao expoe glifos Font Awesome sem aria-hidden', (relPath) => {
+    const source = _fs.readFileSync(_path.join(_ROOT, relPath), 'utf8');
+    const iconTags = source.match(/<i\b[^>]*\bclass=(["'])[^"']*\bfa[srb]?\b[^"']*\1[^>]*>/gi) || [];
+    const missing = iconTags.filter((tag) => !/\baria-hidden=(["'])true\1/i.test(tag));
+
+    expect(missing).toEqual([]);
+  });
+});

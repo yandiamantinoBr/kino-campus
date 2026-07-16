@@ -166,6 +166,9 @@ function createDeps(options) {
     classifyTermToModule(term) {
       return String(term || '').includes('quarto') ? 'moradia' : null;
     },
+    resolveTermModule(item) {
+      return (item && item.module) || (String(item && item.term || '').includes('quarto') ? 'moradia' : null);
+    },
     getSeriesKeys() {
       return ['posts_count', 'comments_count', 'searches_count', 'votes_count', 'admin_actions_count'];
     },
@@ -229,6 +232,21 @@ function createDeps(options) {
     },
     getActorCache() {
       return actorCache;
+    },
+    getVisibleSeriesKeys() {
+      return options.visibleSeriesKeys || ['posts_count', 'comments_count', 'searches_count', 'votes_count', 'admin_actions_count'];
+    },
+    getRankingRows() {
+      return options.rankingRows || [];
+    },
+    getRankingContext() {
+      return options.rankingContext || { module: '', expanded: false };
+    },
+    getTrendExportSnapshot() {
+      return options.trendSnapshot || { rows: (data && data.trends) || [], module: '', query: '' };
+    },
+    isDashboardBusy() {
+      return !!options.dashboardBusy;
     }
   };
 }
@@ -292,6 +310,7 @@ function resetRuntime() {
   jest.resetModules();
   global.window = global;
   delete window._KCAD;
+  delete window.KCAdminExport;
   delete window.XLSX;
   delete window.jspdf;
   delete global.document;
@@ -333,9 +352,10 @@ describe('admin-dashboard.audit.js - contrato estatico', () => {
     expect(auditSource).not.toMatch(/import\s+/);
   });
 
-  test('expoe exatamente 13 chaves publicas', () => {
+  test('expoe exatamente 15 chaves publicas', () => {
     const audit = loadAuditModule();
     expect(Object.keys(audit).sort()).toEqual([
+      'beginRequest',
       'bindAuditControls',
       'enableExport',
       'exportAuditCSV',
@@ -343,6 +363,7 @@ describe('admin-dashboard.audit.js - contrato estatico', () => {
       'exportXLSX',
       'filterAudit',
       'getActorDisplay',
+      'isCurrentRequest',
       'loadActorsById',
       'loadAuditLog',
       'loadMoreAudit',
@@ -350,6 +371,15 @@ describe('admin-dashboard.audit.js - contrato estatico', () => {
       'readAuditFilters',
       'renderAuditRows'
     ]);
+  });
+
+  test('sequencia compartilhada invalida respostas antigas do audit', () => {
+    const audit = loadAuditModule();
+    const first = audit.beginRequest();
+    expect(audit.isCurrentRequest(first)).toBe(true);
+    const second = audit.beginRequest();
+    expect(audit.isCurrentRequest(first)).toBe(false);
+    expect(audit.isCurrentRequest(second)).toBe(true);
   });
 });
 
@@ -379,13 +409,13 @@ describe('admin-dashboard.controller.js - contrato do split audit', () => {
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.7"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.10"></script>'
     ];
 
     let lastIndex = -1;
@@ -488,6 +518,49 @@ describe('window._KCAD.audit - comportamento', () => {
     warnSpy.mockRestore();
   });
 
+  test('loadAuditLog marca indisponibilidade quando todas as fontes falham', async () => {
+    const audit = loadAuditModule();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = makeClient({
+      fromHandler() {
+        return { data: null, error: { code: '42501', message: 'permission denied' } };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    const rows = await audit.loadAuditLog(client, 20, 0, 'all', '2026-04-01T00:00:00Z');
+
+    expect(rows).toEqual([]);
+    expect(rows.__kcAvailable).toBe(false);
+    expect(rows.__kcSource).toBe('unavailable');
+    warnSpy.mockRestore();
+  });
+
+  test('renderAuditRows distingue fonte indisponível de zero eventos', () => {
+    const audit = loadAuditModule();
+    const auditBody = createElement();
+    const auditSummary = createElement();
+    const loadMoreBtn = createElement({ textContent: 'Carregar mais' });
+    const rows = [];
+    Object.defineProperty(rows, '__kcAvailable', { value: false });
+    const deps = createDeps({
+      elements: {
+        '#admin-audit-body': auditBody,
+        '#admin-audit-summary': auditSummary,
+        '#admin-audit-load-more': loadMoreBtn
+      }
+    });
+
+    audit.renderAuditRows(rows, false, deps);
+
+    expect(auditBody.innerHTML).toContain('Auditoria indisponível neste carregamento');
+    expect(auditSummary.textContent).toContain('Auditoria indisponível');
+    expect(loadMoreBtn.disabled).toBe(true);
+    expect(loadMoreBtn.textContent).toBe('Auditoria indisponível');
+  });
+
   test('renderAuditRows escreve linhas e atualiza o botao de carregamento', () => {
     const audit = loadAuditModule();
     const auditBody = createElement();
@@ -516,6 +589,28 @@ describe('window._KCAD.audit - comportamento', () => {
     expect(auditBody.innerHTML).toContain('Mod Ana');
     expect(loadMoreBtn.disabled).toBe(true);
     expect(loadMoreBtn.textContent).toBe('Fim do histórico');
+  });
+
+  test('renderAuditRows distingue encerramento automático de denúncia', () => {
+    const audit = loadAuditModule();
+    const auditBody = createElement();
+    const loadMoreBtn = createElement({ textContent: 'Carregar mais' });
+    const deps = createDeps({
+      elements: {
+        '#admin-audit-body': auditBody,
+        '#admin-audit-load-more': loadMoreBtn
+      }
+    });
+
+    audit.renderAuditRows([
+      { action: 'posts_auto_closed', entity_type: 'post' },
+      { action: 'post_auto_moderated', entity_type: 'post' },
+      { action: 'report_closed', entity_type: 'report' }
+    ], false, deps);
+
+    expect(auditBody.innerHTML).toContain('Encerramento automático');
+    expect(auditBody.innerHTML).toContain('Moderação automática');
+    expect(auditBody.innerHTML).toContain('Denúncia');
   });
 
   test('renderAuditRows append vazio sinaliza fim do historico', () => {
@@ -581,6 +676,25 @@ describe('window._KCAD.audit - comportamento', () => {
     expect(auditBody.innerHTML).toContain('Mod Cris');
   });
 
+  test('loadMoreAudit ignora clique enquanto outro ciclo de auditoria está pendente', async () => {
+    const audit = loadAuditModule();
+    const fromHandler = jest.fn(() => ({ data: [], error: null }));
+    const loadMoreBtn = createElement({ textContent: 'Filtrando...', disabled: true });
+    const deps = createDeps({
+      client: makeClient({ fromHandler }),
+      elements: {
+        '#admin-audit-load-more': loadMoreBtn
+      }
+    });
+    window._KCAD.__adminAuditState = { pending: true };
+
+    await audit.loadMoreAudit(deps);
+
+    expect(fromHandler).not.toHaveBeenCalled();
+    expect(loadMoreBtn.textContent).toBe('Filtrando...');
+    expect(loadMoreBtn.disabled).toBe(true);
+  });
+
   test('filterAudit reseta offset e substitui auditRows', async () => {
     const audit = loadAuditModule();
     const auditBody = createElement();
@@ -625,6 +739,207 @@ describe('window._KCAD.audit - comportamento', () => {
       { created_at: '2026-04-13T10:00:00Z', action: 'post_deleted', entity_type: 'post', actor_id: '123e4567-e89b-12d3-a456-426614174000' }
     ]);
     expect(auditBody.innerHTML).toContain('Deletado');
+  });
+
+  test('filterAudit só publica filtros e linhas juntos ao concluir a requisição', async () => {
+    const audit = loadAuditModule();
+    const auditBody = createElement();
+    const loadMoreBtn = createElement({ textContent: 'Carregar mais' });
+    const filterEl = createElement({ value: 'post_deleted' });
+    let resolveAudit;
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'audit_log') {
+          return new Promise((resolve) => {
+            resolveAudit = resolve;
+          });
+        }
+        return { data: [], error: null };
+      }
+    });
+    const deps = createDeps({
+      client,
+      data: {
+        auditRows: [{ action: 'post_hidden' }],
+        auditFilters: { action: 'post_hidden', entityType: 'all', actorQuery: '' }
+      },
+      elements: {
+        '#admin-audit-body': auditBody,
+        '#admin-audit-load-more': loadMoreBtn,
+        '#admin-audit-filter': filterEl
+      }
+    });
+
+    const pending = audit.filterAudit(deps);
+    expect(window._KCAD.__adminAuditState.pending).toBe(true);
+    expect(deps.getData().auditFilters.action).toBe('post_hidden');
+    expect(loadMoreBtn.disabled).toBe(true);
+    expect(loadMoreBtn.textContent).toBe('Filtrando...');
+    await Promise.resolve();
+
+    resolveAudit({
+      data: [{ action: 'post_deleted', entity_type: 'post' }],
+      error: null
+    });
+    await pending;
+
+    expect(deps.getData().auditRows[0].action).toBe('post_deleted');
+    expect(deps.getData().auditFilters.action).toBe('post_deleted');
+    expect(window._KCAD.__adminAuditState.pending).toBe(false);
+    expect(loadMoreBtn.textContent).not.toBe('Filtrando...');
+  });
+
+  test('filterAudit restaura paginação e botão quando a nova consulta falha', async () => {
+    const audit = loadAuditModule();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const loadMoreBtn = createElement({
+      textContent: 'Fim do histórico',
+      disabled: true,
+      style: { display: '' }
+    });
+    const filterEl = createElement({ value: 'post_deleted' });
+    const previousRows = [{ action: 'post_hidden', entity_type: 'post' }];
+    const client = makeClient({
+      fromHandler() {
+        return { data: null, error: { code: '42501', message: 'permission denied' } };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+    const deps = createDeps({
+      client,
+      data: {
+        auditRows: previousRows,
+        auditFilters: { action: 'post_hidden', entityType: 'all', actorQuery: '' }
+      },
+      auditOffset: 5,
+      elements: {
+        '#admin-audit-load-more': loadMoreBtn,
+        '#admin-audit-filter': filterEl
+      }
+    });
+
+    await audit.filterAudit(deps);
+
+    expect(deps.getAuditOffset()).toBe(5);
+    expect(deps.getData().auditRows).toEqual(previousRows);
+    expect(deps.getData().auditFilters.action).toBe('post_hidden');
+    expect(loadMoreBtn.textContent).toBe('Fim do histórico');
+    expect(loadMoreBtn.disabled).toBe(true);
+    expect(loadMoreBtn.style.display).toBe('');
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  test('exportação traduz alerta critical como Crítico', async () => {
+    const audit = loadAuditModule();
+    const exportReportXLSX = jest.fn().mockResolvedValue(undefined);
+    window.KCAdminExport = { exportReportXLSX };
+    const data = sampleData();
+    data.alerts = [{ tone: 'critical', title: 'Falha crítica', body: 'Requer atenção' }];
+
+    await audit.exportXLSX(data, createDeps({ data }));
+
+    const report = exportReportXLSX.mock.calls[0][1];
+    const alerts = report.sections.find((section) => section.title === 'Alertas');
+    expect(alerts.rows).toEqual([
+      { tom: 'Crítico', titulo: 'Falha crítica', descricao: 'Requer atenção' }
+    ]);
+  });
+
+  test('exportação preserva janela móvel do ranking e monetização indisponível', async () => {
+    const audit = loadAuditModule();
+    const exportReportXLSX = jest.fn().mockResolvedValue(undefined);
+    window.KCAdminExport = { exportReportXLSX };
+    const data = sampleData();
+    data.adOverview = {
+      source: 'unavailable',
+      settings: { status: null, provider: null, auto_ads_enabled: null },
+      campaigns: { total: null, active: null },
+      metrics: { impressions: null, clicks: null, ctr: null }
+    };
+    data.visiblePosts = null;
+    data.reportMetrics.open = null;
+    data.searchCount = null;
+    data.usersNew = null;
+    data.savedPostsCount = null;
+    data.votesCount = null;
+    data.auditAvailable = false;
+    data.dailyAvailable = false;
+    data.trendsAvailable = false;
+    data.dailyMetrics = [];
+    data.moduleShareRows = [];
+    data.trends = [];
+    const rankingContext = {
+      period: 'month',
+      periodLabel: 'Últimos 30 dias corridos (janela móvel)',
+      windowType: 'rolling',
+      windowDays: 30,
+      module: '',
+      expanded: false,
+      limit: 10,
+      available: false,
+      status: 'error',
+      reason: 'request_failed'
+    };
+
+    await audit.exportXLSX(data, createDeps({ data, rankingContext }));
+
+    const report = exportReportXLSX.mock.calls[0][1];
+    const ranking = report.sections.find((section) => section.title === 'Top Contribuidores');
+    const monetization = report.sections.find((section) => section.title === 'Monetização');
+    const summary = report.sections.find((section) => section.title === 'Resumo executivo');
+    const auditSection = report.sections.find((section) => section.title === 'Audit log');
+    const pulse = report.sections.find((section) => section.title === 'Pulso operacional');
+    const series = report.sections.find((section) => section.title === 'Séries (totais no período)');
+    const modules = report.sections.find((section) => section.title === 'Módulos');
+    const trends = report.sections.find((section) => section.title === 'Tendências');
+    const health = report.sections.find((section) => section.title === 'Saúde/Admin');
+    expect(report.filters.ranking_periodo).toBe('Últimos 30 dias corridos (janela móvel)');
+    expect(report.filters.ranking_disponibilidade).toBe('Indisponível');
+    expect(report.filters.pulso_disponibilidade).toBe('Indisponível');
+    expect(report.filters.tendencias_disponibilidade).toBe('Indisponível');
+    expect(ranking.note).toContain('Últimos 30 dias corridos (janela móvel)');
+    expect(ranking.note).toContain('Ranking indisponível');
+    expect(ranking.note).toContain('não representa ausência de contribuidores');
+    expect(ranking.rows).toEqual([]);
+    expect(ranking.emptyMessage).toContain('Ranking indisponível');
+    expect(pulse.rows).toEqual([]);
+    expect(pulse.chart).toBeNull();
+    expect(pulse.emptyMessage).toContain('Pulso diário indisponível');
+    expect(series.rows).toEqual([]);
+    expect(series.emptyMessage).toContain('Totais das séries indisponíveis');
+    expect(modules.rows).toEqual([]);
+    expect(modules.emptyMessage).toContain('Participação por módulo indisponível');
+    expect(trends.rows).toEqual([]);
+    expect(trends.emptyMessage).toContain('Tendências de busca indisponíveis');
+    expect(health.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ indicador: 'Pulso diário', estado: 'Indisponível' }),
+      expect.objectContaining({ indicador: 'Tendências', estado: 'Indisponível' }),
+      expect.objectContaining({ indicador: 'Ranking', estado: 'Indisponível' })
+    ]));
+    expect(report.kpis.find((item) => item.label === 'Campanhas ativas').value).toBe('Indisponível');
+    expect(report.kpis.find((item) => item.label === 'Cliques em anúncios')).toMatchObject({
+      value: 'Indisponível',
+      detail: 'CTR indisponível'
+    });
+    expect(monetization.rows).toEqual(expect.arrayContaining([
+      { indicador: 'Status AdSense', valor: 'Indisponível', contexto: 'Indisponível' },
+      { indicador: 'Auto ads', valor: 'Indisponível', contexto: 'Recomendado: desativado' },
+      { indicador: 'Campanhas totais', valor: 'Indisponível', contexto: 'ad_campaigns' },
+      { indicador: 'Impressões', valor: 'Indisponível', contexto: data.periodLabel },
+      { indicador: 'Cliques', valor: 'Indisponível', contexto: 'CTR indisponível' }
+    ]));
+    expect(summary.rows).toEqual(expect.arrayContaining([
+      { indicador: 'Publicações visíveis', valor: 'Indisponível', contexto: 'Posts publicados ou encerrados visíveis' },
+      { indicador: 'Denúncias abertas', valor: 'Indisponível', contexto: 'Backlog atual, sem recorte temporal' },
+      { indicador: 'Eventos no audit log', valor: 'Indisponível', contexto: 'A fonte de auditoria não respondeu' }
+    ]));
+    expect(report.filters.audit_disponibilidade).toBe('Indisponível');
+    expect(auditSection.note).toContain('não representa zero eventos');
+    expect(auditSection.emptyMessage).toContain('Audit log indisponível');
   });
 
   test('exportXLSX gera workbook com todas as abas esperadas', async () => {
@@ -732,5 +1047,159 @@ describe('window._KCAD.audit - comportamento', () => {
     expect(typeof firstPdfListener).toBe('function');
     expect(xlsxBtn.getListener('click')).toBe(firstXlsxListener);
     expect(pdfBtn.getListener('click')).toBe(firstPdfListener);
+  });
+
+  test('enableExport bloqueia snapshot enquanto o dashboard está atualizando', () => {
+    const audit = loadAuditModule();
+    const xlsxBtn = createElement({ innerHTML: 'XLSX' });
+    const pdfBtn = createElement({ innerHTML: 'PDF' });
+    const csvBtn = createElement({ innerHTML: 'CSV' });
+    const deps = createDeps({
+      data: sampleData(),
+      dashboardBusy: true,
+      elements: {
+        '#admin-export-xlsx': xlsxBtn,
+        '#admin-export-pdf': pdfBtn,
+        '#admin-audit-export-csv': csvBtn
+      }
+    });
+
+    audit.enableExport(deps);
+
+    expect(xlsxBtn.disabled).toBe(true);
+    expect(pdfBtn.disabled).toBe(true);
+    expect(csvBtn.disabled).toBe(true);
+  });
+
+  test('enableExport mantém relatórios gerais e bloqueia CSV quando a auditoria está indisponível', () => {
+    const audit = loadAuditModule();
+    const xlsxBtn = createElement({ innerHTML: 'XLSX' });
+    const pdfBtn = createElement({ innerHTML: 'PDF' });
+    const csvBtn = createElement({ innerHTML: 'CSV' });
+    const data = sampleData();
+    data.auditAvailable = false;
+    const deps = createDeps({
+      data,
+      elements: {
+        '#admin-export-xlsx': xlsxBtn,
+        '#admin-export-pdf': pdfBtn,
+        '#admin-audit-export-csv': csvBtn
+      }
+    });
+
+    audit.enableExport(deps);
+
+    expect(xlsxBtn.disabled).toBe(false);
+    expect(pdfBtn.disabled).toBe(false);
+    expect(csvBtn.disabled).toBe(true);
+  });
+
+  test('relatório compartilhado usa apenas séries visíveis e classificação do servidor', async () => {
+    const audit = loadAuditModule();
+    const data = sampleData();
+    data.dailyMetrics[0].posts_count = 1;
+    data.dailyMetrics[0].comments_count = 2;
+    data.dailyMetrics[0].total_count = 99;
+    data.trends = [{ term: 'termo ambíguo', count: 4, module: 'moradia' }];
+    const deps = createDeps({
+      data,
+      visibleSeriesKeys: ['posts_count', 'comments_count'],
+      trendSnapshot: { rows: data.trends, module: 'moradia', query: 'termo' }
+    });
+    let capturedReport = null;
+    window.KCAdminExport = {
+      exportReportPDF: jest.fn(async (_filename, report) => {
+        capturedReport = report;
+      })
+    };
+
+    await audit.exportPDF(data, deps);
+
+    const pulse = capturedReport.sections.find((section) => section.title === 'Pulso operacional');
+    const trends = capturedReport.sections.find((section) => section.title === 'Tendências');
+    expect(pulse.rows[0].total).toBe(3);
+    expect(pulse.columns[pulse.columns.length - 1].label).toBe('Total das séries exibidas');
+    expect(trends.rows[0].modulo).toBe('Moradia');
+    expect(capturedReport.filters.tendencias_busca).toBe('termo');
+  });
+
+  test('relatorio compartilhado deixa filtros e tendencias sem classe legiveis', async () => {
+    const audit = loadAuditModule();
+    const data = sampleData();
+    data.trends = [{ term: 'sem classificacao', count: 2, module: null }];
+    const deps = createDeps({
+      data,
+      trendSnapshot: { rows: data.trends, module: '', query: '' }
+    });
+    let capturedReport = null;
+    window.KCAdminExport = {
+      exportReportPDF: jest.fn(async (_filename, report) => {
+        capturedReport = report;
+      })
+    };
+
+    await audit.exportPDF(data, deps);
+
+    const trends = capturedReport.sections.find((section) => section.title === 'Tendências');
+    expect(trends.rows[0].modulo).toBe('Não classificado');
+    expect(capturedReport.filters.audit_action).toBe('Todas as ações');
+    expect(capturedReport.filters.audit_entity_type).toBe('Todas as entidades');
+    expect(capturedReport.filters.audit_actor).toBe('Todos os atores');
+    expect(capturedReport.filters.tendencias_modulo).toBe('Todos os módulos');
+    expect(capturedReport.filters.tendencias_busca).toBe('Todos os termos');
+    expect(capturedReport.filters.ranking_modulo).toBe('Todos os módulos');
+  });
+
+  test('relatório exporta o filtro aplicado, não texto ainda não submetido', async () => {
+    const audit = loadAuditModule();
+    const data = sampleData();
+    data.auditFilters = {
+      action: 'post_hidden',
+      entityType: 'post',
+      actorQuery: 'admin-aplicado'
+    };
+    const deps = createDeps({
+      data,
+      elements: {
+        '#admin-audit-filter': createElement({ value: 'post_deleted' }),
+        '#admin-audit-entity-filter': createElement({ value: 'report' }),
+        '#admin-audit-actor-filter': createElement({ value: 'texto-ainda-nao-aplicado' })
+      }
+    });
+    let capturedReport = null;
+    window.KCAdminExport = {
+      exportReportPDF: jest.fn(async (_filename, report) => {
+        capturedReport = report;
+      })
+    };
+
+    await audit.exportPDF(data, deps);
+
+    expect(capturedReport.filters.audit_action).toBe('post_hidden');
+    expect(capturedReport.filters.audit_entity_type).toBe('post');
+    expect(capturedReport.filters.audit_actor).toBe('admin-aplicado');
+  });
+
+  test('audit payload sensível não é serializado no relatório', async () => {
+    const audit = loadAuditModule();
+    const data = sampleData();
+    data.auditRows[0].payload = {
+      access_token: 'segredo',
+      nested: { cookie: 'raw', status: 'published' }
+    };
+    const deps = createDeps({ data });
+    let capturedReport = null;
+    window.KCAdminExport = {
+      exportReportPDF: jest.fn(async (_filename, report) => {
+        capturedReport = report;
+      })
+    };
+
+    await audit.exportPDF(data, deps);
+
+    const auditSection = capturedReport.sections.find((section) => section.title === 'Audit log');
+    expect(auditSection.rows[0].detalhes).not.toContain('segredo');
+    expect(auditSection.rows[0].detalhes).not.toContain('raw');
+    expect(auditSection.rows[0].detalhes).toContain('published');
   });
 });

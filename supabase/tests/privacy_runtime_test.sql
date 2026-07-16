@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(20);
+select extensions.plan(22);
 
 select extensions.has_table(
   'public',
@@ -36,8 +36,8 @@ select extensions.is(
 );
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'privacy_consent_events'),
-  2,
-  'privacy consent events has insert and admin select policies'
+  1,
+  'privacy consent events keeps only the admin select policy'
 );
 
 select extensions.ok(
@@ -57,8 +57,8 @@ select extensions.ok(
   'anon cannot read privacy consent events'
 );
 select extensions.ok(
-  has_column_privilege('anon', 'public.privacy_consent_events', 'session_hash', 'insert'),
-  'anon can insert validated consent columns through the invoker RPC'
+  not has_column_privilege('anon', 'public.privacy_consent_events', 'session_hash', 'insert'),
+  'anon cannot bypass the private consent worker with direct inserts'
 );
 select extensions.ok(
   not has_column_privilege('anon', 'public.privacy_consent_events', 'created_at', 'insert'),
@@ -86,12 +86,26 @@ select extensions.ok(
   'authenticated users can reach the RPC admin authorization check'
 );
 select extensions.ok(
+  not has_function_privilege('anon', 'public.kc_prune_old_analytics()', 'execute'),
+  'anonymous users cannot execute retention cleanup'
+);
+select extensions.ok(
   not has_function_privilege('authenticated', 'public.kc_prune_old_analytics()', 'execute'),
   'authenticated users cannot execute retention cleanup'
 );
 select extensions.ok(
   has_function_privilege('service_role', 'public.kc_prune_old_analytics()', 'execute'),
   'service role can execute retention cleanup'
+);
+select extensions.ok(
+  (
+    select prosrc like '%delete from public.privacy_analytics_events%'
+      and prosrc like '%delete from public.privacy_consent_events%'
+      and prosrc like '%interval ''6 months''%'
+    from pg_catalog.pg_proc
+    where oid = 'public.kc_prune_old_analytics()'::regprocedure
+  ),
+  'retention cleanup covers privacy analytics and consent for six months'
 );
 
 select * from extensions.finish();

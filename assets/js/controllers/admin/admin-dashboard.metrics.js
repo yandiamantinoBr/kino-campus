@@ -17,6 +17,25 @@
   window._KCAD = window._KCAD || {};
   var SEARCH_TRENDS_MAX_ROWS = 100;
 
+  function markMetricAvailability(key, available, source) {
+    window._KCAD.__adminMetricsDiagnostics = window._KCAD.__adminMetricsDiagnostics || {};
+    window._KCAD.__adminMetricsDiagnostics[key] = {
+      available: available === true,
+      source: source || (available ? 'query' : 'unavailable')
+    };
+  }
+
+  function tagRowsAvailability(rows, available, source) {
+    var list = Array.isArray(rows) ? rows : [];
+    try {
+      Object.defineProperties(list, {
+        __kcAvailable: { value: available === true, enumerable: false, configurable: true },
+        __kcSource: { value: source || '', enumerable: false, configurable: true }
+      });
+    } catch (_) { }
+    return list;
+  }
+
   function getDashboardUtils() {
     return window.KCAdminDashboardUtils || {};
   }
@@ -74,10 +93,8 @@
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
     if (!normalized) return '';
-    if (normalized.length >= 5 && normalized.endsWith('s') && !normalized.endsWith('ss')) {
-      return normalized.slice(0, -1);
-    }
-    return normalized;
+    var synonyms = getDashboardUtils().TERM_SYNONYMS || {};
+    return synonyms[normalized] || normalized;
   }
 
   function classifyTermToModule(term) {
@@ -156,9 +173,14 @@
 
   function distinctSessionCount(rows) {
     var sessions = new Set();
-    (rows || []).forEach(function (row, index) {
-      var id = row && (row.session_hash || row.session_id || row.session || row.id);
-      sessions.add(String(id || ('row-' + index)));
+    (rows || []).forEach(function (row) {
+      var sessionId = row && (row.session_hash || row.session_id || row.session);
+      if (sessionId) {
+        sessions.add('session:' + String(sessionId));
+        return;
+      }
+      var userId = row && (row.user_id || row.userId);
+      if (userId) sessions.add('user:' + String(userId));
     });
     return sessions.size;
   }
@@ -168,30 +190,38 @@
       return { ok: false, message: 'Sessao administrativa indisponivel.' };
     }
 
-    var user = await window.KCAPI.getCurrentUser();
-    if (!user) return { ok: false, message: 'Faca login para acessar o dashboard administrativo.' };
+    try {
+      var user = await window.KCAPI.getCurrentUser();
+      if (!user) return { ok: false, message: 'Faca login para acessar o dashboard administrativo.' };
 
-    var client = getClient();
-    if (!client) return { ok: false, message: 'Supabase client nao disponivel.' };
+      var client = getClient();
+      if (!client) return { ok: false, message: 'Supabase client nao disponivel.' };
 
-    var profileResult = await client
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .maybeSingle();
+      var profileResult = await client
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    if (profileResult.error || !profileResult.data || !profileResult.data.is_admin) {
-      return { ok: false, message: 'Acesso restrito a moderadores/administradores.' };
+      if (profileResult && profileResult.error) {
+        return { ok: false, message: 'Nao foi possivel validar o acesso administrativo.' };
+      }
+      if (!profileResult || !profileResult.data || !profileResult.data.is_admin) {
+        return { ok: false, message: 'Acesso restrito a administradores.' };
+      }
+
+      return { ok: true };
+    } catch (_) {
+      return { ok: false, message: 'Nao foi possivel validar o acesso administrativo.' };
     }
-
-    return { ok: true };
   }
 
   async function loadReportMetrics(client, since) {
     try {
       var rpc = await client.rpc('kc_admin_list_reports', { p_status: 'all', p_reason: 'all', p_limit: 2000 });
       if (!rpc.error && Array.isArray(rpc.data)) {
-        var rows = rpc.data;
+        var allRows = rpc.data;
+        var rows = allRows;
         var sinceMs = since ? new Date(since).getTime() : 0;
         if (sinceMs) {
           rows = rows.filter(function (row) {
@@ -199,29 +229,31 @@
           });
         }
 
+        markMetricAvailability('reports', true, 'rpc');
         return {
-          open: rows.filter(function (row) { return String(row.status || '').toLowerCase() === 'open'; }).length,
+          open: allRows.filter(function (row) { return String(row.status || '').toLowerCase() === 'open'; }).length,
           total: rows.length
         };
       }
     } catch (_) { }
 
-    var open = 0;
-    var total = 0;
     try {
       var openQuery = client.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open');
       var totalQuery = client.from('reports').select('id', { count: 'exact', head: true });
       if (since) {
-        openQuery = openQuery.gte('created_at', since);
         totalQuery = totalQuery.gte('created_at', since);
       }
 
       var results = await Promise.all([openQuery, totalQuery]);
-      open = results[0].count || 0;
-      total = results[1].count || 0;
+      if (!results[0].error && !results[1].error &&
+          typeof results[0].count === 'number' && typeof results[1].count === 'number') {
+        markMetricAvailability('reports', true, 'direct');
+        return { open: results[0].count, total: results[1].count };
+      }
     } catch (_) { }
 
-    return { open: open, total: total };
+    markMetricAvailability('reports', false);
+    return { open: null, total: null };
   }
 
   async function loadPostStatusMetrics(client, since) {
@@ -246,6 +278,7 @@
         if (since) fallbackQuery = fallbackQuery.gte('updated_at', since);
         var fallback = await fallbackQuery;
         if (!fallback.error && Array.isArray(fallback.data)) {
+          markMetricAvailability('postStatus', true, 'fallback_rows');
           return {
             hidden: fallback.data.filter(function (row) { return row.status === 'hidden'; }).length,
             deleted: fallback.data.filter(function (row) { return row.status === 'deleted'; }).length
@@ -253,11 +286,17 @@
         }
       }
 
-      hidden = hiddenResult.count || 0;
-      deleted = deletedResult.count || 0;
+      if (!hiddenResult.error && !deletedResult.error &&
+          typeof hiddenResult.count === 'number' && typeof deletedResult.count === 'number') {
+        hidden = hiddenResult.count;
+        deleted = deletedResult.count;
+        markMetricAvailability('postStatus', true, 'direct');
+        return { hidden: hidden, deleted: deleted };
+      }
     } catch (_) { }
 
-    return { hidden: hidden, deleted: deleted };
+    markMetricAvailability('postStatus', false);
+    return { hidden: null, deleted: null };
   }
 
   async function loadPostsCreated(client, since) {
@@ -265,13 +304,20 @@
       var result = await client.from('posts')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', since);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('postsCreated', true, 'count');
+        return result.count;
+      }
 
       var fallback = await client.from('posts').select('id').gte('created_at', since).limit(2000);
-      if (!fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        markMetricAvailability('postsCreated', true, 'fallback_rows');
+        return fallback.data.length;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('postsCreated', false);
+    return null;
   }
 
   async function loadPostsEdited(client, since) {
@@ -280,17 +326,24 @@
         .select('id', { count: 'exact', head: true })
         .gte('updated_at', since)
         .lt('created_at', since);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('postsUpdated', true, 'count');
+        return result.count;
+      }
 
       var fallback = await client.from('posts')
         .select('id')
         .gte('updated_at', since)
         .lt('created_at', since)
         .limit(2000);
-      if (!fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        markMetricAvailability('postsUpdated', true, 'fallback_rows');
+        return fallback.data.length;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('postsUpdated', false);
+    return null;
   }
 
   async function loadCommentsCount(client, since) {
@@ -298,13 +351,20 @@
       var result = await client.from('comments')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', since);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('comments', true, 'count');
+        return result.count;
+      }
 
       var fallback = await client.from('comments').select('id').gte('created_at', since).limit(5000);
-      if (!fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        markMetricAvailability('comments', true, 'fallback_rows');
+        return fallback.data.length;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('comments', false);
+    return null;
   }
 
   async function loadSearchCount(client, since) {
@@ -312,22 +372,33 @@
       var result = await client.from('search_queries')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', since);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('searches', true, 'count');
+        return result.count;
+      }
 
       var fallback = await client.from('search_queries').select('created_at').gte('created_at', since).limit(5000);
-      if (!fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        markMetricAvailability('searches', true, 'fallback_rows');
+        return fallback.data.length;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('searches', false);
+    return null;
   }
 
   async function loadPostsTotal(client) {
     try {
       var result = await client.from('posts').select('id', { count: 'exact', head: true });
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('postsTotal', true, 'count');
+        return result.count;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('postsTotal', false);
+    return null;
   }
 
   async function loadVisiblePostsCount(client) {
@@ -335,25 +406,36 @@
       var result = await client.from('posts')
         .select('id', { count: 'exact', head: true })
         .in('status', ['published', 'closed']);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('visiblePosts', true, 'count');
+        return result.count;
+      }
 
       var fallback = await client.from('posts')
         .select('id,status')
         .in('status', ['published', 'closed'])
         .limit(5000);
-      if (!fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+      if (!fallback.error && Array.isArray(fallback.data)) {
+        markMetricAvailability('visiblePosts', true, 'fallback_rows');
+        return fallback.data.length;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('visiblePosts', false);
+    return null;
   }
 
   async function loadUsersTotal(client) {
     try {
       var result = await client.from('profiles').select('id', { count: 'exact', head: true });
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('usersTotal', true, 'count');
+        return result.count;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('usersTotal', false);
+    return null;
   }
 
   async function loadUsersNew(client, since) {
@@ -361,10 +443,14 @@
       var result = await client.from('profiles')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', since);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('usersNew', true, 'count');
+        return result.count;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('usersNew', false);
+    return null;
   }
 
   async function loadVotesCount(client, since) {
@@ -372,10 +458,14 @@
       var result = await client.from('post_votes')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', since);
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('votes', true, 'count');
+        return result.count;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('votes', false);
+    return null;
   }
 
   async function loadSavedPostsCount(client, since) {
@@ -383,10 +473,14 @@
       var query = client.from('saved_posts').select('id', { count: 'exact', head: true });
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error) return result.count || 0;
+      if (!result.error && typeof result.count === 'number') {
+        markMetricAvailability('saves', true, 'count');
+        return result.count;
+      }
     } catch (_) { }
 
-    return 0;
+    markMetricAvailability('saves', false);
+    return null;
   }
 
   async function loadActiveSessions15m(client) {
@@ -423,7 +517,7 @@
 
     try {
       var direct = await client.from('privacy_analytics_events')
-        .select('id,session_hash,created_at')
+        .select('id,session_hash,user_id,created_at')
         .gte('created_at', since)
         .limit(5000);
       if (!direct.error && Array.isArray(direct.data)) {
@@ -441,18 +535,20 @@
     try {
       var legacy = await Promise.all([
         client.from('search_queries')
-          .select('id,session_id,created_at')
+          .select('id,session_id,user_id,created_at')
           .gte('created_at', since)
           .limit(2500),
         client.from('post_view_events')
-          .select('id,session_id,created_at')
+          .select('id,session_id,user_id,created_at')
           .gte('created_at', since)
           .limit(2500)
       ]);
       var rows = [];
-      if (legacy[0] && !legacy[0].error && Array.isArray(legacy[0].data)) rows = rows.concat(legacy[0].data);
-      if (legacy[1] && !legacy[1].error && Array.isArray(legacy[1].data)) rows = rows.concat(legacy[1].data);
-      if (rows.length || (legacy[0] && !legacy[0].error) || (legacy[1] && !legacy[1].error)) {
+      var searchesAvailable = !!(legacy[0] && !legacy[0].error && Array.isArray(legacy[0].data));
+      var viewsAvailable = !!(legacy[1] && !legacy[1].error && Array.isArray(legacy[1].data));
+      if (searchesAvailable) rows = rows.concat(legacy[0].data);
+      if (viewsAvailable) rows = rows.concat(legacy[1].data);
+      if (searchesAvailable && viewsAvailable) {
         return {
           value: distinctSessionCount(rows),
           available: true,
@@ -475,7 +571,7 @@
         .limit(1500);
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error && Array.isArray(result.data)) return result.data;
+      if (!result.error && Array.isArray(result.data)) return tagRowsAvailability(result.data, true, 'audit_table');
     } catch (_) { }
 
     try {
@@ -488,9 +584,9 @@
         p_since: since || null
       });
       if (!rpc.error && Array.isArray(rpc.data)) {
-        return rpc.data.map(function (row) {
+        return tagRowsAvailability(rpc.data.map(function (row) {
           return { created_at: row.created_at };
-        });
+        }), true, 'audit_rpc');
       }
     } catch (_) { }
 
@@ -503,19 +599,20 @@
       });
       if (!legacy.error && Array.isArray(legacy.data)) {
         var sinceMs = since ? new Date(since).getTime() : 0;
-        return legacy.data.filter(function (row) {
+        return tagRowsAvailability(legacy.data.filter(function (row) {
           return !sinceMs || (row.created_at && new Date(row.created_at).getTime() >= sinceMs);
         }).map(function (row) {
           return { created_at: row.created_at };
-        });
+        }), true, 'audit_legacy_rpc');
       }
     } catch (_) { }
 
-    return [];
+    return tagRowsAvailability([], false, 'unavailable');
   }
 
   async function loadSearchTrendsData(client, since) {
     var trends = [];
+    var hadSuccessfulSource = false;
 
     // Caminho preferido: RPC classificado (termo → módulo pelo conteúdo dos posts).
     try {
@@ -525,8 +622,12 @@
         client.rpc('kc_admin_search_trends_classified', clsArgs),
         new Promise(function (_, reject) { setTimeout(function () { reject(new Error('timeout')); }, 8000); })
       ]);
-      if (clsResult && !clsResult.error && Array.isArray(clsResult.data) && clsResult.data.length > 0) {
-        return canonicalizeClassifiedTrends(clsResult.data);
+      if (clsResult && !clsResult.error && Array.isArray(clsResult.data)) {
+        hadSuccessfulSource = true;
+        if (clsResult.data.length > 0) {
+          markMetricAvailability('trends', true, 'classified_rpc');
+          return canonicalizeClassifiedTrends(clsResult.data);
+        }
       }
     } catch (clsError) {
       console.warn('[Admin trends] RPC classificado indisponível, usando legado:', clsError && clsError.message);
@@ -549,8 +650,9 @@
         result = { error: rpcError };
       }
 
-      if (!result.error && Array.isArray(result.data) && result.data.length > 0) {
-        trends = canonicalizeTrendsList(result.data);
+      if (!result.error && Array.isArray(result.data)) {
+        hadSuccessfulSource = true;
+        if (result.data.length > 0) trends = canonicalizeTrendsList(result.data);
       } else {
         if (result.error) {
           var errorMessage = result.error.message || String(result.error);
@@ -569,15 +671,11 @@
 
         var raw = await rawQuery;
         if (!raw.error && Array.isArray(raw.data)) {
+          hadSuccessfulSource = true;
           trends = buildTrendsFromRows(raw.data);
         } else if (raw.error) {
           console.warn('[Admin trends] Fallback direto falhou:', raw.error.message || raw.error);
-          var rawFallback = await client.from('search_queries').select('term').limit(500);
-          if (!rawFallback.error && Array.isArray(rawFallback.data)) {
-            trends = buildTrendsFromRows(rawFallback.data);
-          } else if (rawFallback.error) {
-            console.warn('[Admin trends] Todas as tentativas falharam:', rawFallback.error.message || rawFallback.error);
-          }
+          console.warn('[Admin trends] Todas as tentativas com recorte temporal falharam; dados sem período não serão exibidos.');
         }
       }
     } catch (error) {
@@ -585,6 +683,7 @@
       trends = [];
     }
 
+    markMetricAvailability('trends', hadSuccessfulSource, hadSuccessfulSource ? 'period_scoped' : 'unavailable');
     return trends;
   }
 
@@ -596,10 +695,10 @@
         .limit(limit || 1500);
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error && Array.isArray(result.data)) return result.data;
+      if (!result.error && Array.isArray(result.data)) return tagRowsAvailability(result.data, true, tableName);
     } catch (_) { }
 
-    return [];
+    return tagRowsAvailability([], false, tableName);
   }
 
   async function queryAdEventRows(client, since, eventName, limit) {
@@ -612,80 +711,154 @@
         .limit(limit || 2000);
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error && Array.isArray(result.data)) return result.data;
+      if (!result.error && Array.isArray(result.data)) return tagRowsAvailability(result.data, true, 'ad_events');
     } catch (_) { }
 
-    return [];
+    return tagRowsAvailability([], false, 'ad_events');
+  }
+
+  function numberOrNull(value) {
+    if (value === null || typeof value === 'undefined' || value === '') return null;
+    var parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   async function loadAdOverview(client, since) {
-    var empty = {
-      ok: true,
-      source: 'fallback',
-      settings: { status: 'disabled', provider: 'direct', auto_ads_enabled: false },
-      campaigns: { total: 0, active: 0, paused: 0, draft: 0, archived: 0 },
-      metrics: { impressions: 0, clicks: 0, ctr: 0 },
-      active_without_impressions: 0,
-      expired_active: 0
+    var unavailable = {
+      ok: false,
+      available: false,
+      source: 'unavailable',
+      availability: {
+        complete: false,
+        settings: false,
+        campaigns: false,
+        impressions: false,
+        clicks: false,
+        metrics: false
+      },
+      settings: { status: null, provider: null, auto_ads_enabled: null },
+      campaigns: { total: null, active: null, paused: null, draft: null, archived: null },
+      metrics: { impressions: null, clicks: null, ctr: null },
+      active_without_impressions: null,
+      expired_active: null
     };
-    if (!client) return empty;
+    if (!client) {
+      markMetricAvailability('ads', false, 'no_client');
+      return unavailable;
+    }
 
     try {
       var rpc = await client.rpc('kc_admin_ads_overview', { p_since: since || null });
       if (!rpc.error && rpc.data && rpc.data.ok !== false) {
-        var next = Object.assign({}, empty, rpc.data, { source: 'rpc' });
-        next.settings = Object.assign({}, empty.settings, next.settings || {});
-        next.campaigns = Object.assign({}, empty.campaigns, next.campaigns || {});
-        next.metrics = Object.assign({}, empty.metrics, next.metrics || {});
-        next.active_without_impressions = Number(
-          next.active_without_impressions || next.campaigns.active_without_impressions || 0
-        );
-        next.expired_active = Number(next.expired_active || next.campaigns.expired_active || 0);
+        var next = Object.assign({}, unavailable, rpc.data, {
+          ok: true,
+          available: true,
+          source: 'rpc',
+          availability: {
+            complete: true,
+            settings: true,
+            campaigns: true,
+            impressions: true,
+            clicks: true,
+            metrics: true
+          }
+        });
+        next.settings = Object.assign({}, unavailable.settings, rpc.data.settings || {});
+        next.campaigns = Object.assign({}, unavailable.campaigns, rpc.data.campaigns || {});
+        next.metrics = Object.assign({}, unavailable.metrics, rpc.data.metrics || {});
+        ['total', 'active', 'paused', 'draft', 'archived'].forEach(function (key) {
+          next.campaigns[key] = numberOrNull(next.campaigns[key]);
+        });
+        ['impressions', 'clicks', 'ctr'].forEach(function (key) {
+          next.metrics[key] = numberOrNull(next.metrics[key]);
+        });
+        var activeWithoutImpressions = rpc.data.active_without_impressions;
+        if (activeWithoutImpressions === null || typeof activeWithoutImpressions === 'undefined') {
+          activeWithoutImpressions = next.campaigns.active_without_impressions;
+        }
+        var expiredActive = rpc.data.expired_active;
+        if (expiredActive === null || typeof expiredActive === 'undefined') {
+          expiredActive = next.campaigns.expired_active;
+        }
+        next.active_without_impressions = numberOrNull(activeWithoutImpressions);
+        next.expired_active = numberOrNull(expiredActive);
+        markMetricAvailability('ads', true, 'rpc');
         return next;
       }
     } catch (_) { }
 
     var campaigns = [];
+    var campaignsAvailable = false;
     try {
       var campaignResult = await client.from('ad_campaigns')
         .select('id,status,ends_at')
         .limit(2000);
-      if (!campaignResult.error && Array.isArray(campaignResult.data)) campaigns = campaignResult.data;
+      if (!campaignResult.error && Array.isArray(campaignResult.data)) {
+        campaigns = campaignResult.data;
+        campaignsAvailable = true;
+      }
     } catch (_) { }
 
-    var settings = empty.settings;
+    var settings = Object.assign({}, unavailable.settings);
+    var settingsAvailable = false;
     try {
       var settingsRpc = await client.rpc('kc_admin_get_ad_network_settings');
       if (!settingsRpc.error && settingsRpc.data && settingsRpc.data.ok !== false && settingsRpc.data.settings) {
-        settings = settingsRpc.data.settings;
+        settings = Object.assign({}, unavailable.settings, settingsRpc.data.settings);
+        settingsAvailable = true;
       }
     } catch (_) { }
 
     var impressions = await queryAdEventRows(client, since, 'ad_impression', 5000);
     var clicks = await queryAdEventRows(client, since, 'ad_click', 5000);
+    var impressionsAvailable = impressions.__kcAvailable === true;
+    var clicksAvailable = clicks.__kcAvailable === true;
     var impressionIds = new Set(impressions.map(function (row) { return String(row && row.entity_id || ''); }).filter(Boolean));
-    var counts = campaigns.reduce(function (acc, row) {
-      var status = String(row && row.status || 'draft');
-      acc.total += 1;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, { total: 0, active: 0, paused: 0, draft: 0, archived: 0 });
+    var counts = campaignsAvailable
+      ? campaigns.reduce(function (acc, row) {
+          var status = String(row && row.status || 'draft');
+          acc.total += 1;
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, { total: 0, active: 0, paused: 0, draft: 0, archived: 0 })
+      : Object.assign({}, unavailable.campaigns);
     var now = Date.now();
-    var activeWithoutImpressions = campaigns.filter(function (row) {
-      return row && row.status === 'active' && !impressionIds.has(String(row.id || ''));
-    }).length;
-    var expiredActive = campaigns.filter(function (row) {
-      return row && row.status === 'active' && row.ends_at && new Date(row.ends_at).getTime() < now;
-    }).length;
+    var activeWithoutImpressions = campaignsAvailable && impressionsAvailable
+      ? campaigns.filter(function (row) {
+          return row && row.status === 'active' && !impressionIds.has(String(row.id || ''));
+        }).length
+      : null;
+    var expiredActive = campaignsAvailable
+      ? campaigns.filter(function (row) {
+          return row && row.status === 'active' && row.ends_at && new Date(row.ends_at).getTime() < now;
+        }).length
+      : null;
+    var metricsAvailable = impressionsAvailable && clicksAvailable;
+    var complete = settingsAvailable && campaignsAvailable && metricsAvailable;
+    var anyAvailable = settingsAvailable || campaignsAvailable || impressionsAvailable || clicksAvailable;
+    var source = complete ? 'fallback' : (anyAvailable ? 'partial' : 'unavailable');
+    var availability = {
+      complete: complete,
+      settings: settingsAvailable,
+      campaigns: campaignsAvailable,
+      impressions: impressionsAvailable,
+      clicks: clicksAvailable,
+      metrics: metricsAvailable
+    };
+    markMetricAvailability('ads', complete, source);
     return {
-      ok: true,
-      source: 'fallback',
+      ok: complete,
+      available: complete,
+      source: source,
+      availability: availability,
       settings: settings,
       campaigns: counts,
       metrics: {
-        impressions: impressions.length,
-        clicks: clicks.length,
-        ctr: impressions.length ? Math.round((clicks.length / impressions.length) * 10000) / 100 : 0,
+        impressions: impressionsAvailable ? impressions.length : null,
+        clicks: clicksAvailable ? clicks.length : null,
+        ctr: metricsAvailable
+          ? (impressions.length ? Math.round((clicks.length / impressions.length) * 10000) / 100 : 0)
+          : null,
       },
       active_without_impressions: activeWithoutImpressions,
       expired_active: expiredActive,
@@ -700,7 +873,8 @@
       var rpc = await client.rpc('kc_admin_dashboard_daily_metrics', {
         p_since: since || null
       });
-      if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length) {
+      if (!rpc.error && Array.isArray(rpc.data)) {
+        markMetricAvailability('dailyMetrics', true, 'rpc');
         if (typeof utils.buildDailyMetricsSeries === 'function') {
           return utils.buildDailyMetricsSeries(rpc.data, since, until);
         }
@@ -729,7 +903,13 @@
     ]);
     throwIfAborted(signal);
 
+    if (eventSets.some(function (rows) { return !rows || rows.__kcAvailable !== true; })) {
+      markMetricAvailability('dailyMetrics', false);
+      return [];
+    }
+
     if (typeof utils.buildDailyMetricsFromEventSets === 'function') {
+      markMetricAvailability('dailyMetrics', true, 'period_scoped_fallback');
       return utils.buildDailyMetricsFromEventSets({
         posts: eventSets[0],
         comments: eventSets[1],
@@ -746,6 +926,7 @@
       }, since, until);
     }
 
+    markMetricAvailability('dailyMetrics', false);
     return [];
   }
 

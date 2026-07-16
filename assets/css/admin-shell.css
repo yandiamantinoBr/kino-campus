@@ -210,7 +210,7 @@ body.kc-admin-page .kc-header--admin .kc-scroll-rail--admin {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768.98px) {
   .kc-header--admin .kc-admin-nav,
   .kc-header--admin .kc-scroll-rail--admin { display: none; }
 
@@ -412,6 +412,23 @@ body.kc-admin-page .kc-admin-invite-feedback.is-info { color: var(--kc-text-dark
 
 body.kc-admin-page .kc-mobile-nav {
   z-index: 1200;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.kc-admin-page .kc-mobile-nav::-webkit-scrollbar {
+  display: none;
+}
+
+body.kc-admin-page .kc-mobile-nav > a {
+  flex: 0 0 58px;
+  min-width: 58px;
+  scroll-snap-align: start;
 }
 
 body.kc-admin-page.kc-admin-modal-open {
@@ -531,6 +548,13 @@ body.kc-admin-page--dashboard .kc-admin-chart-svg {
 
 body.kc-admin-page--dashboard .kc-admin-chart-hit {
   cursor: crosshair;
+}
+
+body.kc-admin-page--dashboard .kc-admin-chart-hit:focus-visible {
+  outline: none;
+  stroke: var(--kc-primary-brand);
+  stroke-width: 2;
+  fill: rgba(255, 107, 0, 0.08);
 }
 
 body.kc-admin-page--dashboard .kc-admin-chart-tooltip {
@@ -1004,12 +1028,16 @@ body.kc-admin-page--dashboard .kc-admin-chart-modal__body .kc-admin-chart-shell 
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768.98px) {
   body.kc-admin-page {
     --kc-admin-header-inline-padding: 12px;
     --kc-admin-wrapper-padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     --kc-admin-modal-viewport-gap: 12px;
     --kc-admin-chart-modal-viewport-gap: 12px;
+  }
+
+  body.kc-admin-page .kc-mobile-nav {
+    display: flex !important;
   }
 
   body.kc-admin-page .kc-admin-wrapper {

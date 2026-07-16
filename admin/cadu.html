@@ -8,9 +8,9 @@
   <meta name="description" content="Painel administrativo do Cadu (OpenClaw) - curador de sites UFG." />
   <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
-  <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+  <script defer src="/_vercel/insights/script.js"></script>
   <title>KinoCampus - Admin Cadu (OpenClaw)</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.6" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.10" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -515,7 +515,7 @@
     .kc-cadu-status-dot--loading { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.18); animation: kc-cadu-pulse 1.4s infinite; }
     @keyframes kc-cadu-pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.2" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.10" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -564,7 +564,7 @@
 
       <!-- Auth gate: loading / acesso negado (controlado pelo admin-cadu.controller.js) -->
       <div id="cadu-loading" role="status" aria-live="polite">
-        <i class="fas fa-spinner fa-spin"></i>
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
         <div>Verificando permissões…</div>
       </div>
       <div id="cadu-access-denied" role="alert"></div>
@@ -578,7 +578,7 @@
           <h1><i class="fas fa-robot"></i> Cadu (OpenClaw)</h1>
           <p>Curador de sites institucionais e perfis do Instagram da UFG. Dados ao vivo da VPS Hostinger via cadu-api.</p>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin"></i> Checando cadu-api…</span>
+            <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Checando cadu-api…</span>
             <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
             <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites, pipeline, feed e OpenClaw em uma requisição)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> API de contexto</span>
             <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api" data-i18n-tooltip="tooltip.cadu-version"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
@@ -970,7 +970,7 @@
 
   <!-- Scripts -->
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.3"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.10"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -989,7 +989,7 @@
   <script defer src="../assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="../assets/js/api/kc-supabase.client.js?v=8.6.8"></script>
-  <script defer src="../assets/js/api/admin-shell.js?v=8.6.2"></script>
+  <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
   <script defer src="../assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.saved.adapter.js?v=8.6.1"></script>
@@ -1003,7 +1003,7 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
 
   <!-- Cadu controller -->
-  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.9"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.10"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a36e7ff58eac3281"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=3958a17d8ad8f1cd"></script>
 </body>

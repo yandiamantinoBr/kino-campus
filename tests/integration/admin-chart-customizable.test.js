@@ -86,14 +86,14 @@ function loadCharts() {
 
 describe('Rodada 2 — migrations', () => {
   test('Migration A adiciona 3 séries (views/curtidas/sessões) preservando o hardening', () => {
-    const sql = r('supabase/migrations/_archive-v75/20260531160000_admin_daily_metrics_traffic_series.sql');
+    const sql = r('supabase/migrations/20260716120242_harden_admin_dashboard_analytics.sql');
     ['post_views_count', 'comment_likes_count', 'sessions_count'].forEach((k) => expect(sql).toContain(k));
-    expect(sql).toContain('public.post_view_events');
+    expect(sql).toContain('public.privacy_analytics_events');
     expect(sql).toContain('public.comment_likes');
-    expect(sql).toContain('count(distinct session_id)');
+    expect(sql).toContain('count(distinct session_hash)');
     expect(sql).toContain("set search_path = ''");
     expect(sql).toContain('security definer');
-    expect(sql).toContain('select * from kc_private.kc_admin_dashboard_daily_metrics($1)');
+    expect(sql).toContain('kc_private.kc_admin_dashboard_daily_metrics_impl($1)');
   });
 
   test('Migration B cria prefs por admin com RLS owner-only + RPCs INVOKER gated', () => {
@@ -156,6 +156,25 @@ describe('Rodada 2 — customização (charts.js)', () => {
     expect(legend).toMatch(/data-series-key="posts_count"[^>]*aria-pressed="true"/);
     expect(legend).toMatch(/data-series-key="reports_count"[^>]*aria-pressed="false"/);
     expect(legend).toContain('is-hidden');
+  });
+
+  test('descarta cor persistida inválida antes de gerar HTML e SVG', () => {
+    const charts = loadCharts();
+    const els = {
+      '#admin-daily-activity-chart': el(),
+      '#admin-daily-activity-legend': el(),
+      '#admin-chart-expand-btn': el()
+    };
+    const prefs = {
+      visible: ['posts_count'],
+      colors: { posts_count: '#fff" onload="alert(1)' }
+    };
+
+    charts.renderDailyActivityChart(SERIES, makeDeps(els, prefs));
+
+    expect(els['#admin-daily-activity-chart'].innerHTML).not.toContain('onload=');
+    expect(els['#admin-daily-activity-legend'].innerHTML).not.toContain('onload=');
+    expect(els['#admin-daily-activity-chart'].innerHTML).toContain('stroke="#ff6b00"');
   });
 
   test('usa o padrão quando não há preferências salvas', () => {

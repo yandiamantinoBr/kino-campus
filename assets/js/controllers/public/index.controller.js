@@ -480,6 +480,74 @@
     loadRanking(currentPeriod, null, container);
   }
 
+  function getSafeRankingAvatarUrl(value) {
+    var raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      var parsed = new URL(raw, window.location.href);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+      parsed.username = '';
+      parsed.password = '';
+      return parsed.href;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function renderRankingFallback(container, users) {
+    container.textContent = '';
+    var fragment = document.createDocumentFragment();
+
+    users.forEach(function (user, index) {
+      var name = String((user && user.display_name) || 'Usuário');
+      var scoreValue = Number(user && user.score);
+      var score = Number.isFinite(scoreValue) ? Math.max(0, Math.round(scoreValue)) : 0;
+      var avatarSrc = getSafeRankingAvatarUrl(user && user.avatar_url);
+      var link = document.createElement('a');
+      var avatar = document.createElement('div');
+      var position = document.createElement('span');
+      var moduleIcon = document.createElement('i');
+      var nameEl = document.createElement('span');
+      var scoreEl = document.createElement('span');
+
+      link.className = 'kc-ranking-user';
+      link.href = 'profile.html?id=' + encodeURIComponent(String((user && user.user_id) || ''));
+      link.title = name + ' — ' + score + ' pts';
+      avatar.className = 'kc-ranking-user-avatar';
+      position.className = 'kc-ranking-user-position';
+      moduleIcon.className = 'fas fa-campground';
+      moduleIcon.setAttribute('aria-hidden', 'true');
+      position.appendChild(moduleIcon);
+      position.appendChild(document.createTextNode(String(index + 1)));
+
+      if (avatarSrc) {
+        var image = document.createElement('img');
+        image.src = avatarSrc;
+        image.alt = name;
+        image.loading = 'lazy';
+        avatar.appendChild(image);
+      } else {
+        var userIcon = document.createElement('i');
+        userIcon.className = 'fas fa-user';
+        userIcon.setAttribute('aria-hidden', 'true');
+        userIcon.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);';
+        avatar.appendChild(userIcon);
+      }
+
+      avatar.appendChild(position);
+      nameEl.className = 'kc-ranking-user-name';
+      nameEl.textContent = name;
+      scoreEl.className = 'kc-ranking-user-score';
+      scoreEl.textContent = score + ' pts';
+      link.appendChild(avatar);
+      link.appendChild(nameEl);
+      link.appendChild(scoreEl);
+      fragment.appendChild(link);
+    });
+
+    container.appendChild(fragment);
+  }
+
   function loadRanking(period, module, container) {
     if (window.KCRanking && typeof window.KCRanking.loadHomeRanking === 'function') {
       window.KCRanking.loadHomeRanking(container, period, module);
@@ -489,28 +557,14 @@
     var api = window.KCAPI;
     if (!api || typeof api.getTopContributors !== 'function') return;
 
-    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin"></i></span>';
+    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
 
     api.getTopContributors(period, module, 10).then(function (users) {
       if (!users || users.length === 0) {
         container.innerHTML = '<span class="kc-ranking-empty">Nenhum contribuidor no período.</span>';
         return;
       }
-      var iconClass = (window.KCRanking && window.KCRanking.getModuleIcon) ? window.KCRanking.getModuleIcon(module) : 'fas fa-campground';
-      container.innerHTML = users.map(function (u, i) {
-        var name = u.display_name || 'Usuário';
-        var avatarSrc = u.avatar_url || '';
-        var avatarHtml = avatarSrc
-          ? '<img src="' + avatarSrc + '" alt="' + name + '" loading="lazy">'
-          : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);"></i>';
-        return '<a href="profile.html?id=' + u.user_id + '" class="kc-ranking-user" title="' + name + ' — ' + u.score + ' pts">' +
-          '<div class="kc-ranking-user-avatar">' + avatarHtml +
-            '<span class="kc-ranking-user-position"><i class="' + iconClass + '"></i>' + (i + 1) + '</span>' +
-          '</div>' +
-          '<span class="kc-ranking-user-name">' + name + '</span>' +
-          '<span class="kc-ranking-user-score">' + u.score + ' pts</span>' +
-        '</a>';
-      }).join('');
+      renderRankingFallback(container, users);
     }).catch(function () {
       container.innerHTML = '<span class="kc-ranking-empty">Erro ao carregar ranking.</span>';
     });

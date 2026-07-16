@@ -34,6 +34,23 @@
     return String(value == null ? '' : value);
   }
 
+  function getSafeAvatarUrl(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw || raw.length > 2048) return '';
+    try {
+      var base = (window.location && window.location.origin)
+        ? window.location.origin
+        : 'https://www.kinocampus.com.br';
+      var parsed = new URL(raw, base);
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return '';
+      parsed.username = '';
+      parsed.password = '';
+      return parsed.href;
+    } catch (_) {
+      return '';
+    }
+  }
+
   function toNumberValue(deps, value) {
     if (deps && typeof deps.toNumber === 'function') return deps.toNumber(value);
     var parsed = Number(value);
@@ -43,9 +60,9 @@
   function getPeriodLabelValue(deps, days) {
     if (deps && typeof deps.getPeriodLabel === 'function') return deps.getPeriodLabel(days);
     if (days <= 1) return 'hoje';
-    if (days <= 7) return 'esta semana';
-    if (days <= 90) return 'últimos 90 dias';
-    if (days >= 365) return 'este ano';
+    if (days <= 7) return 'últimos 7 dias';
+    if (days <= 90 && days > 30) return 'últimos 90 dias';
+    if (days >= 365) return 'últimos 365 dias';
     return 'últimos ' + (days || 30) + ' dias';
   }
 
@@ -80,6 +97,9 @@
   // Módulo do termo priorizando a classificação por conteúdo (servidor) e caindo
   // no dicionário; reusa KCAdminDashboardUtils.resolveTermModule quando disponível.
   function resolveTermModuleValue(deps, trend) {
+    if (deps && typeof deps.resolveTermModule === 'function') {
+      return deps.resolveTermModule(trend);
+    }
     var utils = getDashboardUtils();
     if (typeof utils.resolveTermModule === 'function') {
       return utils.resolveTermModule(trend, window.KC_CONSTANTS || {});
@@ -132,6 +152,11 @@
   function getData(deps) {
     if (deps && typeof deps.getData === 'function') return deps.getData();
     return getStateBucket().data || null;
+  }
+
+  function isSourceAvailable(deps, key) {
+    var data = getData(deps);
+    return !data || data[key] !== false;
   }
 
   function setData(deps, value) {
@@ -187,6 +212,24 @@
     return nextValue;
   }
 
+  function refreshExportAvailability(deps) {
+    if (deps && typeof deps.refreshExportAvailability === 'function') {
+      deps.refreshExportAvailability();
+    }
+  }
+
+  function setRankingPending(deps, requestSeq, pending) {
+    var state = getStateBucket();
+    if (pending) {
+      state.rankingPending = true;
+      state.rankingPendingRequestSeq = requestSeq;
+    } else if (Number(state.rankingPendingRequestSeq) === Number(requestSeq)) {
+      state.rankingPending = false;
+      state.rankingPendingRequestSeq = null;
+    }
+    refreshExportAvailability(deps);
+  }
+
   function showStatusToast(deps, message, tone, options) {
     if (deps && typeof deps.showStatusToast === 'function') {
       deps.showStatusToast(message, tone, options);
@@ -201,7 +244,7 @@
 
     var byModule = {};
     (trends || []).forEach(function (trend) {
-      var moduleKey = classifyTermToModuleValue(deps, trend && trend.term);
+      var moduleKey = resolveTermModuleValue(deps, trend);
       if (!moduleKey) return;
       if (!byModule[moduleKey]) {
         byModule[moduleKey] = {
@@ -221,79 +264,6 @@
     }).sort(function (a, b) {
       return b.count - a.count;
     });
-  }
-
-  function renderSearchTrendsByModule(trends, periodDays, deps) {
-    var container = select(deps, '#admin-trends-modules');
-    if (!container) return;
-
-    var moduleData = aggregateTrendsByModule(trends, deps);
-    if (!moduleData.length) {
-      container.style.display = 'none';
-      container.innerHTML = '';
-      return;
-    }
-
-    container.style.display = 'flex';
-    var periodLabel = getPeriodLabelValue(deps, periodDays || 30);
-    var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells" aria-hidden="true"></i> Por módulo (' + escHtml(deps, periodLabel) + ')</div>';
-
-    container.innerHTML = titleHtml + moduleData.map(function (moduleRow) {
-      var topTerms = moduleRow.terms.slice(0, 3).map(function (term) {
-        return escHtml(deps, term);
-      }).join(', ');
-
-      return '<span class="kc-trend-module-badge" title="' + escHtml(deps, topTerms) + '">'
-        + '<i class="' + escHtml(deps, moduleRow.icon || getModuleIconValue(deps, moduleRow.module)) + '"></i> ' + escHtml(deps, moduleRow.label || getModuleLabelValue(deps, moduleRow.module))
-        + '<span class="kc-badge-count">' + (Number(moduleRow.count) || 0) + '</span>'
-        + '</span>';
-    }).join('');
-  }
-
-  function renderSearchTrends(trends, periodDays, deps) {
-    var trendsList = select(deps, '#admin-trends-list');
-    if (!trendsList) return;
-
-    if (!trends || !trends.length) {
-      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>';
-      var modContainer = select(deps, '#admin-trends-modules');
-      if (modContainer) {
-        modContainer.style.display = 'none';
-        modContainer.innerHTML = '';
-      }
-      var coverageEmpty = select(deps, '#admin-trends-coverage');
-      if (coverageEmpty) coverageEmpty.textContent = '';
-      return;
-    }
-
-    var max = Math.max.apply(null, trends.map(function (trend) {
-      return Number(trend && trend.count) || 1;
-    }).concat([1]));
-
-    trendsList.innerHTML = trends.map(function (trend, index) {
-      var pct = Math.round(((Number(trend && trend.count) || 0) / max) * 100);
-      var modKey = resolveTermModuleValue(deps, trend);
-      var modBadge = modKey
-        ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtml(deps, getModuleLabelValue(deps, modKey)) + '"><i class="' + escHtml(deps, getModuleIconValue(deps, modKey)) + '"></i></span>'
-        : '';
-
-      return '<li class="kc-trend-item">'
-        + '<span class="kc-trend-rank">' + (index + 1) + '</span>'
-        + '<span class="kc-trend-term">' + escHtml(deps, String((trend && trend.term) || '')) + modBadge + '</span>'
-        + '<div class="kc-trend-bar-wrap"><div class="kc-trend-bar" style="width:' + pct + '%"></div></div>'
-        + '<span class="kc-trend-count">' + (Number(trend && trend.count) || 0) + '</span>'
-        + '</li>';
-    }).join('');
-
-    var classifiedCount = trends.reduce(function (acc, t) {
-      return acc + (resolveTermModuleValue(deps, t) ? 1 : 0);
-    }, 0);
-    var coverageEl = select(deps, '#admin-trends-coverage');
-    if (coverageEl) {
-      coverageEl.textContent = Math.round((classifiedCount / trends.length) * 100) + '% classificados';
-    }
-
-    renderSearchTrendsByModule(trends, periodDays, deps);
   }
 
   function hydrateTrendRows(trends, deps) {
@@ -394,12 +364,12 @@
 
     container.style.display = 'flex';
     var periodLabel = getPeriodLabelValue(deps, periodDays || 30);
-    var totalCount = moduleData.reduce(function (acc, row) {
-      return acc + (Number(row.count) || 0);
+    var totalCount = (trends || []).reduce(function (acc, row) {
+      return acc + (Number(row && row.count) || 0);
     }, 0);
     var titleHtml = '<div class="kc-trend-module-title" style="width:100%;"><i class="fas fa-table-cells" aria-hidden="true"></i> Por módulo (' + escHtml(deps, periodLabel) + ') - clique para filtrar</div>';
     var allButton = '<button type="button" class="kc-trend-module-badge' + (!state.module ? ' is-active' : '') + '" data-trend-module="" aria-pressed="' + (!state.module ? 'true' : 'false') + '" title="Mostrar todos os módulos">'
-      + '<i class="fas fa-layer-group"></i> Todos'
+      + '<i class="fas fa-layer-group" aria-hidden="true"></i> Todos'
       + '<span class="kc-badge-count">' + totalCount + '</span>'
       + '</button>';
 
@@ -409,7 +379,7 @@
       }).join(', ');
 
       return '<button type="button" class="kc-trend-module-badge' + (state.module === moduleRow.module ? ' is-active' : '') + '" data-trend-module="' + escHtml(deps, moduleRow.module || '') + '" aria-pressed="' + (state.module === moduleRow.module ? 'true' : 'false') + '" title="' + escHtml(deps, topTerms || 'Filtrar por módulo') + '">'
-        + '<i class="' + escHtml(deps, moduleRow.icon || getModuleIconValue(deps, moduleRow.module)) + '"></i> ' + escHtml(deps, moduleRow.label || getModuleLabelValue(deps, moduleRow.module))
+        + '<i class="' + escHtml(deps, moduleRow.icon || getModuleIconValue(deps, moduleRow.module)) + '" aria-hidden="true"></i> ' + escHtml(deps, moduleRow.label || getModuleLabelValue(deps, moduleRow.module))
         + '<span class="kc-badge-count">' + (Number(moduleRow.count) || 0) + '</span>'
         + '</button>';
     }).join('');
@@ -438,7 +408,7 @@
         var pct = Math.round(((Number(trend && trend.count) || 0) / max) * 100);
         var modKey = trend.__module;
         var modBadge = modKey
-          ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtml(deps, trend.__moduleLabel || getModuleLabelValue(deps, modKey)) + '"><i class="' + escHtml(deps, getModuleIconValue(deps, modKey)) + '"></i></span>'
+          ? '<span style="font-size:.72rem;color:var(--kc-text-dark-secondary);margin-left:4px;" title="' + escHtml(deps, trend.__moduleLabel || getModuleLabelValue(deps, modKey)) + '"><i class="' + escHtml(deps, getModuleIconValue(deps, modKey)) + '" aria-hidden="true"></i></span>'
           : '';
 
         return '<li class="kc-trend-item">'
@@ -476,6 +446,7 @@
   function renderSearchTrends(trends, periodDays, deps) {
     var trendsList = select(deps, '#admin-trends-list');
     if (!trendsList) return;
+    var sourceAvailable = isSourceAvailable(deps, 'trendsAvailable');
 
     var state = getTrendState();
     state.rows = hydrateTrendRows(trends, deps);
@@ -486,12 +457,19 @@
     state.pageSize = Math.max(5, Math.min(Number(state.pageSize) || 10, 50));
 
     var queryInput = select(deps, '#admin-trends-query');
-    if (queryInput) queryInput.value = '';
+    if (queryInput) {
+      queryInput.value = '';
+      queryInput.disabled = !sourceAvailable;
+    }
+    var pageSizeSelect = select(deps, '#admin-trends-page-size');
+    if (pageSizeSelect) pageSizeSelect.disabled = !sourceAvailable;
 
     bindSearchTrendControls(deps);
 
     if (!state.rows.length) {
-      trendsList.innerHTML = '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>';
+      trendsList.innerHTML = sourceAvailable
+        ? '<li class="kc-trend-empty">Nenhuma busca registrada ainda. As buscas feitas na plataforma aparecerão aqui.</li>'
+        : '<li class="kc-trend-empty">Tendências de busca indisponíveis neste carregamento. Tente atualizar novamente.</li>';
       var modContainer = select(deps, '#admin-trends-modules');
       if (modContainer) {
         modContainer.style.display = 'none';
@@ -500,16 +478,29 @@
       var coverageEmpty = select(deps, '#admin-trends-coverage');
       if (coverageEmpty) coverageEmpty.textContent = '';
       var summaryEmpty = select(deps, '#admin-trends-summary');
-      if (summaryEmpty) summaryEmpty.textContent = 'Sem termos no período selecionado.';
+      if (summaryEmpty) {
+        summaryEmpty.textContent = sourceAvailable
+          ? 'Sem termos no período selecionado.'
+          : 'Fonte indisponível; este estado não representa zero buscas.';
+      }
+      var pageLabelEmpty = select(deps, '#admin-trends-page-label');
+      if (pageLabelEmpty) pageLabelEmpty.textContent = 'Página 1 de 1';
+      var prevEmpty = select(deps, '#admin-trends-prev');
+      if (prevEmpty) prevEmpty.disabled = true;
+      var nextEmpty = select(deps, '#admin-trends-next');
+      if (nextEmpty) nextEmpty.disabled = true;
       return;
     }
 
-    var classifiedCount = state.rows.reduce(function (acc, t) {
-      return acc + (t.__module ? 1 : 0);
+    var totalVolume = state.rows.reduce(function (acc, t) {
+      return acc + (Number(t && t.count) || 0);
+    }, 0);
+    var classifiedVolume = state.rows.reduce(function (acc, t) {
+      return acc + (t.__module ? (Number(t && t.count) || 0) : 0);
     }, 0);
     var coverageEl = select(deps, '#admin-trends-coverage');
     if (coverageEl) {
-      coverageEl.textContent = Math.round((classifiedCount / state.rows.length) * 100) + '% classificados';
+      coverageEl.textContent = (totalVolume > 0 ? Math.round((classifiedVolume / totalVolume) * 100) : 0) + '% do volume classificado';
     }
 
     renderSearchTrendPage(deps);
@@ -518,6 +509,11 @@
   function renderDailyActivitySummary(summary, deps) {
     var container = select(deps, '#admin-daily-activity-summary');
     if (!container) return;
+
+    if (!isSourceAvailable(deps, 'dailyAvailable')) {
+      container.innerHTML = '<div class="kc-admin-empty">Pulso diário indisponível neste carregamento. Tente atualizar novamente.</div>';
+      return;
+    }
 
     if (!summary) {
       container.innerHTML = '<div class="kc-admin-empty">Sem dados diários para resumir.</div>';
@@ -546,7 +542,7 @@
 
     container.innerHTML = [
       '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Pico diário</span><strong>' + toNumberValue(deps, summary.peakTotal) + '</strong><small>' + escHtml(deps, peakLabel) + '</small></div>',
-      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Média diária</span><strong>' + escHtml(deps, String(summary.averageTotal || 0)) + '</strong><small>Eventos/dia consolidados</small></div>',
+      '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Média diária</span><strong>' + escHtml(deps, String(summary.averageTotal || 0)) + '</strong><small>Ações/dia; sessões e impressões excluídas</small></div>',
       '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Momentum</span><strong style="color:' + momentumColor + ';"><i class="' + momentumIcon + '" aria-hidden="true"></i> ' + momentumText + '</strong><small>2ª metade vs. 1ª do período</small></div>',
       '<div class="kc-admin-kpi"><span class="kc-admin-kpi__label">Dias ativos</span><strong>' + activeDays + '</strong><small>de ' + totalDays + ' dias com atividade</small></div>'
     ].join('');
@@ -592,11 +588,33 @@
     return !!getHiddenSeries()[key];
   }
 
+  function normalizeSeriesColor(value, fallback) {
+    var match = String(value == null ? '' : value).trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!match) return fallback || '';
+    var hex = match[1].toLowerCase();
+    if (hex.length === 3) {
+      hex = hex.split('').map(function (part) { return part + part; }).join('');
+    }
+    return '#' + hex;
+  }
+
+  function sanitizeSeriesColors(deps, colors) {
+    var source = colors && typeof colors === 'object' ? colors : {};
+    var sanitized = {};
+    getSeriesMeta(deps).forEach(function (meta) {
+      var color = normalizeSeriesColor(source[meta.key], '');
+      if (color) sanitized[meta.key] = color;
+    });
+    return sanitized;
+  }
+
   // Aplica as cores customizadas (salvas pelo admin) sobre o meta base.
   function metaWithColors(deps) {
     var colors = getStateBucket().seriesColors || {};
     return getSeriesMeta(deps).map(function (meta) {
-      return colors[meta.key] ? Object.assign({}, meta, { color: colors[meta.key] }) : meta;
+      var baseColor = normalizeSeriesColor(meta.color, '#0f172a');
+      var customColor = normalizeSeriesColor(colors[meta.key], '');
+      return Object.assign({}, meta, { color: customColor || baseColor });
     });
   }
 
@@ -627,7 +645,7 @@
 
     var prefs = (deps && typeof deps.getInitialChartPrefs === 'function' && deps.getInitialChartPrefs()) || {};
     if (!bucket.seriesColors) {
-      bucket.seriesColors = (prefs.colors && typeof prefs.colors === 'object') ? Object.assign({}, prefs.colors) : {};
+      bucket.seriesColors = sanitizeSeriesColors(deps, prefs.colors);
     }
     if (!bucket.hiddenSeries) {
       var allKeys = getSeriesMeta(deps).map(function (m) { return m.key; });
@@ -658,10 +676,11 @@
   }
 
   function setSeriesColor(deps, key, hex) {
-    if (!key || !hex) return;
+    var normalized = normalizeSeriesColor(hex, '');
+    if (!key || !normalized) return;
     var bucket = getStateBucket();
     bucket.seriesColors = bucket.seriesColors || {};
-    bucket.seriesColors[key] = hex;
+    bucket.seriesColors[key] = normalized;
     applyChartState(deps);
     persistChartPrefs(deps);
   }
@@ -698,7 +717,7 @@
         var on = !hidden[m.key];
         html += '<label class="kc-series-picker__row">'
           + '<input type="checkbox" class="kc-series-picker__toggle"' + (on ? ' checked' : '') + ' data-series-key="' + escHtml(deps, m.key) + '">'
-          + '<span class="kc-series-picker__name"><i class="' + escHtml(deps, m.icon) + '" style="color:' + m.color + ';"></i> ' + escHtml(deps, m.label) + '</span>'
+          + '<span class="kc-series-picker__name"><i class="' + escHtml(deps, m.icon) + '" style="color:' + m.color + ';" aria-hidden="true"></i> ' + escHtml(deps, m.label) + '</span>'
           + '<input type="color" class="kc-series-picker__color" value="' + escHtml(deps, m.color) + '" data-series-key="' + escHtml(deps, m.key) + '" aria-label="Cor da série ' + escHtml(deps, m.label) + '">'
           + '</label>';
       });
@@ -766,7 +785,7 @@
         + ' title="' + escHtml(deps, (hidden ? 'Mostrar' : 'Ocultar') + ' série: ' + meta.label) + '"'
         + (matches ? '' : ' style="display:none;"') + '>'
         + '<span class="kc-admin-chart-legend__dot" style="background:' + meta.color + ';"></span>'
-        + '<span class="kc-admin-chart-legend__label"><i class="' + escHtml(deps, meta.icon) + '"></i> ' + escHtml(deps, meta.label) + '</span>'
+        + '<span class="kc-admin-chart-legend__label"><i class="' + escHtml(deps, meta.icon) + '" aria-hidden="true"></i> ' + escHtml(deps, meta.label) + '</span>'
         + '<span class="kc-admin-chart-legend__total">' + toNumberValue(deps, totals[meta.key]) + '</span>'
         + '</button>';
     }).join('');
@@ -803,8 +822,9 @@
       return '<line x1="' + padding + '" y1="' + y.toFixed(2) + '" x2="' + (width - padding) + '" y2="' + y.toFixed(2) + '" stroke="rgba(148,163,184,.24)" stroke-dasharray="4 4"></line>';
     }).join('');
 
+    var labelStride = Math.max(1, Math.ceil(series.length / 12));
     var labels = series.map(function (row, index) {
-      if (series.length > 14 && index % 2 === 1 && index !== series.length - 1) return '';
+      if (index !== 0 && index !== series.length - 1 && index % labelStride !== 0) return '';
       var x = padding + (step * index);
       return '<text x="' + x.toFixed(2) + '" y="' + (height - 6) + '" text-anchor="middle" fill="var(--kc-text-dark-secondary)" font-size="' + fontSize + '">' + escHtml(deps, row && row.label ? row.label : '') + '</text>';
     }).join('');
@@ -829,10 +849,13 @@
       var isEdge = index === 0 || index === series.length - 1;
       var bandLeft = index === 0 ? padding : (x - step / 2);
       var bandWidth = series.length === 1 ? innerWidth : (isEdge ? step / 2 : step);
-      return '<rect class="kc-admin-chart-hit" data-index="' + index + '" data-x="' + x.toFixed(2) + '" x="' + bandLeft.toFixed(2) + '" y="' + padding + '" width="' + Math.max(bandWidth, 1).toFixed(2) + '" height="' + innerHeight.toFixed(2) + '" fill="transparent"></rect>';
+      var accessibleValues = visibleMeta.map(function (meta) {
+        return meta.label + ': ' + toNumberValue(deps, row && row[meta.key]);
+      }).join(', ');
+      return '<rect class="kc-admin-chart-hit" data-index="' + index + '" data-x="' + x.toFixed(2) + '" x="' + bandLeft.toFixed(2) + '" y="' + padding + '" width="' + Math.max(bandWidth, 1).toFixed(2) + '" height="' + innerHeight.toFixed(2) + '" fill="transparent" tabindex="' + (index === 0 ? '0' : '-1') + '" focusable="true" role="button" aria-label="' + escHtml(deps, ((row && row.label) || '') + ': ' + accessibleValues) + '"></rect>';
     }).join('');
 
-    return '<svg class="kc-admin-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Gráfico diário de atividade" preserveAspectRatio="xMidYMid meet">'
+    return '<svg class="kc-admin-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="group" aria-label="Gráfico diário de atividade; use as setas para navegar entre os dias" preserveAspectRatio="xMidYMid meet">'
       + grid + lines + points + guide
       + '<g class="kc-admin-chart-hits">' + hits + '</g>'
       + labels
@@ -887,9 +910,7 @@
       if (guide && guide.style) guide.style.opacity = '0';
     }
 
-    function move(event) {
-      var target = event && event.target;
-      var hit = target && typeof target.closest === 'function' ? target.closest('.kc-admin-chart-hit') : null;
+    function showHit(hit, event) {
       if (!hit) { hide(); return; }
       var series = getStateBucket().lastSeries || [];
       var row = series[Number(hit.getAttribute('data-index'))];
@@ -899,8 +920,20 @@
       tip.innerHTML = buildTooltipHtml(deps, row);
       if (typeof chartEl.getBoundingClientRect === 'function' && tip.style) {
         var rect = chartEl.getBoundingClientRect();
-        var localX = (event.clientX || (event.touches && event.touches[0] ? event.touches[0].clientX : 0)) - rect.left;
-        var localY = (event.clientY || (event.touches && event.touches[0] ? event.touches[0].clientY : 0)) - rect.top;
+        var touch = event && event.touches && event.touches[0] ? event.touches[0] : null;
+        var clientX = event && Number.isFinite(event.clientX) && event.clientX
+          ? event.clientX
+          : (touch ? touch.clientX : null);
+        var clientY = event && Number.isFinite(event.clientY) && event.clientY
+          ? event.clientY
+          : (touch ? touch.clientY : null);
+        if (clientX == null || clientY == null) {
+          var hitRect = typeof hit.getBoundingClientRect === 'function' ? hit.getBoundingClientRect() : null;
+          clientX = hitRect ? hitRect.left + (hitRect.width / 2) : rect.left + 8;
+          clientY = hitRect ? hitRect.top + Math.min(hitRect.height / 2, 48) : rect.top + 8;
+        }
+        var localX = clientX - rect.left;
+        var localY = clientY - rect.top;
         var tipW = tip.offsetWidth || 160;
         var left = localX + 14;
         if (left + tipW > rect.width) left = Math.max(8, localX - tipW - 14);
@@ -918,10 +951,54 @@
       }
     }
 
+    function move(event) {
+      var target = event && event.target;
+      var hit = target && typeof target.closest === 'function' ? target.closest('.kc-admin-chart-hit') : null;
+      if (!hit) { hide(); return; }
+      showHit(hit, event);
+    }
+
     chartEl.addEventListener('mousemove', move);
     chartEl.addEventListener('mouseleave', hide);
     chartEl.addEventListener('touchstart', move, { passive: true });
     chartEl.addEventListener('touchmove', move, { passive: true });
+    chartEl.addEventListener('focusin', function (event) {
+      var target = event && event.target;
+      var hit = target && typeof target.closest === 'function' ? target.closest('.kc-admin-chart-hit') : null;
+      if (hit) showHit(hit, event);
+    });
+    chartEl.addEventListener('focusout', function () {
+      window.setTimeout(function () {
+        var active = document.activeElement;
+        if (!active || !chartEl.contains(active) || !active.closest || !active.closest('.kc-admin-chart-hit')) hide();
+      }, 0);
+    });
+    chartEl.addEventListener('keydown', function (event) {
+      var target = event && event.target;
+      var hit = target && typeof target.closest === 'function' ? target.closest('.kc-admin-chart-hit') : null;
+      if (!hit) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        showHit(hit, event);
+        return;
+      }
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) === -1) return;
+      var allHits = typeof chartEl.querySelectorAll === 'function'
+        ? Array.prototype.slice.call(chartEl.querySelectorAll('.kc-admin-chart-hit'))
+        : [];
+      if (!allHits.length) return;
+      var currentIndex = allHits.indexOf(hit);
+      var nextIndex = currentIndex;
+      if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = allHits.length - 1;
+      else if (event.key === 'ArrowLeft') nextIndex = Math.max(0, currentIndex - 1);
+      else if (event.key === 'ArrowRight') nextIndex = Math.min(allHits.length - 1, currentIndex + 1);
+      event.preventDefault();
+      allHits.forEach(function (item, index) {
+        item.setAttribute('tabindex', index === nextIndex ? '0' : '-1');
+      });
+      if (allHits[nextIndex] && typeof allHits[nextIndex].focus === 'function') allHits[nextIndex].focus();
+    });
   }
 
   // Liga clique (toggle de série) e busca à legenda (delegação no container).
@@ -989,9 +1066,13 @@
   function closeDailyActivityChartModal(deps) {
     var modal = select(deps, '#admin-chart-modal');
     if (!modal) return;
+    var expandBtn = select(deps, '#admin-chart-expand-btn');
 
     if (typeof modal.setAttribute === 'function') {
       modal.setAttribute('aria-hidden', 'true');
+    }
+    if (expandBtn && typeof expandBtn.setAttribute === 'function') {
+      expandBtn.setAttribute('aria-expanded', 'false');
     }
     if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
       window.KCAdminShell.setModalOpen(false);
@@ -1016,6 +1097,10 @@
     syncDailyActivityChartModal(data.dailyMetrics, deps);
     if (typeof modal.setAttribute === 'function') {
       modal.setAttribute('aria-hidden', 'false');
+    }
+    var expandBtn = select(deps, '#admin-chart-expand-btn');
+    if (expandBtn && typeof expandBtn.setAttribute === 'function') {
+      expandBtn.setAttribute('aria-expanded', 'true');
     }
     if (window.KCAdminShell && typeof window.KCAdminShell.setModalOpen === 'function') {
       window.KCAdminShell.setModalOpen(true);
@@ -1059,7 +1144,32 @@
     if (body && !body.dataset.adminChartEscBound) {
       body.dataset.adminChartEscBound = 'true';
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') closeDailyActivityChartModal(deps);
+        var activeModal = select(deps, '#admin-chart-modal');
+        var modalOpen = activeModal && activeModal.getAttribute('aria-hidden') === 'false';
+        if (event.key === 'Escape' && modalOpen) {
+          closeDailyActivityChartModal(deps);
+          return;
+        }
+        if (event.key !== 'Tab' || !modalOpen || typeof activeModal.querySelectorAll !== 'function') return;
+        var focusable = Array.prototype.slice.call(activeModal.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+        )).filter(function (element) {
+          if (element.hidden || (element.hasAttribute && element.hasAttribute('hidden'))) return false;
+          if (element.closest && element.closest('[aria-hidden="true"]')) return false;
+          var style = window.getComputedStyle ? window.getComputedStyle(element) : null;
+          if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+          return typeof element.getClientRects !== 'function' || element.getClientRects().length > 0;
+        });
+        if (!focusable.length) return;
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       });
     }
   }
@@ -1071,8 +1181,13 @@
     if (!chart || !legend) return;
     seedPrefsIfNeeded(deps);
 
-    if (!Array.isArray(series) || !series.length) {
-      chart.innerHTML = '<div class="kc-admin-empty">Sem dados suficientes para montar o gráfico diário.</div>';
+    var sourceAvailable = isSourceAvailable(deps, 'dailyAvailable');
+    if (!sourceAvailable || !Array.isArray(series) || !series.length) {
+      chart.innerHTML = '<div class="kc-admin-empty">'
+        + (sourceAvailable
+          ? 'Sem dados suficientes para montar o gráfico diário.'
+          : 'Gráfico diário indisponível neste carregamento. A ausência de série não representa zero atividade.')
+        + '</div>';
       legend.innerHTML = '';
       getStateBucket().lastSeries = [];
       syncDailyActivityChartModal([], deps);
@@ -1094,8 +1209,13 @@
     var container = select(deps, '#admin-module-share-table');
     if (!container) return;
 
-    if (!Array.isArray(rows) || !rows.length) {
-      container.innerHTML = '<div class="kc-admin-empty">Sem buscas suficientes para calcular participação por módulo.</div>';
+    var sourceAvailable = isSourceAvailable(deps, 'trendsAvailable');
+    if (!sourceAvailable || !Array.isArray(rows) || !rows.length) {
+      container.innerHTML = '<div class="kc-admin-empty">'
+        + (sourceAvailable
+          ? 'Sem buscas suficientes para calcular participação por módulo.'
+          : 'Participação por módulo indisponível neste carregamento. A fonte de tendências não respondeu.')
+        + '</div>';
       return;
     }
 
@@ -1103,7 +1223,7 @@
       rows.map(function (row) {
         var topTerms = Array.isArray(row.topTerms) && row.topTerms.length ? row.topTerms.join(', ') : 'Sem termos associados';
         return '<tr>'
-          + '<td><span style="display:inline-flex;align-items:center;gap:8px;"><i class="' + escHtml(deps, row.icon || 'fas fa-tag') + '"></i> ' + escHtml(deps, row.label || row.module || 'Módulo') + '</span><div style="margin-top:4px;font-size:.76rem;color:var(--kc-text-dark-secondary);">' + escHtml(deps, topTerms) + '</div></td>'
+          + '<td><span style="display:inline-flex;align-items:center;gap:8px;"><i class="' + escHtml(deps, row.icon || 'fas fa-tag') + '" aria-hidden="true"></i> ' + escHtml(deps, row.label || row.module || 'Módulo') + '</span><div style="margin-top:4px;font-size:.76rem;color:var(--kc-text-dark-secondary);">' + escHtml(deps, topTerms) + '</div></td>'
           + '<td>' + escHtml(deps, String(row.share || 0)) + '%</td>'
           + '<td>' + toNumberValue(deps, row.count) + '</td>'
           + '</tr>';
@@ -1129,10 +1249,67 @@
     }).join('');
   }
 
+  function getRankingWindowContext(days) {
+    var utils = getDashboardUtils();
+    if (typeof utils.getRankingWindowContext === 'function') {
+      return utils.getRankingWindowContext(days);
+    }
+    var selectedDays = Math.max(1, Number(days) || 30);
+    var period = selectedDays <= 1 ? 'day'
+      : selectedDays <= 7 ? 'week'
+        : selectedDays <= 30 ? 'month'
+          : selectedDays <= 90 ? 'quarter'
+            : 'year';
+    var windowDays = period === 'day' ? 1
+      : period === 'week' ? 7
+        : period === 'month' ? 30
+          : period === 'quarter' ? 90
+            : 365;
+    return {
+      period: period,
+      periodDays: windowDays,
+      selectedPeriodDays: selectedDays,
+      windowDays: windowDays,
+      windowType: 'rolling',
+      periodLabel: windowDays === 1
+        ? 'Últimas 24 horas (janela móvel)'
+        : 'Últimos ' + windowDays + ' dias corridos (janela móvel)'
+    };
+  }
+
   function mapPeriodToRanking(days) {
-    if (days <= 1) return 'day';
-    if (days <= 7) return 'week';
-    return 'month';
+    return getRankingWindowContext(days).period;
+  }
+
+  function updateRankingPeriodNote(deps, rankingWindow, module, limit) {
+    var note = select(deps, '#admin-ranking-period-note');
+    if (!note) return;
+    var moduleLabel = module ? getModuleLabelValue(deps, module) : 'Todos os módulos';
+    note.textContent = 'Ranking: ' + rankingWindow.periodLabel + ' • ' + moduleLabel + ' • Top ' + limit
+      + '. Não usa o corte por dia civil do restante do dashboard.';
+  }
+
+  function publishRankingSnapshot(rankingWindow, module, limit, rows, status, reason) {
+    var rankingRows = Array.isArray(rows) ? rows : [];
+    var rankingState = getStateBucket();
+    rankingState.lastRanking = rankingRows;
+    rankingState.rankingSnapshot = {
+      rows: rankingRows,
+      context: {
+        period: rankingWindow.period,
+        periodDays: rankingWindow.periodDays,
+        selectedPeriodDays: rankingWindow.selectedPeriodDays,
+        windowDays: rankingWindow.windowDays,
+        windowType: rankingWindow.windowType,
+        periodLabel: rankingWindow.periodLabel,
+        module: module || '',
+        expanded: limit > 10,
+        limit: limit,
+        available: status === 'ready',
+        status: status,
+        reason: reason || null
+      }
+    };
   }
 
   async function loadAdminRanking(options, deps) {
@@ -1141,32 +1318,56 @@
     var tableEl = select(deps, '#admin-ranking-table');
     if (!tableEl) return;
 
-    var api = window.KCAPI;
-    if (!api || typeof api.getTopContributors !== 'function') {
-      tableEl.innerHTML = '<div class="kc-admin-empty">API indisponível.</div>';
-      return;
-    }
-
     var periodDays = getSelectedPeriodDaysValue(deps);
-    var period = mapPeriodToRanking(periodDays);
+    var rankingWindow = getRankingWindowContext(periodDays);
+    var period = rankingWindow.period;
     var moduleFilter = select(deps, '#admin-ranking-module-filter');
     var module = moduleFilter ? (moduleFilter.value || null) : null;
     var limit = getRankingExpanded(deps) ? 100 : 10;
     var requestSeq = bumpRankingRequestSeq(deps);
+    var showAllBtn = select(deps, '#admin-ranking-show-all');
+
+    // Invalida o snapshot anterior no mesmo ciclo síncrono em que o novo
+    // contexto é selecionado. Assim, a exportação nunca reutiliza linhas de
+    // outro período, módulo ou limite enquanto a atualização está pendente.
+    publishRankingSnapshot(rankingWindow, module, limit, [], 'loading', 'request_in_progress');
+    setRankingPending(deps, requestSeq, true);
+    updateRankingPeriodNote(deps, rankingWindow, module, limit);
 
     tableEl.innerHTML = '<div class="kc-admin-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando ranking...</div>';
+    if (showAllBtn) {
+      showAllBtn.style.display = 'none';
+      if (typeof showAllBtn.setAttribute === 'function') showAllBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    var api = window.KCAPI;
+    if (!api || typeof api.getTopContributors !== 'function') {
+      publishRankingSnapshot(rankingWindow, module, limit, [], 'unavailable', 'api_unavailable');
+      tableEl.innerHTML = '<div class="kc-admin-empty">API indisponível.</div>';
+      setRankingPending(deps, requestSeq, false);
+      return;
+    }
 
     try {
       var users = await api.getTopContributors(period, module, limit);
-      if ((signal && signal.aborted) || requestSeq !== getRankingRequestSeq(deps)) return;
+      if (requestSeq !== getRankingRequestSeq(deps)) return;
+      if (signal && signal.aborted) {
+        publishRankingSnapshot(rankingWindow, module, limit, [], 'aborted', 'request_aborted');
+        tableEl.innerHTML = '<div class="kc-admin-empty">Atualização cancelada.</div>';
+        return;
+      }
 
-      // Guarda o ranking carregado para a exportação (seção Top Contribuidores).
-      getStateBucket().lastRanking = Array.isArray(users) ? users : [];
+      // Publica linhas + contexto em uma única operação para que a exportação
+      // nunca combine o ranking anterior com o filtro/limite recém-selecionado.
+      var rankingRows = Array.isArray(users) ? users : [];
+      publishRankingSnapshot(rankingWindow, module, limit, rankingRows, 'ready', null);
 
-      var showAllBtn = select(deps, '#admin-ranking-show-all');
-      if (!users || !users.length) {
+      if (!rankingRows.length) {
         tableEl.innerHTML = '<div class="kc-admin-empty">Nenhum contribuidor encontrado no período.</div>';
-        if (showAllBtn) showAllBtn.style.display = 'none';
+        if (showAllBtn) {
+          showAllBtn.style.display = 'none';
+          if (typeof showAllBtn.setAttribute === 'function') showAllBtn.setAttribute('aria-expanded', 'false');
+        }
         return;
       }
 
@@ -1178,11 +1379,11 @@
         + '<th title="Penalidades"><i class="fas fa-flag" aria-hidden="true"></i></th>'
         + '</tr></thead><tbody>';
 
-      users.forEach(function (user) {
+      rankingRows.forEach(function (user) {
         var name = user && user.display_name ? user.display_name : 'Usuário';
-        var avatarSrc = user && user.avatar_url ? user.avatar_url : '';
+        var avatarSrc = getSafeAvatarUrl(user && user.avatar_url);
         var avatarHtml = avatarSrc
-          ? '<img src="' + escHtml(deps, avatarSrc) + '" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;" loading="lazy">'
+          ? '<img src="' + escHtml(deps, avatarSrc) + '" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;" loading="lazy">'
           : '<i class="fas fa-user" style="font-size:0.8em;" aria-hidden="true"></i>';
 
         html += '<tr>'
@@ -1202,21 +1403,31 @@
       tableEl.innerHTML = html;
 
       if (showAllBtn) {
-        if (!getRankingExpanded(deps) && users.length >= 10) {
+        if (!getRankingExpanded(deps) && rankingRows.length >= 10) {
           showAllBtn.style.display = 'block';
           showAllBtn.innerHTML = '<i class="fas fa-chevron-down" aria-hidden="true"></i> Mostrar todos';
+          if (typeof showAllBtn.setAttribute === 'function') showAllBtn.setAttribute('aria-expanded', 'false');
         } else if (getRankingExpanded(deps)) {
           showAllBtn.style.display = 'block';
           showAllBtn.innerHTML = '<i class="fas fa-chevron-up" aria-hidden="true"></i> Mostrar top 10';
+          if (typeof showAllBtn.setAttribute === 'function') showAllBtn.setAttribute('aria-expanded', 'true');
         } else {
           showAllBtn.style.display = 'none';
+          if (typeof showAllBtn.setAttribute === 'function') showAllBtn.setAttribute('aria-expanded', 'false');
         }
       }
     } catch (error) {
-      if (error && error.name === 'AbortError') return;
-      if ((signal && signal.aborted) || requestSeq !== getRankingRequestSeq(deps)) return;
+      if (requestSeq !== getRankingRequestSeq(deps)) return;
+      if ((error && error.name === 'AbortError') || (signal && signal.aborted)) {
+        publishRankingSnapshot(rankingWindow, module, limit, [], 'aborted', 'request_aborted');
+        tableEl.innerHTML = '<div class="kc-admin-empty">Atualização cancelada.</div>';
+        return;
+      }
+      publishRankingSnapshot(rankingWindow, module, limit, [], 'error', 'request_failed');
       tableEl.innerHTML = '<div class="kc-admin-empty">Erro ao carregar ranking.</div>';
       showStatusToast(deps, 'Não foi possível atualizar o ranking agora.', 'error', { duration: 3600 });
+    } finally {
+      setRankingPending(deps, requestSeq, false);
     }
   }
 
@@ -1243,6 +1454,10 @@
     if (infoBtn && !infoBtn.dataset.bound) {
       infoBtn.dataset.bound = 'true';
       infoBtn.addEventListener('click', function () {
+        if (window.KCRanking && typeof window.KCRanking.openInfoModal === 'function') {
+          window.KCRanking.openInfoModal(infoBtn);
+          return;
+        }
         if (window.KCRanking && typeof window.KCRanking.ensureInfoModal === 'function') {
           window.KCRanking.ensureInfoModal();
         }

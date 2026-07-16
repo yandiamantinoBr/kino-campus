@@ -75,4 +75,54 @@ describe('KCRanking - Componente de ranking', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+  describe('renderização segura de perfis', () => {
+    test.each([
+      ['sidebar', 'renderSidebarRanking'],
+      ['home', 'renderHomeRanking']
+    ])('%s neutraliza HTML, atributos e URLs controlados pelo perfil', (_label, rendererName) => {
+      document.body.innerHTML = '<div id="ranking"></div>';
+      const container = document.getElementById('ranking');
+      const maliciousName = '<img src=x onerror="window.__kcRankingXss=1">';
+
+      ranking[rendererName](container, [{
+        user_id: 'user" onclick="window.__kcRankingXss=2',
+        display_name: maliciousName,
+        avatar_url: 'javascript:window.__kcRankingXss=3',
+        score: '<svg onload="window.__kcRankingXss=4">'
+      }], 'moradia');
+
+      expect(container.querySelector('script, [onerror], [onload], [onclick]')).toBeNull();
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.textContent).toContain(maliciousName);
+      expect(container.textContent).toContain('0 pts');
+      expect(container.querySelector('a').getAttribute('href')).toContain(
+        'user%22%20onclick%3D%22window.__kcRankingXss%3D2'
+      );
+      expect(window.__kcRankingXss).toBeUndefined();
+    });
+  });
+
+  describe('modal informativo acessível', () => {
+    test('usa semântica de diálogo, fecha com Escape e devolve o foco', () => {
+      jest.useFakeTimers();
+      document.body.innerHTML = '<button id="ranking-trigger">Abrir</button>';
+      const trigger = document.getElementById('ranking-trigger');
+      trigger.focus();
+
+      ranking.openInfoModal(trigger);
+      jest.runOnlyPendingTimers();
+
+      const modal = document.getElementById('kcRankingInfoModal');
+      expect(modal.getAttribute('role')).toBe('dialog');
+      expect(modal.getAttribute('aria-modal')).toBe('true');
+      expect(modal.getAttribute('aria-labelledby')).toBe('kcRankingInfoTitle');
+      expect(modal.getAttribute('aria-hidden')).toBe('false');
+
+      modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(modal.getAttribute('aria-hidden')).toBe('true');
+      expect(document.activeElement).toBe(trigger);
+      jest.useRealTimers();
+    });
+  });
 });
