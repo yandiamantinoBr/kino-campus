@@ -172,6 +172,8 @@ function KinoLogo({ compact = false }: { compact?: boolean }) {
     <a
       className={`kino-logo ${compact ? "kino-logo--compact" : ""}`}
       href={KINO_URLS.home}
+      target="_blank"
+      rel="noreferrer"
       aria-label="Ir para a página inicial do KinoCampus"
       title="Ir para o KinoCampus"
     >
@@ -304,7 +306,7 @@ function LaunchScreen({
             <button className="primary-cta" type="button" onClick={onStart}>
               Iniciar apresentação <ArrowRight size={23} />
             </button>
-            <a className="launch-read-link" href={`/?read=${duration}-${mode}`}><Eye size={19} /> Versão para leitura</a>
+            <a className="launch-read-link" href={`/?read=${duration}-${mode}`} target="_blank" rel="noreferrer"><Eye size={19} /> Versão para leitura</a>
             <span className="live-status"><i /> Piloto funcional em produção</span>
           </div>
           <div className="selection-summary">

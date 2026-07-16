@@ -392,6 +392,8 @@
     'aria-label.pitch-actions':        'Ações da apresentação',
     'aria-label.pitch-fullscreen':     'Abrir apresentação em tela cheia',
     'aria-label.pitch-direct':         'Abrir apresentação em uma nova guia',
+    'aria-label.pitch-launch':         'Abrir apresentação institucional em uma nova aba',
+    'aria-label.pitch-embed-toggle':   'Ver a apresentação dentro desta página',
     'aria-label.pitch-formats':        'Formatos disponíveis',
 
     // Feed / module rails
