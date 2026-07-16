@@ -699,7 +699,10 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain("'<strong class=\"kc-cadu-entity-name\">' + escapeHtml(entity.name) + '</strong>'");
     expect(controller).toContain("catalogLabel(source.overrideOrigin)");
     expect(controller).toContain("catalogLabel(source.sourceKind)");
-    expect(controller).toContain("['ID da fonte', 'Entidades', 'Prioridade efetiva'");
+    expect(controller).toContain("'ID da fonte',");
+    expect(controller).toContain("'Nome das entidades',");
+    expect(controller).toContain("'IDs das entidades',");
+    expect(controller).toContain("'Prioridade efetiva',");
     expect(controller).toContain("administrativeMetadataAvailable ? (source.note || '') : ''");
     expect(controller).toContain("label: 'Metadados administrativos'");
     expect(functionSource('updateSitesFilterControls')).toContain('!sourceView || !administrativeMetadataAvailable');
@@ -765,14 +768,16 @@ describe('admin Cadu runtime hardening', () => {
     )(csvState, label);
     const csv = buildCsv();
     expect(csv[0]).toEqual(expect.arrayContaining(['Prioridade efetiva', 'Origem do ajuste', 'Observação']));
-    expect(csv[1][2]).toBe('');
     expect(csv[1][3]).toBe('');
     expect(csv[1][4]).toBe('');
-    expect(csv[1][5]).toBe('Metadados administrativos indisponíveis');
-    expect(csv[1][11]).toBe('');
+    expect(csv[1][5]).toBe('');
+    expect(csv[1][6]).toBe('');
+    expect(csv[1][7]).toBe('Metadados administrativos indisponíveis');
+    expect(csv[1][13]).toBe('');
 
     const pdfState = {
       sourceCatalog: { administrativeMetadataAvailable: false },
+      sitesView: 'sources',
       sitesFilter: {},
       sitesOrigin: '',
       filteredSites: [{

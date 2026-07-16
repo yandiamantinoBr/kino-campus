@@ -376,7 +376,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toMatchObject({
-      registryVersion: '2026-07-15.8',
+      registryVersion: '2026-07-15.10',
       activation: { state: 'candidate', runtimeConsumers: [] },
       administrativeMetadata: {
         available: false,
