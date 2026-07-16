@@ -853,18 +853,76 @@ async function main() {
 
   console.log(`\n🎯 DECISÕES:`);
 
-  // (1) URL canônica idêntica → sempre duplicata exata
+  // (1) URL canônica idêntica → confirmar com PELO MENOS UM sinal adicional
+  //     v1.7 (2026-07-16): o curator pode produzir múltiplos posts legítimos a
+  //     partir de uma MESMA página de origem quando ela é uma "compilação" (ex:
+  //     PRPG lista 14 programas de Aluno Especial numa única URL âncora, e o
+  //     curator gera 1 post "compilação" + N posts individuais). Tratar URL
+  //     canônica idêntica como duplicata absoluta escondia o post de compilação
+  //     sempre que houvesse um post individual mais antigo no mesmo source_url.
+  //     v1.7.1 (2026-07-16): refina o critério. confirmed = imagesSimilar
+  //     (pHash match é prova forte) OU (titleSimilar >= 0.4 E sameOppType)
+  //     (títulos parecidos do mesmo tipo de oportunidade é duplicata real).
+  //     Apenas titleSimilar não basta — duas oportunidades distintas do mesmo
+  //     tópico podem compartilhar palavras-chave no título. Apenas sameOppType
+  //     também não basta — compilação (14 programas) e item específico
+  //     (Psicologia) compartilham opportunityType mas são conteúdo distinto.
+  const urlDupConfirmation = (c) => {
+    const imagesSimilar = c.phash_status === 'similar';
+    // Jaccard de tokens do título
+    const ta = new Set((c.a.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 2));
+    const tb = new Set((c.b.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 2));
+    const inter = [...ta].filter(x => tb.has(x)).length;
+    const union = new Set([...ta, ...tb]).size;
+    const titleJaccard = union === 0 ? 0 : inter / union;
+    const titleSimilar = titleJaccard >= 0.4;
+    // Mesmo opportunityType
+    const opA = c.a.metadata?.opportunityType || '';
+    const opB = c.b.metadata?.opportunityType || '';
+    const sameOppType = opA && opB && opA === opB;
+    // confirmed = pHash similar OU (título similar E mesmo tipo)
+    const confirmed = imagesSimilar || (titleSimilar && sameOppType);
+    return {
+      imagesSimilar,
+      titleSimilar,
+      titleJaccard,
+      sameOppType,
+      confirmed,
+    };
+  };
   for (const c of exactUrlDups) {
+    const conf = urlDupConfirmation(c);
     const older = c.a.created_at < c.b.created_at ? c.a : c.b;
     const newer = older === c.a ? c.b : c.a;
+    if (!conf.confirmed) {
+      // Sem confirmação adicional: flag para revisão manual ao invés de
+      // esconder cegamente. Mantém a URL canônica idêntica visível no relatório.
+      const key = `flag|${c.a.id}|${c.b.id}|stage1_url_unconfirmed`;
+      if (!seenActions.has(key)) {
+        seenActions.add(key);
+        actionLog({
+          action: 'flag_review',
+          target: c.a.id,
+          target_b: c.b.id,
+          target_title: c.a.title,
+          target_b_title: c.b.title,
+          reason: `URL canônica idêntica mas conteúdo diverge (pHash=${c.phash_status || 'n/a'}, title_jaccard=${(conf.titleJaccard*100).toFixed(0)}%, oppType_match=${conf.sameOppType}, desc_shared=${conf.descShared}) — provável compilação vs item específico; revisão manual`,
+          method: 'stage1_url_unconfirmed',
+        });
+      }
+      continue;
+    }
     const key = `hide|${newer.id}|stage1_url`;
     if (seenActions.has(key)) continue;
     seenActions.add(key);
+    const confReasons = [];
+    if (conf.imagesSimilar) confReasons.push('pHash similar');
+    if (conf.titleSimilar && conf.sameOppType) confReasons.push(`title jaccard ${(conf.titleJaccard*100).toFixed(0)}% + mesmo oppType`);
     actionLog({
       action: 'hide',
       target: newer.id,
       target_title: newer.title,
-      reason: 'URL canônica idêntica (mesmo source_url publicado duas vezes)',
+      reason: `URL canônica idêntica + ${confReasons.join(' + ')}`,
       method: 'stage1_url',
       keep_id: older.id,
     });

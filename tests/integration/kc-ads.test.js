@@ -261,6 +261,89 @@ describe('KCAds feed monetization', () => {
     expect(document.querySelectorAll('.kc-ad-card--aside[data-kc-ad-id="ad-1"]')).toHaveLength(2);
   });
 
+  // v9.3.7.1 (2026-07-16): ads-top deve ser inserido APÓS o kc-create-post-btn
+  // (não após o primeiro section). Caso real: index.html tem
+  // [Context, Criar Publicação, ...] e o ad estava sendo inserido entre
+  // Context e Criar Publicação, empurrando o botão para baixo.
+  test('insere ads-top após o kc-create-post-btn (não após o primeiro section)', () => {
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="context">Sobre</section>',
+      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="create-post.html">Criar Publicação</a></section>',
+      '<section class="kc-sidebar-section" id="smart">Painel</section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-top', title: 'Topo', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+    ], { module_key: '' }, document);
+
+    expect(ok).toBe(true);
+    // Ordem esperada: context, create, ad-top, smart, ad-sticky
+    const sidebar = document.querySelector('.kc-sidebar');
+    const ids = Array.from(sidebar.children).map((el) => {
+      if (el.id) return el.id;
+      if (el.getAttribute('data-kc-ad-aside')) return 'ad-' + el.getAttribute('data-kc-ad-aside');
+      return '?';
+    });
+    expect(ids).toEqual(['context', 'create', 'ad-top', 'smart', 'ad-sticky']);
+    // O create-post-btn deve estar ACIMA do ad-top
+    const createIdx = ids.indexOf('create');
+    const adTopIdx = ids.indexOf('ad-top');
+    expect(createIdx).toBeGreaterThanOrEqual(0);
+    expect(adTopIdx).toBeGreaterThan(createIdx);
+  });
+
+  // v9.3.7.1 (2026-07-16): fallback para comportamento legado quando NÃO há
+  // kc-create-post-btn (páginas de módulo: eventos, oportunidades, etc).
+  test('fallback: insere ads-top após o primeiro section quando não há kc-create-post-btn', () => {
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Filtros</section>',
+      '<section class="kc-sidebar-section" id="two">Categorias</section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-top', title: 'Topo', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+    ], { module_key: 'eventos' }, document);
+
+    expect(ok).toBe(true);
+    const sidebar = document.querySelector('.kc-sidebar');
+    const ids = Array.from(sidebar.children).map((el) => {
+      if (el.id) return el.id;
+      if (el.getAttribute('data-kc-ad-aside')) return 'ad-' + el.getAttribute('data-kc-ad-aside');
+      return '?';
+    });
+    // Comportamento legado: ad-top após o primeiro (one)
+    expect(ids).toEqual(['one', 'ad-top', 'two', 'ad-sticky']);
+  });
+
+  // v9.3.7.1 (2026-07-16): kc-create-post-btn no ÚLTIMO section também
+  // funciona (ad-top vai para o final, antes do sticky)
+  test('kc-create-post-btn como último section: ad-top entra antes do sticky', () => {
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Resumo</section>',
+      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="create-post.html">Criar Publicação</a></section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-top', title: 'Topo', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+    ], { module_key: '' }, document);
+
+    expect(ok).toBe(true);
+    const sidebar = document.querySelector('.kc-sidebar');
+    const ids = Array.from(sidebar.children).map((el) => {
+      if (el.id) return el.id;
+      if (el.getAttribute('data-kc-ad-aside')) return 'ad-' + el.getAttribute('data-kc-ad-aside');
+      return '?';
+    });
+    // one, create, ad-top, ad-sticky (create é o último, ad-top entra entre create e sticky)
+    expect(ids).toEqual(['one', 'create', 'ad-top', 'ad-sticky']);
+  });
+
   test('adiciona UTMs em URLs externas de campanha', () => {
     const url = KCAds.buildTrackedTargetUrl({
       id: 'ad-1',
