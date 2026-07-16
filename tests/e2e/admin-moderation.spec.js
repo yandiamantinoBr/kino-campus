@@ -71,4 +71,48 @@ test.describe('Admin Moderação — admin/moderation.html', () => {
       expect(label || labelledby, `nav[${i}] sem aria-label`).toBeTruthy();
     }
   });
+
+  test('tabela de convites não é ocultada por CSS próprio', async ({ page }) => {
+    const display = await page.locator('#invite-table').evaluate(
+      (table) => getComputedStyle(table).display
+    );
+    expect(display).toBe('table');
+  });
+
+  test('spinner possui movimento perceptível no modo normal', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.reload();
+    const spinner = page.locator('#admin-loading .fa-spinner').first();
+    await expect(spinner).toBeAttached();
+    const styles = await spinner.evaluate((node) => {
+      const base = getComputedStyle(node);
+      const marker = getComputedStyle(node, '::after');
+      return {
+        animationName: base.animationName,
+        markerContent: marker.content,
+        markerBackground: marker.backgroundColor,
+      };
+    });
+    expect(styles.animationName).toContain('kc-loader-rotate');
+    expect(styles.markerContent).not.toBe('none');
+    expect(styles.markerBackground).not.toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('movimento reduzido mantém pulso de opacidade sem rotação', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.reload();
+    const spinner = page.locator('#admin-loading .fa-spinner').first();
+    const styles = await spinner.evaluate((node) => {
+      const base = getComputedStyle(node);
+      const marker = getComputedStyle(node, '::after');
+      return {
+        animationName: base.animationName,
+        transform: base.transform,
+        markerAnimationName: marker.animationName,
+      };
+    });
+    expect(styles.animationName).toContain('kc-loader-reduced-pulse');
+    expect(styles.transform).toBe('none');
+    expect(styles.markerAnimationName).toBe('none');
+  });
 });

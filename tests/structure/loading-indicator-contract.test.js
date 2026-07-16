@@ -27,15 +27,17 @@ function walk(dir, predicate) {
 describe('indicadores de carregamento globais', () => {
   const css = read('assets/css/styles.css');
 
-  test('spinner transversal possui rotação, pulso e fallback para movimento reduzido', () => {
+  test('spinner transversal possui rotação perceptível e pulso sem deslocamento no modo reduzido', () => {
     expect(css).toContain('@keyframes kc-loader-rotate');
     expect(css).toContain('@keyframes kc-loader-pulse');
+    expect(css).toContain('@keyframes kc-loader-reduced-pulse');
     expect(css).toMatch(/\.fa-spinner\.fa-spin\s*\{[\s\S]*animation:\s*kc-loader-rotate/);
+    expect(css).toMatch(/\.fa-spinner\.fa-spin::after\s*\{[\s\S]*background:\s*currentColor/);
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.fa-spinner\.fa-spin[\s\S]*animation:\s*none !important/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.fa-spinner\.fa-spin\s*\{[\s\S]*animation:\s*kc-loader-reduced-pulse[\s\S]*transform:\s*none !important/
     );
     expect(css).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-skeleton[\s\S]*animation:\s*none !important/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-skeleton\s*\{[\s\S]*animation:\s*kc-loader-reduced-pulse/
     );
   });
 
@@ -45,18 +47,18 @@ describe('indicadores de carregamento globais', () => {
     const cadu = read('admin/cadu.html');
 
     expect(themeBoot).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-hero-carousel\.kc-hero-loading::after[\s\S]*animation:\s*none/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-hero-carousel\.kc-hero-loading::after[\s\S]*animation:\s*kcReducedLoadingPulse/
     );
     expect(themeBoot.lastIndexOf('@media (prefers-reduced-motion: reduce)'))
       .toBeGreaterThan(themeBoot.lastIndexOf('transition: opacity 0.28s ease'));
     expect(chat).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-chat-typing span[\s\S]*animation:\s*none !important/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-chat-typing span,[\s\S]*animation:\s*kc-chat-reduced-pulse[\s\S]*transform:\s*none/
     );
     expect(chat).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-chat-skeleton-circle[\s\S]*\.kc-chat-skeleton-line::after/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-chat-skeleton-circle::after,[\s\S]*\.kc-chat-skeleton-line::after[\s\S]*animation:\s*none !important[\s\S]*opacity:\s*0/
     );
     expect(cadu).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-pipeline-status-dot\.is-running[\s\S]*animation:\s*none !important/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-pipeline-status-dot\.is-running,[\s\S]*animation:\s*kc-cadu-reduced-pulse/
     );
   });
 
@@ -142,7 +144,7 @@ describe('indicadores de carregamento globais', () => {
     );
   });
 
-  test('toda página que carrega styles.css aponta para a versão global nova', () => {
+  test('assets de carregamento alterados usam URLs novas apesar do cache immutable', () => {
     const pages = [
       ...walk(ROOT, (file) => {
         const rel = path.relative(ROOT, file);
@@ -151,13 +153,55 @@ describe('indicadores de carregamento globais', () => {
       ...walk(path.join(ROOT, 'admin'), (file) => file.endsWith('.html')),
     ];
     const stale = [];
+    const expectedVersions = {
+      'styles.css': '8.6.12',
+      'kc-theme-boot.css': '8.6.12',
+      'kc-i18n.js': '8.6.12',
+      'admin-shell.css': '8.6.12',
+    };
+
     pages.forEach((file) => {
       const source = fs.readFileSync(file, 'utf8');
-      const matches = Array.from(source.matchAll(/styles\.css\?v=([^"'&\s]+)/g));
-      matches.forEach((match) => {
-        if (match[1] !== '8.6.11') stale.push(`${path.relative(ROOT, file)}=${match[1]}`);
+      Object.entries(expectedVersions).forEach(([assetName, expectedVersion]) => {
+        const escapedName = assetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const matches = Array.from(source.matchAll(new RegExp(`${escapedName}\\?v=([^"'&\\s]+)`, 'g')));
+        matches.forEach((match) => {
+          if (match[1] !== expectedVersion) {
+            stale.push(`${path.relative(ROOT, file)}:${assetName}=${match[1]}`);
+          }
+        });
       });
     });
+
+    const moderation = read('admin/moderation.html');
+    [
+      'admin-moderation.controller.js',
+      'admin-invite.controller.js',
+      'admin-external-access.controller.js',
+    ].forEach((assetName) => {
+      expect(moderation).toContain(`${assetName}?v=8.6.12`);
+    });
+    expect(read('mensagens.html')).toContain('kc-chat.css?v=8.7.7');
+    expect(read('apresentacao-institucional.html')).toContain('kc-pitch-host.css?v=1.2.1');
+    const serviceWorker = read('sw.js');
+    expect(serviceWorker).toContain("var CACHE_VERSION = 'kc-shell-v12.13.1';");
+    expect(serviceWorker).toContain("'/assets/css/styles.css?v=8.6.12'");
+    expect(serviceWorker).toContain("'/assets/js/core/kc-i18n.js?v=8.6.12'");
+    expect(serviceWorker).not.toContain('RUNTIME_VERSION');
+
+    const index = read('index.html');
+    const shellEntries = new Map(
+      Array.from(serviceWorker.matchAll(/['"](\/assets\/[^'"]+\?v=([^'"]+))['"]/g))
+        .map((match) => [match[1].split('?')[0], match[1]])
+    );
+    Array.from(index.matchAll(/(?:src|href)=["'](assets\/[^"'?]+\?v=[^"'&\s]+)["']/g))
+      .forEach((match) => {
+        const absoluteUrl = `/${match[1]}`;
+        const pathname = absoluteUrl.split('?')[0];
+        if (shellEntries.has(pathname)) {
+          expect(shellEntries.get(pathname)).toBe(absoluteUrl);
+        }
+      });
     expect(stale).toEqual([]);
   });
 });

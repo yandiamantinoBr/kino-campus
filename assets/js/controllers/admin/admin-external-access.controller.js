@@ -24,6 +24,9 @@
     items: [],
     countsByStatus: { pending: 0, approved: 0, rejected: 0 },
     loading: false,
+    hasLoaded: false,
+    snapshotIncomplete: true,
+    lastUpdatedAt: null,
     modal: {
       id: null,
       decision: null,
@@ -46,6 +49,43 @@
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
   }
+
+  function cloneSnapshotItems(items) {
+    try {
+      return JSON.parse(JSON.stringify(Array.isArray(items) ? items : []));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function freezeSnapshotValue(value) {
+    if (Array.isArray(value)) {
+      return Object.freeze(value.map((item) => freezeSnapshotValue(item)));
+    }
+    if (value && typeof value === 'object') {
+      Object.keys(value).forEach((key) => {
+        value[key] = freezeSnapshotValue(value[key]);
+      });
+      return Object.freeze(value);
+    }
+    return value;
+  }
+
+  function readExternalAccessSnapshot() {
+    return freezeSnapshotValue({
+      available: STATE.hasLoaded,
+      incomplete: STATE.snapshotIncomplete,
+      refreshing: STATE.loading,
+      updatedAt: STATE.lastUpdatedAt,
+      activeTab: STATE.activeTab,
+      countsByStatus: { ...STATE.countsByStatus },
+      items: cloneSnapshotItems(STATE.items),
+    });
+  }
+
+  window.KCAdminExternalAccessSnapshot = Object.freeze({
+    read: readExternalAccessSnapshot,
+  });
 
   function formatRelative(value) {
     if (!value) return '-';
@@ -85,6 +125,8 @@
     if (el) el.style.display = loading ? 'block' : 'none';
     const panel = $(PANEL_SELECTOR);
     if (panel) panel.setAttribute('aria-busy', loading ? 'true' : 'false');
+    const list = $('#ext-access-list');
+    if (list) list.setAttribute('aria-busy', loading ? 'true' : 'false');
     const refresh = $('#ext-access-refresh');
     if (refresh) {
       refresh.disabled = !!loading;
@@ -116,10 +158,10 @@
   function renderItem(item) {
     const statusClass = `is-${item.admin_status || 'pending'}`;
     const decidedAt = item.admin_decided_at
-      ? `<span class="kc-ext-meta-pill"><i class="fas fa-gavel"></i> Decidida ${escapeHtml(formatRelative(item.admin_decided_at))}</span>`
+      ? `<span class="kc-ext-meta-pill"><i class="fas fa-gavel" aria-hidden="true"></i> Decidida ${escapeHtml(formatRelative(item.admin_decided_at))}</span>`
       : '';
     const noteBlock = item.admin_note
-      ? `<div class="kc-ext-note"><i class="fas fa-note-sticky"></i> ${escapeHtml(item.admin_note)}</div>`
+      ? `<div class="kc-ext-note"><i class="fas fa-note-sticky" aria-hidden="true"></i> ${escapeHtml(item.admin_note)}</div>`
       : '';
     const affiliation = item.affiliation_context
       ? `<div class="kc-ext-affiliation"><strong>Vínculo:</strong> ${escapeHtml(item.affiliation_context)}</div>`
@@ -128,10 +170,10 @@
     const actionsBlock = showActions
       ? `<div class="kc-ext-actions">
            <button type="button" class="kc-btn-primary kc-ext-approve" data-action="approve" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.requester_name || '')}" data-email="${escapeHtml(item.contact_email)}">
-             <i class="fas fa-check"></i> Aprovar
+             <i class="fas fa-check" aria-hidden="true"></i> Aprovar
            </button>
            <button type="button" class="kc-btn-secondary kc-ext-reject" data-action="reject" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.requester_name || '')}" data-email="${escapeHtml(item.contact_email)}">
-             <i class="fas fa-xmark"></i> Recusar
+             <i class="fas fa-xmark" aria-hidden="true"></i> Recusar
            </button>
          </div>`
       : '';
@@ -164,7 +206,7 @@
             <span class="kc-ext-card-email">${escapeHtml(item.contact_email)}</span>
           </div>
           <div class="kc-ext-card-meta">
-            <span class="kc-ext-meta-pill"><i class="fas fa-clock"></i> ${escapeHtml(formatRelative(item.created_at))}</span>
+            <span class="kc-ext-meta-pill"><i class="fas fa-clock" aria-hidden="true"></i> ${escapeHtml(formatRelative(item.created_at))}</span>
             ${decidedAt}
             ${emailBadge}
           </div>
@@ -242,7 +284,6 @@
     const total = Math.max(0, Number(first.total) || 0);
     const target = Math.min(total, MAX_LIST_ITEMS_PER_STATUS);
     const items = Array.isArray(first.items) ? first.items.slice() : [];
-    let incomplete = items.length < total;
 
     while (items.length < target) {
       let page = null;
@@ -272,7 +313,6 @@
       }
       const pageItems = Array.isArray(page.items) ? page.items : [];
       if (!pageItems.length) {
-        incomplete = items.length < total;
         break;
       }
       items.push(...pageItems);
@@ -281,7 +321,7 @@
     return {
       items,
       total,
-      incomplete: incomplete || total > MAX_LIST_ITEMS_PER_STATUS || items.length < total,
+      incomplete: total > MAX_LIST_ITEMS_PER_STATUS || items.length < target,
       failed: false,
     };
   }
@@ -289,6 +329,7 @@
   async function refreshAll() {
     const requestSeq = ++refreshRequestSeq;
     if (!isSupabaseAdminApiReady()) {
+      STATE.snapshotIncomplete = true;
       setLoading(false);
       setFeedback('Solicitações externas exigem o modo Supabase.', 'warn');
       return;
@@ -308,6 +349,7 @@
       const byStatus = { pending, approved, rejected };
       const failedStatuses = [];
       const incompleteStatuses = [];
+      const successfulStatuses = [];
       const nextItems = [];
       const nextCounts = {};
       Object.keys(byStatus).forEach((status) => {
@@ -318,6 +360,7 @@
           nextItems.push(...previousItems.filter((item) => item.admin_status === status));
           return;
         }
+        successfulStatuses.push(status);
         nextCounts[status] = result.total;
         nextItems.push(...result.items);
         if (result.incomplete) incompleteStatuses.push(status);
@@ -328,6 +371,11 @@
         rejected: nextCounts.rejected,
       };
       STATE.items = nextItems;
+      if (successfulStatuses.length) {
+        STATE.hasLoaded = true;
+        STATE.lastUpdatedAt = new Date().toISOString();
+      }
+      STATE.snapshotIncomplete = failedStatuses.length > 0 || incompleteStatuses.length > 0;
       updateTabCounts();
       renderList();
       if (failedStatuses.length) {
@@ -344,6 +392,7 @@
     } catch (e) {
       if (requestSeq !== refreshRequestSeq) return;
       console.error('[admin-external-access] refresh exception:', e);
+      STATE.snapshotIncomplete = true;
       setFeedback('Erro inesperado ao atualizar a lista. Os dados anteriores foram preservados.', 'error');
     } finally {
       if (requestSeq === refreshRequestSeq) setLoading(false);
@@ -351,18 +400,54 @@
   }
 
   function bindTabs() {
-    document.addEventListener('click', (ev) => {
-      const tab = ev.target.closest && ev.target.closest('[data-ext-tab]');
+    const tabsRoot = $('#ext-access-tabs');
+    if (!tabsRoot) return;
+
+    function activateTab(tab, focusTab) {
       if (!tab) return;
       const newTab = String(tab.getAttribute('data-ext-tab') || '').toLowerCase();
       if (!['pending', 'approved', 'rejected'].includes(newTab)) return;
       STATE.activeTab = newTab;
-      $$('[data-ext-tab]').forEach((t) => {
+      $$('[data-ext-tab]', tabsRoot).forEach((t) => {
         const isActive = t === tab;
         t.classList.toggle('is-active', isActive);
         t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        t.setAttribute('tabindex', isActive ? '0' : '-1');
       });
+      const list = $('#ext-access-list');
+      if (list && tab.id) list.setAttribute('aria-labelledby', tab.id);
       renderList();
+      if (focusTab) tab.focus();
+    }
+
+    tabsRoot.addEventListener('click', (ev) => {
+      const tab = ev.target.closest && ev.target.closest('[data-ext-tab]');
+      if (!tab || !tabsRoot.contains(tab)) return;
+      activateTab(tab, false);
+    });
+
+    tabsRoot.addEventListener('keydown', (ev) => {
+      const currentTab = ev.target.closest && ev.target.closest('[data-ext-tab]');
+      if (!currentTab || !tabsRoot.contains(currentTab)) return;
+      const tabs = $$('[data-ext-tab]', tabsRoot);
+      const currentIndex = tabs.indexOf(currentTab);
+      if (currentIndex < 0) return;
+
+      let nextIndex = currentIndex;
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') {
+        nextIndex = (currentIndex + 1) % tabs.length;
+      } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') {
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      } else if (ev.key === 'Home') {
+        nextIndex = 0;
+      } else if (ev.key === 'End') {
+        nextIndex = tabs.length - 1;
+      } else {
+        return;
+      }
+
+      ev.preventDefault();
+      activateTab(tabs[nextIndex], true);
     });
 
     const refreshBtn = $('#ext-access-refresh');
@@ -414,8 +499,8 @@
     if (confirm) {
       confirm.className = decision === 'approved' ? 'kc-btn-primary' : 'kc-btn-danger';
       confirm.innerHTML = decision === 'approved'
-        ? '<i class="fas fa-check"></i> Aprovar e enviar convite'
-        : '<i class="fas fa-xmark"></i> Recusar';
+        ? '<i class="fas fa-check" aria-hidden="true"></i> Aprovar e enviar convite'
+        : '<i class="fas fa-xmark" aria-hidden="true"></i> Recusar';
     }
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
@@ -600,11 +685,11 @@
     const safeEmail = escapeHtml(email);
     const safeLink = escapeHtml(link);
     const errBlock = smtpError
-      ? `<p style="margin:6px 0;font-size:0.8em;color:var(--kc-text-dark-secondary);"><i class="fas fa-triangle-exclamation"></i> SMTP: <code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;">${escapeHtml(smtpError)}</code></p>`
+      ? `<p style="margin:6px 0;font-size:0.8em;color:var(--kc-text-dark-secondary);"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> SMTP: <code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;">${escapeHtml(smtpError)}</code></p>`
       : '';
     area.innerHTML = `
       <h4 style="margin:0 0 8px;color:#f59e0b;font-size:0.98em;display:flex;align-items:center;gap:6px;">
-        <i class="fas fa-link"></i> Link de convite gerado para ${safeEmail}
+        <i class="fas fa-link" aria-hidden="true"></i> Link de convite gerado para ${safeEmail}
       </h4>
       <p style="margin:0 0 10px;font-size:0.85em;color:var(--kc-text-dark-secondary);">
         O SMTP do Supabase Auth não conseguiu enviar automaticamente. Copie o link abaixo e envie pelo seu e-mail
@@ -613,44 +698,87 @@
       </p>
       ${errBlock}
       <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-        <input type="text" readonly value="${safeLink}"
+        <input type="text" readonly value="${safeLink}" aria-label="Link de convite gerado para ${safeEmail || 'o solicitante'}"
           style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-size:0.8em;font-family:monospace;min-width:0;"
           onclick="this.select();" />
-        <button type="button" class="kc-btn-primary" data-ext-copy-invite-link
+        <button type="button" class="kc-btn-primary" data-ext-copy-invite-link aria-label="Copiar link de convite"
           style="padding:8px 14px;border-radius:6px;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;">
-          <i class="fas fa-copy"></i> Copiar
+          <i class="fas fa-copy" aria-hidden="true"></i> Copiar
         </button>
         <button type="button" class="kc-btn-secondary" data-ext-dismiss-invite-link
-          style="padding:8px 12px;border-radius:6px;cursor:pointer;flex-shrink:0;" title="Ocultar este aviso">
-          <i class="fas fa-xmark"></i>
+          style="padding:8px 12px;border-radius:6px;cursor:pointer;flex-shrink:0;" title="Ocultar este aviso" aria-label="Ocultar link de convite">
+          <i class="fas fa-xmark" aria-hidden="true"></i>
         </button>
       </div>
     `;
     area.style.display = 'block';
-    // Scroll suave até o link
-    setTimeout(() => { try { area.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {} }, 100);
+    const prefersReducedMotion = window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(() => {
+      try {
+        area.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+      } catch (_) {}
+    }, 100);
+  }
+
+  function fallbackCopyInviteLink(input) {
+    if (!input) return false;
+    input.focus();
+    input.select();
+    try {
+      return document.execCommand('copy') === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function copyInviteLink(input) {
+    if (!input || !input.value) return false;
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(input.value);
+        return true;
+      } catch (_) {
+        return fallbackCopyInviteLink(input);
+      }
+    }
+    return fallbackCopyInviteLink(input);
   }
 
   function bindInviteLinkActions() {
-    document.addEventListener('click', (ev) => {
+    document.addEventListener('click', async (ev) => {
       const copyBtn = ev.target.closest && ev.target.closest('[data-ext-copy-invite-link]');
       if (copyBtn) {
+        if (copyBtn.disabled) return;
         const area = $('#ext-access-invite-link-area');
         if (!area) return;
         const input = area.querySelector('input[readonly]');
         if (!input) return;
+        const original = copyBtn.innerHTML;
+        copyBtn.disabled = true;
+        copyBtn.setAttribute('aria-busy', 'true');
         try {
-          input.select();
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(input.value);
+          const copied = await copyInviteLink(input);
+          if (copied) {
+            copyBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Copiado!';
+            setFeedback('Link de convite copiado para a área de transferência.', 'success');
           } else {
-            document.execCommand('copy');
+            copyBtn.innerHTML = '<i class="fas fa-copy" aria-hidden="true"></i> Copie manualmente';
+            setFeedback('Não foi possível copiar automaticamente. O link foi selecionado para cópia manual.', 'warn');
           }
-          const original = copyBtn.innerHTML;
-          copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
-          setTimeout(() => { copyBtn.innerHTML = original; }, 1800);
         } catch (e) {
           console.error('[admin-external-access] copy error:', e);
+          input.focus();
+          input.select();
+          copyBtn.innerHTML = '<i class="fas fa-copy" aria-hidden="true"></i> Copie manualmente';
+          setFeedback('Não foi possível copiar automaticamente. O link foi selecionado para cópia manual.', 'warn');
+        } finally {
+          setTimeout(() => {
+            if (!document.contains(copyBtn)) return;
+            copyBtn.innerHTML = original;
+            copyBtn.disabled = false;
+            copyBtn.removeAttribute('aria-busy');
+          }, 1800);
         }
         return;
       }

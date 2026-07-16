@@ -1900,9 +1900,9 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 62. `assets/js/core/kc-theme.js?v=8.6.1` (core)
 63. `assets/js/api/admin-shell.js?v=8.6.1` (api)
 64. `assets/js/controllers/admin/admin-export.shared.js?v=8.6.9` (controllers)
-65. `assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.4` (controllers)
-66. `assets/js/controllers/admin/admin-invite.controller.js?v=8.6.1` (controllers)
-67. `assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.2` (controllers)
+65. `assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.12` (controllers)
+66. `assets/js/controllers/admin/admin-invite.controller.js?v=8.6.12` (controllers)
+67. `assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.12` (controllers)
 
 ### `admin/reports.html` (65 scripts)
 

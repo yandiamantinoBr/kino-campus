@@ -75,7 +75,9 @@ describe('sw.js — integridade', function () {
   test('usa navigation preload e assets versionados', function () {
     expect(SW).toContain('navigationPreload.enable()');
     expect(SW).toContain('url.searchParams.has');
-    expect(SW).toContain("var RUNTIME_VERSION = '8.6.1'");
+    expect(SW).not.toContain('RUNTIME_VERSION');
+    expect(SW).toContain("'/assets/css/styles.css?v=8.6.12'");
+    expect(SW).toContain("'/assets/js/core/kc-i18n.js?v=8.6.12'");
   });
 
   test('skipWaiting e clients.claim presentes', function () {

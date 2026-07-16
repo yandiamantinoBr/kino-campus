@@ -1458,14 +1458,24 @@
   50% { opacity: 0.25; }
 }
 
+@keyframes kc-chat-reduced-pulse {
+  0%, 100% { opacity: 0.48; }
+  50% { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kc-chat-typing span,
   .kc-chat-skeleton-circle,
-  .kc-chat-skeleton-line,
+  .kc-chat-skeleton-line {
+    animation: kc-chat-reduced-pulse 2.4s ease-in-out infinite !important;
+    transform: none;
+  }
+
   .kc-chat-skeleton-circle::after,
   .kc-chat-skeleton-line::after {
     animation: none !important;
     transform: none;
+    opacity: 0;
   }
 }
 

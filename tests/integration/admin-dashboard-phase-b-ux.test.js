@@ -29,8 +29,13 @@ describe('Fase B — skeletons de carregamento', () => {
     expect(css).toContain('.kc-admin-card.kc-skeleton-card');
   });
 
-  test('respeita prefers-reduced-motion (sem animação)', () => {
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*kc-skeleton::after[\s\S]*animation:\s*none/);
+  test('respeita prefers-reduced-motion com pulso de opacidade e sem shimmer espacial', () => {
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-skeleton\s*\{[\s\S]*animation:\s*kc-loader-reduced-pulse/
+    );
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-skeleton::after\s*\{[\s\S]*animation:\s*none !important[\s\S]*transform:\s*none[\s\S]*opacity:\s*0/
+    );
   });
 
   test('controller define helpers de skeleton e os usa no início do load', () => {

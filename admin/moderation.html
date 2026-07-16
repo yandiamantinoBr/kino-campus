@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.11">
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.12">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 
   <title>KinoCampus - Moderação Admin</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.11" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.12" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -64,8 +64,6 @@
       border:1px solid rgba(244,67,54,.35);
       background:rgba(244,67,54,.12);
     }
-    #audit-log-empty { margin:10px 0 0;color:var(--kc-text-dark-secondary);font-size:.9em; }
-
     /* ── Painel de Convites ──────────────────────────────────────────────── */
     #invite-panel { margin-top:16px; }
     #invite-panel h3 { margin:0 0 4px;font-size:1em; }
@@ -80,9 +78,9 @@
     .kc-admin-invite-feedback--error   { background:rgba(244,67,54,.12);border:1px solid rgba(244,67,54,.35);color:#ef9a9a; }
     .kc-admin-invite-feedback--info    { background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);color:#90caf9; }
     #invite-list-empty { color:var(--kc-text-dark-secondary);font-size:.88em;margin:8px 0 0; }
-    #invite-table { display:none; }
+    .kc-admin-loading-state { display:inline-flex;align-items:center;justify-content:center;gap:8px; }
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.10" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
 </head>
 <body class="kc-admin-page kc-admin-page--moderation">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -135,14 +133,15 @@
 
         <div class="kc-admin-posts-table-wrap">
           <table class="kc-admin-posts-table">
+            <caption class="kc-sr-only">Publicações disponíveis para moderação</caption>
             <thead>
               <tr>
-                <th>Post</th>
-                <th>Autor</th>
-                <th>Módulo/Categoria</th>
-                <th>Status</th>
-                <th>Atualizado em</th>
-                <th>Ações</th>
+                <th scope="col">Post</th>
+                <th scope="col">Autor</th>
+                <th scope="col">Módulo/Categoria</th>
+                <th scope="col">Status</th>
+                <th scope="col">Atualizado em</th>
+                <th scope="col">Ações</th>
               </tr>
             </thead>
             <tbody id="moderation-posts-body"></tbody>
@@ -150,7 +149,7 @@
         </div>
 
         <div style="margin-top:12px;display:flex;justify-content:flex-end;">
-          <button id="moderation-load-more" style="display:none;padding:8px 14px;border-radius:8px;border:none;background:#424242;color:#fff;cursor:pointer;">Carregar mais</button>
+          <button id="moderation-load-more" aria-controls="moderation-posts-body" style="display:none;padding:8px 14px;border-radius:8px;border:none;background:#424242;color:#fff;cursor:pointer;">Carregar mais</button>
         </div>
 
         <div class="kc-admin-panel">
@@ -184,7 +183,7 @@
                 <option value="vagas">Vagas</option>
                 <option value="achados">Achados e Perdidos (legado)</option>
               </select>
-              <input id="limit-global-value" type="number" min="1" max="999" value="5" aria-label="Máximo de publicações no limite global" data-i18n-aria-label="aria-label.admin-limit-global-value" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" />
+              <input id="limit-global-value" type="number" min="1" max="1000" value="5" aria-label="Máximo de publicações no limite global" data-i18n-aria-label="aria-label.admin-limit-global-value" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" />
               <button id="limit-global-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save" aria-hidden="true"></i> Salvar limite global</button>
               <button id="limit-global-delete" style="padding:7px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.88em;cursor:pointer;" title="Remover override global (volta ao padrão de 5)" data-i18n-tooltip="tooltip.remove-global-limit"><i class="fas fa-trash" aria-hidden="true"></i> Remover</button>
             </div>
@@ -213,7 +212,7 @@
                 <option value="vagas">Vagas</option>
                 <option value="achados">Achados e Perdidos (legado)</option>
               </select>
-              <input id="limit-user-value" type="number" min="0" max="999" aria-label="Máximo de publicações para o usuário selecionado" data-i18n-aria-label="aria-label.admin-limit-user-value" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <input id="limit-user-value" type="number" min="0" max="1000" aria-label="Máximo de publicações para o usuário selecionado" data-i18n-aria-label="aria-label.admin-limit-user-value" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
               <button id="limit-user-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
             </div>
             <div id="limit-user-selected" style="display:none;margin-top:8px;padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--kc-border-dark);font-size:.85em;color:var(--kc-text-dark-secondary);">
@@ -223,20 +222,21 @@
 
           <!-- Tabela de overrides existentes -->
           <h4 style="margin:0 0 8px;font-size:.92em;font-weight:600;">Configurações salvas</h4>
-          <button id="post-limits-refresh" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
+          <button id="post-limits-refresh" aria-controls="post-limits-body" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
           <div class="kc-admin-posts-table-wrap">
             <table class="kc-admin-posts-table" style="min-width:620px;">
+              <caption class="kc-sr-only">Configurações de limites de publicações salvas</caption>
               <thead>
                 <tr>
-                  <th>Usuário</th>
-                  <th>Módulo</th>
-                  <th>Máx. Ativas</th>
-                  <th>Criado em</th>
-                  <th>Ações</th>
+                  <th scope="col">Usuário</th>
+                  <th scope="col">Módulo</th>
+                  <th scope="col">Máx. Ativas</th>
+                  <th scope="col">Criado em</th>
+                  <th scope="col">Ações</th>
                 </tr>
               </thead>
               <tbody id="post-limits-body">
-                <tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>
+                <tr><td data-label="Status" colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;"><span class="kc-admin-loading-state" role="status" aria-live="polite"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando limites…</span></td></tr>
               </tbody>
             </table>
           </div>
@@ -298,20 +298,21 @@
           </div>
 
           <h4 style="margin:0 0 8px;font-size:.92em;font-weight:600;">Ritmos salvos</h4>
-          <button id="post-flood-limits-refresh" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar ritmos</button>
+          <button id="post-flood-limits-refresh" aria-controls="post-flood-limits-body" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar ritmos</button>
           <div class="kc-admin-posts-table-wrap">
             <table class="kc-admin-posts-table" style="min-width:700px;">
+              <caption class="kc-sr-only">Configurações de ritmo de publicações salvas</caption>
               <thead>
                 <tr>
-                  <th>Usuário</th>
-                  <th>Módulo</th>
-                  <th>Ritmo</th>
-                  <th>Criado em</th>
-                  <th>Ações</th>
+                  <th scope="col">Usuário</th>
+                  <th scope="col">Módulo</th>
+                  <th scope="col">Ritmo</th>
+                  <th scope="col">Criado em</th>
+                  <th scope="col">Ações</th>
                 </tr>
               </thead>
               <tbody id="post-flood-limits-body">
-                <tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>
+                <tr><td data-label="Status" colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;"><span class="kc-admin-loading-state" role="status" aria-live="polite"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando ritmos…</span></td></tr>
               </tbody>
             </table>
           </div>
@@ -357,38 +358,37 @@
               <option value="100">100</option>
               <option value="200">200</option>
             </select>
-            <button id="audit-refresh"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
+            <button id="audit-refresh" aria-controls="audit-log-body"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
           </div>
 
           <div id="audit-log-error" role="alert"></div>
 
           <div class="kc-admin-posts-table-wrap">
             <table class="kc-admin-posts-table kc-audit-table">
+              <caption class="kc-sr-only">Registros de auditoria da moderação</caption>
               <thead>
                 <tr>
-                  <th>Data</th>
-                  <th>Ação</th>
-                  <th>Entidade</th>
-                  <th>entity_id</th>
-                  <th>Autor da ação</th>
-                  <th>Detalhes</th>
+                  <th scope="col">Data</th>
+                  <th scope="col">Ação</th>
+                  <th scope="col">Entidade</th>
+                  <th scope="col">entity_id</th>
+                  <th scope="col">Autor da ação</th>
+                  <th scope="col">Detalhes</th>
                 </tr>
               </thead>
               <tbody id="audit-log-body">
-                <tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logs…</td></tr>
+                <tr><td data-label="Status" colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;"><span class="kc-admin-loading-state" role="status" aria-live="polite"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando logs…</span></td></tr>
               </tbody>
             </table>
           </div>
 
-          <p id="audit-log-empty" style="display:none;">Nenhum log encontrado para os filtros selecionados.</p>
-
-          <div id="audit-pagination" style="display:none;margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div id="audit-pagination" style="display:none;margin-top:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
             <span id="audit-page-info" style="font-size:.84em;color:var(--kc-text-dark-secondary);"></span>
             <div style="display:flex;gap:6px;">
-              <button id="audit-prev" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
+              <button id="audit-prev" aria-controls="audit-log-body" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
                 <i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior
               </button>
-              <button id="audit-next" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
+              <button id="audit-next" aria-controls="audit-log-body" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
                 Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i>
               </button>
             </div>
@@ -445,17 +445,18 @@
 
           <div style="margin-top:16px;">
             <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Convites Enviados</h4>
-            <p id="invite-list-empty">Nenhum convite enviado ainda.</p>
-            <div class="kc-admin-posts-table-wrap" style="display:none;" id="invite-table-wrap">
+            <p id="invite-list-empty" role="status">Nenhum convite enviado ainda.</p>
+            <div class="kc-admin-posts-table-wrap" style="display:none;" id="invite-table-wrap" aria-busy="false">
               <table class="kc-admin-posts-table" id="invite-table" style="min-width:680px;">
+                <caption class="kc-sr-only">Convites enviados a usuários externos</caption>
                 <thead>
                   <tr>
-                    <th>E-mail</th>
-                    <th>Enviado em</th>
-                    <th>Expira em</th>
-                    <th>Status</th>
-                    <th>Nota</th>
-                    <th>Ação</th>
+                    <th scope="col">E-mail</th>
+                    <th scope="col">Enviado em</th>
+                    <th scope="col">Expira em</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Nota</th>
+                    <th scope="col">Ação</th>
                   </tr>
                 </thead>
                 <tbody id="invite-table-body"></tbody>
@@ -471,16 +472,18 @@
 
           <div id="ext-access-feedback" class="kc-admin-invite-feedback" role="status"></div>
 
-          <div class="kc-admin-tabs" id="ext-access-tabs" role="tablist" style="display:flex;gap:6px;margin:12px 0 14px;flex-wrap:wrap;">
-            <button type="button" class="kc-admin-tab is-active" data-ext-tab="pending" role="tab" aria-selected="true">
-              <i class="fas fa-clock" aria-hidden="true"></i> Pendentes <span class="kc-admin-tab-count" data-ext-count="pending">0</span>
-            </button>
-            <button type="button" class="kc-admin-tab" data-ext-tab="approved" role="tab" aria-selected="false">
-              <i class="fas fa-check" aria-hidden="true"></i> Aprovadas <span class="kc-admin-tab-count" data-ext-count="approved">0</span>
-            </button>
-            <button type="button" class="kc-admin-tab" data-ext-tab="rejected" role="tab" aria-selected="false">
-              <i class="fas fa-xmark" aria-hidden="true"></i> Recusadas <span class="kc-admin-tab-count" data-ext-count="rejected">0</span>
-            </button>
+          <div class="kc-admin-tabs" id="ext-access-tabs" style="display:flex;gap:6px;margin:12px 0 14px;flex-wrap:wrap;">
+            <div role="tablist" aria-label="Status das solicitações de acesso externo" data-i18n-aria-label="aria-label.external-access-status-tabs" style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" id="ext-access-tab-pending" class="kc-admin-tab is-active" data-ext-tab="pending" role="tab" aria-selected="true" aria-controls="ext-access-list" tabindex="0">
+                <i class="fas fa-clock" aria-hidden="true"></i> Pendentes <span class="kc-admin-tab-count" data-ext-count="pending">0</span>
+              </button>
+              <button type="button" id="ext-access-tab-approved" class="kc-admin-tab" data-ext-tab="approved" role="tab" aria-selected="false" aria-controls="ext-access-list" tabindex="-1">
+                <i class="fas fa-check" aria-hidden="true"></i> Aprovadas <span class="kc-admin-tab-count" data-ext-count="approved">0</span>
+              </button>
+              <button type="button" id="ext-access-tab-rejected" class="kc-admin-tab" data-ext-tab="rejected" role="tab" aria-selected="false" aria-controls="ext-access-list" tabindex="-1">
+                <i class="fas fa-xmark" aria-hidden="true"></i> Recusadas <span class="kc-admin-tab-count" data-ext-count="rejected">0</span>
+              </button>
+            </div>
             <button type="button" class="kc-admin-tab-refresh" id="ext-access-refresh" title="Atualizar lista" data-i18n-tooltip="tooltip.refresh-list" aria-label="Atualizar lista" data-i18n-aria-label="aria-label.refresh-list">
               <i class="fas fa-rotate" aria-hidden="true"></i>
             </button>
@@ -492,7 +495,7 @@
           <p id="ext-access-empty" style="display:none;color:var(--kc-text-dark-secondary);font-size:.9em;">
             Nenhuma solicitação nesta categoria.
           </p>
-          <div id="ext-access-list" class="kc-ext-access-list"></div>
+          <div id="ext-access-list" class="kc-ext-access-list" role="tabpanel" aria-labelledby="ext-access-tab-pending" tabindex="0"></div>
         </div>
 
         <!-- Modal de confirmação (aprovar/recusar) -->
@@ -543,7 +546,7 @@
   </nav>
 
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.11"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.12"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
     <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -605,8 +608,8 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-invite.controller.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.11"></script>
+  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.12"></script>
+  <script defer src="../assets/js/controllers/admin/admin-invite.controller.js?v=8.6.12"></script>
+  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.12"></script>
 </body>
 </html>
