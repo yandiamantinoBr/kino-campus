@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  let refreshGeneration = 0;
+
   function $(selector) {
     return document.querySelector(selector);
   }
@@ -16,16 +18,17 @@
       .replace(/"/g, '&quot;');
   }
 
-  function number(value) {
+  function formatMetric(value) {
+    if (value === null || typeof value === 'undefined') return '--';
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+    return Number.isFinite(parsed) ? parsed.toLocaleString('pt-BR') : '--';
   }
 
   function card(icon, label, value, subtitle, href) {
     return [
       '<article class="kc-admin-card">',
-      '<div class="kc-admin-card__label"><i class="' + esc(icon) + '"></i> ' + esc(label) + '</div>',
-      '<strong>' + number(value).toLocaleString('pt-BR') + '</strong>',
+      '<div class="kc-admin-card__label"><i class="' + esc(icon) + '" aria-hidden="true"></i> ' + esc(label) + '</div>',
+      '<strong>' + formatMetric(value) + '</strong>',
       subtitle ? '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">' + esc(subtitle) + '</div>' : '',
       href ? '<div style="margin-top:8px;"><a href="' + esc(href) + '" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Ver detalhes &rarr;</a></div>' : '',
       '</article>',
@@ -40,7 +43,7 @@
       const tone = item && item.tone === 'warn' ? '#ff9800' : item && item.tone === 'error' ? '#ef4444' : '#22c55e';
       return [
         '<div class="kc-admin-card" style="min-height:112px;">',
-        '<div class="kc-admin-card__label"><i class="' + esc(item.icon || 'fas fa-circle-check') + '" style="color:' + tone + ';"></i> ' + esc(item.label || 'Status') + '</div>',
+        '<div class="kc-admin-card__label"><i class="' + esc(item.icon || 'fas fa-circle-check') + '" style="color:' + tone + ';" aria-hidden="true"></i> ' + esc(item.label || 'Status') + '</div>',
         '<strong style="font-size:1.05rem;line-height:1.25;">' + esc(item.value || 'OK') + '</strong>',
         '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:6px;">' + esc(item.note || '') + '</div>',
         '</div>',
@@ -56,36 +59,64 @@
 
   async function countRows(client, table, since) {
     try {
-      const result = await client.from(table)
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', since);
-      if (result && !result.error) return result.count || 0;
+      let query = client.from(table)
+        .select('id', { count: 'exact', head: true });
+      if (since) query = query.gte('created_at', since);
+      const result = await query;
+      if (result && !result.error && typeof result.count === 'number') {
+        return { available: true, value: result.count, source: 'count' };
+      }
     } catch (_) { }
 
     try {
-      const fallback = await client.from(table)
-        .select('id')
-        .gte('created_at', since)
-        .limit(5000);
-      if (fallback && !fallback.error && Array.isArray(fallback.data)) return fallback.data.length;
+      let query = client.from(table).select('id');
+      if (since) query = query.gte('created_at', since);
+      const fallback = await query.limit(5000);
+      if (fallback && !fallback.error && Array.isArray(fallback.data)) {
+        return { available: true, value: fallback.data.length, source: 'rows' };
+      }
     } catch (_) { }
 
-    return 0;
+    return { available: false, value: null, source: 'unavailable' };
   }
 
   async function loadFallbackSummary(client, since) {
-    const searches = await countRows(client, 'search_queries', since);
-    const postViews = await countRows(client, 'post_view_events', since);
-    let banners = 0;
-    try {
-      const result = await client.from('hero_banners')
-        .select('id', { count: 'exact', head: true });
-      if (result && !result.error) banners = result.count || 0;
-    } catch (_) { }
-    return { searches, postViews, banners, total: searches + postViews };
+    const results = await Promise.all([
+      countRows(client, 'search_queries', since),
+      countRows(client, 'post_view_events', since),
+      countRows(client, 'hero_banners', null)
+    ]);
+    const searches = results[0];
+    const postViews = results[1];
+    const banners = results[2];
+    const anyAvailable = results.some(function (result) { return result.available; });
+    const complete = results.every(function (result) { return result.available; });
+    if (!anyAvailable) throw new Error('fallback-unavailable');
+    return {
+      searches: searches.value,
+      postViews: postViews.value,
+      banners: banners.value,
+      total: searches.available && postViews.available ? searches.value + postViews.value : null,
+      available: true,
+      complete: complete,
+      availability: {
+        searches: searches.available,
+        postViews: postViews.available,
+        banners: banners.available
+      }
+    };
   }
 
-  async function loadPrivacySummary() {
+  function isCurrentGeneration(generation) {
+    return generation === refreshGeneration;
+  }
+
+  async function loadPrivacySummary(options) {
+    options = options || {};
+    const generation = Number(options.generation) || ++refreshGeneration;
+    const periodDays = Math.max(1, Number(options.periodDays) || 30);
+    const periodLabel = options.periodLabel || (periodDays === 1 ? 'hoje' : ('últimos ' + periodDays + ' dias'));
+    const since = options.since || daysAgo(periodDays);
     const target = $('#admin-privacy-metrics');
     if (!target) return;
     try {
@@ -95,7 +126,7 @@
       if (!client || typeof client.rpc !== 'function') throw new Error('no-client');
 
       const response = await client.rpc('kc_admin_privacy_analytics', {
-        p_since: daysAgo(30),
+        p_since: since,
         p_event_name: 'all',
         p_page_path: 'all',
         p_module_key: 'all',
@@ -105,27 +136,30 @@
       if (response && response.error) throw response.error;
       const data = response && response.data ? response.data : null;
       if (!data || data.ok === false) throw new Error(data && data.code || 'rpc-unavailable');
+      if (!isCurrentGeneration(generation)) return;
 
       const totals = data.totals || {};
       const consent = data.consent || {};
       target.innerHTML = [
-        card('fas fa-chart-simple', 'Eventos opcionais', totals.events, 'últimos 30 dias', 'privacy-analytics.html'),
+        card('fas fa-chart-simple', 'Eventos opcionais', totals.events, periodLabel, 'privacy-analytics.html'),
         card('fas fa-users-viewfinder', 'Sessões agregadas', totals.sessions, 'sem perfil individual', 'privacy-analytics.html'),
         card('fas fa-check-circle', 'Aceites analytics', consent.analytics_accepted, 'histórico agregado', 'privacy-analytics.html'),
         card('fas fa-images', 'Cliques em banners', totals.banner_clicks, 'métricas com consentimento', 'privacy-analytics.html'),
       ].join('');
       renderAdminHealth([
-        { label: 'Rotas admin', value: '6 paginas oficiais', note: 'Dashboard, Moderacao, Denuncias, Banners, Ajuda e Privacidade.' },
+        { label: 'Rotas admin', value: '8 páginas oficiais', note: 'Dashboard, Moderação, Denúncias, Banners, Ajuda, Privacidade, GA4 e Cadu.' },
         { label: 'Privacidade', value: 'RPC ativa', note: 'kc_admin_privacy_analytics respondeu.' },
-        { label: 'Exportacoes', value: 'XLSX/PDF ativo', note: 'Relatorios contextuais e sanitizados.' },
+        { label: 'Exportações', value: 'XLSX/PDF ativo', note: 'Relatórios contextuais e sanitizados.' },
       ]);
     } catch (error) {
+      if (!isCurrentGeneration(generation)) return;
       const fallbackClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
         ? window.KCSupabase.getClient()
         : null;
       if (fallbackClient) {
         try {
-          const fallback = await loadFallbackSummary(fallbackClient, daysAgo(30));
+          const fallback = await loadFallbackSummary(fallbackClient, since);
+          if (!isCurrentGeneration(generation)) return;
           target.innerHTML = [
             card('fas fa-chart-simple', 'Eventos operacionais', fallback.total, 'compatibilidade sem RPC', 'privacy-analytics.html'),
             card('fas fa-magnifying-glass', 'Buscas', fallback.searches, 'search_queries', 'privacy-analytics.html'),
@@ -133,40 +167,51 @@
             card('fas fa-images', 'Banners cadastrados', fallback.banners, 'hero_banners', 'privacy-analytics.html'),
           ].join('');
           renderAdminHealth([
-            { label: 'Rotas admin', value: '6 paginas oficiais', note: 'Validacao local cobre Privacidade/Analytics.' },
-            { label: 'Privacidade', value: 'Fallback ativo', tone: 'warn', note: 'RPC/migration completa ainda nao respondeu.' },
-            { label: 'Exportacoes', value: 'XLSX/PDF ativo', note: 'Exportador compartilhado carregado.' },
+            { label: 'Rotas admin', value: '8 páginas oficiais', note: 'Validação local cobre todas as rotas administrativas.' },
+            {
+              label: 'Privacidade',
+              value: fallback.complete ? 'Fallback ativo' : 'Fallback parcial',
+              tone: 'warn',
+              note: fallback.complete
+                ? 'As três fontes de compatibilidade responderam.'
+                : 'Somente fontes confirmadas são exibidas; as demais usam “--”.'
+            },
+            { label: 'Exportações', value: 'XLSX/PDF ativo', note: 'Exportador compartilhado carregado.' },
           ]);
           return;
         } catch (_) { }
       }
+      if (!isCurrentGeneration(generation)) return;
       target.innerHTML = [
         '<article class="kc-admin-card" style="border-color:rgba(255,107,0,.35);">',
-        '<div class="kc-admin-card__label"><i class="fas fa-triangle-exclamation"></i> Privacidade</div>',
+        '<div class="kc-admin-card__label"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Privacidade</div>',
         '<strong>--</strong>',
         '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">A migration de privacidade ainda não respondeu.</div>',
         '<div style="margin-top:8px;"><a href="privacy-analytics.html" style="font-size:.78rem;color:var(--kc-primary-brand);text-decoration:none;">Abrir painel &rarr;</a></div>',
         '</article>',
       ].join('');
       renderAdminHealth([
-        { label: 'Rotas admin', value: '6 paginas oficiais', note: 'Manifesto canonico carregado nos validadores.' },
-        { label: 'Privacidade', value: 'Indisponivel', tone: 'error', note: 'Sem RPC e sem fallback Supabase neste carregamento.' },
-        { label: 'Exportacoes', value: 'Modo defensivo', tone: 'warn', note: 'Use a pagina dedicada para validar os dados.' },
+        { label: 'Rotas admin', value: '8 páginas oficiais', note: 'Manifesto canônico carregado nos validadores.' },
+        { label: 'Privacidade', value: 'Indisponível', tone: 'error', note: 'Sem RPC e sem fallback Supabase neste carregamento.' },
+        { label: 'Exportações', value: 'Modo defensivo', tone: 'warn', note: 'Use a página dedicada para validar os dados.' },
       ]);
     }
   }
 
   // Render period-aware a partir do bloco "privacy" da RPC agregada (overview),
   // chamado pelo controller no fluxo de refresh (segue o filtro de período).
-  function renderFromOverview(privacyBlock, periodLabel) {
+  function renderFromOverview(privacyBlock, periodLabel, periodDays) {
     const target = $('#admin-privacy-metrics');
     if (!target || !privacyBlock) return;
     const label = periodLabel ? ('no período: ' + periodLabel) : 'no período';
+    const operationalLabel = Number(periodDays) > 183
+      ? 'retenção disponível: até 6 meses'
+      : label;
     target.innerHTML = [
-      card('fas fa-chart-simple', 'Eventos opcionais', privacyBlock.events, label, 'privacy-analytics.html'),
+      card('fas fa-chart-simple', 'Eventos operacionais', privacyBlock.events, operationalLabel, 'privacy-analytics.html'),
       card('fas fa-users-viewfinder', 'Sessões agregadas', privacyBlock.sessions, 'distintas, sem perfil individual', 'privacy-analytics.html'),
-      card('fas fa-magnifying-glass', 'Buscas', privacyBlock.searches, 'consultas registradas', 'privacy-analytics.html'),
-      card('fas fa-eye', 'Views de posts', privacyBlock.post_views, 'visualizações registradas', 'privacy-analytics.html'),
+      card('fas fa-magnifying-glass', 'Buscas', privacyBlock.searches, operationalLabel, 'privacy-analytics.html'),
+      card('fas fa-eye', 'Views de posts', privacyBlock.post_views, operationalLabel, 'privacy-analytics.html'),
     ].join('');
   }
 
@@ -174,14 +219,20 @@
     opts = opts || {};
     window._KCAD = window._KCAD || {};
     window._KCAD.__privacyDriven = true;
+    const generation = ++refreshGeneration;
     if (opts.overview) {
-      renderFromOverview(opts.overview, opts.periodLabel);
+      renderFromOverview(opts.overview, opts.periodLabel, opts.periodDays);
       renderAdminHealth(Array.isArray(opts.health) && opts.health.length
         ? opts.health
         : [{ label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões agregados (sem perfil).' }]);
       return;
     }
-    loadPrivacySummary();
+    loadPrivacySummary({
+      generation: generation,
+      periodDays: opts.periodDays,
+      periodLabel: opts.periodLabel,
+      since: opts.since
+    });
   }
 
   window._KCAD = window._KCAD || {};
@@ -190,7 +241,8 @@
   // Primeira pintura (fallback): só roda se o controller ainda não tiver assumido.
   function autoFallback() {
     if (window._KCAD && window._KCAD.__privacyDriven) return;
-    loadPrivacySummary();
+    const generation = ++refreshGeneration;
+    loadPrivacySummary({ generation: generation, periodDays: 30, periodLabel: 'últimos 30 dias' });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {

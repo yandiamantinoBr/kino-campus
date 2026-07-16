@@ -46,7 +46,12 @@
     kitnets: 'kitnet',
     apartamentos: 'apartamento',
     emprego: 'vaga',
-    empregos: 'vaga'
+    empregos: 'vaga',
+    onibus: 'onibus'
+  });
+
+  var TERM_MODULE_OVERRIDES = Object.freeze({
+    vaga: 'oportunidades'
   });
 
   var MODULE_KEYWORDS = Object.freeze({
@@ -95,6 +100,20 @@
     'ad_impressions_count'
   ]);
 
+  /* Somente grandezas aditivas entram no "pulso". Sessões são usuários
+     distintos sobre eventos já contados e impressões são exposição, não ação. */
+  var PULSE_SUMMARY_KEYS = Object.freeze(SERIES_KEYS.filter(function (key) {
+    return key !== 'sessions_count' && key !== 'ad_impressions_count';
+  }));
+
+  var RANKING_WINDOWS = Object.freeze({
+    day: Object.freeze({ period: 'day', windowDays: 1, periodLabel: 'Últimas 24 horas (janela móvel)' }),
+    week: Object.freeze({ period: 'week', windowDays: 7, periodLabel: 'Últimos 7 dias corridos (janela móvel)' }),
+    month: Object.freeze({ period: 'month', windowDays: 30, periodLabel: 'Últimos 30 dias corridos (janela móvel)' }),
+    quarter: Object.freeze({ period: 'quarter', windowDays: 90, periodLabel: 'Últimos 90 dias corridos (janela móvel)' }),
+    year: Object.freeze({ period: 'year', windowDays: 365, periodLabel: 'Últimos 365 dias corridos (janela móvel)' })
+  });
+
   function normalizeText(value) {
     return String(value || '')
       .toLowerCase()
@@ -111,16 +130,13 @@
     var normalized = normalizeText(collapseWhitespace(term));
     if (!normalized) return '';
     if (TERM_SYNONYMS[normalized]) return TERM_SYNONYMS[normalized];
-    if (normalized.length >= 5 && normalized.endsWith('s') && !normalized.endsWith('ss')) {
-      var singular = normalized.slice(0, -1);
-      return TERM_SYNONYMS[singular] || singular;
-    }
     return normalized;
   }
 
   function classifyTermToModule(term, constants) {
     var normalized = canonicalizeTerm(term);
     if (!normalized) return null;
+    if (TERM_MODULE_OVERRIDES[normalized]) return TERM_MODULE_OVERRIDES[normalized];
 
     var categoryLabels = constants && constants.CATEGORY_LABELS ? constants.CATEGORY_LABELS : null;
     var bestModule = null;
@@ -224,9 +240,64 @@
 
   function toDayKey(value) {
     if (!value) return '';
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
     var date = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(date.getTime())) return '';
+    try {
+      var parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(date);
+      var values = {};
+      parts.forEach(function (part) {
+        if (part.type !== 'literal') values[part.type] = part.value;
+      });
+      if (values.year && values.month && values.day) {
+        return values.year + '-' + values.month + '-' + values.day;
+      }
+    } catch (_) { }
     return date.toISOString().slice(0, 10);
+  }
+
+  function getComparablePreviousSince(since, until) {
+    var sinceMs = new Date(since).getTime();
+    var untilMs = new Date(until).getTime();
+    if (!Number.isFinite(sinceMs) || !Number.isFinite(untilMs) || untilMs <= sinceMs) {
+      return null;
+    }
+    return new Date(sinceMs - (untilMs - sinceMs)).toISOString();
+  }
+
+  function getRankingWindowContext(selectedDays) {
+    var days = Math.max(1, Number(selectedDays) || 30);
+    var period = days <= 1
+      ? 'day'
+      : days <= 7
+        ? 'week'
+        : days <= 30
+          ? 'month'
+          : days <= 90
+            ? 'quarter'
+            : 'year';
+    var windowMeta = RANKING_WINDOWS[period] || RANKING_WINDOWS.month;
+    return {
+      period: windowMeta.period,
+      periodDays: windowMeta.windowDays,
+      selectedPeriodDays: days,
+      windowDays: windowMeta.windowDays,
+      windowType: 'rolling',
+      periodLabel: windowMeta.periodLabel
+    };
+  }
+
+  function toAggregateDayKey(value) {
+    if (typeof value === 'string') {
+      var match = value.match(/^(\d{4}-\d{2}-\d{2})(?:T00:00:00(?:\.000)?Z)?$/);
+      if (match) return match[1];
+    }
+    return toDayKey(value);
   }
 
   function formatDayLabel(dayKey) {
@@ -237,8 +308,8 @@
   }
 
   function createDailyBuckets(since, until) {
-    var startKey = toDayKey(since || new Date());
-    var endKey = toDayKey(until || new Date());
+    var startKey = toAggregateDayKey(since || new Date());
+    var endKey = toAggregateDayKey(until || new Date());
     var start = new Date(startKey + 'T00:00:00Z');
     var end = new Date(endKey + 'T00:00:00Z');
     if (Number.isNaN(start.getTime())) start = new Date(toDayKey(new Date()) + 'T00:00:00Z');
@@ -288,41 +359,22 @@
     });
 
     (rows || []).forEach(function (row) {
-      var dayKey = toDayKey(row && row.day);
+      var dayKey = toAggregateDayKey(row && row.day);
       if (!dayKey) return;
-      if (!bucketMap[dayKey]) {
-        bucketMap[dayKey] = {
-          day: dayKey,
-          label: formatDayLabel(dayKey),
-          posts_count: 0,
-          comments_count: 0,
-          searches_count: 0,
-          votes_count: 0,
-          admin_actions_count: 0,
-          saves_count: 0,
-          reports_count: 0,
-          signups_count: 0,
-          post_views_count: 0,
-          comment_likes_count: 0,
-          sessions_count: 0,
-          ad_clicks_count: 0,
-          ad_impressions_count: 0,
-          total_count: 0
-        };
-      }
+      if (!bucketMap[dayKey]) return;
 
       var bucket = bucketMap[dayKey];
       SERIES_KEYS.forEach(function (key) {
         bucket[key] = Number(row && row[key]) || 0;
       });
-      bucket.total_count = SERIES_KEYS.reduce(function (sum, key) {
+      bucket.total_count = PULSE_SUMMARY_KEYS.reduce(function (sum, key) {
         return sum + (Number(bucket[key]) || 0);
       }, 0);
     });
 
     return Object.keys(bucketMap).sort().map(function (dayKey) {
       var bucket = bucketMap[dayKey];
-      bucket.total_count = SERIES_KEYS.reduce(function (sum, key) {
+      bucket.total_count = PULSE_SUMMARY_KEYS.reduce(function (sum, key) {
         return sum + (Number(bucket[key]) || 0);
       }, 0);
       return bucket;
@@ -361,7 +413,7 @@
 
     return Object.keys(bucketMap).sort().map(function (dayKey) {
       var bucket = bucketMap[dayKey];
-      bucket.total_count = SERIES_KEYS.reduce(function (sum, key) {
+      bucket.total_count = PULSE_SUMMARY_KEYS.reduce(function (sum, key) {
         return sum + (Number(bucket[key]) || 0);
       }, 0);
       return bucket;
@@ -451,17 +503,36 @@
     var hiddenPosts = Number(data.hiddenPosts || 0);
     var deletedPosts = Number(data.deletedPosts || 0);
     var searches = Number(data.searches || 0);
-    var auditEvents = Number(data.auditEvents || 0);
+    var periodDays = Math.max(1, Number(data.periodDays || 30));
+    var searchesPerDay = searches / periodDays;
+    var auditAvailable = data.auditAvailable !== false
+      && data.auditEvents !== null
+      && typeof data.auditEvents !== 'undefined'
+      && Number.isFinite(Number(data.auditEvents));
+    var auditEvents = auditAvailable ? Number(data.auditEvents) : null;
     var peakTotal = Number(data.peakTotal || 0);
     var ads = data.ads && typeof data.ads === 'object' ? data.ads : {};
     var adMetrics = ads.metrics || {};
     var adSettings = ads.settings || {};
     var adCampaigns = ads.campaigns || {};
-    var adClicks = Number(adMetrics.clicks || 0);
-    var adImpressions = Number(adMetrics.impressions || 0);
-    var activeCampaigns = Number(adCampaigns.active || 0);
-    var activeWithoutImpressions = Number(ads.active_without_impressions || 0);
-    var expiredActive = Number(ads.expired_active || 0);
+    var adClicksKnown = adMetrics.clicks !== null && typeof adMetrics.clicks !== 'undefined' && Number.isFinite(Number(adMetrics.clicks));
+    var adImpressionsKnown = adMetrics.impressions !== null && typeof adMetrics.impressions !== 'undefined' && Number.isFinite(Number(adMetrics.impressions));
+    var activeCampaignsKnown = adCampaigns.active !== null && typeof adCampaigns.active !== 'undefined' && Number.isFinite(Number(adCampaigns.active));
+    var activeWithoutImpressionsKnown = ads.active_without_impressions !== null && typeof ads.active_without_impressions !== 'undefined' && Number.isFinite(Number(ads.active_without_impressions));
+    var expiredActiveKnown = ads.expired_active !== null && typeof ads.expired_active !== 'undefined' && Number.isFinite(Number(ads.expired_active));
+
+    if (!auditAvailable) {
+      alerts.push({
+        tone: 'warning',
+        title: 'Auditoria indisponível',
+        body: 'O audit log não respondeu neste carregamento; não interprete a ausência de linhas como zero eventos.'
+      });
+    }
+    var adClicks = adClicksKnown ? Number(adMetrics.clicks) : null;
+    var adImpressions = adImpressionsKnown ? Number(adMetrics.impressions) : null;
+    var activeCampaigns = activeCampaignsKnown ? Number(adCampaigns.active) : null;
+    var activeWithoutImpressions = activeWithoutImpressionsKnown ? Number(ads.active_without_impressions) : null;
+    var expiredActive = expiredActiveKnown ? Number(ads.expired_active) : null;
 
     if (openReports > 0) {
       alerts.push({
@@ -474,16 +545,16 @@
     if (hiddenPosts + deletedPosts > 0) {
       alerts.push({
         tone: 'warning',
-        title: 'Fila de moderação aquecida',
-        body: (hiddenPosts + deletedPosts) + ' post(s) sofreram ação moderativa no período.'
+        title: 'Volume moderativo no período',
+        body: hiddenPosts + ' post(s) ocultos e ' + deletedPosts + ' deletado(s) foram atualizados no recorte.'
       });
     }
 
-    if (searches >= 10) {
+    if (searches >= 10 && searchesPerDay >= 1) {
       alerts.push({
         tone: 'info',
-        title: 'Demanda de busca em alta',
-        body: searches + ' buscas foram registradas no período atual.'
+        title: 'Demanda de busca ativa',
+        body: searches + ' buscas foram registradas, média de ' + (Math.round(searchesPerDay * 10) / 10) + ' por dia.'
       });
     }
 
@@ -495,7 +566,8 @@
       });
     }
 
-    if (activeCampaigns > 0 && adImpressions === 0) {
+    if (activeCampaignsKnown && adImpressionsKnown && activeWithoutImpressionsKnown &&
+        activeCampaigns > 0 && adImpressions === 0 && activeWithoutImpressions === 0) {
       alerts.push({
         tone: 'warning',
         title: 'Campanhas sem entrega',
@@ -503,7 +575,7 @@
       });
     }
 
-    if (activeWithoutImpressions > 0) {
+    if (activeWithoutImpressionsKnown && activeWithoutImpressions > 0) {
       alerts.push({
         tone: 'warning',
         title: 'Publicidade precisa de revisão',
@@ -511,7 +583,7 @@
       });
     }
 
-    if (expiredActive > 0) {
+    if (expiredActiveKnown && expiredActive > 0) {
       alerts.push({
         tone: 'warning',
         title: 'Campanha expirada ainda ativa',
@@ -527,11 +599,19 @@
       });
     }
 
-    if (adClicks > 0) {
+    if (adClicksKnown && adClicks > 0) {
       alerts.push({
         tone: 'positive',
         title: 'Publicidade com cliques',
         body: adClicks + ' clique(s) em anúncios foram registrados no período.'
+      });
+    }
+
+    if (periodDays > 183) {
+      alerts.push({
+        tone: 'info',
+        title: 'Cobertura anual de analytics',
+        body: 'Buscas, visualizações e eventos opcionais têm retenção declarada de até 6 meses; as demais métricas usam os 365 dias selecionados.'
       });
     }
 
@@ -553,6 +633,7 @@
     MODULE_KEYWORDS: MODULE_KEYWORDS,
     MODULE_LABELS: MODULE_LABELS,
     SERIES_KEYS: SERIES_KEYS,
+    PULSE_SUMMARY_KEYS: PULSE_SUMMARY_KEYS,
     TERM_SYNONYMS: TERM_SYNONYMS,
     aggregateTrendsByModule: aggregateTrendsByModule,
     buildActivityPulseSummary: buildActivityPulseSummary,
@@ -565,6 +646,8 @@
     resolveTermModule: resolveTermModule,
     createDailyBuckets: createDailyBuckets,
     formatDayLabel: formatDayLabel,
+    getComparablePreviousSince: getComparablePreviousSince,
+    getRankingWindowContext: getRankingWindowContext,
     normalizeText: normalizeText,
     toDayKey: toDayKey
   };

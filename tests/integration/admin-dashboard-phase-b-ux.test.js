@@ -86,16 +86,42 @@ describe('Fase B — Privacidade/Saúde vinculadas ao período', () => {
   });
 
   test('refresh renderiza por período quando há overview e cai no standalone sem ele', () => {
-    expect(priv).toMatch(/if \(opts\.overview\)[\s\S]*renderFromOverview\(opts\.overview, opts\.periodLabel\)/);
-    expect(priv).toMatch(/loadPrivacySummary\(\);\s*\n\s*}/);
+    expect(priv).toMatch(/if \(opts\.overview\)[\s\S]*renderFromOverview\(opts\.overview, opts\.periodLabel, opts\.periodDays\)/);
+    expect(priv).toMatch(/loadPrivacySummary\(\{[\s\S]*periodDays: opts\.periodDays,[\s\S]*since: opts\.since/);
+    expect(priv).toContain('isCurrentGeneration(generation)');
   });
 
   test('o controller alimenta privacy.refresh com overview + período + health real', () => {
     expect(ctrl).toContain('window._KCAD.privacy.refresh(');
     expect(ctrl).toMatch(/overview: overview \? overview\.privacy : null/);
     expect(ctrl).toContain('periodLabel: fullLabel');
+    expect(ctrl).toContain('periodDays: periodDays');
+    expect(ctrl).toContain('since: since');
     expect(ctrl).toContain('health: healthItems');
     // healthItems reflete sinais reais (RPC agregada, pulso diário, tendências).
     expect(ctrl).toMatch(/var healthItems = \[/);
+  });
+});
+
+describe('Fase B - responsividade do dashboard admin', () => {
+  const css = r('assets/css/admin-shell.css');
+
+  test('inclui a largura exata de 768px no layout compacto', () => {
+    expect(css).toContain('@media (max-width: 768.98px)');
+  });
+
+  test('audit log vira cartoes sem overflow horizontal no layout compacto', () => {
+    expect(css).toMatch(
+      /@media \(max-width: 768\.98px\)[\s\S]*\.kc-admin-audit-wrap\s*\{[\s\S]*overflow:\s*visible[\s\S]*\.kc-admin-audit-wrap table,[\s\S]*display:\s*block/
+    );
+  });
+
+  test('navegacao inferior admin permite acessar todas as rotas por rolagem horizontal', () => {
+    expect(css).toMatch(
+      /body\.kc-admin-page \.kc-mobile-nav\s*\{[\s\S]*overflow-x:\s*auto[\s\S]*\}/
+    );
+    expect(css).toMatch(
+      /body\.kc-admin-page \.kc-mobile-nav > a\s*\{[\s\S]*flex:\s*0 0 58px[\s\S]*min-width:\s*58px/
+    );
   });
 });

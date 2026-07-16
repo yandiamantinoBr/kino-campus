@@ -66,8 +66,23 @@
       try {
         targetPage = new URL(link.href, window.location.href).pathname.split('/').pop() || rawHref;
       } catch (_) { }
-      link.classList.toggle('active', normalizeHref(targetPage) === currentPage);
+      var isActive = normalizeHref(targetPage) === currentPage;
+      link.classList.toggle('active', isActive);
+      if (isActive) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
     });
+  }
+
+  function scrollActiveMobileNav() {
+    var nav = document.querySelector('.kc-mobile-nav');
+    if (!nav) return;
+    var active = nav.querySelector('a[aria-current="page"], a.active');
+    if (!active) return;
+    try {
+      active.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    } catch (_) {
+      nav.scrollLeft = Math.max(0, active.offsetLeft - Math.max(0, (nav.clientWidth - active.offsetWidth) / 2));
+    }
   }
 
   function ensureNavLink(nav, href, iconClass, label) {
@@ -201,7 +216,7 @@
     var links = Array.from(nav.querySelectorAll(':scope > a'));
     links.forEach(function (link) { link.classList.remove('is-icon-only'); });
     nav.scrollLeft = 0;
-    if (window.innerWidth <= 768) return;
+    if (window.innerWidth <= 768.98) return;
     var rail = nav.parentElement && nav.parentElement.matches('[data-kc-scroll-rail]') ? nav.parentElement : null;
     if (rail) {
       rail.classList.remove('is-overflow-start', 'is-overflow-end');
@@ -269,11 +284,13 @@
     releaseBootState();
     ensureHelpRequestsLinks();
     ensureAdminNavRail();
+    requestAnimationFrame(scrollActiveMobileNav);
     syncHeaderState();
     scheduleAdminNavRefresh(0);
     observeHeaderAuth();
     window.addEventListener('load', function () {
       scheduleAdminNavRefresh(0);
+      scrollActiveMobileNav();
       setTimeout(function () { scheduleAdminNavRefresh(0); }, 350);
       setTimeout(function () { scheduleAdminNavRefresh(0); }, 1000);
     }, { once: true });
@@ -302,6 +319,7 @@
   window.KCAdminShell = Object.freeze({
     syncHeader: syncHeaderState,
     refreshNavRail: ensureAdminNavRail,
+    scrollActiveMobileNav: scrollActiveMobileNav,
     setModalOpen: setModalOpen
   });
 

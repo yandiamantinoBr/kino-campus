@@ -84,13 +84,13 @@ function loadCharts() {
 describe('Fase C — migration daily_metrics estendida', () => {
   let sql;
   beforeAll(() => {
-    sql = r('supabase/migrations/_archive-v75/20260531140000_admin_daily_metrics_extended_series.sql');
+    sql = r('supabase/migrations/20260716120242_harden_admin_dashboard_analytics.sql');
   });
 
   test('recria o wrapper público e a implementação privada', () => {
     expect(sql).toContain('drop function if exists public.kc_admin_dashboard_daily_metrics(timestamptz)');
-    expect(sql).toContain('drop function if exists kc_private.kc_admin_dashboard_daily_metrics(timestamptz)');
-    expect(sql).toContain('create function kc_private.kc_admin_dashboard_daily_metrics');
+    expect(sql).toContain('drop function if exists kc_private.kc_admin_dashboard_daily_metrics_impl(timestamptz)');
+    expect(sql).toContain('create function kc_private.kc_admin_dashboard_daily_metrics_impl');
     expect(sql).toContain('create function public.kc_admin_dashboard_daily_metrics');
   });
 
@@ -104,14 +104,15 @@ describe('Fase C — migration daily_metrics estendida', () => {
   test('preserva o hardening: wrapper INVOKER (search_path vazio) → privado DEFINER', () => {
     expect(sql).toContain("set search_path = ''");
     expect(sql).toContain('security definer');
-    expect(sql).toContain("set search_path = 'public'");
-    expect(sql).toContain('select * from kc_private.kc_admin_dashboard_daily_metrics($1)');
+    expect(sql).toContain('kc_private.kc_admin_dashboard_daily_metrics_impl($1)');
+    expect(sql).toContain("at time zone 'America/Sao_Paulo'");
+    expect(sql).toContain('public.kc_is_admin(v_uid)');
   });
 
   test('reaplica privilégios (authenticated/service_role; anon revogado)', () => {
-    expect(sql).toContain('revoke all on function public.kc_admin_dashboard_daily_metrics(timestamptz) from public, anon');
-    expect(sql).toContain('grant execute on function public.kc_admin_dashboard_daily_metrics(timestamptz) to authenticated, service_role');
-    expect(sql).toContain('grant execute on function kc_private.kc_admin_dashboard_daily_metrics(timestamptz) to authenticated, service_role');
+    expect(sql).toMatch(/revoke all on function public\.kc_admin_dashboard_daily_metrics\(timestamptz\)[\s\S]*from public, anon, authenticated, service_role/);
+    expect(sql).toMatch(/grant execute on function public\.kc_admin_dashboard_daily_metrics\(timestamptz\)[\s\S]*to authenticated, service_role/);
+    expect(sql).toMatch(/grant execute on function kc_private\.kc_admin_dashboard_daily_metrics_impl\([\s\S]*\)[\s\S]*to authenticated, service_role/);
   });
 });
 
@@ -181,6 +182,8 @@ describe('Fase C — gráfico interativo (charts.js)', () => {
     expect(svg).toContain('kc-admin-chart-hit');
     expect(svg).toContain('data-index="0"');
     expect(svg).toContain('kc-admin-chart-guide');
+    expect(svg).toContain('role="group"');
+    expect(svg).toContain('use as setas para navegar entre os dias');
   });
 
   test('legenda é clicável (botões + data-series-key/aria-pressed) e buscável (8 séries)', () => {

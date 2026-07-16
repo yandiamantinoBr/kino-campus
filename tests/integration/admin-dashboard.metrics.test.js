@@ -181,6 +181,15 @@ describe('admin-dashboard.controller.js - contrato do split metrics', () => {
     expect(controllerSource).not.toContain("client.rpc('kc_admin_dashboard_daily_metrics'");
   });
 
+  test('cards de monetização preservam null como indisponível em vez de converter para zero', () => {
+    expect(controllerSource).toContain("'Campanhas ativas', adCampaigns.active");
+    expect(controllerSource).toContain("'Cliques em anúncios', adMetrics.clicks");
+    expect(controllerSource).toContain("'Impressões de anúncios', adMetrics.impressions");
+    expect(controllerSource).not.toContain("'Campanhas ativas', Number(adCampaigns.active) || 0");
+    expect(controllerSource).not.toContain("'Cliques em anúncios', Number(adMetrics.clicks) || 0");
+    expect(controllerSource).not.toContain("'Impressões de anúncios', Number(adMetrics.impressions) || 0");
+  });
+
   test('preserva o export publico do refresh', () => {
     expect(controllerSource).toContain('window.KCAdminDashboardRefresh = refreshDashboard;');
   });
@@ -199,13 +208,13 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
 
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.7"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.10"></script>'
     ];
 
     let lastIndex = -1;
@@ -262,7 +271,53 @@ describe('window._KCAD.metrics - comportamento', () => {
     await expect(metrics.checkAccess()).resolves.toEqual({ ok: true });
   });
 
-  test('loadReportMetrics usa o RPC e filtra pelo periodo', async () => {
+  test('checkAccess converte rejeicao da sessao em erro controlado', async () => {
+    window.KCAPI = {
+      getCurrentUser: jest.fn().mockRejectedValue(new Error('network unavailable'))
+    };
+    const metrics = loadMetricsModule();
+
+    await expect(metrics.checkAccess()).resolves.toEqual({
+      ok: false,
+      message: 'Nao foi possivel validar o acesso administrativo.'
+    });
+  });
+
+  test('checkAccess converte rejeicao da consulta de perfil em erro controlado', async () => {
+    window.KCAPI = { getCurrentUser: jest.fn().mockResolvedValue({ id: 'user-1' }) };
+    window.KCSupabase = {
+      getClient: jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue(makeQueryBuilder(function () {
+          throw new Error('profiles unavailable');
+        }, { table: 'profiles' }))
+      })
+    };
+    const metrics = loadMetricsModule();
+
+    await expect(metrics.checkAccess()).resolves.toEqual({
+      ok: false,
+      message: 'Nao foi possivel validar o acesso administrativo.'
+    });
+  });
+
+  test('checkAccess nao confunde erro retornado pelo perfil com falta de permissao', async () => {
+    window.KCAPI = { getCurrentUser: jest.fn().mockResolvedValue({ id: 'user-1' }) };
+    window.KCSupabase = {
+      getClient: jest.fn().mockReturnValue(makeClient({
+        fromHandler() {
+          return { data: null, error: { message: 'timeout' } };
+        }
+      }))
+    };
+    const metrics = loadMetricsModule();
+
+    await expect(metrics.checkAccess()).resolves.toEqual({
+      ok: false,
+      message: 'Nao foi possivel validar o acesso administrativo.'
+    });
+  });
+
+  test('loadReportMetrics preserva o backlog aberto e filtra apenas recebidas pelo periodo', async () => {
     const metrics = loadMetricsModule();
     const client = makeClient({
       rpcHandler(name) {
@@ -281,7 +336,7 @@ describe('window._KCAD.metrics - comportamento', () => {
     });
 
     await expect(metrics.loadReportMetrics(client, '2026-04-01T00:00:00Z')).resolves.toEqual({
-      open: 1,
+      open: 2,
       total: 2
     });
   });
@@ -456,6 +511,75 @@ describe('window._KCAD.metrics - comportamento', () => {
     });
   });
 
+  test('loadActiveSessions15m não publica subcontagem quando apenas uma fonte legada responde', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'privacy_analytics_events') {
+          return { data: null, error: { code: '42P01', message: 'missing table' } };
+        }
+        if (state.table === 'search_queries') {
+          return { data: [{ id: 's1', session_id: 'A' }], error: null };
+        }
+        if (state.table === 'post_view_events') {
+          return { data: null, error: { code: '42501', message: 'permission denied' } };
+        }
+        return { data: [], error: null };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    await expect(metrics.loadActiveSessions15m(client)).resolves.toMatchObject({
+      value: null,
+      available: false,
+      source: 'unavailable'
+    });
+  });
+
+  test('loadActiveSessions15m deduplica por usuário e ignora eventos sem sessão nem usuário', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'privacy_analytics_events') {
+          return { data: null, error: { code: '42P01', message: 'missing table' } };
+        }
+        if (state.table === 'search_queries') {
+          expect(state.select.columns).toContain('user_id');
+          return {
+            data: [
+              { id: 's1', session_id: null, user_id: 'user-1' },
+              { id: 's2', session_id: null, user_id: 'user-1' },
+              { id: 's3', session_id: null, user_id: null }
+            ],
+            error: null
+          };
+        }
+        if (state.table === 'post_view_events') {
+          expect(state.select.columns).toContain('user_id');
+          return {
+            data: [
+              { id: 'v1', session_id: null, user_id: 'user-1' },
+              { id: 'v2', session_id: null, user_id: null }
+            ],
+            error: null
+          };
+        }
+        return { data: [], error: null };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    await expect(metrics.loadActiveSessions15m(client)).resolves.toMatchObject({
+      value: 1,
+      available: true,
+      source: 'legacy_events'
+    });
+  });
+
   test('loadAdOverview normaliza RPC de monetizacao para cards e alertas', async () => {
     const metrics = loadMetricsModule();
     const client = makeClient({
@@ -482,6 +606,102 @@ describe('window._KCAD.metrics - comportamento', () => {
       metrics: { impressions: 120, clicks: 6, ctr: 5 },
       active_without_impressions: 1,
       expired_active: 1
+    });
+  });
+
+  test('loadAdOverview preserva zero quando todas as fontes fallback confirmam ausência de dados', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler() {
+        return { data: [], error: null };
+      },
+      rpcHandler(name) {
+        if (name === 'kc_admin_ads_overview') {
+          return { data: null, error: { code: '42883', message: 'function missing' } };
+        }
+        if (name === 'kc_admin_get_ad_network_settings') {
+          return {
+            data: {
+              ok: true,
+              settings: { status: 'disabled', provider: 'direct', auto_ads_enabled: false }
+            },
+            error: null
+          };
+        }
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    await expect(metrics.loadAdOverview(client, '2026-04-20T00:00:00Z')).resolves.toMatchObject({
+      ok: true,
+      available: true,
+      source: 'fallback',
+      availability: { complete: true },
+      campaigns: { total: 0, active: 0 },
+      metrics: { impressions: 0, clicks: 0, ctr: 0 },
+      active_without_impressions: 0,
+      expired_active: 0
+    });
+    expect(window._KCAD.__adminMetricsDiagnostics.ads).toEqual({
+      available: true,
+      source: 'fallback'
+    });
+  });
+
+  test('loadAdOverview não inventa zeros quando todas as fontes fallback falham', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler() {
+        return { data: null, error: { code: '42501', message: 'permission denied' } };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    await expect(metrics.loadAdOverview(client, '2026-04-20T00:00:00Z')).resolves.toMatchObject({
+      ok: false,
+      available: false,
+      source: 'unavailable',
+      availability: { complete: false },
+      settings: { status: null, provider: null },
+      campaigns: { total: null, active: null },
+      metrics: { impressions: null, clicks: null, ctr: null },
+      active_without_impressions: null,
+      expired_active: null
+    });
+    expect(window._KCAD.__adminMetricsDiagnostics.ads).toEqual({
+      available: false,
+      source: 'unavailable'
+    });
+  });
+
+  test('loadAdOverview mantém valores confirmados e null nas fontes parciais', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'ad_campaigns') return { data: [], error: null };
+        return { data: null, error: { code: '42501', message: 'permission denied' } };
+      },
+      rpcHandler() {
+        return { data: null, error: { code: '42883', message: 'function missing' } };
+      }
+    });
+
+    await expect(metrics.loadAdOverview(client, '2026-04-20T00:00:00Z')).resolves.toMatchObject({
+      ok: false,
+      available: false,
+      source: 'partial',
+      availability: {
+        complete: false,
+        campaigns: true,
+        impressions: false,
+        clicks: false
+      },
+      campaigns: { total: 0, active: 0 },
+      metrics: { impressions: null, clicks: null, ctr: null },
+      active_without_impressions: null,
+      expired_active: 0
     });
   });
 

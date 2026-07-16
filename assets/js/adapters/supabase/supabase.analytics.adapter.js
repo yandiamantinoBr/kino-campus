@@ -18,9 +18,14 @@
       const params = { p_period: period || 'month', p_limit: limit || 10 };
       if (module) params.p_module = module;
       const { data, error } = await client.rpc('kc_get_top_contributors', params);
-      if (error) { console.error('[KCAPI] Top contributors error:', error); return []; }
+      if (error) {
+        console.error('[KCAPI] Top contributors error:', error);
+        throw error;
+      }
       return Array.isArray(data) ? data : [];
-    } catch (_) { return []; }
+    } catch (error) {
+      throw error;
+    }
   }
 
   // ── Rastrear clique em cupom ───────────────────────────────────────────────

@@ -89,6 +89,7 @@
       getSelectedPeriodDays: getSelectedPeriodDays,
       getModuleLabel: getModuleLabel,
       classifyTermToModule: classifyTermToModule,
+      resolveTermModule: resolveTermModule,
       getSeriesKeys: getSeriesKeys,
       getSeriesTotals: getSeriesTotals,
       getSeriesMeta: function () { return SERIES_META.slice(); },
@@ -115,7 +116,61 @@
       },
       getRankingRows: function () {
         var st = (window._KCAD && window._KCAD.__adminChartsState) || {};
+        var snapshot = st.rankingSnapshot || {};
+        if (Array.isArray(snapshot.rows)) return snapshot.rows;
         return Array.isArray(st.lastRanking) ? st.lastRanking : [];
+      },
+      getRankingContext: function () {
+        var st = (window._KCAD && window._KCAD.__adminChartsState) || {};
+        var snapshot = st.rankingSnapshot || {};
+        if (snapshot.context && typeof snapshot.context === 'object') {
+          return snapshot.context;
+        }
+        var moduleFilter = $('#admin-ranking-module-filter');
+        var selectedDays = getSelectedPeriodDays();
+        var rankingWindow = typeof DashboardUtils.getRankingWindowContext === 'function'
+          ? DashboardUtils.getRankingWindowContext(selectedDays)
+          : {
+              period: selectedDays <= 1 ? 'day' : selectedDays <= 7 ? 'week' : selectedDays <= 30 ? 'month' : selectedDays <= 90 ? 'quarter' : 'year',
+              periodDays: selectedDays,
+              selectedPeriodDays: selectedDays,
+              windowDays: selectedDays,
+              windowType: 'rolling',
+              periodLabel: selectedDays <= 1 ? 'Últimas 24 horas (janela móvel)' : 'Últimos ' + selectedDays + ' dias corridos (janela móvel)'
+            };
+        return Object.assign({}, rankingWindow, {
+          module: moduleFilter ? (moduleFilter.value || '') : '',
+          expanded: _adminRankingExpanded,
+          limit: _adminRankingExpanded ? 100 : 10
+        });
+      },
+      getTrendExportSnapshot: function () {
+        var st = (window._KCAD && window._KCAD.__adminChartsState) || {};
+        var trendState = st.searchTrends || {};
+        var query = String(trendState.query || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        var moduleKey = String(trendState.module || '');
+        var rows = (Array.isArray(trendState.rows) ? trendState.rows : []).filter(function (row) {
+          if (moduleKey && row.__module !== moduleKey) return false;
+          if (query && String(row.__searchText || '').indexOf(query) === -1) return false;
+          return true;
+        });
+        return {
+          rows: rows,
+          module: moduleKey,
+          query: String(trendState.query || '').trim()
+        };
+      },
+      isDashboardBusy: function () {
+        var content = $('#admin-content');
+        var chartsState = (window._KCAD && window._KCAD.__adminChartsState) || {};
+        var auditState = (window._KCAD && window._KCAD.__adminAuditState) || {};
+        return !!(
+          _activeRefreshController ||
+          _periodRefreshTimer ||
+          chartsState.rankingPending ||
+          auditState.pending ||
+          (content && content.getAttribute('aria-busy') === 'true')
+        );
       },
       getActorCache: function () { return _actorsById; }
     };
@@ -133,6 +188,7 @@
       getModuleLabel: getModuleLabel,
       getModuleIcon: getModuleIcon,
       classifyTermToModule: classifyTermToModule,
+      resolveTermModule: resolveTermModule,
       getSeriesKeys: getSeriesKeys,
       getSeriesMeta: function () { return SERIES_META.slice(); },
       getChartModalReturnFocus: function () { return _chartModalReturnFocus; },
@@ -141,6 +197,7 @@
       setRankingExpanded: function (nextValue) { _adminRankingExpanded = !!nextValue; },
       getRankingRequestSeq: function () { return _rankingRequestSeq; },
       setRankingRequestSeq: function (nextValue) { _rankingRequestSeq = Number(nextValue) || 0; },
+      refreshExportAvailability: enableExport,
       getInitialChartPrefs: function () { return _chartPrefs; },
       getDefaultVisibleSeries: function () { return DEFAULT_VISIBLE_SERIES.slice(); },
       saveChartPrefs: saveChartPrefs,
@@ -294,39 +351,62 @@
 
   function setLoading(isLoading) {
     const loading = $('#admin-loading');
-    if (loading) loading.style.display = isLoading ? 'flex' : 'none';
+    const content = $('#admin-content');
+    if (loading) {
+      loading.style.display = isLoading ? 'flex' : 'none';
+      loading.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+    }
+    if (content) content.setAttribute('aria-busy', isLoading ? 'true' : 'false');
   }
 
   // Spinner no botão Atualizar durante refresh
   var _refreshOrigHtml = null;
+  var _refreshOrigDisabled = false;
   function setRefreshLoading(isLoading) {
     var btn = $('#admin-refresh-btn');
     if (!btn) return;
     if (isLoading) {
-      _refreshOrigHtml = btn.innerHTML;
+      if (!btn.classList.contains('is-loading')) {
+        _refreshOrigHtml = btn.innerHTML;
+        _refreshOrigDisabled = !!btn.disabled;
+      }
       btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando...';
       btn.classList.add('is-loading');
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
     } else {
-      if (_refreshOrigHtml) btn.innerHTML = _refreshOrigHtml;
+      if (_refreshOrigHtml !== null) btn.innerHTML = _refreshOrigHtml;
       btn.classList.remove('is-loading');
+      btn.disabled = _refreshOrigDisabled;
+      btn.removeAttribute('aria-busy');
+      _refreshOrigHtml = null;
+      _refreshOrigDisabled = false;
     }
   }
 
   // Marca/desmarca grids de métrica em estado de loading
-  var GRID_IDS = ['admin-executive-metrics', 'admin-metrics', 'admin-activity-metrics', 'admin-community-metrics', 'admin-monetization-metrics'];
+  var GRID_IDS = ['admin-executive-metrics', 'admin-metrics', 'admin-activity-metrics', 'admin-community-metrics', 'admin-privacy-metrics', 'admin-monetization-metrics'];
   function setGridsLoading(isLoading) {
     GRID_IDS.forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.classList.toggle('is-loading', isLoading);
+      if (el) {
+        el.classList.toggle('is-loading', isLoading);
+        el.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+      }
     });
+    var content = $('#admin-content');
+    if (content) content.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    enableExport();
   }
 
   function setLastSync() {
     const el = $('#admin-last-sync');
     if (!el) return;
+    var updatedAt = new Date().toLocaleString('pt-BR');
     el.innerHTML = '<i class="fas fa-circle-check" style="color:var(--kc-primary-brand);margin-right:5px;" aria-hidden="true"></i>'
-      + 'Atualizado em ' + new Date().toLocaleString('pt-BR')
+      + 'Atualizado em ' + updatedAt
       + ' &nbsp;<span style="opacity:.6;font-size:.78rem;">- clique para atualizar</span>';
+    el.setAttribute('aria-label', 'Atualizado em ' + updatedAt + '. Ative para atualizar o dashboard.');
   }
 
   function checkAccess() {
@@ -363,7 +443,7 @@
       valueLine += ' <span style="font-size:.72rem;font-weight:600;margin-left:6px;color:' + deltaColor + ';" title="Variação vs período anterior">' + deltaArrow + ' ' + escHtmlAdmin(opts.delta.text) + '</span>';
     }
     var inner = '<div class="kc-admin-card__label" title="' + escHtmlAdmin(label) + '">'
-      + '<i class="' + icon + '"></i> ' + escHtmlAdmin(label) + '</div>'
+      + '<i class="' + icon + '" aria-hidden="true"></i> ' + escHtmlAdmin(label) + '</div>'
       + valueLine;
     if (subtitle) {
       inner += '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:4px;">' + escHtmlAdmin(subtitle) + '</div>';
@@ -376,12 +456,20 @@
 
   // Variação percentual de um KPI vs a janela imediatamente anterior.
   function computeDelta(current, previous) {
+    if (current === null || typeof current === 'undefined' ||
+        previous === null || typeof previous === 'undefined') return null;
     var cur = Number(current) || 0;
     var prev = Number(previous) || 0;
     if (prev <= 0) return null;
     var pct = Math.round(((cur - prev) / prev) * 100);
     if (pct === 0) return { text: '0%', dir: 'flat' };
     return { text: (pct > 0 ? '+' : '') + pct + '%', dir: pct > 0 ? 'up' : 'down' };
+  }
+
+  function sumAvailableMetrics(values) {
+    var list = Array.isArray(values) ? values : [];
+    if (list.some(function (value) { return value === null || typeof value === 'undefined'; })) return null;
+    return list.reduce(function (sum, value) { return sum + (Number(value) || 0); }, 0);
   }
 
   // Skeleton (estado de carregamento) — substitui o texto "Carregando…".
@@ -407,9 +495,10 @@
     });
   }
 
-  function daysAgo(n) {
+  function startOfLocalDayDaysAgo(n) {
     const d = new Date();
-    d.setDate(d.getDate() - n);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - Math.max(0, Number(n) || 0));
     return d.toISOString();
   }
 
@@ -421,10 +510,10 @@
 
   var PERIOD_LABELS = {
     1: 'hoje',
-    7: 'esta semana',
+    7: 'últimos 7 dias',
     30: 'últimos 30 dias',
     90: 'últimos 90 dias',
-    365: 'este ano',
+    365: 'últimos 365 dias',
   };
 
   function getPeriodLabel(days) {
@@ -434,7 +523,6 @@
   function getPeriodShortLabel(days) {
     if (days === 1) return 'hoje';
     if (days === 7) return '7d';
-    if (days === 365) return 'ano';
     return days + 'd';
   }
 
@@ -459,10 +547,17 @@
   }
 
   function getPeriodRange(periodDays) {
+    var normalizedDays = Math.max(1, Number(periodDays) || 30);
+    var since = startOfLocalDayDaysAgo(normalizedDays - 1);
+    var until = new Date().toISOString();
+    var previousSince = DashboardUtils.getComparablePreviousSince
+      ? DashboardUtils.getComparablePreviousSince(since, until)
+      : new Date(new Date(since).getTime() - (new Date(until).getTime() - new Date(since).getTime())).toISOString();
     return {
-      since: daysAgo(periodDays),
-      until: new Date().toISOString(),
-      label: getPeriodLabel(periodDays)
+      since: since,
+      until: until,
+      previousSince: previousSince,
+      label: getPeriodLabel(normalizedDays)
     };
   }
 
@@ -505,6 +600,15 @@
     return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.classifyTermToModule === 'function')
       ? window._KCAD.metrics.classifyTermToModule(term)
       : (DashboardUtils.classifyTermToModule ? DashboardUtils.classifyTermToModule(term, window.KC_CONSTANTS || {}) : null);
+  }
+
+  function resolveTermModule(item) {
+    if (DashboardUtils.resolveTermModule) {
+      return DashboardUtils.resolveTermModule(item, window.KC_CONSTANTS || {});
+    }
+    return item && (item.module || item.module_key)
+      ? (item.module || item.module_key)
+      : classifyTermToModule(item && item.term);
   }
 
   function loadReportMetrics(client, since) {
@@ -589,12 +693,15 @@
     return (window._KCAD && window._KCAD.metrics && typeof window._KCAD.metrics.loadAdOverview === 'function')
       ? window._KCAD.metrics.loadAdOverview(client, since)
       : Promise.resolve({
+          ok: false,
+          available: false,
           source: 'unavailable',
-          settings: { status: 'disabled', provider: 'direct', auto_ads_enabled: false },
-          campaigns: { total: 0, active: 0 },
-          metrics: { impressions: 0, clicks: 0, ctr: 0 },
-          active_without_impressions: 0,
-          expired_active: 0,
+          availability: { complete: false, settings: false, campaigns: false, impressions: false, clicks: false, metrics: false },
+          settings: { status: null, provider: null, auto_ads_enabled: null },
+          campaigns: { total: null, active: null },
+          metrics: { impressions: null, clicks: null, ctr: null },
+          active_without_impressions: null,
+          expired_active: null,
         });
   }
 
@@ -686,6 +793,18 @@
     }
   }
 
+  function beginAuditRequest() {
+    return (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.beginRequest === 'function')
+      ? window._KCAD.audit.beginRequest()
+      : null;
+  }
+
+  function isCurrentAuditRequest(requestSeq) {
+    return requestSeq == null
+      || !(window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.isCurrentRequest === 'function')
+      || window._KCAD.audit.isCurrentRequest(requestSeq);
+  }
+
   function enableExport() {
     if (window._KCAD && window._KCAD.audit && typeof window._KCAD.audit.enableExport === 'function') {
       window._KCAD.audit.enableExport(buildAuditDeps());
@@ -714,6 +833,9 @@
     var since = periodRange.since;
     var shortLabel = getPeriodShortLabel(periodDays);
     var fullLabel  = periodRange.label;
+    var auditFiltersSnapshot = readAuditFilters();
+    var auditRequestSeq = beginAuditRequest();
+    window._KCAD.__adminMetricsDiagnostics = {};
 
     // Atualiza títulos das seções com o período selecionado
     var activityTitle = $('#admin-activity-title');
@@ -745,20 +867,21 @@
     // Caminho preferido: 1 RPC agregada (kc_admin_dashboard_overview) substitui
     // ~19 consultas. Fallback defensivo: loaders individuais (se a RPC faltar/falhar).
     var until = (periodRange && periodRange.until) || new Date().toISOString();
-    var prevSince = daysAgo(periodDays * 2);
+    var prevSince = periodRange.previousSince;
 
     function prevWindowCount(table) {
       return client.from(table)
         .select('id', { count: 'exact', head: true })
         .gte('created_at', prevSince)
         .lt('created_at', since)
-        .then(function (r) { return (r && !r.error && typeof r.count === 'number') ? r.count : 0; })
-        .catch(function () { return 0; });
+        .then(function (r) { return (r && !r.error && typeof r.count === 'number') ? r.count : null; })
+        .catch(function () { return null; });
     }
 
     var reportMetrics, postStatusMetrics, postsCreated, postsEdited, commentsCount,
       searchCount, postsTotal, visiblePosts, usersTotal, usersNew, votesCount,
       savedPostsCount, activeSessions15m, adOverview, auditRows, trends, dailyMetrics;
+    var auditAvailable = false;
     var deltaUsersNew = null, deltaPostsCreated = null, deltaEngagement = null;
 
     var overview = null;
@@ -784,7 +907,8 @@
       commentsCount = Number(ovEng.comments) || 0;
       votesCount = Number(ovEng.votes) || 0;
       savedPostsCount = Number(ovEng.saves) || 0;
-      searchCount = Number((overview.privacy || {}).searches) || 0;
+      searchCount = Number(overview.searches);
+      if (!Number.isFinite(searchCount)) searchCount = Number((overview.privacy || {}).searches) || 0;
       usersTotal = Number(ovUsers.total) || 0;
       usersNew = Number(ovUsers.new) || 0;
       activeSessions15m = {
@@ -802,7 +926,7 @@
       );
 
       var ovRest = await Promise.all([
-        loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
+        loadAuditLog(client, AUDIT_PAGE_SIZE, 0, auditFiltersSnapshot, since),
         loadSearchTrendsData(client, since),
         loadDailyMetrics(client, since, signal),
         loadAdOverview(client, since),
@@ -826,7 +950,7 @@
         loadVotesCount(client, since),
         loadSavedPostsCount(client, since),
         loadActiveSessions15m(client),
-        loadAuditLog(client, AUDIT_PAGE_SIZE, 0, readAuditFilters(), since),
+        loadAuditLog(client, AUDIT_PAGE_SIZE, 0, auditFiltersSnapshot, since),
         loadSearchTrendsData(client, since),
         loadDailyMetrics(client, since, signal),
         loadAdOverview(client, since),
@@ -843,17 +967,27 @@
       deltaUsersNew = computeDelta(usersNew, prevCounts[0]);
       deltaPostsCreated = computeDelta(postsCreated, prevCounts[1]);
       deltaEngagement = computeDelta(
-        (Number(votesCount) || 0) + (Number(savedPostsCount) || 0) + (Number(commentsCount) || 0),
-        (Number(prevCounts[2]) || 0) + (Number(prevCounts[3]) || 0) + (Number(prevCounts[4]) || 0)
+        sumAvailableMetrics([votesCount, savedPostsCount, commentsCount]),
+        sumAvailableMetrics([prevCounts[2], prevCounts[3], prevCounts[4]])
       );
     }
     throwIfAborted(signal);
 
-    _auditOffset = auditRows.length;
-
     // ── Resolve nomes dos atores do audit log ──
+    auditAvailable = !(auditRows && auditRows.__kcAvailable === false);
     await loadActorsById(client, auditRows.map(r => r.actor_id));
     throwIfAborted(signal);
+    var auditRequestCurrent = isCurrentAuditRequest(auditRequestSeq);
+    if (auditRequestCurrent) {
+      _auditOffset = auditRows.length;
+    } else if (_data && Array.isArray(_data.auditRows)) {
+      auditRows = _data.auditRows.slice();
+      auditAvailable = _data.auditAvailable !== false;
+      auditFiltersSnapshot = _data.auditFilters || auditFiltersSnapshot;
+    } else {
+      auditRows = [];
+      auditAvailable = false;
+    }
 
     var moduleShareRows = DashboardUtils.buildModuleShareRows
       ? DashboardUtils.buildModuleShareRows(trends, window.KC_CONSTANTS || {})
@@ -867,8 +1001,10 @@
           hiddenPosts: postStatusMetrics.hidden,
           deletedPosts: postStatusMetrics.deleted,
           searches: searchCount,
-          auditEvents: auditRows.length,
+          auditEvents: auditAvailable ? auditRows.length : null,
+          auditAvailable: auditAvailable,
           peakTotal: dailySummary ? dailySummary.peakTotal : 0,
+          periodDays: periodDays,
           ads: adOverview
         })
       : [];
@@ -876,7 +1012,7 @@
     // ── Renderiza resumo executivo ──
     var activeMetric = activeSessions15m || {};
     var healthValue = activeMetric.available
-      ? (activeMetric.source === 'privacy_rpc' ? 'OK' : 'Fallback')
+      ? (activeMetric.source === 'privacy_rpc' || activeMetric.source === 'overview_rpc' ? 'OK' : 'Fallback')
       : 'Atenção';
     var healthSubtitle = activeMetric.available
       ? (activeMetric.note || 'Coleta agregada operacional.')
@@ -885,8 +1021,8 @@
     if (executiveMetrics) {
       executiveMetrics.innerHTML = [
         metricCard('fas fa-users-viewfinder', 'Ativos agora', activeMetric.available ? activeMetric.value : '--', { subtitle: activeMetric.available ? 'Sessões agregadas nos últimos 15min' : 'Sem dado agregado agora', href: 'privacy-analytics.html', tooltip: 'Sessões anônimas distintas com atividade nos últimos 15 minutos (não identifica usuários).' }),
-        metricCard('fas fa-eye', 'Publicações visíveis', visiblePosts, { subtitle: 'Published + closed no feed público' }),
-        metricCard('fas fa-flag', 'Denúncias abertas', reportMetrics.open, { href: 'reports.html', highlight: true, subtitle: 'Prioridade operacional' }),
+        metricCard('fas fa-eye', 'Publicações visíveis', visiblePosts, { subtitle: 'Status published + closed' }),
+        metricCard('fas fa-flag', 'Denúncias abertas', reportMetrics.open, { href: 'reports.html', highlight: true, subtitle: 'Backlog atual, sem recorte temporal' }),
         metricCard('fas fa-stethoscope', 'Saúde da coleta', healthValue, { subtitle: healthSubtitle, href: 'privacy-analytics.html' }),
       ].join('');
     }
@@ -896,10 +1032,10 @@
     const metrics = $('#admin-metrics');
     if (metrics) {
       metrics.innerHTML = [
-        metricCard('fas fa-flag',      'Denúncias abertas',  reportMetrics.open,          { href: 'reports.html', highlight: true, subtitle: fullLabel }),
-        metricCard('fas fa-list',      'Total de denúncias', reportMetrics.total,         { href: 'reports.html', subtitle: fullLabel }),
-        metricCard('fas fa-eye-slash', 'Posts ocultados',    postStatusMetrics.hidden,    { href: 'moderation.html', subtitle: fullLabel }),
-        metricCard('fas fa-trash',     'Posts deletados',    postStatusMetrics.deleted,   { href: 'moderation.html', subtitle: fullLabel }),
+        metricCard('fas fa-flag',      'Denúncias abertas',    reportMetrics.open,        { href: 'reports.html', highlight: true, subtitle: 'Backlog atual' }),
+        metricCard('fas fa-list',      'Denúncias recebidas', reportMetrics.total,       { href: 'reports.html', subtitle: fullLabel }),
+        metricCard('fas fa-eye-slash', 'Ocultos atualizados', postStatusMetrics.hidden,  { href: 'moderation.html', subtitle: fullLabel }),
+        metricCard('fas fa-trash',     'Deletados atualizados', postStatusMetrics.deleted, { href: 'moderation.html', subtitle: fullLabel }),
       ].join('');
     }
 
@@ -909,10 +1045,10 @@
       activityMetrics.innerHTML = [
         metricCard('fas fa-layer-group',      'Total de posts',    postsTotal),
         metricCard('fas fa-eye',              'Posts visíveis',    visiblePosts),
-        metricCard('fas fa-plus-circle',      'Posts publicados',  postsCreated, { delta: deltaPostsCreated }),
-        metricCard('fas fa-pen-to-square',    'Posts editados',    postsEdited),
+        metricCard('fas fa-plus-circle',      'Posts criados',     postsCreated, { delta: deltaPostsCreated }),
+        metricCard('fas fa-pen-to-square',    'Posts anteriores atualizados', postsEdited, { subtitle: 'Criados antes do período; inclui status e renovações' }),
         metricCard('fas fa-comment',          'Comentários',       commentsCount),
-        metricCard('fas fa-magnifying-glass', 'Buscas',            searchCount),
+        metricCard('fas fa-magnifying-glass', 'Buscas',            searchCount, { subtitle: periodDays > 183 ? 'Retenção disponível: até 6 meses' : fullLabel }),
         metricCard('fas fa-thumbs-up',        'Votos',             votesCount),
         metricCard('fas fa-bookmark',         'Posts salvos',      savedPostsCount),
       ].join('');
@@ -921,10 +1057,11 @@
     // ── Renderiza métricas da comunidade ──
     const communityMetrics = $('#admin-community-metrics');
     if (communityMetrics) {
+      var interactionsTotal = sumAvailableMetrics([votesCount, savedPostsCount, commentsCount]);
       communityMetrics.innerHTML = [
         metricCard('fas fa-users',       'Total de usuários',                   usersTotal),
         metricCard('fas fa-user-plus',   'Novos usuários (' + shortLabel + ')', usersNew, { delta: deltaUsersNew }),
-        metricCard('fas fa-chart-line',   'Interações (' + shortLabel + ')',     votesCount + savedPostsCount + commentsCount, { subtitle: 'Votos + salvos + comentários', delta: deltaEngagement }),
+        metricCard('fas fa-chart-line',   'Interações (' + shortLabel + ')',     interactionsTotal, { subtitle: interactionsTotal === null ? 'Uma ou mais fontes estão indisponíveis' : 'Votos + salvos + comentários', delta: deltaEngagement }),
       ].join('');
     }
 
@@ -933,36 +1070,99 @@
     var adSettings = ads.settings || {};
     var adCampaigns = ads.campaigns || {};
     var adMetrics = ads.metrics || {};
-    var adMode = (adSettings.status === 'active' ? 'Ativo' : (adSettings.status === 'testing' ? 'Em teste' : 'Desativado'));
-    var adProvider = adSettings.provider === 'hybrid'
-      ? 'híbrido'
-      : (adSettings.provider === 'adsense' ? 'AdSense' : 'próprio');
+    var adMode = adSettings.status === null || typeof adSettings.status === 'undefined'
+      ? '--'
+      : (adSettings.status === 'active' ? 'Ativo' : (adSettings.status === 'testing' ? 'Em teste' : 'Desativado'));
+    var adProvider = adSettings.provider === null || typeof adSettings.provider === 'undefined'
+      ? null
+      : (adSettings.provider === 'hybrid'
+          ? 'híbrido'
+          : (adSettings.provider === 'adsense' ? 'AdSense' : 'próprio'));
+    var adCampaignTotalSubtitle = adCampaigns.total === null || typeof adCampaigns.total === 'undefined'
+      ? 'Total indisponível'
+      : formatMetricValue(adCampaigns.total) + ' campanhas no total';
+    var adCtrSubtitle = adMetrics.ctr === null || typeof adMetrics.ctr === 'undefined'
+      ? 'CTR indisponível'
+      : 'CTR ' + formatPercentMetric(adMetrics.ctr);
+    var adImpressionsSubtitle = adMetrics.impressions === null || typeof adMetrics.impressions === 'undefined'
+      ? 'Fonte indisponível no período'
+      : fullLabel;
     var monetizationMetrics = $('#admin-monetization-metrics');
     if (monetizationMetrics) {
       monetizationMetrics.innerHTML = [
-        metricCard('fab fa-google', 'Modo de anúncios', adMode, { subtitle: 'Provider ' + adProvider, href: 'banners.html#feed-ads-admin' }),
-        metricCard('fas fa-bullhorn', 'Campanhas ativas', Number(adCampaigns.active) || 0, { subtitle: (Number(adCampaigns.total) || 0) + ' campanhas no total', href: 'banners.html#feed-ads-admin' }),
-        metricCard('fas fa-arrow-pointer', 'Cliques em anúncios', Number(adMetrics.clicks) || 0, { subtitle: 'CTR ' + formatPercentMetric(adMetrics.ctr), href: 'banners.html#feed-ads-admin' }),
-        metricCard('fas fa-rectangle-ad', 'Impressões de anúncios', Number(adMetrics.impressions) || 0, { subtitle: fullLabel }),
+        metricCard('fab fa-google', 'Modo de anúncios', adMode, { subtitle: adProvider ? 'Provider ' + adProvider : 'Configuração indisponível', href: 'banners.html#feed-ads-admin' }),
+        metricCard('fas fa-bullhorn', 'Campanhas ativas', adCampaigns.active, { subtitle: adCampaignTotalSubtitle, href: 'banners.html#feed-ads-admin' }),
+        metricCard('fas fa-arrow-pointer', 'Cliques em anúncios', adMetrics.clicks, { subtitle: adCtrSubtitle, href: 'banners.html#feed-ads-admin' }),
+        metricCard('fas fa-rectangle-ad', 'Impressões de anúncios', adMetrics.impressions, { subtitle: adImpressionsSubtitle }),
       ].join('');
     }
 
     // ── Privacidade + Saúde (vinculadas ao período + dados reais do overview) ──
+    var metricDiagnostics = (window._KCAD && window._KCAD.__adminMetricsDiagnostics) || {};
+    var unavailableMetricKeys = Object.keys(metricDiagnostics).filter(function (key) {
+      return metricDiagnostics[key] && metricDiagnostics[key].available === false;
+    });
+    if (!overview && unavailableMetricKeys.length) {
+      showError('Algumas métricas não puderam ser confirmadas e aparecem como “--”. Tente atualizar novamente.');
+    }
+    var dailyAvailable = !metricDiagnostics.dailyMetrics || metricDiagnostics.dailyMetrics.available !== false;
+    var trendsAvailable = !metricDiagnostics.trends || metricDiagnostics.trends.available !== false;
+    var adsHealthValue = ads.source === 'rpc'
+      ? 'RPC agregada'
+      : ads.source === 'fallback'
+        ? 'Fallback confirmado'
+        : ads.source === 'partial'
+          ? 'Fallback parcial'
+          : 'Indisponível';
+    var adsHealthTone = ads.source === 'rpc' || ads.source === 'fallback' ? null : 'warn';
+    var adsHealthNote = ads.source === 'partial'
+      ? 'Somente as fontes confirmadas são exibidas; as demais usam “--”.'
+      : ads.source === 'unavailable'
+        ? 'Nenhuma fonte de campanhas/configuração/eventos respondeu neste carregamento.'
+        : 'Campanhas, configuração e eventos agregados de publicidade confirmados.';
     var healthItems = [
-      { label: 'Métricas', value: overview ? 'RPC agregada' : 'Loaders', tone: overview ? null : 'warn', note: overview ? 'kc_admin_dashboard_overview respondeu (1 chamada).' : 'RPC indisponível; usando loaders individuais.' },
-      { label: 'Pulso diário', value: (dailyMetrics && dailyMetrics.length) ? (dailyMetrics.length + ' dias') : 'Sem dados', tone: (dailyMetrics && dailyMetrics.length) ? null : 'warn', note: 'Série de atividade consolidada por dia.' },
-      { label: 'Tendências', value: (trends && trends.length) ? (trends.length + ' termos') : 'Sem buscas', note: 'kc_admin_search_trends respondeu.' },
+      { label: 'Métricas', value: overview ? 'RPC agregada' : (unavailableMetricKeys.length ? 'Loaders parciais' : 'Loaders'), tone: overview ? null : 'warn', note: overview ? 'kc_admin_dashboard_overview respondeu com acesso administrativo validado.' : (unavailableMetricKeys.length ? unavailableMetricKeys.length + ' fonte(s) indisponível(is); valores não confirmados usam “--”.' : 'RPC indisponível; loaders individuais responderam.') },
+      { label: 'Pulso diário', value: !dailyAvailable ? 'Indisponível' : ((dailyMetrics && dailyMetrics.length) ? (dailyMetrics.length + ' dias') : 'Sem eventos'), tone: dailyAvailable && dailyMetrics && dailyMetrics.length ? null : 'warn', note: dailyAvailable ? 'Série de atividade consolidada por dia.' : 'Nenhuma fonte temporal respondeu de forma completa.' },
+      { label: 'Tendências', value: !trendsAvailable ? 'Indisponível' : ((trends && trends.length) ? (trends.length + ' termos') : 'Sem buscas'), tone: trendsAvailable ? null : 'warn', note: trendsAvailable ? 'Consultas preservam o recorte selecionado.' : 'As fontes com recorte temporal não responderam.' },
+      { label: 'Auditoria', value: auditAvailable ? (auditRows.length + ' eventos') : 'Indisponível', tone: auditAvailable ? null : 'warn', note: auditAvailable ? 'Audit log carregado com os filtros aplicados.' : 'A ausência de linhas não representa zero eventos; tente atualizar novamente.' },
       { label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões de search_queries + post_view_events (sem perfil individual).' },
-      { label: 'Monetização', value: ads.source === 'rpc' ? 'RPC agregada' : 'Fallback', tone: ads.source === 'rpc' ? null : 'warn', note: 'Campanhas, AdSense e eventos agregados de publicidade.' }
+      { label: 'Monetização', value: adsHealthValue, tone: adsHealthTone, note: adsHealthNote }
     ];
+    if (periodDays > 183) {
+      healthItems.push({
+        label: 'Cobertura anual',
+        value: 'Analytics parcial',
+        tone: 'warn',
+        note: 'Buscas, visualizações e eventos opcionais têm retenção declarada de até 6 meses; as demais métricas usam o recorte de 365 dias.'
+      });
+    }
     try {
       if (window._KCAD && window._KCAD.privacy && typeof window._KCAD.privacy.refresh === 'function') {
-        window._KCAD.privacy.refresh({ overview: overview ? overview.privacy : null, periodLabel: fullLabel, health: healthItems });
+        window._KCAD.privacy.refresh({
+          overview: overview ? overview.privacy : null,
+          periodLabel: fullLabel,
+          periodDays: periodDays,
+          since: since,
+          health: healthItems
+        });
       }
     } catch (_) { }
 
+    // Publica o snapshot completo antes de renderizar. Assim, o resumo e as
+    // exportações leem as mesmas linhas e os mesmos filtros efetivamente aplicados.
+    _data = {
+      reportMetrics, postStatusMetrics,
+      postsCreated, postsEdited, commentsCount, searchCount, postsTotal, visiblePosts,
+      usersTotal, usersNew, votesCount, savedPostsCount, activeSessions15m,
+      adOverview, auditRows, auditAvailable, auditFilters: auditFiltersSnapshot, trends, periodDays,
+      trendsAvailable, dailyMetrics, dailySummary, dailyAvailable, moduleShareRows, alerts,
+      periodLabel: fullLabel,
+      periodStart: since,
+      periodEnd: periodRange.until,
+    };
+
     // ── Renderiza audit log ──
-    renderAuditRows(auditRows, false);
+    if (auditRequestCurrent) renderAuditRows(auditRows, false);
 
     // ── Renderiza tendências de busca ──
     renderSearchTrends(trends, periodDays);
@@ -972,16 +1172,6 @@
     renderOperationalAlerts(alerts);
     throwIfAborted(signal);
 
-    _data = {
-      reportMetrics, postStatusMetrics,
-      postsCreated, postsEdited, commentsCount, searchCount, postsTotal, visiblePosts,
-      usersTotal, usersNew, votesCount, savedPostsCount, activeSessions15m,
-      adOverview, auditRows, trends, periodDays,
-      dailyMetrics, dailySummary, moduleShareRows, alerts,
-      periodLabel: fullLabel,
-      periodStart: since,
-      periodEnd: periodRange.until,
-    };
     enableExport();
 
     setLastSync();
@@ -1045,7 +1235,12 @@
     setLoading(true);
     stabilizeHeaderActions();
     bindDailyActivityChartModal();
-    const access = await checkAccess();
+    var access;
+    try {
+      access = await checkAccess();
+    } catch (_) {
+      access = { ok: false, message: 'Nao foi possivel validar o acesso administrativo.' };
+    }
     if (!access.ok) {
       setLoading(false);
       showError(access.message);
@@ -1060,7 +1255,14 @@
 
     // Last sync clicável também dispara atualização
     var lastSyncEl = $('#admin-last-sync');
-    if (lastSyncEl) lastSyncEl.addEventListener('click', refreshDashboard);
+    if (lastSyncEl) {
+      lastSyncEl.addEventListener('click', refreshDashboard);
+      lastSyncEl.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        refreshDashboard();
+      });
+    }
 
     bindAuditControls();
 

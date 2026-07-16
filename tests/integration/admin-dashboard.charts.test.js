@@ -148,6 +148,7 @@ function createDeps(options) {
     setRankingRequestSeq(nextValue) {
       rankingRequestSeq = Number(nextValue) || 0;
     },
+    refreshExportAvailability: options.refreshExportAvailability || jest.fn(),
     showStatusToast: options.showStatusToast || jest.fn()
   };
 
@@ -257,6 +258,7 @@ describe('admin-dashboard.controller.js - contrato do split charts', () => {
     expect(controllerSource).toContain("window._KCAD.charts.renderOperationalAlerts(alerts, buildChartsDeps())");
     expect(controllerSource).toContain("window._KCAD.charts.loadAdminRanking(options, buildChartsDeps())");
     expect(controllerSource).toContain("window._KCAD.charts.bindAdminRanking(buildChartsDeps())");
+    expect(controllerSource).toContain('trendsAvailable, dailyMetrics, dailySummary, dailyAvailable');
   });
 
   test('removeu o corpo de charts/ranking do core', () => {
@@ -273,13 +275,13 @@ describe('admin-dashboard.controller.js - contrato do split charts', () => {
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.7"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.6"></script>',
-      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.1"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.2"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.6"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.10"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.10"></script>'
     ];
 
     let lastIndex = -1;
@@ -329,6 +331,39 @@ describe('window._KCAD.charts - comportamento', () => {
 
     expect(listEl.innerHTML).toContain('Nenhuma busca registrada');
     expect(modulesEl.style.display).toBe('none');
+  });
+
+  test('renderSearchTrends distingue fonte indisponível de zero termos confirmado', () => {
+    const charts = loadChartsModule();
+    const listEl = createElement();
+    const modulesEl = createElement();
+    const summaryEl = createElement();
+    const queryEl = createElement();
+    const sizeEl = createElement({ value: '10' });
+    const prevEl = createElement();
+    const nextEl = createElement();
+    const deps = createDeps({
+      data: { trendsAvailable: false },
+      elements: {
+        '#admin-trends-list': listEl,
+        '#admin-trends-modules': modulesEl,
+        '#admin-trends-summary': summaryEl,
+        '#admin-trends-query': queryEl,
+        '#admin-trends-page-size': sizeEl,
+        '#admin-trends-prev': prevEl,
+        '#admin-trends-next': nextEl
+      }
+    });
+
+    charts.renderSearchTrends([], 30, deps);
+
+    expect(listEl.innerHTML).toContain('Tendências de busca indisponíveis');
+    expect(listEl.innerHTML).not.toContain('Nenhuma busca registrada');
+    expect(summaryEl.textContent).toContain('não representa zero buscas');
+    expect(queryEl.disabled).toBe(true);
+    expect(sizeEl.disabled).toBe(true);
+    expect(prevEl.disabled).toBe(true);
+    expect(nextEl.disabled).toBe(true);
   });
 
   test('renderSearchTrends renderiza lista e agrupamento por módulo', () => {
@@ -508,6 +543,53 @@ describe('window._KCAD.charts - comportamento', () => {
     expect(expandBtn.disabled).toBe(true);
   });
 
+  test('pulso e módulos distinguem indisponibilidade de ausência confirmada', () => {
+    const charts = loadChartsModule();
+    const summaryEl = createElement();
+    const chartEl = createElement();
+    const legendEl = createElement();
+    const expandBtn = createElement();
+    const moduleEl = createElement();
+    const modal = createElement();
+    const modalContent = createElement();
+    const modalLegend = createElement();
+    const modalMeta = createElement();
+    installDocument({
+      '#admin-daily-activity-summary': summaryEl,
+      '#admin-daily-activity-chart': chartEl,
+      '#admin-daily-activity-legend': legendEl,
+      '#admin-chart-expand-btn': expandBtn,
+      '#admin-module-share-table': moduleEl,
+      '#admin-chart-modal': modal,
+      '#admin-chart-modal-content': modalContent,
+      '#admin-chart-modal-legend': modalLegend,
+      '#admin-chart-modal-meta': modalMeta
+    });
+    const deps = createDeps({
+      data: { dailyAvailable: false, trendsAvailable: false },
+      elements: {
+        '#admin-daily-activity-summary': summaryEl,
+        '#admin-daily-activity-chart': chartEl,
+        '#admin-daily-activity-legend': legendEl,
+        '#admin-chart-expand-btn': expandBtn,
+        '#admin-module-share-table': moduleEl,
+        '#admin-chart-modal': modal,
+        '#admin-chart-modal-content': modalContent,
+        '#admin-chart-modal-legend': modalLegend,
+        '#admin-chart-modal-meta': modalMeta
+      }
+    });
+
+    charts.renderDailyActivitySummary(null, deps);
+    charts.renderDailyActivityChart([], deps);
+    charts.renderModuleShareTable([], deps);
+
+    expect(summaryEl.innerHTML).toContain('Pulso diário indisponível');
+    expect(chartEl.innerHTML).toContain('não representa zero atividade');
+    expect(moduleEl.innerHTML).toContain('Participação por módulo indisponível');
+    expect(expandBtn.disabled).toBe(true);
+  });
+
   test('bindDailyActivityChartModal abre e fecha o modal expandido', () => {
     const charts = loadChartsModule();
     const expandBtn = createElement();
@@ -567,11 +649,13 @@ describe('window._KCAD.charts - comportamento', () => {
     expect(modalMeta.textContent).toContain('Período analisado');
     expect(closeBtn.focused).toBe(true);
     expect(window.KCAdminShell.setModalOpen).toHaveBeenCalledWith(true);
+    expect(expandBtn.getAttribute('aria-expanded')).toBe('true');
 
     closeBtn.getListener('click')();
 
     expect(modal.getAttribute('aria-hidden')).toBe('true');
     expect(window.KCAdminShell.setModalOpen).toHaveBeenCalledWith(false);
+    expect(expandBtn.getAttribute('aria-expanded')).toBe('false');
   });
 
   test('renderModuleShareTable monta a tabela de share por módulo', () => {
@@ -611,25 +695,59 @@ describe('window._KCAD.charts - comportamento', () => {
     expect(container.innerHTML).toContain('Pico');
   });
 
-  test('mapPeriodToRanking converte dia, semana e mês', () => {
+  test('mapPeriodToRanking converte todos os períodos sem reduzir 90/365 dias para mês', () => {
     const charts = loadChartsModule();
     expect(charts.mapPeriodToRanking(1)).toBe('day');
     expect(charts.mapPeriodToRanking(7)).toBe('week');
     expect(charts.mapPeriodToRanking(30)).toBe('month');
+    expect(charts.mapPeriodToRanking(90)).toBe('quarter');
+    expect(charts.mapPeriodToRanking(365)).toBe('year');
   });
 
   test('loadAdminRanking mostra indisponibilidade quando a API não existe', async () => {
     const charts = loadChartsModule();
     const tableEl = createElement();
+    const showAllBtn = createElement({ style: { display: 'block' } });
+    const moduleFilter = createElement({ value: 'moradia' });
+    const refreshExportAvailability = jest.fn();
+    window._KCAD.__adminChartsState = {
+      lastRanking: [{ rank: 1, display_name: 'Resultado antigo' }],
+      rankingSnapshot: {
+        rows: [{ rank: 1, display_name: 'Resultado antigo' }],
+        context: { period: 'month', module: '', available: true, status: 'ready', reason: null }
+      }
+    };
     const deps = createDeps({
+      periodDays: 90,
+      refreshExportAvailability,
       elements: {
-        '#admin-ranking-table': tableEl
+        '#admin-ranking-table': tableEl,
+        '#admin-ranking-show-all': showAllBtn,
+        '#admin-ranking-module-filter': moduleFilter
       }
     });
 
     await charts.loadAdminRanking({}, deps);
 
     expect(tableEl.innerHTML).toContain('API indisponível');
+    expect(showAllBtn.style.display).toBe('none');
+    expect(window._KCAD.__adminChartsState.lastRanking).toEqual([]);
+    expect(window._KCAD.__adminChartsState.rankingSnapshot).toEqual({
+      rows: [],
+      context: expect.objectContaining({
+        period: 'quarter',
+        selectedPeriodDays: 90,
+        windowDays: 90,
+        module: 'moradia',
+        expanded: false,
+        limit: 10,
+        available: false,
+        status: 'unavailable',
+        reason: 'api_unavailable'
+      })
+    });
+    expect(window._KCAD.__adminChartsState.rankingPending).toBe(false);
+    expect(refreshExportAvailability).toHaveBeenCalledTimes(2);
   });
 
   test('loadAdminRanking renderiza a tabela e habilita o CTA de expandir', async () => {
@@ -637,11 +755,13 @@ describe('window._KCAD.charts - comportamento', () => {
     const tableEl = createElement();
     const showAllBtn = createElement({ style: {} });
     const moduleFilter = createElement({ value: '' });
+    const periodNote = createElement();
     const deps = createDeps({
       elements: {
         '#admin-ranking-table': tableEl,
         '#admin-ranking-show-all': showAllBtn,
-        '#admin-ranking-module-filter': moduleFilter
+        '#admin-ranking-module-filter': moduleFilter,
+        '#admin-ranking-period-note': periodNote
       }
     });
 
@@ -655,16 +775,130 @@ describe('window._KCAD.charts - comportamento', () => {
     expect(tableEl.innerHTML).toContain('kc-ranking-score-table');
     expect(showAllBtn.style.display).toBe('block');
     expect(showAllBtn.innerHTML).toContain('Mostrar todos');
+    expect(showAllBtn.getAttribute('aria-expanded')).toBe('false');
+    expect(periodNote.textContent).toContain('Top 10');
+    expect(periodNote.textContent).toContain('Todos os módulos');
+    expect(periodNote.textContent).toContain('Últimos 30 dias corridos (janela móvel)');
+    expect(periodNote.textContent).toContain('Não usa o corte por dia civil');
     expect(deps.__getRankingRequestSeq()).toBe(1);
+    expect(window._KCAD.__adminChartsState.rankingSnapshot).toEqual({
+      rows: expect.any(Array),
+      context: {
+        period: 'month',
+        periodDays: 30,
+        selectedPeriodDays: 30,
+        windowDays: 30,
+        windowType: 'rolling',
+        periodLabel: 'Últimos 30 dias corridos (janela móvel)',
+        module: '',
+        expanded: false,
+        limit: 10,
+        available: true,
+        status: 'ready',
+        reason: null
+      }
+    });
+    expect(window._KCAD.__adminChartsState.rankingPending).toBe(false);
+  });
+
+  test('loadAdminRanking rejeita URL de avatar com protocolo inseguro', async () => {
+    const charts = loadChartsModule();
+    const tableEl = createElement();
+    const showAllBtn = createElement({ style: {} });
+    const moduleFilter = createElement({ value: '' });
+    const deps = createDeps({
+      elements: {
+        '#admin-ranking-table': tableEl,
+        '#admin-ranking-show-all': showAllBtn,
+        '#admin-ranking-module-filter': moduleFilter
+      }
+    });
+
+    window.KCAPI = {
+      getTopContributors: jest.fn().mockResolvedValue([{
+        rank: 1,
+        display_name: 'Avatar inseguro',
+        avatar_url: 'data:image/svg+xml,<svg onload=alert(1)>',
+        score: 10
+      }])
+    };
+
+    await charts.loadAdminRanking({}, deps);
+
+    expect(tableEl.innerHTML).not.toContain('<img src=');
+    expect(tableEl.innerHTML).toContain('fas fa-user');
+  });
+
+  test('loadAdminRanking mantém linhas e contexto atômicos enquanto uma troca está pendente', async () => {
+    const charts = loadChartsModule();
+    const tableEl = createElement();
+    const moduleFilter = createElement({ value: '' });
+    const refreshExportAvailability = jest.fn();
+    window._KCAD.__adminChartsState = {
+      lastRanking: [{ rank: 1, display_name: 'Resultado antigo' }],
+      rankingSnapshot: {
+        rows: [{ rank: 1, display_name: 'Resultado antigo' }],
+        context: { period: 'week', module: 'moradia', available: true, status: 'ready', reason: null }
+      }
+    };
+    let resolveRequest;
+    window.KCAPI = {
+      getTopContributors: jest.fn(() => new Promise((resolve) => {
+        resolveRequest = resolve;
+      }))
+    };
+    const deps = createDeps({
+      refreshExportAvailability,
+      elements: {
+        '#admin-ranking-table': tableEl,
+        '#admin-ranking-module-filter': moduleFilter
+      }
+    });
+
+    const pending = charts.loadAdminRanking({}, deps);
+    expect(window._KCAD.__adminChartsState.rankingPending).toBe(true);
+    expect(window._KCAD.__adminChartsState.lastRanking).toEqual([]);
+    expect(window._KCAD.__adminChartsState.rankingSnapshot).toEqual({
+      rows: [],
+      context: expect.objectContaining({
+        period: 'month',
+        module: '',
+        available: false,
+        status: 'loading',
+        reason: 'request_in_progress'
+      })
+    });
+
+    moduleFilter.value = 'moradia';
+    resolveRequest(makeRankingUsers(2));
+    await pending;
+
+    expect(window._KCAD.__adminChartsState.rankingSnapshot.context.module).toBe('');
+    expect(window._KCAD.__adminChartsState.rankingSnapshot.context.available).toBe(true);
+    expect(window._KCAD.__adminChartsState.rankingSnapshot.context.status).toBe('ready');
+    expect(window._KCAD.__adminChartsState.rankingSnapshot.context.reason).toBeNull();
+    expect(window._KCAD.__adminChartsState.rankingSnapshot.rows).toHaveLength(2);
+    expect(window._KCAD.__adminChartsState.rankingPending).toBe(false);
+    expect(refreshExportAvailability).toHaveBeenCalledTimes(2);
   });
 
   test('loadAdminRanking trata erro e emite toast', async () => {
     const charts = loadChartsModule();
     const tableEl = createElement();
+    const moduleFilter = createElement({ value: 'compra-venda' });
     const toastSpy = jest.fn();
+    window._KCAD.__adminChartsState = {
+      lastRanking: [{ rank: 1, display_name: 'Resultado antigo' }],
+      rankingSnapshot: {
+        rows: [{ rank: 1, display_name: 'Resultado antigo' }],
+        context: { period: 'month', module: '', available: true, status: 'ready', reason: null }
+      }
+    };
     const deps = createDeps({
+      periodDays: 7,
       elements: {
-        '#admin-ranking-table': tableEl
+        '#admin-ranking-table': tableEl,
+        '#admin-ranking-module-filter': moduleFilter
       },
       showStatusToast: toastSpy
     });
@@ -676,7 +910,69 @@ describe('window._KCAD.charts - comportamento', () => {
     await charts.loadAdminRanking({}, deps);
 
     expect(tableEl.innerHTML).toContain('Erro ao carregar ranking');
+    expect(window._KCAD.__adminChartsState.lastRanking).toEqual([]);
+    expect(window._KCAD.__adminChartsState.rankingSnapshot).toEqual({
+      rows: [],
+      context: expect.objectContaining({
+        period: 'week',
+        selectedPeriodDays: 7,
+        windowDays: 7,
+        module: 'compra-venda',
+        available: false,
+        status: 'error',
+        reason: 'request_failed'
+      })
+    });
+    expect(window._KCAD.__adminChartsState.rankingPending).toBe(false);
     expect(toastSpy).toHaveBeenCalledWith('Não foi possível atualizar o ranking agora.', 'error', { duration: 3600 });
+  });
+
+  test('loadAdminRanking ignora resposta antiga depois de uma atualização atual falhar', async () => {
+    const charts = loadChartsModule();
+    const tableEl = createElement();
+    const moduleFilter = createElement({ value: '' });
+    let resolveOldRequest;
+    window.KCAPI = {
+      getTopContributors: jest.fn()
+        .mockImplementationOnce(() => new Promise((resolve) => {
+          resolveOldRequest = resolve;
+        }))
+        .mockRejectedValueOnce(new Error('falha atual'))
+    };
+    const deps = createDeps({
+      elements: {
+        '#admin-ranking-table': tableEl,
+        '#admin-ranking-module-filter': moduleFilter
+      }
+    });
+
+    const oldRequest = charts.loadAdminRanking({}, deps);
+    moduleFilter.value = 'moradia';
+    await charts.loadAdminRanking({}, deps);
+
+    expect(window._KCAD.__adminChartsState.rankingSnapshot).toEqual({
+      rows: [],
+      context: expect.objectContaining({
+        module: 'moradia',
+        available: false,
+        status: 'error',
+        reason: 'request_failed'
+      })
+    });
+
+    resolveOldRequest(makeRankingUsers(3));
+    await oldRequest;
+
+    expect(window._KCAD.__adminChartsState.rankingSnapshot).toEqual({
+      rows: [],
+      context: expect.objectContaining({
+        module: 'moradia',
+        available: false,
+        status: 'error',
+        reason: 'request_failed'
+      })
+    });
+    expect(window._KCAD.__adminChartsState.lastRanking).toEqual([]);
   });
 
   test('bindAdminRanking reseta expansão no filtro e abre o modal informativo', async () => {
@@ -698,7 +994,8 @@ describe('window._KCAD.charts - comportamento', () => {
       getTopContributors: jest.fn().mockResolvedValue(makeRankingUsers(3))
     };
     window.KCRanking = {
-      ensureInfoModal: jest.fn()
+      ensureInfoModal: jest.fn(),
+      openInfoModal: jest.fn()
     };
 
     const deps = createDeps({
@@ -719,10 +1016,11 @@ describe('window._KCAD.charts - comportamento', () => {
 
     expect(deps.__getRankingExpanded()).toBe(false);
     expect(window.KCAPI.getTopContributors).toHaveBeenCalledWith('month', 'moradia', 10);
+    expect(showAllBtn.getAttribute('aria-expanded')).toBe('false');
 
     infoBtn.getListener('click')();
-    expect(window.KCRanking.ensureInfoModal).toHaveBeenCalledTimes(1);
-    expect(modal.getAttribute('aria-hidden')).toBe('false');
+    expect(window.KCRanking.openInfoModal).toHaveBeenCalledWith(infoBtn);
+    expect(window.KCRanking.ensureInfoModal).not.toHaveBeenCalled();
   });
 
   test('bindAdminRanking alterna entre top 10 e expandido', async () => {
@@ -751,5 +1049,6 @@ describe('window._KCAD.charts - comportamento', () => {
 
     expect(deps.__getRankingExpanded()).toBe(true);
     expect(window.KCAPI.getTopContributors).toHaveBeenCalledWith('month', null, 100);
+    expect(showAllBtn.getAttribute('aria-expanded')).toBe('true');
   });
 });

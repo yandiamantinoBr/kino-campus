@@ -81,7 +81,7 @@ describe('Tendencias - wiring + dicionario ampliado', () => {
     expect(src).toContain('function resolveTermModuleValue');
     expect(src).toContain('resolveTermModuleValue(deps, trend)');
     expect(src).toContain('admin-trends-coverage');
-    expect(src).toContain('% classificados');
+    expect(src).toContain('% do volume classificado');
     expect(r('admin/index.html')).toContain('id="admin-trends-coverage"');
   });
 
