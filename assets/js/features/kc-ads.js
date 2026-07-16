@@ -607,13 +607,31 @@
       rendered.html,
     ].join('');
     if (slot === 'top') {
-      const firstContentSection = Array.from(sidebar.children || []).find((node) => {
-        return node !== section && !(node.getAttribute && node.getAttribute('data-kc-ad-aside'));
-      });
-      if (firstContentSection) {
-        sidebar.insertBefore(section, firstContentSection.nextSibling);
-      } else if (sidebar.firstElementChild !== section) {
-        sidebar.insertBefore(section, sidebar.firstElementChild);
+      // v9.3.7.1 (2026-07-16): inserir o ad DEPOIS do kc-create-post-btn
+      // (era: depois do primeiro section de conteúdo, o que empurrava o
+      // "Criar Publicação" para baixo do anúncio). Procura o section
+      // que contém o .kc-create-post-btn e ancora ali; fallback para o
+      // comportamento legado se a página não tiver o botão.
+      const createPostBtn = sidebar.querySelector
+        ? sidebar.querySelector('.kc-create-post-btn')
+        : null;
+      const createPostSection = createPostBtn && typeof createPostBtn.closest === 'function'
+        ? createPostBtn.closest('.kc-sidebar-section')
+        : null;
+      const insertAfter = (createPostSection && createPostSection.parentNode === sidebar)
+        ? createPostSection
+        : null;
+      if (insertAfter) {
+        sidebar.insertBefore(section, insertAfter.nextSibling);
+      } else {
+        const firstContentSection = Array.from(sidebar.children || []).find((node) => {
+          return node !== section && !(node.getAttribute && node.getAttribute('data-kc-ad-aside'));
+        });
+        if (firstContentSection) {
+          sidebar.insertBefore(section, firstContentSection.nextSibling);
+        } else if (sidebar.firstElementChild !== section) {
+          sidebar.insertBefore(section, sidebar.firstElementChild);
+        }
       }
     } else {
       sidebar.appendChild(section);
