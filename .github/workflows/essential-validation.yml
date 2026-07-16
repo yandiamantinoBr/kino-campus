@@ -75,6 +75,7 @@ jobs:
           name: playwright-report
           path: output/playwright-report
           retention-days: 7
+          if-no-files-found: ignore
 
   database-contracts:
     name: Supabase reset, lint and pgTAP

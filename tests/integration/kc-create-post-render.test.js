@@ -309,7 +309,8 @@ describe('kc-create-post.render.js — kcRenderCreateModal', () => {
   });
 
   test('constrói campos via kcBuildFieldsForModule com state', () => {
-    expect(source).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values);');
+    // v11.31.6+: 4º parâmetro opts com isAdmin para limite de descrição admin.
+    expect(source).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values');
   });
 
   test('adiciona seção de visibilidade ao parts', () => {
