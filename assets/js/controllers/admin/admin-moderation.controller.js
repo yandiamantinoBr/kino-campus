@@ -9,8 +9,6 @@
   const SEARCH_DEBOUNCE_MS = 350;
   const EXPORT_ROW_LIMIT = 2000;
   const EXPORT_PAGE_SIZE = 250;
-  const EXTERNAL_ACCESS_EXPORT_PAGE_SIZE = 200;
-  const EXTERNAL_ACCESS_EXPORT_LIMIT_PER_STATUS = 2000;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const STATUS_LABELS = Object.freeze({
     all: 'Todos',
@@ -27,6 +25,9 @@
   let _postsRequestSeq = 0;
   let _auditRequestSeq = 0;
   let _userSearchRequestSeq = 0;
+  let _limitsRequestSeq = 0;
+  let _floodLimitsRequestSeq = 0;
+  let _exportInFlight = false;
   const state = {
     statusFilter: 'all',
     search: '',
@@ -60,7 +61,9 @@
     if (!error) return false;
     const code = String(error.code || '');
     const message = String(error.message || error.details || error.hint || '').toLowerCase();
-    return code === '42883' || (message.includes('function') && message.includes('does not exist'));
+    return code === '42883'
+      || code === 'PGRST202'
+      || (message.includes('function') && (message.includes('does not exist') || message.includes('schema cache')));
   }
 
   function sanitizeSearchTerm(term) {
@@ -236,6 +239,22 @@
     button.removeAttribute('aria-busy');
   }
 
+  function renderTableRequestState(tbody, colspan, message, loading) {
+    if (!tbody) return;
+    const safeMessage = escape(message || (loading ? 'Carregando…' : 'Dados indisponíveis.'));
+    tbody.innerHTML = `<tr><td data-label="Status" colspan="${Number(colspan) || 1}" style="text-align:center;color:${loading ? 'var(--kc-text-dark-secondary)' : '#ef9a9a'};padding:14px;">
+      <span class="kc-admin-loading-state" role="${loading ? 'status' : 'alert'}" aria-live="${loading ? 'polite' : 'assertive'}" style="display:inline-flex;align-items:center;gap:7px;">
+        ${loading ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>' : ''}${safeMessage}
+      </span>
+    </td></tr>`;
+  }
+
+  function setTableRegionBusy(tbody, refreshButton, busy, label) {
+    const wrap = tbody && tbody.closest ? tbody.closest('.kc-admin-posts-table-wrap') : null;
+    if (wrap) wrap.setAttribute('aria-busy', busy ? 'true' : 'false');
+    setControlBusy(refreshButton, busy, label || 'Atualizando…');
+  }
+
   function setPostsBusy(busy, append) {
     const wrap = $('.kc-admin-posts-table-wrap');
     if (wrap) wrap.setAttribute('aria-busy', busy ? 'true' : 'false');
@@ -333,6 +352,28 @@
       return data.map((row) => row.id).filter(Boolean);
     } catch (_) {
       return [];
+    }
+  }
+
+  async function resolveAuditActorIds(client, actorQuery) {
+    const term = sanitizeSearchTerm(actorQuery);
+    if (!client || !term) return { ids: [], error: null };
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('id')
+        .or(`display_name.ilike.%${term}%,full_name.ilike.%${term}%`)
+        .order('id', { ascending: true })
+        .limit(5000);
+      if (error) return { ids: [], error };
+      return {
+        ids: (Array.isArray(data) ? data : [])
+          .map((row) => row && row.id)
+          .filter((id) => UUID_RE.test(String(id || ''))),
+        error: null,
+      };
+    } catch (error) {
+      return { ids: [], error };
     }
   }
 
@@ -440,8 +481,11 @@
       }
 
       if (requestSeq !== _postsRequestSeq) return;
-      state.totalCount = totalCount;
-      state.hasMore = (requestOffset + list.length) < totalCount;
+      const effectiveTotalCount = append && !list.length
+        ? Math.max(Number(state.totalCount) || 0, requestOffset)
+        : totalCount;
+      state.totalCount = effectiveTotalCount;
+      state.hasMore = list.length > 0 && (requestOffset + list.length) < effectiveTotalCount;
       state.posts = reset ? list : state.posts.concat(list);
       state.offset = requestOffset + list.length;
       renderPosts();
@@ -461,6 +505,12 @@
     } catch (_) {
       return '{}';
     }
+  }
+
+  function formatAuditEntityId(value) {
+    const entityId = String(value || '').trim();
+    if (!entityId) return '—';
+    return entityId.length > 12 ? `${entityId.slice(0, 12)}…` : entityId;
   }
 
   async function loadActorsById(actorIds) {
@@ -522,16 +572,13 @@
     const body = $('#audit-log-body');
     if (!body) return;
 
-    const empty = $('#audit-log-empty');
     const rows = Array.isArray(state.audit.rows) ? state.audit.rows : [];
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:20px;">Nenhum log encontrado para os filtros selecionados.</td></tr>';
-      if (empty) empty.style.display = 'block';
+      body.innerHTML = '<tr><td data-label="Status" colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:20px;"><span role="status">Nenhum log encontrado para os filtros selecionados.</span></td></tr>';
       renderAuditPagination();
       return;
     }
 
-    if (empty) empty.style.display = 'none';
     body.innerHTML = rows.map((row, idx) => {
       const detailId = `audit-detail-${idx}`;
       const payload = escape(formatPayload(row.payload));
@@ -540,7 +587,7 @@
         <td data-label="Data">${escape(fmtDate(row.created_at))}</td>
         <td data-label="Ação"><code>${escape(row.action || '—')}</code></td>
         <td data-label="Entidade"><code>${escape(row.entity_type || '—')}</code></td>
-        <td data-label="entity_id"><code style="font-size:.8em;">${escape((row.entity_id || '—').substring(0,12))}…</code></td>
+        <td data-label="entity_id"><code style="font-size:.8em;">${escape(formatAuditEntityId(row.entity_id))}</code></td>
         <td data-label="Autor da ação">${(() => {
           const actorId = String(row.actor_id || '');
           if (!actorId) return '<code>service_role/system</code>';
@@ -580,13 +627,10 @@
     const wrap = body && body.closest ? body.closest('.kc-admin-posts-table-wrap') : null;
     if (wrap) wrap.setAttribute('aria-busy', 'true');
     setControlBusy($('#audit-refresh'), true, 'Atualizando…');
-    if (body) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logs…</td></tr>';
-    }
+    renderTableRequestState(body, 6, 'Carregando logs…', true);
     setAuditError('');
 
     const actorQuery = String(state.audit.actorQuery || '').trim();
-    const actorQueryLower = actorQuery.toLowerCase();
     const actorQueryIsUuid = actorQuery && UUID_RE.test(actorQuery);
     const limit = state.audit.pageSize;
     const offset = state.audit.offset;
@@ -619,27 +663,41 @@
       // Fallback paginado para projetos ainda sem a RPC.
       if (!fetchOk) {
         try {
-          let query = client
-            .from('audit_log')
-            .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit);
-
-          if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
-          if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
-          if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
-
-          const { data, error } = await query;
-          if (requestSeq !== _auditRequestSeq) return;
-          if (error) {
-            console.error('[Admin moderation] fetchAuditLogs direct:', error);
-            state.audit.rows = [];
-            state.audit.hasMore = false;
-            renderAuditLogs();
-            setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
-            return;
+          let actorIdsForFallback = null;
+          if (actorQuery && !actorQueryIsUuid) {
+            const actorLookup = await resolveAuditActorIds(client, actorQuery);
+            if (requestSeq !== _auditRequestSeq) return;
+            if (actorLookup.error) throw actorLookup.error;
+            actorIdsForFallback = actorLookup.ids;
           }
-          rows = data || [];
+
+          if (actorIdsForFallback && !actorIdsForFallback.length) {
+            rows = [];
+          } else {
+            let query = client
+              .from('audit_log')
+              .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
+              .order('created_at', { ascending: false })
+              .order('id', { ascending: false });
+
+            if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
+            if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
+            if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+            if (actorIdsForFallback) query = query.in('actor_id', actorIdsForFallback);
+            query = query.range(offset, offset + limit);
+
+            const { data, error } = await query;
+            if (requestSeq !== _auditRequestSeq) return;
+            if (error) {
+              console.error('[Admin moderation] fetchAuditLogs direct:', error);
+              state.audit.rows = [];
+              state.audit.hasMore = false;
+              renderAuditLogs();
+              setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+              return;
+            }
+            rows = data || [];
+          }
         } catch (directErr) {
           console.error('[Admin moderation] fetchAuditLogs direct exceção:', directErr);
           state.audit.rows = [];
@@ -662,29 +720,13 @@
       const actorsById = await loadActorsById(actorIds);
       if (requestSeq !== _auditRequestSeq) return;
       state.audit.actorsById = actorsById;
-
-      // Filtro client-side por nome do ator (quando não é UUID)
-      if (actorQuery && !actorQueryIsUuid) {
-        state.audit.rows = rows.filter((row) => {
-          const actorId = String(row.actor_id || '').toLowerCase();
-          const actor = state.audit.actorsById[String(row.actor_id || '')] || null;
-          const displayName = String(actor && actor.display_name || '').toLowerCase();
-          const fullName = String(actor && actor.full_name || '').toLowerCase();
-          return actorId.includes(actorQueryLower)
-            || displayName.includes(actorQueryLower)
-            || fullName.includes(actorQueryLower);
-        });
-      } else {
-        state.audit.rows = rows;
-      }
+      state.audit.rows = rows;
 
       renderAuditLogs();
     } finally {
       if (requestSeq === _auditRequestSeq) {
         if (wrap) wrap.setAttribute('aria-busy', 'false');
         setControlBusy($('#audit-refresh'), false);
-        const refresh = $('#audit-refresh');
-        if (refresh) refresh.disabled = false;
       }
     }
   }
@@ -922,101 +964,171 @@
     select.innerHTML = statuses.map((status) => `<option value="${status}">${escape(statusLabel(status))}</option>`).join('');
   }
 
-  async function fetchPostsForExport(client, warnings) {
-    const normalizedSearch = sanitizeSearchTerm(state.search);
-    const statusFilter = state.statusFilter !== 'all' ? state.statusFilter : null;
-    const rows = [];
+  function cloneAndFreezeExportValue(value) {
+    if (Array.isArray(value)) {
+      return Object.freeze(value.map((item) => cloneAndFreezeExportValue(item)));
+    }
+    if (value && typeof value === 'object') {
+      const clone = {};
+      Object.keys(value).forEach((key) => {
+        clone[key] = cloneAndFreezeExportValue(value[key]);
+      });
+      return Object.freeze(clone);
+    }
+    return value;
+  }
+
+  function readExternalAccessSnapshotForExport() {
+    try {
+      const reader = window.KCAdminExternalAccessSnapshot;
+      if (reader && typeof reader.read === 'function') {
+        const snapshot = reader.read();
+        if (snapshot && typeof snapshot === 'object') return snapshot;
+      }
+    } catch (error) {
+      console.error('[Admin moderation] external access snapshot:', error);
+    }
+    return {
+      available: false,
+      incomplete: true,
+      refreshing: false,
+      updatedAt: null,
+      countsByStatus: { pending: 0, approved: 0, rejected: 0 },
+      items: [],
+    };
+  }
+
+  function captureModerationExportContext() {
+    const externalAccessSnapshot = readExternalAccessSnapshotForExport();
+    return cloneAndFreezeExportValue({
+      snapshotAt: new Date().toISOString(),
+      filters: {
+        statusFilter: state.statusFilter || 'all',
+        search: state.search || '',
+        auditEntityType: state.audit.entityType || 'all',
+        auditAction: state.audit.action || 'all',
+        auditActorQuery: state.audit.actorQuery || '',
+        auditPageSize: state.audit.pageSize || 25,
+      },
+      screen: {
+        posts: Array.isArray(state.posts) ? state.posts : [],
+        totalCount: Number(state.totalCount) || 0,
+        auditRows: Array.isArray(state.audit.rows) ? state.audit.rows : [],
+        actorsById: state.audit.actorsById || {},
+        activeLimits: Array.isArray(limitsState.limits) ? limitsState.limits : [],
+        activeLimitsAvailable: limitsState.limitsLoaded === true,
+        activeLimitsRefreshing: limitsState.limitsLoading === true,
+        floodLimits: Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [],
+        floodLimitsAvailable: limitsState.floodLimitsLoaded === true,
+        floodLimitsRefreshing: limitsState.floodLimitsLoading === true,
+        externalAccessSnapshot,
+        sessionActions: Array.isArray(state.sessionActions) ? state.sessionActions : [],
+      },
+    });
+  }
+
+  async function fetchPostsForExport(client, warnings, context) {
+    const normalizedSearch = sanitizeSearchTerm(context.filters.search);
+    const statusFilter = context.filters.statusFilter !== 'all' ? context.filters.statusFilter : null;
+    let rows = [];
     let totalCount = 0;
     let resolvedViaRpc = false;
+    let rpcFailed = false;
 
     try {
-      for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
-        const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
-        const rpc = await client.rpc('kc_admin_search_posts_full', {
-          p_query: normalizedSearch || null,
-          p_status: statusFilter,
-          p_limit: limit,
-          p_offset: offset,
-        });
-        if (!rpc || rpc.error || !Array.isArray(rpc.data)) {
-          if (rpc && rpc.error && !isFunctionMissing(rpc.error)) warnings.push('RPC de posts falhou; export usando fallback direto.');
-          break;
-        }
+      const rpc = await client.rpc('kc_admin_search_posts_full_snapshot', {
+        p_query: normalizedSearch || null,
+        p_status: statusFilter,
+        p_limit: EXPORT_ROW_LIMIT,
+        p_offset: 0,
+        p_until: context.snapshotAt,
+      });
+      const envelope = rpc && !rpc.error
+        ? (Array.isArray(rpc.data) ? rpc.data[0] : rpc.data)
+        : null;
+      if (!rpc || rpc.error || !envelope || !Array.isArray(envelope.out_rows)) {
+        if (rpc && rpc.error && !isFunctionMissing(rpc.error)) warnings.push('RPC de posts falhou; export usando fallback direto.');
+        rpcFailed = true;
+      } else {
         resolvedViaRpc = true;
-        const chunk = rpc.data.map(mapRpcPost);
-        if (offset === 0) totalCount = rpc.data.length ? Number(rpc.data[0].total_count || 0) : 0;
-        rows.push(...chunk);
-        if (chunk.length < limit || (totalCount && rows.length >= totalCount)) break;
+        rows = envelope.out_rows.map(mapRpcPost);
+        totalCount = Number(envelope.out_total_count || 0);
       }
     } catch (error) {
       warnings.push('Falha ao buscar posts via RPC; export usando fallback direto.');
+      rpcFailed = true;
     }
 
-    if (resolvedViaRpc) {
+    if (resolvedViaRpc && !rpcFailed) {
       if (totalCount > rows.length) warnings.push(`Export de posts limitado a ${rows.length} de ${totalCount} registros filtrados.`);
       return { rows, totalCount: totalCount || rows.length, source: 'rpc' };
+    }
+    if (rpcFailed && rows.length) {
+      rows = [];
+      totalCount = 0;
     }
 
     try {
       const authorIds = normalizedSearch ? await searchAuthorIds(client, normalizedSearch) : [];
-      for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
-        const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
-        let query = client
-          .from('posts')
-          .select('id, legacy_id, title, content:description, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
-          .order('created_at', { ascending: false })
-          .range(offset, offset + limit - 1);
+      let query = client
+        .from('posts')
+        .select('id, legacy_id, title, content:description, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .lte('created_at', context.snapshotAt)
+        .limit(EXPORT_ROW_LIMIT);
 
-        if (statusFilter) query = query.eq('status', statusFilter);
-        if (normalizedSearch) {
-          const clauses = [
-            `title.ilike.%${normalizedSearch}%`,
-            `description.ilike.%${normalizedSearch}%`,
-            `legacy_id.ilike.%${normalizedSearch}%`,
-          ];
-          if (UUID_RE.test(normalizedSearch)) clauses.push(`id.eq.${normalizedSearch}`);
-          if (authorIds.length) clauses.push(`author_id.in.(${authorIds.join(',')})`);
-          query = query.or(clauses.join(','));
-        }
-
-        const { data, error, count } = await query;
-        if (error) throw error;
-        if (offset === 0) totalCount = Number.isFinite(Number(count)) ? Number(count) : 0;
-        const chunk = data || [];
-        rows.push(...chunk);
-        if (chunk.length < limit || (totalCount && rows.length >= totalCount)) break;
+      if (statusFilter) query = query.eq('status', statusFilter);
+      if (normalizedSearch) {
+        const clauses = [
+          `title.ilike.%${normalizedSearch}%`,
+          `description.ilike.%${normalizedSearch}%`,
+          `legacy_id.ilike.%${normalizedSearch}%`,
+        ];
+        if (UUID_RE.test(normalizedSearch)) clauses.push(`id.eq.${normalizedSearch}`);
+        if (authorIds.length) clauses.push(`author_id.in.(${authorIds.join(',')})`);
+        query = query.or(clauses.join(','));
       }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      totalCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+      rows = data || [];
       if (totalCount > rows.length) warnings.push(`Export de posts limitado a ${rows.length} de ${totalCount} registros filtrados.`);
       return { rows, totalCount: totalCount || rows.length, source: 'direct' };
     } catch (error) {
       warnings.push('Não foi possível buscar todos os posts filtrados; export usando a página carregada.');
       return {
-        rows: Array.isArray(state.posts) ? state.posts : [],
-        totalCount: state.totalCount || (Array.isArray(state.posts) ? state.posts.length : 0),
+        rows: context.screen.posts,
+        totalCount: context.screen.totalCount || context.screen.posts.length,
         source: 'state_fallback',
       };
     }
   }
 
-  async function fetchAuditRowsForExport(client, warnings) {
-    const actorQuery = String(state.audit.actorQuery || '').trim();
+  async function fetchAuditRowsForExport(client, warnings, context) {
+    const actorQuery = String(context.filters.auditActorQuery || '').trim();
     const actorQueryIsUuid = actorQuery && UUID_RE.test(actorQuery);
-    const actorQueryLower = actorQuery.toLowerCase();
     const rows = [];
     let resolvedViaRpc = false;
+    let rpcFailed = false;
+    let source = 'direct';
 
     try {
       for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
         const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
         const rpc = await client.rpc('kc_admin_list_audit_logs', {
-          p_entity_type: state.audit.entityType,
-          p_action: state.audit.action,
+          p_entity_type: context.filters.auditEntityType,
+          p_action: context.filters.auditAction,
           p_actor_query: actorQuery || null,
           p_limit: limit,
           p_offset: offset,
+          p_since: null,
+          p_until: context.snapshotAt,
         });
         if (!rpc || rpc.error || !Array.isArray(rpc.data)) {
           if (rpc && rpc.error) warnings.push('RPC de audit log falhou; export usando fallback direto.');
+          rpcFailed = true;
           break;
         }
         resolvedViaRpc = true;
@@ -1025,159 +1137,131 @@
       }
     } catch (error) {
       warnings.push('Falha ao buscar audit log via RPC; export usando fallback direto.');
+      rpcFailed = true;
     }
 
-    if (!resolvedViaRpc) {
+    if (rpcFailed && rows.length) rows.splice(0, rows.length);
+
+    if (!resolvedViaRpc || rpcFailed) {
       try {
-        for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
-          const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
-          let query = client
-            .from('audit_log')
-            .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+        let actorIdsForFallback = null;
+        if (actorQuery && !actorQueryIsUuid) {
+          const actorLookup = await resolveAuditActorIds(client, actorQuery);
+          if (actorLookup.error) throw actorLookup.error;
+          actorIdsForFallback = actorLookup.ids;
+        }
 
-          if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
-          if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
-          if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+        if (!actorIdsForFallback || actorIdsForFallback.length) {
+          for (let offset = 0; rows.length < EXPORT_ROW_LIMIT; offset += EXPORT_PAGE_SIZE) {
+            const limit = Math.min(EXPORT_PAGE_SIZE, EXPORT_ROW_LIMIT - rows.length);
+            let query = client
+              .from('audit_log')
+              .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
+              .order('created_at', { ascending: false })
+              .order('id', { ascending: false })
+              .lte('created_at', context.snapshotAt);
 
-          const { data, error } = await query;
-          if (error) throw error;
-          const chunk = data || [];
-          rows.push(...chunk);
-          if (chunk.length < limit) break;
+            if (context.filters.auditEntityType !== 'all') query = query.eq('entity_type', context.filters.auditEntityType);
+            if (context.filters.auditAction !== 'all') query = query.eq('action', context.filters.auditAction);
+            if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+            if (actorIdsForFallback) query = query.in('actor_id', actorIdsForFallback);
+            query = query.range(offset, offset + limit - 1);
+
+            const { data, error } = await query;
+            if (error) throw error;
+            const chunk = data || [];
+            rows.push(...chunk);
+            if (chunk.length < limit) break;
+          }
         }
       } catch (error) {
         warnings.push('Não foi possível buscar todo o audit log filtrado; export usando a página carregada.');
-        rows.splice(0, rows.length, ...(Array.isArray(state.audit.rows) ? state.audit.rows : []));
+        rows.splice(0, rows.length, ...context.screen.auditRows);
+        source = 'state_fallback';
       }
     }
 
     let actorsById = await loadActorsById(rows.map((row) => row.actor_id).filter(Boolean));
-    let filteredRows = rows;
-    if (actorQuery && !actorQueryIsUuid) {
-      filteredRows = rows.filter((row) => {
-        const actorId = String(row.actor_id || '').toLowerCase();
-        const actor = actorsById[String(row.actor_id || '')] || null;
-        const displayName = String(actor && actor.display_name || '').toLowerCase();
-        const fullName = String(actor && actor.full_name || '').toLowerCase();
-        return actorId.includes(actorQueryLower)
-          || displayName.includes(actorQueryLower)
-          || fullName.includes(actorQueryLower);
-      });
+    if (source === 'state_fallback') {
+      actorsById = Object.assign({}, context.screen.actorsById, actorsById);
     }
-    if (filteredRows.length >= EXPORT_ROW_LIMIT) warnings.push(`Audit log limitado aos ${EXPORT_ROW_LIMIT} registros mais recentes dos filtros atuais.`);
-    return { rows: filteredRows, actorsById, source: resolvedViaRpc ? 'rpc' : 'direct' };
+    if (rows.length >= EXPORT_ROW_LIMIT) warnings.push(`Audit log limitado aos ${EXPORT_ROW_LIMIT} registros mais recentes dos filtros congelados.`);
+    return { rows, actorsById, source: resolvedViaRpc && !rpcFailed ? 'rpc' : source };
   }
 
-  async function fetchPostLimitsForExport(client, warnings) {
-    try {
-      const { data, error } = await client.rpc('kc_admin_get_post_limits');
-      if (error) throw error;
-      return (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
-    } catch (error) {
-      warnings.push('Não foi possível atualizar limites ativos para o export; usando dados carregados.');
-      return Array.isArray(limitsState.limits) ? limitsState.limits : [];
-    }
-  }
-
-  async function fetchPostFloodLimitsForExport(client, warnings) {
-    try {
-      const { data, error } = await client.rpc('kc_admin_get_post_flood_limits');
-      if (error) throw error;
-      return (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
-    } catch (error) {
-      warnings.push('Não foi possível atualizar limites de ritmo para o export; usando dados carregados.');
-      return Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [];
-    }
-  }
-
-  // Coleta as solicitações de acesso externo (mesma fonte do painel da página).
-  async function fetchExternalAccessForExport(warnings) {
-    if (!window.KCAPI || typeof window.KCAPI.listExternalAccessRequests !== 'function') {
-      warnings.push('Solicitações de acesso externo indisponíveis para o export.');
-      return [];
+  function collectVisibleAdminSnapshotsForExport(warnings, context) {
+    if (!context.screen.activeLimitsAvailable) {
+      warnings.push('O snapshot de limites ativos ainda não estava disponível no início do export.');
+    } else if (context.screen.activeLimitsRefreshing) {
+      warnings.push('Limites ativos estavam sendo atualizados; o export preservou os valores visíveis no clique.');
     }
 
-    async function fetchStatus(status) {
-      const items = [];
-      let total = null;
-      while (items.length < EXTERNAL_ACCESS_EXPORT_LIMIT_PER_STATUS) {
-        const limit = Math.min(
-          EXTERNAL_ACCESS_EXPORT_PAGE_SIZE,
-          EXTERNAL_ACCESS_EXPORT_LIMIT_PER_STATUS - items.length
-        );
-        let response = null;
-        try {
-          response = await window.KCAPI.listExternalAccessRequests({
-            status,
-            limit,
-            offset: items.length,
-          });
-        } catch (error) {
-          warnings.push(`Falha ao coletar solicitações de acesso externo "${status}" a partir do item ${items.length}.`);
-          break;
-        }
-        if (!response || response.ok === false) {
-          warnings.push(`Falha ao coletar solicitações de acesso externo "${status}" a partir do item ${items.length}.`);
-          break;
-        }
-        const pageItems = Array.isArray(response.items) ? response.items : [];
-        if (total === null) total = Math.max(0, Number(response.total) || 0);
-        items.push(...pageItems);
-        if (!pageItems.length || pageItems.length < limit || (total && items.length >= total)) break;
+    if (!context.screen.floodLimitsAvailable) {
+      warnings.push('O snapshot de limites de ritmo ainda não estava disponível no início do export.');
+    } else if (context.screen.floodLimitsRefreshing) {
+      warnings.push('Limites de ritmo estavam sendo atualizados; o export preservou os valores visíveis no clique.');
+    }
+
+    const externalSnapshot = context.screen.externalAccessSnapshot || {};
+    if (!externalSnapshot.available) {
+      warnings.push('O snapshot de acesso externo ainda não estava disponível no início do export.');
+    } else {
+      if (externalSnapshot.incomplete) {
+        warnings.push('O snapshot visível de acesso externo estava parcial; o export preservou somente os itens exibidos no clique.');
       }
-      if (total !== null && total > items.length) {
-        warnings.push(
-          `Solicitações de acesso externo "${status}" limitadas a ${items.length} de ${total} registros.`
-        );
+      if (externalSnapshot.refreshing) {
+        warnings.push('O acesso externo estava sendo atualizado; o export preservou o snapshot visível anterior.');
       }
-      return items;
     }
-
-    const results = await Promise.all(
-      ['pending', 'approved', 'rejected'].map(fetchStatus)
-    );
-    return results.reduce((all, rows) => all.concat(rows), []);
-  }
-
-  async function collectModerationExportData() {
-    const client = getClient();
-    const warnings = [];
-    if (!client) {
-      warnings.push('Supabase client indisponível; export usando apenas dados carregados na tela.');
-      return {
-        posts: Array.isArray(state.posts) ? state.posts : [],
-        postsTotalCount: state.totalCount || 0,
-        auditRows: Array.isArray(state.audit.rows) ? state.audit.rows : [],
-        actorsById: state.audit.actorsById || {},
-        activeLimits: Array.isArray(limitsState.limits) ? limitsState.limits : [],
-        floodLimits: Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : [],
-        externalAccess: [],
-        warnings,
-      };
-    }
-
-    const [postsPayload, auditPayload, activeLimits, floodLimits, externalAccess] = await Promise.all([
-      fetchPostsForExport(client, warnings),
-      fetchAuditRowsForExport(client, warnings),
-      fetchPostLimitsForExport(client, warnings),
-      fetchPostFloodLimitsForExport(client, warnings),
-      fetchExternalAccessForExport(warnings),
-    ]);
 
     return {
+      activeLimits: context.screen.activeLimits,
+      floodLimits: context.screen.floodLimits,
+      externalAccess: externalSnapshot.available && Array.isArray(externalSnapshot.items)
+        ? externalSnapshot.items
+        : [],
+    };
+  }
+
+  async function collectModerationExportData(context) {
+    const client = getClient();
+    const warnings = [];
+    const visibleSnapshots = collectVisibleAdminSnapshotsForExport(warnings, context);
+    if (!client) {
+      warnings.push('Supabase client indisponível; export usando apenas dados carregados na tela.');
+      return cloneAndFreezeExportValue({
+        context,
+        posts: context.screen.posts,
+        postsTotalCount: context.screen.totalCount,
+        postsSource: 'state_fallback',
+        auditRows: context.screen.auditRows,
+        auditSource: 'state_fallback',
+        actorsById: context.screen.actorsById,
+        activeLimits: visibleSnapshots.activeLimits,
+        floodLimits: visibleSnapshots.floodLimits,
+        externalAccess: visibleSnapshots.externalAccess,
+        warnings,
+      });
+    }
+
+    const [postsPayload, auditPayload] = await Promise.all([
+      fetchPostsForExport(client, warnings, context),
+      fetchAuditRowsForExport(client, warnings, context),
+    ]);
+
+    return cloneAndFreezeExportValue({
+      context,
       posts: postsPayload.rows,
       postsTotalCount: postsPayload.totalCount,
       postsSource: postsPayload.source,
       auditRows: auditPayload.rows,
       auditSource: auditPayload.source,
       actorsById: auditPayload.actorsById,
-      activeLimits,
-      floodLimits,
-      externalAccess,
+      activeLimits: visibleSnapshots.activeLimits,
+      floodLimits: visibleSnapshots.floodLimits,
+      externalAccess: visibleSnapshots.externalAccess,
       warnings,
-    };
+    });
   }
 
   function extAccessStatusLabel(status) {
@@ -1185,16 +1269,30 @@
     return map[String(status || '').toLowerCase()] || (status || 'Pendente');
   }
 
+  function exportSourceLabel(source) {
+    const labels = {
+      rpc: 'RPC administrativa',
+      direct: 'consulta direta protegida',
+      state_fallback: 'dados carregados na tela',
+    };
+    return labels[String(source || '')] || 'fonte administrativa';
+  }
+
   function buildModerationExportReport(exportData) {
     exportData = exportData || {};
-    const posts = Array.isArray(exportData.posts) ? exportData.posts : (Array.isArray(state.posts) ? state.posts : []);
-    const auditRows = Array.isArray(exportData.auditRows) ? exportData.auditRows : (Array.isArray(state.audit.rows) ? state.audit.rows : []);
-    const activeLimits = Array.isArray(exportData.activeLimits) ? exportData.activeLimits : (Array.isArray(limitsState.limits) ? limitsState.limits : []);
-    const floodLimits = Array.isArray(exportData.floodLimits) ? exportData.floodLimits : (Array.isArray(limitsState.floodLimits) ? limitsState.floodLimits : []);
-    const actorsById = exportData.actorsById || state.audit.actorsById || {};
+    const context = exportData.context || captureModerationExportContext();
+    const posts = Array.isArray(exportData.posts) ? exportData.posts : context.screen.posts;
+    const auditRows = Array.isArray(exportData.auditRows) ? exportData.auditRows : context.screen.auditRows;
+    const activeLimits = Array.isArray(exportData.activeLimits) ? exportData.activeLimits : context.screen.activeLimits;
+    const floodLimits = Array.isArray(exportData.floodLimits) ? exportData.floodLimits : context.screen.floodLimits;
+    const sessionActions = context.screen.sessionActions;
+    const actorsById = exportData.actorsById || context.screen.actorsById;
     const warnings = Array.isArray(exportData.warnings) ? exportData.warnings : [];
     const externalAccess = Array.isArray(exportData.externalAccess) ? exportData.externalAccess : [];
-    const postsTotalCount = Number.isFinite(Number(exportData.postsTotalCount)) ? Number(exportData.postsTotalCount) : (state.totalCount || posts.length);
+    const postsTotalCount = Number.isFinite(Number(exportData.postsTotalCount)) ? Number(exportData.postsTotalCount) : (context.screen.totalCount || posts.length);
+    const postsSource = exportData.postsSource || 'state_fallback';
+    const auditSource = exportData.auditSource || 'state_fallback';
+    const statusDistributionIsSample = postsTotalCount > posts.length;
     const statusCounts = posts.reduce((acc, post) => {
       const key = String(post && post.status || 'desconhecido');
       acc[key] = (acc[key] || 0) + 1;
@@ -1202,7 +1300,10 @@
     }, {});
     const sections = [
       {
-        title: 'Distribuição de status',
+        title: statusDistributionIsSample ? 'Distribuição de status (amostra exportada)' : 'Distribuição de status',
+        note: statusDistributionIsSample
+          ? `A distribuição considera ${posts.length} de ${postsTotalCount} posts filtrados, conforme o limite seguro do export.`
+          : `Distribuição calculada sobre os ${posts.length} posts exportados.`,
         rows: Object.keys(statusCounts).map((status) => ({
           status: statusLabel(status),
           total: statusCounts[status],
@@ -1274,7 +1375,7 @@
       },
       {
         title: 'Audit log filtrado',
-        note: 'Eventos administrativos relacionados aos filtros atuais.',
+        note: `Eventos administrativos relacionados aos filtros congelados no início do export. Fonte: ${exportSourceLabel(auditSource)}.`,
         rows: auditRows.map((row) => {
           const actorId = String(row.actor_id || '');
           const actor = actorsById && actorsById[actorId];
@@ -1295,7 +1396,7 @@
       },
       {
         title: 'Ações da sessão',
-        rows: state.sessionActions.map((item) => ({
+        rows: sessionActions.map((item) => ({
           post_id: item.postId,
           acao: statusLabel(item.action),
           data: fmtDate(item.timestamp),
@@ -1351,22 +1452,24 @@
     return {
       title: 'KinoCampus - Moderação Admin',
       subtitle: 'Posts filtrados, limites ativos, ritmo de publicação, audit log e solicitações de acesso externo da seleção atual',
-      source: 'admin/moderation.html — export paginado dos filtros atuais, sujeito aos limites de segurança informados',
+      source: `admin/moderation.html — instantâneo iniciado em ${fmtDate(context.snapshotAt)}; posts: ${exportSourceLabel(postsSource)}; audit log: ${exportSourceLabel(auditSource)}; sujeito aos limites de segurança informados`,
       filters: {
-        status: statusLabel(state.statusFilter || 'all'),
-        busca: state.search || '',
-        audit_entity_type: state.audit.entityType || 'all',
-        audit_action: state.audit.action || 'all',
-        audit_actor: state.audit.actorQuery || '',
-        audit_page_size: state.audit.pageSize || 25,
+        status: statusLabel(context.filters.statusFilter || 'all'),
+        busca: context.filters.search || '',
+        audit_entity_type: context.filters.auditEntityType || 'all',
+        audit_action: context.filters.auditAction || 'all',
+        audit_actor: context.filters.auditActorQuery || '',
+        audit_page_size: context.filters.auditPageSize || 25,
+        fonte_posts: exportSourceLabel(postsSource),
+        fonte_audit: exportSourceLabel(auditSource),
       },
       kpis: {
         posts_carregados: posts.length,
         posts_filtrados_total: postsTotalCount,
-        audit_rows_na_pagina: auditRows.length,
+        audit_rows_exportadas: auditRows.length,
         limites_ativos: activeLimits.length,
         limites_de_ritmo: floodLimits.length,
-        acoes_da_sessao: state.sessionActions.length,
+        acoes_da_sessao: sessionActions.length,
       },
       sections,
     };
@@ -1377,16 +1480,24 @@
       showToastSafe('Exportador admin indisponível.', 'error');
       return;
     }
-    const date = new Date().toISOString().slice(0, 10);
-    const btn = kind === 'pdf' ? $('#moderation-export-pdf') : $('#moderation-export-xlsx');
-    const original = btn ? btn.innerHTML : '';
+    if (_exportInFlight) {
+      showToastSafe('Já existe uma exportação em andamento.', 'info', 2200);
+      return;
+    }
+
+    _exportInFlight = true;
+    const exportButtons = [
+      $('#moderation-export-pdf'),
+      $('#moderation-export-xlsx'),
+    ].filter(Boolean);
+    let buttonsBusy = false;
     try {
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Exportando...';
-      }
-      showToastSafe('Preparando relatório com os filtros atuais...', 'info', 2200);
-      const exportData = await collectModerationExportData();
+      const context = captureModerationExportContext();
+      const date = context.snapshotAt.slice(0, 10);
+      exportButtons.forEach((button) => setControlBusy(button, true, 'Exportando…'));
+      buttonsBusy = true;
+      showToastSafe('Preparando relatório com os filtros congelados neste instante...', 'info', 2200);
+      const exportData = await collectModerationExportData(context);
       const report = buildModerationExportReport(exportData);
       if (kind === 'pdf') {
         await window.KCAdminExport.exportReportPDF('kc-admin-moderacao-' + date + '.pdf', report);
@@ -1398,10 +1509,8 @@
       console.error('[Admin moderation] export:', error);
       showToastSafe('Não foi possível gerar o relatório agora.', 'error', 3600);
     } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = original;
-      }
+      if (buttonsBusy) exportButtons.forEach((button) => setControlBusy(button, false));
+      _exportInFlight = false;
     }
   }
 
@@ -1574,7 +1683,11 @@
   const limitsState = {
     selectedUser: null, // { id, name }
     limits: [],
+    limitsLoaded: false,
+    limitsLoading: false,
     floodLimits: [],
+    floodLimitsLoaded: false,
+    floodLimitsLoading: false,
   };
 
   function showLimitsFeedback(msg, isError) {
@@ -1593,20 +1706,32 @@
   async function fetchPostLimits() {
     const client = getClient();
     if (!client) return;
+    const requestSeq = ++_limitsRequestSeq;
     const tbody = $('#post-limits-body');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>';
+    const refreshButton = $('#post-limits-refresh');
+    limitsState.limitsLoading = true;
+    setTableRegionBusy(tbody, refreshButton, true, 'Atualizando…');
+    renderTableRequestState(tbody, 5, 'Carregando limites…', true);
     try {
       const { data, error } = await client.rpc('kc_admin_get_post_limits');
+      if (requestSeq !== _limitsRequestSeq) return;
       const responseError = error || (data && data.ok === false ? { message: data.message || data.error } : null);
       if (responseError) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(String(responseError.message || 'Falha ao carregar limites'))}</td></tr>`;
+        renderTableRequestState(tbody, 5, `Erro: ${String(responseError.message || 'Falha ao carregar limites')}`, false);
         return;
       }
       const limits = (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
       limitsState.limits = limits;
+      limitsState.limitsLoaded = true;
       renderPostLimits(limits);
     } catch (error) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(getErrorMessage(error, 'Falha ao carregar limites'))}</td></tr>`;
+      if (requestSeq !== _limitsRequestSeq) return;
+      renderTableRequestState(tbody, 5, `Erro: ${getErrorMessage(error, 'Falha ao carregar limites')}`, false);
+    } finally {
+      if (requestSeq === _limitsRequestSeq) {
+        limitsState.limitsLoading = false;
+        setTableRegionBusy(tbody, refreshButton, false);
+      }
     }
   }
 
@@ -1638,22 +1763,34 @@
   async function fetchPostFloodLimits() {
     const client = getClient();
     if (!client) return;
+    const requestSeq = ++_floodLimitsRequestSeq;
     const tbody = $('#post-flood-limits-body');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>';
+    const refreshButton = $('#post-flood-limits-refresh');
+    limitsState.floodLimitsLoading = true;
+    setTableRegionBusy(tbody, refreshButton, true, 'Atualizando…');
+    renderTableRequestState(tbody, 5, 'Carregando limites de ritmo…', true);
     try {
       const { data, error } = await client.rpc('kc_admin_get_post_flood_limits');
+      if (requestSeq !== _floodLimitsRequestSeq) return;
       if (error) {
         const msg = isFunctionMissing(error)
           ? 'Migration de ritmo ainda não aplicada no Supabase.'
           : String(error.message || 'Falha ao carregar ritmos');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">${escape(msg)}</td></tr>`;
+        renderTableRequestState(tbody, 5, msg, false);
         return;
       }
       const limits = (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
       limitsState.floodLimits = limits;
+      limitsState.floodLimitsLoaded = true;
       renderPostFloodLimits(limits);
     } catch (error) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(String(error && error.message || error || 'Falha ao carregar ritmos'))}</td></tr>`;
+      if (requestSeq !== _floodLimitsRequestSeq) return;
+      renderTableRequestState(tbody, 5, `Erro: ${String(error && error.message || error || 'Falha ao carregar ritmos')}`, false);
+    } finally {
+      if (requestSeq === _floodLimitsRequestSeq) {
+        limitsState.floodLimitsLoading = false;
+        setTableRegionBusy(tbody, refreshButton, false);
+      }
     }
   }
 
@@ -1693,7 +1830,8 @@
     return value;
   }
 
-  async function runLimitOperation(button, loadingLabel, operation) {
+  async function runLimitOperation(button, loadingLabel, operation, busyRow) {
+    if (busyRow) busyRow.setAttribute('aria-busy', 'true');
     setControlBusy(button, true, loadingLabel);
     try {
       return await operation();
@@ -1703,7 +1841,7 @@
       return null;
     } finally {
       setControlBusy(button, false);
-      if (button) button.disabled = false;
+      if (busyRow) busyRow.removeAttribute('aria-busy');
     }
   }
 
@@ -1720,10 +1858,9 @@
     const client = getClient();
     if (!client) return;
     const moduleEl = $('#limit-global-module');
-    const valueEl = $('#limit-global-value');
     const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
-    const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
-    if (!val || val < 1) { showLimitsFeedback('Informe um valor válido (mínimo 1).', true); return; }
+    const val = parseLimitNumber('#limit-global-value', { min: 1, max: 1000 });
+    if (val == null) { showLimitsFeedback('Informe um valor válido entre 1 e 1000.', true); return; }
     const btn = $('#limit-global-save');
     const response = await runLimitOperation(btn, 'Salvando…', () =>
       client.rpc('kc_admin_set_post_limit', { p_user_id: null, p_module: mod || null, p_max_active: val })
@@ -1757,10 +1894,9 @@
     if (!client) return;
     if (!limitsState.selectedUser) { showLimitsFeedback('Selecione um usuário antes de salvar.', true); return; }
     const moduleEl = $('#limit-user-module');
-    const valueEl = $('#limit-user-value');
     const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
-    const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
-    if (isNaN(val) || val < 0) { showLimitsFeedback('Informe um valor válido (0 = bloqueado, mínimo 1 para ativo).', true); return; }
+    const val = parseLimitNumber('#limit-user-value', { min: 0, max: 1000 });
+    if (val == null) { showLimitsFeedback('Informe um valor válido entre 0 e 1000 (0 = bloqueado).', true); return; }
     const btn = $('#limit-user-save');
     const selectedUser = { ...limitsState.selectedUser };
     const response = await runLimitOperation(btn, 'Salvando…', () =>
@@ -1772,11 +1908,14 @@
     await fetchPostLimits();
   }
 
-  async function deleteLimitById(limitId) {
+  async function deleteLimitById(limitId, button, row) {
     const client = getClient();
     if (!client) return;
-    const response = await runLimitOperation(null, 'Removendo…', () =>
-      client.rpc('kc_admin_delete_post_limit', { p_limit_id: limitId })
+    const response = await runLimitOperation(
+      button,
+      'Removendo…',
+      () => client.rpc('kc_admin_delete_post_limit', { p_limit_id: limitId }),
+      row
     );
     const errorMessage = getRpcOperationError(response, 'Falha ao remover limite.');
     if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
@@ -1856,14 +1995,17 @@
     const match = limitsState.floodLimits.find((r) => !r.user_id && (mod ? r.module === mod : !r.module));
     if (!match) { showLimitsFeedback('Nenhum ritmo global encontrado para remover.', true); return; }
     if (!window.confirm('Remover este ritmo global e voltar ao padrão anti-spam?')) return;
-    await deleteFloodLimitById(match.id);
+    await deleteFloodLimitById(match.id, $('#flood-global-delete'), null);
   }
 
-  async function deleteFloodLimitById(limitId) {
+  async function deleteFloodLimitById(limitId, button, row) {
     const client = getClient();
     if (!client) return;
-    const response = await runLimitOperation(null, 'Removendo…', () =>
-      client.rpc('kc_admin_delete_post_flood_limit', { p_limit_id: limitId })
+    const response = await runLimitOperation(
+      button,
+      'Removendo…',
+      () => client.rpc('kc_admin_delete_post_flood_limit', { p_limit_id: limitId }),
+      row
     );
     const errorMessage = getRpcOperationError(response, 'Falha ao remover ritmo.');
     if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
@@ -1931,7 +2073,7 @@
         const lid = btn.getAttribute('data-limit-delete');
         if (!lid) return;
         if (!window.confirm('Remover este override de limite?')) return;
-        await deleteLimitById(lid);
+        await deleteLimitById(lid, btn, btn.closest('tr'));
       });
     }
 
@@ -1943,7 +2085,7 @@
         const lid = btn.getAttribute('data-flood-limit-delete');
         if (!lid) return;
         if (!window.confirm('Remover este limite de ritmo?')) return;
-        await deleteFloodLimitById(lid);
+        await deleteFloodLimitById(lid, btn, btn.closest('tr'));
       });
     }
 

@@ -3643,15 +3643,53 @@ main {
     }
 }
 
+@keyframes kc-loader-marker-pulse {
+    0%, 100% {
+        opacity: 0.42;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes kc-loader-reduced-pulse {
+    0%, 100% {
+        opacity: 0.62;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
 /* Spinner transversal: substitui o movimento quase imperceptível padrão do
    Font Awesome por uma animação consistente em todas as páginas. */
 .fa-spinner.fa-spin {
     --fa-animation-duration: 0.78s;
     --fa-animation-timing: linear;
     display: inline-block;
+    position: relative;
+    overflow: visible;
     transform-origin: center;
     will-change: transform, opacity;
     animation: kc-loader-rotate 0.78s linear infinite, kc-loader-pulse 1.45s ease-in-out infinite;
+}
+
+/* O glifo do Font Awesome é quase radialmente simétrico. Este ponto acompanha
+   a rotação do ícone e torna o movimento perceptível sem alterar o layout. */
+.fa-spinner.fa-spin::after {
+    content: "";
+    position: absolute;
+    top: -0.16em;
+    inset-inline-start: 50%;
+    width: 0.3em;
+    height: 0.3em;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0.32em currentColor;
+    opacity: 0.85;
+    pointer-events: none;
+    transform: translateX(-50%);
+    animation: kc-loader-marker-pulse 1.1s ease-in-out infinite;
 }
 
 /* Em estados de carregamento independentes, o halo laranja dá contraste nos
@@ -3675,9 +3713,15 @@ main {
 @media (prefers-reduced-motion: reduce) {
     :not(html).kc-loading::after,
     .fa-spinner.fa-spin {
+        animation: kc-loader-reduced-pulse 2.4s ease-in-out infinite !important;
+        transform: none !important;
+        will-change: opacity;
+    }
+
+    .fa-spinner.fa-spin::after {
         animation: none !important;
-        opacity: 1;
-        will-change: auto;
+        opacity: 0.85;
+        transform: translateX(-50%);
     }
 
     :not(html).kc-loading::after {
@@ -3741,7 +3785,7 @@ body.kc-admin-page .kc-skeleton {
 
 @media (prefers-reduced-motion: reduce) {
     .kc-skeleton {
-        animation: none !important;
+        animation: kc-loader-reduced-pulse 2.4s ease-in-out infinite !important;
         background-position: 0 0;
     }
 }

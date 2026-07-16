@@ -574,6 +574,7 @@
     'aria-label.admin-flood-user-module':   'Módulo — ritmo por usuário',
     'aria-label.admin-flood-user-max':      'Máximo de publicações na janela do usuário',
     'aria-label.admin-flood-user-window':   'Janela do usuário em minutos',
+    'aria-label.external-access-status-tabs': 'Status das solicitações de acesso externo',
     'aria-label.refresh-list':             'Atualizar lista',
     'aria-label.refresh-dashboard':        'Atualizar dashboard',
 

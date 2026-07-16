@@ -207,6 +207,11 @@ html:not(.kc-loading) .kc-hero-carousel {
   100% { background-position: -200% 0; }
 }
 
+@keyframes kcReducedLoadingPulse {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; }
+}
+
 /* Fade-in suave quando o skeleton é removido */
 .kc-hero-carousel {
   transition: opacity 0.28s ease;
@@ -214,7 +219,7 @@ html:not(.kc-loading) .kc-hero-carousel {
 
 @media (prefers-reduced-motion: reduce) {
   .kc-hero-carousel.kc-hero-loading::after {
-    animation: none;
+    animation: kcReducedLoadingPulse 2.4s ease-in-out infinite;
     background-position: 0 0;
   }
 

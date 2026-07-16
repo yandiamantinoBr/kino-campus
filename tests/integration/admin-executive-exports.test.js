@@ -61,11 +61,14 @@ describe('exports executivos admin - dashboard, denuncias e banners', () => {
 
   test('moderacao inclui acesso externo (convites/solicitacoes) no export', () => {
     const source = read('assets/js/controllers/admin/admin-moderation.controller.js');
-    expect(source).toContain('async function fetchExternalAccessForExport(warnings)');
-    expect(source).toContain('listExternalAccessRequests');
-    expect(source).toContain('const EXTERNAL_ACCESS_EXPORT_PAGE_SIZE = 200;');
-    expect(source).toContain('offset: items.length');
-    expect(source).toContain('Solicitações de acesso externo "${status}" limitadas');
+    const external = read('assets/js/controllers/admin/admin-external-access.controller.js');
+    expect(source).toContain('function readExternalAccessSnapshotForExport()');
+    expect(source).toContain('window.KCAdminExternalAccessSnapshot');
+    expect(source).toContain('function collectVisibleAdminSnapshotsForExport(warnings, context)');
+    expect(source).toContain('externalAccess: visibleSnapshots.externalAccess');
+    expect(source).not.toContain('listExternalAccessRequests');
+    expect(external).toContain('window.KCAdminExternalAccessSnapshot = Object.freeze');
+    expect(external).toContain('items: cloneSnapshotItems(STATE.items)');
     expect(source).toContain("title: 'Acesso externo'");
     expect(source).toContain('externalAccess');
     expect(source).toContain('function extAccessStatusLabel');

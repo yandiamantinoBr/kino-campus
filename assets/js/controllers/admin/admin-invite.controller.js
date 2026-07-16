@@ -4,8 +4,11 @@
   var POLL_DELAY_MS = 500;
   var INITIAL_POLL_DELAY_MS = 1000;
   var MAX_POLL_ATTEMPTS = 20;
+  var SLOW_POLL_DELAY_MS = 2500;
   var COPY_FEEDBACK_MS = 2000;
   var pollTimer = 0;
+  var inviteRequestSeq = 0;
+  var pageInactive = false;
 
   function $(id) { return document.getElementById(id); }
 
@@ -58,6 +61,9 @@
     var btn = $('invite-btn');
     if (!btn) return;
     btn.disabled = !!loading;
+    btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    var form = $('invite-form');
+    if (form) form.setAttribute('aria-busy', loading ? 'true' : 'false');
     btn.innerHTML = loading
       ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Gerando link...'
       : '<i class="fas fa-paper-plane" aria-hidden="true"></i> Gerar Link de Convite';
@@ -95,6 +101,7 @@
   }
 
   function schedulePoll(callback, delay) {
+    if (pageInactive) return;
     clearPollTimer();
     pollTimer = window.setTimeout(callback, delay);
   }
@@ -127,7 +134,7 @@
   async function handleCopyLink() {
     var input = $('invite-link-input');
     if (!input || !input.value) {
-      setFeedback('Nenhum link disponivel para copiar.', 'error');
+      setFeedback('Nenhum link disponível para copiar.', 'error');
       return;
     }
 
@@ -135,12 +142,12 @@
     var copied = await copyTextToClipboard(input.value, input);
     if (copied) {
       setTemporaryButtonLabel(button, '<i class="fas fa-check" aria-hidden="true"></i> Copiado!');
-      setFeedback('Link copiado para a area de transferencia.', 'success');
+      setFeedback('Link copiado para a área de transferência.', 'success');
       return;
     }
 
     setTemporaryButtonLabel(button, '<i class="fas fa-copy" aria-hidden="true"></i> Copie manualmente');
-    setFeedback('Nao foi possivel copiar automaticamente. Copie manualmente o link exibido abaixo.', 'error');
+    setFeedback('Não foi possível copiar automaticamente. Copie manualmente o link exibido abaixo.', 'error');
   }
 
   function renderInviteRow(invite) {
@@ -153,20 +160,39 @@
       statusHtml = '<span class="kc-badge" style="background:#3b82f6;">Pendente</span>';
     }
 
-    return '<tr data-invite-email="' + escapeHtml(invite.email) + '">' +
-      '<td style="font-size:.9em;">' + escapeHtml(invite.email) + '</td>' +
-      '<td style="font-size:.85em;white-space:nowrap;">' + formatDate(invite.invited_at) + '</td>' +
-      '<td style="font-size:.85em;white-space:nowrap;">' + formatDate(invite.expires_at) + '</td>' +
-      '<td>' + statusHtml + '</td>' +
-      '<td style="font-size:.85em;color:var(--kc-text-dark-secondary);">' + escapeHtml(invite.note || '') + '</td>' +
-      '<td>' +
+    var safeEmail = escapeHtml(invite.email);
+    return '<tr data-invite-email="' + safeEmail + '">' +
+      '<td data-label="E-mail" style="font-size:.9em;">' + safeEmail + '</td>' +
+      '<td data-label="Enviado em" style="font-size:.85em;white-space:nowrap;">' + formatDate(invite.invited_at) + '</td>' +
+      '<td data-label="Expira em" style="font-size:.85em;white-space:nowrap;">' + formatDate(invite.expires_at) + '</td>' +
+      '<td data-label="Status">' + statusHtml + '</td>' +
+      '<td data-label="Nota" style="font-size:.85em;color:var(--kc-text-dark-secondary);">' + escapeHtml(invite.note || '—') + '</td>' +
+      '<td data-label="Ação">' +
         '<button type="button" class="kc-admin-invite-revoke" data-email="' + escapeHtml(invite.email) + '" ' +
           'style="padding:4px 10px;border:none;border-radius:6px;background:#c62828;color:#fff;font-size:.8em;cursor:pointer;" ' +
-          'title="Revogar convite">' +
+          'title="Revogar convite" aria-label="Revogar convite de ' + safeEmail + '">' +
           '<i class="fas fa-times" aria-hidden="true"></i>' +
         '</button>' +
       '</td>' +
     '</tr>';
+  }
+
+  function renderInviteListUnavailable(message) {
+    var tbody = $('invite-table-body');
+    var empty = $('invite-list-empty');
+    var wrap = $('invite-table-wrap');
+    inviteRequestSeq += 1;
+    if (tbody) tbody.innerHTML = '';
+    if (wrap) {
+      wrap.style.display = 'none';
+      wrap.setAttribute('aria-busy', 'false');
+    }
+    if (empty) {
+      empty.style.display = 'block';
+      empty.style.color = '#ef9a9a';
+      empty.setAttribute('role', 'alert');
+      empty.textContent = String(message || 'A lista de convites está indisponível no momento.');
+    }
   }
 
   async function loadInvites() {
@@ -175,38 +201,58 @@
     var wrap = $('invite-table-wrap');
     if (!tbody) return;
 
-    if (!window.KCAPI || typeof window.KCAPI.getInvites !== 'function') return;
+    if (!window.KCAPI || typeof window.KCAPI.getInvites !== 'function') {
+      renderInviteListUnavailable('Não foi possível inicializar a API da lista de convites. Atualize a página e tente novamente.');
+      return;
+    }
 
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--kc-text-dark-secondary);">Carregando...</td></tr>';
+    var requestSeq = ++inviteRequestSeq;
+    tbody.innerHTML = '<tr><td data-label="Status" colspan="6" style="text-align:center;padding:14px;color:var(--kc-text-dark-secondary);">' +
+      '<span class="kc-admin-loading-state" role="status" aria-live="polite">' +
+        '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando convites…' +
+      '</span>' +
+    '</td></tr>';
     if (wrap) wrap.style.display = '';
-    if (empty) empty.style.display = 'none';
+    if (wrap) wrap.setAttribute('aria-busy', 'true');
+    if (empty) {
+      empty.style.display = 'none';
+      empty.style.removeProperty('color');
+      empty.setAttribute('role', 'status');
+    }
 
-    var result;
     try {
-      result = await window.KCAPI.getInvites();
-    } catch (err) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:#ef9a9a;">Erro ao carregar convites.</td></tr>';
-      return;
-    }
+      var result = await window.KCAPI.getInvites();
+      if (requestSeq !== inviteRequestSeq) return;
 
-    if (!result || result.error || !Array.isArray(result.data)) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:#ef9a9a;">Erro ao carregar convites.</td></tr>';
-      return;
-    }
-
-    var invites = result.data;
-    if (!invites.length) {
-      if (wrap) wrap.style.display = 'none';
-      if (empty) {
-        empty.style.display = 'block';
-        empty.textContent = 'Nenhum convite enviado ainda.';
+      if (!result || result.error || !Array.isArray(result.data)) {
+        tbody.innerHTML = '<tr><td data-label="Status" colspan="6" role="alert" style="text-align:center;padding:14px;color:#ef9a9a;">Erro ao carregar convites.</td></tr>';
+        return;
       }
-      return;
-    }
 
-    if (wrap) wrap.style.display = '';
-    if (empty) empty.style.display = 'none';
-    tbody.innerHTML = invites.map(renderInviteRow).join('');
+      var invites = result.data;
+      if (!invites.length) {
+        tbody.innerHTML = '';
+        if (wrap) wrap.style.display = 'none';
+        if (empty) {
+          empty.style.display = 'block';
+          empty.style.removeProperty('color');
+          empty.setAttribute('role', 'status');
+          empty.textContent = 'Nenhum convite enviado ainda.';
+        }
+        return;
+      }
+
+      if (wrap) wrap.style.display = '';
+      if (empty) empty.style.display = 'none';
+      tbody.innerHTML = invites.map(renderInviteRow).join('');
+    } catch (err) {
+      if (requestSeq !== inviteRequestSeq) return;
+      tbody.innerHTML = '<tr><td data-label="Status" colspan="6" role="alert" style="text-align:center;padding:14px;color:#ef9a9a;">Erro ao carregar convites.</td></tr>';
+    } finally {
+      if (requestSeq === inviteRequestSeq && wrap) {
+        wrap.setAttribute('aria-busy', 'false');
+      }
+    }
   }
 
   async function handleInviteSubmit(event) {
@@ -219,12 +265,12 @@
     var note = String(noteInput ? noteInput.value : '').trim();
 
     if (!email || !email.includes('@')) {
-      setFeedback('Digite um e-mail valido.', 'error');
+      setFeedback('Digite um e-mail válido.', 'error');
       return;
     }
 
     if (!window.KCAPI || typeof window.KCAPI.inviteExternalUser !== 'function') {
-      setFeedback('API de convites nao disponivel.', 'error');
+      setFeedback('API de convites não disponível.', 'error');
       return;
     }
 
@@ -244,7 +290,7 @@
     setBtnLoading(false);
 
     if (!result || result.ok !== true) {
-      setFeedback('Erro: ' + normalizeResultError(result, 'Nao foi possivel gerar o convite.'), 'error');
+      setFeedback('Erro: ' + normalizeResultError(result, 'Não foi possível gerar o convite.'), 'error');
       return;
     }
 
@@ -253,22 +299,22 @@
       setFeedback('Convite processado, mas a resposta veio incompleta. Atualize a lista para conferir o status.', 'info');
       emailInput.value = '';
       if (noteInput) noteInput.value = '';
-      loadInvites();
+      await loadInvites();
       return;
     }
 
     if (data.already_registered) {
-      setFeedback('Usuario ' + email + ' ja estava cadastrado. Whitelist atualizada e login liberado.', 'success');
+      setFeedback('Usuário ' + email + ' já estava cadastrado. Lista de acesso atualizada e login liberado.', 'success');
     } else if (typeof data.invite_link === 'string' && data.invite_link.trim()) {
       setFeedback('Link gerado para ' + email + '. Copie abaixo e envie pelo seu e-mail.', 'success');
       showLinkArea(data.invite_link.trim());
     } else {
-      setFeedback('Convite gerado para ' + email + ', mas o link nao foi retornado. Atualize a lista para acompanhar o status.', 'info');
+      setFeedback('Convite gerado para ' + email + ', mas o link não foi retornado. Atualize a lista para acompanhar o status.', 'info');
     }
 
     emailInput.value = '';
     if (noteInput) noteInput.value = '';
-    loadInvites();
+    await loadInvites();
   }
 
   async function handleRevokeClick(event) {
@@ -279,31 +325,37 @@
     if (!email) return;
 
     if (!window.KCAPI || typeof window.KCAPI.revokeInvite !== 'function') {
-      setFeedback('API de revogacao nao disponivel.', 'error');
+      setFeedback('API de revogação não disponível.', 'error');
       return;
     }
 
-    if (!confirm('Revogar convite de ' + email + '?\nO usuario nao conseguira mais usar o link de convite.')) return;
+    if (!confirm('Revogar convite de ' + email + '?\nO usuário não conseguirá mais usar o link de convite.')) return;
 
+    var row = button.closest('tr');
+    var originalHtml = button.innerHTML;
     button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>';
+    if (row) row.setAttribute('aria-busy', 'true');
+    setFeedback('Revogando o convite de ' + email + '…', 'info');
 
-    var result;
     try {
-      result = await window.KCAPI.revokeInvite(email);
+      var result = await window.KCAPI.revokeInvite(email);
+      if (result && result.ok) {
+        await loadInvites();
+        setFeedback('Convite de ' + email + ' revogado.', 'success');
+        return;
+      }
+
+      setFeedback('Erro ao revogar: ' + normalizeResultError(result, 'tente novamente.'), 'error');
     } catch (err) {
-      button.disabled = false;
       setFeedback('Erro ao revogar: ' + (err && err.message ? err.message : String(err)), 'error');
-      return;
+    } finally {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.innerHTML = originalHtml;
+      if (row) row.setAttribute('aria-busy', 'false');
     }
-
-    if (result && result.ok) {
-      setFeedback('Convite de ' + email + ' revogado.', 'success');
-      loadInvites();
-      return;
-    }
-
-    button.disabled = false;
-    setFeedback('Erro ao revogar: ' + normalizeResultError(result, 'tente novamente.'), 'error');
   }
 
   function init() {
@@ -319,10 +371,15 @@
     var copyBtn = $('invite-link-copy');
     if (copyBtn) copyBtn.addEventListener('click', handleCopyLink);
 
-    window.addEventListener('pagehide', clearPollTimer, { once: true });
+    window.addEventListener('pagehide', function () {
+      pageInactive = true;
+      clearPollTimer();
+    }, { once: true });
 
     var attempts = 0;
+    var unavailableShown = false;
     function tryLoad() {
+      if (pageInactive) return;
       if (window.KCAPI && typeof window.KCAPI.getInvites === 'function') {
         var content = $('admin-content');
         if (content && content.style.display !== 'none') {
@@ -334,7 +391,16 @@
       if (attempts < MAX_POLL_ATTEMPTS) {
         attempts += 1;
         schedulePoll(tryLoad, POLL_DELAY_MS);
+        return;
       }
+      clearPollTimer();
+      if (!unavailableShown) {
+        unavailableShown = true;
+        renderInviteListUnavailable(
+          'A lista de convites ainda não ficou disponível. Continuaremos tentando; verifique sua conexão ou atualize a página.'
+        );
+      }
+      schedulePoll(tryLoad, SLOW_POLL_DELAY_MS);
     }
 
     schedulePoll(tryLoad, INITIAL_POLL_DELAY_MS);

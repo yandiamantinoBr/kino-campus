@@ -235,6 +235,11 @@ body.kc-pitch-host-page {
   50% { transform: rotate(0deg) scale(1.04); }
 }
 
+@keyframes kc-pitch-reduced-pulse {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; }
+}
+
 @media (max-width: 760px) {
   :root {
     --kc-pitch-hostbar-height: 64px;
@@ -289,7 +294,8 @@ body.kc-pitch-host-page {
 
 @media (prefers-reduced-motion: reduce) {
   .kc-pitch-loading img {
-    animation: none;
+    animation: kc-pitch-reduced-pulse 2.4s ease-in-out infinite;
+    transform: rotate(-3deg);
   }
 
   .kc-pitch-frame,

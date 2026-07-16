@@ -6,11 +6,11 @@
   <meta name="robots" content="noindex,nofollow" />
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
   <meta name="description" content="Painel administrativo do Cadu (OpenClaw) - curador de sites UFG." />
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.11">
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.12">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
   <script defer src="/_vercel/insights/script.js"></script>
   <title>KinoCampus - Admin Cadu (OpenClaw)</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.11" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.12" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -514,15 +514,15 @@
     .kc-cadu-status-dot--down { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
     .kc-cadu-status-dot--loading { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.18); animation: kc-cadu-pulse 1.4s infinite; }
     @keyframes kc-cadu-pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
+    @keyframes kc-cadu-reduced-pulse { 0%, 100% { opacity: .58; } 50% { opacity: 1; } }
     @media (prefers-reduced-motion: reduce) {
       .kc-pipeline-status-dot.is-running,
       .kc-cadu-status-dot--loading {
-        animation: none !important;
-        opacity: 1;
+        animation: kc-cadu-reduced-pulse 2.4s ease-in-out infinite !important;
       }
     }
   </style>
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.10" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -977,7 +977,7 @@
 
   <!-- Scripts -->
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.10"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.12"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>

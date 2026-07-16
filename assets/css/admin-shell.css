@@ -805,7 +805,15 @@ body.kc-admin-page .kc-admin-card.kc-skeleton-card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.kc-admin-page .kc-skeleton::after { animation: none; }
+  body.kc-admin-page .kc-skeleton {
+    animation: kc-loader-reduced-pulse 2.4s ease-in-out infinite !important;
+  }
+
+  body.kc-admin-page .kc-skeleton::after {
+    animation: none !important;
+    transform: none;
+    opacity: 0;
+  }
 }
 
 body.kc-admin-page--dashboard .kc-admin-chart-modal-backdrop {

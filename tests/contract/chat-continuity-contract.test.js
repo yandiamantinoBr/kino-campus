@@ -87,7 +87,7 @@ describe('chat continuity contract', () => {
     expect(html).toContain('padding-left: 0 !important;');
     expect(html).toContain('justify-self: center;');
     expect(html).toContain('width: min(1760px, calc(100vw - 56px));');
-    expect(html).toContain('assets/css/kc-chat.css?v=8.7.6');
+    expect(html).toContain('assets/css/kc-chat.css?v=8.7.7');
     expect(html).toContain('chat-inbox.controller.js?v=9.3.5.30');
     expect(css).toContain('grid-template-columns: minmax(360px, 33%) minmax(620px, 1fr);');
     expect(css).toContain('height: 100%;');
