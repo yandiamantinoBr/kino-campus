@@ -7,7 +7,7 @@
     { key: 'posts_count', label: 'Posts', color: '#ff6b00', icon: 'fas fa-layer-group', family: 'Conteúdo' },
     { key: 'comments_count', label: 'Comentários', color: '#0ea5e9', icon: 'fas fa-comment', family: 'Conteúdo' },
     { key: 'post_views_count', label: 'Visualizações', color: '#3b82f6', icon: 'fas fa-eye', family: 'Alcance' },
-    { key: 'sessions_count', label: 'Sessões ativas', color: '#a855f7', icon: 'fas fa-wifi', family: 'Tráfego' },
+    { key: 'sessions_count', label: 'Atividade distinta', color: '#a855f7', icon: 'fas fa-wifi', family: 'Tráfego' },
     { key: 'votes_count', label: 'Votos', color: '#10b981', icon: 'fas fa-thumbs-up', family: 'Engajamento' },
     { key: 'comment_likes_count', label: 'Curtidas em comentários', color: '#f43f5e', icon: 'fas fa-heart', family: 'Engajamento' },
     { key: 'saves_count', label: 'Salvos', color: '#ec4899', icon: 'fas fa-bookmark', family: 'Intenção' },

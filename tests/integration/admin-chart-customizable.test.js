@@ -121,7 +121,7 @@ describe('Rodada 2 — catálogo de 13 séries', () => {
   test('controller e charts têm SERIES_META/DEFAULT_SERIES_META com famílias', () => {
     const ctrl = r('assets/js/controllers/admin/admin-dashboard.controller.js');
     const charts = r('assets/js/controllers/admin/admin-dashboard.charts.js');
-    ['Visualizações', 'Sessões ativas', 'Curtidas em comentários', 'Cliques em anúncios', 'Impressões de anúncios'].forEach((label) => {
+    ['Visualizações', 'Atividade distinta', 'Curtidas em comentários', 'Cliques em anúncios', 'Impressões de anúncios'].forEach((label) => {
       expect(ctrl).toContain(label);
       expect(charts).toContain(label);
     });

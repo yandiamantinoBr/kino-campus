@@ -950,39 +950,57 @@
     doc.setFillColor(color[0], color[1], color[2]);
   }
 
-  function addPdfHeader(doc, report, pageWidth) {
+  function addPdfHeader(doc, report, pageWidth, compact) {
     setFillColor(doc, BRAND.orange);
-    doc.rect(0, 0, pageWidth, 76, 'F');
+    doc.rect(0, 0, pageWidth, compact ? 44 : 76, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
     doc.setTextColor(255, 255, 255);
+    if (compact) {
+      doc.setFontSize(11);
+      doc.text(BRAND.name, 42, 27);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pdfLines(doc, report.title, pageWidth - 190, 1), 172, 27);
+      return;
+    }
+    doc.setFontSize(18);
     doc.text(BRAND.name, 42, 31);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(pdfLines(doc, report.title, pageWidth - 84, 2), 42, 50);
   }
 
-  function addPdfFooter(doc) {
+  function addPdfFinalChrome(doc, report) {
     const pageCount = doc.internal.getNumberOfPages();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     for (let page = 1; page <= pageCount; page += 1) {
       doc.setPage(page);
+      // Redraw the chrome last so table pagination cannot paint over the
+      // compact header text on pages created internally by autoTable.
+      addPdfHeader(doc, report, pageWidth, page > 1);
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, pageHeight - 39, pageWidth, 39, 'F');
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       setTextColor(doc, BRAND.muted);
       doc.text('KinoCampus Admin - dados administrativos agregados', 42, pageHeight - 24);
-      doc.text(String(page) + '/' + String(pageCount), pageWidth - 64, pageHeight - 24);
+      doc.text(
+        'Página ' + String(page) + ' de ' + String(pageCount),
+        pageWidth - 42,
+        pageHeight - 24,
+        { align: 'right' }
+      );
     }
   }
 
-  function addPdfPageChrome(doc, report) {
+  function addPdfPageChrome(doc, report, pageNumber) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
     // As margens de tabelas e seções começam abaixo de 90 pt.
-    addPdfHeader(doc, report, pageWidth);
+    addPdfHeader(doc, report, pageWidth, Number(pageNumber) > 1);
   }
 
   async function exportReportPDF(filename, report) {
@@ -990,6 +1008,18 @@
     try {
       const JsPDF = await ensureAutoTable();
       const doc = new JsPDF({ unit: 'pt', format: 'a4' });
+      if (typeof doc.setProperties === 'function') {
+        doc.setProperties({
+          title: normalized.title,
+          subject: normalized.subtitle + (normalized.period ? ' — ' + normalized.period : ''),
+          author: BRAND.name,
+          creator: 'KinoCampus Admin',
+          keywords: 'KinoCampus, dashboard, administração, relatório'
+        });
+      }
+      if (typeof doc.setLanguage === 'function') doc.setLanguage('pt-BR');
+      if (typeof doc.viewerPreferences === 'function') doc.viewerPreferences({ DisplayDocTitle: true });
+      if (typeof doc.setDisplayMode === 'function') doc.setDisplayMode('fullwidth', 'continuous', 'UseOutlines');
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 42;
@@ -1004,7 +1034,7 @@
           ? Number(pageInfo.pageNumber)
           : doc.internal.getNumberOfPages();
         if (pagesWithChrome[pageNumber]) return;
-        addPdfPageChrome(doc, normalized);
+        addPdfPageChrome(doc, normalized, pageNumber);
         pagesWithChrome[pageNumber] = true;
       }
 
@@ -1014,11 +1044,25 @@
         if (y + height <= pageHeight - 48) return;
         doc.addPage();
         ensureCurrentPageChrome();
-        y = 102;
+        y = 62;
       }
 
-      function drawSectionTitle(title, note) {
-        addPageIfNeeded(44);
+      function addPdfBookmark(title) {
+        try {
+          if (!doc.outline || typeof doc.outline.add !== 'function') return;
+          const pageInfo = doc.internal && typeof doc.internal.getCurrentPageInfo === 'function'
+            ? doc.internal.getCurrentPageInfo()
+            : null;
+          const pageNumber = pageInfo && Number(pageInfo.pageNumber)
+            ? Number(pageInfo.pageNumber)
+            : doc.internal.getNumberOfPages();
+          doc.outline.add(null, String(title || 'Seção'), { pageNumber: pageNumber });
+        } catch (_) { /* recurso opcional do jsPDF */ }
+      }
+
+      function drawSectionTitle(title, note, minContentHeight) {
+        addPageIfNeeded(44 + (Number(minContentHeight) || 0));
+        addPdfBookmark(title);
         setTextColor(doc, BRAND.dark);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
@@ -1040,41 +1084,69 @@
         const gap = 12;
         const columns = 2;
         const cardWidth = (pageWidth - margin * 2 - gap) / columns;
-        const cardHeight = 66;
 
-        list.slice(0, 8).forEach(function (row, index) {
-          const col = index % columns;
-          const x = margin + (col * (cardWidth + gap));
-          if (col === 0) addPageIfNeeded(cardHeight + 12);
+        function fullLines(value) {
+          return doc.splitTextToSize(
+            normalizeUnicode(String(value == null ? '' : value)),
+            cardWidth - 28
+          );
+        }
+
+        for (let rowStart = 0; rowStart < list.length; rowStart += columns) {
+          const cards = list.slice(rowStart, rowStart + columns).map(function (row) {
+            const labelLines = fullLines(row.Indicador || 'Indicador');
+            const valueLines = fullLines(row.Valor);
+            const contextLines = row.Contexto ? fullLines(row.Contexto) : [];
+            const height = 16
+              + (labelLines.length * 9)
+              + 5
+              + (valueLines.length * 15)
+              + (contextLines.length ? 6 + (contextLines.length * 8) : 0)
+              + 12;
+            return {
+              row,
+              labelLines,
+              valueLines,
+              contextLines,
+              height: Math.max(72, height),
+            };
+          });
+          const cardHeight = cards.reduce(function (max, card) {
+            return Math.max(max, card.height);
+          }, 72);
+          addPageIfNeeded(cardHeight + 12);
           const yCard = y;
-          doc.setDrawColor(BRAND.border[0], BRAND.border[1], BRAND.border[2]);
-          doc.setFillColor(255, 255, 255);
-          doc.rect(x, yCard, cardWidth, cardHeight, 'FD');
-          setFillColor(doc, BRAND.light);
-          doc.rect(x, yCard, 5, cardHeight, 'F');
-          setTextColor(doc, BRAND.muted);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.text(pdfLines(doc, truncate(row.Indicador || 'Indicador', 48), cardWidth - 28, 1), x + 14, yCard + 18);
-          setTextColor(doc, BRAND.dark);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(13);
-          const valueLines = pdfLines(doc, truncate(row.Valor, 64), cardWidth - 28, 2);
-          doc.text(valueLines, x + 14, yCard + 36);
-          if (row.Contexto) {
+
+          cards.forEach(function (card, index) {
+            const x = margin + (index * (cardWidth + gap));
+            let textY = yCard + 17;
+            doc.setDrawColor(BRAND.border[0], BRAND.border[1], BRAND.border[2]);
+            doc.setFillColor(255, 255, 255);
+            doc.rect(x, yCard, cardWidth, cardHeight, 'FD');
+            setFillColor(doc, BRAND.light);
+            doc.rect(x, yCard, 5, cardHeight, 'F');
+
             setTextColor(doc, BRAND.muted);
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.text(pdfLines(doc, truncate(row.Contexto, 42), cardWidth - 28, 1), x + 14, yCard + 56);
-          }
-          if (col === columns - 1 || index === Math.min(list.length, 8) - 1) y += cardHeight + 12;
-        });
-        if (list.length > 8) {
-          addPageIfNeeded(18);
-          setTextColor(doc, BRAND.muted);
-          doc.setFontSize(8);
-          doc.text('KPIs adicionais disponíveis no XLSX.', margin, y);
-          y += 18;
+            doc.setFontSize(8);
+            doc.text(card.labelLines, x + 14, textY);
+            textY += card.labelLines.length * 9 + 5;
+
+            setTextColor(doc, BRAND.dark);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.text(card.valueLines, x + 14, textY);
+            textY += card.valueLines.length * 15;
+
+            if (card.contextLines.length) {
+              textY += 6;
+              setTextColor(doc, BRAND.muted);
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(7);
+              doc.text(card.contextLines, x + 14, textY);
+            }
+          });
+          y += cardHeight + 12;
         }
       }
 
@@ -1109,7 +1181,7 @@
           head: head,
           body: body,
           startY: y,
-          margin: { left: margin, right: margin, top: 90, bottom: 40 },
+          margin: { left: margin, right: margin, top: 54, bottom: 40 },
           theme: 'grid',
           styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', textColor: BRAND.dark, lineColor: BRAND.border, lineWidth: 0.5, valign: 'top' },
           headStyles: { fillColor: BRAND.orange, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
@@ -1124,7 +1196,17 @@
           setTextColor(doc, BRAND.muted);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
-          doc.text(pdfLines(doc, 'PDF resumido: ' + (fullList.length - limit) + ' linhas adicionais disponíveis no XLSX.', pageWidth - margin * 2, 2), margin, y);
+          const omitted = fullList.length - limit;
+          doc.text(
+            pdfLines(
+              doc,
+              'PDF resumido: ' + omitted + ' ' + (omitted === 1 ? 'linha adicional disponível' : 'linhas adicionais disponíveis') + ' no XLSX.',
+              pageWidth - margin * 2,
+              2
+            ),
+            margin,
+            y
+          );
           y += 18;
         }
         y += 6;
@@ -1246,17 +1328,17 @@
       y += sourceLines.length * 11 + 12;
 
       if (normalized.filters.length) {
-        drawSectionTitle('Filtros aplicados');
-        drawRows(normalized.filters, 12);
+        drawSectionTitle('Filtros aplicados', null, 82);
+        drawRows(normalized.filters, normalized.filters.length);
       }
 
       if (normalized.kpis.length) {
-        drawSectionTitle('Resumo executivo');
+        drawSectionTitle('Resumo executivo', null, 90);
         drawKpiCards(normalized.kpis);
       }
 
       normalized.sections.forEach(function (section) {
-        drawSectionTitle(section.title, section.note);
+        drawSectionTitle(section.title, section.note, section.chart ? 250 : 82);
         if (section.chart) drawLineChart(section.chart);
         drawRows(
           section.rows,
@@ -1266,7 +1348,7 @@
         );
       });
 
-      addPdfFooter(doc);
+      addPdfFinalChrome(doc, normalized);
       doc.save(filename);
     } catch (error) {
       console.warn('[KCAdminExport] PDF avançado indisponível, usando TXT simples:', error);

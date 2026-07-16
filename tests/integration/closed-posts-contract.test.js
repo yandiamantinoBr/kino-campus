@@ -211,7 +211,7 @@ describe('closed posts - contratos admin, shell e notificacoes', () => {
     const reports = read('assets/js/controllers/admin/admin-reports.controller.js');
     const reportsHtml = read('admin/reports.html');
 
-    expect(moderation).toContain("'closed', 'deleted'");
+    expect(moderation).toContain("['all', 'published', 'pending', 'hidden', 'closed', 'expired', 'deleted']");
     expect(moderation).toContain("actionButton('Encerrar', 'closed'");
     expect(reports).toContain("post_closed: 'Encerramento'");
     expect(reports).toContain("data-action=\"closePost\"");

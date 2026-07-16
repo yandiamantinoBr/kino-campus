@@ -112,6 +112,7 @@
     if (!pill) return;
     pill.classList.remove('is-loading', 'is-down');
     if (kind) pill.classList.add(kind);
+    pill.setAttribute('aria-busy', kind === 'is-loading' ? 'true' : 'false');
     pill.innerHTML = html;
   }
 
@@ -324,7 +325,7 @@
     // CAMADA 6: profile.is_admin (último recurso)
     // ============================================================
     try {
-      var res = await client.from('profiles').select('is_admin, display_name, full_name, email').eq('id', user.id).maybeSingle();
+      var res = await client.from('profiles').select('is_admin, display_name, full_name').eq('id', user.id).maybeSingle();
       var profile = res && res.data;
       var error = res && res.error;
       if (error || !profile) {
@@ -1767,7 +1768,7 @@
     var btn = document.querySelector('.kc-cadu-publish-btn[data-source-id="' + cssEscape(source.id) + '"]');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando…</span>';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando…</span>';
     }
     try {
       var data = await apiFetch('/api/cadu/publish', {
@@ -1818,7 +1819,8 @@
     var btn = document.querySelector('.kc-cadu-publish-btn[data-key="' + cssEscape(key) + '"]');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      btn.setAttribute('aria-busy', 'true');
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Enviando para revisão…</span>';
     }
     try {
       var data = await apiFetch('/api/cadu/publish', {
@@ -1830,6 +1832,7 @@
       var outcome = normalizePublishOutcome(data);
       if (btn) {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         btn.classList.remove('is-ok', 'is-pending', 'is-err');
         btn.innerHTML = outcome.kind === 'published'
           ? '<i class="fas fa-check"></i>'
@@ -1853,6 +1856,7 @@
     } catch (err) {
       if (btn) {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i>';
         btn.classList.remove('is-ok', 'is-pending');
         btn.classList.add('is-err');
@@ -2259,7 +2263,7 @@
     state.feedDiagnosticsLoading = true;
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando...';
     }
     if (summaryEl) summaryEl.innerHTML = '<span class="kc-cadu-feed-diagnostics__chip">Consultando o Supabase em modo somente leitura…</span>';
     try {
@@ -2964,7 +2968,7 @@
     if (btn) btn.disabled = true;
     if (contextEl) contextEl.disabled = true;
     setOpenclawRetryRequest(opts.retry === true ? request : null);
-    if (status) status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (opts.retry === true ? 'Repetindo a mesma solicitação com idempotência…' : 'Cadu pensando…');
+    if (status) status.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ' + (opts.retry === true ? 'Repetindo a mesma solicitação com idempotência…' : 'Cadu pensando…');
     var completed = false;
 
     try {
@@ -3070,10 +3074,10 @@
     var status = $('#openclaw-chat-status');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Solicitando sinal de vida…';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Solicitando sinal de vida…';
     }
     if (status) status.textContent = 'Enviando evento de heartbeat…';
-    setOpenclawActionStatus('<i class="fas fa-spinner fa-spin"></i> Enviando heartbeat para o agente principal…', 'loading');
+    setOpenclawActionStatus('<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Enviando heartbeat para o agente principal…', 'loading');
     try {
       var resp = await apiFetch('/api/cadu/openclaw/agent-event', {
         method: 'POST',
@@ -3124,8 +3128,8 @@
     box.hidden = false;
     if (btn) btn.innerHTML = '<i class="fas fa-eye-slash"></i> Ocultar logs';
     setOpenclawActionStatus(session
-      ? '<i class="fas fa-spinner fa-spin"></i> Buscando logs e filtrando pela sessão <code>' + escapeHtml(fmtSessionId(getOpenclawSessionId(session))) + '</code>…'
-      : '<i class="fas fa-spinner fa-spin"></i> Buscando últimos logs do Gateway…', 'loading');
+      ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Buscando logs e filtrando pela sessão <code>' + escapeHtml(fmtSessionId(getOpenclawSessionId(session))) + '</code>…'
+      : '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Buscando últimos logs do Gateway…', 'loading');
     try {
       var resp = await apiFetch('/api/cadu/openclaw/logs?limit=80');
       if (resp && !resp.__error) {
@@ -3680,7 +3684,8 @@
     try {
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Exportando PDF…</span>';
       }
       var report = buildSitesPdfReport();
       var date = new Date().toISOString().slice(0, 10);
@@ -3695,6 +3700,7 @@
     } finally {
       if (btn) {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         btn.innerHTML = originalHtml;
       }
     }
@@ -3705,7 +3711,8 @@
     try {
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Exportando PDF…</span>';
       }
       var report = buildFeedPdfReport();
       var date = new Date().toISOString().slice(0, 10);
@@ -3720,6 +3727,7 @@
     } finally {
       if (btn) {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         btn.innerHTML = originalHtml;
       }
     }
@@ -4744,7 +4752,7 @@
       return { button: button, disabled: button.disabled, html: button.innerHTML };
     });
     buttons.forEach(function (button) { button.disabled = true; });
-    if (clickedButton) clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando…';
+    if (clickedButton) clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Iniciando…';
     return function restorePipelineActionButtons() {
       originals.forEach(function (original) {
         original.button.disabled = original.disabled;
@@ -5063,7 +5071,7 @@
     var modal = ensureRunDetailsModal();
     var requestGeneration = (modal.el.__kcRequestGeneration || 0) + 1;
     modal.el.__kcRequestGeneration = requestGeneration;
-    modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin"></i> Carregando artefatos…</div>';
+    modal.body.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando artefatos…</div>';
     modal.title.textContent = 'Execução ' + runId.slice(0, 8);
     modal.el.__kcReturnFocus = document.activeElement;
     modal.el.removeAttribute('hidden');
@@ -5418,7 +5426,8 @@
       }
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.setAttribute('aria-busy', 'true');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Exportando PDF…</span>';
       }
       var r = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/export');
       var data = pipelineApiDataOrThrow(r, 'Exportação PDF');
@@ -5433,6 +5442,7 @@
     } finally {
       if (btn) {
         btn.disabled = false;
+        btn.removeAttribute('aria-busy');
         btn.innerHTML = originalHtml;
       }
     }
@@ -5851,8 +5861,12 @@
     var opts = options || {};
     var loading = $('#cadu-loading');
     if (loading) loading.style.display = 'flex';
-    $('#cadu-status-pill').classList.add('is-loading');
-    $('#cadu-status-pill').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando…';
+    var statusPill = $('#cadu-status-pill');
+    if (statusPill) {
+      statusPill.classList.add('is-loading');
+      statusPill.setAttribute('aria-busy', 'true');
+      statusPill.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando…';
+    }
     var operationalRefresh = Promise.resolve();
     if (state.currentTab === 'openclaw') {
       operationalRefresh = refreshOpenclaw({ force: opts.forceOperational === true });

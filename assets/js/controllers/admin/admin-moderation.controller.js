@@ -9,6 +9,8 @@
   const SEARCH_DEBOUNCE_MS = 350;
   const EXPORT_ROW_LIMIT = 2000;
   const EXPORT_PAGE_SIZE = 250;
+  const EXTERNAL_ACCESS_EXPORT_PAGE_SIZE = 200;
+  const EXTERNAL_ACCESS_EXPORT_LIMIT_PER_STATUS = 2000;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const STATUS_LABELS = Object.freeze({
     all: 'Todos',
@@ -16,11 +18,15 @@
     pending: 'Pendente',
     hidden: 'Oculto',
     closed: 'Encerrado',
+    expired: 'Expirado',
     deleted: 'Deletado',
     unknown: 'Desconhecido',
   });
   let _isBusy = false;
   let _searchDebounceTimer = null;
+  let _postsRequestSeq = 0;
+  let _auditRequestSeq = 0;
+  let _userSearchRequestSeq = 0;
   const state = {
     statusFilter: 'all',
     search: '',
@@ -101,11 +107,47 @@
     el.textContent = `Exibindo ${loaded} de ${total} posts${state.search ? ' encontrados' : ''}.`;
   }
 
+  function resetPostsForRequest() {
+    // A reset may supersede an in-flight "carregar mais". Normalize its
+    // original label/dataset before the stale request skips its own finally.
+    setControlBusy($('#moderation-load-more'), false);
+    state.posts = [];
+    state.offset = 0;
+    state.totalCount = 0;
+    state.hasMore = false;
+  }
+
+  function renderPostsRequestState(message, loading) {
+    const body = $('#moderation-posts-body');
+    const safeMessage = escape(message || (loading ? 'Carregando publicações…' : 'Lista indisponível.'));
+    if (body) {
+      body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:26px;">
+        <span role="${loading ? 'status' : 'alert'}" aria-live="${loading ? 'polite' : 'assertive'}">
+          ${loading ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ' : ''}${safeMessage}
+        </span>
+      </td></tr>`;
+    }
+    const summary = ensurePostsSummary();
+    if (summary) summary.textContent = loading ? 'Atualizando a lista filtrada…' : 'A lista filtrada atual não está disponível.';
+    const loadMore = $('#moderation-load-more');
+    if (loadMore) {
+      loadMore.style.display = 'none';
+      loadMore.disabled = true;
+    }
+  }
+
   function showError(msg, allowBack) {
     const el = $('#admin-error');
     if (!el) return;
     el.innerHTML = `${escape(msg)}${allowBack ? ' <a href="../index.html" style="color:#ef9a9a;">Voltar ao início</a>' : ''}`;
     el.style.display = 'block';
+  }
+
+  function clearError() {
+    const el = $('#admin-error');
+    if (!el) return;
+    el.textContent = '';
+    el.style.display = 'none';
   }
 
   function showFeedback(msg) {
@@ -169,7 +211,43 @@
 
   function setLoading(visible) {
     const el = $('#admin-loading');
-    if (el) el.style.display = visible ? 'flex' : 'none';
+    if (el) {
+      el.style.display = visible ? 'flex' : 'none';
+      el.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    }
+    const content = $('#admin-content');
+    if (content) content.setAttribute('aria-busy', visible ? 'true' : 'false');
+  }
+
+  function setControlBusy(button, busy, label) {
+    if (!button) return;
+    if (busy) {
+      if (!button.dataset.kcOriginalHtml) button.dataset.kcOriginalHtml = button.innerHTML;
+      if (!button.dataset.kcOriginalDisabled) button.dataset.kcOriginalDisabled = button.disabled ? 'true' : 'false';
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ' + escape(label || 'Carregando…');
+      return;
+    }
+    if (button.dataset.kcOriginalHtml) button.innerHTML = button.dataset.kcOriginalHtml;
+    button.disabled = button.dataset.kcOriginalDisabled === 'true';
+    delete button.dataset.kcOriginalHtml;
+    delete button.dataset.kcOriginalDisabled;
+    button.removeAttribute('aria-busy');
+  }
+
+  function setPostsBusy(busy, append) {
+    const wrap = $('.kc-admin-posts-table-wrap');
+    if (wrap) wrap.setAttribute('aria-busy', busy ? 'true' : 'false');
+    const refresh = $('#moderation-refresh');
+    const loadMore = $('#moderation-load-more');
+    if (append) {
+      setControlBusy(loadMore, busy, 'Carregando…');
+      if (!busy && loadMore) loadMore.disabled = !state.hasMore;
+    } else {
+      setControlBusy(refresh, busy, 'Atualizando…');
+      if (!busy && refresh) refresh.disabled = false;
+    }
   }
 
   function setAuditError(msg) {
@@ -278,83 +356,103 @@
   }
 
   async function fetchPosts(reset) {
-    const client = getClient();
-    if (!client) return;
-
-    if (reset) {
-      state.offset = 0;
-      state.posts = [];
-      state.totalCount = 0;
-    }
-
+    const append = !reset;
+    const requestSeq = ++_postsRequestSeq;
+    const requestOffset = reset ? 0 : state.offset;
     const normalizedSearch = sanitizeSearchTerm(state.search);
     const statusFilter = state.statusFilter !== 'all' ? state.statusFilter : null;
     let list = [];
     let totalCount = 0;
     let resolved = false;
+    let allowDirectFallback = true;
 
+    if (reset) {
+      resetPostsForRequest();
+      renderPostsRequestState('Carregando publicações…', true);
+    }
+
+    const client = getClient();
+    if (!client) {
+      if (reset) renderPostsRequestState('Supabase indisponível; não foi possível carregar a lista atual.', false);
+      showError('Supabase client não disponível.', false);
+      return;
+    }
+
+    setPostsBusy(true, append);
+    clearError();
     try {
       const rpc = await client.rpc('kc_admin_search_posts_full', {
         p_query: normalizedSearch || null,
         p_status: statusFilter,
         p_limit: PAGE_SIZE,
-        p_offset: state.offset,
+        p_offset: requestOffset,
       });
 
+      if (requestSeq !== _postsRequestSeq) return;
       if (rpc && !rpc.error && Array.isArray(rpc.data)) {
         list = rpc.data.map(mapRpcPost);
         totalCount = rpc.data.length ? Number(rpc.data[0].total_count || 0) : 0;
         resolved = true;
-      } else if (rpc && rpc.error && !isFunctionMissing(rpc.error)) {
+      } else if (rpc && rpc.error) {
+        allowDirectFallback = isFunctionMissing(rpc.error);
         console.error('[Admin moderation] fetchPosts rpc:', rpc.error);
-      }
-    } catch (rpcError) {
-      console.error('[Admin moderation] fetchPosts rpc exception:', rpcError);
-    }
-
-    if (!resolved) {
-      // v9.3.5.8: coluna 'content' foi renomeada para 'description'. Aliasamos
-      // como content no SELECT para manter o restante do controller compativel.
-      let query = client
-        .from('posts')
-        .select('id, legacy_id, title, content:description, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(state.offset, state.offset + PAGE_SIZE - 1);
-
-      if (statusFilter) query = query.eq('status', statusFilter);
-
-      if (normalizedSearch) {
-        const authorIds = await searchAuthorIds(client, normalizedSearch);
-        const clauses = [
-          `title.ilike.%${normalizedSearch}%`,
-          `description.ilike.%${normalizedSearch}%`,
-          `legacy_id.ilike.%${normalizedSearch}%`,
-        ];
-        if (UUID_RE.test(normalizedSearch)) {
-          clauses.push(`id.eq.${normalizedSearch}`);
+        if (!allowDirectFallback) {
+          showError('Não foi possível listar as publicações. Atualize a sessão e tente novamente.', false);
+          if (reset) renderPostsRequestState('Não foi possível carregar as publicações deste filtro.', false);
+          return;
         }
-        if (authorIds.length) {
-          clauses.push(`author_id.in.(${authorIds.join(',')})`);
+      }
+
+      if (!resolved && allowDirectFallback) {
+        // Compatibilidade com projetos ainda sem a RPC agregada.
+        let query = client
+          .from('posts')
+          .select('id, legacy_id, title, content:description, module, category, status, created_at, updated_at, author_id, author:profiles!posts_author_id_fkey(display_name,full_name)', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(requestOffset, requestOffset + PAGE_SIZE - 1);
+
+        if (statusFilter) query = query.eq('status', statusFilter);
+
+        if (normalizedSearch) {
+          const authorIds = await searchAuthorIds(client, normalizedSearch);
+          if (requestSeq !== _postsRequestSeq) return;
+          const clauses = [
+            `title.ilike.%${normalizedSearch}%`,
+            `description.ilike.%${normalizedSearch}%`,
+            `legacy_id.ilike.%${normalizedSearch}%`,
+          ];
+          if (UUID_RE.test(normalizedSearch)) clauses.push(`id.eq.${normalizedSearch}`);
+          if (authorIds.length) clauses.push(`author_id.in.(${authorIds.join(',')})`);
+          query = query.or(clauses.join(','));
         }
-        query = query.or(clauses.join(','));
+
+        const { data, error, count } = await query;
+        if (requestSeq !== _postsRequestSeq) return;
+        if (error) {
+          console.error('[Admin moderation] fetchPosts:', error);
+          showError('Erro ao listar posts. Verifique as permissões administrativas no Supabase.', false);
+          if (reset) renderPostsRequestState('Não foi possível carregar as publicações deste filtro.', false);
+          return;
+        }
+
+        list = data || [];
+        totalCount = Number.isFinite(Number(count)) ? Number(count) : requestOffset + list.length;
       }
 
-      const { data, error, count } = await query;
-      if (error) {
-        console.error('[Admin moderation] fetchPosts:', error);
-        showError('Erro ao listar posts. Verifique policies/admin no Supabase.', false);
-        return;
-      }
-
-      list = data || [];
-      totalCount = Number.isFinite(Number(count)) ? Number(count) : list.length;
+      if (requestSeq !== _postsRequestSeq) return;
+      state.totalCount = totalCount;
+      state.hasMore = (requestOffset + list.length) < totalCount;
+      state.posts = reset ? list : state.posts.concat(list);
+      state.offset = requestOffset + list.length;
+      renderPosts();
+    } catch (error) {
+      if (requestSeq !== _postsRequestSeq) return;
+      console.error('[Admin moderation] fetchPosts exception:', error);
+      showError('Não foi possível atualizar a lista de publicações.', false);
+      if (reset) renderPostsRequestState('Não foi possível atualizar as publicações deste filtro.', false);
+    } finally {
+      if (requestSeq === _postsRequestSeq) setPostsBusy(false, append);
     }
-
-    state.totalCount = totalCount;
-    state.hasMore = (state.offset + list.length) < totalCount;
-    state.posts = reset ? list : state.posts.concat(list);
-    state.offset += list.length;
-    renderPosts();
   }
 
   function formatPayload(payload) {
@@ -455,6 +553,8 @@
           <button
             type="button"
             data-audit-detail="${detailId}"
+            aria-controls="${detailId}"
+            aria-expanded="false"
             style="padding:6px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);cursor:pointer;font-size:.82em;"
           >
             Ver detalhes
@@ -475,7 +575,11 @@
     const client = getClient();
     if (!client) return;
 
+    const requestSeq = ++_auditRequestSeq;
     const body = $('#audit-log-body');
+    const wrap = body && body.closest ? body.closest('.kc-admin-posts-table-wrap') : null;
+    if (wrap) wrap.setAttribute('aria-busy', 'true');
+    setControlBusy($('#audit-refresh'), true, 'Atualizando…');
     if (body) {
       body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--kc-text-dark-secondary);padding:18px;">Carregando logs…</td></tr>';
     }
@@ -492,89 +596,103 @@
     let fetchOk = false;
 
     try {
-      const rpc = await client.rpc('kc_admin_list_audit_logs', {
-        p_entity_type: state.audit.entityType,
-        p_action: state.audit.action,
-        p_actor_query: actorQueryIsUuid ? actorQuery : (actorQuery || null),
-        p_limit: limit + 1,
-        p_offset: offset,
-      });
-
-      if (rpc && !rpc.error && Array.isArray(rpc.data)) {
-        rows = rpc.data;
-        fetchOk = true;
-      } else if (rpc && rpc.error) {
-        console.error('[Admin moderation] fetchAuditLogs rpc:', rpc.error);
-      }
-    } catch (rpcErr) {
-      console.error('[Admin moderation] fetchAuditLogs rpc exceção:', rpcErr);
-    }
-
-    // Fallback: query direta (sem offset — apenas primeira página)
-    if (!fetchOk) {
       try {
-        let query = client
-          .from('audit_log')
-          .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
-          .order('created_at', { ascending: false })
-          .limit(limit + 1);
+        const rpc = await client.rpc('kc_admin_list_audit_logs', {
+          p_entity_type: state.audit.entityType,
+          p_action: state.audit.action,
+          p_actor_query: actorQueryIsUuid ? actorQuery : (actorQuery || null),
+          p_limit: limit + 1,
+          p_offset: offset,
+        });
 
-        if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
-        if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
-        if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+        if (requestSeq !== _auditRequestSeq) return;
+        if (rpc && !rpc.error && Array.isArray(rpc.data)) {
+          rows = rpc.data;
+          fetchOk = true;
+        } else if (rpc && rpc.error) {
+          console.error('[Admin moderation] fetchAuditLogs rpc:', rpc.error);
+        }
+      } catch (rpcErr) {
+        console.error('[Admin moderation] fetchAuditLogs rpc exceção:', rpcErr);
+      }
 
-        const { data, error } = await query;
-        if (error) {
-          console.error('[Admin moderation] fetchAuditLogs direct:', error);
+      // Fallback paginado para projetos ainda sem a RPC.
+      if (!fetchOk) {
+        try {
+          let query = client
+            .from('audit_log')
+            .select('id, created_at, action, entity_type, entity_id, actor_id, payload')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit);
+
+          if (state.audit.entityType !== 'all') query = query.eq('entity_type', state.audit.entityType);
+          if (state.audit.action !== 'all') query = query.eq('action', state.audit.action);
+          if (actorQueryIsUuid) query = query.eq('actor_id', actorQuery);
+
+          const { data, error } = await query;
+          if (requestSeq !== _auditRequestSeq) return;
+          if (error) {
+            console.error('[Admin moderation] fetchAuditLogs direct:', error);
+            state.audit.rows = [];
+            state.audit.hasMore = false;
+            renderAuditLogs();
+            setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+            return;
+          }
+          rows = data || [];
+        } catch (directErr) {
+          console.error('[Admin moderation] fetchAuditLogs direct exceção:', directErr);
           state.audit.rows = [];
           state.audit.hasMore = false;
           renderAuditLogs();
-          setAuditError('Não foi possível carregar o audit log. Verifique migration/RLS no Supabase.');
+          setAuditError('Não foi possível carregar o audit log.');
           return;
         }
-        rows = data || [];
-      } catch (directErr) {
-        console.error('[Admin moderation] fetchAuditLogs direct exceção:', directErr);
-        state.audit.rows = [];
+      }
+
+      // Detectar hasMore
+      if (rows.length > limit) {
+        state.audit.hasMore = true;
+        rows = rows.slice(0, limit);
+      } else {
         state.audit.hasMore = false;
-        renderAuditLogs();
-        setAuditError('Não foi possível carregar o audit log.');
-        return;
+      }
+
+      const actorIds = rows.map((row) => row.actor_id).filter(Boolean);
+      const actorsById = await loadActorsById(actorIds);
+      if (requestSeq !== _auditRequestSeq) return;
+      state.audit.actorsById = actorsById;
+
+      // Filtro client-side por nome do ator (quando não é UUID)
+      if (actorQuery && !actorQueryIsUuid) {
+        state.audit.rows = rows.filter((row) => {
+          const actorId = String(row.actor_id || '').toLowerCase();
+          const actor = state.audit.actorsById[String(row.actor_id || '')] || null;
+          const displayName = String(actor && actor.display_name || '').toLowerCase();
+          const fullName = String(actor && actor.full_name || '').toLowerCase();
+          return actorId.includes(actorQueryLower)
+            || displayName.includes(actorQueryLower)
+            || fullName.includes(actorQueryLower);
+        });
+      } else {
+        state.audit.rows = rows;
+      }
+
+      renderAuditLogs();
+    } finally {
+      if (requestSeq === _auditRequestSeq) {
+        if (wrap) wrap.setAttribute('aria-busy', 'false');
+        setControlBusy($('#audit-refresh'), false);
+        const refresh = $('#audit-refresh');
+        if (refresh) refresh.disabled = false;
       }
     }
-
-    // Detectar hasMore
-    if (rows.length > limit) {
-      state.audit.hasMore = true;
-      rows = rows.slice(0, limit);
-    } else {
-      state.audit.hasMore = false;
-    }
-
-    const actorIds = rows.map((row) => row.actor_id).filter(Boolean);
-    state.audit.actorsById = await loadActorsById(actorIds);
-
-    // Filtro client-side por nome do ator (quando não é UUID)
-    if (actorQuery && !actorQueryIsUuid) {
-      state.audit.rows = rows.filter((row) => {
-        const actorId = String(row.actor_id || '').toLowerCase();
-        const actor = state.audit.actorsById[String(row.actor_id || '')] || null;
-        const displayName = String(actor && actor.display_name || '').toLowerCase();
-        const fullName = String(actor && actor.full_name || '').toLowerCase();
-        return actorId.includes(actorQueryLower)
-          || displayName.includes(actorQueryLower)
-          || fullName.includes(actorQueryLower);
-      });
-    } else {
-      state.audit.rows = rows;
-    }
-
-    renderAuditLogs();
   }
 
   function statusBadge(status) {
-    const map = { published: '#4caf50', pending: '#757575', hidden: '#ef6c00', closed: '#64748b', deleted: '#c62828' };
-    return `<span class="kc-badge" style="background:${map[status] || '#546e7a'};">${escape(status || 'unknown')}</span>`;
+    const key = String(status || 'unknown').toLowerCase();
+    const map = { published: '#2e7d32', pending: '#616161', hidden: '#ef6c00', closed: '#475569', expired: '#6b7280', deleted: '#b71c1c' };
+    return `<span class="kc-badge" style="background:${map[key] || '#546e7a'};">${escape(statusLabel(key))}</span>`;
   }
 
   function fmtDate(iso) {
@@ -643,20 +761,24 @@
         const author = (p.author && (p.author.display_name || p.author.full_name)) || '—';
         const moduleInfo = [p.module, p.category].filter(Boolean).join(' / ') || '—';
         const idRef = p.legacy_id ? `${escape(p.legacy_id)} · ${escape(p.id)}` : escape(p.id);
+        const excerpt = String(p.content || '').replace(/\s+/g, ' ').trim().slice(0, 180);
+        const publishLabel = p.status === 'pending' ? 'Aprovar/Publicar' : 'Reativar';
 
         return `<tr data-id="${escape(p.id)}">
           <td data-label="Post">
             <strong>${escape(p.title || '(sem título)')}</strong><br>
             <span style="font-size:.8em;color:var(--kc-text-dark-secondary);">${idRef}</span>
+            ${excerpt ? `<div style="font-size:.82em;color:var(--kc-text-dark-secondary);margin-top:5px;line-height:1.35;">${escape(excerpt)}${String(p.content || '').length > 180 ? '…' : ''}</div>` : ''}
+            <a href="../product.html?id=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:6px;font-size:.8em;color:var(--kc-primary-brand);">Abrir publicação <span aria-hidden="true">↗</span></a>
           </td>
           <td data-label="Autor">${escape(author)}</td>
-          <td data-label="Módulo/Categoria">${escape(moduleInfo)}</td>
+          <td data-label="Módulo/Categoria">${escape(moduleLabel(p.module))}${p.category ? ` / ${escape(p.category)}` : ''}</td>
           <td data-label="Status" data-col="status">${statusBadge(p.status)}</td>
           <td data-label="Atualizado em" data-col="updated">${escape(fmtDate(p.updated_at || p.created_at))}</td>
           <td data-label="Ações">
             <div class="kc-admin-actions">
               ${actionButton('Ocultar', 'hidden', '#ef6c00', p.status === 'hidden')}
-              ${actionButton('Reativar', 'published', '#2e7d32', p.status === 'published')}
+              ${actionButton(publishLabel, 'published', '#2e7d32', p.status === 'published')}
               ${actionButton('Encerrar', 'closed', '#64748b', p.status === 'closed')}
               ${actionButton('Deletar', 'deleted', '#b71c1c', p.status === 'deleted')}
             </div>
@@ -681,7 +803,7 @@
       return;
     }
     el.innerHTML = state.sessionActions.slice(0, 10).map((item) =>
-      `<li><code>${escape(item.postId)}</code> → <strong>${escape(item.action)}</strong> (${escape(fmtDate(item.timestamp))})</li>`).join('');
+      `<li><code>${escape(item.postId)}</code> → <strong>${escape(statusLabel(item.action))}</strong> (${escape(fmtDate(item.timestamp))})</li>`).join('');
   }
 
   async function updatePostStatus(postId, status) {
@@ -796,8 +918,8 @@
   function initStatusFilter() {
     const select = $('#moderation-status-filter');
     if (!select) return;
-    const statuses = ['all', 'published', 'pending', 'hidden', 'closed', 'deleted'];
-    select.innerHTML = statuses.map((s) => `<option value="${s}">${s === 'all' ? 'Todos status' : s}</option>`).join('');
+    const statuses = ['all', 'published', 'pending', 'hidden', 'closed', 'expired', 'deleted'];
+    select.innerHTML = statuses.map((status) => `<option value="${status}">${escape(statusLabel(status))}</option>`).join('');
   }
 
   async function fetchPostsForExport(client, warnings) {
@@ -972,22 +1094,51 @@
 
   // Coleta as solicitações de acesso externo (mesma fonte do painel da página).
   async function fetchExternalAccessForExport(warnings) {
-    try {
-      if (!window.KCAPI || typeof window.KCAPI.listExternalAccessRequests !== 'function') return [];
-      const statuses = ['pending', 'approved', 'rejected'];
-      const results = await Promise.all(statuses.map((status) => {
-        return Promise.resolve(window.KCAPI.listExternalAccessRequests({ status, limit: 100 }))
-          .catch(() => null);
-      }));
-      let items = [];
-      results.forEach((res) => {
-        if (res && res.ok !== false && Array.isArray(res.items)) items = items.concat(res.items);
-      });
-      return items;
-    } catch (error) {
-      warnings.push('Não foi possível coletar solicitações de acesso externo para o export.');
+    if (!window.KCAPI || typeof window.KCAPI.listExternalAccessRequests !== 'function') {
+      warnings.push('Solicitações de acesso externo indisponíveis para o export.');
       return [];
     }
+
+    async function fetchStatus(status) {
+      const items = [];
+      let total = null;
+      while (items.length < EXTERNAL_ACCESS_EXPORT_LIMIT_PER_STATUS) {
+        const limit = Math.min(
+          EXTERNAL_ACCESS_EXPORT_PAGE_SIZE,
+          EXTERNAL_ACCESS_EXPORT_LIMIT_PER_STATUS - items.length
+        );
+        let response = null;
+        try {
+          response = await window.KCAPI.listExternalAccessRequests({
+            status,
+            limit,
+            offset: items.length,
+          });
+        } catch (error) {
+          warnings.push(`Falha ao coletar solicitações de acesso externo "${status}" a partir do item ${items.length}.`);
+          break;
+        }
+        if (!response || response.ok === false) {
+          warnings.push(`Falha ao coletar solicitações de acesso externo "${status}" a partir do item ${items.length}.`);
+          break;
+        }
+        const pageItems = Array.isArray(response.items) ? response.items : [];
+        if (total === null) total = Math.max(0, Number(response.total) || 0);
+        items.push(...pageItems);
+        if (!pageItems.length || pageItems.length < limit || (total && items.length >= total)) break;
+      }
+      if (total !== null && total > items.length) {
+        warnings.push(
+          `Solicitações de acesso externo "${status}" limitadas a ${items.length} de ${total} registros.`
+        );
+      }
+      return items;
+    }
+
+    const results = await Promise.all(
+      ['pending', 'approved', 'rejected'].map(fetchStatus)
+    );
+    return results.reduce((all, rows) => all.concat(rows), []);
   }
 
   async function collectModerationExportData() {
@@ -1157,7 +1308,7 @@
     if (externalAccess.length) {
       sections.push({
         title: 'Acesso externo',
-        note: 'Solicitações de acesso externo (convites) exibidas no painel — pendentes, aprovadas e recusadas.',
+        note: 'Solicitações de acesso externo coletadas com paginação — pendentes, aprovadas e recusadas. Limites ou falhas parciais aparecem na seção de avisos.',
         rows: externalAccess.map((req) => ({
           solicitante: (req && req.requester_name) || 'Solicitante',
           email: (req && req.contact_email) || '',
@@ -1200,7 +1351,7 @@
     return {
       title: 'KinoCampus - Moderação Admin',
       subtitle: 'Posts filtrados, limites ativos, ritmo de publicação, audit log e solicitações de acesso externo da seleção atual',
-      source: 'admin/moderation.html — export completo dos filtros atuais',
+      source: 'admin/moderation.html — export paginado dos filtros atuais, sujeito aos limites de segurança informados',
       filters: {
         status: statusLabel(state.statusFilter || 'all'),
         busca: state.search || '',
@@ -1242,6 +1393,10 @@
       } else {
         await window.KCAdminExport.exportReportXLSX('kc-admin-moderacao-' + date + '.xlsx', report);
       }
+      showToastSafe('Relatório preparado com sucesso.', 'success', 1800);
+    } catch (error) {
+      console.error('[Admin moderation] export:', error);
+      showToastSafe('Não foi possível gerar o relatório agora.', 'error', 3600);
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -1259,13 +1414,24 @@
         const row = ev.target.closest('tr[data-id]');
         if (!row) return;
         if (btn.dataset.kcBusy === '1') return;
+        const action = btn.getAttribute('data-action');
+        const rowButtons = Array.from(row.querySelectorAll('button[data-action]'));
+        const originals = rowButtons.map((item) => ({ item, html: item.innerHTML, disabled: item.disabled }));
         btn.dataset.kcBusy = '1';
-        btn.disabled = true;
+        row.setAttribute('aria-busy', 'true');
+        rowButtons.forEach((item) => { item.disabled = true; });
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ' + escape(statusLabel(action));
         try {
-          await updatePostStatus(row.getAttribute('data-id'), btn.getAttribute('data-action'));
+          await updatePostStatus(row.getAttribute('data-id'), action);
         } finally {
-          btn.disabled = false;
-          delete btn.dataset.kcBusy;
+          if (row.isConnected) {
+            row.removeAttribute('aria-busy');
+            originals.forEach(({ item, html, disabled }) => {
+              item.innerHTML = html;
+              item.disabled = disabled;
+              delete item.dataset.kcBusy;
+            });
+          }
         }
       });
     }
@@ -1393,7 +1559,9 @@
         const detail = document.getElementById(detailId);
         if (!detail) return;
         const isOpen = detail.style.display !== 'none';
-        detail.style.display = isOpen ? 'none' : 'table-row';
+        if (isOpen) detail.style.display = 'none';
+        else detail.style.removeProperty('display');
+        btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
         btn.textContent = isOpen ? 'Ver detalhes' : 'Ocultar detalhes';
       });
     }
@@ -1427,14 +1595,19 @@
     if (!client) return;
     const tbody = $('#post-limits-body');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--kc-text-dark-secondary);padding:14px;">Carregando…</td></tr>';
-    const { data, error } = await client.rpc('kc_admin_get_post_limits');
-    if (error) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(String(error.message || 'Falha ao carregar limites'))}</td></tr>`;
-      return;
+    try {
+      const { data, error } = await client.rpc('kc_admin_get_post_limits');
+      const responseError = error || (data && data.ok === false ? { message: data.message || data.error } : null);
+      if (responseError) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(String(responseError.message || 'Falha ao carregar limites'))}</td></tr>`;
+        return;
+      }
+      const limits = (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
+      limitsState.limits = limits;
+      renderPostLimits(limits);
+    } catch (error) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="color:#ef9a9a;padding:10px;">Erro: ${escape(getErrorMessage(error, 'Falha ao carregar limites'))}</td></tr>`;
     }
-    const limits = (data && data.limits) ? data.limits : (Array.isArray(data) ? data : []);
-    limitsState.limits = limits;
-    renderPostLimits(limits);
   }
 
   function renderPostLimits(limits) {
@@ -1520,6 +1693,29 @@
     return value;
   }
 
+  async function runLimitOperation(button, loadingLabel, operation) {
+    setControlBusy(button, true, loadingLabel);
+    try {
+      return await operation();
+    } catch (error) {
+      console.error('[Admin moderation] limit operation:', error);
+      showLimitsFeedback('Erro de rede: ' + getErrorMessage(error, 'não foi possível concluir a operação.'), true);
+      return null;
+    } finally {
+      setControlBusy(button, false);
+      if (button) button.disabled = false;
+    }
+  }
+
+  function getRpcOperationError(response, fallback) {
+    if (!response) return fallback;
+    if (response.error) return getErrorMessage(response.error, fallback);
+    if (response.data && response.data.ok === false) {
+      return String(response.data.message || response.data.error || fallback);
+    }
+    return '';
+  }
+
   async function saveGlobalLimit() {
     const client = getClient();
     if (!client) return;
@@ -1529,10 +1725,11 @@
     const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
     if (!val || val < 1) { showLimitsFeedback('Informe um valor válido (mínimo 1).', true); return; }
     const btn = $('#limit-global-save');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
-    const { error } = await client.rpc('kc_admin_set_post_limit', { p_user_id: null, p_module: mod || null, p_max_active: val });
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" aria-hidden="true"></i> Salvar limite global'; }
-    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    const response = await runLimitOperation(btn, 'Salvando…', () =>
+      client.rpc('kc_admin_set_post_limit', { p_user_id: null, p_module: mod || null, p_max_active: val })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao salvar limite global.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
     showLimitsFeedback('Limite global salvo com sucesso!', false);
     await fetchPostLimits();
   }
@@ -1545,8 +1742,12 @@
     // Find matching global limit in loaded list
     const match = limitsState.limits.find((r) => !r.user_id && (mod ? r.module === mod : !r.module));
     if (!match) { showLimitsFeedback('Nenhum override global encontrado para remover.', true); return; }
-    const { error } = await client.rpc('kc_admin_delete_post_limit', { p_limit_id: match.id });
-    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    if (!window.confirm('Remover este limite global e voltar ao padrão da plataforma?')) return;
+    const response = await runLimitOperation($('#limit-global-delete'), 'Removendo…', () =>
+      client.rpc('kc_admin_delete_post_limit', { p_limit_id: match.id })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao remover limite global.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
     showLimitsFeedback('Override global removido.', false);
     await fetchPostLimits();
   }
@@ -1561,19 +1762,24 @@
     const val = valueEl ? parseInt(valueEl.value, 10) : NaN;
     if (isNaN(val) || val < 0) { showLimitsFeedback('Informe um valor válido (0 = bloqueado, mínimo 1 para ativo).', true); return; }
     const btn = $('#limit-user-save');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
-    const { error } = await client.rpc('kc_admin_set_post_limit', { p_user_id: limitsState.selectedUser.id, p_module: mod || null, p_max_active: val });
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save" aria-hidden="true"></i> Salvar'; }
-    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
-    showLimitsFeedback(`Limite de ${val} salvo para ${limitsState.selectedUser.name}.`, false);
+    const selectedUser = { ...limitsState.selectedUser };
+    const response = await runLimitOperation(btn, 'Salvando…', () =>
+      client.rpc('kc_admin_set_post_limit', { p_user_id: selectedUser.id, p_module: mod || null, p_max_active: val })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao salvar limite do usuário.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
+    showLimitsFeedback(`Limite de ${val} salvo para ${selectedUser.name}.`, false);
     await fetchPostLimits();
   }
 
   async function deleteLimitById(limitId) {
     const client = getClient();
     if (!client) return;
-    const { error } = await client.rpc('kc_admin_delete_post_limit', { p_limit_id: limitId });
-    if (error) { showLimitsFeedback('Erro: ' + String(error.message || error), true); return; }
+    const response = await runLimitOperation(null, 'Removendo…', () =>
+      client.rpc('kc_admin_delete_post_limit', { p_limit_id: limitId })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao remover limite.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
     showLimitsFeedback('Override removido com sucesso.', false);
     await fetchPostLimits();
   }
@@ -1594,20 +1800,18 @@
     if (windowMinutes == null) { showLimitsFeedback('Informe uma janela válida entre 1 minuto e 7 dias.', true); return; }
 
     const btn = isUser ? $('#flood-user-save') : $('#flood-global-save');
-    const original = btn ? btn.innerHTML : '';
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando…'; }
-    const { data, error } = await client.rpc('kc_admin_set_post_flood_limit', {
-      p_user_id: isUser ? limitsState.selectedUser.id : null,
-      p_module: mod || null,
-      p_max_posts: maxPosts,
-      p_window_minutes: windowMinutes,
-    });
-    if (btn) { btn.disabled = false; btn.innerHTML = original; }
-    if (error || (data && data.ok === false)) {
-      showLimitsFeedback('Erro: ' + String((error && error.message) || (data && data.message) || error || 'Falha ao salvar ritmo'), true);
-      return;
-    }
-    showLimitsFeedback(isUser ? `Ritmo salvo para ${limitsState.selectedUser.name}.` : 'Ritmo global salvo com sucesso!', false);
+    const selectedUser = isUser ? { ...limitsState.selectedUser } : null;
+    const response = await runLimitOperation(btn, 'Salvando…', () =>
+      client.rpc('kc_admin_set_post_flood_limit', {
+        p_user_id: selectedUser ? selectedUser.id : null,
+        p_module: mod || null,
+        p_max_posts: maxPosts,
+        p_window_minutes: windowMinutes,
+      })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao salvar ritmo.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
+    showLimitsFeedback(selectedUser ? `Ritmo salvo para ${selectedUser.name}.` : 'Ritmo global salvo com sucesso!', false);
     await fetchPostFloodLimits();
     await fetchAuditLogs();
   }
@@ -1622,22 +1826,21 @@
     const moduleEl = $('#flood-user-module');
     const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
     const label = limitsState.selectedUser.name || limitsState.selectedUser.id;
+    const selectedUserId = limitsState.selectedUser.id;
     const scopeLabel = mod ? ` no módulo ${mod}` : '';
     if (!window.confirm(`Resetar o bloqueio de ritmo de ${label}${scopeLabel}? Isso permite nova publicação imediatamente.`)) return;
 
     const btn = $('#flood-user-reset');
-    const original = btn ? btn.innerHTML : '';
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Resetando…'; }
-    const { data, error } = await client.rpc('kc_admin_reset_post_flood_limit', {
-      p_user_id: limitsState.selectedUser.id,
-      p_module: mod || null,
-      p_reason: 'admin_moderation_panel',
-    });
-    if (btn) { btn.disabled = false; btn.innerHTML = original; }
-    if (error || (data && data.ok === false)) {
-      showLimitsFeedback('Erro: ' + String((error && error.message) || (data && data.message) || error || 'Falha ao resetar bloqueio'), true);
-      return;
-    }
+    const response = await runLimitOperation(btn, 'Resetando…', () =>
+      client.rpc('kc_admin_reset_post_flood_limit', {
+        p_user_id: selectedUserId,
+        p_module: mod || null,
+        p_reason: 'admin_moderation_panel',
+      })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao resetar bloqueio.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
+    const data = response && response.data;
     const check = data && data.check ? data.check : {};
     const remaining = Number.isFinite(Number(check.remaining)) ? Number(check.remaining) : null;
     showLimitsFeedback(`Bloqueio resetado para ${label}. ${remaining != null ? `${remaining} publicação(ões) disponíveis na janela atual.` : 'O usuário pode tentar publicar novamente.'}`, false);
@@ -1652,17 +1855,18 @@
     const mod = (moduleEl && moduleEl.value) ? moduleEl.value.trim() : null;
     const match = limitsState.floodLimits.find((r) => !r.user_id && (mod ? r.module === mod : !r.module));
     if (!match) { showLimitsFeedback('Nenhum ritmo global encontrado para remover.', true); return; }
+    if (!window.confirm('Remover este ritmo global e voltar ao padrão anti-spam?')) return;
     await deleteFloodLimitById(match.id);
   }
 
   async function deleteFloodLimitById(limitId) {
     const client = getClient();
     if (!client) return;
-    const { data, error } = await client.rpc('kc_admin_delete_post_flood_limit', { p_limit_id: limitId });
-    if (error || (data && data.ok === false)) {
-      showLimitsFeedback('Erro: ' + String((error && error.message) || (data && data.message) || error || 'Falha ao remover ritmo'), true);
-      return;
-    }
+    const response = await runLimitOperation(null, 'Removendo…', () =>
+      client.rpc('kc_admin_delete_post_flood_limit', { p_limit_id: limitId })
+    );
+    const errorMessage = getRpcOperationError(response, 'Falha ao remover ritmo.');
+    if (errorMessage) { showLimitsFeedback('Erro: ' + errorMessage, true); return; }
     showLimitsFeedback('Ritmo removido com sucesso.', false);
     await fetchPostFloodLimits();
     await fetchAuditLogs();
@@ -1670,13 +1874,25 @@
 
   async function searchUsersForLimit(query) {
     const client = getClient();
-    if (!client || !query || query.length < 2) return [];
-    const { data } = await client
-      .from('profiles')
-      .select('id, full_name, display_name, email')
-      .or(`full_name.ilike.%${query}%,display_name.ilike.%${query}%,email.ilike.%${query}%`)
-      .limit(8);
-    return data || [];
+    const normalized = String(query || '').trim();
+    if (!client || normalized.length < 2) return [];
+    try {
+      const { data, error } = await client.rpc('kc_admin_search_profiles_for_limits', {
+        p_query: normalized,
+        p_limit: 8,
+      });
+      if (error) throw error;
+      return (Array.isArray(data) ? data : []).map((row) => ({
+        id: row.out_id,
+        full_name: row.out_full_name || '',
+        display_name: row.out_display_name || '',
+        email: row.out_email || '',
+      }));
+    } catch (error) {
+      console.error('[Admin moderation] searchUsersForLimit:', error);
+      showLimitsFeedback('Não foi possível buscar usuários agora.', true);
+      return [];
+    }
   }
 
   function bindPostLimitsEvents() {
@@ -1740,39 +1956,63 @@
     if (userSearch && userResults) {
       userSearch.addEventListener('input', () => {
         clearTimeout(searchTimer);
+        _userSearchRequestSeq += 1;
+        if (limitsState.selectedUser) {
+          limitsState.selectedUser = null;
+          if (userSelectedEl) {
+            userSelectedEl.style.display = 'none';
+            userSelectedEl.textContent = 'Nenhum usuário selecionado';
+          }
+        }
         const q = userSearch.value.trim();
+        userSearch.setAttribute('aria-expanded', 'false');
         if (q.length < 2) { userResults.style.display = 'none'; return; }
+        const requestSeq = _userSearchRequestSeq;
         searchTimer = setTimeout(async () => {
           const users = await searchUsersForLimit(q);
+          if (requestSeq !== _userSearchRequestSeq || userSearch.value.trim() !== q) return;
           if (!users.length) { userResults.style.display = 'none'; return; }
           userResults.innerHTML = users.map((u) => {
             const label = escape(u.display_name || u.full_name || u.email || u.id);
             const sub = escape(u.email || u.id || '');
-            return `<div data-user-id="${escape(u.id)}" data-user-name="${label}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--kc-border-dark);font-size:.88em;">
+            return `<div role="option" tabindex="0" data-user-id="${escape(u.id)}" data-user-name="${label}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--kc-border-dark);font-size:.88em;">
               <strong>${label}</strong>${sub ? `<br><span style="color:var(--kc-text-dark-secondary);font-size:.83em;">${sub}</span>` : ''}
             </div>`;
           }).join('');
           userResults.style.display = 'block';
+          userSearch.setAttribute('aria-expanded', 'true');
         }, 300);
       });
 
-      userResults.addEventListener('click', (ev) => {
-        const item = ev.target.closest('[data-user-id]');
+      const selectUserResult = (item) => {
         if (!item) return;
         const uid = item.getAttribute('data-user-id');
         const uname = item.getAttribute('data-user-name');
         limitsState.selectedUser = { id: uid, name: uname };
         userSearch.value = uname;
         userResults.style.display = 'none';
+        userSearch.setAttribute('aria-expanded', 'false');
         if (userSelectedEl) {
           userSelectedEl.style.display = 'block';
           userSelectedEl.innerHTML = `<i class="fas fa-user" style="margin-right:6px;color:var(--kc-primary-brand);" aria-hidden="true"></i>Usuário selecionado: <strong>${escape(uname)}</strong> <span style="color:var(--kc-text-dark-secondary);font-size:.82em;">(${escape(uid)})</span>`;
         }
+      };
+
+      userResults.addEventListener('click', (ev) => {
+        selectUserResult(ev.target.closest('[data-user-id]'));
+      });
+      userResults.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        const item = ev.target.closest('[data-user-id]');
+        if (!item) return;
+        ev.preventDefault();
+        selectUserResult(item);
       });
 
       document.addEventListener('click', (ev) => {
         if (!userResults.contains(ev.target) && ev.target !== userSearch) {
           userResults.style.display = 'none';
+          userSearch.setAttribute('aria-expanded', 'false');
         }
       });
     }
@@ -1788,19 +2028,38 @@
   async function boot() {
     setLoading(true);
     initStatusFilter();
-    const ok = await checkAdminAccess();
-    setLoading(false);
-    if (!ok) {
-      setTimeout(() => { window.location.replace('../index.html'); }, 2500);
-      return;
-    }
+    try {
+      const ok = await checkAdminAccess();
+      if (!ok) {
+        setTimeout(() => { window.location.replace('../index.html'); }, 2500);
+        return;
+      }
 
-    $('#admin-content').style.display = 'block';
-    showLoadingSkeletons();
-    bindEvents();
-    bindPostLimitsEvents();
-    renderSessionActions();
-    await Promise.all([fetchPosts(true), fetchAuditLogs(), fetchPostLimits(), fetchPostFloodLimits()]);
+      setLoading(false);
+      $('#admin-content').style.display = 'block';
+      showLoadingSkeletons();
+      bindEvents();
+      bindPostLimitsEvents();
+      renderSessionActions();
+
+      const results = await Promise.allSettled([
+        fetchPosts(true),
+        fetchAuditLogs(),
+        fetchPostLimits(),
+        fetchPostFloodLimits(),
+      ]);
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length) {
+        console.error('[Admin moderation] initial partial failures:', failures);
+        showToastSafe('O painel abriu, mas algumas seções não puderam ser atualizadas.', 'error', 4200);
+      }
+    } catch (error) {
+      console.error('[Admin moderation] boot:', error);
+      showError('Não foi possível inicializar o painel de moderação.', true);
+      showToastSafe('Falha ao carregar a moderação. Tente atualizar a página.', 'error', 4200);
+    } finally {
+      setLoading(false);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', boot);

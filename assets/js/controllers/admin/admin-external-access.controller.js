@@ -1,5 +1,5 @@
 /*
- * KinoCampus -- admin-external-access.controller.js (v9.3.5.4)
+ * KinoCampus -- admin-external-access.controller.js (v8.6.11)
  *
  * Gerencia a seção "Solicitações de Acesso Externo" em /admin/moderation.html.
  * - Lista pendentes / aprovadas / recusadas via KCAPI.listExternalAccessRequests
@@ -15,12 +15,24 @@
   window.__kcAdminExternalAccessInstalled = true;
 
   const PANEL_SELECTOR = '#external-access-panel';
+  const LIST_PAGE_SIZE = 200;
+  const MAX_LIST_ITEMS_PER_STATUS = 2000;
+  let modalTokenSeq = 0;
+  let refreshRequestSeq = 0;
   const STATE = {
     activeTab: 'pending',
     items: [],
     countsByStatus: { pending: 0, approved: 0, rejected: 0 },
     loading: false,
-    modal: { id: null, decision: null, requesterName: '', email: '' },
+    modal: {
+      id: null,
+      decision: null,
+      requesterName: '',
+      email: '',
+      busy: false,
+      token: 0,
+    },
+    returnFocus: null,
   };
 
   function $(sel, root) { return (root || document).querySelector(sel); }
@@ -56,15 +68,28 @@
   function setFeedback(message, kind) {
     const el = $('#ext-access-feedback');
     if (!el) return;
-    if (!message) { el.textContent = ''; el.className = 'kc-admin-invite-feedback'; return; }
+    if (!message) {
+      el.textContent = '';
+      el.className = 'kc-admin-invite-feedback';
+      el.style.display = 'none';
+      return;
+    }
     el.textContent = message;
     el.className = `kc-admin-invite-feedback is-${kind || 'info'}`;
+    el.style.display = 'block';
   }
 
   function setLoading(loading) {
     STATE.loading = !!loading;
     const el = $('#ext-access-loading');
     if (el) el.style.display = loading ? 'block' : 'none';
+    const panel = $(PANEL_SELECTOR);
+    if (panel) panel.setAttribute('aria-busy', loading ? 'true' : 'false');
+    const refresh = $('#ext-access-refresh');
+    if (refresh) {
+      refresh.disabled = !!loading;
+      refresh.setAttribute('aria-busy', loading ? 'true' : 'false');
+    }
   }
 
   function setEmpty(empty) {
@@ -77,6 +102,15 @@
       const el = document.querySelector(`[data-ext-count="${status}"]`);
       if (el) el.textContent = String(STATE.countsByStatus[status] || 0);
     });
+  }
+
+  function renderProcessingBadge(delivery, label) {
+    const claimedAt = delivery && delivery.claimed_at ? new Date(delivery.claimed_at).getTime() : NaN;
+    const isStale = Number.isFinite(claimedAt) && (Date.now() - claimedAt) > (15 * 60 * 1000);
+    if (isStale) {
+      return `<span class="kc-ext-email-status is-err" title="A entrega não foi confirmada. Consulte os logs da Edge Function antes de qualquer envio manual, pois o reenvio automático é bloqueado para evitar duplicidade."><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> ${escapeHtml(label)} sem confirmação</span>`;
+    }
+    return `<span class="kc-ext-email-status is-warn" title="A entrega foi reivindicada por uma operação em andamento; novas tentativas não enviam outra mensagem."><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ${escapeHtml(label)} em processamento</span>`;
   }
 
   function renderItem(item) {
@@ -107,14 +141,19 @@
     let emailBadge = '';
     if (item.admin_status === 'approved' && meta.invite_email) {
       const st = String(meta.invite_email.status || '');
-      if (st === 'sent') emailBadge = '<span class="kc-ext-email-status is-ok"><i class="fas fa-envelope-circle-check"></i> Convite enviado</span>';
-      else if (st === 'failed') emailBadge = '<span class="kc-ext-email-status is-err"><i class="fas fa-triangle-exclamation"></i> Falha no envio do convite</span>';
+      if (st === 'sent') emailBadge = '<span class="kc-ext-email-status is-ok"><i class="fas fa-envelope-circle-check" aria-hidden="true"></i> Convite enviado</span>';
+      else if (st === 'failed') emailBadge = '<span class="kc-ext-email-status is-err"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Falha no envio do convite</span>';
+      else if (st === 'processing') emailBadge = renderProcessingBadge(meta.invite_email, 'Convite');
+      else if (st === 'link_generated' && meta.invite_email.invite_link) {
+        emailBadge = `<button type="button" class="kc-ext-email-status is-warn" data-ext-recover-invite-link="${escapeHtml(item.id)}"><i class="fas fa-link" aria-hidden="true"></i> Recuperar link manual</button>`;
+      }
     }
     if (item.admin_status === 'rejected' && meta.rejection_email) {
       const st = String(meta.rejection_email.status || '');
-      if (st === 'sent') emailBadge = '<span class="kc-ext-email-status is-ok"><i class="fas fa-envelope-circle-check"></i> E-mail de recusa enviado</span>';
-      else if (st === 'pending_provider_setup') emailBadge = '<span class="kc-ext-email-status is-warn"><i class="fas fa-hourglass-half"></i> E-mail pendente (configurar Resend)</span>';
-      else if (st === 'failed') emailBadge = '<span class="kc-ext-email-status is-err"><i class="fas fa-triangle-exclamation"></i> Falha no envio</span>';
+      if (st === 'sent') emailBadge = '<span class="kc-ext-email-status is-ok"><i class="fas fa-envelope-circle-check" aria-hidden="true"></i> E-mail de recusa enviado</span>';
+      else if (st === 'pending_provider_setup') emailBadge = '<span class="kc-ext-email-status is-warn"><i class="fas fa-hourglass-half" aria-hidden="true"></i> E-mail pendente (configurar SMTP administrativo)</span>';
+      else if (st === 'failed') emailBadge = '<span class="kc-ext-email-status is-err"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Falha no envio</span>';
+      else if (st === 'processing') emailBadge = renderProcessingBadge(meta.rejection_email, 'E-mail');
     }
 
     return `
@@ -161,22 +200,101 @@
 
   async function fetchByStatus(status) {
     if (!window.KCAPI || typeof window.KCAPI.listExternalAccessRequests !== 'function') {
-      setFeedback('KCAPI.listExternalAccessRequests indisponível.', 'error');
-      return { items: [], total: 0 };
+      return {
+        items: [],
+        total: 0,
+        failed: true,
+        error: 'KCAPI.listExternalAccessRequests indisponível.',
+      };
     }
     if (!isSupabaseAdminApiReady()) {
-      setFeedback('Solicitações externas exigem o modo Supabase.', 'warn');
-      return { items: [], total: 0 };
+      return {
+        items: [],
+        total: 0,
+        failed: true,
+        error: 'Solicitações externas exigem o modo Supabase.',
+      };
     }
-    const res = await window.KCAPI.listExternalAccessRequests({ status, limit: 100 });
-    if (!res || res.ok === false) {
-      setFeedback((res && res.error && res.error.message) || 'Falha ao listar solicitações.', 'error');
-      return { items: [], total: 0 };
+    let first = null;
+    try {
+      first = await window.KCAPI.listExternalAccessRequests({
+        status,
+        limit: LIST_PAGE_SIZE,
+        offset: 0,
+      });
+    } catch (error) {
+      return {
+        items: [],
+        total: 0,
+        failed: true,
+        error: (error && error.message) || 'Falha ao listar solicitações.',
+      };
     }
-    return { items: res.items || [], total: res.total || 0 };
+    if (!first || first.ok === false) {
+      return {
+        items: [],
+        total: 0,
+        failed: true,
+        error: (first && first.error && first.error.message) || 'Falha ao listar solicitações.',
+      };
+    }
+
+    const total = Math.max(0, Number(first.total) || 0);
+    const target = Math.min(total, MAX_LIST_ITEMS_PER_STATUS);
+    const items = Array.isArray(first.items) ? first.items.slice() : [];
+    let incomplete = items.length < total;
+
+    while (items.length < target) {
+      let page = null;
+      try {
+        page = await window.KCAPI.listExternalAccessRequests({
+          status,
+          limit: Math.min(LIST_PAGE_SIZE, target - items.length),
+          offset: items.length,
+        });
+      } catch (error) {
+        console.error('[admin-external-access] partial page exception:', status, error);
+        return {
+          items: [],
+          total,
+          failed: true,
+          error: (error && error.message) || 'Falha em uma página do histórico.',
+        };
+      }
+      if (!page || page.ok === false) {
+        console.error('[admin-external-access] partial page failure:', status, page && page.error);
+        return {
+          items: [],
+          total,
+          failed: true,
+          error: (page && page.error && page.error.message) || 'Falha em uma página do histórico.',
+        };
+      }
+      const pageItems = Array.isArray(page.items) ? page.items : [];
+      if (!pageItems.length) {
+        incomplete = items.length < total;
+        break;
+      }
+      items.push(...pageItems);
+    }
+
+    return {
+      items,
+      total,
+      incomplete: incomplete || total > MAX_LIST_ITEMS_PER_STATUS || items.length < total,
+      failed: false,
+    };
   }
 
   async function refreshAll() {
+    const requestSeq = ++refreshRequestSeq;
+    if (!isSupabaseAdminApiReady()) {
+      setLoading(false);
+      setFeedback('Solicitações externas exigem o modo Supabase.', 'warn');
+      return;
+    }
+    const previousItems = Array.isArray(STATE.items) ? STATE.items.slice() : [];
+    const previousCounts = { ...STATE.countsByStatus };
     setLoading(true);
     setFeedback('');
     try {
@@ -186,19 +304,49 @@
         fetchByStatus('approved'),
         fetchByStatus('rejected'),
       ]);
+      if (requestSeq !== refreshRequestSeq) return;
+      const byStatus = { pending, approved, rejected };
+      const failedStatuses = [];
+      const incompleteStatuses = [];
+      const nextItems = [];
+      const nextCounts = {};
+      Object.keys(byStatus).forEach((status) => {
+        const result = byStatus[status];
+        if (result.failed) {
+          failedStatuses.push(status);
+          nextCounts[status] = Number(previousCounts[status]) || 0;
+          nextItems.push(...previousItems.filter((item) => item.admin_status === status));
+          return;
+        }
+        nextCounts[status] = result.total;
+        nextItems.push(...result.items);
+        if (result.incomplete) incompleteStatuses.push(status);
+      });
       STATE.countsByStatus = {
-        pending: pending.total,
-        approved: approved.total,
-        rejected: rejected.total,
+        pending: nextCounts.pending,
+        approved: nextCounts.approved,
+        rejected: nextCounts.rejected,
       };
-      STATE.items = [].concat(pending.items, approved.items, rejected.items);
+      STATE.items = nextItems;
       updateTabCounts();
       renderList();
+      if (failedStatuses.length) {
+        setFeedback(
+          'Não foi possível atualizar ' + failedStatuses.join(', ') + '. Os dados anteriores dessas categorias foram preservados.',
+          'warn'
+        );
+      } else if (incompleteStatuses.length) {
+        setFeedback(
+          'A contagem total foi atualizada, mas parte do histórico não pôde ser carregada. Use Atualizar para tentar novamente.',
+          'warn'
+        );
+      }
     } catch (e) {
+      if (requestSeq !== refreshRequestSeq) return;
       console.error('[admin-external-access] refresh exception:', e);
-      setFeedback('Erro inesperado ao atualizar a lista.', 'error');
+      setFeedback('Erro inesperado ao atualizar a lista. Os dados anteriores foram preservados.', 'error');
     } finally {
-      setLoading(false);
+      if (requestSeq === refreshRequestSeq) setLoading(false);
     }
   }
 
@@ -221,10 +369,37 @@
     if (refreshBtn) refreshBtn.addEventListener('click', refreshAll);
   }
 
-  function openModal({ id, decision, requesterName, email }) {
-    STATE.modal = { id, decision, requesterName: requesterName || '', email: email || '' };
+  function setModalBusy(busy, expectedToken) {
+    if (expectedToken != null && STATE.modal.token !== expectedToken) return false;
+    STATE.modal.busy = !!busy;
     const modal = $('#ext-access-modal');
-    if (!modal) return;
+    if (modal) modal.setAttribute('aria-busy', busy ? 'true' : 'false');
+    $$('[data-ext-modal-close]', modal || document).forEach((closer) => {
+      if ('disabled' in closer) closer.disabled = !!busy;
+      closer.setAttribute('aria-disabled', busy ? 'true' : 'false');
+    });
+    const note = $('#ext-modal-note');
+    if (note) note.disabled = !!busy;
+    return true;
+  }
+
+  function openModal({ id, decision, requesterName, email }) {
+    const modal = $('#ext-access-modal');
+    if (!modal || STATE.modal.busy || modal.getAttribute('aria-hidden') === 'false') {
+      if (STATE.modal.busy) setFeedback('Aguarde a conclusão da decisão em andamento.', 'info');
+      return;
+    }
+    STATE.returnFocus = document.activeElement && typeof document.activeElement.focus === 'function'
+      ? document.activeElement
+      : null;
+    STATE.modal = {
+      id,
+      decision,
+      requesterName: requesterName || '',
+      email: email || '',
+      busy: false,
+      token: ++modalTokenSeq,
+    };
     const title = $('#ext-modal-title');
     const summary = $('#ext-modal-summary');
     const confirm = $('#ext-modal-confirm');
@@ -244,27 +419,61 @@
     }
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
+    modal.setAttribute('aria-busy', 'false');
     setTimeout(() => { try { note && note.focus(); } catch (_) {} }, 50);
   }
 
-  function closeModal() {
+  function closeModal(force, expectedToken) {
     const modal = $('#ext-access-modal');
-    if (!modal) return;
+    if (!modal) return false;
+    if (expectedToken != null && STATE.modal.token !== expectedToken) return false;
+    if (STATE.modal.busy && !force) {
+      setFeedback('Aguarde a conclusão da decisão em andamento.', 'info');
+      return false;
+    }
+    const returnFocus = STATE.returnFocus;
+    setModalBusy(false, STATE.modal.token);
+    const confirm = $('#ext-modal-confirm');
+    if (confirm) {
+      confirm.disabled = false;
+      confirm.removeAttribute('aria-busy');
+    }
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
-    STATE.modal = { id: null, decision: null, requesterName: '', email: '' };
+    modal.setAttribute('aria-busy', 'false');
+    STATE.modal = {
+      id: null,
+      decision: null,
+      requesterName: '',
+      email: '',
+      busy: false,
+      token: ++modalTokenSeq,
+    };
+    STATE.returnFocus = null;
+    if (returnFocus && document.contains(returnFocus)) {
+      setTimeout(() => {
+        try { returnFocus.focus(); } catch (_) { /* ignore */ }
+      }, 0);
+    }
+    return true;
   }
 
   async function confirmModalDecision() {
-    const { id, decision } = STATE.modal;
-    if (!id || !decision) return;
+    const { id, decision, token } = STATE.modal;
+    if (!id || !decision || STATE.modal.busy) return;
     if (!isSupabaseAdminApiReady()) {
       setFeedback('Solicitações externas exigem o modo Supabase.', 'warn');
       return;
     }
     const note = String(($('#ext-modal-note') || {}).value || '').trim();
     const confirmBtn = $('#ext-modal-confirm');
-    if (confirmBtn) confirmBtn.disabled = true;
+    const originalConfirmHtml = confirmBtn ? confirmBtn.innerHTML : '';
+    setModalBusy(true, token);
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.setAttribute('aria-busy', 'true');
+      confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Processando…';
+    }
     setFeedback(decision === 'approved' ? 'Aprovando solicitação...' : 'Registrando recusa...', 'info');
     try {
       const res = await window.KCAPI.decideExternalAccessRequest({
@@ -279,47 +488,97 @@
       }
       const data = res.data || {};
       let successMsg = '';
+      if (data.delivery_status === 'processing') {
+        closeModal(true, token);
+        await refreshAll();
+        setFeedback(
+          'A decisão já foi registrada e a entrega continua em processamento. Nenhuma mensagem duplicada foi enviada.',
+          'warn'
+        );
+        return;
+      }
       if (decision === 'approved') {
         if (data.invite_sent === false && data.invite_link) {
           // SMTP falhou -> mostrar o link gerado para envio manual
           showInviteLinkPrompt(data.invite_link, data.invite_sent_to || '', data.smtp_error || '');
           successMsg = 'Solicitação aprovada. SMTP indisponível — link de convite gerado abaixo para envio manual.';
-          closeModal();
-          await refreshAll();
-          setFeedback(successMsg, 'warn');
-          return;
+        } else if (data.invite_sent === false) {
+          successMsg = 'Solicitação aprovada, mas o convite não foi entregue. Nenhuma nova tentativa automática será feita para evitar mensagens duplicadas.';
+        } else {
+          successMsg = `Solicitação aprovada e convite enviado para ${data.invite_sent_to || 'o solicitante'}.`;
         }
-        successMsg = `Solicitação aprovada e convite enviado para ${data.invite_sent_to || 'o solicitante'}.`;
       } else {
         if (data.email_sent === false) {
-          successMsg = 'Solicitação marcada como recusada. E-mail não enviado (configure Resend para envio automático).';
+          successMsg = 'Solicitação marcada como recusada, mas o SMTP administrativo não confirmou o envio.';
         } else {
           successMsg = 'Solicitação marcada como recusada e e-mail de recusa enviado.';
         }
       }
-      setFeedback(successMsg, 'success');
-      closeModal();
+      if (data.delivery_state_persisted === false) {
+        successMsg += ' O resultado da entrega não foi confirmado no histórico; revise o item que permanece em processamento antes de qualquer ação manual.';
+      }
+      closeModal(true, token);
       await refreshAll();
+      setFeedback(
+        successMsg,
+        data.delivery_state_persisted === false
+          || data.invite_sent === false
+          || data.email_sent === false
+          ? 'warn'
+          : 'success'
+      );
     } catch (e) {
       console.error('[admin-external-access] decision exception:', e);
       setFeedback('Erro inesperado. Tente novamente.', 'error');
     } finally {
-      if (confirmBtn) confirmBtn.disabled = false;
+      if (STATE.modal.token === token) {
+        setModalBusy(false, token);
+      }
+      if (confirmBtn && STATE.modal.token === token) {
+        confirmBtn.disabled = false;
+        confirmBtn.removeAttribute('aria-busy');
+        confirmBtn.innerHTML = originalConfirmHtml;
+      }
     }
   }
 
   function bindModal() {
     document.addEventListener('click', (ev) => {
       const closer = ev.target.closest && ev.target.closest('[data-ext-modal-close]');
-      if (closer) { closeModal(); return; }
+      if (closer) {
+        ev.preventDefault();
+        closeModal(false);
+        return;
+      }
       const confirm = ev.target.closest && ev.target.closest('#ext-modal-confirm');
       if (confirm) { confirmModalDecision(); return; }
     });
 
     document.addEventListener('keydown', (ev) => {
+      const modal = $('#ext-access-modal');
+      if (!modal || modal.style.display === 'none') return;
       if (ev.key === 'Escape') {
-        const modal = $('#ext-access-modal');
-        if (modal && modal.style.display !== 'none') closeModal();
+        ev.preventDefault();
+        closeModal(false);
+        return;
+      }
+      if (ev.key !== 'Tab') return;
+      const focusable = $$(
+        'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        modal
+      ).filter((node) => node.getAttribute('aria-hidden') !== 'true');
+      if (!focusable.length) {
+        ev.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (ev.shiftKey && document.activeElement === first) {
+        ev.preventDefault();
+        last.focus();
+      } else if (!ev.shiftKey && document.activeElement === last) {
+        ev.preventDefault();
+        first.focus();
       }
     });
   }
@@ -349,7 +608,8 @@
       </h4>
       <p style="margin:0 0 10px;font-size:0.85em;color:var(--kc-text-dark-secondary);">
         O SMTP do Supabase Auth não conseguiu enviar automaticamente. Copie o link abaixo e envie pelo seu e-mail
-        (ex: contato@kinocampus.com.br). O link é válido por 7 dias e leva direto ao onboarding.
+        (ex: contato@kinocampus.com.br). O link é temporário e pode expirar conforme a configuração
+        do Supabase Auth; envie-o imediatamente.
       </p>
       ${errBlock}
       <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
@@ -392,6 +652,20 @@
         } catch (e) {
           console.error('[admin-external-access] copy error:', e);
         }
+        return;
+      }
+      const existingLinkBtn = ev.target.closest && ev.target.closest('[data-ext-recover-invite-link]');
+      if (existingLinkBtn) {
+        const requestId = existingLinkBtn.getAttribute('data-ext-recover-invite-link') || '';
+        const item = STATE.items.find((entry) => String(entry && entry.id || '') === requestId);
+        const inviteMeta = item && item.metadata && item.metadata.invite_email
+          ? item.metadata.invite_email
+          : {};
+        showInviteLinkPrompt(
+          String(inviteMeta.invite_link || ''),
+          String(item && item.contact_email || ''),
+          String(inviteMeta.smtp_error || inviteMeta.error_message || '')
+        );
         return;
       }
       const dismissBtn = ev.target.closest && ev.target.closest('[data-ext-dismiss-invite-link]');

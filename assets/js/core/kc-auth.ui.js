@@ -866,7 +866,7 @@
     const submitButton = form.querySelector('button[type="submit"]');
     if (submitButton) {
       submitButton.disabled = true;
-      submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando...</span>';
+      submitButton.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando...</span>';
     }
     setStatus('Enviando solicitação de acesso externo...', 'info');
 

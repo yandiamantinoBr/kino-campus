@@ -28,6 +28,14 @@ describe('KCAdminDashboardUtils', () => {
     expect(rows[1].share).toBe(40);
   });
 
+  test('classificação exige palavras completas e evita falsos positivos por substring', () => {
+    expect(DashboardUtils.classifyTermToModule('universidade', {})).toBeNull();
+    expect(DashboardUtils.classifyTermToModule('novidade', {})).toBeNull();
+    expect(DashboardUtils.classifyTermToModule('atividade', {})).toBeNull();
+    expect(DashboardUtils.classifyTermToModule('vaga estágio', {})).toBe('oportunidades');
+    expect(DashboardUtils.classifyTermToModule('quarto mobiliado', {})).toBe('moradia');
+  });
+
   test('buildDailyMetricsFromEventSets agrega eventos por dia', () => {
     const series = DashboardUtils.buildDailyMetricsFromEventSets({
       posts: [{ created_at: '2026-03-20T10:00:00Z' }],

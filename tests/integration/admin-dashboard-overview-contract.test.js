@@ -64,6 +64,9 @@ describe('admin-dashboard.controller — usa a RPC com fallback', () => {
 
   test('deriva deltas e active a partir do overview', () => {
     expect(ctrl).toContain('overview.active_15m');
+    expect(ctrl).toContain('finiteNonNegativeMetric(overview.active_15m)');
+    expect(ctrl).toMatch(/overviewActive15m === null[\s\S]*loadActiveSessions15m\(client\)/);
+    expect(ctrl).not.toContain('value: Number(overview.active_15m) || 0');
     expect(ctrl).toContain('ovUsers.prev_new');
     expect(ctrl).toContain('ovPosts.prev_created');
   });

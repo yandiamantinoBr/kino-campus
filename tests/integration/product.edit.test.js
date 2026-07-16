@@ -127,9 +127,9 @@ describe('product.edit.js - feedback e navegacao', () => {
   });
 
   test('mantem o fluxo de toggle, renew e bump com estados de botao', () => {
-    expect(source).toContain("toggleBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> Aguarde...'");
-    expect(source).toContain("renewBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> Renovando...'");
-    expect(source).toContain("bumpBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\"></i> Impulsionando...'");
+    expect(source).toContain("toggleBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\" aria-hidden=\"true\"></i> Aguarde...'");
+    expect(source).toContain("renewBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\" aria-hidden=\"true\"></i> Renovando...'");
+    expect(source).toContain("bumpBtn.innerHTML = '<i class=\"fas fa-spinner fa-spin\" aria-hidden=\"true\"></i> Impulsionando...'");
     expect(source).toContain("bumpBtn.innerHTML = '<i class=\"fas fa-rocket\"></i> Impulsionado!'");
   });
 });

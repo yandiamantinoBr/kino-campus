@@ -217,6 +217,27 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
     pager.destroy();
     delete window.KCUtils;
   });
+
+  test('dependência de renderização ausente nunca deixa o spinner preso', () => {
+    document.body.innerHTML = [
+      '<div id="feed-container" class="kc-feed-list">',
+      '<div><i class="fas fa-spinner fa-spin"></i><p>Carregando publicações...</p></div>',
+      '</div>'
+    ].join('');
+    delete window.KCUtils;
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+
+    const container = document.getElementById('feed-container');
+    expect(pager).toBeNull();
+    expect(container.querySelector('.fa-spinner')).toBeNull();
+    expect(container.getAttribute('aria-busy')).toBe('false');
+    expect(container.querySelector('[data-kc-feed-error="renderer-unavailable"]')).not.toBeNull();
+    expect(container.textContent).toContain('Não foi possível carregar as publicações');
+  });
 });
 
 describe('kc-feed.controller — anti-duplication Set behavior', () => {

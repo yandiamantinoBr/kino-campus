@@ -551,7 +551,7 @@
     if (!api || typeof api.closePost !== 'function') { showToastMsg('Serviço indisponível.', 'error'); return; }
     if (!window.confirm('Encerrar esta publicação? Ela continuará visível como histórico, mas não ficará ativa no feed.')) return;
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Encerrando...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Encerrando...'; }
     api.closePost(uuid, { reason: 'owner_closed' }).then(function (res) {
       if (res && res.ok) {
         state.posts[postIdx] = Object.assign({}, state.posts[postIdx], {
@@ -580,7 +580,7 @@
     if (!api || typeof api.reactivatePost !== 'function') { showToastMsg('Serviço indisponível.', 'error'); return; }
     if (!window.confirm('Reativar esta publicação? Ela voltará a ficar ativa nos feeds.')) return;
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reativando...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Reativando...'; }
     api.reactivatePost(uuid).then(function (res) {
       if (res && res.ok) {
         state.posts[postIdx] = Object.assign({}, state.posts[postIdx], {
@@ -668,7 +668,7 @@
     }
 
     var prevHTML = btn ? btn.innerHTML : '';
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Impulsionando…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Impulsionando…'; }
 
     api.bumpPost(uuid).then(function (res) {
       if (res && res.ok) {

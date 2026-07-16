@@ -50,6 +50,9 @@
     const status = document.createElement('div');
     status.className = 'kc-home-section-status';
     status.dataset.kcHomeCategoriesStatus = 'true';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    status.setAttribute('aria-atomic', 'true');
     status.hidden = true;
     refs.list.insertAdjacentElement('beforebegin', status);
     return status;
@@ -66,8 +69,10 @@
     const icon = kind === 'error'
       ? 'fas fa-circle-exclamation'
       : 'fas fa-spinner fa-spin';
+    status.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+    status.setAttribute('aria-live', kind === 'error' ? 'assertive' : 'polite');
     status.hidden = false;
-    status.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+    status.innerHTML = `<i class="${icon}" aria-hidden="true"></i><span>${message}</span>`;
   }
 
   function getCategoryHelpElements() {
@@ -557,7 +562,7 @@
     var api = window.KCAPI;
     if (!api || typeof api.getTopContributors !== 'function') return;
 
-    container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
+    container.innerHTML = '<span class="kc-ranking-empty" role="status"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando ranking…</span></span>';
 
     api.getTopContributors(period, module, 10).then(function (users) {
       if (!users || users.length === 0) {

@@ -150,6 +150,9 @@
 
   function setAuthorAnalyticsMarkup(panel, result) {
     if (!panel) return;
+    panel.setAttribute('aria-busy', 'false');
+    panel.removeAttribute('role');
+    panel.removeAttribute('aria-live');
     panel.innerHTML =
       statBadge('fas fa-eye', result.views, 'Views') +
       statBadge('fas fa-arrow-up', result.votos, 'Votos') +
@@ -169,8 +172,11 @@
 
     var panel = document.createElement('div');
     panel.id = 'kcAuthorAnalytics';
+    panel.setAttribute('role', 'status');
+    panel.setAttribute('aria-live', 'polite');
+    panel.setAttribute('aria-busy', 'true');
     panel.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:10px;background:var(--kc-surface-dark, #1a1a22);margin-bottom:12px;font-size:.85em;align-items:center;';
-    panel.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--kc-text-dark-secondary, #888);"></i> <span style="color:var(--kc-text-dark-secondary, #888);">Carregando analytics...</span>';
+    panel.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--kc-text-dark-secondary, #888);" aria-hidden="true"></i> <span style="color:var(--kc-text-dark-secondary, #888);">Carregando analytics...</span>';
 
     var actions = document.querySelector('.kc-product-actions');
     if (actions) actions.insertAdjacentElement('afterend', panel);
@@ -178,6 +184,7 @@
 
     var pid = getPostIdForMutation(post);
     if (!pid || !window.KCAPI || typeof window.KCAPI.getPostAnalytics !== 'function') {
+      panel.setAttribute('aria-busy', 'false');
       panel.style.display = 'none';
       return;
     }
@@ -198,6 +205,7 @@
 
     request.then(function (res) {
       if (!res || !res.ok) {
+        panel.setAttribute('aria-busy', 'false');
         if (!renderedSignature) panel.style.display = 'none';
         return;
       }
@@ -207,6 +215,7 @@
         setAuthorAnalyticsMarkup(panel, res);
       }
     }).catch(function () {
+      panel.setAttribute('aria-busy', 'false');
       if (!renderedSignature) panel.style.display = 'none';
     });
   }

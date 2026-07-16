@@ -274,10 +274,11 @@
 
       if ((hiddenResult.error || deletedResult.error) &&
           (isPermissionError(hiddenResult.error) || isPermissionError(deletedResult.error))) {
-        var fallbackQuery = client.from('posts').select('status, updated_at').in('status', ['hidden', 'deleted']).limit(2000);
+        var fallbackQuery = client.from('posts').select('status, updated_at', { count: 'exact' }).in('status', ['hidden', 'deleted']).limit(2000);
         if (since) fallbackQuery = fallbackQuery.gte('updated_at', since);
         var fallback = await fallbackQuery;
-        if (!fallback.error && Array.isArray(fallback.data)) {
+        if (!fallback.error && Array.isArray(fallback.data) &&
+            typeof fallback.count === 'number' && fallback.count === fallback.data.length) {
           markMetricAvailability('postStatus', true, 'fallback_rows');
           return {
             hidden: fallback.data.filter(function (row) { return row.status === 'hidden'; }).length,
@@ -309,10 +310,10 @@
         return result.count;
       }
 
-      var fallback = await client.from('posts').select('id').gte('created_at', since).limit(2000);
-      if (!fallback.error && Array.isArray(fallback.data)) {
-        markMetricAvailability('postsCreated', true, 'fallback_rows');
-        return fallback.data.length;
+      var fallback = await client.from('posts').select('id', { count: 'exact' }).gte('created_at', since).limit(2000);
+      if (!fallback.error && typeof fallback.count === 'number') {
+        markMetricAvailability('postsCreated', true, 'fallback_exact_count');
+        return fallback.count;
       }
     } catch (_) { }
 
@@ -332,13 +333,13 @@
       }
 
       var fallback = await client.from('posts')
-        .select('id')
+        .select('id', { count: 'exact' })
         .gte('updated_at', since)
         .lt('created_at', since)
         .limit(2000);
-      if (!fallback.error && Array.isArray(fallback.data)) {
-        markMetricAvailability('postsUpdated', true, 'fallback_rows');
-        return fallback.data.length;
+      if (!fallback.error && typeof fallback.count === 'number') {
+        markMetricAvailability('postsUpdated', true, 'fallback_exact_count');
+        return fallback.count;
       }
     } catch (_) { }
 
@@ -356,10 +357,10 @@
         return result.count;
       }
 
-      var fallback = await client.from('comments').select('id').gte('created_at', since).limit(5000);
-      if (!fallback.error && Array.isArray(fallback.data)) {
-        markMetricAvailability('comments', true, 'fallback_rows');
-        return fallback.data.length;
+      var fallback = await client.from('comments').select('id', { count: 'exact' }).gte('created_at', since).limit(5000);
+      if (!fallback.error && typeof fallback.count === 'number') {
+        markMetricAvailability('comments', true, 'fallback_exact_count');
+        return fallback.count;
       }
     } catch (_) { }
 
@@ -377,10 +378,10 @@
         return result.count;
       }
 
-      var fallback = await client.from('search_queries').select('created_at').gte('created_at', since).limit(5000);
-      if (!fallback.error && Array.isArray(fallback.data)) {
-        markMetricAvailability('searches', true, 'fallback_rows');
-        return fallback.data.length;
+      var fallback = await client.from('search_queries').select('created_at', { count: 'exact' }).gte('created_at', since).limit(5000);
+      if (!fallback.error && typeof fallback.count === 'number') {
+        markMetricAvailability('searches', true, 'fallback_exact_count');
+        return fallback.count;
       }
     } catch (_) { }
 
@@ -412,12 +413,12 @@
       }
 
       var fallback = await client.from('posts')
-        .select('id,status')
+        .select('id,status', { count: 'exact' })
         .in('status', ['published', 'closed'])
         .limit(5000);
-      if (!fallback.error && Array.isArray(fallback.data)) {
-        markMetricAvailability('visiblePosts', true, 'fallback_rows');
-        return fallback.data.length;
+      if (!fallback.error && typeof fallback.count === 'number') {
+        markMetricAvailability('visiblePosts', true, 'fallback_exact_count');
+        return fallback.count;
       }
     } catch (_) { }
 
@@ -504,12 +505,14 @@
         p_offset: 0
       });
       if (!rpc.error && rpc.data && rpc.data.ok !== false && rpc.data.totals) {
+        var rpcSessionCount = numberOrNull(rpc.data.totals.sessions);
+        if (rpcSessionCount === null || rpcSessionCount < 0) throw new Error('invalid_session_total');
         return {
-          value: Number(rpc.data.totals.sessions) || 0,
+          value: rpcSessionCount,
           available: true,
           source: 'privacy_rpc',
           label: 'RPC',
-          note: 'Sessoes agregadas nos ultimos 15 minutos.',
+          note: 'Identificadores de atividade agregados nos últimos 15 minutos.',
           since: since
         };
       }
@@ -517,16 +520,17 @@
 
     try {
       var direct = await client.from('privacy_analytics_events')
-        .select('id,session_hash,user_id,created_at')
+        .select('id,session_hash,user_id,created_at', { count: 'exact' })
         .gte('created_at', since)
         .limit(5000);
-      if (!direct.error && Array.isArray(direct.data)) {
+      if (!direct.error && Array.isArray(direct.data) &&
+          typeof direct.count === 'number' && direct.count === direct.data.length) {
         return {
           value: distinctSessionCount(direct.data),
           available: true,
           source: 'privacy_table',
           label: 'Tabela',
-          note: 'Fallback por privacy_analytics_events.',
+          note: 'Fallback completo por privacy_analytics_events.',
           since: since
         };
       }
@@ -535,17 +539,19 @@
     try {
       var legacy = await Promise.all([
         client.from('search_queries')
-          .select('id,session_id,user_id,created_at')
+          .select('id,session_id,user_id,created_at', { count: 'exact' })
           .gte('created_at', since)
           .limit(2500),
         client.from('post_view_events')
-          .select('id,session_id,user_id,created_at')
+          .select('id,session_id,user_id,created_at', { count: 'exact' })
           .gte('created_at', since)
           .limit(2500)
       ]);
       var rows = [];
-      var searchesAvailable = !!(legacy[0] && !legacy[0].error && Array.isArray(legacy[0].data));
-      var viewsAvailable = !!(legacy[1] && !legacy[1].error && Array.isArray(legacy[1].data));
+      var searchesAvailable = !!(legacy[0] && !legacy[0].error && Array.isArray(legacy[0].data) &&
+        typeof legacy[0].count === 'number' && legacy[0].count === legacy[0].data.length);
+      var viewsAvailable = !!(legacy[1] && !legacy[1].error && Array.isArray(legacy[1].data) &&
+        typeof legacy[1].count === 'number' && legacy[1].count === legacy[1].data.length);
       if (searchesAvailable) rows = rows.concat(legacy[0].data);
       if (viewsAvailable) rows = rows.concat(legacy[1].data);
       if (searchesAvailable && viewsAvailable) {
@@ -554,7 +560,7 @@
           available: true,
           source: 'legacy_events',
           label: 'Fallback',
-          note: 'Estimativa por buscas e views recentes.',
+          note: 'Identificadores agregados por buscas e views recentes.',
           since: since
         };
       }
@@ -566,12 +572,15 @@
   async function loadAuditEventRows(client, since) {
     try {
       var query = client.from('audit_log')
-        .select('created_at')
+        .select('created_at', { count: 'exact' })
         .order('created_at', { ascending: false })
         .limit(1500);
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error && Array.isArray(result.data)) return tagRowsAvailability(result.data, true, 'audit_table');
+      if (!result.error && Array.isArray(result.data) &&
+          typeof result.count === 'number' && result.count === result.data.length) {
+        return tagRowsAvailability(result.data, true, 'audit_table');
+      }
     } catch (_) { }
 
     try {
@@ -583,7 +592,9 @@
         p_offset: 0,
         p_since: since || null
       });
-      if (!rpc.error && Array.isArray(rpc.data)) {
+      // A RPC limita cada resposta a 500 linhas. Só uma página menor que o
+      // limite prova que o período foi carregado por inteiro.
+      if (!rpc.error && Array.isArray(rpc.data) && rpc.data.length < 500) {
         return tagRowsAvailability(rpc.data.map(function (row) {
           return { created_at: row.created_at };
         }), true, 'audit_rpc');
@@ -597,7 +608,7 @@
         p_actor_query: null,
         p_limit: 1500
       });
-      if (!legacy.error && Array.isArray(legacy.data)) {
+      if (!legacy.error && Array.isArray(legacy.data) && legacy.data.length < 500) {
         var sinceMs = since ? new Date(since).getTime() : 0;
         return tagRowsAvailability(legacy.data.filter(function (row) {
           return !sinceMs || (row.created_at && new Date(row.created_at).getTime() >= sinceMs);
@@ -664,15 +675,18 @@
         }
 
         var rawQuery = client.from('search_queries')
-          .select('term')
+          .select('term', { count: 'exact' })
           .order('created_at', { ascending: false })
           .limit(5000);
         if (since) rawQuery = rawQuery.gte('created_at', since);
 
         var raw = await rawQuery;
-        if (!raw.error && Array.isArray(raw.data)) {
+        if (!raw.error && Array.isArray(raw.data) &&
+            typeof raw.count === 'number' && raw.count === raw.data.length) {
           hadSuccessfulSource = true;
           trends = buildTrendsFromRows(raw.data);
+        } else if (!raw.error && Array.isArray(raw.data)) {
+          console.warn('[Admin trends] Fallback direto retornou uma amostra parcial; tendências não serão estimadas.');
         } else if (raw.error) {
           console.warn('[Admin trends] Fallback direto falhou:', raw.error.message || raw.error);
           console.warn('[Admin trends] Todas as tentativas com recorte temporal falharam; dados sem período não serão exibidos.');
@@ -690,12 +704,15 @@
   async function queryCreatedAtRows(client, tableName, since, limit) {
     try {
       var query = client.from(tableName)
-        .select('created_at')
+        .select('created_at', { count: 'exact' })
         .order('created_at', { ascending: false })
         .limit(limit || 1500);
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error && Array.isArray(result.data)) return tagRowsAvailability(result.data, true, tableName);
+      if (!result.error && Array.isArray(result.data) &&
+          typeof result.count === 'number' && result.count === result.data.length) {
+        return tagRowsAvailability(result.data, true, tableName);
+      }
     } catch (_) { }
 
     return tagRowsAvailability([], false, tableName);
@@ -704,14 +721,17 @@
   async function queryAdEventRows(client, since, eventName, limit) {
     try {
       var query = client.from('privacy_analytics_events')
-        .select('created_at,event_name,entity_id')
+        .select('created_at,event_name,entity_id', { count: 'exact' })
         .eq('entity_type', 'ad_campaign')
         .eq('event_name', eventName)
         .order('created_at', { ascending: false })
         .limit(limit || 2000);
       if (since) query = query.gte('created_at', since);
       var result = await query;
-      if (!result.error && Array.isArray(result.data)) return tagRowsAvailability(result.data, true, 'ad_events');
+      if (!result.error && Array.isArray(result.data) &&
+          typeof result.count === 'number' && result.count === result.data.length) {
+        return tagRowsAvailability(result.data, true, 'ad_events');
+      }
     } catch (_) { }
 
     return tagRowsAvailability([], false, 'ad_events');
@@ -791,9 +811,10 @@
     var campaignsAvailable = false;
     try {
       var campaignResult = await client.from('ad_campaigns')
-        .select('id,status,ends_at')
+        .select('id,status,ends_at', { count: 'exact' })
         .limit(2000);
-      if (!campaignResult.error && Array.isArray(campaignResult.data)) {
+      if (!campaignResult.error && Array.isArray(campaignResult.data) &&
+          typeof campaignResult.count === 'number' && campaignResult.count === campaignResult.data.length) {
         campaigns = campaignResult.data;
         campaignsAvailable = true;
       }

@@ -44,7 +44,7 @@
       return [
         '<div class="kc-admin-card" style="min-height:112px;">',
         '<div class="kc-admin-card__label"><i class="' + esc(item.icon || 'fas fa-circle-check') + '" style="color:' + tone + ';" aria-hidden="true"></i> ' + esc(item.label || 'Status') + '</div>',
-        '<strong style="font-size:1.05rem;line-height:1.25;">' + esc(item.value || 'OK') + '</strong>',
+        '<strong style="font-size:1.05rem;line-height:1.25;">' + esc(item.value === null || typeof item.value === 'undefined' || item.value === '' ? 'Indisponível' : item.value) + '</strong>',
         '<div style="font-size:.75rem;color:var(--kc-text-dark-secondary);margin-top:6px;">' + esc(item.note || '') + '</div>',
         '</div>',
       ].join('');
@@ -69,11 +69,11 @@
     } catch (_) { }
 
     try {
-      let query = client.from(table).select('id');
+      let query = client.from(table).select('id', { count: 'exact' });
       if (since) query = query.gte('created_at', since);
       const fallback = await query.limit(5000);
-      if (fallback && !fallback.error && Array.isArray(fallback.data)) {
-        return { available: true, value: fallback.data.length, source: 'rows' };
+      if (fallback && !fallback.error && typeof fallback.count === 'number') {
+        return { available: true, value: fallback.count, source: 'rows_with_exact_count' };
       }
     } catch (_) { }
 
@@ -142,14 +142,12 @@
       const consent = data.consent || {};
       target.innerHTML = [
         card('fas fa-chart-simple', 'Eventos opcionais', totals.events, periodLabel, 'privacy-analytics.html'),
-        card('fas fa-users-viewfinder', 'Sessões agregadas', totals.sessions, 'sem perfil individual', 'privacy-analytics.html'),
+        card('fas fa-users-viewfinder', 'Atividade distinta', totals.sessions, 'identificadores agregados, sem perfil individual', 'privacy-analytics.html'),
         card('fas fa-check-circle', 'Aceites analytics', consent.analytics_accepted, 'histórico agregado', 'privacy-analytics.html'),
         card('fas fa-images', 'Cliques em banners', totals.banner_clicks, 'métricas com consentimento', 'privacy-analytics.html'),
       ].join('');
       renderAdminHealth([
-        { label: 'Rotas admin', value: '8 páginas oficiais', note: 'Dashboard, Moderação, Denúncias, Banners, Ajuda, Privacidade, GA4 e Cadu.' },
         { label: 'Privacidade', value: 'RPC ativa', note: 'kc_admin_privacy_analytics respondeu.' },
-        { label: 'Exportações', value: 'XLSX/PDF ativo', note: 'Relatórios contextuais e sanitizados.' },
       ]);
     } catch (error) {
       if (!isCurrentGeneration(generation)) return;
@@ -167,7 +165,6 @@
             card('fas fa-images', 'Banners cadastrados', fallback.banners, 'hero_banners', 'privacy-analytics.html'),
           ].join('');
           renderAdminHealth([
-            { label: 'Rotas admin', value: '8 páginas oficiais', note: 'Validação local cobre todas as rotas administrativas.' },
             {
               label: 'Privacidade',
               value: fallback.complete ? 'Fallback ativo' : 'Fallback parcial',
@@ -176,7 +173,6 @@
                 ? 'As três fontes de compatibilidade responderam.'
                 : 'Somente fontes confirmadas são exibidas; as demais usam “--”.'
             },
-            { label: 'Exportações', value: 'XLSX/PDF ativo', note: 'Exportador compartilhado carregado.' },
           ]);
           return;
         } catch (_) { }
@@ -191,9 +187,7 @@
         '</article>',
       ].join('');
       renderAdminHealth([
-        { label: 'Rotas admin', value: '8 páginas oficiais', note: 'Manifesto canônico carregado nos validadores.' },
         { label: 'Privacidade', value: 'Indisponível', tone: 'error', note: 'Sem RPC e sem fallback Supabase neste carregamento.' },
-        { label: 'Exportações', value: 'Modo defensivo', tone: 'warn', note: 'Use a página dedicada para validar os dados.' },
       ]);
     }
   }
@@ -209,7 +203,7 @@
       : label;
     target.innerHTML = [
       card('fas fa-chart-simple', 'Eventos operacionais', privacyBlock.events, operationalLabel, 'privacy-analytics.html'),
-      card('fas fa-users-viewfinder', 'Sessões agregadas', privacyBlock.sessions, 'distintas, sem perfil individual', 'privacy-analytics.html'),
+      card('fas fa-users-viewfinder', 'Atividade distinta', privacyBlock.sessions, 'identificadores agregados, sem perfil individual', 'privacy-analytics.html'),
       card('fas fa-magnifying-glass', 'Buscas', privacyBlock.searches, operationalLabel, 'privacy-analytics.html'),
       card('fas fa-eye', 'Views de posts', privacyBlock.post_views, operationalLabel, 'privacy-analytics.html'),
     ].join('');
@@ -224,7 +218,7 @@
       renderFromOverview(opts.overview, opts.periodLabel, opts.periodDays);
       renderAdminHealth(Array.isArray(opts.health) && opts.health.length
         ? opts.health
-        : [{ label: 'Privacidade', value: 'Dados reais', note: 'Eventos/sessões agregados (sem perfil).' }]);
+        : [{ label: 'Privacidade', value: 'Fonte não informada', tone: 'warn', note: 'Eventos e identificadores agregados (sem perfil).' }]);
       return;
     }
     loadPrivacySummary({

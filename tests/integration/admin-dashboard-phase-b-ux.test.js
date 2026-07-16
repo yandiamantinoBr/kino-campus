@@ -40,6 +40,13 @@ describe('Fase B — skeletons de carregamento', () => {
     // Só injeta placeholder em grids ainda vazios (não sobrescreve dados).
     expect(ctrl).toContain('el.children.length === 0');
   });
+
+  test('gate de acesso termina antes dos skeletons e não há cards-spinner estáticos concorrentes', () => {
+    const html = r('admin/index.html');
+    expect(ctrl).toMatch(/setLoading\(false\);[\s\S]*showDashboardSkeletons\(\);[\s\S]*setGridsLoading\(true\);/);
+    expect(html).not.toContain('Carregando privacidade');
+    expect(html).not.toContain('Carregando monetização');
+  });
 });
 
 describe('Fase B — toolbar enxuta (sem atalhos duplicados)', () => {

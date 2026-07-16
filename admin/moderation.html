@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.11">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
 <script defer src="/_vercel/insights/script.js"></script>
 
   <title>KinoCampus - Moderação Admin</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.10" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.11" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -98,18 +98,18 @@
         </a>
       </div>
       <nav class="kc-admin-nav" aria-label="Navegação admin" data-i18n-aria-label="aria-label.admin-nav">
-        <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line"></i> Dashboard</a>
-        <a href="moderation.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-shield-halved"></i> Moderação</a>
-        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag"></i> Denúncias</a>
-        <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images"></i> Banners</a>
-        <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring"></i> Pedidos de ajuda</a>
-        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart"></i> Privacidade</a>
-        <a href="ga4-dashboard.html" class="kc-admin-nav__link"><i class="fab fa-google"></i> GA4</a>
-        <a href="cadu.html" class="kc-admin-nav__link"><i class="fas fa-robot"></i> Cadu</a>
+        <a href="index.html" class="kc-admin-nav__link"><i class="fas fa-chart-line" aria-hidden="true"></i> Dashboard</a>
+        <a href="moderation.html" class="kc-admin-nav__link active" aria-current="page"><i class="fas fa-shield-halved" aria-hidden="true"></i> Moderação</a>
+        <a href="reports.html" class="kc-admin-nav__link"><i class="fas fa-flag" aria-hidden="true"></i> Denúncias</a>
+        <a href="banners.html" class="kc-admin-nav__link"><i class="fas fa-images" aria-hidden="true"></i> Banners</a>
+        <a href="help-requests.html" class="kc-admin-nav__link"><i class="fas fa-life-ring" aria-hidden="true"></i> Pedidos de ajuda</a>
+        <a href="privacy-analytics.html" class="kc-admin-nav__link"><i class="fas fa-shield-heart" aria-hidden="true"></i> Privacidade</a>
+        <a href="ga4-dashboard.html" class="kc-admin-nav__link"><i class="fab fa-google" aria-hidden="true"></i> GA4</a>
+        <a href="cadu.html" class="kc-admin-nav__link"><i class="fas fa-robot" aria-hidden="true"></i> Cadu</a>
       </nav>
       <div class="kc-user-actions">
-        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
-        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun"></i></button>
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell" aria-hidden="true"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" aria-label="Alternar tema" data-i18n-aria-label="aria-label.theme-toggle-admin" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle"><i class="fas fa-sun" aria-hidden="true"></i></button>
         <a class="btn-login" href="#login" data-kc-login="true">Login/Cadastro</a>
       </div>
     </div>
@@ -117,19 +117,19 @@
 
   <main class="kc-main-content" id="kc-main">
     <div class="kc-admin-wrapper">
-      <div id="admin-loading"><i class="fas fa-spinner fa-spin" style="font-size:1.6em;" aria-hidden="true"></i><span>Verificando acesso…</span></div>
+      <div id="admin-loading" role="status" aria-live="polite" aria-atomic="true"><i class="fas fa-spinner fa-spin" style="font-size:1.6em;" aria-hidden="true"></i><span>Verificando acesso…</span></div>
       <div id="admin-error" role="alert"></div>
       <div id="admin-feedback" role="status"></div>
 
       <div id="admin-content">
         <div class="kc-admin-header-bar">
-          <h1><i class="fas fa-shield-halved"></i>Moderação de Posts</h1>
+          <h1><i class="fas fa-shield-halved" aria-hidden="true"></i>Moderação de Posts</h1>
           <div class="kc-admin-filters">
             <select id="moderation-status-filter" aria-label="Filtrar por status de moderação" data-i18n-aria-label="aria-label.filter-mod-status"></select>
-            <input id="moderation-search" type="search" placeholder="Buscar por título, ID, nome ou nickname" data-i18n-placeholder="placeholder.admin-mod-search" />
-            <button id="moderation-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
-            <button id="moderation-export-xlsx" type="button"><i class="fas fa-file-excel"></i> XLSX</button>
-            <button id="moderation-export-pdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+            <input id="moderation-search" type="search" aria-label="Buscar publicações por título, ID ou autor" data-i18n-aria-label="aria-label.admin-mod-search" placeholder="Buscar por título, ID, nome ou nickname" data-i18n-placeholder="placeholder.admin-mod-search" />
+            <button id="moderation-refresh"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
+            <button id="moderation-export-xlsx" type="button"><i class="fas fa-file-excel" aria-hidden="true"></i> XLSX</button>
+            <button id="moderation-export-pdf" type="button"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</button>
           </div>
         </div>
 
@@ -182,11 +182,11 @@
                 <option value="vendas">Vendas</option>
                 <option value="servicos">Serviços</option>
                 <option value="vagas">Vagas</option>
-                <option value="achados">Achados e Perdidos</option>
+                <option value="achados">Achados e Perdidos (legado)</option>
               </select>
-              <input id="limit-global-value" type="number" min="1" max="999" value="5" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" />
-              <button id="limit-global-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Salvar limite global</button>
-              <button id="limit-global-delete" style="padding:7px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.88em;cursor:pointer;" title="Remover override global (volta ao padrão de 5)" data-i18n-tooltip="tooltip.remove-global-limit"><i class="fas fa-trash"></i> Remover</button>
+              <input id="limit-global-value" type="number" min="1" max="999" value="5" aria-label="Máximo de publicações no limite global" data-i18n-aria-label="aria-label.admin-limit-global-value" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" />
+              <button id="limit-global-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save" aria-hidden="true"></i> Salvar limite global</button>
+              <button id="limit-global-delete" style="padding:7px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.88em;cursor:pointer;" title="Remover override global (volta ao padrão de 5)" data-i18n-tooltip="tooltip.remove-global-limit"><i class="fas fa-trash" aria-hidden="true"></i> Remover</button>
             </div>
           </div>
 
@@ -195,8 +195,8 @@
             <h4 style="margin:0 0 10px;font-size:.92em;font-weight:600;">Limite por usuário específico</h4>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
               <div style="flex:1;min-width:200px;position:relative;">
-                <input id="limit-user-search" type="search" placeholder="Buscar usuário por nome, e-mail ou nickname…" data-i18n-placeholder="placeholder.admin-user-search" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
-                <div id="limit-user-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:8px;z-index:50;max-height:180px;overflow-y:auto;"></div>
+                <input id="limit-user-search" type="search" aria-label="Buscar usuário para configurar limites" data-i18n-aria-label="aria-label.admin-user-limit-search" aria-autocomplete="list" aria-controls="limit-user-results" aria-expanded="false" placeholder="Buscar usuário por nome, e-mail ou nickname…" data-i18n-placeholder="placeholder.admin-user-search" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+                <div id="limit-user-results" role="listbox" aria-label="Resultados da busca de usuários" data-i18n-aria-label="aria-label.admin-user-search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:8px;z-index:50;max-height:180px;overflow-y:auto;"></div>
               </div>
               <select id="limit-user-module" aria-label="Módulo — limite por usuário" data-i18n-aria-label="aria-label.filter-mod-user-module" style="padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;">
                 <option value="">Todos os módulos</option>
@@ -211,10 +211,10 @@
                 <option value="vendas">Vendas</option>
                 <option value="servicos">Serviços</option>
                 <option value="vagas">Vagas</option>
-                <option value="achados">Achados e Perdidos</option>
+                <option value="achados">Achados e Perdidos (legado)</option>
               </select>
-              <input id="limit-user-value" type="number" min="0" max="999" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
-              <button id="limit-user-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> Salvar</button>
+              <input id="limit-user-value" type="number" min="0" max="999" aria-label="Máximo de publicações para o usuário selecionado" data-i18n-aria-label="aria-label.admin-limit-user-value" placeholder="Máx." data-i18n-placeholder="placeholder.admin-limit-max" style="width:80px;padding:7px 10px;border-radius:7px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.88em;" />
+              <button id="limit-user-save" style="padding:7px 14px;border-radius:7px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.88em;cursor:pointer;font-weight:600;"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
             </div>
             <div id="limit-user-selected" style="display:none;margin-top:8px;padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid var(--kc-border-dark);font-size:.85em;color:var(--kc-text-dark-secondary);">
               Nenhum usuário selecionado
@@ -223,7 +223,7 @@
 
           <!-- Tabela de overrides existentes -->
           <h4 style="margin:0 0 8px;font-size:.92em;font-weight:600;">Configurações salvas</h4>
-          <button id="post-limits-refresh" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt"></i> Atualizar</button>
+          <button id="post-limits-refresh" style="margin-bottom:8px;padding:5px 12px;border-radius:7px;border:none;background:#424242;color:#ccc;font-size:.83em;cursor:pointer;"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
           <div class="kc-admin-posts-table-wrap">
             <table class="kc-admin-posts-table" style="min-width:620px;">
               <thead>
@@ -333,22 +333,31 @@
             <select id="audit-action-filter" aria-label="Filtrar por ação" data-i18n-aria-label="aria-label.filter-action">
               <option value="all">Todas ações</option>
               <option value="post_status_changed">post_status_changed</option>
+              <option value="post_admin_status_changed">post_admin_status_changed</option>
+              <option value="post_closed">post_closed</option>
+              <option value="posts_auto_closed">posts_auto_closed</option>
+              <option value="post_reactivated">post_reactivated</option>
+              <option value="post_bumped">post_bumped</option>
+              <option value="post_edited">post_edited</option>
+              <option value="cadu_post_published">cadu_post_published</option>
+              <option value="cadu_post_edited">cadu_post_edited</option>
               <option value="post_limit_changed">post_limit_changed</option>
               <option value="post_flood_limit_changed">post_flood_limit_changed</option>
               <option value="post_flood_limit_deleted">post_flood_limit_deleted</option>
+              <option value="post_flood_limit_reset">post_flood_limit_reset</option>
               <option value="report_closed">report_closed</option>
               <option value="post_deleted">post_deleted</option>
               <option value="invite_sent">invite_sent</option>
               <option value="invite_revoked">invite_revoked</option>
             </select>
-            <input id="audit-actor-id-filter" type="search" placeholder="Filtrar por actor_id, nome ou nickname" data-i18n-placeholder="placeholder.admin-actor-filter" />
+            <input id="audit-actor-id-filter" type="search" aria-label="Filtrar auditoria por identificador ou nome do ator" data-i18n-aria-label="aria-label.admin-audit-actor-filter" placeholder="Filtrar por actor_id, nome ou nickname" data-i18n-placeholder="placeholder.admin-actor-filter" />
             <select id="audit-page-size" aria-label="Registros por página" data-i18n-aria-label="aria-label.records-per-page" style="min-width:70px;">
               <option value="25" selected>25</option>
               <option value="50">50</option>
               <option value="100">100</option>
               <option value="200">200</option>
             </select>
-            <button id="audit-refresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
+            <button id="audit-refresh"><i class="fas fa-sync-alt" aria-hidden="true"></i> Atualizar</button>
           </div>
 
           <div id="audit-log-error" role="alert"></div>
@@ -377,10 +386,10 @@
             <span id="audit-page-info" style="font-size:.84em;color:var(--kc-text-dark-secondary);"></span>
             <div style="display:flex;gap:6px;">
               <button id="audit-prev" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
-                <i class="fas fa-chevron-left"></i> Anterior
+                <i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior
               </button>
               <button id="audit-next" disabled style="padding:6px 14px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-surface-dark);color:var(--kc-text-dark);font-size:.84em;cursor:pointer;">
-                Próxima <i class="fas fa-chevron-right"></i>
+                Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i>
               </button>
             </div>
           </div>
@@ -388,23 +397,23 @@
 
         <!-- ── Painel de Convites de Usuários Externos ───────────────────── -->
         <div class="kc-admin-panel" id="invite-panel">
-          <h3><i class="fas fa-user-plus" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Convidar Usuário Externo</h3>
-          <p>Envie um convite para usuários com e-mail não-institucional (ex: @gmail.com). O convidado receberá um link de acesso válido por 7 dias que o leva diretamente ao onboarding.</p>
+          <h3><i class="fas fa-user-plus" style="color:var(--kc-primary-brand);margin-right:6px;" aria-hidden="true"></i>Convidar Usuário Externo</h3>
+          <p>Envie um convite para usuários com e-mail não-institucional (ex: @gmail.com). A autorização administrativa fica registrada por 7 dias; o link do Supabase Auth pode expirar antes, portanto deve ser enviado e utilizado imediatamente.</p>
 
           <div id="invite-feedback" class="kc-admin-invite-feedback" role="status"></div>
 
           <!-- Link de convite gerado (exibido após sucesso) -->
           <div id="invite-link-area" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;">
             <p style="margin:0 0 8px;font-size:.84em;color:var(--kc-text-dark-secondary);">
-              <i class="fas fa-link" style="margin-right:4px;"></i>
+              <i class="fas fa-link" style="margin-right:4px;" aria-hidden="true"></i>
               Copie o link abaixo e envie para o convidado pelo seu e-mail (ex: contato@kinocampus.com.br):
             </p>
             <div style="display:flex;gap:6px;align-items:center;">
-              <input id="invite-link-input" type="text" readonly
+              <input id="invite-link-input" type="text" readonly aria-label="Link de convite gerado" data-i18n-aria-label="aria-label.admin-invite-link"
                 style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-size:.8em;font-family:monospace;min-width:0;" />
               <button id="invite-link-copy" type="button"
                 style="padding:7px 14px;border-radius:6px;border:none;background:var(--kc-primary-brand);color:#fff;font-size:.82em;cursor:pointer;white-space:nowrap;flex-shrink:0;">
-                <i class="fas fa-copy"></i> Copiar
+                <i class="fas fa-copy" aria-hidden="true"></i> Copiar
               </button>
             </div>
           </div>
@@ -414,6 +423,8 @@
               <input
                 id="invite-email"
                 type="email"
+                aria-label="E-mail do convidado externo"
+                data-i18n-aria-label="aria-label.admin-invite-email"
                 placeholder="E-mail do convidado (ex: usuario@gmail.com)" data-i18n-placeholder="placeholder.admin-invite-email"
                 required
                 autocomplete="off"
@@ -421,11 +432,13 @@
               <input
                 id="invite-note"
                 type="text"
+                aria-label="Motivo interno do convite"
+                data-i18n-aria-label="aria-label.admin-invite-reason"
                 placeholder="Motivo do convite (opcional)" data-i18n-placeholder="placeholder.admin-invite-reason"
                 maxlength="120"
               />
               <button type="submit" id="invite-btn">
-                <i class="fas fa-paper-plane"></i> Gerar Link de Convite
+                <i class="fas fa-paper-plane" aria-hidden="true"></i> Gerar Link de Convite
               </button>
             </div>
           </form>
@@ -453,27 +466,27 @@
 
         <!-- ── v9.3.5.4: Solicitações de Acesso Externo (Pendentes/Aprovadas/Recusadas) ── -->
         <div class="kc-admin-panel" id="external-access-panel">
-          <h3><i class="fas fa-user-clock" style="color:var(--kc-primary-brand);margin-right:6px;"></i>Solicitações de Acesso Externo</h3>
-          <p>Solicitações enviadas pelo formulário "Solicitar acesso externo" do login (kc-auth-external-access). Aprove para enviar um convite real por e-mail, ou recuse para registrar a decisão.</p>
+          <h3><i class="fas fa-user-clock" style="color:var(--kc-primary-brand);margin-right:6px;" aria-hidden="true"></i>Solicitações de Acesso Externo</h3>
+          <p>Solicitações enviadas pelo formulário "Solicitar acesso externo" do login (kc-auth-external-access). Aprove para enviar um convite real por e-mail, ou recuse para registrar a decisão. Se uma entrega permanecer sem confirmação, consulte os logs antes de qualquer envio manual; o reenvio automático fica bloqueado para evitar duplicidade.</p>
 
           <div id="ext-access-feedback" class="kc-admin-invite-feedback" role="status"></div>
 
           <div class="kc-admin-tabs" id="ext-access-tabs" role="tablist" style="display:flex;gap:6px;margin:12px 0 14px;flex-wrap:wrap;">
             <button type="button" class="kc-admin-tab is-active" data-ext-tab="pending" role="tab" aria-selected="true">
-              <i class="fas fa-clock"></i> Pendentes <span class="kc-admin-tab-count" data-ext-count="pending">0</span>
+              <i class="fas fa-clock" aria-hidden="true"></i> Pendentes <span class="kc-admin-tab-count" data-ext-count="pending">0</span>
             </button>
             <button type="button" class="kc-admin-tab" data-ext-tab="approved" role="tab" aria-selected="false">
-              <i class="fas fa-check"></i> Aprovadas <span class="kc-admin-tab-count" data-ext-count="approved">0</span>
+              <i class="fas fa-check" aria-hidden="true"></i> Aprovadas <span class="kc-admin-tab-count" data-ext-count="approved">0</span>
             </button>
             <button type="button" class="kc-admin-tab" data-ext-tab="rejected" role="tab" aria-selected="false">
-              <i class="fas fa-xmark"></i> Recusadas <span class="kc-admin-tab-count" data-ext-count="rejected">0</span>
+              <i class="fas fa-xmark" aria-hidden="true"></i> Recusadas <span class="kc-admin-tab-count" data-ext-count="rejected">0</span>
             </button>
             <button type="button" class="kc-admin-tab-refresh" id="ext-access-refresh" title="Atualizar lista" data-i18n-tooltip="tooltip.refresh-list" aria-label="Atualizar lista" data-i18n-aria-label="aria-label.refresh-list">
-              <i class="fas fa-rotate"></i>
+              <i class="fas fa-rotate" aria-hidden="true"></i>
             </button>
           </div>
 
-          <div id="ext-access-loading" style="display:none;color:var(--kc-text-dark-secondary);font-size:.9em;">
+          <div id="ext-access-loading" role="status" aria-live="polite" aria-atomic="true" style="display:none;color:var(--kc-text-dark-secondary);font-size:.9em;">
             <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando solicitações...
           </div>
           <p id="ext-access-empty" style="display:none;color:var(--kc-text-dark-secondary);font-size:.9em;">
@@ -488,26 +501,26 @@
           <div class="kc-modal-card" style="max-width:520px;">
             <div class="kc-modal-header">
               <h3 id="ext-modal-title">Confirmar decisão</h3>
-              <button type="button" class="kc-modal-close" data-ext-modal-close aria-label="Fechar" data-i18n-aria-label="aria-label.close"><i class="fas fa-xmark"></i></button>
+              <button type="button" class="kc-modal-close" data-ext-modal-close aria-label="Fechar" data-i18n-aria-label="aria-label.close"><i class="fas fa-xmark" aria-hidden="true"></i></button>
             </div>
             <div class="kc-modal-body">
               <p id="ext-modal-summary" style="color:var(--kc-text-dark-secondary);font-size:.92em;margin-bottom:10px;"></p>
               <label for="ext-modal-note" style="display:block;font-size:.88em;margin-bottom:6px;font-weight:600;">
-                Nota interna / observação (opcional)
+                Nota interna (opcional, não enviada ao solicitante)
               </label>
               <textarea id="ext-modal-note" rows="3" maxlength="500"
                 placeholder="Ex: vínculo confirmado via Linkedin / motivo da recusa"
                 data-i18n-placeholder="placeholder.external-access-note"
                 style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--kc-border-dark);background:var(--kc-background-dark);color:var(--kc-text-dark);font-family:inherit;font-size:.9em;resize:vertical;min-height:60px;"></textarea>
               <p style="font-size:.78em;color:var(--kc-text-dark-secondary);margin-top:6px;">
-                Aprovações enviam um e-mail de convite via SMTP do Supabase Auth.
-                Recusas enviam e-mail se Resend estiver configurado; senão ficam pendentes para reenvio.
+                Aprovações enviam um convite via Supabase Auth. Recusas usam o SMTP administrativo.
+                Esta nota permanece apenas no histórico interno da solicitação.
               </p>
             </div>
             <div class="kc-modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
               <button type="button" class="kc-btn-secondary" data-ext-modal-close>Cancelar</button>
               <button type="button" id="ext-modal-confirm" class="kc-btn-primary">
-                <i class="fas fa-check"></i> Confirmar
+                <i class="fas fa-check" aria-hidden="true"></i> Confirmar
               </button>
             </div>
           </div>
@@ -519,18 +532,18 @@
 
   <!-- Mobile Navigation (admin) -->
   <nav class="kc-mobile-nav" aria-label="Menu mobile" data-i18n-aria-label="aria-label.nav-mobile">
-    <a href="index.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-    <a class="active" href="moderation.html"><i class="fas fa-shield-halved"></i><span>Moderação</span></a>
-    <a href="reports.html"><i class="fas fa-flag"></i><span>Denúncias</span></a>
-    <a href="banners.html"><i class="fas fa-images"></i><span>Banners</span></a>
-    <a href="help-requests.html"><i class="fas fa-life-ring"></i><span>Ajuda</span></a>
-    <a href="privacy-analytics.html"><i class="fas fa-shield-heart"></i><span>Privac.</span></a>
-    <a href="ga4-dashboard.html"><i class="fab fa-google"></i><span>GA4</span></a>
+    <a href="index.html"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Dashboard</span></a>
+    <a class="active" href="moderation.html"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Moderação</span></a>
+    <a href="reports.html"><i class="fas fa-flag" aria-hidden="true"></i><span>Denúncias</span></a>
+    <a href="banners.html"><i class="fas fa-images" aria-hidden="true"></i><span>Banners</span></a>
+    <a href="help-requests.html"><i class="fas fa-life-ring" aria-hidden="true"></i><span>Ajuda</span></a>
+    <a href="privacy-analytics.html"><i class="fas fa-shield-heart" aria-hidden="true"></i><span>Privac.</span></a>
+    <a href="ga4-dashboard.html"><i class="fab fa-google" aria-hidden="true"></i><span>GA4</span></a>
   
   </nav>
 
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.1"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.10"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.11"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
     <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -576,7 +589,7 @@
   <script defer src="../assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
-  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.11"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
     <script defer src="../assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
@@ -591,9 +604,9 @@
   <script defer src="../assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
-  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.10"></script>
-  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.4"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
+  <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-invite.controller.js?v=8.6.1"></script>
-  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.2"></script>
+  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.11"></script>
 </body>
 </html>

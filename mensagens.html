@@ -8,14 +8,14 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <meta name="description" content="Conversas diretas na comunidade KinoCampus UFG." />
   <title>KinoCampus — Mensagens</title>
-  <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.1" />
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.11" />
   <script src="assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
 <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.1"></script>
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.10" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.11" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.2" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.4" />
+  <link rel="stylesheet" href="assets/css/kc-chat.css?v=8.7.6" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     body.kc-chat-route { margin: 0; background: var(--kc-background-dark); }
@@ -131,25 +131,26 @@
               />
             </label>
           </div>
-          <div class="kc-chat-sidebar__list" id="kcChatList" role="list">
+          <p class="kc-sr-only" id="kcChatListStatus" role="status" aria-live="polite">Carregando conversas…</p>
+          <div class="kc-chat-sidebar__list" id="kcChatList" role="list" aria-busy="true" aria-describedby="kcChatListStatus">
             <!-- Skeletons enquanto carrega -->
-            <div class="kc-chat-skeleton-item">
-              <div class="kc-chat-skeleton-circle"></div>
-              <div>
+            <div class="kc-chat-skeleton-item" role="listitem" aria-hidden="true">
+              <div class="kc-chat-skeleton-circle" aria-hidden="true"></div>
+              <div aria-hidden="true">
                 <div class="kc-chat-skeleton-line" style="width: 70%"></div>
                 <div class="kc-chat-skeleton-line"></div>
               </div>
             </div>
-            <div class="kc-chat-skeleton-item">
-              <div class="kc-chat-skeleton-circle"></div>
-              <div>
+            <div class="kc-chat-skeleton-item" role="listitem" aria-hidden="true">
+              <div class="kc-chat-skeleton-circle" aria-hidden="true"></div>
+              <div aria-hidden="true">
                 <div class="kc-chat-skeleton-line" style="width: 50%"></div>
                 <div class="kc-chat-skeleton-line"></div>
               </div>
             </div>
-            <div class="kc-chat-skeleton-item">
-              <div class="kc-chat-skeleton-circle"></div>
-              <div>
+            <div class="kc-chat-skeleton-item" role="listitem" aria-hidden="true">
+              <div class="kc-chat-skeleton-circle" aria-hidden="true"></div>
+              <div aria-hidden="true">
                 <div class="kc-chat-skeleton-line" style="width: 60%"></div>
                 <div class="kc-chat-skeleton-line"></div>
               </div>
@@ -317,6 +318,6 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.7"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.29"></script>
+  <script defer src="assets/js/controllers/public/chat-inbox.controller.js?v=9.3.5.30"></script>
 </body>
 </html>

@@ -520,7 +520,7 @@
       try {
         var extra = await client
           .from('profiles')
-          .select('created_at, bio, avatar_url, display_name, full_name, verified, legacy_id')
+          .select('created_at, bio, avatar_url, display_name, full_name, verified')
           .eq('id', state.profileId)
           .maybeSingle();
         if (extra && extra.data) state.profile = Object.assign({}, state.profile, extra.data);
