@@ -154,3 +154,107 @@ describe('moderação — decisão externa idempotente e nota interna', () => {
     expect(moderation).toContain("renderPostsRequestState('Não foi possível carregar as publicações deste filtro.', false)");
   });
 });
+
+describe('moderação — integridade transacional e workers privados reconciliados', () => {
+  const migration = read('supabase/migrations/20260716184424_finalize_admin_moderation_integrity.sql');
+
+  test('limites ativos têm uma única linha por escopo nulo e usam upsert atômico', () => {
+    expect(migration).toContain('lock table public.post_limits in share row exclusive mode');
+    expect(migration).toContain("set module = nullif(btrim(module), '')");
+    expect(migration).toContain('create unique index post_limits_unique_scope_idx');
+    expect(migration).toContain('on public.post_limits (user_id, module) nulls not distinct');
+    expect(migration).toMatch(
+      /kc_private\.kc_admin_set_post_limit[\s\S]*?on conflict \(user_id, module\)[\s\S]*?do update set/
+    );
+    expect(migration).toMatch(
+      /kc_admin_set_post_flood_limit[\s\S]*?on conflict \([\s\S]*?coalesce\(user_id,[\s\S]*?coalesce\(module,[\s\S]*?do update set/
+    );
+  });
+
+  test('RPCs públicas de limites são invoker e a lógica privilegiada fica em kc_private', () => {
+    [
+      'kc_admin_get_post_limits',
+      'kc_admin_set_post_limit',
+      'kc_admin_delete_post_limit',
+    ].forEach((name) => {
+      expect(migration).toMatch(
+        new RegExp(`create or replace function public\\.${name}[\\s\\S]*?security invoker[\\s\\S]*?set search_path = ''`)
+      );
+      expect(migration).toMatch(
+        new RegExp(`create or replace function kc_private\\.${name}[\\s\\S]*?security definer[\\s\\S]*?set search_path = ''`)
+      );
+    });
+  });
+
+  test('worker externo ausente da baseline é restaurado com paginação determinística', () => {
+    expect(migration).toContain('create or replace function kc_private.kc_admin_list_external_access');
+    expect(migration).toMatch(
+      /kc_private\.kc_admin_list_external_access[\s\S]*?security definer[\s\S]*?set search_path = ''/
+    );
+    expect(migration).toContain('count(*) over()');
+    expect(migration).toMatch(
+      /order by[\s\S]*?admin_status = 'pending'[\s\S]*?created_at desc,[\s\S]*?id desc/
+    );
+    expect(migration).toContain('help_requests_external_access_status_created_id_idx');
+  });
+
+  test('export de posts usa corte temporal e desempate estável sem alterar a RPC interativa', () => {
+    expect(migration).toContain(
+      'drop function if exists public.kc_admin_search_posts_full(\n  text, text, integer, integer, timestamptz'
+    );
+    expect(migration).toContain(
+      'kc_private.kc_admin_search_posts_full_snapshot(\n  p_query text,\n  p_status text,\n  p_limit integer,\n  p_offset integer,\n  p_until timestamptz'
+    );
+    expect(migration).toContain('create or replace function kc_private.kc_admin_search_posts_full_rows');
+    expect(migration).toContain('least(coalesce(p_limit, 25), 2000)');
+    expect(migration).toContain('greatest(1, least(coalesce($3, 25), 250))');
+    expect(migration).toContain("left(coalesce(post_row.description, ''), 500)");
+    expect(migration).toContain('out_rows jsonb');
+    expect(migration).toContain('out_total_count bigint');
+    expect(migration).toContain("to_jsonb(post_row) - 'total_count'");
+    expect(migration).toContain('greatest(1, least(coalesce($3, 2000), 2000))');
+    expect(migration).toContain('post_row.created_at <= coalesce(p_until, now())');
+    expect(migration).toMatch(
+      /order by[\s\S]*?post_row\.created_at desc,[\s\S]*?post_row\.id desc/
+    );
+    expect(migration).toContain(
+      'public.kc_admin_search_posts_full_snapshot(\n  p_query text,\n  p_status text,\n  p_limit integer,\n  p_offset integer,\n  p_until timestamptz'
+    );
+    expect(migration).not.toContain(
+      'public.kc_admin_search_posts_full(\n  p_query text,\n  p_status text,\n  p_limit integer,\n  p_offset integer,\n  p_until timestamptz'
+    );
+    expect(migration).toContain(
+      'revoke all on function kc_private.kc_admin_search_posts_full_rows(text, text, integer, integer, timestamptz)'
+    );
+    expect(migration).toContain("notify pgrst, 'reload schema'");
+  });
+
+  test('criação pública de ajuda passa por worker sanitizador e não aceita INSERT direto', () => {
+    expect(migration).toContain('create or replace function kc_private.kc_create_help_request');
+    expect(migration).toMatch(
+      /kc_private\.kc_create_help_request[\s\S]*?security definer[\s\S]*?set search_path = ''/
+    );
+    expect(migration).toMatch(
+      /public\.kc_create_help_request[\s\S]*?security invoker[\s\S]*?kc_private\.kc_create_help_request/
+    );
+    expect(migration).toContain('revoke insert on table public.help_requests from anon, authenticated;');
+    expect(migration).toContain('drop policy if exists help_requests_insert_public');
+    expect(migration).toContain("admin_status = 'pending'");
+    expect(migration).toContain("status = 'new'");
+  });
+
+  test('ACL das funções privadas e públicas é explícita por papel', () => {
+    expect(migration).toContain(
+      'revoke all on function kc_private.kc_admin_list_external_access(text, integer, integer)'
+    );
+    expect(migration).toContain(
+      'grant execute on function public.kc_admin_list_external_access(text, integer, integer)'
+    );
+    expect(migration).toMatch(
+      /grant execute on function public\.kc_admin_list_external_access\(text, integer, integer\)[\s\S]*?to authenticated, service_role/
+    );
+    expect(migration).toMatch(
+      /grant execute on function public\.kc_create_help_request\(jsonb\)[\s\S]*?to anon, authenticated, service_role/
+    );
+  });
+});
