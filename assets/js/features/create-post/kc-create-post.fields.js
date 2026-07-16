@@ -21,8 +21,67 @@
     return window._KCCreatePost && window._KCCreatePost.resolvers;
   }
 
+  // ── Limites de caracteres (admin override 2026-07-16) ─────────────────────
+  // 2000 é o limite padrão do produto para usuários finais. Admins operators
+  // (KC_ADMIN_OPERATOR_USER_IDS) ganham 5000 para acomodar publicações
+  // densas tipo editais longos ou chamadas multi-tópico sem precisar de
+  // cortar a copy. Mantém o restante da UI inalterada.
+  const KC_DESCRIPTION_MAX_LENGTH = 2000;
+  const KC_DESCRIPTION_MAX_LENGTH_ADMIN = 5000;
+
+  function kcGetMaxDescriptionLength(isAdmin) {
+    return isAdmin ? KC_DESCRIPTION_MAX_LENGTH_ADMIN : KC_DESCRIPTION_MAX_LENGTH;
+  }
+
+  // ── Detecção de admin operator (mirror do supabase.posts-write.adapter) ─
+  // Lista idêntica à KC_ADMIN_OPERATOR_USER_IDS do posts-write adapter —
+  // qualquer divergência aqui precisa ser propagada para os dois lugares
+  // (RLS continua sendo a fonte da verdade no Supabase via
+  // profiles.is_admin = true).
+  const KC_ADMIN_OPERATOR_USER_IDS = Object.freeze([
+    'abfb1831-6ad3-4f40-b55b-788e29f146f0', // yan1nakamura (hotmail)
+    'bf3a4310-927f-4200-9df7-7478392d6a6e', // Yan Diamantino (yandiamantino)
+    '2345582d-8bf7-4393-aa0d-f9953d0e02ca', // Cadu Bot
+    '10391c7b-4a6d-4462-becb-e6e0056b7e1d', // Codex QA Admin
+  ]);
+  function _kcIsOperatorUserId(value) {
+    if (!value) return false;
+    var normalized = String(value).trim().toLowerCase();
+    if (!normalized) return false;
+    for (var i = 0; i < KC_ADMIN_OPERATOR_USER_IDS.length; i += 1) {
+      if (String(KC_ADMIN_OPERATOR_USER_IDS[i]).toLowerCase() === normalized) return true;
+    }
+    return false;
+  }
+  function kcIsCurrentUserAdminOperator() {
+    try {
+      var user = null;
+      if (window.KCSupabase && typeof window.KCSupabase.getUser === 'function') {
+        user = window.KCSupabase.getUser();
+      }
+      if (!user && window.KCSupabase && window.KCSupabase.auth) {
+        user = window.KCSupabase.auth.user || null;
+      }
+      if (user && _kcIsOperatorUserId(user.id)) return true;
+      if (user && user.app_metadata) {
+        if (_kcIsOperatorUserId(user.app_metadata.user_id)) return true;
+        if (_kcIsOperatorUserId(user.app_metadata.sub)) return true;
+      }
+      var profile = null;
+      if (window.KCProfiles && typeof window.KCProfiles.getCurrentProfile === 'function') {
+        profile = window.KCProfiles.getCurrentProfile();
+      }
+      if (profile) {
+        if (_kcIsOperatorUserId(profile.id)) return true;
+        if (_kcIsOperatorUserId(profile.user_id)) return true;
+        if (profile.is_admin === true || profile.is_admin === 'true') return true;
+      }
+    } catch (_) { /* fall-through to false */ }
+    return false;
+  }
+
   // ── Geração de campos por módulo ─────────────────────────────────────────
-  function kcBuildFieldsForModule(moduleKey, selections, values) {
+  function kcBuildFieldsForModule(moduleKey, selections, values, opts) {
     const r = _getResolvers();
     const fields = [];
     const moneyFieldMeta = {
@@ -30,10 +89,12 @@
       inputmode: 'decimal',
       pattern: '^\\d{1,3}(?:\\.\\d{3})*(?:,\\d{1,2})?$|^\\d+(?:[\\.,]\\d{1,2})?$'
     };
+    const isAdmin = !!(opts && opts.isAdmin);
+    const descMaxLength = kcGetMaxDescriptionLength(isAdmin);
 
     // comuns
     fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true, maxLength: 80 });
-    fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4, maxLength: 2000 });
+    fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4, maxLength: descMaxLength, maxLengthAdmin: KC_DESCRIPTION_MAX_LENGTH_ADMIN });
 
     if (moduleKey === 'compra-venda') {
       const acao = selections.acao;
@@ -199,5 +260,9 @@
 
   window._KCCreatePost.fields = {
     buildFieldsForModule: kcBuildFieldsForModule,
+    getMaxDescriptionLength: kcGetMaxDescriptionLength,
+    isCurrentUserAdminOperator: kcIsCurrentUserAdminOperator,
+    MAX_DESCRIPTION_LENGTH: KC_DESCRIPTION_MAX_LENGTH,
+    MAX_DESCRIPTION_LENGTH_ADMIN: KC_DESCRIPTION_MAX_LENGTH_ADMIN,
   };
 })();

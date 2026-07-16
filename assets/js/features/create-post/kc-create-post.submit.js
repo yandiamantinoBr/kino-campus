@@ -79,10 +79,18 @@
         }
         if (descInput && typeof descInput.setCustomValidity === 'function') {
           const normalizedDesc = String(descInput.value || '').trim();
+          // Limite dinâmico: 2000 padrão, 5000 para admin operators
+          // (mirror do override em kc-create-post.fields.js).
+          const fieldsModule = window._KCCreatePost && window._KCCreatePost.fields;
+          const isAdminOperator = !!(fieldsModule && typeof fieldsModule.isCurrentUserAdminOperator === 'function'
+            && fieldsModule.isCurrentUserAdminOperator());
+          const maxDescLength = (fieldsModule && typeof fieldsModule.getMaxDescriptionLength === 'function')
+            ? fieldsModule.getMaxDescriptionLength(isAdminOperator)
+            : 2000;
           if (!normalizedDesc) {
             descInput.setCustomValidity('Informe uma descrição válida.');
-          } else if (normalizedDesc.length > 2000) {
-            descInput.setCustomValidity('A descrição deve ter no máximo 2000 caracteres.');
+          } else if (normalizedDesc.length > maxDescLength) {
+            descInput.setCustomValidity('A descrição deve ter no máximo ' + maxDescLength + ' caracteres.');
           } else {
             descInput.setCustomValidity('');
           }
