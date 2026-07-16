@@ -1,4 +1,4 @@
-// KinoCampus -- Edge Function: kc-external-access-decide (v9.3.5.5)
+// KinoCampus -- Edge Function: kc-external-access-decide (v9.3.5.6)
 //
 // Decide uma solicitação de acesso externo (help_requests.type=external_access).
 // Endpoint: POST /functions/v1/kc-external-access-decide
@@ -6,8 +6,8 @@
 // Auth: requer Bearer JWT de admin
 //
 // Fluxo:
-//   1. Valida JWT do caller + chama RPC kc_admin_decide_external_access
-//      (SECURITY DEFINER) que valida admin e atualiza help_requests.
+//   1. Valida JWT do caller + chama RPC atômica de decisão/claim. Somente
+//      o claim persistido pode executar e concluir o efeito externo.
 //   2. Se APPROVED -> auth.admin.inviteUserByEmail (SMTP nativo do Auth,
 //      configurado para usar Hostinger). Cria entry em auth.users com
 //      metadata is_invited_external. Fallback: generateLink se SMTP falhar.
@@ -85,12 +85,9 @@ function brandedFooter() {
     </p>`;
 }
 
-function buildRejectionEmail(opts: { requesterName: string; adminNote: string | null; baseUrl: string }) {
+function buildRejectionEmail(opts: { requesterName: string; baseUrl: string }) {
   const subject = "KinoCampus — Sobre sua solicitação de acesso";
   const greeting = opts.requesterName ? `Olá, ${escapeHtml(opts.requesterName)}!` : "Olá!";
-  const noteBlock = opts.adminNote
-    ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 14px;margin:14px 0"><strong>Observação da equipe:</strong> ${escapeHtml(opts.adminNote)}</div>`
-    : "";
 
   const html = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1f2937;line-height:1.55">
@@ -98,7 +95,6 @@ function buildRejectionEmail(opts: { requesterName: string; adminNote: string | 
       <h2 style="color:#ff6b00;font-size:1.3rem;margin:0 0 12px">Sobre sua solicitação</h2>
       <p>${greeting}</p>
       <p>Agradecemos seu interesse na <strong>comunidade KinoCampus</strong>. Após análise, <strong>não conseguimos aprovar seu acesso neste momento</strong>.</p>
-      ${noteBlock}
       <p>O KinoCampus prioriza acesso a perfis com vínculo institucional UFG. Caso você obtenha um e-mail institucional (<code>@ufg.br</code>, <code>@discente.ufg.br</code> ou <code>@egresso.ufg.br</code>), poderá criar sua conta diretamente em <a href="${escapeHtml(opts.baseUrl)}" style="color:#ff6b00">${escapeHtml(opts.baseUrl)}</a>.</p>
       <p>Se acreditar que sua solicitação foi mal interpretada, ou tiver mais contexto a compartilhar, basta responder este e-mail.</p>
       ${brandedFooter()}
@@ -112,7 +108,6 @@ function buildRejectionEmail(opts: { requesterName: string; adminNote: string | 
     "Agradecemos seu interesse na comunidade KinoCampus. Após análise,",
     "não conseguimos aprovar seu acesso neste momento.",
     "",
-    opts.adminNote ? `Observação da equipe: ${opts.adminNote}\n` : "",
     "O KinoCampus prioriza acesso a perfis com vínculo institucional UFG.",
     "Caso obtenha um e-mail UFG, poderá criar sua conta em " + opts.baseUrl,
     "",
@@ -211,10 +206,17 @@ Deno.serve(async (req) => {
   const adminNote = String(body.admin_note || "").trim() || null;
   if (!UUID_RE.test(helpRequestId)) return json(400, { ok: false, error: "invalid_help_request_id" });
   if (decision !== "approved" && decision !== "rejected") return json(400, { ok: false, error: "invalid_decision" });
+  if (adminNote && adminNote.length > 500) return json(400, { ok: false, error: "admin_note_too_long" });
 
+  const deliveryClaimId = crypto.randomUUID();
   const { data: rpcData, error: rpcErr } = await userClient.rpc(
-    "kc_admin_decide_external_access",
-    { p_id: helpRequestId, p_decision: decision, p_note: adminNote },
+    "kc_admin_claim_external_access_delivery",
+    {
+      p_id: helpRequestId,
+      p_decision: decision,
+      p_note: adminNote,
+      p_claim_id: deliveryClaimId,
+    },
   );
   if (rpcErr) {
     console.error("[kc-external-access-decide] rpc error:", rpcErr);
@@ -232,21 +234,118 @@ Deno.serve(async (req) => {
   const requesterName = String(row.out_requester_name || "").trim();
   const metadata = asObject(row.out_metadata);
   const baseUrl = appBaseUrl();
+  const deliveryKey = decision === "approved" ? "invite_email" : "rejection_email";
+  const previousDelivery = asObject(metadata[deliveryKey]);
+  const previousStatus = String(previousDelivery.status || "");
+  const persistedClaimId = String(previousDelivery.claim_id || "");
+
+  async function completeDelivery(delivery: JsonObject) {
+    const { data, error } = await adminClient.rpc(
+      "kc_complete_external_access_delivery",
+      {
+        p_id: row.out_id,
+        p_decision: decision,
+        p_claim_id: deliveryClaimId,
+        p_delivery: delivery,
+      },
+    );
+    if (error) {
+      console.error("[kc-external-access-decide] delivery completion error:", error);
+      return false;
+    }
+    return data === true;
+  }
+
+  // Terminal results are replayed without delivery. A different in-flight
+  // claim also returns without sending, which closes the concurrent-click race.
+  if (["sent", "link_generated", "failed"].includes(previousStatus)) {
+    const previousError = String(
+      previousDelivery.smtp_error ||
+      previousDelivery.error_message ||
+      "",
+    ) || null;
+    return json(200, {
+      ok: true,
+      decision,
+      decision_persisted: true,
+      replayed: true,
+      delivery_status: previousStatus,
+      help_request_id: row.out_id,
+      invite_sent: decision === "approved" && previousStatus === "sent",
+      invite_sent_to: decision === "approved" ? requesterEmail : undefined,
+      invite_link: decision === "approved" && previousStatus === "link_generated"
+        ? String(previousDelivery.invite_link || "")
+        : null,
+      smtp_error: previousError,
+      email_sent: decision === "rejected" && previousStatus === "sent",
+      sent_to: decision === "rejected" ? requesterEmail : undefined,
+    });
+  }
+
+  if (previousStatus === "processing" && persistedClaimId !== deliveryClaimId) {
+    return json(200, {
+      ok: true,
+      decision,
+      decision_persisted: true,
+      replayed: true,
+      delivery_status: "processing",
+      help_request_id: row.out_id,
+      invite_sent: decision === "approved" ? false : undefined,
+      invite_sent_to: decision === "approved" ? requesterEmail : undefined,
+      email_sent: decision === "rejected" ? false : undefined,
+      sent_to: decision === "rejected" ? requesterEmail : undefined,
+      message: "A decisão já foi registrada e a entrega está em processamento.",
+    });
+  }
+
+  if (previousStatus !== "processing" || persistedClaimId !== deliveryClaimId) {
+    console.error("[kc-external-access-decide] delivery claim missing:", {
+      helpRequestId,
+      decision,
+      previousStatus,
+    });
+    return json(500, {
+      ok: false,
+      error: "delivery_claim_missing",
+      decision_persisted: true,
+    });
+  }
 
   // ── APROVADO: usa auth.admin.inviteUserByEmail (SMTP do Supabase Auth) ──
   if (decision === "approved") {
     const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
     const { error: whitelistErr } = await adminClient
       .from("kc_invited_emails")
-      .upsert({ email: requesterEmail, invited_by: user.id, note: adminNote, expires_at: expiresAt, used_at: null }, { onConflict: "email" });
-    if (whitelistErr) console.error("[kc-external-access-decide] whitelist upsert error:", whitelistErr);
+      .upsert({ email: requesterEmail, invited_by: user.id, note: null, expires_at: expiresAt, used_at: null }, { onConflict: "email" });
+    if (whitelistErr) {
+      console.error("[kc-external-access-decide] whitelist upsert error:", whitelistErr);
+      const failure = {
+        status: "failed",
+        provider: "supabase_auth",
+        failed_at: new Date().toISOString(),
+        error_message: `whitelist_failed: ${whitelistErr.message || "unknown"}`,
+      };
+      const deliveryStatePersisted = await completeDelivery(failure);
+      return json(200, {
+        ok: true,
+        decision: "approved",
+        decision_persisted: true,
+        delivery_status: "failed",
+        delivery_state_persisted: deliveryStatePersisted,
+        help_request_id: row.out_id,
+        invite_sent_to: requesterEmail,
+        invite_sent: false,
+        invite_link: null,
+        smtp_error: String(failure.error_message),
+        message: "Solicitação aprovada, mas o convite não pôde ser preparado.",
+      });
+    }
 
     const redirectTo = `${baseUrl}/auth-callback.html`;
     const userMetadata = {
       is_invited_external: true,
       external_access_request_id: row.out_id,
       invited_by_admin_id: user.id,
-      admin_note: adminNote,
     };
 
     let inviteSent = false;
@@ -277,12 +376,26 @@ Deno.serve(async (req) => {
           console.error("[kc-external-access-decide] generateLink exception:", e);
         }
         if (!inviteLink) {
-          try {
-            await adminClient.from("help_requests").update({
-              metadata: { ...metadata, invite_email: { status: "failed", provider: "supabase_auth", failed_at: new Date().toISOString(), error_message: msg } },
-            }).eq("id", row.out_id);
-          } catch (_) {}
-          return json(502, { ok: false, error: "invite_email_failed", detail: msg });
+          const failedDelivery = {
+            status: "failed",
+            provider: "supabase_auth",
+            failed_at: new Date().toISOString(),
+            error_message: msg,
+          };
+          const deliveryStatePersisted = await completeDelivery(failedDelivery);
+          return json(200, {
+            ok: true,
+            decision: "approved",
+            decision_persisted: true,
+            delivery_status: "failed",
+            delivery_state_persisted: deliveryStatePersisted,
+            help_request_id: row.out_id,
+            invite_sent_to: requesterEmail,
+            invite_sent: false,
+            invite_link: null,
+            smtp_error: msg,
+            message: "Solicitação aprovada, mas o convite não foi entregue.",
+          });
         }
       }
     }
@@ -291,22 +404,27 @@ Deno.serve(async (req) => {
       ? { status: "sent", provider: "supabase_auth", sent_at: new Date().toISOString(), redirect_to: redirectTo }
       : { status: "link_generated", provider: "supabase_auth_manual_send", generated_at: new Date().toISOString(), redirect_to: redirectTo, invite_link: inviteLink, smtp_error: inviteSendError, note: "SMTP indisponível. Link gerado para envio manual." };
 
-    try { await adminClient.from("help_requests").update({ metadata: { ...metadata, invite_email: inviteMetaStatus } }).eq("id", row.out_id); } catch (e) { console.error(e); }
+    const deliveryStatePersisted = await completeDelivery(inviteMetaStatus);
 
     return json(200, {
       ok: true,
       decision: "approved",
+      decision_persisted: true,
+      delivery_status: inviteSent ? "sent" : "link_generated",
+      delivery_state_persisted: deliveryStatePersisted,
       help_request_id: row.out_id,
       invite_sent_to: requesterEmail,
       invite_sent: inviteSent,
       invite_link: inviteLink,
       smtp_error: inviteSendError,
-      message: inviteSent ? "Convite enviado via SMTP." : "Convite gerado. Copie o link e envie manualmente.",
+      message: deliveryStatePersisted
+        ? (inviteSent ? "Convite enviado via SMTP." : "Convite gerado. Copie o link e envie manualmente.")
+        : "A entrega foi executada, mas o resultado não pôde ser confirmado no histórico. Revise o item em processamento.",
     });
   }
 
   // ── REJEITADO: envia via SMTP direto (denomailer + Hostinger) ──
-  const email = buildRejectionEmail({ requesterName, adminNote, baseUrl });
+  const email = buildRejectionEmail({ requesterName, baseUrl });
   const adminReplyTo = getEnv("KC_ADMIN_NOTIFICATION_EMAIL", DEFAULT_ADMIN_EMAIL);
 
   let rejectionResult: JsonObject;
@@ -336,21 +454,18 @@ Deno.serve(async (req) => {
     };
   }
 
-  try {
-    await adminClient.from("help_requests").update({
-      metadata: { ...metadata, rejection_email: rejectionResult },
-    }).eq("id", row.out_id);
-  } catch (e) {
-    console.error("[kc-external-access-decide] metadata update error:", e);
-  }
+  const deliveryStatePersisted = await completeDelivery(rejectionResult);
 
   const sentOk = rejectionResult.status === "sent";
-  return json(sentOk ? 200 : 502, {
-    ok: sentOk,
+  return json(200, {
+    ok: true,
     decision: "rejected",
+    decision_persisted: true,
+    delivery_status: sentOk ? "sent" : "failed",
+    delivery_state_persisted: deliveryStatePersisted,
     help_request_id: row.out_id,
     email_sent: sentOk,
     sent_to: requesterEmail,
-    error: sentOk ? undefined : "rejection_email_failed",
+    smtp_error: sentOk ? null : String(rejectionResult.error_message || "rejection_email_failed"),
   });
 });

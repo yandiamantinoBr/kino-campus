@@ -63,6 +63,9 @@ describe('exports executivos admin - dashboard, denuncias e banners', () => {
     const source = read('assets/js/controllers/admin/admin-moderation.controller.js');
     expect(source).toContain('async function fetchExternalAccessForExport(warnings)');
     expect(source).toContain('listExternalAccessRequests');
+    expect(source).toContain('const EXTERNAL_ACCESS_EXPORT_PAGE_SIZE = 200;');
+    expect(source).toContain('offset: items.length');
+    expect(source).toContain('Solicitações de acesso externo "${status}" limitadas');
     expect(source).toContain("title: 'Acesso externo'");
     expect(source).toContain('externalAccess');
     expect(source).toContain('function extAccessStatusLabel');

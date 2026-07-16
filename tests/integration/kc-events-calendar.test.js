@@ -222,6 +222,20 @@ describe('kc-events-calendar — runtime (jsdom)', () => {
     expect(document.getElementById('kcCalModal')).not.toBeNull();
   });
 
+  test('sem cliente Supabase, encerra o estado ocupado em vez de prender o spinner', () => {
+    loadModule();
+    const el = document.createElement('div');
+    el.setAttribute('data-kc-cal-mount', '');
+    document.body.appendChild(el);
+
+    window.KCEventsCalendar.mount(el);
+
+    const grid = el.querySelector('[data-kc-cal-grid]');
+    expect(grid).not.toBeNull();
+    expect(grid.getAttribute('aria-busy')).toBe('false');
+    expect(grid.querySelector('.fa-spinner')).toBeNull();
+  });
+
   test('data-kc-cal-rail vira data-kc-eventos-section (integração com rail mobile)', () => {
     loadModule();
     const el = document.createElement('div');

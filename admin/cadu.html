@@ -6,11 +6,11 @@
   <meta name="robots" content="noindex,nofollow" />
   <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
   <meta name="description" content="Painel administrativo do Cadu (OpenClaw) - curador de sites UFG." />
-  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.1">
+  <link rel="stylesheet" href="../assets/css/kc-theme-boot.css?v=8.6.11">
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
   <script defer src="/_vercel/insights/script.js"></script>
   <title>KinoCampus - Admin Cadu (OpenClaw)</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.10" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.11" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -514,6 +514,13 @@
     .kc-cadu-status-dot--down { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
     .kc-cadu-status-dot--loading { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.18); animation: kc-cadu-pulse 1.4s infinite; }
     @keyframes kc-cadu-pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .kc-pipeline-status-dot.is-running,
+      .kc-cadu-status-dot--loading {
+        animation: none !important;
+        opacity: 1;
+      }
+    }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.10" />
 </head>
@@ -578,7 +585,7 @@
           <h1><i class="fas fa-robot"></i> Cadu (OpenClaw)</h1>
           <p>Curador de sites institucionais e perfis do Instagram da UFG. Dados ao vivo da VPS Hostinger via cadu-api.</p>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="kc-cadu-status is-loading" id="cadu-status-pill"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Checando cadu-api…</span>
+            <span class="kc-cadu-status is-loading" id="cadu-status-pill" role="status" aria-live="polite" aria-atomic="true" aria-busy="true"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Checando cadu-api…</span>
             <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
             <span class="kc-cadu-status" id="cadu-context-pill" style="display:none;" title="Endpoint /api/openclaw/context disponível (consolida sites, pipeline, feed e OpenClaw em uma requisição)" data-i18n-tooltip="tooltip.cadu-context"><i class="fas fa-layer-group"></i> API de contexto</span>
             <span class="kc-cadu-status" id="cadu-version-pill" style="display:none;" title="Versão cadu-api" data-i18n-tooltip="tooltip.cadu-version"><i class="fas fa-code-branch"></i> <code id="cadu-version-text">v—</code></span>
@@ -1003,8 +1010,8 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
 
   <!-- Cadu controller -->
-  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.10"></script>
+  <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a36e7ff58eac3281"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=3958a17d8ad8f1cd"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=e7dd2ac622f04815"></script>
 </body>
 </html>

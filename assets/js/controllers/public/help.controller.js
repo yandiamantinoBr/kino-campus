@@ -39,7 +39,7 @@
     if (!button) return;
     button.disabled = state.submitting;
     button.innerHTML = state.submitting
-      ? '<i class="fas fa-spinner fa-spin"></i><span>Enviando pedido...</span>'
+      ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando pedido...</span>'
       : '<i class="fas fa-paper-plane"></i><span>Enviar pedido</span>';
   }
 

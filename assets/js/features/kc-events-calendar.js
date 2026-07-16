@@ -132,8 +132,8 @@
       '    <i class="fas fa-chevron-right"></i>',
       '  </button>',
       '</div>',
-      '<div class="kc-cal-grid" data-kc-cal-grid aria-live="polite">',
-      '  <div class="kc-cal-loading"><i class="fas fa-spinner fa-spin"></i></div>',
+      '<div class="kc-cal-grid" data-kc-cal-grid aria-live="polite" aria-busy="true">',
+      '  <div class="kc-cal-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando calendário…</span></div>',
       '</div>',
       '<div class="kc-cal-day-detail" data-kc-cal-day-detail style="display:none;">',
       '  <div class="kc-cal-day-detail-title" data-kc-cal-day-detail-title></div>',
@@ -256,6 +256,8 @@
 
     if (!client) {
       calState.loading = false;
+      calState.lastFetchAt = Date.now();
+      renderCalendarAll();
       return;
     }
 
@@ -476,7 +478,7 @@
     var html;
 
     if (calState.loading) {
-      html = '<div class="kc-cal-loading"><i class="fas fa-spinner fa-spin"></i></div>';
+      html = '<div class="kc-cal-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando calendário…</span></div>';
     } else if (v === 'month') {
       html = renderMonthGrid(y, m);
     } else if (v === 'week') {
@@ -485,8 +487,14 @@
       html = renderDayGrid(y, m, d);
     }
 
-    if (grid) grid.innerHTML = html;
-    if (modalGrid) modalGrid.innerHTML = html;
+    if (grid) {
+      grid.setAttribute('aria-busy', calState.loading ? 'true' : 'false');
+      grid.innerHTML = html;
+    }
+    if (modalGrid) {
+      modalGrid.setAttribute('aria-busy', calState.loading ? 'true' : 'false');
+      modalGrid.innerHTML = html;
+    }
   }
 
   /* ── Render principal (sidebar + modal) ───────────────── */

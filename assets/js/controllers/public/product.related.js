@@ -106,6 +106,7 @@
     var section = document.getElementById('relatedSection');
     var grid = document.getElementById('relatedGrid');
     if (!section || !grid) return;
+    grid.setAttribute('aria-busy', 'false');
 
     var list = Array.isArray(posts) ? posts.filter(Boolean) : [];
     if (!list.length) {
@@ -152,19 +153,24 @@
     var grid = document.getElementById('relatedGrid');
     if (!section || !grid || !post || !window.KCAPI || typeof window.KCAPI.getRelatedPosts !== 'function') {
       if (section) section.style.display = 'none';
-      if (grid) grid.innerHTML = '';
+      if (grid) {
+        grid.setAttribute('aria-busy', 'false');
+        grid.innerHTML = '';
+      }
       return;
     }
 
     var currentPostId = getPostIdForMutation(post);
     if (!currentPostId) {
       section.style.display = 'none';
+      grid.setAttribute('aria-busy', 'false');
       grid.innerHTML = '';
       return;
     }
 
     var requestToken = ++relatedRequestToken;
-    grid.innerHTML = '<div class="kc-related-loading"><i class="fas fa-spinner fa-spin"></i> Carregando publicações relacionadas...</div>';
+    grid.setAttribute('aria-busy', 'true');
+    grid.innerHTML = '<div class="kc-related-loading" role="status"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando publicações relacionadas...</div>';
     section.style.display = 'block';
 
     try {
@@ -180,6 +186,7 @@
     } catch (error) {
       if (requestToken !== relatedRequestToken) return;
       console.warn('[KC Product] related posts:', error);
+      grid.setAttribute('aria-busy', 'false');
       grid.innerHTML = '';
       section.style.display = 'none';
     }

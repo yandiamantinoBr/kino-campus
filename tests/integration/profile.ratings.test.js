@@ -214,11 +214,11 @@ describe('profile.controller.js - contrato do split ratings', () => {
 describe('profile.html - ordem canonica dos scripts do split ratings', () => {
   test('carrega presentation -> collections -> ratings -> controller no final da pagina', () => {
     const orderedScripts = [
-      '<script defer src="assets/js/features/kc-ranking.js?v=8.6.10"></script>',
+      '<script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>',
       '<script defer src="assets/js/controllers/public/profile.presentation.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.2"></script>',
       '<script defer src="assets/js/controllers/public/profile.ratings.js?v=8.6.1"></script>',
-      '<script defer src="assets/js/controllers/public/profile.flow.js?v=8.6.1"></script>',
+      '<script defer src="assets/js/controllers/public/profile.flow.js?v=8.6.11"></script>',
       '<script defer src="assets/js/controllers/public/profile.controller.js?v=8.6.1"></script>'
     ];
 

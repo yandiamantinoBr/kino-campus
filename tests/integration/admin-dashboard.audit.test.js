@@ -78,6 +78,11 @@ function makeQueryBuilder(handler, initialState) {
       state.gte.push({ field, value });
       return builder;
     },
+    lte(field, value) {
+      state.lte = state.lte || [];
+      state.lte.push({ field, value });
+      return builder;
+    },
     in(field, value) {
       state.in = state.in || [];
       state.in.push({ field, value });
@@ -85,6 +90,8 @@ function makeQueryBuilder(handler, initialState) {
     },
     order(field, options) {
       state.order = { field, options };
+      state.orders = state.orders || [];
+      state.orders.push({ field, options });
       return builder;
     },
     range(from, to) {
@@ -409,13 +416,13 @@ describe('admin-dashboard.controller.js - contrato do split audit', () => {
 describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.10"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.11"></script>'
     ];
 
     let lastIndex = -1;
@@ -488,6 +495,45 @@ describe('window._KCAD.audit - comportamento', () => {
     ]);
   });
 
+  test('loadAuditLog congela o limite superior e usa desempate por id', async () => {
+    const audit = loadAuditModule();
+    let queryState = null;
+    const client = makeClient({
+      fromHandler(state) {
+        if (state.table === 'audit_log') {
+          queryState = state;
+          return {
+            data: [
+              { id: '123e4567-e89b-12d3-a456-426614174000', created_at: '2026-04-10T10:00:00Z', action: 'post_hidden' }
+            ],
+            error: null
+          };
+        }
+        return { data: [], error: null };
+      }
+    });
+
+    const rows = await audit.loadAuditLog(
+      client,
+      20,
+      0,
+      'all',
+      '2026-04-01T00:00:00Z',
+      {},
+      '2026-04-10T12:00:00Z'
+    );
+
+    expect(queryState.select.columns).toContain('id, created_at');
+    expect(queryState.orders).toEqual([
+      { field: 'created_at', options: { ascending: false } },
+      { field: 'id', options: { ascending: false } }
+    ]);
+    expect(queryState.lte).toEqual([
+      { field: 'created_at', value: '2026-04-10T12:00:00Z' }
+    ]);
+    expect(rows.__kcSnapshotBounded).toBe(true);
+  });
+
   test('loadAuditLog cai para RPC quando a query direta falha por permissao', async () => {
     const audit = loadAuditModule();
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -515,6 +561,41 @@ describe('window._KCAD.audit - comportamento', () => {
       { created_at: '2026-04-11T10:00:00Z', action: 'post_deleted', entity_type: 'post', actor_id: '2' }
     ]);
 
+    warnSpy.mockRestore();
+  });
+
+  test('loadAuditLog envia p_until ao RPC estável de exportação', async () => {
+    const audit = loadAuditModule();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    let rpcArgs = null;
+    const client = makeClient({
+      fromHandler() {
+        return { data: null, error: { code: '42501', message: 'permission denied' } };
+      },
+      rpcHandler(name, args) {
+        if (name === 'kc_admin_list_audit_logs') {
+          rpcArgs = args;
+          return {
+            data: [{ id: '123e4567-e89b-12d3-a456-426614174000', created_at: '2026-04-11T10:00:00Z' }],
+            error: null
+          };
+        }
+        return { data: [], error: null };
+      }
+    });
+
+    const rows = await audit.loadAuditLog(
+      client,
+      20,
+      0,
+      'all',
+      '2026-04-01T00:00:00Z',
+      {},
+      '2026-04-11T12:00:00Z'
+    );
+
+    expect(rpcArgs.p_until).toBe('2026-04-11T12:00:00Z');
+    expect(rows.__kcSnapshotBounded).toBe(true);
     warnSpy.mockRestore();
   });
 
@@ -897,10 +978,17 @@ describe('window._KCAD.audit - comportamento', () => {
     const modules = report.sections.find((section) => section.title === 'Módulos');
     const trends = report.sections.find((section) => section.title === 'Tendências');
     const health = report.sections.find((section) => section.title === 'Saúde/Admin');
+    const sourceAvailability = report.sections.find((section) => section.title === 'Disponibilidade das fontes');
     expect(report.filters.ranking_periodo).toBe('Últimos 30 dias corridos (janela móvel)');
-    expect(report.filters.ranking_disponibilidade).toBe('Indisponível');
-    expect(report.filters.pulso_disponibilidade).toBe('Indisponível');
-    expect(report.filters.tendencias_disponibilidade).toBe('Indisponível');
+    expect(report.filters).not.toHaveProperty('ranking_disponibilidade');
+    expect(report.filters).not.toHaveProperty('pulso_disponibilidade');
+    expect(report.filters).not.toHaveProperty('tendencias_disponibilidade');
+    expect(sourceAvailability.rows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ bloco: 'Pulso operacional', estado: 'Indisponível' }),
+      expect.objectContaining({ bloco: 'Tendências de busca', estado: 'Indisponível' }),
+      expect.objectContaining({ bloco: 'Audit log', estado: 'Indisponível' }),
+      expect.objectContaining({ bloco: 'Ranking', estado: 'Indisponível' })
+    ]));
     expect(ranking.note).toContain('Últimos 30 dias corridos (janela móvel)');
     expect(ranking.note).toContain('Ranking indisponível');
     expect(ranking.note).toContain('não representa ausência de contribuidores');
@@ -937,7 +1025,7 @@ describe('window._KCAD.audit - comportamento', () => {
       { indicador: 'Denúncias abertas', valor: 'Indisponível', contexto: 'Backlog atual, sem recorte temporal' },
       { indicador: 'Eventos no audit log', valor: 'Indisponível', contexto: 'A fonte de auditoria não respondeu' }
     ]));
-    expect(report.filters.audit_disponibilidade).toBe('Indisponível');
+    expect(report.filters).not.toHaveProperty('audit_disponibilidade');
     expect(auditSection.note).toContain('não representa zero eventos');
     expect(auditSection.emptyMessage).toContain('Audit log indisponível');
   });
@@ -1178,6 +1266,81 @@ describe('window._KCAD.audit - comportamento', () => {
     expect(capturedReport.filters.audit_action).toBe('post_hidden');
     expect(capturedReport.filters.audit_entity_type).toBe('post');
     expect(capturedReport.filters.audit_actor).toBe('admin-aplicado');
+  });
+
+  test('clique de exportação congela filtros, séries, tendências e ranking antes de qualquer await', async () => {
+    const audit = loadAuditModule();
+    const data = sampleData();
+    data.auditAvailable = false;
+    data.auditFilters = {
+      action: 'post_hidden',
+      entityType: 'post',
+      actorQuery: 'admin-a'
+    };
+    const xlsxBtn = createElement({ innerHTML: 'XLSX' });
+    const pdfBtn = createElement({ innerHTML: 'PDF' });
+    const csvBtn = createElement({ innerHTML: 'CSV' });
+    const options = {
+      data,
+      visibleSeriesKeys: ['posts_count'],
+      trendSnapshot: {
+        rows: [{ term: 'moradia ufg', count: 4, module: 'moradia' }],
+        module: 'moradia',
+        query: 'moradia'
+      },
+      rankingRows: [{ rank: 1, display_name: 'Pessoa A', score: 10 }],
+      rankingContext: {
+        periodLabel: 'Janela A',
+        module: 'eventos',
+        limit: 10,
+        available: true
+      },
+      elements: {
+        '#admin-export-xlsx': xlsxBtn,
+        '#admin-export-pdf': pdfBtn,
+        '#admin-audit-export-csv': csvBtn
+      }
+    };
+    const deps = createDeps(options);
+    const exportReportPDF = jest.fn().mockResolvedValue(undefined);
+    window.KCAdminExport = { exportReportPDF };
+
+    audit.enableExport(deps);
+    const exportPromise = pdfBtn.getListener('click')();
+
+    options.visibleSeriesKeys = ['comments_count'];
+    options.trendSnapshot = {
+      rows: [{ term: 'evento novo', count: 99, module: 'eventos' }],
+      module: 'eventos',
+      query: 'evento'
+    };
+    options.rankingRows = [{ rank: 1, display_name: 'Pessoa B', score: 99 }];
+    options.rankingContext = {
+      periodLabel: 'Janela B',
+      module: 'moradia',
+      limit: 100,
+      available: true
+    };
+    data.auditFilters = {
+      action: 'post_deleted',
+      entityType: 'report',
+      actorQuery: 'admin-b'
+    };
+
+    await exportPromise;
+
+    const report = exportReportPDF.mock.calls[0][1];
+    const pulse = report.sections.find((section) => section.title === 'Pulso operacional');
+    const trends = report.sections.find((section) => section.title === 'Tendências');
+    const ranking = report.sections.find((section) => section.title === 'Top Contribuidores');
+    expect(report.filters.audit_action).toBe('post_hidden');
+    expect(report.filters.audit_entity_type).toBe('post');
+    expect(report.filters.audit_actor).toBe('admin-a');
+    expect(report.filters.tendencias_busca).toBe('moradia');
+    expect(report.filters.ranking_periodo).toBe('Janela A');
+    expect(pulse.columns.map((column) => column.key)).toEqual(['dia', 'posts_count', 'total']);
+    expect(trends.rows[0].termo).toBe('moradia ufg');
+    expect(ranking.rows[0].usuario).toBe('Pessoa A');
   });
 
   test('audit payload sensível não é serializado no relatório', async () => {

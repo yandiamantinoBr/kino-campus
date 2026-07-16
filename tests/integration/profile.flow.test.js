@@ -180,6 +180,13 @@ describe('profile.flow.js - contrato estatico', () => {
     expect(moduleSource).not.toMatch(/import\s+/);
   });
 
+  test('fallback de perfil consulta apenas colunas existentes no schema atual', () => {
+    expect(moduleSource).toContain(
+      ".select('created_at, bio, avatar_url, display_name, full_name, verified')"
+    );
+    expect(moduleSource).not.toMatch(/from\(['"]profiles['"]\)[\s\S]{0,220}select\([^)]*legacy_id/);
+  });
+
   test('expoe 10 chaves publicas e o namespace fica frozen', () => {
     const flow = loadFlowModule();
 
@@ -235,11 +242,11 @@ describe('profile.controller.js - contrato do split flow', () => {
 describe('profile.html - ordem canonica dos scripts do split flow', () => {
   test('carrega presentation -> collections -> ratings -> flow -> controller', () => {
     const orderedScripts = [
-      '<script defer src="assets/js/features/kc-ranking.js?v=8.6.10"></script>',
+      '<script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>',
       '<script defer src="assets/js/controllers/public/profile.presentation.js?v=8.6.1"></script>',
       '<script defer src="assets/js/controllers/public/profile.collections.js?v=8.6.2"></script>',
       '<script defer src="assets/js/controllers/public/profile.ratings.js?v=8.6.1"></script>',
-      '<script defer src="assets/js/controllers/public/profile.flow.js?v=8.6.1"></script>',
+      '<script defer src="assets/js/controllers/public/profile.flow.js?v=8.6.11"></script>',
       '<script defer src="assets/js/controllers/public/profile.controller.js?v=8.6.1"></script>'
     ];
 

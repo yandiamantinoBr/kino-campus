@@ -71,7 +71,13 @@ function makeQueryBuilder(handler, initialState) {
       return builder;
     },
     then(resolve, reject) {
-      return Promise.resolve(handler(state)).then(resolve, reject);
+      return Promise.resolve(handler(state)).then((result) => {
+        if (result && state.select && state.select.options && state.select.options.count === 'exact'
+            && Array.isArray(result.data) && typeof result.count !== 'number') {
+          return Object.assign({}, result, { count: result.data.length });
+        }
+        return result;
+      }).then(resolve, reject);
     },
     catch(reject) {
       return Promise.resolve(handler(state)).catch(reject);
@@ -208,13 +214,13 @@ describe('admin/index.html - ordem dos scripts do dashboard admin', () => {
 
   test('carrega shared -> metrics -> audit -> charts -> kc-ranking -> privacy -> controller', () => {
     const orderedScripts = [
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.10"></script>',
-      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.10"></script>'
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.shared.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.metrics.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.audit.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.charts.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/features/kc-ranking.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.privacy.js?v=8.6.11"></script>',
+      '<script defer src="../assets/js/controllers/admin/admin-dashboard.controller.js?v=8.6.11"></script>'
     ];
 
     let lastIndex = -1;
@@ -771,5 +777,22 @@ describe('window._KCAD.metrics - comportamento', () => {
       admin_actions_count: 1,
       total_count: 3
     });
+  });
+
+  test('queryCreatedAtRows rejeita amostra limitada como série completa', async () => {
+    const metrics = loadMetricsModule();
+    const client = makeClient({
+      fromHandler() {
+        return {
+          data: [{ created_at: '2026-04-20T09:00:00Z' }],
+          count: 4,
+          error: null
+        };
+      }
+    });
+
+    const rows = await metrics.queryCreatedAtRows(client, 'posts', '2026-04-20T00:00:00Z', 1);
+    expect(rows).toHaveLength(0);
+    expect(rows.__kcAvailable).toBe(false);
   });
 });

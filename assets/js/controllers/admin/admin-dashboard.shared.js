@@ -133,6 +133,23 @@
     return normalized;
   }
 
+  function canonicalTokens(value) {
+    return normalizeText(collapseWhitespace(value))
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean)
+      .map(function (token) { return TERM_SYNONYMS[token] || token; });
+  }
+
+  function containsKeyword(normalizedTerm, keyword) {
+    var normalizedKeyword = normalizeText(collapseWhitespace(keyword));
+    if (!normalizedKeyword) return false;
+    if (normalizedKeyword.indexOf(' ') !== -1) {
+      return (' ' + normalizedTerm + ' ').indexOf(' ' + normalizedKeyword + ' ') !== -1;
+    }
+    var keywordToken = TERM_SYNONYMS[normalizedKeyword] || normalizedKeyword;
+    return canonicalTokens(normalizedTerm).indexOf(keywordToken) !== -1;
+  }
+
   function classifyTermToModule(term, constants) {
     var normalized = canonicalizeTerm(term);
     if (!normalized) return null;
@@ -154,15 +171,14 @@
           score += 10;
           break;
         }
-        if (normalized.indexOf(keyword) !== -1) score += 3;
-        else if (keyword.indexOf(normalized) !== -1) score += 2;
+        if (containsKeyword(normalized, keyword)) score += 3;
       }
 
       if (score === 0 && categoryLabels && categoryLabels[moduleKey]) {
         var labels = Object.keys(categoryLabels[moduleKey]);
         for (var k = 0; k < labels.length; k += 1) {
           var labelKey = normalizeText(labels[k]);
-          if (normalized === labelKey || normalized.indexOf(labelKey) !== -1 || labelKey.indexOf(normalized) !== -1) {
+          if (normalized === labelKey || containsKeyword(normalized, labelKey)) {
             score += 5;
             break;
           }
@@ -562,7 +578,7 @@
       alerts.push({
         tone: 'positive',
         title: 'Pico operacional identificado',
-        body: 'O maior pulso diário somou ' + peakTotal + ' eventos consolidados.'
+        body: 'O maior pulso diário somou ' + peakTotal + ' eventos em todas as séries coletadas; o gráfico pode exibir apenas as séries selecionadas.'
       });
     }
 

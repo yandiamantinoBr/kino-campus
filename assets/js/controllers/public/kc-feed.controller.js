@@ -415,7 +415,21 @@
     if (!container) return null;
 
     if (!window.KCUtils || typeof window.KCUtils.renderPostCard !== 'function') {
-      warn('[KCControllers] KCUtils.renderPostCard não disponível; mantendo fallback estático.');
+      const hasLoadingFallback = !container.children.length
+        || !!container.querySelector('.fa-spinner, .kc-loading')
+        || /\bcarregando\b/i.test(String(container.textContent || ''));
+      if (hasLoadingFallback) {
+        container.setAttribute('aria-busy', 'false');
+        container.setAttribute('aria-live', 'polite');
+        container.innerHTML = [
+          '<div class="kc-no-results" data-kc-feed-error="renderer-unavailable" role="status">',
+          '<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>',
+          '<h3>Não foi possível carregar as publicações</h3>',
+          '<p>Atualize a página. Se o problema continuar, tente novamente em alguns instantes.</p>',
+          '</div>'
+        ].join('');
+      }
+      warn('[KCControllers] KCUtils.renderPostCard não disponível; fallback de carregamento encerrado.');
       return null;
     }
 

@@ -166,7 +166,7 @@
     if (mode === 'loading') {
       button.disabled = true;
       button.classList.add('is-loading');
-      button.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>${esc(label || 'Salvando...')}</span>`;
+      button.innerHTML = `<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>${esc(label || 'Salvando...')}</span>`;
       return;
     }
 

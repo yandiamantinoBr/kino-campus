@@ -635,6 +635,13 @@
 
   // ── Conversas (sidebar) ─────────────────────────────────────────────────
 
+  function setConversationListBusy(busy, message) {
+    var list = $('kcChatList');
+    var status = $('kcChatListStatus');
+    if (list) list.setAttribute('aria-busy', busy ? 'true' : 'false');
+    if (status && message) status.textContent = message;
+  }
+
   async function loadConversations() {
     if (!window.KCAPI || !window.KCAPI.chat) {
       renderEmptyList('error');
@@ -643,6 +650,7 @@
     if (!state.me || !state.me.id) return false;
 
     var token = ++state.conversationLoadToken;
+    setConversationListBusy(true, 'Carregando conversas…');
     var r = null;
     try {
       r = await withTimeout(
@@ -666,6 +674,7 @@
     state.convById.clear();
     state.conversations.forEach(function (c) { state.convById.set(c.conversation_id, c); });
     renderConversationsList();
+    setConversationListBusy(false, 'Conversas carregadas.');
     dispatchUnreadChange();
     try {
       if (!state.inboxOpenedTracked && window.KCEvents && typeof window.KCEvents.track === 'function') {
@@ -799,6 +808,7 @@
         '</div>';
     }
     list.innerHTML = html;
+    setConversationListBusy(false, 'O carregamento das conversas foi concluído.');
   }
 
   // ── Abrir conversa específica ───────────────────────────────────────────
@@ -865,7 +875,10 @@
     state.messages = [];
     state.messagesById.clear();
     var mwrap = $('kcChatMessages');
-    if (mwrap) mwrap.innerHTML = '<div class="kc-chat-skeleton-item"><div class="kc-chat-skeleton-circle"></div><div><div class="kc-chat-skeleton-line"></div><div class="kc-chat-skeleton-line"></div></div></div>';
+    if (mwrap) {
+      mwrap.setAttribute('aria-busy', 'true');
+      mwrap.innerHTML = '<div class="kc-chat-skeleton-item" role="status"><span class="kc-sr-only">Carregando mensagens…</span><div class="kc-chat-skeleton-circle" aria-hidden="true"></div><div aria-hidden="true"><div class="kc-chat-skeleton-line"></div><div class="kc-chat-skeleton-line"></div></div></div>';
+    }
 
     // Carrega mensagens
     await loadMessages();
@@ -1068,6 +1081,7 @@
   function renderMessagesList() {
     var wrap = $('kcChatMessages');
     if (!wrap) return;
+    wrap.setAttribute('aria-busy', 'false');
 
     if (state.messages.length === 0) {
       wrap.innerHTML = '<div class="kc-chat-empty" style="height:100%;flex:1;">' +
@@ -1194,6 +1208,7 @@
   function renderMessagesError() {
     var wrap = $('kcChatMessages');
     if (!wrap) return;
+    wrap.setAttribute('aria-busy', 'false');
     wrap.innerHTML = '<div class="kc-chat-empty" style="height:100%;flex:1;">' +
       '<div class="kc-chat-empty__icon"><i class="fas fa-exclamation-triangle"></i></div>' +
       '<h2 class="kc-chat-empty__title">Não foi possível carregar</h2>' +

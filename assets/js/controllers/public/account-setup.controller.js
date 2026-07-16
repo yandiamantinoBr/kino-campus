@@ -556,7 +556,7 @@
     if (!saveButton) return;
     saveButton.disabled = state.avatarSaving || state.submitting;
     saveButton.innerHTML = state.avatarSaving
-      ? '<i class="fas fa-spinner fa-spin"></i><span>Salvando foto...</span>'
+      ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Salvando foto...</span>'
       : '<i class="fas fa-check"></i><span>Salvar foto agora</span>';
   }
 

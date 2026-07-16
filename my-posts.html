@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
   <meta name="description" content="Gerencie suas publicações no KinoCampus. Veja, edite, renove e acompanhe o desempenho dos seus anúncios." />
-  <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.1"/>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.11"/>
   <script src="assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
 <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.1"></script>
@@ -16,7 +16,7 @@
     html.kc-theme-preload, html.kc-theme-preload * { transition: none !important; }
   </style>
   <title>KinoCampus — Minhas Publicações</title>
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.10"/>
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.11"/>
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
@@ -103,7 +103,7 @@
       <div id="myPostsTabRow" class="kc-feed-tabs" style="display:none; margin-bottom:14px;"></div>
 
       <!-- Loading -->
-      <div id="myPostsLoading" style="display:none; text-align:center; padding:48px 20px;">
+      <div id="myPostsLoading" role="status" aria-live="polite" aria-atomic="true" style="display:none; text-align:center; padding:48px 20px;">
         <i class="fas fa-spinner fa-spin" style="font-size:2em; color:var(--kc-primary-brand); display:block; margin-bottom:12px;" aria-hidden="true"></i>
         <p style="color:var(--kc-text-dark-secondary); margin:0;">Carregando suas publicações…</p>
       </div>

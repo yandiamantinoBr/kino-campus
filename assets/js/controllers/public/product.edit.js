@@ -616,7 +616,7 @@
       if (toggleBtn.disabled) return;
       toggleBtn.disabled = true;
       prevHTML = toggleBtn.innerHTML;
-      toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguarde...';
+      toggleBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Aguarde...';
 
       try {
         if (window.KCAPI && typeof window.KCAPI.togglePostStatus === 'function') {
@@ -737,7 +737,7 @@
       if (renewBtn.disabled) return;
       renewBtn.disabled = true;
       prevHTML = renewBtn.innerHTML;
-      renewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Renovando...';
+      renewBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Renovando...';
 
       try {
         if (window.KCAPI && typeof window.KCAPI.renewPost === 'function') {
@@ -782,7 +782,7 @@
       if (bumpBtn.disabled) return;
       bumpBtn.disabled = true;
       prevHTML = bumpBtn.innerHTML;
-      bumpBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Impulsionando...';
+      bumpBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Impulsionando...';
 
       try {
         if (window.KCAPI && typeof window.KCAPI.bumpPost === 'function') {

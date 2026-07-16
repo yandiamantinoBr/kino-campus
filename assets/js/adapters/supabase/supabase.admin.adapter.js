@@ -226,7 +226,16 @@
       });
       if (error) {
         console.error('[KCAPI][external-access] decide error:', error);
-        return { ok: false, error: { message: (error && error.message) || 'Falha ao processar decisão.' } };
+        let edgeBody = null;
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            edgeBody = await error.context.json();
+          }
+        } catch (_) { /* ignore */ }
+        const message = edgeBody && (edgeBody.detail || edgeBody.message || edgeBody.error)
+          ? String(edgeBody.detail || edgeBody.message || edgeBody.error)
+          : String((error && error.message) || 'Falha ao processar decisão.');
+        return { ok: false, error: { message, body: edgeBody || null } };
       }
       return { ok: true, data: data || null };
     } catch (e) {

@@ -211,3 +211,14 @@ html:not(.kc-loading) .kc-hero-carousel {
 .kc-hero-carousel {
   transition: opacity 0.28s ease;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .kc-hero-carousel.kc-hero-loading::after {
+    animation: none;
+    background-position: 0 0;
+  }
+
+  .kc-hero-carousel {
+    transition: none;
+  }
+}

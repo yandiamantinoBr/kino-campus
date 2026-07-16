@@ -435,7 +435,7 @@
         return Promise.resolve(cached.users);
       }
       if (attempt < 3) {
-        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
+        container.innerHTML = '<span class="kc-ranking-empty" role="status"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando ranking…</span></span>';
         setTimeout(function () { loadSidebarRanking(container, period, module, attempt + 1); }, 350);
         return;
       }
@@ -444,7 +444,7 @@
     }
 
     if (hadCached) renderSidebarRanking(container, cached.users, module);
-    else container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
+    else container.innerHTML = '<span class="kc-ranking-empty" role="status"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando ranking…</span></span>';
 
     if (hadCached && !shouldRevalidateRanking(cached)) {
       decorateAuthorAvatars(cached.users, module);
@@ -478,7 +478,7 @@
         return Promise.resolve(cached.users);
       }
       if (attempt < 3) {
-        container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
+        container.innerHTML = '<span class="kc-ranking-empty" role="status"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando ranking…</span></span>';
         setTimeout(function () { loadHomeRanking(container, period, module, attempt + 1); }, 350);
         return;
       }
@@ -487,7 +487,7 @@
     }
 
     if (hadCached) renderHomeRanking(container, cached.users, module);
-    else container.innerHTML = '<span class="kc-ranking-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i></span>';
+    else container.innerHTML = '<span class="kc-ranking-empty" role="status"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span class="kc-sr-only">Carregando ranking…</span></span>';
 
     if (hadCached && !shouldRevalidateRanking(cached)) {
       return Promise.resolve(cached.users);
