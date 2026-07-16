@@ -526,7 +526,13 @@
     }
 
     // Fields
-    const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values);
+    // Detecta se o usuário atual é admin operator (KC_ADMIN_OPERATOR_USER_IDS
+    // ou profile.is_admin=true). Quando admin, a descrição aceita 5000 chars
+    // em vez de 2000 (override aplicado em kc-create-post.fields.js).
+    const isAdminOperator = !!(window._KCCreatePost && window._KCCreatePost.fields
+      && typeof window._KCCreatePost.fields.isCurrentUserAdminOperator === 'function'
+      && window._KCCreatePost.fields.isCurrentUserAdminOperator());
+    const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values, { isAdmin: isAdminOperator });
     parts.push('<div class="kc-create-fields">');
     fields.forEach((f) => {
       const val = kcCreateState.values[f.name];

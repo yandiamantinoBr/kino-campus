@@ -388,9 +388,9 @@ function _kcFieldsModule() {
   return window._KCCreatePost && window._KCCreatePost.fields;
 }
 
-function kcBuildFieldsForModule(moduleKey, selections, values) {
+function kcBuildFieldsForModule(moduleKey, selections, values, opts) {
   var f = _kcFieldsModule();
-  return (f && typeof f.buildFieldsForModule === 'function') ? f.buildFieldsForModule(moduleKey, selections, values) : [];
+  return (f && typeof f.buildFieldsForModule === 'function') ? f.buildFieldsForModule(moduleKey, selections, values, opts) : [];
 }
 
 function kcRenderCreateModal() {
