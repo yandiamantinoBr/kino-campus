@@ -96,7 +96,7 @@ describe('kc-create-post — render and active-field pipeline', () => {
     // implementação real usa _getModules() e _getState()
     expect(renderSource).toContain('const KC_CREATE_SCHEMA = _getModules();');
     expect(renderSource).toContain('Object.keys(KC_CREATE_SCHEMA).forEach((key) => {');
-    expect(renderSource).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values);');
+    expect(renderSource).toContain('const fields = kcBuildFieldsForModule(kcCreateState.moduleKey, kcCreateState.selections, kcCreateState.values');
     expect(renderSource).toContain('parts.push(kcCreateVisibilitySectionHtml());');
     expect(renderSource).toContain('parts.push(kcCreateImagesSectionHtml());');
     expect(renderSource).toContain('parts.push(kcCreateSustainSectionHtml());');

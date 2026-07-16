@@ -135,124 +135,6 @@ body.kc-pitch-host-page {
     #fbf9f5;
 }
 
-/* ── v1.1.0: Landing page (substitui o iframe embed por padrão) ──────────── */
-
-.kc-pitch-landing {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  padding: 24px;
-  text-align: center;
-  transition: opacity 300ms ease, visibility 300ms ease;
-}
-
-.kc-pitch-landing__card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  max-width: 420px;
-  animation: kc-pitch-landing-fade 400ms ease;
-}
-
-.kc-pitch-landing__icon {
-  width: 80px;
-  height: 80px;
-  display: grid;
-  place-content: center;
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--kc-primary-brand) 12%, var(--kc-surface-dark));
-  color: var(--kc-primary-brand);
-  box-shadow: 0 14px 36px rgba(7, 26, 61, 0.10);
-  margin-bottom: 6px;
-}
-
-.is-pitch-launched .kc-pitch-landing__icon {
-  animation: kc-pitch-breathe 1.8s ease-in-out infinite;
-}
-
-/* Popup bloqueado — destacar o botão CTA para o usuário clicar manualmente */
-.is-pitch-blocked .kc-pitch-landing__cta {
-  animation: kc-pitch-pulse 1.2s ease-in-out infinite;
-}
-
-.is-pitch-blocked .kc-pitch-landing__lead {
-  color: var(--kc-primary-brand);
-  font-weight: 600;
-}
-
-.kc-pitch-landing__title {
-  font-size: clamp(1.3rem, 2.4vw, 1.7rem);
-  font-weight: 850;
-  color: var(--kc-text-dark-primary);
-  letter-spacing: -0.01em;
-}
-
-.kc-pitch-landing__lead {
-  font-size: 0.95rem;
-  color: #5d6673;
-  line-height: 1.5;
-}
-
-.kc-pitch-landing__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-  padding: 14px 28px;
-  border: 0;
-  border-radius: 16px;
-  color: #fff;
-  background: var(--kc-primary-brand);
-  font: inherit;
-  font-size: 1.05rem;
-  font-weight: 800;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 10px 28px rgba(255, 107, 0, 0.32);
-  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
-}
-
-.kc-pitch-landing__cta:hover {
-  transform: translateY(-2px);
-  background: #e95f00;
-  box-shadow: 0 14px 34px rgba(255, 107, 0, 0.40);
-}
-
-.kc-pitch-landing__cta svg {
-  width: 22px;
-  height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.kc-pitch-landing__embed-toggle {
-  margin-top: 4px;
-  padding: 8px 16px;
-  border: 1px solid var(--kc-border-dark);
-  border-radius: 10px;
-  color: #5d6673;
-  background: transparent;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: color 180ms ease, border-color 180ms ease;
-}
-
-.kc-pitch-landing__embed-toggle:hover {
-  color: var(--kc-primary-brand);
-  border-color: color-mix(in srgb, var(--kc-primary-brand) 40%, var(--kc-border-dark));
-}
-
-/* ── iframe fallback (escondido por padrão, visível só quando embedado) ──── */
-
 .kc-pitch-frame {
   position: absolute;
   inset: 0;
@@ -263,25 +145,13 @@ body.kc-pitch-host-page {
   opacity: 0;
   background: #fbf9f5;
   transition: opacity 240ms ease;
-  z-index: 1;
-}
-
-.is-pitch-embedded .kc-pitch-landing {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .is-pitch-ready .kc-pitch-frame {
   opacity: 1;
 }
 
-.is-pitch-embedded .kc-pitch-frame {
-  z-index: 2;
-}
-
-/* ── Legacy loading state (mantido para compat) ──────────────────────────── */
-
+/* Loading state — visível enquanto o iframe carrega */
 .kc-pitch-loading {
   position: absolute;
   inset: 0;
@@ -327,6 +197,7 @@ body.kc-pitch-host-page {
   pointer-events: auto;
 }
 
+/* v1.2.0: fallback aparece em 12s (antes 9s) — mais tolerante a conexões lentas */
 .is-pitch-slow .kc-pitch-loading a {
   display: inline-flex;
 }
@@ -362,16 +233,6 @@ body.kc-pitch-host-page {
 @keyframes kc-pitch-breathe {
   0%, 100% { transform: rotate(-3deg) scale(1); }
   50% { transform: rotate(0deg) scale(1.04); }
-}
-
-@keyframes kc-pitch-landing-fade {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes kc-pitch-pulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 10px 28px rgba(255, 107, 0, 0.32); }
-  50% { transform: scale(1.04); box-shadow: 0 14px 36px rgba(255, 107, 0, 0.48); }
 }
 
 @media (max-width: 760px) {
@@ -413,16 +274,6 @@ body.kc-pitch-host-page {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
   }
-
-  .kc-pitch-landing__icon {
-    width: 64px;
-    height: 64px;
-  }
-
-  .kc-pitch-landing__cta {
-    width: 100%;
-    justify-content: center;
-  }
 }
 
 @media (max-width: 390px) {
@@ -437,23 +288,14 @@ body.kc-pitch-host-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kc-pitch-loading img,
-  .is-pitch-launched .kc-pitch-landing__icon,
-  .is-pitch-blocked .kc-pitch-landing__cta {
+  .kc-pitch-loading img {
     animation: none;
   }
 
   .kc-pitch-frame,
   .kc-pitch-loading,
   .kc-pitch-hostbar__button,
-  .kc-pitch-hostbar__link,
-  .kc-pitch-landing,
-  .kc-pitch-landing__cta,
-  .kc-pitch-landing__embed-toggle {
+  .kc-pitch-hostbar__link {
     transition: none;
-  }
-
-  .kc-pitch-landing__card {
-    animation: none;
   }
 }

@@ -69,8 +69,10 @@ describe('kc-create-post.fields.js — _getResolvers()', () => {
 
 // ─── 3. kcBuildFieldsForModule — presença e assinatura ───────────────────────
 describe('kc-create-post.fields.js — kcBuildFieldsForModule', () => {
-  test('define função kcBuildFieldsForModule com 3 parâmetros', () => {
-    expect(source).toContain('function kcBuildFieldsForModule(moduleKey, selections, values)');
+  test('define função kcBuildFieldsForModule com parâmetros moduleKey, selections, values', () => {
+    // v11.31.6+: adicionado parâmetro opts (4º) para suportar inserção de ads.
+    // Os 3 parâmetros originais permanecem na mesma ordem.
+    expect(source).toContain('function kcBuildFieldsForModule(moduleKey, selections, values');
   });
 
   test('retorna array fields', () => {
@@ -105,8 +107,11 @@ describe('kc-create-post.fields.js — campos comuns', () => {
     expect(source).toContain("type: 'textarea'");
   });
 
-  test('descricao tem maxLength 2000', () => {
-    expect(source).toContain('maxLength: 2000');
+  test('descricao tem maxLength controlado pela constante 2000', () => {
+    // v11.31.6+: descrição usa descMaxLength (admin vs não-admin).
+    // A constante base KC_DESCRIPTION_MAX_LENGTH = 2000 permanece.
+    expect(source).toContain('KC_DESCRIPTION_MAX_LENGTH = 2000');
+    expect(source).toContain('descMaxLength');
   });
 });
 

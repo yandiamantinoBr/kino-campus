@@ -29,7 +29,7 @@
   <script defer src="assets/js/boot/kc-seo-structured-data.js?v=8.6.2"></script>
   <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
   <link rel="stylesheet" href="assets/css/styles.css?v=8.6.7" />
-  <link rel="stylesheet" href="assets/css/kc-pitch-host.css?v=1.1.0" />
+  <link rel="stylesheet" href="assets/css/kc-pitch-host.css?v=1.2.0" />
 </head>
 <body class="kc-pitch-host-page">
   <a href="#kc-main" class="kc-skip-link">Pular para a apresentação</a>
@@ -65,27 +65,7 @@
   <main class="kc-pitch-stage" id="kc-main">
     <h1 class="kc-sr-only">Apresentação institucional interativa do KinoCampus</h1>
 
-    <!-- v1.1.0: Landing page que abre a apresentação em nova aba -->
-    <div class="kc-pitch-landing" role="status" aria-live="polite">
-      <div class="kc-pitch-landing__card">
-        <div class="kc-pitch-landing__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
-          </svg>
-        </div>
-        <strong class="kc-pitch-landing__title">Apresentação institucional</strong>
-        <span class="kc-pitch-landing__lead" id="kc-pitch-status">Preparando a apresentação…</span>
-        <a class="kc-pitch-landing__cta" id="kc-pitch-launch" data-kc-pitch-direct href="https://kino-campus-pitch.yandiamantinobr.chatgpt.site" target="_blank" rel="noopener noreferrer" aria-label="Abrir apresentação institucional em uma nova aba" data-i18n-aria-label="aria-label.pitch-launch">
-          <span>Abrir apresentação</span>
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 12h14M12 5l7 7-7 7" />
-          </svg>
-        </a>
-        <button type="button" class="kc-pitch-landing__embed-toggle" id="kc-pitch-embed-toggle" aria-label="Ver a apresentação dentro desta página" data-i18n-aria-label="aria-label.pitch-embed-toggle">Ver dentro desta página</button>
-      </div>
-    </div>
-
-    <!-- v1.1.0: iframe apenas como fallback opcional (escondido por padrão) -->
+    <!-- v1.2.0: iframe embedado diretamente (como v1.0.0), com loop protection no JS -->
     <iframe
       id="kc-pitch-frame"
       class="kc-pitch-frame"
@@ -95,6 +75,14 @@
       allowfullscreen
       referrerpolicy="strict-origin-when-cross-origin"
     ></iframe>
+
+    <!-- Loading state com fallback "abrir em nova aba" após 12s -->
+    <div class="kc-pitch-loading" role="status" aria-live="polite">
+      <img src="assets/favicon.svg" alt="" aria-hidden="true" />
+      <strong>Preparando a apresentação</strong>
+      <span>Carregando os seis percursos e os recursos interativos…</span>
+      <a data-kc-pitch-direct href="https://kino-campus-pitch.yandiamantinobr.chatgpt.site" target="_blank" rel="noopener noreferrer">Abrir diretamente</a>
+    </div>
 
     <noscript>
       <section class="kc-pitch-noscript">
@@ -170,6 +158,6 @@
   <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.2"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
-  <script defer src="assets/js/features/kc-pitch-host.js?v=1.1.0"></script>
+  <script defer src="assets/js/features/kc-pitch-host.js?v=1.2.0"></script>
 </body>
 </html>
