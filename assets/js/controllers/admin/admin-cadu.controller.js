@@ -3556,7 +3556,7 @@
             ? catalogLabel(s.override_origin) + (s.collision ? ' · evidência de colisão' : '')
             : 'Legado somente leitura')
           : (state.sitesView === 'sources' ? catalogLabel('metadata_unavailable') : '—'),
-        observacao: administrativeMetadataAvailable && state.sitesView === 'sources' ? (s.note || '') : (s.note || ''),
+        observacao: administrativeMetadataAvailable && state.sitesView === 'sources' ? (s.note || '') : '',
       };
     });
     var kpis = [

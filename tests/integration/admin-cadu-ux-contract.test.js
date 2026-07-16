@@ -108,9 +108,9 @@ describe('admin Cadu UX contracts', () => {
   test('PDF explains registry provenance without calling scanner evidence confirmation', () => {
     expect(controller).not.toContain('perfis validados pelo scanner');
     expect(controller).toContain('perfil com evidência institucional confirmada');
-    expect(controller).toContain("{ key: 'ajuste', label: 'Ajuste / colisão'");
-    expect(controller).toContain('valores legados não são promovidos automaticamente');
-    expect(controller).toContain('Prioridades efetivas, notas e ajustes administrativos não estão disponíveis neste artefato');
+    expect(controller).toContain("{ key: 'ajuste', label: 'Ajuste'");
+    expect(controller).toContain('Ajustes estáveis exigem ETag/CAS');
+    expect(controller).toContain('Prioridades efetivas e notas administrativas podem estar omitidas no espelho');
   });
 
   test('does not claim that the shadow registry already drives production collection', () => {
@@ -156,7 +156,7 @@ describe('admin Cadu UX contracts', () => {
 
   test('keeps inherited notes visibly separate and requires an explicit first tier', () => {
     expect(controller).toContain('Nota herdada (não será copiada):');
-    expect(controller).toContain('Escolha a prioridade explicitamente…');
+    expect(controller).toContain('Escolha a prioridade…');
     expect(controller).toContain('function normalizedDraftNote(note)');
     expect(controller).toContain("String(note == null ? '' : note).trim() === '' ? null : String(note)");
     expect(controller).toContain('compare os valores e decida manualmente antes de salvar novamente');
