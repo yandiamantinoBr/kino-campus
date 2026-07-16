@@ -489,7 +489,9 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     expect(layout.tabs.overflowX).toBe('auto');
     expect(layout.tabs.scrollWidth).toBeGreaterThan(layout.tabs.clientWidth);
     expect(layout.tableWrap.overflowX).toBe('auto');
-    expect(layout.tableWrap.scrollWidth).toBeGreaterThan(layout.tableWrap.clientWidth);
+    // 2026-07-15: Mapa UFG usa paginação + layout compacto em vez de forçar
+    // min-width largo. A tabela cabe na largura disponível (scrollWidth ≈ clientWidth).
+    expect(layout.tableWrap.scrollWidth).toBeLessThanOrEqual(layout.tableWrap.clientWidth * 1.25);
     for (const control of layout.controls) {
       expect.soft(control.width, `${control.id} deve continuar utilizável`).toBeGreaterThan(100);
       expect.soft(control.left, `${control.id} não pode escapar à esquerda`).toBeGreaterThanOrEqual(layout.toolbar.left - 1);
