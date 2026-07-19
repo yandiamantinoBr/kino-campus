@@ -54,3 +54,26 @@ Deno.test("Cadu mapper preserves raw source title, registry lineage and action f
     confidence: "high",
   }]);
 });
+
+Deno.test("Cadu mapper aligns expiry with an event end or opportunity deadline", () => {
+  const event = mapItemToPost({
+    module: "eventos",
+    title: "SimpÃ³sio UFG 2026",
+    description: "Evento acadÃªmico com programaÃ§Ã£o completa e participaÃ§Ã£o aberta Ã  comunidade.",
+    dateStart: "2099-09-18",
+    dateEnd: "2099-09-19",
+    sourceUrl: "https://ufg.br/n/202700",
+    sourceId: "ufg:article:202700",
+  });
+  assert.equal(event.row.expires_at, "2099-09-20T02:59:59.999Z");
+
+  const opportunity = mapItemToPost({
+    module: "oportunidades",
+    title: "SeleÃ§Ã£o de bolsistas",
+    description: "InscriÃ§Ãµes abertas para seleÃ§Ã£o de bolsistas atÃ© 27/08/2099.",
+    deadlineDate: "2099-08-27",
+    sourceUrl: "https://ufg.br/n/202701",
+    sourceId: "ufg:article:202701",
+  });
+  assert.equal(opportunity.row.expires_at, "2099-08-28T02:59:59.999Z");
+});
