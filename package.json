@@ -70,7 +70,8 @@
     "babel-jest": "^30.3.0",
     "http-server": "^14.1.1",
     "jest": "^30.3.0",
-    "jest-environment-jsdom": "^30.3.0"
+    "jest-environment-jsdom": "^30.3.0",
+    "jsdom": "^26.1.0"
   },
   "overrides": {
     "tmp": "0.2.7",

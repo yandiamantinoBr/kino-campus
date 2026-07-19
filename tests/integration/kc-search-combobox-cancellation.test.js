@@ -11,6 +11,14 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const SOURCE = fs.readFileSync(path.join(ROOT, 'assets/js/features/kc-search.js'), 'utf8');
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function waitFor(predicate, timeoutMs = 2000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await wait(10);
+  }
+  throw new Error(`condition_not_met_within_${timeoutMs}ms`);
+}
 
 function createSearchPage(searchPosts) {
   const dom = new JSDOM(`<!doctype html><html><head></head><body>
@@ -51,7 +59,7 @@ describe('V76.42 — combobox e concorrência do kcSearchDropdown', () => {
     ]);
     const { window } = page;
     const searchInput = input(window, 'evento');
-    await wait(230);
+    await waitFor(() => window.document.querySelectorAll('#kcSearchDropdown [role="option"]').length === 2);
 
     const dropdown = window.document.getElementById('kcSearchDropdown');
     const options = dropdown.querySelectorAll('[role="option"]');
@@ -79,7 +87,9 @@ describe('V76.42 — combobox e concorrência do kcSearchDropdown', () => {
 
   test('aborta a consulta anterior e nunca renderiza resposta obsoleta', async () => {
     let aborted = 0;
+    let started = 0;
     const page = createSearchPage((params) => new Promise((resolve, reject) => {
+      started += 1;
       const slow = params.q === 'evento';
       const timer = setTimeout(() => resolve([{
         id: slow ? 'old' : 'new',
@@ -97,9 +107,12 @@ describe('V76.42 — combobox e concorrência do kcSearchDropdown', () => {
     const { window } = page;
 
     input(window, 'evento');
-    await wait(210);
+    await waitFor(() => started === 1);
     input(window, 'eventos');
-    await wait(240);
+    await waitFor(() => (
+      aborted === 1
+      && window.document.getElementById('kcSearchDropdown').textContent.includes('Resultado novo')
+    ));
 
     const dropdownText = window.document.getElementById('kcSearchDropdown').textContent;
     const metrics = window.kcSearch.getPerformanceSnapshot();

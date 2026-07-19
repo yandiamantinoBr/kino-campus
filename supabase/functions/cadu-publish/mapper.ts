@@ -531,8 +531,28 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const hasFormattedTitle = !!(item.formattedTitle || item.formatted_title);
   const title = hasFormattedTitle ? clamp(rawTitle, 120) : clamp(rawTitle, 100);
   const description = buildDescription(item);
-  const sourceUrl = String(item.sourceUrl || "");
-  const sourceId = String(item.sourceId || "");
+  const sourceUrl = String(item.sourceUrl || "").trim().slice(0, 2_048);
+  const sourceId = normalizeWhitespace(item.sourceId).slice(0, 500);
+  const sourceTitle = normalizeWhitespace(item.sourceTitle ?? item.source_title).slice(0, 1_000);
+  const sourceRegistryId = normalizeWhitespace(item.sourceRegistryId || item.source_registry_id).slice(0, 200);
+  const rawActionFingerprints = Array.isArray(item.actionFingerprints)
+    ? item.actionFingerprints
+    : (Array.isArray(item.action_fingerprints) ? item.action_fingerprints : []);
+  const actionFingerprints = uniq(
+    rawActionFingerprints
+      .map((value) => normalizeWhitespace(value).slice(0, 200))
+      .filter(Boolean),
+  ).slice(0, 20);
+  const extractedLinks = Array.isArray(item.extractedLinks) ? item.extractedLinks.slice(0, 12) : [];
+  const relevantLinks = item.relevantLinks && typeof item.relevantLinks === "object" && !Array.isArray(item.relevantLinks)
+    ? Object.fromEntries(
+      Object.entries(item.relevantLinks).slice(0, 12).map(([group, links]) => [
+        group,
+        Array.isArray(links) ? links.slice(0, 20) : links,
+      ]),
+    )
+    : {};
+  const actionEvidence = Array.isArray(item.actionEvidence) ? item.actionEvidence.slice(0, 20) : [];
   const images = buildImageList(item);
   const sourceHost = hostOf(sourceUrl);
   const categoryKeyForCover = slugify(item.category) || DEFAULT_CATEGORY[module] || "";
@@ -560,12 +580,18 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     source_host: hostOf(sourceUrl),
     source_unit: normalizeWhitespace(item.sourceName),
     source_id: sourceId,
+    source_title: sourceTitle,
+    source_registry_id: sourceRegistryId,
+    action_fingerprints: actionFingerprints,
     content_hash: lightHash(`${item.title || ""}\n${item.text || item.description || ""}`),
     original_title: normalizeWhitespace(item.title),
     image_url: safeExternalImage,
     cover_url: safeExternalImage,
     gallery_image_urls: safeGalleryImages,
     edital_pdf_urls: Array.isArray(item.pdfLinks) ? item.pdfLinks.slice(0, 10) : [],
+    extracted_links: extractedLinks,
+    relevant_links: relevantLinks,
+    action_evidence: actionEvidence,
     official_document_urls: documentLinks.map((l) => l.url),
     enrichment_sources: enrichmentSources,
     enrichment_checked_at: item.enrichmentCheckedAt || "",

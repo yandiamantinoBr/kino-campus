@@ -55,6 +55,14 @@ const SITE_URL = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com
 
 const STORAGE_BUCKET = "kino-media";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+const IMAGE_DOWNLOAD_TIMEOUT_MS = Math.max(
+  1_000,
+  Math.min(Number(Deno.env.get("CADU_IMAGE_DOWNLOAD_TIMEOUT_MS")) || 8_000, 30_000),
+);
+const IMAGE_UPLOAD_CONCURRENCY = Math.max(
+  1,
+  Math.min(Math.trunc(Number(Deno.env.get("CADU_IMAGE_UPLOAD_CONCURRENCY")) || 2), 4),
+);
 const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
 const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"));
 const INSTITUTIONAL_REVIEW_ENABLED =
@@ -355,20 +363,45 @@ const IMAGE_EXT: Record<string, string> = {
 };
 
 async function downloadImage(url: string): Promise<{ bytes: Uint8Array; contentType: string; ext: string }> {
-  const resp = await fetch(url, { headers: { accept: "image/*,*/*;q=0.5", "user-agent": USER_AGENT } });
-  if (!resp.ok) throw new Error(`image_download_http_${resp.status}`);
-  const ct = (resp.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-  let ext = IMAGE_EXT[ct] || "";
-  if (!ext) {
-    const m = url.toLowerCase().match(/\.(jpe?g|png|gif|webp)(?:$|[?#])/);
-    if (m) ext = m[1] === "jpeg" ? "jpg" : m[1];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_DOWNLOAD_TIMEOUT_MS);
+  try {
+    let resp: Response;
+    try {
+      resp = await fetch(url, {
+        headers: { accept: "image/*,*/*;q=0.5", "user-agent": USER_AGENT },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error("image_download_timeout");
+      throw error;
+    }
+    if (!resp.ok) throw new Error(`image_download_http_${resp.status}`);
+    const declaredBytes = Number(resp.headers.get("content-length") || 0);
+    if (Number.isFinite(declaredBytes) && declaredBytes > MAX_IMAGE_BYTES) {
+      throw new Error("image_too_large");
+    }
+    const ct = (resp.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    let ext = IMAGE_EXT[ct] || "";
+    if (!ext) {
+      const m = url.toLowerCase().match(/\.(jpe?g|png|gif|webp)(?:$|[?#])/);
+      if (m) ext = m[1] === "jpeg" ? "jpg" : m[1];
+    }
+    if (!ext) throw new Error("unsupported_image_type");
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(await resp.arrayBuffer());
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error("image_download_timeout");
+      throw error;
+    }
+    if (bytes.byteLength === 0) throw new Error("empty_image");
+    if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("image_too_large");
+    const contentType = ct.startsWith("image/") ? ct : `image/${ext === "jpg" ? "jpeg" : ext}`;
+    return { bytes, contentType, ext };
+  } finally {
+    clearTimeout(timeout);
   }
-  if (!ext) throw new Error("unsupported_image_type");
-  const bytes = new Uint8Array(await resp.arrayBuffer());
-  if (bytes.byteLength === 0) throw new Error("empty_image");
-  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("image_too_large");
-  const contentType = ct.startsWith("image/") ? ct : `image/${ext === "jpg" ? "jpeg" : ext}`;
-  return { bytes, contentType, ext };
 }
 
 // Sobe a capa para kino-media e devolve a URL publica do Storage (ou "" se falhar).
@@ -408,29 +441,31 @@ async function prepareFinalImages(
   allowExternalFallback: boolean,
 ): Promise<{ images: string[]; uploads: PreparedImage[] }> {
   const cleanCandidates = Array.from(new Set(candidates.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
-  const images: string[] = [];
-  const uploads: PreparedImage[] = [];
+  const results = new Array<PreparedImage>(cleanCandidates.length);
+  let nextIndex = 0;
 
-  for (let index = 0; index < cleanCandidates.length; index += 1) {
-    const candidate = cleanCandidates[index];
-    try {
-      const storageUrl = await uploadCover(admin, userId, postId, candidate, index);
-      if (storageUrl) {
-        images.push(storageUrl);
-        uploads.push({ source: candidate, url: storageUrl, uploaded: true, fallback: false });
-        continue;
-      }
-      throw new Error("storage_url_empty");
-    } catch (e) {
-      const error = e instanceof Error ? e.message : String(e);
-      if (allowExternalFallback && canPersistExternalImageUrl(candidate)) {
-        images.push(candidate);
-        uploads.push({ source: candidate, url: candidate, uploaded: false, fallback: true, error });
-      } else {
-        uploads.push({ source: candidate, url: "", uploaded: false, fallback: false, error });
+  async function worker(): Promise<void> {
+    while (nextIndex < cleanCandidates.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      const candidate = cleanCandidates[index];
+      try {
+        const storageUrl = await uploadCover(admin, userId, postId, candidate, index);
+        if (!storageUrl) throw new Error("storage_url_empty");
+        results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
+      } catch (e) {
+        const error = e instanceof Error ? e.message : String(e);
+        results[index] = allowExternalFallback && canPersistExternalImageUrl(candidate)
+          ? { source: candidate, url: candidate, uploaded: false, fallback: true, error }
+          : { source: candidate, url: "", uploaded: false, fallback: false, error };
       }
     }
   }
+
+  const workerCount = Math.min(IMAGE_UPLOAD_CONCURRENCY, cleanCandidates.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  const uploads = results.filter(Boolean);
+  const images = uploads.map((entry) => entry.url).filter(Boolean);
 
   return { images: Array.from(new Set(images)).slice(0, MAX_IMAGE_COUNT), uploads };
 }
@@ -504,28 +539,64 @@ async function findExisting(
   sourceUrl: string,
 ): Promise<{ id: string; status: string } | null> {
   if (sourceId) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from("posts")
       .select("id,status")
       .eq("author_id", userId)
       .eq("metadata->>source_id", sourceId)
       .neq("status", "deleted")
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(1)
       .maybeSingle();
+    if (error) throw error;
     if (data) return data as { id: string; status: string };
   }
   if (sourceUrl) {
-    const { data } = await admin
+    const { data, error } = await admin
       .from("posts")
       .select("id,status")
       .eq("author_id", userId)
       .eq("metadata->>source_url", sourceUrl)
       .neq("status", "deleted")
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(1)
       .maybeSingle();
+    if (error) throw error;
     if (data) return data as { id: string; status: string };
   }
   return null;
+}
+
+async function findActiveSourceIdDuplicate(
+  admin: SupabaseClient,
+  userId: string,
+  sourceId: string,
+): Promise<{ id: string; status: string } | null> {
+  if (!sourceId) return null;
+  const { data, error } = await admin
+    .from("posts")
+    .select("id,status")
+    .eq("author_id", userId)
+    .eq("metadata->>source_id", sourceId)
+    .in("status", ["published", "closed", "pending"])
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? data as { id: string; status: string } : null;
+}
+
+function duplicateResponse(existing: { id: string; status: string }) {
+  return json(200, {
+    ok: false,
+    code: "DUPLICATE",
+    message: "Ja existe um post deste mesmo conteudo (mesma fonte).",
+    post_id: existing.id,
+    status: existing.status,
+  });
 }
 
 function audit(admin: SupabaseClient, action: string, entityId: string, actorId: string, payload: Record<string, unknown>) {
@@ -554,13 +625,7 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
   // Dedup: nao republica o mesmo source_id/source_url.
   const existing = await findExisting(admin, userId, mapped.dedup.sourceId, mapped.dedup.sourceUrl);
   if (existing) {
-    return json(200, {
-      ok: false,
-      code: "DUPLICATE",
-      message: "Ja existe um post deste mesmo conteudo (mesma fonte).",
-      post_id: existing.id,
-      status: existing.status,
-    });
+    return duplicateResponse(existing);
   }
 
   const quality = evaluateCaduPublishQuality(item, mapped);
@@ -588,6 +653,20 @@ async function handlePublish(admin: SupabaseClient, userId: string, body: Record
   const insertRow = { ...mapped.row, author_id: userId, status: "published" };
   const { data: post, error } = await admin.from("posts").insert(insertRow).select("*").single();
   if (error || !post) {
+    // The partial unique index closes the SELECT/INSERT race. A concurrent
+    // winner is returned as the same idempotent DUPLICATE contract used above.
+    if (error?.code === "23505" && mapped.dedup.sourceId) {
+      try {
+        const racedDuplicate = await findActiveSourceIdDuplicate(
+          admin,
+          userId,
+          mapped.dedup.sourceId,
+        );
+        if (racedDuplicate) return duplicateResponse(racedDuplicate);
+      } catch (_) {
+        // Preserve the original insert error if the deterministic refetch fails.
+      }
+    }
     return json(500, { ok: false, code: "INSERT_FAILED", message: error?.message || "Falha ao inserir o post." });
   }
 
