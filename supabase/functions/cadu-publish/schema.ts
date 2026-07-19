@@ -160,6 +160,11 @@ export interface CaduItem {
   tags?: string[];
   sourceUrl?: string;
   sourceId?: string;
+  sourceTitle?: string;
+  sourceRegistryId?: string;
+  actionFingerprints?: string[];
+  relevantLinks?: Record<string, unknown>;
+  actionEvidence?: Array<Record<string, unknown>>;
   sourceName?: string;
   pdfLinks?: string[];
   extractedLinks?: Array<string | { url?: string; label?: string }>;
