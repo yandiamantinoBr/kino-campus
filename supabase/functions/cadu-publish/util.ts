@@ -161,6 +161,50 @@ export function validRemoteImageUrl(value: unknown): string {
   }
 }
 
+/**
+ * Returns true only when a URL identifies the content itself, rather than a
+ * reusable action destination (application form, shared document, home page).
+ *
+ * `source_id` remains the primary idempotency key. This narrower URL fallback
+ * prevents two unrelated calls that reuse the same Google Form from being
+ * collapsed into one Kino Campus post.
+ */
+export function isDurableSourceIdentityUrl(value: unknown): boolean {
+  try {
+    const url = new URL(String(value ?? "").trim());
+    if (!/^https?:$/.test(url.protocol)) return false;
+
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const path = url.pathname.replace(/\/{2,}/g, "/");
+
+    if (
+      host === "forms.gle" ||
+      host === "forms.office.com" ||
+      host === "docs.google.com" ||
+      host === "drive.google.com" ||
+      host === "bit.ly" ||
+      host === "tinyurl.com"
+    ) return false;
+
+    if (host === "instagram.com") {
+      return /^\/(?:p|reel|tv)\/[A-Za-z0-9_-]{5,}\/?$/i.test(path);
+    }
+
+    const isUfgHost = host === "ufg.br" || host.endsWith(".ufg.br");
+    if (!isUfgHost) return false;
+
+    if (/^\/(?:n|e)\/[^/?#]+(?:\/|$)/i.test(path)) return true;
+    if (/\/article\/view\/[^/?#]+(?:\/|$)/i.test(path)) return true;
+    if (/\/(?:evento|eventos)\/[^/?#]+(?:\/|$)/i.test(path)) return true;
+
+    return ["id", "event", "evento"].some((key) =>
+      String(url.searchParams.get(key) || "").trim().length > 0
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
 export function isSvgUrl(value: unknown): boolean {
   try {
     const url = new URL(String(value ?? "").trim());

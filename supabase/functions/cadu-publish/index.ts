@@ -36,6 +36,7 @@ import {
   canPersistExternalImageUrl,
   hostOf,
   isoDateFromAny,
+  isDurableSourceIdentityUrl,
   isSvgUrl,
   isTemporaryOrSocialImageUrl,
   lightHash,
@@ -552,7 +553,7 @@ async function findExisting(
     if (error) throw error;
     if (data) return data as { id: string; status: string };
   }
-  if (sourceUrl) {
+  if (sourceUrl && isDurableSourceIdentityUrl(sourceUrl)) {
     const { data, error } = await admin
       .from("posts")
       .select("id,status")

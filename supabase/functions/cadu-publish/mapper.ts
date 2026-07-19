@@ -52,6 +52,7 @@ export interface MappedPost {
     category: string;
     image_url: string | null;
     visibility: string;
+    expires_at?: string;
     metadata: Record<string, unknown>;
   };
   images: string[];
@@ -214,6 +215,15 @@ function resolveOpportunityDeadline(item: CaduItem, fullText: string): string {
     if (iso) return iso;
   }
   return extractDeadlineFromText(fullText, fallbackYear);
+}
+
+/** End of the relevant day in Goias (UTC-03), where UFG operates. */
+function expiryAtEndOfDay(isoDate: unknown, now = new Date()): string {
+  const iso = validIsoDateStrict(isoDate);
+  if (!iso) return "";
+  const expiry = new Date(`${iso}T23:59:59.999-03:00`);
+  if (Number.isNaN(expiry.getTime()) || expiry.getTime() <= now.getTime()) return "";
+  return expiry.toISOString();
 }
 
 function markdownUrlLink(url: unknown): string {
@@ -729,6 +739,15 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     visibility,
     metadata,
   };
+
+  // The database's 30-day trigger remains the fallback. When the source gives
+  // a reliable event end or application deadline, keep the post visible until
+  // that real-world boundary and close it at the end of the local day.
+  const relevanceDate = module === "eventos"
+    ? String(metadata.data_fim_evento || metadata.data_evento || "")
+    : (module === "oportunidades" ? String(metadata.deadline_date || "") : "");
+  const expiresAt = expiryAtEndOfDay(relevanceDate);
+  if (expiresAt) row.expires_at = expiresAt;
 
   return {
     row,
