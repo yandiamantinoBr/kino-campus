@@ -27,7 +27,22 @@ create unique index if not exists post_media_post_id_url_uidx
 -- entry over an update label. Entries without a URL are retained by JSON
 -- identity, so this cleanup cannot discard unrelated metadata.
 -- Keep updated_at stable: this is storage normalization, not new content.
-alter table public.posts disable trigger kc_posts_set_updated_at;
+-- Older production schemas do not have this trigger, while the current
+-- reconstructed schema does. Treat the trigger as an optional compatibility
+-- hook so the same migration remains safe across both states.
+do $migration$
+begin
+  if exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.posts'::regclass
+      and tgname = 'kc_posts_set_updated_at'
+      and not tgisinternal
+  ) then
+    execute 'alter table public.posts disable trigger kc_posts_set_updated_at';
+  end if;
+end
+$migration$;
 
 with compacted_sources as (
   select
@@ -77,7 +92,19 @@ from compacted_sources compacted
 where p.id = compacted.id
   and p.metadata->'enrichment_sources' is distinct from compacted.enrichment_sources;
 
-alter table public.posts enable trigger kc_posts_set_updated_at;
+do $migration$
+begin
+  if exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.posts'::regclass
+      and tgname = 'kc_posts_set_updated_at'
+      and not tgisinternal
+  ) then
+    execute 'alter table public.posts enable trigger kc_posts_set_updated_at';
+  end if;
+end
+$migration$;
 
 comment on index public.post_media_post_id_url_uidx is
   'Prevents repeated Cadu enrichment runs from attaching the same media URL to one post.';
