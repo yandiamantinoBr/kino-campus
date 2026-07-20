@@ -41,12 +41,14 @@
   }
 
   function preferenceCatalog(registry) {
-    var source = registry && registry.registry ? registry.registry : registry;
-    var modules = source && source.modules ? source.modules : {};
+    var source = (registry && registry.registry)
+      ? registry.registry
+      : (registry && typeof registry === 'object' ? registry : {});
+    var modules = source.modules && typeof source.modules === 'object' ? source.modules : {};
     var catalog = {};
     var moduleOrder = Array.isArray(source.moduleKeys) && source.moduleKeys.length
       ? source.moduleKeys
-      : MODULE_KEYS;
+      : MODULE_KEYS.slice();
 
     moduleOrder.forEach(function (moduleKey) {
       var moduleEntry = modules[moduleKey];
@@ -101,15 +103,25 @@
   function normalizeState(input, registry) {
     var source = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
     var catalog = preferenceCatalog(registry);
+    var catalogKeys = Object.keys(catalog);
+    var hasCatalog = catalogKeys.length > 0;
     var mode = source.mode === MODES.PERSONALIZED ? MODES.PERSONALIZED : MODES.STANDARD;
     var features = {};
 
     Object.keys(source.features && typeof source.features === 'object' ? source.features : {}).forEach(function (featureKey) {
-      var entry = catalog[featureKey];
-      if (!entry) return;
-      var allowed = entry.options.map(function (option) { return option.key; });
-      var values = uniqueAllowed(source.features[featureKey], allowed);
-      if (values.length) features[featureKey] = values;
+      var rawValues = source.features[featureKey];
+      if (hasCatalog) {
+        var entry = catalog[featureKey];
+        if (!entry) return;
+        var allowed = entry.options.map(function (option) { return option.key; });
+        var values = uniqueAllowed(rawValues, allowed);
+        if (values.length) features[featureKey] = values;
+        return;
+      }
+      // Without a registry snapshot, keep already-sanitized keys (module:group).
+      if (!/^[\w-]+:[\w-]+$/.test(String(featureKey || ''))) return;
+      var deduped = uniqueAllowed(rawValues, Array.isArray(rawValues) ? rawValues.map(String) : []);
+      if (deduped.length) features[featureKey] = deduped;
     });
 
     var granted = mode === MODES.PERSONALIZED;
@@ -163,16 +175,25 @@
     return left;
   }
 
-  function toRemotePayload(state) {
-    var normalized = normalizeState(state);
+  function toRemotePayload(state, registry) {
+    // Prefer an explicit registry so feature keys are not stripped. When absent,
+    // normalizeState still preserves previously sanitized module:group keys.
+    var normalized = normalizeState(state, registry);
     return {
       version: normalized.version,
       mode: normalized.mode,
       modules: normalized.modules,
       features: normalized.features,
-      localAffinityConsent: normalized.localAffinityConsent,
-      consent: normalized.consent,
-      updatedAt: normalized.updatedAt
+      localAffinityConsent: normalized.localAffinityConsent === true,
+      consent: {
+        purpose: PURPOSE_VERSION,
+        granted: normalized.mode === MODES.PERSONALIZED,
+        source: (normalized.consent && normalized.consent.source) || 'settings',
+        updatedAt: normalized.consent && normalized.consent.updatedAt
+          ? normalized.consent.updatedAt
+          : (normalized.updatedAt || null)
+      },
+      updatedAt: normalized.updatedAt || null
     };
   }
 

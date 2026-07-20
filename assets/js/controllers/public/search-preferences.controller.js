@@ -78,15 +78,27 @@
     });
   }
 
+  function emojiSpan(emoji, className) {
+    var value = String(emoji || '').trim();
+    if (!value) return '';
+    return '<span class="' + className + '" aria-hidden="true">' + value + '</span>';
+  }
+
   function moduleVisual(moduleKey, moduleEntry) {
     var emoji = moduleEntry && moduleEntry.emoji ? String(moduleEntry.emoji) : '';
+    if (emoji) return emojiSpan(emoji, 'kc-search-preference-choice__emoji');
     var iconClass = (moduleEntry && moduleEntry.icon)
       ? String(moduleEntry.icon)
       : ('fas ' + (moduleIcons[moduleKey] || 'fa-layer-group'));
-    if (emoji) {
-      return '<span class="kc-search-preference-choice__emoji" aria-hidden="true">' + escapeHtml(emoji) + '</span>';
-    }
     return '<span class="kc-search-preference-choice__icon" aria-hidden="true"><i class="' + escapeHtml(iconClass) + '"></i></span>';
+  }
+
+  function optionVisual(option) {
+    if (option && option.emoji) return emojiSpan(option.emoji, 'kc-search-preference-option__emoji');
+    if (option && option.icon) {
+      return '<span class="kc-search-preference-option__icon" aria-hidden="true"><i class="' + escapeHtml(option.icon) + '"></i></span>';
+    }
+    return '<span class="kc-search-preference-option__emoji kc-search-preference-option__emoji--empty" aria-hidden="true">•</span>';
   }
 
   function renderModules(registry, state) {
@@ -97,7 +109,7 @@
       var moduleEntry = source.modules[moduleKey];
       var checked = state.modules.indexOf(moduleKey) !== -1;
       return [
-        '<label class="kc-search-preference-choice">',
+        '<label class="kc-search-preference-choice' + (checked ? ' is-checked' : '') + '">',
         '  <input type="checkbox" data-search-preference-module="' + escapeHtml(moduleKey) + '"' + (checked ? ' checked' : '') + ' />',
         '  ' + moduleVisual(moduleKey, moduleEntry),
         '  <span class="kc-search-preference-choice__text">' + escapeHtml(moduleEntry.label) + '</span>',
@@ -125,7 +137,7 @@
       var moduleLabel = groups[0].moduleLabel || moduleEntry.label || moduleKey;
       var moduleEmoji = groups[0].moduleEmoji || moduleEntry.emoji || '';
       var heading = moduleEmoji
-        ? '<span class="kc-search-preference-module-block__emoji" aria-hidden="true">' + escapeHtml(moduleEmoji) + '</span>'
+        ? emojiSpan(moduleEmoji, 'kc-search-preference-module-block__emoji')
         : moduleVisual(moduleKey, moduleEntry);
       return [
         '<section class="kc-search-preference-module-block" data-search-preference-module-block="' + escapeHtml(moduleKey) + '">',
@@ -133,7 +145,7 @@
         '    ' + heading,
         '    <div>',
         '      <h4>' + escapeHtml(moduleLabel) + '</h4>',
-        '      <p>Mesmas opções do formulário de publicação</p>',
+        '      <p>Mesmas categorias do formulário de publicação</p>',
         '    </div>',
         '  </header>',
         '  <div class="kc-search-preference-module-block__groups">',
@@ -141,19 +153,14 @@
           var selected = state.features[entry.key] || [];
           return [
             '<fieldset class="kc-search-preference-group">',
-            '  <legend>' + escapeHtml(entry.label) + '</legend>',
+            '  <legend><span class="kc-search-preference-group__title">' + escapeHtml(entry.label) + '</span></legend>',
             '  <div class="kc-search-preference-options" role="group" aria-label="' + escapeHtml(moduleLabel + ' · ' + entry.label) + '">',
             entry.options.map(function (option) {
               var checked = selected.indexOf(option.key) !== -1;
-              var mark = option.emoji
-                ? '<span class="kc-search-preference-option__emoji" aria-hidden="true">' + escapeHtml(option.emoji) + '</span>'
-                : (option.icon
-                  ? '<span class="kc-search-preference-option__icon" aria-hidden="true"><i class="' + escapeHtml(option.icon) + '"></i></span>'
-                  : '');
               return [
-                '<label class="kc-search-preference-option' + (checked ? ' is-checked' : '') + '">',
+                '<label class="kc-search-preference-option' + (checked ? ' is-checked' : '') + '" title="' + escapeHtml(option.label) + '">',
                 '  <input type="checkbox" data-search-preference-feature="' + escapeHtml(entry.key) + '" value="' + escapeHtml(option.key) + '"' + (checked ? ' checked' : '') + ' />',
-                '  ' + mark,
+                '  ' + optionVisual(option),
                 '  <span class="kc-search-preference-option__label">' + escapeHtml(option.label) + '</span>',
                 '</label>'
               ].join('');
@@ -256,7 +263,7 @@
 
       if (merge.shouldPushRemote) {
         var push = await window.KCAPI.updateSearchPreferences(
-          window.KCSearchPreferences.toRemotePayload(state)
+          window.KCSearchPreferences.toRemotePayload(state, currentRegistry)
         );
         if (push && push.ok && push.data && push.data.preferences) {
           state = window.KCSearchPreferences.save(push.data.preferences, {
@@ -306,14 +313,15 @@
       if (accountSession) {
         setStatus('Salvando na conta…', 'info');
         var remoteResult = await window.KCAPI.updateSearchPreferences(
-          window.KCSearchPreferences.toRemotePayload(state)
+          window.KCSearchPreferences.toRemotePayload(state, currentRegistry)
         );
         if (!remoteResult || !remoteResult.ok) {
+          // Local save already succeeded — keep it and surface the remote error.
           populate(state);
           emitChange(state);
           setStatus(
             (remoteResult && remoteResult.error && remoteResult.error.message)
-              || 'Salvo neste navegador, mas a sincronização com a conta falhou. Tente de novo.',
+              || 'Preferências salvas neste navegador, mas a sincronização com a conta falhou. Tente de novo.',
             'error'
           );
           return;
@@ -354,26 +362,7 @@
       }
     } catch (error) {
       console.error('[SearchPreferences] save failed:', error);
-      setStatus('Não foi possível salvar as preferências.', 'error');
-    }
-  }
-
-  function downloadExport() {
-    try {
-      var payload = window.KCSearchPreferences.exportData({ registry: currentRegistry });
-      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      var link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      var objectUrl = link.href;
-      link.download = 'kinocampus-preferencias-busca.json';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(objectUrl);
-      setStatus('Cópia exportada em JSON.', 'success');
-    } catch (error) {
-      console.error('[SearchPreferences] export failed:', error);
-      setStatus('Não foi possível exportar as preferências.', 'error');
+      setStatus('Não foi possível salvar as preferências: ' + ((error && error.message) || 'erro desconhecido'), 'error');
     }
   }
 
@@ -387,7 +376,7 @@
     if (accountSession) {
       try {
         var remoteResult = await window.KCAPI.updateSearchPreferences(
-          window.KCSearchPreferences.toRemotePayload(state)
+          window.KCSearchPreferences.toRemotePayload(state, currentRegistry)
         );
         if (remoteResult && remoteResult.ok) {
           state = window.KCSearchPreferences.save(
@@ -412,8 +401,8 @@
   function bindEvents() {
     $('#settingsSearchPersonalized').addEventListener('change', syncAvailability);
     $('#settingsSaveSearchPreferences').addEventListener('click', function () { save(); });
-    $('#settingsExportSearchPreferences').addEventListener('click', downloadExport);
-    $('#settingsClearSearchPreferences').addEventListener('click', function () { clear(); });
+    var clearBtn = $('#settingsClearSearchPreferences');
+    if (clearBtn) clearBtn.addEventListener('click', function () { clear(); });
   }
 
   async function init() {

@@ -121,6 +121,24 @@ describe('preferências explícitas de busca', () => {
     expect(storage.snapshot()).toEqual({});
   });
 
+  test('toRemotePayload não quebra sem registry e preserva features já normalizadas', () => {
+    const storage = memoryStorage();
+    const saved = Preferences.save({
+      mode: 'personalized',
+      modules: ['eventos'],
+      features: { 'eventos:topico': ['academicos'] }
+    }, { storage, registry: Registry, now: () => '2026-07-20T14:00:00.000Z' });
+
+    expect(() => Preferences.toRemotePayload(saved)).not.toThrow();
+    const remote = Preferences.toRemotePayload(saved);
+    expect(remote.features).toEqual({ 'eventos:topico': ['academicos'] });
+    expect(remote.modules).toEqual(['eventos']);
+    expect(remote.consent.granted).toBe(true);
+
+    const withRegistry = Preferences.toRemotePayload(saved, Registry);
+    expect(withRegistry.features).toEqual({ 'eventos:topico': ['academicos'] });
+  });
+
   test('mergeLocalAndRemote prioriza conta mais recente e sinaliza push quando o local venceu', () => {
     const local = Preferences.normalizeState({
       mode: 'personalized',

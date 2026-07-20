@@ -425,7 +425,10 @@
       return { ok: false, error: { message: 'Entre na conta para sincronizar preferências de busca.' } };
     }
     const payload = window.KCSearchPreferences && typeof window.KCSearchPreferences.toRemotePayload === 'function'
-      ? window.KCSearchPreferences.toRemotePayload(preferences)
+      ? window.KCSearchPreferences.toRemotePayload(
+        preferences,
+        window.KCSearchFieldRegistrySnapshot || null
+      )
       : normalizeSearchPreferences(preferences);
     const now = new Date().toISOString();
     if (!payload.updatedAt) payload.updatedAt = now;

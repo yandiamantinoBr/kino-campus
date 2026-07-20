@@ -876,17 +876,27 @@ body.kc-settings-page .kc-settings-input {
 }
 
 .kc-search-preference-choice__icon,
+.kc-search-preference-choice__emoji,
+.kc-search-preference-module-block__emoji,
+.kc-search-preference-option__emoji {
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  speak: never;
+}
+
+.kc-search-preference-choice__icon,
 .kc-search-preference-choice__emoji {
   display: inline-grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
-  border-radius: 9px;
+  border-radius: 10px;
   background: rgba(255, 124, 0, 0.12);
   color: var(--kc-primary-brand);
-  font-size: 1rem;
-  line-height: 1;
+  font-size: 1.15rem;
 }
 
 .kc-search-preference-choice__text {
@@ -935,12 +945,11 @@ body.kc-settings-page .kc-settings-input {
 .kc-search-preference-module-block__emoji {
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   background: rgba(255, 124, 0, 0.12);
-  font-size: 1.25rem;
-  line-height: 1;
+  font-size: 1.45rem;
 }
 
 .kc-search-preference-module-block__groups {
@@ -975,17 +984,18 @@ body.kc-settings-page .kc-settings-input {
 .kc-search-preference-options label {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   max-width: 100%;
-  padding: 8px 11px;
+  min-height: 38px;
+  padding: 8px 12px 8px 10px;
   border: 1px solid var(--kc-border-dark);
   border-radius: 999px;
   background: var(--kc-surface-dark);
   color: var(--kc-text-dark-secondary);
-  font-size: 0.82rem;
-  line-height: 1.2;
+  font-size: 0.84rem;
+  line-height: 1.25;
   cursor: pointer;
-  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
 .kc-search-preference-option input,
@@ -999,9 +1009,17 @@ body.kc-settings-page .kc-settings-input {
 
 .kc-search-preference-option__emoji,
 .kc-search-preference-option__icon {
+  display: inline-grid;
+  place-items: center;
   flex: 0 0 auto;
-  font-size: 0.95rem;
-  line-height: 1;
+  width: 1.35em;
+  min-width: 1.35em;
+  font-size: 1.12rem;
+}
+
+.kc-search-preference-option__emoji--empty {
+  opacity: 0.35;
+  font-size: 0.85rem;
 }
 
 .kc-search-preference-option__label {
@@ -1011,10 +1029,16 @@ body.kc-settings-page .kc-settings-input {
 .kc-search-preference-option.is-checked,
 .kc-search-preference-option:has(input:checked),
 .kc-search-preference-options label:has(input:checked) {
-  border-color: rgba(255, 124, 0, 0.48);
-  background: rgba(255, 124, 0, 0.12);
+  border-color: rgba(255, 124, 0, 0.55);
+  background: rgba(255, 124, 0, 0.14);
   color: var(--kc-text-dark-primary);
   font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(255, 124, 0, 0.08);
+}
+
+.kc-search-preference-choice.is-checked {
+  border-color: rgba(255, 124, 0, 0.48);
+  box-shadow: 0 0 0 2px rgba(255, 124, 0, 0.1);
 }
 
 .kc-chip {

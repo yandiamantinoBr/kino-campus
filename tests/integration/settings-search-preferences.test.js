@@ -14,7 +14,8 @@ describe('settings search personalization controls', () => {
     expect(html).toContain('id="settingsSearchPersonalized"');
     expect(html).toContain('id="settingsSearchAffinity"');
     expect(html).toContain('id="settingsSaveSearchPreferences"');
-    expect(html).toContain('id="settingsExportSearchPreferences"');
+    expect(html).not.toContain('id="settingsExportSearchPreferences"');
+    expect(html).not.toContain('Exportar JSON');
     expect(html).toContain('id="settingsClearSearchPreferences"');
     expect(html).toContain('id="settingsSearchPreferencesSyncHint"');
     expect(html).toContain('sincronizam');
