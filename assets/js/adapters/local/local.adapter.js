@@ -87,38 +87,24 @@
   function buildLocalPostKeys(post) {
     const source = post && typeof post === 'object' && !Array.isArray(post) ? post : {};
     const normalized = normalizePost(source);
-    const keys = [
-      normalized && normalized.id,
-      normalized && normalized.uuid,
-      normalized && normalized.legacyId,
-      normalized && normalized.legacy_id,
-      source.id,
-      source.uuid,
-      source.legacyId,
-      source.legacy_id,
-      source._id,
-    ];
-    return Array.from(new Set(keys.map((value) => String(value == null ? '' : value).trim()).filter(Boolean)));
+    return Array.from(new Set([
+      normalized && normalized.id, normalized && normalized.uuid,
+      normalized && normalized.legacyId, normalized && normalized.legacy_id,
+      source.id, source.uuid, source.legacyId, source.legacy_id, source._id,
+    ].map((value) => String(value == null ? '' : value).trim()).filter(Boolean)));
   }
 
   function parseLocalPostTime(post) {
     const source = post && typeof post === 'object' && !Array.isArray(post) ? post : {};
     const normalized = normalizePost(source);
     const candidates = [
-      normalized && normalized.updatedAt,
-      normalized && normalized.updated_at,
-      source.updatedAt,
-      source.updated_at,
-      normalized && normalized.createdAt,
-      normalized && normalized.created_at,
-      source.createdAt,
-      source.created_at,
-      source.timestamp_iso,
+      normalized && normalized.updatedAt, normalized && normalized.updated_at,
+      source.updatedAt, source.updated_at,
+      normalized && normalized.createdAt, normalized && normalized.created_at,
+      source.createdAt, source.created_at, source.timestamp_iso,
     ];
-    for (let index = 0; index < candidates.length; index += 1) {
-      const value = String(candidates[index] || '').trim();
-      if (!value) continue;
-      const parsed = Date.parse(value);
+    for (let i = 0; i < candidates.length; i += 1) {
+      const parsed = Date.parse(String(candidates[i] || '').trim());
       if (Number.isFinite(parsed)) return parsed;
     }
     return 0;
@@ -126,29 +112,27 @@
 
   function mapLocalPostSummary(post, extras = {}) {
     const source = post && typeof post === 'object' && !Array.isArray(post) ? post : {};
-    const normalized = normalizePost(source);
-    const id = normalized && normalized.id != null
-      ? normalized.id
-      : (source.id != null ? source.id : (source.uuid != null ? source.uuid : null));
-    const uuid = String(
-      (normalized && (normalized.uuid || normalized.id || normalized.legacyId || normalized.legacy_id))
-      || source.uuid
-      || source.id
-      || source.legacy_id
-      || source.legacyId
-      || ''
-    ).trim();
+    const n = normalizePost(source);
+    const id = n && n.id != null ? n.id : (source.id != null ? source.id : (source.uuid != null ? source.uuid : null));
+    const uuid = String((n && (n.uuid || n.id || n.legacyId || n.legacy_id)) || source.uuid || source.id || source.legacy_id || source.legacyId || '').trim();
+    const pick = (...vals) => {
+      for (let i = 0; i < vals.length; i += 1) {
+        const value = vals[i];
+        if (value != null && String(value).trim() !== '') return value;
+      }
+      return '';
+    };
     const summary = {
       id: id != null ? id : (uuid || null),
       uuid: uuid || null,
       legacy_id: source.legacy_id != null ? source.legacy_id : (source.legacyId != null ? source.legacyId : null),
-      title: String((normalized && normalized.title) || source.title || source.titulo || 'Sem titulo').trim() || 'Sem titulo',
-      created_at: String((normalized && (normalized.created_at || normalized.createdAt)) || source.created_at || source.createdAt || '').trim() || null,
-      status: String((normalized && normalized.status) || source.status || 'published').trim() || 'published',
-      visibility: String((normalized && normalized.visibility) || source.visibility || 'public').trim() || 'public',
-      module: String((normalized && (normalized.module || normalized.modulo)) || source.module || source.modulo || '').trim(),
-      category: String((normalized && (normalized.category || normalized.categoriaKey || normalized.categoria)) || source.category || source.categoriaKey || source.categoria || '').trim(),
-      votos: Number((normalized && normalized.votos != null ? normalized.votos : source.votos) != null ? (normalized && normalized.votos != null ? normalized.votos : source.votos) : source.votes) || 0,
+      title: String(pick(n && n.title, source.title, source.titulo, 'Sem titulo')).trim() || 'Sem titulo',
+      created_at: String(pick(n && (n.created_at || n.createdAt), source.created_at, source.createdAt)).trim() || null,
+      status: String(pick(n && n.status, source.status, 'published')).trim() || 'published',
+      visibility: String(pick(n && n.visibility, source.visibility, 'public')).trim() || 'public',
+      module: String(pick(n && (n.module || n.modulo), source.module, source.modulo)).trim(),
+      category: String(pick(n && (n.category || n.categoriaKey || n.categoria), source.category, source.categoriaKey, source.categoria)).trim(),
+      votos: Number(n && n.votos != null ? n.votos : (source.votos != null ? source.votos : source.votes)) || 0,
       view_count: Number(source.view_count != null ? source.view_count : source.viewCount) || 0,
       share_count: Number(source.share_count != null ? source.share_count : source.shareCount) || 0,
       coupon_clicks: Number(source.coupon_clicks != null ? source.coupon_clicks : source.couponClicks) || 0,
@@ -162,21 +146,14 @@
   function paginateLocalItems(items, params = {}) {
     const page = Math.max(1, Number(params.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(params.limit) || 12));
-    const offset = (page - 1) * limit;
-    return { page, limit, items: items.slice(offset, offset + limit) };
+    return { page, limit, items: items.slice((page - 1) * limit, page * limit) };
   }
 
-  function buildUnavailableResult(message) {
-    return { ok: false, error: { message } };
-  }
-
-  function buildUnavailableCode(message) {
-    return { ok: false, code: 'UNAVAILABLE', message };
-  }
+  function buildUnavailableResult(message) { return { ok: false, error: { message } }; }
+  function buildUnavailableCode(message) { return { ok: false, code: 'UNAVAILABLE', message }; }
 
   function buildDefaultLocalRatingSummaryFallback(userId) {
-    const key = String(userId || '').trim();
-    return { userId: key || null, average: null, count: 0 };
+    return { userId: String(userId || '').trim() || null, average: null, count: 0 };
   }
 
   function buildDefaultLocalAdminHelpListFallback(filters = {}) {
@@ -185,30 +162,22 @@
     return Object.assign([], { totalCount: 0, limit, offset, hasMore: false });
   }
 
+  function buildChannelPref(inApp) { return { in_app: inApp !== false, email: false, whatsapp: false }; }
+
   function buildDefaultLocalNotificationPreferencesFallback() {
     return {
-      comment_on_post: { in_app: true, email: false, whatsapp: false },
-      comment_reply: { in_app: true, email: false, whatsapp: false },
-      vote_on_post: { in_app: true, email: false, whatsapp: false },
-      post_expired: { in_app: true, email: false, whatsapp: false },
-      post_reported: { in_app: true, email: false, whatsapp: false },
-      system: { in_app: true, email: false, whatsapp: false },
+      comment_on_post: buildChannelPref(true), comment_reply: buildChannelPref(true),
+      vote_on_post: buildChannelPref(true), post_expired: buildChannelPref(true),
+      post_reported: buildChannelPref(true), system: buildChannelPref(true),
     };
   }
 
   function buildDefaultLocalNotificationChannelTargetsFallback() {
     return {
       whatsapp: {
-        channel: 'whatsapp',
-        destination: '',
-        country_code: '55',
-        local_number: '',
-        consent_granted: false,
-        consent_at: null,
-        configured: false,
-        ready: false,
-        display: '',
-        metadata: { country_code: '55' },
+        channel: 'whatsapp', destination: '', country_code: '55', local_number: '',
+        consent_granted: false, consent_at: null, configured: false, ready: false,
+        display: '', metadata: { country_code: '55' },
       },
     };
   }
@@ -220,9 +189,11 @@
   }
 
   function buildUserRatingStateFallback(params = {}) {
-    const targetUserId = String((params.targetUserId || params.target_user_id) || '').trim();
-    const contextPostId = String((params.contextPostId || params.context_post_id) || '').trim() || null;
-    return { targetUserId: targetUserId || null, contextPostId, canRate: false, reason: 'TARGET_NOT_FOUND', myRating: null };
+    return {
+      targetUserId: String((params.targetUserId || params.target_user_id) || '').trim() || null,
+      contextPostId: String((params.contextPostId || params.context_post_id) || '').trim() || null,
+      canRate: false, reason: 'TARGET_NOT_FOUND', myRating: null,
+    };
   }
 
   function buildLocalRatingsDeps() {
@@ -413,30 +384,26 @@
   const getNotificationPreferences = createAsyncDelegate('notifications', 'getNotificationPreferences', null, buildDefaultLocalNotificationPreferencesFallback);
   const updateNotificationPreferences = createAsyncDelegate('notifications', 'updateNotificationPreferences', null, () => buildUnavailableResult('Preferencias de notificacao locais indisponiveis.'), ensureObjectArg(0));
   async function getSearchPreferences() {
-    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.load === 'function') {
-      return window.KCSearchPreferences.load();
-    }
+    const prefs = window.KCSearchPreferences;
+    if (prefs && typeof prefs.load === 'function') return prefs.load();
+    if (prefs && typeof prefs.defaultState === 'function') return prefs.defaultState();
     return {
-      version: 1,
-      mode: 'standard',
-      modules: [],
-      features: {},
-      localAffinityConsent: false,
+      version: 1, mode: 'standard', modules: [], features: {}, localAffinityConsent: false,
       consent: { purpose: 'search-personalization-v1', granted: false, source: 'settings', updatedAt: null },
-      updatedAt: null,
-      sync: { scope: 'local', remoteUpdatedAt: null, lastSyncedAt: null },
+      updatedAt: null, sync: { scope: 'local', remoteUpdatedAt: null, lastSyncedAt: null },
     };
   }
+
   async function updateSearchPreferences(preferences = {}) {
-    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.save === 'function') {
-      try {
-        const saved = window.KCSearchPreferences.save(preferences);
-        return { ok: true, data: { preferences: saved } };
-      } catch (error) {
-        return { ok: false, error: { message: (error && error.message) || 'Falha ao salvar preferencias locais de busca.' } };
-      }
+    const prefs = window.KCSearchPreferences;
+    if (!(prefs && typeof prefs.save === 'function')) {
+      return buildUnavailableResult('Preferencias de busca locais indisponiveis.');
     }
-    return buildUnavailableResult('Preferencias de busca locais indisponiveis.');
+    try {
+      return { ok: true, data: { preferences: prefs.save(preferences) } };
+    } catch (error) {
+      return { ok: false, error: { message: (error && error.message) || 'Falha ao salvar preferencias locais de busca.' } };
+    }
   }
   const getNotificationChannelTargets = createAsyncDelegate('notifications', 'getNotificationChannelTargets', null, buildDefaultLocalNotificationChannelTargetsFallback);
   const updateNotificationChannelTargets = createAsyncDelegate('notifications', 'updateNotificationChannelTargets', null, () => buildUnavailableResult('Destinos privados locais indisponiveis.'), ensureObjectArg(0));
