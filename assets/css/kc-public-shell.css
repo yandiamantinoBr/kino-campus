@@ -875,7 +875,8 @@ body.kc-settings-page .kc-settings-input {
   box-shadow: 0 0 0 2px rgba(255, 124, 0, 0.1);
 }
 
-.kc-search-preference-choice__icon {
+.kc-search-preference-choice__icon,
+.kc-search-preference-choice__emoji {
   display: inline-grid;
   place-items: center;
   width: 28px;
@@ -884,9 +885,65 @@ body.kc-settings-page .kc-settings-input {
   border-radius: 9px;
   background: rgba(255, 124, 0, 0.12);
   color: var(--kc-primary-brand);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.kc-search-preference-choice__text {
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .kc-search-preference-topics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.kc-search-preference-module-block {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--kc-surface-dark) 88%, transparent), var(--kc-background-dark));
+}
+
+.kc-search-preference-module-block__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.kc-search-preference-module-block__head h4 {
+  margin: 0;
+  color: var(--kc-text-dark-primary);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.kc-search-preference-module-block__head p {
+  margin: 2px 0 0;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.kc-search-preference-module-block__emoji {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 124, 0, 0.12);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.kc-search-preference-module-block__groups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -898,7 +955,7 @@ body.kc-settings-page .kc-settings-input {
   padding: 12px;
   border: 1px solid var(--kc-border-dark);
   border-radius: 14px;
-  background: var(--kc-background-dark);
+  background: color-mix(in srgb, var(--kc-background-dark) 92%, var(--kc-surface-dark));
 }
 
 .kc-search-preference-group legend {
@@ -914,22 +971,61 @@ body.kc-settings-page .kc-settings-input {
   gap: 8px;
 }
 
+.kc-search-preference-option,
 .kc-search-preference-options label {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 9px;
+  max-width: 100%;
+  padding: 8px 11px;
   border: 1px solid var(--kc-border-dark);
   border-radius: 999px;
+  background: var(--kc-surface-dark);
   color: var(--kc-text-dark-secondary);
   font-size: 0.82rem;
+  line-height: 1.2;
   cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 
+.kc-search-preference-option input,
+.kc-search-preference-options label input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
+.kc-search-preference-option__emoji,
+.kc-search-preference-option__icon {
+  flex: 0 0 auto;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.kc-search-preference-option__label {
+  min-width: 0;
+}
+
+.kc-search-preference-option.is-checked,
+.kc-search-preference-option:has(input:checked),
 .kc-search-preference-options label:has(input:checked) {
-  border-color: rgba(255, 124, 0, 0.42);
-  background: rgba(255, 124, 0, 0.09);
+  border-color: rgba(255, 124, 0, 0.48);
+  background: rgba(255, 124, 0, 0.12);
   color: var(--kc-text-dark-primary);
+  font-weight: 700;
+}
+
+.kc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kc-chip__emoji {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .kc-search-preferences-privacy {
@@ -1216,7 +1312,8 @@ body.kc-auth-callback-route .kc-callback-card {
   }
 
   .kc-search-preferences-heading,
-  .kc-search-preference-topics {
+  .kc-search-preference-topics,
+  .kc-search-preference-module-block__groups {
     grid-template-columns: 1fr;
   }
 
@@ -1227,6 +1324,11 @@ body.kc-auth-callback-route .kc-callback-card {
 
   .kc-search-preference-modules {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kc-search-preference-option,
+  .kc-search-preference-options label {
+    max-width: 100%;
   }
 
   .kc-help-list {

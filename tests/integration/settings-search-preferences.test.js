@@ -39,4 +39,14 @@ describe('settings search personalization controls', () => {
     expect(controller).toContain('window.KCSearchPreferences.clear()');
     expect(controller).toContain('hydrateFromAccount');
   });
+
+  test('assuntos e temas renderizam divisões por módulo com emoji alinhado ao create-modal', () => {
+    const controller = read('assets/js/controllers/public/search-preferences.controller.js');
+    const schema = read('assets/js/features/create-post/kc-create-post.schema.js');
+    expect(controller).toContain('kc-search-preference-module-block');
+    expect(controller).toContain('moduleEmoji');
+    expect(controller).toContain('option.emoji');
+    expect(schema).toContain("emoji: '🎓'");
+    expect(schema).toContain("emoji: '🚗'");
+  });
 });

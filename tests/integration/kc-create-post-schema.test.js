@@ -60,20 +60,28 @@ describe('kc-create-post.schema — module contracts', () => {
 
   test('keeps ingressos as a first-class compra-venda category', () => {
     expect(source).toContain("categoryGroupId: 'categoria'");
-    expect(source).toContain("{ key: 'ingressos', label: 'Ingressos' }");
+    expect(source).toContain("key: 'ingressos'");
   });
 
   test('expande subtópicos de eventos para formatos acadêmicos úteis', () => {
-    expect(source).toContain("{ key: 'palestras', label: 'Palestras' }");
-    expect(source).toContain("{ key: 'congressos', label: 'Congressos' }");
-    expect(source).toContain("{ key: 'cursos', label: 'Cursos' }");
+    expect(source).toContain("key: 'palestras'");
+    expect(source).toContain("label: 'Palestras'");
+    expect(source).toContain("key: 'congressos'");
+    expect(source).toContain("label: 'Congressos'");
+    expect(source).toContain("key: 'cursos'");
+    expect(source).toContain("label: 'Cursos'");
+    expect(source).toContain("emoji: '🎓'");
   });
 
   test('expande tipos de oportunidades além de vagas tradicionais', () => {
-    expect(source).toContain("{ key: 'editais', label: 'Editais' }");
-    expect(source).toContain("{ key: 'concursos', label: 'Concursos' }");
-    expect(source).toContain("{ key: 'bolsas', label: 'Bolsas' }");
-    expect(source).toContain("{ key: 'cursos-capacitacoes', label: 'Cursos e capacitações' }");
+    expect(source).toContain("key: 'editais'");
+    expect(source).toContain("label: 'Editais'");
+    expect(source).toContain("key: 'concursos'");
+    expect(source).toContain("label: 'Concursos'");
+    expect(source).toContain("key: 'bolsas'");
+    expect(source).toContain("label: 'Bolsas'");
+    expect(source).toContain("key: 'cursos-capacitacoes'");
+    expect(source).toContain("label: 'Cursos e capacitações'");
   });
 });
 

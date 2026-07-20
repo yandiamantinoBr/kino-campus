@@ -44,8 +44,11 @@
     var source = registry && registry.registry ? registry.registry : registry;
     var modules = source && source.modules ? source.modules : {};
     var catalog = {};
+    var moduleOrder = Array.isArray(source.moduleKeys) && source.moduleKeys.length
+      ? source.moduleKeys
+      : MODULE_KEYS;
 
-    MODULE_KEYS.forEach(function (moduleKey) {
+    moduleOrder.forEach(function (moduleKey) {
       var moduleEntry = modules[moduleKey];
       if (!moduleEntry) return;
       (moduleEntry.tagGroups || []).forEach(function (group) {
@@ -54,10 +57,18 @@
         catalog[featureKey] = {
           key: featureKey,
           module: moduleKey,
+          moduleLabel: String(moduleEntry.label || moduleKey),
+          moduleEmoji: String(moduleEntry.emoji || ''),
+          moduleIcon: String(moduleEntry.icon || ''),
           group: String(group.id || ''),
           label: String(group.label || ''),
           options: (group.options || []).map(function (option) {
-            return { key: String(option.key || ''), label: String(option.label || '') };
+            return {
+              key: String(option.key || ''),
+              label: String(option.label || ''),
+              emoji: String(option.emoji || ''),
+              icon: String(option.icon || '')
+            };
           }).filter(function (option) { return !!option.key; })
         };
       });

@@ -92,12 +92,10 @@
     contato: policy('restricted-contact', [], ['metadata.contato', 'contato'], false, false)
   };
 
-  var PREFERENCE_TAG_GROUPS = {
-    'compra-venda': ['categoria'],
-    moradia: ['tipo'],
-    eventos: ['topico'],
-    oportunidades: ['tipo']
-  };
+  // All create-modal tag groups feed “Assuntos e temas”. Keep this null/empty
+  // to auto-include every tagGroup from kc-create-post.schema.js; optionally
+  // restrict a module with an explicit allow-list of group ids.
+  var PREFERENCE_TAG_GROUPS = null;
 
   function policy(privacyClass, operators, payloadPaths, indexable, filterable, preferenceFeature) {
     return {
@@ -218,17 +216,26 @@
     }
   }
 
+  function isPreferenceEligibleGroup(moduleKey, groupId) {
+    // Default: every create-modal tag group is preference-eligible so new
+    // filters in kc-create-post.schema.js automatically surface in settings.
+    if (!PREFERENCE_TAG_GROUPS || typeof PREFERENCE_TAG_GROUPS !== 'object') return true;
+    var allowed = PREFERENCE_TAG_GROUPS[moduleKey];
+    if (!Array.isArray(allowed)) return true;
+    return allowed.indexOf(groupId) !== -1;
+  }
+
   function buildTagGroup(moduleKey, group, categoryGroupId) {
-    var allowedPreferenceGroups = PREFERENCE_TAG_GROUPS[moduleKey] || [];
-    var isCategoryGroup = group.id === categoryGroupId;
+    var groupId = String(group.id || '');
+    var isCategoryGroup = groupId === categoryGroupId;
     var payloadPaths = isCategoryGroup
       ? ['category', 'categoriaKey', 'metadata.categoryKey', 'metadata.subcategory', 'metadata.subcategoryKey']
       : ['tagKeys', 'metadata.tagKeys'];
-    if (moduleKey === 'compra-venda' && group.id === 'acao') {
+    if (moduleKey === 'compra-venda' && groupId === 'acao') {
       payloadPaths = payloadPaths.concat(['metadata.actionKey', 'metadata.actionLabel']);
     }
     return {
-      id: String(group.id || ''),
+      id: groupId,
       label: String(group.label || ''),
       required: group.required === true,
       multi: group.multi === true,
@@ -236,10 +243,15 @@
       payloadPaths: payloadPaths,
       indexable: true,
       filterable: true,
-      preferenceEligible: allowedPreferenceGroups.indexOf(group.id) !== -1,
+      preferenceEligible: isPreferenceEligibleGroup(moduleKey, groupId),
       options: (group.options || []).map(function (option) {
-        return { key: String(option.key || ''), label: String(option.label || '') };
-      })
+        return {
+          key: String(option.key || ''),
+          label: String(option.label || ''),
+          emoji: option.emoji ? String(option.emoji) : '',
+          icon: option.icon ? String(option.icon) : ''
+        };
+      }).filter(function (option) { return !!option.key; })
     };
   }
 
@@ -296,6 +308,8 @@
       modules[moduleKey] = {
         key: moduleKey,
         label: String(moduleSchema.label || moduleKey),
+        icon: String(moduleSchema.icon || ''),
+        emoji: String(moduleSchema.emoji || ''),
         categoryGroupId: String(moduleSchema.categoryGroupId || ''),
         scenarios: clone(MODULE_SCENARIOS[moduleKey]),
         tagGroups: (moduleSchema.tagGroups || []).map(function (group) {

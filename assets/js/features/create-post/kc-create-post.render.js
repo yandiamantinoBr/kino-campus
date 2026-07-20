@@ -519,7 +519,8 @@
         parts.push(`<div class="kc-create-group"><div class="kc-create-group__head"><span>${_esc(g.label)}${g.required ? ' *' : ''}</span></div><div class="kc-chip-row">`);
         g.options.forEach((opt) => {
           const active = selectedKey === opt.key ? ' active' : '';
-          parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${_esc(g.id)}" data-kc-chip="${_esc(opt.key)}">${_esc(opt.label)}</button>`);
+          const emoji = opt.emoji ? `<span class="kc-chip__emoji" aria-hidden="true">${_esc(opt.emoji)}</span>` : '';
+          parts.push(`<button type="button" class="kc-chip${active}" data-kc-group="${_esc(g.id)}" data-kc-chip="${_esc(opt.key)}">${emoji}<span>${_esc(opt.label)}</span></button>`);
         });
         parts.push('</div></div>');
       });

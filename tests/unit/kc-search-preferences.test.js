@@ -31,6 +31,7 @@ describe('preferências explícitas de busca', () => {
       features: {
         'eventos:topico': ['academicos', 'academicos', 'inventado'],
         'achados-perdidos:tipo': ['documentos'],
+        'caronas:tipo': ['ofereco'],
         contato: ['telefone']
       },
       localAffinityConsent: true,
@@ -39,10 +40,33 @@ describe('preferências explícitas de busca', () => {
     }, Registry);
 
     expect(normalized.modules).toEqual(['eventos']);
-    expect(normalized.features).toEqual({ 'eventos:topico': ['academicos'] });
+    // Todos os tagGroups do create-modal são elegíveis; valores inválidos caem fora.
+    expect(normalized.features).toEqual({
+      'eventos:topico': ['academicos'],
+      'achados-perdidos:tipo': ['documentos'],
+      'caronas:tipo': ['ofereco']
+    });
     expect(normalized.localAffinityConsent).toBe(true);
     expect(normalized).not.toHaveProperty('query');
     expect(normalized).not.toHaveProperty('campus');
+  });
+
+  test('catalogo de assuntos cobre todos os tagGroups do create-modal com emoji', () => {
+    const catalog = Preferences.preferenceCatalog(Registry);
+    const keys = Object.keys(catalog).sort();
+    expect(keys).toEqual([
+      'achados-perdidos:status',
+      'achados-perdidos:tipo',
+      'caronas:tipo',
+      'compra-venda:acao',
+      'compra-venda:categoria',
+      'eventos:topico',
+      'moradia:tipo',
+      'oportunidades:tipo'
+    ]);
+    expect(catalog['eventos:topico'].moduleEmoji).toBe('📅');
+    expect(catalog['eventos:topico'].options.every((option) => option.emoji)).toBe(true);
+    expect(catalog['eventos:topico'].options.find((option) => option.key === 'academicos').emoji).toBe('🎓');
   });
 
   test('modo padrão remove preferências e afinidade mesmo com payload residual', () => {

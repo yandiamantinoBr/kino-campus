@@ -2,6 +2,11 @@
  * @file kc-create-post.schema.js
  * @description Schema and constants for the create-post runtime (v11.31.2).
  * Registers window._KCCreatePost.schema before assets/js/kc-create-post.js.
+ *
+ * Source of truth for module tag groups used by:
+ *  - create-post modal chips
+ *  - search field registry (npm run generate:search-registry)
+ *  - settings “Busca e descoberta” topics
  */
 (function () {
   'use strict';
@@ -36,12 +41,12 @@
             required: true,
             multi: false,
             options: [
-              { key: 'eletronicos', label: 'Eletrônicos' },
-              { key: 'livros', label: 'Livros' },
-              { key: 'ingressos', label: 'Ingressos' },
-              { key: 'moveis', label: 'Móveis' },
-              { key: 'vestuario', label: 'Vestuário' },
-              { key: 'outros', label: 'Outros' },
+              { key: 'eletronicos', label: 'Eletrônicos', emoji: '💻' },
+              { key: 'livros', label: 'Livros', emoji: '📚' },
+              { key: 'ingressos', label: 'Ingressos', emoji: '🎟️' },
+              { key: 'moveis', label: 'Móveis', emoji: '🪑' },
+              { key: 'vestuario', label: 'Vestuário', emoji: '👕' },
+              { key: 'outros', label: 'Outros', emoji: '📦' },
             ]
           },
           {
@@ -50,8 +55,8 @@
             required: true,
             multi: false,
             options: [
-              { key: 'vendo', label: 'Vendo' },
-              { key: 'compro', label: 'Compro' },
+              { key: 'vendo', label: 'Vendo', emoji: '🏷️' },
+              { key: 'compro', label: 'Compro', emoji: '🛒' },
             ]
           }
         ]
@@ -69,8 +74,8 @@
             required: true,
             multi: false,
             options: [
-              { key: 'ofereco', label: 'Ofereço carona' },
-              { key: 'procuro', label: 'Procuro carona' },
+              { key: 'ofereco', label: 'Ofereço carona', emoji: '🙋' },
+              { key: 'procuro', label: 'Procuro carona', emoji: '🔎' },
             ]
           }
         ]
@@ -88,11 +93,11 @@
             required: true,
             multi: false,
             options: [
-              { key: 'republicas', label: 'Repúblicas' },
-              { key: 'quartos', label: 'Quartos' },
-              { key: 'apartamentos', label: 'Apartamentos' },
-              { key: 'casas', label: 'Casas' },
-              { key: 'procurando', label: 'Procurando' },
+              { key: 'republicas', label: 'Repúblicas', emoji: '🏠' },
+              { key: 'quartos', label: 'Quartos', emoji: '🛏️' },
+              { key: 'apartamentos', label: 'Apartamentos', emoji: '🏢' },
+              { key: 'casas', label: 'Casas', emoji: '🏡' },
+              { key: 'procurando', label: 'Procurando', emoji: '🔍' },
             ]
           }
         ]
@@ -110,15 +115,15 @@
             required: true,
             multi: false,
             options: [
-              { key: 'academicos', label: 'Acadêmicos' },
-              { key: 'palestras', label: 'Palestras' },
-              { key: 'congressos', label: 'Congressos' },
-              { key: 'cursos', label: 'Cursos' },
-              { key: 'culturais', label: 'Culturais' },
-              { key: 'esportivos', label: 'Esportivos' },
-              { key: 'workshops', label: 'Workshops' },
-              { key: 'festas', label: 'Festas' },
-              { key: 'sustentabilidade', label: 'Sustentabilidade' },
+              { key: 'academicos', label: 'Acadêmicos', emoji: '🎓' },
+              { key: 'palestras', label: 'Palestras', emoji: '🎤' },
+              { key: 'congressos', label: 'Congressos', emoji: '🏛️' },
+              { key: 'cursos', label: 'Cursos', emoji: '📖' },
+              { key: 'culturais', label: 'Culturais', emoji: '🎭' },
+              { key: 'esportivos', label: 'Esportivos', emoji: '⚽' },
+              { key: 'workshops', label: 'Workshops', emoji: '🛠️' },
+              { key: 'festas', label: 'Festas', emoji: '🎉' },
+              { key: 'sustentabilidade', label: 'Sustentabilidade', emoji: '🌱' },
             ]
           }
         ]
@@ -136,8 +141,8 @@
             required: true,
             multi: false,
             options: [
-              { key: 'perdidos', label: 'Perdidos' },
-              { key: 'encontrados', label: 'Encontrados' },
+              { key: 'perdidos', label: 'Perdidos', emoji: '😢' },
+              { key: 'encontrados', label: 'Encontrados', emoji: '🙌' },
             ]
           },
           {
@@ -146,9 +151,9 @@
             required: true,
             multi: false,
             options: [
-              { key: 'documentos', label: 'Documentos' },
-              { key: 'eletronicos', label: 'Eletrônicos' },
-              { key: 'outros', label: 'Outros' },
+              { key: 'documentos', label: 'Documentos', emoji: '🪪' },
+              { key: 'eletronicos', label: 'Eletrônicos', emoji: '📱' },
+              { key: 'outros', label: 'Outros', emoji: '🎒' },
             ]
           }
         ]
@@ -166,16 +171,16 @@
             required: true,
             multi: false,
             options: [
-              { key: 'editais', label: 'Editais' },
-              { key: 'concursos', label: 'Concursos' },
-              { key: 'bolsas', label: 'Bolsas' },
-              { key: 'estagios', label: 'Estágio' },
-              { key: 'empregos', label: 'Emprego' },
-              { key: 'monitoria', label: 'Monitoria' },
-              { key: 'pesquisa', label: 'Pesquisa' },
-              { key: 'cursos-capacitacoes', label: 'Cursos e capacitações' },
-              { key: 'voluntariado', label: 'Voluntariado' },
-              { key: 'freelancer', label: 'Freelancer' },
+              { key: 'editais', label: 'Editais', emoji: '📋' },
+              { key: 'concursos', label: 'Concursos', emoji: '🏆' },
+              { key: 'bolsas', label: 'Bolsas', emoji: '🎓' },
+              { key: 'estagios', label: 'Estágio', emoji: '👔' },
+              { key: 'empregos', label: 'Emprego', emoji: '💼' },
+              { key: 'monitoria', label: 'Monitoria', emoji: '🧑‍🏫' },
+              { key: 'pesquisa', label: 'Pesquisa', emoji: '🔬' },
+              { key: 'cursos-capacitacoes', label: 'Cursos e capacitações', emoji: '📚' },
+              { key: 'voluntariado', label: 'Voluntariado', emoji: '🤝' },
+              { key: 'freelancer', label: 'Freelancer', emoji: '💻' },
             ]
           }
         ]

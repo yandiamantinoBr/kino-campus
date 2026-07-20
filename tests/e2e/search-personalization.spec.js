@@ -13,8 +13,32 @@ const posts = [
 ];
 
 async function prepare(page, path, options = {}) {
-  await page.addInitScript(() => {
+  const personalized = options.personalized !== false;
+  const affinity = options.affinity === true;
+  await page.addInitScript(({ personalizedMode, affinityMode, fixturePosts }) => {
     Object.defineProperty(navigator, 'webdriver', { configurable: true, get: () => false });
+    try {
+      localStorage.setItem('kc_search_preferences_v1', JSON.stringify({
+        version: 1,
+        mode: personalizedMode ? 'personalized' : 'standard',
+        modules: personalizedMode ? ['eventos'] : [],
+        features: personalizedMode ? { 'eventos:topico': ['academicos'] } : {},
+        localAffinityConsent: personalizedMode && affinityMode,
+        consent: {
+          purpose: 'search-personalization-v1',
+          granted: personalizedMode,
+          source: 'settings',
+          updatedAt: '2026-06-20T12:00:00.000Z'
+        },
+        updatedAt: '2026-06-20T12:00:00.000Z'
+      }));
+      if (!affinityMode) localStorage.removeItem('kc_search_affinity_v1');
+    } catch (_) {}
+    window.__KC_SEARCH_E2E_FIXTURES__ = fixturePosts;
+  }, {
+    personalizedMode: personalized,
+    affinityMode: affinity,
+    fixturePosts: posts
   });
   await page.route('**/data/database.json', (route) => route.fulfill({
     status: 200,
@@ -22,29 +46,35 @@ async function prepare(page, path, options = {}) {
     body: JSON.stringify({ anuncios: [] })
   }));
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await page.evaluate(({ fixturePosts, personalized, affinity }) => {
-    localStorage.setItem('kc_search_preferences_v1', JSON.stringify({
-      version: 1,
-      mode: personalized ? 'personalized' : 'standard',
-      modules: personalized ? ['eventos'] : [],
-      features: personalized ? { 'eventos:topico': ['academicos'] } : {},
-      localAffinityConsent: personalized && affinity,
-      consent: {
-        purpose: 'search-personalization-v1',
-        granted: personalized,
-        source: 'settings',
-        updatedAt: '2026-06-20T12:00:00.000Z'
-      },
-      updatedAt: '2026-06-20T12:00:00.000Z'
-    }));
+  await page.evaluate(() => {
+    const fixturePosts = window.__KC_SEARCH_E2E_FIXTURES__ || [];
+    // Force local driver so fixture posts drive ranking (production KC_ENV uses supabase).
+    if (window.KCAPI && window.KCAPI.ENV) {
+      window.KCAPI.ENV.driver = 'local';
+      window.KCAPI.ENV.DATA_DRIVER = 'local';
+    }
+    if (window.KC_ENV) {
+      window.KC_ENV.driver = 'local';
+      window.KC_ENV.DATA_DRIVER = 'local';
+    }
     window.dispatchEvent(new CustomEvent('kc:search-preferences-change'));
-    window.KCAPI.registerAdapter('local', {
-      searchPosts: async () => fixturePosts,
-      getPosts: async () => fixturePosts,
-      getFeedCursor: async () => ({ posts: fixturePosts, nextCursor: null, hasMore: false }),
-      getPostById: async (id) => fixturePosts.find((post) => String(post.id) === String(id)) || null
-    });
-  }, { fixturePosts: posts, personalized: options.personalized !== false, affinity: options.affinity === true });
+    if (window.KCAPI && typeof window.KCAPI.registerAdapter === 'function') {
+      window.KCAPI.registerAdapter('local', {
+        name: 'local',
+        searchPosts: async () => fixturePosts.map((post) => Object.assign({}, post)),
+        getPosts: async () => fixturePosts.map((post) => Object.assign({}, post)),
+        getFeedCursor: async () => ({
+          posts: fixturePosts.map((post) => Object.assign({}, post)),
+          nextCursor: null,
+          hasMore: false
+        }),
+        getPostById: async (id) => {
+          const found = fixturePosts.find((post) => String(post.id) === String(id));
+          return found ? Object.assign({}, found) : null;
+        }
+      });
+    }
+  });
 }
 
 test.describe('V76.44/V76.46 - personalização local opt-in', () => {

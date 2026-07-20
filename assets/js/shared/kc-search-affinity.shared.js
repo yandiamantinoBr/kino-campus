@@ -17,8 +17,10 @@
   var HALF_LIFE_MS = 30 * 24 * 60 * 60 * 1000;
   var MAX_FEATURES = 24;
   var MAX_COUNT = 20;
-  var MAX_EXPLICIT_BOOST = 0.05;
-  var MAX_AFFINITY_BOOST = 0.02;
+  // Explicit preferences must visibly affect near-ties and moderate score gaps
+  // without overpowering a much stronger base relevance match.
+  var MAX_EXPLICIT_BOOST = 0.12;
+  var MAX_AFFINITY_BOOST = 0.03;
   var MAX_TOTAL_BOOST = MAX_EXPLICIT_BOOST + MAX_AFFINITY_BOOST;
 
   function parseTimestamp(value) {
@@ -216,8 +218,8 @@
     var signals = extractSignals(post, registry);
     var reasons = explicitReasons(signals, preferences);
     var explicitBoost = 0;
-    if (reasons.some(function (reason) { return reason.type === 'explicit-module'; })) explicitBoost += 0.025;
-    explicitBoost += Math.min(0.025, reasons.filter(function (reason) { return reason.type === 'explicit-feature'; }).length * 0.015);
+    if (reasons.some(function (reason) { return reason.type === 'explicit-module'; })) explicitBoost += 0.06;
+    explicitBoost += Math.min(0.06, reasons.filter(function (reason) { return reason.type === 'explicit-feature'; }).length * 0.035);
     explicitBoost = Math.min(MAX_EXPLICIT_BOOST, explicitBoost);
 
     var bestAffinity = 0;

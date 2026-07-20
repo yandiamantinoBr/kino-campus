@@ -78,6 +78,17 @@
     });
   }
 
+  function moduleVisual(moduleKey, moduleEntry) {
+    var emoji = moduleEntry && moduleEntry.emoji ? String(moduleEntry.emoji) : '';
+    var iconClass = (moduleEntry && moduleEntry.icon)
+      ? String(moduleEntry.icon)
+      : ('fas ' + (moduleIcons[moduleKey] || 'fa-layer-group'));
+    if (emoji) {
+      return '<span class="kc-search-preference-choice__emoji" aria-hidden="true">' + escapeHtml(emoji) + '</span>';
+    }
+    return '<span class="kc-search-preference-choice__icon" aria-hidden="true"><i class="' + escapeHtml(iconClass) + '"></i></span>';
+  }
+
   function renderModules(registry, state) {
     var target = $('#settingsSearchModules');
     if (!target) return;
@@ -88,8 +99,8 @@
       return [
         '<label class="kc-search-preference-choice">',
         '  <input type="checkbox" data-search-preference-module="' + escapeHtml(moduleKey) + '"' + (checked ? ' checked' : '') + ' />',
-        '  <span class="kc-search-preference-choice__icon" aria-hidden="true"><i class="fas ' + escapeHtml(moduleIcons[moduleKey] || 'fa-layer-group') + '"></i></span>',
-        '  <span>' + escapeHtml(moduleEntry.label) + '</span>',
+        '  ' + moduleVisual(moduleKey, moduleEntry),
+        '  <span class="kc-search-preference-choice__text">' + escapeHtml(moduleEntry.label) + '</span>',
         '</label>'
       ].join('');
     }).join('');
@@ -99,20 +110,60 @@
     var target = $('#settingsSearchTopics');
     if (!target) return;
     var catalog = window.KCSearchPreferences.preferenceCatalog(registry);
-    target.innerHTML = Object.keys(catalog).map(function (featureKey) {
+    var byModule = {};
+    Object.keys(catalog).forEach(function (featureKey) {
       var entry = catalog[featureKey];
-      var selected = state.features[featureKey] || [];
-      var moduleLabel = registry.registry.modules[entry.module].label;
+      if (!byModule[entry.module]) byModule[entry.module] = [];
+      byModule[entry.module].push(entry);
+    });
+
+    var moduleOrder = (registry.registry && registry.registry.moduleKeys) || Object.keys(byModule);
+    target.innerHTML = moduleOrder.map(function (moduleKey) {
+      var groups = byModule[moduleKey];
+      if (!groups || !groups.length) return '';
+      var moduleEntry = registry.registry.modules[moduleKey] || {};
+      var moduleLabel = groups[0].moduleLabel || moduleEntry.label || moduleKey;
+      var moduleEmoji = groups[0].moduleEmoji || moduleEntry.emoji || '';
+      var heading = moduleEmoji
+        ? '<span class="kc-search-preference-module-block__emoji" aria-hidden="true">' + escapeHtml(moduleEmoji) + '</span>'
+        : moduleVisual(moduleKey, moduleEntry);
       return [
-        '<fieldset class="kc-search-preference-group">',
-        '  <legend>' + escapeHtml(moduleLabel) + ' · ' + escapeHtml(entry.label) + '</legend>',
-        '  <div class="kc-search-preference-options">',
-        entry.options.map(function (option) {
-          var checked = selected.indexOf(option.key) !== -1;
-          return '<label><input type="checkbox" data-search-preference-feature="' + escapeHtml(featureKey) + '" value="' + escapeHtml(option.key) + '"' + (checked ? ' checked' : '') + ' /><span>' + escapeHtml(option.label) + '</span></label>';
+        '<section class="kc-search-preference-module-block" data-search-preference-module-block="' + escapeHtml(moduleKey) + '">',
+        '  <header class="kc-search-preference-module-block__head">',
+        '    ' + heading,
+        '    <div>',
+        '      <h4>' + escapeHtml(moduleLabel) + '</h4>',
+        '      <p>Mesmas opções do formulário de publicação</p>',
+        '    </div>',
+        '  </header>',
+        '  <div class="kc-search-preference-module-block__groups">',
+        groups.map(function (entry) {
+          var selected = state.features[entry.key] || [];
+          return [
+            '<fieldset class="kc-search-preference-group">',
+            '  <legend>' + escapeHtml(entry.label) + '</legend>',
+            '  <div class="kc-search-preference-options" role="group" aria-label="' + escapeHtml(moduleLabel + ' · ' + entry.label) + '">',
+            entry.options.map(function (option) {
+              var checked = selected.indexOf(option.key) !== -1;
+              var mark = option.emoji
+                ? '<span class="kc-search-preference-option__emoji" aria-hidden="true">' + escapeHtml(option.emoji) + '</span>'
+                : (option.icon
+                  ? '<span class="kc-search-preference-option__icon" aria-hidden="true"><i class="' + escapeHtml(option.icon) + '"></i></span>'
+                  : '');
+              return [
+                '<label class="kc-search-preference-option' + (checked ? ' is-checked' : '') + '">',
+                '  <input type="checkbox" data-search-preference-feature="' + escapeHtml(entry.key) + '" value="' + escapeHtml(option.key) + '"' + (checked ? ' checked' : '') + ' />',
+                '  ' + mark,
+                '  <span class="kc-search-preference-option__label">' + escapeHtml(option.label) + '</span>',
+                '</label>'
+              ].join('');
+            }).join(''),
+            '  </div>',
+            '</fieldset>'
+          ].join('');
         }).join(''),
         '  </div>',
-        '</fieldset>'
+        '</section>'
       ].join('');
     }).join('');
   }

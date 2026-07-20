@@ -297,18 +297,20 @@
   function loadSearchPersonalizationRuntime() {
     if (!isSearchPersonalizationEnabled()) return Promise.resolve(null);
     if (searchPersonalizationRuntimePromise) return searchPersonalizationRuntimePromise;
+    // Always load the personalization assets when the flag is on. Whether the
+    // user currently has personalized mode is decided later in apply/record so
+    // a first empty load does not permanently disable reordering.
     searchPersonalizationRuntimePromise = loadStructuredSearchAsset(PERSONALIZATION_PREFERENCES_ASSET)
-      .then((preferences) => {
-        const state = preferences.load();
-        if (!preferences.isPersonalized(state)) return null;
-        return PERSONALIZATION_ASSETS.reduce(
-          (promise, asset) => promise.then(() => loadStructuredSearchAsset(asset)),
-          Promise.resolve()
-        ).then(buildSearchPersonalizationRuntime);
-      }).catch((error) => {
-      try { console.warn('[KinoCampus] Personalização local indisponível; ranking comum preservado.', error); } catch (_) {}
-      return null;
-    });
+      .then(() => PERSONALIZATION_ASSETS.reduce(
+        (promise, asset) => promise.then(() => loadStructuredSearchAsset(asset)),
+        Promise.resolve()
+      ))
+      .then(buildSearchPersonalizationRuntime)
+      .catch((error) => {
+        try { console.warn('[KinoCampus] Personalização local indisponível; ranking comum preservado.', error); } catch (_) {}
+        searchPersonalizationRuntimePromise = null;
+        return null;
+      });
     return searchPersonalizationRuntimePromise;
   }
 
