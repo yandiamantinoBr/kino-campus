@@ -122,16 +122,26 @@
     if (!card) return;
     const bar = card.querySelector('.kc-search-modal-card__bar');
     if (!dropdown || !bar) return;
+    // Prefer the shared search positioner (viewport max-height + edge clamping).
+    if (window.kcSearch && typeof window.kcSearch.positionDropdown === 'function') {
+      window.kcSearch.positionDropdown(dropdown, bar);
+      dropdown.style.zIndex = '10001';
+      return;
+    }
     const rect = bar.getBoundingClientRect();
     const vw = window.innerWidth || document.documentElement.clientWidth;
-    let w = Math.max(rect.width, 280);
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    let w = Math.max(rect.width, Math.min(320, vw - 16));
     let l = rect.left;
     if (l + w > vw - 8) l = Math.max(8, vw - w - 8);
     if (l < 8) l = 8;
     if (w > vw - 16) w = vw - 16;
-    dropdown.style.top    = `${rect.bottom + 6}px`;
-    dropdown.style.left   = `${l}px`;
-    dropdown.style.width  = `${w}px`;
+    const spaceBelow = Math.max(140, vh - rect.bottom - 12);
+    dropdown.style.top = `${rect.bottom + 6}px`;
+    dropdown.style.bottom = 'auto';
+    dropdown.style.left = `${l}px`;
+    dropdown.style.width = `${w}px`;
+    dropdown.style.maxHeight = `${Math.min(320, spaceBelow)}px`;
     dropdown.style.zIndex = '10001'; /* acima do overlay (9999) e padrão (10000) */
   }
 

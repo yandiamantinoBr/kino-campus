@@ -30,6 +30,8 @@ describe('personalização de busca — ranking real', () => {
     expect(ranked[0]._kcPersonalization.boost).toBeGreaterThan(0);
     expect(ranked[0]._kcPersonalization.primary).toBeTruthy();
     expect(ranked[0]._kcPersonalization.primary.shortLabel).toBeTruthy();
+    expect(ranked[0]._kcPersonalization.primary.shortLabel).toMatch(/^(Eventos|Acadêmicos)$/i);
+    expect(ranked[0]._kcPersonalization.primary.shortLabel).not.toMatch(/escolhido/i);
     expect(ranked[0]._kcPersonalization.primary.tone).toMatch(/prioritized|match|sustainable|affinity|cashback/);
     expect(ranked[0]._kcPersonalization.reasons.some((reason) => /Eventos|Acadêmicos|escolhido|Priorizado/i.test(reason.label + reason.shortLabel))).toBe(true);
   });

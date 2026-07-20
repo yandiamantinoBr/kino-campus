@@ -86,7 +86,8 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
     await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'event-near');
     // Compact corner badge (not a footer bar under the card)
     await expect(cards.nth(0).locator('.kc-result-signal-badge')).toBeVisible();
-    await expect(cards.nth(0).locator('.kc-result-signal-badge')).toContainText(/Acadêmicos|Eventos|Priorizado/i);
+    await expect(cards.nth(0).locator('.kc-result-signal-badge')).toContainText(/Acadêmicos|Eventos/i);
+    await expect(cards.nth(0).locator('.kc-result-signal-badge')).not.toContainText(/escolhido/i);
     await expect(cards.nth(0).locator('.kc-search-personalization-reason')).toHaveCount(0);
 
     // Personalization lives inside the filters toolbar; details stay collapsed until click
@@ -162,7 +163,8 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
     const options = page.locator('#kcSearchDropdown [role="option"]');
     await expect(options).toHaveCount(2);
     await expect(options.nth(0)).toContainText('Evento perto do campus');
-    await expect(options.nth(0)).toContainText(/Priorizado|Acadêmicos|Eventos|Afinidade/i);
+    await expect(options.nth(0)).toContainText(/Acadêmicos|Eventos/i);
+    await expect(options.nth(0)).not.toContainText(/escolhido/i);
 
     await page.evaluate(() => {
       localStorage.setItem('kc_search_preferences_v1', JSON.stringify({

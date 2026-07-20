@@ -1295,12 +1295,25 @@
     }
   }
 
+  /** Corner/dropdown chip: only module or topic name — never "…escolhido por você". */
+  function personalizationChipLabel(reason) {
+    if (!reason) return '';
+    const short = String(reason.shortLabel || '').trim();
+    if (short && !/escolhido|por você/i.test(short)) return short.slice(0, 22);
+    const cleaned = String(reason.label || '')
+      .replace(/\s+escolhido por você\.?$/i, '')
+      .replace(/^Afinidade local com\s+/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return (cleaned || 'Priorizado').slice(0, 22);
+  }
+
   function buildResultSignalBadge(post) {
     const personalization = post && post._kcPersonalization;
     if (!personalization || !(personalization.boost > 0)) return '';
     const primary = personalization.primary
       || (Array.isArray(personalization.reasons) ? personalization.reasons[0] : null);
-    if (!primary || !primary.label) return '';
+    if (!primary || !(primary.label || primary.shortLabel)) return '';
     const tone = String(primary.tone || primary.type || 'prioritized')
       .replace(/explicit-module/i, 'prioritized')
       .replace(/explicit-feature/i, 'match')
@@ -1308,7 +1321,9 @@
       .replace(/[^a-z-]/gi, '')
       .toLowerCase() || 'prioritized';
     const icon = String(primary.icon || 'fas fa-wand-magic-sparkles');
-    const shortLabel = String(primary.shortLabel || primary.label || 'Priorizado').slice(0, 18);
+    const shortLabel = personalizationChipLabel(primary);
+    if (!shortLabel) return '';
+    // Tooltip can keep the fuller explanation; visible chip stays short.
     const title = String(primary.label || shortLabel);
     return (
       `<span class="kc-result-signal-badge kc-result-signal-badge--${escapeHtml(tone)}" title="${escapeHtml(title)}">` +
@@ -1611,17 +1626,31 @@
     if (!dropdown || !searchBarEl) return;
     const rect = searchBarEl.getBoundingClientRect();
     const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
 
-    let width = Math.max(rect.width, 280);
+    let width = Math.max(rect.width, Math.min(320, vw - 16));
     let left = rect.left;
 
     if (left + width > vw - 8) left = Math.max(8, vw - width - 8);
     if (left < 8) left = 8;
     if (width > vw - 16) width = vw - 16;
 
-    dropdown.style.top = `${rect.bottom + 6}px`;
+    const gap = 6;
+    const spaceBelow = Math.max(120, vh - rect.bottom - 12);
+    const spaceAbove = Math.max(120, rect.top - 12);
+    const preferBelow = spaceBelow >= 180 || spaceBelow >= spaceAbove;
+    const maxHeight = Math.min(360, preferBelow ? spaceBelow : spaceAbove);
+
+    if (preferBelow) {
+      dropdown.style.top = `${rect.bottom + gap}px`;
+      dropdown.style.bottom = 'auto';
+    } else {
+      dropdown.style.top = 'auto';
+      dropdown.style.bottom = `${Math.max(8, vh - rect.top + gap)}px`;
+    }
     dropdown.style.left = `${left}px`;
     dropdown.style.width = `${width}px`;
+    dropdown.style.maxHeight = `${maxHeight}px`;
   }
 
   function formatPrice(post) {
@@ -1695,17 +1724,20 @@
 
       const meta = document.createElement('div');
       meta.className = 'kc-search-dropdown__meta';
-      const parts = [post.categoria || post.modulo || ''].filter(Boolean);
-      if (post.autor) parts.push(`por ${post.autor}`);
+      const moduleLabel = post.modulo || post.module || '';
+      const categoryLabel = post.categoria || post.category || '';
       const personalization = post && post._kcPersonalization;
-      const firstReason = personalization && Array.isArray(personalization.reasons)
-        ? personalization.reasons.find((reason) => reason && reason.label)
-        : null;
-      if (firstReason) {
-        const short = firstReason.shortLabel || firstReason.label;
-        parts.unshift(short);
-      }
-      meta.textContent = parts.join(' · ');
+      const primary = personalization && (personalization.primary
+        || (Array.isArray(personalization.reasons)
+          ? personalization.reasons.find((reason) => reason && (reason.shortLabel || reason.label))
+          : null));
+      const chip = personalizationChipLabel(primary);
+      // Meta stays taxonomic; personalized signal is a separate compact pill.
+      const parts = [];
+      if (categoryLabel) parts.push(categoryLabel);
+      else if (moduleLabel) parts.push(moduleLabel);
+      if (post.autor) parts.push(`por ${post.autor}`);
+      meta.textContent = parts.filter(Boolean).join(' · ');
 
       info.appendChild(title);
       info.appendChild(meta);
@@ -1713,13 +1745,23 @@
       item.appendChild(emoji);
       item.appendChild(info);
 
+      const trailing = document.createElement('div');
+      trailing.className = 'kc-search-dropdown__trailing';
+      if (chip) {
+        const signal = document.createElement('span');
+        signal.className = 'kc-search-dropdown__signal';
+        signal.textContent = chip;
+        signal.title = primary && primary.label ? String(primary.label) : chip;
+        trailing.appendChild(signal);
+      }
       const priceStr = formatPrice(post);
       if (priceStr) {
         const price = document.createElement('span');
         price.className = 'kc-search-dropdown__price';
         price.textContent = priceStr;
-        item.appendChild(price);
+        trailing.appendChild(price);
       }
+      if (trailing.childNodes.length) item.appendChild(trailing);
 
       list.appendChild(item);
     });
@@ -1798,6 +1840,8 @@
       }
       positionDropdown(dropdown, searchBarEl);
       renderDropdown(dropdown, results, q, structuredState);
+      // Reposition after paint so max-height fits remaining viewport (esp. mobile modal).
+      positionDropdown(dropdown, searchBarEl);
       recordSearchPerformance(request, 'ok', results.length);
     } catch (error) {
       if (isAbortError(error, request)) {
@@ -1942,6 +1986,7 @@
     navigateToResults,
     attachComboboxInput: setupComboboxInput,
     handleComboboxKeydown,
+    positionDropdown,
     getPerformanceSnapshot: getSearchPerformanceSnapshot,
     track: trackSearch,
     flushPending: flushPendingTrackedSearches,

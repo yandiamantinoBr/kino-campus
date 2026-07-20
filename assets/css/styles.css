@@ -223,13 +223,16 @@ header {
 .kc-search-dropdown {
     display: none;
     position: fixed;
-    /* top/left/width set dynamically by JS via getBoundingClientRect */
+    /* top/left/width/max-height set dynamically by JS via getBoundingClientRect */
     background-color: var(--kc-surface-dark);
     border: 1px solid var(--kc-border-dark);
     border-radius: 14px;
-    max-height: 340px;
+    max-height: min(360px, calc(100vh - 96px));
+    overflow-x: hidden;
     overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
     z-index: 10000; /* acima do modal overlay (9999) */
     min-width: 240px;
 }
@@ -245,14 +248,15 @@ header {
 .kc-search-dropdown__item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
+    gap: 12px;
+    padding: 11px 14px;
     cursor: pointer;
     text-decoration: none;
     color: var(--kc-text-dark-primary);
-    border-bottom: 1px solid var(--kc-border-dark);
+    border-bottom: 1px solid color-mix(in srgb, var(--kc-border-dark) 88%, transparent);
     transition: background var(--transition-speed) ease;
-    font-size: 0.88em;
+    font-size: 0.9em;
+    min-width: 0;
 }
 
 .kc-search-dropdown__item:last-child {
@@ -270,59 +274,103 @@ header {
 }
 
 .kc-search-dropdown__emoji {
-    font-size: 1.3em;
-    flex-shrink: 0;
-    width: 24px;
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--kc-background-dark) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--kc-border-dark) 80%, transparent);
+    font-size: 1.15em;
+    line-height: 1;
     text-align: center;
 }
 
 .kc-search-dropdown__info {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
 }
 
 .kc-search-dropdown__title {
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .kc-search-dropdown__meta {
+    margin-top: 2px;
     font-size: 0.78em;
+    line-height: 1.3;
     color: var(--kc-text-dark-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.kc-search-dropdown__trailing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    max-width: 42%;
+    min-width: 0;
+}
+
+.kc-search-dropdown__signal {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 124, 0, 0.14);
+    border: 1px solid rgba(255, 124, 0, 0.28);
+    color: var(--kc-primary-brand);
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .kc-search-dropdown__price {
     font-size: 0.82em;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--kc-primary-brand);
-    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .kc-search-dropdown__empty {
-    padding: 16px;
+    padding: 18px 16px;
     text-align: center;
     color: var(--kc-text-dark-secondary);
     font-size: 0.9em;
+    line-height: 1.45;
 }
 
 .kc-search-dropdown__footer {
     display: block;
     width: 100%;
-    padding: 8px 14px;
+    padding: 10px 14px;
     text-align: center;
-    font-size: 0.82em;
+    font-size: 0.84em;
     font-family: inherit;
     color: var(--kc-primary-brand);
     border: 0;
     border-top: 1px solid var(--kc-border-dark);
     background: transparent;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
     transition: background var(--transition-speed) ease;
 }
 
@@ -333,6 +381,12 @@ header {
 .kc-search-dropdown [role="option"].is-active {
     outline: 2px solid var(--kc-primary-brand);
     outline-offset: -2px;
+}
+
+/* Dropdown inside mobile search modal — denser, viewport-aware */
+body.kc-modal-open .kc-search-dropdown {
+    border-radius: 16px;
+    max-height: min(48vh, 320px);
 }
 
 /* ── Mobile search button: retângulo idêntico ao kc-search-bar ── */
@@ -372,8 +426,12 @@ header {
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 60px 16px 24px;
-    background: rgba(0,0,0,0.62);
+    padding:
+      max(16px, env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px))
+      max(16px, env(safe-area-inset-bottom, 0px))
+      max(12px, env(safe-area-inset-left, 0px));
+    background: rgba(0, 0, 0, 0.62);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     opacity: 0;
@@ -390,10 +448,11 @@ header {
 
 .kc-search-modal-card {
     width: min(600px, 100%);
+    margin-top: min(48px, 8vh);
     background: var(--kc-surface-dark);
     border: 1px solid var(--kc-border-dark);
     border-radius: 20px;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
     overflow: hidden;
     transform: translateY(-10px) scale(0.98);
     transition: transform 180ms ease;
@@ -408,8 +467,42 @@ header {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     border-bottom: 1px solid var(--kc-border-dark);
+}
+
+@media (max-width: 480px) {
+    .kc-search-modal-card {
+        width: 100%;
+        margin-top: 4px;
+        border-radius: 16px;
+    }
+
+    .kc-search-modal-card__header {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .kc-search-modal-card__bar {
+        padding: 8px 10px;
+        border-radius: 12px;
+    }
+
+    .kc-search-dropdown__item {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .kc-search-dropdown__emoji {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        font-size: 1.05em;
+    }
+
+    .kc-search-dropdown__trailing {
+        max-width: 38%;
+    }
 }
 
 .kc-search-modal-card__close {

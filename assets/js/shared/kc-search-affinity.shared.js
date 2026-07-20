@@ -199,11 +199,22 @@
     return Math.max(0, Math.min(1, decay * saturation));
   }
 
+  /** Compact badge/chip text: module or topic only — never "escolhido por você". */
+  function cleanShortLabel(value, fallback) {
+    var text = String(value || '')
+      .replace(/\s+escolhido por você\.?$/i, '')
+      .replace(/^afinidade local com\s+/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!text) text = String(fallback || 'Priorizado').trim();
+    return text.slice(0, 22);
+  }
+
   function reasonMeta(type, label, shortLabel, icon, tone) {
     return {
       type: type,
       label: label,
-      shortLabel: shortLabel || label,
+      shortLabel: cleanShortLabel(shortLabel, label),
       icon: icon || 'fas fa-wand-magic-sparkles',
       tone: tone || 'prioritized'
     };
@@ -212,18 +223,17 @@
   function featureBadgeMeta(signal) {
     var label = String(signal && signal.label || '').trim();
     var value = String(signal && signal.value || '').trim();
-    var blob = (label + ' ' + value).toLowerCase();
+    var groupLabel = String(signal && signal.groupLabel || '').trim();
+    var blob = (label + ' ' + value + ' ' + groupLabel).toLowerCase();
     if (/cashback|cupom|desconto|coupon/.test(blob)) {
       return { shortLabel: 'Cashback', icon: 'fas fa-coins', tone: 'cashback' };
     }
     if (/sustent|eco|recicl|verde/.test(blob)) {
       return { shortLabel: 'Sustentável', icon: 'fas fa-leaf', tone: 'sustainable' };
     }
-    if (/priorid|destaque|boost/.test(blob)) {
-      return { shortLabel: 'Priorizado', icon: 'fas fa-wand-magic-sparkles', tone: 'prioritized' };
-    }
+    // Prefer option label (Acadêmicos, Perdidos, Vendo…); never full explanation.
     return {
-      shortLabel: (label || 'Match').slice(0, 18),
+      shortLabel: cleanShortLabel(label || groupLabel || value || 'Match'),
       icon: 'fas fa-bullseye',
       tone: 'match'
     };
@@ -233,11 +243,10 @@
     var reasons = [];
     var moduleSignal = signals.find(function (signal) { return signal.type === 'module'; });
     if (moduleSignal && (preferences.modules || []).indexOf(moduleSignal.module) !== -1) {
-      var moduleShort = String(moduleSignal.label || 'Priorizado').slice(0, 14);
       reasons.push(reasonMeta(
         'explicit-module',
         moduleSignal.label + ' escolhido por você',
-        moduleShort || 'Priorizado',
+        moduleSignal.label || 'Priorizado',
         'fas fa-wand-magic-sparkles',
         'prioritized'
       ));
@@ -282,7 +291,7 @@
       reasons.push(reasonMeta(
         'local-affinity',
         'Afinidade local com ' + affinityLabel,
-        'Afinidade',
+        cleanShortLabel(affinityLabel, 'Afinidade'),
         'fas fa-heart',
         'affinity'
       ));
