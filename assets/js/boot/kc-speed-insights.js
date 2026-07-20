@@ -1,87 +1,97 @@
 /**
- * kc-speed-insights.js — Vercel Speed Insights Boot
- * 
- * Injects Vercel Speed Insights tracking script to monitor web vitals
- * and performance metrics. This script is loaded early to ensure proper
- * tracking throughout the application lifecycle.
- * 
+ * kc-speed-insights.js — Vercel Speed Insights (+ quiet Analytics boot)
+ *
+ * Injects Vercel performance telemetry. Failures from content blockers are
+ * expected and must not spam the console or affect app functionality.
+ *
  * @see https://vercel.com/docs/speed-insights
  */
-
-(function() {
+(function () {
   'use strict';
-  
-  // Check if we're in a browser environment
-  if (typeof window === 'undefined') return;
-  
-  // Initialize Speed Insights queue
-  function initQueue() {
-    if (window.si) return;
-    window.si = function(...params) {
-      window.siq = window.siq || [];
-      window.siq.push(params);
-    };
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  var DEBUG = false;
+  try {
+    DEBUG = !!(window.localStorage && window.localStorage.getItem('kc_debug_telemetry') === '1');
+  } catch (_) {
+    DEBUG = false;
   }
-  
-  // Detect environment
+
+  function logDebug(message) {
+    if (!DEBUG || !console || typeof console.debug !== 'function') return;
+    console.debug('[KinoCampus][telemetry]', message);
+  }
+
   function isDevelopment() {
     try {
-      return window.location.hostname === 'localhost' || 
-             window.location.hostname === '127.0.0.1' ||
-             window.location.hostname.includes('preview');
-    } catch {
+      var host = window.location.hostname || '';
+      return host === 'localhost' || host === '127.0.0.1' || host.indexOf('preview') !== -1;
+    } catch (_) {
       return false;
     }
   }
-  
-  // Get script source based on environment
-  function getScriptSrc() {
-    if (isDevelopment()) {
-      return 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js';
-    }
-    return '/_vercel/speed-insights/script.js';
+
+  function ensureQueue(name, queueName) {
+    if (typeof window[name] === 'function') return;
+    window[name] = function () {
+      var q = window[queueName] || (window[queueName] = []);
+      q.push(arguments);
+    };
   }
-  
-  // Inject Speed Insights
-  function injectSpeedInsights() {
-    // Initialize queue first
-    initQueue();
-    
-    const src = getScriptSrc();
-    
-    // Check if script is already loaded
-    if (document.head.querySelector('script[src*="' + src + '"]')) {
-      console.log('[KinoCampus] Speed Insights already loaded');
-      return;
-    }
-    
-    // Create and configure script element
-    const script = document.createElement('script');
+
+  function alreadyInjected(srcFragment) {
+    return !!(document.head && document.head.querySelector('script[src*="' + srcFragment + '"]'));
+  }
+
+  function injectScript(src, meta) {
+    if (!document.head || alreadyInjected(src)) return;
+    var script = document.createElement('script');
     script.src = src;
     script.defer = true;
-    
-    // Add SDK metadata
-    script.dataset.sdkn = '@vercel/speed-insights/vanilla';
-    script.dataset.sdkv = '2.0.0';
-    
-    // Error handler
-    script.onerror = function() {
-      console.warn(
-        '[KinoCampus] Failed to load Speed Insights script. ' +
-        'This may be due to content blockers or network issues.'
-      );
+    if (meta && meta.sdkn) script.dataset.sdkn = meta.sdkn;
+    if (meta && meta.sdkv) script.dataset.sdkv = meta.sdkv;
+    // Content blockers (uBlock, etc.) produce net::ERR_BLOCKED_BY_CLIENT.
+    // That is expected and not an application fault — stay silent by default.
+    script.onerror = function () {
+      logDebug('Blocked or failed to load: ' + src);
     };
-    
-    // Inject script into page
+    script.onload = function () {
+      logDebug('Loaded: ' + src);
+    };
     document.head.appendChild(script);
-    
-    console.log('[KinoCampus] Speed Insights initialized');
   }
-  
-  // Run on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectSpeedInsights);
-  } else {
+
+  function injectSpeedInsights() {
+    ensureQueue('si', 'siq');
+    var src = isDevelopment()
+      ? 'https://va.vercel-scripts.com/v1/speed-insights/script.debug.js'
+      : '/_vercel/speed-insights/script.js';
+    injectScript(src, {
+      sdkn: '@vercel/speed-insights/vanilla',
+      sdkv: '2.0.0'
+    });
+  }
+
+  // Static <script src="/_vercel/insights/script.js"> tags also get blocked by
+  // ad blockers. Prefer this quiet injector when the page has not already loaded it.
+  function injectWebAnalytics() {
+    ensureQueue('va', 'vaq');
+    if (alreadyInjected('/_vercel/insights/script.js') || alreadyInjected('vercel-insights')) return;
+    injectScript('/_vercel/insights/script.js', {
+      sdkn: '@vercel/analytics/vanilla',
+      sdkv: '1.0.0'
+    });
+  }
+
+  function boot() {
     injectSpeedInsights();
+    injectWebAnalytics();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
   }
 })();

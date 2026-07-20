@@ -264,6 +264,11 @@ describe('Cadu institutional review — durable database and admin proxy', () =>
     expect(migration).toContain('alter table public.cadu_institutional_source_reviews enable row level security');
     expect(migration).toContain('grant execute on function public.kc_create_institutional_source_review');
     expect(migration).toContain('grant execute on function public.kc_resolve_institutional_source_review');
+    // Follow-up migration satisfies advisor rls_enabled_no_policy with admin SELECT only.
+    const rlsPolicyMigration = r('supabase/migrations/20260720160000_cadu_institutional_reviews_rls_policy.sql');
+    expect(rlsPolicyMigration).toContain('cadu_institutional_source_reviews_admin_select');
+    expect(rlsPolicyMigration).toContain('kc_is_admin((select auth.uid()))');
+    expect(rlsPolicyMigration).toContain('grant select on table public.cadu_institutional_source_reviews');
   });
 
   test('proxy forwards the exact review envelope while retaining legacy publish', () => {
