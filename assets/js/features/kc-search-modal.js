@@ -42,21 +42,26 @@
         <button class="kc-search-modal-card__close" type="button" aria-label="Fechar busca">
           <i class="fas fa-arrow-left" aria-hidden="true"></i>
         </button>
-        <div class="kc-search-modal-card__bar">
-          <i class="fas fa-search kc-search-modal-card__icon" aria-hidden="true"></i>
-          <input
-            type="search"
-            id="kcSearchModalInput"
-            class="kc-search-modal-card__input"
-            aria-label="Pesquisar"
-            placeholder=""
-            autocomplete="off"
-            autocorrect="off"
-            spellcheck="false"
-          />
-          <button class="kc-search-modal-card__clear" type="button" aria-label="Limpar busca" style="display:none">
-            <i class="fas fa-times" aria-hidden="true"></i>
-          </button>
+        <div class="kc-search-modal-card__main">
+          <p class="kc-search-modal-card__label" id="kcSearchModalLabel">Buscar no KinoCampus</p>
+          <div class="kc-search-modal-card__bar">
+            <i class="fas fa-search kc-search-modal-card__icon" aria-hidden="true"></i>
+            <input
+              type="search"
+              id="kcSearchModalInput"
+              class="kc-search-modal-card__input"
+              aria-label="Pesquisar"
+              aria-labelledby="kcSearchModalLabel"
+              placeholder=""
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="search"
+            />
+            <button class="kc-search-modal-card__clear" type="button" aria-label="Limpar busca" aria-hidden="true">
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -69,6 +74,15 @@
     if (window.kcSearch && typeof window.kcSearch.attachComboboxInput === 'function') {
       window.kcSearch.attachComboboxInput(modalInput);
     }
+
+    function setClearVisible(visible) {
+      if (!clearBtn) return;
+      // Keep the control in layout (no display:none) to avoid bar width jumps.
+      clearBtn.classList.toggle('is-visible', !!visible);
+      clearBtn.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      clearBtn.tabIndex = visible ? 0 : -1;
+    }
+    setClearVisible(false);
 
     /* Fecha ao clicar no overlay (fora do card) */
     overlay.addEventListener('click', (e) => {
@@ -85,7 +99,7 @@
     /* Botão limpar */
     clearBtn.addEventListener('click', () => {
       modalInput.value = '';
-      clearBtn.style.display = 'none';
+      setClearVisible(false);
       syncToRealInput('');
       modalInput.focus();
     });
@@ -93,7 +107,7 @@
     /* Quando o usuário digita no modal → sincroniza com #searchInput real */
     modalInput.addEventListener('input', () => {
       const q = modalInput.value;
-      clearBtn.style.display = q ? 'flex' : 'none';
+      setClearVisible(!!String(q || '').trim());
       syncToRealInput(q);
     });
 
@@ -223,6 +237,12 @@
     /* Limpa o input real para não deixar dropdown aberto */
     syncToRealInput('');
     if (modalInput) modalInput.value = '';
+    const clearBtn = card && card.querySelector('.kc-search-modal-card__clear');
+    if (clearBtn) {
+      clearBtn.classList.remove('is-visible');
+      clearBtn.setAttribute('aria-hidden', 'true');
+      clearBtn.tabIndex = -1;
+    }
   }
 
   /* ─── Inicialização ──────────────────────────────────────── */
