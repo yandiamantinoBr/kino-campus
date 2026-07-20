@@ -149,12 +149,15 @@
         '    </div>',
         '  </header>',
         '  <div class="kc-search-preference-module-block__groups">',
-        groups.map(function (entry) {
+        groups.map(function (entry, groupIndex) {
           var selected = state.features[entry.key] || [];
+          var titleId = ('kc-search-pref-' + moduleKey + '-' + entry.key + '-' + groupIndex)
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]+/g, '-');
           return [
-            '<fieldset class="kc-search-preference-group">',
-            '  <legend><span class="kc-search-preference-group__title">' + escapeHtml(entry.label) + '</span></legend>',
-            '  <div class="kc-search-preference-options" role="group" aria-label="' + escapeHtml(moduleLabel + ' · ' + entry.label) + '">',
+            '<section class="kc-search-preference-group" role="group" aria-labelledby="' + escapeHtml(titleId) + '">',
+            '  <h5 class="kc-search-preference-group__title" id="' + escapeHtml(titleId) + '">' + escapeHtml(entry.label) + '</h5>',
+            '  <div class="kc-search-preference-options">',
             entry.options.map(function (option) {
               var checked = selected.indexOf(option.key) !== -1;
               return [
@@ -166,7 +169,7 @@
               ].join('');
             }).join(''),
             '  </div>',
-            '</fieldset>'
+            '</section>'
           ].join('');
         }).join(''),
         '  </div>',

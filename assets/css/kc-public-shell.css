@@ -907,30 +907,41 @@ body.kc-settings-page .kc-settings-input {
 .kc-search-preference-topics {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 18px;
 }
 
 .kc-search-preference-module-block {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0;
   min-width: 0;
   padding: 0;
   border: 1px solid var(--kc-border-dark);
   border-radius: 18px;
-  overflow: hidden;
+  /* Avoid overflow:hidden — it clipped module subtitles into the first group title. */
+  overflow: visible;
   background: color-mix(in srgb, var(--kc-surface-dark) 90%, var(--kc-background-dark));
   box-shadow: 0 1px 0 color-mix(in srgb, var(--kc-border-dark) 55%, transparent);
+  isolation: isolate;
 }
 
 .kc-search-preference-module-block__head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
+  align-items: start;
+  min-width: 0;
+  padding: 16px 16px 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--kc-border-dark) 88%, transparent);
+  border-radius: 18px 18px 0 0;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--kc-surface-dark) 72%, transparent), transparent);
+    linear-gradient(180deg, color-mix(in srgb, var(--kc-surface-dark) 78%, transparent), transparent);
+}
+
+.kc-search-preference-module-block__head > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .kc-search-preference-module-block__head h4 {
@@ -938,13 +949,16 @@ body.kc-settings-page .kc-settings-input {
   color: var(--kc-text-dark-primary);
   font-size: 1rem;
   font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .kc-search-preference-module-block__head p {
-  margin: 2px 0 0;
+  margin: 0;
   color: var(--kc-text-dark-secondary);
   font-size: 0.8rem;
-  line-height: 1.4;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .kc-search-preference-module-block__emoji {
@@ -952,6 +966,7 @@ body.kc-settings-page .kc-settings-input {
   place-items: center;
   width: 44px;
   height: 44px;
+  flex: 0 0 auto;
   border-radius: 14px;
   background: rgba(255, 124, 0, 0.12);
   font-size: 1.45rem;
@@ -961,16 +976,24 @@ body.kc-settings-page .kc-settings-input {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
+  min-width: 0;
+  border-radius: 0 0 18px 18px;
+  overflow: hidden; /* only clip group backgrounds to rounded bottom corners */
 }
 
+/* Prefer <section> groups (no fieldset/legend overlap quirks). Keep fieldset
+   rules as fallback for any residual markup. */
 .kc-search-preference-group {
+  display: grid;
+  gap: 12px;
   min-width: 0;
   margin: 0;
-  padding: 14px 16px 16px;
+  padding: 16px;
   border: 0;
   border-radius: 0;
   border-top: 1px solid color-mix(in srgb, var(--kc-border-dark) 78%, transparent);
   background: transparent;
+  min-inline-size: 0;
 }
 
 .kc-search-preference-module-block__groups > .kc-search-preference-group:first-child {
@@ -978,16 +1001,17 @@ body.kc-settings-page .kc-settings-input {
 }
 
 .kc-search-preference-module-block__groups > .kc-search-preference-group:nth-child(even) {
-  background: color-mix(in srgb, var(--kc-background-dark) 55%, transparent);
+  background: color-mix(in srgb, var(--kc-background-dark) 48%, transparent);
 }
 
 .kc-search-preference-group legend {
-  float: none;
-  display: block;
+  /* Legacy fieldset path — keep non-overlapping if still present. */
+  float: left;
   width: 100%;
   max-width: 100%;
-  margin: 0 0 10px;
+  margin: 0;
   padding: 0;
+  border: 0;
   color: var(--kc-text-dark-primary);
   font-size: 0.82rem;
   font-weight: 800;
@@ -995,18 +1019,34 @@ body.kc-settings-page .kc-settings-input {
   line-height: 1.3;
 }
 
+.kc-search-preference-group:has(> legend)::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
 .kc-search-preference-group__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 0 4px;
-  border-bottom: 2px solid rgba(255, 124, 0, 0.3);
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 124, 0, 0.34);
+  color: var(--kc-text-dark-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .kc-search-preference-options {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  clear: both;
 }
 
 .kc-search-preference-option,
