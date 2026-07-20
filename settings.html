@@ -69,32 +69,37 @@
         <div class="kc-search-preferences-heading">
           <div>
             <span class="kc-settings-eyebrow">Busca e descoberta</span>
-            <h2 id="settingsSearchPreferencesTitle">Suas preferências de busca</h2>
-            <p>Escolha explicitamente o que deseja priorizar. O padrão é não personalizado e nada desta seção é enviado para analytics ou vinculado à sua conta.</p>
+            <h2 id="settingsSearchPreferencesTitle">O que priorizar na busca</h2>
+            <p>Ative a personalização e marque módulos e assuntos. Com a conta logada, as escolhas sincronizam e passam a influenciar o ranking da busca e da descoberta em todos os seus dispositivos — sempre depois do texto e dos filtros da consulta.</p>
           </div>
           <label class="kc-settings-pill kc-search-preferences-mode" for="settingsSearchPersonalized">
             <input id="settingsSearchPersonalized" type="checkbox" />
-            <span id="settingsSearchModeLabel">Não personalizada</span>
+            <span id="settingsSearchModeLabel">Ordem padrão</span>
           </label>
+        </div>
+
+        <div id="settingsSearchPreferencesSyncHint" class="kc-search-preferences-privacy" role="status" aria-live="polite">
+          <i class="fas fa-cloud" aria-hidden="true"></i>
+          <span>Verificando sincronização…</span>
         </div>
 
         <div id="settingsSearchPreferenceControls" class="kc-search-preferences-controls is-disabled">
           <fieldset class="kc-search-preference-section">
-            <legend>Módulos que você quer priorizar</legend>
-            <p>Você pode selecionar qualquer combinação. A consulta e os filtros sempre continuarão dominando a ordem.</p>
+            <legend>Módulos em destaque</legend>
+            <p>Marque os espaços da plataforma que mais importam para você (eventos, moradia, caronas…). Resultados desses módulos sobem levemente na lista quando a consulta for ambígua.</p>
             <div id="settingsSearchModules" class="kc-search-preference-modules" aria-live="polite"></div>
           </fieldset>
 
           <div class="kc-search-preference-section">
-            <h3>Assuntos específicos</h3>
-            <p>As opções vêm dos mesmos campos canônicos usados ao criar uma publicação.</p>
+            <h3>Assuntos e temas</h3>
+            <p>Opções iguais às do formulário de publicação. Úteis para afinar descoberta (ex.: estágios, acadêmicos, documentos) sem reescrever a busca toda vez.</p>
             <div id="settingsSearchTopics" class="kc-search-preference-topics" aria-live="polite"></div>
           </div>
 
           <div class="kc-settings-row kc-search-preferences-affinity">
             <div>
-              <strong><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Afinidade local</strong>
-              <p>Permitir, separadamente, que interações futuras ajustem uma afinidade mínima neste navegador. Não inclui texto pesquisado, identidade ou dados sensíveis.</p>
+              <strong><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Ajuste fino por uso</strong>
+              <p>Com o tempo, cliques e interações em resultados podem reforçar um pouco os temas que você mais usa neste navegador. Não grava o texto digitado na busca.</p>
             </div>
             <label class="kc-settings-pill" for="settingsSearchAffinity">
               <input id="settingsSearchAffinity" type="checkbox" />
@@ -105,13 +110,13 @@
 
         <div class="kc-search-preferences-privacy" role="note">
           <i class="fas fa-shield-halved" aria-hidden="true"></i>
-          <p><strong>Controle local e revogável.</strong> Você pode exportar ou remover tudo a qualquer momento. Desativar a personalização também apaga a afinidade local.</p>
+          <p><strong>Você no controle.</strong> A personalização só roda se você ativar. Pode exportar, desligar ou apagar a qualquer momento. Desligar a personalização também limpa o ajuste fino por uso.</p>
         </div>
         <div id="settingsSearchPreferencesStatus" class="kc-settings-status kc-search-preferences-status" role="status" aria-live="polite"></div>
         <div class="kc-settings-actions-row">
           <button id="settingsSaveSearchPreferences" type="button" class="kc-settings-btn is-primary"><i class="fas fa-floppy-disk"></i><span>Salvar preferências</span></button>
           <button id="settingsExportSearchPreferences" type="button" class="kc-settings-btn"><i class="fas fa-file-export"></i><span>Exportar JSON</span></button>
-          <button id="settingsClearSearchPreferences" type="button" class="kc-settings-btn is-danger"><i class="fas fa-trash-can"></i><span>Remover dados locais</span></button>
+          <button id="settingsClearSearchPreferences" type="button" class="kc-settings-btn is-danger"><i class="fas fa-trash-can"></i><span>Remover preferências</span></button>
         </div>
       </section>
 
@@ -300,7 +305,7 @@
   <script defer src="assets/js/api/kc-api.filters.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.authors.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.posts-normalize.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.client.js?v=8.6.2"></script>
+  <script defer src="assets/js/api/kc-api.client.js?v=8.6.3"></script>
   <script defer src="assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.saved.adapter.js?v=8.6.1"></script>
@@ -317,8 +322,8 @@
     <script defer src="assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.2"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.2"></script>
   <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
@@ -331,10 +336,10 @@
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
   <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
-  <script defer src="assets/js/shared/kc-search-preferences.shared.js?v=8.6.1"></script>
+  <script defer src="assets/js/shared/kc-search-preferences.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.7"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/search-preferences.controller.js?v=8.6.1"></script>
+  <script defer src="assets/js/controllers/public/search-preferences.controller.js?v=8.6.2"></script>
   <script defer src="assets/js/controllers/public/settings.controller.js?v=8.6.1"></script>
 </body>
 </html>

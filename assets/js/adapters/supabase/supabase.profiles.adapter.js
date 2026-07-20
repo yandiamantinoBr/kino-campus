@@ -362,10 +362,106 @@
   }
 
   // ── Namespace ─────────────────────────────────────────────────────────────
+  // ── Preferências de busca / descoberta (conta) ─────────────────────────────
+
+  function buildDefaultSearchPreferences() {
+    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.defaultState === 'function') {
+      return window.KCSearchPreferences.defaultState();
+    }
+    return {
+      version: 1,
+      mode: 'standard',
+      modules: [],
+      features: {},
+      localAffinityConsent: false,
+      consent: { purpose: 'search-personalization-v1', granted: false, source: 'settings', updatedAt: null },
+      updatedAt: null,
+      sync: { scope: 'local', remoteUpdatedAt: null, lastSyncedAt: null },
+    };
+  }
+
+  function normalizeSearchPreferences(value) {
+    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.normalizeState === 'function') {
+      return window.KCSearchPreferences.normalizeState(value);
+    }
+    return buildDefaultSearchPreferences();
+  }
+
+  async function getSearchPreferences() {
+    const client = getSupabaseClient();
+    if (!client) return buildDefaultSearchPreferences();
+    const user = await getCurrentUser();
+    if (!user || !user.id) return buildDefaultSearchPreferences();
+    try {
+      const { data, error } = await client
+        .from('search_preferences')
+        .select('preferences, updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) {
+        console.error('[KCAPI][profiles] getSearchPreferences:', error);
+        return buildDefaultSearchPreferences();
+      }
+      if (!data || !data.preferences) return buildDefaultSearchPreferences();
+      const normalized = normalizeSearchPreferences(data.preferences);
+      normalized.sync = {
+        scope: 'account',
+        remoteUpdatedAt: data.updated_at || normalized.updatedAt,
+        lastSyncedAt: data.updated_at || normalized.updatedAt,
+      };
+      if (!normalized.updatedAt && data.updated_at) normalized.updatedAt = data.updated_at;
+      return normalized;
+    } catch (e) {
+      console.error('[KCAPI][profiles] getSearchPreferences exception:', e);
+      return buildDefaultSearchPreferences();
+    }
+  }
+
+  async function updateSearchPreferences(preferences = {}) {
+    const client = getSupabaseClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    const user = await getCurrentUser();
+    if (!user || !user.id) {
+      return { ok: false, error: { message: 'Entre na conta para sincronizar preferências de busca.' } };
+    }
+    const payload = window.KCSearchPreferences && typeof window.KCSearchPreferences.toRemotePayload === 'function'
+      ? window.KCSearchPreferences.toRemotePayload(preferences)
+      : normalizeSearchPreferences(preferences);
+    const now = new Date().toISOString();
+    if (!payload.updatedAt) payload.updatedAt = now;
+    if (payload.consent) payload.consent.updatedAt = payload.updatedAt;
+    try {
+      const { data, error } = await client
+        .from('search_preferences')
+        .upsert({
+          user_id: user.id,
+          preferences: payload,
+        }, { onConflict: 'user_id' })
+        .select('preferences, updated_at')
+        .maybeSingle();
+      if (error) {
+        console.error('[KCAPI][profiles] updateSearchPreferences:', error);
+        return { ok: false, error: { message: error.message || 'Não foi possível salvar as preferências de busca.' } };
+      }
+      const normalized = normalizeSearchPreferences(data && data.preferences ? data.preferences : payload);
+      normalized.sync = {
+        scope: 'account',
+        remoteUpdatedAt: (data && data.updated_at) || payload.updatedAt,
+        lastSyncedAt: now,
+      };
+      return { ok: true, data: { preferences: normalized } };
+    } catch (e) {
+      console.error('[KCAPI][profiles] updateSearchPreferences exception:', e);
+      return { ok: false, error: { message: 'Não foi possível salvar as preferências de busca.' } };
+    }
+  }
+
   window._KCSA.profiles = {
     getMyProfile,
     updateMyProfile,
     uploadProfileAvatar,
+    getSearchPreferences,
+    updateSearchPreferences,
   };
 
 })();

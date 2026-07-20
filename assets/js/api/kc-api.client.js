@@ -1227,6 +1227,34 @@
     return { ok: false, error: { message: 'Prefer\u00EAncias de notifica\u00E7\u00E3o indispon\u00EDveis neste driver.' } };
   }
 
+  async function getSearchPreferences() {
+    const driver = getActiveDriver();
+    if (driver && typeof driver.getSearchPreferences === 'function') {
+      return driver.getSearchPreferences();
+    }
+    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.defaultState === 'function') {
+      return window.KCSearchPreferences.defaultState();
+    }
+    return {
+      version: 1,
+      mode: 'standard',
+      modules: [],
+      features: {},
+      localAffinityConsent: false,
+      consent: { purpose: 'search-personalization-v1', granted: false, source: 'settings', updatedAt: null },
+      updatedAt: null,
+      sync: { scope: 'local', remoteUpdatedAt: null, lastSyncedAt: null },
+    };
+  }
+
+  async function updateSearchPreferences(preferences = {}) {
+    const driver = getActiveDriver();
+    if (driver && typeof driver.updateSearchPreferences === 'function') {
+      return driver.updateSearchPreferences(preferences);
+    }
+    return { ok: false, error: { message: 'Prefer\u00EAncias de busca indispon\u00EDveis neste driver.' } };
+  }
+
   async function getNotificationChannelTargets() {
     const notificationsModule = getNotificationsModule();
     if (notificationsModule && typeof notificationsModule.getNotificationChannelTargets === 'function') {
@@ -1409,6 +1437,8 @@
     updateNotificationPreferences,
     getNotificationChannelTargets,
     updateNotificationChannelTargets,
+    getSearchPreferences,
+    updateSearchPreferences,
 
     // Notifications (v9.1.0)
     getNotifications,

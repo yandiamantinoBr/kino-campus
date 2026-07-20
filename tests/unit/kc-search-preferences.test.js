@@ -76,7 +76,7 @@ describe('preferências explícitas de busca', () => {
     expect(JSON.parse(storage.getItem(Preferences.STORAGE_KEY))).not.toHaveProperty('query');
   });
 
-  test('exporta somente o escopo local consentido e clear remove os dois stores', () => {
+  test('exporta o escopo atual e clear remove os dois stores', () => {
     const storage = memoryStorage();
     Preferences.save({ mode: 'personalized', modules: ['oportunidades'], localAffinityConsent: true }, {
       storage, registry: Registry, now: () => '2026-06-20T12:00:00.000Z'
@@ -87,7 +87,7 @@ describe('preferências explícitas de busca', () => {
       storage, registry: Registry, now: () => '2026-06-20T12:01:00.000Z'
     });
     expect(exported).toMatchObject({
-      exportVersion: 1,
+      exportVersion: 2,
       scope: 'local-browser-only',
       preferences: { modules: ['oportunidades'] },
       localAffinity: { version: 1, features: {} }
@@ -95,6 +95,31 @@ describe('preferências explícitas de busca', () => {
 
     Preferences.clear({ storage });
     expect(storage.snapshot()).toEqual({});
+  });
+
+  test('mergeLocalAndRemote prioriza conta mais recente e sinaliza push quando o local venceu', () => {
+    const local = Preferences.normalizeState({
+      mode: 'personalized',
+      modules: ['moradia'],
+      updatedAt: '2026-07-20T12:00:00.000Z'
+    }, Registry);
+    const remote = Preferences.normalizeState({
+      mode: 'personalized',
+      modules: ['eventos'],
+      updatedAt: '2026-07-20T13:00:00.000Z'
+    }, Registry);
+
+    const remoteWins = Preferences.mergeLocalAndRemote(local, remote, Registry);
+    expect(remoteWins.shouldWriteLocal).toBe(true);
+    expect(remoteWins.shouldPushRemote).toBe(false);
+    expect(remoteWins.state.modules).toEqual(['eventos']);
+
+    const localWins = Preferences.mergeLocalAndRemote(local, {
+      ...remote,
+      updatedAt: '2026-07-20T11:00:00.000Z'
+    }, Registry);
+    expect(localWins.shouldPushRemote).toBe(true);
+    expect(localWins.state.modules).toEqual(['moradia']);
   });
 
   test('falha fechada quando storage está indisponível ou corrompido', () => {

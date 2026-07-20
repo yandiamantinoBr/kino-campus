@@ -373,6 +373,8 @@ const { ENV } = window.KCAPI;
     getMyProfile: window._KCSA.profiles.getMyProfile,
     updateMyProfile: window._KCSA.profiles.updateMyProfile,
     uploadProfileAvatar: window._KCSA.profiles.uploadProfileAvatar,
+    getSearchPreferences: window._KCSA.profiles.getSearchPreferences,
+    updateSearchPreferences: window._KCSA.profiles.updateSearchPreferences,
     getMyPosts: window._KCSA.posts.getMyPosts,
     getPostsByAuthorId: window._KCSA.posts.getPostsByAuthorId,
     getRelatedPosts: window._KCSA.posts.getRelatedPosts,

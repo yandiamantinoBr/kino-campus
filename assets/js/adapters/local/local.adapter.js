@@ -412,6 +412,32 @@
 
   const getNotificationPreferences = createAsyncDelegate('notifications', 'getNotificationPreferences', null, buildDefaultLocalNotificationPreferencesFallback);
   const updateNotificationPreferences = createAsyncDelegate('notifications', 'updateNotificationPreferences', null, () => buildUnavailableResult('Preferencias de notificacao locais indisponiveis.'), ensureObjectArg(0));
+  async function getSearchPreferences() {
+    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.load === 'function') {
+      return window.KCSearchPreferences.load();
+    }
+    return {
+      version: 1,
+      mode: 'standard',
+      modules: [],
+      features: {},
+      localAffinityConsent: false,
+      consent: { purpose: 'search-personalization-v1', granted: false, source: 'settings', updatedAt: null },
+      updatedAt: null,
+      sync: { scope: 'local', remoteUpdatedAt: null, lastSyncedAt: null },
+    };
+  }
+  async function updateSearchPreferences(preferences = {}) {
+    if (window.KCSearchPreferences && typeof window.KCSearchPreferences.save === 'function') {
+      try {
+        const saved = window.KCSearchPreferences.save(preferences);
+        return { ok: true, data: { preferences: saved } };
+      } catch (error) {
+        return { ok: false, error: { message: (error && error.message) || 'Falha ao salvar preferencias locais de busca.' } };
+      }
+    }
+    return buildUnavailableResult('Preferencias de busca locais indisponiveis.');
+  }
   const getNotificationChannelTargets = createAsyncDelegate('notifications', 'getNotificationChannelTargets', null, buildDefaultLocalNotificationChannelTargetsFallback);
   const updateNotificationChannelTargets = createAsyncDelegate('notifications', 'updateNotificationChannelTargets', null, () => buildUnavailableResult('Destinos privados locais indisponiveis.'), ensureObjectArg(0));
   const getNotifications = createAsyncDelegate('notifications', 'getNotifications', null, () => ({ ok: true, notifications: [], unread: 0, total: 0 }));
@@ -463,6 +489,8 @@
     processAccountErasure,
     getNotificationPreferences,
     updateNotificationPreferences,
+    getSearchPreferences,
+    updateSearchPreferences,
     getNotificationChannelTargets,
     updateNotificationChannelTargets,
     togglePostStatus,

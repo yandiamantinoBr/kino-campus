@@ -1,8 +1,11 @@
 /*
   KinoCampus - explicit search preferences and purpose-specific consent.
 
-  This module is intentionally local-only. It never stores query text, identity,
-  free-form profile data or inferred/sensitive attributes.
+  Local storage remains a fast cache for ranking. When the user is signed in,
+  the same payload is upserted to public.search_preferences so preferences
+  follow the account across devices.
+
+  Never stores free-form query text or inferred demographic attributes.
 */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
@@ -75,7 +78,12 @@
         source: 'settings',
         updatedAt: null
       },
-      updatedAt: null
+      updatedAt: null,
+      sync: {
+        scope: 'local',
+        remoteUpdatedAt: null,
+        lastSyncedAt: null
+      }
     };
   }
 
@@ -94,6 +102,7 @@
     });
 
     var granted = mode === MODES.PERSONALIZED;
+    var syncSource = source.sync && typeof source.sync === 'object' ? source.sync : {};
     return {
       version: VERSION,
       mode: mode,
@@ -103,12 +112,19 @@
       consent: {
         purpose: PURPOSE_VERSION,
         granted: granted,
-        source: 'settings',
+        source: (source.consent && source.consent.source === 'account')
+          ? 'account'
+          : (source.consent && typeof source.consent.source === 'string' ? source.consent.source : 'settings'),
         updatedAt: granted && source.consent && typeof source.consent.updatedAt === 'string'
           ? source.consent.updatedAt
           : null
       },
-      updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null
+      updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null,
+      sync: {
+        scope: syncSource.scope === 'account' ? 'account' : 'local',
+        remoteUpdatedAt: typeof syncSource.remoteUpdatedAt === 'string' ? syncSource.remoteUpdatedAt : null,
+        lastSyncedAt: typeof syncSource.lastSyncedAt === 'string' ? syncSource.lastSyncedAt : null
+      }
     };
   }
 
@@ -118,6 +134,35 @@
       if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
     } catch (_) {}
     return null;
+  }
+
+  function parseTime(value) {
+    if (!value) return 0;
+    var ms = Date.parse(value);
+    return Number.isFinite(ms) ? ms : 0;
+  }
+
+  function pickNewer(left, right) {
+    var leftAt = parseTime(left && left.updatedAt);
+    var rightAt = parseTime(right && right.updatedAt);
+    if (rightAt > leftAt) return right;
+    if (leftAt > rightAt) return left;
+    // tie-break: personalized wins over empty standard only if modules/features present
+    if (isPersonalized(right) && !isPersonalized(left)) return right;
+    return left;
+  }
+
+  function toRemotePayload(state) {
+    var normalized = normalizeState(state);
+    return {
+      version: normalized.version,
+      mode: normalized.mode,
+      modules: normalized.modules,
+      features: normalized.features,
+      localAffinityConsent: normalized.localAffinityConsent,
+      consent: normalized.consent,
+      updatedAt: normalized.updatedAt
+    };
   }
 
   function load(options) {
@@ -140,6 +185,17 @@
     var normalized = normalizeState(input, opts.registry);
     normalized.updatedAt = now;
     normalized.consent.updatedAt = now;
+    if (opts.scope === 'account') {
+      normalized.sync.scope = 'account';
+      normalized.sync.remoteUpdatedAt = now;
+      normalized.sync.lastSyncedAt = now;
+      normalized.consent.source = 'account';
+    } else {
+      normalized.sync.scope = 'local';
+      if (opts.preserveRemoteMeta !== true) {
+        normalized.sync.lastSyncedAt = normalized.sync.lastSyncedAt || null;
+      }
+    }
     storage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     if (!normalized.localAffinityConsent) storage.removeItem(AFFINITY_STORAGE_KEY);
     return clone(normalized);
@@ -167,9 +223,9 @@
       } catch (_) {}
     }
     return {
-      exportVersion: 1,
+      exportVersion: 2,
       exportedAt: typeof opts.now === 'function' ? opts.now() : new Date().toISOString(),
-      scope: 'local-browser-only',
+      scope: state.sync && state.sync.scope === 'account' ? 'account-and-local-cache' : 'local-browser-only',
       preferences: state,
       localAffinity: affinity
     };
@@ -177,6 +233,42 @@
 
   function isPersonalized(input) {
     return !!input && input.mode === MODES.PERSONALIZED && input.consent && input.consent.granted === true;
+  }
+
+  /**
+   * Merge remote account payload with local cache.
+   * Remote wins when strictly newer; otherwise local is preferred and can be pushed.
+   */
+  function mergeLocalAndRemote(localState, remoteState, registry) {
+    var local = normalizeState(localState, registry);
+    var remote = remoteState ? normalizeState(remoteState, registry) : null;
+    if (!remote) {
+      return { state: local, shouldPushRemote: isPersonalized(local) || !!local.updatedAt, shouldWriteLocal: false };
+    }
+    remote.sync = remote.sync || {};
+    remote.sync.scope = 'account';
+    remote.sync.remoteUpdatedAt = remote.updatedAt;
+    var winner = pickNewer(local, remote);
+    var remoteIsWinner = winner === remote || (parseTime(remote.updatedAt) >= parseTime(local.updatedAt) && remote.updatedAt);
+    if (remoteIsWinner && parseTime(remote.updatedAt) > parseTime(local.updatedAt)) {
+      winner.sync = {
+        scope: 'account',
+        remoteUpdatedAt: remote.updatedAt,
+        lastSyncedAt: remote.updatedAt
+      };
+      return { state: winner, shouldPushRemote: false, shouldWriteLocal: true };
+    }
+    // local is newer or equal
+    winner.sync = {
+      scope: 'account',
+      remoteUpdatedAt: remote.updatedAt,
+      lastSyncedAt: local.updatedAt || remote.updatedAt
+    };
+    return {
+      state: winner,
+      shouldPushRemote: parseTime(local.updatedAt) > parseTime(remote.updatedAt),
+      shouldWriteLocal: false
+    };
   }
 
   return Object.freeze({
@@ -193,6 +285,9 @@
     save: save,
     clear: clear,
     exportData: exportData,
-    isPersonalized: isPersonalized
+    isPersonalized: isPersonalized,
+    toRemotePayload: toRemotePayload,
+    mergeLocalAndRemote: mergeLocalAndRemote,
+    pickNewer: pickNewer
   });
 }));
