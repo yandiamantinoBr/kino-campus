@@ -88,19 +88,25 @@ describe('KCSearchFieldRegistry — derivação canônica', () => {
   });
 
   test.each(Object.keys(createPost.schema.modules))('%s mantém grupos e opções do schema sem cópia divergente', (moduleKey) => {
+    const normalizeOption = (option) => ({
+      key: option.key,
+      label: option.label,
+      emoji: option.emoji || '',
+      icon: option.icon || ''
+    });
     const sourceGroups = createPost.schema.modules[moduleKey].tagGroups.map((group) => ({
       id: group.id,
       label: group.label,
       required: group.required === true,
       multi: group.multi === true,
-      options: group.options.map((option) => ({ key: option.key, label: option.label }))
+      options: group.options.map(normalizeOption)
     }));
     const registryGroups = registry.modules[moduleKey].tagGroups.map((group) => ({
       id: group.id,
       label: group.label,
       required: group.required,
       multi: group.multi,
-      options: group.options
+      options: group.options.map(normalizeOption)
     }));
 
     expect(registryGroups).toEqual(sourceGroups);
@@ -185,7 +191,12 @@ describe('KCSearchFieldRegistry — privacidade e preferências', () => {
         if (group.preferenceEligible) eligible.push(`${moduleKey}:${group.id}`);
       });
     });
+    // All create-modal tag groups are preference-eligible (Assuntos e temas parity).
     expect(eligible.sort()).toEqual([
+      'achados-perdidos:status',
+      'achados-perdidos:tipo',
+      'caronas:tipo',
+      'compra-venda:acao',
       'compra-venda:categoria',
       'eventos:topico',
       'moradia:tipo',

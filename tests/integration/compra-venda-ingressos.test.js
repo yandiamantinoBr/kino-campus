@@ -16,6 +16,7 @@ describe('compra-venda ingressos category', () => {
 
     expect(controller).toContain("{ key: 'ingressos', label: 'Ingressos'");
     expect(controller).toContain("if (key.includes('ingress')) return 'ingressos';");
-    expect(createSchema).toContain("{ key: 'ingressos', label: 'Ingressos' }");
+    // Schema may include optional emoji for preference UI parity with create-modal.
+    expect(createSchema).toMatch(/\{\s*key:\s*'ingressos',\s*label:\s*'Ingressos'/);
   });
 });

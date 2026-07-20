@@ -91,6 +91,8 @@ const EXPECTED_KCAPI_MEMBERS = [
   'updateNotificationPreferences',
   'getNotificationChannelTargets',
   'updateNotificationChannelTargets',
+  'getSearchPreferences',
+  'updateSearchPreferences',
   'getNotifications',
   'markNotificationsRead',
   'markAllNotificationsRead',
@@ -186,9 +188,9 @@ describe('kc-api.client.js - source shape', () => {
     expect(source.trim().endsWith('})();')).toBe(true);
   });
 
-  test('mantem snapshot completo dos 107 membros publicos de window.KCAPI', () => {
+  test('mantem snapshot completo dos 109 membros publicos de window.KCAPI', () => {
     expect(extractFacadeMembers(facadeBlock)).toEqual(EXPECTED_KCAPI_MEMBERS);
-    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(107);
+    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(109);
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
