@@ -77,6 +77,8 @@ function mergeMetadata(base, patch) {
   if (!isPlainObject(patch)) return result;
   Object.entries(patch).forEach(([key, value]) => {
     if (value === undefined) return;
+    // Block prototype-pollution keys before recursive merge (S41 / VPS archive).
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return;
     if (isPlainObject(value) && isPlainObject(result[key])) {
       result[key] = mergeMetadata(result[key], value);
     } else {

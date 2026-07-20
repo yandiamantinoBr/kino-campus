@@ -11,6 +11,12 @@ const INCLUDE_TERMS = [
   'espaco das profissoes', 'profissoes', 'mestrado', 'doutorado',
   'pos-graduacao', 'pos graduacao', 'aluno especial', 'residencia',
   'professor substituto',
+  // Alinhado ao curador v4.5+ / archive VPS 2026-07-20
+  'concurso professor efetivo', 'webnario', 'webinar', 'live', 'mutirao',
+  'abertura de turma', 'transferencia', 'segunda chamada', 'recurso',
+  'resultado', 'classificacao', 'convocacao', 'nomeacao', 'treinamento',
+  'workshop', 'minicurso', 'simposio', 'jornada', 'semana academica',
+  'festival', 'mostra',
 ];
 
 const EXCLUDE_TERMS = [
