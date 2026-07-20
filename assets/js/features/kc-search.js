@@ -1664,6 +1664,98 @@
     return post && post.id ? `product.html?id=${encodeURIComponent(post.id)}` : '#';
   }
 
+  /** Collect candidate cover URLs from normalized/raw search posts. */
+  function getPostImageCandidates(post) {
+    const out = [];
+    const push = (value) => {
+      const src = String(value || '').trim();
+      if (!src || out.indexOf(src) !== -1) return;
+      out.push(src);
+    };
+    if (!post || typeof post !== 'object') return out;
+    if (Array.isArray(post.imagens)) post.imagens.forEach(push);
+    if (Array.isArray(post.images)) post.images.forEach(push);
+    push(post.image_url || post.imageUrl);
+    push(post.cover_url || post.coverUrl);
+    const meta = post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+    if (Array.isArray(meta.gallery_image_urls)) meta.gallery_image_urls.forEach(push);
+    if (Array.isArray(meta.galleryImageUrls)) meta.galleryImageUrls.forEach(push);
+    push(meta.image_url || meta.imageUrl || meta.cover_url || meta.coverUrl);
+    return out;
+  }
+
+  /**
+   * Build a compact thumbnail URL when the media is hosted on Supabase Storage.
+   * Uses /render/image for server-side resize/compress. External hosts keep the
+   * original URL (browser still loads it small via width/height + CSS cover).
+   */
+  function buildOptimizedThumbUrl(src, options = {}) {
+    const size = Math.max(32, Math.min(160, Number(options.size) || 80));
+    const quality = Math.max(40, Math.min(85, Number(options.quality) || 62));
+    const raw = String(src || '').trim();
+    if (!raw || !/^https?:\/\//i.test(raw)) return raw;
+    try {
+      const url = new URL(raw);
+      const objectMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/i);
+      if (objectMatch) {
+        url.pathname = `/storage/v1/render/image/public/${objectMatch[1]}/${objectMatch[2]}`;
+        url.search = '';
+        url.searchParams.set('width', String(size));
+        url.searchParams.set('height', String(size));
+        url.searchParams.set('resize', 'cover');
+        url.searchParams.set('quality', String(quality));
+        return url.toString();
+      }
+      if (/\/storage\/v1\/render\/image\//i.test(url.pathname)) {
+        url.searchParams.set('width', String(size));
+        url.searchParams.set('height', String(size));
+        url.searchParams.set('resize', 'cover');
+        url.searchParams.set('quality', String(quality));
+        return url.toString();
+      }
+    } catch (_) { /* keep original */ }
+    return raw;
+  }
+
+  function createDropdownThumb(post) {
+    const wrap = document.createElement('span');
+    wrap.className = 'kc-search-dropdown__thumb';
+    const emoji = String((post && post.emoji) || '✨');
+    const candidates = getPostImageCandidates(post);
+    const primary = candidates[0] || '';
+
+    if (!primary) {
+      wrap.classList.add('kc-search-dropdown__thumb--emoji', 'kc-search-dropdown__emoji');
+      wrap.textContent = emoji;
+      wrap.setAttribute('aria-hidden', 'true');
+      return wrap;
+    }
+
+    const img = document.createElement('img');
+    img.className = 'kc-search-dropdown__thumb-img';
+    img.alt = '';
+    img.setAttribute('aria-hidden', 'true');
+    img.width = 40;
+    img.height = 40;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    // denser pixel ratio thumbs without shipping full post media
+    const optimized = buildOptimizedThumbUrl(primary, { size: 80, quality: 62 });
+    img.src = optimized;
+    img.onerror = function onThumbError() {
+      if (img.dataset.kcThumbFallback !== '1' && optimized !== primary) {
+        img.dataset.kcThumbFallback = '1';
+        img.src = primary;
+        return;
+      }
+      wrap.classList.add('kc-search-dropdown__thumb--emoji', 'kc-search-dropdown__emoji');
+      wrap.textContent = emoji;
+      if (img.parentNode === wrap) wrap.removeChild(img);
+    };
+    wrap.appendChild(img);
+    return wrap;
+  }
+
   function renderDropdown(dropdown, results, query, structuredState) {
     dropdown.innerHTML = '';
     dropdownRenderSeq += 1;
@@ -1711,9 +1803,7 @@
         recordSearchResultInteraction(post, 'dropdown-click');
       });
 
-      const emoji = document.createElement('span');
-      emoji.className = 'kc-search-dropdown__emoji';
-      emoji.textContent = post.emoji || '✨';
+      const thumb = createDropdownThumb(post);
 
       const info = document.createElement('div');
       info.className = 'kc-search-dropdown__info';
@@ -1742,7 +1832,7 @@
       info.appendChild(title);
       info.appendChild(meta);
 
-      item.appendChild(emoji);
+      item.appendChild(thumb);
       item.appendChild(info);
 
       const trailing = document.createElement('div');
@@ -2008,6 +2098,9 @@
       handleComboboxKeydown,
       setupComboboxInput,
       updateDropdown,
+      getPostImageCandidates,
+      buildOptimizedThumbUrl,
+      createDropdownThumb,
       closeDropdown,
       navigateToResults,
       trackSearch
