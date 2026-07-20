@@ -199,16 +199,60 @@
     return Math.max(0, Math.min(1, decay * saturation));
   }
 
+  function reasonMeta(type, label, shortLabel, icon, tone) {
+    return {
+      type: type,
+      label: label,
+      shortLabel: shortLabel || label,
+      icon: icon || 'fas fa-wand-magic-sparkles',
+      tone: tone || 'prioritized'
+    };
+  }
+
+  function featureBadgeMeta(signal) {
+    var label = String(signal && signal.label || '').trim();
+    var value = String(signal && signal.value || '').trim();
+    var blob = (label + ' ' + value).toLowerCase();
+    if (/cashback|cupom|desconto|coupon/.test(blob)) {
+      return { shortLabel: 'Cashback', icon: 'fas fa-coins', tone: 'cashback' };
+    }
+    if (/sustent|eco|recicl|verde/.test(blob)) {
+      return { shortLabel: 'Sustentável', icon: 'fas fa-leaf', tone: 'sustainable' };
+    }
+    if (/priorid|destaque|boost/.test(blob)) {
+      return { shortLabel: 'Priorizado', icon: 'fas fa-wand-magic-sparkles', tone: 'prioritized' };
+    }
+    return {
+      shortLabel: (label || 'Match').slice(0, 18),
+      icon: 'fas fa-bullseye',
+      tone: 'match'
+    };
+  }
+
   function explicitReasons(signals, preferences) {
     var reasons = [];
     var moduleSignal = signals.find(function (signal) { return signal.type === 'module'; });
     if (moduleSignal && (preferences.modules || []).indexOf(moduleSignal.module) !== -1) {
-      reasons.push({ type: 'explicit-module', label: moduleSignal.label + ' escolhido por você' });
+      var moduleShort = String(moduleSignal.label || 'Priorizado').slice(0, 14);
+      reasons.push(reasonMeta(
+        'explicit-module',
+        moduleSignal.label + ' escolhido por você',
+        moduleShort || 'Priorizado',
+        'fas fa-wand-magic-sparkles',
+        'prioritized'
+      ));
     }
     signals.filter(function (signal) { return signal.type === 'feature'; }).forEach(function (signal) {
       var values = preferences.features && preferences.features[signal.featureKey];
       if (Array.isArray(values) && values.indexOf(signal.value) !== -1) {
-        reasons.push({ type: 'explicit-feature', label: signal.label + ' escolhido por você' });
+        var badge = featureBadgeMeta(signal);
+        reasons.push(reasonMeta(
+          'explicit-feature',
+          signal.label + ' escolhido por você',
+          badge.shortLabel,
+          badge.icon,
+          badge.tone
+        ));
       }
     });
     return reasons;
@@ -234,10 +278,23 @@
       });
     }
     var affinityBoost = Math.min(MAX_AFFINITY_BOOST, bestAffinity * MAX_AFFINITY_BOOST);
-    if (affinityBoost > 0.001 && affinityLabel) reasons.push({ type: 'local-affinity', label: 'Afinidade local com ' + affinityLabel });
+    if (affinityBoost > 0.001 && affinityLabel) {
+      reasons.push(reasonMeta(
+        'local-affinity',
+        'Afinidade local com ' + affinityLabel,
+        'Afinidade',
+        'fas fa-heart',
+        'affinity'
+      ));
+    }
     var boost = Math.min(MAX_TOTAL_BOOST, explicitBoost + affinityBoost);
     var base = Math.max(0, Number(post && post.relevanceScore) || 0);
     var personalizedScore = base * (1 + boost);
+    // Prefer the most specific reason for the compact card badge.
+    var primary = reasons.find(function (reason) { return reason && reason.type === 'explicit-feature'; })
+      || reasons.find(function (reason) { return reason && reason.type === 'explicit-module'; })
+      || reasons[0]
+      || null;
     return {
       index: index,
       post: Object.assign({}, post, boost > 0 ? {
@@ -246,6 +303,7 @@
           boost: Math.round(boost * 10000) / 10000,
           explicitBoost: Math.round(explicitBoost * 10000) / 10000,
           affinityBoost: Math.round(affinityBoost * 10000) / 10000,
+          primary: primary ? Object.freeze(Object.assign({}, primary)) : null,
           reasons: Object.freeze(reasons.slice(0, 3).map(function (reason) { return Object.freeze(reason); }))
         })
       } : {}),

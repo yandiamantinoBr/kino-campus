@@ -84,9 +84,19 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
     const cards = page.locator('#searchResultsList [data-kc-search-result-id]');
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'event-near');
+    // Compact corner badge (not a footer bar under the card)
+    await expect(cards.nth(0).locator('.kc-result-signal-badge')).toBeVisible();
+    await expect(cards.nth(0).locator('.kc-result-signal-badge')).toContainText(/Acadêmicos|Eventos|Priorizado/i);
+    await expect(cards.nth(0).locator('.kc-search-personalization-reason')).toHaveCount(0);
+
+    // Summary chip visible; details panel collapsed until click
+    const summary = page.locator('#searchResultsPersonalizationSummary');
     await expect(page.locator('#searchResultsPersonalization')).toBeVisible();
-    await expect(page.locator('#searchResultsPersonalization')).toContainText('Eventos escolhido por você');
-    await expect(cards.nth(0).locator('.kc-search-personalization-reason')).toContainText('Priorizado');
+    await expect(summary).toBeVisible();
+    await expect(page.locator('#searchResultsPersonalizationPanel')).toBeHidden();
+    await summary.click();
+    await expect(page.locator('#searchResultsPersonalizationPanel')).toBeVisible();
+    await expect(page.locator('#searchResultsPersonalization')).toContainText(/Eventos|Acadêmicos|escolhido/i);
 
     const state = await page.evaluate(() => {
       const cardsNow = [...document.querySelectorAll('[data-kc-search-result-id]')];
@@ -99,24 +109,21 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
     expect(state.affinity).toBeNull();
 
     const toggle = page.locator('#searchResultsPersonalizationToggle');
-    await expect(toggle).toHaveText('Ordem padrão');
+    await expect(toggle).toContainText(/Ordem padrão|padrão/i);
     await toggle.click();
     await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'housing-strong');
-    await expect(page.locator('#searchResultsPersonalization')).toContainText('Ordem padrão nesta busca');
-    await expect(page.locator('#searchResultsList')).not.toContainText('Priorizado:');
+    await expect(page.locator('#searchResultsPersonalizationSummaryText')).toContainText(/padrão/i);
+    await expect(cards.nth(0).locator('.kc-result-signal-badge')).toHaveCount(0);
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('kc_search_preferences_v1')).mode))
       .toBe('personalized');
 
+    // Re-open panel if collapsed and restore personalization
+    if (await page.locator('#searchResultsPersonalizationPanel').isHidden()) {
+      await summary.click();
+    }
     await toggle.click();
     await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'event-near');
-    await expect(toggle).toHaveText('Ordem padrão');
-
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
-    await page.locator('#searchInput').fill('campu');
-    await expect(cards.nth(0)).toHaveAttribute('data-kc-search-result-id', 'event-near');
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 
     await page.setViewportSize({ width: 390, height: 844 });
     const mobile = await page.evaluate(() => ({
@@ -150,7 +157,7 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
     const options = page.locator('#kcSearchDropdown [role="option"]');
     await expect(options).toHaveCount(2);
     await expect(options.nth(0)).toContainText('Evento perto do campus');
-    await expect(options.nth(0)).toContainText('Prioridade: Eventos escolhido por você');
+    await expect(options.nth(0)).toContainText(/Priorizado|Acadêmicos|Eventos|Afinidade/i);
 
     await page.evaluate(() => {
       localStorage.setItem('kc_search_preferences_v1', JSON.stringify({

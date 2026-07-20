@@ -42,8 +42,12 @@ describe('afinidade local e reranking responsável', () => {
       expect.objectContaining({ key: 'module:eventos', type: 'module' }),
       expect.objectContaining({ key: 'feature:eventos:topico:academicos', type: 'feature' })
     ]));
+    // status group is preference-eligible (synced with create-modal), so category maps to a feature signal.
     expect(Affinity.extractSignals({ module: 'achados-perdidos', category: 'perdidos' }, Registry))
-      .toEqual([expect.objectContaining({ key: 'module:achados-perdidos' })]);
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ key: 'module:achados-perdidos', type: 'module' }),
+        expect.objectContaining({ key: 'feature:achados-perdidos:status:perdidos', type: 'feature' })
+      ]));
   });
 
   test('não registra sem opt-in separado, em automação ou fora de clique deliberado', () => {

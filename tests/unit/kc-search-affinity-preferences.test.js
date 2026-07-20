@@ -28,7 +28,10 @@ describe('personalização de busca — ranking real', () => {
     });
     expect(ranked.map((post) => post.id)).toEqual(['event', 'housing']);
     expect(ranked[0]._kcPersonalization.boost).toBeGreaterThan(0);
-    expect(ranked[0]._kcPersonalization.reasons.some((reason) => /Eventos|Acadêmicos|escolhido/i.test(reason.label))).toBe(true);
+    expect(ranked[0]._kcPersonalization.primary).toBeTruthy();
+    expect(ranked[0]._kcPersonalization.primary.shortLabel).toBeTruthy();
+    expect(ranked[0]._kcPersonalization.primary.tone).toMatch(/prioritized|match|sustainable|affinity|cashback/);
+    expect(ranked[0]._kcPersonalization.reasons.some((reason) => /Eventos|Acadêmicos|escolhido|Priorizado/i.test(reason.label + reason.shortLabel))).toBe(true);
   });
 
   test('modo standard não altera a ordem original', () => {

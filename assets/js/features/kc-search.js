@@ -881,6 +881,9 @@
       structuredNote: document.getElementById('searchResultsStructuredNote'),
       structuredRestore: document.getElementById('searchResultsStructuredRestore'),
       personalization: document.getElementById('searchResultsPersonalization'),
+      personalizationSummary: document.getElementById('searchResultsPersonalizationSummary'),
+      personalizationSummaryText: document.getElementById('searchResultsPersonalizationSummaryText'),
+      personalizationPanel: document.getElementById('searchResultsPersonalizationPanel'),
       personalizationTitle: document.getElementById('searchResultsPersonalizationTitle'),
       personalizationText: document.getElementById('searchResultsPersonalizationText'),
       personalizationToggle: document.getElementById('searchResultsPersonalizationToggle'),
@@ -1025,6 +1028,17 @@
     if (controls.structuredRestore) controls.structuredRestore.hidden = !(state.dismissedCount > 0);
   }
 
+  function setPersonalizationPanelExpanded(expanded) {
+    const controls = getResultControls();
+    if (!controls.personalization || !controls.personalizationSummary) return;
+    const open = expanded === true;
+    controls.personalization.classList.toggle('is-expanded', open);
+    controls.personalizationSummary.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (controls.personalizationPanel) {
+      controls.personalizationPanel.hidden = !open;
+    }
+  }
+
   function renderSearchPersonalizationState(results, sortBy, options = {}) {
     const controls = getResultControls();
     if (!controls.personalization) return;
@@ -1034,28 +1048,45 @@
     );
     const visible = suppressed || (sortBy === 'relevance' && personalized.length > 0);
     controls.personalization.hidden = !visible;
-    if (!visible || !controls.personalizationText) return;
-    if (controls.personalizationTitle) {
-      controls.personalizationTitle.textContent = suppressed
-        ? 'Ordem padrão nesta busca.'
-        : 'Ordem personalizada neste navegador.';
-    }
-    if (controls.personalizationToggle) {
-      controls.personalizationToggle.setAttribute('aria-pressed', suppressed ? 'true' : 'false');
-    }
-    if (suppressed) {
-      controls.personalizationText.textContent = 'A personalização local foi ignorada somente para esta consulta.';
+    if (!visible) {
+      setPersonalizationPanelExpanded(false);
       return;
     }
+
     const reasonLabels = [];
     personalized.forEach((post) => {
       (post._kcPersonalization.reasons || []).forEach((reason) => {
         if (reason && reason.label && reasonLabels.indexOf(reason.label) === -1) reasonLabels.push(reason.label);
       });
     });
-    controls.personalizationText.textContent = reasonLabels.length
-      ? `Ordem ajustada por: ${reasonLabels.slice(0, 3).join(' · ')}.`
-      : 'A ordem considera apenas preferências locais autorizadas.';
+
+    if (controls.personalizationSummaryText) {
+      controls.personalizationSummaryText.textContent = suppressed
+        ? 'Ordem padrão nesta busca'
+        : (personalized.length
+          ? `Personalização ativa · ${personalized.length} resultado${personalized.length === 1 ? '' : 's'}`
+          : 'Personalização ativa');
+    }
+    if (controls.personalizationTitle) {
+      controls.personalizationTitle.textContent = suppressed
+        ? 'Ordem padrão nesta busca'
+        : 'Como a ordem foi ajustada';
+    }
+    if (controls.personalizationToggle) {
+      controls.personalizationToggle.setAttribute('aria-pressed', suppressed ? 'true' : 'false');
+      controls.personalizationToggle.textContent = suppressed ? 'Usar personalização' : 'Ordem padrão';
+    }
+    if (controls.personalizationText) {
+      if (suppressed) {
+        controls.personalizationText.textContent = 'A personalização foi ignorada só nesta consulta. A consulta e os filtros continuam dominantes.';
+      } else {
+        controls.personalizationText.textContent = reasonLabels.length
+          ? `Ajustes aplicados: ${reasonLabels.slice(0, 3).join(' · ')}. A consulta e os filtros continuam dominantes.`
+          : 'A ordem considera preferências que você autorizou. A consulta e os filtros continuam dominantes.';
+      }
+    }
+    // Keep details collapsed until the user opens the summary chip.
+    if (options.keepExpanded !== true) setPersonalizationPanelExpanded(false);
   }
 
   function updateNoResultsState(noElement, results, state) {
@@ -1216,6 +1247,13 @@
       });
     }
 
+    if (controls.personalizationSummary && controls.personalizationSummary.dataset.kcSearchBound !== '1') {
+      controls.personalizationSummary.dataset.kcSearchBound = '1';
+      controls.personalizationSummary.addEventListener('click', () => {
+        const expanded = controls.personalizationSummary.getAttribute('aria-expanded') === 'true';
+        setPersonalizationPanelExpanded(!expanded);
+      });
+    }
     if (controls.personalizationToggle && controls.personalizationToggle.dataset.kcSearchBound !== '1') {
       controls.personalizationToggle.dataset.kcSearchBound = '1';
       controls.personalizationToggle.addEventListener('click', () => {
@@ -1239,20 +1277,57 @@
     }
   }
 
+  function buildResultSignalBadge(post) {
+    const personalization = post && post._kcPersonalization;
+    if (!personalization || !(personalization.boost > 0)) return '';
+    const primary = personalization.primary
+      || (Array.isArray(personalization.reasons) ? personalization.reasons[0] : null);
+    if (!primary || !primary.label) return '';
+    const tone = String(primary.tone || primary.type || 'prioritized')
+      .replace(/explicit-module/i, 'prioritized')
+      .replace(/explicit-feature/i, 'match')
+      .replace(/local-affinity/i, 'affinity')
+      .replace(/[^a-z-]/gi, '')
+      .toLowerCase() || 'prioritized';
+    const icon = String(primary.icon || 'fas fa-wand-magic-sparkles');
+    const shortLabel = String(primary.shortLabel || primary.label || 'Priorizado').slice(0, 18);
+    const title = String(primary.label || shortLabel);
+    return (
+      `<span class="kc-result-signal-badge kc-result-signal-badge--${escapeHtml(tone)}" title="${escapeHtml(title)}">` +
+      `<i class="${escapeHtml(icon)}" aria-hidden="true"></i>` +
+      `<span>${escapeHtml(shortLabel)}</span>` +
+      `</span>`
+    );
+  }
+
   function decorateResultCard(html, post) {
     const source = String(html || '');
     const id = getStructuredPostId(post);
     if (!id || !/<article\b/i.test(source)) return source;
-    const personalization = post && post._kcPersonalization;
-    const reason = personalization && Array.isArray(personalization.reasons)
-      ? personalization.reasons.map((item) => item && item.label).filter(Boolean).slice(0, 2).join(' · ')
-      : '';
     let decorated = source.replace(/<article\b/i, `<article data-kc-search-result-id="${escapeHtml(id)}"`);
-    if (reason && /<\/article>\s*$/i.test(decorated)) {
-      const explanation = `<div class="kc-search-personalization-reason"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><span>Priorizado: ${escapeHtml(reason)}</span></div>`;
-      decorated = decorated.replace(/<\/article>\s*$/i, `${explanation}</article>`);
+    const signalBadge = buildResultSignalBadge(post);
+    if (!signalBadge) return decorated;
+
+    // Prefer the top-right corner stack (same zone as cashback/coupon badges).
+    // Order: signal first, cashback last → with flex-end cashback stays outermost right.
+    if (/kc-cashback-badge/i.test(decorated)) {
+      decorated = decorated.replace(
+        /(<span class="kc-cashback-badge"[\s\S]*?<\/span>)/i,
+        `<div class="kc-card__corner-signals">${signalBadge}$1</div>`
+      );
+      if (!/kc-card--has-corner-badge/i.test(decorated)) {
+        decorated = decorated.replace(/class="([^"]*\bkc-card\b[^"]*)"/i, 'class="$1 kc-card--has-corner-badge"');
+      }
+      return decorated;
     }
-    return decorated;
+
+    if (/<div class="kc-card__main">/i.test(decorated)) {
+      return decorated.replace(
+        /<div class="kc-card__main">/i,
+        `<div class="kc-card__main"><div class="kc-card__corner-signals">${signalBadge}</div>`
+      );
+    }
+    return decorated.replace(/<article\b([^>]*)>/i, `<article$1><div class="kc-card__corner-signals">${signalBadge}</div>`);
   }
 
   function buildResultCard(raw) {
@@ -1600,7 +1675,10 @@
       const firstReason = personalization && Array.isArray(personalization.reasons)
         ? personalization.reasons.find((reason) => reason && reason.label)
         : null;
-      if (firstReason) parts.unshift(`Prioridade: ${firstReason.label}`);
+      if (firstReason) {
+        const short = firstReason.shortLabel || firstReason.label;
+        parts.unshift(short);
+      }
       meta.textContent = parts.join(' · ');
 
       info.appendChild(title);
