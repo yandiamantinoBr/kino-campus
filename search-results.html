@@ -43,28 +43,35 @@
         }
 
         .kc-search-results-controls {
+            display: grid;
+            gap: 12px;
+            margin: 0 0 18px;
+            padding: 14px 16px;
+            border: 1px solid var(--kc-border-dark);
+            border-radius: 14px;
+            background: var(--kc-surface-dark);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+        }
+
+        .kc-search-results-controls__toolbar {
             display: flex;
             align-items: stretch;
             justify-content: space-between;
             gap: 14px;
-            margin: 0 0 18px;
-            padding: 14px 16px;
-            border: 1px solid var(--kc-border-dark);
-            border-radius: 12px;
-            background: var(--kc-surface-dark);
-            box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+            min-width: 0;
         }
 
         .kc-search-results-controls__summary {
             display: flex;
             align-items: center;
             gap: 10px;
-            min-width: 180px;
+            min-width: 168px;
             padding: 10px 12px;
             border: 1px solid rgba(255,124,0,.24);
             border-radius: 11px;
             background: rgba(255,124,0,.08);
             color: var(--kc-text-dark);
+            flex: 0 0 auto;
         }
 
         .kc-search-results-controls__icon {
@@ -276,15 +283,27 @@
             background: transparent;
         }
 
+        /* Personalization lives inside the filters toolbar — compact chip + expand */
+        .kc-search-results-controls__personalization {
+            display: grid;
+            gap: 0;
+            margin: 0;
+            padding-top: 12px;
+            border-top: 1px solid color-mix(in srgb, var(--kc-border-dark) 88%, transparent);
+            color: var(--kc-text-dark);
+            min-width: 0;
+        }
+
+        .kc-search-results-controls__personalization[hidden],
+        .kc-search-personalization[hidden] {
+            display: none !important;
+        }
+
         .kc-search-personalization {
             display: grid;
             gap: 0;
-            margin: -6px 0 16px;
-            color: var(--kc-text-dark);
-        }
-
-        .kc-search-personalization[hidden] {
-            display: none !important;
+            margin: 0;
+            min-width: 0;
         }
 
         .kc-search-personalization__summary {
@@ -299,7 +318,7 @@
             background: rgba(255, 124, 0, 0.08);
             color: var(--kc-text-dark-primary);
             font: inherit;
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             font-weight: 700;
             cursor: pointer;
             text-align: left;
@@ -327,13 +346,13 @@
         .kc-search-personalization__panel {
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px 16px;
+            gap: 10px 14px;
             align-items: center;
             margin-top: 10px;
-            padding: 14px 16px;
-            border: 1px solid rgba(255, 124, 0, 0.24);
-            border-radius: 14px;
-            background: rgba(255, 124, 0, 0.07);
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 124, 0, 0.22);
+            border-radius: 12px;
+            background: rgba(255, 124, 0, 0.06);
         }
 
         .kc-search-personalization__panel[hidden] {
@@ -343,15 +362,22 @@
         .kc-search-personalization__panel p {
             margin: 0;
             color: var(--kc-text-dark-secondary);
-            line-height: 1.5;
-            font-size: 0.9rem;
+            line-height: 1.45;
+            font-size: 0.86rem;
+        }
+
+        .kc-search-personalization__panel p strong {
+            display: block;
+            margin-bottom: 2px;
+            color: var(--kc-text-dark-primary);
+            font-size: 0.84rem;
         }
 
         .kc-search-personalization__actions {
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
@@ -360,11 +386,12 @@
             color: var(--primary-orange);
             font-weight: 800;
             white-space: nowrap;
+            font-size: 0.84rem;
         }
 
         .kc-search-personalization__toggle {
-            min-height: 36px;
-            padding: 7px 12px;
+            min-height: 34px;
+            padding: 6px 12px;
             border: 1px solid rgba(255, 124, 0, 0.28);
             border-radius: 999px;
             background: var(--kc-bg-dark);
@@ -448,12 +475,26 @@
             position: relative;
         }
 
+        @media (max-width: 960px) {
+            .kc-search-results-controls__toolbar {
+                flex-wrap: wrap;
+            }
+
+            .kc-search-results-active {
+                flex: 1 1 100%;
+            }
+        }
+
         @media (max-width: 760px) {
             .kc-search-results-controls {
-                align-items: stretch;
-                flex-direction: column;
                 gap: 10px;
                 padding: 12px;
+            }
+
+            .kc-search-results-controls__toolbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
             }
 
             .kc-search-results-controls__group {
@@ -501,6 +542,10 @@
             .kc-search-structured-chip {
                 min-height: 36px;
                 max-width: 100%;
+            }
+
+            .kc-search-personalization__summary {
+                width: 100%;
             }
 
             .kc-search-personalization__panel {
@@ -643,46 +688,72 @@
         </div>
 
         <section class="kc-search-results-controls" aria-label="Filtros dos resultados de busca" data-i18n-aria-label="aria-label.search-results-filters">
-            <div class="kc-search-results-controls__summary" aria-live="polite">
-                <span class="kc-search-results-controls__icon" aria-hidden="true"><i class="fas fa-sliders"></i></span>
-                <div>
-                    <strong>Filtros</strong>
-                    <span id="searchResultsVisibleSummary">0 resultado(s)</span>
+            <div class="kc-search-results-controls__toolbar">
+                <div class="kc-search-results-controls__summary" aria-live="polite">
+                    <span class="kc-search-results-controls__icon" aria-hidden="true"><i class="fas fa-sliders"></i></span>
+                    <div>
+                        <strong>Filtros</strong>
+                        <span id="searchResultsVisibleSummary">0 resultados</span>
+                    </div>
                 </div>
+                <div class="kc-search-results-controls__group">
+                    <label class="kc-search-results-field" for="searchResultsModuleFilter">
+                        <span>Por m&oacute;dulo</span>
+                        <select id="searchResultsModuleFilter" aria-label="Filtrar por m&oacute;dulo" data-i18n-aria-label="aria-label.search-results-module">
+                            <option value="">Todos</option>
+                            <option value="eventos">Eventos</option>
+                            <option value="oportunidades">Oportunidades</option>
+                            <option value="moradia">Moradia</option>
+                            <option value="compra-venda">Compra e venda</option>
+                            <option value="caronas">Caronas</option>
+                            <option value="achados-perdidos">Achados/Perdidos</option>
+                        </select>
+                    </label>
+
+                    <label class="kc-search-results-field" for="searchResultsSort">
+                        <span>Ordenar</span>
+                        <select id="searchResultsSort" aria-label="Ordenar resultados" data-i18n-aria-label="aria-label.search-results-sort">
+                            <option value="relevance">Mais relevantes</option>
+                            <option value="recent">Mais recentes</option>
+                            <option value="engagement">Maior engajamento</option>
+                        </select>
+                    </label>
+
+                    <label class="kc-search-results-toggle" for="searchResultsHideClosed">
+                        <input id="searchResultsHideClosed" type="checkbox" />
+                        <span>Ocultar encerradas</span>
+                    </label>
+
+                    <button class="kc-btn-secondary" type="button" id="searchResultsClearFilters">
+                        <i class="fas fa-rotate-left"></i> Limpar filtros
+                    </button>
+                </div>
+                <div class="kc-search-results-active" id="searchResultsActiveFilters">Todos os m&oacute;dulos &middot; Mais relevantes</div>
             </div>
-            <div class="kc-search-results-controls__group">
-                <label class="kc-search-results-field" for="searchResultsModuleFilter">
-                    <span>Por m&oacute;dulo</span>
-                    <select id="searchResultsModuleFilter" aria-label="Filtrar por m&oacute;dulo" data-i18n-aria-label="aria-label.search-results-module">
-                        <option value="">Todos</option>
-                        <option value="eventos">Eventos</option>
-                        <option value="oportunidades">Oportunidades</option>
-                        <option value="moradia">Moradia</option>
-                        <option value="compra-venda">Compra e venda</option>
-                        <option value="caronas">Caronas</option>
-                        <option value="achados-perdidos">Achados/Perdidos</option>
-                    </select>
-                </label>
 
-                <label class="kc-search-results-field" for="searchResultsSort">
-                    <span>Ordenar</span>
-                    <select id="searchResultsSort" aria-label="Ordenar resultados" data-i18n-aria-label="aria-label.search-results-sort">
-                        <option value="relevance">Mais relevantes</option>
-                        <option value="recent">Mais recentes</option>
-                        <option value="engagement">Maior engajamento</option>
-                    </select>
-                </label>
-
-                <label class="kc-search-results-toggle" for="searchResultsHideClosed">
-                    <input id="searchResultsHideClosed" type="checkbox" />
-                    <span>Ocultar encerradas</span>
-                </label>
-
-                <button class="kc-btn-secondary" type="button" id="searchResultsClearFilters">
-                    <i class="fas fa-rotate-left"></i> Limpar filtros
-                </button>
+            <div class="kc-search-results-controls__personalization" id="searchResultsPersonalizationSlot" hidden>
+                <aside class="kc-search-personalization" id="searchResultsPersonalization" aria-live="polite" hidden>
+                    <button type="button"
+                        class="kc-search-personalization__summary"
+                        id="searchResultsPersonalizationSummary"
+                        aria-expanded="false"
+                        aria-controls="searchResultsPersonalizationPanel">
+                        <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+                        <span class="kc-search-personalization__summary-label" id="searchResultsPersonalizationSummaryText">Personaliza&ccedil;&atilde;o ativa</span>
+                        <i class="fas fa-chevron-down kc-search-personalization__summary-chevron" aria-hidden="true"></i>
+                    </button>
+                    <div class="kc-search-personalization__panel" id="searchResultsPersonalizationPanel" hidden>
+                        <p>
+                            <strong id="searchResultsPersonalizationTitle">Como a ordem foi ajustada</strong>
+                            <span id="searchResultsPersonalizationText"></span>
+                        </p>
+                        <div class="kc-search-personalization__actions">
+                            <button type="button" class="kc-search-personalization__toggle" id="searchResultsPersonalizationToggle" aria-pressed="false">Ordem padr&atilde;o</button>
+                            <a href="settings.html#settingsSearchPreferences">Revisar prefer&ecirc;ncias</a>
+                        </div>
+                    </div>
+                </aside>
             </div>
-            <div class="kc-search-results-active" id="searchResultsActiveFilters">Todos os m&oacute;dulos &middot; Mais relevantes</div>
         </section>
 
         <section class="kc-search-structured" id="searchResultsStructured" aria-labelledby="searchResultsStructuredTitle" aria-live="polite" hidden>
@@ -697,28 +768,6 @@
             <div class="kc-search-structured__chips" id="searchResultsStructuredChips"></div>
             <p class="kc-search-structured__note" id="searchResultsStructuredNote" hidden></p>
         </section>
-
-        <aside class="kc-search-personalization" id="searchResultsPersonalization" aria-live="polite" hidden>
-            <button type="button"
-                class="kc-search-personalization__summary"
-                id="searchResultsPersonalizationSummary"
-                aria-expanded="false"
-                aria-controls="searchResultsPersonalizationPanel">
-                <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
-                <span class="kc-search-personalization__summary-label" id="searchResultsPersonalizationSummaryText">Personalização ativa</span>
-                <i class="fas fa-chevron-down kc-search-personalization__summary-chevron" aria-hidden="true"></i>
-            </button>
-            <div class="kc-search-personalization__panel" id="searchResultsPersonalizationPanel" hidden>
-                <p>
-                    <strong id="searchResultsPersonalizationTitle">Como a ordem foi ajustada</strong>
-                    <span id="searchResultsPersonalizationText"></span>
-                </p>
-                <div class="kc-search-personalization__actions">
-                    <button type="button" class="kc-search-personalization__toggle" id="searchResultsPersonalizationToggle" aria-pressed="false">Ordem padrão</button>
-                    <a href="settings.html#settingsSearchPreferences">Revisar preferências</a>
-                </div>
-            </div>
-        </aside>
 
         <div id="noResults">
             <i class="fas fa-search" aria-hidden="true"></i>
@@ -855,7 +904,7 @@
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
-    <script defer src="assets/js/features/kc-search.js?v=8.6.8"></script>
+    <script defer src="assets/js/features/kc-search.js?v=8.6.9"></script>
     <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
 </body>
 

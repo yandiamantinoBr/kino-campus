@@ -177,6 +177,10 @@ describe('KCSearchShadowPipeline — contrato', () => {
     expect(result.plan.module).toBe('moradia');
     expect(result.candidate.map((row) => row.id)).toEqual(['housing']);
     expect(result.policy.moduleOverride).toBe('moradia');
+    // Facets ignore the UI module override so the module dropdown keeps honest counts.
+    expect(result.facets.modules.eventos).toBe(1);
+    expect(result.facets.modules.moradia).toBe(1);
+    expect(result.facets.total).toBe(2);
   });
 
   test('expõe somente contagens agregadas de módulos como facetas', () => {

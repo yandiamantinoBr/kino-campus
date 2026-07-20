@@ -21,6 +21,11 @@ describe('search-results.html', () => {
     expect(html).toContain('id="searchResultsRelaxStructured"');
     expect(html).toContain('id="noResultsMessage"');
     expect(html).toContain('kc-search-results-controls__summary');
+    expect(html).toContain('kc-search-results-controls__toolbar');
+    expect(html).toContain('id="searchResultsPersonalizationSlot"');
+    expect(html).toContain('id="searchResultsPersonalization"');
+    // Personalization lives inside the filters toolbar, not as a loose sibling block.
+    expect(html).toMatch(/kc-search-results-controls[\s\S]*searchResultsPersonalization[\s\S]*<\/section>/);
     expect(html).toContain('data-i18n-aria-label="aria-label.search-results-filters"');
   });
 
@@ -28,7 +33,7 @@ describe('search-results.html', () => {
     const html = read('search-results.html');
 
     expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.2');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.7');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.9');
   });
 });
 
@@ -42,8 +47,11 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('writeResultFiltersToUrl(q, filters)');
     expect(source).toContain('function dismissStructuredSignal');
     expect(source).toContain('function renderStructuredSearchState');
+    expect(source).toContain('function formatVisibleResultsLabel');
     expect(source).toContain('moduleOverride: filters.module');
     expect(source).toContain('SEARCH_RESULTS_LIMIT = 120');
+    // Visible summary must track the rendered feed list, not a pre-filter pool.
+    expect(source).toContain('formatVisibleResultsLabel(visible)');
   });
 
   test('keeps the header search global outside the results page', () => {

@@ -880,6 +880,7 @@
       structuredChips: document.getElementById('searchResultsStructuredChips'),
       structuredNote: document.getElementById('searchResultsStructuredNote'),
       structuredRestore: document.getElementById('searchResultsStructuredRestore'),
+      personalizationSlot: document.getElementById('searchResultsPersonalizationSlot'),
       personalization: document.getElementById('searchResultsPersonalization'),
       personalizationSummary: document.getElementById('searchResultsPersonalizationSummary'),
       personalizationSummaryText: document.getElementById('searchResultsPersonalizationSummaryText'),
@@ -1048,6 +1049,7 @@
     );
     const visible = suppressed || (sortBy === 'relevance' && personalized.length > 0);
     controls.personalization.hidden = !visible;
+    if (controls.personalizationSlot) controls.personalizationSlot.hidden = !visible;
     if (!visible) {
       setPersonalizationPanelExpanded(false);
       return;
@@ -1061,10 +1063,11 @@
     });
 
     if (controls.personalizationSummaryText) {
+      // Avoid reusing the word "resultados" here — Filtros already owns the feed count.
       controls.personalizationSummaryText.textContent = suppressed
         ? 'Ordem padrão nesta busca'
         : (personalized.length
-          ? `Personalização ativa · ${personalized.length} resultado${personalized.length === 1 ? '' : 's'}`
+          ? `Personalização ativa · ${personalized.length} priorizado${personalized.length === 1 ? '' : 's'}`
           : 'Personalização ativa');
     }
     if (controls.personalizationTitle) {
@@ -1145,23 +1148,38 @@
     return list;
   }
 
-  function updateResultsControlsState(rawResults, filteredResults, filters, structuredState) {
-    const controls = getResultControls();
-    const rawList = Array.isArray(rawResults) ? rawResults : [];
-    const visibleList = Array.isArray(filteredResults) ? filteredResults : [];
-    const fallbackModuleCounts = rawList.reduce((acc, post) => {
+  function countResultsByModule(results) {
+    return (Array.isArray(results) ? results : []).reduce((acc, post) => {
       const key = getPostModuleKey(post);
       if (!key) return acc;
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
+  }
+
+  function sumModuleCounts(moduleCounts) {
+    return Object.keys(moduleCounts || {}).reduce((total, key) => total + (Number(moduleCounts[key]) || 0), 0);
+  }
+
+  function formatVisibleResultsLabel(count) {
+    const n = Math.max(0, Number(count) || 0);
+    return n === 1 ? '1 resultado' : `${n} resultados`;
+  }
+
+  function updateResultsControlsState(rawResults, filteredResults, filters, structuredState, options = {}) {
+    const controls = getResultControls();
+    const visibleList = Array.isArray(filteredResults) ? filteredResults : [];
+    const visible = visibleList.length;
+    // Prefer a pre-UI-module pool for dropdown facets (matches what switching modules would show).
+    const facetSource = Array.isArray(options.facetSource) ? options.facetSource : (Array.isArray(rawResults) ? rawResults : []);
+    const fallbackModuleCounts = countResultsByModule(facetSource);
     const structuredFacets = structuredState && structuredState.facets;
     const moduleCounts = structuredFacets && structuredFacets.modules
       ? structuredFacets.modules
       : fallbackModuleCounts;
     const facetTotal = structuredFacets && Number.isFinite(Number(structuredFacets.total))
       ? Number(structuredFacets.total)
-      : rawList.length;
+      : (sumModuleCounts(moduleCounts) || facetSource.length);
 
     if (controls.module) {
       SEARCH_RESULTS_MODULES.forEach((item) => {
@@ -1169,27 +1187,27 @@
         if (!option) return;
         const count = item.key ? (moduleCounts[item.key] || 0) : facetTotal;
         option.textContent = item.key ? `${item.label} (${count})` : `${item.label} (${facetTotal})`;
+        // Keep the active module selectable even if the current structured query yields 0 there.
         option.disabled = !!item.key && count === 0 && filters.module !== item.key;
       });
     }
 
+    // Source of truth: cards actually rendered in #searchResultsList / header count.
     if (controls.count) {
-      const total = rawList.length;
-      const visible = visibleList.length;
-      controls.count.textContent = total === visible
-        ? `${visible} resultado(s)`
-        : `${visible} de ${total} resultado(s)`;
+      controls.count.textContent = formatVisibleResultsLabel(visible);
     }
+    const headerCount = document.getElementById('resultsCount');
+    if (headerCount) headerCount.textContent = String(visible);
 
     if (controls.active) {
       const parts = [];
       if (filters.module) parts.push(`Módulo: ${getModuleLabel(filters.module)}`);
       if (filters.hideClosed) parts.push('Encerradas ocultas');
       if (filters.sortBy === 'recent') parts.push('Mais recentes');
-      if (filters.sortBy === 'engagement') parts.push('Maior engajamento');
-      controls.active.textContent = parts.length
-        ? parts.join(' · ')
-        : 'Todos os módulos · Mais relevantes';
+      else if (filters.sortBy === 'engagement') parts.push('Maior engajamento');
+      else parts.push('Mais relevantes');
+      if (!filters.module) parts.unshift('Todos os módulos');
+      controls.active.textContent = parts.join(' · ');
     }
   }
 
@@ -1372,14 +1390,12 @@
     const personalizationSuppressed = syncSearchPersonalizationContext(q);
     const titleEl = document.getElementById('searchQueryText');
     const noEl = document.getElementById('noResults');
-    const countEl = document.getElementById('resultsCount');
 
     if (titleEl) titleEl.textContent = q ? `"${q}"` : '';
 
     if (!q) {
       listEl.innerHTML = '';
       lastRenderedSearchResults = new Map();
-      if (countEl) countEl.textContent = '0';
       updateResultsControlsState([], [], readResultFilters());
       renderStructuredSearchState(null);
       renderSearchPersonalizationState([], 'relevance', { suppressed: false });
@@ -1420,6 +1436,8 @@
     const filters = readResultFilters();
     const ignoredSignals = getStructuredIgnoredSignals(q);
     let structuredState = null;
+    // Keep UI module on the pilot for correct candidate restriction AND chip suppression,
+    // but facets ignore moduleOverride (see shadow pipeline) so dropdown counts stay honest.
     const pilotResults = await applyStructuredSearchPilot(q, safeResults, {
       surface: 'results',
       hideClosed: filters.hideClosed,
@@ -1446,12 +1464,20 @@
     renderSearchPersonalizationState(filteredResults, filters.sortBy, {
       suppressed: personalizationSuppressed
     });
-    updateResultsControlsState(pilotResults, filteredResults, filters, structuredState);
+    // Facet source: when structured facets exist they already exclude UI moduleOverride.
+    // Fallback: public+closed-aware pool without module restriction for honest dropdown counts.
+    const facetSource = filterAndSortResults(safeResults, q, {
+      module: '',
+      hideClosed: filters.hideClosed,
+      sortBy: 'relevance'
+    });
+    updateResultsControlsState(pilotResults, filteredResults, filters, structuredState, {
+      facetSource: facetSource
+    });
     lastRenderedSearchResults = new Map(filteredResults.map((post) => [getStructuredPostId(post), post]));
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
 
     updateNoResultsState(noEl, filteredResults, structuredState);
-    if (countEl) countEl.textContent = String(filteredResults.length);
     recordSearchPerformance(request, 'ok', filteredResults.length);
   }
 

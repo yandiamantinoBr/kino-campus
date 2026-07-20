@@ -365,7 +365,10 @@
       hideClosed: hideClosed,
       now: options.now || options.nowValue
     });
-    var facetIntent = applyIntent(facetPool, plan.module, plan.intent);
+    // Module dropdown facets must ignore the UI module override so other modules
+    // keep real counts and remain selectable. Keep module only when it comes from the query.
+    var facetModule = plan.moduleOverride ? null : plan.module;
+    var facetIntent = applyIntent(facetPool, facetModule, plan.intent);
     var facetFiltered = applySupportedFilters(facetIntent.posts, plan.filters, options);
     var facetModuleCounts = moduleCounts(facetFiltered.posts, options.registry);
     var candidate = filtered.posts.slice(0, limit);

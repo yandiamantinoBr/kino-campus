@@ -89,11 +89,16 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
     await expect(cards.nth(0).locator('.kc-result-signal-badge')).toContainText(/Acadêmicos|Eventos|Priorizado/i);
     await expect(cards.nth(0).locator('.kc-search-personalization-reason')).toHaveCount(0);
 
-    // Summary chip visible; details panel collapsed until click
+    // Personalization lives inside the filters toolbar; details stay collapsed until click
     const summary = page.locator('#searchResultsPersonalizationSummary');
-    await expect(page.locator('#searchResultsPersonalization')).toBeVisible();
+    const controls = page.locator('.kc-search-results-controls');
+    await expect(controls.locator('#searchResultsPersonalization')).toBeVisible();
+    await expect(page.locator('#searchResultsPersonalizationSlot')).toBeVisible();
     await expect(summary).toBeVisible();
     await expect(page.locator('#searchResultsPersonalizationPanel')).toBeHidden();
+    // Filtros count must match cards actually rendered in the feed
+    await expect(page.locator('#resultsCount')).toHaveText('2');
+    await expect(page.locator('#searchResultsVisibleSummary')).toHaveText(/2 resultados/);
     await summary.click();
     await expect(page.locator('#searchResultsPersonalizationPanel')).toBeVisible();
     await expect(page.locator('#searchResultsPersonalization')).toContainText(/Eventos|Acadêmicos|escolhido/i);

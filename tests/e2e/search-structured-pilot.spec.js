@@ -43,9 +43,15 @@ async function isolateLocalDatabase(page) {
 
 test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
   test('defaults desligados não fazem requisições estruturadas nas duas superfícies', async ({ page }) => {
+    // Registry may load for search personalization (affinity/preferences), but the
+    // structured pilot parser/pipeline must stay lazy until their flags are enabled.
+    const pilotOnlyAssets = [
+      'kc-search-query-parser.shared.js',
+      'kc-search-shadow-pipeline.shared.js'
+    ];
     const requested = [];
     page.on('request', (request) => {
-      if (STRUCTURED_ASSETS.some((asset) => request.url().includes(asset))) requested.push(request.url());
+      if (pilotOnlyAssets.some((asset) => request.url().includes(asset))) requested.push(request.url());
     });
     await page.goto('/search-results.html?q=evento');
     await page.waitForLoadState('networkidle');
