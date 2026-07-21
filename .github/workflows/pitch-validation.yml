@@ -6,12 +6,20 @@ on:
       - kinocampus-V75.0-foundations
     paths:
       - 'apps/pitch-institucional/**'
+      - 'apresentacao-institucional.html'
+      - 'assets/css/kc-pitch-host.css'
+      - 'assets/js/features/kc-pitch-host.js'
+      - 'tests/integration/kc-pitch-*.test.js'
       - '.github/workflows/pitch-validation.yml'
   push:
     branches:
       - kinocampus-V75.0-foundations
     paths:
       - 'apps/pitch-institucional/**'
+      - 'apresentacao-institucional.html'
+      - 'assets/css/kc-pitch-host.css'
+      - 'assets/js/features/kc-pitch-host.js'
+      - 'tests/integration/kc-pitch-*.test.js'
       - '.github/workflows/pitch-validation.yml'
 
 permissions:
@@ -22,8 +30,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
-    name: Lint, build and rendered HTML
+  app:
+    name: App lint, build and rendered HTML
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -62,3 +70,28 @@ jobs:
           path: ${{ runner.temp }}/pitch-validation.log
           retention-days: 7
           if-no-files-found: ignore
+
+  contracts:
+    name: Host and runtime Jest contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run pitch contracts
+        run: >-
+          npx jest
+          tests/integration/kc-pitch-host.test.js
+          tests/integration/kc-pitch-runtime-guard.test.js
+          --runInBand
