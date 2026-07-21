@@ -46,4 +46,19 @@ jobs:
         run: npm run lint
 
       - name: Build and validate rendered HTML
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test > "${RUNNER_TEMP}/pitch-validation.log" 2>&1
+          status=$?
+          tail -n 120 "${RUNNER_TEMP}/pitch-validation.log"
+          exit "$status"
+
+      - name: Upload pitch validation log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pitch-validation-log
+          path: ${{ runner.temp }}/pitch-validation.log
+          retention-days: 7
+          if-no-files-found: ignore
