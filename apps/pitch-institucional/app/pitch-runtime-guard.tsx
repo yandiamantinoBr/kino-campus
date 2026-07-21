@@ -196,7 +196,7 @@ function installSessionFetchGuard() {
     clearNavigationIntent();
     navigationEpoch += 1;
 
-    let resolveIntent = () => undefined;
+    let resolveIntent: () => void = () => {};
     const observed = new Promise<void>((resolve) => {
       resolveIntent = resolve;
     });
@@ -325,7 +325,7 @@ function installSessionFetchGuard() {
 
   window.fetch = guardedFetch;
 
-  document.addEventListener("pointerdown", (event) => {
+  document.addEventListener("click", (event) => {
     const target = event.target;
     if (target instanceof Element && target.closest(NAVIGATION_TARGET_SELECTOR)) {
       beginNavigationIntent();
