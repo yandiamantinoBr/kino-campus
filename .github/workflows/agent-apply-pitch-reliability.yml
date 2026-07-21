@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/pitch-navigation-reliability-2026-07-21
+  workflow_dispatch:
 
 permissions:
   contents: write
