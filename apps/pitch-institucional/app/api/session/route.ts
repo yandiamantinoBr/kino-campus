@@ -32,6 +32,17 @@ function cleanWord(value: string) {
     .slice(0, 42);
 }
 
+/** Canonical form so "Prazo" and "prazo" merge into the same cloud entry. */
+function canonicalizeWord(value: string) {
+  const cleaned = cleanWord(value);
+  if (!cleaned) return "";
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toLocaleUpperCase("pt-BR") + part.slice(1).toLocaleLowerCase("pt-BR"))
+    .join(" ");
+}
+
 const blockedTerms = [
   "caralho",
   "foder",
@@ -137,7 +148,7 @@ async function mutateSession(request: Request) {
   if (payload.action === "respond") {
     const participantId = payload.participantId?.trim().slice(0, 64);
     const promptId = payload.promptId?.trim().slice(0, 80);
-    const value = cleanWord(payload.value ?? "");
+    const value = canonicalizeWord(payload.value ?? "");
     if (!participantId || !promptId || !value) {
       return Response.json({ error: "Resposta incompleta." }, { status: 400 });
     }

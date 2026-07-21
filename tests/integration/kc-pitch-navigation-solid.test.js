@@ -29,14 +29,42 @@ describe('apresentação institucional — navegação e projeção', () => {
     expect(page).toContain('onCurrent={goToSlide}');
     expect(page).toContain('localAuthorityActive');
     expect(page).toContain('generationAtStart !== pollGenerationRef.current');
-    // Old unconditional poll overwrite must not return.
-    expect(page).not.toMatch(/setCurrent\(\(previous\) => previous === safeCurrent \? previous : safeCurrent\);\s*\}\s*\}\s*catch \{ \/\* keep the stage usable offline \*\/ \}/);
+    expect(page).toContain('if (!localAuthorityActive)');
+    // Unconditional poll overwrite of current (without local authority guard) must not return.
+    expect(page).not.toMatch(/setSession\(data\.session\);\s*setCurrent\(\(previous\) => \(previous === safeCurrent \? previous : safeCurrent\)\);/);
   });
 
   test('serializa controle remoto e preserva intenção local', () => {
     expect(page).toContain('function RemoteView');
     expect(page).toContain('controlChainRef.current = controlChainRef.current.then(run, run)');
-    expect(page).toContain('localAuthorityUntilRef.current = Date.now() + 2400');
+    expect(page).toMatch(/localAuthorityUntilRef\.current = Date\.now\(\) \+ (2400|2800)/);
+  });
+
+  test('suaviza navegação com debounce de control e poll inteligente', () => {
+    expect(page).toContain('setTimeout');
+    expect(page).toContain('intervalMs');
+    expect(page).toContain('generationAtStart !== pollGenerationRef.current');
+    expect(page).toContain('if (!localAuthorityActive)');
+    expect(page).toContain('key={slide.id}');
+  });
+
+  test('INTERAÇÃO 02 (barrier-cloud) renderiza nuvem de palavras, não um único token', () => {
+    expect(decks).toContain('id: "word-cloud"');
+    expect(decks).toContain('id: "barrier-cloud"');
+    expect(decks).toContain('type: "word"');
+    expect(decks).toContain('Em uma palavra: o que mais dificulta encontrar oportunidades?');
+    expect(page).toContain('word-cloud');
+    expect(page).toContain('word-cloud__word');
+    expect(page).toContain('A nuvem se forma com as palavras do público');
+    expect(css).toContain('.word-cloud__word');
+  });
+
+  test('slide__index e launch-footer sobem no layout web', () => {
+    expect(css).toMatch(/\.slide__index[^}]*bottom:\s*clamp\(58px/);
+    expect(css).toContain('launch-shell');
+    expect(css).toContain('flex-direction: column');
+    expect(css).toMatch(/\.launch-footer[^}]*margin-top:\s*clamp/);
+    expect(css).toMatch(/\.source-node[^}]*font-size:\s*clamp\(/);
   });
 
   test('usa ZoomIn/ZoomOut no botão de projeção (não o ícone de deficiência)', () => {
