@@ -5,12 +5,22 @@ import { useEffect } from "react";
 type SessionRequestPayload = {
   action?: string;
   code?: string;
+  currentSlide?: number;
 };
 
 type SessionNetworkState = {
   generation: number;
   pendingControls: number;
   controlChain: Promise<void>;
+  desiredSlide: number | null;
+  localAuthorityUntil: number;
+};
+
+type NavigationIntent = {
+  epoch: number;
+  observed: Promise<void>;
+  resolve: () => void;
+  timeoutId: number;
 };
 
 type GuardedWindow = Window &
@@ -21,6 +31,11 @@ type GuardedWindow = Window &
 const SESSION_PATH = "/api/session";
 const PROJECTION_TITLE = "Aumentar a legibilidade na projeção";
 const TOUCH_GUARD_SELECTOR = ".presentation-controls, .presentation-actions";
+const NAVIGATION_TARGET_SELECTOR =
+  ".presentation-controls button:not(:disabled), .overview-list button, .remote-buttons button:not(:disabled)";
+const NAVIGATION_KEYS = new Set(["ArrowRight", "ArrowLeft", "PageDown", "PageUp", "Home", "End", " "]);
+const INTENT_TIMEOUT_MS = 1200;
+const LOCAL_AUTHORITY_MS = 2400;
 
 const runtimeStyles = `
   .presentation-shell {
@@ -133,6 +148,32 @@ function readSessionPayload(init?: RequestInit): SessionRequestPayload | null {
   }
 }
 
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function patchSessionSlide(response: Response, currentSlide: number) {
+  try {
+    const data = await response.clone().json() as {
+      session?: { currentSlide?: number };
+    };
+    if (!data.session || typeof data.session.currentSlide !== "number") return response;
+
+    data.session.currentSlide = currentSlide;
+    const headers = new Headers(response.headers);
+    headers.delete("content-length");
+    headers.delete("content-encoding");
+    headers.set("content-type", "application/json; charset=utf-8");
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  } catch {
+    return response;
+  }
+}
+
 function installSessionFetchGuard() {
   const guardedWindow = window as GuardedWindow;
   if (guardedWindow.__kinoPitchSessionFetchGuard) return;
@@ -140,6 +181,37 @@ function installSessionFetchGuard() {
 
   const nativeFetch = window.fetch.bind(window);
   const sessionStates = new Map<string, SessionNetworkState>();
+  let navigationEpoch = 0;
+  let navigationIntent: NavigationIntent | null = null;
+  let swipeStartX: number | null = null;
+
+  const clearNavigationIntent = () => {
+    if (!navigationIntent) return;
+    window.clearTimeout(navigationIntent.timeoutId);
+    navigationIntent.resolve();
+    navigationIntent = null;
+  };
+
+  const beginNavigationIntent = () => {
+    clearNavigationIntent();
+    navigationEpoch += 1;
+
+    let resolveIntent = () => undefined;
+    const observed = new Promise<void>((resolve) => {
+      resolveIntent = resolve;
+    });
+    const epoch = navigationEpoch;
+    const timeoutId = window.setTimeout(() => {
+      if (navigationIntent?.epoch === epoch) clearNavigationIntent();
+    }, INTENT_TIMEOUT_MS);
+
+    navigationIntent = {
+      epoch,
+      observed,
+      resolve: resolveIntent,
+      timeoutId,
+    };
+  };
 
   const getSessionState = (code: string) => {
     const normalizedCode = code.trim().toUpperCase();
@@ -150,6 +222,8 @@ function installSessionFetchGuard() {
       generation: 0,
       pendingControls: 0,
       controlChain: Promise.resolve(),
+      desiredSlide: null,
+      localAuthorityUntil: 0,
     };
     sessionStates.set(normalizedCode, created);
     return created;
@@ -179,8 +253,13 @@ function installSessionFetchGuard() {
         : nativeFetch(input, init);
 
     if (method === "POST" && payload?.action === "control") {
+      clearNavigationIntent();
       state.generation += 1;
       state.pendingControls += 1;
+      if (typeof payload.currentSlide === "number" && Number.isFinite(payload.currentSlide)) {
+        state.desiredSlide = payload.currentSlide;
+        state.localAuthorityUntil = performance.now() + LOCAL_AUTHORITY_MS;
+      }
 
       const request = state.controlChain.then(fetchOnce, fetchOnce).finally(() => {
         state.pendingControls = Math.max(0, state.pendingControls - 1);
@@ -197,11 +276,39 @@ function installSessionFetchGuard() {
     if (method === "GET") {
       for (let attempt = 0; attempt < 4; attempt += 1) {
         const generationAtStart = state.generation;
+        const epochAtStart = navigationEpoch;
+        const intentAtStart = navigationIntent;
         const response = await fetchOnce();
-        const remainedStable =
-          generationAtStart === state.generation && state.pendingControls === 0;
 
-        if (remainedStable) return response;
+        if (intentAtStart) await intentAtStart.observed;
+
+        const remainedStable =
+          generationAtStart === state.generation &&
+          epochAtStart === navigationEpoch &&
+          state.pendingControls === 0 &&
+          navigationIntent === null;
+
+        if (remainedStable) {
+          const desiredSlide = state.desiredSlide;
+          if (desiredSlide === null || performance.now() >= state.localAuthorityUntil) {
+            state.desiredSlide = null;
+            return response;
+          }
+
+          try {
+            const data = await response.clone().json() as {
+              session?: { currentSlide?: number };
+            };
+            if (data.session?.currentSlide === desiredSlide) {
+              state.desiredSlide = null;
+              return response;
+            }
+          } catch {
+            return response;
+          }
+
+          if (attempt === 3) return patchSessionSlide(response, desiredSlide);
+        }
 
         try {
           await response.body?.cancel();
@@ -209,6 +316,7 @@ function installSessionFetchGuard() {
           // A resposta ficou obsoleta; o novo GET abaixo é a fonte válida.
         }
         await state.controlChain;
+        await wait(35);
       }
     }
 
@@ -216,6 +324,41 @@ function installSessionFetchGuard() {
   };
 
   window.fetch = guardedFetch;
+
+  document.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest(NAVIGATION_TARGET_SELECTOR)) {
+      beginNavigationIntent();
+    }
+  }, true);
+
+  window.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    ) return;
+    if (NAVIGATION_KEYS.has(event.key)) beginNavigationIntent();
+  }, true);
+
+  document.addEventListener("touchstart", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element) || !target.closest(".presentation-shell") || target.closest(TOUCH_GUARD_SELECTOR)) {
+      swipeStartX = null;
+      return;
+    }
+    swipeStartX = event.changedTouches[0]?.clientX ?? null;
+  }, { capture: true, passive: true });
+
+  document.addEventListener("touchend", (event) => {
+    if (swipeStartX === null) return;
+    const endX = event.changedTouches[0]?.clientX;
+    if (typeof endX === "number" && Math.abs(endX - swipeStartX) > 60) {
+      beginNavigationIntent();
+    }
+    swipeStartX = null;
+  }, { capture: true, passive: true });
 }
 
 function stopTouchPropagation(event: Event) {
