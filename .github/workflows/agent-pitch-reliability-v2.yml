@@ -1,0 +1,164 @@
+name: Agent Pitch Reliability V2
+
+on:
+  push:
+    branches:
+      - fix/pitch-navigation-reliability-2026-07-21
+    paths:
+      - .github/workflows/agent-pitch-reliability-v2.yml
+      - scripts/agent-apply-pitch-reliability-fix.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: pitch-navigation-reliability-v2
+  cancel-in-progress: false
+
+jobs:
+  apply-validate-integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BASE_BRANCH: kinocampus-V75.0-foundations
+      FIX_BRANCH: fix/pitch-navigation-reliability-2026-07-21
+    steps:
+      - name: Check out the guarded fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FIX_BRANCH }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/pitch-institucional/package-lock.json
+
+      - name: Verify and apply the deterministic patch
+        run: |
+          set -euo pipefail
+          test -f scripts/agent-apply-pitch-reliability-fix.mjs
+          grep -q "Pitch navigation reliability patch applied" scripts/agent-apply-pitch-reliability-fix.mjs
+          node scripts/agent-apply-pitch-reliability-fix.mjs
+          test -f apps/pitch-institucional/app/presentation-sync.ts
+          grep -q "reconcilePresenterSlide" apps/pitch-institucional/app/page.tsx
+          grep -q "ZoomIn size={18}" apps/pitch-institucional/app/page.tsx
+
+      - name: Remove one-shot automation from the deliverable
+        run: |
+          rm -f scripts/agent-apply-pitch-reliability-fix.mjs
+          rm -f .github/workflows/agent-apply-pitch-reliability-fix.yml
+          rm -f .github/workflows/agent-pitch-reliability-v2.yml
+
+      - name: Review the patch boundary
+        run: |
+          set -euo pipefail
+          git diff --check
+          git status --short
+          git diff --stat
+          changed="$(git diff --name-only | sort)"
+          printf '%s\n' "$changed"
+          forbidden="$(printf '%s\n' "$changed" | grep -Ev '^(apps/pitch-institucional/(app/(page\.tsx|globals\.css|presentation-sync\.ts)|tests/presentation-behavior\.test\.mjs|package\.json)|\.github/workflows/agent-apply-pitch-reliability-fix\.yml|\.github/workflows/agent-pitch-reliability-v2\.yml|scripts/agent-apply-pitch-reliability-fix\.mjs)$' || true)"
+          if [ -n "$forbidden" ]; then
+            echo "Unexpected files changed:"
+            echo "$forbidden"
+            exit 1
+          fi
+
+      - name: Validate the institutional pitch application
+        working-directory: apps/pitch-institucional
+        run: |
+          npm ci
+          npm run lint
+          npm test
+
+      - name: Validate the Kino Campus host integration
+        run: |
+          npm ci
+          npm run validate:js
+          npm run validate:html
+          npm run validate:inline
+          node --test tests/integration/kc-pitch-host.test.js
+
+      - name: Commit and push the validated source changes
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name "Kino Campus Reliability Agent"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes were produced."
+            exit 1
+          fi
+          git commit -m "fix(pitch): stabilize navigation and projection controls"
+          git push origin HEAD:${FIX_BRANCH}
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the review pull request
+        id: pull
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          number="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$FIX_BRANCH" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$number" ]; then
+            response="$(gh api --method POST "repos/$GITHUB_REPOSITORY/pulls" \
+              -f title='fix(pitch): stabilize institutional presentation navigation' \
+              -f head="$FIX_BRANCH" \
+              -f base="$BASE_BRANCH" \
+              -f body='## Escopo\n\nCorrige a disputa entre navegação local e polling remoto, serializa atualizações da sessão, protege teclado e gestos contra avanços duplicados, substitui o ícone de projeção por ampliação e reforça viewport/safe-area no mobile.\n\n## Validação executada\n\n- build, lint e testes do app de pitch;\n- contratos das seis combinações de duração e modo;\n- teste da reconciliação contra respostas remotas obsoletas;\n- validações JavaScript/HTML/inline do host;\n- teste de integração do iframe institucional;\n- git diff --check e limite explícito de arquivos alterados.' )"
+            number="$(printf '%s' "$response" | jq -r '.number')"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for external deployment status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            response="$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/status")"
+            state="$(printf '%s' "$response" | jq -r '.state')"
+            contexts="$(printf '%s' "$response" | jq -r '.statuses | length')"
+            echo "Combined status: $state ($contexts contexts), attempt $attempt/40"
+            if [ "$state" = "success" ] || { [ "$state" = "pending" ] && [ "$contexts" = "0" ]; }; then
+              exit 0
+            fi
+            if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
+              printf '%s' "$response" | jq '.statuses[] | {context, state, description, target_url}'
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "External status did not settle within ten minutes."
+          exit 1
+
+      - name: Merge the validated pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pull.outputs.number }}
+          HEAD_SHA: ${{ steps.commit.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge" \
+            -f merge_method=squash \
+            -f sha="$HEAD_SHA" \
+            -f commit_title='fix(pitch): stabilize institutional presentation navigation' \
+            -f commit_message='Validated navigation synchronization, mobile gestures, projection legibility and all six presentation variants.'
+
+      - name: Remove the merged fix branch
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$FIX_BRANCH" || true
