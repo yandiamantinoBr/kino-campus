@@ -111,12 +111,15 @@ describe('admin Search Console dashboard integration', () => {
 
 describe('admin GA4 dashboard refresh consistency', () => {
   test('does not expose raw Edge or Google errors in the GA4 banner', () => {
-    expect(SOURCE).toContain("throw createGa4Error(code, res.status);");
+    expect(SOURCE).toContain('throw createGa4Error(code, res.status, json);');
     expect(SOURCE).toContain('function friendlyGa4Error(error)');
     expect(SOURCE).toContain("code === 'invalid_sa_key'");
     expect(SOURCE).toContain("code === 'ga4_not_authorized'");
     expect(SOURCE).toContain("throw createGa4Error('no_session', 401);");
     expect(SOURCE).toContain("throw createGa4Error('no_supabase_url', 0);");
+    expect(SOURCE).toContain("action: 'diagnose'");
+    expect(SOURCE).toContain('runDiagnose');
+    expect(HTML).toContain('id="ga4DiagnoseButton"');
     expect(SOURCE).not.toContain("(json.error || json.message)");
     expect(SOURCE).not.toContain("setError('Falha ao carregar: ' + msg)");
   });
@@ -153,8 +156,8 @@ describe('admin GA4 dashboard refresh consistency', () => {
     expect(SOURCE).toContain('var REFRESH_INTERVAL_MS = 300_000;');
     expect(HTML).toContain('O painel atualiza a cada 5 minutos');
     expect(HTML).not.toContain('atualiza a cada 60 s');
-    expect(HTML).toContain('admin-ga4-dashboard.controller.js?v=8.6.11');
-    expect(SOURCE).toContain('Dashboard Controller (V8.6.11)');
+    expect(HTML).toContain('admin-ga4-dashboard.controller.js?v=8.6.12');
+    expect(SOURCE).toContain('Dashboard Controller (V8.6.12)');
   });
 
   test('coalesces overlapping manual and automatic refreshes into one promise', () => {

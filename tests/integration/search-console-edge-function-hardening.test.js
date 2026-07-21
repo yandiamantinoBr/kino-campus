@@ -19,11 +19,13 @@ describe('Search Console Edge Function hardening', () => {
 
   test('checks admin before reading Google configuration or calling Google', () => {
     const adminCheck = INDEX.indexOf('const caller = await resolveCaller(req)');
-    const configRead = INDEX.indexOf('getEnv("KC_SEARCH_CONSOLE_SA_KEY")');
+    const configRead = INDEX.indexOf('Deno.env.get("KC_SEARCH_CONSOLE_SA_KEY")');
     const execute = INDEX.indexOf('const data = await executeRequest(');
     expect(adminCheck).toBeGreaterThan(-1);
     expect(configRead).toBeGreaterThan(adminCheck);
     expect(execute).toBeGreaterThan(configRead);
+    expect(INDEX).toContain('parseServiceAccountSecret');
+    expect(INDEX).toContain('google-service-account.ts');
   });
 
   test('aceita HTTP apenas para loopback local, nunca para origem remota', () => {

@@ -29,9 +29,10 @@ describe('kc-ga4-reports Edge Function hardening', function () {
 
   test('valida identificadores e formato da credencial antes de chamar o Google', function () {
     expect(EDGE_FUNCTION).toContain('invalid_property_id');
-    expect(EDGE_FUNCTION).toContain('saKey.type !== "service_account"');
-    expect(EDGE_FUNCTION).toContain('BEGIN PRIVATE KEY');
-    expect(EDGE_FUNCTION).toContain('gserviceaccount\\.com');
+    expect(EDGE_FUNCTION).toContain('parseServiceAccountSecret');
+    expect(EDGE_FUNCTION).toContain('google-service-account.ts');
+    expect(EDGE_FUNCTION).toContain('action === "diagnose"');
+    expect(EDGE_FUNCTION).toContain('invalid_sa_key');
   });
 
   test('cache usa serializacao estavel profunda para filtros aninhados', function () {

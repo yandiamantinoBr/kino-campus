@@ -32,6 +32,10 @@
 //   via service-role client. Non-admin requests get 403.
 
 import { createClient } from "@supabase/supabase-js";
+import {
+  parseServiceAccountSecret,
+  type ServiceAccountKey,
+} from "../_shared/google-service-account.ts";
 
 // ── Constants ────────────────────────────────────────────────────────────
 const COMMON_CORS_HEADERS = {
@@ -143,14 +147,6 @@ async function fetchWithTimeout(
 }
 
 // ── Service Account JWT → OAuth2 token ───────────────────────────────────
-interface ServiceAccountKey {
-  type: string;
-  project_id: string;
-  private_key: string;
-  client_email: string;
-  token_uri?: string;
-}
-
 let cachedToken: { token: string; expiresAtMs: number } | null = null;
 
 function base64url(input: ArrayBuffer | Uint8Array | string): string {
@@ -560,6 +556,92 @@ async function handleRunReport(
   }
 }
 
+function readSaKeyRaw(): string {
+  // Do not trim: JSON secrets may be multi-line or base64-wrapped.
+  return Deno.env.get("KC_GA4_SA_KEY") ?? "";
+}
+
+function resolveServiceAccount():
+  | {
+    ok: true;
+    key: ServiceAccountKey;
+    diagnostics: Record<string, unknown>;
+  }
+  | {
+    ok: false;
+    error: "missing_config" | "invalid_sa_key";
+    reason?: string;
+    diagnostics?: Record<string, unknown>;
+  } {
+  const saKeyJson = readSaKeyRaw();
+  if (!saKeyJson) {
+    return { ok: false, error: "missing_config" };
+  }
+  const parsed = parseServiceAccountSecret(saKeyJson);
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      error: "invalid_sa_key",
+      reason: parsed.reason,
+      diagnostics: parsed.diagnostics as unknown as Record<string, unknown>,
+    };
+  }
+  return {
+    ok: true,
+    key: parsed.key,
+    diagnostics: parsed.diagnostics as unknown as Record<string, unknown>,
+  };
+}
+
+async function handleDiagnose(
+  req: Request,
+  propertyId: string,
+  saResolved: ReturnType<typeof resolveServiceAccount>,
+): Promise<Response> {
+  const saKey = saResolved.ok ? saResolved.key : null;
+  const base: Record<string, unknown> = {
+    ok: true,
+    action: "diagnose",
+    property_id_configured: /^\d{6,20}$/.test(propertyId),
+    property_id_length: propertyId.length,
+    sa_key_present: !!readSaKeyRaw(),
+    sa_key_length: readSaKeyRaw().length,
+    sa_parse_ok: !!saKey,
+    sa_parse_reason: saResolved.ok
+      ? null
+      : ("reason" in saResolved ? saResolved.reason ?? null : null),
+    sa_diagnostics: ("diagnostics" in saResolved
+      ? saResolved.diagnostics
+      : null) ?? null,
+    oauth_ok: false,
+    data_api_ok: false,
+    client_email_domain_ok: saKey
+      ? /\.gserviceaccount\.com$/i.test(saKey.client_email)
+      : false,
+  };
+
+  if (!saKey || !/^\d{6,20}$/.test(propertyId)) {
+    return json(req, 200, base);
+  }
+
+  try {
+    const token = await getAccessToken(saKey);
+    base.oauth_ok = !!token;
+    const probe = await callDataApi(saKey, propertyId, {
+      dateRanges: [{ startDate: "yesterday", endDate: "yesterday" }],
+      metrics: [{ name: "sessions" }],
+      limit: 1,
+    });
+    base.data_api_ok = !!probe;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    base.data_api_ok = false;
+    base.probe_error = msg;
+  }
+
+  return json(req, 200, base);
+}
+
 // ── Router ───────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -586,34 +668,8 @@ Deno.serve(async (req: Request) => {
     return json(req, 403, { error: "admin_required" });
   }
 
-  const saKeyJson = getEnv("KC_GA4_SA_KEY");
   const propertyId = getEnv("KC_GA4_PROPERTY_ID");
-  if (!saKeyJson || !propertyId) {
-    return json(req, 503, {
-      error: "missing_config",
-      detail:
-        "Set KC_GA4_SA_KEY and KC_GA4_PROPERTY_ID via supabase secrets set",
-    });
-  }
-  if (!/^\d{6,20}$/.test(propertyId)) {
-    return json(req, 503, { error: "invalid_property_id" });
-  }
-
-  let saKey: ServiceAccountKey;
-  try {
-    saKey = JSON.parse(saKeyJson) as ServiceAccountKey;
-    if (
-      saKey.type !== "service_account" ||
-      !saKey.private_key ||
-      !saKey.private_key.includes("-----BEGIN PRIVATE KEY-----") ||
-      !saKey.private_key.includes("-----END PRIVATE KEY-----") ||
-      !/^[^@\s]+@[^@\s]+\.gserviceaccount\.com$/i.test(saKey.client_email)
-    ) {
-      throw new Error("invalid service account shape");
-    }
-  } catch (_) {
-    return json(req, 503, { error: "invalid_sa_key" });
-  }
+  const saResolved = resolveServiceAccount();
 
   let body: unknown;
   try {
@@ -627,10 +683,45 @@ Deno.serve(async (req: Request) => {
     if (new TextEncoder().encode(text).byteLength > MAX_REQUEST_BODY_BYTES) {
       return json(req, 413, { error: "body_too_large" });
     }
-    body = JSON.parse(text);
+    body = text.trim() ? JSON.parse(text) : {};
   } catch (_) {
     return json(req, 400, { error: "invalid_json" });
   }
 
-  return await handleRunReport(req, saKey, propertyId, body);
+  const action = body && typeof body === "object" && !Array.isArray(body)
+    ? String((body as Record<string, unknown>).action || "runReport")
+    : "runReport";
+
+  if (action === "diagnose") {
+    return await handleDiagnose(req, propertyId, saResolved);
+  }
+
+  if (!propertyId || !readSaKeyRaw()) {
+    return json(req, 503, {
+      error: "missing_config",
+      detail:
+        "Set KC_GA4_SA_KEY and KC_GA4_PROPERTY_ID via supabase secrets set",
+    });
+  }
+  if (!/^\d{6,20}$/.test(propertyId)) {
+    return json(req, 503, { error: "invalid_property_id" });
+  }
+  if (!saResolved.ok) {
+    return json(req, 503, {
+      error: "invalid_sa_key",
+      reason: saResolved.reason,
+      diagnostics: saResolved.diagnostics,
+    });
+  }
+
+  // Strip non-GA4 fields (e.g. action) before validating runReport body.
+  const reportBody = body && typeof body === "object" && !Array.isArray(body)
+    ? Object.fromEntries(
+      Object.entries(body as Record<string, unknown>).filter(([key]) =>
+        key !== "action"
+      ),
+    )
+    : body;
+
+  return await handleRunReport(req, saResolved.key, propertyId, reportBody);
 });
