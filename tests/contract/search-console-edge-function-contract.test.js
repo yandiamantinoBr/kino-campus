@@ -25,7 +25,8 @@ describe('Search Console Edge Function contract', () => {
       /const SEARCH_CONSOLE_SCOPE\s*=\s*"https:\/\/www\.googleapis\.com\/auth\/webmasters\.readonly";/,
     );
     expect(INDEX).not.toMatch(/auth\/webmasters(?=["'])/);
-    expect(INDEX).toContain('getEnv("KC_SEARCH_CONSOLE_SA_KEY")');
+    // SA JSON is read raw (no trim) to avoid PEM/secret mangling.
+    expect(INDEX).toContain('Deno.env.get("KC_SEARCH_CONSOLE_SA_KEY")');
     expect(INDEX).not.toContain('getEnv("KC_GA4_SA_KEY")');
     expect(INDEX).toContain('getEnv("KC_SEARCH_CONSOLE_SITE_URL")');
     expect(VALIDATION).not.toContain('siteUrl: input.');
