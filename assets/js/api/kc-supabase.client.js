@@ -489,6 +489,20 @@
    * Those must NOT force a full feed refresh — only in-place metric UI updates.
    * Content fields that do warrant a refresh are listed in CONTENT_KEYS.
    */
+  function normalizeComparableField(value) {
+    if (value == null) return '';
+    if (typeof value === 'object') {
+      try { return JSON.stringify(value); } catch (_) { return String(value); }
+    }
+    // Normalize numeric strings vs numbers (price, scores, etc.).
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+    const asString = String(value).trim();
+    if (asString !== '' && Number.isFinite(Number(asString)) && /^-?\d+(\.\d+)?$/.test(asString)) {
+      return String(Number(asString));
+    }
+    return asString;
+  }
+
   function isMetricsOnlyPostUpdate(oldRow, newRow) {
     if (!oldRow || !newRow || typeof oldRow !== 'object' || typeof newRow !== 'object') return false;
 
@@ -500,22 +514,30 @@
     for (let i = 0; i < CONTENT_KEYS.length; i += 1) {
       const key = CONTENT_KEYS[i];
       if (!(key in oldRow) && !(key in newRow)) continue;
-      const a = oldRow[key];
-      const b = newRow[key];
-      // Normalize objects (metadata) for stable compare.
-      const left = (a && typeof a === 'object') ? JSON.stringify(a) : String(a == null ? '' : a);
-      const right = (b && typeof b === 'object') ? JSON.stringify(b) : String(b == null ? '' : b);
-      if (left !== right) return false;
+      if (normalizeComparableField(oldRow[key]) !== normalizeComparableField(newRow[key])) {
+        return false;
+      }
     }
 
     const METRIC_KEYS = [
       'votos', 'highlight_score', 'view_count', 'share_count', 'coupon_clicks',
-      'last_comment_at', 'lastCommentAt',
+      'last_comment_at', 'lastCommentAt', 'bumped_at', 'bumpedAt',
     ];
-    return METRIC_KEYS.some((key) => {
+    const metricChanged = METRIC_KEYS.some((key) => {
       if (!(key in oldRow) && !(key in newRow)) return false;
-      return String(oldRow[key] == null ? '' : oldRow[key]) !== String(newRow[key] == null ? '' : newRow[key]);
+      return normalizeComparableField(oldRow[key]) !== normalizeComparableField(newRow[key]);
     });
+    if (metricChanged) return true;
+
+    // updated_at-only (kc_set_updated_at) with no content/metric delta still
+    // must not force a feed wipe — treat as soft metrics event.
+    if (
+      normalizeComparableField(oldRow.updated_at || oldRow.updatedAt)
+      !== normalizeComparableField(newRow.updated_at || newRow.updatedAt)
+    ) {
+      return true;
+    }
+    return false;
   }
 
   function normalizePostChangePayload(payload) {

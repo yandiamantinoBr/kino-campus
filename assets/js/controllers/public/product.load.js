@@ -713,9 +713,24 @@
         ].map(function (value) { return String(value || '').trim(); }).filter(Boolean);
         if (!currentId || changedIds.indexOf(currentId) === -1) return;
 
-        // Counter-only updates (votes/views/highlight): patch score, do not remount the page.
+        // Counter-only / realtime UPDATEs (votes/views/highlight): patch score, do not remount.
         var changeType = String(change.type || '').trim().toLowerCase();
-        if (changeType === 'metrics_updated' || changeType === 'vote_metrics' || changeType === 'metrics') {
+        var changeSource = String(change.source || '').trim().toLowerCase();
+        var isSoftRealtime = (
+          changeType === 'metrics_updated'
+          || changeType === 'vote_metrics'
+          || changeType === 'metrics'
+          || (
+            (changeType === 'updated' || changeType === '')
+            && (
+              !changeSource
+              || changeSource.indexOf('realtime') !== -1
+              || changeSource === 'broadcast'
+              || changeSource === 'remote'
+            )
+          )
+        );
+        if (isSoftRealtime) {
           try {
             var scoreRaw = (change.votos != null)
               ? change.votos

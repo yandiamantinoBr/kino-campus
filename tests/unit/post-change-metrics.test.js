@@ -45,10 +45,11 @@ describe('post change metrics — vote must not refresh feeds', () => {
   });
 
   test('isMetricsOnlyPostUpdate ignora título/status e detecta votos', () => {
+    const helperSrc = extractFunction(clientSrc, 'normalizeComparableField');
     const fnSrc = extractFunction(clientSrc, 'isMetricsOnlyPostUpdate');
-    expect(fnSrc).toBeTruthy();
+    expect(helperSrc && fnSrc).toBeTruthy();
     // eslint-disable-next-line no-new-func
-    const isMetricsOnlyPostUpdate = new Function(`${fnSrc}; return isMetricsOnlyPostUpdate;`)();
+    const isMetricsOnlyPostUpdate = new Function(`${helperSrc}\n${fnSrc}; return isMetricsOnlyPostUpdate;`)();
 
     const base = {
       id: '550e8400-e29b-41d4-a716-446655440000',
@@ -70,12 +71,13 @@ describe('post change metrics — vote must not refresh feeds', () => {
   });
 
   test('normalizePostChangePayload marca vote update como metrics_updated', () => {
+    const helperSrc = extractFunction(clientSrc, 'normalizeComparableField');
     const metricsFn = extractFunction(clientSrc, 'isMetricsOnlyPostUpdate');
     const normalizeFn = extractFunction(clientSrc, 'normalizePostChangePayload');
-    expect(metricsFn && normalizeFn).toBeTruthy();
+    expect(helperSrc && metricsFn && normalizeFn).toBeTruthy();
     // eslint-disable-next-line no-new-func
     const normalizePostChangePayload = new Function(
-      `${metricsFn}\n${normalizeFn}; return normalizePostChangePayload;`,
+      `${helperSrc}\n${metricsFn}\n${normalizeFn}; return normalizePostChangePayload;`,
     )();
 
     const oldRow = {
@@ -102,10 +104,22 @@ describe('post change metrics — vote must not refresh feeds', () => {
   });
 
   test('feed e product ignoram metrics_updated sem scheduleFreshnessRefresh/loadPost', () => {
+    expect(feedSrc).toContain('shouldHardRefreshOnPostChange');
+    expect(feedSrc).toContain('applySoftMetricPatch');
     expect(feedSrc).toContain("changeType === 'metrics_updated'");
+    expect(feedSrc).toContain("source === 'realtime'");
     expect(feedSrc).toContain('kcUpdateVoteScoreInDOM');
     expect(productSrc).toContain("changeType === 'metrics_updated'");
+    expect(productSrc).toContain('isSoftRealtime');
     expect(productSrc).toContain('kcUpdateVoteScoreInDOM');
+  });
+
+  test('feed soft-patches generic realtime updated (vote path) e hard-refresha só API/status', () => {
+    expect(feedSrc).toContain('function shouldHardRefreshOnPostChange');
+    // Realtime updated must NOT hard refresh.
+    expect(feedSrc).toMatch(/source === 'realtime'[\s\S]*return false/);
+    // Hard path still exists for API/content mutations.
+    expect(feedSrc).toContain('scheduleFreshnessRefresh(change.type || \'post_change\')');
   });
 
   test('click de voto previne default/propagação (sem navegação acidental)', () => {
