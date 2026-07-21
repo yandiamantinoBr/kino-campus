@@ -95,3 +95,66 @@ jobs:
           tests/integration/kc-pitch-host.test.js
           tests/integration/kc-pitch-runtime-guard.test.js
           --runInBand
+
+  browser:
+    name: Chromium — 6 modes, stale session and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install pitch dependencies
+        working-directory: apps/pitch-institucional
+        run: npm run install:ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start pitch development server
+        shell: bash
+        run: |
+          pushd apps/pitch-institucional >/dev/null
+          nohup npm run dev -- --host 127.0.0.1 --port 4173 > "${RUNNER_TEMP}/pitch-dev.log" 2>&1 &
+          echo $! > "${RUNNER_TEMP}/pitch-dev.pid"
+          popd >/dev/null
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          tail -n 160 "${RUNNER_TEMP}/pitch-dev.log" || true
+          exit 1
+
+      - name: Run browser smoke
+        env:
+          PITCH_BASE_URL: http://127.0.0.1:4173
+        run: node apps/pitch-institucional/tests/browser-smoke.mjs
+
+      - name: Upload development server log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pitch-browser-server-log
+          path: ${{ runner.temp }}/pitch-dev.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Stop pitch development server
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "${RUNNER_TEMP}/pitch-dev.pid" ]]; then
+            kill "$(cat "${RUNNER_TEMP}/pitch-dev.pid")" 2>/dev/null || true
+          fi
