@@ -12,7 +12,9 @@
   //      botão "Abrir em nova aba" para o usuário não ficar preso.
   //   3. Links de fallback com target=_blank sempre disponíveis.
 
-  var LIVE_ORIGIN = 'https://kino-campus-pitch.yandiamantinobr.chatgpt.site';
+  // Primary: Vercel deployment of apps/pitch-institucional (monorepo source of truth).
+  // ChatGPT Sites URL is no longer the live origin — monorepo merges never updated it.
+  var LIVE_ORIGIN = 'https://kino-campus-pitch.vercel.app';
   var body = document.body;
   var frame = document.getElementById('kc-pitch-frame');
   var fullscreenButton = document.querySelector('[data-kc-pitch-fullscreen]');
