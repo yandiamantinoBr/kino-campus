@@ -148,14 +148,17 @@ describe('kc-feed.controller — source contracts', () => {
     expect(source).toContain('subscribePostChanges');
   });
 
-  test('não recarrega o feed em metrics_updated (voto não reseta a lista)', () => {
+  test('não recarrega o feed em metrics_updated nem em realtime updated (voto)', () => {
+    expect(source).toContain('shouldHardRefreshOnPostChange');
+    expect(source).toContain('applySoftMetricPatch');
     expect(source).toContain("changeType === 'metrics_updated'");
+    expect(source).toContain("source === 'realtime'");
     expect(source).toContain('kcUpdateVoteScoreInDOM');
-    // Full refresh must stay behind the metrics early-return.
-    const metricsIdx = source.indexOf("changeType === 'metrics_updated'");
+    // Soft guard must appear before hard refresh call.
+    const softIdx = source.indexOf('shouldHardRefreshOnPostChange');
     const refreshIdx = source.indexOf('scheduleFreshnessRefresh(change.type || \'post_change\')');
-    expect(metricsIdx).toBeGreaterThan(-1);
-    expect(refreshIdx).toBeGreaterThan(metricsIdx);
+    expect(softIdx).toBeGreaterThan(-1);
+    expect(refreshIdx).toBeGreaterThan(softIdx);
   });
 });
 

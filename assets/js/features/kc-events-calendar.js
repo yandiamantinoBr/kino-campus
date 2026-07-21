@@ -308,9 +308,25 @@
     // Só mudanças de eventos afetam o calendário (module ausente ⇒ não filtra).
     var mod = String(change.module || '').trim().toLowerCase();
     if (mod && mod !== 'eventos') return;
-    // Contadores (votos etc.) não precisam rebuscar o calendário.
+    // Contadores (votos etc.) e UPDATEs de realtime não precisam rebuscar o calendário.
     var changeType = String(change.type || '').trim().toLowerCase();
-    if (changeType === 'metrics_updated' || changeType === 'vote_metrics' || changeType === 'metrics') return;
+    var changeSource = String(change.source || '').trim().toLowerCase();
+    if (
+      changeType === 'metrics_updated'
+      || changeType === 'vote_metrics'
+      || changeType === 'metrics'
+      || (
+        (changeType === 'updated' || changeType === '')
+        && (
+          !changeSource
+          || changeSource.indexOf('realtime') !== -1
+          || changeSource === 'broadcast'
+          || changeSource === 'remote'
+        )
+      )
+    ) {
+      return;
+    }
     scheduleRefresh(); // deletar/esconder/editar/criar re-busca
   }
 

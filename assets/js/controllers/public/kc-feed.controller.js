@@ -812,25 +812,69 @@
       }, 120);
     }
 
+    function applySoftMetricPatch(change) {
+      try {
+        const postId = String(
+          change.postId || change.uuid || (change.row && (change.row.id || change.row.uuid)) || '',
+        ).trim();
+        const scoreRaw = (change.votos != null)
+          ? change.votos
+          : (change.row && change.row.votos != null ? change.row.votos : null);
+        if (postId && scoreRaw != null && typeof kcUpdateVoteScoreInDOM === 'function') {
+          kcUpdateVoteScoreInDOM(postId, scoreRaw);
+        }
+      } catch (_) { /* keep feed stable */ }
+    }
+
+    function shouldHardRefreshOnPostChange(change) {
+      const changeType = String(change && change.type || '').trim().toLowerCase();
+      const source = String(change && change.source || '').trim().toLowerCase();
+
+      // New posts are handled by the realtime banner / prepend path.
+      if (changeType === 'created') return false;
+
+      // Explicit engagement classification.
+      if (
+        changeType === 'metrics_updated'
+        || changeType === 'vote_metrics'
+        || changeType === 'metrics'
+      ) {
+        return false;
+      }
+
+      // Generic "updated" is the default postgres UPDATE label. Voting updates
+      // posts.votos + highlight_score (and updated_at) and used to wipe every
+      // home tab (#destaques/#recentes/#comentados). Soft-patch only when the
+      // event originates from realtime; API mutations still hard-refresh.
+      if (changeType === 'updated' || changeType === '') {
+        if (
+          source === 'realtime'
+          || source === 'realtime-broadcast'
+          || source.indexOf('realtime') !== -1
+          || source === 'broadcast'
+          || source === 'remote'
+          || !source
+        ) {
+          return false;
+        }
+        // source=api | my-posts | admin | moderation → content/status mutation
+        return true;
+      }
+
+      // soft_deleted, purged, status_changed, edited, etc.
+      return true;
+    }
+
     function handlePostChange(change) {
       if (!change || state.destroyed) return;
       const changeModule = String(change.module || '').trim().toLowerCase();
       if (moduleKeys.length && changeModule && moduleKeys.indexOf(changeModule) === -1) return;
       if (change.type === 'created') return;
 
-      // Vote/view/highlight counter updates must NOT wipe the feed (scroll + page state).
-      // voting.js already patches .kc-vote-box scores in place; reinforce here as a fallback.
-      const changeType = String(change.type || '').trim().toLowerCase();
-      if (changeType === 'metrics_updated' || changeType === 'vote_metrics' || changeType === 'metrics') {
-        try {
-          const postId = String(change.postId || change.uuid || (change.row && (change.row.id || change.row.uuid)) || '').trim();
-          const scoreRaw = (change.votos != null)
-            ? change.votos
-            : (change.row && change.row.votos != null ? change.row.votos : null);
-          if (postId && scoreRaw != null && typeof kcUpdateVoteScoreInDOM === 'function') {
-            kcUpdateVoteScoreInDOM(postId, scoreRaw);
-          }
-        } catch (_) { /* keep feed stable */ }
+      // Never wipe the feed (scroll + page state) on vote/view/highlight noise.
+      // voting.js already patches .kc-vote-box scores; reinforce as a fallback.
+      if (!shouldHardRefreshOnPostChange(change)) {
+        applySoftMetricPatch(change);
         return;
       }
 
