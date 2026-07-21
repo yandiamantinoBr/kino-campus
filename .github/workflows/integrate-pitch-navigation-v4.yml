@@ -1,0 +1,117 @@
+name: Integrate Pitch Navigation Reliability V4
+
+on:
+  push:
+    branches:
+      - fix/pitch-navigation-reliability-v4-2026-07-21
+    paths:
+      - .github/workflows/integrate-pitch-navigation-v4.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: integrate-pitch-navigation-reliability-v4
+  cancel-in-progress: false
+
+jobs:
+  validate-and-merge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      FIX_BRANCH: fix/pitch-navigation-reliability-v4-2026-07-21
+      BASE_BRANCH: kinocampus-V75.0-foundations
+    steps:
+      - name: Check out validated fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FIX_BRANCH }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/pitch-institucional/package-lock.json
+
+      - name: Verify the completed fix and remove this one-shot workflow
+        run: |
+          set -euo pipefail
+          test -f apps/pitch-institucional/app/presentation-sync.ts
+          test -f apps/pitch-institucional/tests/presentation-behavior.test.mjs
+          grep -q 'reconcilePresenterSlide' apps/pitch-institucional/app/page.tsx
+          grep -q 'pendingNavigationRef' apps/pitch-institucional/app/page.tsx
+          grep -q 'ZoomIn size={18}' apps/pitch-institucional/app/page.tsx
+          grep -q 'bottom: max(12px, env(safe-area-inset-bottom))' apps/pitch-institucional/app/globals.css
+          test ! -e scripts/apply-pitch-navigation-v4.mjs
+          test ! -e .github/workflows/pitch-navigation-reliability-v4.yml
+          if compgen -G '.github/.pitch-connector-probe*' > /dev/null; then
+            echo 'Temporary connector probes are still present.'
+            exit 1
+          fi
+          rm -f .github/workflows/integrate-pitch-navigation-v4.yml
+
+      - name: Commit removal of one-shot integration workflow
+        run: |
+          set -euo pipefail
+          git config user.name 'Kino Campus Reliability Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore(pitch): remove one-shot integration workflow'
+          git push origin HEAD:${FIX_BRANCH}
+
+      - name: Rebase comparison on the current base and enforce scope
+        run: |
+          set -euo pipefail
+          git fetch origin ${BASE_BRANCH} ${FIX_BRANCH}
+          git merge-base --is-ancestor origin/${BASE_BRANCH} HEAD || {
+            echo 'The base advanced; merging it into the fix branch before validation.'
+            git merge --no-edit origin/${BASE_BRANCH}
+            git push origin HEAD:${FIX_BRANCH}
+          }
+          git diff --check origin/${BASE_BRANCH}...HEAD
+          changed="$(git diff --name-only origin/${BASE_BRANCH}...HEAD | sort)"
+          printf '%s\n' "$changed"
+          forbidden="$(printf '%s\n' "$changed" | grep -Ev '^(apps/pitch-institucional/(app/(page\.tsx|globals\.css|presentation-sync\.ts)|tests/presentation-behavior\.test\.mjs|package\.json))$' || true)"
+          if [ -n "$forbidden" ]; then
+            echo 'Unexpected files in final diff:'
+            echo "$forbidden"
+            exit 1
+          fi
+          expected_count="$(printf '%s\n' "$changed" | sed '/^$/d' | wc -l | tr -d ' ')"
+          if [ "$expected_count" -ne 5 ]; then
+            echo "Expected exactly five application files in the final diff; found $expected_count."
+            exit 1
+          fi
+
+      - name: Validate institutional presentation application
+        working-directory: apps/pitch-institucional
+        run: |
+          npm ci
+          npm run lint
+          npm test
+
+      - name: Validate Kino Campus host integration
+        run: |
+          npm ci
+          npm run validate:js
+          npm run validate:html
+          npm run validate:inline
+          node --test tests/integration/kc-pitch-host.test.js
+
+      - name: Merge the validated branch into the current base
+        run: |
+          set -euo pipefail
+          git fetch origin ${BASE_BRANCH} ${FIX_BRANCH}
+          git checkout -B integration-${BASE_BRANCH} origin/${BASE_BRANCH}
+          git pull --ff-only origin ${BASE_BRANCH}
+          git merge --no-ff origin/${FIX_BRANCH} -m 'merge: stabilize institutional pitch navigation'
+          git push origin HEAD:${BASE_BRANCH}
+
+      - name: Remove the integrated fix branch
+        if: success()
+        run: git push origin --delete ${FIX_BRANCH} || true
