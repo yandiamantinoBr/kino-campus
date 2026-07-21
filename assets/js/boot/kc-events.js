@@ -1,5 +1,5 @@
 /*
-  KinoCampus - kc-events.js v8.6.5
+  KinoCampus - kc-events.js v8.6.7
 
   Helper padronizado para enviar eventos customizados ao Google Analytics 4
   (carregado por kc-google-tag.js).
@@ -42,7 +42,8 @@
     kc_logout: Object.freeze({}),
     kc_message_send: Object.freeze({ message_type: true, has_attachment: true, has_text: true, is_reply: true, context: true }),
     kc_post_create: Object.freeze({ item_id: true, module: true, content_type: true, publication_status: true }),
-    kc_post_view: Object.freeze({ post_id: true }),
+    kc_module_view: Object.freeze({ module: true }),
+    kc_post_view: Object.freeze({ post_id: true, module: true, content_type: true }),
     kc_profile_cta_click: Object.freeze({ item_id: true, content_type: true }),
     kc_search: Object.freeze({ search_source: true, query_length_bucket: true }),
     kc_share: Object.freeze({ post_id: true, method: true }),
@@ -301,8 +302,68 @@
     }
   }
 
-  // Auto-update consent on kc:consentchange (already wired by kc-google-tag)
-  // (no-op here — kept in one place)
+  /**
+   * Reenvia eventos enfileirados quando gtag + consentimento analytics passam a
+   * estar disponiveis (ex.: usuario aceita "Metricas" no banner LGPD).
+   * Timing/page_view auxiliares nao usam schema allowlist e nao sao reenviados.
+   */
+  function flushQueue() {
+    if (!gtagAvailable() || !hasConsent() || !eventQueue.length) return 0;
+    var pending = eventQueue.slice();
+    eventQueue.length = 0;
+    var sent = 0;
+    pending.forEach(function (entry) {
+      if (!entry || !entry.name) return;
+      var name = String(entry.name).toLowerCase().slice(0, 40);
+      var schema = EVENT_PARAM_SCHEMAS[name];
+      if (!schema) return;
+      var safeParams = sanitizeParams(entry.params || {}, schema);
+      try {
+        window.gtag('event', name, safeParams);
+        sent += 1;
+      } catch (_) {
+        pushToQueue(name, safeParams, 'gtag_threw');
+      }
+    });
+    if (DEBUG) console.info('[KCEvents] flushed queue, sent=', sent);
+    return sent;
+  }
+
+  function detectModuleFromPath() {
+    try {
+      var path = String((window.location && window.location.pathname) || '').toLowerCase();
+      if (/eventos/.test(path)) return 'eventos';
+      if (/oportunidades/.test(path)) return 'oportunidades';
+      if (/caronas/.test(path)) return 'caronas';
+      if (/moradia/.test(path)) return 'moradia';
+      if (/compra-venda/.test(path)) return 'compra-venda';
+      if (/achados-perdidos/.test(path)) return 'achados-perdidos';
+      if (/editorial/.test(path)) return 'editorial';
+      if (/(^|\/)ods(\.html)?$/.test(path) || /\/ods\.html$/.test(path)) return 'ods';
+    } catch (_) { }
+    return '';
+  }
+
+  function maybeTrackModuleView() {
+    var moduleName = detectModuleFromPath();
+    if (!moduleName) return false;
+    return trackOnce('kc_module_view', { module: moduleName });
+  }
+
+  // Google tag also listens for this event; we only retry product events.
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('kc:consentchange', function () {
+      if (hasConsent()) {
+        flushQueue();
+        maybeTrackModuleView();
+      }
+    });
+  }
+
+  // If consent already exists on first paint, record the module feed landing once.
+  if (hasConsent()) {
+    maybeTrackModuleView();
+  }
 
   window.KCEvents = Object.freeze({
     track: track,
@@ -312,6 +373,7 @@
     trackTiming: trackTiming,
     trackEngagement: trackEngagement,
     trackPageView: trackPageView,
+    flushQueue: flushQueue,
     hasConsent: hasConsent,
     enableDebug: function () { DEBUG = true; },
     getQueue: function () { return eventQueue.slice(); },

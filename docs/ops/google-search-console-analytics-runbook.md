@@ -124,6 +124,12 @@ Front-end emite via `window.KCEvents.track(name, params)` (helper em `assets/js/
 
 **Validação no GA4**: `Relatórios → Engajamento → Eventos` (lag de 24-48h para primeira aparição). Para debug em tempo real, use `DebugView` no GA4 (requer `?debug_mode=1` ou `window.KCEvents.enableDebug()`).
 
+**Fila pós-consentimento (2026-07-20):** eventos `kc_*` tentados antes do aceite de Métricas ficam em fila interna e são reenviados em `kc:consentchange` via `KCEvents.flushQueue()`. Assim a primeira navegação útil após o banner não se perde.
+
+**Landing de módulo:** `kc_module_view` dispara uma vez por sessão/página ao abrir feeds (eventos, oportunidades, caronas, moradia, compra-venda, achados-perdidos, editorial, ods).
+
+**Status operacional e o erro 499 de Tempo real:** ver `docs/analytics/GA4-STATUS-AND-OPS-2026-07-20.md`.
+
 **Canais de contact_click** (derivado do href): `whatsapp` | `email` | `phone` | `chat_internal` (link para `/mensagens.html?with=`) | `external` (outros links externos).
 
 ## O que não fazer

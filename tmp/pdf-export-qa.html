@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>QA PDF Admin</title>
+</head>
+<body>
+  <button id="run" type="button">Gerar PDF QA</button>
+  <output id="status">pronto</output>
+  <script src="/assets/vendor/jspdf.umd.min.js"></script>
+  <script src="/assets/vendor/jspdf.plugin.autotable.min.js"></script>
+  <script src="/assets/js/controllers/admin/admin-export.shared.js?v=qa"></script>
+  <script>
+    (function () {
+      function days(count) {
+        return Array.from({ length: count }, function (_, index) {
+          var day = String(index + 1).padStart(2, '0') + '/07';
+          return {
+            dia: day,
+            posts_count: 12 + index,
+            comments_count: 7 + (index % 9),
+            post_views_count: 90 + (index * 3),
+            sessions_count: 30 + (index % 11),
+            signups_count: index % 5,
+            ad_clicks_count: index % 8,
+            total: 139 + (index * 4)
+          };
+        });
+      }
+
+      function numbered(count, builder) {
+        return Array.from({ length: count }, function (_, index) {
+          return builder(index + 1);
+        });
+      }
+
+      var pulseRows = days(30);
+      var report = {
+        title: 'KinoCampus - Relatório Executivo Admin',
+        subtitle: 'Dashboard administrativo consolidado — validação final',
+        period: '17/06/2026 até 16/07/2026',
+        source: 'admin/index.html — Dashboard Admin',
+        generatedAt: new Date().toISOString(),
+        filters: {
+          periodo: 'Últimos 30 dias corridos',
+          inicio: '17/06/2026',
+          fim: '16/07/2026',
+          audit_action: 'Todas as ações',
+          audit_entity_type: 'Todas as entidades',
+          audit_actor: 'Todos os atores',
+          tendencias_modulo: 'Todos os módulos',
+          tendencias_busca: 'Todos os termos',
+          ranking_periodo: 'Últimos 30 dias corridos',
+          ranking_modulo: 'Todos os módulos',
+          ranking_limite: 100,
+          series_exibidas: 'Visualizações, Atividade distinta, Posts, Comentários, Cadastros, Cliques em anúncios',
+          series_ocultas: 'Votos, Curtidas em comentários, Salvos, Buscas, Denúncias, Ações admin, Impressões de anúncios'
+        },
+        kpis: numbered(14, function (index) {
+          return {
+            label: 'Indicador executivo ' + index,
+            value: index * 17,
+            detail: 'Contexto confirmado do indicador ' + index
+          };
+        }),
+        sections: [
+          {
+            title: 'Disponibilidade das fontes',
+            note: 'Estado e procedência dos snapshots usados neste arquivo.',
+            rows: numbered(6, function (index) {
+              return {
+                bloco: 'Fonte ' + index,
+                estado: index === 5 ? 'Parcial' : 'Disponível',
+                fonte: 'RPC agregada administrativa',
+                observacao: 'Fonte confirmada para a janela selecionada.'
+              };
+            }),
+            columns: ['bloco', 'estado', 'fonte', 'observacao'],
+            maxPdfRows: 6
+          },
+          {
+            title: 'Resumo executivo',
+            rows: numbered(15, function (index) {
+              return { indicador: 'Métrica ' + index, valor: index * 23, contexto: 'Janela e fonte explicadas' };
+            }),
+            columns: ['indicador', 'valor', 'contexto'],
+            maxPdfRows: 15
+          },
+          {
+            title: 'Pulso operacional',
+            note: 'O total soma todas as séries exibidas neste gráfico.',
+            rows: pulseRows,
+            columns: ['dia', 'posts_count', 'comments_count', 'post_views_count', 'sessions_count', 'signups_count', 'ad_clicks_count', 'total'],
+            chart: {
+              type: 'line',
+              xKey: 'dia',
+              xLabel: 'Dia',
+              yLabel: 'Eventos',
+              rows: pulseRows,
+              series: [
+                { key: 'posts_count', label: 'Posts', color: '#ff6b00' },
+                { key: 'comments_count', label: 'Comentários', color: '#0ea5e9' },
+                { key: 'post_views_count', label: 'Visualizações', color: '#3b82f6' },
+                { key: 'sessions_count', label: 'Atividade distinta', color: '#a855f7' },
+                { key: 'signups_count', label: 'Cadastros', color: '#14b8a6' },
+                { key: 'ad_clicks_count', label: 'Cliques em anúncios', color: '#f59e0b' }
+              ]
+            },
+            maxPdfRows: 30
+          },
+          {
+            title: 'Séries (totais no período)',
+            rows: numbered(13, function (index) {
+              return { serie: 'Série ' + index, total: index * 111 };
+            }),
+            columns: ['serie', 'total'],
+            maxPdfRows: 13
+          },
+          {
+            title: 'Módulos',
+            note: 'Inclui volume não classificado no denominador.',
+            rows: numbered(8, function (index) {
+              return { modulo: index === 8 ? 'Não classificado' : 'Módulo ' + index, participacao_percentual: (12.5) + '%', volume: index * 9 };
+            }),
+            columns: ['modulo', 'participacao_percentual', 'volume'],
+            maxPdfRows: 8
+          },
+          {
+            title: 'Tendências',
+            rows: numbered(50, function (index) {
+              return { posicao: index, termo: 'consulta de busca ' + index, buscas: 101 - index, modulo: 'Eventos' };
+            }),
+            columns: ['posicao', 'termo', 'buscas', 'modulo'],
+            maxPdfRows: 50
+          },
+          {
+            title: 'Saúde/Admin',
+            rows: numbered(6, function (index) {
+              return { indicador: 'Verificação ' + index, estado: 'Disponível', fonte: 'Consulta confirmada', observacao: 'Sem estimativa silenciosa.' };
+            }),
+            columns: ['indicador', 'estado', 'fonte', 'observacao'],
+            maxPdfRows: 6
+          },
+          {
+            title: 'Audit log',
+            note: 'Amostra visual extensa para validar paginação integral.',
+            rows: numbered(120, function (index) {
+              return {
+                data: '16/07/2026 14:' + String(index % 60).padStart(2, '0'),
+                acao: index % 2 ? 'post_status_changed' : 'external_access_decided',
+                entidade: index % 2 ? 'post' : 'help_request',
+                referencia: '1234abcd…',
+                ator: 'Administrador QA'
+              };
+            }),
+            columns: ['data', 'acao', 'entidade', 'referencia', 'ator'],
+            maxPdfRows: 120
+          }
+        ]
+      };
+
+      document.getElementById('run').addEventListener('click', async function () {
+        var status = document.getElementById('status');
+        status.textContent = 'gerando';
+        try {
+          await window.KCAdminExport.exportReportPDF('admin-dashboard-final-qa.pdf', report);
+          status.textContent = 'concluído';
+        } catch (error) {
+          status.textContent = 'erro: ' + (error && error.message ? error.message : String(error));
+          throw error;
+        }
+      });
+    }());
+  </script>
+</body>
+</html>

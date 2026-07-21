@@ -155,4 +155,44 @@ describe('KCEvents privacy and queue robustness', () => {
     expect(pageViewParams).toMatchObject({ page_path: '/profile' });
     expect(pageViewParams).not.toHaveProperty('page_title');
   });
+
+  test('flushes queued product events after analytics consent is granted', () => {
+    window.gtag = jest.fn();
+    let analytics = false;
+    window.KCConsent = { hasConsent: (key) => key === 'analytics' ? analytics : false };
+    const events = loadEvents();
+
+    expect(events.track('kc_search', { search_source: 'search', query_length_bucket: '2_4' })).toBe(false);
+    expect(events.track('kc_post_view', {
+      post_id: '11111111-1111-4111-8111-111111111111',
+      module: 'eventos',
+      content_type: 'post',
+    })).toBe(false);
+    expect(events.getQueue()).toHaveLength(2);
+    expect(window.gtag).not.toHaveBeenCalled();
+
+    analytics = true;
+    window.dispatchEvent(new CustomEvent('kc:consentchange', {
+      detail: { preferences: { analytics: true } },
+    }));
+
+    expect(events.getQueue()).toHaveLength(0);
+    // At least the two queued product events; module_view may also fire once for the path.
+    expect(window.gtag.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(window.gtag).toHaveBeenCalledWith(
+      'event',
+      'kc_search',
+      expect.objectContaining({ search_source: 'search', query_length_bucket: '2_4' }),
+    );
+    expect(window.gtag).toHaveBeenCalledWith(
+      'event',
+      'kc_post_view',
+      expect.objectContaining({
+        post_id: '11111111-1111-4111-8111-111111111111',
+        module: 'eventos',
+        content_type: 'post',
+      }),
+    );
+    expect(typeof events.flushQueue).toBe('function');
+  });
 });
