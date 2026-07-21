@@ -290,24 +290,15 @@ function installSessionFetchGuard() {
 
         if (remainedStable) {
           const desiredSlide = state.desiredSlide;
-          if (desiredSlide === null || performance.now() >= state.localAuthorityUntil) {
-            state.desiredSlide = null;
-            return response;
+          if (desiredSlide !== null && performance.now() < state.localAuthorityUntil) {
+            // Preserve the presenter's latest local intent for the entire
+            // synchronization window. A first matching poll must not release
+            // authority because another, older GET may still be in flight.
+            return patchSessionSlide(response, desiredSlide);
           }
 
-          try {
-            const data = await response.clone().json() as {
-              session?: { currentSlide?: number };
-            };
-            if (data.session?.currentSlide === desiredSlide) {
-              state.desiredSlide = null;
-              return response;
-            }
-          } catch {
-            return response;
-          }
-
-          if (attempt === 3) return patchSessionSlide(response, desiredSlide);
+          state.desiredSlide = null;
+          return response;
         }
 
         try {
