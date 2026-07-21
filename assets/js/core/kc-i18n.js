@@ -671,6 +671,7 @@
     'tooltip.pitch-home':               'Ir para o KinoCampus',
     'tooltip.pitch-fullscreen':         'Abrir em tela cheia',
     'tooltip.pitch-frame':              'Apresentação institucional interativa do KinoCampus',
+    'tooltip.admin-ga4-diagnose':       'Testa secrets, OAuth e Data API sem expor credenciais',
     'tooltip.banners-metrics-period':   'Período das métricas',
     // Ranking / info
     'tooltip.how-it-works':             'Como funciona?',
