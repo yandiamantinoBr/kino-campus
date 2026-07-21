@@ -308,7 +308,10 @@
     // Só mudanças de eventos afetam o calendário (module ausente ⇒ não filtra).
     var mod = String(change.module || '').trim().toLowerCase();
     if (mod && mod !== 'eventos') return;
-    scheduleRefresh(); // qualquer mudança (deletar/esconder/editar/criar) re-busca
+    // Contadores (votos etc.) não precisam rebuscar o calendário.
+    var changeType = String(change.type || '').trim().toLowerCase();
+    if (changeType === 'metrics_updated' || changeType === 'vote_metrics' || changeType === 'metrics') return;
+    scheduleRefresh(); // deletar/esconder/editar/criar re-busca
   }
 
   function onCalendarVisible() {
