@@ -10,6 +10,10 @@
       "includeFiles": "services/cadu-ufg-publisher/config/cadu-source-registry/*.json"
     }
   },
+  "redirects": [
+    { "source": "/admin/ga4/dashboard.html", "destination": "/admin/ga4-dashboard.html", "permanent": true },
+    { "source": "/admin/ga4/dashboard", "destination": "/admin/ga4-dashboard.html", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/feed.xml", "destination": "/api/feed" },

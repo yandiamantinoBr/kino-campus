@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Admin GA4 + Search Console Dashboard Controller (V8.6.11)
+  KinoCampus - Admin GA4 + Search Console Dashboard Controller (V8.6.12)
 
   Reads from Edge Functions kc-ga4-reports and kc-search-console-reports,
   which proxy Google read-only APIs. Requires admin access
@@ -162,23 +162,33 @@
     try { json = JSON.parse(text); } catch (_) {}
     if (!res.ok) {
       var code = (json && typeof json.error === 'string' && json.error) || ('http_' + res.status);
-      throw createGa4Error(code, res.status);
+      throw createGa4Error(code, res.status, json);
     }
     return json && json.data;
   }
 
-  function createGa4Error(code, status) {
+  function createGa4Error(code, status, payload) {
     var safeCode = code || 'ga4_error';
     var error = new Error(safeCode);
     error.code = safeCode;
     error.status = status || 0;
+    error.reason = payload && payload.reason ? String(payload.reason) : '';
+    error.diagnostics = payload && payload.diagnostics ? payload.diagnostics : null;
     return error;
   }
 
   function friendlyGa4Error(error) {
     var code = error && error.code ? String(error.code) : '';
-    if (code === 'missing_config' || code === 'invalid_property_id' || code === 'invalid_sa_key' || code === 'no_supabase_url') {
+    if (code === 'missing_config' || code === 'invalid_property_id' || code === 'no_supabase_url') {
       return 'O Google Analytics 4 n\u00e3o p\u00f4de ser carregado porque a integra\u00e7\u00e3o do servidor precisa ser configurada novamente.';
+    }
+    if (code === 'invalid_sa_key') {
+      var reason = error && error.reason ? String(error.reason) : '';
+      var hint = reason
+        ? ' Detalhe t\u00e9cnico (seguro): ' + reason + '.'
+        : '';
+      return 'A chave t\u00e9cnica do GA4 no servidor est\u00e1 inv\u00e1lida ou corrompida.' + hint +
+        ' Republicar com npm run analytics:secrets:set (nunca colar o JSON no PowerShell).';
     }
     if (code === 'service_account_auth_failed') {
       return 'O Google Analytics 4 rejeitou a credencial t\u00e9cnica configurada no servidor.';
@@ -1288,6 +1298,62 @@
   // ── Bootstrap ──────────────────────────────────────────────────────────
   var refreshTimer = null;
 
+  async function runDiagnose() {
+    try {
+      var token = await getAccessToken();
+      if (!token) throw createGa4Error('no_session', 401);
+      var baseUrl = getSupabaseUrl();
+      if (!baseUrl) throw createGa4Error('no_supabase_url', 0);
+      var url = baseUrl.replace(/\/+$/, '') + '/functions/v1/kc-ga4-reports';
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'diagnose' }),
+      });
+      var text = await res.text();
+      var json = null;
+      try { json = JSON.parse(text); } catch (_) {}
+      if (!res.ok) {
+        var code = (json && json.error) || ('http_' + res.status);
+        throw createGa4Error(code, res.status, json);
+      }
+      var lines = [
+        'Diagnóstico GA4 (admin):',
+        '- property_id_ok: ' + !!json.property_id_configured,
+        '- sa_key_present: ' + !!json.sa_key_present + ' (len=' + (json.sa_key_length || 0) + ')',
+        '- sa_parse_ok: ' + !!json.sa_parse_ok + (json.sa_parse_reason ? ' (' + json.sa_parse_reason + ')' : ''),
+        '- oauth_ok: ' + !!json.oauth_ok,
+        '- data_api_ok: ' + !!json.data_api_ok,
+      ];
+      if (json.probe_error) lines.push('- probe_error: ' + String(json.probe_error));
+      if (json.sa_diagnostics) {
+        try {
+          lines.push('- sa_diagnostics: ' + JSON.stringify(json.sa_diagnostics));
+        } catch (_) {}
+      }
+      setStatus(lines.join(' '));
+      console.info('[ga4-dashboard] diagnose', json);
+      if (!json.sa_parse_ok || !json.oauth_ok || !json.data_api_ok) {
+        setError(
+          !json.sa_parse_ok
+            ? friendlyGa4Error(createGa4Error('invalid_sa_key', 503, { reason: json.sa_parse_reason, diagnostics: json.sa_diagnostics }))
+            : (!json.oauth_ok
+              ? friendlyGa4Error(createGa4Error('service_account_auth_failed', 502))
+              : 'Diagnóstico: a Data API não respondeu. Verifique permissões da service account na propriedade GA4.')
+        );
+      } else {
+        clearError();
+      }
+      return json;
+    } catch (err) {
+      setError(friendlyGa4Error(err));
+      throw err;
+    }
+  }
+
   async function init() {
     var loading = $('#admin-loading');
     var content = $('#admin-content');
@@ -1305,6 +1371,17 @@
     if (refreshBtn) {
       refreshBtn.addEventListener('click', function () {
         loadDashboard().catch(function (e) { console.error('[ga4-dashboard] refresh failed:', e); });
+      });
+    }
+    var diagnoseBtn = $('#ga4DiagnoseButton');
+    if (diagnoseBtn) {
+      diagnoseBtn.addEventListener('click', function () {
+        diagnoseBtn.disabled = true;
+        runDiagnose().catch(function (e) {
+          console.error('[ga4-dashboard] diagnose failed:', e);
+        }).finally(function () {
+          diagnoseBtn.disabled = false;
+        });
       });
     }
     var csvBtn = $('#ga4ExportCsv');

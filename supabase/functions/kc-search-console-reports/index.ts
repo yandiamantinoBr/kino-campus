@@ -14,6 +14,10 @@
 
 import { createClient } from "@supabase/supabase-js";
 import {
+  parseServiceAccountSecret,
+  type ServiceAccountKey,
+} from "../_shared/google-service-account.ts";
+import {
   type ConfiguredSite,
   type InspectUrlRequest,
   parseConfiguredSite,
@@ -181,34 +185,13 @@ async function resolveCaller(req: Request): Promise<CallerContext> {
   }
 }
 
-interface ServiceAccountKey {
-  type: "service_account";
-  private_key: string;
-  client_email: string;
+function parseServiceAccount(raw: string): ServiceAccountKey | null {
+  const parsed = parseServiceAccountSecret(raw);
+  return parsed.ok ? parsed.key : null;
 }
 
-function parseServiceAccount(raw: string): ServiceAccountKey | null {
-  if (!raw || raw.length > 128 * 1024) return null;
-  try {
-    const value = JSON.parse(raw) as Record<string, unknown>;
-    if (
-      value.type !== "service_account" ||
-      typeof value.private_key !== "string" ||
-      !value.private_key.includes("-----BEGIN PRIVATE KEY-----") ||
-      !value.private_key.includes("-----END PRIVATE KEY-----") ||
-      typeof value.client_email !== "string" ||
-      !/^[^@\s]+@[^@\s]+\.gserviceaccount\.com$/i.test(value.client_email)
-    ) {
-      return null;
-    }
-    return {
-      type: "service_account",
-      private_key: value.private_key,
-      client_email: value.client_email,
-    };
-  } catch (_) {
-    return null;
-  }
+function parseServiceAccountDetailed(raw: string) {
+  return parseServiceAccountSecret(raw);
 }
 
 function base64url(input: ArrayBuffer | Uint8Array | string): string {
@@ -611,7 +594,8 @@ async function handlePost(req: Request): Promise<Response> {
     });
   }
 
-  const serviceAccountRaw = getEnv("KC_SEARCH_CONSOLE_SA_KEY");
+  // Prefer raw env for SA JSON (avoid trim edge-cases on multi-line secrets).
+  const serviceAccountRaw = Deno.env.get("KC_SEARCH_CONSOLE_SA_KEY") ?? "";
   const configuredSiteRaw = getEnv("KC_SEARCH_CONSOLE_SITE_URL");
   if (!serviceAccountRaw || !configuredSiteRaw) {
     return problemResponse(
@@ -624,17 +608,18 @@ async function handlePost(req: Request): Promise<Response> {
     );
   }
 
-  const serviceAccount = parseServiceAccount(serviceAccountRaw);
-  if (!serviceAccount) {
-    return problemResponse(
-      req,
-      problem(
-        503,
-        "invalid_service_account_config",
+  const serviceAccountParsed = parseServiceAccountDetailed(serviceAccountRaw);
+  if (!serviceAccountParsed.ok) {
+    return json(req, 503, {
+      ok: false,
+      error: "invalid_service_account_config",
+      detail:
         "KC_SEARCH_CONSOLE_SA_KEY must contain a valid Google service-account JSON key.",
-      ),
-    );
+      reason: serviceAccountParsed.reason,
+      diagnostics: serviceAccountParsed.diagnostics,
+    });
   }
+  const serviceAccount = serviceAccountParsed.key;
 
   const siteResult = parseConfiguredSite(configuredSiteRaw);
   if (!siteResult.ok) {

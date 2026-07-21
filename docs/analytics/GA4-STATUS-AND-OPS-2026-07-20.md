@@ -1,4 +1,4 @@
-# GA4 / Search Console — status operacional (2026-07-20)
+# GA4 / Search Console — status operacional (2026-07-21)
 
 Documento vivo para o Yan: o que já está certo, o que o “erro” do GA significa, e como extrair o máximo de informação.
 
@@ -34,7 +34,46 @@ A tag de produção é **`G-P9RKYHPB7Z`**, carregada por `assets/js/boot/kc-goog
 | Painel admin | Edge Functions `kc-ga4-reports` / `kc-search-console-reports` | Lê Data API + Search Console sem expor secrets no front |
 | Busca Google | Google Search Console (propriedade de domínio) | Cliques, impressões, CTR, posição, indexação |
 
-## 3. Eventos importantes no GA4
+## 3. Painel admin e `invalid_sa_key`
+
+URL correta: **`/admin/ga4-dashboard.html`** (apenas administradores com `profiles.is_admin = true`).
+
+- `/admin/ga4/dashboard.html` redireciona para o caminho certo.
+- Botão **Diagnosticar** chama `POST …/kc-ga4-reports` com `{ "action": "diagnose" }` e devolve flags seguras (`sa_parse_ok`, `oauth_ok`, `data_api_ok`, `reason`) **sem** vazar chave privada.
+- As Edge Functions usam o parser compartilhado `supabase/functions/_shared/google-service-account.ts`, que:
+  - remove aspas/BOM de wrappers de secret;
+  - aceita JSON double-encoded;
+  - normaliza PEM com `\n` literal ou colapsado em uma linha;
+  - retorna `reason` + `diagnostics` booleanos quando a chave falha.
+
+### Secrets necessários (Supabase Edge)
+
+| Secret | Valor |
+| --- | --- |
+| `KC_GA4_SA_KEY` | JSON completo da service account de leitura do GA4 |
+| `KC_GA4_PROPERTY_ID` | `540208497` |
+| `KC_SEARCH_CONSOLE_SA_KEY` | JSON completo da SA de leitura do Search Console |
+| `KC_SEARCH_CONSOLE_SITE_URL` | `sc-domain:kinocampus.com.br` |
+
+**Nunca** cole o JSON no PowerShell (`supabase secrets set KC_GA4_SA_KEY="{...}"`). Use:
+
+```bash
+npm run analytics:secrets:set -- \
+  --project-ref wacyrkwhkvzwkqpolrbg \
+  --ga-key ./path/ga4-sa.json \
+  --ga-property 540208497 \
+  --search-console-key ./path/sc-sa.json \
+  --search-console-site sc-domain:kinocampus.com.br
+```
+
+### Evidência de saúde (2026-07-21)
+
+- Secrets listados no projeto com digests presentes.
+- Logs de Edge: `kc-ga4-reports` e `kc-search-console-reports` respondendo **HTTP 200** em produção.
+- Security Advisor: **0** lints.
+- Wrappers `public.kc_*` de analytics/busca: **SECURITY INVOKER** (implementação admin em `kc_private` DEFINER sem grant a anon/authenticated).
+
+## 4. Eventos importantes no GA4
 
 Veja a tabela completa em `docs/ops/google-search-console-analytics-runbook.md`.
 
@@ -43,74 +82,72 @@ Destaques:
 - `page_view` — controlado (manual, URL sanitizada)
 - `kc_post_view` — com `post_id`, opcional `module`, `content_type`
 - `kc_search` — **sem** termo bruto (só `search_source` + `query_length_bucket`) por privacidade
-- `kc_module_view` — landing em feed de módulo (eventos, oportunidades, …)
-- `login` / `sign_up` / `share` / `generate_lead` — eventos recomendados Google (em paralelo aos `kc_*`)
+- `kc_module_view` — landing em feed de módulo
+- `login` / `sign_up` / `share` / `generate_lead` — eventos recomendados Google
 
 ### Melhoria 2026-07-20
 
-- Fila de eventos agora é **reenviada** quando o usuário aceita Métricas (`flushQueue` em `kc:consentchange`). Antes, cliques/buscas feitos antes do consentimento podiam se perder.
+- Fila de eventos é **reenviada** quando o usuário aceita Métricas (`flushQueue` em `kc:consentchange`).
 
-## 4. Google Search Console (cliques no Google)
+### Melhoria 2026-07-21
 
-Isso é **outra ferramenta**, ligada mas distinta do Analytics:
+- Parser robusto de service account nas Edge Functions + botão Diagnosticar no admin.
+- Redirect de path legado `/admin/ga4/dashboard.html`.
+- Reafirmação de grants INVOKER nas RPCs de analytics (advisors zerados).
 
-1. Abra https://search.google.com/search-console
-2. Propriedade de domínio do KinoCampus (ideal: `kinocampus.com.br`)
-3. **Desempenho → Resultados da pesquisa** = cliques, impressões, CTR, posição
-4. **Sitemaps** → confirme `https://www.kinocampus.com.br/sitemap.xml`
-5. **Indexação → Páginas** → o que o Google indexou / excluiu
-6. No GA4: **Admin → Links de produto → Search Console** (já auditado como vinculado em 2026-07-14)
+## 5. Google Search Console
 
-Relatórios de pesquisa no GA4 aparecem com atraso típico de **2–3 dias**.
+1. https://search.google.com/search-console — propriedade de domínio
+2. **Desempenho → Resultados da pesquisa**
+3. **Sitemaps** → `https://www.kinocampus.com.br/sitemap.xml`
+4. No GA4: **Admin → Links de produto → Search Console**
 
-## 5. Como maximizar insights (checklist semanal)
+Relatórios de pesquisa no GA4 têm atraso típico de **2–3 dias**.
+
+## 6. Como maximizar insights (checklist semanal)
 
 ### No GA4
 
-1. **Aquisição → Visão geral da aquisição** — de onde vem o tráfego
-2. **Engajamento → Páginas e telas** — o que as pessoas abrem
-3. **Engajamento → Eventos** — filtrar `kc_`
-4. **Explorar → Exploração de funil** — ex.: `session_start` → `kc_post_view` → `kc_contact_click`
-5. Marcar como **conversões/eventos principais**: `sign_up`, `generate_lead`, `kc_contact_click`, `kc_post_create`, `kc_share` (vários já marcados na auditoria)
+1. **Aquisição → Visão geral**
+2. **Engajamento → Páginas e telas**
+3. **Engajamento → Eventos** (filtrar `kc_`)
+4. **Explorar → Funil** (ex.: `session_start` → `kc_post_view` → `kc_contact_click`)
+5. Conversões: `sign_up`, `generate_lead`, `kc_contact_click`, `kc_post_create`, `kc_share`
 
 ### No Search Console
 
-1. Consultas com muitas impressões e poucos cliques → melhorar título/descrição da página
-2. Páginas na posição 8–20 → reforçar conteúdo e links internos
-3. URLs importantes “descobertas, não indexadas” → Inspeção de URL + solicitar indexação
+1. Muitas impressões / poucos cliques → título/descrição
+2. Posição 8–20 → conteúdo e links internos
+3. URLs “descobertas, não indexadas” → Inspeção de URL
 
 ### No Admin KinoCampus
 
-- `/admin/ga4-dashboard.html` — visão consolidada (requer secrets de service account no Supabase)
-- `/admin/privacy-analytics.html` — consentimento e métricas internas (não substitui o GA)
+- `/admin/ga4-dashboard.html` — visão consolidada (admin only)
+- `/admin/privacy-analytics.html` — métricas internas de consentimento
 
-## 6. O que o GA **não** captura (de propósito)
+## 7. O que o GA **não** captura (de propósito)
 
-- Termo de busca digitado (PII / alta cardinalidade)
+- Termo de busca digitado
 - IDs de usuário brutos, chat, telefone, e-mail
-- Tráfego em `localhost` / previews / `/admin`
-- Qualquer evento sem consentimento de Métricas
+- Tráfego em localhost / previews / `/admin`
+- Eventos sem consentimento de Métricas
 
-Isso é correto para LGPD e para qualidade dos relatórios.
+## 8. Validação rápida em produção
 
-## 7. Validação rápida em produção
-
-1. Abra `https://www.kinocampus.com.br/` em aba anônima
-2. Aceite **Métricas** no banner
-3. Navegue: home → oportunidades → abrir um post → buscar algo
-4. GA4 → **Admin → DebugView** (ou Tempo real)
-5. Confirme: `page_view`, `kc_module_view` (em feeds), `kc_post_view`, `kc_search`
-
-No console (opcional):
+1. Aba anônima em `https://www.kinocampus.com.br/`
+2. Aceitar **Métricas**
+3. Home → oportunidades → abrir post → buscar
+4. GA4 DebugView / Tempo real
+5. Admin logado → `/admin/ga4-dashboard.html` → **Atualizar** e, se necessário, **Diagnosticar**
 
 ```js
 KCEvents.enableDebug();
-KCEvents.getQueue(); // deve esvaziar após consentimento
+KCEvents.getQueue();
 KCGoogleTag.measurementId; // "G-P9RKYHPB7Z"
 ```
 
-## 8. Referências internas
+## 9. Referências
 
 - Runbook: `docs/ops/google-search-console-analytics-runbook.md`
 - Auditoria 2026-07-14: `docs/analytics/GA4-SEARCH-CONSOLE-AUDIT-2026-07-14.md`
-- Código: `assets/js/boot/kc-google-tag.js`, `assets/js/boot/kc-events.js`
+- Código: `kc-google-tag.js`, `kc-events.js`, `kc-ga4-reports`, `kc-search-console-reports`, `_shared/google-service-account.ts`
