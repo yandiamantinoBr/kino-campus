@@ -294,11 +294,25 @@ function installSessionFetchGuard() {
             // Preserve the presenter's latest local intent for the entire
             // synchronization window. A first matching poll must not release
             // authority because another, older GET may still be in flight.
-            return patchSessionSlide(response, desiredSlide);
-          }
+            const patchedResponse = await patchSessionSlide(response, desiredSlide);
+            const remainedStableAfterPatch =
+              generationAtStart === state.generation &&
+              epochAtStart === navigationEpoch &&
+              state.pendingControls === 0 &&
+              navigationIntent === null &&
+              state.desiredSlide === desiredSlide;
 
-          state.desiredSlide = null;
-          return response;
+            if (remainedStableAfterPatch) return patchedResponse;
+
+            try {
+              if (patchedResponse !== response) await patchedResponse.body?.cancel();
+            } catch {
+              // The patched response became obsolete during JSON cloning.
+            }
+          } else {
+            state.desiredSlide = null;
+            return response;
+          }
         }
 
         try {
