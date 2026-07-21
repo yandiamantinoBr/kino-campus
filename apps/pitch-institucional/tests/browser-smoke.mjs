@@ -102,13 +102,52 @@ function createSessionHarness({ getDelayMs = 40, controlDelayMs = 40 } = {}) {
   };
 }
 
+async function activateSegment(button) {
+  if (await button.getAttribute("aria-pressed") === "true") return;
+
+  let lastError;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await button.click();
+    try {
+      await expect(button).toHaveAttribute("aria-pressed", "true", { timeout: 1400 });
+      return;
+    } catch (error) {
+      lastError = error;
+      await delay(180);
+    }
+  }
+  throw lastError;
+}
+
 async function selectVariant(page, duration, mode) {
-  await page.getByRole("group", { name: "Duração da apresentação" })
-    .getByRole("button", { name: `${duration} min`, exact: true })
-    .click();
-  await page.getByRole("group", { name: "Modalidade da apresentação" })
-    .getByRole("button", { name: mode === "interativo" ? "Interativo" : "Expositivo", exact: true })
-    .click();
+  const durationButton = page.getByRole("group", { name: "Duração da apresentação" })
+    .getByRole("button", { name: `${duration} min`, exact: true });
+  const modeButton = page.getByRole("group", { name: "Modalidade da apresentação" })
+    .getByRole("button", { name: mode === "interativo" ? "Interativo" : "Expositivo", exact: true });
+
+  await activateSegment(durationButton);
+  await activateSegment(modeButton);
+  await expect(durationButton).toHaveAttribute("aria-pressed", "true");
+  await expect(modeButton).toHaveAttribute("aria-pressed", "true");
+}
+
+async function startPresentation(page) {
+  const startButton = page.getByRole("button", { name: /Iniciar apresentação/i });
+  const shell = page.locator(".presentation-shell");
+  let lastError;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await startButton.click();
+    try {
+      await expect(shell).toBeVisible({ timeout: 2200 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!(await startButton.isVisible().catch(() => false))) break;
+      await delay(180);
+    }
+  }
+  throw lastError;
 }
 
 async function openVariant(browser, duration, mode, harnessOptions = {}) {
@@ -117,9 +156,9 @@ async function openVariant(browser, duration, mode, harnessOptions = {}) {
   const harness = createSessionHarness(harnessOptions);
   await harness.install(page);
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".launch-shell")).toBeVisible();
   await selectVariant(page, duration, mode);
-  await page.getByRole("button", { name: /Iniciar apresentação/i }).click();
-  await expect(page.locator(".presentation-shell")).toBeVisible();
+  await startPresentation(page);
   await expect(page.getByRole("navigation", { name: "Controles da apresentação" })).toBeVisible();
   return { context, page, harness };
 }
@@ -212,8 +251,9 @@ async function verifyMobileControls(browser) {
   const harness = createSessionHarness();
   await harness.install(page);
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".launch-shell")).toBeVisible();
   await selectVariant(page, 30, "expositivo");
-  await page.getByRole("button", { name: /Iniciar apresentação/i }).click();
+  await startPresentation(page);
 
   const controls = page.getByRole("navigation", { name: "Controles da apresentação" });
   const previous = page.getByRole("button", { name: "Slide anterior" });
