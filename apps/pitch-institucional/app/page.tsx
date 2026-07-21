@@ -60,6 +60,8 @@ import {
   TestTube2,
   Users,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
   allSlides,
@@ -717,6 +719,7 @@ function PresenterView({
   const [qrAudience, setQrAudience] = useState("");
   const [qrRemote, setQrRemote] = useState("");
   const touchStart = useRef<number | null>(null);
+  const touchIgnoreUntil = useRef(0);
   const slide = deck[current];
 
   const next = useCallback(() => onCurrent(Math.min(deck.length - 1, current + 1)), [current, deck.length, onCurrent]);
@@ -731,10 +734,11 @@ function PresenterView({
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       if (["ArrowRight", "PageDown", " "].includes(event.key)) { event.preventDefault(); next(); }
       if (["ArrowLeft", "PageUp"].includes(event.key)) { event.preventDefault(); previous(); }
-      if (event.key === "Home") onCurrent(0);
-      if (event.key === "End") onCurrent(deck.length - 1);
+      if (event.key === "Home") { event.preventDefault(); onCurrent(0); }
+      if (event.key === "End") { event.preventDefault(); onCurrent(deck.length - 1); }
       if (event.key === "Escape" && !document.fullscreenElement) onExit();
     };
     window.addEventListener("keydown", handler);
@@ -755,19 +759,52 @@ function PresenterView({
     else await document.documentElement.requestFullscreen();
   };
   const formattedTime = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+  const markControlTouch = () => {
+    // Prevent the same finger press from also being interpreted as a swipe.
+    touchIgnoreUntil.current = Date.now() + 450;
+    touchStart.current = null;
+  };
 
   return (
     <main
       className={`presentation-shell ${projectionMode ? "is-projection" : ""}`}
-      onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
-      onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (distance < -60) next(); if (distance > 60) previous(); touchStart.current = null; }}
+      onTouchStart={(event) => {
+        if (Date.now() < touchIgnoreUntil.current) return;
+        const target = event.target as HTMLElement | null;
+        if (target?.closest(".presentation-controls, .presentation-actions, .overview-drawer, .notes-drawer, .session-panel")) {
+          touchStart.current = null;
+          return;
+        }
+        touchStart.current = event.changedTouches[0].clientX;
+      }}
+      onTouchEnd={(event) => {
+        if (touchStart.current === null || Date.now() < touchIgnoreUntil.current) {
+          touchStart.current = null;
+          return;
+        }
+        const distance = event.changedTouches[0].clientX - touchStart.current;
+        if (distance < -60) next();
+        if (distance > 60) previous();
+        touchStart.current = null;
+      }}
     >
       <header className="presentation-header">
         <div className="brand-button"><KinoLogo compact /></div>
         <div className="presentation-meta"><span>{durationLabels[duration]}</span><i /> <span>{mode === "interativo" ? "Interativo" : "Expositivo"}</span><i /> <strong>{slide.numberLabel}</strong></div>
-        <div className="presentation-actions">
+        <div className="presentation-actions" onTouchStart={markControlTouch}>
           <span className="presentation-timer"><Clock3 size={16} /> {formattedTime}</span>
-          <button type="button" onClick={() => setProjectionMode((current) => !current)} className={projectionMode ? "is-active" : ""} aria-pressed={projectionMode} title="Aumentar a legibilidade na projeção"><Accessibility size={18} /><span>Projeção</span></button>
+          <button
+            type="button"
+            data-kc-projection-toggle
+            onClick={() => setProjectionMode((value) => !value)}
+            className={projectionMode ? "is-active" : ""}
+            aria-pressed={projectionMode}
+            title={projectionMode ? "Restaurar tamanho do texto na projeção" : "Aumentar a legibilidade na projeção"}
+            aria-label={projectionMode ? "Desativar modo de projeção e restaurar o tamanho do texto" : "Ativar modo de projeção para aumentar texto e contraste"}
+          >
+            {projectionMode ? <ZoomOut size={18} aria-hidden="true" /> : <ZoomIn size={18} aria-hidden="true" />}
+            <span>Projeção</span>
+          </button>
           <button type="button" onClick={() => { setNotesOpen((open) => !open); setMenuOpen(false); setSessionOpen(false); }} className={notesOpen ? "is-active" : ""}><BookOpenCheck size={18} /><span>Notas</span></button>
           <button type="button" onClick={() => { if (!session) onCreateSession(); setSessionOpen(true); setNotesOpen(false); setMenuOpen(false); }} className={session ? "is-live" : ""}><MonitorSmartphone size={18} /><span>{session ? session.code : "Celular"}</span></button>
           <button type="button" onClick={toggleFullscreen} aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}>{fullscreen ? <Maximize2 size={18} /> : <Fullscreen size={18} />}</button>
@@ -777,7 +814,7 @@ function PresenterView({
 
       <SlideCanvas slide={slide} index={current} total={deck.length} session={session} />
 
-      <nav className="presentation-controls" aria-label="Controles da apresentação">
+      <nav className="presentation-controls" aria-label="Controles da apresentação" onTouchStart={markControlTouch}>
         <button type="button" onClick={previous} disabled={current === 0} aria-label="Slide anterior"><ChevronLeft size={24} /></button>
         <div className="progress-track"><i style={{ width: `${((current + 1) / deck.length) * 100}%` }} /></div>
         <span>{String(current + 1).padStart(2, "0")} / {String(deck.length).padStart(2, "0")}</span>
@@ -980,9 +1017,31 @@ function RemoteView({ code, token, onExit }: { code: string; token: string; onEx
   const [session, setSession] = useState<SessionSnapshot | null>(null);
   const [error, setError] = useState("");
   const deck = useMemo(() => session ? buildDeck(session.duration as Duration, session.mode as PresentationMode) : [], [session]);
+  const controlChainRef = useRef(Promise.resolve());
+  const localAuthorityUntilRef = useRef(0);
+  const desiredSlideRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
-    try { const response = await fetch(`/api/session?code=${encodeURIComponent(code)}`, { cache: "no-store" }); const data = await readJson(response); if (!response.ok) throw new Error(data.error); if (!data.session) throw new Error("Sessão sem dados válidos."); setSession(data.session); setError(""); } catch (caught) { setError(caught instanceof Error ? caught.message : "Controle indisponível."); }
+    try {
+      const response = await fetch(`/api/session?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+      const data = await readJson(response);
+      if (!response.ok) throw new Error(data.error);
+      if (!data.session) throw new Error("Sessão sem dados válidos.");
+      // Do not let a stale poll overwrite an in-flight local control.
+      if (Date.now() < localAuthorityUntilRef.current && desiredSlideRef.current !== null) {
+        if (data.session.currentSlide !== desiredSlideRef.current) {
+          setSession({ ...data.session, currentSlide: desiredSlideRef.current });
+          setError("");
+          return;
+        }
+        localAuthorityUntilRef.current = 0;
+        desiredSlideRef.current = null;
+      }
+      setSession(data.session);
+      setError("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Controle indisponível.");
+    }
   }, [code]);
   useEffect(() => {
     const firstLoad = window.setTimeout(() => void load(), 0);
@@ -990,15 +1049,37 @@ function RemoteView({ code, token, onExit }: { code: string; token: string; onEx
     return () => { window.clearTimeout(firstLoad); window.clearInterval(timer); };
   }, [load]);
 
-  const control = async (nextIndex: number) => {
+  const control = (nextIndex: number) => {
     if (!session || !deck.length) return;
     const safe = Math.max(0, Math.min(deck.length - 1, nextIndex));
     const activePrompt = deck[safe]?.prompt?.id ?? null;
-    const response = await fetch("/api/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "control", code, token, currentSlide: safe, activePrompt }) });
-    const data = await readJson(response);
-    if (!response.ok) { setError(data.error || "Controle não autorizado."); return; }
-    if (!data.session) { setError("O controle não recebeu o estado atualizado."); return; }
-    setSession(data.session);
+    desiredSlideRef.current = safe;
+    localAuthorityUntilRef.current = Date.now() + 2400;
+    setSession((previous) => previous ? { ...previous, currentSlide: safe, activePrompt } : previous);
+
+    const run = async () => {
+      const response = await fetch("/api/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "control", code, token, currentSlide: safe, activePrompt }),
+      });
+      const data = await readJson(response);
+      if (!response.ok) {
+        setError(data.error || "Controle não autorizado.");
+        return;
+      }
+      if (!data.session) {
+        setError("O controle não recebeu o estado atualizado.");
+        return;
+      }
+      if (desiredSlideRef.current === safe) {
+        setSession(data.session);
+        localAuthorityUntilRef.current = 0;
+        desiredSlideRef.current = null;
+      }
+    };
+
+    controlChainRef.current = controlChainRef.current.then(run, run).catch(() => undefined);
   };
 
   const currentSlide = session && deck[session.currentSlide];
@@ -1045,6 +1126,12 @@ export default function Home() {
   const readDuration = route.view === "read" ? route.duration : 15;
   const readMode = route.view === "read" ? route.mode : "expositivo";
   const deck = useMemo(() => buildDeck(duration, mode), [duration, mode]);
+  // Local navigation authority: a GET poll must not rewind a click that has
+  // not yet been confirmed by the control POST (classic freeze/jump-back).
+  const localAuthorityUntilRef = useRef(0);
+  const desiredSlideRef = useRef(0);
+  const controlChainRef = useRef(Promise.resolve());
+  const pollGenerationRef = useRef(0);
 
   const createSession = useCallback(async () => {
     try {
@@ -1059,40 +1146,129 @@ export default function Home() {
   }, [duration, mode]);
 
   const start = async () => {
-    setCurrent(0); setView("deck");
+    setCurrent(0);
+    desiredSlideRef.current = 0;
+    localAuthorityUntilRef.current = 0;
+    setView("deck");
     if (mode === "interativo") await createSession();
   };
+
+  const goToSlide = useCallback((index: number) => {
+    const safe = Math.max(0, Math.min(deck.length - 1, index));
+    desiredSlideRef.current = safe;
+    localAuthorityUntilRef.current = Date.now() + 2400;
+    pollGenerationRef.current += 1;
+    setCurrent(safe);
+  }, [deck.length]);
 
   const sessionCode = session?.code;
   useEffect(() => {
     if (view !== "deck" || !sessionCode || !presenterToken) return;
-    const slide = deck[current];
-    fetch("/api/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "control", code: sessionCode, token: presenterToken, currentSlide: current, activePrompt: slide?.prompt?.id ?? null }) })
-      .then((response) => readJson(response))
-      .then((data) => { if (data.session) setSession(data.session); })
-      .catch(() => undefined);
+    const slideIndex = current;
+    const slide = deck[slideIndex];
+    const activePrompt = slide?.prompt?.id ?? null;
+
+    const run = async () => {
+      try {
+        const response = await fetch("/api/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            action: "control",
+            code: sessionCode,
+            token: presenterToken,
+            currentSlide: slideIndex,
+            activePrompt,
+          }),
+        });
+        const data = await readJson(response);
+        if (!data.session) return;
+        // Only apply if this control still matches the latest desired slide.
+        if (desiredSlideRef.current !== slideIndex) return;
+        setSession(data.session);
+        if (data.session.currentSlide === slideIndex) {
+          localAuthorityUntilRef.current = 0;
+        }
+      } catch {
+        /* keep presenting offline */
+      }
+    };
+
+    controlChainRef.current = controlChainRef.current.then(run, run);
   }, [current, deck, presenterToken, sessionCode, view]);
 
   useEffect(() => {
     if (view !== "deck" || !sessionCode) return;
     const timer = window.setInterval(async () => {
+      const generationAtStart = pollGenerationRef.current;
       try {
         const response = await fetch(`/api/session?code=${sessionCode}`, { cache: "no-store" });
         const data = await readJson(response);
-        if (data.session) {
-          setSession(data.session);
-          const safeCurrent = Math.max(0, Math.min(deck.length - 1, data.session.currentSlide));
-          setCurrent((previous) => previous === safeCurrent ? previous : safeCurrent);
+        if (!data.session) return;
+        // Drop polls started before a newer local navigation intent.
+        if (generationAtStart !== pollGenerationRef.current) return;
+
+        const safeCurrent = Math.max(0, Math.min(deck.length - 1, data.session.currentSlide));
+        const localAuthorityActive = Date.now() < localAuthorityUntilRef.current;
+        const desired = desiredSlideRef.current;
+
+        if (localAuthorityActive && safeCurrent !== desired) {
+          // Server is still catching up: keep aggregates/responses, hold slide.
+          setSession((previous) => ({
+            ...data.session!,
+            currentSlide: previous?.currentSlide ?? desired,
+            activePrompt: deck[desired]?.prompt?.id ?? data.session!.activePrompt,
+          }));
+          return;
         }
-      } catch { /* keep the stage usable offline */ }
+
+        if (localAuthorityActive && safeCurrent === desired) {
+          localAuthorityUntilRef.current = 0;
+        }
+
+        setSession(data.session);
+        setCurrent((previous) => (previous === safeCurrent ? previous : safeCurrent));
+        desiredSlideRef.current = safeCurrent;
+      } catch {
+        /* keep the stage usable offline */
+      }
     }, 900);
     return () => window.clearInterval(timer);
-  }, [deck.length, sessionCode, view]);
+  }, [deck, sessionCode, view]);
 
-  const exit = () => { setView("launch"); setCurrent(0); window.history.replaceState({}, "", window.location.pathname); };
+  const exit = () => {
+    setView("launch");
+    setCurrent(0);
+    desiredSlideRef.current = 0;
+    localAuthorityUntilRef.current = 0;
+    window.history.replaceState({}, "", window.location.pathname);
+  };
   if (view === "audience") return <AudienceView initialCode={routeCode} onExit={exit} />;
   if (view === "remote") return <RemoteView code={routeCode} token={routeToken} onExit={exit} />;
   if (view === "read") return <ReadOnlyDeck duration={readDuration} mode={readMode} onExit={exit} />;
-  if (view === "deck") return <PresenterView duration={duration} mode={mode} deck={deck} current={current} onCurrent={setCurrent} onExit={exit} session={session} presenterToken={presenterToken} onCreateSession={createSession} sessionError={sessionError} />;
-  return <LaunchScreen duration={duration} mode={mode} onDuration={(value) => { setDuration(value); setCurrent(0); }} onMode={(value) => { setMode(value); setCurrent(0); }} onStart={start} />;
+  if (view === "deck") {
+    return (
+      <PresenterView
+        duration={duration}
+        mode={mode}
+        deck={deck}
+        current={current}
+        onCurrent={goToSlide}
+        onExit={exit}
+        session={session}
+        presenterToken={presenterToken}
+        onCreateSession={createSession}
+        sessionError={sessionError}
+      />
+    );
+  }
+  return (
+    <LaunchScreen
+      duration={duration}
+      mode={mode}
+      onDuration={(value) => { setDuration(value); setCurrent(0); desiredSlideRef.current = 0; }}
+      onMode={(value) => { setMode(value); setCurrent(0); desiredSlideRef.current = 0; }}
+      onStart={start}
+    />
+  );
 }

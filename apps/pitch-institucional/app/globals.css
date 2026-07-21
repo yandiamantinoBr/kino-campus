@@ -117,14 +117,16 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .presentation-meta i { width: 3px; height: 3px; border-radius: 50%; background: #abb0b8; }
 .presentation-meta strong { color: var(--orange); }
 .presentation-actions { margin-left: auto; display: flex; align-items: center; gap: 7px; }
-.presentation-actions button, .icon-button { min-width: 36px; height: 36px; border: 1px solid var(--line); background: rgba(255,255,255,.8); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 10px; color: #656d78; font-size: .72rem; font-weight: 750; cursor: pointer; }
+.presentation-actions button, .icon-button { min-width: 36px; height: 36px; border: 1px solid var(--line); background: rgba(255,255,255,.8); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 10px; color: #656d78; font-size: .72rem; font-weight: 750; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .presentation-actions button:hover, .presentation-actions button.is-active { color: var(--ink); border-color: #c8c2b8; }
 .presentation-actions button.is-live { color: white; background: var(--orange); border-color: var(--orange); }
 .presentation-timer { display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; font-size: .76rem; color: #737984; font-variant-numeric: tabular-nums; }
-.presentation-controls { position: absolute; right: clamp(18px, 2.7vw, 42px); bottom: 18px; z-index: 25; display: flex; align-items: center; gap: 12px; }
-.presentation-controls button { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; background: rgba(255,255,255,.86); cursor: pointer; box-shadow: 0 8px 20px rgba(7,26,61,.08); }
+.presentation-shell { overscroll-behavior: contain; }
+.presentation-controls { position: absolute; right: clamp(18px, 2.7vw, 42px); bottom: max(18px, env(safe-area-inset-bottom, 0px)); z-index: 25; display: flex; align-items: center; gap: 12px; isolation: isolate; }
+.presentation-controls button { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; background: rgba(255,255,255,.86); cursor: pointer; box-shadow: 0 8px 20px rgba(7,26,61,.08); touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .presentation-controls button:disabled { opacity: .28; cursor: not-allowed; }
 .presentation-controls span { min-width: 50px; color: #6e7580; font-size: .72rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.presentation-actions button[data-kc-projection-toggle] { min-width: 42px; }
 .progress-track { width: clamp(100px, 11vw, 170px); height: 4px; border-radius: 99px; background: #dedbd4; overflow: hidden; }
 .progress-track i { display: block; height: 100%; border-radius: inherit; background: var(--orange); transition: width 300ms ease; }
 .slide { position: absolute; inset: 62px 0 0; padding: clamp(32px, 5.7vh, 68px) clamp(36px, 6vw, 90px) clamp(56px, 7vh, 78px); display: grid; grid-template-columns: minmax(410px, .86fr) minmax(520px, 1.14fr); align-items: center; gap: clamp(42px, 6vw, 100px); overflow: hidden; background: radial-gradient(circle at 82% 22%, rgba(65,181,211,.08), transparent 27%), radial-gradient(circle at 64% 81%, rgba(112,226,145,.07), transparent 28%), var(--cream); animation: slideIn 420ms cubic-bezier(.2,.8,.2,1); }
@@ -399,7 +401,28 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   .slide__visual { min-height: 430px; }
   .slide--vision .slide__visual .launch-visual { min-height: 540px; transform: scale(.9); }
   .notes-drawer { position: fixed; left: 16px; right: 16px; bottom: 74px; width: auto; }
-  .presentation-controls { position: fixed; left: 50%; right: auto; transform: translateX(-50%); padding: 6px; border-radius: 999px; background: rgba(251,249,245,.88); backdrop-filter: blur(14px); }
+  .presentation-controls {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    padding: 6px;
+    border-radius: 999px;
+    background: rgba(251,249,245,.88);
+    backdrop-filter: blur(14px);
+  }
+  .presentation-controls button {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .presentation-actions button, .icon-button {
+    min-width: 44px;
+    height: 44px;
+  }
+  .slide {
+    padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  }
   .progress-track { width: 95px; }
   .presentation-shell.is-projection .slide { grid-template-columns: 1fr; }.presentation-shell.is-projection .slide__visual { min-height: 430px; }
   .read-header { flex-wrap: wrap; gap: 10px 16px; }.read-header__actions { width: 100%; margin-left: 0; }.read-header__actions button { flex: 1; justify-content: center; }
