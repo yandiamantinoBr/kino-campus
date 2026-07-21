@@ -817,6 +817,23 @@
       const changeModule = String(change.module || '').trim().toLowerCase();
       if (moduleKeys.length && changeModule && moduleKeys.indexOf(changeModule) === -1) return;
       if (change.type === 'created') return;
+
+      // Vote/view/highlight counter updates must NOT wipe the feed (scroll + page state).
+      // voting.js already patches .kc-vote-box scores in place; reinforce here as a fallback.
+      const changeType = String(change.type || '').trim().toLowerCase();
+      if (changeType === 'metrics_updated' || changeType === 'vote_metrics' || changeType === 'metrics') {
+        try {
+          const postId = String(change.postId || change.uuid || (change.row && (change.row.id || change.row.uuid)) || '').trim();
+          const scoreRaw = (change.votos != null)
+            ? change.votos
+            : (change.row && change.row.votos != null ? change.row.votos : null);
+          if (postId && scoreRaw != null && typeof kcUpdateVoteScoreInDOM === 'function') {
+            kcUpdateVoteScoreInDOM(postId, scoreRaw);
+          }
+        } catch (_) { /* keep feed stable */ }
+        return;
+      }
+
       scheduleFreshnessRefresh(change.type || 'post_change');
     }
 

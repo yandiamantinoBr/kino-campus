@@ -484,6 +484,40 @@
     };
   }
 
+  /**
+   * Engagement counters (votes, views, highlight, etc.) update posts often.
+   * Those must NOT force a full feed refresh — only in-place metric UI updates.
+   * Content fields that do warrant a refresh are listed in CONTENT_KEYS.
+   */
+  function isMetricsOnlyPostUpdate(oldRow, newRow) {
+    if (!oldRow || !newRow || typeof oldRow !== 'object' || typeof newRow !== 'object') return false;
+
+    const CONTENT_KEYS = [
+      'title', 'description', 'price', 'location', 'module', 'category',
+      'status', 'visibility', 'metadata', 'image_url', 'expires_at',
+      'author_id', 'legacy_id', 'authorId', 'legacyId',
+    ];
+    for (let i = 0; i < CONTENT_KEYS.length; i += 1) {
+      const key = CONTENT_KEYS[i];
+      if (!(key in oldRow) && !(key in newRow)) continue;
+      const a = oldRow[key];
+      const b = newRow[key];
+      // Normalize objects (metadata) for stable compare.
+      const left = (a && typeof a === 'object') ? JSON.stringify(a) : String(a == null ? '' : a);
+      const right = (b && typeof b === 'object') ? JSON.stringify(b) : String(b == null ? '' : b);
+      if (left !== right) return false;
+    }
+
+    const METRIC_KEYS = [
+      'votos', 'highlight_score', 'view_count', 'share_count', 'coupon_clicks',
+      'last_comment_at', 'lastCommentAt',
+    ];
+    return METRIC_KEYS.some((key) => {
+      if (!(key in oldRow) && !(key in newRow)) return false;
+      return String(oldRow[key] == null ? '' : oldRow[key]) !== String(newRow[key] == null ? '' : newRow[key]);
+    });
+  }
+
   function normalizePostChangePayload(payload) {
     const eventType = String((payload && payload.eventType) || (payload && payload.type) || '').toUpperCase();
     const row = (payload && payload.new && typeof payload.new === 'object')
@@ -499,6 +533,9 @@
     else if (eventType === 'DELETE') type = 'purged';
     else if (nextStatus && nextStatus !== previousStatus) {
       type = (nextStatus === 'deleted' || nextStatus === 'hidden') ? 'soft_deleted' : 'status_changed';
+    } else if (eventType === 'UPDATE' && isMetricsOnlyPostUpdate(oldRow, row)) {
+      // Vote / view / highlight counters only — keep scroll position & feed state.
+      type = 'metrics_updated';
     }
 
     return {
@@ -509,6 +546,8 @@
       module: row.module || row.modulo || '',
       status: nextStatus,
       updated_at: row.updated_at || row.updatedAt || '',
+      votos: Object.prototype.hasOwnProperty.call(row, 'votos') ? row.votos : undefined,
+      highlight_score: Object.prototype.hasOwnProperty.call(row, 'highlight_score') ? row.highlight_score : undefined,
       row,
       payload,
     };

@@ -771,7 +771,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!voteType) return;
-    vote(voteTrigger, voteType);
+    // Prevent any ancestor navigation / accidental form submit from hijacking the vote.
+    try {
+      e.preventDefault();
+      e.stopPropagation();
+    } catch (_) { /* ignore */ }
+    if (typeof vote === 'function') vote(voteTrigger, voteType);
   });
 
   // ripple delegation

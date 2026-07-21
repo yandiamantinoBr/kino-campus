@@ -147,6 +147,16 @@ describe('kc-feed.controller — source contracts', () => {
     expect(source).toContain('KCPostFreshness.subscribe');
     expect(source).toContain('subscribePostChanges');
   });
+
+  test('não recarrega o feed em metrics_updated (voto não reseta a lista)', () => {
+    expect(source).toContain("changeType === 'metrics_updated'");
+    expect(source).toContain('kcUpdateVoteScoreInDOM');
+    // Full refresh must stay behind the metrics early-return.
+    const metricsIdx = source.indexOf("changeType === 'metrics_updated'");
+    const refreshIdx = source.indexOf('scheduleFreshnessRefresh(change.type || \'post_change\')');
+    expect(metricsIdx).toBeGreaterThan(-1);
+    expect(refreshIdx).toBeGreaterThan(metricsIdx);
+  });
 });
 
 
