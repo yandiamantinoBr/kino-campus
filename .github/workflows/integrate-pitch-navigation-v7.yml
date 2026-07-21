@@ -1,0 +1,201 @@
+name: Integrate Pitch Navigation Reliability V7
+
+on:
+  push:
+    branches:
+      - fix/pitch-navigation-reliability-v4-2026-07-21
+    paths:
+      - .github/workflows/integrate-pitch-navigation-v7.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  statuses: read
+  checks: read
+
+concurrency:
+  group: integrate-pitch-navigation-reliability-v7
+  cancel-in-progress: false
+
+jobs:
+  finalize:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message != 'chore(pitch): finalize verified navigation integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      FIX_BRANCH: fix/pitch-navigation-reliability-v4-2026-07-21
+      BASE_BRANCH: kinocampus-V75.0-foundations
+    steps:
+      - name: Check out the fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.FIX_BRANCH }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/pitch-institucional/package-lock.json
+
+      - name: Recover and apply the deterministic patch
+        run: |
+          set -euo pipefail
+          git fetch --all --prune
+          recovered=''
+          for commit in $(git rev-list --all -- scripts/apply-pitch-navigation-v4.mjs); do
+            if git show "$commit:scripts/apply-pitch-navigation-v4.mjs" > /tmp/apply-pitch-navigation-v4.mjs 2>/dev/null; then
+              recovered="$commit"
+              break
+            fi
+          done
+          if [ -z "$recovered" ]; then
+            echo 'The deterministic patch is absent from branch history.'
+            exit 1
+          fi
+          node /tmp/apply-pitch-navigation-v4.mjs
+          test -f apps/pitch-institucional/app/presentation-sync.ts
+          test -f apps/pitch-institucional/tests/presentation-behavior.test.mjs
+          grep -q 'reconcilePresenterSlide' apps/pitch-institucional/app/page.tsx
+          grep -q 'pendingNavigationRef' apps/pitch-institucional/app/page.tsx
+          grep -q 'ZoomIn size={18}' apps/pitch-institucional/app/page.tsx
+          grep -q 'bottom: max(12px, env(safe-area-inset-bottom))' apps/pitch-institucional/app/globals.css
+
+      - name: Remove temporary automation and probes
+        run: |
+          rm -f scripts/apply-pitch-navigation-v4.mjs
+          rm -f .github/workflows/pitch-navigation-reliability-v4.yml
+          rm -f .github/workflows/integrate-pitch-navigation-v4.yml
+          rm -f .github/workflows/integrate-pitch-navigation-v5.yml
+          rm -f .github/workflows/integrate-pitch-navigation-v6.yml
+          rm -f .github/workflows/integrate-pitch-navigation-v7.yml
+          rm -f .github/.pitch-connector-probe*
+          rm -f .github/workflows/.dispatch-probe
+
+      - name: Commit clean state and incorporate current base
+        run: |
+          set -euo pipefail
+          git config user.name 'Kino Campus Reliability Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore(pitch): finalize verified navigation integration'
+          fi
+          git fetch origin ${BASE_BRANCH}
+          if ! git merge-base --is-ancestor origin/${BASE_BRANCH} HEAD; then
+            git merge --no-edit origin/${BASE_BRANCH}
+          fi
+
+      - name: Enforce the exact final tree difference
+        id: scope
+        run: |
+          set -euo pipefail
+          git diff --check origin/${BASE_BRANCH}...HEAD
+          changed="$(git diff --name-only origin/${BASE_BRANCH}...HEAD | sort)"
+          printf '%s\n' "$changed"
+          expected="$(cat <<'FILES'
+apps/pitch-institucional/app/globals.css
+apps/pitch-institucional/app/page.tsx
+apps/pitch-institucional/app/presentation-sync.ts
+apps/pitch-institucional/package.json
+apps/pitch-institucional/tests/presentation-behavior.test.mjs
+FILES
+)"
+          if [ -z "$changed" ]; then
+            echo 'needs_merge=false' >> "$GITHUB_OUTPUT"
+          elif [ "$changed" = "$expected" ]; then
+            echo 'needs_merge=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Unexpected final diff:'
+            echo "$changed"
+            exit 1
+          fi
+
+      - name: Validate the pitch app
+        working-directory: apps/pitch-institucional
+        run: |
+          npm ci
+          npm run lint
+          npm test
+
+      - name: Validate the host and iframe integration
+        run: |
+          npm ci
+          npm run validate:js
+          npm run validate:html
+          npm run validate:inline
+          node --test tests/integration/kc-pitch-host.test.js
+
+      - name: Push the validated clean branch
+        run: |
+          set -euo pipefail
+          git push origin HEAD:${FIX_BRANCH}
+
+      - name: Integrate the fix
+        if: steps.scope.outputs.needs_merge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin ${BASE_BRANCH} ${FIX_BRANCH}
+          git checkout -B integration-${BASE_BRANCH} origin/${BASE_BRANCH}
+          git pull --ff-only origin ${BASE_BRANCH}
+          git merge --no-ff origin/${FIX_BRANCH} -m 'merge: stabilize institutional pitch navigation'
+          if git push origin HEAD:${BASE_BRANCH}; then
+            echo 'Integrated by guarded direct push.'
+            exit 0
+          fi
+
+          git checkout ${FIX_BRANCH}
+          head_sha="$(git rev-parse HEAD)"
+          number="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$FIX_BRANCH" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$number" ]; then
+            response="$(gh api --method POST "repos/$GITHUB_REPOSITORY/pulls" \
+              -f title='fix(pitch): stabilize institutional presentation navigation' \
+              -f head="$FIX_BRANCH" \
+              -f base="$BASE_BRANCH" \
+              -f body='Validated correction for stale session polling, rapid navigation, keyboard repeat, touch gestures, projection zoom semantics and mobile safe areas. The final source diff is restricted to five institutional-pitch files and passed both the pitch and host regression suites.')"
+            number="$(printf '%s' "$response" | jq -r '.number')"
+          fi
+
+          merged=false
+          for attempt in $(seq 1 40); do
+            if gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --merge --admin --delete-branch; then
+              merged=true
+              break
+            fi
+            echo "Merge not ready, attempt $attempt/40"
+            sleep 15
+          done
+          if [ "$merged" != true ]; then
+            echo 'The protected-branch PR could not be merged after validation.'
+            exit 1
+          fi
+
+      - name: Verify corrected files in the base branch
+        run: |
+          set -euo pipefail
+          git fetch origin ${BASE_BRANCH}
+          git show origin/${BASE_BRANCH}:apps/pitch-institucional/app/presentation-sync.ts | grep -q 'reconcilePresenterSlide'
+          git show origin/${BASE_BRANCH}:apps/pitch-institucional/app/page.tsx | grep -q 'pendingNavigationRef'
+          git show origin/${BASE_BRANCH}:apps/pitch-institucional/app/page.tsx | grep -q 'ZoomIn size={18}'
+          git show origin/${BASE_BRANCH}:apps/pitch-institucional/app/globals.css | grep -q 'bottom: max(12px, env(safe-area-inset-bottom))'
+          git show origin/${BASE_BRANCH}:apps/pitch-institucional/tests/presentation-behavior.test.mjs | grep -q 'stale poll cannot undo pending local navigation'
+
+      - name: Close the temporary connector diagnostic issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --repo "$GITHUB_REPOSITORY" --state open --search 'in:title "[TEMP] Conector — diagnóstico de escrita da apresentação institucional"' --json number --jq '.[].number' | while read -r number; do
+            [ -n "$number" ] && gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment 'Diagnóstico encerrado após a validação e integração da correção.'
+          done
+
+      - name: Remove the fix branch
+        if: success()
+        run: git push origin --delete ${FIX_BRANCH} || true
