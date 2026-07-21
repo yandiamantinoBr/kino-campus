@@ -1,0 +1,49 @@
+name: Pitch Validation
+
+on:
+  pull_request:
+    branches:
+      - kinocampus-V75.0-foundations
+    paths:
+      - 'apps/pitch-institucional/**'
+      - '.github/workflows/pitch-validation.yml'
+  push:
+    branches:
+      - kinocampus-V75.0-foundations
+    paths:
+      - 'apps/pitch-institucional/**'
+      - '.github/workflows/pitch-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pitch-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Lint, build and rendered HTML
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/pitch-institucional
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Install locked dependencies
+        run: npm run install:ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build and validate rendered HTML
+        run: npm test
