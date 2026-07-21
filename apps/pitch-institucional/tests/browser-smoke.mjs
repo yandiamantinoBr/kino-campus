@@ -4,7 +4,7 @@ import { chromium, expect } from "@playwright/test";
 const baseUrl = process.env.PITCH_BASE_URL ?? "http://127.0.0.1:4173";
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-function createSessionHarness() {
+function createSessionHarness({ getDelayMs = 40, controlDelayMs = 40 } = {}) {
   const state = {
     code: "ABC123",
     presenterToken: "pitch-presenter-token",
@@ -48,7 +48,7 @@ function createSessionHarness() {
 
           // Mantém uma resposta antiga em voo para reproduzir a corrida que
           // antes podia devolver o apresentador ao slide anterior.
-          await delay(180);
+          await delay(getDelayMs);
           await route.fulfill({
             status: 200,
             contentType: "application/json",
@@ -81,7 +81,7 @@ function createSessionHarness() {
         if (payload.action === "control") {
           const requestedSlide = payload.currentSlide;
           const requestedPrompt = payload.activePrompt ?? null;
-          await delay(420);
+          await delay(controlDelayMs);
           state.currentSlide = requestedSlide;
           state.activePrompt = requestedPrompt;
           await route.fulfill({
@@ -104,17 +104,17 @@ function createSessionHarness() {
 
 async function selectVariant(page, duration, mode) {
   await page.getByRole("group", { name: "Duração da apresentação" })
-    .getByRole("button", { name: `${duration} min` })
+    .getByRole("button", { name: `${duration} min`, exact: true })
     .click();
   await page.getByRole("group", { name: "Modalidade da apresentação" })
-    .getByRole("button", { name: mode === "interativo" ? "Interativo" : "Expositivo" })
+    .getByRole("button", { name: mode === "interativo" ? "Interativo" : "Expositivo", exact: true })
     .click();
 }
 
-async function openVariant(browser, duration, mode) {
+async function openVariant(browser, duration, mode, harnessOptions = {}) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
-  const harness = createSessionHarness();
+  const harness = createSessionHarness(harnessOptions);
   await harness.install(page);
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await selectVariant(page, duration, mode);
@@ -134,13 +134,19 @@ async function verifyAllSixVariants(browser) {
       await expect(counter).toContainText("02 /");
       await page.getByRole("button", { name: "Slide anterior" }).click();
       await expect(counter).toContainText("01 /");
+      if (mode === "interativo") await delay(150);
       await context.close();
     }
   }
 }
 
 async function verifyStalePollCannotRevertNavigation(browser) {
-  const { context, page, harness } = await openVariant(browser, 15, "interativo");
+  const { context, page, harness } = await openVariant(
+    browser,
+    15,
+    "interativo",
+    { getDelayMs: 180, controlDelayMs: 420 },
+  );
   const counter = page.locator(".presentation-controls > span");
   const next = page.getByRole("button", { name: "Próximo slide" });
 
