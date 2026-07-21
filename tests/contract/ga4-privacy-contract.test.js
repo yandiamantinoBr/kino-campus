@@ -74,7 +74,8 @@ describe('GA4 call-site privacy contract', () => {
     expect(authCallback).toContain('15 * 60 * 1000');
     expect(apiClient).toContain("trackRecommended('share', { item_id: postId, content_type: 'post', method: safeMethod })");
     expect(apiClient).toContain('native_share');
-    expect(apiClient).toContain("track('kc_post_view', { post_id: postId })");
+    expect(apiClient).toContain("window.KCEvents.track('kc_post_view', payload)");
+    expect(apiClient).toContain("content_type: 'post'");
     expect(apiClient).toContain("track('kc_coupon_click', { post_id: postId })");
     expect(productAnalytics).toContain("trackRecommended('generate_lead'");
     expect(productAnalytics).toContain("content_type: 'post'");

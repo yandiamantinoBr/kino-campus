@@ -743,10 +743,23 @@
   }
 
   // ── Analytics de post (v9.3.1) — delegados via getPostsReadModule() ──
-  async function trackView(postId) {
+  async function trackView(postId, options) {
     try {
       if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-        window.KCEvents.track('kc_post_view', { post_id: postId });
+        var payload = { post_id: postId, content_type: 'post' };
+        var moduleName = options && options.module
+          ? String(options.module).trim().toLowerCase()
+          : '';
+        if (!moduleName) {
+          try {
+            var ds = document && document.body && document.body.dataset
+              ? document.body.dataset.kcModule || document.body.dataset.module || ''
+              : '';
+            moduleName = String(ds || '').trim().toLowerCase();
+          } catch (_) { moduleName = ''; }
+        }
+        if (moduleName) payload.module = moduleName;
+        window.KCEvents.track('kc_post_view', payload);
       }
     } catch (_) { }
     const postsReadModule = getPostsReadModule();
