@@ -20,8 +20,9 @@ describe('apresentação institucional do KinoCampus', () => {
 
   test('preserva o acesso anônimo e não expõe controle privado no host', () => {
     expect(page).not.toMatch(/presenterToken|token de controle|controle privado/i);
-    expect(hostScript).toContain('kino-campus-pitch.yandiamantinobr.chatgpt.site');
+    expect(hostScript).toContain('kino-campus-pitch.vercel.app');
     expect(hostScript).toContain('window.location.search');
+    expect(hostScript).not.toContain('chatgpt.site');
   });
 
   test('é encontrável na home e na página Sobre, abrindo em nova aba', () => {
@@ -33,7 +34,8 @@ describe('apresentação institucional do KinoCampus', () => {
 
   test('tem aliases curtos e política de frames explícita', () => {
     expect(vercel).toContain('"source": "/pitch"');
-    expect(vercel).toContain('https://*.chatgpt.site');
+    expect(vercel).toContain('https://*.vercel.app');
+    expect(vercel).toContain('https://kino-campus-pitch.vercel.app');
   });
 
   // ── v1.2.0: embed direto + loop protection ───────────────────────────────
@@ -68,7 +70,7 @@ describe('apresentação institucional do KinoCampus', () => {
 
     window.eval(hostScript);
 
-    expect(frame.src).toBe('https://kino-campus-pitch.yandiamantinobr.chatgpt.site/?read=15-interativo#read-contexto');
+    expect(frame.src).toBe('https://kino-campus-pitch.vercel.app/?read=15-interativo#read-contexto');
     expect(document.querySelector('[data-kc-pitch-direct]').href).toBe(frame.src);
 
     frame.dispatchEvent(new Event('load'));

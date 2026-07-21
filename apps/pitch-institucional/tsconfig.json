@@ -30,5 +30,16 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "examples",
+    ".sites-runtime",
+    "dist",
+    ".wrangler",
+    "worker",
+    "build",
+    "drizzle",
+    "vite.config.ts",
+    "drizzle.config.ts"
+  ]
 }

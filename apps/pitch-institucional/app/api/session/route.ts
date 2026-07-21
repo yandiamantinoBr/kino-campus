@@ -1,8 +1,13 @@
-import { eq, sql } from "drizzle-orm";
-import { getDb } from "../../../db";
-import { responses, sessions } from "../../../db/schema";
+import {
+  storeCreateSession,
+  storeGetSession,
+  storeListResponses,
+  storeUpdateSession,
+  storeUpsertResponse,
+  type PitchSessionRow,
+} from "../../../db/session-store";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -38,60 +43,11 @@ const blockedTerms = [
   "nazista",
 ];
 
-let schemaReady: Promise<void> | null = null;
-
-function ensureSchema() {
-  if (!schemaReady) {
-    const db = getDb();
-    schemaReady = (async () => {
-      await db.run(sql.raw(`
-        CREATE TABLE IF NOT EXISTS pitch_sessions (
-          code TEXT PRIMARY KEY NOT NULL,
-          duration INTEGER NOT NULL,
-          mode TEXT NOT NULL,
-          current_slide INTEGER DEFAULT 0 NOT NULL,
-          active_prompt TEXT,
-          presenter_token TEXT NOT NULL,
-          status TEXT DEFAULT 'live' NOT NULL,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
-        )
-      `));
-      await db.run(sql.raw(`
-        CREATE TABLE IF NOT EXISTS pitch_responses (
-          session_code TEXT NOT NULL,
-          prompt_id TEXT NOT NULL,
-          participant_id TEXT NOT NULL,
-          value TEXT NOT NULL,
-          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-          PRIMARY KEY (session_code, prompt_id, participant_id),
-          FOREIGN KEY (session_code) REFERENCES pitch_sessions(code) ON DELETE CASCADE
-        )
-      `));
-      await db.run(sql.raw(`
-        CREATE INDEX IF NOT EXISTS pitch_responses_session_idx
-        ON pitch_responses(session_code)
-      `));
-    })().catch((error) => {
-      schemaReady = null;
-      throw error;
-    });
-  }
-  return schemaReady;
-}
-
 async function readSession(code: string) {
-  await ensureSchema();
-  const db = getDb();
-  const [session] = await db.select().from(sessions).where(eq(sessions.code, code)).limit(1);
+  const session = await storeGetSession(code);
   if (!session) return null;
 
-  const rows = await db
-    .select({ promptId: responses.promptId, value: responses.value })
-    .from(responses)
-    .where(eq(responses.sessionCode, code))
-    .limit(1200);
-
+  const rows = await storeListResponses(code);
   const aggregates: Record<string, Record<string, number>> = {};
   for (const row of rows) {
     aggregates[row.promptId] ??= {};
@@ -134,8 +90,6 @@ async function mutateSession(request: Request) {
     promptId?: string;
     value?: string;
   };
-  await ensureSchema();
-  const db = getDb();
 
   if (payload.action === "create") {
     const duration = [5, 15, 30].includes(Number(payload.duration))
@@ -144,15 +98,15 @@ async function mutateSession(request: Request) {
     const mode = payload.mode === "interativo" ? "interativo" : "expositivo";
     const token = randomToken();
 
-    await db.run(sql.raw(`
-      DELETE FROM pitch_sessions
-      WHERE datetime(updated_at) < datetime('now', '-7 days')
-    `));
-
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = randomString(6);
       try {
-        await db.insert(sessions).values({ code, duration, mode, presenterToken: token });
+        await storeCreateSession({
+          code,
+          duration,
+          mode,
+          presenterToken: token,
+        });
         return Response.json({
           session: await readSession(code),
           presenterToken: token,
@@ -167,20 +121,16 @@ async function mutateSession(request: Request) {
   if (!code) return Response.json({ error: "Código da sessão ausente." }, { status: 400 });
 
   if (payload.action === "control") {
-    const [session] = await db.select().from(sessions).where(eq(sessions.code, code)).limit(1);
+    const session = await storeGetSession(code);
     if (!session || session.presenterToken !== payload.token) {
       return Response.json({ error: "Controle não autorizado." }, { status: 403 });
     }
 
     const currentSlide = Math.max(0, Math.min(60, Number(payload.currentSlide ?? 0)));
-    await db
-      .update(sessions)
-      .set({
-        currentSlide,
-        activePrompt: payload.activePrompt?.slice(0, 80) || null,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(sessions.code, code));
+    await storeUpdateSession(code, {
+      currentSlide,
+      activePrompt: payload.activePrompt?.slice(0, 80) || null,
+    });
     return Response.json({ session: await readSession(code) });
   }
 
@@ -191,45 +141,39 @@ async function mutateSession(request: Request) {
     if (!participantId || !promptId || !value) {
       return Response.json({ error: "Resposta incompleta." }, { status: 400 });
     }
-    const normalized = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const normalized = value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
     if (blockedTerms.some((term) => normalized.includes(term))) {
-      return Response.json({ error: "Use uma resposta respeitosa para participar." }, { status: 422 });
+      return Response.json(
+        { error: "Use uma resposta respeitosa para participar." },
+        { status: 422 },
+      );
     }
-    const [session] = await db.select().from(sessions).where(eq(sessions.code, code)).limit(1);
+    const session: PitchSessionRow | null = await storeGetSession(code);
     if (!session || session.status !== "live") {
       return Response.json({ error: "Esta sessão não está disponível." }, { status: 404 });
     }
-    if (session.activePrompt !== promptId) {
-      return Response.json({ error: "Esta interação não está ativa no momento." }, { status: 409 });
-    }
 
-    await db
-      .insert(responses)
-      .values({ sessionCode: code, promptId, participantId, value })
-      .onConflictDoUpdate({
-        target: [responses.sessionCode, responses.promptId, responses.participantId],
-        set: { value, createdAt: new Date().toISOString() },
-      });
-
+    await storeUpsertResponse({
+      sessionCode: code,
+      promptId,
+      participantId,
+      value,
+    });
     return Response.json({ session: await readSession(code) });
   }
 
-  return Response.json({ error: "Ação inválida." }, { status: 400 });
-}
-
-function apiError(error: unknown) {
-  console.error("[pitch-session]", error);
-  return Response.json(
-    { error: "A sessão ao vivo está temporariamente indisponível. A apresentação expositiva continua funcionando." },
-    { status: 500 },
-  );
+  return Response.json({ error: "Ação não suportada." }, { status: 400 });
 }
 
 export async function GET(request: Request) {
   try {
     return await getSession(request);
   } catch (error) {
-    return apiError(error);
+    const message = error instanceof Error ? error.message : "Erro interno.";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 
@@ -237,6 +181,7 @@ export async function POST(request: Request) {
   try {
     return await mutateSession(request);
   } catch (error) {
-    return apiError(error);
+    const message = error instanceof Error ? error.message : "Erro interno.";
+    return Response.json({ error: message }, { status: 500 });
   }
 }

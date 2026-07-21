@@ -65,6 +65,7 @@ describe('apresentação institucional — navegação e projeção', () => {
   test('host da página canônica continua com embed e loop protection', () => {
     expect(hostHtml).toContain('id="kc-pitch-frame"');
     expect(hostHtml).toContain('kc-pitch-host.js');
-    expect(host).toContain('loop');
+    expect(host).toContain('LIVE_ORIGIN');
+    expect(host).toContain('kino-campus-pitch.vercel.app');
   });
 });

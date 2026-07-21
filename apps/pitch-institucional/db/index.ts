@@ -1,13 +1,13 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
+/**
+ * Legacy D1 entry kept for optional Cloudflare/Sites tooling.
+ * The live session API uses `session-store.ts` (Supabase) so Vercel builds
+ * never import `cloudflare:workers`.
+ */
 
-export function getDb() {
-  if (!env.DB) {
-    throw new Error(
-      "Cloudflare D1 binding `DB` is unavailable. Set the `d1` field in .openai/hosting.json to `DB` or let your control plane inject the real binding values before using the database."
-    );
-  }
+export { sessions, responses } from "./schema";
 
-  return drizzle(env.DB, { schema });
+export function getDb(): never {
+  throw new Error(
+    "getDb()/D1 is not used on the Vercel host. Use session-store helpers instead.",
+  );
 }
