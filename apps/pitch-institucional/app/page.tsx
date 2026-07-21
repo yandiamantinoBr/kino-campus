@@ -79,6 +79,7 @@ type SessionSnapshot = {
   currentSlide: number;
   activePrompt: string | null;
   status: string;
+  updatedAt?: string;
   responseCount: number;
   aggregates: Record<string, Record<string, number>>;
 };
@@ -341,22 +342,37 @@ function InteractionResults({
 
   if (prompt.type === "word") {
     const max = Math.max(1, ...entries.map(([, count]) => count));
+    const palette = ["#071a3d", "#ff5a0a", "#168bab", "#208c52", "#876b58", "#5b4db8"];
     return (
       <div className="word-cloud" aria-label={`${total} respostas na nuvem de palavras`}>
         {entries.length === 0 ? (
-          <div className="results-empty"><MessageSquareText size={34} /><span>As palavras aparecerão aqui.</span></div>
+          <div className="results-empty">
+            <MessageSquareText size={34} />
+            <span>A nuvem se forma com as palavras do público.</span>
+            <small>Cada celular envia uma palavra — as mais repetidas ficam maiores.</small>
+          </div>
         ) : (
-          entries.slice(0, 26).map(([word, count], index) => (
-            <span
-              key={word}
-              style={{
-                fontSize: `${1 + (count / max) * 2.2}rem`,
-                color: ["#071a3d", "#ff5a0a", "#168bab", "#208c52"][index % 4],
-              }}
-            >
-              {word}
-            </span>
-          ))
+          entries.slice(0, 36).map(([word, count], index) => {
+            const weight = count / max;
+            const rotate = ((index * 47) % 11) - 5;
+            return (
+              <span
+                key={word}
+                className="word-cloud__word"
+                title={`${count} ${count === 1 ? "menção" : "menções"}`}
+                style={{
+                  fontSize: `${1.15 + weight * 2.85}rem`,
+                  color: palette[index % palette.length],
+                  opacity: 0.78 + weight * 0.22,
+                  transform: `rotate(${rotate}deg)`,
+                  animationDelay: `${Math.min(index, 18) * 28}ms`,
+                  zIndex: Math.round(weight * 10),
+                }}
+              >
+                {word}
+              </span>
+            );
+          })
         )}
       </div>
     );
@@ -621,7 +637,7 @@ function SlideCanvas({
         )}
       </div>
       <div className="slide__visual"><SlideVisual slide={slide} session={session} /></div>
-      <div className="slide__index"><span>{String(index + 1).padStart(2, "0")}</span><i /><small>{slide.numberLabel}</small></div>
+      <div className="slide__index" aria-hidden="true"><span>{String(index + 1).padStart(2, "0")}</span><i /><small>{slide.numberLabel}</small></div>
     </section>
   );
 }
@@ -812,7 +828,7 @@ function PresenterView({
         </div>
       </header>
 
-      <SlideCanvas slide={slide} index={current} total={deck.length} session={session} />
+      <SlideCanvas key={slide.id} slide={slide} index={current} total={deck.length} session={session} />
 
       <nav className="presentation-controls" aria-label="Controles da apresentação" onTouchStart={markControlTouch}>
         <button type="button" onClick={previous} disabled={current === 0} aria-label="Slide anterior"><ChevronLeft size={24} /></button>
@@ -1155,50 +1171,83 @@ export default function Home() {
 
   const goToSlide = useCallback((index: number) => {
     const safe = Math.max(0, Math.min(deck.length - 1, index));
+    if (desiredSlideRef.current === safe) {
+      // Same target: still refresh authority so a late poll cannot rewind.
+      localAuthorityUntilRef.current = Date.now() + 2800;
+      return;
+    }
     desiredSlideRef.current = safe;
-    localAuthorityUntilRef.current = Date.now() + 2400;
+    localAuthorityUntilRef.current = Date.now() + 2800;
     pollGenerationRef.current += 1;
     setCurrent(safe);
   }, [deck.length]);
 
   const sessionCode = session?.code;
+  // Debounced control sync: rapid next/prev only posts the latest slide.
   useEffect(() => {
     if (view !== "deck" || !sessionCode || !presenterToken) return;
     const slideIndex = current;
     const slide = deck[slideIndex];
     const activePrompt = slide?.prompt?.id ?? null;
 
-    const run = async () => {
-      try {
-        const response = await fetch("/api/session", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            action: "control",
-            code: sessionCode,
-            token: presenterToken,
-            currentSlide: slideIndex,
-            activePrompt,
-          }),
-        });
-        const data = await readJson(response);
-        if (!data.session) return;
-        // Only apply if this control still matches the latest desired slide.
+    const timer = window.setTimeout(() => {
+      const run = async () => {
+        // Skip stale chain items after burst navigation.
         if (desiredSlideRef.current !== slideIndex) return;
-        setSession(data.session);
-        if (data.session.currentSlide === slideIndex) {
-          localAuthorityUntilRef.current = 0;
+        try {
+          const response = await fetch("/api/session", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "control",
+              code: sessionCode,
+              token: presenterToken,
+              currentSlide: slideIndex,
+              activePrompt,
+            }),
+          });
+          const data = await readJson(response);
+          if (!data.session) return;
+          if (desiredSlideRef.current !== slideIndex) return;
+          setSession((previous) => {
+            const next = data.session!;
+            // Keep local slide authority; refresh aggregates/counts from server.
+            if (Date.now() < localAuthorityUntilRef.current) {
+              return {
+                ...next,
+                currentSlide: desiredSlideRef.current,
+                activePrompt: deck[desiredSlideRef.current]?.prompt?.id ?? next.activePrompt,
+              };
+            }
+            if (
+              previous &&
+              previous.currentSlide === next.currentSlide &&
+              previous.responseCount === next.responseCount &&
+              previous.updatedAt === next.updatedAt &&
+              previous.activePrompt === next.activePrompt
+            ) {
+              return previous;
+            }
+            return next;
+          });
+          if (data.session.currentSlide === slideIndex) {
+            localAuthorityUntilRef.current = 0;
+          }
+        } catch {
+          /* keep presenting offline */
         }
-      } catch {
-        /* keep presenting offline */
-      }
-    };
+      };
+      controlChainRef.current = controlChainRef.current.then(run, run);
+    }, 120);
 
-    controlChainRef.current = controlChainRef.current.then(run, run);
+    return () => window.clearTimeout(timer);
   }, [current, deck, presenterToken, sessionCode, view]);
 
   useEffect(() => {
     if (view !== "deck" || !sessionCode) return;
+    // Interaction slides need fresher aggregates; otherwise poll lighter.
+    const onInteraction = Boolean(deck[desiredSlideRef.current]?.prompt || deck[current]?.prompt);
+    const intervalMs = onInteraction ? 1100 : 1600;
     const timer = window.setInterval(async () => {
       const generationAtStart = pollGenerationRef.current;
       try {
@@ -1226,15 +1275,30 @@ export default function Home() {
           localAuthorityUntilRef.current = 0;
         }
 
-        setSession(data.session);
-        setCurrent((previous) => (previous === safeCurrent ? previous : safeCurrent));
-        desiredSlideRef.current = safeCurrent;
+        setSession((previous) => {
+          const next = data.session!;
+          if (
+            previous &&
+            previous.currentSlide === next.currentSlide &&
+            previous.responseCount === next.responseCount &&
+            previous.updatedAt === next.updatedAt &&
+            previous.activePrompt === next.activePrompt
+          ) {
+            return previous;
+          }
+          return next;
+        });
+        // Only follow server slide when remote/control advanced it (or after authority ends).
+        if (!localAuthorityActive) {
+          setCurrent((previous) => (previous === safeCurrent ? previous : safeCurrent));
+          desiredSlideRef.current = safeCurrent;
+        }
       } catch {
         /* keep the stage usable offline */
       }
-    }, 900);
+    }, intervalMs);
     return () => window.clearInterval(timer);
-  }, [deck, sessionCode, view]);
+  }, [current, deck, sessionCode, view]);
 
   const exit = () => {
     setView("launch");
