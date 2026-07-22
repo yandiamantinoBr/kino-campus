@@ -24,6 +24,7 @@
     { "source": "/apresentacao-institucional", "destination": "/apresentacao-institucional.html" },
     { "source": "/mensagens", "destination": "/mensagens.html" },
     { "source": "/auth/callback", "destination": "/auth-callback.html" },
+    { "source": "/api/cadu/source-reviews", "destination": "/api/cadu/sites?path=source-reviews" },
     { "source": "/api/cadu/sites/(.+)", "destination": "/api/cadu/sites?path=$1" },
     { "source": "/api/cadu/pipeline/(.+)", "destination": "/api/cadu/pipeline-router?path=$1" },
     { "source": "/api/cadu/openclaw/(.+)", "destination": "/api/cadu/openclaw-router?path=$1" }

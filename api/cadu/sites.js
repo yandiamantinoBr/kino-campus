@@ -6,6 +6,7 @@
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
 import { getCaduSourceRegistryMirror } from '../../server/cadu-source-registry-mirror.js';
+import { handleCaduSourceReviews } from '../../server/cadu-source-reviews-proxy.js';
 
 const STRONG_CADU_ETAG = /^"[a-f0-9]{64}"$/;
 const CADU_REGISTRY_SHA256 = /^[a-f0-9]{64}$/;
@@ -336,12 +337,23 @@ function legacyMetaWritesEnabled() {
 }
 
 export default async function handler(req, res) {
+  // Reuse this function for the durable review queue so Hobby deployments stay
+  // below Vercel's serverless-function limit. The public URL remains
+  // /api/cadu/source-reviews through the exact rewrite in vercel.json.
+  const routerPath = req && req.query ? req.query.path : undefined;
+  if (routerPath === 'source-reviews') {
+    const sourceReviewQuery = Object.fromEntries(
+      Object.entries(req.query || {}).filter(([key]) => key !== 'path'),
+    );
+    return handleCaduSourceReviews(req, res, { query: sourceReviewQuery });
+  }
+
   configureCors(res);
   // Failures and metadata are never cacheable. The legacy sites list replaces
   // this header with its existing private five-minute cache only after success.
   res.setHeader('Cache-Control', 'private, no-store');
 
-  const rawPath = req && req.query ? req.query.path : undefined;
+  const rawPath = routerPath;
   const route = classifyCaduSitesPath(rawPath);
   if (!route) return sendProxyError(res, 400, 'invalid_cadu_sites_path');
   if (req.method === 'OPTIONS') return res.status(204).end();

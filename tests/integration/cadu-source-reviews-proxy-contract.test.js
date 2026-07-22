@@ -5,6 +5,8 @@ jest.mock('../../server/cadu-auth.mjs', () => ({
 }));
 
 const { createHash, createHmac } = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 const { requireCaduAdmin } = require('../../server/cadu-auth.mjs');
 const {
   buildCaduReviewSignatureHeaders,
@@ -12,7 +14,9 @@ const {
   default: handler,
   parseSourceReviewListQuery,
   serializeSourceReviewResolution,
-} = require('../../api/cadu/source-reviews.js');
+} = require('../../server/cadu-source-reviews-proxy.js');
+
+const ROOT = path.join(__dirname, '..', '..');
 
 const ADMIN_ID = '123e4567-e89b-42d3-a456-426614174002';
 const REQUESTER_ID = '123e4567-e89b-42d3-a456-426614174001';
@@ -136,6 +140,18 @@ describe('Cadu institutional source review queue proxy', () => {
     } else {
       process.env.CADU_REVIEW_SIGNING_SECRET = originalReviewSigningSecret;
     }
+  });
+
+  test('shares the existing sites function instead of exceeding the Vercel function cap', () => {
+    const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8'));
+    expect(config.rewrites).toContainEqual({
+      source: '/api/cadu/source-reviews',
+      destination: '/api/cadu/sites?path=source-reviews',
+    });
+    expect(fs.existsSync(path.join(ROOT, 'api', 'cadu', 'source-reviews.js'))).toBe(false);
+    const sitesProxy = fs.readFileSync(path.join(ROOT, 'api', 'cadu', 'sites.js'), 'utf8');
+    expect(sitesProxy).toContain("routerPath === 'source-reviews'");
+    expect(sitesProxy).toContain('return handleCaduSourceReviews(req, res, { query: sourceReviewQuery });');
   });
 
   test('allowlists and canonicalizes only supported list filters', () => {

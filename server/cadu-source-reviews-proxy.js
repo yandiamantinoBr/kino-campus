@@ -8,7 +8,7 @@
 
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { TextDecoder } from 'node:util';
-import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
+import { requireCaduAdmin } from './cadu-auth.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SOURCE_ID = /^web\.[a-z0-9][a-z0-9.-]{0,115}$/;
@@ -383,7 +383,7 @@ function sanitizedAuthResponse(res) {
   };
 }
 
-export default async function handler(req, res) {
+export async function handleCaduSourceReviews(req, res, options = {}) {
   configureResponse(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET' && req.method !== 'POST') {
@@ -403,7 +403,7 @@ export default async function handler(req, res) {
   let route;
   let upstreamBody;
   if (req.method === 'GET') {
-    const query = parseSourceReviewListQuery(req.query || {});
+    const query = parseSourceReviewListQuery(options.query || req.query || {});
     if (!query) return sendError(res, 400, 'invalid_source_review_filters');
     route = { kind: 'list', query };
   } else {
@@ -485,3 +485,5 @@ export default async function handler(req, res) {
     return sendError(res, 502, 'cadu_api_unreachable');
   }
 }
+
+export default handleCaduSourceReviews;
