@@ -23,6 +23,17 @@ const READINESS_CHECKS = {
   legacyReadsPreserved: true,
   serviceRolePhaseA: true
 };
+const REVIEW_READINESS_CHECKS = {
+  reviewTable: true,
+  reviewConstraints: true,
+  reviewIndexes: true,
+  reviewRlsPolicy: true,
+  reviewTableAcl: true,
+  reviewGuardTrigger: true,
+  reviewCreateRpc: true,
+  reviewResolveRpc: true,
+  reviewDependencies: true
+};
 
 function rowEntry(unitId, rowKey, sourceIds, entityIds = [], tier = 2) {
   const entry = {
@@ -330,6 +341,12 @@ describe('KCAdminCaduSources fail-closed projection', () => {
       contractVersion: 'cadu-unit-meta-cas-v1',
       phase: 'phase-a',
       checks: { ...READINESS_CHECKS },
+      reviewContractVersion: 'cadu-institutional-review-v1',
+      reviewChecks: { ...REVIEW_READINESS_CHECKS },
+      reviewQueueReady: true,
+      reviewProxyReady: true,
+      edgeCapabilityVersion: 'cadu-publish-capabilities-v1',
+      institutionalReviewEnabled: true,
       metadataRowsValidated: 5,
       registryVersion: input.registryVersion,
       registrySha256: HASH
@@ -361,6 +378,21 @@ describe('KCAdminCaduSources fail-closed projection', () => {
       { headers: { 'X-Cadu-Registry-Sha256': HASH } },
       catalog
     ), 'metadata_contract_not_ready');
+    expectContractError(() => validateRegistryReadiness(
+      { ...readiness, reviewProxyReady: false },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'review_contract_mismatch');
+    expectContractError(() => validateRegistryReadiness(
+      { ...readiness, reviewChecks: { ...REVIEW_READINESS_CHECKS, reviewResolveRpc: false } },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'review_contract_not_ready');
+    expectContractError(() => validateRegistryReadiness(
+      { ...readiness, institutionalReviewEnabled: false },
+      { headers: { 'X-Cadu-Registry-Sha256': HASH } },
+      catalog
+    ), 'review_edge_not_ready');
   });
 
   test('rejects duplicate canonical IDs and duplicate source revisions/ETags', () => {

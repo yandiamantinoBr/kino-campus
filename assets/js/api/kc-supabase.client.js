@@ -396,6 +396,33 @@
 
   const activeChannels = Object.create(null);
 
+  function notifyChannelListeners(channelName, callbackName, value) {
+    const entry = activeChannels[channelName];
+    if (!entry) return;
+    entry.listeners.forEach((listener) => {
+      try {
+        const callback = listener[callbackName];
+        if (typeof callback === 'function') callback(value);
+      } catch (_) { }
+    });
+  }
+
+  function addChannelListener(channelName, listener, client) {
+    activeChannels[channelName].listeners.add(listener);
+    let unsubscribed = false;
+    return { unsubscribe: function () {
+      if (unsubscribed) return;
+      unsubscribed = true;
+      const entry = activeChannels[channelName];
+      if (!entry) return;
+      entry.listeners.delete(listener);
+      if (entry.listeners.size) return;
+      try { if (typeof entry.channel.unsubscribe === 'function') entry.channel.unsubscribe(); } catch (_) { }
+      try { if (typeof client.removeChannel === 'function') client.removeChannel(entry.channel); } catch (_) { }
+      delete activeChannels[channelName];
+    } };
+  }
+
   function subscribeNewPosts(options = {}) {
     const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
     const { driver } = readEnv();
@@ -432,22 +459,13 @@
               if (!mk || !moduleSet.has(mk)) return;
             }
 
-            // Notify all multiplexed listeners
-            if (activeChannels[channelName]) {
-                activeChannels[channelName].listeners.forEach(l => {
-                    try { if (typeof l.onPost === 'function') l.onPost({ row, payload }); } catch (_) {}
-                });
-            }
+            notifyChannelListeners(channelName, 'onPost', { row, payload });
           }
         );
 
         if (typeof channel.subscribe === 'function') {
           channel.subscribe((status) => {
-            if (activeChannels[channelName]) {
-                activeChannels[channelName].listeners.forEach(l => {
-                    try { if (typeof l.onStatus === 'function') l.onStatus(status); } catch (_) {}
-                });
-            }
+            notifyChannelListeners(channelName, 'onStatus', status);
           });
         }
       } catch (e) {
@@ -457,31 +475,7 @@
       }
     }
 
-    const listener = {
-      onPost: opt.onPost,
-      onStatus: opt.onStatus,
-      onError: opt.onError
-    };
-
-    activeChannels[channelName].listeners.add(listener);
-    let localUnsubscribed = false;
-
-    return {
-      unsubscribe: function () {
-        if (localUnsubscribed) return;
-        localUnsubscribed = true;
-
-        const entry = activeChannels[channelName];
-        if (entry) {
-          entry.listeners.delete(listener);
-          if (entry.listeners.size === 0) {
-             try { if (typeof entry.channel.unsubscribe === 'function') entry.channel.unsubscribe(); } catch (_) {}
-             try { if (typeof client.removeChannel === 'function') client.removeChannel(entry.channel); } catch (_) {}
-             delete activeChannels[channelName];
-          }
-        }
-      }
-    };
+    return addChannelListener(channelName, { onPost: opt.onPost, onStatus: opt.onStatus }, client);
   }
 
   /**
@@ -491,53 +485,31 @@
    */
   function normalizeComparableField(value) {
     if (value == null) return '';
-    if (typeof value === 'object') {
-      try { return JSON.stringify(value); } catch (_) { return String(value); }
-    }
-    // Normalize numeric strings vs numbers (price, scores, etc.).
-    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+    if (typeof value === 'object') try { return JSON.stringify(value); } catch (_) { return String(value); }
     const asString = String(value).trim();
-    if (asString !== '' && Number.isFinite(Number(asString)) && /^-?\d+(\.\d+)?$/.test(asString)) {
-      return String(Number(asString));
-    }
-    return asString;
+    return asString && Number.isFinite(Number(asString)) && /^-?\d+(\.\d+)?$/.test(asString)
+      ? String(Number(asString)) : asString;
   }
 
   function isMetricsOnlyPostUpdate(oldRow, newRow) {
     if (!oldRow || !newRow || typeof oldRow !== 'object' || typeof newRow !== 'object') return false;
-
     const CONTENT_KEYS = [
-      'title', 'description', 'price', 'location', 'module', 'category',
-      'status', 'visibility', 'metadata', 'image_url', 'expires_at',
-      'author_id', 'legacy_id', 'authorId', 'legacyId',
+      'title', 'description', 'price', 'location', 'module', 'category', 'status', 'visibility',
+      'metadata', 'image_url', 'expires_at', 'author_id', 'legacy_id', 'authorId', 'legacyId',
     ];
-    for (let i = 0; i < CONTENT_KEYS.length; i += 1) {
-      const key = CONTENT_KEYS[i];
-      if (!(key in oldRow) && !(key in newRow)) continue;
-      if (normalizeComparableField(oldRow[key]) !== normalizeComparableField(newRow[key])) {
-        return false;
-      }
+    for (const key of CONTENT_KEYS) {
+      if ((key in oldRow || key in newRow)
+        && normalizeComparableField(oldRow[key]) !== normalizeComparableField(newRow[key])) return false;
     }
-
     const METRIC_KEYS = [
       'votos', 'highlight_score', 'view_count', 'share_count', 'coupon_clicks',
       'last_comment_at', 'lastCommentAt', 'bumped_at', 'bumpedAt',
     ];
-    const metricChanged = METRIC_KEYS.some((key) => {
-      if (!(key in oldRow) && !(key in newRow)) return false;
-      return normalizeComparableField(oldRow[key]) !== normalizeComparableField(newRow[key]);
-    });
-    if (metricChanged) return true;
-
-    // updated_at-only (kc_set_updated_at) with no content/metric delta still
-    // must not force a feed wipe — treat as soft metrics event.
-    if (
-      normalizeComparableField(oldRow.updated_at || oldRow.updatedAt)
-      !== normalizeComparableField(newRow.updated_at || newRow.updatedAt)
-    ) {
-      return true;
-    }
-    return false;
+    if (METRIC_KEYS.some((key) => (key in oldRow || key in newRow)
+      && normalizeComparableField(oldRow[key]) !== normalizeComparableField(newRow[key]))) return true;
+    // A trigger-only updated_at delta is soft too: it must not wipe the feed.
+    return normalizeComparableField(oldRow.updated_at || oldRow.updatedAt)
+      !== normalizeComparableField(newRow.updated_at || newRow.updatedAt);
   }
 
   function normalizePostChangePayload(payload) {
@@ -608,11 +580,7 @@
             window.KCPostFreshness.emit(change);
           }
         } catch (_) { }
-        if (activeChannels[channelName]) {
-          activeChannels[channelName].listeners.forEach(function (l) {
-            try { if (typeof l.onChange === 'function') l.onChange(change); } catch (_) { }
-          });
-        }
+        notifyChannelListeners(channelName, 'onChange', change);
       }
 
       try {
@@ -639,11 +607,7 @@
         );
         if (typeof channel.subscribe === 'function') {
           channel.subscribe((status) => {
-            if (activeChannels[channelName]) {
-              activeChannels[channelName].listeners.forEach(function (l) {
-                try { if (typeof l.onStatus === 'function') l.onStatus(status); } catch (_) { }
-              });
-            }
+            notifyChannelListeners(channelName, 'onStatus', status);
           });
         }
       } catch (e) {
@@ -653,32 +617,10 @@
       }
     }
 
-    // Registra este listener no canal compartilhado
-    const listener = {
+    return addChannelListener(channelName, {
       onChange: function (change) { try { if (typeof opt.onChange === 'function') opt.onChange(change); } catch (_) { } },
       onStatus: function (status) { try { if (typeof opt.onStatus === 'function') opt.onStatus(status); } catch (_) { } },
-    };
-    activeChannels[channelName].listeners.add(listener);
-
-    let unsubscribed = false;
-    return {
-      unsubscribe: function () {
-        if (unsubscribed) return;
-        unsubscribed = true;
-        if (activeChannels[channelName]) {
-          activeChannels[channelName].listeners.delete(listener);
-          // Só remove o canal quando não há mais listeners
-          if (activeChannels[channelName].listeners.size === 0) {
-            try {
-              const ch = activeChannels[channelName].channel;
-              if (typeof ch.unsubscribe === 'function') ch.unsubscribe();
-            } catch (_) { }
-            try { if (typeof client.removeChannel === 'function') client.removeChannel(activeChannels[channelName].channel); } catch (_) { }
-            delete activeChannels[channelName];
-          }
-        }
-      }
-    };
+    }, client);
   }
 
   function onAuthStateChange(callback) {

@@ -1,5 +1,5 @@
 /**
- * KinoCampus Service Worker - v12.13.1
+ * KinoCampus Service Worker - v12.13.2
  *
  * Estrategia:
  *   - Shell local versionado (CSS + JS core): stale-while-revalidate
@@ -15,7 +15,7 @@
 
 'use strict';
 
-var CACHE_VERSION = 'kc-shell-v12.13.1';
+var CACHE_VERSION = 'kc-shell-v12.13.2';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';
 
@@ -35,7 +35,7 @@ var SHELL_ASSETS = [
   '/assets/js/utils/kc-utils.format.js?v=8.6.1',
   '/assets/js/utils/kc-utils.dom.js?v=8.6.1',
   '/assets/js/utils/kc-utils.js?v=8.6.1',
-  '/assets/js/core/kc-core.js?v=8.6.3',
+  '/assets/js/core/kc-core.js?v=8.6.4',
 ];
 
 /** Padroes que nunca devem ser cacheados (Supabase, CDNs, Fonts). */

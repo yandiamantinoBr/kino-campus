@@ -273,6 +273,31 @@
     .kc-cadu-badge--tier_conflict,
     .kc-cadu-badge--url_conflict,
     .kc-cadu-badge--quarantined { background: rgba(239,68,68,.12); color: #f87171; }
+    .kc-cadu-source-run {
+      margin-top: 8px;
+      padding: 7px 8px;
+      border: 1px solid rgba(148,163,184,.24);
+      border-left-width: 3px;
+      border-radius: 6px;
+      background: rgba(148,163,184,.06);
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.35;
+    }
+    .kc-cadu-source-run > div { color: var(--kc-text-dark-primary); font-size: .75rem; }
+    .kc-cadu-source-run > small { display: block; margin-top: 2px; font-size: .68rem; overflow-wrap: anywhere; }
+    .kc-cadu-source-run--ok { border-left-color: #10b981; background: rgba(16,185,129,.06); }
+    .kc-cadu-source-run--empty,
+    .kc-cadu-source-run--budget { border-left-color: #f59e0b; background: rgba(245,158,11,.06); }
+    .kc-cadu-source-run--error,
+    .kc-cadu-source-run--quarantined { border-left-color: #ef4444; background: rgba(239,68,68,.06); }
+    .kc-cadu-source-run--no_feed,
+    .kc-cadu-source-run--unmatched,
+    .kc-cadu-source-run--unavailable { border-left-color: #64748b; }
+    .kc-cadu-source-run__failure { color: #f87171; }
+    .kc-cadu-source-run__scope { color: var(--kc-text-dark-secondary); font-style: italic; }
+    .kc-cadu-source-identity { min-width: 0; }
+    html:not([data-theme="dark"]) .kc-cadu-source-run__failure,
+    body[data-theme="light"] .kc-cadu-source-run__failure { color: #b91c1c; }
 
     /* ===== Pipeline tab (v0.4.0) ===== */
     .kc-pipeline-grid { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(220px, 280px); gap: 16px; min-width: 0; }
@@ -436,6 +461,7 @@
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
     .kc-cadu-publish-btn.is-ok { background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.4); color: #10b981; }
     .kc-cadu-publish-btn.is-pending { background: rgba(245,158,11,.18); border-color: rgba(245,158,11,.4); color: #f59e0b; }
+    .kc-cadu-publish-btn.is-complete { background: rgba(79,195,247,.14); border-color: rgba(79,195,247,.38); color: #4fc3f7; }
     .kc-cadu-publish-btn.is-err { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.4); color: #ef4444; }
     /* ===== Botão "Perguntar Cadu" (cross-tab) ===== */
     .kc-cadu-ask-btn { background: rgba(79,195,247,.10); border: 1px solid rgba(79,195,247,.32); color: #4fc3f7; border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
@@ -453,6 +479,21 @@
     .kc-cadu-catalog-summary__item { border: 1px solid var(--kc-border-dark); border-radius: 10px; padding: 10px 12px; background: rgba(255,255,255,.025); }
     .kc-cadu-catalog-summary__item strong { display: block; font-size: 1.25rem; color: var(--kc-text-dark-primary); }
     .kc-cadu-catalog-summary__item small { color: var(--kc-text-dark-secondary); }
+    .kc-cadu-map-guide {
+      display: grid; grid-template-columns: minmax(250px,.8fr) minmax(420px,1.5fr); gap: 12px;
+      margin: 0 0 14px; padding: 12px; border: 1px solid rgba(79,195,247,.26);
+      border-radius: 12px; background: rgba(79,195,247,.055); color: var(--kc-text-dark-secondary);
+      font-size: .76rem; line-height: 1.45;
+    }
+    .kc-cadu-map-guide h3, .kc-cadu-map-guide h4 { margin: 0; color: var(--kc-text-dark-primary); }
+    .kc-cadu-map-guide h3 { font-size: .9rem; }
+    .kc-cadu-map-guide h4 { font-size: .76rem; }
+    .kc-cadu-map-guide p { margin: 5px 0 0; }
+    .kc-cadu-map-guide__count { display: block; color: var(--kc-text-dark-primary); font-size: .82rem; }
+    .kc-cadu-map-guide__breakdown { display: block; margin-top: 3px; overflow-wrap: anywhere; }
+    .kc-cadu-map-guide__states { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+    .kc-cadu-map-guide__state { min-width: 0; padding: 8px 9px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background: rgba(255,255,255,.025); }
+    .kc-cadu-map-guide__state p { margin-top: 2px; }
     .kc-cadu-review-policy { margin: -2px 0 12px; padding: 10px 12px; border-left: 3px solid #f59e0b; border-radius: 7px; background: rgba(245,158,11,.08); color: var(--kc-text-dark-secondary); font-size: .78rem; line-height: 1.5; }
     .kc-cadu-review-policy strong { color: var(--kc-text-dark-primary); }
     .kc-cadu-map-list { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -464,6 +505,65 @@
     .kc-cadu-save-source-btn { margin-top: 2px; border: 1px solid rgba(16,185,129,.38); background: rgba(16,185,129,.11); color: #10b981; border-radius: 7px; padding: 5px 8px; cursor: pointer; font-size: .75rem; justify-self: start; }
     .kc-cadu-save-source-btn:disabled { opacity: .48; cursor: not-allowed; }
     .kc-cadu-review-issues { color: var(--kc-text-dark-secondary); font-size: .74rem; line-height: 1.35; overflow-wrap: anywhere; }
+    .kc-cadu-review-gate { padding: 6px 7px; border-radius: 7px; font-size: .7rem; line-height: 1.35; overflow-wrap: anywhere; }
+    .kc-cadu-review-gate strong { color: inherit; }
+    .kc-cadu-review-gate.is-blocked { color: #f87171; background: rgba(239,68,68,.09); border: 1px solid rgba(239,68,68,.24); }
+    .kc-cadu-review-gate.is-available { color: #34d399; background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.24); }
+    html:not([data-theme="dark"]) .kc-cadu-review-gate.is-blocked,
+    body[data-theme="light"] .kc-cadu-review-gate.is-blocked { color: #b91c1c; }
+    html:not([data-theme="dark"]) .kc-cadu-review-gate.is-available,
+    body[data-theme="light"] .kc-cadu-review-gate.is-available { color: #047857; }
+    .kc-cadu-adjustment-scope { margin: 0; color: var(--kc-text-dark-secondary); font-size: .69rem; line-height: 1.35; }
+    .kc-cadu-adjustment-scope strong { color: var(--kc-text-dark-primary); }
+    .kc-cadu-review-queue { margin-top: 16px; padding: 14px; border: 1px solid var(--kc-border-dark); border-radius: 12px; background: rgba(255,255,255,.018); }
+    .kc-cadu-review-queue__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .kc-cadu-review-queue__head h3 { margin: 0; color: var(--kc-text-dark-primary); font-size: 1rem; }
+    .kc-cadu-review-queue__head p { max-width: 78ch; margin: 4px 0 0; color: var(--kc-text-dark-secondary); font-size: .76rem; line-height: 1.45; }
+    .kc-cadu-review-queue__count { display: inline-flex; min-width: 24px; justify-content: center; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: rgba(255,107,0,.14); color: var(--kc-primary-brand); font-size: .72rem; }
+    .kc-cadu-review-queue__refresh, .kc-cadu-review-queue__filters button, .kc-cadu-review-queue__pager button, .kc-cadu-review-decision { border: 1px solid var(--kc-border-dark); border-radius: 8px; background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); cursor: pointer; font: inherit; }
+    .kc-cadu-review-queue__refresh { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; white-space: nowrap; }
+    .kc-cadu-review-queue__refresh:disabled, .kc-cadu-review-queue__filters button:disabled, .kc-cadu-review-queue__pager button:disabled, .kc-cadu-review-decision:disabled { opacity: .48; cursor: not-allowed; }
+    .kc-cadu-review-queue__filters { display: grid; grid-template-columns: minmax(145px,.6fr) minmax(220px,1.4fr) auto auto; gap: 8px; align-items: end; margin-top: 12px; }
+    .kc-cadu-review-queue__filters label { display: grid; gap: 4px; min-width: 0; color: var(--kc-text-dark-secondary); font-size: .7rem; }
+    .kc-cadu-review-queue__filters input, .kc-cadu-review-queue__filters select, .kc-cadu-review-resolution-note { width: 100%; min-width: 0; border: 1px solid var(--kc-border-dark); border-radius: 8px; background: var(--kc-surface-dark); color: var(--kc-text-dark-primary); font: inherit; }
+    .kc-cadu-review-queue__filters input, .kc-cadu-review-queue__filters select { min-height: 36px; padding: 6px 8px; }
+    .kc-cadu-review-queue__filters button { min-height: 36px; padding: 6px 10px; }
+    .kc-cadu-review-queue__status { min-height: 1.3em; margin: 9px 0; color: var(--kc-text-dark-secondary); font-size: .72rem; }
+    .kc-cadu-review-queue__status.is-error { color: #f87171; }
+    .kc-cadu-review-queue__list { display: grid; gap: 9px; }
+    .kc-cadu-review-queue__item { min-width: 0; padding: 11px; border: 1px solid var(--kc-border-dark); border-radius: 10px; background: rgba(255,255,255,.025); }
+    .kc-cadu-review-queue__item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .kc-cadu-review-queue__item-head > div { min-width: 0; }
+    .kc-cadu-review-queue__item-head strong { display: block; color: var(--kc-text-dark-primary); overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__item-head code { display: block; margin-top: 2px; color: var(--kc-text-dark-secondary); font-size: .68rem; overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__meta { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px 12px; margin-top: 8px; color: var(--kc-text-dark-secondary); font-size: .74rem; }
+    .kc-cadu-review-queue__meta span { min-width: 0; overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__meta strong { color: var(--kc-text-dark-primary); }
+    .kc-cadu-review-queue__meta a { overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__note, .kc-cadu-review-queue__resolution { margin: 8px 0 0; color: var(--kc-text-dark-secondary); font-size: .73rem; overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__technical { margin-top: 8px; color: var(--kc-text-dark-secondary); font-size: .69rem; }
+    .kc-cadu-review-queue__technical summary { cursor: pointer; }
+    .kc-cadu-review-queue__technical div { display: grid; grid-template-columns: minmax(100px,.25fr) minmax(0,1fr); gap: 8px; margin-top: 4px; }
+    .kc-cadu-review-queue__technical code { overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__actions { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--kc-border-dark); }
+    .kc-cadu-review-queue__action-warning { padding: 7px 8px; border: 1px solid rgba(245,158,11,.34); border-radius: 8px; background: rgba(245,158,11,.09); color: #fbbf24; font-size: .72rem; line-height: 1.4; overflow-wrap: anywhere; }
+    .kc-cadu-review-queue__actions label { color: var(--kc-text-dark-primary); font-size: .72rem; }
+    .kc-cadu-review-queue__actions label span, .kc-cadu-review-queue__actions small { color: var(--kc-text-dark-secondary); }
+    .kc-cadu-review-resolution-note { padding: 7px 8px; resize: vertical; min-height: 48px; }
+    .kc-cadu-review-queue__decision-buttons { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+    .kc-cadu-review-decision { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 34px; padding: 5px 8px; }
+    .kc-cadu-review-decision.is-approve { border-color: rgba(16,185,129,.38); color: #34d399; }
+    .kc-cadu-review-decision.is-reject { border-color: rgba(239,68,68,.4); color: #f87171; }
+    .kc-cadu-review-decision.is-supersede { border-color: rgba(245,158,11,.42); color: #fbbf24; }
+    .kc-cadu-review-queue__empty { padding: 18px 10px; border: 1px dashed var(--kc-border-dark); border-radius: 9px; color: var(--kc-text-dark-secondary); text-align: center; font-size: .78rem; }
+    .kc-cadu-review-queue__empty.is-error { border-color: rgba(239,68,68,.35); color: #f87171; }
+    .kc-cadu-review-queue__pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; color: var(--kc-text-dark-secondary); font-size: .72rem; }
+    .kc-cadu-review-queue__pager button { min-height: 32px; padding: 4px 9px; }
+    html:not([data-theme="dark"]) .kc-cadu-review-queue__status.is-error,
+    html:not([data-theme="dark"]) .kc-cadu-review-queue__empty.is-error,
+    html:not([data-theme="dark"]) .kc-cadu-review-decision.is-reject { color: #b91c1c; }
+    html:not([data-theme="dark"]) .kc-cadu-review-decision.is-approve { color: #047857; }
+    html:not([data-theme="dark"]) .kc-cadu-review-queue__action-warning { color: #92400e; }
     .kc-cadu-muted { color: var(--kc-text-dark-secondary); font-size: .78rem; }
     .kc-cadu-source-tier-select, .kc-cadu-source-note-input { width: 100%; min-width: 0; max-width: 100%; }
     .kc-cadu-url-link { overflow-wrap: anywhere; }
@@ -474,15 +574,71 @@
       #tab-sites > .kc-cadu-toolbar { grid-template-columns: repeat(3,minmax(0,1fr)); }
       #tab-sites > .kc-cadu-toolbar #sites-search { grid-column: span 2; }
       #tab-sites > .kc-cadu-toolbar button { justify-content: center; }
+      .kc-cadu-map-guide { grid-template-columns: 1fr; }
     }
     @media (max-width: 760px) {
       body.kc-admin-page--cadu main.kc-main-content, .kc-cadu-wrapper, .kc-cadu-section { width: 100%; max-width: 100%; min-width: 0; }
       .kc-cadu-wrapper { padding-left: 10px; padding-right: 10px; }
       .kc-cadu-section { padding: 12px; }
       .kc-cadu-catalog-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .kc-cadu-map-guide__states { grid-template-columns: 1fr; }
+      .kc-cadu-review-queue__head { align-items: stretch; flex-direction: column; }
+      .kc-cadu-review-queue__refresh { justify-content: center; width: 100%; }
+      .kc-cadu-review-queue__filters { grid-template-columns: 1fr; }
+      .kc-cadu-review-queue__filters button { width: 100%; }
+      .kc-cadu-review-queue__meta { grid-template-columns: 1fr; }
+      .kc-cadu-review-queue__decision-buttons { grid-template-columns: 1fr; }
+      .kc-cadu-review-queue__technical div { grid-template-columns: 1fr; gap: 1px; }
+      .kc-cadu-review-queue__pager { justify-content: space-between; flex-wrap: wrap; }
       #tab-sites > .kc-cadu-toolbar { grid-template-columns: repeat(2,minmax(0,1fr)); }
       #tab-sites > .kc-cadu-toolbar #sites-view, #tab-sites > .kc-cadu-toolbar #sites-search, #tab-sites > .kc-cadu-toolbar #sites-origin { grid-column: 1 / -1; }
       #tab-sites > .kc-cadu-toolbar input, #tab-sites > .kc-cadu-toolbar select, #tab-sites > .kc-cadu-toolbar button { width: 100%; max-width: 100%; }
+      #sites-table { display: block; }
+      #sites-table thead {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+      }
+      #sites-table tbody { display: grid; gap: 10px; width: 100%; }
+      #sites-table tbody tr { display: grid; width: 100%; border: 1px solid var(--kc-border-dark); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,.018); }
+      #sites-table tbody td {
+        display: grid; grid-template-columns: minmax(92px,31%) minmax(0,1fr); gap: 9px;
+        width: 100% !important; padding: 8px; border-bottom: 1px solid var(--kc-border-dark);
+        word-break: normal;
+      }
+      #sites-table tbody td:last-child { border-bottom: 0; }
+      #sites-table tbody td::before { align-self: start; color: var(--kc-text-dark-secondary); font-size: .66rem; font-weight: 700; letter-spacing: .045em; line-height: 1.35; text-transform: uppercase; }
+      #sites-table tbody td > * { min-width: 0; }
+      #sites-table tbody td.kc-cadu-empty { display: block; }
+      #sites-table tbody td.kc-cadu-empty::before { content: none !important; }
+      #sites-table[data-view="sources"] td:nth-child(1)::before { content: "Prioridade"; }
+      #sites-table[data-view="sources"] td:nth-child(2)::before { content: "Entidade / fonte"; }
+      #sites-table[data-view="sources"] td:nth-child(3)::before { content: "Site institucional"; }
+      #sites-table[data-view="sources"] td:nth-child(4)::before { content: "Instagram"; }
+      #sites-table[data-view="sources"] td:nth-child(5)::before { content: "Revisão"; }
+      #sites-table[data-view="sources"] td:nth-child(6)::before { content: "Prioridade + nota"; }
+      #sites-table[data-view="sources"] td:nth-child(7)::before { content: "Ações"; }
+      #sites-table[data-view="entities"] td:nth-child(1)::before { content: "Entidade UFG"; }
+      #sites-table[data-view="entities"] td:nth-child(2)::before { content: "Tipo / campus"; }
+      #sites-table[data-view="entities"] td:nth-child(3)::before { content: "Sites associados"; }
+      #sites-table[data-view="entities"] td:nth-child(4)::before { content: "Instagram"; }
+      #sites-table[data-view="entities"] td:nth-child(5)::before { content: "Cobertura"; }
+      #sites-table[data-view="instagram"] td:nth-child(1)::before { content: "Perfil Instagram"; }
+      #sites-table[data-view="instagram"] td:nth-child(2)::before { content: "Entidades"; }
+      #sites-table[data-view="instagram"] td:nth-child(3)::before { content: "Sites associados"; }
+      #sites-table[data-view="instagram"] td:nth-child(4)::before { content: "Status"; }
+      #sites-table[data-view="instagram"] td:nth-child(5)::before { content: "Execução"; }
+      #sites-table[data-view="deferred"] td:nth-child(1)::before { content: "Pendência"; }
+      #sites-table[data-view="deferred"] td:nth-child(2)::before { content: "Identidades legadas"; }
+      #sites-table[data-view="deferred"] td:nth-child(3)::before { content: "Fontes candidatas"; }
+      #sites-table[data-view="deferred"] td:nth-child(4)::before { content: "Entidades"; }
+      #sites-table[data-view="deferred"] td:nth-child(5)::before { content: "Evidências"; }
+      #sites-table[data-view="legacy"] td:nth-child(1)::before { content: "Prioridade"; }
+      #sites-table[data-view="legacy"] td:nth-child(2)::before { content: "Unidade legada"; }
+      #sites-table[data-view="legacy"] td:nth-child(3)::before { content: "Site institucional"; }
+      #sites-table[data-view="legacy"] td:nth-child(4)::before { content: "Instagram"; }
+      #sites-table[data-view="legacy"] td:nth-child(5)::before { content: "Status"; }
+      #sites-table[data-view="legacy"] td:nth-child(6)::before { content: "Observação"; }
+      #sites-table[data-view="legacy"] td:nth-child(7)::before { content: "Ações"; }
       .kc-cadu-scroll-hint { display: flex; align-items: center; gap: 6px; }
       body.kc-admin-page--cadu .kc-mobile-nav { max-width: 100vw; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: none; }
       body.kc-admin-page--cadu .kc-mobile-nav::-webkit-scrollbar { display: none; }
@@ -655,7 +811,26 @@
           <div><strong>Validando catálogo canônico</strong><small>Conferindo hash, IDs estáveis, entidades, fontes web, Instagram e ajustes administrativos.</small></div>
         </div>
         <div class="kc-cadu-catalog-summary" id="sites-catalog-summary" aria-label="Resumo do catálogo UFG" data-i18n-aria-label="aria-label.cadu-catalog-summary" style="display:none;"></div>
-        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, ajuste administrativo estável, sem colisão nem pendência crítica. A ação cria uma entrada durável no estado pendente (<code>pending</code>) e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
+        <aside class="kc-cadu-map-guide" aria-labelledby="sites-map-guide-title">
+          <div>
+            <h3 id="sites-map-guide-title"><i class="fas fa-circle-info" aria-hidden="true"></i> Como ler o Mapa UFG</h3>
+            <strong class="kc-cadu-map-guide__count" id="sites-source-record-count">— registros de fonte web</strong>
+            <span class="kc-cadu-map-guide__breakdown" id="sites-source-role-breakdown">Aguardando o catálogo para detalhar os tipos de registro.</span>
+            <p><strong>Fonte não é programa:</strong> uma mesma entidade pode ter site principal, página oficial associada e observações legadas. Portanto, a contagem de fontes web não representa a quantidade de programas ou unidades da UFG.</p>
+            <p><strong>Produção hoje:</strong> este catálogo está em <code>shadow</code> e não ativa coleta. Curador e scanner ainda leem inventários operacionais validados; porém, cada coletor web do Curador fica vinculado a um ID estável deste catálogo e a execução é recusada se os dois divergirem. O Mapa concilia identidades e prepara uma migração segura.</p>
+          </div>
+          <div>
+            <h4>Cinco dimensões independentes de estado</h4>
+            <div class="kc-cadu-map-guide__states">
+              <div class="kc-cadu-map-guide__state"><h4>1. Identidade / revisão</h4><p>Diz se nome, vínculo e URL foram reconhecidos como oficiais ou permanecem em quarentena.</p></div>
+              <div class="kc-cadu-map-guide__state"><h4>2. Transporte</h4><p>Informa se site e endpoints responderam à verificação técnica; não confirma, sozinho, a identidade oficial.</p></div>
+              <div class="kc-cadu-map-guide__state"><h4>3. Ajuste administrativo</h4><p>Define somente prioridade efetiva e nota no banco. Não altera URL, Instagram nem execução da pipeline.</p></div>
+              <div class="kc-cadu-map-guide__state"><h4>4. Fila editorial</h4><p>“Enviar à revisão” cria uma solicitação pendente e durável; não publica nem habilita coleta automaticamente.</p></div>
+              <div class="kc-cadu-map-guide__state"><h4>5. Última execução</h4><p>Correlaciona o ID canônico com o diagnóstico do artefato mais recente do Curador. Mostra coleta/classificação observada naquela execução e não substitui a auditoria estática de transporte.</p></div>
+            </div>
+          </div>
+        </aside>
+        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, ajuste administrativo estável, sem colisão nem pendência crítica. O botão só é liberado depois de conferir todo o histórico editorial limitado e, no clique, o ID exato e a versão atual da fonte são confirmados novamente no servidor. Uma decisão terminal permanece visível e bloqueia o reenvio da mesma versão. A ação cria uma entrada durável no estado pendente (<code>pending</code>) e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
         <div class="kc-cadu-toolbar">
           <select id="sites-view" aria-label="Escolher visão do catálogo" data-i18n-aria-label="aria-label.cadu-sites-view">
             <option value="sources">Fontes web</option>
@@ -729,6 +904,39 @@
             <button type="button" id="sites-page-next" aria-label="Próxima página" data-i18n-aria-label="aria-label.cadu-sites-page-next">Próxima <i class="fas fa-chevron-right"></i></button>
           </div>
         </div>
+        <section class="kc-cadu-review-queue" id="institutional-review-queue" aria-labelledby="institutional-review-title" aria-busy="true">
+          <div class="kc-cadu-review-queue__head">
+            <div>
+              <h3 id="institutional-review-title"><i class="fas fa-clipboard-check" aria-hidden="true"></i> Fila editorial institucional <span class="kc-cadu-review-queue__count" id="institutional-review-count">0</span></h3>
+              <p>Solicitações duráveis criadas pelo Mapa UFG. Aprovar, rejeitar ou substituir apenas encerra a solicitação: nenhuma dessas ações publica conteúdo nem ativa fonte, Instagram ou pipeline.</p>
+            </div>
+            <button type="button" class="kc-cadu-review-queue__refresh" id="institutional-review-refresh"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar fila</button>
+          </div>
+          <form class="kc-cadu-review-queue__filters" id="institutional-review-filters">
+            <label for="institutional-review-state">Estado
+              <select id="institutional-review-state">
+                <option value="pending" selected>Pendentes</option>
+                <option value="approved">Aprovadas</option>
+                <option value="rejected">Rejeitadas</option>
+                <option value="superseded">Substituídas</option>
+              </select>
+            </label>
+            <label for="institutional-review-source-id">ID canônico da fonte <span id="institutional-review-filter-help">(correspondência exata; não busca trechos)</span>
+              <input id="institutional-review-source-id" type="search" autocomplete="off" maxlength="120" placeholder="Ex.: web.ufg.portal" data-i18n-placeholder="placeholder.cadu-review-source-id" aria-describedby="institutional-review-filter-help">
+            </label>
+            <button type="submit"><i class="fas fa-filter" aria-hidden="true"></i> Aplicar</button>
+            <button type="button" id="institutional-review-clear"><i class="fas fa-eraser" aria-hidden="true"></i> Limpar</button>
+          </form>
+          <div id="institutional-review-status" class="kc-cadu-review-queue__status" role="status" aria-live="polite" aria-atomic="true">Carregando fila editorial institucional…</div>
+          <div class="kc-cadu-review-queue__list" id="institutional-review-list" role="list">
+            <div class="kc-cadu-review-queue__empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Consultando solicitações…</div>
+          </div>
+          <nav class="kc-cadu-review-queue__pager" aria-label="Paginação da fila editorial" data-i18n-aria-label="aria-label.cadu-review-queue-pagination">
+            <span id="institutional-review-page-meta">0 solicitações</span>
+            <button type="button" id="institutional-review-prev" disabled><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+            <button type="button" id="institutional-review-next" disabled>Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+          </nav>
+        </section>
       </section>
 
       <!-- ============== TAB: PIPELINE (v0.4.0) ============== -->
@@ -1011,7 +1219,7 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a36e7ff58eac3281"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=e7dd2ac622f04815"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=67ebb2f14bf5d420"></script>
 </body>
 </html>

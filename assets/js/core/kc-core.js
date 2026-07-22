@@ -759,12 +759,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.addEventListener('click', (e) => {
     const voteTrigger = e.target.closest('[data-action], [data-kc-vote]');
     if (!voteTrigger) return;
-
     let voteType = '';
     const action = String(voteTrigger.getAttribute('data-action') || '').trim().toLowerCase();
     if (action === 'vote-hot') voteType = 'hot';
     if (action === 'vote-cold') voteType = 'cold';
-
     if (!voteType) {
       const legacyVote = String(voteTrigger.getAttribute('data-kc-vote') || '').trim().toLowerCase();
       if (legacyVote === 'hot' || legacyVote === 'cold') voteType = legacyVote;
@@ -772,10 +770,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!voteType) return;
     // Prevent any ancestor navigation / accidental form submit from hijacking the vote.
-    try {
-      e.preventDefault();
-      e.stopPropagation();
-    } catch (_) { /* ignore */ }
+    e.preventDefault();
+    e.stopPropagation();
     if (typeof vote === 'function') vote(voteTrigger, voteType);
   });
 

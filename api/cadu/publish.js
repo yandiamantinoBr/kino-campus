@@ -11,6 +11,11 @@ const REVIEW_POLICY = Object.freeze({
   contentKind: 'institutional_site',
   origin: 'cadu-admin-map-ufg',
 });
+const UNSAFE_REVIEW_NOTE_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
+
+function canonicalReviewNote(value) {
+  return String(value ?? '').trim();
+}
 
 function canonicalHttpsUrl(value) {
   try {
@@ -34,7 +39,8 @@ function institutionalReviewPayload(body) {
     : String(body.instagram_handle).trim();
   const expectedKey = `map-ufg-review:${sourceId}:${sourceRevision}`;
   const tier = body.tier == null || body.tier === '' ? null : body.tier;
-  const note = body.note == null || String(body.note).trim() === '' ? null : String(body.note).trim();
+  const normalizedNote = body.note == null ? '' : canonicalReviewNote(body.note);
+  const note = normalizedNote === '' ? null : normalizedNote;
   const category = typeof body.category === 'string' && body.category.trim()
     ? body.category.trim()
     : 'institutional';
@@ -69,7 +75,7 @@ function institutionalReviewPayload(body) {
   if (tier !== null && (!Number.isInteger(tier) || tier < 1 || tier > 3)) {
     return { error: 'tier deve ser 1, 2, 3 ou null' };
   }
-  if (note !== null && (note.length > 500 || /[\u0000-\u001f\u007f]/.test(note))) {
+  if (note !== null && (note.length > 500 || UNSAFE_REVIEW_NOTE_CONTROL.test(note))) {
     return { error: 'note inválida para revisão institucional' };
   }
 

@@ -36,6 +36,44 @@ function isolatedFunction(name, dependencies = []) {
   )();
 }
 
+function isolatedInstitutionalReviewFunction(name, dependencies = []) {
+  const states = ['pending', 'approved', 'rejected', 'superseded'];
+  const decisions = ['approved', 'rejected', 'superseded'];
+  const itemKeys = [
+    'id', 'requested_by', 'source_id', 'source_url', 'content_url', 'instagram_handle',
+    'content_kind', 'intent', 'idempotency_key', 'source_revision', 'registry_sha256',
+    'name', 'note', 'tier', 'category', 'origin', 'state', 'resolved_by', 'resolved_at',
+    'resolution_note', 'created_at', 'updated_at',
+  ];
+  return Function(
+    '"use strict";\n' +
+    `const INSTITUTIONAL_REVIEW_STATES = Object.freeze(${JSON.stringify(states)});\n` +
+    `const INSTITUTIONAL_REVIEW_DECISIONS = Object.freeze(${JSON.stringify(decisions)});\n` +
+    `const INSTITUTIONAL_REVIEW_ITEM_KEYS = Object.freeze(${JSON.stringify(itemKeys)});\n` +
+    dependencies.map((dependency) => `const ${dependency} = ${functionSource(dependency)};`).join('\n') +
+    `\nreturn (${functionSource(name)});`,
+  )();
+}
+
+function pendingReviewAuthorityHarness(apiFetchResponse) {
+  return Function(
+    'apiFetchResponse',
+    '"use strict";\n' +
+    'var INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT = 100;\n' +
+    'var INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS = 500;\n' +
+    'var state = { sourceCatalog: null, pendingInstitutionalReviewsBySource: Object.create(null), ' +
+      'pendingInstitutionalReviewAuthorityState: "loading", pendingInstitutionalReviewAuthorityError: "", ' +
+      'pendingInstitutionalReviewAuthorityRequestGeneration: 0 };\n' +
+    'function renderSitesTable() {}\n' +
+    'function normalizeInstitutionalReviewQueueResponse(data) { return data; }\n' +
+    functionSource('institutionalReviewQueuePathFor') + '\n' +
+    functionSource('pendingInstitutionalReviewReference') + '\n' +
+    functionSource('pendingInstitutionalReviewAuthorityFailure') + '\n' +
+    'async ' + functionSource('loadPendingInstitutionalReviewAuthority') + '\n' +
+    'return { state: state, load: loadPendingInstitutionalReviewAuthority };',
+  )(apiFetchResponse);
+}
+
 describe('admin Cadu runtime hardening', () => {
   test('marks OpenClaw online only after a fresh and complete status snapshot', () => {
     const openclawStatusData = isolatedFunction('openclawStatusData', [
@@ -228,6 +266,8 @@ describe('admin Cadu runtime hardening', () => {
     const normalizePublicFeedResponse = isolatedFunction('normalizePublicFeedResponse', [
       'feedTimestampMs',
       'normalizePublicFeedItem',
+      'normalizeSourceDiagnosticUrl',
+      'normalizeSourceDiagnostics',
     ]);
     const valid = normalizePublicFeedResponse({
       source: 'curator_artifacts',
@@ -244,6 +284,36 @@ describe('admin Cadu runtime hardening', () => {
       future_timestamps: 0,
       total: 1,
       has_more: false,
+      source_diagnostics_artifact: 'curadoria-v4.4-daily-2026-07-14.json',
+      source_diagnostics_at: '2026-07-14T12:00:00.000Z',
+      source_diagnostics_mode: 'daily',
+      source_diagnostics: [{
+        sourceRegistryId: 'web.ufg.portal',
+        legacyId: 'ufg',
+        displayName: 'Universidade Federal de Goiás',
+        declaredUrl: 'https://ufg.br',
+        collectionUrl: 'https://ufg.br',
+        tier: 1,
+        state: 'ok',
+        newsItems: 4,
+        eventItems: 2,
+        collectedItems: 6,
+        classifiedItems: 5,
+        elapsedMs: 321,
+      }, {
+        sourceRegistryId: 'web.legacy.tvufg',
+        legacyId: 'tvufg',
+        displayName: 'TV UFG',
+        declaredUrl: 'https://tvufg.org.br',
+        collectionUrl: null,
+        tier: 1,
+        state: 'no_feed',
+        newsItems: null,
+        eventItems: null,
+        collectedItems: null,
+        classifiedItems: null,
+        elapsedMs: 0,
+      }],
       items: [{
         chunk_id: 'a1b2c3d4e5f60708',
         heading: 'Edital público',
@@ -262,8 +332,16 @@ describe('admin Cadu runtime hardening', () => {
       meta: {
         source: 'curator_artifacts', privacy: 'public_only', status: 'ready',
         contractInvalidArtifacts: 0, validArtifacts: 2,
+        sourceDiagnosticsArtifact: 'curadoria-v4.4-daily-2026-07-14.json',
+        sourceDiagnosticsMode: 'daily',
       },
     });
+    expect(valid.meta.sourceDiagnostics).toEqual([expect.objectContaining({
+      sourceRegistryId: 'web.ufg.portal', state: 'ok', collectedItems: 6, classifiedItems: 5,
+    }), expect.objectContaining({
+      sourceRegistryId: 'web.legacy.tvufg', state: 'no_feed', collectedItems: null,
+    })]);
+    expect(valid.meta.sourceDiagnosticsAt).toBe(Date.parse('2026-07-14T12:00:00.000Z'));
     expect(valid.items[0]).toMatchObject({ heading: 'Edital público', status: 'publicável' });
     expect(() => normalizePublicFeedResponse({ items: [], total: 0 }))
       .toThrow(/contrato de feed público/);
@@ -273,6 +351,83 @@ describe('admin Cadu runtime hardening', () => {
       artifacts_scanned: 1, invalid_artifacts: 0, contract_invalid_artifacts: 1,
       valid_artifacts: 1, future_timestamps: 0, total: 0, has_more: false, items: [],
     })).toThrow(/contadores de artefatos inconsistentes/);
+
+    const malformedDiagnostics = normalizePublicFeedResponse({
+      source: 'curator_artifacts', privacy: 'public_only', legacy_memory_feed_retired: true,
+      status: 'ready', stale: false, latest_collection_at: null, age_seconds: null,
+      artifacts_scanned: 0, invalid_artifacts: 0, contract_invalid_artifacts: 0,
+      valid_artifacts: 0, future_timestamps: 0, total: 0, has_more: false, items: [],
+      source_diagnostics_artifact: '../private.json',
+      source_diagnostics: [{
+        sourceRegistryId: 'web.ufg.portal', legacyId: 'ufg', displayName: 'UFG',
+        declaredUrl: 'https://ufg.br', collectionUrl: 'https://ufg.br', tier: 1,
+        state: 'invented', newsItems: 0, eventItems: 0, collectedItems: 0,
+        classifiedItems: 0, elapsedMs: 1, unexpected: true,
+      }],
+    });
+    expect(malformedDiagnostics.items).toEqual([]);
+    expect(malformedDiagnostics.meta.sourceDiagnostics).toBeNull();
+    expect(malformedDiagnostics.meta.sourceDiagnosticsArtifact).toBeNull();
+  });
+
+  test('rejects source diagnostics atomically across identity, shape, transport and bound violations', () => {
+    const normalizeSourceDiagnostics = isolatedFunction('normalizeSourceDiagnostics', [
+      'feedTimestampMs',
+      'normalizeSourceDiagnosticUrl',
+    ]);
+    const row = {
+      sourceRegistryId: 'web.ufg.portal', legacyId: 'ufg', displayName: 'UFG',
+      declaredUrl: 'https://ufg.br', collectionUrl: 'https://ufg.br', tier: 1,
+      state: 'ok', newsItems: 1, eventItems: 0, collectedItems: 1,
+      classifiedItems: 1, elapsedMs: 20,
+    };
+    const payload = {
+      source_diagnostics: [row],
+      source_diagnostics_artifact: 'curadoria-v4.4-full-2026-07-22.json',
+      source_diagnostics_at: '2026-07-22T12:00:00.000Z',
+      source_diagnostics_mode: 'full',
+    };
+    expect(normalizeSourceDiagnostics(payload)).toMatchObject({
+      mode: 'full', items: [expect.objectContaining({ sourceRegistryId: 'web.ufg.portal' })],
+    });
+    [
+      { ...payload, source_diagnostics: [{ ...row, sourceRegistryId: 'legacy_source' }] },
+      { ...payload, source_diagnostics: [{ ...row, declaredUrl: 'http://ufg.br' }] },
+      { ...payload, source_diagnostics: [{ ...row, collectedItems: Number.MAX_SAFE_INTEGER + 1 }] },
+      { ...payload, source_diagnostics: [{ ...row, failure: 'bad\u0000value' }] },
+      { ...payload, source_diagnostics: [{ ...row, extra: true }] },
+      { ...payload, source_diagnostics: [row, { ...row }] },
+      { ...payload, source_diagnostics_artifact: '../private.json' },
+      { ...payload, source_diagnostics_mode: 'invented' },
+      { ...payload, source_diagnostics: Array.from({ length: 501 }, () => row) },
+    ].forEach((candidate) => expect(normalizeSourceDiagnostics(candidate)).toBeNull());
+  });
+
+  test('presents source execution diagnostics separately from static transport audit', () => {
+    const sourceDiagnosticPresentation = Function(
+      'catalogLabel',
+      `"use strict"; return (${functionSource('sourceDiagnosticPresentation')});`,
+    )((value) => ({ daily: 'Execução diária' }[value] || value));
+    expect(sourceDiagnosticPresentation({
+      state: 'budget', collectedItems: 3, classifiedItems: null, elapsedMs: 2500,
+      failure: 'budget reached',
+    }, {
+      sourceDiagnostics: [],
+      sourceDiagnosticsAt: Date.parse('2026-07-14T12:00:00.000Z'),
+      sourceDiagnosticsMode: 'daily',
+      sourceDiagnosticsArtifact: 'curadoria-v4.4-daily-2026-07-14.json',
+    })).toMatchObject({
+      tone: 'budget', label: 'Limite de tempo',
+      detail: '3 coletado(s) · classificação não medida · 2500 ms',
+      failure: 'budget reached',
+    });
+    expect(sourceDiagnosticPresentation(null, { sourceDiagnostics: [] })).toMatchObject({
+      tone: 'unmatched', label: 'Sem correlação nesta execução',
+    });
+    expect(sourceDiagnosticPresentation(null, { sourceDiagnostics: null })).toMatchObject({
+      tone: 'unavailable', label: 'Diagnóstico indisponível',
+    });
+    expect(functionSource('sourceRuntimeDiagnosticHtml')).toContain('distinta da auditoria estática de transporte');
   });
 
   test('reads Telegram connectivity from structured health JSON before text fallback', () => {
@@ -681,7 +836,305 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('submitSourceReview(canonicalSource)');
     expect(functionSource('updateSourceSaveButton')).toContain('updateSourceReviewButton(source, draft)');
     expect(functionSource('updateSourceReviewButton')).toContain('sourceReviewEligibility(');
-    expect(functionSource('updateSourceReviewButton')).toContain("classList.remove('is-ok', 'is-pending', 'is-err')");
+    expect(functionSource('updateSourceReviewButton')).toContain("classList.remove('is-ok', 'is-pending', 'is-complete', 'is-err')");
+  });
+
+  test('keeps a terminal decision authoritative until the canonical source revision changes', () => {
+    const presentationFactory = Function(
+      'state',
+      '"use strict";\n' +
+      'function catalogLabel(value) { return String(value); }\n' +
+      functionSource('sourceReviewGateCopy') + '\n' +
+      functionSource('latestInstitutionalReviewForSource') + '\n' +
+      functionSource('institutionalReviewSubmissionAuthority') + '\n' +
+      `return (${functionSource('sourceReviewPresentation')});`,
+    );
+    const state = {
+      pendingInstitutionalReviewsBySource: {
+        'web.ufg.portal': {
+          id: '123e4567-e89b-42d3-a456-426614174000',
+          sourceId: 'web.ufg.portal',
+          sourceRevision: 'a'.repeat(64),
+          state: 'approved',
+        },
+      },
+      pendingInstitutionalReviewAuthorityState: 'ready',
+      pendingInstitutionalReviewAuthorityError: '',
+    };
+    const presentation = presentationFactory(state);
+    expect(presentation(
+      { id: 'web.ufg.portal', revision: 'a'.repeat(64) },
+      { allowed: true, reason: '' },
+    )).toMatchObject({
+      completed: true,
+      disabled: true,
+      label: 'Revisão aprovada',
+    });
+    expect(presentation(
+      { id: 'web.ufg.portal', revision: 'b'.repeat(64) },
+      { allowed: true, reason: '' },
+    )).toMatchObject({
+      pending: false,
+      disabled: false,
+      label: 'Enviar à revisão',
+    });
+  });
+
+  test('validates the institutional review queue and resolution envelopes fail-closed', () => {
+    const normalizeQueue = isolatedInstitutionalReviewFunction('normalizeInstitutionalReviewQueueResponse', [
+      'objectHasExactKeys',
+      'isCanonicalUuid',
+      'isValidIsoDate',
+      'isNullableBoundedString',
+      'sourceReviewCanonicalUrl',
+      'normalizeInstitutionalReviewItem',
+    ]);
+    const normalizeResolution = isolatedInstitutionalReviewFunction('normalizeInstitutionalReviewResolution', [
+      'objectHasExactKeys',
+      'isCanonicalUuid',
+      'isValidIsoDate',
+    ]);
+    const item = {
+      id: '123e4567-e89b-42d3-a456-426614174000',
+      requested_by: '00000000-0000-4000-8000-000000000001',
+      source_id: 'web.ufg.portal',
+      source_url: 'https://ufg.br/',
+      content_url: 'https://ufg.br/',
+      instagram_handle: 'ufg_oficial',
+      content_kind: 'institutional_site',
+      intent: 'review',
+      idempotency_key: `map-ufg-review:web.ufg.portal:${'b'.repeat(64)}`,
+      source_revision: 'b'.repeat(64),
+      registry_sha256: 'a'.repeat(64),
+      name: 'Universidade Federal de Goiás',
+      note: null,
+      tier: 1,
+      category: 'university',
+      origin: 'cadu-admin-map-ufg',
+      state: 'pending',
+      resolved_by: null,
+      resolved_at: null,
+      resolution_note: null,
+      created_at: '2026-07-22T12:00:00.000Z',
+      updated_at: '2026-07-22T12:00:00.000Z',
+    };
+    const response = {
+      items: [item], total: 1, limit: 10, offset: 0, has_more: false,
+      filters: { state: 'pending', source_id: 'web.ufg.portal' },
+    };
+    expect(normalizeQueue(response, {
+      state: 'pending', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    })).toMatchObject({ total: 1, limit: 10, offset: 0, hasMore: false });
+    expect(() => normalizeQueue({ ...response, unexpected: true }, { limit: 10, offset: 0 })).toThrow(/contrato inesperado/);
+    expect(() => normalizeQueue({ ...response, items: [{ ...item, source_url: 'javascript:alert(1)' }] }, {
+      state: 'pending', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    })).toThrow(/URL institucional inválida/);
+    expect(() => normalizeQueue({
+      ...response,
+      filters: { state: 'pending', source_id: null },
+      items: [{ ...item, source_id: 'legacy_source' }],
+    }, {
+      state: 'pending', sourceId: '', limit: 10, offset: 0,
+    })).toThrow(/ID canônico inválido/);
+    expect(() => normalizeQueue({ ...response, items: [{ ...item, resolved_by: item.requested_by }] }, {
+      state: 'pending', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    })).toThrow(/resolução inconsistente/);
+    expect(() => normalizeQueue({ ...response, has_more: true }, {
+      state: 'pending', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    })).toThrow(/contagem inconsistente/);
+    expect(() => normalizeQueue({ ...response, filters: { state: 'pending', source_id: 'web.ufg.outra' } }, {
+      state: 'pending', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    })).toThrow(/filtro exato de fonte não confirmado/);
+
+    const longResolutionNote = `<strong>${'x'.repeat(983)}</strong>`;
+    expect(longResolutionNote).toHaveLength(1000);
+    const terminalItem = {
+      ...item,
+      state: 'approved',
+      resolved_by: item.requested_by,
+      resolved_at: '2026-07-22T13:00:00.000Z',
+      resolution_note: longResolutionNote,
+    };
+    const terminalResponse = {
+      ...response,
+      items: [terminalItem],
+      filters: { state: 'approved', source_id: 'web.ufg.portal' },
+    };
+    expect(normalizeQueue(terminalResponse, {
+      state: 'approved', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    }).items[0].resolution_note).toBe(longResolutionNote);
+    expect(() => normalizeQueue({
+      ...terminalResponse,
+      items: [{ ...terminalItem, resolution_note: `${longResolutionNote}x` }],
+    }, {
+      state: 'approved', sourceId: 'web.ufg.portal', limit: 10, offset: 0,
+    })).toThrow(/nota inválida/);
+    expect(functionSource('institutionalReviewCardHtml')).toContain('escapeHtml(item.resolution_note)');
+
+    const resolution = {
+      id: item.id,
+      source_id: item.source_id,
+      source_revision: item.source_revision,
+      state: 'approved',
+      resolved_by: item.requested_by,
+      resolved_at: '2026-07-22T13:00:00.000Z',
+      replayed: false,
+    };
+    expect(normalizeResolution(resolution, item, 'approved')).toEqual(resolution);
+    expect(() => normalizeResolution({ ...resolution, state: 'rejected' }, item, 'approved')).toThrow(/não confirmada/);
+    expect(() => normalizeResolution({ ...resolution, published: true }, item, 'approved')).toThrow(/contrato inesperado/);
+  });
+
+  test('builds the latest-review authority from every bounded history page and swaps it atomically', async () => {
+    const items = Array.from({ length: 101 }, (_, index) => ({
+      id: `review-${index + 1}`,
+      source_id: `web.ufg.source-${index + 1}`,
+      source_revision: String((index + 1) % 10).repeat(64),
+      state: index % 2 ? 'approved' : 'pending',
+      created_at: new Date(Date.UTC(2026, 6, 22, 12, 0, 0) - index * 1000).toISOString(),
+      resolved_at: index % 2 ? '2026-07-22T13:00:00.000Z' : null,
+    }));
+    const paths = [];
+    const harness = pendingReviewAuthorityHarness(async (path) => {
+      paths.push(path);
+      const url = new URL(path, 'https://kino.test');
+      const offset = Number(url.searchParams.get('offset'));
+      const limit = Number(url.searchParams.get('limit'));
+      const pageItems = items.slice(offset, offset + limit);
+      return {
+        ok: true,
+        data: {
+          items: pageItems,
+          total: items.length,
+          limit,
+          offset,
+          hasMore: offset + pageItems.length < items.length,
+        },
+      };
+    });
+
+    await expect(harness.load()).resolves.toBe(true);
+    expect(paths).toHaveLength(2);
+    expect(paths[0]).not.toContain('state=');
+    expect(paths[0]).toContain('limit=100');
+    expect(paths[1]).toContain('offset=100');
+    expect(harness.state.pendingInstitutionalReviewAuthorityState).toBe('ready');
+    expect(Object.keys(harness.state.pendingInstitutionalReviewsBySource)).toHaveLength(101);
+    expect(harness.state.pendingInstitutionalReviewsBySource['web.ufg.source-101'])
+      .toMatchObject({ id: 'review-101', sourceId: 'web.ufg.source-101', state: 'pending' });
+  });
+
+  test('keeps the previous pending snapshot on partial failure and ignores an older generation', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `old-review-${index + 1}`,
+      source_id: `web.ufg.old-${index + 1}`,
+      source_revision: 'a'.repeat(64),
+      state: 'pending',
+      created_at: new Date(Date.UTC(2026, 6, 22, 12, 0, 0) - index * 1000).toISOString(),
+      resolved_at: null,
+    }));
+    const inconsistent = pendingReviewAuthorityHarness(async (path) => {
+      const offset = Number(new URL(path, 'https://kino.test').searchParams.get('offset'));
+      return {
+        ok: true,
+        data: offset === 0
+          ? { items: firstPage, total: 101, limit: 100, offset: 0, hasMore: true }
+          : { items: [], total: 100, limit: 100, offset: 100, hasMore: false },
+      };
+    });
+    const retained = Object.create(null);
+    retained['web.ufg.retained'] = { id: 'retained-review' };
+    inconsistent.state.pendingInstitutionalReviewsBySource = retained;
+    await expect(inconsistent.load()).resolves.toBe(false);
+    expect(inconsistent.state.pendingInstitutionalReviewAuthorityState).toBe('error');
+    expect(inconsistent.state.pendingInstitutionalReviewsBySource).toBe(retained);
+
+    let releaseOlder;
+    let calls = 0;
+    const racing = pendingReviewAuthorityHarness(async () => {
+      calls += 1;
+      if (calls === 1) {
+        return new Promise((resolve) => { releaseOlder = resolve; });
+      }
+      return {
+        ok: true,
+        data: { items: [], total: 0, limit: 100, offset: 0, hasMore: false },
+      };
+    });
+    const older = racing.load();
+    const newer = racing.load();
+    await expect(newer).resolves.toBe(true);
+    releaseOlder({
+      ok: true,
+      data: {
+        items: [{
+          id: 'late', source_id: 'web.ufg.late', source_revision: 'b'.repeat(64),
+          state: 'pending', created_at: '2026-07-22T12:00:00.000Z', resolved_at: null,
+        }],
+        total: 1,
+        limit: 100,
+        offset: 0,
+        hasMore: false,
+      },
+    });
+    await expect(older).resolves.toBe(false);
+    expect(racing.state.pendingInstitutionalReviewAuthorityState).toBe('ready');
+    expect(racing.state.pendingInstitutionalReviewsBySource).toEqual({});
+  });
+
+  test('retains only the newest terminal or pending review per source and rejects reordered history', async () => {
+    const newest = {
+      id: 'review-newest', source_id: 'web.ufg.portal', source_revision: 'b'.repeat(64),
+      state: 'approved', created_at: '2026-07-22T12:00:00.000Z',
+      resolved_at: '2026-07-22T12:01:00.000Z',
+    };
+    const older = {
+      id: 'review-older', source_id: 'web.ufg.portal', source_revision: 'a'.repeat(64),
+      state: 'rejected', created_at: '2026-07-21T12:00:00.000Z',
+      resolved_at: '2026-07-21T12:01:00.000Z',
+    };
+    const latest = pendingReviewAuthorityHarness(async () => ({
+      ok: true,
+      data: { items: [newest, older], total: 2, limit: 100, offset: 0, hasMore: false },
+    }));
+    await expect(latest.load()).resolves.toBe(true);
+    expect(latest.state.pendingInstitutionalReviewsBySource['web.ufg.portal'])
+      .toMatchObject({ id: 'review-newest', state: 'approved', sourceRevision: 'b'.repeat(64) });
+
+    const reordered = pendingReviewAuthorityHarness(async () => ({
+      ok: true,
+      data: { items: [older, newest], total: 2, limit: 100, offset: 0, hasMore: false },
+    }));
+    const retained = { 'web.ufg.retained': { id: 'retained' } };
+    reordered.state.pendingInstitutionalReviewsBySource = retained;
+    await expect(reordered.load()).resolves.toBe(false);
+    expect(reordered.state.pendingInstitutionalReviewAuthorityState).toBe('error');
+    expect(reordered.state.pendingInstitutionalReviewsBySource).toBe(retained);
+  });
+
+  test('recognizes stale source reviews and blocks direct-mode resolution without inventing identity', () => {
+    const responseErrorCode = isolatedFunction('institutionalReviewResponseErrorCode');
+    expect(responseErrorCode({ status: 409, data: { detail: 'SOURCE_REVIEW_STALE' } }))
+      .toBe('SOURCE_REVIEW_STALE');
+    expect(responseErrorCode({ status: 409, data: { message: 'source_review_stale: source changed' } }))
+      .toBe('SOURCE_REVIEW_STALE');
+    expect(responseErrorCode({ status: 409, data: { detail: 'another_conflict' } })).toBe('');
+    expect(responseErrorCode({ status: 400, data: { detail: 'SOURCE_REVIEW_STALE' } })).toBe('');
+
+    const capabilityFactory = Function(
+      'getCaduConfig',
+      `"use strict"; return (${functionSource('institutionalReviewResolutionCapability')});`,
+    );
+    expect(capabilityFactory(() => ({ direct: false }))()).toEqual({ allowed: true, reason: '' });
+    expect(capabilityFactory(() => ({ direct: true }))()).toMatchObject({
+      allowed: false,
+      reason: expect.stringContaining('não comprova a identidade administrativa'),
+    });
+    expect(functionSource('resolveInstitutionalReview')).toContain('institutionalReviewResolutionCapability()');
+    expect(functionSource('resolveInstitutionalReview')).toContain("institutionalReviewResponseErrorCode(envelope) === 'SOURCE_REVIEW_STALE'");
+    expect(functionSource('resolveInstitutionalReview')).toContain('loadSites()');
+    expect(functionSource('resolveInstitutionalReview')).toContain('reconciledReview.state === decision');
+    expect(functionSource('resolveInstitutionalReview')).toContain('A resposta demorou, mas o servidor confirmou');
   });
 
   test('renders canonical catalog metadata in pt-BR with full institutional names', () => {

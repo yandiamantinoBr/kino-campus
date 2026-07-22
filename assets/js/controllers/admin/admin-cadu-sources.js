@@ -44,6 +44,17 @@
     'legacyReadsPreserved',
     'serviceRolePhaseA'
   ]);
+  var REVIEW_READINESS_CHECKS = Object.freeze([
+    'reviewTable',
+    'reviewConstraints',
+    'reviewIndexes',
+    'reviewRlsPolicy',
+    'reviewTableAcl',
+    'reviewGuardTrigger',
+    'reviewCreateRpc',
+    'reviewResolveRpc',
+    'reviewDependencies'
+  ]);
   var VIEWS = Object.freeze(['sources', 'entities', 'instagram', 'deferred']);
 
   function SourceRegistryContractError(code, path, message) {
@@ -281,6 +292,25 @@
     ) {
       fail('metadata_contract_not_ready', 'readiness.checks', 'expected the exact phase-a check set with every value true');
     }
+    if (payload.reviewContractVersion !== 'cadu-institutional-review-v1' ||
+        payload.reviewQueueReady !== true || payload.reviewProxyReady !== true) {
+      fail('review_contract_mismatch', 'readiness', 'institutional review queue/proxy is not ready');
+    }
+    requireObject(payload.reviewChecks, 'readiness.reviewChecks');
+    var reviewCheckNames = Object.keys(payload.reviewChecks).sort();
+    var expectedReviewCheckNames = REVIEW_READINESS_CHECKS.slice().sort();
+    if (
+      reviewCheckNames.length !== expectedReviewCheckNames.length ||
+      reviewCheckNames.some(function (name, index) {
+        return name !== expectedReviewCheckNames[index] || payload.reviewChecks[name] !== true;
+      })
+    ) {
+      fail('review_contract_not_ready', 'readiness.reviewChecks', 'expected the exact review check set with every value true');
+    }
+    if (payload.edgeCapabilityVersion !== 'cadu-publish-capabilities-v1' ||
+        payload.institutionalReviewEnabled !== true) {
+      fail('review_edge_not_ready', 'readiness', 'institutional review Edge capability is not enabled');
+    }
     if (!Number.isSafeInteger(payload.metadataRowsValidated) || payload.metadataRowsValidated < 0) {
       fail('invalid_metadata_count', 'readiness.metadataRowsValidated', 'expected a non-negative integer');
     }
@@ -288,6 +318,11 @@
       ready: true,
       contractVersion: payload.contractVersion,
       phase: payload.phase,
+      reviewContractVersion: payload.reviewContractVersion,
+      reviewQueueReady: true,
+      reviewProxyReady: true,
+      edgeCapabilityVersion: payload.edgeCapabilityVersion,
+      institutionalReviewEnabled: true,
       metadataRowsValidated: payload.metadataRowsValidated,
       registryVersion: payload.registryVersion,
       registrySha256: payload.registrySha256

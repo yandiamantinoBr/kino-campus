@@ -116,7 +116,25 @@ describe('admin Cadu UX contracts', () => {
   test('does not claim that the shadow registry already drives production collection', () => {
     expect(html).toContain('O Curador em produção ainda consulta os inventários operacionais legados validados.');
     expect(html).toContain('permanece em modo de validação (<code>shadow</code>), com as fontes desabilitadas');
+    expect(html).toContain('este catálogo está em <code>shadow</code> e não ativa coleta');
+    expect(html).toContain('Curador e scanner ainda leem inventários operacionais validados');
     expect(html).not.toContain('perfis oficiais habilitados pelo catálogo canônico');
+  });
+
+  test('explains source counts and the five independent Mapa UFG state dimensions', () => {
+    expect(html).toContain('id="sites-source-record-count"');
+    expect(html).toContain('Fonte não é programa:');
+    expect(html).toContain('a contagem de fontes web não representa a quantidade de programas ou unidades da UFG');
+    [
+      '1. Identidade / revisão',
+      '2. Transporte',
+      '3. Ajuste administrativo',
+      '4. Fila editorial',
+      '5. Última execução'
+    ].forEach((label) => expect(html).toContain(label));
+    expect(html).toContain('não substitui a auditoria estática de transporte');
+    expect(controller).toContain("catalogCountLabel(summary.sources, 'registro de fonte web', 'registros de fonte web')");
+    expect(controller).toContain("catalogCountLabel(roleCounts.legacy, 'observação legada', 'observações legadas')");
   });
 
   test('loads and validates the canonical registry before enabling source views', () => {
@@ -128,7 +146,8 @@ describe('admin Cadu UX contracts', () => {
     });
     expect(controller).toContain("apiFetchResponse('/api/cadu/sites/source-registry')");
     expect(controller).toContain("'/api/cadu/sites/source-registry/readiness',");
-    expect(controller).toContain('{ timeoutMs: 4000 }');
+    expect(controller).toContain('{ timeoutMs: SOURCE_REGISTRY_READINESS_TIMEOUT_MS }');
+    expect(controller).toContain('SOURCE_REGISTRY_READINESS_TIMEOUT_MS = 15000');
     expect(controller).toContain('registryModel().validateRegistryReadiness(');
     expect(controller).toContain('registryModel().buildCatalog(registryEnvelope.data, registryResponseMeta(registryEnvelope))');
     expect(controller).toContain("'X-Cadu-Canonical-ETag': envelope.headers.canonicalEtag");
@@ -151,7 +170,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('var expectedEtag = canonicalResponseEtag(envelope)');
     expect(controller).toContain('Nenhuma repetição automática foi feita.');
     expect(controller).toContain("state.sourceSaveChains[sourceId]");
-    expect(controller).toContain('window.confirm(\'Criar ajuste administrativo estável para \' + source.id');
+    expect(controller).toContain('window.confirm(\'Salvar prioridade + nota como ajuste administrativo estável para \' + source.id');
+    expect(controller).toContain('Isso não corrige URL/Instagram nem ativa a pipeline.');
   });
 
   test('keeps inherited notes visibly separate and requires an explicit first tier', () => {
@@ -160,6 +180,41 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('function normalizedDraftNote(note)');
     expect(controller).toContain("String(note == null ? '' : note).trim() === '' ? null : String(note)");
     expect(controller).toContain('compare os valores e decida manualmente antes de salvar novamente');
+  });
+
+  test('makes the exact review block reason and adjustment scope visible without relying on title', () => {
+    expect(controller).toContain('Motivo do bloqueio: ');
+    expect(controller).toContain('aria-describedby="' + "' + escapeHtml(reviewGateId) + '" + '"');
+    expect(controller).toContain('class="kc-cadu-review-gate ');
+    expect(controller).toContain('salva apenas prioridade e nota administrativa. Não corrige URL/Instagram nem ativa a pipeline.');
+    expect(controller).toContain("stable ? 'Atualizar prioridade + nota' : 'Salvar prioridade + nota'");
+    expect(controller).not.toContain("stable ? 'Salvar ajuste' : 'Criar ajuste estável'");
+  });
+
+  test('provides a durable institutional review queue without implying publication', () => {
+    expect(html).toContain('id="institutional-review-queue"');
+    expect(html).toContain('id="institutional-review-filters"');
+    expect(html).toContain('(correspondência exata; não busca trechos)');
+    expect(html).toContain('Aprovar, rejeitar ou substituir apenas encerra a solicitação');
+    expect(html).toContain('nenhuma dessas ações publica conteúdo nem ativa fonte, Instagram ou pipeline');
+    expect(html).toContain('depois de conferir todo o histórico editorial limitado');
+    expect(html).toContain('o ID exato e a versão atual da fonte são confirmados novamente no servidor');
+    expect(html).toContain('Uma decisão terminal permanece visível e bloqueia o reenvio da mesma versão.');
+    expect(controller).toContain("return '/api/cadu/source-reviews?' + params.toString()");
+    expect(controller).toContain("apiFetchResponse('/api/cadu/source-reviews', {");
+    expect(controller).toContain("expected_source_revision: item.source_revision");
+    expect(controller).toContain("state.pendingInstitutionalReviewsBySource[source.id]");
+    expect(controller).toContain('loadPendingInstitutionalReviewAuthority()');
+    expect(controller).toContain('confirmPendingInstitutionalReviewForSource(source.id)');
+    expect(controller).toContain("latest.sourceRevision === source.revision");
+    expect(controller).toContain("completed: true");
+    expect(controller).toContain('INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS = 500');
+    expect(controller).toContain("pendingInstitutionalReviewAuthorityState: 'loading'");
+    expect(controller).toContain("label: authority.loading ? 'Verificando pendências' : 'Revisão indisponível'");
+    expect(controller).toContain('Não publica conteúdo e não ativa fonte, Instagram ou pipeline.');
+    expect(controller).toContain('function resolveInstitutionalReview(reviewId, decision)');
+    expect(controller).toContain('state.institutionalReviewResolveChains[reviewId]');
+    expect(controller).toContain('<details class="kc-cadu-review-queue__technical">');
   });
 
   test('serializes source writes, preserves dirty drafts and revalidates the exact effect', () => {
@@ -187,7 +242,7 @@ describe('admin Cadu UX contracts', () => {
 
   test('renders complete entity and Instagram coverage, including mapping gaps', () => {
     expect(controller).toContain("summary.entities, 'registros de entidade'");
-    expect(controller).toContain("summary.sources, 'fontes web candidatas'");
+    expect(controller).toContain("summary.sources, 'registros de fonte web (não programas)'");
     expect(controller).not.toContain("summary.sources, 'fontes web oficiais'");
     expect(html).toContain('Registros de entidade');
     expect(html).toContain('<option value="instagram">Perfis Instagram</option>');
@@ -242,6 +297,16 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('#tab-sites > .kc-cadu-toolbar { grid-template-columns:');
     expect(html).toContain('.kc-cadu-hero > .kc-cadu-toolbar { display: flex;');
     expect(html).toContain('.kc-cadu-activity-dropdown[hidden] { display: none !important; }');
+  });
+
+  test('turns every Mapa UFG table view into labelled cards on narrow screens', () => {
+    expect(html).toContain('#sites-table tbody td {');
+    expect(html).toContain('grid-template-columns: minmax(92px,31%) minmax(0,1fr)');
+    expect(html).toContain('#sites-table[data-view="sources"] td:nth-child(7)::before { content: "Ações"; }');
+    expect(html).toContain('#sites-table[data-view="entities"] td:nth-child(5)::before { content: "Cobertura"; }');
+    expect(html).toContain('#sites-table[data-view="instagram"] td:nth-child(5)::before { content: "Execução"; }');
+    expect(html).toContain('#sites-table[data-view="deferred"] td:nth-child(5)::before { content: "Evidências"; }');
+    expect(html).toContain('#sites-table[data-view="legacy"] td:nth-child(7)::before { content: "Ações"; }');
   });
 
   test('exports deferred legacy identities and row metadata rather than hashes alone', () => {
