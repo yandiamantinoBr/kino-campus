@@ -703,6 +703,13 @@ O sistema tem **3 camadas de autenticação** validando coisas distintas:
 - Delegação GLOBAL no `document.addEventListener('click')` (linha 1007) — `t.closest('.kc-cadu-ask-btn')`
 - Aciona `askCaduContext({...})` → POST `/api/cadu/openclaw/agent-send` direto (sem tentar endpoint dedicado)
 
+**Correlação com a última pipeline (2026-07-22):**
+- `GET /api/cadu/feed?with_meta=true` pode incluir o bloco aditivo `source_diagnostics` do artefato mais recente do Curador;
+- o cliente valida o bloco inteiro (forma exata, IDs, URLs HTTPS, estados, contadores, limites e metadados) e o descarta atomicamente se qualquer linha estiver fora do contrato, sem derrubar o feed público;
+- cada linha da visão **Fontes web** é correlacionada exclusivamente por `sourceRegistryId`; nome, URL e ordem não são usados como identidade;
+- “Última pipeline” descreve aquela execução do Curador (coletados, classificados, duração, modo, horário e artefato). É uma dimensão separada da auditoria estática de transporte do catálogo e não prova ativação, publicação ou saúde permanente da fonte;
+- “Sem correlação nesta execução” é esperado quando a fonte canônica ainda não pertence ao inventário operacional considerado; “Diagnóstico indisponível” significa bloco ausente ou inválido, não zero itens.
+
 ### 4.2 Feed coletado
 
 **Auto-load** (`refreshAll` linha 1650-1658):

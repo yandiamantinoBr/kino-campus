@@ -18,6 +18,16 @@
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
   var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
   var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
+  var INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT = 100;
+  var INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS = 500;
+  var INSTITUTIONAL_REVIEW_STATES = Object.freeze(['pending', 'approved', 'rejected', 'superseded']);
+  var INSTITUTIONAL_REVIEW_DECISIONS = Object.freeze(['approved', 'rejected', 'superseded']);
+  var INSTITUTIONAL_REVIEW_ITEM_KEYS = Object.freeze([
+    'id', 'requested_by', 'source_id', 'source_url', 'content_url', 'instagram_handle',
+    'content_kind', 'intent', 'idempotency_key', 'source_revision', 'registry_sha256',
+    'name', 'note', 'tier', 'category', 'origin', 'state', 'resolved_by', 'resolved_at',
+    'resolution_note', 'created_at', 'updated_at'
+  ]);
 
   var state = {
     allSites: [],
@@ -33,6 +43,22 @@
     sourceSaveChains: Object.create(null),
     sourceMutationQueue: null,
     catalogRequestGeneration: 0,
+    institutionalReviews: [],
+    institutionalReviewTotal: 0,
+    institutionalReviewLimit: 10,
+    institutionalReviewOffset: 0,
+    institutionalReviewState: 'pending',
+    institutionalReviewSourceId: '',
+    institutionalReviewLoading: false,
+    institutionalReviewError: '',
+    institutionalReviewActionError: '',
+    institutionalReviewRequestGeneration: 0,
+    institutionalReviewResolveChains: Object.create(null),
+    staleInstitutionalReviews: Object.create(null),
+    pendingInstitutionalReviewsBySource: Object.create(null),
+    pendingInstitutionalReviewAuthorityState: 'loading',
+    pendingInstitutionalReviewAuthorityError: '',
+    pendingInstitutionalReviewAuthorityRequestGeneration: 0,
     allFeedItems: [],
     feedLimit: FEED_PAGE_SIZE,
     feedPage: 0,
@@ -45,6 +71,7 @@
     feedLoading: false,
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
+    sourceDiagnosticsById: Object.create(null),
     sitesFilter: { q: '', tier: '', ig: '' },
     sitesPage: 0,
     sitesPageSize: 25,
@@ -466,17 +493,45 @@
     container.appendChild(item);
   }
 
+  function catalogCountLabel(value, singular, plural) {
+    var count = Number(value) || 0;
+    return count + ' ' + (count === 1 ? singular : plural);
+  }
+
   function renderCatalogSummary() {
     var container = $('#sites-catalog-summary');
+    var sourceCount = $('#sites-source-record-count');
+    var roleBreakdown = $('#sites-source-role-breakdown');
     if (!container) return;
     container.textContent = '';
     if (!state.sourceCatalog) {
       container.style.display = 'none';
+      if (sourceCount) sourceCount.textContent = '— registros de fonte web';
+      if (roleBreakdown) roleBreakdown.textContent = 'Catálogo canônico indisponível; o fallback legado não permite comparar entidades e tipos de fonte.';
       return;
     }
     var summary = state.sourceCatalog.summary;
+    var sources = state.sourceCatalog.sources || [];
+    var roleCounts = sources.reduce(function (counts, source) {
+      var role = source && source.role;
+      if (role === 'primary_site') counts.primary += 1;
+      else if (role === 'official_profile') counts.officialProfile += 1;
+      else if (role === 'legacy_observation') counts.legacy += 1;
+      else counts.other += 1;
+      return counts;
+    }, { primary: 0, officialProfile: 0, legacy: 0, other: 0 });
+    if (sourceCount) sourceCount.textContent = catalogCountLabel(summary.sources, 'registro de fonte web', 'registros de fonte web') + ' (não programas)';
+    if (roleBreakdown) {
+      var breakdown = [
+        catalogCountLabel(roleCounts.primary, 'site principal', 'sites principais'),
+        catalogCountLabel(roleCounts.officialProfile, 'página oficial associada', 'páginas oficiais associadas'),
+        catalogCountLabel(roleCounts.legacy, 'observação legada', 'observações legadas')
+      ];
+      if (roleCounts.other) breakdown.push(catalogCountLabel(roleCounts.other, 'registro de outro papel canônico', 'registros de outros papéis canônicos'));
+      roleBreakdown.textContent = 'Composição: ' + breakdown.join(' · ') + '.';
+    }
     appendCatalogMetric(container, summary.entities, 'registros de entidade');
-    appendCatalogMetric(container, summary.sources, 'fontes web candidatas');
+    appendCatalogMetric(container, summary.sources, 'registros de fonte web (não programas)');
     appendCatalogMetric(container, summary.instagramProfiles, 'perfis Instagram mapeados');
     appendCatalogMetric(container, summary.instagramConfirmed, 'Instagram confirmados');
     appendCatalogMetric(container, summary.instagramPending, 'Instagram pendentes/tentativos');
@@ -500,6 +555,9 @@
     confirmed_official: 'Identidade oficial confirmada',
     reviewed: 'Revisado',
     pending: 'Pendente',
+    approved: 'Aprovada',
+    rejected: 'Rejeitada',
+    superseded: 'Substituída',
     pending_review: 'Revisão pendente',
     pending_verification: 'Verificação pendente',
     tentative: 'Tentativo',
@@ -718,6 +776,188 @@
     return { allowed: true, reason: '', instagramHandle: instagram.handle };
   }
 
+  function sourceReviewGateCopy(eligibility) {
+    if (eligibility && eligibility.allowed) {
+      return {
+        stateClass: 'is-available',
+        label: 'Disponível: ',
+        detail: 'cria uma solicitação editorial pendente; não publica nem ativa a coleta.'
+      };
+    }
+    return {
+      stateClass: 'is-blocked',
+      label: 'Motivo do bloqueio: ',
+      detail: eligibility && eligibility.reason ? eligibility.reason : 'A fonte não atende aos critérios da revisão.'
+    };
+  }
+
+  function objectHasExactKeys(value, keys) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    var actual = Object.keys(value).sort();
+    var expected = keys.slice().sort();
+    return actual.length === expected.length && actual.every(function (key, index) {
+      return key === expected[index];
+    });
+  }
+
+  function isCanonicalUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+
+  function isValidIsoDate(value) {
+    return typeof value === 'string' && value.length <= 40 && !isNaN(new Date(value).getTime());
+  }
+
+  function isNullableBoundedString(value, maxLength) {
+    return value === null || (typeof value === 'string' && value.length <= maxLength);
+  }
+
+  function normalizeInstitutionalReviewItem(item) {
+    if (!objectHasExactKeys(item, INSTITUTIONAL_REVIEW_ITEM_KEYS)) throw new Error('item da fila com contrato inesperado');
+    if (!isCanonicalUuid(item.id) || !isCanonicalUuid(item.requested_by)) throw new Error('identidade técnica inválida na fila');
+    if (!/^web\.[a-z0-9][a-z0-9.-]{0,115}$/.test(item.source_id)) throw new Error('ID canônico inválido na fila');
+    var sourceUrl = sourceReviewCanonicalUrl(item.source_url);
+    var contentUrl = sourceReviewCanonicalUrl(item.content_url);
+    if (!sourceUrl || !contentUrl) throw new Error('URL institucional inválida na fila');
+    if (item.instagram_handle !== null && !/^[a-z0-9._]{1,30}$/i.test(item.instagram_handle)) throw new Error('Instagram inválido na fila');
+    if (item.content_kind !== 'institutional_site' || item.intent !== 'review' || item.origin !== 'cadu-admin-map-ufg') throw new Error('política editorial inválida na fila');
+    if (typeof item.idempotency_key !== 'string' || !item.idempotency_key || item.idempotency_key.length > 320) throw new Error('idempotência inválida na fila');
+    if (!/^[a-f0-9]{64}$/.test(item.source_revision) || !/^[a-f0-9]{64}$/.test(item.registry_sha256)) throw new Error('revisão canônica inválida na fila');
+    if (typeof item.name !== 'string' || !item.name.trim() || item.name.length > 240) throw new Error('nome institucional inválido na fila');
+    // A entrada desta tela continua limitada a 500 caracteres, mas o contrato
+    // canônico aceita notas de resolução de até 1.000 criadas por outros
+    // clientes. A renderização abaixo sempre passa o valor por escapeHtml.
+    if (!isNullableBoundedString(item.note, 500) || !isNullableBoundedString(item.resolution_note, 1000)) throw new Error('nota inválida na fila');
+    if (item.tier !== null && (!Number.isInteger(item.tier) || item.tier < 1 || item.tier > 3)) throw new Error('prioridade inválida na fila');
+    if (typeof item.category !== 'string' || !item.category || item.category.length > 100) throw new Error('categoria inválida na fila');
+    if (INSTITUTIONAL_REVIEW_STATES.indexOf(item.state) === -1) throw new Error('estado inválido na fila');
+    if (!isValidIsoDate(item.created_at) || !isValidIsoDate(item.updated_at)) throw new Error('data inválida na fila');
+    if (item.state === 'pending') {
+      if (item.resolved_by !== null || item.resolved_at !== null || item.resolution_note !== null) throw new Error('pendência com resolução inconsistente');
+    } else if (!isCanonicalUuid(item.resolved_by) || !isValidIsoDate(item.resolved_at)) {
+      throw new Error('resolução terminal incompleta');
+    }
+    return Object.assign({}, item, { source_url: sourceUrl, content_url: contentUrl });
+  }
+
+  function normalizeInstitutionalReviewQueueResponse(data, expected) {
+    var contractKeys = ['items', 'total', 'limit', 'offset', 'has_more', 'filters'];
+    if (!objectHasExactKeys(data, contractKeys)) throw new Error('resposta da fila com contrato inesperado');
+    if (!Array.isArray(data.items) || !Number.isInteger(data.total) || data.total < 0 ||
+        !Number.isInteger(data.limit) || data.limit < 1 || data.limit > 100 ||
+        !Number.isInteger(data.offset) || data.offset < 0 || typeof data.has_more !== 'boolean' ||
+        !data.filters || typeof data.filters !== 'object' || Array.isArray(data.filters)) {
+      throw new Error('paginação inválida na fila');
+    }
+    var context = expected || {};
+    if (context.limit != null && data.limit !== context.limit) throw new Error('limite divergente na fila');
+    if (context.offset != null && data.offset !== context.offset) throw new Error('offset divergente na fila');
+    if (context.state && data.filters.state !== context.state) throw new Error('filtro de estado divergente na fila');
+    var responseSourceId = data.filters.source_id == null ? '' : String(data.filters.source_id);
+    if ((context.sourceId || '') !== responseSourceId) throw new Error('filtro exato de fonte não confirmado');
+    if (data.items.length > data.limit || (data.items.length && data.offset + data.items.length > data.total) ||
+        data.has_more !== (data.offset + data.items.length < data.total)) {
+      throw new Error('contagem inconsistente na fila');
+    }
+    var ids = Object.create(null);
+    var items = data.items.map(function (raw) {
+      var item = normalizeInstitutionalReviewItem(raw);
+      if (ids[item.id]) throw new Error('revisão duplicada na fila');
+      ids[item.id] = true;
+      if (context.state && item.state !== context.state) throw new Error('estado divergente na fila');
+      if (context.sourceId && item.source_id !== context.sourceId) throw new Error('filtro exato de fonte divergente');
+      return item;
+    });
+    return {
+      items: items,
+      total: data.total,
+      limit: data.limit,
+      offset: data.offset,
+      hasMore: data.has_more,
+      filters: Object.assign({}, data.filters)
+    };
+  }
+
+  function normalizeInstitutionalReviewResolution(data, item, decision) {
+    var keys = ['id', 'source_id', 'source_revision', 'state', 'resolved_by', 'resolved_at', 'replayed'];
+    if (!objectHasExactKeys(data, keys) || !item || INSTITUTIONAL_REVIEW_DECISIONS.indexOf(decision) === -1) {
+      throw new Error('resolução editorial com contrato inesperado');
+    }
+    if (data.id !== item.id || data.source_id !== item.source_id ||
+        data.source_revision !== item.source_revision || data.state !== decision ||
+        !isCanonicalUuid(data.resolved_by) || !isValidIsoDate(data.resolved_at) ||
+        typeof data.replayed !== 'boolean') {
+      throw new Error('resolução editorial não confirmada');
+    }
+    return Object.assign({}, data);
+  }
+
+  function pendingInstitutionalReviewForSource(sourceId) {
+    return state.pendingInstitutionalReviewsBySource[String(sourceId || '')] || null;
+  }
+
+  function institutionalReviewSubmissionAuthority() {
+    if (state.pendingInstitutionalReviewAuthorityState === 'ready') {
+      return { allowed: true, loading: false, reason: '' };
+    }
+    if (state.pendingInstitutionalReviewAuthorityState === 'loading') {
+      return {
+        allowed: false,
+        loading: true,
+        reason: 'Aguarde a conferência completa das solicitações pendentes no servidor.'
+      };
+    }
+    return {
+      allowed: false,
+      loading: false,
+      reason: state.pendingInstitutionalReviewAuthorityError ||
+        'Não foi possível confirmar todas as solicitações pendentes; atualize a fila antes de enviar.'
+    };
+  }
+
+  function sourceReviewPresentation(source, eligibility) {
+    var pending = source && pendingInstitutionalReviewForSource(source.id);
+    if (pending) {
+      return {
+        pending: true,
+        disabled: true,
+        icon: 'fa-clock',
+        label: 'Revisão pendente',
+        title: 'Esta fonte já possui uma solicitação pendente na fila editorial institucional.',
+        gateCopy: {
+          stateClass: 'is-available',
+          label: 'Na fila: ',
+          detail: 'solicitação editorial pendente; ela ainda não foi publicada nem ativou a coleta.'
+        }
+      };
+    }
+    var authority = institutionalReviewSubmissionAuthority();
+    if (eligibility.allowed && !authority.allowed) {
+      return {
+        pending: false,
+        disabled: true,
+        icon: authority.loading ? 'fa-spinner fa-spin' : 'fa-triangle-exclamation',
+        label: authority.loading ? 'Verificando pendências' : 'Revisão indisponível',
+        title: authority.reason,
+        gateCopy: {
+          stateClass: 'is-blocked',
+          label: authority.loading ? 'Conferindo fila: ' : 'Envio bloqueado: ',
+          detail: authority.reason
+        }
+      };
+    }
+    return {
+      pending: false,
+      disabled: !eligibility.allowed,
+      icon: eligibility.allowed ? 'fa-clipboard-check' : 'fa-lock',
+      label: eligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada',
+      title: eligibility.allowed
+        ? 'Cria uma sugestão durável pendente para revisão; não publica automaticamente.'
+        : 'Revisão bloqueada: ' + eligibility.reason,
+      gateCopy: sourceReviewGateCopy(eligibility)
+    };
+  }
+
   function sourceReviewIdempotencyKey(source) {
     return 'map-ufg-review:' + source.id + ':' + source.revision;
   }
@@ -744,6 +984,414 @@
       category: firstEntity ? firstEntity.kind : source.sourceKind,
       source: 'cadu-admin-map-ufg'
     };
+  }
+
+  function formatInstitutionalReviewDate(value) {
+    if (!isValidIsoDate(value)) return '—';
+    return new Date(value).toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  function institutionalReviewDecisionLabel(decision) {
+    if (decision === 'approved') return 'Aprovar';
+    if (decision === 'rejected') return 'Rejeitar';
+    if (decision === 'superseded') return 'Substituir';
+    return 'Resolver';
+  }
+
+  function institutionalReviewResolutionCapability() {
+    var cfg = getCaduConfig();
+    if (cfg.direct) {
+      return {
+        allowed: false,
+        reason: 'Resolução indisponível no modo local direto: esse transporte não comprova a identidade administrativa. Use o proxy autenticado do KinoCampus para decidir a solicitação.'
+      };
+    }
+    return { allowed: true, reason: '' };
+  }
+
+  function institutionalReviewResponseErrorCode(envelope) {
+    if (!envelope || envelope.status !== 409 || !envelope.data || typeof envelope.data !== 'object') return '';
+    var candidates = [envelope.data.code, envelope.data.error, envelope.data.detail, envelope.data.message];
+    for (var index = 0; index < candidates.length; index += 1) {
+      if (typeof candidates[index] !== 'string') continue;
+      var normalized = candidates[index].trim().toUpperCase();
+      if (normalized === 'SOURCE_REVIEW_STALE' || /^SOURCE_REVIEW_STALE(?:\s|:|-)/.test(normalized)) {
+        return 'SOURCE_REVIEW_STALE';
+      }
+    }
+    return '';
+  }
+
+  function institutionalReviewCardHtml(item) {
+    var busy = state.institutionalReviewResolveChains[item.id] || null;
+    var capability = institutionalReviewResolutionCapability();
+    var stale = state.staleInstitutionalReviews[item.id];
+    var instagram = item.instagram_handle
+      ? '<a href="https://www.instagram.com/' + encodeURIComponent(item.instagram_handle) + '/" target="_blank" rel="noopener">@' + escapeHtml(item.instagram_handle) + '</a>'
+      : '<span class="kc-cadu-muted">sem Instagram exclusivo</span>';
+    var resolution = item.state === 'pending' ? ''
+      : '<div class="kc-cadu-review-queue__resolution"><strong>Resolução:</strong> ' + escapeHtml(catalogLabel(item.state))
+        + (item.resolution_note ? ' · ' + escapeHtml(item.resolution_note) : ' · sem nota de resolução')
+        + ' · ' + escapeHtml(formatInstitutionalReviewDate(item.resolved_at)) + '</div>';
+    var actions = '';
+    if (item.state === 'pending') {
+      actions = '<div class="kc-cadu-review-queue__actions">'
+        + (!capability.allowed
+          ? '<div class="kc-cadu-review-queue__action-warning" role="note"><strong>Ações bloqueadas:</strong> ' + escapeHtml(capability.reason) + '</div>'
+          : (stale
+            ? '<div class="kc-cadu-review-queue__action-warning" role="note"><strong>Versão desatualizada:</strong> a fonte mudou desde esta solicitação. Esta revisão só pode ser marcada como substituída.</div>'
+            : ''))
+        + '<label for="institutional-review-note-' + escapeHtml(item.id) + '">Nota de resolução <span>(opcional)</span></label>'
+        + '<textarea id="institutional-review-note-' + escapeHtml(item.id) + '" class="kc-cadu-review-resolution-note" data-review-id="' + escapeHtml(item.id) + '" maxlength="500" rows="2" placeholder="Contexto objetivo para a decisão"' + ((busy || !capability.allowed) ? ' disabled' : '') + '></textarea>'
+        + '<div class="kc-cadu-review-queue__decision-buttons">'
+        + INSTITUTIONAL_REVIEW_DECISIONS.map(function (decision) {
+          var label = institutionalReviewDecisionLabel(decision);
+          var icon = decision === 'approved' ? 'fa-check' : (decision === 'rejected' ? 'fa-xmark' : 'fa-code-branch');
+          var className = decision === 'approved' ? 'is-approve' : (decision === 'rejected' ? 'is-reject' : 'is-supersede');
+          var resolving = busy && busy.decision === decision;
+          var blocked = busy || !capability.allowed || (stale && decision !== 'superseded');
+          return '<button type="button" class="kc-cadu-review-decision ' + className + '" data-review-id="' + escapeHtml(item.id) + '" data-review-decision="' + decision + '"' + (blocked ? ' disabled' : '') + '>'
+            + '<i class="fas ' + (resolving ? 'fa-spinner fa-spin' : icon) + '" aria-hidden="true"></i><span>' + (resolving ? 'Resolvendo…' : label) + '</span></button>';
+        }).join('')
+        + '</div><small>Resolver altera somente o estado desta solicitação. Não publica conteúdo e não ativa fonte, Instagram ou pipeline.</small>'
+        + '</div>';
+    }
+    return '<article class="kc-cadu-review-queue__item" role="listitem" data-review-id="' + escapeHtml(item.id) + '"' + (busy ? ' aria-busy="true"' : '') + '>'
+      + '<div class="kc-cadu-review-queue__item-head"><div><strong>' + escapeHtml(item.name) + '</strong><code>' + escapeHtml(item.source_id) + '</code></div>'
+      + badgeHtml(catalogLabel(item.state), item.state) + '</div>'
+      + '<div class="kc-cadu-review-queue__meta">'
+      + '<span><strong>Fonte:</strong> <a href="' + escapeHtml(item.source_url) + '" target="_blank" rel="noopener">' + escapeHtml(item.source_url.replace(/^https?:\/\//, '')) + '</a></span>'
+      + '<span><strong>Instagram:</strong> ' + instagram + '</span>'
+      + '<span><strong>Criada:</strong> ' + escapeHtml(formatInstitutionalReviewDate(item.created_at)) + '</span>'
+      + '<span><strong>Prioridade:</strong> ' + escapeHtml(item.tier == null ? '—' : ('T' + item.tier)) + '</span>'
+      + '</div>'
+      + (item.note ? '<p class="kc-cadu-review-queue__note"><strong>Nota da fonte:</strong> ' + escapeHtml(item.note) + '</p>' : '')
+      + resolution
+      + '<details class="kc-cadu-review-queue__technical"><summary>Detalhes técnicos</summary>'
+      + '<div><span>Revisão:</span><code>' + escapeHtml(item.id) + '</code></div>'
+      + '<div><span>Versão da fonte:</span><code>' + escapeHtml(item.source_revision) + '</code></div>'
+      + '<div><span>Catálogo:</span><code>' + escapeHtml(item.registry_sha256) + '</code></div>'
+      + '<div><span>Solicitante:</span><code>' + escapeHtml(item.requested_by) + '</code></div>'
+      + (item.resolved_by ? '<div><span>Responsável pela resolução:</span><code>' + escapeHtml(item.resolved_by) + '</code></div>' : '')
+      + '</details>'
+      + actions
+      + '</article>';
+  }
+
+  function renderInstitutionalReviewQueue() {
+    var section = $('#institutional-review-queue');
+    var status = $('#institutional-review-status');
+    var list = $('#institutional-review-list');
+    var count = $('#institutional-review-count');
+    var prev = $('#institutional-review-prev');
+    var next = $('#institutional-review-next');
+    var meta = $('#institutional-review-page-meta');
+    var refresh = $('#institutional-review-refresh');
+    var stateSelect = $('#institutional-review-state');
+    var sourceInput = $('#institutional-review-source-id');
+    if (!section || !status || !list) return;
+    section.setAttribute('aria-busy', state.institutionalReviewLoading ? 'true' : 'false');
+    status.setAttribute('role', (state.institutionalReviewError || state.institutionalReviewActionError) ? 'alert' : 'status');
+    if (refresh) refresh.disabled = state.institutionalReviewLoading;
+    if (stateSelect && stateSelect.value !== state.institutionalReviewState) stateSelect.value = state.institutionalReviewState;
+    if (sourceInput && sourceInput.value !== state.institutionalReviewSourceId) sourceInput.value = state.institutionalReviewSourceId;
+    if (count) count.textContent = String(state.institutionalReviewTotal);
+    if (state.institutionalReviewLoading) {
+      status.className = 'kc-cadu-review-queue__status';
+      status.textContent = 'Carregando fila editorial institucional…';
+      if (!state.institutionalReviews.length) {
+        list.innerHTML = '<div class="kc-cadu-review-queue__empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Consultando solicitações…</div>';
+      }
+    } else if (state.institutionalReviewError) {
+      status.className = 'kc-cadu-review-queue__status is-error';
+      status.textContent = state.institutionalReviewError;
+      list.innerHTML = '<div class="kc-cadu-review-queue__empty is-error" role="alert">Não foi possível exibir a fila. Use “Atualizar fila” para tentar novamente.</div>';
+    } else {
+      status.className = 'kc-cadu-review-queue__status' + (state.institutionalReviewActionError ? ' is-error' : '');
+      status.textContent = state.institutionalReviewActionError || (state.institutionalReviewTotal
+        ? 'Fila sincronizada. Os filtros usam correspondência exata para o ID da fonte.'
+        : 'Fila sincronizada; nenhum item corresponde aos filtros atuais.');
+      list.innerHTML = state.institutionalReviews.length
+        ? state.institutionalReviews.map(institutionalReviewCardHtml).join('')
+        : '<div class="kc-cadu-review-queue__empty">Nenhuma solicitação neste estado e filtro.</div>';
+    }
+    var from = state.institutionalReviewTotal ? state.institutionalReviewOffset + 1 : 0;
+    var to = Math.min(state.institutionalReviewTotal, state.institutionalReviewOffset + state.institutionalReviews.length);
+    if (meta) meta.textContent = state.institutionalReviewTotal
+      ? ('Exibindo ' + from + '–' + to + ' de ' + state.institutionalReviewTotal)
+      : '0 solicitações';
+    if (prev) prev.disabled = state.institutionalReviewLoading || state.institutionalReviewOffset <= 0;
+    if (next) next.disabled = state.institutionalReviewLoading || state.institutionalReviewOffset + state.institutionalReviews.length >= state.institutionalReviewTotal;
+  }
+
+  function institutionalReviewQueuePathFor(filters) {
+    var query = filters || {};
+    var params = new URLSearchParams();
+    params.set('state', String(query.state || 'pending'));
+    if (query.sourceId) params.set('source_id', String(query.sourceId));
+    params.set('limit', String(query.limit));
+    params.set('offset', String(query.offset));
+    return '/api/cadu/source-reviews?' + params.toString();
+  }
+
+  function institutionalReviewQueuePath() {
+    return institutionalReviewQueuePathFor({
+      state: state.institutionalReviewState,
+      sourceId: state.institutionalReviewSourceId,
+      limit: state.institutionalReviewLimit,
+      offset: state.institutionalReviewOffset
+    });
+  }
+
+  function pendingInstitutionalReviewReference(item) {
+    return {
+      id: item.id,
+      sourceId: item.source_id,
+      sourceRevision: item.source_revision
+    };
+  }
+
+  function pendingInstitutionalReviewAuthorityFailure(message) {
+    state.pendingInstitutionalReviewAuthorityState = 'error';
+    state.pendingInstitutionalReviewAuthorityError = message ||
+      'Não foi possível confirmar integralmente as solicitações pendentes. Nenhum novo envio será liberado até atualizar a fila.';
+    if (state.sourceCatalog) renderSitesTable();
+  }
+
+  async function loadPendingInstitutionalReviewAuthority() {
+    var requestGeneration = ++state.pendingInstitutionalReviewAuthorityRequestGeneration;
+    state.pendingInstitutionalReviewAuthorityState = 'loading';
+    state.pendingInstitutionalReviewAuthorityError = '';
+    if (state.sourceCatalog) renderSitesTable();
+    var nextBySource = Object.create(null);
+    var reviewIds = Object.create(null);
+    var expectedTotal = null;
+    var offset = 0;
+    try {
+      while (true) {
+        var envelope = await apiFetchResponse(institutionalReviewQueuePathFor({
+          state: 'pending',
+          sourceId: '',
+          limit: INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT,
+          offset: offset
+        }), { timeoutMs: 12000 });
+        if (requestGeneration !== state.pendingInstitutionalReviewAuthorityRequestGeneration) return false;
+        if (!envelope.ok) throw new Error('HTTP ' + String(envelope.status || 0));
+        var page = normalizeInstitutionalReviewQueueResponse(envelope.data, {
+          state: 'pending',
+          sourceId: '',
+          limit: INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT,
+          offset: offset
+        });
+        if (expectedTotal === null) {
+          expectedTotal = page.total;
+          if (expectedTotal > INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS) {
+            throw new Error('limite seguro excedido');
+          }
+        } else if (page.total !== expectedTotal) {
+          throw new Error('fila mudou durante a paginação');
+        }
+        if (page.hasMore && !page.items.length) throw new Error('paginação sem progresso');
+        page.items.forEach(function (item) {
+          if (reviewIds[item.id] || nextBySource[item.source_id]) {
+            throw new Error('pendência duplicada na paginação');
+          }
+          reviewIds[item.id] = true;
+          nextBySource[item.source_id] = pendingInstitutionalReviewReference(item);
+        });
+        offset += page.items.length;
+        if (offset > INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS) throw new Error('limite seguro excedido');
+        if (!page.hasMore) break;
+      }
+      if (expectedTotal === null || offset !== expectedTotal || Object.keys(nextBySource).length !== expectedTotal) {
+        throw new Error('snapshot pendente incompleto');
+      }
+      if (requestGeneration !== state.pendingInstitutionalReviewAuthorityRequestGeneration) return false;
+      state.pendingInstitutionalReviewsBySource = nextBySource;
+      state.pendingInstitutionalReviewAuthorityState = 'ready';
+      state.pendingInstitutionalReviewAuthorityError = '';
+      if (state.sourceCatalog) renderSitesTable();
+      return true;
+    } catch (_) {
+      if (requestGeneration !== state.pendingInstitutionalReviewAuthorityRequestGeneration) return false;
+      pendingInstitutionalReviewAuthorityFailure();
+      return false;
+    }
+  }
+
+  async function confirmPendingInstitutionalReviewForSource(sourceId) {
+    if (!/^web\.[a-z0-9][a-z0-9.-]{0,115}$/.test(String(sourceId || ''))) {
+      throw new Error('ID canônico inválido para conferência da fila');
+    }
+    var envelope = await apiFetchResponse(institutionalReviewQueuePathFor({
+      state: 'pending',
+      sourceId: sourceId,
+      limit: 1,
+      offset: 0
+    }), { timeoutMs: 12000 });
+    if (!envelope.ok) throw new Error('fila pendente indisponível');
+    var normalized = normalizeInstitutionalReviewQueueResponse(envelope.data, {
+      state: 'pending', sourceId: sourceId, limit: 1, offset: 0
+    });
+    if (normalized.total > 1 || normalized.items.length !== normalized.total) {
+      throw new Error('autoridade pendente inconsistente para a fonte');
+    }
+    var pending = normalized.items[0] || null;
+    if (pending) {
+      state.pendingInstitutionalReviewsBySource[sourceId] = pendingInstitutionalReviewReference(pending);
+    } else {
+      delete state.pendingInstitutionalReviewsBySource[sourceId];
+    }
+    if (state.sourceCatalog) renderSitesTable();
+    return pending;
+  }
+
+  async function loadInstitutionalReviews(options) {
+    var opts = options || {};
+    if (opts.state !== undefined) state.institutionalReviewState = String(opts.state);
+    if (opts.sourceId !== undefined) state.institutionalReviewSourceId = String(opts.sourceId).trim();
+    if (opts.offset !== undefined) state.institutionalReviewOffset = Math.max(0, Number(opts.offset) || 0);
+    if (INSTITUTIONAL_REVIEW_STATES.indexOf(state.institutionalReviewState) === -1) state.institutionalReviewState = 'pending';
+    if (state.institutionalReviewSourceId && !/^web\.[a-z0-9][a-z0-9.-]{0,115}$/.test(state.institutionalReviewSourceId)) {
+      state.institutionalReviewError = 'Informe um ID canônico exato, como web.ufg.portal; buscas parciais não são aplicadas.';
+      state.institutionalReviewLoading = false;
+      state.institutionalReviews = [];
+      state.institutionalReviewTotal = 0;
+      renderInstitutionalReviewQueue();
+      return false;
+    }
+    var requestGeneration = ++state.institutionalReviewRequestGeneration;
+    state.institutionalReviewLoading = true;
+    state.institutionalReviewError = '';
+    if (!opts.preserveActionError) state.institutionalReviewActionError = '';
+    renderInstitutionalReviewQueue();
+    var envelope = await apiFetchResponse(institutionalReviewQueuePath(), { timeoutMs: 12000 });
+    if (requestGeneration !== state.institutionalReviewRequestGeneration) return false;
+    if (!envelope.ok) {
+      state.institutionalReviewLoading = false;
+      state.institutionalReviews = [];
+      state.institutionalReviewTotal = 0;
+      state.institutionalReviewError = 'Falha ao carregar a fila editorial (HTTP ' + String(envelope.status || 0) + ').';
+      renderInstitutionalReviewQueue();
+      return false;
+    }
+    var normalized;
+    try {
+      normalized = normalizeInstitutionalReviewQueueResponse(envelope.data, {
+        state: state.institutionalReviewState,
+        sourceId: state.institutionalReviewSourceId,
+        limit: state.institutionalReviewLimit,
+        offset: state.institutionalReviewOffset
+      });
+    } catch (_) {
+      state.institutionalReviewLoading = false;
+      state.institutionalReviews = [];
+      state.institutionalReviewTotal = 0;
+      state.institutionalReviewError = 'A fila respondeu com um contrato inválido e foi bloqueada por segurança.';
+      renderInstitutionalReviewQueue();
+      return false;
+    }
+    if (!normalized.items.length && normalized.total > 0 && normalized.offset >= normalized.total) {
+      state.institutionalReviewOffset = Math.max(0, Math.floor((normalized.total - 1) / normalized.limit) * normalized.limit);
+      state.institutionalReviewLoading = false;
+      return loadInstitutionalReviews();
+    }
+    state.institutionalReviews = normalized.items;
+    state.institutionalReviewTotal = normalized.total;
+    state.institutionalReviewLimit = normalized.limit;
+    state.institutionalReviewOffset = normalized.offset;
+    state.institutionalReviewLoading = false;
+    normalized.items.forEach(function (item) {
+      var stale = state.staleInstitutionalReviews[item.id];
+      if (stale && stale.sourceRevision !== item.source_revision) delete state.staleInstitutionalReviews[item.id];
+    });
+    renderInstitutionalReviewQueue();
+    if (state.sourceCatalog) renderSitesTable();
+    return true;
+  }
+
+  async function resolveInstitutionalReview(reviewId, decision) {
+    var item = state.institutionalReviews.find(function (entry) { return entry.id === reviewId; });
+    if (!item || item.state !== 'pending' || INSTITUTIONAL_REVIEW_DECISIONS.indexOf(decision) === -1 || state.institutionalReviewResolveChains[reviewId]) return;
+    var capability = institutionalReviewResolutionCapability();
+    if (!capability.allowed) {
+      state.institutionalReviewActionError = capability.reason;
+      renderInstitutionalReviewQueue();
+      showCaduError(capability.reason);
+      return;
+    }
+    if (state.staleInstitutionalReviews[reviewId] && decision !== 'superseded') {
+      state.institutionalReviewActionError = 'Esta revisão está desatualizada e só pode ser marcada como substituída.';
+      renderInstitutionalReviewQueue();
+      showCaduError(state.institutionalReviewActionError);
+      return;
+    }
+    var noteInput = document.querySelector('.kc-cadu-review-resolution-note[data-review-id="' + cssEscape(reviewId) + '"]');
+    var resolutionNote = noteInput ? String(noteInput.value || '').trim() : '';
+    if (resolutionNote.length > 500) {
+      state.institutionalReviewActionError = 'A nota de resolução deve ter no máximo 500 caracteres.';
+      renderInstitutionalReviewQueue();
+      return;
+    }
+    var action = institutionalReviewDecisionLabel(decision);
+    var confirmation = action + ' a solicitação de "' + item.name + '" (' + item.source_id + ')?\n\n'
+      + 'Nota de resolução: ' + (resolutionNote ? 'informada' : 'vazia') + '.\n'
+      + 'Esta ação apenas resolve a solicitação editorial. Ela NÃO publica conteúdo e NÃO ativa fonte, Instagram ou pipeline.';
+    if (!window.confirm(confirmation)) return;
+    state.institutionalReviewActionError = '';
+    state.institutionalReviewResolveChains[reviewId] = { decision: decision };
+    renderInstitutionalReviewQueue();
+    try {
+      var body = {
+        review_id: item.id,
+        expected_source_revision: item.source_revision,
+        decision: decision
+      };
+      if (resolutionNote) body.resolution_note = resolutionNote;
+      var envelope = await apiFetchResponse('/api/cadu/source-reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(body),
+        timeoutMs: 12000
+      });
+      if (!envelope.ok && institutionalReviewResponseErrorCode(envelope) === 'SOURCE_REVIEW_STALE') {
+        state.staleInstitutionalReviews[item.id] = { sourceRevision: item.source_revision };
+        var staleMessage = 'Esta revisão está desatualizada: a fonte mudou desde a solicitação. Ela só pode ser marcada como substituída. A fila e o catálogo foram atualizados para conferência.';
+        await Promise.all([
+          loadInstitutionalReviews({ preserveActionError: true }),
+          loadPendingInstitutionalReviewAuthority(),
+          loadSites()
+        ]);
+        state.institutionalReviewActionError = staleMessage;
+        showCaduError(staleMessage);
+        return;
+      }
+      if (!envelope.ok) throw new Error('HTTP ' + String(envelope.status || 0));
+      normalizeInstitutionalReviewResolution(envelope.data, item, decision);
+      delete state.staleInstitutionalReviews[item.id];
+      delete state.pendingInstitutionalReviewsBySource[item.source_id];
+      state.institutionalReviews = state.institutionalReviews.filter(function (entry) { return entry.id !== item.id; });
+      if (state.institutionalReviewTotal > 0) state.institutionalReviewTotal -= 1;
+      if (state.sourceCatalog) renderSitesTable();
+      showCaduError('Solicitação de ' + item.source_id + ' resolvida como ' + catalogLabel(decision) + '. Nenhum conteúdo foi publicado e nenhuma coleta foi ativada.', 'info');
+      await Promise.all([
+        loadInstitutionalReviews(),
+        loadPendingInstitutionalReviewAuthority()
+      ]);
+    } catch (error) {
+      var actionError = 'Não foi possível resolver a solicitação (' + String(error && error.message ? error.message : 'falha desconhecida') + '). A fila foi recarregada sem repetir a ação.';
+      await Promise.all([
+        loadInstitutionalReviews(),
+        loadPendingInstitutionalReviewAuthority()
+      ]);
+      state.institutionalReviewActionError = actionError;
+      showCaduError(actionError);
+    } finally {
+      delete state.institutionalReviewResolveChains[reviewId];
+      renderInstitutionalReviewQueue();
+    }
   }
 
   function registryResponseMeta(envelope) {
@@ -1276,13 +1924,22 @@
       draft,
       Boolean(state.sourceSaveChains[source.id])
     );
-    button.disabled = !eligibility.allowed;
-    button.title = eligibility.allowed
-      ? 'Cria uma sugestão durável pendente para revisão; não publica automaticamente.'
-      : 'Revisão bloqueada: ' + eligibility.reason;
+    var presentation = sourceReviewPresentation(source, eligibility);
+    button.disabled = presentation.disabled;
+    button.title = presentation.title;
     button.classList.remove('is-ok', 'is-pending', 'is-err');
-    button.innerHTML = '<i class="fas ' + (eligibility.allowed ? 'fa-clipboard-check' : 'fa-lock') + '"></i><span>' +
-      (eligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada') + '</span>';
+    if (presentation.pending) button.classList.add('is-pending');
+    button.innerHTML = '<i class="fas ' + presentation.icon + '"></i><span>' + presentation.label + '</span>';
+    var gate = row.querySelector('.kc-cadu-review-gate');
+    if (gate) {
+      var gateCopy = presentation.gateCopy;
+      gate.className = 'kc-cadu-review-gate ' + gateCopy.stateClass;
+      gate.textContent = '';
+      var gateLabel = document.createElement('strong');
+      gateLabel.textContent = gateCopy.label;
+      gate.appendChild(gateLabel);
+      gate.appendChild(document.createTextNode(gateCopy.detail));
+    }
   }
 
   function sourceConflictHtml(source, draft) {
@@ -1297,6 +1954,66 @@
       + 'Atual: ' + escapeHtml(serverTier) + ' · ' + escapeHtml(serverNote) + ' · ETag ' + escapeHtml(source.revision.slice(0, 12)) + '…<br>'
       + 'Rascunho: ' + escapeHtml(draftTier) + ' · ' + escapeHtml(draftNote) + '<br>'
       + 'Campos propostos: ' + escapeHtml(fields.join(', ') || 'nenhum') + '. Compare novamente antes de confirmar.'
+      + '</div>';
+  }
+
+  function sourceDiagnosticPresentation(diagnostic, meta) {
+    var feedMeta = meta || {};
+    var diagnosticsAvailable = Array.isArray(feedMeta.sourceDiagnostics);
+    var context = [];
+    if (feedMeta.sourceDiagnosticsAt) {
+      context.push(new Date(feedMeta.sourceDiagnosticsAt).toLocaleString('pt-BR'));
+    }
+    if (feedMeta.sourceDiagnosticsMode) context.push(catalogLabel(feedMeta.sourceDiagnosticsMode));
+    if (feedMeta.sourceDiagnosticsArtifact) context.push(feedMeta.sourceDiagnosticsArtifact);
+    var provenance = context.length ? context.join(' · ') : 'horário e artefato não informados';
+    if (!diagnosticsAvailable) {
+      return {
+        tone: 'unavailable',
+        label: 'Diagnóstico indisponível',
+        detail: 'O feed continua disponível, mas não trouxe um bloco operacional válido.',
+        provenance: provenance,
+        failure: ''
+      };
+    }
+    if (!diagnostic) {
+      return {
+        tone: 'unmatched',
+        label: 'Sem correlação nesta execução',
+        detail: 'A fonte canônica não apareceu no inventário operacional considerado pelo artefato.',
+        provenance: provenance,
+        failure: ''
+      };
+    }
+    var labels = {
+      ok: 'OK',
+      empty: 'Sem itens',
+      no_feed: 'Sem feed operacional',
+      quarantined: 'Em quarentena',
+      budget: 'Limite de tempo',
+      error: 'Erro de coleta'
+    };
+    function count(value, unavailable) { return value === null ? unavailable : String(value); }
+    return {
+      tone: diagnostic.state,
+      label: labels[diagnostic.state],
+      detail: (diagnostic.collectedItems === null ? count(null, 'coleta não medida') : count(diagnostic.collectedItems) + ' coletado(s)') + ' · ' +
+        (diagnostic.classifiedItems === null ? count(null, 'classificação não medida') : count(diagnostic.classifiedItems) + ' classificado(s)') + ' · ' +
+        diagnostic.elapsedMs + ' ms',
+      provenance: provenance,
+      failure: diagnostic.failure || ''
+    };
+  }
+
+  function sourceRuntimeDiagnosticHtml(source) {
+    var diagnostic = source && state.sourceDiagnosticsById[source.id];
+    var presentation = sourceDiagnosticPresentation(diagnostic, state.feedMeta);
+    return '<div class="kc-cadu-source-run kc-cadu-source-run--' + escapeHtml(presentation.tone) + '" role="group" aria-label="Diagnóstico da última execução da pipeline">'
+      + '<div><strong>Última pipeline:</strong> <span>' + escapeHtml(presentation.label) + '</span></div>'
+      + '<small>' + escapeHtml(presentation.detail) + '</small>'
+      + '<small>' + escapeHtml(presentation.provenance) + '</small>'
+      + (presentation.failure ? '<small class="kc-cadu-source-run__failure"><strong>Alerta:</strong> ' + escapeHtml(presentation.failure) + '</small>' : '')
+      + '<small class="kc-cadu-source-run__scope">Execução do Curador; distinta da auditoria estática de transporte.</small>'
       + '</div>';
   }
 
@@ -1325,11 +2042,17 @@
         + (blockingIssues.length ? '<div class="kc-cadu-review-issues"><strong>Pendência crítica:</strong><br>' + blockingIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '')
         + (informationalIssues.length ? '<div class="kc-cadu-review-issues"><strong>Observação informativa:</strong><br>' + informationalIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '');
       var reviewEligibility = sourceReviewEligibility(source, draft, saving);
-      var reviewTitle = reviewEligibility.allowed
-        ? 'Cria uma sugestão durável pendente para revisão; não publica automaticamente.'
-        : 'Revisão bloqueada: ' + reviewEligibility.reason;
-      var actions = '<button type="button" class="kc-cadu-publish-btn" data-source-id="' + escapeHtml(source.id) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewEligibility.allowed ? '' : ' disabled') + '>'
-        + '<i class="fas ' + (reviewEligibility.allowed ? 'fa-clipboard-check' : 'fa-lock') + '"></i><span>' + (reviewEligibility.allowed ? 'Enviar à revisão' : 'Revisão bloqueada') + '</span></button>'
+      var reviewPresentation = sourceReviewPresentation(source, reviewEligibility);
+      var reviewTitle = reviewPresentation.title;
+      var gateCopy = reviewPresentation.gateCopy;
+      var reviewGateId = 'review-gate-' + source.id;
+      var reviewGate = '<div class="kc-cadu-review-gate ' + gateCopy.stateClass + '" id="' + escapeHtml(reviewGateId) + '" role="status">'
+        + '<strong>' + escapeHtml(gateCopy.label) + '</strong>'
+        + escapeHtml(gateCopy.detail)
+        + '</div>';
+      var actions = '<button type="button" class="kc-cadu-publish-btn' + (reviewPresentation.pending ? ' is-pending' : '') + '" data-source-id="' + escapeHtml(source.id) + '" aria-describedby="' + escapeHtml(reviewGateId) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewPresentation.disabled ? ' disabled' : '') + '>'
+        + '<i class="fas ' + reviewPresentation.icon + '"></i><span>' + escapeHtml(reviewPresentation.label) + '</span></button>'
+        + reviewGate
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name) + '" data-ask-url="' + escapeHtml(site.url) + '" data-ask-instagram="' + escapeHtml(site.instagramContext || 'sem perfil associado') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '" title="Enviar todas as associações e seus status ao chat Cadu"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
       var tierClass = source.effectiveTier == null ? 'na' : String(source.effectiveTier);
       var priorityCell = administrativeMetadataAvailable
@@ -1347,11 +2070,12 @@
           + '<label class="kc-cadu-muted" for="tier-' + escapeHtml(source.id) + '">Prioridade do ajuste</label>'
           + '<select id="tier-' + escapeHtml(source.id) + '" class="kc-cadu-source-tier-select" data-source-id="' + escapeHtml(source.id) + '" aria-label="Prioridade estável de ' + escapeHtml(source.id) + '"' + (busy ? ' disabled' : '') + '>' + tierOptionsHtml(draft, !stable) + '</select>'
           + '<textarea class="kc-cadu-source-note-input" data-source-id="' + escapeHtml(source.id) + '" aria-label="Nota administrativa de ' + escapeHtml(source.id) + '" maxlength="500" rows="2" placeholder="Nota administrativa explícita; vazio remove a nota"' + (busy ? ' disabled' : '') + '>' + escapeHtml(draft.note) + '</textarea>'
-          + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Salvar ajuste' : 'Criar ajuste estável'))) + '</button>'
+          + '<button type="button" class="kc-cadu-save-source-btn" data-source-id="' + escapeHtml(source.id) + '"' + (busy || !canSave ? ' disabled' : '') + '>' + (saving ? 'Salvando…' : (readOnly ? 'Somente leitura' : (stable ? 'Atualizar prioridade + nota' : 'Salvar prioridade + nota'))) + '</button>'
+          + '<p class="kc-cadu-adjustment-scope"><strong>Escopo:</strong> salva apenas prioridade e nota administrativa. Não corrige URL/Instagram nem ativa a pipeline.</p>'
         : '<div class="kc-cadu-inherited-warning"><strong>Não incluídos neste espelho.</strong><br>Prioridade efetiva, nota e origem do ajuste administrativo só aparecem quando a rota canônica do Cadu está disponível.</div>';
       return '<tr data-source-id="' + escapeHtml(source.id) + '">'
         + '<td>' + priorityCell + '</td>'
-        + '<td>' + entityChips(source.entities) + '<code class="kc-cadu-source-id">' + escapeHtml(source.id) + '</code></td>'
+        + '<td><div class="kc-cadu-source-identity">' + entityChips(source.entities) + '<code class="kc-cadu-source-id">' + escapeHtml(source.id) + '</code>' + sourceRuntimeDiagnosticHtml(source) + '</div></td>'
         + '<td><a href="' + escapeHtml(source.canonicalUrl) + '" target="_blank" rel="noopener" class="kc-cadu-url-link">' + escapeHtml(source.canonicalUrl.replace(/^https?:\/\//, '')) + '</a><small class="kc-cadu-source-id">' + escapeHtml(catalogLabel(source.sourceKind)) + ' · shadow</small></td>'
         + '<td>' + profileLinks(source.instagramProfiles) + '</td>'
         + '<td>' + review + '</td>'
@@ -1523,7 +2247,7 @@
     }
     if (mutation.isFirstStable) {
       var inheritedWarning = source.isInheritedLegacy ? ' O valor legado exibido não será copiado automaticamente.' : '';
-      if (!window.confirm('Criar ajuste administrativo estável para ' + source.id + '? Prioridade: ' + (changes.tier == null ? 'herdar base' : 'T' + changes.tier) + '; nota: ' + (changes.note == null ? 'vazia' : 'informada') + '.' + inheritedWarning)) return;
+      if (!window.confirm('Salvar prioridade + nota como ajuste administrativo estável para ' + source.id + '? Prioridade: ' + (changes.tier == null ? 'herdar base' : 'T' + changes.tier) + '; nota: ' + (changes.note == null ? 'vazia' : 'informada') + '. Isso não corrige URL/Instagram nem ativa a pipeline.' + inheritedWarning)) return;
     }
     renderSitesTable();
     var envelope = await apiFetchResponse('/api/cadu/sites/' + mutation.path, {
@@ -1747,6 +2471,15 @@
   }
 
   async function submitSourceReview(source) {
+    if (pendingInstitutionalReviewForSource(source && source.id)) {
+      showCaduError('Esta fonte já possui uma solicitação pendente na fila editorial institucional. Nenhum novo envio foi feito.', 'info');
+      return;
+    }
+    var authority = institutionalReviewSubmissionAuthority();
+    if (!authority.allowed) {
+      showCaduError('Revisão bloqueada: ' + authority.reason);
+      return;
+    }
     var draft = state.sourceDrafts[source.id];
     var saving = Boolean(state.sourceSaveChains[source.id]);
     var eligibility = sourceReviewEligibility(source, draft, saving);
@@ -1771,6 +2504,19 @@
       btn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando…</span>';
     }
     try {
+      var serverPending;
+      try {
+        serverPending = await confirmPendingInstitutionalReviewForSource(source.id);
+      } catch (_) {
+        var authorityError = new Error('Não foi possível confirmar no servidor se esta fonte já possui revisão pendente. Nenhum envio foi feito; atualize a fila e tente novamente.');
+        authorityError.reviewAuthorityFailed = true;
+        pendingInstitutionalReviewAuthorityFailure(authorityError.message);
+        throw authorityError;
+      }
+      if (serverPending) {
+        showCaduError('O servidor confirmou que esta fonte já possui uma solicitação pendente. Nenhum novo envio foi feito.', 'info');
+        return;
+      }
       var data = await apiFetch('/api/cadu/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1786,14 +2532,25 @@
         btn.classList.add('is-pending');
         btn.innerHTML = '<i class="fas fa-clock"></i><span>' + (outcome.replayed ? 'Já pendente' : 'Revisão pendente') + '</span>';
       }
+      state.pendingInstitutionalReviewsBySource[source.id] = {
+        id: outcome.reviewId,
+        sourceId: source.id,
+        sourceRevision: source.revision
+      };
+      renderSitesTable();
       showCaduError((outcome.replayed ? 'A revisão já estava persistida' : 'Fonte enviada à revisão') +
         '. Ela permanece pendente e não foi publicada. Código: ' + outcome.policyCode + '.', 'info');
+      await Promise.all([
+        loadInstitutionalReviews({ state: 'pending', sourceId: source.id, offset: 0 }),
+        loadPendingInstitutionalReviewAuthority()
+      ]);
       setTimeout(hideCaduError, 7000);
     } catch (err) {
       if (btn) {
         btn.classList.remove('is-pending');
         btn.classList.add('is-err');
-        btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i><span>Falha no envio</span>';
+        btn.innerHTML = '<i class="fas fa-triangle-exclamation"></i><span>' +
+          (err && err.reviewAuthorityFailed ? 'Fila não confirmada' : 'Falha no envio') + '</span>';
       }
       showCaduError('Erro ao enviar para revisão: ' + (err && err.message ? err.message : err));
     } finally {
@@ -1909,6 +2666,117 @@
     }, null);
   }
 
+  function normalizeSourceDiagnosticUrl(value) {
+    if (value === null) return null;
+    if (typeof value !== 'string' || value.length < 1 || value.length > 500 ||
+        value !== value.trim() || /[\u0000-\u001f\u007f-\u009f]/.test(value)) return undefined;
+    try {
+      var parsed = new URL(value);
+      if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password || parsed.hash) {
+        return undefined;
+      }
+      return value;
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  function normalizeSourceDiagnostics(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data) ||
+        !Object.prototype.hasOwnProperty.call(data, 'source_diagnostics')) return null;
+    var rawItems = data.source_diagnostics;
+    if (!Array.isArray(rawItems) || rawItems.length > 500) return null;
+    var requiredKeys = [
+      'sourceRegistryId', 'legacyId', 'displayName', 'declaredUrl', 'collectionUrl',
+      'tier', 'state', 'newsItems', 'eventItems', 'collectedItems',
+      'classifiedItems', 'elapsedMs'
+    ];
+    var allowedKeys = requiredKeys.concat(['failure']);
+    var states = ['ok', 'empty', 'no_feed', 'quarantined', 'budget', 'error'];
+    var seenRegistryIds = Object.create(null);
+    var seenLegacyIds = Object.create(null);
+
+    function exactShape(item) {
+      var keys = Object.keys(item);
+      return requiredKeys.every(function (key) {
+        return Object.prototype.hasOwnProperty.call(item, key);
+      }) && keys.every(function (key) { return allowedKeys.indexOf(key) >= 0; });
+    }
+
+    function nullableCount(value) {
+      return value === null || (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0);
+    }
+
+    var items = [];
+    for (var index = 0; index < rawItems.length; index += 1) {
+      var item = rawItems[index];
+      if (!item || typeof item !== 'object' || Array.isArray(item) || !exactShape(item)) return null;
+      var sourceRegistryId = item.sourceRegistryId;
+      if (sourceRegistryId !== null &&
+          (typeof sourceRegistryId !== 'string' || !/^web\.[a-z0-9][a-z0-9.-]{0,115}$/.test(sourceRegistryId))) return null;
+      if (sourceRegistryId !== null && seenRegistryIds[sourceRegistryId]) return null;
+      if (typeof item.legacyId !== 'string' || !/^[a-z0-9][a-z0-9.-]{0,79}$/.test(item.legacyId) ||
+          seenLegacyIds[item.legacyId]) return null;
+      if (typeof item.displayName !== 'string' || item.displayName !== item.displayName.trim() ||
+          item.displayName.length < 1 || item.displayName.length > 80 || /[\u0000-\u001f\u007f-\u009f]/.test(item.displayName)) return null;
+      var declaredUrl = normalizeSourceDiagnosticUrl(item.declaredUrl);
+      var collectionUrl = normalizeSourceDiagnosticUrl(item.collectionUrl);
+      if (declaredUrl === undefined || collectionUrl === undefined ||
+          !Number.isSafeInteger(item.tier) || item.tier < 1 || item.tier > 3 ||
+          states.indexOf(item.state) < 0 ||
+          !nullableCount(item.newsItems) || !nullableCount(item.eventItems) ||
+          !nullableCount(item.collectedItems) || !nullableCount(item.classifiedItems) ||
+          !Number.isSafeInteger(item.elapsedMs) || item.elapsedMs < 0) return null;
+      if (Object.prototype.hasOwnProperty.call(item, 'failure') &&
+          (typeof item.failure !== 'string' || item.failure !== item.failure.trim() ||
+           item.failure.length < 1 || item.failure.length > 160 || /[\u0000-\u001f\u007f-\u009f]/.test(item.failure))) return null;
+      if (sourceRegistryId !== null) seenRegistryIds[sourceRegistryId] = true;
+      seenLegacyIds[item.legacyId] = true;
+      items.push({
+        sourceRegistryId: sourceRegistryId,
+        legacyId: item.legacyId,
+        displayName: item.displayName,
+        declaredUrl: declaredUrl,
+        collectionUrl: collectionUrl,
+        tier: item.tier,
+        state: item.state,
+        newsItems: item.newsItems,
+        eventItems: item.eventItems,
+        collectedItems: item.collectedItems,
+        classifiedItems: item.classifiedItems,
+        elapsedMs: item.elapsedMs,
+        failure: Object.prototype.hasOwnProperty.call(item, 'failure') ? item.failure : null
+      });
+    }
+
+    var artifact = null;
+    if (data.source_diagnostics_artifact != null) {
+      if (typeof data.source_diagnostics_artifact !== 'string' ||
+          !/^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/.test(data.source_diagnostics_artifact)) return null;
+      artifact = data.source_diagnostics_artifact;
+    }
+    var at = null;
+    if (data.source_diagnostics_at != null) {
+      at = feedTimestampMs(data.source_diagnostics_at);
+      if (at === null) return null;
+    }
+    var mode = null;
+    if (data.source_diagnostics_mode != null) {
+      if (typeof data.source_diagnostics_mode !== 'string' ||
+          ['quick', 'daily', 'full', 'ig-only'].indexOf(data.source_diagnostics_mode) < 0) return null;
+      mode = data.source_diagnostics_mode;
+    }
+    return { items: items, artifact: artifact, at: at, mode: mode };
+  }
+
+  function indexSourceDiagnostics(items) {
+    var indexed = Object.create(null);
+    (Array.isArray(items) ? items : []).forEach(function (item) {
+      if (item && item.sourceRegistryId) indexed[item.sourceRegistryId] = item;
+    });
+    return indexed;
+  }
+
   function normalizePublicFeedItem(item) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
     var chunkId = String(item.chunk_id || '');
@@ -1976,6 +2844,10 @@
     if (invalidArtifacts + contractInvalidArtifacts + validArtifacts > artifactsScanned) {
       throw new Error('O cadu-api retornou contadores de artefatos inconsistentes.');
     }
+    // Source-level diagnostics are additive. A malformed diagnostics block is
+    // discarded atomically, while the already validated public feed remains
+    // available to administrators.
+    var sourceDiagnostics = normalizeSourceDiagnostics(data);
     return {
       items: items,
       total: total,
@@ -1992,6 +2864,10 @@
         contractInvalidArtifacts: contractInvalidArtifacts,
         validArtifacts: validArtifacts,
         futureTimestamps: futureTimestamps,
+        sourceDiagnostics: sourceDiagnostics ? sourceDiagnostics.items : null,
+        sourceDiagnosticsArtifact: sourceDiagnostics ? sourceDiagnostics.artifact : null,
+        sourceDiagnosticsAt: sourceDiagnostics ? sourceDiagnostics.at : null,
+        sourceDiagnosticsMode: sourceDiagnostics ? sourceDiagnostics.mode : null,
       },
     };
   }
@@ -2066,6 +2942,8 @@
       state.allFeedItems = [];
       state.feedMeta = null;
       state.feedLatestAt = null;
+      state.sourceDiagnosticsById = Object.create(null);
+      if (state.sourceCatalog) renderSitesTable();
     }
     var limit = state.feedLimit || FEED_PAGE_SIZE;
     var shouldAppend = typeof appendPage === 'number';
@@ -2084,6 +2962,7 @@
       var items = feed.items;
       state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
       state.feedMeta = feed.meta;
+      state.sourceDiagnosticsById = indexSourceDiagnostics(feed.meta.sourceDiagnostics);
       state.feedLatestAt = feed.meta.latestCollectionAt || newestFeedTimestamp(state.allFeedItems);
       state.feedTotal = feed.total;
       state.feedHasMore = feed.hasMore;
@@ -2092,6 +2971,7 @@
       $('#kpi-memory-detail').textContent = 'itens públicos do Curador; ' + feed.meta.validArtifacts + '/' + feed.meta.artifactsScanned + ' artefatos válidos; página ' + (state.feedPage + 1);
       renderFeedFreshness(null);
       applyFeedFilter();
+      if (state.sourceCatalog) renderSitesTable();
       return { ok: true, page: requestPage };
     } catch (err) {
       if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
@@ -3897,6 +4777,54 @@
         state.sitesPageSize = Number.isFinite(next) ? next : 25;
         state.sitesPage = 0;
         renderSitesTable();
+      });
+    }
+    var institutionalReviewForm = $('#institutional-review-filters');
+    var institutionalReviewRefresh = $('#institutional-review-refresh');
+    var institutionalReviewClear = $('#institutional-review-clear');
+    var institutionalReviewPrev = $('#institutional-review-prev');
+    var institutionalReviewNext = $('#institutional-review-next');
+    var institutionalReviewList = $('#institutional-review-list');
+    if (institutionalReviewForm) {
+      institutionalReviewForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var selectedState = $('#institutional-review-state');
+        var sourceId = $('#institutional-review-source-id');
+        loadInstitutionalReviews({
+          state: selectedState ? selectedState.value : 'pending',
+          sourceId: sourceId ? sourceId.value : '',
+          offset: 0
+        });
+      });
+    }
+    if (institutionalReviewRefresh) institutionalReviewRefresh.addEventListener('click', function () {
+      loadInstitutionalReviews();
+      loadPendingInstitutionalReviewAuthority();
+    });
+    if (institutionalReviewClear) {
+      institutionalReviewClear.addEventListener('click', function () {
+        loadInstitutionalReviews({ state: 'pending', sourceId: '', offset: 0 });
+      });
+    }
+    if (institutionalReviewPrev) {
+      institutionalReviewPrev.addEventListener('click', function () {
+        loadInstitutionalReviews({ offset: Math.max(0, state.institutionalReviewOffset - state.institutionalReviewLimit) });
+      });
+    }
+    if (institutionalReviewNext) {
+      institutionalReviewNext.addEventListener('click', function () {
+        if (state.institutionalReviewOffset + state.institutionalReviews.length >= state.institutionalReviewTotal) return;
+        loadInstitutionalReviews({ offset: state.institutionalReviewOffset + state.institutionalReviewLimit });
+      });
+    }
+    if (institutionalReviewList) {
+      institutionalReviewList.addEventListener('click', function (event) {
+        var button = event.target.closest && event.target.closest('.kc-cadu-review-decision');
+        if (!button) return;
+        resolveInstitutionalReview(
+          button.getAttribute('data-review-id') || '',
+          button.getAttribute('data-review-decision') || ''
+        );
       });
     }
 
@@ -5876,6 +6804,8 @@
     await Promise.all([
       checkHealth(),
       loadSites(),
+      loadInstitutionalReviews(),
+      loadPendingInstitutionalReviewAuthority(),
       state.currentTab === 'feed' ? loadFeed(true) : Promise.resolve(),
       operationalRefresh,
     ]);

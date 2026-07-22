@@ -230,7 +230,37 @@ function registryReadiness() {
   };
 }
 
-async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, openclawHandler, feedHandler, publishHandler, pipelineRunsHandler) {
+function institutionalReviewItem(index, overrides = {}) {
+  const suffix = String(index).padStart(12, '0');
+  const sourceId = overrides.source_id || `web.ufg.queue-${index}`;
+  return {
+    id: `00000000-0000-4000-8000-${suffix}`,
+    requested_by: '00000000-0000-4000-8000-000000000001',
+    source_id: sourceId,
+    source_url: overrides.source_url || `https://queue-${index}.ufg.br/`,
+    content_url: overrides.content_url || overrides.source_url || `https://queue-${index}.ufg.br/`,
+    instagram_handle: overrides.instagram_handle === undefined ? `queue_${index}` : overrides.instagram_handle,
+    content_kind: 'institutional_site',
+    intent: 'review',
+    idempotency_key: `map-ufg-review:${sourceId}:${String(index % 10).repeat(64)}`,
+    source_revision: overrides.source_revision || String(index % 10).repeat(64),
+    registry_sha256: HASH,
+    name: overrides.name || `Fonte institucional ${index}`,
+    note: overrides.note === undefined ? null : overrides.note,
+    tier: overrides.tier === undefined ? 2 : overrides.tier,
+    category: overrides.category || 'academic_unit',
+    origin: 'cadu-admin-map-ufg',
+    state: overrides.state || 'pending',
+    resolved_by: overrides.resolved_by === undefined ? null : overrides.resolved_by,
+    resolved_at: overrides.resolved_at === undefined ? null : overrides.resolved_at,
+    resolution_note: overrides.resolution_note === undefined ? null : overrides.resolution_note,
+    created_at: overrides.created_at || `2026-07-${String(Math.min(index, 28)).padStart(2, '0')}T12:00:00.000Z`,
+    updated_at: overrides.updated_at || `2026-07-${String(Math.min(index, 28)).padStart(2, '0')}T12:00:00.000Z`,
+    ...overrides
+  };
+}
+
+async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, openclawHandler, feedHandler, publishHandler, pipelineRunsHandler, sourceReviewsHandler) {
   await page.route('**/api/cadu/**', async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -242,6 +272,22 @@ async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, ope
     }
     if (path === '/api/cadu/publish' && publishHandler) {
       return publishHandler(route, path);
+    }
+    if (path === '/api/cadu/source-reviews') {
+      if (sourceReviewsHandler) return sourceReviewsHandler(route, path);
+      const url = new URL(request.url());
+      const limit = Number(url.searchParams.get('limit') || 10);
+      const offset = Number(url.searchParams.get('offset') || 0);
+      if (request.method() !== 'GET') return route.fulfill({ status: 405, json: { error: 'method_not_allowed' } });
+      return route.fulfill({
+        json: {
+          items: [], total: 0, limit, offset, has_more: false,
+          filters: {
+            state: url.searchParams.get('state') || 'pending',
+            source_id: url.searchParams.get('source_id') || null
+          }
+        }
+      });
     }
     if (openclawHandler && path.startsWith('/api/cadu/openclaw/')) {
       return openclawHandler(route, path);
@@ -276,10 +322,20 @@ async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, ope
       return route.fulfill({
         json: {
           items: [], total: 0, limit: 25, offset: 0, has_more: false,
-          source: 'curator_artifacts', privacy: 'public_only', artifacts_scanned: 0,
-          invalid_artifacts: 0, contract_invalid_artifacts: 0, valid_artifacts: 0,
-          future_timestamps: 0, latest_collection_at: null,
-          age_seconds: null, stale: true, status: 'unavailable', legacy_memory_feed_retired: true
+          source: 'curator_artifacts', privacy: 'public_only', artifacts_scanned: 1,
+          invalid_artifacts: 0, contract_invalid_artifacts: 0, valid_artifacts: 1,
+          future_timestamps: 0, latest_collection_at: '2026-07-22T12:00:00.000Z',
+          age_seconds: 10, stale: false, status: 'ready', legacy_memory_feed_retired: true,
+          source_diagnostics_artifact: 'curadoria-v4.4-daily-2026-07-22.json',
+          source_diagnostics_at: '2026-07-22T12:00:00.000Z',
+          source_diagnostics_mode: 'daily',
+          source_diagnostics: [{
+            sourceRegistryId: 'web.ufg.portal', legacyId: 'ufg',
+            displayName: 'Universidade Federal de Goiás',
+            declaredUrl: 'https://ufg.br', collectionUrl: 'https://ufg.br',
+            tier: 1, state: 'ok', newsItems: 4, eventItems: 2,
+            collectedItems: 6, classifiedItems: 5, elapsedMs: 321
+          }]
         }
       });
     }
@@ -362,13 +418,27 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await sitesTab.click();
     await expect(page.locator('#kpi-sites')).toHaveText('2');
     await expect(page.locator('#sites-catalog-summary')).toContainText('2registros de entidade');
+    await expect(page.locator('#sites-source-record-count')).toHaveText('1 registro de fonte web (não programas)');
+    await expect(page.locator('#sites-source-role-breakdown')).toContainText('1 registro de outro papel canônico');
+    await expect(page.locator('.kc-cadu-map-guide')).toContainText('Cinco dimensões independentes de estado');
     await expect(page.locator('tr[data-source-id="web.ufg.portal"]')).toBeVisible();
     await expect(page.locator('.kc-cadu-inherited-warning')).toContainText('não será copiada');
     await expect(page.locator('.kc-cadu-source-note-input')).toHaveValue('');
     await expect(page.locator('.kc-cadu-save-source-btn')).toBeDisabled();
+    await expect(page.locator('.kc-cadu-save-source-btn')).toContainText('Salvar prioridade + nota');
+    await expect(page.locator('.kc-cadu-adjustment-scope')).toContainText('Não corrige URL/Instagram nem ativa a pipeline');
     await expect(page.locator('.kc-cadu-publish-btn')).toBeDisabled();
     await expect(page.locator('.kc-cadu-publish-btn')).toContainText('Revisão bloqueada');
+    await expect(page.locator('.kc-cadu-publish-btn')).toHaveAttribute('aria-describedby', 'review-gate-web.ufg.portal');
+    const blockedReviewGate = page.locator('[id="review-gate-web.ufg.portal"]');
+    await expect(blockedReviewGate).toContainText('Motivo do bloqueio: A ação aceita somente a fonte primária institucional.');
+    expect(await blockedReviewGate.evaluate((element) => getComputedStyle(element).color)).toBe('rgb(185, 28, 28)');
     await expect(page.locator('tr[data-source-id="web.ufg.portal"]')).toContainText('associação direta observada nesta fonte');
+    const sourceRun = page.locator('tr[data-source-id="web.ufg.portal"] .kc-cadu-source-run');
+    await expect(sourceRun).toContainText('Última pipeline: OK');
+    await expect(sourceRun).toContainText('6 coletado(s) · 5 classificado(s) · 321 ms');
+    await expect(sourceRun).toContainText('curadoria-v4.4-daily-2026-07-22.json');
+    await expect(sourceRun).toContainText('distinta da auditoria estática de transporte');
     await expect(page.locator('.kc-cadu-ask-btn[data-ask-kind="site"]'))
       .toHaveAttribute('data-ask-instagram', '@ufg_oficial (Confirmado)');
     const desktopHeroLayout = await page.evaluate(() => {
@@ -525,6 +595,23 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       scrollWidth: element.scrollWidth
     }));
     expect(sourceTableWidths.scrollWidth).toBeLessThanOrEqual(sourceTableWidths.clientWidth * 1.25);
+    const sourceCardLayout = await page.locator('#sites-table tbody tr').first().evaluate((row) => {
+      const cell = row.querySelector('td');
+      const rowStyle = getComputedStyle(row);
+      const cellStyle = getComputedStyle(cell);
+      return {
+        rowDisplay: rowStyle.display,
+        cellDisplay: cellStyle.display,
+        rowWidth: row.getBoundingClientRect().width,
+        cellWidth: cell.getBoundingClientRect().width,
+        gridColumns: cellStyle.gridTemplateColumns
+      };
+    });
+    expect(sourceCardLayout.rowDisplay).toBe('grid');
+    expect(sourceCardLayout.cellDisplay).toBe('grid');
+    expect(sourceCardLayout.cellWidth).toBeGreaterThan(300);
+    expect(sourceCardLayout.cellWidth).toBeLessThanOrEqual(sourceCardLayout.rowWidth + 1);
+    expect(sourceCardLayout.gridColumns.split(' ')).toHaveLength(2);
     await expect(page.locator('#sites-pagination')).toBeVisible();
     await expect(page.locator('#sites-page-size')).toBeVisible();
     if (process.env.CADU_VISUAL_CAPTURE === '1') {
@@ -936,6 +1023,9 @@ test.describe('Admin Cadu — catálogo canônico', () => {
 
   test('envia fonte estável à revisão durável com identidade e revisões canônicas', async ({ page }) => {
     const requests = [];
+    const operations = [];
+    let reviewCreated = false;
+    let queueReads = 0;
     const projection = stableReviewProjection();
     await mockCommonCaduRoutes(page, async (route) => route.fulfill({
       headers: {
@@ -947,7 +1037,9 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       json: projection
     }), null, null, null, async (route) => {
       const request = route.request().postDataJSON();
+      operations.push('publish');
       requests.push(request);
+      reviewCreated = true;
       return route.fulfill({
         status: 200,
         json: {
@@ -972,15 +1064,49 @@ test.describe('Admin Cadu — catálogo canônico', () => {
           replayed: false
         }
       });
+    }, null, async (route) => {
+      queueReads += 1;
+      const url = new URL(route.request().url());
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      if (url.searchParams.get('source_id') === 'web.ufg.portal' && limit === 1 && offset === 0) {
+        operations.push('exact-source-check');
+      }
+      const item = institutionalReviewItem(1, {
+        id: '123e4567-e89b-42d3-a456-426614174000',
+        source_id: 'web.ufg.portal',
+        source_url: 'https://ufg.br/',
+        content_url: 'https://ufg.br/',
+        instagram_handle: 'ufg_oficial',
+        source_revision: SOURCE_REVISION,
+        name: 'UFG — Universidade Federal de Goiás',
+        note: 'Fonte canônica confirmada para revisão editorial',
+        tier: 2,
+        category: 'university'
+      });
+      return route.fulfill({
+        json: {
+          items: reviewCreated ? [item] : [],
+          total: reviewCreated ? 1 : 0,
+          limit,
+          offset,
+          has_more: false,
+          filters: { state: 'pending', source_id: url.searchParams.get('source_id') }
+        }
+      });
     });
 
     await page.goto('/admin/cadu.html');
+    await expect(page.locator('#institutional-review-status')).toContainText('Fila sincronizada');
     const button = page.locator('tr[data-source-id="web.ufg.portal"] .kc-cadu-publish-btn');
     await expect(button).toBeEnabled();
     await expect(button).toContainText('Enviar à revisão');
+    await expect(page.locator('[id="review-gate-web.ufg.portal"]')).toContainText('Disponível: cria uma solicitação editorial pendente; não publica nem ativa a coleta.');
     await button.click();
 
     await expect.poll(() => requests.length).toBe(1);
+    expect(operations.indexOf('exact-source-check')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('exact-source-check')).toBeLessThan(operations.indexOf('publish'));
     expect(requests[0]).toEqual({
       action: 'review',
       intent: 'review',
@@ -999,10 +1125,358 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       source: 'cadu-admin-map-ufg'
     });
     await expect(button).toContainText('Revisão pendente');
+    await expect(button).toBeDisabled();
+    await expect(page.locator('[id="review-gate-web.ufg.portal"]')).toContainText('Na fila: solicitação editorial pendente');
+    await expect(page.locator('#institutional-review-list')).toContainText('UFG — Universidade Federal de Goiás');
+    await expect.poll(() => queueReads).toBeGreaterThanOrEqual(2);
     await expect(page.locator('#cadu-error')).toContainText('permanece pendente e não foi publicada');
     await expect(page.locator('#cadu-error')).toHaveClass(/is-info/);
     await expect(page.locator('#cadu-error')).not.toHaveClass(/is-success/);
     await expect(page.locator('#cadu-error')).toHaveAttribute('role', 'status');
+  });
+
+  test('bloqueia a fonte cuja pendência está além da primeira página visível', async ({ page }) => {
+    const allItems = Array.from({ length: 100 }, (_, index) => institutionalReviewItem(index + 1));
+    allItems.push(institutionalReviewItem(101, {
+      source_id: 'web.ufg.portal',
+      source_url: 'https://ufg.br/',
+      content_url: 'https://ufg.br/',
+      instagram_handle: 'ufg_oficial',
+      source_revision: SOURCE_REVISION,
+      name: 'UFG — Universidade Federal de Goiás',
+      note: 'Fonte canônica confirmada para revisão editorial',
+      tier: 2,
+      category: 'university'
+    }));
+    const reads = [];
+    const publishRequests = [];
+    await mockCommonCaduRoutes(page, async (route) => route.fulfill({
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        ETag: LIST_ETAG,
+        'X-Cadu-Registry-Sha256': HASH
+      },
+      json: stableReviewProjection()
+    }), null, null, null, async (route) => {
+      publishRequests.push(route.request().postDataJSON());
+      return route.fulfill({ status: 500, json: { error: 'unexpected_publish' } });
+    }, null, async (route) => {
+      const url = new URL(route.request().url());
+      const state = url.searchParams.get('state') || 'pending';
+      const sourceId = url.searchParams.get('source_id') || '';
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      reads.push({ state, sourceId, limit, offset });
+      let items = state === 'pending' ? allItems : [];
+      if (sourceId) items = items.filter((item) => item.source_id === sourceId);
+      const pageItems = items.slice(offset, offset + limit);
+      return route.fulfill({
+        json: {
+          items: pageItems,
+          total: items.length,
+          limit,
+          offset,
+          has_more: offset + pageItems.length < items.length,
+          filters: { state, source_id: sourceId || null }
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    const button = page.locator('tr[data-source-id="web.ufg.portal"] .kc-cadu-publish-btn');
+    await expect(button).toContainText('Revisão pendente');
+    await expect(button).toBeDisabled();
+    await expect(page.locator('[id="review-gate-web.ufg.portal"]')).toContainText('Na fila:');
+    expect(reads).toEqual(expect.arrayContaining([
+      expect.objectContaining({ state: 'pending', sourceId: '', limit: 100, offset: 0 }),
+      expect.objectContaining({ state: 'pending', sourceId: '', limit: 100, offset: 100 })
+    ]));
+    await button.click({ force: true }).catch(() => {});
+    expect(publishRequests).toHaveLength(0);
+  });
+
+  test('mantém novos envios fechados quando uma página da autoridade pendente falha', async ({ page }) => {
+    const allItems = Array.from({ length: 101 }, (_, index) => institutionalReviewItem(index + 1));
+    const publishRequests = [];
+    await mockCommonCaduRoutes(page, async (route) => route.fulfill({
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        ETag: LIST_ETAG,
+        'X-Cadu-Registry-Sha256': HASH
+      },
+      json: stableReviewProjection()
+    }), null, null, null, async (route) => {
+      publishRequests.push(route.request().postDataJSON());
+      return route.fulfill({ status: 500, json: { error: 'unexpected_publish' } });
+    }, null, async (route) => {
+      const url = new URL(route.request().url());
+      const state = url.searchParams.get('state') || 'pending';
+      const sourceId = url.searchParams.get('source_id') || '';
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      if (!sourceId && state === 'pending' && limit === 100 && offset === 100) {
+        return route.fulfill({ status: 502, json: { error: 'partial_page_failed' } });
+      }
+      let items = state === 'pending' ? allItems : [];
+      if (sourceId) items = items.filter((item) => item.source_id === sourceId);
+      const pageItems = items.slice(offset, offset + limit);
+      return route.fulfill({
+        json: {
+          items: pageItems,
+          total: items.length,
+          limit,
+          offset,
+          has_more: offset + pageItems.length < items.length,
+          filters: { state, source_id: sourceId || null }
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    const button = page.locator('tr[data-source-id="web.ufg.portal"] .kc-cadu-publish-btn');
+    await expect(button).toContainText('Revisão indisponível');
+    await expect(button).toBeDisabled();
+    await expect(page.locator('[id="review-gate-web.ufg.portal"]')).toContainText('Nenhum novo envio será liberado');
+    await button.click({ force: true }).catch(() => {});
+    expect(publishRequests).toHaveLength(0);
+  });
+
+  test('pagina, filtra por ID exato e resolve a fila institucional sem publicar', async ({ page }, testInfo) => {
+    const allItems = Array.from({ length: 11 }, (_, index) => institutionalReviewItem(index + 1));
+    const queueQueries = [];
+    const resolutions = [];
+    const resolvedIds = new Set();
+    await mockCommonCaduRoutes(page, async (route) => route.fulfill({
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        ETag: LIST_ETAG,
+        'X-Cadu-Registry-Sha256': HASH
+      },
+      json: stableReviewProjection()
+    }), null, null, null, null, null, async (route) => {
+      const request = route.request();
+      if (request.method() === 'POST') {
+        const body = request.postDataJSON();
+        resolutions.push(body);
+        resolvedIds.add(body.review_id);
+        const item = allItems.find((entry) => entry.id === body.review_id);
+        return route.fulfill({
+          json: {
+            id: item.id,
+            source_id: item.source_id,
+            source_revision: item.source_revision,
+            state: body.decision,
+            resolved_by: '00000000-0000-4000-8000-000000000001',
+            resolved_at: '2026-07-22T15:00:00.000Z',
+            replayed: false
+          }
+        });
+      }
+      const url = new URL(request.url());
+      const state = url.searchParams.get('state') || 'pending';
+      const sourceId = url.searchParams.get('source_id') || '';
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      queueQueries.push({ state, sourceId, limit, offset });
+      let items = allItems.filter((item) => !resolvedIds.has(item.id) && item.state === state);
+      if (sourceId) items = items.filter((item) => item.source_id === sourceId);
+      const pageItems = items.slice(offset, offset + limit);
+      return route.fulfill({
+        json: {
+          items: pageItems,
+          total: items.length,
+          limit,
+          offset,
+          has_more: offset + pageItems.length < items.length,
+          filters: { state, source_id: sourceId || null }
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    await expect(page.locator('#institutional-review-count')).toHaveText('11');
+    await expect(page.locator('.kc-cadu-review-queue__item')).toHaveCount(10);
+    await expect(page.locator('#institutional-review-page-meta')).toHaveText('Exibindo 1–10 de 11');
+    await expect(page.locator('#institutional-review-next')).toBeEnabled();
+
+    await page.locator('#institutional-review-next').click();
+    await expect(page.locator('#institutional-review-page-meta')).toHaveText('Exibindo 11–11 de 11');
+    await expect(page.locator('.kc-cadu-review-queue__item')).toHaveCount(1);
+    await expect(page.locator('#institutional-review-list')).toContainText('web.ufg.queue-11');
+
+    await page.locator('#institutional-review-source-id').fill('web.ufg.queue-11');
+    await page.locator('#institutional-review-filters').evaluate((form) => form.requestSubmit());
+    await expect(page.locator('#institutional-review-count')).toHaveText('1');
+    await expect.poll(() => queueQueries.some((query) => query.sourceId === 'web.ufg.queue-11' && query.offset === 0)).toBe(true);
+    const card = page.locator('.kc-cadu-review-queue__item').first();
+    await expect(card).toContainText('Fonte institucional 11');
+    await expect(card.locator('.kc-cadu-review-decision')).toHaveCount(3);
+    await expect(card.locator('.kc-cadu-review-queue__technical code').first()).toBeHidden();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileQueueLayout = await page.locator('#institutional-review-queue').evaluate((section) => {
+      const filters = section.querySelector('.kc-cadu-review-queue__filters');
+      const decisions = section.querySelector('.kc-cadu-review-queue__decision-buttons');
+      const box = section.getBoundingClientRect();
+      return {
+        viewport: document.documentElement.clientWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        left: box.left,
+        right: box.right,
+        filterColumns: getComputedStyle(filters).gridTemplateColumns,
+        decisionColumns: getComputedStyle(decisions).gridTemplateColumns
+      };
+    });
+    expect(mobileQueueLayout.documentWidth).toBeLessThanOrEqual(mobileQueueLayout.viewport + 1);
+    expect(mobileQueueLayout.left).toBeGreaterThanOrEqual(0);
+    expect(mobileQueueLayout.right).toBeLessThanOrEqual(mobileQueueLayout.viewport + 1);
+    expect(mobileQueueLayout.filterColumns.split(' ')).toHaveLength(1);
+    expect(mobileQueueLayout.decisionColumns.split(' ')).toHaveLength(1);
+    if (process.env.CADU_VISUAL_CAPTURE === '1') {
+      await page.screenshot({ path: testInfo.outputPath('cadu-review-queue-mobile.png'), fullPage: true });
+    }
+    await card.locator('.kc-cadu-review-resolution-note').fill('Identidade oficial conferida; encerrar solicitação.');
+    page.once('dialog', (dialog) => {
+      expect(dialog.message()).toContain('NÃO publica conteúdo');
+      dialog.accept();
+    });
+    await card.locator('[data-review-decision="approved"]').dblclick();
+
+    await expect.poll(() => resolutions.length).toBe(1);
+    expect(resolutions[0]).toEqual({
+      review_id: allItems[10].id,
+      expected_source_revision: allItems[10].source_revision,
+      decision: 'approved',
+      resolution_note: 'Identidade oficial conferida; encerrar solicitação.'
+    });
+    await expect(page.locator('#institutional-review-count')).toHaveText('0');
+    await expect(page.locator('#institutional-review-list')).toContainText('Nenhuma solicitação');
+    await expect(page.locator('#cadu-error')).toContainText('Nenhum conteúdo foi publicado e nenhuma coleta foi ativada');
+  });
+
+  test('aceita e escapa nota terminal canônica de 1.000 caracteres sem ampliar a entrada local', async ({ page }) => {
+    const unsafePrefix = '<img src=x onerror="window.__caduInjected=true">';
+    const longResolutionNote = unsafePrefix.padEnd(1000, 'x');
+    const approvedItem = institutionalReviewItem(21, {
+      state: 'approved',
+      resolved_by: '00000000-0000-4000-8000-000000000002',
+      resolved_at: '2026-07-22T15:00:00.000Z',
+      resolution_note: longResolutionNote
+    });
+    await mockCommonCaduRoutes(page, async (route) => route.fulfill({
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        ETag: LIST_ETAG,
+        'X-Cadu-Registry-Sha256': HASH
+      },
+      json: stableReviewProjection()
+    }), null, null, null, null, null, async (route) => {
+      const url = new URL(route.request().url());
+      const state = url.searchParams.get('state') || 'pending';
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      const items = state === 'approved' ? [approvedItem] : [];
+      return route.fulfill({
+        json: {
+          items, total: items.length, limit, offset, has_more: false,
+          filters: { state, source_id: url.searchParams.get('source_id') }
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    await page.locator('#institutional-review-state').selectOption('approved');
+    await page.locator('#institutional-review-filters').evaluate((form) => form.requestSubmit());
+    const card = page.locator('.kc-cadu-review-queue__item').first();
+    await expect(card).toContainText(unsafePrefix);
+    await expect(card.locator('img')).toHaveCount(0);
+    await expect(card.locator('.kc-cadu-review-decision')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__caduInjected)).toBeUndefined();
+    const resolutionHtml = await card.locator('.kc-cadu-review-queue__resolution').innerHTML();
+    expect(resolutionHtml).toContain('&lt;img src=x onerror="window.__caduInjected=true"&gt;');
+    expect(longResolutionNote).toHaveLength(1000);
+    expect(await page.locator('.kc-cadu-review-resolution-note').count()).toBe(0);
+  });
+
+  test('recarrega fila e catálogo no conflito stale e permite somente substituir', async ({ page }) => {
+    const item = institutionalReviewItem(22);
+    let registryReads = 0;
+    let queueReads = 0;
+    const resolutions = [];
+    let resolved = false;
+    await mockCommonCaduRoutes(page, async (route) => {
+      registryReads += 1;
+      return route.fulfill({
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, no-store',
+          ETag: LIST_ETAG,
+          'X-Cadu-Registry-Sha256': HASH
+        },
+        json: stableReviewProjection()
+      });
+    }, null, null, null, null, null, async (route) => {
+      const request = route.request();
+      if (request.method() === 'POST') {
+        const body = request.postDataJSON();
+        resolutions.push(body);
+        if (body.decision !== 'superseded') {
+          return route.fulfill({
+            status: 409,
+            json: { error: 'cadu_api_error', detail: 'SOURCE_REVIEW_STALE' }
+          });
+        }
+        resolved = true;
+        return route.fulfill({
+          json: {
+            id: item.id,
+            source_id: item.source_id,
+            source_revision: item.source_revision,
+            state: 'superseded',
+            resolved_by: '00000000-0000-4000-8000-000000000002',
+            resolved_at: '2026-07-22T16:00:00.000Z',
+            replayed: false
+          }
+        });
+      }
+      queueReads += 1;
+      const url = new URL(request.url());
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      const items = resolved ? [] : [item];
+      return route.fulfill({
+        json: {
+          items, total: items.length, limit, offset, has_more: false,
+          filters: {
+            state: url.searchParams.get('state') || 'pending',
+            source_id: url.searchParams.get('source_id')
+          }
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    const card = page.locator('.kc-cadu-review-queue__item').first();
+    page.once('dialog', (dialog) => dialog.accept());
+    await card.locator('[data-review-decision="approved"]').click();
+
+    await expect(page.locator('#institutional-review-status')).toContainText('só pode ser marcada como substituída');
+    await expect(page.locator('#cadu-error')).toContainText('fila e o catálogo foram atualizados');
+    await expect.poll(() => queueReads).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => registryReads).toBeGreaterThanOrEqual(2);
+    await expect(card.locator('[data-review-decision="approved"]')).toBeDisabled();
+    await expect(card.locator('[data-review-decision="rejected"]')).toBeDisabled();
+    await expect(card.locator('[data-review-decision="superseded"]')).toBeEnabled();
+    expect(resolutions).toHaveLength(1);
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await card.locator('[data-review-decision="superseded"]').click();
+    await expect.poll(() => resolutions.length).toBe(2);
+    expect(resolutions.map((body) => body.decision)).toEqual(['approved', 'superseded']);
+    await expect(page.locator('#institutional-review-count')).toHaveText('0');
   });
 
   test('chat OpenClaw usa health estruturado, sessão fixada e retry idempotente sem envio real', async ({ page }) => {
