@@ -7,6 +7,7 @@ const SOURCE_ID_PATTERN = /^web\.[a-z0-9][a-z0-9.-]{0,115}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const INSTAGRAM_HANDLE_PATTERN = /^[a-z0-9._]{1,30}$/;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001f\u007f]/;
+const UNSAFE_MULTILINE_CONTROL_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
 const INSTITUTIONAL_REVIEW_FIELDS = new Set([
   "action",
   "intent",
@@ -48,6 +49,10 @@ export type InstitutionalReviewParseResult =
 
 function plainText(value: unknown): string {
   return String(value ?? "").normalize("NFKC").trim();
+}
+
+function multilineText(value: unknown): string {
+  return String(value ?? "").trim();
 }
 
 function canonicalHttpsUrl(value: unknown): string {
@@ -102,6 +107,7 @@ export function parseInstitutionalReview(
   const registrySha256 = plainText(body.registry_sha256);
   const name = plainText(body.name);
   const noteValue = body.note;
+  const normalizedNote = multilineText(noteValue);
   const category = plainText(body.category).slice(0, 80);
   const origin = plainText(body.source);
   const rawInstagram = body.instagram_handle;
@@ -192,9 +198,9 @@ export function parseInstitutionalReview(
   if (
     noteValue !== null && noteValue !== undefined && (
       typeof noteValue !== "string" ||
-      noteValue !== plainText(noteValue) ||
-      noteValue.length > 500 ||
-      CONTROL_CHARACTER_PATTERN.test(noteValue)
+      noteValue !== normalizedNote ||
+      normalizedNote.length > 500 ||
+      UNSAFE_MULTILINE_CONTROL_PATTERN.test(normalizedNote)
     )
   ) {
     errors.push("note deve ter ate 500 caracteres sem controles, ou null.");
@@ -233,9 +239,9 @@ export function parseInstitutionalReview(
       sourceRevision,
       registrySha256,
       name,
-      note: noteValue == null || plainText(noteValue) === ""
+      note: noteValue == null || normalizedNote === ""
         ? null
-        : plainText(noteValue),
+        : normalizedNote,
       tier,
       category,
       origin: INSTITUTIONAL_REVIEW_ORIGIN,

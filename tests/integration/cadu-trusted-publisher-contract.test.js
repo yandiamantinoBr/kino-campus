@@ -235,6 +235,16 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('code: "REVIEW_DISABLED"');
     expect(index).toContain('return await handleReview(admin, user.id, body)');
   });
+
+  test('expõe capability read-only autenticada para provar o rollout da fila', () => {
+    expect(index).toContain('case "capabilities"');
+    expect(index).toContain('cadu-publish-capabilities-v1');
+    expect(index).toContain('institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED');
+    expect(index).toContain('reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE');
+    expect(index).toContain('createReviewRpc: "kc_create_institutional_source_review"');
+    expect(index.indexOf('isTrustedPublisher(admin, user.id)'))
+      .toBeLessThan(index.indexOf('case "capabilities"'));
+  });
 });
 
 describe('Cadu institutional review — durable database and admin proxy', () => {
@@ -289,6 +299,8 @@ describe('Cadu institutional review — durable database and admin proxy', () =>
     const build = Function(
       '"use strict";\n' +
       "const REVIEW_POLICY = Object.freeze({ intent:'review', contentKind:'institutional_site', origin:'cadu-admin-map-ufg' });\n" +
+      'const UNSAFE_REVIEW_NOTE_CONTROL = /[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/u;\n' +
+      functionSource(proxy, 'canonicalReviewNote') + '\n' +
       functionSource(proxy, 'canonicalHttpsUrl') + '\n' +
       functionSource(proxy, 'institutionalReviewPayload') + '\n' +
       'return institutionalReviewPayload;',
@@ -307,6 +319,86 @@ describe('Cadu institutional review — durable database and admin proxy', () =>
       error: 'content_url deve coincidir com source_url nesta política',
     });
     expect(build({ ...input, source_revision: 'c'.repeat(64) }).error).toMatch(/idempotency_key/);
+    const multiline = 'Linha 1\n\tLinha 2\rLinha 3';
+    expect(build({ ...input, note: multiline }).payload.note).toBe(multiline);
+    expect(build({ ...input, note: 'inválida\u0000' }).error).toMatch(/note inválida/);
+  });
+
+  test('follow-up migration aligns multiline note controls without weakening other fields', () => {
+    const multilineMigration = r(
+      'supabase/migrations/20260722183000_allow_cadu_review_multiline_notes.sql',
+    );
+    expect(multilineMigration).toContain(
+      'drop constraint if exists cadu_institutional_source_reviews_contract_check',
+    );
+    expect(multilineMigration).toContain(
+      "note !~ E'[\\\\x01-\\\\x08\\\\x0B\\\\x0C\\\\x0E-\\\\x1F\\\\x7F]'",
+    );
+    expect(multilineMigration).toContain(
+      'cadu_institutional_source_reviews_resolution_note_control_check',
+    );
+    expect(multilineMigration).toContain("name !~ '[[:cntrl:]]'");
+    expect(multilineMigration).toContain("category !~ '[[:cntrl:]]'");
+  });
+
+  test('readiness probe proves the queue, constraints, RLS and service-only RPC boundary', () => {
+    const readinessMigration = r(
+      'supabase/migrations/20260722190000_cadu_review_contract_probe.sql',
+    );
+    expect(readinessMigration).toContain(
+      'create or replace function public.kc_cadu_review_contract()',
+    );
+    expect(readinessMigration).toContain("'cadu-institutional-review-v1'");
+    [
+      'reviewTable', 'reviewConstraints', 'reviewIndexes', 'reviewRlsPolicy',
+      'reviewTableAcl', 'reviewGuardTrigger', 'reviewCreateRpc',
+      'reviewResolveRpc', 'reviewDependencies',
+    ].forEach((check) => expect(readinessMigration).toContain(`'${check}'`));
+    expect(readinessMigration).toContain('function_row.proargnames[1:15]');
+    expect(readinessMigration).toContain('function_row.proargnames[1:6]');
+    expect(readinessMigration).toContain("'p_expected_meta_revisions'");
+    expect(readinessMigration).toContain('pg_catalog.md5(function_row.prosrc)');
+    expect(readinessMigration).toContain('pg_catalog.pg_get_function_result(function_row.oid)');
+    expect(readinessMigration).toMatch(
+      /from pg_catalog[.]pg_trigger as trigger_row[\s\S]*not trigger_row[.]tgisinternal[\s\S]*\) = 1/,
+    );
+    expect(readinessMigration).toContain("pg_catalog.to_regprocedure('kc_private.kc_is_admin(uuid)')");
+    expect(readinessMigration).toContain("function_row.prosecdef");
+    expect(readinessMigration).toContain(
+      'revoke all on function public.kc_cadu_review_contract()',
+    );
+    expect(readinessMigration).toContain(
+      'grant execute on function public.kc_cadu_review_contract()',
+    );
+    expect(readinessMigration).not.toMatch(/insert\s+into|update\s+public[.]|delete\s+from/i);
+  });
+
+  test('resolution uses a source-scoped metadata CAS and removes the unsafe v1 overload', () => {
+    const expandMigration = r(
+      'supabase/migrations/20260722184500_cadu_review_resolution_cas_v2.sql',
+    );
+    const cleanupMigration = r(
+      'supabase/migrations/20260722185500_remove_legacy_cadu_review_resolution_rpc.sql',
+    );
+    expect(expandMigration).toContain('p_expected_meta_revisions jsonb');
+    expect(expandMigration).toContain('pg_catalog.pg_advisory_xact_lock');
+    expect(expandMigration).toContain("'kino-campus:cadu-source:v1:' || v_source_id");
+    expect(expandMigration).toContain('from public.kc_unit_meta as meta');
+    expect(expandMigration).toContain("raise sqlstate 'PT412'");
+    expect(expandMigration).toContain(
+      "p_decision is null or p_decision not in ('approved', 'rejected', 'superseded')",
+    );
+    expect(expandMigration).toContain(
+      'v_review.source_revision is distinct from p_expected_source_revision',
+    );
+    expect(cleanupMigration).toContain(
+      'drop function public.kc_resolve_institutional_source_review',
+    );
+    expect(cleanupMigration).toContain('uuid, text, text, text, uuid');
+    expect(cleanupMigration).toContain(
+      "'public.kc_resolve_institutional_source_review(uuid,text,text,text,uuid,jsonb)'",
+    );
+    expect(cleanupMigration).toContain("function_row.proname = 'kc_resolve_institutional_source_review'");
   });
 });
 

@@ -18,6 +18,7 @@
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
   var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
   var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
+  var SOURCE_REGISTRY_READINESS_TIMEOUT_MS = 15000;
   var INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT = 100;
   var INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS = 500;
   var INSTITUTIONAL_REVIEW_STATES = Object.freeze(['pending', 'approved', 'rejected', 'superseded']);
@@ -893,6 +894,11 @@
   }
 
   function pendingInstitutionalReviewForSource(sourceId) {
+    var latest = latestInstitutionalReviewForSource(sourceId);
+    return latest && latest.state === 'pending' ? latest : null;
+  }
+
+  function latestInstitutionalReviewForSource(sourceId) {
     return state.pendingInstitutionalReviewsBySource[String(sourceId || '')] || null;
   }
 
@@ -904,19 +910,20 @@
       return {
         allowed: false,
         loading: true,
-        reason: 'Aguarde a conferência completa das solicitações pendentes no servidor.'
+        reason: 'Aguarde a conferência completa do histórico editorial no servidor.'
       };
     }
     return {
       allowed: false,
       loading: false,
       reason: state.pendingInstitutionalReviewAuthorityError ||
-        'Não foi possível confirmar todas as solicitações pendentes; atualize a fila antes de enviar.'
+        'Não foi possível confirmar o histórico editorial; atualize a fila antes de enviar.'
     };
   }
 
   function sourceReviewPresentation(source, eligibility) {
-    var pending = source && pendingInstitutionalReviewForSource(source.id);
+    var latest = source && latestInstitutionalReviewForSource(source.id);
+    var pending = latest && latest.state === 'pending';
     if (pending) {
       return {
         pending: true,
@@ -928,6 +935,28 @@
           stateClass: 'is-available',
           label: 'Na fila: ',
           detail: 'solicitação editorial pendente; ela ainda não foi publicada nem ativou a coleta.'
+        }
+      };
+    }
+    if (latest && latest.sourceRevision === source.revision) {
+      var terminalLabels = {
+        approved: 'Revisão aprovada',
+        rejected: 'Revisão rejeitada',
+        superseded: 'Revisão substituída'
+      };
+      var terminalLabel = terminalLabels[latest.state] || 'Revisão concluída';
+      return {
+        pending: false,
+        completed: true,
+        disabled: true,
+        icon: latest.state === 'approved' ? 'fa-circle-check' :
+          (latest.state === 'rejected' ? 'fa-circle-xmark' : 'fa-code-branch'),
+        label: terminalLabel,
+        title: terminalLabel + ' para esta versão canônica. Uma nova solicitação só será liberada quando a fonte mudar.',
+        gateCopy: {
+          stateClass: 'is-available',
+          label: 'Revisão concluída: ',
+          detail: catalogLabel(latest.state) + ' para esta versão; a decisão não publicou conteúdo nem ativou a coleta.'
         }
       };
     }
@@ -1129,7 +1158,7 @@
   function institutionalReviewQueuePathFor(filters) {
     var query = filters || {};
     var params = new URLSearchParams();
-    params.set('state', String(query.state || 'pending'));
+    if (query.state) params.set('state', String(query.state));
     if (query.sourceId) params.set('source_id', String(query.sourceId));
     params.set('limit', String(query.limit));
     params.set('offset', String(query.offset));
@@ -1149,14 +1178,17 @@
     return {
       id: item.id,
       sourceId: item.source_id,
-      sourceRevision: item.source_revision
+      sourceRevision: item.source_revision,
+      state: item.state,
+      createdAt: item.created_at,
+      resolvedAt: item.resolved_at
     };
   }
 
   function pendingInstitutionalReviewAuthorityFailure(message) {
     state.pendingInstitutionalReviewAuthorityState = 'error';
     state.pendingInstitutionalReviewAuthorityError = message ||
-      'Não foi possível confirmar integralmente as solicitações pendentes. Nenhum novo envio será liberado até atualizar a fila.';
+      'Não foi possível confirmar integralmente o histórico editorial. Nenhum novo envio será liberado até atualizar a fila.';
     if (state.sourceCatalog) renderSitesTable();
   }
 
@@ -1169,10 +1201,11 @@
     var reviewIds = Object.create(null);
     var expectedTotal = null;
     var offset = 0;
+    var previousReviewOrder = null;
     try {
       while (true) {
         var envelope = await apiFetchResponse(institutionalReviewQueuePathFor({
-          state: 'pending',
+          state: '',
           sourceId: '',
           limit: INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT,
           offset: offset
@@ -1180,7 +1213,7 @@
         if (requestGeneration !== state.pendingInstitutionalReviewAuthorityRequestGeneration) return false;
         if (!envelope.ok) throw new Error('HTTP ' + String(envelope.status || 0));
         var page = normalizeInstitutionalReviewQueueResponse(envelope.data, {
-          state: 'pending',
+          state: '',
           sourceId: '',
           limit: INSTITUTIONAL_REVIEW_AUTHORITY_PAGE_LIMIT,
           offset: offset
@@ -1195,18 +1228,29 @@
         }
         if (page.hasMore && !page.items.length) throw new Error('paginação sem progresso');
         page.items.forEach(function (item) {
-          if (reviewIds[item.id] || nextBySource[item.source_id]) {
-            throw new Error('pendência duplicada na paginação');
+          var currentOrder = {
+            createdAt: new Date(item.created_at).getTime(),
+            id: item.id
+          };
+          if (previousReviewOrder && (
+            currentOrder.createdAt > previousReviewOrder.createdAt ||
+            (currentOrder.createdAt === previousReviewOrder.createdAt && currentOrder.id > previousReviewOrder.id)
+          )) {
+            throw new Error('ordenação editorial divergente');
           }
+          previousReviewOrder = currentOrder;
+          if (reviewIds[item.id]) throw new Error('revisão duplicada na paginação');
           reviewIds[item.id] = true;
-          nextBySource[item.source_id] = pendingInstitutionalReviewReference(item);
+          if (!nextBySource[item.source_id]) {
+            nextBySource[item.source_id] = pendingInstitutionalReviewReference(item);
+          }
         });
         offset += page.items.length;
         if (offset > INSTITUTIONAL_REVIEW_AUTHORITY_MAX_ITEMS) throw new Error('limite seguro excedido');
         if (!page.hasMore) break;
       }
-      if (expectedTotal === null || offset !== expectedTotal || Object.keys(nextBySource).length !== expectedTotal) {
-        throw new Error('snapshot pendente incompleto');
+      if (expectedTotal === null || offset !== expectedTotal) {
+        throw new Error('histórico editorial incompleto');
       }
       if (requestGeneration !== state.pendingInstitutionalReviewAuthorityRequestGeneration) return false;
       state.pendingInstitutionalReviewsBySource = nextBySource;
@@ -1226,26 +1270,26 @@
       throw new Error('ID canônico inválido para conferência da fila');
     }
     var envelope = await apiFetchResponse(institutionalReviewQueuePathFor({
-      state: 'pending',
+      state: '',
       sourceId: sourceId,
       limit: 1,
       offset: 0
     }), { timeoutMs: 12000 });
-    if (!envelope.ok) throw new Error('fila pendente indisponível');
+    if (!envelope.ok) throw new Error('histórico editorial indisponível');
     var normalized = normalizeInstitutionalReviewQueueResponse(envelope.data, {
-      state: 'pending', sourceId: sourceId, limit: 1, offset: 0
+      state: '', sourceId: sourceId, limit: 1, offset: 0
     });
-    if (normalized.total > 1 || normalized.items.length !== normalized.total) {
-      throw new Error('autoridade pendente inconsistente para a fonte');
+    if (normalized.items.length !== Math.min(1, normalized.total)) {
+      throw new Error('autoridade editorial inconsistente para a fonte');
     }
-    var pending = normalized.items[0] || null;
-    if (pending) {
-      state.pendingInstitutionalReviewsBySource[sourceId] = pendingInstitutionalReviewReference(pending);
+    var latest = normalized.items[0] || null;
+    if (latest) {
+      state.pendingInstitutionalReviewsBySource[sourceId] = pendingInstitutionalReviewReference(latest);
     } else {
       delete state.pendingInstitutionalReviewsBySource[sourceId];
     }
     if (state.sourceCatalog) renderSitesTable();
-    return pending;
+    return latest;
   }
 
   async function loadInstitutionalReviews(options) {
@@ -1354,7 +1398,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(body),
-        timeoutMs: 12000
+        timeoutMs: 15000
       });
       if (!envelope.ok && institutionalReviewResponseErrorCode(envelope) === 'SOURCE_REVIEW_STALE') {
         state.staleInstitutionalReviews[item.id] = { sourceRevision: item.source_revision };
@@ -1369,9 +1413,16 @@
         return;
       }
       if (!envelope.ok) throw new Error('HTTP ' + String(envelope.status || 0));
-      normalizeInstitutionalReviewResolution(envelope.data, item, decision);
+      var resolvedReview = normalizeInstitutionalReviewResolution(envelope.data, item, decision);
       delete state.staleInstitutionalReviews[item.id];
-      delete state.pendingInstitutionalReviewsBySource[item.source_id];
+      state.pendingInstitutionalReviewsBySource[item.source_id] = {
+        id: item.id,
+        sourceId: item.source_id,
+        sourceRevision: item.source_revision,
+        state: resolvedReview.state,
+        createdAt: item.created_at,
+        resolvedAt: resolvedReview.resolved_at
+      };
       state.institutionalReviews = state.institutionalReviews.filter(function (entry) { return entry.id !== item.id; });
       if (state.institutionalReviewTotal > 0) state.institutionalReviewTotal -= 1;
       if (state.sourceCatalog) renderSitesTable();
@@ -1386,6 +1437,14 @@
         loadInstitutionalReviews(),
         loadPendingInstitutionalReviewAuthority()
       ]);
+      var reconciledReview = latestInstitutionalReviewForSource(item.source_id);
+      if (reconciledReview && reconciledReview.id === item.id &&
+          reconciledReview.sourceRevision === item.source_revision &&
+          reconciledReview.state === decision) {
+        state.institutionalReviewActionError = '';
+        showCaduError('A resposta demorou, mas o servidor confirmou a solicitação como ' + catalogLabel(decision) + '. Nenhum conteúdo foi publicado e nenhuma coleta foi ativada.', 'info');
+        return;
+      }
       state.institutionalReviewActionError = actionError;
       showCaduError(actionError);
     } finally {
@@ -1516,7 +1575,7 @@
     try {
       var readinessEnvelopePromise = apiFetchResponse(
         '/api/cadu/sites/source-registry/readiness',
-        { timeoutMs: 4000 }
+        { timeoutMs: SOURCE_REGISTRY_READINESS_TIMEOUT_MS }
       );
       registryEnvelope = await apiFetchResponse('/api/cadu/sites/source-registry');
       if (requestGeneration !== state.catalogRequestGeneration) return 'stale';
@@ -1927,8 +1986,9 @@
     var presentation = sourceReviewPresentation(source, eligibility);
     button.disabled = presentation.disabled;
     button.title = presentation.title;
-    button.classList.remove('is-ok', 'is-pending', 'is-err');
+    button.classList.remove('is-ok', 'is-pending', 'is-complete', 'is-err');
     if (presentation.pending) button.classList.add('is-pending');
+    if (presentation.completed) button.classList.add('is-complete');
     button.innerHTML = '<i class="fas ' + presentation.icon + '"></i><span>' + presentation.label + '</span>';
     var gate = row.querySelector('.kc-cadu-review-gate');
     if (gate) {
@@ -2050,7 +2110,8 @@
         + '<strong>' + escapeHtml(gateCopy.label) + '</strong>'
         + escapeHtml(gateCopy.detail)
         + '</div>';
-      var actions = '<button type="button" class="kc-cadu-publish-btn' + (reviewPresentation.pending ? ' is-pending' : '') + '" data-source-id="' + escapeHtml(source.id) + '" aria-describedby="' + escapeHtml(reviewGateId) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewPresentation.disabled ? ' disabled' : '') + '>'
+      var reviewButtonStateClass = reviewPresentation.pending ? ' is-pending' : (reviewPresentation.completed ? ' is-complete' : '');
+      var actions = '<button type="button" class="kc-cadu-publish-btn' + reviewButtonStateClass + '" data-source-id="' + escapeHtml(source.id) + '" aria-describedby="' + escapeHtml(reviewGateId) + '" title="' + escapeHtml(reviewTitle) + '"' + (reviewPresentation.disabled ? ' disabled' : '') + '>'
         + '<i class="fas ' + reviewPresentation.icon + '"></i><span>' + escapeHtml(reviewPresentation.label) + '</span></button>'
         + reviewGate
         + ' <button type="button" class="kc-cadu-ask-btn" data-ask-kind="site" data-ask-name="' + escapeHtml(site.name) + '" data-ask-url="' + escapeHtml(site.url) + '" data-ask-instagram="' + escapeHtml(site.instagramContext || 'sem perfil associado') + '" data-ask-tier="' + escapeHtml(site.tier || '') + '" title="Enviar todas as associações e seus status ao chat Cadu"><i class="fas fa-robot"></i><span>Perguntar</span></button>';
@@ -2471,8 +2532,13 @@
   }
 
   async function submitSourceReview(source) {
-    if (pendingInstitutionalReviewForSource(source && source.id)) {
+    var localReview = source && latestInstitutionalReviewForSource(source.id);
+    if (localReview && localReview.state === 'pending') {
       showCaduError('Esta fonte já possui uma solicitação pendente na fila editorial institucional. Nenhum novo envio foi feito.', 'info');
+      return;
+    }
+    if (localReview && localReview.sourceRevision === source.revision) {
+      showCaduError('Esta versão da fonte já possui uma decisão editorial (' + catalogLabel(localReview.state) + '). Altere e salve a fonte antes de criar outra solicitação.', 'info');
       return;
     }
     var authority = institutionalReviewSubmissionAuthority();
@@ -2513,8 +2579,12 @@
         pendingInstitutionalReviewAuthorityFailure(authorityError.message);
         throw authorityError;
       }
-      if (serverPending) {
+      if (serverPending && serverPending.state === 'pending') {
         showCaduError('O servidor confirmou que esta fonte já possui uma solicitação pendente. Nenhum novo envio foi feito.', 'info');
+        return;
+      }
+      if (serverPending && serverPending.source_revision === source.revision) {
+        showCaduError('O servidor confirmou que esta versão da fonte já foi resolvida como ' + catalogLabel(serverPending.state) + '. Nenhum novo envio foi feito.', 'info');
         return;
       }
       var data = await apiFetch('/api/cadu/publish', {
@@ -2535,7 +2605,10 @@
       state.pendingInstitutionalReviewsBySource[source.id] = {
         id: outcome.reviewId,
         sourceId: source.id,
-        sourceRevision: source.revision
+        sourceRevision: source.revision,
+        state: 'pending',
+        createdAt: new Date().toISOString(),
+        resolvedAt: null
       };
       renderSitesTable();
       showCaduError((outcome.replayed ? 'A revisão já estava persistida' : 'Fonte enviada à revisão') +

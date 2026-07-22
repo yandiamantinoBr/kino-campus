@@ -17,6 +17,7 @@ const {
 const ETAG = `"${'a'.repeat(64)}"`;
 const NEXT_ETAG = `"${'b'.repeat(64)}"`;
 const REGISTRY_SHA = 'c'.repeat(64);
+const ADMIN_ID = '11111111-1111-4111-8111-111111111111';
 
 function createResponse() {
   const headers = new Map();
@@ -88,15 +89,17 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
   const originalFetch = global.fetch;
   const originalApiUrl = process.env.CADU_API_URL;
   const originalApiToken = process.env.CADU_API_TOKEN;
+  const originalReviewSigningSecret = process.env.CADU_REVIEW_SIGNING_SECRET;
   const originalLegacyMetaWriteEnabled = process.env.CADU_LEGACY_META_WRITE_ENABLED;
 
   beforeEach(() => {
     process.env.CADU_API_URL = 'https://cadu.example/';
     process.env.CADU_API_TOKEN = 'server-secret';
+    process.env.CADU_REVIEW_SIGNING_SECRET = 'review-signing-secret-0123456789abcdef';
     delete process.env.CADU_LEGACY_META_WRITE_ENABLED;
     global.fetch = jest.fn();
     requireCaduAdmin.mockReset();
-    requireCaduAdmin.mockResolvedValue({ id: 'admin-user' });
+    requireCaduAdmin.mockResolvedValue({ id: ADMIN_ID });
   });
 
   afterAll(() => {
@@ -105,6 +108,8 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     else process.env.CADU_API_URL = originalApiUrl;
     if (originalApiToken === undefined) delete process.env.CADU_API_TOKEN;
     else process.env.CADU_API_TOKEN = originalApiToken;
+    if (originalReviewSigningSecret === undefined) delete process.env.CADU_REVIEW_SIGNING_SECRET;
+    else process.env.CADU_REVIEW_SIGNING_SECRET = originalReviewSigningSecret;
     if (originalLegacyMetaWriteEnabled === undefined) delete process.env.CADU_LEGACY_META_WRITE_ENABLED;
     else process.env.CADU_LEGACY_META_WRITE_ENABLED = originalLegacyMetaWriteEnabled;
   });
@@ -452,9 +457,25 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
 
     expect(res.statusCode).toBe(200);
     expect(global.fetch.mock.calls[0][0]).toBe('https://cadu.example/api/source-registry/readiness');
+    const readinessHeaders = global.fetch.mock.calls[0][1].headers;
+    expect(readinessHeaders['X-Kino-Review-Capability']).toBe('v1');
+    expect(readinessHeaders['X-Kino-Admin-Id']).toBe(ADMIN_ID);
+    expect(readinessHeaders['X-Kino-Review-Body-SHA256']).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+    expect(readinessHeaders['X-Kino-Review-Signature']).toMatch(/^[a-f0-9]{64}$/);
     expect(res.headers.get('x-cadu-registry-sha256')).toBe(REGISTRY_SHA);
     expect(res.headers.get('etag')).toBeUndefined();
     expect(res.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  test('fails readiness closed before upstream when the review HMAC is absent', async () => {
+    delete process.env.CADU_REVIEW_SIGNING_SECRET;
+    const res = createResponse();
+
+    await handler(request({ path: 'source-registry/readiness' }), res);
+
+    expect(res.statusCode).toBe(503);
+    expect(res.body).toEqual({ error: 'cadu_review_signing_not_configured' });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test('fails closed when readiness omits the registry hash', async () => {

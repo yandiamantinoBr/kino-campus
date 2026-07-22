@@ -6,7 +6,10 @@
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
 import { getCaduSourceRegistryMirror } from '../../server/cadu-source-registry-mirror.js';
-import { handleCaduSourceReviews } from '../../server/cadu-source-reviews-proxy.js';
+import {
+  buildCaduReviewSignatureHeaders,
+  handleCaduSourceReviews,
+} from '../../server/cadu-source-reviews-proxy.js';
 
 const STRONG_CADU_ETAG = /^"[a-f0-9]{64}"$/;
 const CADU_REGISTRY_SHA256 = /^[a-f0-9]{64}$/;
@@ -423,6 +426,21 @@ export default async function handler(req, res) {
     Accept: 'application/json',
     'User-Agent': 'KinoCampus-Admin/2.0',
   };
+  if (route.kind === 'registry_readiness') {
+    try {
+      Object.assign(upstreamHeaders, buildCaduReviewSignatureHeaders({
+        signingSecret: process.env.CADU_REVIEW_SIGNING_SECRET,
+        apiToken: token,
+        adminId: admin.id,
+        method: 'GET',
+        targetUrl,
+        body: '',
+      }));
+      upstreamHeaders['X-Kino-Review-Capability'] = 'v1';
+    } catch {
+      return sendProxyError(res, 503, 'cadu_review_signing_not_configured');
+    }
+  }
   if (req.method === 'PATCH') upstreamHeaders['Content-Type'] = 'application/json';
   if (route.kind === 'registry_override') upstreamHeaders['If-Match'] = ifMatch;
 
@@ -433,7 +451,7 @@ export default async function handler(req, res) {
       body: requestBody,
       cache: 'no-store',
       redirect: 'error',
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(route.kind === 'registry_readiness' ? 12000 : 25000),
     });
 
     const text = await upstream.text();

@@ -207,8 +207,10 @@ export function buildCaduReviewSignatureHeaders({
   nonce = randomBytes(24).toString('base64url'),
 }) {
   const secret = reviewSigningSecretBytes(signingSecret, apiToken);
-  if (!secret || !UUID.test(adminId || '') || method !== 'POST'
-      || typeof body !== 'string') {
+  if (!secret || !UUID.test(adminId || '')
+      || !['GET', 'POST'].includes(method)
+      || typeof body !== 'string'
+      || (method === 'GET' && body !== '')) {
     throw new TypeError('invalid Cadu review signing configuration');
   }
   const timestamp = String(timestampSeconds);
@@ -456,7 +458,10 @@ export async function handleCaduSourceReviews(req, res, options = {}) {
       body: upstreamBody,
       cache: 'no-store',
       redirect: 'error',
-      signal: AbortSignal.timeout(20000),
+      // Keep a strict deadline ladder: OpenClaw resolves within 10 s, this
+      // proxy gives the upstream 12 s, and the browser waits 15 s before it
+      // reloads the authoritative state instead of guessing the outcome.
+      signal: AbortSignal.timeout(12000),
     });
     const text = await readLimitedSourceReviewResponse(
       upstream,

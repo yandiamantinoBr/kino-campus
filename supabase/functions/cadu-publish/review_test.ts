@@ -43,6 +43,22 @@ Deno.test("institutional review parses the exact revision-bound envelope", () =>
   assert.equal(INSTITUTIONAL_REVIEW_POLICY_CODE, "INSTITUTIONAL_SOURCE_REVIEW");
 });
 
+Deno.test("institutional review preserves safe multiline notes and rejects other controls", () => {
+  const multiline = "Linha 1\n\tLinha 2\rLinha 3";
+  const parsed = parseInstitutionalReview({
+    ...validEnvelope(),
+    note: multiline,
+  });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) assert.equal(parsed.value.note, multiline);
+
+  for (const unsafe of ["nul\u0000", "vertical\u000btab", "delete\u007f"]) {
+    const rejected = parseInstitutionalReview({ ...validEnvelope(), note: unsafe });
+    assert.equal(rejected.ok, false, unsafe);
+    if (!rejected.ok) assert.match(rejected.errors.join(" "), /note deve ter/);
+  }
+});
+
 Deno.test("institutional review fails closed on stale identity or noncanonical Instagram", () => {
   const stale = parseInstitutionalReview({
     ...validEnvelope(),

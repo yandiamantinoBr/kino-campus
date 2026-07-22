@@ -461,6 +461,7 @@
     .kc-cadu-publish-btn:disabled { opacity: .6; cursor: not-allowed; }
     .kc-cadu-publish-btn.is-ok { background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.4); color: #10b981; }
     .kc-cadu-publish-btn.is-pending { background: rgba(245,158,11,.18); border-color: rgba(245,158,11,.4); color: #f59e0b; }
+    .kc-cadu-publish-btn.is-complete { background: rgba(79,195,247,.14); border-color: rgba(79,195,247,.38); color: #4fc3f7; }
     .kc-cadu-publish-btn.is-err { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.4); color: #ef4444; }
     /* ===== Botão "Perguntar Cadu" (cross-tab) ===== */
     .kc-cadu-ask-btn { background: rgba(79,195,247,.10); border: 1px solid rgba(79,195,247,.32); color: #4fc3f7; border-radius: 8px; padding: 5px 10px; font-size: .82rem; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 4px; }
@@ -829,7 +830,7 @@
             </div>
           </div>
         </aside>
-        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, ajuste administrativo estável, sem colisão nem pendência crítica. O botão só é liberado depois de conferir todas as páginas da fila pendente e, no clique, o ID exato da fonte é confirmado novamente no servidor. A ação cria uma entrada durável no estado pendente (<code>pending</code>) e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
+        <p class="kc-cadu-review-policy"><strong>Revisão segura:</strong> “Enviar à revisão” aparece somente na fonte primária institucional, com tipo canônico aceito, ajuste administrativo estável, sem colisão nem pendência crítica. O botão só é liberado depois de conferir todo o histórico editorial limitado e, no clique, o ID exato e a versão atual da fonte são confirmados novamente no servidor. Uma decisão terminal permanece visível e bloqueia o reenvio da mesma versão. A ação cria uma entrada durável no estado pendente (<code>pending</code>) e nunca publica automaticamente; observações legadas e perfis oficiais continuam somente leitura.</p>
         <div class="kc-cadu-toolbar">
           <select id="sites-view" aria-label="Escolher visão do catálogo" data-i18n-aria-label="aria-label.cadu-sites-view">
             <option value="sources">Fontes web</option>
@@ -1218,7 +1219,7 @@
 
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a36e7ff58eac3281"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=3b3fa26a1e488731"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=67ebb2f14bf5d420"></script>
 </body>
 </html>

@@ -287,13 +287,26 @@ describe('Cadu institutional source review queue proxy', () => {
       expect(changedHeaders['X-Kino-Review-Signature'])
         .not.toBe(headers['X-Kino-Review-Signature']);
     }
+    const readinessTarget = 'https://cadu.example/api/source-registry/readiness';
+    const readinessHeaders = buildCaduReviewSignatureHeaders({
+      signingSecret: REVIEW_SIGNING_SECRET,
+      apiToken: 'internal-cadu-token',
+      adminId: ADMIN_ID,
+      method: 'GET',
+      targetUrl: readinessTarget,
+      body: '',
+      timestampSeconds,
+      nonce,
+    });
+    expect(readinessHeaders['X-Kino-Review-Body-SHA256'])
+      .toBe(createHash('sha256').update(Buffer.alloc(0)).digest('hex'));
     expect(() => buildCaduReviewSignatureHeaders({
       signingSecret: REVIEW_SIGNING_SECRET,
       apiToken: 'internal-cadu-token',
       adminId: ADMIN_ID,
       method: 'GET',
-      targetUrl,
-      body,
+      targetUrl: readinessTarget,
+      body: '{}',
       timestampSeconds,
       nonce,
     })).toThrow('invalid Cadu review signing configuration');

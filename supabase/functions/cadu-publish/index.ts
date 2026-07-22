@@ -12,6 +12,7 @@
 //     'pending'.
 //
 // Acoes (POST /functions/v1/cadu-publish):
+//   { action: "capabilities" }              -> contrato read-only do endpoint
 //   { action: "publish", item, options? }   -> cria post + capa
 //   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
 //   { action: "edit", postId, fields?, metadata?, image?, images? } -> edita
@@ -68,6 +69,7 @@ const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
 const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"));
 const INSTITUTIONAL_REVIEW_ENABLED =
   Deno.env.get("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1";
+const CAPABILITY_VERSION = "cadu-publish-capabilities-v1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -1062,6 +1064,22 @@ Deno.serve(async (req) => {
 
   try {
     switch (action) {
+      case "capabilities":
+        if (Object.keys(body).length !== 1 || body.action !== "capabilities") {
+          return json(400, {
+            ok: false,
+            code: "BAD_CAPABILITY_PROBE",
+            message: "O probe de capacidades aceita apenas a acao capabilities.",
+          });
+        }
+        return json(200, {
+          ok: true,
+          code: "OK",
+          capabilityVersion: CAPABILITY_VERSION,
+          institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
+          reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
+          createReviewRpc: "kc_create_institutional_source_review",
+        });
       case "publish":
         return await handlePublish(admin, user.id, body);
       case "review":

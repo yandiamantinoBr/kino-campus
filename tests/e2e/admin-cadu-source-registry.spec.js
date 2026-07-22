@@ -15,6 +15,17 @@ const READINESS_CHECKS = {
   legacyReadsPreserved: true,
   serviceRolePhaseA: true
 };
+const REVIEW_READINESS_CHECKS = {
+  reviewTable: true,
+  reviewConstraints: true,
+  reviewIndexes: true,
+  reviewRlsPolicy: true,
+  reviewTableAcl: true,
+  reviewGuardTrigger: true,
+  reviewCreateRpc: true,
+  reviewResolveRpc: true,
+  reviewDependencies: true
+};
 
 function registryProjection() {
   const orphanRowKey = 'c'.repeat(64);
@@ -224,6 +235,12 @@ function registryReadiness() {
     contractVersion: 'cadu-unit-meta-cas-v1',
     phase: 'phase-a',
     checks: { ...READINESS_CHECKS },
+    reviewContractVersion: 'cadu-institutional-review-v1',
+    reviewQueueReady: true,
+    reviewProxyReady: true,
+    reviewChecks: { ...REVIEW_READINESS_CHECKS },
+    edgeCapabilityVersion: 'cadu-publish-capabilities-v1',
+    institutionalReviewEnabled: true,
     metadataRowsValidated: 2,
     registryVersion: '2026-07-13.3',
     registrySha256: HASH
@@ -283,7 +300,7 @@ async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, ope
         json: {
           items: [], total: 0, limit, offset, has_more: false,
           filters: {
-            state: url.searchParams.get('state') || 'pending',
+            state: url.searchParams.get('state') || null,
             source_id: url.searchParams.get('source_id') || null
           }
         }
@@ -1136,8 +1153,8 @@ test.describe('Admin Cadu — catálogo canônico', () => {
   });
 
   test('bloqueia a fonte cuja pendência está além da primeira página visível', async ({ page }) => {
-    const allItems = Array.from({ length: 100 }, (_, index) => institutionalReviewItem(index + 1));
-    allItems.push(institutionalReviewItem(101, {
+    const allItems = Array.from({ length: 100 }, (_, index) => institutionalReviewItem(102 - index));
+    allItems.push(institutionalReviewItem(2, {
       source_id: 'web.ufg.portal',
       source_url: 'https://ufg.br/',
       content_url: 'https://ufg.br/',
@@ -1163,12 +1180,12 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       return route.fulfill({ status: 500, json: { error: 'unexpected_publish' } });
     }, null, async (route) => {
       const url = new URL(route.request().url());
-      const state = url.searchParams.get('state') || 'pending';
+      const state = url.searchParams.get('state');
       const sourceId = url.searchParams.get('source_id') || '';
       const limit = Number(url.searchParams.get('limit'));
       const offset = Number(url.searchParams.get('offset'));
       reads.push({ state, sourceId, limit, offset });
-      let items = state === 'pending' ? allItems : [];
+      let items = state === null || state === 'pending' ? allItems : [];
       if (sourceId) items = items.filter((item) => item.source_id === sourceId);
       const pageItems = items.slice(offset, offset + limit);
       return route.fulfill({
@@ -1189,15 +1206,29 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     await expect(button).toBeDisabled();
     await expect(page.locator('[id="review-gate-web.ufg.portal"]')).toContainText('Na fila:');
     expect(reads).toEqual(expect.arrayContaining([
-      expect.objectContaining({ state: 'pending', sourceId: '', limit: 100, offset: 0 }),
-      expect.objectContaining({ state: 'pending', sourceId: '', limit: 100, offset: 100 })
+      expect.objectContaining({ state: null, sourceId: '', limit: 100, offset: 0 }),
+      expect.objectContaining({ state: null, sourceId: '', limit: 100, offset: 100 })
     ]));
     await button.click({ force: true }).catch(() => {});
     expect(publishRequests).toHaveLength(0);
   });
 
-  test('mantém novos envios fechados quando uma página da autoridade pendente falha', async ({ page }) => {
-    const allItems = Array.from({ length: 101 }, (_, index) => institutionalReviewItem(index + 1));
+  test('mantém a decisão terminal visível e impede reenviar a mesma revisão canônica', async ({ page }) => {
+    const terminal = institutionalReviewItem(151, {
+      source_id: 'web.ufg.portal',
+      source_url: 'https://ufg.br/',
+      content_url: 'https://ufg.br/',
+      instagram_handle: 'ufg_oficial',
+      source_revision: SOURCE_REVISION,
+      name: 'UFG — Universidade Federal de Goiás',
+      note: 'Fonte canônica confirmada para revisão editorial',
+      tier: 2,
+      category: 'university',
+      state: 'approved',
+      resolved_by: '00000000-0000-4000-8000-000000000002',
+      resolved_at: '2026-07-22T15:00:00.000Z',
+      resolution_note: 'Identidade institucional conferida.'
+    });
     const publishRequests = [];
     await mockCommonCaduRoutes(page, async (route) => route.fulfill({
       headers: {
@@ -1212,14 +1243,61 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       return route.fulfill({ status: 500, json: { error: 'unexpected_publish' } });
     }, null, async (route) => {
       const url = new URL(route.request().url());
-      const state = url.searchParams.get('state') || 'pending';
+      const requestedState = url.searchParams.get('state');
       const sourceId = url.searchParams.get('source_id') || '';
       const limit = Number(url.searchParams.get('limit'));
       const offset = Number(url.searchParams.get('offset'));
-      if (!sourceId && state === 'pending' && limit === 100 && offset === 100) {
+      let items = requestedState === null || requestedState === 'approved' ? [terminal] : [];
+      if (sourceId) items = items.filter((item) => item.source_id === sourceId);
+      const pageItems = items.slice(offset, offset + limit);
+      return route.fulfill({
+        json: {
+          items: pageItems,
+          total: items.length,
+          limit,
+          offset,
+          has_more: offset + pageItems.length < items.length,
+          filters: { state: requestedState, source_id: sourceId || null }
+        }
+      });
+    });
+
+    await page.goto('/admin/cadu.html');
+    const button = page.locator('tr[data-source-id="web.ufg.portal"] .kc-cadu-publish-btn');
+    await expect(button).toContainText('Revisão aprovada');
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveClass(/is-complete/);
+    await expect(page.locator('[id="review-gate-web.ufg.portal"]')).toContainText(
+      'Revisão concluída: Aprovada para esta versão',
+    );
+    await button.click({ force: true }).catch(() => {});
+    expect(publishRequests).toHaveLength(0);
+  });
+
+  test('mantém novos envios fechados quando uma página da autoridade pendente falha', async ({ page }) => {
+    const allItems = Array.from({ length: 101 }, (_, index) => institutionalReviewItem(101 - index));
+    const publishRequests = [];
+    await mockCommonCaduRoutes(page, async (route) => route.fulfill({
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, no-store',
+        ETag: LIST_ETAG,
+        'X-Cadu-Registry-Sha256': HASH
+      },
+      json: stableReviewProjection()
+    }), null, null, null, async (route) => {
+      publishRequests.push(route.request().postDataJSON());
+      return route.fulfill({ status: 500, json: { error: 'unexpected_publish' } });
+    }, null, async (route) => {
+      const url = new URL(route.request().url());
+      const state = url.searchParams.get('state');
+      const sourceId = url.searchParams.get('source_id') || '';
+      const limit = Number(url.searchParams.get('limit'));
+      const offset = Number(url.searchParams.get('offset'));
+      if (!sourceId && state === null && limit === 100 && offset === 100) {
         return route.fulfill({ status: 502, json: { error: 'partial_page_failed' } });
       }
-      let items = state === 'pending' ? allItems : [];
+      let items = state === null || state === 'pending' ? allItems : [];
       if (sourceId) items = items.filter((item) => item.source_id === sourceId);
       const pageItems = items.slice(offset, offset + limit);
       return route.fulfill({
@@ -1276,12 +1354,13 @@ test.describe('Admin Cadu — catálogo canônico', () => {
         });
       }
       const url = new URL(request.url());
-      const state = url.searchParams.get('state') || 'pending';
+      const state = url.searchParams.get('state');
       const sourceId = url.searchParams.get('source_id') || '';
       const limit = Number(url.searchParams.get('limit'));
       const offset = Number(url.searchParams.get('offset'));
       queueQueries.push({ state, sourceId, limit, offset });
-      let items = allItems.filter((item) => !resolvedIds.has(item.id) && item.state === state);
+      let items = allItems.filter((item) => !resolvedIds.has(item.id)
+        && (state === null || item.state === state));
       if (sourceId) items = items.filter((item) => item.source_id === sourceId);
       const pageItems = items.slice(offset, offset + limit);
       return route.fulfill({
@@ -1375,10 +1454,10 @@ test.describe('Admin Cadu — catálogo canônico', () => {
       json: stableReviewProjection()
     }), null, null, null, null, null, async (route) => {
       const url = new URL(route.request().url());
-      const state = url.searchParams.get('state') || 'pending';
+      const state = url.searchParams.get('state');
       const limit = Number(url.searchParams.get('limit'));
       const offset = Number(url.searchParams.get('offset'));
-      const items = state === 'approved' ? [approvedItem] : [];
+      const items = state === null || state === 'approved' ? [approvedItem] : [];
       return route.fulfill({
         json: {
           items, total: items.length, limit, offset, has_more: false,
@@ -1451,7 +1530,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
         json: {
           items, total: items.length, limit, offset, has_more: false,
           filters: {
-            state: url.searchParams.get('state') || 'pending',
+            state: url.searchParams.get('state'),
             source_id: url.searchParams.get('source_id')
           }
         }

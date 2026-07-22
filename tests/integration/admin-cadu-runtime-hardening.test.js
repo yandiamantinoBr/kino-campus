@@ -836,7 +836,48 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('submitSourceReview(canonicalSource)');
     expect(functionSource('updateSourceSaveButton')).toContain('updateSourceReviewButton(source, draft)');
     expect(functionSource('updateSourceReviewButton')).toContain('sourceReviewEligibility(');
-    expect(functionSource('updateSourceReviewButton')).toContain("classList.remove('is-ok', 'is-pending', 'is-err')");
+    expect(functionSource('updateSourceReviewButton')).toContain("classList.remove('is-ok', 'is-pending', 'is-complete', 'is-err')");
+  });
+
+  test('keeps a terminal decision authoritative until the canonical source revision changes', () => {
+    const presentationFactory = Function(
+      'state',
+      '"use strict";\n' +
+      'function catalogLabel(value) { return String(value); }\n' +
+      functionSource('sourceReviewGateCopy') + '\n' +
+      functionSource('latestInstitutionalReviewForSource') + '\n' +
+      functionSource('institutionalReviewSubmissionAuthority') + '\n' +
+      `return (${functionSource('sourceReviewPresentation')});`,
+    );
+    const state = {
+      pendingInstitutionalReviewsBySource: {
+        'web.ufg.portal': {
+          id: '123e4567-e89b-42d3-a456-426614174000',
+          sourceId: 'web.ufg.portal',
+          sourceRevision: 'a'.repeat(64),
+          state: 'approved',
+        },
+      },
+      pendingInstitutionalReviewAuthorityState: 'ready',
+      pendingInstitutionalReviewAuthorityError: '',
+    };
+    const presentation = presentationFactory(state);
+    expect(presentation(
+      { id: 'web.ufg.portal', revision: 'a'.repeat(64) },
+      { allowed: true, reason: '' },
+    )).toMatchObject({
+      completed: true,
+      disabled: true,
+      label: 'Revisão aprovada',
+    });
+    expect(presentation(
+      { id: 'web.ufg.portal', revision: 'b'.repeat(64) },
+      { allowed: true, reason: '' },
+    )).toMatchObject({
+      pending: false,
+      disabled: false,
+      label: 'Enviar à revisão',
+    });
   });
 
   test('validates the institutional review queue and resolution envelopes fail-closed', () => {
@@ -944,11 +985,14 @@ describe('admin Cadu runtime hardening', () => {
     expect(() => normalizeResolution({ ...resolution, published: true }, item, 'approved')).toThrow(/contrato inesperado/);
   });
 
-  test('builds the pending-review authority from every bounded page and swaps it atomically', async () => {
+  test('builds the latest-review authority from every bounded history page and swaps it atomically', async () => {
     const items = Array.from({ length: 101 }, (_, index) => ({
       id: `review-${index + 1}`,
       source_id: `web.ufg.source-${index + 1}`,
       source_revision: String((index + 1) % 10).repeat(64),
+      state: index % 2 ? 'approved' : 'pending',
+      created_at: new Date(Date.UTC(2026, 6, 22, 12, 0, 0) - index * 1000).toISOString(),
+      resolved_at: index % 2 ? '2026-07-22T13:00:00.000Z' : null,
     }));
     const paths = [];
     const harness = pendingReviewAuthorityHarness(async (path) => {
@@ -971,13 +1015,13 @@ describe('admin Cadu runtime hardening', () => {
 
     await expect(harness.load()).resolves.toBe(true);
     expect(paths).toHaveLength(2);
-    expect(paths[0]).toContain('state=pending');
+    expect(paths[0]).not.toContain('state=');
     expect(paths[0]).toContain('limit=100');
     expect(paths[1]).toContain('offset=100');
     expect(harness.state.pendingInstitutionalReviewAuthorityState).toBe('ready');
     expect(Object.keys(harness.state.pendingInstitutionalReviewsBySource)).toHaveLength(101);
     expect(harness.state.pendingInstitutionalReviewsBySource['web.ufg.source-101'])
-      .toMatchObject({ id: 'review-101', sourceId: 'web.ufg.source-101' });
+      .toMatchObject({ id: 'review-101', sourceId: 'web.ufg.source-101', state: 'pending' });
   });
 
   test('keeps the previous pending snapshot on partial failure and ignores an older generation', async () => {
@@ -985,6 +1029,9 @@ describe('admin Cadu runtime hardening', () => {
       id: `old-review-${index + 1}`,
       source_id: `web.ufg.old-${index + 1}`,
       source_revision: 'a'.repeat(64),
+      state: 'pending',
+      created_at: new Date(Date.UTC(2026, 6, 22, 12, 0, 0) - index * 1000).toISOString(),
+      resolved_at: null,
     }));
     const inconsistent = pendingReviewAuthorityHarness(async (path) => {
       const offset = Number(new URL(path, 'https://kino.test').searchParams.get('offset'));
@@ -1020,7 +1067,10 @@ describe('admin Cadu runtime hardening', () => {
     releaseOlder({
       ok: true,
       data: {
-        items: [{ id: 'late', source_id: 'web.ufg.late', source_revision: 'b'.repeat(64) }],
+        items: [{
+          id: 'late', source_id: 'web.ufg.late', source_revision: 'b'.repeat(64),
+          state: 'pending', created_at: '2026-07-22T12:00:00.000Z', resolved_at: null,
+        }],
         total: 1,
         limit: 100,
         offset: 0,
@@ -1030,6 +1080,36 @@ describe('admin Cadu runtime hardening', () => {
     await expect(older).resolves.toBe(false);
     expect(racing.state.pendingInstitutionalReviewAuthorityState).toBe('ready');
     expect(racing.state.pendingInstitutionalReviewsBySource).toEqual({});
+  });
+
+  test('retains only the newest terminal or pending review per source and rejects reordered history', async () => {
+    const newest = {
+      id: 'review-newest', source_id: 'web.ufg.portal', source_revision: 'b'.repeat(64),
+      state: 'approved', created_at: '2026-07-22T12:00:00.000Z',
+      resolved_at: '2026-07-22T12:01:00.000Z',
+    };
+    const older = {
+      id: 'review-older', source_id: 'web.ufg.portal', source_revision: 'a'.repeat(64),
+      state: 'rejected', created_at: '2026-07-21T12:00:00.000Z',
+      resolved_at: '2026-07-21T12:01:00.000Z',
+    };
+    const latest = pendingReviewAuthorityHarness(async () => ({
+      ok: true,
+      data: { items: [newest, older], total: 2, limit: 100, offset: 0, hasMore: false },
+    }));
+    await expect(latest.load()).resolves.toBe(true);
+    expect(latest.state.pendingInstitutionalReviewsBySource['web.ufg.portal'])
+      .toMatchObject({ id: 'review-newest', state: 'approved', sourceRevision: 'b'.repeat(64) });
+
+    const reordered = pendingReviewAuthorityHarness(async () => ({
+      ok: true,
+      data: { items: [older, newest], total: 2, limit: 100, offset: 0, hasMore: false },
+    }));
+    const retained = { 'web.ufg.retained': { id: 'retained' } };
+    reordered.state.pendingInstitutionalReviewsBySource = retained;
+    await expect(reordered.load()).resolves.toBe(false);
+    expect(reordered.state.pendingInstitutionalReviewAuthorityState).toBe('error');
+    expect(reordered.state.pendingInstitutionalReviewsBySource).toBe(retained);
   });
 
   test('recognizes stale source reviews and blocks direct-mode resolution without inventing identity', () => {
@@ -1053,6 +1133,8 @@ describe('admin Cadu runtime hardening', () => {
     expect(functionSource('resolveInstitutionalReview')).toContain('institutionalReviewResolutionCapability()');
     expect(functionSource('resolveInstitutionalReview')).toContain("institutionalReviewResponseErrorCode(envelope) === 'SOURCE_REVIEW_STALE'");
     expect(functionSource('resolveInstitutionalReview')).toContain('loadSites()');
+    expect(functionSource('resolveInstitutionalReview')).toContain('reconciledReview.state === decision');
+    expect(functionSource('resolveInstitutionalReview')).toContain('A resposta demorou, mas o servidor confirmou');
   });
 
   test('renders canonical catalog metadata in pt-BR with full institutional names', () => {
