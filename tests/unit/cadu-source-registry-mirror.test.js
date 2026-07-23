@@ -196,9 +196,9 @@ describe('bundled Cadu source-registry mirror', () => {
       reason: 'mirror_excludes_runtime_overrides',
     });
     expect(catalog.summary).toMatchObject({
-      sources: 197,
-      entities: 170,
-      instagramProfiles: 86,
+      sources: 198,
+      entities: 172,
+      instagramProfiles: 103,
       deferred: 0,
     });
     expect(catalog.sources.every((source) => source.enabled === false)).toBe(true);
