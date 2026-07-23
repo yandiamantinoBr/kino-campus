@@ -1,0 +1,548 @@
+{
+  "scanner": "scan-ig-browser.js",
+  "version": "1.1.0",
+  "relevanceVersion": "2026-06-30-events-opps-v3",
+  "timestamp": "2026-07-18T15:14:34.658Z",
+  "stats": {
+    "profilesScanned": 51,
+    "profilesOk": 51,
+    "profilesFail": 0,
+    "totalPosts": 6,
+    "totalRelevant": 2,
+    "totalSkipped": 537
+  },
+  "sourceAudit": {
+    "aliases": {
+      "icbufg": "icb.ufg",
+      "emacufg": "em.ufg",
+      "fct.ufg": "campusaparecidaufg",
+      "odontologiaufg": "odontologia.ufg",
+      "fefdufg": "fefufg",
+      "culturaufg": "centroculturalufg",
+      "esportesufg": "cecasufg"
+    },
+    "aliasesResolved": [],
+    "duplicatesSkipped": [],
+    "discoveredHandles": []
+  },
+  "results": [
+    {
+      "handle": "ufg_oficial",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "posufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "face.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fen_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fanutufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "evzufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "icb.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "iptsp_ufg",
+      "posts": [
+        {
+          "title": "Photo by IPTSP - UFG in Instituto de Patologia Tropical e Saúde Pública with @pesquisaeinovacaoufg, @posufg, @list_ufg, ",
+          "text": "Photo by IPTSP - UFG in Instituto de Patologia Tropical e Saúde Pública with @pesquisaeinovacaoufg, @posufg, @list_ufg, and @cetisaude. May be an image of poster and text.",
+          "link": "https://www.instagram.com/iptsp_ufg/p/Da51spns-93/",
+          "image": "https://scontent-gru2-2.cdninstagram.com/v/t51.82787-15/750593983_18331137001267093_1985455814053688896_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=102&ig_cache_key=Mzk0MzQxOTExMzU1MTE2MzI1NQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTM1MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=he7tpoMmR88Q7kNvwH4Ko3Z&_nc_oc=Adr1RVtPHcvb361yyn0U2H57oave7h9F5n930W3cgLBJdKoL8ZS3qdKmtpvaL8Vx_fI&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-gru2-2.cdninstagram.com&_nc_gid=UcnQfxJU06y7H915M8-n0w&_nc_ss=7a22e&oh=00_AQD8H-IHo4cC30uzlyPl897Wu1vJo0ALYj-gJtrU0OEOhA&oe=6A615D95",
+          "date": "",
+          "source": "ig:@iptsp_ufg",
+          "isReel": false,
+          "relevant": false,
+          "relevanceReason": "weak_signal",
+          "strongOpportunityTerms": [],
+          "actionEventTerms": [],
+          "matchedTerms": [
+            "pesquisa",
+            "inovacao"
+          ],
+          "module": null,
+          "category": "pesquisa",
+          "hasDeadline": false,
+          "futureDates": [],
+          "score": 0.21000000000000002,
+          "_needsDetail": true,
+          "_isNew": true
+        }
+      ],
+      "newPosts": 1,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "em.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "propessoas_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "infufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 0,
+      "error": null
+    },
+    {
+      "handle": "emc_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fav_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fcs_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "pesquisaeinovacaoufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "proex.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "prograd_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "praeufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "sri_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "institutoverbenaufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "cei.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "ciar_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "letras.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fic.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 6,
+      "error": null
+    },
+    {
+      "handle": "campusaparecidaufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "odontologia.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "iqufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "cerofufg",
+      "posts": [
+        {
+          "title": "Photo by CEROF-UFG on July 17, 2026. May be an image of eyeglasses, poster and text that says '116 CÓRNEAS Foram preserv",
+          "text": "Photo by CEROF-UFG on July 17, 2026. May be an image of eyeglasses, poster and text that says '116 CÓRNEAS Foram preservadas e disponibilizadas para α Central Estadual de Transplantes da SES-GO SES- Banco de Olhos do CEROF-UFG apresenta resultados do primeiro semestre de 2026 CEROF WaIRLeSCaNSS ்த OUDA UFG UNTIRSI 西品型。 家 FEALALE'.",
+          "link": "https://www.instagram.com/cerofufg/p/Da6Ic7jmbIs/",
+          "image": "https://scontent-gru1-2.cdninstagram.com/v/t51.82787-15/749343238_18567390988069791_8025031023686186422_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=110&ig_cache_key=Mzk0MzQ4NjQyNjU0MTg0MTY2MQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTA4MS5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=NiJFFLyS7YMQ7kNvwFknB-T&_nc_oc=Adp8DGAy_guuN5spd6E1yOI2kEZVPZey4r9m7UxJBDimmq4m4RlHIAxtlu-HI6szvjs&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-gru1-2.cdninstagram.com&_nc_gid=6JOSfBTADIc52BBEOy3ckg&_nc_ss=7a22e&oh=00_AQDObI4gELYcGohX_5PKM0yAyiLXbXjwtQ1tRGGGLloTXg&oe=6A6158EB",
+          "date": "2026-07-17",
+          "source": "ig:@cerofufg",
+          "isReel": false,
+          "relevant": false,
+          "relevanceReason": "weak_signal",
+          "strongOpportunityTerms": [],
+          "actionEventTerms": [],
+          "matchedTerms": [],
+          "module": null,
+          "category": null,
+          "hasDeadline": false,
+          "futureDates": [],
+          "score": 0,
+          "_needsDetail": false,
+          "_isNew": true
+        }
+      ],
+      "newPosts": 1,
+      "skippedPosts": 10,
+      "error": null
+    },
+    {
+      "handle": "eeca_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 9,
+      "error": null
+    },
+    {
+      "handle": "ime_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "museu_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "planetario.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "editora.ufg",
+      "posts": [
+        {
+          "title": "🎥📚 E se um livro pudesse transformar a forma como você compreende as ciências humanas?  O Prof. José Ternes apresenta ",
+          "text": "🎥📚 E se um livro pudesse transformar a forma como você compreende as ciências humanas?\n\nO Prof. José Ternes apresenta um panorama de Michel Foucault e a Idade do Homem, obra que chega à sua terceira edição publicada pela Editora UFG. \n\nUma conversa para quem deseja conhecer mais sobre um dos mais influentes filósofos do século XX e os caminhos que inspiraram a construção desta obra.\n\n▶️ Assista ao vídeo e conheça mais sobre o livro.\n\n📖 Michel Foucault e a Idade do Homem será relançado no dia 29 de julho, às 19h, na Livraria UFG – Pátio das Humanidades (Câmpus Samambaia), durante o 20º Seminário Nacional de História da Ciência e da Tecnologia.\n\n#EditoraUFG #MichelFoucault #JoséTernes #CiênciasHumanas #HistóriaDoPensamento #Livros #LançamentoEditorial #Leitura",
+          "link": "https://www.instagram.com/editora.ufg/reel/Da5szR7idsz/",
+          "image": "https://scontent-gru1-2.cdninstagram.com/v/t51.71878-15/749258278_4376228012692927_6390883081744180729_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=100&ig_cache_key=Mzk0MzM3OTk4NjczMTg4MzMxNTE4MDAyMjM3NjY2OTU3MTgz.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNMSVBTLnhwaWRzLjY0MC5zZHIudmlkZW9fZGVmYXVsdF9jb3Zlcl9mcmFtZS5DMyJ9&_nc_ohc=zYazKecOWMgQ7kNvwFH6lNw&_nc_oc=Adpu3XTeCCbIxLYgBiTAuTmxyzT_kbwy40WZjV9OewM9c9RVL3-xtzQZ1sQpKwjIR3w&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-gru1-2.cdninstagram.com&_nc_gid=ZQLbYlJXQChins5FIwcG3Q&_nc_ss=7a22e&oh=00_AQBo6uJav6adc6USN7fnulekqySpkNJzkf8880U1N5jr7A&oe=6A61592B",
+          "date": "",
+          "source": "ig:@editora.ufg",
+          "isReel": true,
+          "relevant": true,
+          "relevanceReason": "event_with_deadline",
+          "strongOpportunityTerms": [],
+          "actionEventTerms": [
+            "seminario",
+            "seminário",
+            "lancamento",
+            "lançamento"
+          ],
+          "matchedTerms": [
+            "seminario",
+            "lancamento"
+          ],
+          "module": "eventos",
+          "category": "workshops",
+          "hasDeadline": true,
+          "futureDates": [
+            "2026-07-29"
+          ],
+          "score": 0.21000000000000002,
+          "_needsDetail": true,
+          "_isNew": true
+        }
+      ],
+      "newPosts": 1,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "sibi_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "cepae_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fafilufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "iesaufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 0,
+      "error": null
+    },
+    {
+      "handle": "campusgoiasufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "sdh_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "firminopolis_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "centroculturalufg",
+      "posts": [
+        {
+          "title": "Conheça o Teatro do CCUFG ✨  O primeiro semestre garantiu acesso à uma programação cultural gratuita e de qualidade para",
+          "text": "Conheça o Teatro do CCUFG ✨\n\nO primeiro semestre garantiu acesso à uma programação cultural gratuita e de qualidade para mais de 7500 pessoas num total de 72 apresentações até o mês de junho de 2026.\n\nEm breve retomaremos nossa programação múltipla e diversa para mais milhares de espectadores!\n\n#TeatroCCUFG #Cultura #Seacult",
+          "link": "https://www.instagram.com/centroculturalufg/reel/Da6CbryJoeU/",
+          "image": "https://scontent-gru1-2.cdninstagram.com/v/t51.71878-15/747796066_1549274856606024_3455437659253405221_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=108&ig_cache_key=Mzk0MzQ3NTEyMjI0NzQ2ODk0OA%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNMSVBTLnhwaWRzLjY0MC5zZHIudmlkZW9fbmZyYW1lX2NvdmVyX2ZyYW1lLkMzIn0%3D&_nc_ohc=btVNK-z_kTQQ7kNvwFy6aMs&_nc_oc=AdrWYFPAwRdXp-QcHusLabjnQ--znURWu_6FcjVCoVLC9DMnXU0IspBCu9B1QCQ_RGM&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-gru1-2.cdninstagram.com&_nc_gid=cqwpxnCUgHB6LOK7hJwghA&_nc_ss=7a22e&oh=00_AQAGADx2_fjxklYaf1MeSqUBhuvtQqqr_2njRv4P2UsOuw&oe=6A617253",
+          "date": "",
+          "source": "ig:@centroculturalufg",
+          "isReel": true,
+          "relevant": true,
+          "relevanceReason": "event_with_deadline",
+          "strongOpportunityTerms": [],
+          "actionEventTerms": [
+            "programacao",
+            "programação"
+          ],
+          "matchedTerms": [
+            "programacao"
+          ],
+          "module": null,
+          "category": null,
+          "hasDeadline": true,
+          "futureDates": [],
+          "score": 0.22999999999999998,
+          "_needsDetail": true,
+          "_isNew": true
+        }
+      ],
+      "newPosts": 1,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "lacena_ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 7,
+      "error": null
+    },
+    {
+      "handle": "escoladeposufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "ea.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "fefufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    },
+    {
+      "handle": "cecasufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 0,
+      "error": null
+    },
+    {
+      "handle": "direitoufg",
+      "posts": [
+        {
+          "title": "Photo by FD UFG on July 17, 2026. May be a meme of poster, magazine and text that says 'COMUNICADO A Faculdade de Direit",
+          "text": "Photo by FD UFG on July 17, 2026. May be a meme of poster, magazine and text that says 'COMUNICADO A Faculdade de Direito da Universidade Federal de Goiás (FD/UFG) informa que permanecerá regime de atendimento remoto dia 31 de julho de 2026, com suspensão temporária das atividades presenciais, em razão da execução das obras de reforma da rede esgoto da unidade acadêmica. Durante este período, as atividades administrativas serão realizadas normalmente em regime remoto. Para atendimento encaminhamento de demandas, solicitamos que os contatos sejam efetuados por meio dos seguintes endereços eletrônicos: Direção: Secretaria Administrativa: Núcleo Prática Jurídica: fd@ufg.br Direito Agrário Direito Público compreensão. Desde já, agradecemos Diretoria Faculdade de Direito Coordenação Administrat",
+          "link": "https://www.instagram.com/direitoufg/p/Da57l0VuOZ_/",
+          "image": "https://scontent-gru2-1.cdninstagram.com/v/t51.82787-15/749879078_18418251940196351_1191885418517666431_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=107&ig_cache_key=Mzk0MzQ0NTAzMjMwMzM4ODI4Nw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTM1MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=J0Y2LEHL5GUQ7kNvwH0au2X&_nc_oc=AdrsUTgdYGWq6WNTe_uQSMjt0OFPQ4_-b8GTodb0qe5ud1Lrfgo9ARFbTFxC6Mw721I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-gru2-1.cdninstagram.com&_nc_gid=ZAwdYuZx83B4XIYTT_NcAQ&_nc_ss=7a22e&oh=00_AQBs0OwxDR7-FKshbBSBlXvdt_3XV4G9ZhqKmSvJdsH7hQ&oe=6A617139",
+          "date": "2026-07-17",
+          "source": "ig:@direitoufg",
+          "isReel": false,
+          "relevant": false,
+          "relevanceReason": "weak_signal",
+          "strongOpportunityTerms": [],
+          "actionEventTerms": [],
+          "matchedTerms": [],
+          "module": null,
+          "category": null,
+          "hasDeadline": true,
+          "futureDates": [
+            "2026-07-31"
+          ],
+          "score": 0,
+          "_needsDetail": false,
+          "_isNew": true
+        }
+      ],
+      "newPosts": 1,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "patiodaciencia.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 0,
+      "error": null
+    },
+    {
+      "handle": "tvufg",
+      "posts": [
+        {
+          "title": "Photo by TV UFG on July 17, 2026. May be a Twitter screenshot of text that says 'tvBrasil As artes têm essa grande quali",
+          "text": "Photo by TV UFG on July 17, 2026. May be a Twitter screenshot of text that says 'tvBrasil As artes têm essa grande qualidade de anunciar o novo [...] Se você vê que tem uma outra possibilidade lidade de sentir e de olhar o mundo, alguma coisa pode se modificar. E essa esperança eu acho que a gente carrega.'.",
+          "link": "https://www.instagram.com/tvufg/p/Da52pIXk8Bc/",
+          "image": "https://scontent-gru1-2.cdninstagram.com/v/t51.82787-15/748480832_18602530156043643_3011734603706656211_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=100&ig_cache_key=Mzk0MzQyMzI2OTczNTIxOTI5Mg%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTA4MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=o5T3fe_LSg4Q7kNvwHQIumA&_nc_oc=Ados_EVjIKK6ADPQxrw9OW8-SUpb8k4XOT_bYGi4cNRYj0X0MdL83GVljH_YXM7kJXw&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-gru1-2.cdninstagram.com&_nc_gid=BQI_X5EmYbBBXBU2Sfq_1g&_nc_ss=7a22e&oh=00_AQDtruJTFBH5_EaTDAaOTfQG_hQtDO3dw3DuQpR4IJxHKA&oe=6A616ED1",
+          "date": "2026-07-17",
+          "source": "ig:@tvufg",
+          "isReel": false,
+          "relevant": false,
+          "relevanceReason": "weak_signal",
+          "strongOpportunityTerms": [],
+          "actionEventTerms": [],
+          "matchedTerms": [],
+          "module": null,
+          "category": null,
+          "hasDeadline": false,
+          "futureDates": [],
+          "score": 0,
+          "_needsDetail": false,
+          "_isNew": true
+        }
+      ],
+      "newPosts": 1,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "lapigufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 11,
+      "error": null
+    },
+    {
+      "handle": "floreser.ufg",
+      "posts": [],
+      "newPosts": 0,
+      "skippedPosts": 12,
+      "error": null
+    }
+  ],
+  "artifactContract": {
+    "schemaVersion": 1,
+    "kind": "instagram-scan",
+    "version": "1.1.0",
+    "runId": "ac027e02-4122-400a-a3ba-cc97c4e23182",
+    "dateBrt": "2026-07-18",
+    "generatedAt": "2026-07-18T15:14:34.658Z",
+    "contentSha256": "4a38b10a7085761c0c5254d45e7c8253509f3f5e701bf5026f0ea6933ac65cea"
+  }
+}

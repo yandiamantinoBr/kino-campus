@@ -1,0 +1,169 @@
+{
+  "generatedAt": "2026-07-18T15:26:04.026Z",
+  "skipped": [
+    {
+      "title": "Evento de Extensão: CERISE SUMMIT 2026",
+      "sourceUrl": "https://emc.ufg.br/e/39293",
+      "module": "eventos",
+      "issues": [
+        "unapproved_description_url",
+        "needs_review"
+      ],
+      "reasons": [
+        "inscricao",
+        "vagas",
+        "palestra",
+        "evento",
+        "extensao",
+        "pesquisa",
+        "oportunidade",
+        "inovacao",
+        "formacao",
+        "live",
+        "programacao completa"
+      ],
+      "dates": {
+        "publishedAt": "2026-07-16T16:45:52.701-03:00",
+        "updatedAt": "2026-07-16T16:46:35.950-03:00",
+        "eventStartsAt": "2026-09-18",
+        "eventEndsAt": "2026-09-18",
+        "applicationOpensAt": null,
+        "applicationDeadline": null,
+        "resultPublishedAt": null,
+        "applicationStatus": "unknown",
+        "eventStatus": "upcoming",
+        "canApply": false,
+        "dateEvidence": [
+          {
+            "date": "2026-09-18",
+            "role": "eventStartsAt",
+            "excerpt": "são: CERISE SUMMIT 2026. Evento de Extensão: CERISE SUMMIT 2026 Data: 2026-09-18. Fim: 2026-09-18. Local: Escola de Engenharia Elétrica, Mecânica e de",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "contextDate",
+            "excerpt": "T 2026. Evento de Extensão: CERISE SUMMIT 2026 Data: 2026-09-18. Fim: 2026-09-18. Local: Escola de Engenharia Elétrica, Mecânica e de Computação - EMC",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "eventStartsAt",
+            "excerpt": "niversitário) Endereço: Av. Universitária, n.º 1488 - quadr. - Data: 18 de setembro de 2026 - Horário: 08h às 18h - Local : Escola de Engenharia Elétrica,",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "eventStartsAt",
+            "excerpt": "structured event start",
+            "source": "structured_event",
+            "yearInferred": false,
+            "temporalDirection": "structured"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "eventEndsAt",
+            "excerpt": "structured event end",
+            "source": "structured_event",
+            "yearInferred": false,
+            "temporalDirection": "structured"
+          }
+        ],
+        "dates": [
+          "2026-09-18"
+        ],
+        "futureDates": [
+          "2026-09-18"
+        ],
+        "pastDates": [],
+        "latestDate": "2026-09-18",
+        "hasDeadline": false,
+        "hasDeadlineByRegex": false,
+        "hasDeadlineByHeuristic": false,
+        "isExpired": false,
+        "isOld": false,
+        "isUpcoming": true,
+        "webyDate": "2026-07-16T16:45:52.701-03:00"
+      }
+    },
+    {
+      "title": "VII ENGOPE abre inscrições e submissões de trabalhos para edição de 2026",
+      "sourceUrl": "https://forms.gle/xv78GaNBRbSCHJEw7",
+      "module": "eventos",
+      "issues": [
+        "unapproved_description_url",
+        "needs_review"
+      ],
+      "reasons": [
+        "inscricoes",
+        "curso",
+        "palestra",
+        "evento",
+        "formacao"
+      ],
+      "dates": {
+        "publishedAt": "2026-07-15T09:30:06.670-03:00",
+        "updatedAt": "2026-07-15T09:35:34.382-03:00",
+        "eventStartsAt": "2026-10-21",
+        "eventEndsAt": "2026-10-23",
+        "applicationOpensAt": null,
+        "applicationDeadline": "2026-09-30",
+        "resultPublishedAt": null,
+        "applicationStatus": "open",
+        "eventStatus": "upcoming",
+        "canApply": false,
+        "dateEvidence": [
+          {
+            "date": "2026-10-21",
+            "role": "eventStartsAt",
+            "excerpt": "ia de Dados para Setores Estratégicos de Goiás, que será realizado de 21 a 23 de outubro de 2026. As inscrições e submissões podem ser realizadas diretamente pelo s",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "future"
+          },
+          {
+            "date": "2026-10-23",
+            "role": "eventEndsAt",
+            "excerpt": "ia de Dados para Setores Estratégicos de Goiás, que será realizado de 21 a 23 de outubro de 2026. As inscrições e submissões podem ser realizadas diretamente pelo s",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "future"
+          },
+          {
+            "date": "2026-09-30",
+            "role": "applicationDeadline",
+            "excerpt": "dem ser realizadas diretamente pelo site oficial do evento, até o dia 30 de setembro de 2026: https://viiengope.plateia.ufg.br/ A programação do evento contará",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          }
+        ],
+        "dates": [
+          "2026-09-30",
+          "2026-10-21",
+          "2026-10-23"
+        ],
+        "futureDates": [
+          "2026-09-30",
+          "2026-10-21",
+          "2026-10-23"
+        ],
+        "pastDates": [],
+        "latestDate": "2026-10-23",
+        "hasDeadline": true,
+        "hasDeadlineByRegex": true,
+        "hasDeadlineByHeuristic": false,
+        "isExpired": false,
+        "isOld": false,
+        "isUpcoming": true,
+        "webyDate": "2026-07-15T09:30:06.670-03:00"
+      }
+    }
+  ]
+}

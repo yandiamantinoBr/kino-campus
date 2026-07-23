@@ -1,0 +1,614 @@
+{
+  "formatter": "formatador-ia.js",
+  "provider": {
+    "provider": "deepseek",
+    "providerHost": "api.deepseek.com",
+    "model": "deepseek-v4-pro"
+  },
+  "model": "deepseek-v4-pro",
+  "timestamp": "2026-07-18T15:26:03.994Z",
+  "summary": {
+    "attempted": 4,
+    "succeeded": 4,
+    "failed": 0
+  },
+  "items": [
+    {
+      "title": "Evento de Extensão: CERISE SUMMIT 2026",
+      "formattedTitle": "CERISE SUMMIT 2026: Tecnologia, Inovação e Conectividade Inteligente na UFG",
+      "site": "emc",
+      "url": "https://emc.ufg.br/e/39293",
+      "module": "eventos",
+      "category": "academicos",
+      "score": 0.97,
+      "description": "🚨 **Conectividade inteligente em pauta!** O **CERISE SUMMIT 2026** apresenta protótipos, soluções em 5G, IoT, IA e robótica.\n\n📅 **Data e horário:** **18 de setembro de 2026**, das **8h às 18h**\n📍 **Local:** EMC UFG — Auditório Prof. Biolkino Pereira e Centro de Aulas CAE, Campus Colemar Natal e Silva, Goiânia\n\n👥 **Público:** Empresas, startups, pesquisadores, estudantes e profissionais de áreas tecnológicas\n📊 **Vagas:** **100** (limitadas)\n💰 **Inscrição:** **gratuita**, com emissão de certificados\n\n📝 [Formulário de inscrição](https://forms.gle/LPk9ZLofGnHMPMcV9)\n📎 [Mais informações](https://emc.ufg.br/e/39293)\n\n📌 **Fonte:** EMC UFG",
+      "formattedDescription": "🚨 **Conectividade inteligente em pauta!** O **CERISE SUMMIT 2026** apresenta protótipos, soluções em 5G, IoT, IA e robótica.\n\n📅 **Data e horário:** **18 de setembro de 2026**, das **8h às 18h**\n📍 **Local:** EMC UFG — Auditório Prof. Biolkino Pereira e Centro de Aulas CAE, Campus Colemar Natal e Silva, Goiânia\n\n👥 **Público:** Empresas, startups, pesquisadores, estudantes e profissionais de áreas tecnológicas\n📊 **Vagas:** **100** (limitadas)\n💰 **Inscrição:** **gratuita**, com emissão de certificados\n\n📝 [Formulário de inscrição](https://forms.gle/LPk9ZLofGnHMPMcV9)\n📎 [Mais informações](https://emc.ufg.br/e/39293)\n\n📌 **Fonte:** EMC UFG",
+      "formatted": true,
+      "formatFailure": null,
+      "image": "https://files.cercomp.ufg.br/weby/up/440/o/CERISE_SUMMIT_2026_Inscricao.png?1784231031",
+      "images": [
+        "https://files.cercomp.ufg.br/weby/up/440/o/CERISE_SUMMIT_2026_Inscricao.png?1784231031"
+      ],
+      "sourceId": "emc:https://emc.ufg.br/e/39293",
+      "sourceUrl": "https://emc.ufg.br/e/39293",
+      "sourceName": "emc",
+      "decision": "publish",
+      "reasons": [
+        "inscricao",
+        "vagas",
+        "palestra",
+        "evento",
+        "extensao",
+        "pesquisa",
+        "oportunidade",
+        "inovacao",
+        "formacao",
+        "live",
+        "programacao completa"
+      ],
+      "needsReview": true,
+      "qualityOk": false,
+      "qualityIssues": [
+        "unapproved_description_url"
+      ],
+      "qualityWarnings": [
+        "unapproved_description_url"
+      ],
+      "qualityBlockingIssues": [
+        "unapproved_description_url"
+      ],
+      "duplicate": false,
+      "expired": false,
+      "sourceKind": "event",
+      "eventSource": "emc",
+      "place": "Escola de Engenharia Elétrica, Mecânica e de Computação - EMC UFG (Auditório Prof. Biolkino Pereira e Centro de Aulas CAE UFG, de acordo com a Programação) - Campus Colemar Natal e Silva (Setor Universitário) Endereço:  Av. Universitária, n.º 1488 - quadr",
+      "externalUrl": null,
+      "relevantLinks": null,
+      "actionEvidence": [],
+      "pdfs": [],
+      "pdfLinks": [],
+      "enrichmentSources": [
+        {
+          "url": "https://emc.ufg.br/e/39293",
+          "label": "emc",
+          "type": "official"
+        }
+      ],
+      "link": "https://emc.ufg.br/e/39293",
+      "linkAsCta": true,
+      "actionLabel": "Ver detalhes",
+      "contato": "",
+      "dates": {
+        "publishedAt": "2026-07-16T16:45:52.701-03:00",
+        "updatedAt": "2026-07-16T16:46:35.950-03:00",
+        "eventStartsAt": "2026-09-18",
+        "eventEndsAt": "2026-09-18",
+        "applicationOpensAt": null,
+        "applicationDeadline": null,
+        "resultPublishedAt": null,
+        "applicationStatus": "unknown",
+        "eventStatus": "upcoming",
+        "canApply": false,
+        "dateEvidence": [
+          {
+            "date": "2026-09-18",
+            "role": "eventStartsAt",
+            "excerpt": "são: CERISE SUMMIT 2026. Evento de Extensão: CERISE SUMMIT 2026 Data: 2026-09-18. Fim: 2026-09-18. Local: Escola de Engenharia Elétrica, Mecânica e de",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "contextDate",
+            "excerpt": "T 2026. Evento de Extensão: CERISE SUMMIT 2026 Data: 2026-09-18. Fim: 2026-09-18. Local: Escola de Engenharia Elétrica, Mecânica e de Computação - EMC",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "eventStartsAt",
+            "excerpt": "niversitário) Endereço: Av. Universitária, n.º 1488 - quadr. - Data: 18 de setembro de 2026 - Horário: 08h às 18h - Local : Escola de Engenharia Elétrica,",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "eventStartsAt",
+            "excerpt": "structured event start",
+            "source": "structured_event",
+            "yearInferred": false,
+            "temporalDirection": "structured"
+          },
+          {
+            "date": "2026-09-18",
+            "role": "eventEndsAt",
+            "excerpt": "structured event end",
+            "source": "structured_event",
+            "yearInferred": false,
+            "temporalDirection": "structured"
+          }
+        ],
+        "dates": [
+          "2026-09-18"
+        ],
+        "futureDates": [
+          "2026-09-18"
+        ],
+        "pastDates": [],
+        "latestDate": "2026-09-18",
+        "hasDeadline": false,
+        "hasDeadlineByRegex": false,
+        "hasDeadlineByHeuristic": false,
+        "isExpired": false,
+        "isOld": false,
+        "isUpcoming": true,
+        "webyDate": "2026-07-16T16:45:52.701-03:00"
+      }
+    },
+    {
+      "title": "Convite do Centro de Excelência CERISE UFG - Capacitação: Introdução ao Raspberry Pi e sua Aplicação em IoT",
+      "formattedTitle": "Capacitação gratuita em Raspberry Pi e IoT na EMC UFG",
+      "site": "emc",
+      "url": "https://emc.ufg.br/n/202015",
+      "module": "eventos",
+      "category": "workshops",
+      "score": 0.72,
+      "description": "🚨 **Atenção, comunidade acadêmica e entusiastas de tecnologia!** O Centro de Excelência CERISE da UFG oferece uma capacitação gratuita em **Introdução ao Raspberry Pi e sua Aplicação em IoT**.\n\n📅 **Datas:** **13 de agosto a 01 de outubro de 2026** (todas as quintas-feiras)\n⏰ **Horário:** das **18h50 às 22h**\n📊 **Carga horária total:** **24 horas**\n\n🎯 **Pré-requisitos:** Conhecimentos básicos de eletrônica analógica/digital e de linguagens **C/C++** e **Python**\n\n📍 **Local:** Sala Caryocar brasiliensis, Bloco A, 3º piso, Campus Colemar Natal e Silva – **EMC UFG**\n💡 **Vagas limitadas** e haverá **emissão de certificado** de participação.\n\n📝 [Formulário de inscrições](https://forms.gle/PvJyah5GrbxKiq9F7)\n📎 [Mais informações](https://emc.ufg.br/n/202015)\n\n📌 **Fonte:** EMC/UFG",
+      "formattedDescription": "🚨 **Atenção, comunidade acadêmica e entusiastas de tecnologia!** O Centro de Excelência CERISE da UFG oferece uma capacitação gratuita em **Introdução ao Raspberry Pi e sua Aplicação em IoT**.\n\n📅 **Datas:** **13 de agosto a 01 de outubro de 2026** (todas as quintas-feiras)\n⏰ **Horário:** das **18h50 às 22h**\n📊 **Carga horária total:** **24 horas**\n\n🎯 **Pré-requisitos:** Conhecimentos básicos de eletrônica analógica/digital e de linguagens **C/C++** e **Python**\n\n📍 **Local:** Sala Caryocar brasiliensis, Bloco A, 3º piso, Campus Colemar Natal e Silva – **EMC UFG**\n💡 **Vagas limitadas** e haverá **emissão de certificado** de participação.\n\n📝 [Formulário de inscrições](https://forms.gle/PvJyah5GrbxKiq9F7)\n📎 [Mais informações](https://emc.ufg.br/n/202015)\n\n📌 **Fonte:** EMC/UFG",
+      "formatted": true,
+      "formatFailure": null,
+      "image": "https://files.cercomp.ufg.br/weby/up/440/o/logo-emc-ufg.jpeg?1644499459",
+      "images": [
+        "https://files.cercomp.ufg.br/weby/up/440/o/logo-emc-ufg.jpeg?1644499459",
+        "https://files.cercomp.ufg.br/weby/up/440/o/noticia-rasperperry-curso-cerise.png?1781880373"
+      ],
+      "sourceId": "emc:https://forms.gle/PvJyah5GrbxKiq9F7",
+      "sourceUrl": "https://forms.gle/PvJyah5GrbxKiq9F7",
+      "sourceName": "emc",
+      "decision": "publish",
+      "reasons": [
+        "inscricoes",
+        "vagas",
+        "curso",
+        "evento",
+        "capacitacao"
+      ],
+      "needsReview": false,
+      "qualityOk": true,
+      "qualityIssues": [],
+      "qualityWarnings": [],
+      "qualityBlockingIssues": [],
+      "duplicate": false,
+      "expired": false,
+      "sourceKind": "news",
+      "eventSource": null,
+      "place": null,
+      "externalUrl": null,
+      "relevantLinks": {
+        "formularios": [
+          {
+            "url": "https://forms.gle/PvJyah5GrbxKiq9F7",
+            "label": "https://forms.gle/PvJyah5GrbxKiq9F7"
+          },
+          {
+            "url": "https://forms.gle/PvJyah5GrbxKiq9F7&amp;source=gmail&amp;ust=1781965252123000&amp;usg=AOvVaw355laFEMu2yEORxdtiHfFV",
+            "label": "Formulário Google"
+          }
+        ],
+        "editais": [],
+        "paginasOficiais": [],
+        "outros": []
+      },
+      "actionEvidence": [],
+      "pdfs": [],
+      "pdfLinks": [],
+      "enrichmentSources": [
+        {
+          "url": "https://emc.ufg.br/n/202015",
+          "label": "emc",
+          "type": "official"
+        }
+      ],
+      "link": "https://forms.gle/PvJyah5GrbxKiq9F7",
+      "linkAsCta": true,
+      "actionLabel": "Ver detalhes",
+      "contato": "",
+      "dates": {
+        "publishedAt": "2026-06-19T11:44:17.763-03:00",
+        "updatedAt": "2026-06-19T11:44:17.766-03:00",
+        "eventStartsAt": "2026-08-13",
+        "eventEndsAt": "2026-10-01",
+        "applicationOpensAt": null,
+        "applicationDeadline": null,
+        "resultPublishedAt": null,
+        "applicationStatus": "unknown",
+        "eventStatus": "upcoming",
+        "canApply": false,
+        "dateEvidence": [
+          {
+            "date": "2026-08-13",
+            "role": "eventStartsAt",
+            "excerpt": "IoT | EMC Ministrante: Prof. José Wilson Lima Nerys, Dr. Datas: 13 de agosto a 01 de outubro de 2026 (às quintas-feiras) Carga horária: 24h Horário: das 18:50h às 2",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-10-01",
+            "role": "eventEndsAt",
+            "excerpt": "IoT | EMC Ministrante: Prof. José Wilson Lima Nerys, Dr. Datas: 13 de agosto a 01 de outubro de 2026 (às quintas-feiras) Carga horária: 24h Horário: das 18:50h às 2",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-08-13",
+            "role": "eventStartsAt",
+            "excerpt": "de Governo Ministrante: Prof. José Wilson Lima Nerys, Dr. Datas: 13 de agosto a 01 de outubro de 2026 (às quintas-feiras) Carga horária: 24h Horário: das 18:50h às 2",
+            "source": "html",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-10-01",
+            "role": "eventEndsAt",
+            "excerpt": "de Governo Ministrante: Prof. José Wilson Lima Nerys, Dr. Datas: 13 de agosto a 01 de outubro de 2026 (às quintas-feiras) Carga horária: 24h Horário: das 18:50h às 2",
+            "source": "html",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          }
+        ],
+        "dates": [
+          "2026-08-13",
+          "2026-10-01"
+        ],
+        "futureDates": [
+          "2026-08-13",
+          "2026-10-01"
+        ],
+        "pastDates": [],
+        "latestDate": "2026-10-01",
+        "hasDeadline": false,
+        "hasDeadlineByRegex": false,
+        "hasDeadlineByHeuristic": false,
+        "isExpired": false,
+        "isOld": false,
+        "isUpcoming": true,
+        "webyDate": "2026-06-19T11:44:17.763-03:00"
+      }
+    },
+    {
+      "title": "VII ENGOPE abre inscrições e submissões de trabalhos para edição de 2026",
+      "formattedTitle": "VII ENGOPE 2026: inscrições e submissões abertas até 30/09",
+      "site": "ime",
+      "url": "https://ime.ufg.br/n/202777",
+      "module": "eventos",
+      "category": "workshops",
+      "score": 0.8899999999999999,
+      "description": "🚨 **Atenção, comunidade acadêmica!** O **VII ENGOPE** está com inscrições e submissões de trabalhos abertas para a edição de 2026.\n\n📅 **Prazo final:** **30 de setembro de 2026**\n📅 **Evento:** **21 a 23 de outubro de 2026**\n\n🎯 **Tema:** Integração Científica e Formação em Ciência de Dados para Setores Estratégicos de Goiás\n📊 **Atividades:** minicursos, palestras, sessões de pôsteres, comunicações orais e Datathon\n\n📍 **Local:** Universidade Federal de Goiás (UFG)\n\n🌐 [Site oficial do evento](https://viiengope.plateia.ufg.br/)\n📎 [Mais informações](https://ime.ufg.br/n/202777)\n\n📌 **Fonte:** IME/UFG",
+      "formattedDescription": "🚨 **Atenção, comunidade acadêmica!** O **VII ENGOPE** está com inscrições e submissões de trabalhos abertas para a edição de 2026.\n\n📅 **Prazo final:** **30 de setembro de 2026**\n📅 **Evento:** **21 a 23 de outubro de 2026**\n\n🎯 **Tema:** Integração Científica e Formação em Ciência de Dados para Setores Estratégicos de Goiás\n📊 **Atividades:** minicursos, palestras, sessões de pôsteres, comunicações orais e Datathon\n\n📍 **Local:** Universidade Federal de Goiás (UFG)\n\n🌐 [Site oficial do evento](https://viiengope.plateia.ufg.br/)\n📎 [Mais informações](https://ime.ufg.br/n/202777)\n\n📌 **Fonte:** IME/UFG",
+      "formatted": true,
+      "formatFailure": null,
+      "image": "https://files.cercomp.ufg.br/weby/up/29/o/vii-engope.png?1784118432",
+      "images": [
+        "https://files.cercomp.ufg.br/weby/up/29/o/vii-engope.png?1784118432",
+        "https://files.cercomp.ufg.br/weby/up/29/o/lista-imagens.png"
+      ],
+      "sourceId": "ime:https://forms.gle/xv78GaNBRbSCHJEw7",
+      "sourceUrl": "https://forms.gle/xv78GaNBRbSCHJEw7",
+      "sourceName": "ime",
+      "decision": "publish",
+      "reasons": [
+        "inscricoes",
+        "curso",
+        "palestra",
+        "evento",
+        "formacao"
+      ],
+      "needsReview": true,
+      "qualityOk": false,
+      "qualityIssues": [
+        "unapproved_description_url"
+      ],
+      "qualityWarnings": [
+        "unapproved_description_url"
+      ],
+      "qualityBlockingIssues": [
+        "unapproved_description_url"
+      ],
+      "duplicate": false,
+      "expired": false,
+      "sourceKind": "news",
+      "eventSource": null,
+      "place": null,
+      "externalUrl": null,
+      "relevantLinks": {
+        "formularios": [
+          {
+            "url": "https://forms.gle/xv78GaNBRbSCHJEw7",
+            "label": "Formulário Google"
+          }
+        ],
+        "editais": [],
+        "paginasOficiais": [],
+        "outros": []
+      },
+      "actionEvidence": [],
+      "pdfs": [
+        "https://files.cercomp.ufg.br/weby/up/29/o/DAHA.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/Resolucao_CEPEC_2023_1830_ppc_licmat_2019.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/Resolucao_CEPEC_2023_1854_ppc_licmat_2012.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/sugestao_de_fluxo_matematica_matriz_2012_%281%29.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/fluxo_disciplinas_matriz_2019_%281%29.pdf"
+      ],
+      "pdfLinks": [
+        "https://files.cercomp.ufg.br/weby/up/29/o/DAHA.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/Resolucao_CEPEC_2023_1830_ppc_licmat_2019.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/Resolucao_CEPEC_2023_1854_ppc_licmat_2012.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/sugestao_de_fluxo_matematica_matriz_2012_%281%29.pdf",
+        "https://files.cercomp.ufg.br/weby/up/29/o/fluxo_disciplinas_matriz_2019_%281%29.pdf"
+      ],
+      "enrichmentSources": [
+        {
+          "url": "https://ime.ufg.br/n/202777",
+          "label": "ime",
+          "type": "official"
+        }
+      ],
+      "link": "https://forms.gle/xv78GaNBRbSCHJEw7",
+      "linkAsCta": true,
+      "actionLabel": "Ver detalhes",
+      "contato": "",
+      "dates": {
+        "publishedAt": "2026-07-15T09:30:06.670-03:00",
+        "updatedAt": "2026-07-15T09:35:34.382-03:00",
+        "eventStartsAt": "2026-10-21",
+        "eventEndsAt": "2026-10-23",
+        "applicationOpensAt": null,
+        "applicationDeadline": "2026-09-30",
+        "resultPublishedAt": null,
+        "applicationStatus": "open",
+        "eventStatus": "upcoming",
+        "canApply": false,
+        "dateEvidence": [
+          {
+            "date": "2026-10-21",
+            "role": "eventStartsAt",
+            "excerpt": "ia de Dados para Setores Estratégicos de Goiás, que será realizado de 21 a 23 de outubro de 2026. As inscrições e submissões podem ser realizadas diretamente pelo s",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "future"
+          },
+          {
+            "date": "2026-10-23",
+            "role": "eventEndsAt",
+            "excerpt": "ia de Dados para Setores Estratégicos de Goiás, que será realizado de 21 a 23 de outubro de 2026. As inscrições e submissões podem ser realizadas diretamente pelo s",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "future"
+          },
+          {
+            "date": "2026-09-30",
+            "role": "applicationDeadline",
+            "excerpt": "dem ser realizadas diretamente pelo site oficial do evento, até o dia 30 de setembro de 2026: https://viiengope.plateia.ufg.br/ A programação do evento contará",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          }
+        ],
+        "dates": [
+          "2026-09-30",
+          "2026-10-21",
+          "2026-10-23"
+        ],
+        "futureDates": [
+          "2026-09-30",
+          "2026-10-21",
+          "2026-10-23"
+        ],
+        "pastDates": [],
+        "latestDate": "2026-10-23",
+        "hasDeadline": true,
+        "hasDeadlineByRegex": true,
+        "hasDeadlineByHeuristic": false,
+        "isExpired": false,
+        "isOld": false,
+        "isUpcoming": true,
+        "webyDate": "2026-07-15T09:30:06.670-03:00"
+      }
+    },
+    {
+      "title": "Cursos IsF - Português para Estrangeiros",
+      "formattedTitle": "IsF oferta curso de Português para Estrangeiros com Cine Debate",
+      "site": "idiomassemfronteiras",
+      "url": "https://idiomassemfronteiras.sri.ufg.br/n/202692",
+      "module": "eventos",
+      "category": "workshops",
+      "score": 0.83,
+      "description": "🚨 **IsF abre curso de Português para Estrangeiros!** O programa **Idiomas sem Fronteiras** oferece o curso **Cine Debate - Nível B1**, perfeito para praticar o idioma com filmes e debates.\n\n📅 **Inscrições:** até **27 de agosto de 2026**\n📅 **Período do curso:** de **1º a 24 de setembro de 2026**\n🕓 **Aulas:** terças e quintas, das **16h às 18h**\n🎯 **Nível B1** | **Carga horária: 16h**\n💻 **Modalidade:** remoto\n🧑‍🎓 **Vagas:** **20**\n\n📝 [Inscreva-se no formulário](https://forms.gle/HwqoEEfZqbWW9arv7)\n📎 [Mais informações](https://idiomassemfronteiras.sri.ufg.br/n/202692)\n\n📌 **Fonte:** Idiomas sem Fronteiras – UFG",
+      "formattedDescription": "🚨 **IsF abre curso de Português para Estrangeiros!** O programa **Idiomas sem Fronteiras** oferece o curso **Cine Debate - Nível B1**, perfeito para praticar o idioma com filmes e debates.\n\n📅 **Inscrições:** até **27 de agosto de 2026**\n📅 **Período do curso:** de **1º a 24 de setembro de 2026**\n🕓 **Aulas:** terças e quintas, das **16h às 18h**\n🎯 **Nível B1** | **Carga horária: 16h**\n💻 **Modalidade:** remoto\n🧑‍🎓 **Vagas:** **20**\n\n📝 [Inscreva-se no formulário](https://forms.gle/HwqoEEfZqbWW9arv7)\n📎 [Mais informações](https://idiomassemfronteiras.sri.ufg.br/n/202692)\n\n📌 **Fonte:** Idiomas sem Fronteiras – UFG",
+      "formatted": true,
+      "formatFailure": null,
+      "image": "https://files.cercomp.ufg.br/weby/up/719/o/1.png?1729261835",
+      "images": [
+        "https://files.cercomp.ufg.br/weby/up/719/o/1.png?1729261835",
+        "https://files.cercomp.ufg.br/weby/up/719/o/12.png?1731069485",
+        "https://files.cercomp.ufg.br/weby/up/719/o/Nucli_FL.png?1646418559"
+      ],
+      "sourceId": "idiomassemfronteiras:https://forms.gle/HwqoEEfZqbWW9arv7",
+      "sourceUrl": "https://forms.gle/HwqoEEfZqbWW9arv7",
+      "sourceName": "idiomassemfronteiras",
+      "decision": "publish",
+      "reasons": [
+        "inscricoes",
+        "vagas",
+        "curso",
+        "idioma",
+        "inscricoes abertas",
+        "isf",
+        "idiomas sem fronteiras"
+      ],
+      "needsReview": false,
+      "qualityOk": true,
+      "qualityIssues": [],
+      "qualityWarnings": [],
+      "qualityBlockingIssues": [],
+      "duplicate": false,
+      "expired": false,
+      "sourceKind": "news",
+      "eventSource": null,
+      "place": null,
+      "externalUrl": null,
+      "relevantLinks": {
+        "formularios": [
+          {
+            "url": "https://forms.gle/HwqoEEfZqbWW9arv7",
+            "label": "https://forms.gle/HwqoEEfZqbWW9arv7"
+          }
+        ],
+        "editais": [],
+        "paginasOficiais": [],
+        "outros": []
+      },
+      "actionEvidence": [
+        {
+          "type": "application_url",
+          "value": "https://forms.gle/HwqoEEfZqbWW9arv7",
+          "source": "content",
+          "label": "",
+          "purpose": "application",
+          "confidence": "high",
+          "hostClass": "form_provider"
+        }
+      ],
+      "pdfs": [],
+      "pdfLinks": [],
+      "enrichmentSources": [
+        {
+          "url": "https://idiomassemfronteiras.sri.ufg.br/n/202692",
+          "label": "idiomassemfronteiras",
+          "type": "official"
+        }
+      ],
+      "link": "https://forms.gle/HwqoEEfZqbWW9arv7",
+      "linkAsCta": true,
+      "actionLabel": "Inscreva-se",
+      "contato": "",
+      "dates": {
+        "publishedAt": "2026-07-10T13:09:35.598-03:00",
+        "updatedAt": "2026-07-10T13:09:35.603-03:00",
+        "eventStartsAt": "2026-09-01",
+        "eventEndsAt": "2026-09-24",
+        "applicationOpensAt": null,
+        "applicationDeadline": "2026-08-27",
+        "resultPublishedAt": null,
+        "applicationStatus": "open",
+        "eventStatus": "upcoming",
+        "canApply": true,
+        "dateEvidence": [
+          {
+            "date": "2026-08-27",
+            "role": "applicationDeadline",
+            "excerpt": "trangeiros | Letras - Idiomas sem Fronteiras Inscrições abertas até 27/08/26! Cine Debate - Nível B1 Carga Horária: 16h Datas: 01/09/2026",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-01",
+            "role": "eventStartsAt",
+            "excerpt": "té 27/08/26! Cine Debate - Nível B1 Carga Horária: 16h Datas: 01/09/2026 a 24/09/2026 Horário: Terças e quintas das 16h às 18h Curso Remoto 20 vag",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-09-24",
+            "role": "eventEndsAt",
+            "excerpt": "té 27/08/26! Cine Debate - Nível B1 Carga Horária: 16h Datas: 01/09/2026 a 24/09/2026 Horário: Terças e quintas das 16h às 18h Curso Remoto 20 vag",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-06-08",
+            "role": "applicationDeadline",
+            "excerpt": "quintas das 16h às 18h Curso Remoto 20 vagas Inscrições até 08/06/2026 em: https://forms.gle/HwqoEEfZqbWW9arv7 Listar Todas Voltar",
+            "source": "item_text",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-08-27",
+            "role": "applicationDeadline",
+            "excerpt": "o Brasileiro Atualize sua Barra de Governo Inscrições abertas até 27/08/26! Cine Debate - Nível B1 Carga Horária: 16h Datas: 01/09/2026",
+            "source": "html",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          },
+          {
+            "date": "2026-06-08",
+            "role": "applicationDeadline",
+            "excerpt": "quintas das 16h às 18h Curso Remoto 20 vagas Inscrições até 08/06/2026 em: https://forms.gle/HwqoEEfZqbWW9arv7 Listar Todas Voltar Esc",
+            "source": "html",
+            "yearInferred": false,
+            "temporalDirection": "unknown"
+          }
+        ],
+        "dates": [
+          "2026-06-08",
+          "2026-08-27",
+          "2026-09-01",
+          "2026-09-24"
+        ],
+        "futureDates": [
+          "2026-08-27",
+          "2026-09-01",
+          "2026-09-24"
+        ],
+        "pastDates": [
+          "2026-06-08"
+        ],
+        "latestDate": "2026-09-24",
+        "hasDeadline": true,
+        "hasDeadlineByRegex": true,
+        "hasDeadlineByHeuristic": false,
+        "isExpired": false,
+        "isOld": false,
+        "isUpcoming": true,
+        "webyDate": "2026-07-10T13:09:35.598-03:00"
+      }
+    }
+  ],
+  "formatFailures": [],
+  "formatterSummary": {
+    "attempted": 4,
+    "succeeded": 4,
+    "failed": 0
+  },
+  "pipelineContract": {
+    "schemaVersion": 1,
+    "sourceArtifact": "_truly_new_2026-07-18.json",
+    "sourceContentSha256": "138ec7e975dc5146051804a70968d1b1550ab174dcac6b1c9a0d4227d0e354a1",
+    "sourceRunId": "ac027e02-4122-400a-a3ba-cc97c4e23182",
+    "generatedAt": "2026-07-18T15:26:04.020Z",
+    "expectedIdentities": [
+      "url:cadu-url-identity-v2:emc.ufg.br/events/39293",
+      "url:cadu-url-identity-v2:forms.gle/pvjyah5grbxkiq9f7",
+      "url:cadu-url-identity-v2:forms.gle/xv78ganbrbschjew7",
+      "url:cadu-url-identity-v2:forms.gle/hwqoeefzqbww9arv7"
+    ],
+    "formattedIdentities": [
+      "url:cadu-url-identity-v2:emc.ufg.br/events/39293",
+      "url:cadu-url-identity-v2:forms.gle/pvjyah5grbxkiq9f7",
+      "url:cadu-url-identity-v2:forms.gle/xv78ganbrbschjew7",
+      "url:cadu-url-identity-v2:forms.gle/hwqoeefzqbww9arv7"
+    ],
+    "skippedAlreadyPublishedIdentities": [],
+    "failedFormattingIdentities": [],
+    "contentSha256": "704449c047589ee05a3bbb3e7c89c737ef3b6b8779ae300251ad3c4f1e038018"
+  }
+}

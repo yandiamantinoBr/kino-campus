@@ -1,0 +1,143 @@
+- generic [active] [ref=e1]:
+  - link "Pular para o conteúdo principal" [ref=e2] [cursor=pointer]:
+    - /url: "#kc-main"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Ir para o início" [ref=e6] [cursor=pointer]:
+        - /url: ../index.html
+        - generic [ref=e7]: 
+        - generic [ref=e9]:
+          - generic [ref=e10]: KinoCampus
+          - generic [ref=e11]: Comunidade UFG
+      - generic [ref=e12]:
+        - text: 
+        - navigation "Navegação admin" [ref=e13]:
+          - link "Dashboard" [ref=e14] [cursor=pointer]:
+            - /url: index.html
+            - generic [ref=e15]: 
+          - link "Moderação" [ref=e17] [cursor=pointer]:
+            - /url: moderation.html
+            - generic [ref=e18]: 
+          - link "Denúncias" [ref=e20] [cursor=pointer]:
+            - /url: reports.html
+            - generic [ref=e21]: 
+          - link "Banners" [ref=e23] [cursor=pointer]:
+            - /url: banners.html
+            - generic [ref=e24]: 
+          - link "Pedidos de ajuda" [ref=e25] [cursor=pointer]:
+            - /url: help-requests.html
+            - generic [ref=e26]: 
+          - link "Privacidade" [ref=e27] [cursor=pointer]:
+            - /url: privacy-analytics.html
+            - generic [ref=e28]: 
+          - link "GA4" [ref=e29] [cursor=pointer]:
+            - /url: ga4-dashboard.html
+            - generic [ref=e30]: 
+          - link "Cadu" [ref=e31] [cursor=pointer]:
+            - /url: cadu.html
+            - generic [ref=e32]: 
+        - text: 
+      - generic [ref=e33]:
+        - button "Notificações" [ref=e34] [cursor=pointer]:
+          - generic: 
+        - link "Mensagens" [ref=e35] [cursor=pointer]:
+          - /url: ../mensagens.html
+          - generic [ref=e36]: 
+        - button "Ativar tema escuro" [ref=e37] [cursor=pointer]:
+          - generic [ref=e38]: 
+        - link "Login/Cadastro" [ref=e39] [cursor=pointer]:
+          - /url: "#login"
+  - main [ref=e40]:
+    - generic [ref=e41]:
+      - text: 
+      - alert [ref=e42]:
+        - generic [ref=e43]: 
+        - generic [ref=e44]: Acesso restrito
+        - generic [ref=e45]: Você precisa estar autenticado. Redirecionando…
+      - text:                                                       +               
+  - contentinfo "Rodapé do KinoCampus" [ref=e46]:
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - link "KinoCampus - página inicial" [ref=e49] [cursor=pointer]:
+          - /url: ../index.html
+          - generic [ref=e50]: 
+          - generic [ref=e51]: KinoCampus
+        - paragraph [ref=e52]: Comunidade digital para publicar, encontrar e organizar oportunidades, eventos, moradias, caronas e itens úteis no contexto da UFG.
+      - navigation "Navegação da plataforma" [ref=e53]:
+        - heading "Plataforma" [level=2] [ref=e54]
+        - link "Início" [ref=e55] [cursor=pointer]:
+          - /url: ../index.html
+        - link "Sobre" [ref=e56] [cursor=pointer]:
+          - /url: ../sobre.html
+        - link "Minhas publicações" [ref=e57] [cursor=pointer]:
+          - /url: ../my-posts.html
+        - link "Criar publicação" [ref=e58] [cursor=pointer]:
+          - /url: ../create-post.html
+      - navigation "Módulos do KinoCampus" [ref=e59]:
+        - heading "Módulos" [level=2] [ref=e60]
+        - link "Achados e perdidos" [ref=e61] [cursor=pointer]:
+          - /url: ../achados-perdidos.html
+        - link "Eventos" [ref=e62] [cursor=pointer]:
+          - /url: ../eventos.html
+        - link "Moradia" [ref=e63] [cursor=pointer]:
+          - /url: ../moradia.html
+        - link "Oportunidades" [ref=e64] [cursor=pointer]:
+          - /url: ../oportunidades.html
+        - link "Compra e venda" [ref=e65] [cursor=pointer]:
+          - /url: ../compra-venda-feed.html
+        - link "Caronas" [ref=e66] [cursor=pointer]:
+          - /url: ../caronas-feed.html
+      - navigation "Suporte e conta" [ref=e67]:
+        - heading "Suporte" [level=2] [ref=e68]
+        - link "Central de Ajuda" [ref=e69] [cursor=pointer]:
+          - /url: ../ajuda.html
+        - link "Configurações" [ref=e70] [cursor=pointer]:
+          - /url: ../settings.html
+        - link "Minhas publicações" [ref=e71] [cursor=pointer]:
+          - /url: ../my-posts.html
+        - link "contato@kinocampus.com.br" [ref=e72] [cursor=pointer]:
+          - /url: mailto:contato@kinocampus.com.br
+      - navigation "Transparência e privacidade" [ref=e73]:
+        - heading "Transparência" [level=2] [ref=e74]
+        - link "Central de Transparência" [ref=e75] [cursor=pointer]:
+          - /url: ../transparencia.html
+        - link "Política editorial" [ref=e76] [cursor=pointer]:
+          - /url: ../editorial.html
+        - link "Declaração de Privacidade" [ref=e77] [cursor=pointer]:
+          - /url: ../privacidade.html
+        - link "Termos de Uso" [ref=e78] [cursor=pointer]:
+          - /url: ../termos.html
+        - button "Preferências de cookies" [ref=e79] [cursor=pointer]
+        - link "Solicitações de suporte" [ref=e80] [cursor=pointer]:
+          - /url: ../ajuda.html#solicitacoes-suporte
+    - generic [ref=e81]:
+      - generic [ref=e82]: © 2026 KinoCampus. Plataforma comunitária independente.
+      - generic [ref=e83]:
+        - link "Contato" [ref=e84] [cursor=pointer]:
+          - /url: ../ajuda.html
+        - link "Transparência" [ref=e85] [cursor=pointer]:
+          - /url: ../transparencia.html
+        - link "Privacidade" [ref=e86] [cursor=pointer]:
+          - /url: ../privacidade.html
+        - link "Termos de Uso" [ref=e87] [cursor=pointer]:
+          - /url: ../termos.html
+        - button "Cookies" [ref=e88] [cursor=pointer]
+  - text:        
+  - generic:
+    - dialog "Aviso de privacidade e cookies" [ref=e89]:
+      - generic [ref=e90]:
+        - strong [ref=e91]:
+          - generic [ref=e92]: 
+          - text: Privacidade no KinoCampus
+        - paragraph [ref=e93]: Usamos dados necessários para manter a plataforma funcionando. Com sua autorização, também usamos preferências, métricas e publicidade controlada para melhorar a experiência.
+        - generic [ref=e94]:
+          - link "Declaração de Privacidade" [ref=e95] [cursor=pointer]:
+            - /url: ../privacidade.html
+          - link "Termos de Uso" [ref=e96] [cursor=pointer]:
+            - /url: ../termos.html
+      - generic [ref=e97]:
+        - button "Rejeitar opcionais" [ref=e98] [cursor=pointer]
+        - button "Configurar" [ref=e99] [cursor=pointer]
+        - button "Aceitar todos" [ref=e100] [cursor=pointer]
+    - text: 
+  - text: 
