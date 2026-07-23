@@ -37,11 +37,12 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generator", "seedContentSha256", "adjudicationContentSha256", "schemaContentSha256", "inputs"],
+      "required": ["generator", "seedContentSha256", "adjudicationContentSha256", "transportVerificationContentSha256", "schemaContentSha256", "inputs"],
       "properties": {
         "generator": { "type": "string", "minLength": 1 },
         "seedContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "adjudicationContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "transportVerificationContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "schemaContentSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "inputs": {
           "type": "array",
@@ -507,7 +508,7 @@
       "additionalProperties": false,
       "required": ["inventory", "handle", "sourceId"],
       "properties": {
-        "inventory": { "enum": ["kino_publisher", "openclaw_curator", "admin_markdown", "instagram_scanner", "official_ufg_page"] },
+        "inventory": { "enum": ["kino_publisher", "openclaw_curator", "admin_markdown", "instagram_scanner", "instagram_scanner_retired", "official_ufg_page"] },
         "handle": { "$ref": "#/$defs/instagramHandle" },
         "sourceId": { "type": ["string", "null"] }
       }
@@ -541,6 +542,14 @@
       },
       "allOf": [
         {
+          "if": { "properties": { "status": { "const": "retired" } } },
+          "then": {
+            "properties": {
+              "executionModes": { "maxItems": 0 }
+            }
+          }
+        },
+        {
           "if": { "properties": { "status": { "const": "confirmed" } } },
           "then": {
             "properties": {
@@ -549,6 +558,24 @@
                   "evidence": {
                     "contains": {
                       "properties": { "kind": { "enum": ["institutional_directory", "official_page"] } },
+                      "required": ["kind"]
+                    },
+                    "minContains": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "confirmed" } } },
+          "then": {
+            "properties": {
+              "audit": {
+                "properties": {
+                  "evidence": {
+                    "contains": {
+                      "properties": { "kind": { "const": "direct_verification" } },
                       "required": ["kind"]
                     },
                     "minContains": 1

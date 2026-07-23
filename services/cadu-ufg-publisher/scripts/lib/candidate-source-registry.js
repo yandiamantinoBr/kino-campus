@@ -154,6 +154,7 @@ const WEB_OBSERVATION_INVENTORIES = Object.freeze([
 const INSTAGRAM_OBSERVATION_INVENTORIES = Object.freeze([
   ...WEB_OBSERVATION_INVENTORIES,
   'instagram_scanner',
+  'instagram_scanner_retired',
   'official_ufg_page',
 ]);
 const OFFICIAL_EVIDENCE_KINDS = Object.freeze(['institutional_directory', 'official_page']);
@@ -323,11 +324,23 @@ function parseRegistryVersion(value, context = 'registryVersion') {
 function validateProvenance(provenance) {
   assertExactObjectKeys(
     provenance,
-    ['generator', 'seedContentSha256', 'adjudicationContentSha256', 'schemaContentSha256', 'inputs'],
+    [
+      'generator',
+      'seedContentSha256',
+      'adjudicationContentSha256',
+      'transportVerificationContentSha256',
+      'schemaContentSha256',
+      'inputs',
+    ],
     'registry provenance',
   );
   assert.strictEqual(provenance.generator, EXPECTED_PROVENANCE.generator, 'unexpected registry generator');
-  for (const field of ['seedContentSha256', 'adjudicationContentSha256', 'schemaContentSha256']) {
+  for (const field of [
+    'seedContentSha256',
+    'adjudicationContentSha256',
+    'transportVerificationContentSha256',
+    'schemaContentSha256',
+  ]) {
     assert(/^[0-9a-f]{64}$/.test(provenance[field]), `invalid provenance ${field}`);
   }
   assert(Array.isArray(provenance.inputs), 'registry provenance inputs[]');
@@ -969,7 +982,9 @@ function validateReconciliationReport(report, registry) {
     .filter((entity) => entity.status === 'pending_verification')
     .map((entity) => entity.id);
   const instagramWithoutEntity = registry.instagramProfiles
-    .filter((profile) => profile.entityIds.length === 0)
+    // Reassigned/retired handles may intentionally lose their old entity
+    // association; their supersededBy edge is the authoritative lineage.
+    .filter((profile) => profile.status !== 'retired' && profile.entityIds.length === 0)
     .map((profile) => profile.id);
   const scannerInstagramWithoutEntity = registry.instagramProfiles
     .filter((profile) => profile.entityIds.length === 0

@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-15.10",
-  "auditCutoff": "2026-07-15",
+  "registryVersion": "2026-07-22.3",
+  "auditCutoff": "2026-07-22",
   "generatedFrom": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "bb97502364717f99131915020bc8dabff7e37a7173451c3e50d7543d2d41b95f",
-    "adjudicationContentSha256": "1c8b4f3dc0896b375d36630b237375fd7f84886535a33de30914eed8b8321c87",
-    "schemaContentSha256": "da6d367be46bf4bca8509dc07ead5c655fb147c576b021484df305f918afbf04",
+    "seedContentSha256": "17ed8cbd602ae77fcd2196947a116d0a414bbf41cd9edc10499baaf90e1589fe",
+    "adjudicationContentSha256": "67150f0ae749c2945989e1ce32b056d7542a5d68dc9c868822b3e9696eb252cb",
+    "transportVerificationContentSha256": "029ad852e7df6b75245340228bef7f5c4557eabaeab5ca000abcb96cc2efb360",
+    "schemaContentSha256": "1850871482d93a219deebe5d72ffcc556f492a0e1e053bea3b011ec9e1671892",
     "inputs": [
       {
         "id": "kino_publisher",
@@ -18,16 +19,16 @@
       {
         "id": "openclaw_curator",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "c778cf216ea1e5734b769d40044bce69b536b40a",
+        "commit": "6698e841924d4fdbf867950037d11ed4f10ffbad",
         "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
-        "contentSha256": "92192fb7e9b698de594e8a0c96e33f2a3394068b23746488a1f39fec758d3fc3"
+        "contentSha256": "9265275fdba5dca2210856410178523b971a92c5c2b97c28f89cb9d48b279ada"
       },
       {
         "id": "instagram_scanner",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "0e30c1f815ad8276631037592816d21a48b73627",
+        "commit": "090d99869994c7c6fa69cdae0a824b99356089e0",
         "path": "data/.openclaw/workspace/scripts/scan-ig-browser.js",
-        "contentSha256": "8323e9b99a2bc71fc0b3be4e28f43176c3015acbd0a77f813529d94700793efc"
+        "contentSha256": "60ee9aedaf886c93097b7a41f0a00b1b52e62156258003db7c34b97589b3931c"
       },
       {
         "id": "admin_markdown",
@@ -61,33 +62,33 @@
       "uniqueInstagramHandles": 54
     },
     "curator": {
-      "entries": 146,
-      "uniqueIds": 146,
-      "uniqueUrls": 146,
+      "entries": 157,
+      "uniqueIds": 157,
+      "uniqueUrls": 157,
       "tiers": {
-        "1": 85,
-        "2": 36,
+        "1": 95,
+        "2": 37,
         "3": 25
       },
       "modes": {
         "quick": {
-          "declared": 85,
-          "unique": 85
+          "declared": 95,
+          "unique": 95
         },
         "daily": {
-          "declared": 121,
-          "unique": 121
+          "declared": 132,
+          "unique": 132
         },
         "full": {
-          "declared": 146,
-          "unique": 146
+          "declared": 157,
+          "unique": 157
         }
       },
-      "instagramAssociations": 54,
-      "uniqueInstagramHandles": 51
+      "instagramAssociations": 57,
+      "uniqueInstagramHandles": 53
     },
     "instagramScanner": {
-      "canonicalHandles": 51,
+      "canonicalHandles": 76,
       "aliases": 7,
       "duplicatesSkipped": 0
     },
@@ -105,36 +106,36 @@
       "falseNullHandles": 8
     },
     "overlap": {
-      "commonUniqueUrls": 99,
-      "publisherOnlyUrls": 8,
-      "curatorOnlyUrls": 47,
-      "commonIds": 92,
-      "publisherOnlyIds": 15,
-      "curatorOnlyIds": 54,
-      "tierConflictsOnCommonUrls": 51,
-      "declaredTierSetConflictsOnCommonUrls": 51,
-      "instagramConflictsOnCommonUrls": 21,
-      "sameUrlDifferentId": 7
+      "commonUniqueUrls": 101,
+      "publisherOnlyUrls": 6,
+      "curatorOnlyUrls": 56,
+      "commonIds": 93,
+      "publisherOnlyIds": 14,
+      "curatorOnlyIds": 64,
+      "tierConflictsOnCommonUrls": 52,
+      "declaredTierSetConflictsOnCommonUrls": 52,
+      "instagramConflictsOnCommonUrls": 20,
+      "sameUrlDifferentId": 8
     }
   },
   "normalizedRegistry": {
-    "entities": 170,
-    "webSources": 197,
-    "instagramProfiles": 86,
+    "entities": 172,
+    "webSources": 198,
+    "instagramProfiles": 103,
     "enabledWebSources": 0,
     "enabledInstagramProfiles": 0,
-    "officiallyConfirmedWebSources": 133,
-    "officiallyDeclaredInstagramProfiles": 21,
+    "officiallyConfirmedWebSources": 137,
+    "officiallyDeclaredInstagramProfiles": 51,
     "quarantinedWebSources": 6,
-    "retiredInstagramProfiles": 1,
-    "pendingWebSources": 64,
-    "transportUnverifiedWebSources": 181,
-    "endpointVerificationPendingWebSources": 194,
+    "retiredInstagramProfiles": 7,
+    "pendingWebSources": 61,
+    "transportUnverifiedWebSources": 5,
+    "endpointVerificationPendingWebSources": 6,
     "tierConflictSources": 0,
-    "urlConflictSources": 18
+    "urlConflictSources": 19
   },
   "identityReconciliation": {
-    "authoritativeSeedEntities": 141,
+    "authoritativeSeedEntities": 146,
     "provisionalEntities": [
       {
         "id": "ufg.legacy.adm-face",
@@ -215,13 +216,6 @@
         ]
       },
       {
-        "id": "ufg.legacy.iac",
-        "name": "IAC",
-        "legacyIds": [
-          "iac"
-        ]
-      },
-      {
         "id": "ufg.legacy.idiomassemfronteiras",
         "name": "idiomassemfronteiras",
         "legacyIds": [
@@ -245,14 +239,6 @@
         ]
       },
       {
-        "id": "ufg.legacy.labmic",
-        "name": "LabMic",
-        "legacyIds": [
-          "LabMic",
-          "labmic"
-        ]
-      },
-      {
         "id": "ufg.legacy.lam",
         "name": "LAM/FACE",
         "legacyIds": [
@@ -273,14 +259,6 @@
         "name": "ouvidoria",
         "legacyIds": [
           "ouvidoria"
-        ]
-      },
-      {
-        "id": "ufg.legacy.patio-ciencia",
-        "name": "Patio Ciencia",
-        "legacyIds": [
-          "PATIO CIENCIA",
-          "patiodaciencia"
         ]
       },
       {
@@ -760,6 +738,13 @@
         ]
       },
       {
+        "id": "ig.sri-ufg",
+        "entityIds": [
+          "ufg.legacy.idiomassemfronteiras",
+          "ufg.sri"
+        ]
+      },
+      {
         "id": "ig.ufg-oficial",
         "entityIds": [
           "ufg.fe",
@@ -774,8 +759,28 @@
     ],
     "reassignedInstagramProfiles": [
       {
+        "id": "ig.fl-ufg-oficial",
+        "supersededBy": "ig.letras-ufg"
+      },
+      {
+        "id": "ig.funapeufg",
+        "supersededBy": "ig.funape-oficial"
+      },
+      {
+        "id": "ig.icb-acoes",
+        "supersededBy": "ig.icb-ufg"
+      },
+      {
+        "id": "ig.iesaufg",
+        "supersededBy": "ig.iesa-ufg"
+      },
+      {
         "id": "ig.infufg",
         "supersededBy": "ig.inf-ufg"
+      },
+      {
+        "id": "ig.ppgacv",
+        "supersededBy": "ig.ppgacv-ufg"
       }
     ]
   },
@@ -798,8 +803,8 @@
     "aliasResolutionApplied": true,
     "uniqueHandles": {
       "publisher": 54,
-      "curator": 51,
-      "scanner": 51
+      "curator": 53,
+      "scanner": 76
     },
     "commonAll": [
       "campusaparecidaufg",
@@ -822,6 +827,7 @@
       "fcs_ufg",
       "fen_ufg",
       "firminopolis_ufg",
+      "iesa.ufg",
       "ime_ufg",
       "institutoverbenaufg",
       "iptsp_ufg",
@@ -832,6 +838,7 @@
       "pesquisaeinovacaoufg",
       "planetario.ufg",
       "posufg",
+      "ppgadm.ufg",
       "praeufg",
       "proex.ufg",
       "prograd_ufg",
@@ -844,58 +851,41 @@
     ],
     "exclusive": {
       "publisherOnly": [
-        "cepeconf_ufg",
         "fl_ufg_oficial",
-        "herbarioufg",
         "icb_acoes",
-        "iesa.ufg",
-        "inf.ufg",
-        "ipelab.ufg",
-        "jornalufg",
-        "labmic.ufg",
-        "patiodaciencia_ufg",
-        "ppgci.ufg",
-        "ppgcont.ufg",
-        "pts.ufg",
-        "radioufg"
+        "jornalufg"
       ],
       "curatorOnly": [
-        "campusocidentalufg",
-        "centrodelinguasflufg",
-        "ppgacv",
-        "ppgccufg",
-        "ppgnut.ufg"
+        "infufg",
+        "ppgccufg"
       ],
       "scannerOnly": [
         "cecasufg",
         "escoladeposufg",
         "floreser.ufg",
+        "funape.oficial",
+        "fundacaofagep",
+        "fundacaortve",
         "lacena_ufg",
         "lapigufg",
-        "patiodaciencia.ufg"
+        "patiodaciencia.ufg",
+        "poshistoriaufg",
+        "ppga_ufg",
+        "ppgban.ufg",
+        "ppgca_ufg",
+        "ppgcb_ufg",
+        "ppgecoevolufg",
+        "ppgeo.ufg",
+        "ppggmp.ufg",
+        "ppgoufg",
+        "ppgzufg"
       ]
     },
     "legacyNotScanned": [
-      "campusocidentalufg",
-      "centrodelinguasflufg",
-      "cepeconf_ufg",
-      "fl_ufg_oficial",
-      "herbarioufg",
-      "icb_acoes",
-      "iesa.ufg",
-      "inf.ufg",
-      "ipelab.ufg",
       "jornalufg",
       "labmic.ufg",
       "patiodaciencia_ufg",
-      "ppgacv",
-      "ppgadm.ufg",
-      "ppgccufg",
-      "ppgci.ufg",
-      "ppgcont.ufg",
-      "ppgnut.ufg",
-      "pts.ufg",
-      "radioufg"
+      "ppgccufg"
     ],
     "scannerWithoutEntity": [
       "ig.cecasufg",
@@ -943,20 +933,6 @@
         "inventory": "kino_publisher"
       },
       {
-        "url": "https://patiodaciencia.ufg.br/",
-        "candidateSourceId": "web.legacy.patio-ciencia",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "kino_publisher"
-      },
-      {
-        "url": "https://pos.letras.ufg.br/",
-        "candidateSourceId": "web.ufg.ppg.ppgll",
-        "reviewState": "confirmed_official",
-        "classification": "officially_confirmed_but_policy_unresolved",
-        "inventory": "kino_publisher"
-      },
-      {
         "url": "https://sape.face.ufg.br/",
         "candidateSourceId": "web.legacy.sape",
         "reviewState": "pending_review",
@@ -966,8 +942,57 @@
     ],
     "curatorOnly": [
       {
+        "url": "https://artesdacenappg.iac.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgac.profile",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://biodiversidadeanimal.icb.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgban",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://bioparasitohospedeiro.iptsp.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgbrph",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ccn.ufg.br/",
+        "candidateSourceId": "web.ufg.campus.caldas-novas",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ciamb.prpg.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgciamb",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
         "url": "https://cidadeocidental.ufg.br/",
         "candidateSourceId": "web.ufg.campus.cidade-ocidental",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://cienciapoliticari.fcs.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgcpri",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://cienciassaude.medicina.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgcs",
         "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
@@ -980,8 +1005,15 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://co.ufg.br/",
-        "candidateSourceId": "web.ufg.campus.cidade-ocidental",
+        "url": "https://culturavisual.fav.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgacv",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ecoevol.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgecoevol",
         "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
@@ -1001,6 +1033,13 @@
         "inventory": "openclaw_curator"
       },
       {
+        "url": "https://ensinosaude.medicina.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppges",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
         "url": "https://fef.ufg.br/",
         "candidateSourceId": "web.ufg.fefd",
         "reviewState": "confirmed_official",
@@ -1010,6 +1049,13 @@
       {
         "url": "https://fic.ufg.br/",
         "candidateSourceId": "web.ufg.fic",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://gecon.eeca.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppggecon",
         "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
@@ -1029,6 +1075,69 @@
         "inventory": "openclaw_curator"
       },
       {
+        "url": "https://pgbb.prpg.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgbb",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pgbm.icb.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgbm",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos-saudecoletiva.iptsp.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgsc",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos-sociologia.fcs.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgs",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.cepae.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgeeb",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.direitoshumanos.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgdh",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.filosofia.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgfil",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.historia.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgh",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://pos.icb.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgcb",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
         "url": "https://pos.ufg.br/p/mestrado-profissional-educacao-fisica-rede-nacional-proef",
         "candidateSourceId": "web.legacy.proef",
         "reviewState": "pending_review",
@@ -1043,85 +1152,8 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://pos.ufg.br/p/pos-graduacao-biodiversidade-animal-ppgban",
-        "candidateSourceId": "web.legacy.ppgban",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-biologia-relacao-parasito-hospedeiro",
-        "candidateSourceId": "web.legacy.ppgrph",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-biotenologia-biodiversidade",
-        "candidateSourceId": "web.legacy.ppgbb",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ciencia-politica-ppgcpri",
-        "candidateSourceId": "web.legacy.ppgcpri",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
         "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-ambientais-ppgciamb",
         "candidateSourceId": "web.legacy.ppgciamb",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-biologicas-ppgcb",
-        "candidateSourceId": "web.legacy.ppgcb",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ciencias-saude-ppgcs",
-        "candidateSourceId": "web.legacy.ppgcs",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-direito-agrario-ppgda",
-        "candidateSourceId": "web.legacy.ppgda",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-direito-politicas-publicas-ppgdp",
-        "candidateSourceId": "web.legacy.ppgdp",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-direitos-humanos-ppgdh",
-        "candidateSourceId": "web.legacy.ppgdh",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ecologia-evolucao-ppgecoecvol",
-        "candidateSourceId": "web.legacy.ppgecoevol",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-ciencias-matematica-ppgecm",
-        "candidateSourceId": "web.legacy.ppgecm",
         "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
@@ -1134,13 +1166,6 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://pos.ufg.br/p/pos-graduacao-educacao-ppge",
-        "candidateSourceId": "web.legacy.ppge",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
         "url": "https://pos.ufg.br/p/pos-graduacao-enfermagem-ppgenf",
         "candidateSourceId": "web.legacy.ppgenf",
         "reviewState": "quarantined",
@@ -1148,36 +1173,8 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-educacao-basica-ppgeeb",
-        "candidateSourceId": "web.legacy.ppgeeb",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-historia-profhistoria",
-        "candidateSourceId": "web.legacy.profhistoria",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-ensino-na-saude-ppges",
-        "candidateSourceId": "web.legacy.ppges",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
         "url": "https://pos.ufg.br/p/pos-graduacao-filosofia-ppgfil",
         "candidateSourceId": "web.legacy.ppgfil",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-fisica-ppgf",
-        "candidateSourceId": "web.legacy.ppgf",
         "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
@@ -1190,29 +1187,8 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://pos.ufg.br/p/pos-graduacao-geotecnia-estruturas-construcao-civil-ppggecon",
-        "candidateSourceId": "web.legacy.ppggecon",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-historia-ppgh",
-        "candidateSourceId": "web.legacy.ppgh",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
         "url": "https://pos.ufg.br/p/pos-graduacao-letras-linguistica-ppgll",
         "candidateSourceId": "web.legacy.ppgll",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-matematica-ppgime",
-        "candidateSourceId": "web.legacy.ppgec",
         "reviewState": "pending_review",
         "classification": "pending_verification",
         "inventory": "openclaw_curator"
@@ -1232,34 +1208,6 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://pos.ufg.br/p/pos-graduacao-performances-culturais-ppgpc",
-        "candidateSourceId": "web.legacy.ppgculturas",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-projeto-cidade-ppgprocidade",
-        "candidateSourceId": "web.legacy.ppgpc",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-psicologia-ppgp",
-        "candidateSourceId": "web.legacy.ppgp",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
-        "url": "https://pos.ufg.br/p/pos-graduacao-saude-coletiva-ppgsc",
-        "candidateSourceId": "web.legacy.ppgsc",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
-        "inventory": "openclaw_curator"
-      },
-      {
         "url": "https://pos.ufg.br/p/pos-graduacao-sociologia-ppgs",
         "candidateSourceId": "web.legacy.ppgs",
         "reviewState": "pending_review",
@@ -1274,15 +1222,106 @@
         "inventory": "openclaw_curator"
       },
       {
-        "url": "https://pos.ufg.br/p/programa-pos-graduacao-odontologia-ppgo",
-        "candidateSourceId": "web.legacy.ppgo",
-        "reviewState": "pending_review",
-        "classification": "pending_verification",
+        "url": "https://posgraduacao.if.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgf",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://posgraduacao.ime.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgmat",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://posgraduacao.odonto.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgo",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgact.medialab.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgact",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgda.direito.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgda",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgdp.direito.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgdp",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppge.fe.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppge",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgecm.prpg.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgecm",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgef.fef.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgef",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgenfs.fen.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgenfs",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgep.fct.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgep",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
       {
         "url": "https://ppgmus.em.ufg.br/",
         "candidateSourceId": "web.ufg.ppg.ppgmus",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://ppgp.fe.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgp",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://prof.historia.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.profhistoria",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://projetoecidade.fav.ufg.br/",
+        "candidateSourceId": "web.ufg.ppg.ppgprocidade",
         "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
@@ -1903,6 +1942,22 @@
           {
             "id": "odonto",
             "tier": 3
+          }
+        ],
+        "action": "adjudicate_before_activation"
+      },
+      {
+        "url": "https://patiodaciencia.ufg.br/",
+        "publisher": [
+          {
+            "id": "patiodaciencia",
+            "tier": 1
+          }
+        ],
+        "curator": [
+          {
+            "id": "patiodaciencia",
+            "tier": 2
           }
         ],
         "action": "adjudicate_before_activation"
@@ -2574,6 +2629,18 @@
         "note": "This reproduces the current first-match tier precedence used by the curator helper."
       },
       {
+        "url": "https://patiodaciencia.ufg.br/",
+        "publisher": {
+          "id": "patiodaciencia",
+          "tier": 1
+        },
+        "curatorFirstMatch": {
+          "id": "patiodaciencia",
+          "tier": 2
+        },
+        "note": "This reproduces the current first-match tier precedence used by the curator helper."
+      },
+      {
         "url": "https://pitt.prpi.ufg.br/",
         "publisher": {
           "id": "pitt",
@@ -2772,16 +2839,6 @@
         "action": "verify_on_official_institutional_channel"
       },
       {
-        "url": "https://iesa.ufg.br/",
-        "publisher": [
-          "iesa.ufg"
-        ],
-        "curator": [
-          "iesaufg"
-        ],
-        "action": "verify_on_official_institutional_channel"
-      },
-      {
         "url": "https://inf.ufg.br/",
         "publisher": [
           "inf.ufg"
@@ -2805,16 +2862,6 @@
         "url": "https://jornal.ufg.br/",
         "publisher": [
           "jornalufg"
-        ],
-        "curator": [
-          "null"
-        ],
-        "action": "verify_on_official_institutional_channel"
-      },
-      {
-        "url": "https://labmic.ufg.br/",
-        "publisher": [
-          "labmic.ufg"
         ],
         "curator": [
           "null"
@@ -2855,6 +2902,16 @@
         "url": "https://parquesamambaia.ufg.br/",
         "publisher": [
           "pts.ufg"
+        ],
+        "curator": [
+          "null"
+        ],
+        "action": "verify_on_official_institutional_channel"
+      },
+      {
+        "url": "https://pos.letras.ufg.br/",
+        "publisher": [
+          "fl_ufg_oficial"
         ],
         "curator": [
           "null"
@@ -2998,6 +3055,15 @@
         ]
       },
       {
+        "url": "https://pos.letras.ufg.br/",
+        "publisher": [
+          "pos-letras"
+        ],
+        "curator": [
+          "ppgll-operational"
+        ]
+      },
+      {
         "url": "https://uaech.goias.ufg.br/",
         "publisher": [
           "uaech-goias"
@@ -3045,9 +3111,7 @@
         "legacyCandidates": [
           "https://co.ufg.br/"
         ],
-        "observedLegacyCandidates": [
-          "https://co.ufg.br/"
-        ],
+        "observedLegacyCandidates": [],
         "action": "verify_redirect_and_content_equivalence"
       },
       {
@@ -3124,10 +3188,21 @@
       },
       {
         "sourceId": "web.ufg.ppg.ppgac.profile",
-        "canonicalUrl": "https://pos.ufg.br/p/programa-pos-graduacao-artes-cena-ppgac",
+        "canonicalUrl": "https://artesdacenappg.iac.ufg.br/",
         "declaredUrl": "https://artesdacenappg.emac.ufg.br/",
         "legacyCandidates": [
-          "https://artesdacenappg.emac.ufg.br/"
+          "https://artesdacenappg.emac.ufg.br/",
+          "https://pos.ufg.br/p/programa-pos-graduacao-artes-cena-ppgac"
+        ],
+        "observedLegacyCandidates": [],
+        "action": "verify_redirect_and_content_equivalence"
+      },
+      {
+        "sourceId": "web.ufg.ppg.ppgact",
+        "canonicalUrl": "https://ppgact.medialab.ufg.br/",
+        "declaredUrl": "https://ppgact.medialab.ufg.br/",
+        "legacyCandidates": [
+          "https://ppgipc.fcs.ufg.br/"
         ],
         "observedLegacyCandidates": [],
         "action": "verify_redirect_and_content_equivalence"
@@ -3242,25 +3317,25 @@
   "activationBlockers": [
     {
       "id": "collection-not-activated",
-      "count": 283,
+      "count": 301,
       "requiredAction": "keep all enabled flags false until shadow and dry-run gates pass"
     },
     {
       "id": "tier-conflicts",
       "count": 0,
       "sourceIds": [],
-      "commonUrlDeclaredSetCount": 51,
-      "commonUrlEffectiveLegacyCount": 51,
+      "commonUrlDeclaredSetCount": 52,
+      "commonUrlEffectiveLegacyCount": 52,
       "requiredAction": "adjudicate tier and execution modes explicitly"
     },
     {
       "id": "instagram-conflicts",
-      "count": 21,
+      "count": 20,
       "requiredAction": "collect official profile evidence; legacy majority is not evidence"
     },
     {
       "id": "institutional-url-conflicts",
-      "count": 18,
+      "count": 19,
       "sourceIds": [
         "web.affiliated.fagep",
         "web.affiliated.funape",
@@ -3274,6 +3349,7 @@
         "web.ufg.fo",
         "web.ufg.ime",
         "web.ufg.ppg.ppgac.profile",
+        "web.ufg.ppg.ppgact",
         "web.ufg.ppg.ppgef",
         "web.ufg.ppg.ppgmus",
         "web.ufg.ppg.ppgnanofarma.profile",
@@ -3285,7 +3361,7 @@
     },
     {
       "id": "pending-source-audit",
-      "count": 64,
+      "count": 61,
       "sourceIds": [
         "web.legacy.adm-face",
         "web.legacy.cei",
@@ -3297,15 +3373,12 @@
         "web.legacy.crti",
         "web.legacy.ead-face",
         "web.legacy.eco-face",
-        "web.legacy.iac",
         "web.legacy.idiomassemfronteiras",
         "web.legacy.ipelab",
         "web.legacy.jornal-ufg",
-        "web.legacy.labmic",
         "web.legacy.lam",
         "web.legacy.lamcad",
         "web.legacy.ouvidoria",
-        "web.legacy.patio-ciencia",
         "web.legacy.pitt",
         "web.legacy.pos-ufg",
         "web.legacy.ppgac",
@@ -3369,396 +3442,32 @@
     },
     {
       "id": "transport-unverified",
-      "count": 181,
+      "count": 5,
       "sourceIds": [
-        "web.legacy.adm-face",
-        "web.legacy.cei",
-        "web.legacy.cepeconf",
-        "web.legacy.cerof",
-        "web.legacy.cl",
-        "web.legacy.contabeis-face",
-        "web.legacy.cpcbio",
-        "web.legacy.crti",
         "web.legacy.ead-face",
-        "web.legacy.eco-face",
-        "web.legacy.iac",
-        "web.legacy.idiomassemfronteiras",
-        "web.legacy.ipelab",
-        "web.legacy.jornal-ufg",
-        "web.legacy.labmic",
-        "web.legacy.lam",
-        "web.legacy.lamcad",
-        "web.legacy.ouvidoria",
-        "web.legacy.patio-ciencia",
-        "web.legacy.pitt",
-        "web.legacy.pos-ufg",
         "web.legacy.ppgac",
-        "web.legacy.ppgacv",
-        "web.legacy.ppgban",
-        "web.legacy.ppgbb",
-        "web.legacy.ppgbm",
-        "web.legacy.ppgcb",
-        "web.legacy.ppgciamb",
-        "web.legacy.ppgcpri",
-        "web.legacy.ppgcs",
-        "web.legacy.ppgculturas",
-        "web.legacy.ppgda",
-        "web.legacy.ppgdh",
-        "web.legacy.ppgdp",
-        "web.legacy.ppge",
-        "web.legacy.ppgec",
-        "web.legacy.ppgecm",
-        "web.legacy.ppgecoevol",
-        "web.legacy.ppgeeb",
         "web.legacy.ppgef",
         "web.legacy.ppgenf",
-        "web.legacy.ppges",
-        "web.legacy.ppgf",
-        "web.legacy.ppgfil",
-        "web.legacy.ppggecon",
-        "web.legacy.ppgh",
-        "web.legacy.ppgll",
-        "web.legacy.ppgmcf",
-        "web.legacy.ppgo",
-        "web.legacy.ppgp",
-        "web.legacy.ppgpc",
-        "web.legacy.ppgrph",
-        "web.legacy.ppgs",
-        "web.legacy.ppgsc",
-        "web.legacy.proef",
-        "web.legacy.profhistoria",
-        "web.legacy.pts",
-        "web.legacy.radio-ufg",
-        "web.legacy.sape",
-        "web.legacy.sea",
-        "web.legacy.tvufg",
-        "web.legacy.uc",
-        "web.legacy.verbena",
-        "web.ufg.agro",
-        "web.ufg.bc",
-        "web.ufg.campus.caldas-novas",
-        "web.ufg.campus.goias",
-        "web.ufg.cefis",
-        "web.ufg.cegraf",
-        "web.ufg.cepae",
-        "web.ufg.ciar",
-        "web.ufg.cidarq",
-        "web.ufg.cpa",
-        "web.ufg.csa",
-        "web.ufg.editora",
-        "web.ufg.evz",
-        "web.ufg.face",
-        "web.ufg.fafil",
-        "web.ufg.fanut",
-        "web.ufg.fav",
-        "web.ufg.fct",
-        "web.ufg.fd",
-        "web.ufg.fe",
-        "web.ufg.fen",
-        "web.ufg.ff",
-        "web.ufg.fh",
-        "web.ufg.fic",
-        "web.ufg.fl",
-        "web.ufg.fm",
-        "web.ufg.fo",
-        "web.ufg.hospital.clinicas",
-        "web.ufg.hospital.veterinario",
-        "web.ufg.icb",
-        "web.ufg.iesa",
-        "web.ufg.if",
-        "web.ufg.inf",
-        "web.ufg.iptsp",
-        "web.ufg.iq",
-        "web.ufg.planetario",
-        "web.ufg.portal",
-        "web.ufg.pos.directory",
-        "web.ufg.ppg.dcc-ufms-ufg",
-        "web.ufg.ppg.ppga",
-        "web.ufg.ppg.ppgaas",
-        "web.ufg.ppg.ppgac.profile",
-        "web.ufg.ppg.ppgact",
-        "web.ufg.ppg.ppgacv",
-        "web.ufg.ppg.ppgadm",
-        "web.ufg.ppg.ppgagro",
-        "web.ufg.ppg.ppgas",
-        "web.ufg.ppg.ppgban",
-        "web.ufg.ppg.ppgbb",
-        "web.ufg.ppg.ppgbm",
-        "web.ufg.ppg.ppgbrph",
-        "web.ufg.ppg.ppgca",
-        "web.ufg.ppg.ppgcb",
-        "web.ufg.ppg.ppgcc",
-        "web.ufg.ppg.ppgcf",
-        "web.ufg.ppg.ppgci",
-        "web.ufg.ppg.ppgciamb",
-        "web.ufg.ppg.ppgcom",
-        "web.ufg.ppg.ppgcont",
-        "web.ufg.ppg.ppgcpri",
-        "web.ufg.ppg.ppgcs",
-        "web.ufg.ppg.ppgcta",
-        "web.ufg.ppg.ppgda",
-        "web.ufg.ppg.ppgdh",
-        "web.ufg.ppg.ppgdp",
-        "web.ufg.ppg.ppgdr",
-        "web.ufg.ppg.ppge",
-        "web.ufg.ppg.ppgea",
-        "web.ufg.ppg.ppgeas",
-        "web.ufg.ppg.ppgecm",
-        "web.ufg.ppg.ppgecoevol",
-        "web.ufg.ppg.ppgecon",
-        "web.ufg.ppg.ppgeeb",
-        "web.ufg.ppg.ppgeec",
-        "web.ufg.ppg.ppgef",
-        "web.ufg.ppg.ppgenfs",
-        "web.ufg.ppg.ppgeo",
-        "web.ufg.ppg.ppgep",
-        "web.ufg.ppg.ppgeq",
-        "web.ufg.ppg.ppges",
-        "web.ufg.ppg.ppgf",
-        "web.ufg.ppg.ppgfil",
-        "web.ufg.ppg.ppggecon",
-        "web.ufg.ppg.ppggmp",
-        "web.ufg.ppg.ppgh",
-        "web.ufg.ppg.ppgif",
-        "web.ufg.ppg.ppgll",
-        "web.ufg.ppg.ppgmat",
-        "web.ufg.ppg.ppgmcf",
-        "web.ufg.ppg.ppgmec",
-        "web.ufg.ppg.ppgmtsp",
-        "web.ufg.ppg.ppgmus",
-        "web.ufg.ppg.ppgnanofarma.profile",
-        "web.ufg.ppg.ppgnut",
-        "web.ufg.ppg.ppgo",
-        "web.ufg.ppg.ppgp",
-        "web.ufg.ppg.ppgprocidade",
-        "web.ufg.ppg.ppgq",
-        "web.ufg.ppg.ppgs",
-        "web.ufg.ppg.ppgsc",
-        "web.ufg.ppg.ppgz",
-        "web.ufg.ppg.proef",
-        "web.ufg.ppg.profhistoria",
-        "web.ufg.ppg.profiap",
-        "web.ufg.ppg.profmat",
-        "web.ufg.prae",
-        "web.ufg.proad",
-        "web.ufg.prograd",
-        "web.ufg.propessoas",
-        "web.ufg.prpg",
-        "web.ufg.prpi",
-        "web.ufg.sdh",
-        "web.ufg.secom",
-        "web.ufg.secplan",
-        "web.ufg.seinfra",
-        "web.ufg.seti",
-        "web.ufg.sin",
-        "web.ufg.sri"
+        "web.legacy.sea"
       ],
       "requiredAction": "verify canonical URL transport, redirect target and HTTP result"
     },
     {
       "id": "endpoint-verification-pending",
-      "count": 194,
+      "count": 6,
       "sourceIds": [
-        "web.legacy.adm-face",
-        "web.legacy.ccufg",
-        "web.legacy.cei",
-        "web.legacy.cepeconf",
-        "web.legacy.cerof",
-        "web.legacy.cl",
-        "web.legacy.contabeis-face",
-        "web.legacy.cpcbio",
-        "web.legacy.crti",
         "web.legacy.ead-face",
-        "web.legacy.eco-face",
-        "web.legacy.iac",
-        "web.legacy.idiomassemfronteiras",
-        "web.legacy.ipelab",
-        "web.legacy.jornal-ufg",
-        "web.legacy.labmic",
-        "web.legacy.lam",
-        "web.legacy.lamcad",
-        "web.legacy.ouvidoria",
-        "web.legacy.patio-ciencia",
         "web.legacy.pitt",
-        "web.legacy.pos-ufg",
         "web.legacy.ppgac",
-        "web.legacy.ppgacv",
-        "web.legacy.ppgban",
-        "web.legacy.ppgbb",
-        "web.legacy.ppgbm",
-        "web.legacy.ppgcb",
-        "web.legacy.ppgciamb",
-        "web.legacy.ppgcpri",
-        "web.legacy.ppgcs",
-        "web.legacy.ppgculturas",
-        "web.legacy.ppgda",
-        "web.legacy.ppgdh",
-        "web.legacy.ppgdp",
-        "web.legacy.ppge",
-        "web.legacy.ppgec",
-        "web.legacy.ppgecm",
-        "web.legacy.ppgecoevol",
-        "web.legacy.ppgeeb",
         "web.legacy.ppgef",
         "web.legacy.ppgenf",
-        "web.legacy.ppges",
-        "web.legacy.ppgf",
-        "web.legacy.ppgfil",
-        "web.legacy.ppggecon",
-        "web.legacy.ppgh",
-        "web.legacy.ppgll",
-        "web.legacy.ppgmcf",
-        "web.legacy.ppgo",
-        "web.legacy.ppgp",
-        "web.legacy.ppgpc",
-        "web.legacy.ppgrph",
-        "web.legacy.ppgs",
-        "web.legacy.ppgsc",
-        "web.legacy.proef",
-        "web.legacy.profhistoria",
-        "web.legacy.pts",
-        "web.legacy.radio-ufg",
-        "web.legacy.revistas-ufg",
-        "web.legacy.sape",
-        "web.legacy.sea",
-        "web.legacy.seacult",
-        "web.legacy.tvufg",
-        "web.legacy.uc",
-        "web.legacy.verbena",
-        "web.ufg.agro",
-        "web.ufg.bc",
-        "web.ufg.campus.caldas-novas",
-        "web.ufg.campus.cidade-ocidental",
-        "web.ufg.campus.goias",
-        "web.ufg.cefis",
-        "web.ufg.cegraf",
-        "web.ufg.cepae",
-        "web.ufg.ciar",
-        "web.ufg.cidarq",
-        "web.ufg.cpa",
-        "web.ufg.csa",
-        "web.ufg.editora",
-        "web.ufg.eeca",
-        "web.ufg.emac",
-        "web.ufg.emc",
-        "web.ufg.evz",
-        "web.ufg.face",
-        "web.ufg.fafil",
-        "web.ufg.fanut",
-        "web.ufg.fav",
-        "web.ufg.fcs",
-        "web.ufg.fct",
-        "web.ufg.fd",
-        "web.ufg.fe",
-        "web.ufg.fefd",
-        "web.ufg.fen",
-        "web.ufg.ff",
-        "web.ufg.fh",
-        "web.ufg.fic",
-        "web.ufg.fl",
-        "web.ufg.fm",
-        "web.ufg.fo",
-        "web.ufg.hospital.clinicas",
-        "web.ufg.hospital.veterinario",
-        "web.ufg.icb",
-        "web.ufg.iesa",
-        "web.ufg.if",
-        "web.ufg.ime",
-        "web.ufg.inf",
-        "web.ufg.iptsp",
-        "web.ufg.iq",
-        "web.ufg.museu",
-        "web.ufg.planetario",
-        "web.ufg.portal",
-        "web.ufg.pos.directory",
-        "web.ufg.ppg.dcc-ufms-ufg",
-        "web.ufg.ppg.ppga",
-        "web.ufg.ppg.ppgaas",
-        "web.ufg.ppg.ppgac.profile",
-        "web.ufg.ppg.ppgact",
-        "web.ufg.ppg.ppgacv",
-        "web.ufg.ppg.ppgadm",
-        "web.ufg.ppg.ppgagro",
-        "web.ufg.ppg.ppgas",
-        "web.ufg.ppg.ppgban",
-        "web.ufg.ppg.ppgbb",
-        "web.ufg.ppg.ppgbm",
-        "web.ufg.ppg.ppgbrph",
-        "web.ufg.ppg.ppgca",
-        "web.ufg.ppg.ppgcb",
-        "web.ufg.ppg.ppgcc",
-        "web.ufg.ppg.ppgcf",
-        "web.ufg.ppg.ppgci",
-        "web.ufg.ppg.ppgciamb",
-        "web.ufg.ppg.ppgcom",
-        "web.ufg.ppg.ppgcont",
-        "web.ufg.ppg.ppgcpri",
-        "web.ufg.ppg.ppgcs",
-        "web.ufg.ppg.ppgcta",
-        "web.ufg.ppg.ppgda",
-        "web.ufg.ppg.ppgdh",
-        "web.ufg.ppg.ppgdp",
-        "web.ufg.ppg.ppgdr",
-        "web.ufg.ppg.ppge",
-        "web.ufg.ppg.ppgea",
-        "web.ufg.ppg.ppgeas",
-        "web.ufg.ppg.ppgecm",
-        "web.ufg.ppg.ppgecoevol",
-        "web.ufg.ppg.ppgecon",
-        "web.ufg.ppg.ppgeeb",
-        "web.ufg.ppg.ppgeec",
-        "web.ufg.ppg.ppgef",
-        "web.ufg.ppg.ppgenfs",
-        "web.ufg.ppg.ppgeo",
-        "web.ufg.ppg.ppgep",
-        "web.ufg.ppg.ppgeq",
-        "web.ufg.ppg.ppges",
-        "web.ufg.ppg.ppgf",
-        "web.ufg.ppg.ppgfil",
-        "web.ufg.ppg.ppggecon",
-        "web.ufg.ppg.ppggmp",
-        "web.ufg.ppg.ppgh",
-        "web.ufg.ppg.ppgif",
-        "web.ufg.ppg.ppgll",
-        "web.ufg.ppg.ppgmat",
-        "web.ufg.ppg.ppgmcf",
-        "web.ufg.ppg.ppgmec",
-        "web.ufg.ppg.ppgmtsp",
-        "web.ufg.ppg.ppgmus",
-        "web.ufg.ppg.ppgnanofarma.profile",
-        "web.ufg.ppg.ppgnut",
-        "web.ufg.ppg.ppgo",
-        "web.ufg.ppg.ppgp",
-        "web.ufg.ppg.ppgprocidade",
-        "web.ufg.ppg.ppgq",
-        "web.ufg.ppg.ppgs",
-        "web.ufg.ppg.ppgsc",
-        "web.ufg.ppg.ppgz",
-        "web.ufg.ppg.proef",
-        "web.ufg.ppg.profhistoria",
-        "web.ufg.ppg.profiap",
-        "web.ufg.ppg.profmat",
-        "web.ufg.prae",
-        "web.ufg.proad",
-        "web.ufg.proec",
-        "web.ufg.prograd",
-        "web.ufg.propessoas",
-        "web.ufg.prpg",
-        "web.ufg.prpi",
-        "web.ufg.sdh",
-        "web.ufg.secom",
-        "web.ufg.secplan",
-        "web.ufg.seinfra",
-        "web.ufg.seti",
-        "web.ufg.sin",
-        "web.ufg.sri",
-        "web.ufg.uaech"
+        "web.legacy.sea"
       ],
       "requiredAction": "verify each declared collection endpoint before enabling a source"
     },
     {
       "id": "provisional-entity-identity",
-      "count": 29,
+      "count": 26,
       "entityIds": [
         "ufg.legacy.adm-face",
         "ufg.legacy.cei",
@@ -3770,15 +3479,12 @@
         "ufg.legacy.crti",
         "ufg.legacy.ead-face",
         "ufg.legacy.eco-face",
-        "ufg.legacy.iac",
         "ufg.legacy.idiomassemfronteiras",
         "ufg.legacy.ipelab",
         "ufg.legacy.jornal-ufg",
-        "ufg.legacy.labmic",
         "ufg.legacy.lam",
         "ufg.legacy.lamcad",
         "ufg.legacy.ouvidoria",
-        "ufg.legacy.patio-ciencia",
         "ufg.legacy.pitt",
         "ufg.legacy.pos-ufg",
         "ufg.legacy.pts",
@@ -3806,28 +3512,12 @@
     },
     {
       "id": "legacy-instagram-not-scanned",
-      "count": 20,
+      "count": 4,
       "handles": [
-        "campusocidentalufg",
-        "centrodelinguasflufg",
-        "cepeconf_ufg",
-        "fl_ufg_oficial",
-        "herbarioufg",
-        "icb_acoes",
-        "iesa.ufg",
-        "inf.ufg",
-        "ipelab.ufg",
         "jornalufg",
         "labmic.ufg",
         "patiodaciencia_ufg",
-        "ppgacv",
-        "ppgadm.ufg",
-        "ppgccufg",
-        "ppgci.ufg",
-        "ppgcont.ufg",
-        "ppgnut.ufg",
-        "pts.ufg",
-        "radioufg"
+        "ppgccufg"
       ],
       "requiredAction": "adjudicate alias or add the verified profile to scanner coverage before activation"
     },
@@ -3845,17 +3535,13 @@
     },
     {
       "id": "instagram-profile-verification-pending",
-      "count": 85,
+      "count": 64,
       "profileIds": [
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
-        "ig.campusocidentalufg",
         "ig.cecasufg",
         "ig.cei-ufg",
-        "ig.centroculturalufg",
-        "ig.centrodelinguasflufg",
         "ig.cepae-ufg",
-        "ig.cepeconf-ufg",
         "ig.cerofufg",
         "ig.ciar-ufg",
         "ig.direitoufg",
@@ -3875,58 +3561,41 @@
         "ig.fen-ufg",
         "ig.fic-ufg",
         "ig.firminopolis-ufg",
-        "ig.fl-ufg-oficial",
         "ig.floreser-ufg",
-        "ig.funapeufg",
-        "ig.fundacaofagep",
-        "ig.fundacaortve",
-        "ig.herbarioufg",
-        "ig.icb-ufg",
-        "ig.icb-acoes",
-        "ig.iesa-ufg",
-        "ig.iesaufg",
+        "ig.gecon-eeca",
         "ig.ime-ufg",
-        "ig.inf-ufg",
         "ig.institutoverbenaufg",
-        "ig.ipelab-ufg",
         "ig.iptsp-ufg",
         "ig.iqufg",
         "ig.jornalufg",
         "ig.labmic-ufg",
         "ig.lacena-ufg",
         "ig.lapigufg",
-        "ig.letras-ufg",
-        "ig.museu-ufg",
         "ig.odontologia-ufg",
         "ig.patiodaciencia-ufg",
         "ig.patiodaciencia-ufg-c66026d4",
         "ig.pesquisaeinovacaoufg",
         "ig.planetario-ufg",
-        "ig.poshistoriaufg",
         "ig.posufg",
-        "ig.ppga-ufg",
-        "ig.ppgacv",
-        "ig.ppgacv-ufg",
-        "ig.ppgadm-ufg",
-        "ig.ppgban-ufg",
-        "ig.ppgca-ufg",
-        "ig.ppgcb-ufg",
+        "ig.ppg-projeto-e-cidade",
+        "ig.ppgact",
+        "ig.ppgasufg",
+        "ig.ppgbrph-ufg",
         "ig.ppgccufg",
-        "ig.ppgci-ufg",
-        "ig.ppgcont-ufg",
-        "ig.ppgcta-ufg",
-        "ig.ppgecoevolufg",
-        "ig.ppgeo-ufg",
-        "ig.ppggmp-ufg",
-        "ig.ppgnut-ufg",
-        "ig.ppgoufg",
-        "ig.ppgzufg",
+        "ig.ppgcom-ufg",
+        "ig.ppgda-ufg",
+        "ig.ppgdp-ufg",
+        "ig.ppgeas-ufg",
+        "ig.ppgequfg",
+        "ig.ppgfil-ufg",
+        "ig.ppggeageociencias",
+        "ig.ppgmecufg",
+        "ig.ppgmus-em-ufg",
+        "ig.ppgq-ufg",
+        "ig.ppgs-ufg",
         "ig.praeufg",
-        "ig.proex-ufg",
         "ig.prograd-ufg",
         "ig.propessoas-ufg",
-        "ig.pts-ufg",
-        "ig.radioufg",
         "ig.sdh-ufg",
         "ig.sibi-ufg",
         "ig.sri-ufg",
@@ -3937,15 +3606,13 @@
     },
     {
       "id": "instagram-evidence-missing",
-      "count": 64,
+      "count": 46,
       "profileIds": [
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
         "ig.cecasufg",
         "ig.cei-ufg",
-        "ig.centrodelinguasflufg",
         "ig.cepae-ufg",
-        "ig.cepeconf-ufg",
         "ig.cerofufg",
         "ig.ciar-ufg",
         "ig.direitoufg",
@@ -3965,39 +3632,23 @@
         "ig.fen-ufg",
         "ig.fic-ufg",
         "ig.firminopolis-ufg",
-        "ig.fl-ufg-oficial",
         "ig.floreser-ufg",
-        "ig.herbarioufg",
-        "ig.icb-ufg",
-        "ig.icb-acoes",
-        "ig.iesa-ufg",
-        "ig.iesaufg",
         "ig.ime-ufg",
         "ig.institutoverbenaufg",
-        "ig.ipelab-ufg",
         "ig.iptsp-ufg",
         "ig.iqufg",
         "ig.jornalufg",
-        "ig.labmic-ufg",
         "ig.lacena-ufg",
         "ig.lapigufg",
-        "ig.letras-ufg",
         "ig.odontologia-ufg",
         "ig.patiodaciencia-ufg",
-        "ig.patiodaciencia-ufg-c66026d4",
         "ig.pesquisaeinovacaoufg",
         "ig.planetario-ufg",
         "ig.posufg",
-        "ig.ppgacv",
-        "ig.ppgadm-ufg",
         "ig.ppgccufg",
-        "ig.ppgci-ufg",
-        "ig.ppgcont-ufg",
         "ig.praeufg",
         "ig.prograd-ufg",
         "ig.propessoas-ufg",
-        "ig.pts-ufg",
-        "ig.radioufg",
         "ig.sdh-ufg",
         "ig.sibi-ufg",
         "ig.sri-ufg",
