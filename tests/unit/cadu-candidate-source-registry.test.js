@@ -454,12 +454,12 @@ describe('Cadu candidate source registry mirror', () => {
     const { manifest } = verifyMirroredRegistry();
     expect(manifest.upstream).toEqual({
       repository: 'https://github.com/yandiamantinoBr/openclaw-cadu',
-      commit: 'ce92e41d36421e70b18eeabce7668b3024e9582e',
+      commit: '4bf8ce46a863aa07d70d1344d98745bdb84e7cc5',
     });
     expect(Object.fromEntries(manifest.artifacts.map((artifact) => [artifact.id, artifact.upstreamGitBlobOid]))).toEqual({
-      candidate: 'b2a04760aeec426f1a5be15677f297213dc4eb12',
-      schema: '7dd8eceb528ac0afcaa00e496cfeb404989561d4',
-      'reconciliation-report': '41266ef38528daab7811695e89f191190e991a21',
+      candidate: '8be9da2afcff0b354af380f3336c5c2159a9d059',
+      schema: '04bc038f0694066b447f56940eb5e0dceb1dbcef',
+      'reconciliation-report': '506c10f898b4a6076617949a5358b9a2a7141bf7',
     });
   });
 
@@ -467,9 +467,9 @@ describe('Cadu candidate source registry mirror', () => {
     const { registry, schema } = verifyMirroredRegistry();
     expect(loadCandidateSourceRegistry()).toEqual(registry);
     expect(registry.activation).toEqual({ state: 'shadow', runtimeConsumers: ['cadu-api'] });
-    expect(registry.entities).toHaveLength(170);
-    expect(registry.webSources).toHaveLength(197);
-    expect(registry.instagramProfiles).toHaveLength(86);
+    expect(registry.entities).toHaveLength(172);
+    expect(registry.webSources).toHaveLength(198);
+    expect(registry.instagramProfiles).toHaveLength(103);
     expect(registry.webSources.every((source) => source.enabled === false)).toBe(true);
     expect(registry.instagramProfiles.every((profile) => profile.enabled === false)).toBe(true);
 
@@ -498,11 +498,11 @@ describe('Cadu candidate source registry mirror', () => {
       /duplicate directory id/,
     );
     rejectMutation(
-      (candidate) => { candidate.authoritativeDirectories[0].checkedAt = '2026-07-16'; },
+      (candidate) => { candidate.authoritativeDirectories[0].checkedAt = '2026-07-23'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.authoritativeDirectories[0].pageUpdatedAt = '2026-07-16'; },
+      (candidate) => { candidate.authoritativeDirectories[0].pageUpdatedAt = '2026-07-23'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -532,18 +532,18 @@ describe('Cadu candidate source registry mirror', () => {
       /executionModes order drift/,
     );
     rejectMutation(
-      (candidate) => { candidate.webSources[0].audit.checkedAt = '2026-07-16'; },
+      (candidate) => { candidate.webSources[0].audit.checkedAt = '2026-07-23'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
       (candidate) => {
         const source = candidate.webSources.find((entry) => entry.audit.evidence.length > 0);
-        source.audit.evidence[0].checkedAt = '2026-07-16';
+        source.audit.evidence[0].checkedAt = '2026-07-23';
       },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.webSources[0].transport.checkedAt = '2026-07-16'; },
+      (candidate) => { candidate.webSources[0].transport.checkedAt = '2026-07-23'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -551,12 +551,12 @@ describe('Cadu candidate source registry mirror', () => {
         const observation = candidate.webSources
           .flatMap((source) => source.observations)
           .find((entry) => entry.publisherDeclared !== null);
-        observation.publisherDeclared.lastAudit = '2026-07-16';
+        observation.publisherDeclared.lastAudit = '2026-07-23';
       },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.instagramProfiles[0].audit.checkedAt = '2026-07-16'; },
+      (candidate) => { candidate.instagramProfiles[0].audit.checkedAt = '2026-07-23'; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -957,13 +957,15 @@ describe('Cadu candidate source registry mirror', () => {
     }));
     expect(proec.aliases).toContain('https://proec.ufg.br/');
     expect(proec.transport.status).toBe('verified_200');
-    expect(proec.audit.evidence[0].field).toBe('entity_and_canonical_url');
+    expect(proec.audit.evidence.some((entry) => entry.field === 'entity_and_canonical_url')).toBe(true);
 
     const nanofarma = sources.get('web.ufg.ppg.ppgnanofarma.profile');
     expect(nanofarma.declaredUrl).toBe('https://www.ufrgs.br/farmacia/?page_id=1589');
     expect(nanofarma.aliases).not.toContain(nanofarma.declaredUrl);
+    // Operational PPGAC root is the IAC Weby host; the pos.ufg.br/p page remains
+    // directory evidence/linhagem, not the collection canonical URL.
     expect(sources.get('web.ufg.ppg.ppgac.profile').canonicalUrl)
-      .toBe('https://pos.ufg.br/p/programa-pos-graduacao-artes-cena-ppgac');
+      .toBe('https://artesdacenappg.iac.ufg.br/');
 
     const publisherObservations = registry.webSources
       .flatMap((source) => source.observations)
@@ -972,8 +974,13 @@ describe('Cadu candidate source registry mirror', () => {
     expect(publisherObservations.every((observation) => observation.publisherDeclared)).toBe(true);
     expect(publisherObservations.filter((observation) => observation.publisherDeclared.hasFeedRss)).toHaveLength(103);
 
-    expect(registry.instagramProfiles.filter((profile) => profile.audit.evidence.length > 0)).toHaveLength(22);
-    expect(report.instagramOverlap.legacyNotScanned).toHaveLength(20);
+    expect(registry.instagramProfiles.filter((profile) => profile.audit.evidence.length > 0)).toHaveLength(57);
+    expect(report.instagramOverlap.legacyNotScanned).toEqual([
+      'jornalufg',
+      'labmic.ufg',
+      'patiodaciencia_ufg',
+      'ppgccufg',
+    ]);
     expect(report.instagramOverlap.scannerWithoutEntity).toHaveLength(5);
   });
 
