@@ -513,6 +513,28 @@
     body[data-theme="light"] .kc-cadu-review-gate.is-blocked { color: #b91c1c; }
     html:not([data-theme="dark"]) .kc-cadu-review-gate.is-available,
     body[data-theme="light"] .kc-cadu-review-gate.is-available { color: #047857; }
+    .kc-cadu-source-detail { margin-top: 7px; padding: 6px 8px; border: 1px solid var(--kc-border-dark); border-radius: 8px; background: rgba(255,255,255,.02); }
+    .kc-cadu-source-detail > summary { cursor: pointer; color: var(--kc-text-dark-primary); font-size: .72rem; line-height: 1.35; list-style-position: outside; }
+    .kc-cadu-source-detail > summary strong { color: var(--kc-text-dark-primary); }
+    .kc-cadu-checklist { list-style: none; margin: 7px 0 0; padding: 0; display: grid; gap: 4px; }
+    .kc-cadu-checklist li { display: grid; grid-template-columns: 1.1rem minmax(0,1fr); gap: 6px; align-items: start; font-size: .7rem; line-height: 1.35; color: var(--kc-text-dark-secondary); }
+    .kc-cadu-checklist li strong { color: var(--kc-text-dark-primary); }
+    .kc-cadu-checklist__mark { display: inline-flex; width: 1rem; justify-content: center; font-weight: 700; }
+    .kc-cadu-checklist li.is-ok .kc-cadu-checklist__mark { color: #34d399; }
+    .kc-cadu-checklist li.is-blocked .kc-cadu-checklist__mark { color: #f87171; }
+    .kc-cadu-checklist__note { margin: 7px 0 0; font-size: .68rem; line-height: 1.35; color: var(--kc-text-dark-secondary); }
+    .kc-cadu-dimension-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 8px; }
+    .kc-cadu-dimension-grid > div { min-width: 0; padding: 7px 8px; border: 1px solid var(--kc-border-dark); border-radius: 7px; background: rgba(255,255,255,.02); }
+    .kc-cadu-dimension-grid h5 { margin: 0; font-size: .72rem; color: var(--kc-text-dark-primary); }
+    .kc-cadu-dimension-grid p { margin: 4px 0 0; font-size: .68rem; line-height: 1.4; color: var(--kc-text-dark-secondary); overflow-wrap: anywhere; }
+    .kc-cadu-ig-block { margin-bottom: 4px; }
+    html:not([data-theme="dark"]) .kc-cadu-checklist li.is-ok .kc-cadu-checklist__mark,
+    body[data-theme="light"] .kc-cadu-checklist li.is-ok .kc-cadu-checklist__mark { color: #047857; }
+    html:not([data-theme="dark"]) .kc-cadu-checklist li.is-blocked .kc-cadu-checklist__mark,
+    body[data-theme="light"] .kc-cadu-checklist li.is-blocked .kc-cadu-checklist__mark { color: #b91c1c; }
+    @media (max-width: 900px) {
+      .kc-cadu-dimension-grid { grid-template-columns: 1fr; }
+    }
     .kc-cadu-adjustment-scope { margin: 0; color: var(--kc-text-dark-secondary); font-size: .69rem; line-height: 1.35; }
     .kc-cadu-adjustment-scope strong { color: var(--kc-text-dark-primary); }
     .kc-cadu-review-queue { margin-top: 16px; padding: 14px; border: 1px solid var(--kc-border-dark); border-radius: 12px; background: rgba(255,255,255,.018); }
@@ -816,8 +838,9 @@
             <h3 id="sites-map-guide-title"><i class="fas fa-circle-info" aria-hidden="true"></i> Como ler o Mapa UFG</h3>
             <strong class="kc-cadu-map-guide__count" id="sites-source-record-count">— registros de fonte web</strong>
             <span class="kc-cadu-map-guide__breakdown" id="sites-source-role-breakdown">Aguardando o catálogo para detalhar os tipos de registro.</span>
-            <p><strong>Fonte não é programa:</strong> uma mesma entidade pode ter site principal, página oficial associada e observações legadas. Portanto, a contagem de fontes web não representa a quantidade de programas ou unidades da UFG.</p>
-            <p><strong>Produção hoje:</strong> este catálogo está em <code>shadow</code> e não ativa coleta. Curador e scanner ainda leem inventários operacionais validados; porém, cada coletor web do Curador fica vinculado a um ID estável deste catálogo e a execução é recusada se os dois divergirem. O Mapa concilia identidades e prepara uma migração segura.</p>
+            <p><strong>Fonte não é programa:</strong> uma mesma entidade pode ter site principal, página oficial associada e observações legadas. Portanto, a contagem de fontes web não representa a quantidade de programas ou unidades da UFG (cerca de 197 fontes web ≠ 67 PPGs ≠ 170 entidades).</p>
+            <p><strong>Produção hoje:</strong> este catálogo está em <code>shadow</code> e não ativa coleta sozinho. Curador e scanner ainda leem inventários operacionais validados; porém, cada coletor web do Curador fica vinculado a um ID estável deste catálogo e a execução é recusada se os dois divergirem. A coluna “Última pipeline” correlaciona esse ID com o diagnóstico do artefato mais recente. O Mapa concilia identidades e prepara uma migração segura.</p>
+            <p><strong>“Revisão bloqueada”:</strong> não é um erro genérico. Abra o checklist em cada linha para ver exatamente quais critérios da fila editorial ainda falham (ajuste estável, identidade oficial, pendência crítica, Instagram ambíguo etc.). Aprovar na fila também <em>não</em> publica nem liga a pipeline.</p>
           </div>
           <div>
             <h4>Cinco dimensões independentes de estado</h4>
@@ -1220,6 +1243,6 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=67ebb2f14bf5d420"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=02cdb6cb32ecc11f"></script>
 </body>
 </html>

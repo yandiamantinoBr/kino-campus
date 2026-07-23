@@ -792,6 +792,141 @@
     };
   }
 
+  /**
+   * Checklist legível de elegibilidade da fila editorial (não publica, não ativa coleta).
+   * Cada item é independente: "Revisão bloqueada" sempre tem motivo explícito.
+   */
+  function sourceReviewChecklist(source, draft, saving) {
+    var items = [];
+    function push(ok, label, detail) {
+      items.push({ ok: Boolean(ok), label: label, detail: detail || '' });
+    }
+    if (!source || typeof source !== 'object') {
+      push(false, 'Fonte canônica', 'Registro ausente no catálogo.');
+      return items;
+    }
+    push(
+      source.administrativeMetadataAvailable !== false,
+      'Metadados administrativos',
+      source.administrativeMetadataAvailable === false
+        ? 'Espelho sem prioridade/nota editáveis.'
+        : 'Prioridade e nota disponíveis para ajuste.'
+    );
+    push(
+      source.role === 'primary_site',
+      'Papel da fonte',
+      source.role === 'primary_site'
+        ? 'Site institucional principal.'
+        : 'Somente primary_site pode ir à fila (' + catalogLabel(source.role) + ').'
+    );
+    var kindOk = ['weby_site', 'ojs_site', 'html_page', 'external_site', 'mixed'].indexOf(source.sourceKind) >= 0;
+    push(kindOk, 'Tipo canônico', kindOk ? catalogLabel(source.sourceKind) : 'Tipo não elegível: ' + catalogLabel(source.sourceKind));
+    var stableOk = source.overrideOrigin === 'stable' && source.overrideUnitId === source.id;
+    push(
+      stableOk,
+      'Ajuste administrativo estável',
+      stableOk
+        ? 'Prioridade/nota com identidade canônica (' + source.overrideUnitId + ').'
+        : 'Salve primeiro prioridade + nota como ajuste estável (origem atual: ' + catalogLabel(source.overrideOrigin) + ').'
+    );
+    push(!source.collision, 'Sem colisão de identidades', source.collision ? 'Há evidência de colisão legada.' : 'Sem colisão ativa.');
+    var blocking = sourceReviewBlockingIssues(source);
+    push(
+      !blocking.length,
+      'Sem pendência crítica',
+      blocking.length
+        ? blocking.map(catalogLabel).join('; ')
+        : 'Nenhuma issue bloqueante (transporte/URL informativos não bloqueiam).'
+    );
+    var identityOk = ['reviewed', 'confirmed_official'].indexOf(source.reviewState) >= 0;
+    push(
+      identityOk,
+      'Identidade oficial confirmada',
+      identityOk
+        ? catalogLabel(source.reviewState)
+        : 'Estado atual: ' + catalogLabel(source.reviewState) + ' — ainda não é confirmed_official/reviewed.'
+    );
+    var urlOk = Boolean(sourceReviewCanonicalUrl(source.canonicalUrl));
+    push(urlOk, 'URL HTTPS canônica', urlOk ? source.canonicalUrl : 'URL inválida ou não-HTTPS.');
+    var revOk = /^[a-f0-9]{64}$/.test(String(source.revision || '')) &&
+      /^[a-f0-9]{64}$/.test(String(source.registrySha256 || ''));
+    push(revOk, 'Versão canônica íntegra', revOk ? 'ETag/revision e registrySha256 presentes.' : 'Hashes canônicos ausentes ou inválidos.');
+    push(!saving, 'Sem gravação em andamento', saving ? 'Aguarde o salvamento do ajuste.' : 'Nenhuma gravação pendente.');
+    push(!(draft && draft.conflict), 'Sem conflito de rascunho', draft && draft.conflict ? 'ETag mudou; revise e reconcilie o rascunho.' : 'Sem conflito de ETag.');
+    push(
+      !(draft && sourceDraftIsDirty(source, draft)),
+      'Rascunho salvo',
+      draft && sourceDraftIsDirty(source, draft) ? 'Há alterações locais não salvas.' : 'Rascunho alinhado ao servidor.'
+    );
+    var instagram = sourceReviewCanonicalInstagram(source);
+    push(instagram.ok, 'Instagram canônico', instagram.ok
+      ? (instagram.handle ? '@' + instagram.handle + ' exclusivo confirmado (opcional).' : 'Nenhum handle exclusivo exigido; envio sem Instagram é válido.')
+      : instagram.reason);
+    return items;
+  }
+
+  function sourceReviewChecklistHtml(source, draft, saving) {
+    var items = sourceReviewChecklist(source, draft, saving);
+    var failed = items.filter(function (item) { return !item.ok; }).length;
+    var summary = failed
+      ? failed + ' critério(s) impedem o envio à fila editorial'
+      : 'Todos os critérios da fila editorial estão satisfeitos';
+    return '<details class="kc-cadu-source-detail" open>'
+      + '<summary><strong>Checklist da revisão editorial</strong> — ' + escapeHtml(summary) + '</summary>'
+      + '<ul class="kc-cadu-checklist">'
+      + items.map(function (item) {
+        return '<li class="' + (item.ok ? 'is-ok' : 'is-blocked') + '">'
+          + '<span class="kc-cadu-checklist__mark" aria-hidden="true">' + (item.ok ? '✓' : '✗') + '</span>'
+          + '<span><strong>' + escapeHtml(item.label) + ':</strong> ' + escapeHtml(item.detail) + '</span>'
+          + '</li>';
+      }).join('')
+      + '</ul>'
+      + '<p class="kc-cadu-checklist__note">A fila editorial <strong>não publica</strong> e <strong>não ativa</strong> coleta, Instagram ou pipeline. “Revisão bloqueada” só significa que este envio não está liberado ainda.</p>'
+      + '</details>';
+  }
+
+  function sourceDimensionPanelHtml(source) {
+    var modes = (source.executionModes || []).map(catalogLabel).join(', ') || 'nenhum (shadow)';
+    var issues = (source.reviewIssues || []).map(catalogLabel);
+    var informational = (source.reviewIssues || []).filter(function (issue) {
+      return sourceReviewBlockingIssues(source).indexOf(issue) === -1;
+    }).map(catalogLabel);
+    var blocking = sourceReviewBlockingIssues(source).map(catalogLabel);
+    var ig = (source.instagramProfiles || []).map(function (profile) {
+      return '@' + String(profile.handle || '').replace(/^@/, '') + ' · ' + catalogLabel(profile.status)
+        + (profile.shared ? ' · compartilhado' : '')
+        + (profile.viaSourceObservation ? ' · direto nesta fonte' : ' · via entidade');
+    }).join(' | ') || 'sem perfil associado no catálogo';
+    var pipeline = sourceDiagnosticPresentation(state.sourceDiagnosticsById[source.id], state.feedMeta);
+    return '<details class="kc-cadu-source-detail">'
+      + '<summary><strong>Cinco dimensões desta fonte</strong> (identidade · transporte · ajuste · fila · pipeline)</summary>'
+      + '<div class="kc-cadu-dimension-grid">'
+      + '<div><h5>1. Identidade / revisão</h5><p>' + escapeHtml(catalogLabel(source.reviewState))
+      + (blocking.length ? '<br><strong>Críticas:</strong> ' + escapeHtml(blocking.join('; ')) : '')
+      + (informational.length ? '<br><strong>Informativas:</strong> ' + escapeHtml(informational.join('; ')) : '')
+      + (!issues.length ? '<br>Sem reviewIssues.' : '')
+      + '</p></div>'
+      + '<div><h5>2. Transporte / coleta potencial</h5><p>Tipo: ' + escapeHtml(catalogLabel(source.sourceKind))
+      + '<br>Papel: ' + escapeHtml(catalogLabel(source.role))
+      + '<br>Modos no catálogo: ' + escapeHtml(modes)
+      + '<br>enabled=' + (source.enabled ? 'true' : 'false') + ' (shadow não coleta sozinho)'
+      + '</p></div>'
+      + '<div><h5>3. Ajuste administrativo</h5><p>Origem: ' + escapeHtml(catalogLabel(source.overrideOrigin))
+      + '<br>Base T' + escapeHtml(source.baseTier == null ? '—' : String(source.baseTier))
+      + ' · efetiva T' + escapeHtml(source.effectiveTier == null ? '—' : String(source.effectiveTier))
+      + '<br>Só altera prioridade/nota no banco; não muda URL, Instagram nem inventário da pipeline.'
+      + '</p></div>'
+      + '<div><h5>4. Instagram no catálogo</h5><p>' + escapeHtml(ig)
+      + '<br><em>Confirmado</em> exige declaração oficial + verificação direta. Pendente/tentativo não ativa scanner.'
+      + '</p></div>'
+      + '<div><h5>5. Última pipeline (Curador)</h5><p><strong>' + escapeHtml(pipeline.label) + '</strong><br>'
+      + escapeHtml(pipeline.detail) + '<br>' + escapeHtml(pipeline.provenance)
+      + (pipeline.failure ? '<br>Alerta: ' + escapeHtml(pipeline.failure) : '')
+      + '<br><em>Correlaciona sourceId canônico com o artefato mais recente; não substitui auditoria estática.</em>'
+      + '</p></div>'
+      + '</div></details>';
+  }
+
   function objectHasExactKeys(value, keys) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
     var actual = Object.keys(value).sort();
@@ -1799,14 +1934,21 @@
   }
 
   function profileLinks(profiles) {
-    if (!profiles || !profiles.length) return '<span class="kc-cadu-muted">sem perfil associado</span>';
+    if (!profiles || !profiles.length) {
+      return '<span class="kc-cadu-muted">sem perfil associado</span>'
+        + '<small class="kc-cadu-source-id">Sem declaração no catálogo canônico — a pipeline de IG só varre perfis do inventário operacional verificado.</small>';
+    }
     return profiles.map(function (profile) {
       var provenance = profile.viaSourceObservation
         ? 'associação direta observada nesta fonte'
         : 'associação indireta via entidade' + (profile.viaEntityIds && profile.viaEntityIds.length ? ': ' + profile.viaEntityIds.join(', ') : '');
       if (profile.shared) provenance += ' · perfil compartilhado';
-      return '<div><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(catalogLabel(profile.status), profile.statusGroup)
-        + '<small class="kc-cadu-source-id">' + escapeHtml(provenance) + '</small></div>';
+      var exec = profile.enabled
+        ? 'ativo no inventário operacional: ' + ((profile.executionModes || []).map(catalogLabel).join(', ') || 'modos não informados')
+        : 'desativado no modo de validação (não entra no scanner até promoção controlada)';
+      return '<div class="kc-cadu-ig-block"><a href="' + escapeHtml(profile.profileUrl) + '" target="_blank" rel="noopener" class="kc-cadu-ig-link">@' + escapeHtml(String(profile.handle).replace(/^@/, '')) + '</a> ' + badgeHtml(catalogLabel(profile.status), profile.statusGroup)
+        + '<small class="kc-cadu-source-id">' + escapeHtml(provenance) + '</small>'
+        + '<small class="kc-cadu-source-id">' + escapeHtml(exec) + '</small></div>';
     }).join('');
   }
 
@@ -2100,7 +2242,9 @@
         + '<span class="kc-cadu-source-id">ETag ' + escapeHtml(source.revision.slice(0, 12)) + '…</span>'
         + (source.collision ? '<div class="kc-cadu-review-issues"><strong>Colisão legada:</strong> o ajuste estável prevalece, mas as linhas concorrentes continuam em Pendências.</div>' : '')
         + (blockingIssues.length ? '<div class="kc-cadu-review-issues"><strong>Pendência crítica:</strong><br>' + blockingIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '')
-        + (informationalIssues.length ? '<div class="kc-cadu-review-issues"><strong>Observação informativa:</strong><br>' + informationalIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '');
+        + (informationalIssues.length ? '<div class="kc-cadu-review-issues"><strong>Observação informativa:</strong><br>' + informationalIssues.map(function (issue) { return escapeHtml(catalogLabel(issue)); }).join('<br>') + '</div>' : '')
+        + sourceDimensionPanelHtml(source)
+        + sourceReviewChecklistHtml(source, draft, saving);
       var reviewEligibility = sourceReviewEligibility(source, draft, saving);
       var reviewPresentation = sourceReviewPresentation(source, reviewEligibility);
       var reviewTitle = reviewPresentation.title;
