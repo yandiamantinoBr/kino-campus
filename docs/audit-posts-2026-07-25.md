@@ -110,11 +110,56 @@ Total: **22/56 posts escondidos após auditoria** (39% do total).
 
 ## Próximos passos (mapeamento de correções para a pipeline)
 
+### Bug CRÍTICO raiz-encontrado: pipeline-kino.js scrub past dates
+
+Localização: `data/.openclaw/workspace/scripts/pipeline-kino.js:1896-1949`
+Função: "POST-FORMAT: Scrub past dates from descriptions"
+
+```js
+// pipeline-kino.js:1912-1921
+newDesc = newDesc.replace(dateRegex, (match, dia, mesNome, _, ano) => {
+  const mesIdx = meses[mesNome.toLowerCase()] || 1;
+  const anoNum = ano ? parseInt(ano) : currentYearBrt;  // ← BUG AQUI
+  const dataStr = `${anoNum}-${String(mesIdx).padStart(2,'0')}-${String(parseInt(dia)).padStart(2,'0')}`;
+  if (dataStr < hojeStr) {
+    changed = true;
+    return '';   // ← apaga data passada
+  }
+  return match;   // ← mantém data futura com ano ATUAL (2026)
+});
+```
+
+**Comportamento esperado**: apagar datas que já passaram.
+**Comportamento real**: 
+- Se a data está no passado (ex: "10 de setembro de 2025"), deveria apagar. **NÃO apaga** porque o `currentYearBrt` é 2026 e a comparação `10/9/2026 < 25/7/2026` é FALSE.
+- Resultado: post de 10/9/2025 republicado como 10/9/2026.
+
+**Fix proposto** (NÃO APLICADO — pipeline rodando):
+```js
+// Antes: usar ig_posted_at como referência
+// Depois: detectar se data é plausível (between 30 dias atrás e 18 meses à frente)
+const minPlausible = addDays(hojeStr, -30);   // 30 dias atrás
+const maxPlausible = addDays(hojeStr, 540);   // 18 meses à frente
+if (dataStr < minPlausible || dataStr > maxPlausible) {
+  // data inventada: apagar
+  changed = true;
+  return '';
+}
+```
+
+### Outras correções priorizadas
+
 1. **CRÍTICO — Filtro de idade do post IG**: bloquear publicação de posts com `ig_date > 90 dias` da data de hoje. (Hoje: 2026-07-25, bloquear tudo antes de 2026-04-25.) Implementar no `enrich-instagram` stage comparando `ig_taken_at` com NOW().
-2. **CRÍTICO — Decodificar shortcode → data**: armazenar `ig_posted_at` na metadata no momento do `ig_official_source` (já temos o shortcode, é só decodificar). Sem isso, filtros temporais são impossíveis.
+2. **CRÍTICO — Decodificar shortcode → data**: armazenar `ig_posted_at` na metadata no momento do `ig_official_source` (já temos o shortcode, é só decodificar). Sem isso, filtros temporais são impossíveis. **Já implementado em `tmp/decode-shortcodes.py` deste audit**.
 3. **CRÍTICO — Extração de links do IG**: 95% dos posts têm `extracted_links: []`. Verificar por que o `extract_links` não está funcionando — provável que o html scraping do IG não pegue o "link in bio" do caption (Instagram esconde em CTA nos stories/reels). Implementar fallback: se caption tem "link na bio", adicionar nota "ver bio do @handle" e buscar via `fetch-ig-img-X.js`.
 4. **ALTO — Filtro de "evento passado"**: comparar `data_evento` do post gerado com `ig_posted_at`. Se o evento já passou (> 7 dias), não publicar.
 5. **ALTO — Imagem correta**: garantir que `cover_url` (image) venha do MESMO post do IG, não de posts adjacentes. Investigar caso SIERGO: o `ig_official_source` ou `image-extract` está pegando imagem errada.
 6. **MÉDIO — Cross-account detection**: no `format-kino.js` (ou similar), comparar `source_id` (handle do IG) com a URL real. Se o handle na URL não bate com `source_unit`, **re-buscar** o post original do source_unit.
 7. **MÉDIO — Posts-resumo de evento**: 6b463b2b (Encontro de Pesquisa) é um post de agradecimento ("Nosso agradecimento especial a todos os participantes"). Esses posts devem ser filtrados como `is_post_summary = true` via heurística de palavras-chave no `original_title`.
 8. **BAIXO — ITBP**: catalogar abreviações incomuns (ITBP = ?) num dicionário para exibir nome completo.
+
+## Script de decodificação de shortcode (reutilizável)
+
+Salvo em `tmp/decode-shortcodes.py` (movido para `.tmp-audit-2026-07-25/`). Pode ser integrado
+na pipeline como um utilitário `decode-instagram-shortcode.js` no stage `enrich-instagram`
+para preencher `metadata.ig_posted_at` antes do scrub.
