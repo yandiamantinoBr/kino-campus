@@ -208,6 +208,14 @@ Análise: A maioria é **cross-account repost** (uma conta UFG repostou conteúd
    - 1f59d22e (Institutoverbena - Fórum)
    - ddf87375 (Institutoverbena - Concurso Buriti Alegre)
 5. ✅ **Fix Q commitado (PR #91)**: dedup-kino v1.8.0 com Stage 1.5 content-hash
+6. ✅ **Fix R commitado (PR #92)**: STRONG_OPPORTUNITY_HEADLINE_PATTERN inclui "matrícula"
+   - Evita que 3+ posts de matrícula caiam em eventos/workshops
+   - 9/9 testes novos passam (test-fix-r-matricula.js)
+7. ✅ **Fix S commitado (PR #93)**: +3 handles IG no INSTAGRAM_ONLY_HANDLES
+   - ppgca_ufg → https://ppgca.evz.ufg.br
+   - ppgcb_ufg → https://pos.icb.ufg.br
+   - floreser.ufg → https://ufg.br
+   - Recupera 4 QUALITY_BLOCKED do run ef904a69
 
 ## Ações Recomendadas (próximas)
 
