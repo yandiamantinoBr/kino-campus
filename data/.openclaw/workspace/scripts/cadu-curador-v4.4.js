@@ -2230,15 +2230,18 @@ function fetchUrlResult(url) {
   // Retry policy: --retry 2 + --retry-all-errors cobre blips transitorios
   // (DNS, connection reset, 5xx) sem retry em 4xx (autorais). Combined com o
   // wrapper de retry do network-fetch.js para chamadas HTTPS feitas pelo Node.
+  // Fix W2 (2026-07-25): --max-time 10 -> 20 (30 timeouts no run 58267b6c).
+  // 10s era pouco para sites Weby/ICHL com HTML grande (>500KB) e TTFB lento.
+  // 20s + retry 2x cobre 99% dos casos sem inflar tempo total do pipeline.
   const result = spawnSync('curl', [
     '-sS', '-L',
     '-A', 'Mozilla/5.0 (compatible; CADU-Curator/4.4; +https://kinocampus.com.br)',
-    '--connect-timeout', '5',
-    '--max-time', '10',
+    '--connect-timeout', '10',
+    '--max-time', '20',
     '--retry', '2',
     '--retry-all-errors',
     '--retry-delay', '1',
-    '--retry-max-time', '40',
+    '--retry-max-time', '60',
     '--retry-connrefused',
     '--write-out', `${FETCH_META_MARKER}%{http_code}\t%{url_effective}`,
     url,
