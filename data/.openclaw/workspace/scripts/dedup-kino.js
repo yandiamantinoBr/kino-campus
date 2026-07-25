@@ -26,10 +26,13 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
+const { signInWithRetry } = require('./auth-retry');
 const sharp = require('sharp');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { writeJsonAtomic } = require('./lib/atomic-json-file.js');
+const { canonicalUrl } = require('./lib/canonical-url.js');
 
 // === Configuração ===
 
@@ -161,10 +164,21 @@ function loadEnv() {
 }
 loadEnv();
 
-const ANON_KEY = env.CADU_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY;
-const AI_API_KEY = env.CADU_DEEPSEEK_API_KEY || env.CADU_AI_API_KEY || env.CADU_ZAI_API_KEY || env.DEEPSEEK_API_KEY;
-const AI_BASE = env.CADU_DEEPSEEK_ENDPOINT || env.CADU_ZAI_ENDPOINT || env.CADU_MINIMAX_ENDPOINT || 'https://api.deepseek.com/v1/chat/completions';
-const AI_MODEL = env.CADU_DEEPSEEK_MODEL || env.CADU_AI_MODEL || env.CADU_ZAI_MODEL || 'deepseek-v4-pro';
+// Compose environment is authoritative; the legacy publisher file remains a
+// compatibility fallback only. This mirrors the aliases advertised by the
+// pipeline preflight instead of reporting a stage ready under unusable names.
+const runtimeEnv = { ...env, ...process.env };
+const ANON_KEY = runtimeEnv.CADU_SUPABASE_ANON_KEY
+  || runtimeEnv.SUPABASE_ANON_KEY
+  || runtimeEnv.KINOCAMPUS_SUPABASE_ANON_KEY;
+const KINO_EMAIL = runtimeEnv.CADU_KINO_EMAIL || runtimeEnv.CADU_EMAIL;
+const KINO_PASSWORD = runtimeEnv.CADU_KINO_PASSWORD || runtimeEnv.CADU_PASSWORD;
+const AI_API_KEY = runtimeEnv.CADU_DEEPSEEK_API_KEY || runtimeEnv.CADU_AI_API_KEY
+  || runtimeEnv.CADU_ZAI_API_KEY || runtimeEnv.DEEPSEEK_API_KEY;
+const AI_BASE = runtimeEnv.CADU_DEEPSEEK_ENDPOINT || runtimeEnv.CADU_ZAI_ENDPOINT
+  || runtimeEnv.CADU_MINIMAX_ENDPOINT || 'https://api.deepseek.com/v1/chat/completions';
+const AI_MODEL = runtimeEnv.CADU_DEEPSEEK_MODEL || runtimeEnv.CADU_AI_MODEL
+  || runtimeEnv.CADU_ZAI_MODEL || 'deepseek-v4-pro';
 
 // === Stage 1: Texto ===
 
@@ -213,27 +227,6 @@ function levenshteinRatio(a, b) {
   }
   const dist = dp[m][n];
   return 1 - dist / Math.max(m, n);
-}
-
-function canonicalUrl(url) {
-  if (!url) return '';
-  try {
-    const u = new URL(url);
-    const host = u.host.toLowerCase();
-    const path = (u.pathname || '').replace(/\/$/, '');
-    let eventId = u.searchParams.get('event');
-    if (!eventId) {
-      const m = path.match(/\/e\/(\d+)(?:-|$)/);
-      if (m) eventId = m[1];
-    }
-    if (eventId && /^\d+$/.test(eventId)) {
-      return `${host}/events/${eventId}`;
-    }
-    return (host + path).toLowerCase();
-  } catch {
-    let s = (url || '').toLowerCase().split(/\?|#/)[0].replace(/\/$/, '');
-    return s;
-  }
 }
 
 function detectLogoInstitucional(imageUrl) {
@@ -464,7 +457,27 @@ async function closePastEvents(supabase, bearer, today) {
       ...(dataEvento ? [dataEvento] : []),
       ...(dataFim ? [dataFim] : []),
     ].filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d));
-    return allDates.length > 0 && allDates.every(d => d < today);
+    if (!(allDates.length > 0 && allDates.every(d => d < today))) return false;
+
+    // v1.6 (2026-07-16): Pular posts reativados nas últimas 48h.
+    // O `mergeIntoExisting` (publish_auto_v5) preserva o post canônico
+    // (regra P2-OLDEST), então o metadata.expires_at/data_evento do post
+    // antigo pode estar no passado mesmo quando o item NOVO do curador é
+    // para um evento futuro. Sem este guard, o auto-close fecha o post
+    // imediatamente após a reativação, criando um loop
+    // "reativar → auto-close → reativar → auto-close" a cada hora.
+    // Freeze window de 48h é suficiente para o cadu-pipeline (que roda
+    // manualmente) publicar uma nova versão / atualizar a metadata
+    // com a data correta antes do próximo auto-close.
+    const reactivatedAt = p.metadata?._reactivated_from_closed_at;
+    if (reactivatedAt) {
+      const reactivatedMs = Date.parse(reactivatedAt);
+      if (!Number.isNaN(reactivatedMs) && (Date.now() - reactivatedMs) < (48 * 60 * 60 * 1000)) {
+        console.log(`   ⏭️ skip (reactivated há <48h): ${p.title.slice(0, 60)}`);
+        return false;
+      }
+    }
+    return true;
   });
   
   console.log(`   ${events.length} eventos publicados | ${pastEvents.length} com todas as datas no passado`);
@@ -620,7 +633,11 @@ async function main() {
   if (!fs.existsSync(REPORT_DIR)) fs.mkdirSync(REPORT_DIR, { recursive: true });
 
   if (!ANON_KEY) {
-    console.error('❌ CADU_SUPABASE_ANON_KEY ausente em .env.local');
+    console.error('❌ Chave anônima do Supabase ausente no ambiente');
+    process.exit(1);
+  }
+  if (!KINO_EMAIL || !KINO_PASSWORD) {
+    console.error('❌ Credenciais técnicas do KinoCampus ausentes no ambiente');
     process.exit(1);
   }
   if (!NO_LLM && !AI_API_KEY) {
@@ -628,12 +645,17 @@ async function main() {
   }
 
   const supabase = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
-  const { data: auth } = await supabase.auth.signInWithPassword({
-    email: env.CADU_KINO_EMAIL,
-    password: env.CADU_KINO_PASSWORD,
-  });
+  let auth;
+  try {
+    auth = await signInWithRetry(supabase, KINO_EMAIL, KINO_PASSWORD, {
+      onAttempt: (a, e) => e && console.log(`  auth attempt ${a}: ${e.name || 'err'} status=${e.status || '?'}`),
+    });
+  } catch (e) {
+    console.error('❌ Login falhou apos retries:', e.message);
+    process.exit(1);
+  }
   const bearer = `Bearer ${auth.session.access_token}`;
-  console.log(`🔑 Logado como ${auth.user.id}\n`);
+  console.log(`🔑 Logado como ${auth.user.id} (apos ${auth.attempts} tentativa(s))\n`);
 
   // === Carregar posts ===
   const posts = await fetchRecentPosts(supabase, bearer, days);
@@ -728,6 +750,62 @@ async function main() {
       console.log(`     [${c.method}] ${(c.score*100).toFixed(0)}% | ${c.a.title?.slice(0, 50)} ↔ ${c.b.title?.slice(0, 50)}`);
     });
   }
+
+  // === STAGE 1.5: Content-Hash Dedup (Fix Q - 2026-07-25) ===
+  // Caso real: posts com imagens IDENTICAS byte-a-byte mas URLs/titulos
+  // diferentes. O Stage 2 (pHash) só roda em pares do Stage 1 (text-similar)
+  // ou exactUrlDups — perdia 100% destes casos. Exemplo 2026-07-24:
+  // 8 grupos de duplicatas, 15 posts (Centro de Linguas 3x, IX SIPACV 3x,
+  // ICB 2x, etc). Content hash (SHA256 dos bytes) e' O(1) por post, nao
+  // depende de pHash perceptual. Cobre o caso comum (mesma imagem
+  // reutilizada). Diferencas de resize/compressao ainda caem no Stage 2.
+  console.log(`\n🔍 STAGE 1.5: Content-Hash Dedup (imagens identicas byte-a-byte)...`);
+  const contentHashDups = [];
+  const hashToPosts = new Map();
+  for (const p of posts) {
+    if (!p._contentHash) {
+      try {
+        p._contentHash = await computeContentHash(p.image_url);
+      } catch (e) {
+        p._contentHash = null;
+      }
+    }
+    if (!p._contentHash) continue;
+    if (!hashToPosts.has(p._contentHash)) {
+      hashToPosts.set(p._contentHash, []);
+    }
+    hashToPosts.get(p._contentHash).push(p);
+  }
+  let contentHashGroups = 0;
+  for (const [hash, plist] of hashToPosts) {
+    if (plist.length < 2) continue;
+    contentHashGroups += 1;
+    // Gerar todos os pares
+    for (let i = 0; i < plist.length; i++) {
+      for (let j = i + 1; j < plist.length; j++) {
+        const a = plist[i], b = plist[j];
+        const srcA = a.metadata?.source_unit || a._sourceUnit || '';
+        const srcB = b.metadata?.source_unit || b._sourceUnit || '';
+        const sameSource = srcA && srcB && srcA === srcB;
+        contentHashDups.push({
+          a, b,
+          method: 'content_hash',
+          content_hash: hash,
+          same_source: sameSource,
+          source_unit_a: srcA,
+          source_unit_b: srcB,
+        });
+      }
+    }
+  }
+  console.log(`   Posts com image content_hash: ${hashToPosts.size}`);
+  console.log(`   Grupos de duplicatas (>=2 posts/mesma imagem): ${contentHashGroups}`);
+  console.log(`   Pares a investigar: ${contentHashDups.length}`);
+  // Sample
+  contentHashDups.slice(0, 5).forEach(d => {
+    const tag = d.same_source ? '[SAME_SRC]' : '[DIFF_SRC]';
+    console.log(`     ${tag} ${d.a.id.slice(0, 8)} ↔ ${d.b.id.slice(0, 8)}: ${d.a.title?.slice(0, 50)} ↔ ${d.b.title?.slice(0, 50)}`);
+  });
 
   // === STAGE 2: Imagem ===
   console.log(`\n🖼️ STAGE 2: Análise de imagem (pHash + logo inadequada)...`);
@@ -928,6 +1006,55 @@ async function main() {
     });
   }
 
+  // (1.5) Content-hash dedup (Fix Q + Fix R v1.8.1 - 2026-07-25)
+  // Imagens IDENTICAS byte-a-byte (SHA256). Caso real: 8 grupos/15 posts
+  // no run 2026-07-24 (Centro de Linguas 3x, IX SIPACV 3x, ICB 2x, etc).
+  // Stage 2 pHash só roda em pares de Stage 1+URL-dup, perdia 100% destes.
+  //
+  // Fix R v1.8.1 (2026-07-25): same_source pairs agora AUTO-HIDE (não flag_review).
+  // Validado em 2026-07-25 com 10 posts do run 2026-07-24: 100% das ações
+  // aplicadas resultaram em posts redundantes removidos. diff_source continua
+  // flag_review (caso real: 1 cross-account no IX SIPACV - investigar formatador).
+  for (const d of contentHashDups) {
+    const older = d.a.created_at < d.b.created_at ? d.a : d.b;
+    const newer = older === d.a ? d.b : d.a;
+    const key = `act|${newer.id}|stage15_content_hash`;
+    if (seenActions.has(key)) continue;
+    seenActions.add(key);
+    const reasonPrefix = d.same_source
+      ? `Imagem IDÊNTICA byte-a-byte (SHA256=${d.content_hash.slice(0, 12)}...) + mesmo source_unit "${d.source_unit_a}"`
+      : `Imagem IDÊNTICA byte-a-byte (SHA256=${d.content_hash.slice(0, 12)}...) mas source_units DIFERENTES: "${d.source_unit_a}" vs "${d.source_unit_b}" (provável bug de cache/imagem compartilhada — investigar formatador)`;
+    if (d.same_source) {
+      // Fix R v1.8.1: AUTO-HIDE for same_source pairs (validated 2026-07-25)
+      actionLog({
+        action: 'hide',
+        target: newer.id,
+        target_title: newer.title,
+        reason: reasonPrefix,
+        method: 'stage15_content_hash_auto',
+        content_hash: d.content_hash,
+        same_source: true,
+        source_unit_a: d.source_unit_a,
+        keep_id: older.id,
+      });
+    } else {
+      // diff_source: continua flag_review (humano decide)
+      actionLog({
+        action: 'flag_review',
+        target: newer.id,
+        target_b: older.id,
+        target_title: newer.title,
+        target_b_title: older.title,
+        reason: reasonPrefix,
+        method: 'stage15_content_hash',
+        content_hash: d.content_hash,
+        same_source: false,
+        source_unit_a: d.source_unit_a,
+        source_unit_b: d.source_unit_b,
+      });
+    }
+  }
+
   // (2) Stage 3 confirmou mesmo evento com confiança alta
   for (const r of semanticaResults) {
     if (r.mesmo_evento && r.confianca >= 0.75 && (r.recomendacao === 'hide_a' || r.recomendacao === 'hide_b')) {
@@ -1007,7 +1134,7 @@ async function main() {
   // === Salvar relatório ===
   const dateStr = new Date().toISOString().slice(0, 10);
   const reportFile = path.join(REPORT_DIR, `dedup-${dateStr}.json`);
-  fs.writeFileSync(reportFile, JSON.stringify(report, null, 2));
+  writeJsonAtomic(reportFile, report);
   console.log(`\n📄 Relatório salvo: ${reportFile}`);
 
   // === Resumo final ===
