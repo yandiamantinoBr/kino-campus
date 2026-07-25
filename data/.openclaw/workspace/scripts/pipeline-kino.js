@@ -3071,12 +3071,23 @@ async function main() {
     }
     } // end else (needsFormatting > 0)
     
-    // ── POST-FORMAT: Scrub past dates from descriptions ──
+    // ── POST-FORMAT: Scrub past/future dates from descriptions ──
     // Fix 2026-06-24: Edge Function quality gate bloqueia deadline_past/event_past.
     // Remove datas vencidas das descrições formatadas para evitar QUALITY_BLOCKED.
+    // Fix S (2026-07-25): janela plausivel -30/+540 dias. ANTES usava
+    //   currentYearBrt=2026 quando caption NAO tinha ano, mantendo
+    //   "15 a 20 de agosto" como 15-20/08/2026 (futuro, plausivel) mesmo
+    //   quando o post original era de 2024-2025 (13+ posts republicados).
+    //   DEPOIS: se data < -30 dias (muito passada) OU > +540 dias (muito
+    //   futura, ~1.5 anos), apaga. Capturas de 2024-2025 agora sao removidas.
     if (formattedItems.length > 0) {
       const hojeStr = isoDateInTimeZone();
       const currentYearBrt = Number(hojeStr.slice(0, 4));
+      const [hjY, hjM, hjD] = hojeStr.split('-').map(Number);
+      const minPlausible = new Date(Date.UTC(hjY, hjM - 1, hjD - 30));
+      const maxPlausible = new Date(Date.UTC(hjY, hjM - 1, hjD + 540));
+      const minStr = minPlausible.toISOString().slice(0, 10);
+      const maxStr = maxPlausible.toISOString().slice(0, 10);
       let scrubbedCount = 0;
       
       const meses = {janeiro:1,fevereiro:2,março:3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
@@ -3091,7 +3102,8 @@ async function main() {
           const mesIdx = meses[mesNome.toLowerCase()] || 1;
           const anoNum = ano ? parseInt(ano) : currentYearBrt;
           const dataStr = `${anoNum}-${String(mesIdx).padStart(2,'0')}-${String(parseInt(dia)).padStart(2,'0')}`;
-          if (dataStr < hojeStr) {
+          // Apaga se MUITO passada (>30 dias atrás) ou MUITO futura (>540 dias)
+          if (dataStr < minStr || dataStr > maxStr) {
             changed = true;
             return '';
           }
