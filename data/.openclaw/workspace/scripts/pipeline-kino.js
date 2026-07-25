@@ -3417,8 +3417,11 @@ async function main() {
   // do publish (mesma sessão), fechando a janela de duplicação.
   // Usa --no-llm (sem IA) + --days=7 (lookback curto) pra ser rápido.
   if (WITH_PUBLISH && (published > 0 || qualityBlocked > 0) && !DRY_RUN) {
-    log('🔁', 'Dedup inline pós-publish (--no-llm --days=7) — fecha janela de duplicação visível');
-    const dedupCmd = nodeCommand(path.join(SCRIPTS_DIR, 'dedup-kino.js'), ['--no-llm', '--days=7']);
+    log('🔁', 'Dedup inline pós-publish (--no-llm --days=7 --auto-apply) — fecha janela de duplicação visível');
+    // Fix Y (2026-07-25): passa --auto-apply para dedup-kino.js aplicar hides/flags
+    // ANTES: sem flag, dedup rodava em DRY-RUN, reportava 9 hiddens mas NAO aplicava.
+    // DEPOIS: --auto-apply garante aplicação quando rodado inline pelo pipeline.
+    const dedupCmd = nodeCommand(path.join(SCRIPTS_DIR, 'dedup-kino.js'), ['--no-llm', '--days=7', '--auto-apply']);
     try {
       const dedupResult = await runStep(dedupCmd, 'Dedup inline', {
         id: 'dedup',

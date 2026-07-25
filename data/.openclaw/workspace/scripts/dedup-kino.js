@@ -14,7 +14,8 @@
  *
  * Uso:
  *   node scripts/dedup-kino.js --dry-run                  # padrão, lista sem aplicar
- *   node scripts/dedup-kino.js --apply                    # aplica ações automaticamente
+ *   node scripts/dedup-kino.js --apply                    # aplica ações automaticamente (CLI manual)
+ *   node scripts/dedup-kino.js --auto-apply               # idem --apply, usado pelo pipeline
  *   node scripts/dedup-kino.js --days 30                  # lookback custom (padrão 90)
  *   node scripts/dedup-kino.js --limit 5                  # max pares a enviar pro M3
  *   node scripts/dedup-kino.js --no-llm                   # só stages 1+2
@@ -597,7 +598,11 @@ async function flagLogoIssue(supabase, bearer, postId, logoInfo, sourceUrl) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const DRY_RUN = !args.includes('--apply');
+  // Fix Y (2026-07-25): aceita --apply (CLI manual) ou --auto-apply (invocado pelo pipeline)
+  // ANTES: so --apply, e pipeline passava nada, entao dedup SEMPRE rodava em DRY-RUN.
+  // Resultado: 9 hiddens reportados mas nao aplicados no run 58267b6c.
+  // DEPOIS: pipeline passa --auto-apply explicitamente quando !DRY_RUN.
+  const DRY_RUN = !(args.includes('--apply') || args.includes('--auto-apply'));
   const NO_LLM = args.includes('--no-llm');
   const REPORT_ONLY = args.includes('--report');
   const SKIP_AUTO_CLOSE = args.includes('--no-auto-close');
