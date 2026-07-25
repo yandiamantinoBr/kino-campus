@@ -133,6 +133,10 @@ const INSTAGRAM_ONLY_HANDLES = {
   'em.ufg': 'https://em.ufg.br',                              // EM - Escola de Musica da UFG (sub-site com /p/ funcionando)
   'ppgban.ufg': 'https://biodiversidadeanimal.icb.ufg.br',     // PPGBAN - Pos-Graduacao em Biodiversidade Animal (sub-site do ICB)
   'ppgecoevolufg': 'https://www.ecoevol.ufg.br',              // PPGECOEVOL - Pos-Graduacao em Ecologia e Evolucao (handle sem dot)
+  // Fix T3 (2026-07-25): 1 handle IG descoberto apos run e57ac3fe (58267b6c + e57ac3fe audit)
+  // que causou 1 QUALITY_BLOCKED por instagram_without_official_source (IV Simposio LABOTER).
+  // URL verificada via curl (2026-07-25 18:55): site ppgeo.iesa.ufg.br ativo (HTTP 200, 41KB).
+  'ppgeo.ufg': 'https://ppgeo.iesa.ufg.br',                   // PPGEO - Pos-Graduacao em Geografia (sub-site do IESA)
 };
 // Hosts de CDN Instagram (para detectar quando enrichmentSources só tem Instagram)
 const INSTAGRAM_CDN_HOSTS = [
