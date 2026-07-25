@@ -3,7 +3,8 @@
 **Data:** 2026-07-25
 **Total de posts auditados:** 56
 **Autor:** Cadu Bot (`2345582d-8bf7-4393-aa0d-f9953d0e02ca`)
-**Status:** 55 published, 1 closed
+**Status inicial:** 55 published, 1 closed
+**Status pós-auditoria:** 45 published, 10 hidden, 1 closed
 
 ## Distribuição
 
@@ -196,6 +197,17 @@ Análise: A maioria é **cross-account repost** (uma conta UFG repostou conteúd
 1. ✅ Reclassificados 3 posts críticos: `eventos/workshops` → `oportunidades/pesquisa`
 2. ✅ Inferidos area/subcategory para 32 posts
 3. ✅ Refinadas 5 inferências com fallback ruim
+4. ✅ **Aplicado dedup --apply: 10 posts hidden** (status='hidden') por conteúdo duplicado
+   - e89dae60, e6fa7f89 (Centro de Línguas - 2 dos 3)
+   - d5cffac4 (IX SIPACV)
+   - af634f5f (PPGACV)
+   - 952af4a9 (ICB LABMol)
+   - 813e0f5f (CAPES/Fundos)
+   - 206f8b3e (CEPAE Simp. Educação Inclusiva)
+   - b165d137 (Editora UFG - Foucault)
+   - 1f59d22e (Institutoverbena - Fórum)
+   - ddf87375 (Institutoverbena - Concurso Buriti Alegre)
+5. ✅ **Fix Q commitado (PR #91)**: dedup-kino v1.8.0 com Stage 1.5 content-hash
 
 ## Ações Recomendadas (próximas)
 
