@@ -27,3 +27,7 @@ services/cadu-ufg-publisher/data/
 # Local worktrees must never be versioned as gitlinks/submodules.
 .claude/worktrees/*
 yan-*.png
+
+# Local tmp/ audit outputs (2026-07-25 onwards)
+tmp/
+.tmp-audit-*/
