@@ -32,7 +32,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { writeJsonAtomic } = require('./lib/atomic-json-file.js');
-const { canonicalUrl } = require('./lib/canonical-url.js');
+const { canonicalUrl, canonicalUrlDetails, extractWebyEvent, webySameEvent } = require('./lib/canonical-url.js');
 
 // === Configuração ===
 
@@ -672,13 +672,19 @@ async function main() {
     p._site = p.metadata?.source_site || p.metadata?.site || 'desconhecido';
     p._sourceUrl = p.metadata?.source_url || p.metadata?.link || '';
     p._canonicalUrl = canonicalUrl(p._sourceUrl);
+    // Fix W (2026-07-25): also extract weby event slug for cross-/e/-/n/ dedup
+    p._canonDetails = canonicalUrlDetails(p._sourceUrl);
+    p._webyEventSlug = (p._canonDetails && p._canonDetails.slug) || '';
     p._logoInfo = detectLogoInstitucional(p.image_url || '');
   }
 
   // === STAGE 1: Texto (V2 — token Jaccard + containment + substring) ===
-  console.log(`\n📝 STAGE 1: Análise textual (V2: token Jaccard + containment + substring + URL canônica)...`);
+  console.log(`\n📝 STAGE 1: Análise textual (V2: token Jaccard + containment + substring + URL canônica + Weby event slug)...`);
   const stage1Candidates = [];
   const exactUrlDups = [];
+  // Fix W: duplicates that share the same Weby event slug (e.g., /e/39293-cerise-summit
+  // and /n/202881-cerise-summit both refer to the same event)
+  const webySlugDups = [];
 
   // Tokens genéricos que sozinhos não caracterizam evento (replicado do backfill-kino-fixes)
   const GENERIC_TOKENS = new Set([
@@ -698,6 +704,15 @@ async function main() {
       // Match exato por URL canônica
       if (a._canonicalUrl && b._canonicalUrl && a._canonicalUrl === b._canonicalUrl) {
         exactUrlDups.push({ a, b, score: 1.0, method: 'canonical_url' });
+        continue;
+      }
+      // Fix W (2026-07-25): match por slug de evento Weby
+      // /e/39293-cerise-summit-2026 e /n/202881-cerise-summit-2026 compartilham slug
+      if (a._webyEventSlug && b._webyEventSlug
+          && a._canonDetails && b._canonDetails
+          && a._canonDetails.host === b._canonDetails.host
+          && a._webyEventSlug === b._webyEventSlug) {
+        webySlugDups.push({ a, b, score: 1.0, method: 'weby_event_slug' });
         continue;
       }
       // V2: Jaccard de TOKENS (não shingles) + containment
@@ -743,6 +758,7 @@ async function main() {
   stage1Candidates.sort((x, y) => y.score - x.score);
 
   console.log(`   Duplicatas exatas (URL canônica): ${exactUrlDups.length}`);
+  console.log(`   Duplicatas por slug de evento Weby (Fix W): ${webySlugDups.length}`);
   console.log(`   Candidatos textuais: ${stage1Candidates.length}`);
   if (stage1Candidates.length > 0) {
     console.log('   Top 5:');
@@ -836,8 +852,8 @@ async function main() {
     console.log(`     [${li.logo.unit}] ${li.post.title?.slice(0, 60)} → ${li.post.image_url?.slice(0, 60)}`);
   });
 
-  // pHash para candidatos do Stage 1 (e URL exata)
-  const stage1AndUrl = [...stage1Candidates, ...exactUrlDups];
+  // pHash para candidatos do Stage 1 (e URL exata, e Weby event slug - Fix W)
+  const stage1AndUrl = [...stage1Candidates, ...exactUrlDups, ...webySlugDups];
   console.log(`   Calculando pHash de ${stage1AndUrl.length} pares...`);
 
   const imageConfirmedPairs = [];
@@ -909,6 +925,7 @@ async function main() {
     total_posts: posts.length,
     stage1: {
       exact_url_dups: exactUrlDups.length,
+      weby_event_slug_dups: webySlugDups.length,
       text_candidates: stage1Candidates.length,
     },
     stage2: {
