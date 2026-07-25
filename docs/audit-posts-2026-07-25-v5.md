@@ -169,6 +169,7 @@ if (!identity.ok) {
 | Q | 2026-07-25 | dedup-content-hash (rodada 1 dedup --apply) | c063bb35 |
 | R | 2026-07-25 | STRONG_OPPORTUNITY_HEADLINE_PATTERN inclui "matrícula" | faaab3e3 |
 | S | 2026-07-25 | 3 handles IG adicionais (ppgca_ufg, ppgcb_ufg, floreser.ufg) | faaab3e3 |
+| S2 | 2026-07-25 | scrub past dates com janela plausivel (-30/+540 dias) | b876a375 |
 | T | 2026-07-25 | cross-matcher evita many-to-one matching (usedIpLinks Set) | d78d65e |
 | T2 | 2026-07-25 | 3 handles IG (em.ufg, ppgban.ufg, ppgecoevolufg) | 2f1ee266 |
 | T3 | 2026-07-25 | 1 handle IG (ppgeo.ufg → ppgeo.iesa.ufg.br) | e3d09941 |
@@ -181,7 +182,7 @@ if (!identity.ok) {
 | Z | 2026-07-25 | flag post existente + skip_publish para blocked | 579c8be9 |
 | Recovery | 2026-07-25 | sync-vps-to-clone.sh (recovery run 5101099a) | ef2129db |
 
-**Total:** 25 Fixes (A até Z) + 1 Recovery.
+**Total:** 26 Fixes (A até Z + S2) + 1 Recovery.
 
 ---
 
