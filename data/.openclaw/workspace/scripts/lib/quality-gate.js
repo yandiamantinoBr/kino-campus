@@ -439,33 +439,10 @@ async function ensureQuality(record) {
   const expectedApplicationDeadline = validIsoDate(dates.applicationDeadline);
   if (claimedDeadlineDates.length > 0 &&
       (!expectedApplicationDeadline || claimedDeadlineDates.some(date => date !== expectedApplicationDeadline))) {
-    // Fix D (2026-07-23): edictais com MULTIPLAS edicoes/datas (ex: Teste ANPAD
-    // com 3 edicoes em junho/setembro/novembro) descrevem varias datas que
-    // nao sao o "applicationDeadline" unico. A heuristica antiga exigia que
-    // TODAS as datas extraidas batessem com o applicationDeadline, o que
-    // nunca acontece para editais multi-edicao. A solucao: aceitar
-    // mismatch se QUALQUER das datas extraidas:
-    //   - bate exatamente com o applicationDeadline
-    //   - eh igual a uma das dates[] do item (multiplas edicoes)
-    //   - esta dentro de uma janela de tolerancia de +/- 14 dias
-    //   - esta no passado recente (anuncio antigo de prazo ja expirado)
-    const allItemDates = new Set([
-      ...(Array.isArray(dates.dates) ? dates.dates : []).map(validIsoDate).filter(Boolean),
-      ...(Array.isArray(dates.futureDates) ? dates.futureDates : []).map(validIsoDate).filter(Boolean),
-      ...(Array.isArray(dates.pastDates) ? dates.pastDates : []).map(validIsoDate).filter(Boolean),
-      expectedApplicationDeadline,
-    ].filter(Boolean));
-    const matchesAnyItemDate = claimedDeadlineDates.some(d => allItemDates.has(d));
-    const matchesWithin14d = expectedApplicationDeadline && claimedDeadlineDates.some(d => {
-      const diff = Math.abs((Date.parse(`${d}T12:00:00Z`) - Date.parse(`${expectedApplicationDeadline}T12:00:00Z`)) / 86400000);
-      return Number.isFinite(diff) && diff <= 14;
-    });
-    const allPast = claimedDeadlineDates.every(d => d < (TODAY_ISO || ''));
-    if (!matchesAnyItemDate && !matchesWithin14d && !allPast) {
-      block('application_deadline_mismatch');
-    } else {
-      warn('application_deadline_relaxed');
-    }
+    // A data citada explicitamente como prazo deve corresponder ao campo
+    // semantico applicationDeadline. Datas de resultado, matricula ou outra
+    // edicao nao podem validar um prazo apenas por constarem em dates[].
+    block('application_deadline_mismatch');
   }
   const hasApplicationCta = normalizedDisplayCopy
     .split(/[\r\n.!?;]+/)

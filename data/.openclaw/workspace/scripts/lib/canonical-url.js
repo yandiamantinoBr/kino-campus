@@ -8,7 +8,7 @@
  * `https://ufg.br/events?event=<id>` URL as the same `ufg.br/events` key.
  * Consumers must compare `key` values produced by the same version.
  *
- * Version 3 (2026-07-25, Fix W) adds `slug` extraction from Weby URLs.
+ * Version 3 (2026-07-25, Fix W) added `slug` extraction from Weby URLs.
  * The Weby CMS uses TWO numeric IDs for the same event:
  *   - /e/{event_id}-slug-do-evento (event page, id = the event)
  *   - /n/{news_id}-slug-do-evento (news article about the event, id = the news)
@@ -16,13 +16,14 @@
  * canonical identity. Previous version treated /e/ and /n/ as distinct URLs
  * even when they referred to the same event.
  *
- * Now the canonical key for both URLs is `host/events/{id}:slug`, allowing
- * dedup to recognize "/e/39293-cerise-summit-2026" and
- * "/n/202881-cerise-summit-2026" as the same event.
+ * Version 4 keeps `/events?event={id}` and `/e/{id}-slug` equivalent again.
+ * Version 3 appended the slug to only the `/e/` key, which accidentally split
+ * those two forms. Cross `/e/` and `/n/` identity remains available through
+ * `webySameEvent`, where the shared slug is the appropriate signal.
  *
  * Consumers must compare `key` values produced by the same version.
  */
-const URL_IDENTITY_VERSION = 'cadu-url-identity-v3';
+const URL_IDENTITY_VERSION = 'cadu-url-identity-v4';
 
 const TRACKING_PARAMETER = /^(?:utm_[a-z0-9_]+|fbclid|gclid|dclid|msclkid|igshid|mc_cid|mc_eid)$/i;
 
@@ -113,11 +114,9 @@ function canonicalUrlDetails(value) {
       // so /e/{id} and /n/{id} for the same event share the same canonical key.
       const webyEvent = extractWebyEvent(value);
       slug = (webyEvent && webyEvent.slug) || '';
-      // v3: include the slug in the key. If slug is empty, the key matches v2
-      // exactly (backward compatibility for old Weby URLs without slug).
-      const key = slug
-        ? `${host}/events/${eventId}:${slug}`
-        : `${host}/events/${eventId}`;
+      // v4: the numeric event ID is canonical for both query and /e/ forms.
+      // The slug remains in details for safe /e/ vs /n/ corroboration.
+      const key = `${host}/events/${eventId}`;
       return {
         version: URL_IDENTITY_VERSION,
         valid: true,
