@@ -1617,3 +1617,9 @@ OpenClaw implantado no VPS no commit
 `489e398a59237dd1fd62364c2ef46795fc72ca53`, com Gateway, `cadu-api`, Chrome/CDP
 e os dois containers saudáveis. Regressão KinoCampus: 256 suites e 4.624 testes
 aprovados.
+
+A curadoria horária `a7fee871-38ff-43f0-89e0-8c7b40e7d731` concluiu às
+17:32:19 UTC e promoveu atomicamente o artefato diário. Após o restart, a
+primeira leitura autenticada do Feed Coletado aqueceu o cache e confirmou 44
+itens, 2 artefatos válidos, 0 inválidos, `status=ready` e `stale=false`. O
+`cache_warm=false` inicial era lazy load, não falha da coleta.

@@ -190,6 +190,40 @@ três revisões e manteve todos os cursos. A quarta revisão é o par FUNAPE nº
 41/2026 versus nº 38/2026, também mantido por conflito explícito entre números
 de processo.
 
+## Curadoria horária e Feed Coletado
+
+O cron de 2026-07-26 iniciou às 17:20:02 UTC e terminou às 17:32:19 UTC:
+
+- run `a7fee871-38ff-43f0-89e0-8c7b40e7d731`;
+- coleta diária site-only, sem IA, Instagram ou publicação;
+- 18 itens para revisão e 2.489 descartes, dos quais 1.169 expirados e 366
+  duplicados;
+- candidato validado com SHA-256
+  `8526f4e848a89a8a5e9deb0eb02bcc74172fa32ee68b96c0365ba379acfca3ec`;
+- promoção atômica para
+  `data/ufg-scrape/curadoria-v4.4-daily-2026-07-26.json`;
+- candidato privado removido após a promoção (`cleanupPending=false`).
+
+Esse processo começou antes da implantação do commit `489e398`, por isso seu log
+ainda mostra `IconeX.png` em dois candidatos. Isso é evidência do runtime antigo,
+não regressão do código implantado depois. O publisher atual rejeita esses
+valores mesmo que um artefato anterior ainda os contenha; o próximo cron passa a
+coletar com o filtro novo.
+
+Após o restart do `cadu-api`, o healthcheck mostrou `cache_warm=false` até a
+primeira leitura, comportamento esperado do cache lazy. Uma chamada autenticada
+a `/api/feed?limit=1&offset=0&with_meta=true` carregou o snapshot e confirmou:
+
+- `status=ready`;
+- 44 itens;
+- 2 artefatos válidos e 0 inválidos;
+- `stale=false`;
+- diagnóstico da fonte associado ao artefato diário de 2026-07-26.
+
+O healthcheck posterior passou a informar `cache_warm=true`, 2 artefatos e feed
+não obsoleto. Portanto não houve indisponibilidade do Feed Coletado nem timeout
+da curadoria; houve apenas cache ainda não lido após o restart.
+
 ## Código, testes e implantação
 
 - OpenClaw PR `#91`: identidade entre fontes, deduplicação, conflitos
