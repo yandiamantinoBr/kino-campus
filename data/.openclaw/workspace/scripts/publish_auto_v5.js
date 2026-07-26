@@ -16,7 +16,12 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
-const { normalizeImageUrl: normalizeCmsUrl, isThumbnailUrl, validateImageUrl } = require('./lib/image-utils.js');
+const {
+  isKnownPlaceholderImageUrl,
+  normalizeImageUrl: normalizeCmsUrl,
+  isThumbnailUrl,
+  validateImageUrl,
+} = require('./lib/image-utils.js');
 const { resolveActionLabel } = require('./lib/curator-action-policy.js');
 const { canonicalUrl: sharedCanonicalUrl } = require('./lib/canonical-url.js');
 const { instagramPermalinkKey } = require('./lib/instagram-url.js');
@@ -116,7 +121,9 @@ function pickLatestReport() {
     .map(String)
     .map(s => s.trim())
     .filter(s => /^https?:\/\//i.test(s) && !/\.svg(?:$|[?#])/i.test(s))
+    .filter(s => !isKnownPlaceholderImageUrl(s))
     .map(s => normalizeCmsUrl(s)) // P0-A: troca /l/ por /o/ no CMS UFG
+    .filter(Boolean)
     .filter(s => {
       if (seen.has(s)) return false;
       seen.add(s);
@@ -1499,6 +1506,7 @@ module.exports = {
   fetchRecentPostsForCanonicalDedup,
   findExistingPostsClient,
   mergeIntoExisting,
+  normalizeImages,
   actionFingerprintConfirmsCandidate,
   hasItemLevelUrlIdentity,
   parsePublisherArgs,
