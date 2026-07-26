@@ -22,7 +22,8 @@ Resultado da correção de dados:
 - 8 canônicas tiveram módulo, categoria, prazo ou expiração corrigidos;
 - 1 prazo classificado incorretamente foi removido;
 - 3 publicações inválidas foram ocultadas;
-- 3 capas genéricas foram substituídas por mídia específica e verificada;
+- 5 referências de capa genérica foram substituídas ou alinhadas a mídia
+  específica e verificada;
 - nenhuma linha foi excluída da tabela `posts`;
 - o estado observado após a intervenção é 704 posts: 140 `published`, 289 `hidden`,
   261 `closed` e 14 `deleted`.
@@ -108,12 +109,18 @@ pares não são duplicatas e desapareceram do relatório final.
 | `6be33ea9` - 20º Seminário Nacional da SBHC | capa armazenada derivada de `IconeX.png` | substituída pelo cartaz específico do seminário |
 | `4addd028` - II Enlic-CO / VIII Eleb / Prolicen | capa armazenada derivada de `IconeX.png` | substituída pelo cartaz específico do encontro |
 | `d252919e` - 4ª edição do Programa de Saúde Indígena | `posts.image_url` apontava diretamente para `IconeX.png` | alinhada à mídia oficial já presente em `post_media` |
+| `a8a3f0e5` - VI Seminário Internacional EaD / IV Conect EaD | `posts.image_url` ainda apontava para `IconeX.png` | alinhada ao cartaz específico já marcado como capa em `post_media` |
+| `752300fd` - II Jornada Música na Infância | `posts.image_url` e metadados de capa estavam incompletos | alinhados à arte específica já marcada como capa; a segunda arte foi preservada na galeria |
 
-Para os três posts, `posts.image_url`, `metadata.image_url`,
-`metadata.cover_url`, `metadata.gallery_image_urls` e a mídia marcada como capa
-em `post_media` passaram a apontar para o mesmo arquivo. Cada alteração registra
-o valor anterior em `manual_data_corrections`, versão
-`cadu-image-placeholder-v1`.
+Para os cinco posts, `posts.image_url`, `metadata.image_url` e
+`metadata.cover_url` passaram a apontar para a mídia marcada como capa em
+`post_media`. `metadata.gallery_image_urls` preserva apenas mídias específicas,
+com a capa na primeira posição. Cada alteração registra o valor anterior em
+`manual_data_corrections`, versão `cadu-image-placeholder-v1`.
+
+A varredura final dos 140 posts `published` retornou zero ocorrências ativas de
+`IconeX.png`, `/weby/assets/` ou `/assets/ufg*/` em `posts.image_url`, campos de
+capa/galeria do `metadata` e `post_media`.
 
 ## Funcionamento revisado por estágio
 
