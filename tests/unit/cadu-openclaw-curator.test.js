@@ -191,6 +191,105 @@ describe('OpenClaw curator relevance gate', () => {
     })).toBe('Saiba mais');
   });
 
+  test('closes an elapsed deadline even when the original notice uses future tense', () => {
+    const result = curator.classifyItem(
+      'PPGCC publica edital de selecao para alunos especiais - 2026/2',
+      'As inscricoes estarao abertas no periodo de 23 de junho de 2026 a 10 de julho de 2026, ate as 16h.',
+      '',
+      'ppgcc',
+      'https://ppgcc.inf.ufg.br/n/201916',
+      { created_at: '2026-06-17T07:59:35-03:00', sourceKind: 'news' }
+    );
+
+    expect(result.temporal.applicationDeadline).toBe('2026-07-10');
+    expect(result.temporal.applicationStatus).toBe('closed');
+    expect(result.temporal.canApply).toBe(false);
+    expect(result.decision).toBe('discard');
+  });
+
+  test('does not reinterpret post-result enrollment as a new public window', () => {
+    const result = curator.classifyItem(
+      'Processo Seletivo Aluno Especial 2026.2',
+      [
+        'Inscricao exclusivamente on-line no periodo de 09 a 10/07/2026.',
+        'Resultado Final 13/07/2026.',
+        'A matricula para aluno especial ocorrera pelo e-mail do programa.',
+        'Matricula: dias 06 a 08 de agosto de 2026.',
+      ].join(' '),
+      '',
+      'ppgca',
+      'https://ppgca.evz.ufg.br/n/202060',
+      { created_at: '2026-06-22T09:31:52-03:00', sourceKind: 'news' }
+    );
+
+    expect(result.temporal.applicationDeadline).toBe('2026-07-10');
+    expect(result.temporal.applicationStatus).toBe('closed');
+    expect(result.temporal.dateEvidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({ date: '2026-08-06', role: 'contextDate' }),
+      expect.objectContaining({ date: '2026-08-08', role: 'contextDate' }),
+    ]));
+    expect(result.decision).toBe('discard');
+  });
+
+  test('recognizes the completion deadline of a multi-step registration', () => {
+    const result = curator.classifyItem(
+      'Inscricoes para a XXXI Maratona de Programacao seguem abertas',
+      [
+        'As inscricoes permanecem abertas.',
+        'A inscricao e realizada em duas etapas: pagamento e cadastramento da equipe.',
+        'Ambas as etapas devem ser concluidas ate o dia 10 de agosto de 2026 para que a inscricao seja efetivada.',
+        'A etapa regional sera realizada no dia 29 de agosto de 2026.',
+      ].join(' '),
+      '',
+      'inf',
+      'https://inf.ufg.br/n/203015',
+      { created_at: '2026-07-10T14:07:18-03:00', sourceKind: 'news' }
+    );
+
+    expect(result.temporal.applicationDeadline).toBe('2026-08-10');
+    expect(result.temporal.applicationStatus).toBe('open');
+    expect(result.temporal.eventStartsAt).toBe('2026-08-29');
+  });
+
+  test('routes a structured event to review when its media filename has another year', () => {
+    const classification = curator.classifyItem(
+      'Entrega de titulo emerito',
+      'Data: 2026-10-21. Local: Auditorio da UFG.',
+      '',
+      'ufg',
+      'https://ufg.br/events?event=38329',
+      {
+        created_at: '2025-10-14T19:12:51-03:00',
+        sourceKind: 'event',
+        eventStartsAt: '2026-10-21T14:00:00-03:00',
+        eventEndsAt: '2026-10-21T16:00:00-03:00',
+      }
+    );
+    const reviewed = curator.applySourcePublicationPolicy(classification, {
+      sourceKind: 'event',
+      images: ['https://files.cercomp.ufg.br/weby/up/1/o/convite_titulo_21-10-25_2.png'],
+    }, { eventsAutoPublish: true });
+
+    expect(reviewed.decision).toBe('review');
+    expect(reviewed.reasons).toContain('structured_event_media_date_conflict');
+    expect(reviewed.temporal.structuredEventMediaDateConflict).toEqual({
+      eventDate: '2026-10-21',
+      mediaDate: '2025-10-21',
+      mediaUrl: 'https://files.cercomp.ufg.br/weby/up/1/o/convite_titulo_21-10-25_2.png',
+    });
+  });
+
+  test('keeps structured artwork when hydration exposes a template icon', () => {
+    const placeholder = 'https://files.cercomp.ufg.br/weby/up/1/i/IconeX.png?1746546951';
+    const artwork = 'https://files.cercomp.ufg.br/weby/up/1/o/convite_titulo_21-10-25_2.png?1760479677';
+
+    expect(curator.normalizeItemMedia(
+      placeholder,
+      [artwork],
+      'https://ufg.br/events?event=38329'
+    )).toEqual({ image: artwork, images: [artwork] });
+  });
+
   test('produces a byte-reproducible offline report for a fixed artifact and reference date', () => {
     const item = fixture.cases.find(({ id }) => id === 'active-opportunity-with-form-and-deadline');
     const artifactText = JSON.stringify({
