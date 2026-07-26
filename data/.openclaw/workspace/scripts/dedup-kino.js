@@ -434,10 +434,13 @@ async function closePastEvents(supabase, bearer, today) {
   // v1.4 (2026-06-15): Auto-close de eventos com TODAS as datas passadas
   // PATCH direto em posts com module='eventos', status='published' e dates.dates todas < today
   // Adiciona metadata.closed_at, closed_reason, closed_by
-  console.log(`\n🔒 AUTO-CLOSE: procurando eventos passados...`);
+  // Fix S3 (2026-07-25): expandido para TAMBEM processar module='oportunidades'
+  // (inscricoes encerradas). Antes: 14 posts com data_evento/deadline passada
+  // permaneceram published por SEMANAS (auditoria rodada 1). Agora: auto-hide.
+  console.log(`\n🔒 AUTO-CLOSE: procurando posts com todas as datas no passado (eventos + oportunidades)...`);
   
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/posts?module=eq.eventos&status=eq.published&limit=200&select=id,title,metadata`,
+    `${SUPABASE_URL}/rest/v1/posts?or=(module.eq.eventos,module.eq.oportunidades)&status=eq.published&limit=400&select=id,title,module,metadata`,
     { headers: { 'apikey': ANON_KEY, 'Authorization': bearer } }
   );
   if (!res.ok) {
@@ -450,13 +453,26 @@ async function closePastEvents(supabase, bearer, today) {
     // v1.5 (2026-06-23): Verificar múltiplas fontes de datas no metadata.
     // O formatador popula metadata.dates.dates, mas o mapper Deno armazena
     // datas como data_evento/data_fim_evento. Precisamos checar ambos.
+    // Fix S3 (2026-07-25): TAMBEM checar deadline_date (para oportunidades).
+    //   Oportunidades NAO tem data_evento (evento eh no futuro), mas tem
+    //   deadline_date (inscricao). Quando deadline_date passa, a oportunidade
+    //   esta encerrada e deve ser auto-hidden.
     const datesFromDates = p.metadata?.dates?.dates || [];
     const dataEvento = p.metadata?.data_evento || '';
     const dataFim = p.metadata?.data_fim_evento || '';
+    const deadlineDate = p.metadata?.deadline_date || '';
+    // Normalizar deadline_date de "dd/mm/yyyy" para "yyyy-mm-dd" se necessario
+    const deadlineISO = (() => {
+      if (!deadlineDate) return '';
+      if (/^\d{4}-\d{2}-\d{2}/.test(deadlineDate)) return deadlineDate;
+      const m = deadlineDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+    })();
     const allDates = [
       ...datesFromDates,
       ...(dataEvento ? [dataEvento] : []),
       ...(dataFim ? [dataFim] : []),
+      ...(deadlineISO ? [deadlineISO] : []),
     ].filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d));
     if (!(allDates.length > 0 && allDates.every(d => d < today))) return false;
 
@@ -480,8 +496,8 @@ async function closePastEvents(supabase, bearer, today) {
     }
     return true;
   });
-  
-  console.log(`   ${events.length} eventos publicados | ${pastEvents.length} com todas as datas no passado`);
+
+  console.log(`   ${events.length} eventos/oportunidades publicados | ${pastEvents.length} com todas as datas no passado`);
   
   let closed = 0, failed = 0;
   for (const evt of pastEvents) {
