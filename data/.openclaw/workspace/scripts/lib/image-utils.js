@@ -1,14 +1,31 @@
 'use strict';
 
+function isKnownPlaceholderImageUrl(raw) {
+  const value = String(raw || '').replace(/&amp;/g, '&').trim();
+  if (!value) return false;
+
+  let decoded = value;
+  try {
+    decoded = decodeURIComponent(value);
+  } catch (_) {}
+
+  return [
+    /(?:^|\/)iconex\.png(?:$|[?#])/i,
+    /\/weby\/assets\//i,
+    /\/assets\/ufg\d?\//i,
+  ].some(pattern => pattern.test(decoded));
+}
+
 function normalizeImageUrl(raw) {
   const value = String(raw || '').replace(/&amp;/g, '&').trim();
-  if (!value) return '';
+  if (!value || isKnownPlaceholderImageUrl(value)) return '';
 
   // Weby/UFG uses /up/<id>/l/ and /up/<id>/i/ for reduced images.
   // Prefer /o/ so the publisher uploads the best available original.
   const upgraded = value
     .replace(/\/up\/(\d+)\/(?:l|i|m|s)\//i, '/up/$1/o/')
     .replace(/\/up\/(\d+)\/thumb\//i, '/up/$1/o/');
+  if (isKnownPlaceholderImageUrl(upgraded)) return '';
 
   try {
     const url = new URL(upgraded);
@@ -81,6 +98,7 @@ async function validateImageUrl(raw, options = {}) {
 }
 
 module.exports = {
+  isKnownPlaceholderImageUrl,
   normalizeImageUrl,
   isThumbnailUrl,
   validateImageUrl,

@@ -454,12 +454,12 @@ describe('Cadu candidate source registry mirror', () => {
     const { manifest } = verifyMirroredRegistry();
     expect(manifest.upstream).toEqual({
       repository: 'https://github.com/yandiamantinoBr/openclaw-cadu',
-      commit: '4bf8ce46a863aa07d70d1344d98745bdb84e7cc5',
+      commit: '489e398a59237dd1fd62364c2ef46795fc72ca53',
     });
     expect(Object.fromEntries(manifest.artifacts.map((artifact) => [artifact.id, artifact.upstreamGitBlobOid]))).toEqual({
-      candidate: '8be9da2afcff0b354af380f3336c5c2159a9d059',
+      candidate: '3b475113590ba31a5db93b4416808de7b67b190a',
       schema: '04bc038f0694066b447f56940eb5e0dceb1dbcef',
-      'reconciliation-report': '506c10f898b4a6076617949a5358b9a2a7141bf7',
+      'reconciliation-report': '31b9e604ca12adfd639a3521b4d5f776d1761e45',
     });
   });
 

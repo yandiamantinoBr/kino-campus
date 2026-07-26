@@ -33,7 +33,11 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { writeJsonAtomic } = require('./lib/atomic-json-file.js');
-const { canonicalUrl, canonicalUrlDetails, extractWebyEvent, webySameEvent } = require('./lib/canonical-url.js');
+const { canonicalUrl, webySameEvent } = require('./lib/canonical-url.js');
+const {
+  decideDuplicatePair,
+  latestRelevantLifecycleDate,
+} = require('./lib/post-identity.js');
 
 // === Configuração ===
 
@@ -406,7 +410,7 @@ async function fetchRecentPosts(supabase, bearer, days) {
   const limit = 200;
   while (true) {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/posts?select=id,title,description,image_url,metadata,status,created_at&status=eq.published&created_at=gte.${since}&order=created_at.desc&limit=${limit}&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/posts?select=id,title,description,image_url,metadata,status,module,category,expires_at,moderation_reason,created_at&status=eq.published&created_at=gte.${since}&order=created_at.desc&limit=${limit}&offset=${offset}`,
       {
         headers: {
           'apikey': ANON_KEY,
@@ -438,7 +442,7 @@ async function closePastEvents(supabase, bearer, today) {
   // (inscricoes encerradas). Antes: 14 posts com data_evento/deadline passada
   // permaneceram published por SEMANAS (auditoria rodada 1). Agora: auto-hide.
   console.log(`\n🔒 AUTO-CLOSE: procurando posts com todas as datas no passado (eventos + oportunidades)...`);
-  
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/posts?or=(module.eq.eventos,module.eq.oportunidades)&status=eq.published&limit=400&select=id,title,module,metadata`,
     { headers: { 'apikey': ANON_KEY, 'Authorization': bearer } }
@@ -448,33 +452,14 @@ async function closePastEvents(supabase, bearer, today) {
     return { closed: 0, failed: 0 };
   }
   const events = await res.json();
-  
+
   const pastEvents = events.filter(p => {
-    // v1.5 (2026-06-23): Verificar múltiplas fontes de datas no metadata.
-    // O formatador popula metadata.dates.dates, mas o mapper Deno armazena
-    // datas como data_evento/data_fim_evento. Precisamos checar ambos.
-    // Fix S3 (2026-07-25): TAMBEM checar deadline_date (para oportunidades).
-    //   Oportunidades NAO tem data_evento (evento eh no futuro), mas tem
-    //   deadline_date (inscricao). Quando deadline_date passa, a oportunidade
-    //   esta encerrada e deve ser auto-hidden.
-    const datesFromDates = p.metadata?.dates?.dates || [];
-    const dataEvento = p.metadata?.data_evento || '';
-    const dataFim = p.metadata?.data_fim_evento || '';
-    const deadlineDate = p.metadata?.deadline_date || '';
-    // Normalizar deadline_date de "dd/mm/yyyy" para "yyyy-mm-dd" se necessario
-    const deadlineISO = (() => {
-      if (!deadlineDate) return '';
-      if (/^\d{4}-\d{2}-\d{2}/.test(deadlineDate)) return deadlineDate;
-      const m = deadlineDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
-    })();
-    const allDates = [
-      ...datesFromDates,
-      ...(dataEvento ? [dataEvento] : []),
-      ...(dataFim ? [dataFim] : []),
-      ...(deadlineISO ? [deadlineISO] : []),
-    ].filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d));
-    if (!(allDates.length > 0 && allDates.every(d => d < today))) return false;
+    // Close by semantic role: events use their latest event date and
+    // opportunities use their application deadline. A result/publication
+    // date must never close an otherwise active opportunity.
+    const lifecycleDate = latestRelevantLifecycleDate(p);
+    if (!lifecycleDate || lifecycleDate >= today) return false;
+    p._autoCloseReferenceDate = lifecycleDate;
 
     // v1.6 (2026-07-16): Pular posts reativados nas últimas 48h.
     // O `mergeIntoExisting` (publish_auto_v5) preserva o post canônico
@@ -498,16 +483,19 @@ async function closePastEvents(supabase, bearer, today) {
   });
 
   console.log(`   ${events.length} eventos/oportunidades publicados | ${pastEvents.length} com todas as datas no passado`);
-  
+
   let closed = 0, failed = 0;
   for (const evt of pastEvents) {
-    const meta = evt.metadata || {};
-    meta.closed_at = new Date().toISOString();
-    meta.closed_reason = 'evento_encerrado_data_passada';
-    meta.closed_by = 'cadu-auto-close';
-    
+    const meta = {
+      ...(evt.metadata || {}),
+      closed_at: new Date().toISOString(),
+      closed_reason: 'data_semantica_encerrada',
+      closed_by: 'cadu-auto-close',
+      closed_reference_date: evt._autoCloseReferenceDate,
+    };
+
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/posts?id=eq.${evt.id}`,
+      `${SUPABASE_URL}/rest/v1/posts?id=eq.${evt.id}&status=eq.published`,
       {
         method: 'PATCH',
         headers: {
@@ -519,7 +507,8 @@ async function closePastEvents(supabase, bearer, today) {
         body: JSON.stringify({ status: 'closed', metadata: meta }),
       }
     );
-    if (r.ok) {
+    const changed = r.ok ? await r.json().catch(() => []) : [];
+    if (r.ok && Array.isArray(changed) && changed.length === 1) {
       closed++;
       console.log(`   ✅ closed: ${evt.title.slice(0, 70)}`);
     } else {
@@ -528,11 +517,11 @@ async function closePastEvents(supabase, bearer, today) {
     }
     await new Promise(r => setTimeout(r, 200));
   }
-  
+
   return { closed, failed };
 }
 
-async function hidePost(supabase, bearer, postId, reason) {
+async function hidePost(supabase, bearer, postId, reason, audit = {}) {
   // F1 (2026-07-06): preservar metadata existente (source_url, content_hash,
   // cover_url, cadu_published, etc). Bug B5: o PATCH substituía o jsonb inteiro
   // → posts hidden ficavam sem referência pra audit/dedup retroativo.
@@ -540,26 +529,38 @@ async function hidePost(supabase, bearer, postId, reason) {
   let existingMeta = {};
   try {
     const sel = await fetch(
-      `${SUPABASE_URL}/rest/v1/posts?select=metadata&id=eq.${postId}`,
+      `${SUPABASE_URL}/rest/v1/posts?select=metadata,status&id=eq.${postId}`,
       { headers: { 'apikey': ANON_KEY, 'Authorization': bearer } }
     );
     if (sel.ok) {
       const data = await sel.json();
-      if (Array.isArray(data) && data[0] && data[0].metadata && typeof data[0].metadata === 'object') {
-        existingMeta = data[0].metadata;
-      }
+      if (!Array.isArray(data) || !data[0] || data[0].status !== 'published') return false;
+      if (data[0].metadata && typeof data[0].metadata === 'object') existingMeta = data[0].metadata;
     }
   } catch (_) { /* mantém existingMeta = {} se falhar */ }
 
+  const hiddenAt = new Date().toISOString();
   const mergedMeta = {
     ...existingMeta,
     hidden_by_dedup: true,
     hidden_reason: reason,
-    hidden_at: new Date().toISOString(),
+    hidden_at: hiddenAt,
+    ...(audit.keepId ? { merged_into_post_id: audit.keepId } : {}),
+    ...(audit.method ? { dedup_method: audit.method } : {}),
+    ...(Array.isArray(audit.evidence) && audit.evidence.length > 0
+      ? { dedup_evidence: [...new Set(audit.evidence.map(String))].slice(0, 24) }
+      : {}),
+    cadu_reactivation_blocked: true,
+    cadu_reactivation_block: {
+      reason: 'dedup_confirmed',
+      detail: reason,
+      blocked_by: 'cadu-dedup',
+      blocked_at: hiddenAt,
+    },
   };
 
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/posts?id=eq.${postId}`,
+    `${SUPABASE_URL}/rest/v1/posts?id=eq.${postId}&status=eq.published`,
     {
       method: 'PATCH',
       headers: {
@@ -574,10 +575,13 @@ async function hidePost(supabase, bearer, postId, reason) {
       }),
     }
   );
-  return res.ok;
+  if (!res.ok) return false;
+  const changed = await res.json().catch(() => []);
+  return Array.isArray(changed) && changed.length === 1;
 }
 
-async function flagLogoIssue(supabase, bearer, postId, logoInfo, sourceUrl) {
+async function flagReviewIssue(supabase, bearer, action) {
+  const postId = action.target;
   // Não altera a imagem (pode ser a única); apenas flagga para revisão
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/posts?select=metadata&id=eq.${postId}`,
@@ -585,12 +589,32 @@ async function flagLogoIssue(supabase, bearer, postId, logoInfo, sourceUrl) {
   );
   const data = await res.json();
   const currentMeta = data[0]?.metadata || {};
+  const review = {
+    kind: action.method || 'manual_review',
+    reason: action.reason || '',
+    peer_post_id: action.target_b || null,
+    flagged_at: new Date().toISOString(),
+  };
+  const previous = Array.isArray(currentMeta.dedup_review_flags)
+    ? currentMeta.dedup_review_flags
+    : [];
+  const dedupReviewFlags = [...previous, review]
+    .filter((entry, index, all) => all.findIndex(candidate => (
+      candidate.kind === entry.kind
+      && candidate.reason === entry.reason
+      && candidate.peer_post_id === entry.peer_post_id
+    )) === index)
+    .slice(-24);
   const newMeta = {
     ...currentMeta,
-    logo_review_flag: true,
-    logo_review_info: logoInfo,
-    logo_review_at: new Date().toISOString(),
-    logo_review_source: sourceUrl,
+    dedup_review_required: true,
+    dedup_review_flags: dedupReviewFlags,
+    ...(action.method === 'stage2_logo' ? {
+      logo_review_flag: true,
+      logo_review_info: action.logo_info || {},
+      logo_review_at: review.flagged_at,
+      logo_review_source: action.reason || '',
+    } : {}),
   };
   const r2 = await fetch(
     `${SUPABASE_URL}/rest/v1/posts?id=eq.${postId}`,
@@ -693,9 +717,6 @@ async function main() {
     p._site = p.metadata?.source_site || p.metadata?.site || 'desconhecido';
     p._sourceUrl = p.metadata?.source_url || p.metadata?.link || '';
     p._canonicalUrl = canonicalUrl(p._sourceUrl);
-    // Fix W (2026-07-25): also extract weby event slug for cross-/e/-/n/ dedup
-    p._canonDetails = canonicalUrlDetails(p._sourceUrl);
-    p._webyEventSlug = (p._canonDetails && p._canonDetails.slug) || '';
     p._logoInfo = detectLogoInstitucional(p.image_url || '');
   }
 
@@ -729,10 +750,7 @@ async function main() {
       }
       // Fix W (2026-07-25): match por slug de evento Weby
       // /e/39293-cerise-summit-2026 e /n/202881-cerise-summit-2026 compartilham slug
-      if (a._webyEventSlug && b._webyEventSlug
-          && a._canonDetails && b._canonDetails
-          && a._canonDetails.host === b._canonDetails.host
-          && a._webyEventSlug === b._webyEventSlug) {
+      if (webySameEvent(a._sourceUrl, b._sourceUrl)) {
         webySlugDups.push({ a, b, score: 1.0, method: 'weby_event_slug' });
         continue;
       }
@@ -823,7 +841,7 @@ async function main() {
         const a = plist[i], b = plist[j];
         const srcA = a.metadata?.source_unit || a._sourceUnit || '';
         const srcB = b.metadata?.source_unit || b._sourceUnit || '';
-        const sameSource = srcA && srcB && srcA === srcB;
+        const sameSource = Boolean(srcA && srcB && srcA === srcB);
         contentHashDups.push({
           a, b,
           method: 'content_hash',
@@ -949,6 +967,11 @@ async function main() {
       weby_event_slug_dups: webySlugDups.length,
       text_candidates: stage1Candidates.length,
     },
+    stage1_5: {
+      content_hash_groups: contentHashGroups,
+      content_hash_pairs: contentHashDups.length,
+      note: 'Exact image bytes are supporting evidence only.',
+    },
     stage2: {
       image_similar_pairs: imageConfirmedPairs.length,
       logo_issues: logoIssues.length,
@@ -961,9 +984,16 @@ async function main() {
   };
 
   // Decidir ações baseadas em Stage 1+2+3
+  const plannedActionKeys = new Set();
   const actionLog = (action) => {
+    const actionKey = action.action === 'hide'
+      ? `hide|${action.target}`
+      : `${action.action}|${action.target}|${action.target_b || ''}|${action.method || ''}`;
+    if (plannedActionKeys.has(actionKey)) return false;
+    plannedActionKeys.add(actionKey);
     report.actions_planned.push(action);
     console.log(`   ${DRY_RUN ? '📋' : '🔴'} ${action.action}: ${action.target_title || action.target} — ${action.reason}`);
+    return true;
   };
   const seenActions = new Set(); // dedup por target+method
 
@@ -985,25 +1015,20 @@ async function main() {
   //     (Psicologia) compartilham opportunityType mas são conteúdo distinto.
   const urlDupConfirmation = (c) => {
     const imagesSimilar = c.phash_status === 'similar';
-    // Jaccard de tokens do título
-    const ta = new Set((c.a.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 2));
-    const tb = new Set((c.b.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 2));
-    const inter = [...ta].filter(x => tb.has(x)).length;
-    const union = new Set([...ta, ...tb]).size;
-    const titleJaccard = union === 0 ? 0 : inter / union;
-    const titleSimilar = titleJaccard >= 0.4;
-    // Mesmo opportunityType
     const opA = c.a.metadata?.opportunityType || '';
     const opB = c.b.metadata?.opportunityType || '';
     const sameOppType = opA && opB && opA === opB;
-    // confirmed = pHash similar OU (título similar E mesmo tipo)
-    const confirmed = imagesSimilar || (titleSimilar && sameOppType);
+    const decision = decideDuplicatePair(c.a, c.b, {
+      sameCanonicalUrl: true,
+      sameImage: imagesSimilar,
+    });
     return {
       imagesSimilar,
-      titleSimilar,
-      titleJaccard,
+      titleSimilar: decision.signals.titles.strong,
+      titleJaccard: decision.signals.titles.jaccard,
       sameOppType,
-      confirmed,
+      confirmed: decision.autoHide,
+      decision,
     };
   };
   for (const c of exactUrlDups) {
@@ -1022,7 +1047,7 @@ async function main() {
           target_b: c.b.id,
           target_title: c.a.title,
           target_b_title: c.b.title,
-          reason: `URL canônica idêntica mas conteúdo diverge (pHash=${c.phash_status || 'n/a'}, title_jaccard=${(conf.titleJaccard*100).toFixed(0)}%, oppType_match=${conf.sameOppType}, desc_shared=${conf.descShared}) — provável compilação vs item específico; revisão manual`,
+          reason: `URL canônica idêntica sem corroboração suficiente (pHash=${c.phash_status || 'n/a'}, title_jaccard=${(conf.titleJaccard*100).toFixed(0)}%, conflitos=${conf.decision.conflicts.join(',') || 'nenhum'}) — possível compilação vs item específico`,
           method: 'stage1_url_unconfirmed',
         });
       }
@@ -1031,84 +1056,142 @@ async function main() {
     const key = `hide|${newer.id}|stage1_url`;
     if (seenActions.has(key)) continue;
     seenActions.add(key);
-    const confReasons = [];
-    if (conf.imagesSimilar) confReasons.push('pHash similar');
-    if (conf.titleSimilar && conf.sameOppType) confReasons.push(`title jaccard ${(conf.titleJaccard*100).toFixed(0)}% + mesmo oppType`);
     actionLog({
       action: 'hide',
       target: newer.id,
       target_title: newer.title,
-      reason: `URL canônica idêntica + ${confReasons.join(' + ')}`,
+      reason: `URL canônica idêntica + ${conf.decision.reasons.join(' + ')}`,
       method: 'stage1_url',
       keep_id: older.id,
     });
   }
 
-  // (1.5) Content-hash dedup (Fix Q + Fix R v1.8.1 - 2026-07-25)
-  // Imagens IDENTICAS byte-a-byte (SHA256). Caso real: 8 grupos/15 posts
-  // no run 2026-07-24 (Centro de Linguas 3x, IX SIPACV 3x, ICB 2x, etc).
-  // Stage 2 pHash só roda em pares de Stage 1+URL-dup, perdia 100% destes.
-  //
-  // Fix R v1.8.1 (2026-07-25): same_source pairs agora AUTO-HIDE (não flag_review).
-  // Validado em 2026-07-25 com 10 posts do run 2026-07-24: 100% das ações
-  // aplicadas resultaram em posts redundantes removidos. diff_source continua
-  // flag_review (caso real: 1 cross-account no IX SIPACV - investigar formatador).
-  for (const d of contentHashDups) {
-    const older = d.a.created_at < d.b.created_at ? d.a : d.b;
-    const newer = older === d.a ? d.b : d.a;
-    const key = `act|${newer.id}|stage15_content_hash`;
-    if (seenActions.has(key)) continue;
-    seenActions.add(key);
-    const reasonPrefix = d.same_source
-      ? `Imagem IDÊNTICA byte-a-byte (SHA256=${d.content_hash.slice(0, 12)}...) + mesmo source_unit "${d.source_unit_a}"`
-      : `Imagem IDÊNTICA byte-a-byte (SHA256=${d.content_hash.slice(0, 12)}...) mas source_units DIFERENTES: "${d.source_unit_a}" vs "${d.source_unit_b}" (provável bug de cache/imagem compartilhada — investigar formatador)`;
-    if (d.same_source) {
-      // Fix R v1.8.1: AUTO-HIDE for same_source pairs (validated 2026-07-25)
+  // Weby /e/ and /n/ pages with the same host+slug identify the same event.
+  for (const c of webySlugDups) {
+    const older = c.a.created_at < c.b.created_at ? c.a : c.b;
+    const newer = older === c.a ? c.b : c.a;
+    const decision = decideDuplicatePair(c.a, c.b, { sameWebyEvent: true });
+    if (decision.autoHide) {
       actionLog({
         action: 'hide',
         target: newer.id,
         target_title: newer.title,
-        reason: reasonPrefix,
-        method: 'stage15_content_hash_auto',
-        content_hash: d.content_hash,
-        same_source: true,
-        source_unit_a: d.source_unit_a,
+        reason: `Mesmo evento Weby (host + slug) + ${decision.reasons.join(' + ')}`,
+        method: 'stage1_weby_event',
         keep_id: older.id,
       });
     } else {
-      // diff_source: continua flag_review (humano decide)
       actionLog({
         action: 'flag_review',
         target: newer.id,
         target_b: older.id,
         target_title: newer.title,
         target_b_title: older.title,
-        reason: reasonPrefix,
+        reason: `Mesmo slug Weby, mas há conflito de identidade: ${decision.conflicts.join(', ')}`,
+        method: 'stage1_weby_conflict',
+      });
+    }
+  }
+
+  // (1.5) Content-hash is supporting evidence, never identity by itself.
+  // Imagens IDENTICAS byte-a-byte (SHA256). Caso real: 8 grupos/15 posts
+  // no run 2026-07-24 (Centro de Linguas 3x, IX SIPACV 3x, ICB 2x, etc).
+  // Stage 2 pHash só roda em pares de Stage 1+URL-dup, perdia 100% destes.
+  //
+  for (const d of contentHashDups) {
+    const older = d.a.created_at < d.b.created_at ? d.a : d.b;
+    const newer = older === d.a ? d.b : d.a;
+    const key = `act|${newer.id}|stage15_content_hash`;
+    if (seenActions.has(key)) continue;
+    seenActions.add(key);
+    const decision = decideDuplicatePair(d.a, d.b, { sameImage: true });
+    const reasonPrefix = d.same_source
+      ? `Imagem IDÊNTICA byte-a-byte (SHA256=${d.content_hash.slice(0, 12)}...) + mesmo source_unit "${d.source_unit_a}"`
+      : `Imagem IDÊNTICA byte-a-byte (SHA256=${d.content_hash.slice(0, 12)}...) mas source_units DIFERENTES: "${d.source_unit_a}" vs "${d.source_unit_b}" (provável bug de cache/imagem compartilhada — investigar formatador)`;
+    if (decision.autoHide) {
+      actionLog({
+        action: 'hide',
+        target: newer.id,
+        target_title: newer.title,
+        reason: `${reasonPrefix}; identidade corroborada por ${decision.reasons.join(' + ')}`,
+        method: 'stage15_content_hash_auto',
+        content_hash: d.content_hash,
+        same_source: Boolean(d.same_source),
+        source_unit_a: d.source_unit_a,
+        keep_id: older.id,
+      });
+    } else {
+      actionLog({
+        action: 'flag_review',
+        target: newer.id,
+        target_b: older.id,
+        target_title: newer.title,
+        target_b_title: older.title,
+        reason: `${reasonPrefix}; imagem isolada não prova identidade${decision.conflicts.length ? `; conflitos=${decision.conflicts.join(',')}` : ''}`,
         method: 'stage15_content_hash',
         content_hash: d.content_hash,
-        same_source: false,
+        same_source: Boolean(d.same_source),
         source_unit_a: d.source_unit_a,
         source_unit_b: d.source_unit_b,
       });
     }
   }
 
-  // (2) Stage 3 confirmou mesmo evento com confiança alta
+  // Deterministic cross-source duplicates are important because the inline
+  // pipeline intentionally runs without the LLM. Require multiple independent
+  // signals (title/entity/date/fingerprint) before hiding.
+  for (const c of stage1Candidates) {
+    const decision = decideDuplicatePair(c.a, c.b, {
+      sameImage: Boolean(c.a._contentHash && c.a._contentHash === c.b._contentHash),
+    });
+    if (!decision.autoHide) continue;
+    const older = c.a.created_at < c.b.created_at ? c.a : c.b;
+    const newer = older === c.a ? c.b : c.a;
+    actionLog({
+      action: 'hide',
+      target: newer.id,
+      target_title: newer.title,
+      reason: `Duplicata determinística entre fontes: ${decision.reasons.join(' + ')}`,
+      method: 'stage1_deterministic_identity',
+      keep_id: older.id,
+      evidence: decision.reasons,
+    });
+  }
+  // (2) Stage 3 confirmou mesmo evento com confiança alta. A IA nunca pode
+  // anular um conflito determinístico nem escolher o canônico: preservamos o
+  // post mais antigo e usamos a classificação apenas como evidência adicional.
   for (const r of semanticaResults) {
     if (r.mesmo_evento && r.confianca >= 0.75 && (r.recomendacao === 'hide_a' || r.recomendacao === 'hide_b')) {
-      const targetId = r.recomendacao === 'hide_a' ? r.a : r.b;
-      const otherId = r.recomendacao === 'hide_a' ? r.b : r.a;
-      // Buscar os posts completos
-      const target = posts.find(p => p.id === targetId);
-      const other = posts.find(p => p.id === otherId);
-      if (target && other) {
+      const postA = posts.find(p => p.id === r.a);
+      const postB = posts.find(p => p.id === r.b);
+      if (postA && postB) {
+        const policy = decideDuplicatePair(postA, postB);
+        if (policy.conflicts.length > 0) {
+          actionLog({
+            action: 'flag_review',
+            target: postA.id,
+            target_b: postB.id,
+            target_title: postA.title,
+            target_b_title: postB.title,
+            reason: `IA indicou mesmo item (${(r.confianca*100).toFixed(0)}%), mas a identidade determinística encontrou: ${policy.conflicts.join(', ')}`,
+            method: 'stage3_llm_conflict',
+          });
+          continue;
+        }
+        const older = postA.created_at <= postB.created_at ? postA : postB;
+        const newer = older === postA ? postB : postA;
         actionLog({
           action: 'hide',
-          target: target.id,
-          target_title: target.title,
+          target: newer.id,
+          target_title: newer.title,
           reason: `IA: ${r.tipo_relacao} (conf ${(r.confianca*100).toFixed(0)}%) — ${r.motivo}`,
           method: 'stage3_llm',
-          keep_id: other.id,
+          keep_id: older.id,
+          evidence: [
+            `llm:${r.tipo_relacao}`,
+            `confidence:${Number(r.confianca).toFixed(2)}`,
+            ...policy.reasons,
+          ],
         });
       }
     } else if (r.mesmo_evento && r.confianca >= 0.6 && r.recomendacao === 'revisar_manual') {
@@ -1152,11 +1235,15 @@ async function main() {
     for (const a of report.actions_planned) {
       try {
         if (a.action === 'hide') {
-          const ok = await hidePost(supabase, bearer, a.target, a.reason);
+          const ok = await hidePost(supabase, bearer, a.target, a.reason, {
+            keepId: a.keep_id || '',
+            method: a.method || '',
+            evidence: a.evidence || [],
+          });
           if (ok) { hidden++; console.log(`   ✅ hidden: ${a.target_title?.slice(0, 60)}`); }
           else { failed++; console.log(`   ❌ fail: ${a.target_title?.slice(0, 60)}`); }
         } else if (a.action === 'flag_review') {
-          const ok = await flagLogoIssue(supabase, bearer, a.target, a.logo_info || {}, a.reason);
+          const ok = await flagReviewIssue(supabase, bearer, a);
           if (ok) { flagged++; console.log(`   🏳️ flagged: ${a.target_title?.slice(0, 60)}`); }
           else { failed++; console.log(`   ❌ fail flag: ${a.target_title?.slice(0, 60)}`); }
         }

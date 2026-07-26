@@ -27,7 +27,10 @@ const {
   normalizeHttpUrl,
 } = require('./lib/quality-gate.js');
 const { resolveActionLabel } = require('./lib/curator-action-policy.js');
-const { normalizeImageUrl } = require('./lib/image-utils.js');
+const {
+  isKnownPlaceholderImageUrl,
+  normalizeImageUrl,
+} = require('./lib/image-utils.js');
 
 // ============================================================
 // CONFIG
@@ -210,6 +213,7 @@ function normalizeImageCandidates(candidates, limit = 6) {
   const seen = new Set();
   return (Array.isArray(candidates) ? candidates : [])
     .filter(value => typeof value === 'string' && value.trim())
+    .filter(value => !isKnownPlaceholderImageUrl(value))
     .map(value => normalizeImageUrl(value))
     .filter(value => /^https?:\/\//i.test(value) && !/\.svg(?:$|[?#])/i.test(value))
     .filter(value => {

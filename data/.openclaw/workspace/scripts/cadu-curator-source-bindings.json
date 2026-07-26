@@ -1,0 +1,636 @@
+{
+  "schemaVersion": 1,
+  "registryVersion": "2026-07-22.3",
+  "registrySha256": "999bb2d7585f76a289b9a21619f866523da14abab303ee1cb25dc1c32f71cf46",
+  "curatorScriptSha256": "8f66402514a74e53285ed9e0fec36ec4dda88a81a4b800856a1c9b9363c84c7c",
+  "bindings": [
+    {
+      "legacyId": "agro",
+      "sourceId": "web.ufg.agro"
+    },
+    {
+      "legacyId": "bc",
+      "sourceId": "web.ufg.bc"
+    },
+    {
+      "legacyId": "campusgoias",
+      "sourceId": "web.ufg.campus.goias"
+    },
+    {
+      "legacyId": "ccn",
+      "sourceId": "web.ufg.campus.caldas-novas"
+    },
+    {
+      "legacyId": "cefis",
+      "sourceId": "web.ufg.cefis"
+    },
+    {
+      "legacyId": "cegraf",
+      "sourceId": "web.ufg.cegraf"
+    },
+    {
+      "legacyId": "cei",
+      "sourceId": "web.legacy.cei"
+    },
+    {
+      "legacyId": "centrocultural",
+      "sourceId": "web.legacy.ccufg"
+    },
+    {
+      "legacyId": "cepae",
+      "sourceId": "web.ufg.cepae"
+    },
+    {
+      "legacyId": "cerof",
+      "sourceId": "web.legacy.cerof"
+    },
+    {
+      "legacyId": "ciar",
+      "sourceId": "web.ufg.ciar"
+    },
+    {
+      "legacyId": "cidadeocidental",
+      "sourceId": "web.ufg.campus.cidade-ocidental"
+    },
+    {
+      "legacyId": "cidarq",
+      "sourceId": "web.ufg.cidarq"
+    },
+    {
+      "legacyId": "cl",
+      "sourceId": "web.legacy.cl"
+    },
+    {
+      "legacyId": "cpa",
+      "sourceId": "web.ufg.cpa"
+    },
+    {
+      "legacyId": "cpcbio",
+      "sourceId": "web.legacy.cpcbio"
+    },
+    {
+      "legacyId": "crti",
+      "sourceId": "web.legacy.crti"
+    },
+    {
+      "legacyId": "csa",
+      "sourceId": "web.ufg.csa"
+    },
+    {
+      "legacyId": "direito",
+      "sourceId": "web.ufg.fd"
+    },
+    {
+      "legacyId": "editora",
+      "sourceId": "web.ufg.editora"
+    },
+    {
+      "legacyId": "eeca",
+      "sourceId": "web.ufg.eeca"
+    },
+    {
+      "legacyId": "emac",
+      "sourceId": "web.ufg.emac"
+    },
+    {
+      "legacyId": "emc",
+      "sourceId": "web.ufg.emc"
+    },
+    {
+      "legacyId": "evz",
+      "sourceId": "web.ufg.evz"
+    },
+    {
+      "legacyId": "face",
+      "sourceId": "web.ufg.face"
+    },
+    {
+      "legacyId": "fanut",
+      "sourceId": "web.ufg.fanut"
+    },
+    {
+      "legacyId": "farmacia",
+      "sourceId": "web.ufg.ff"
+    },
+    {
+      "legacyId": "fav",
+      "sourceId": "web.ufg.fav"
+    },
+    {
+      "legacyId": "fcs",
+      "sourceId": "web.ufg.fcs"
+    },
+    {
+      "legacyId": "fct",
+      "sourceId": "web.ufg.fct"
+    },
+    {
+      "legacyId": "fe",
+      "sourceId": "web.ufg.fe"
+    },
+    {
+      "legacyId": "fefd",
+      "sourceId": "web.ufg.fefd"
+    },
+    {
+      "legacyId": "fen",
+      "sourceId": "web.ufg.fen"
+    },
+    {
+      "legacyId": "fic",
+      "sourceId": "web.ufg.fic"
+    },
+    {
+      "legacyId": "filosofia",
+      "sourceId": "web.ufg.fafil"
+    },
+    {
+      "legacyId": "historia",
+      "sourceId": "web.ufg.fh"
+    },
+    {
+      "legacyId": "hospitalveterinario",
+      "sourceId": "web.ufg.hospital.veterinario"
+    },
+    {
+      "legacyId": "iac",
+      "sourceId": "web.legacy.iac"
+    },
+    {
+      "legacyId": "icb",
+      "sourceId": "web.ufg.icb"
+    },
+    {
+      "legacyId": "idiomassemfronteiras",
+      "sourceId": "web.legacy.idiomassemfronteiras"
+    },
+    {
+      "legacyId": "iesa",
+      "sourceId": "web.ufg.iesa"
+    },
+    {
+      "legacyId": "if",
+      "sourceId": "web.ufg.if"
+    },
+    {
+      "legacyId": "ime",
+      "sourceId": "web.ufg.ime"
+    },
+    {
+      "legacyId": "inf",
+      "sourceId": "web.ufg.inf"
+    },
+    {
+      "legacyId": "institutoverbena",
+      "sourceId": "web.legacy.verbena"
+    },
+    {
+      "legacyId": "ipelab",
+      "sourceId": "web.legacy.ipelab"
+    },
+    {
+      "legacyId": "iptsp",
+      "sourceId": "web.ufg.iptsp"
+    },
+    {
+      "legacyId": "jornal-ufg",
+      "sourceId": "web.legacy.jornal-ufg"
+    },
+    {
+      "legacyId": "labmic",
+      "sourceId": "web.legacy.labmic"
+    },
+    {
+      "legacyId": "lamcad",
+      "sourceId": "web.legacy.lamcad"
+    },
+    {
+      "legacyId": "letras",
+      "sourceId": "web.ufg.fl"
+    },
+    {
+      "legacyId": "medicina",
+      "sourceId": "web.ufg.fm"
+    },
+    {
+      "legacyId": "museu",
+      "sourceId": "web.ufg.museu"
+    },
+    {
+      "legacyId": "odonto",
+      "sourceId": "web.ufg.fo"
+    },
+    {
+      "legacyId": "ouvidoria",
+      "sourceId": "web.legacy.ouvidoria"
+    },
+    {
+      "legacyId": "patiodaciencia",
+      "sourceId": "web.legacy.patio-ciencia"
+    },
+    {
+      "legacyId": "pitt",
+      "sourceId": "web.legacy.pitt"
+    },
+    {
+      "legacyId": "planetario",
+      "sourceId": "web.ufg.planetario"
+    },
+    {
+      "legacyId": "pos-ufg",
+      "sourceId": "web.legacy.pos-ufg"
+    },
+    {
+      "legacyId": "ppga",
+      "sourceId": "web.ufg.ppg.ppga"
+    },
+    {
+      "legacyId": "ppgaas",
+      "sourceId": "web.ufg.ppg.ppgaas"
+    },
+    {
+      "legacyId": "ppgac",
+      "sourceId": "web.legacy.ppgac"
+    },
+    {
+      "legacyId": "ppgac-operational",
+      "sourceId": "web.ufg.ppg.ppgac.profile"
+    },
+    {
+      "legacyId": "ppgacv",
+      "sourceId": "web.legacy.ppgacv"
+    },
+    {
+      "legacyId": "ppgacv-operational",
+      "sourceId": "web.ufg.ppg.ppgacv"
+    },
+    {
+      "legacyId": "ppgadm",
+      "sourceId": "web.ufg.ppg.ppgadm"
+    },
+    {
+      "legacyId": "ppgagro",
+      "sourceId": "web.ufg.ppg.ppgagro"
+    },
+    {
+      "legacyId": "ppgas",
+      "sourceId": "web.ufg.ppg.ppgas"
+    },
+    {
+      "legacyId": "ppgban",
+      "sourceId": "web.ufg.ppg.ppgban"
+    },
+    {
+      "legacyId": "ppgbb",
+      "sourceId": "web.ufg.ppg.ppgbb"
+    },
+    {
+      "legacyId": "ppgbm",
+      "sourceId": "web.legacy.ppgbm"
+    },
+    {
+      "legacyId": "ppgbm-operational",
+      "sourceId": "web.ufg.ppg.ppgbm"
+    },
+    {
+      "legacyId": "ppgca",
+      "sourceId": "web.ufg.ppg.ppgca"
+    },
+    {
+      "legacyId": "ppgcb",
+      "sourceId": "web.ufg.ppg.ppgcb"
+    },
+    {
+      "legacyId": "ppgcc",
+      "sourceId": "web.ufg.ppg.ppgcc"
+    },
+    {
+      "legacyId": "ppgcf",
+      "sourceId": "web.ufg.ppg.ppgcf"
+    },
+    {
+      "legacyId": "ppgci",
+      "sourceId": "web.ufg.ppg.ppgci"
+    },
+    {
+      "legacyId": "ppgciamb",
+      "sourceId": "web.legacy.ppgciamb"
+    },
+    {
+      "legacyId": "ppgciamb-operational",
+      "sourceId": "web.ufg.ppg.ppgciamb"
+    },
+    {
+      "legacyId": "ppgcom",
+      "sourceId": "web.ufg.ppg.ppgcom"
+    },
+    {
+      "legacyId": "ppgcont",
+      "sourceId": "web.ufg.ppg.ppgcont"
+    },
+    {
+      "legacyId": "ppgcpri",
+      "sourceId": "web.ufg.ppg.ppgcpri"
+    },
+    {
+      "legacyId": "ppgcs",
+      "sourceId": "web.ufg.ppg.ppgcs"
+    },
+    {
+      "legacyId": "ppgcta",
+      "sourceId": "web.ufg.ppg.ppgcta"
+    },
+    {
+      "legacyId": "ppgculturas",
+      "sourceId": "web.ufg.ppg.ppgact"
+    },
+    {
+      "legacyId": "ppgda",
+      "sourceId": "web.ufg.ppg.ppgda"
+    },
+    {
+      "legacyId": "ppgdh",
+      "sourceId": "web.ufg.ppg.ppgdh"
+    },
+    {
+      "legacyId": "ppgdp",
+      "sourceId": "web.ufg.ppg.ppgdp"
+    },
+    {
+      "legacyId": "ppgdr",
+      "sourceId": "web.ufg.ppg.ppgdr"
+    },
+    {
+      "legacyId": "ppge",
+      "sourceId": "web.ufg.ppg.ppge"
+    },
+    {
+      "legacyId": "ppgea",
+      "sourceId": "web.ufg.ppg.ppgea"
+    },
+    {
+      "legacyId": "ppgeas",
+      "sourceId": "web.ufg.ppg.ppgeas"
+    },
+    {
+      "legacyId": "ppgec",
+      "sourceId": "web.ufg.ppg.ppgmat"
+    },
+    {
+      "legacyId": "ppgecm",
+      "sourceId": "web.ufg.ppg.ppgecm"
+    },
+    {
+      "legacyId": "ppgecoevol",
+      "sourceId": "web.ufg.ppg.ppgecoevol"
+    },
+    {
+      "legacyId": "ppgecon",
+      "sourceId": "web.ufg.ppg.ppgecon"
+    },
+    {
+      "legacyId": "ppgeeb",
+      "sourceId": "web.ufg.ppg.ppgeeb"
+    },
+    {
+      "legacyId": "ppgeec",
+      "sourceId": "web.ufg.ppg.ppgeec"
+    },
+    {
+      "legacyId": "ppgef",
+      "sourceId": "web.legacy.ppgef"
+    },
+    {
+      "legacyId": "ppgef-operational",
+      "sourceId": "web.ufg.ppg.ppgef"
+    },
+    {
+      "legacyId": "ppgenf",
+      "sourceId": "web.legacy.ppgenf"
+    },
+    {
+      "legacyId": "ppgenfs-operational",
+      "sourceId": "web.ufg.ppg.ppgenfs"
+    },
+    {
+      "legacyId": "ppgeo",
+      "sourceId": "web.ufg.ppg.ppgeo"
+    },
+    {
+      "legacyId": "ppgep-operational",
+      "sourceId": "web.ufg.ppg.ppgep"
+    },
+    {
+      "legacyId": "ppgeq",
+      "sourceId": "web.ufg.ppg.ppgeq"
+    },
+    {
+      "legacyId": "ppges",
+      "sourceId": "web.ufg.ppg.ppges"
+    },
+    {
+      "legacyId": "ppgf",
+      "sourceId": "web.ufg.ppg.ppgf"
+    },
+    {
+      "legacyId": "ppgfil",
+      "sourceId": "web.legacy.ppgfil"
+    },
+    {
+      "legacyId": "ppgfil-operational",
+      "sourceId": "web.ufg.ppg.ppgfil"
+    },
+    {
+      "legacyId": "ppgfnf",
+      "sourceId": "web.ufg.ppg.ppgnanofarma.profile"
+    },
+    {
+      "legacyId": "ppggecon",
+      "sourceId": "web.ufg.ppg.ppggecon"
+    },
+    {
+      "legacyId": "ppggmp",
+      "sourceId": "web.ufg.ppg.ppggmp"
+    },
+    {
+      "legacyId": "ppgh",
+      "sourceId": "web.ufg.ppg.ppgh"
+    },
+    {
+      "legacyId": "ppgif",
+      "sourceId": "web.ufg.ppg.ppgif"
+    },
+    {
+      "legacyId": "ppgll",
+      "sourceId": "web.legacy.ppgll"
+    },
+    {
+      "legacyId": "ppgll-operational",
+      "sourceId": "web.ufg.ppg.ppgll"
+    },
+    {
+      "legacyId": "ppgmcf",
+      "sourceId": "web.legacy.ppgmcf"
+    },
+    {
+      "legacyId": "ppgmec",
+      "sourceId": "web.ufg.ppg.ppgmec"
+    },
+    {
+      "legacyId": "ppgmtsp",
+      "sourceId": "web.ufg.ppg.ppgmtsp"
+    },
+    {
+      "legacyId": "ppgmus",
+      "sourceId": "web.ufg.ppg.ppgmus"
+    },
+    {
+      "legacyId": "ppgnut",
+      "sourceId": "web.ufg.ppg.ppgnut"
+    },
+    {
+      "legacyId": "ppgo",
+      "sourceId": "web.ufg.ppg.ppgo"
+    },
+    {
+      "legacyId": "ppgp",
+      "sourceId": "web.ufg.ppg.ppgp"
+    },
+    {
+      "legacyId": "ppgpc",
+      "sourceId": "web.ufg.ppg.ppgprocidade"
+    },
+    {
+      "legacyId": "ppgq",
+      "sourceId": "web.ufg.ppg.ppgq"
+    },
+    {
+      "legacyId": "ppgrph",
+      "sourceId": "web.ufg.ppg.ppgbrph"
+    },
+    {
+      "legacyId": "ppgs",
+      "sourceId": "web.legacy.ppgs"
+    },
+    {
+      "legacyId": "ppgs-operational",
+      "sourceId": "web.ufg.ppg.ppgs"
+    },
+    {
+      "legacyId": "ppgsc",
+      "sourceId": "web.ufg.ppg.ppgsc"
+    },
+    {
+      "legacyId": "ppgz",
+      "sourceId": "web.ufg.ppg.ppgz"
+    },
+    {
+      "legacyId": "prae",
+      "sourceId": "web.ufg.prae"
+    },
+    {
+      "legacyId": "proad",
+      "sourceId": "web.ufg.proad"
+    },
+    {
+      "legacyId": "proef",
+      "sourceId": "web.legacy.proef"
+    },
+    {
+      "legacyId": "proex",
+      "sourceId": "web.ufg.proec"
+    },
+    {
+      "legacyId": "profhistoria",
+      "sourceId": "web.ufg.ppg.profhistoria"
+    },
+    {
+      "legacyId": "profiap",
+      "sourceId": "web.ufg.ppg.profiap"
+    },
+    {
+      "legacyId": "profmat",
+      "sourceId": "web.ufg.ppg.profmat"
+    },
+    {
+      "legacyId": "prograd",
+      "sourceId": "web.ufg.prograd"
+    },
+    {
+      "legacyId": "propessoas",
+      "sourceId": "web.ufg.propessoas"
+    },
+    {
+      "legacyId": "prpg",
+      "sourceId": "web.ufg.prpg"
+    },
+    {
+      "legacyId": "prpi",
+      "sourceId": "web.ufg.prpi"
+    },
+    {
+      "legacyId": "pts",
+      "sourceId": "web.legacy.pts"
+    },
+    {
+      "legacyId": "quimica",
+      "sourceId": "web.ufg.iq"
+    },
+    {
+      "legacyId": "radio-ufg",
+      "sourceId": "web.legacy.radio-ufg"
+    },
+    {
+      "legacyId": "revistas-ufg",
+      "sourceId": "web.legacy.revistas-ufg"
+    },
+    {
+      "legacyId": "sdh",
+      "sourceId": "web.ufg.sdh"
+    },
+    {
+      "legacyId": "seacult",
+      "sourceId": "web.legacy.seacult"
+    },
+    {
+      "legacyId": "secom",
+      "sourceId": "web.ufg.secom"
+    },
+    {
+      "legacyId": "secplan",
+      "sourceId": "web.ufg.secplan"
+    },
+    {
+      "legacyId": "seinfra",
+      "sourceId": "web.ufg.seinfra"
+    },
+    {
+      "legacyId": "seti",
+      "sourceId": "web.ufg.seti"
+    },
+    {
+      "legacyId": "sin",
+      "sourceId": "web.ufg.sin"
+    },
+    {
+      "legacyId": "sri",
+      "sourceId": "web.ufg.sri"
+    },
+    {
+      "legacyId": "tvufg",
+      "sourceId": "web.legacy.tvufg"
+    },
+    {
+      "legacyId": "uaech",
+      "sourceId": "web.ufg.uaech"
+    },
+    {
+      "legacyId": "uc",
+      "sourceId": "web.legacy.uc"
+    },
+    {
+      "legacyId": "ufg",
+      "sourceId": "web.ufg.portal"
+    }
+  ]
+}

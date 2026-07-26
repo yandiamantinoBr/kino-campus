@@ -16,10 +16,17 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
-const { normalizeImageUrl: normalizeCmsUrl, isThumbnailUrl, validateImageUrl } = require('./lib/image-utils.js');
+const {
+  isKnownPlaceholderImageUrl,
+  normalizeImageUrl: normalizeCmsUrl,
+  isThumbnailUrl,
+  validateImageUrl,
+} = require('./lib/image-utils.js');
 const { resolveActionLabel } = require('./lib/curator-action-policy.js');
 const { canonicalUrl: sharedCanonicalUrl } = require('./lib/canonical-url.js');
 const { instagramPermalinkKey } = require('./lib/instagram-url.js');
+const { decideDuplicatePair } = require('./lib/post-identity.js');
+const { decidePostReactivation } = require('./lib/post-reactivation.js');
 
 const SUPABASE_URL = 'https://wacyrkwhkvzwkqpolrbg.supabase.co';
 
@@ -114,7 +121,9 @@ function pickLatestReport() {
     .map(String)
     .map(s => s.trim())
     .filter(s => /^https?:\/\//i.test(s) && !/\.svg(?:$|[?#])/i.test(s))
+    .filter(s => !isKnownPlaceholderImageUrl(s))
     .map(s => normalizeCmsUrl(s)) // P0-A: troca /l/ por /o/ no CMS UFG
+    .filter(Boolean)
     .filter(s => {
       if (seen.has(s)) return false;
       seen.add(s);
@@ -492,6 +501,109 @@ function publisherSourceIdentityConflict(item, post) {
   return null;
 }
 
+function publisherIdentityPost(item, titleOverride = '') {
+  const dates = item?.dates && typeof item.dates === 'object'
+    ? item.dates
+    : {};
+  return {
+    title: String(titleOverride || item?.sourceTitle || item?.title || '').trim(),
+    module: String(item?.module || '').trim(),
+    category: String(item?.category || '').trim(),
+    image_url: String(item?.image || '').trim(),
+    metadata: {
+      source_id: String(item?.sourceId || '').trim(),
+      source_url: String(item?.sourceUrl || item?.link || '').trim(),
+      source_registry_id: String(item?.sourceRegistryId || '').trim(),
+      source_title: String(item?.sourceTitle || '').trim(),
+      source_unit: String(item?.sourceUnit || item?.sourceName || '').trim(),
+      dates,
+      date_start: item?.dateStart || item?.eventStartsAt || dates.eventStartsAt || null,
+      date_end: item?.dateEnd || item?.eventEndsAt || dates.eventEndsAt || null,
+      deadline_date: item?.deadlineDate
+        || item?.applicationDeadline
+        || dates.applicationDeadline
+        || null,
+      action_fingerprints: Array.isArray(item?.actionFingerprints)
+        ? item.actionFingerprints
+        : [],
+    },
+  };
+}
+
+function publisherPairDecision(item, post) {
+  const incoming = publisherIdentityPost(item);
+  const visibleTitle = String(post?.title || '').trim();
+  const lifecycleConflict = publisherTitleIdentityConflict(incoming.title, visibleTitle);
+  if (lifecycleConflict) {
+    return {
+      autoHide: false,
+      review: true,
+      reasons: [],
+      conflicts: [lifecycleConflict],
+      signals: null,
+    };
+  }
+
+  // The visible post title is authoritative here. metadata.source_title can
+  // be inherited from an earlier bad merge and must not turn a reused form
+  // into a duplicate of an unrelated post.
+  const existing = {
+    ...post,
+    title: visibleTitle || String(post?.metadata?.source_title || '').trim(),
+  };
+  const candidateTitles = [...new Set([
+    incoming.title,
+    String(item?.formattedTitle || '').trim(),
+  ].filter(Boolean))];
+  let fallback = null;
+  for (const candidateTitle of candidateTitles) {
+    const decision = decideDuplicatePair(
+      publisherIdentityPost(item, candidateTitle),
+      existing,
+    );
+    if (decision.autoHide) return decision;
+    if (!fallback || decision.review) fallback = decision;
+  }
+  return fallback || decideDuplicatePair(incoming, existing);
+}
+
+function publisherTitleQueryWords(item, limit = 6) {
+  const stop = new Set([
+    'aberta', 'abertas', 'aberto', 'abertos', 'aluno', 'alunos', 'curso',
+    'cursos', 'edital', 'inscricao', 'inscricoes', 'oportunidade',
+    'oportunidades', 'processo', 'selecao', 'seletivo', 'ufg', 'vagas',
+  ]);
+  const titles = [...new Set([
+    item?.formattedTitle,
+    item?.title,
+    item?.sourceTitle,
+  ].map(value => String(value || '').trim()).filter(Boolean))];
+  const ranked = [];
+  for (let titleIndex = 0; titleIndex < titles.length; titleIndex += 1) {
+    const original = titles[titleIndex].normalize('NFC');
+    const rawTokens = original.match(/[\p{L}\p{N}]+/gu) || [];
+    for (const rawToken of rawTokens) {
+      if (rawToken.length < 5) continue;
+      const normalized = normalizeTitleForCompare(rawToken);
+      if (!normalized || stop.has(normalized)) continue;
+      const acronym = /^[A-Z][A-Z0-9-]{2,14}$/.test(rawToken);
+      const program = /^PPG[A-Z0-9]{1,12}$/i.test(rawToken);
+      ranked.push({
+        value: rawToken.toLocaleLowerCase('pt-BR'),
+        score: (program ? 1000 : 0)
+          + (acronym ? 500 : 0)
+          + ((titles.length - titleIndex) * 100)
+          + rawToken.length,
+      });
+    }
+  }
+  return [...new Map(
+    ranked
+      .sort((a, b) => b.score - a.score || a.value.localeCompare(b.value))
+      .map(entry => [entry.value, entry]),
+  ).values()].slice(0, Math.max(1, limit)).map(entry => entry.value);
+}
+
 function identityDates(value) {
   const dates = new Set();
   const visit = (entry) => {
@@ -701,12 +813,8 @@ async function findExistingPostsClient(supabase, item) {
 
   // 1. Mesmo sourceUrl (raw) OU canonical URL equivalente
   const itemSourceCanonical = canonicalUrl(item.sourceUrl || item.link);
-  const titleConfirmsCandidate = (post) => {
-    if (publisherSourceIdentityConflict(item, post)) return false;
-    return titlesMatch(identityTitle, post?.title)
-      || titlesMatch(identityTitle, post?.metadata?.source_title);
-  };
-  const selectFields = 'id, title, status, created_at, updated_at, view_count, share_count, coupon_clicks, description, image_url, metadata';
+  const titleConfirmsCandidate = post => publisherPairDecision(item, post).autoHide;
+  const selectFields = 'id, title, status, module, category, expires_at, moderation_reason, created_at, updated_at, view_count, share_count, coupon_clicks, description, image_url, metadata';
   const fetchExactMatches = (stage, applyFilter) => fetchPaginatedDedupRows(
     stage,
     ({ from, to }) => applyFilter(
@@ -778,7 +886,7 @@ async function findExistingPostsClient(supabase, item) {
 
   // 5. Título similar (slug match) — heurística: trigrama overlap ≥ 50%
   if (tNorm && tNorm.length >= 15) {
-    const words = tNorm.split(' ').filter(w => w.length >= 5).sort((a, b) => b.length - a.length).slice(0, 2);
+    const words = publisherTitleQueryWords(item);
     for (const word of words) {
       const data = await fetchExactMatches(
         `title_word_${word}`,
@@ -793,6 +901,25 @@ async function findExistingPostsClient(supabase, item) {
   }
 
   return candidates;
+}
+
+function buildDedupHiddenMetadata(post, keepId, now = new Date()) {
+  const timestamp = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
+  const reason = `Duplicata entre fontes mesclada no post canonico ${keepId}`;
+  return {
+    ...(post?.metadata && typeof post.metadata === 'object' ? post.metadata : {}),
+    hidden_by_dedup: true,
+    hidden_reason: reason,
+    hidden_at: timestamp,
+    merged_into_post_id: keepId,
+    cadu_reactivation_blocked: true,
+    cadu_reactivation_block: {
+      reason: 'dedup_confirmed',
+      detail: reason,
+      blocked_by: 'cadu-publisher-dedup',
+      blocked_at: timestamp,
+    },
+  };
 }
 
 function relevantExpiryFromItem(item, now = null) {
@@ -856,7 +983,7 @@ function relevantExpiryFromItem(item, now = null) {
  * com N publicáveis identificados.
  */
 async function mergeIntoExisting(supabase, postId, item, opts = {}) {
-  const { reactivateIfHidden = true, reactivateIfClosed = true } = opts;
+  const { reactivateIfHidden = false, reactivateIfClosed = true } = opts;
   // Pega o post existente
   const { data: existing, error: existingError } = await supabase
     .from('posts')
@@ -907,46 +1034,29 @@ async function mergeIntoExisting(supabase, postId, item, opts = {}) {
   const manualImage = existingMeta.manual_image === true || existingMeta.manual_image === 'true';
 
   const patch = {};
-  // Fix S4 (2026-07-25): GUARD contra reativação indevida. Se o post tem
-  // moderation_reason começando com "audit-" (sinal de hide MANUAL da
-  // auditoria por problema de imagem, data, etc), NÃO reativar.
-  // ANTES: mergeIntoExisting reativava QUALQUER post hidden quando havia
-  // item novo. Resultado: posts escondidos manualmente pela auditoria
-  // (com motivo) voltavam a published SEM checar o motivo.
-  // Exemplo: d163e99c (PPGCA imagem placeholder) foi escondido em 25/07
-  //   com moderation_reason='audit-2026-07-25-run-58267b6c: ...placeholder
-  //   EDITAL...', mas o dedup inline do run e57ac3fe o reativou.
-  // DEPOIS: se moderation_reason começa com "audit-", skip reativação.
-  const modReason = (existing.moderation_reason || '').toString();
-  const isAuditHide = modReason.startsWith('audit-');
-  if (isAuditHide) {
-    console.log(`   ⚠️ [S4] skip reativação: moderation_reason=audit-* (post escondido manualmente pela auditoria)`);
-  }
-  // Status: reativar se hidden ou closed (mas respeita guard de audit-)
-  if (reactivateIfHidden && existing.status === 'hidden' && !isAuditHide) {
-    patch.status = 'published';
-  }
-  // FIX 2026-07-15: reativar `closed` (auto-close por data passada) quando
-  // há um item NOVO para o mesmo source. Caso contrário o item novo vira
-  // `hidden` e o post closed fica inativo — UI mostra "encerrado" e nada
-  // é publicado, mesmo com N publicáveis identificados pelo curador.
-  // IMPORTANTE: o audit trail vai DIRETO no mergedMeta (não no patch)
-  // porque _reactivated_from_closed_at não é coluna da tabela `posts`
-  // — é uma chave dentro de metadata. Setar como campo top-level do
-  // patch faz o Supabase retornar:
-  //   "Could not find the '_reactivated_from_closed_at' column of 'posts'
-  //   in the schema cache"
-  // e o update INTEIRO falha (status: published não é aplicado).
+  // Hidden content is fail-closed. It can only return through an explicit
+  // metadata approval. Closed content may return when a new release carries a
+  // future semantic date and the prior closure was not manual/moderated.
+  const reactivation = decidePostReactivation(existing, {
+    incomingExpiry,
+    reactivateIfHidden,
+    reactivateIfClosed,
+  });
   const reactivationTrail = {};
-  if (reactivateIfClosed && existing.status === 'closed' && incomingExpiry) {
-    patch.status = 'published';
+  if (reactivation.allowed) {
+    patch.status = reactivation.targetStatus;
+  } else if (existing.status === 'hidden' || existing.status === 'closed') {
+    console.log(`   ⚠️ reativação bloqueada: ${reactivation.reason}`);
+  }
+  if (reactivation.allowed && existing.status === 'closed') {
     reactivationTrail._reactivated_from_closed_at = new Date().toISOString();
     reactivationTrail._reactivated_from_closed_by = 'cadu-publish-merge';
+    reactivationTrail._reactivation_reason = reactivation.reason;
   }
-  if (reactivateIfHidden && existing.status === 'hidden' && !isAuditHide) {
-    patch.status = 'published';
+  if (reactivation.allowed && existing.status === 'hidden') {
     reactivationTrail._reactivated_from_hidden_at = new Date().toISOString();
     reactivationTrail._reactivated_from_hidden_by = 'cadu-publish-merge';
+    reactivationTrail._reactivation_reason = reactivation.reason;
   }
 
   // Description: pegar a mais completa, MAS respeitar manual edits
@@ -1226,9 +1336,18 @@ async function main() {
         const cleanupFailedPostIds = [];
         for (const other of existingList) {
           if (other.id !== winner.id && other.status !== 'hidden') {
-            const { error: hideError } = await supabase.from('posts').update({ status: 'hidden' }).eq('id', other.id);
-            if (hideError) {
-              console.warn(`   ⚠️ não ocultou ${other.id.slice(0, 8)}: ${hideError.message}`);
+            const { data: hiddenRows, error: hideError } = await supabase
+              .from('posts')
+              .update({
+                status: 'hidden',
+                metadata: buildDedupHiddenMetadata(other, winner.id),
+              })
+              .eq('id', other.id)
+              .eq('status', other.status)
+              .select('id');
+            if (hideError || !Array.isArray(hiddenRows) || hiddenRows.length !== 1) {
+              const detail = hideError?.message || 'post mudou durante a limpeza';
+              console.warn(`   ⚠️ não ocultou ${other.id.slice(0, 8)}: ${detail}`);
               cleanupFailedPostIds.push(other.id);
             } else {
               console.log(`   🙈 escondeu ${other.id.slice(0, 8)} (mais novo)`);
@@ -1294,7 +1413,7 @@ async function main() {
     } else if (res.code === 'DUPLICATE') {
       // P1-merge (2026-06-12): Se cadu-publish detectou duplicata, mescla no existente
       if (res.post_id) {
-        const mergeApplied = await mergeIntoExisting(supabase, res.post_id, item, { reactivateIfHidden: true });
+        const mergeApplied = await mergeIntoExisting(supabase, res.post_id, item);
         if (!mergeApplied) {
           console.error(`   merge-cadu falhou para ${res.post_id.slice(0, 8)}`);
           errors++;
@@ -1379,6 +1498,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildDedupHiddenMetadata,
   canonicalUrl,
   DEDUP_RECENT_PAGE_SIZE,
   DedupQueryError,
@@ -1386,11 +1506,15 @@ module.exports = {
   fetchRecentPostsForCanonicalDedup,
   findExistingPostsClient,
   mergeIntoExisting,
+  normalizeImages,
   actionFingerprintConfirmsCandidate,
   hasItemLevelUrlIdentity,
   parsePublisherArgs,
   publicationDateFields,
   publishOutcomeIdentity,
+  publisherIdentityPost,
+  publisherPairDecision,
+  publisherTitleQueryWords,
   publisherSourceIdentityConflict,
   relevantExpiryFromItem,
   recordToItem,

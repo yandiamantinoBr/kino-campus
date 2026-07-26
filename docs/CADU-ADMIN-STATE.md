@@ -1573,3 +1573,45 @@ Resultado: 3 suites Jest passaram, 20 testes passaram.
 - Nao transformar `repairSuggestions` em escrita direta. A proxima etapa deve ser uma acao admin separada, com revisao humana/OpenClaw, log de auditoria e rollback por item.
 - Os 4 eventos sem data ficaram como `manual_event_date_review`; devem ser validados na fonte oficial antes de preencher `data_evento` ou reclassificar.
 - Itens `manual_deadline_review` precisam consulta da fonte oficial; nao havia data extraivel no texto publicado com confianca suficiente.
+
+# v14 - Deduplicação entre fontes e contrato de imagens (2026-07-26)
+
+## Escopo
+
+Auditoria do estado publicado, relatórios do `dedup-kino`, pipeline executada no
+OpenClaw/VPS e consistência de mídia no Supabase.
+
+## Resultado
+
+- 14 duplicatas reais ocultadas com vínculo para 13 posts canônicos.
+- 8 reparos de classificação, prazo ou expiração nas canônicas.
+- 3 publicações inválidas mantidas ocultas.
+- 3 capas `IconeX.png` reparadas com mídia específica.
+- 0 ocultações planejadas no dry-run final; 15 pares passaram pela classificação
+  semântica e restaram somente 4 revisões humanas de processos FUNAPE e cursos
+  SRI distintos.
+- Estado observado: 704 posts, sendo 140 `published`, 289 `hidden`, 261
+  `closed` e 14 `deleted`.
+
+## Correção estrutural
+
+O `events.json` entregava `ev.image` diretamente a `parseEventItem()`, sem o
+filtro aplicado às páginas HTML. O contrato compartilhado agora rejeita
+`IconeX.png`, `/weby/assets/` e `/assets/ufg*/` na curadoria, formatação,
+resolução/enriquecimento e publicação.
+
+Imagem ou URL idêntica passou a ser apenas evidência. Conflitos de processo,
+programa, curso, data e objeto impedem merge automático. Posts ocultos por
+auditoria/moderação não podem ser reativados pela publicação incremental.
+
+## Evidências e continuidade
+
+O relatório completo, os pares consolidados, os falsos positivos preservados,
+os caminhos dos artefatos no VPS e os testes estão em:
+
+`docs/auditoria/cadu-pipeline-publications-dedup-2026-07-26.md`
+
+OpenClaw implantado no VPS no commit
+`489e398a59237dd1fd62364c2ef46795fc72ca53`, com Gateway, `cadu-api`, Chrome/CDP
+e os dois containers saudáveis. Regressão KinoCampus: 256 suites e 4.624 testes
+aprovados.

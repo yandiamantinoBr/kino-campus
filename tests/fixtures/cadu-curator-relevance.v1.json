@@ -77,7 +77,7 @@
     {
       "id": "profmat-structured-upcoming-event",
       "title": "IV Workshop Online do PROFMAT nos dias 17, 18 e 19 de setembro de 2026",
-      "text": "Inscrições pelo formulário https://forms.example.edu/profmat até 15 de setembro de 2026. O evento virtual começa em 17 de setembro de 2026 e termina em 19 de setembro de 2026.",
+      "text": "Inscrições pelo formulário https://forms.gle/profmatFixture até 15 de setembro de 2026. O evento virtual começa em 17 de setembro de 2026 e termina em 19 de setembro de 2026.",
       "sourceName": "profmat",
       "linkUrl": "https://profmat.ime.ufg.br/e/39200",
       "jsonItem": {
@@ -118,7 +118,7 @@
     {
       "id": "old-correction-with-explicit-current-extension",
       "title": "Retificação prorroga prazo da Chamada 04/2024",
-      "text": "Novo prazo: inscrições prorrogadas até 20 de agosto de 2026 pelo formulário https://forms.example.edu/extension.",
+      "text": "Novo prazo: inscrições prorrogadas até 20 de agosto de 2026 pelo formulário https://forms.gle/extensionFixture.",
       "sourceName": "prpi",
       "linkUrl": "https://prpi.ufg.br/n/correction",
       "jsonItem": {
@@ -225,7 +225,7 @@
     {
       "id": "current-open-status-with-action-url",
       "title": "Edital 15/2026 recebe candidaturas para monitoria",
-      "text": "Candidaturas abertas no formulário https://forms.example.edu/monitoria. Confira os requisitos do edital.",
+      "text": "Candidaturas abertas no formulário https://forms.gle/monitoriaFixture. Confira os requisitos do edital.",
       "sourceName": "prograd",
       "linkUrl": "https://prograd.ufg.br/n/open-status",
       "jsonItem": {
@@ -271,8 +271,8 @@
         "sourceKind": "opportunity"
       },
       "expected": {
-        "decision": "discard",
-        "reason": "opportunity_without_active_window",
+        "decision": "publish",
+        "module": "oportunidades",
         "applicationDeadline": "2026-08-28",
         "applicationStatus": "open",
         "canApply": false

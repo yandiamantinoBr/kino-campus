@@ -2641,6 +2641,7 @@ function normalizeImageUrl(raw, baseUrl) {
     // P0-A (2026-06-12): troca /up/[N]/l/ por /up/[N]/o/ no CMS UFG.
     // O nome "/l/" é contra-intuitivo — é THUMBNAIL, não large.
     const upgraded = normalizeCmsUrl(clean);
+    if (!upgraded) return '';
     const url = new URL(upgraded, baseUrl);
     if (!/^https?:$/.test(url.protocol)) return '';
     if (/\.svg(?:$|[?#])/i.test(url.pathname)) return '';
@@ -4790,7 +4791,9 @@ function parseEventItem(ev, sourceName = 'eventos', baseUrl = 'https://ufg.br') 
   const beginAt = ev.begin_at || '';
   const endAt = ev.end_at || '';
   const place = ev.place || '';
-  const image = ev.image || '';
+  // events.json exposes the CMS image directly, so it must pass through the
+  // same institutional-image filter used by hydrated news pages.
+  const image = normalizeImageUrl(ev.image || '', baseUrl);
   const categories = ev.category_list || [];
   const viewCount = ev.view_count || 0;
   const externalUrl = ev.url && /^https?:\/\//i.test(ev.url) ? ev.url : '';
