@@ -1,7 +1,7 @@
 {
   "$schema": "./ufg-source-registry.schema.json",
   "schemaVersion": 1,
-  "registryVersion": "2026-07-22.3",
+  "registryVersion": "2026-07-26.1",
   "auditCutoff": "2026-07-22",
   "activation": {
     "state": "shadow",
@@ -11,9 +11,9 @@
   },
   "provenance": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "17ed8cbd602ae77fcd2196947a116d0a414bbf41cd9edc10499baaf90e1589fe",
-    "adjudicationContentSha256": "67150f0ae749c2945989e1ce32b056d7542a5d68dc9c868822b3e9696eb252cb",
-    "transportVerificationContentSha256": "029ad852e7df6b75245340228bef7f5c4557eabaeab5ca000abcb96cc2efb360",
+    "seedContentSha256": "d826698ca50e3450309869b6bc5b79d373397d0978f5ceacaf5a114fe048c7f9",
+    "adjudicationContentSha256": "465257fee2d4b064346456875de8aa1b9c388b0a22bd0362d65d2a8fbe6fd373",
+    "transportVerificationContentSha256": "e893a2815732738b09e6c5341bd1732dd6229253023623e11c89d0b4bc377c97",
     "schemaContentSha256": "1850871482d93a219deebe5d72ffcc556f492a0e1e053bea3b011ec9e1671892",
     "inputs": [
       {
@@ -26,9 +26,9 @@
       {
         "id": "openclaw_curator",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "f12ade64d04fe05542a203d9f35e349e125edc8a",
+        "commit": "f25652d7d908484f23bd18fadaa662b00876a9b1",
         "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
-        "contentSha256": "8f66402514a74e53285ed9e0fec36ec4dda88a81a4b800856a1c9b9363c84c7c"
+        "contentSha256": "f74d26d92765eb8639004963719283fb76a7bf64ab9f66d0bd37d6a91804409d"
       },
       {
         "id": "instagram_scanner",
@@ -3712,7 +3712,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -3962,7 +3962,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -4081,7 +4081,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -4299,7 +4299,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -4446,7 +4446,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -4908,7 +4908,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -5011,7 +5011,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -5146,7 +5146,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -5506,7 +5506,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -5625,7 +5625,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -5839,7 +5839,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -5986,7 +5986,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6108,7 +6108,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6193,7 +6193,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6283,7 +6283,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6361,7 +6361,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6439,7 +6439,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6517,7 +6517,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6595,7 +6595,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6673,7 +6673,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6751,7 +6751,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6829,7 +6829,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6907,7 +6907,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -6985,7 +6985,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7063,7 +7063,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7141,7 +7141,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7219,7 +7219,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7297,7 +7297,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7375,7 +7375,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7453,7 +7453,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7543,7 +7543,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7633,7 +7633,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7711,7 +7711,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7789,7 +7789,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7867,7 +7867,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -7945,7 +7945,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8023,7 +8023,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8101,7 +8101,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8179,7 +8179,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8257,7 +8257,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8335,7 +8335,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8413,7 +8413,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8491,7 +8491,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8569,7 +8569,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8647,7 +8647,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8725,7 +8725,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8803,7 +8803,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -8906,7 +8906,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -9041,7 +9041,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -9155,7 +9155,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -9592,7 +9592,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -9715,7 +9715,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"
@@ -9850,7 +9850,7 @@
           },
           {
             "kind": "legacy_snapshot",
-            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f12ade64d04fe05542a203d9f35e349e125edc8a/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
+            "url": "https://github.com/yandiamantinoBr/openclaw-cadu/blob/f25652d7d908484f23bd18fadaa662b00876a9b1/data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
             "field": "legacy_source_observation",
             "observedValue": "openclaw_curator: 1 observation(s)",
             "checkedAt": "2026-07-22"

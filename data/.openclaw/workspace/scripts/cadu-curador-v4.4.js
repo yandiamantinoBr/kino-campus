@@ -1230,6 +1230,24 @@ function applySourcePublicationPolicy(classification, item, site) {
     return classification;
   }
   const isEvent = item?.sourceKind === 'event';
+  const mediaDateConflict = isEvent
+    ? structuredEventMediaDateConflict(item, classification.temporal)
+    : null;
+  if (mediaDateConflict) {
+    return {
+      ...classification,
+      decision: 'review',
+      score: Math.min(classification.score, PUBLISH_THRESHOLD - 0.01),
+      temporal: {
+        ...classification.temporal,
+        structuredEventMediaDateConflict: mediaDateConflict,
+      },
+      reasons: [
+        ...(classification.reasons || []),
+        'structured_event_media_date_conflict',
+      ],
+    };
+  }
   const autoPublish = isEvent ? sourceEventsAutoPublish(site) : sourceNewsAutoPublish(site);
   if (autoPublish) return classification;
   return {
@@ -1241,6 +1259,50 @@ function applySourcePublicationPolicy(classification, item, site) {
       isEvent ? 'source_event_review_only' : 'source_news_review_only',
     ],
   };
+}
+
+function mediaDateHints(rawUrl) {
+  let value = String(rawUrl || '').trim();
+  if (!value) return [];
+  try {
+    value = decodeURIComponent(value);
+  } catch (_) {}
+  const pathname = value.split(/[?#]/, 1)[0];
+  const filename = pathname.slice(pathname.lastIndexOf('/') + 1);
+  const dates = [];
+  const add = (year, month, day) => {
+    const normalizedYear = Number(year) < 100 ? Number(year) + 2000 : Number(year);
+    const date = validIsoDate(normalizedYear, month, day);
+    if (date) dates.push(date);
+  };
+  let match;
+  const dayFirst = /(?:^|[^\d])(\d{1,2})[-_.](\d{1,2})[-_.](\d{2}|\d{4})(?=[^\d]|$)/g;
+  while ((match = dayFirst.exec(filename)) !== null) {
+    add(match[3], match[2], match[1]);
+  }
+  const yearFirst = /(?:^|[^\d])((?:19|20)\d{2})[-_.](\d{1,2})[-_.](\d{1,2})(?=[^\d]|$)/g;
+  while ((match = yearFirst.exec(filename)) !== null) {
+    add(match[1], match[2], match[3]);
+  }
+  return [...new Set(dates)].sort();
+}
+
+function structuredEventMediaDateConflict(item, temporal) {
+  const eventDate = String(temporal?.eventStartsAt || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return null;
+  const mediaUrls = [...new Set([
+    item?.image,
+    ...(Array.isArray(item?.images) ? item.images : []),
+  ].map(value => String(value || '').trim()).filter(Boolean))];
+  const eventMonthDay = eventDate.slice(5);
+  for (const url of mediaUrls) {
+    for (const mediaDate of mediaDateHints(url)) {
+      if (mediaDate !== eventDate && mediaDate.slice(5) === eventMonthDay) {
+        return { eventDate, mediaDate, mediaUrl: url };
+      }
+    }
+  }
+  return null;
 }
 
 function applySourcePageAvailabilityPolicy(classification, {
@@ -2652,6 +2714,20 @@ function normalizeImageUrl(raw, baseUrl) {
   };
 }
 
+function normalizeItemMedia(primary, candidates, baseUrl) {
+  const images = [];
+  const add = (value) => {
+    const normalized = normalizeImageUrl(value, baseUrl);
+    if (normalized && !images.includes(normalized)) images.push(normalized);
+  };
+  add(primary);
+  for (const candidate of Array.isArray(candidates) ? candidates : []) add(candidate);
+  return {
+    image: images[0] || '',
+    images: images.slice(0, 5),
+  };
+}
+
 function extractImages(html, baseUrl, primary, metadataHtml = '') {
   const urls = [];
   const add = (value) => {
@@ -2978,7 +3054,7 @@ function isPostResultEnrollmentContext(text, index, length = 0) {
   );
   const enrollmentIndex = lastMatchIndex(
     before,
-    /\b(?:data|periodo|prazo) (?:da|de|para) matricula\b|\bmatricula (?:dos|das) (?:aprovados|selecionados|classificados|convocados)\b/g,
+    /\b(?:data|periodo|prazo) (?:da|de|para) matricula\b|\bmatricula (?:dos|das) (?:aprovados|selecionados|classificados|convocados)\b|\bmatricula (?:para|de) (?:alunos? (?:especial|especiais)|ingressantes?|candidatos?)\b/g,
   );
   const reopenedApplicationIndex = lastMatchIndex(
     before,
@@ -3071,6 +3147,11 @@ function classifyDateRole(text, index) {
   if (isRestrictedEnrollmentContext(text, index) || isPostResultEnrollmentContext(text, index)) return 'contextDate';
 
   const before = normalizeText(text.slice(sentenceStart(text, index), index));
+  const after = normalizeText(text.slice(index, sentenceEnd(text, index)));
+  const applicationCompletionDeadline =
+    /\b(?:etapas?|passos?|procedimentos?)\b[^.!?;]{0,100}\b(?:concluid[ao]s?|finalizad[ao]s?)\b[^.!?;]{0,25}\bate(?: o dia)?$/.test(before) &&
+    /\bpara que (?:a |as )?(?:inscricao|inscricoes|candidatura|candidaturas|submissao|submissoes|matricula|matriculas)\b[^.!?;]{0,50}\b(?:seja|sejam|fique|fiquem)\b[^.!?;]{0,30}\b(?:efetivad[ao]s?|validad[ao]s?|concluid[ao]s?)\b/.test(after);
+  if (applicationCompletionDeadline) return 'applicationDeadline';
   const adjudicationPublicationIndex = lastMatchIndex(
     before,
     /\b(?:relacao|lista) (?:d[ae]s? )?(?:inscricoes?|candidaturas?) (?:deferidas?|indeferidas?|homologadas?|selecionadas?|aprovadas?)\b[^.!?;]{0,120}\b(?:divulgad[ao]s?|publicad[ao]s?|disponibilizad[ao]s?)\b/g,
@@ -3595,6 +3676,11 @@ function analyzeTemporalRelevance(text, html, webyDate, options = {}) {
   const applicationWindowStarted = !applicationOpensAt || applicationOpensAt <= TODAY_ISO;
   let applicationStatus = 'unknown';
   if (applicationSignal?.status === 'closed') {
+    applicationStatus = 'closed';
+  } else if (applicationDeadline && applicationDeadline < TODAY_ISO) {
+    // A tense such as "inscricoes estarao abertas" describes the original
+    // notice, not the status at collection time. An explicit elapsed endpoint
+    // is authoritative unless a later extension was parsed above.
     applicationStatus = 'closed';
   } else if (applicationSignal?.status === 'not_open') {
     applicationStatus = applicationOpensAt && applicationOpensAt > TODAY_ISO ? 'scheduled' : 'unknown';
@@ -5025,11 +5111,11 @@ function fetchNewsDetail(url, fetcher = fetchUrlResult) {
   // Extract image from the news page — v4.2: reject SVGs
   const imgMatch = contentHtml.match(/<img[^>]+src="([^"]+weby\/up\/\d+\/o\/[^"]+\.(png|jpg|jpeg))"/i) ||
     contentHtml.match(/<img[^>]+src="(https?:\/\/files\.cercomp\.ufg\.br\/weby\/[^"]+)"/i);
-  let image = imgMatch ? imgMatch[1] : '';
+  let image = normalizeImageUrl(imgMatch ? imgMatch[1] : '', url);
   // v4.2: Reject SVG images (logos institucionais) — handle query strings
   if (image && image.toLowerCase().split('?')[0].endsWith('.svg')) image = '';
-  const images = extractImages(contentHtml, url, image, html);
-  image = images[0] || image;
+  let images = extractImages(contentHtml, url, image, html);
+  ({ image, images } = normalizeItemMedia(image, images, url));
   // v4.3 (2026-06-08): Extract relevant links for post CTA
   const relevantLinks = extractRelevantLinks(contentHtml, url);
 
@@ -5586,6 +5672,12 @@ async function main() {
           }
         }
 
+        // A detail page can expose a social/template icon as its first image
+        // while the structured event feed already supplied the real artwork.
+        // Reconcile both lists after hydration so a placeholder cannot replace
+        // a valid primary image or survive in the generated artifact.
+        ({ image, images } = normalizeItemMedia(image, images, item.link || baseUrl));
+
         classification = applySourcePageAvailabilityPolicy(classification, {
           sourceKind: item.sourceKind || 'news',
           detailChecked,
@@ -5597,7 +5689,11 @@ async function main() {
         // those structured records, but require review until the source-level
         // event precision has been adjudicated. News opportunities from the
         // same source continue through the normal action/deadline gates.
-        classification = applySourcePublicationPolicy(classification, item, site);
+        classification = applySourcePublicationPolicy(classification, {
+          ...item,
+          image,
+          images,
+        }, site);
 
         // Check against published cache (link exact match > title fuzzy match)
         const isLinkDuplicate = item.link && publishedLinks.includes(item.link);
@@ -6394,6 +6490,7 @@ module.exports = {
   parseCuratorArgs,
   parseCurlFetchResult,
   parseEventItem,
+  normalizeItemMedia,
   officialReferenceNewsIdentities,
   parseDatePt,
   parseWebyJson,

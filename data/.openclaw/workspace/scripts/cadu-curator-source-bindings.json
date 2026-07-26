@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-22.3",
-  "registrySha256": "999bb2d7585f76a289b9a21619f866523da14abab303ee1cb25dc1c32f71cf46",
-  "curatorScriptSha256": "8f66402514a74e53285ed9e0fec36ec4dda88a81a4b800856a1c9b9363c84c7c",
+  "registryVersion": "2026-07-26.1",
+  "registrySha256": "d6070fa6b031d8f82cf2e76c683548b67c717cb3516469e58974caceac03aa78",
+  "curatorScriptSha256": "f74d26d92765eb8639004963719283fb76a7bf64ab9f66d0bd37d6a91804409d",
   "bindings": [
     {
       "legacyId": "agro",
