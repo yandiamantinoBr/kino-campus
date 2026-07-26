@@ -123,8 +123,8 @@ if (reactivateIfHidden && existing.status === 'hidden' && !isAuditHide) {
 ## Estado final (2026-07-25 23:30 BRT)
 
 - **Total posts:** 700
-- **Published:** 169 → 153 (-16: 14 antigos + 2 duplicatas)
-- **Hidden:** 260 → 276 (+16)
+- **Published:** 169 → 146 (-23: 14 antigos + 2 duplicatas + 1 reativado + 3 imgs dedupe + 4 imgs dedupe)
+- **Hidden:** 260 → 283 (+23)
 - **Closed:** 257 (mesmo)
 - **Deleted:** 14 (mesmo)
 
@@ -141,6 +141,7 @@ if (reactivateIfHidden && existing.status === 'hidden' && !isAuditHide) {
 | S2 | 2026-07-25 | scrub past dates com janela plausivel (-30/+540 dias) | b876a375 |
 | S3 | 2026-07-25 | auto-hide posts com data passada (eventos + oportunidades) | aad21472 |
 | S4 | 2026-07-25 | guard contra reativação indevida (audit-*) | ee16a084 |
+| S5 | 2026-07-25 | dedup-kino-cron.sh (cron a cada 6h) | a90c942c |
 | T | 2026-07-25 | cross-matcher evita many-to-one matching | d78d65e |
 | T2 | 2026-07-25 | 3 handles IG (em.ufg, ppgban.ufg, ppgecoevolufg) | 2f1ee266 |
 | T3 | 2026-07-25 | 1 handle IG (ppgeo.ufg) | e3d09941 |
@@ -153,7 +154,7 @@ if (reactivateIfHidden && existing.status === 'hidden' && !isAuditHide) {
 | Z | 2026-07-25 | flag post existente + skip_publish para blocked | 579c8be9 |
 | Recovery | 2026-07-25 | sync-vps-to-clone.sh | ef2129db |
 
-**Total:** 28 Fixes (A até Z + S2, S3, S4) + 1 Recovery.
+**Total:** 29 Fixes (A até Z + S2, S3, S4, S5) + 1 Recovery.
 
 ---
 
