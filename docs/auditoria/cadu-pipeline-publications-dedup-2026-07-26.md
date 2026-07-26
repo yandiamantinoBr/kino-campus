@@ -231,17 +231,155 @@ da curadoria; houve apenas cache ainda não lido após o restart.
   `af401a6d922d2c7095fc01cb4fe0cdebff80653f`.
 - OpenClaw PR `#92`: contrato compartilhado de rejeição de placeholders; merge
   `489e398a59237dd1fd62364c2ef46795fc72ca53`.
+- OpenClaw PR `#93`: correções de interpretação temporal para prazo encerrado
+  escrito no futuro, matrícula administrativa posterior ao resultado, inscrição
+  em múltiplas etapas e conflito entre data estruturada e ano da arte; merge
+  `ac816c5`.
+- OpenClaw PR `#94`: reconciliação de mídia após hidratação e bloqueio
+  fail-closed de promoção de artefato com placeholder; merge `716c9f2`.
+- OpenClaw PR `#95`: versionamento coerente dos artefatos do registro de fontes
+  após as mudanças do curador; merge
+  `749c05beff5d81253d3b5f36d4bf076950186740`.
 - Suite OpenClaw: 51/51 testes aprovados.
-- Espelho KinoCampus: 256 suites, 4.624 testes e 3 snapshots aprovados.
-- Registro de fontes espelhado e fixado no commit OpenClaw
-  `489e398a59237dd1fd62364c2ef46795fc72ca53`.
-- VPS implantado no commit `489e398a59237dd1fd62364c2ef46795fc72ca53`,
-  com árvore Git limpa.
+- Espelho KinoCampus: 256 suites, 4.629 testes e 3 snapshots aprovados.
+- Contratos novos no espelho KinoCampus: 5 suites e 73 testes aprovados.
+- Registro de fontes espelhado na versão `2026-07-26.1` e fixado no commit
+  OpenClaw `749c05beff5d81253d3b5f36d4bf076950186740`.
+- Implantação intermediária no commit
+  `489e398a59237dd1fd62364c2ef46795fc72ca53`, usada para validar o contrato
+  inicial de mídia e depois substituída pelo release final descrito abaixo.
 - `openclaw-hahq-cadu-api` e `openclaw-hahq-openclaw-1` estavam `healthy`.
 - O Gateway respondeu `ok=true`, `status=live`; o CDP respondeu Chrome
   `149.0.7827.196`, protocolo `1.3`, na porta interna efetiva `18800`.
 - Os hashes SHA-256 dos seis scripts alterados são idênticos no release e no
   bind mount `/data/.openclaw/workspace/scripts`.
+
+## Validação final da curadoria em produção
+
+### Cron horário `d82e66d9-8242-40bd-9c08-f584a52957b5`
+
+O ciclo encerrado às 18:33:05 UTC executou o curador ainda antes da correção de
+reconciliação pós-hidratação:
+
+- 117 fontes tentadas: 115 com resposta, 1 vazia, 11 sem feed, 4 em quarentena
+  e 1 interrompida pelo orçamento global;
+- 2.517 itens: 19 publicáveis, 18 para revisão e 2.480 descartados;
+- `collectionComplete=false`, exclusivamente por
+  `source_budget_exhausted:1`;
+- o IPTSP foi a fonte interrompida, mas voltou a entregar 25 itens no run
+  controlado seguinte. A evidência caracteriza degradação transitória, não URL
+  ou binding permanentemente quebrado;
+- hash do contrato do artefato
+  `914a24c...` e SHA-256 do arquivo canônico
+  `23573059...`.
+
+Esse artefato ainda continha 17 ocorrências de placeholder, duas delas em itens
+publicáveis. A investigação mostrou a causa: a coleta estruturada já possuía a
+arte específica em `images[]`, mas a hidratação da página de detalhe
+sobrescrevia `image` com `IconeX.png`. Filtrar apenas a entrada e a publicação
+não bastava; era necessário reconciliar a mídia depois da hidratação e impedir
+a promoção do artefato inválido.
+
+### Run controlado `e8650794-e42e-4a82-afb7-392b56aa68fd`
+
+Foi executado em diretório isolado, no modo site-only, sem IA, Instagram,
+publicação ou alteração do artefato canônico:
+
+- 117/117 fontes tentadas;
+- 116 fontes com resposta, 1 vazia, 11 sem feed, 4 em quarentena e nenhuma
+  interrompida por orçamento;
+- `collectionComplete=true` e `collectionIssues=[]`;
+- 2.526 itens: 14 publicáveis, 18 para revisão e 2.494 descartados;
+- 1.191 descartes por expiração e 348 por duplicidade intrarrun;
+- zero ocorrências de `IconeX.png`, `/weby/assets/` ou `/assets/ufg*/` nos
+  campos de mídia;
+- SHA-256 do artefato isolado
+  `54ebfc0a976c1963ef012c8740a53b8d706988c15e7191c00eb9c4eb9aaa1733`.
+
+Casos reais conferidos:
+
+| Caso | Resultado | Evidência principal |
+|---|---|---|
+| Maratona de Programação do INF | `publish` | prazo de conclusão das duas etapas em 10/08/2026 e evento em 29/08/2026 |
+| Aluno especial PPGCC | `discard` | inscrições encerradas em 13/07/2026, apesar do texto original usar “estarão abertas” |
+| Aluno especial PPGCA | `discard` | inscrições encerradas em 24/07/2026; datas futuras eram resultado e matrícula de aprovados |
+| Seleção PPGENFS | `discard` | prazo encerrado em 24/07/2026 |
+| XIX Seminário de Estágio | `discard` | prazo encerrado em 10/06/2026 |
+| Título emérito, evento 38329 | `review` | evento estruturado em 21/10/2026, mas arquivo da arte indica 21/10/2025 |
+
+O arquivo canônico manteve o SHA-256 anterior durante esse teste, comprovando
+que o isolamento funcionou. O diretório temporário foi removido somente depois
+da cópia e validação do artefato.
+
+### Primeiro cron normal após a correção
+
+O cron `d291377a-035a-4a3f-abbc-294ceabfa92d` iniciou às 19:20:02 UTC e
+concluiu às 19:31:46 UTC já no release final:
+
+- 117/117 fontes tentadas, 116 com resposta, 1 vazia, 11 sem feed, 4 em
+  quarentena e zero interrupções por orçamento;
+- `collectionComplete=true` e `collectionIssues=[]`;
+- 2.526 itens: 14 publicáveis, 18 para revisão e 2.494 descartados;
+- 1.191 descartes por expiração e 348 por duplicidade intrarrun;
+- zero placeholders nos campos de mídia do arquivo promovido;
+- `contentSha256` do contrato
+  `4bd096dd4a6e2da6acd18a5146e09560183abc6aa50be148ca69aafcdafdda9b`;
+- SHA-256 do arquivo canônico
+  `c033867b1a65fd18efbe211305837230f140453ff35c88b5a0a71314be352164`.
+
+O evento UFG `38329` aparece em `reviewable` com
+`structured_event_media_date_conflict`; Maratona do INF permanece em
+`publishable`; PPGCC, PPGCA, PPGENFS e XIX Seminário de Estágio aparecem em
+`discarded` com os prazos encerrados. Portanto o mesmo comportamento observado
+no run isolado foi reproduzido na promoção canônica.
+
+### Estado implantado
+
+O release final do VPS está no commit
+`749c05beff5d81253d3b5f36d4bf076950186740`, branch `main`, árvore limpa. Os
+containers `openclaw-hahq-openclaw-1` e `openclaw-hahq-cadu-api` estão
+saudáveis. Após leitura autenticada de `/api/feed`, o health confirmou:
+
+- `cache_warm=true`;
+- 2 artefatos;
+- `stale=false`;
+- registro de fontes `2026-07-26.1`;
+- SHA-256 do registro
+  `d6070fa6b031d8f82cf2e76c683548b67c717cb3516469e58974caceac03aa78`;
+- estado do registro `shadow`, somente leitura e sem ativação do coletor ou do
+  publisher legado.
+
+Depois da promoção, `/api/feed?limit=100&offset=0&with_meta=true` respondeu
+`200` com 44 itens. O `latest_collection_at` do health passou a corresponder ao
+`generatedAt` da coleta de 19:31:44 UTC, mantendo `cache_warm=true`, 2
+artefatos e `stale=false`.
+
+Os três aliases legados `ppgef`, `ppgenf` e `ppgac` permanecem em quarentena,
+mas possuem sucessores operacionais no registro. `revistas-ufg` continua
+quarentenada por incompatibilidade de conteúdo/plataforma e não deve ser
+reativada como fonte de eventos ou oportunidades sem nova evidência oficial.
+
+### Verificação read-only no Supabase
+
+A consulta final ao estado publicado confirmou:
+
+- zero posts `published` para as fontes problemáticas PPGCC, PPGCA, PPGENFS,
+  XIX Seminário de Estágio e evento UFG `38329`;
+- os dois registros encontrados nesse conjunto estão `hidden`, com razão de
+  moderação explícita;
+- zero placeholders em `posts.image_url`;
+- zero placeholders em `post_media.url` de posts publicados;
+- três correspondências em `metadata` são somente o campo histórico
+  `manual_data_corrections.previous_url`, que preserva auditabilidade da
+  correção e não é mídia exibida;
+- zero grupos com título normalizado idêntico entre posts Cadu publicados;
+- um grupo compartilha exatamente a mesma `source_url`: processos FUNAPE nº
+  38/2026 e nº 41/2026. São objetos, cargos e números de processo distintos em
+  uma página agregadora comum, portanto devem permanecer separados.
+
+Essa distinção é importante: apagar o histórico de correção faria a auditoria
+parecer limpa, mas perderia rastreabilidade; deduplicar apenas por URL ocultaria
+publicações legítimas de fontes agregadoras.
 
 ## Riscos residuais e próximas ações
 

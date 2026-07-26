@@ -1623,3 +1623,94 @@ A curadoria horária `a7fee871-38ff-43f0-89e0-8c7b40e7d731` concluiu às
 primeira leitura autenticada do Feed Coletado aqueceu o cache e confirmou 44
 itens, 2 artefatos válidos, 0 inválidos, `status=ready` e `stale=false`. O
 `cache_warm=false` inicial era lazy load, não falha da coleta.
+
+# v15 - Integridade temporal, mídia pós-hidratação e registro versionado (2026-07-26)
+
+## Problemas confirmados
+
+- O texto “as inscrições estarão abertas” mantinha uma oportunidade como ativa
+  mesmo depois do prazo explícito.
+- Datas futuras de resultado ou matrícula administrativa podiam ser confundidas
+  com nova janela pública de candidatura.
+- Inscrições em múltiplas etapas não reconheciam necessariamente a data limite
+  para concluir todas as etapas.
+- Eventos estruturados podiam carregar uma arte de outro ano sem revisão.
+- A hidratação da página de detalhe podia substituir uma arte válida de
+  `images[]` por `IconeX.png` em `image`.
+- O registro de fontes havia mudado sem incremento de versão, e o sincronizador
+  oficial do KinoCampus bloqueou corretamente essa inconsistência.
+
+## Correções consolidadas
+
+- O curador fecha prazo explícito vencido independentemente do tempo verbal do
+  texto original.
+- Matrícula de candidato já selecionado é contexto administrativo, não nova
+  oportunidade pública.
+- A data de conclusão de inscrição em múltiplas etapas passa a ser prazo.
+- Divergência entre a data estruturada do evento e o ano inferível da arte
+  encaminha o item para revisão.
+- `normalizeItemMedia()` reconcilia a mídia depois da hidratação, preservando a
+  arte específica e removendo placeholders.
+- O committer recusa promoção quando detecta
+  `placeholder_image_present`.
+- Registro de fontes incrementado para `2026-07-26.1` e espelhado no commit
+  OpenClaw `749c05beff5d81253d3b5f36d4bf076950186740`.
+
+## Evidência operacional
+
+O cron `d82e66d9-8242-40bd-9c08-f584a52957b5` encerrou às 18:33:05 UTC com
+2.517 itens, 19 publicáveis, 18 para revisão e 2.480 descartados. Uma de 117
+fontes atingiu o orçamento global. O artefato revelou 17 placeholders, dois em
+publicáveis, e permitiu localizar a sobrescrita pós-hidratação.
+
+O run controlado `e8650794-e42e-4a82-afb7-392b56aa68fd`, executado sem IA,
+Instagram ou publicação e em diretório isolado, confirmou:
+
+- 117/117 fontes tentadas e nenhuma interrompida por orçamento;
+- 2.526 itens, 14 publicáveis, 18 para revisão e 2.494 descartados;
+- `collectionComplete=true`;
+- zero placeholders nos campos de mídia;
+- IPTSP novamente operacional, com 25 itens;
+- artefato SHA-256
+  `54ebfc0a976c1963ef012c8740a53b8d706988c15e7191c00eb9c4eb9aaa1733`;
+- arquivo canônico inalterado durante o teste.
+
+Casos conferidos no conteúdo real: Maratona do INF permaneceu publicável;
+seleções PPGCC, PPGCA e PPGENFS e o XIX Seminário de Estágio foram descartados
+por prazo encerrado; o evento UFG `38329` foi retido para revisão por conflito
+entre a data estruturada de 2026 e a arte de 2025.
+
+## Estado vivo verificado
+
+- VPS no commit `749c05beff5d81253d3b5f36d4bf076950186740`, `main` limpa.
+- OpenClaw e `cadu-api` saudáveis.
+- `/api/feed` autenticado respondeu `200`.
+- Health após aquecimento: `cache_warm=true`, 2 artefatos e `stale=false`.
+- Registro no `cadu-api`: versão `2026-07-26.1`, estado `shadow`, somente
+  leitura, sem ativação de coleta ou publicação por esse espelho.
+- Curador e bindings do KinoCampus são byte a byte idênticos ao OpenClaw.
+- Contratos direcionados do espelho: 5 suites e 73 testes aprovados.
+- Regressão completa: 256 suites, 4.629 testes e 3 snapshots aprovados.
+- Supabase, leitura final: zero mídia-placeholder ativa, zero títulos Cadu
+  publicados exatamente duplicados e zero posts ativos das fontes temporais
+  problemáticas. As três menções restantes a `IconeX` estão somente no
+  histórico auditável `manual_data_corrections.previous_url`.
+- Primeiro cron normal no release final:
+  `d291377a-035a-4a3f-abbc-294ceabfa92d`, concluído às 19:31:46 UTC com
+  117/117 fontes tentadas, zero `budget-skip`, 2.526 itens e zero placeholders.
+- Artefato canônico promovido com SHA-256
+  `c033867b1a65fd18efbe211305837230f140453ff35c88b5a0a71314be352164`;
+  Feed Coletado recarregado com 44 itens e `stale=false`.
+
+## Limites e continuidade
+
+- O run controlado não promoveu o artefato por definição; a substituição
+  canônica já ocorreu no cron normal `d291377a`, submetida ao novo committer
+  fail-closed.
+- `ppgef`, `ppgenf` e `ppgac` seguem como aliases legados em quarentena, com
+  sucessores operacionais. `revistas-ufg` permanece quarentenada por
+  incompatibilidade de conteúdo/plataforma.
+- O registro espelhado ainda é `shadow`; ativação deve permanecer uma decisão
+  separada, com rollout e rollback próprios.
+- Evidências completas, hashes, decisões por caso e histórico dos PRs estão em
+  `docs/auditoria/cadu-pipeline-publications-dedup-2026-07-26.md`.
