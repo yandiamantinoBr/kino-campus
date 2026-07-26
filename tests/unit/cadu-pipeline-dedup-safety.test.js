@@ -174,6 +174,19 @@ describe('Cadu deterministic post identity', () => {
     expect(decision.autoHide).toBe(false);
   });
 
+  test('same event acronym and date do not merge complementary programming posts', () => {
+    const decision = decideDuplicatePair(
+      post('20º SNHCT: confira a programação de abertura e atividades culturais do dia 27', {
+        deadline_date: '2026-07-31',
+      }),
+      post('Programação completa do 20º SNHCT disponível', {
+        deadline_date: '2026-07-31',
+      }),
+    );
+    expect(decision.autoHide).toBe(false);
+    expect(decision.review).toBe(false);
+  });
+
   test('same Weby host and slug is deterministic identity', () => {
     const decision = decideDuplicatePair(
       post('CERISE Summit 2026'),

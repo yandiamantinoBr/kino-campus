@@ -437,7 +437,13 @@ function decideDuplicatePair(a, b, evidence = {}) {
           )
           || (
             signals.sharedAcronyms.length > 0
-            && signals.titles.distinctiveShared.length >= 2
+            && (
+              signals.titles.distinctiveShared.length >= 3
+              || (
+                signals.titles.shared.length >= 4
+                && signals.titles.containment >= 0.7
+              )
+            )
           )
           || (
             signals.titles.strong
