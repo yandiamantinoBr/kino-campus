@@ -1586,7 +1586,9 @@ OpenClaw/VPS e consistência de mídia no Supabase.
 - 14 duplicatas reais ocultadas com vínculo para 13 posts canônicos.
 - 8 reparos de classificação, prazo ou expiração nas canônicas.
 - 3 publicações inválidas mantidas ocultas.
-- 3 capas `IconeX.png` reparadas com mídia específica.
+- 5 referências de capa `IconeX.png` reparadas ou alinhadas com mídia
+  específica; a varredura dos 140 posts publicados retornou 0 placeholders
+  ativos em `posts`, metadados e `post_media`.
 - 0 ocultações planejadas no dry-run final; 15 pares passaram pela classificação
   semântica e restaram somente 4 revisões humanas de processos FUNAPE e cursos
   SRI distintos.
