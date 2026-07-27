@@ -10,8 +10,8 @@ verdade.
 Fontes observadas:
 
 - OpenClaw `main` no commit
-  `1f3a456f564d7a31b6291de6e0621d17e8122806`;
-- `cadu-api` 0.5.10 saudável no VPS;
+  `2b0ca22cdd9751521234b60f191550f009d90e5d`;
+- `cadu-api` 0.5.11 saudável no VPS;
 - preflight profundo autenticado dos nove estágios;
 - run completa `b6c75272-ab61-4584-b06c-f45036ecc921`;
 - simulações globais `5eaadbbb-fa13-4d15-882a-ea24d3596182` e
@@ -212,16 +212,21 @@ Executar escrita sem ganho de deduplicação aumentaria ruído de metadados.
 
 ## Melhorias de observabilidade
 
-OpenClaw PR #103:
+OpenClaw PRs #103, #104 e #105:
 
-- `cadu-api` 0.5.10;
+- `cadu-api` 0.5.11;
 - `--emit-cadu-markers` somente no estágio isolado do Admin;
 - etapa e resultado estruturados em sucesso e falha;
 - falha de configuração/autenticação é fail-closed;
+- contadores `errors: 0` e `failed: 0` não viram avisos falsos; contadores
+  positivos e falhas textuais continuam visíveis;
+- cobertura Instagram degradada identifica o perfil, o motivo técnico e quantos
+  itens vieram do retry durável. No B6: `@praeufg`,
+  `grid_observed_items_invalid`, 6 itens recuperados;
 - 55/55 arquivos de teste Node;
-- 153 testes Python aprovados, 28 ignorados por plataforma/dependência;
+- 155 testes Python aprovados, 28 ignorados por plataforma/dependência;
 - 167/167 scripts aprovados no syntax check;
-- 440 arquivos verificados pelo scanner de segredos.
+- 442 arquivos verificados pelo scanner de segredos.
 
 KinoCampus:
 

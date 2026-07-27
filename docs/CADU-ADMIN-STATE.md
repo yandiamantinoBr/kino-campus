@@ -1719,11 +1719,14 @@ entre a data estruturada de 2026 e a arte de 2025.
 
 ## Estado vivo
 
-- OpenClaw em `1f3a456f564d7a31b6291de6e0621d17e8122806`.
-- `cadu-api` 0.5.10, container saudável.
+- OpenClaw em `2b0ca22cdd9751521234b60f191550f009d90e5d`.
+- `cadu-api` 0.5.11, container saudável.
 - Preflight profundo: 9/9 estágios executáveis, zero bloqueios e zero warnings.
 - Pipeline completa `b6c75272`: 2.106,5 s, 3.405 itens, 25 novos, 1 criado,
   7 mesclados e `outcome_status=success`.
+- O parser semântico elimina oito falsos avisos do B6 causados por contadores
+  zerados. O aviso restante representa cobertura IG degradada: `@praeufg`
+  retornou grade vazia, mas 6 itens foram preservados pelo retry durável.
 - Dedup global `dfc30e45`: 137 ativos, 36 candidatos textuais, 7 pares de
   imagem similar, 2 avaliações IA, zero hides e 4 revisões planejadas.
 - O run global agora termina com etapa `dedup` e

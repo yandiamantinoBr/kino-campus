@@ -426,11 +426,16 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
 
 - Fonte executável dos estágios: `openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`.
   `pipeline/PIPELINE_STAGES.json` no KinoCampus é somente snapshot documental.
-- Runtime implantado: OpenClaw `1f3a456f564d7a31b6291de6e0621d17e8122806`,
-  `cadu-api` 0.5.10, 9/9 estágios executáveis no preflight profundo.
+- Runtime implantado: OpenClaw `2b0ca22cdd9751521234b60f191550f009d90e5d`,
+  `cadu-api` 0.5.11, 9/9 estágios executáveis no preflight profundo.
 - Pipeline completa de referência:
   `b6c75272-ab61-4584-b06c-f45036ecc921`, 2.106,5 s, 3.405 itens,
   25 realmente novos, 1 criado, 7 mesclados, sucesso.
+- O parser 0.5.11 remove os oito falsos avisos de `errors: 0`/`failed: 0`
+  desse run e preserva o aviso real de cobertura Instagram. O scanner agora
+  explicita o perfil: `@praeufg`, `grid_observed_items_invalid`, com 6 itens
+  recuperados do retry durável. A nova linha detalhada vale para runs futuros;
+  o log histórico B6 permanece imutável.
 - Dedup isolado padrão:
   `--all-active --report --no-auto-close --emit-cadu-markers --dry-run`.
   O modo real troca `--report` por `--auto-apply`; não executa auto-close.
