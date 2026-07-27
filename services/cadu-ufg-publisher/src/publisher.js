@@ -93,6 +93,10 @@ function hasOwn(value, key) {
 }
 
 function metadataContains(actual, expected) {
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual) || actual.length !== expected.length) return false;
+    return expected.every((value, index) => metadataContains(actual[index], value));
+  }
   if (isPlainObject(expected)) {
     if (!isPlainObject(actual)) return false;
     return Object.entries(expected).every(([key, value]) => metadataContains(actual[key], value));
