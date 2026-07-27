@@ -678,7 +678,10 @@ class SupabasePublisher {
         }
         const coverPatch = withCoverImage(row, prepared.images[0]);
         row.image_url = coverPatch.image_url;
-        row.metadata = coverPatch.metadata;
+        row.metadata = {
+          ...coverPatch.metadata,
+          gallery_image_urls: prepared.images.slice(),
+        };
       }
 
       const post = await this.patchPost(postId, row);
@@ -710,6 +713,9 @@ class SupabasePublisher {
       if (row.image_url) {
         expectedMetadata.image_url = row.image_url;
         expectedMetadata.cover_url = row.image_url;
+      }
+      if (imageCandidates.length) {
+        expectedMetadata.gallery_image_urls = prepared.images.slice();
       }
       const validation = this.validatePostPatch(fresh, row, expectedMetadata);
       if (!validation.ok) {

@@ -59,7 +59,12 @@ O publisher agora prepara a imagem antes de alterar o post. Se o upload para
 - `posts.image_url`
 - `metadata.image_url`
 - `metadata.cover_url`
+- `metadata.gallery_image_urls`
 - `post_media` com `is_cover=true`
+
+`metadata.gallery_image_urls` deve espelhar exatamente a lista ordenada gravada
+em `post_media`. Manter a galeria antiga após trocar a capa pode fazer o frontend
+ou o preview social continuarem exibindo a mídia anterior.
 
 Se o upload falhar para uma imagem oficial publica da UFG, o fallback externo
 continua permitido por padrao. O erro aparece em `result.media.uploads`.

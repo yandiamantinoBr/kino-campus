@@ -904,7 +904,14 @@ describe('cadu-ufg-publisher', () => {
     });
     publisher.session = { access_token: 'token', user: { id: 'user-1' } };
     publisher.getPost = jest.fn()
-      .mockResolvedValueOnce({ id: 'post-1', image_url: 'https://old.local/old.jpg', metadata: { link: 'https://old.local' } })
+      .mockResolvedValueOnce({
+        id: 'post-1',
+        image_url: 'https://old.local/old.jpg',
+        metadata: {
+          link: 'https://old.local',
+          gallery_image_urls: ['https://old.local/old.jpg'],
+        },
+      })
       .mockResolvedValueOnce({
         id: 'post-1',
         image_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
@@ -912,6 +919,7 @@ describe('cadu-ufg-publisher', () => {
           link: 'https://new.local',
           image_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
           cover_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+          gallery_image_urls: ['https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg'],
         },
       });
     publisher.getPostMedia = jest.fn(async () => [{ url: 'https://old.local/old.jpg' }]);
@@ -942,6 +950,7 @@ describe('cadu-ufg-publisher', () => {
       link: 'https://new.local',
       image_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
       cover_url: 'https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg',
+      gallery_image_urls: ['https://project.supabase.co/storage/v1/object/public/kino-media/post-media/post-1/cover.jpg'],
     });
   });
 
