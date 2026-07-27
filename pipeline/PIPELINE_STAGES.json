@@ -1,55 +1,55 @@
 {
   "$schema": "https://kinocampus.com.br/schemas/pipeline-stages.v1.json",
-  "_comment": "Catálogo canônico de estágios da pipeline do Cadu. Single source of truth — cadu-api/pipeline.py deve espelhar este arquivo. Sincronização manual por enquanto.",
+  "_comment": "Snapshot documental do catálogo implantado. A fonte executável é openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py; args de modo (simulação/real) são resolvidos pelo cadu-api.",
   "stages": [
     {
       "id": "curator",
-      "name": "Curador UFG v4.4",
-      "description": "Varre sites UFG Tier 1+2 (~80s) e classifica itens publicáveis",
-      "script": "scripts/cadu-curador-v4.4.js",
-      "args": ["--daily"],
-      "estimated_sec": 90,
+      "name": "Curador UFG 4.4",
+      "description": "Varre sites UFG dos níveis 1 e 2 no modo diário e classifica itens publicáveis",
+      "script": "scripts/pipeline-kino.js",
+      "args": ["--stage=curator"],
+      "estimated_sec": 180,
       "category": "scan"
     },
     {
       "id": "ig",
       "name": "Scanner Instagram",
-      "description": "14 perfis UFG via browser CDP (~45s)",
+      "description": "Varre perfis institucionais da UFG pelo navegador CDP e enriquece publicações relevantes",
       "script": "scripts/scan-ig-browser.js",
       "args": [],
-      "estimated_sec": 50,
+      "estimated_sec": 420,
       "category": "scan"
     },
     {
       "id": "duplicates",
-      "name": "Enriquecimento Duplicatas",
-      "description": "Atualiza posts existentes com info nova de itens descartados",
-      "script": "scripts/enrich-duplicates.js",
-      "args": [],
+      "name": "Enriquecimento de duplicatas",
+      "description": "Atualiza posts existentes com informações novas de itens descartados",
+      "script": "scripts/pipeline-kino.js",
+      "args": ["--stage=duplicates"],
       "estimated_sec": 60,
       "category": "process"
     },
     {
       "id": "format",
       "name": "Formatador IA",
-      "description": "Gera descrições canônicas (padrão CONPEEX) com IA",
-      "script": "scripts/formatador-ia.js",
-      "args": [],
-      "estimated_sec": 120,
+      "description": "Gera descrições canônicas a partir do _truly_new do dia",
+      "script": "scripts/pipeline-kino.js",
+      "args": ["--stage=format"],
+      "estimated_sec": 300,
       "category": "process"
     },
     {
       "id": "publish",
       "name": "Publicação",
-      "description": "Publica itens selecionados via Edge Function cadu-publish",
-      "script": "scripts/publish_auto_v5.js",
-      "args": [],
+      "description": "Publica o _formatted do dia via Edge Function cadu-publish",
+      "script": "scripts/pipeline-kino.js",
+      "args": ["--stage=publish"],
       "estimated_sec": 60,
       "category": "publish"
     },
     {
       "id": "enrich",
-      "name": "Enriquecimento Imagens",
+      "name": "Enriquecimento de imagens",
       "description": "Adiciona imagens complementares aos posts publicados",
       "script": "scripts/enrich-images.js",
       "args": ["--from-recent", "20"],
@@ -58,17 +58,17 @@
     },
     {
       "id": "dedup",
-      "name": "Dedup Visual + Textual",
-      "description": "Detecta posts duplicados via pHash + shingles Jaccard",
+      "name": "Deduplicação visual e textual",
+      "description": "Audita todos os posts ativos e consolida duplicatas confirmadas, preservando o post canônico",
       "script": "scripts/dedup-kino.js",
       "args": [],
-      "estimated_sec": 120,
+      "estimated_sec": 900,
       "category": "maintenance"
     },
     {
       "id": "sigaa",
-      "name": "SIGAA Calendar Sync",
-      "description": "Sincroniza tarefas SIGAA → Google Calendar (~90s)",
+      "name": "Sincronização SIGAA → Google Agenda",
+      "description": "Sincroniza tarefas do SIGAA com o Google Agenda (~90 s)",
       "script": "scripts/sigaa/sync_calendar.js",
       "args": [],
       "estimated_sec": 100,
@@ -76,11 +76,11 @@
     },
     {
       "id": "all",
-      "name": "Pipeline Completa",
-      "description": "IG + Curator + Duplicates + Format + Publish + Enrich",
+      "name": "Pipeline completa",
+      "description": "Instagram + Curador completo (níveis 1–3) + Duplicatas + Formatação + Publicação + Enriquecimento",
       "script": "scripts/pipeline-kino.js",
-      "args": ["--ig", "--format", "--publish"],
-      "estimated_sec": 400,
+      "args": ["--stage=ig", "--stage=curator", "--stage=duplicates", "--stage=enrich-instagram", "--stage=format", "--stage=publish", "--stage=enrich", "--full"],
+      "estimated_sec": 1500,
       "category": "publish"
     }
   ]

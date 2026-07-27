@@ -421,3 +421,33 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
 - Benchmark read-only em 2026-07-02: 80 posts analisados, 40 itens acionaveis, 36 `missing-deadline`, 4 `missing-event-date`, 27 `patch_deadline_date`, 9 `manual_deadline_review`, 4 `manual_event_date_review`.
 - Ainda nao ha escrita automatica no Supabase. Proxima fase segura: acao admin separada para aplicar patch apos revisao humana/OpenClaw, com log de auditoria e rollback por item.
 - Evidencia: `docs/qa/reports/report-v76-cadu-deadline-normalization-2026-07-02.md` e `docs/architecture/feed-ranking-transition-plan-2026-07-02.md`.
+
+## 21. Atualização Codex - Dedup global e próximo estágio de imagem (2026-07-27)
+
+- Fonte executável dos estágios: `openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`.
+  `pipeline/PIPELINE_STAGES.json` no KinoCampus é somente snapshot documental.
+- Runtime implantado: OpenClaw `1f3a456f564d7a31b6291de6e0621d17e8122806`,
+  `cadu-api` 0.5.10, 9/9 estágios executáveis no preflight profundo.
+- Pipeline completa de referência:
+  `b6c75272-ab61-4584-b06c-f45036ecc921`, 2.106,5 s, 3.405 itens,
+  25 realmente novos, 1 criado, 7 mesclados, sucesso.
+- Dedup isolado padrão:
+  `--all-active --report --no-auto-close --emit-cadu-markers --dry-run`.
+  O modo real troca `--report` por `--auto-apply`; não executa auto-close.
+- Run de referência:
+  `dfc30e45-7e39-444c-af24-de971446f941`, 137 posts, 36 candidatos,
+  7 pares visuais, 2 pares IA, zero hides, 4 revisões e resultado estruturado
+  `success`.
+- Não rodar dedup real quando `dedup_hides_planned=0`; flags sem ação útil só
+  aumentam ruído de metadados.
+- Quatro cursos SRI distintos compartilham a capa errada de defeso eleitoral.
+  O dedup os preservou corretamente. O reparo é de mídia.
+- Próxima implementação segura: estágio `image-audit` dry-run, com
+  hash/pHash, OCR, conflitos de entidade/data, VLM limitado, prévia e aplicação
+  por canário. Não criar botão funcional antes de existir contrato, relatório e
+  testes.
+- O histórico da Pipeline diferencia o `dedup_report` produzido no run atual
+  dos relatórios antigos. O modal foi validado com Playwright em desktop e
+  mobile, com backdrop integral e sem overflow horizontal nos artefatos.
+- Evidência completa e casos canário:
+  `docs/auditoria/cadu-pipeline-stages-dedup-2026-07-27.md`.

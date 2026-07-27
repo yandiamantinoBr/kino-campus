@@ -1714,3 +1714,43 @@ entre a data estruturada de 2026 e a arte de 2025.
   separada, com rollout e rollback próprios.
 - Evidências completas, hashes, decisões por caso e histórico dos PRs estão em
   `docs/auditoria/cadu-pipeline-publications-dedup-2026-07-26.md`.
+
+# v16 - Estágio global de deduplicação e observabilidade (2026-07-27)
+
+## Estado vivo
+
+- OpenClaw em `1f3a456f564d7a31b6291de6e0621d17e8122806`.
+- `cadu-api` 0.5.10, container saudável.
+- Preflight profundo: 9/9 estágios executáveis, zero bloqueios e zero warnings.
+- Pipeline completa `b6c75272`: 2.106,5 s, 3.405 itens, 25 novos, 1 criado,
+  7 mesclados e `outcome_status=success`.
+- Dedup global `dfc30e45`: 137 ativos, 36 candidatos textuais, 7 pares de
+  imagem similar, 2 avaliações IA, zero hides e 4 revisões planejadas.
+- O run global agora termina com etapa `dedup` e
+  `effective_status=outcome_status=success`, em vez de `finished` ambíguo.
+
+## Decisão sobre duplicatas
+
+Não foi executado modo real porque não havia ocultação confirmada. Os quatro
+cursos SRI são cursos distintos com prazos/shortcodes diferentes, mas
+compartilham os bytes de uma capa incorreta. O problema é integridade de mídia,
+não duplicidade de conteúdo. Publicações complementares do 20º SNHCT também
+foram preservadas.
+
+## Interface e contrato
+
+- cards/histórico passam a mostrar métricas específicas do dedup;
+- revisões e falhas de aplicação ficam visualmente destacadas;
+- modal separa artefatos gerados no run de contexto anterior;
+- `pipeline/PIPELINE_STAGES.json` é snapshot documental, não fonte executável;
+- catálogo estático foi alinhado aos comandos e ETAs do runtime.
+
+## Continuidade
+
+O próximo estágio proposto é `image-audit`, inicialmente apenas dry-run:
+validação de URL/placeholder, agrupamento por hash/pHash, OCR, comparação de
+entidades/datas e VLM somente para ambiguidades. Ele nunca deve ocultar posts e
+qualquer substituição deve usar canário, prévia, origem oficial e rollback.
+
+Relatório completo:
+`docs/auditoria/cadu-pipeline-stages-dedup-2026-07-27.md`.

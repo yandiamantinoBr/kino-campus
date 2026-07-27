@@ -1,6 +1,11 @@
 # KinoCampus + Cadu (OpenClaw) — Pipeline Documentation
 
-Documentação canônica da pipeline automatizada do Cadu. Esta é a **fonte de verdade** — o admin UI (`/admin/cadu.html`) consome via cadu-api v0.4.2+ e o VPS Hostinger `srv1597083.hstgr.cloud` executa via `docker exec` no container `openclaw-hahq-openclaw-1`.
+Documentação operacional da pipeline automatizada do Cadu. A fonte executável é
+`openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`; o arquivo
+`pipeline/PIPELINE_STAGES.json` deste repositório é um snapshot documental. O
+admin UI (`/admin/cadu.html`) consome o catálogo do cadu-api 0.5.10 e o VPS
+Hostinger `srv1597083.hstgr.cloud` executa os scripts no container
+`openclaw-hahq-openclaw-1`.
 
 ## Arquitetura
 
@@ -16,7 +21,7 @@ Documentação canônica da pipeline automatizada do Cadu. Esta é a **fonte de 
                   │ HTTPS + Bearer token
                   v
 ┌──────────────────────────────────────┐
-│ cadu-api v0.4.2 (FastAPI, VPS)       │  ← Orquestra runs + persiste
+│ cadu-api v0.5.10 (FastAPI, VPS)      │  ← Orquestra runs + persiste
 │ - Python 3.12 + Docker socket        │
 │ - Dedup automático (sem runs paralelos do mesmo stage)
 │ - Popen polling (detecta término real, não /proc/PID)
@@ -31,19 +36,20 @@ Documentação canônica da pipeline automatizada do Cadu. Esta é a **fonte de 
 
 ## Estágios pré-definidos
 
-Cada estágio é uma combinação `script` + `args` fixos. Catálogo em `pipeline/PIPELINE_STAGES.json`:
+Cada estágio combina entrypoint, argumentos base e argumentos de modo
+resolvidos pelo cadu-api. Snapshot em `pipeline/PIPELINE_STAGES.json`:
 
 | Stage ID    | Nome                       | Script                                   | Args                            | Categoria     | ETA |
 |-------------|----------------------------|------------------------------------------|---------------------------------|---------------|-----|
-| `curator`   | Curador UFG v4.4           | `scripts/cadu-curador-v4.4.js`           | `--daily`                       | scan          | 90s |
+| `curator`   | Curador UFG 4.4            | `scripts/pipeline-kino.js`                | `--stage=curator`               | scan          | 180s |
 | `ig`        | Scanner Instagram          | `scripts/scan-ig-browser.js`             | (nenhum)                        | scan          | 420s |
-| `duplicates`| Enriquecimento Duplicatas  | `scripts/enrich-duplicates.js`           | (nenhum)                        | process       | 60s |
-| `format`    | Formatador IA              | `scripts/pipeline-kino.js`               | `--stage=format`                | process       | 120s |
+| `duplicates`| Enriquecimento de duplicatas | `scripts/pipeline-kino.js`              | `--stage=duplicates`            | process       | 60s |
+| `format`    | Formatador IA              | `scripts/pipeline-kino.js`               | `--stage=format`                | process       | 300s |
 | `publish`   | Publicação                 | `scripts/pipeline-kino.js`               | `--stage=publish`               | publish       | 60s |
 | `enrich`    | Enriquecimento Imagens     | `scripts/enrich-images.js`              | `--from-recent 20`              | process       | 90s |
-| `dedup`     | Dedup Visual + Textual     | `scripts/dedup-kino.js`                  | (nenhum)                        | maintenance   | 120s |
+| `dedup`     | Deduplicação visual e textual | `scripts/dedup-kino.js`               | modo padrão: `--all-active --report --no-auto-close --emit-cadu-markers --dry-run` | maintenance | 900s |
 | `sigaa`     | SIGAA Calendar Sync        | `scripts/sigaa/sync_calendar.js`         | (nenhum)                        | maintenance   | 100s |
-| `all`       | Pipeline Completa          | `scripts/pipeline-kino.js`               | `--stage=ig --stage=curator --stage=duplicates --stage=format --stage=publish --stage=enrich` | publish | 600s |
+| `all`       | Pipeline completa          | `scripts/pipeline-kino.js`               | `ig → curator → duplicates → enrich-instagram → format → publish → enrich`, `--full` | publish | 1500s |
 
 ## Pipeline Completa (workflow diário)
 
@@ -51,18 +57,29 @@ A ordem real é:
 1. **`ig`** — Captura posts novos de perfis UFG (CDP)
 2. **`curator`** — Varre sites UFG Tier 1+2 (~80s, 31 sites)
 3. **`duplicates`** — Enriquece posts já publicados com info de duplicatas
-4. **`format`** — Gera descrições canônicas (padrão CONPEEX)
-5. **`publish`** — Publica os selecionados via Edge Function cadu-publish
-6. **`enrich`** — Adiciona imagens complementares aos posts publicados
+4. **`enrich-instagram`** — Cruza fontes e detalhes oficiais do Instagram
+5. **`format`** — Gera descrições canônicas
+6. **`publish`** — Publica ou mescla via Edge Function cadu-publish
+7. **`enrich`** — Adiciona imagens complementares aos posts persistidos
+8. **`dedup` inline** — Audita sete dias sem IA após publicação real
 
 Nota 2026-06-30: dentro de `curator`, cada unidade agora e varrida com `events.json` local antes de `news.json`. A pipeline deve privilegiar eventos futuros/ongoing e oportunidades acionaveis, nao noticias institucionais genericas.
 
-Hoje a Pipeline Completa chama explicitamente os seis estágios acima. Runs recentes em produção duraram ~500-600s, então o admin usa polling de log para `all` em vez de manter SSE aberto por mais de 300s na Vercel.
+Hoje a Pipeline Completa chama explicitamente os sete estágios de entrada acima
+e executa o dedup inline no final. O run `b6c75272` durou 2.106,5 s; o admin usa
+polling de log para `all` em vez de manter SSE aberto por mais de 300 s na
+Vercel.
 
 Para estágios isolados:
 - `format` depende de `_truly_new_YYYY-MM-DD.json`; se ele não existir, tenta derivar do `curadoria-v4.4-daily-YYYY-MM-DD.json` do mesmo dia. Quando todos os itens já existem no Supabase, grava `_formatted_YYYY-MM-DD.json` vazio e fresco para deixar o no-op explícito.
 - `publish` depende de `_formatted_YYYY-MM-DD.json` fresco. Se o arquivo formatado for anterior ao `_truly_new` do dia, o preflight bloqueia e orienta rodar `format` novamente.
 - `duplicates` usa o relatório `curadoria-v4.x` mais recente; padrões legados `v4.2` e atuais `v4.4` são aceitos.
+- `dedup` isolado audita todos os posts publicados. A simulação é padrão; a
+  execução real oculta somente duplicatas confirmadas e nunca executa
+  auto-close. Imagem igual isoladamente gera revisão, não ocultação.
+
+Auditoria vigente dos estágios e do dedup global:
+`docs/auditoria/cadu-pipeline-stages-dedup-2026-07-27.md`.
 
 O filtro de "truly new" usa duas fontes: o cache local `kino-posts-cache.json` e uma leitura REST do Supabase em tempo real (`posts.status=published`, `metadata.source_url/link`). Se a leitura viva falhar, o pipeline continua com o cache local e registra warning no log.
 

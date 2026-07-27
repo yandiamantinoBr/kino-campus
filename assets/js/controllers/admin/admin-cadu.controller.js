@@ -5959,6 +5959,10 @@
     if (!summary || !summary.metrics) return '';
     var m = summary.metrics || {};
     var parts = [];
+    function metric(key, label, warning) {
+      if (m[key] == null) return;
+      parts.push('<span' + (warning ? ' class="is-warning"' : '') + '>' + label + ' ' + escapeHtml(m[key]) + '</span>');
+    }
     if (m.publishable != null) parts.push('<span>publicáveis ' + escapeHtml(m.publishable) + '</span>');
     if (m.published != null) {
       var cls = (Number(m.published) === 0 && Number(m.publishable || 0) > 0) ? ' class="is-warning"' : '';
@@ -5973,6 +5977,18 @@
     if (m.ig_new_posts != null) parts.push('<span>IG novos ' + escapeHtml(m.ig_new_posts) + '</span>');
     if (m.ig_relevant_posts != null) parts.push('<span>IG relevantes ' + escapeHtml(m.ig_relevant_posts) + '</span>');
     if (m.ig_seen_skipped != null) parts.push('<span>IG já vistos ' + escapeHtml(m.ig_seen_skipped) + '</span>');
+    metric('dedup_posts_analyzed', 'analisados', false);
+    metric('dedup_exact_url_pairs', 'URLs idênticas', false);
+    metric('dedup_text_candidates', 'candidatos textuais', false);
+    metric('dedup_exact_image_groups', 'grupos de imagem idêntica', false);
+    metric('dedup_similar_image_pairs', 'imagens similares', false);
+    metric('dedup_logo_issues', 'capas suspeitas', Number(m.dedup_logo_issues) > 0);
+    metric('dedup_ai_pairs', 'pares avaliados pela IA', false);
+    metric('dedup_hides_planned', 'ocultações planejadas', false);
+    metric('dedup_reviews_planned', 'revisões planejadas', Number(m.dedup_reviews_planned) > 0);
+    metric('dedup_hidden', 'duplicatas ocultadas', false);
+    metric('dedup_flagged', 'marcados para revisão', Number(m.dedup_flagged) > 0);
+    metric('dedup_apply_failures', 'falhas ao aplicar', Number(m.dedup_apply_failures) > 0);
     if (summary.duration_sec != null) parts.push('<span>' + escapeHtml(Math.round(Number(summary.duration_sec))) + 's</span>');
     if ((summary.warnings || []).length) parts.push('<span class="is-warning">avisos ' + summary.warnings.length + '</span>');
     return parts.length ? '<div class="kc-pipeline-history-item__summary">' + parts.join('') + '</div>' : '';
@@ -6208,6 +6224,43 @@
     if (returnFocus && document.contains(returnFocus) && typeof returnFocus.focus === 'function') returnFocus.focus();
   }
 
+  function renderPipelineArtifact(artifact, currentRun) {
+    var a = artifact && typeof artifact === 'object' ? artifact : {};
+    var sizeKb = Number(a.size_bytes) > 0 ? Number(a.size_bytes) / 1024 : 0;
+    return '<div class="kc-pipeline-artifact' + (currentRun ? ' is-current' : '') + '">' +
+      '<i class="kc-pipeline-artifact__icon fas ' + (a.kind === 'dedup_report' ? 'fa-file-shield' : 'fa-file-code') + '"></i>' +
+      '<span class="kc-pipeline-artifact__kind">' + escapeHtml(a.kind || 'other') + '</span>' +
+      '<span class="kc-pipeline-artifact__name">' + escapeHtml(a.name || 'arquivo sem nome') + '</span>' +
+      '<span class="kc-pipeline-artifact__status ' + (currentRun ? 'is-current' : 'is-context') + '">' +
+        (currentRun ? 'gerado nesta execução' : 'contexto anterior') +
+      '</span>' +
+      '<span class="kc-pipeline-artifact__size">' + escapeHtml(sizeKb.toFixed(1)) + ' KB</span>' +
+    '</div>';
+  }
+
+  function renderPipelineArtifacts(artifacts) {
+    var list = Array.isArray(artifacts) ? artifacts : [];
+    var current = list.filter(function (artifact) {
+      return artifact && artifact.produced_during_run === true && artifact.stale_for_run !== true;
+    });
+    var context = list.filter(function (artifact) {
+      return current.indexOf(artifact) === -1;
+    });
+    var currentHtml = current.length
+      ? current.map(function (artifact) { return renderPipelineArtifact(artifact, true); }).join('')
+      : '<div class="kc-cadu-empty">Nenhum artefato novo foi produzido nesta execução.</div>';
+    var contextHtml = context.length
+      ? '<details class="kc-pipeline-artifact-group">' +
+          '<summary>Contexto anterior (' + context.length + ')</summary>' +
+          '<div class="kc-pipeline-artifact-group__body">' +
+            context.map(function (artifact) { return renderPipelineArtifact(artifact, false); }).join('') +
+          '</div>' +
+        '</details>'
+      : '';
+    return '<div class="kc-pipeline-artifact-group__title">Gerados nesta execução (' + current.length + ')</div>' +
+      currentHtml + contextHtml;
+  }
+
   function openRunDetailsModal(runId) {
     if (!isSafePipelineRunId(runId)) {
       showCaduError('Identificador de execução inválido; detalhes não foram solicitados.');
@@ -6241,21 +6294,13 @@
       };
       var summaryHtml = renderRunSummary(exportSummary) || '<div class="kc-cadu-empty">Resumo operacional ainda não detectado no log.</div>';
       var artifactsHtml = arts.length
-        ? arts.map(function (a) {
-            return '<div class="kc-pipeline-artifact">' +
-              '<i class="fas fa-file-code"></i> ' +
-              '<span class="kc-pipeline-artifact__kind">' + escapeHtml(a.kind || 'other') + '</span>' +
-              ' <span class="kc-pipeline-artifact__name">' + escapeHtml(a.name) + '</span>' +
-              (a.stale_for_run ? ' <span class="kc-pipeline-artifact__kind" title="Arquivo do mesmo dia, mas anterior ao início desta execução">antes da execução</span>' : '') +
-              ' <span style="color:var(--kc-text-dark-secondary);font-size:.7rem;">' + escapeHtml((Number(a.size_bytes) > 0 ? Number(a.size_bytes) / 1024 : 0).toFixed(1)) + ' KB</span>' +
-            '</div>';
-          }).join('')
+        ? renderPipelineArtifacts(arts)
         : '<div class="kc-cadu-empty">Nenhum artefato encontrado.</div>';
       var logHtml = '<pre class="kc-pipeline-log-tail">' + escapeHtml(log) + '</pre>';
       modal.body.innerHTML =
         '<h4 style="margin:0 0 8px;font-size:.85rem;">Resumo</h4>' +
         summaryHtml +
-        '<h4 style="margin:0 0 8px;font-size:.85rem;">Artefatos (' + arts.length + ')</h4>' +
+        '<h4 style="margin:0 0 8px;font-size:.85rem;">Artefatos vinculados (' + arts.length + ')</h4>' +
         artifactsHtml +
         '<h4 style="margin:14px 0 8px;font-size:.85rem;">Log (últimas 80 linhas)</h4>' +
         logHtml +
@@ -6295,14 +6340,14 @@
     el.setAttribute('aria-modal', 'true');
     el.setAttribute('aria-labelledby', 'run-details-modal-title');
     el.setAttribute('hidden', '');
-    el.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;padding:20px;';
+    el.style.display = 'none';
     el.innerHTML =
-      '<div class="kc-modal__inner" style="background:var(--kc-surface-dark);border:1px solid var(--kc-border-dark);border-radius:14px;max-width:900px;width:100%;max-height:90vh;display:flex;flex-direction:column;">' +
-        '<div class="kc-modal__head" style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--kc-border-dark);">' +
-          '<h3 class="kc-modal__title" id="run-details-modal-title" style="margin:0;font-size:1rem;">Execução</h3>' +
+      '<div class="kc-modal__inner">' +
+        '<div class="kc-modal__head">' +
+          '<h3 class="kc-modal__title" id="run-details-modal-title">Execução</h3>' +
           '<button type="button" class="kc-pipeline-history-btn kc-modal__close" aria-label="Fechar detalhes da execução"><i class="fas fa-times" aria-hidden="true"></i></button>' +
         '</div>' +
-        '<div class="kc-modal__body" style="padding:18px;overflow:auto;flex:1;"></div>' +
+        '<div class="kc-modal__body"></div>' +
       '</div>';
     var closeButton = el.querySelector('.kc-modal__close');
     var modal = { el: el, title: el.querySelector('.kc-modal__title'), body: el.querySelector('.kc-modal__body'), close: closeButton };
