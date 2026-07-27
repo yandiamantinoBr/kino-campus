@@ -5986,6 +5986,10 @@
     metric('dedup_logo_issues', 'capas suspeitas', Number(m.dedup_logo_issues) > 0);
     metric('dedup_ai_pairs', 'pares avaliados pela IA', false);
     metric('dedup_semantic_pairs', 'pares semânticos avaliados', false);
+    metric('dedup_program_identity_pairs', 'pares por identidade de programa', false);
+    metric('dedup_semantic_distinct', 'classificados como distintos', false);
+    metric('dedup_semantic_ambiguous', 'classificados como ambíguos', Number(m.dedup_semantic_ambiguous) > 0);
+    metric('dedup_semantic_hides_blocked', 'recomendações de ocultação bloqueadas', Number(m.dedup_semantic_hides_blocked) > 0);
     metric('dedup_preview_reused', 'prévia semântica aplicada', false);
     metric('dedup_hides_planned', 'ocultações planejadas', false);
     metric('dedup_reviews_planned', 'revisões planejadas', Number(m.dedup_reviews_planned) > 0);

@@ -1804,3 +1804,49 @@ Relatório completo:
   nos dois modos.
 - A aplicação registrou `dedup_preview_reused=1`, zero chamadas de IA, zero
   hides, três flags e zero falhas.
+
+# v18 - Deduplicação global após reparo de capas (2026-07-27)
+
+## Estado real auditado
+
+- Cinco capas incorretas foram substituídas por arquivos extraídos da publicação
+  oficial exata e inspecionados antes da escrita: quatro cursos SRI e a
+  programação de férias do Planetário.
+- A leitura posterior confirmou cinco hashes distintos e coerência entre
+  `posts.image_url`, metadata, galeria e `post_media`.
+- Com 138 posts ativos, o estágio encontrou zero URL canônica, referência
+  oficial ou hash de imagem exatamente repetido; sete pares por pHash eram
+  reutilização de linguagem visual, não prova de duplicidade.
+
+## Falso positivo contido
+
+A simulação `310b9de3-1361-4bad-959c-c32776554e57` incluiu um par adicional por
+identidade explícita de programa, mas o modelo confundiu dois cursos SRI
+distintos e propôs uma ocultação. Esse plano não foi aplicado. A política foi
+endurecida para que a IA não crie autoridade de escrita: um hide semântico só
+pode existir quando a decisão determinística já produz `autoHide=true`.
+
+## Contrato final validado
+
+- Simulação segura: `3dd292dc-0302-4720-acc2-9b1ca308c5ba`.
+- Execução vinculada: `efc25352-ad33-4097-8464-4c5398f95ed6`.
+- Ambas usaram snapshot
+  `ef7bf9fc09d555ec5b30debdc29f2d08562bcf0ff6b04d2598ebf191946e1658`.
+- Os três pares foram preservados: dois cursos SRI distintos/ambíguos e um post
+  específico PPGZ versus uma compilação de 14 programas.
+- O plano vazio teve SHA-256
+  `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`.
+- O modo real reutilizou a prévia, fez zero chamadas de IA e zero mutações.
+
+## Observabilidade adicionada
+
+O resumo do run passa a separar:
+
+- pares selecionados por identidade de programa;
+- pares classificados como distintos;
+- pares ambíguos;
+- recomendações de ocultação bloqueadas pela política.
+
+Ambiguidade e recomendação bloqueada aparecem com destaque visual. Esses
+contadores explicam por que um par chegou à IA e por que nenhuma ação destrutiva
+foi autorizada.

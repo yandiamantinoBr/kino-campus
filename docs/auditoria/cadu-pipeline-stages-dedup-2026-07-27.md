@@ -380,9 +380,30 @@ Casos canário conhecidos:
 
 ## Próximos passos seguros
 
-1. corrigir as cinco capas conhecidas por fluxo autenticado e auditável;
-2. validar visualmente antes/depois;
+1. concluído: corrigir as cinco capas conhecidas por fluxo autenticado e auditável;
+2. concluído: validar visualmente antes/depois;
 3. implementar `image-audit` em dry-run;
 4. expor relatório e prévia no Admin;
 5. só depois discutir aplicação em lote;
-6. manter `dedup` real bloqueado quando `hides_planned=0`.
+6. quando o plano vinculado estiver vazio, concluir o `dedup` real como no-op
+   auditado, sem escrita e sem nova inferência.
+
+## Atualização operacional após a auditoria inicial
+
+Os cinco casos canário de capa foram reparados e verificados. A auditoria global
+posterior passou a observar 138 posts ativos, sem URL, referência oficial ou
+hash de imagem exatamente repetido.
+
+A simulação `310b9de3` revelou um falso positivo semântico entre dois cursos SRI
+distintos. O plano não foi aplicado. Como consequência, a classificação da IA
+passou a ser estritamente consultiva: uma recomendação de hide não produz
+autoridade de escrita sem `autoHide=true` na política determinística.
+
+A simulação segura `3dd292dc` e a execução real vinculada `efc25352` usaram o
+mesmo snapshot e o mesmo plano vazio. O modo real não repetiu inferência, não
+ocultou, não marcou e não alterou qualquer publicação.
+
+O resumo do estágio agora distingue pares selecionados por identidade de
+programa, classificados como distintos, ambíguos e recomendações de hide
+bloqueadas. Isso permite auditar tanto a cobertura quanto a contenção do modelo
+sem abrir o relatório JSON bruto.

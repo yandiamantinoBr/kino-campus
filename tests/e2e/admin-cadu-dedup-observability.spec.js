@@ -15,6 +15,10 @@ const DEDUP_METRICS = {
   dedup_logo_issues: 0,
   dedup_ai_pairs: 0,
   dedup_semantic_pairs: 2,
+  dedup_program_identity_pairs: 1,
+  dedup_semantic_distinct: 2,
+  dedup_semantic_ambiguous: 1,
+  dedup_semantic_hides_blocked: 1,
   dedup_preview_reused: 1,
   dedup_hides_planned: 0,
   dedup_reviews_planned: 4,
@@ -206,6 +210,10 @@ async function mockCaduApi(page) {
             'Dedup global: 137 publicações ativas analisadas',
             'Pares enviados à IA: 0',
             'Pares semânticos avaliados: 2',
+            'Pares por identidade de programa: 1',
+            'Classificados como distintos: 2',
+            'Classificados como ambíguos: 1',
+            'Recomendações de hide bloqueadas: 1',
             'Prévia semântica aplicada: 1',
             'Ocultações planejadas: 0',
             'Revisões planejadas: 4',
@@ -275,6 +283,10 @@ async function openDedupDetails(page) {
   await expect(history).toBeVisible();
   await expect(history).toContainText('analisados 137');
   await expect(history).toContainText('referências oficiais compartilhadas 1');
+  await expect(history).toContainText('pares por identidade de programa 1');
+  await expect(history).toContainText('classificados como distintos 2');
+  await expect(history).toContainText('classificados como ambíguos 1');
+  await expect(history).toContainText('recomendações de ocultação bloqueadas 1');
   await expect(history).toContainText('prévia semântica aplicada 1');
   await expect(history).toContainText('revisões planejadas 4');
   await history.getByRole('button', { name: 'Ver artefatos e log' }).click();
