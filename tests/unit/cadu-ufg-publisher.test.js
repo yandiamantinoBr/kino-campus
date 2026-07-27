@@ -954,6 +954,38 @@ describe('cadu-ufg-publisher', () => {
     });
   });
 
+  test('publisher validation tolerates JSONB key reordering inside ordered arrays', () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    const expectedHistory = [
+      { at: '2026-07-27T19:19:50.298Z', operation: 'repair', reason: 'validated' },
+      { at: '2026-07-27T19:20:00.000Z', operation: 'review', reason: 'complete' },
+    ];
+    const jsonbHistory = [
+      { reason: 'validated', operation: 'repair', at: '2026-07-27T19:19:50.298Z' },
+      { reason: 'complete', operation: 'review', at: '2026-07-27T19:20:00.000Z' },
+    ];
+
+    expect(publisher.validatePostPatch(
+      { metadata: { image_repair_history: jsonbHistory } },
+      {},
+      { image_repair_history: expectedHistory },
+    )).toMatchObject({ ok: true, errors: [] });
+
+    expect(publisher.validatePostPatch(
+      { metadata: { image_repair_history: [...jsonbHistory].reverse() } },
+      {},
+      { image_repair_history: expectedHistory },
+    )).toMatchObject({
+      ok: false,
+      errors: ['mismatch_metadata_image_repair_history'],
+    });
+  });
+
   test('safeUpdatePost merges metadata and does not delete media when no image is provided', async () => {
     const publisher = new SupabasePublisher({
       supabaseUrl: 'https://project.supabase.co',
