@@ -5979,11 +5979,14 @@
     if (m.ig_seen_skipped != null) parts.push('<span>IG já vistos ' + escapeHtml(m.ig_seen_skipped) + '</span>');
     metric('dedup_posts_analyzed', 'analisados', false);
     metric('dedup_exact_url_pairs', 'URLs idênticas', false);
+    metric('dedup_official_reference_pairs', 'referências oficiais compartilhadas', false);
     metric('dedup_text_candidates', 'candidatos textuais', false);
     metric('dedup_exact_image_groups', 'grupos de imagem idêntica', false);
     metric('dedup_similar_image_pairs', 'imagens similares', false);
     metric('dedup_logo_issues', 'capas suspeitas', Number(m.dedup_logo_issues) > 0);
     metric('dedup_ai_pairs', 'pares avaliados pela IA', false);
+    metric('dedup_semantic_pairs', 'pares semânticos avaliados', false);
+    metric('dedup_preview_reused', 'prévia semântica aplicada', false);
     metric('dedup_hides_planned', 'ocultações planejadas', false);
     metric('dedup_reviews_planned', 'revisões planejadas', Number(m.dedup_reviews_planned) > 0);
     metric('dedup_hidden', 'duplicatas ocultadas', false);
@@ -6932,10 +6935,14 @@
           : (profile.mutates_platform
             ? '\n\nATENÇÃO: esta execução pode alterar dados reais/plataforma.'
             : '\n\nEste estágio não declara mutação direta de plataforma.');
+        var dedupPreviewNotice = stageId === 'dedup' && dryRun === false
+          ? '\n\nEsta ação aplica a simulação recente sem consultar novamente a IA. Se posts, pares ou ações tiverem mudado, o backend bloqueará toda escrita e pedirá uma nova simulação.'
+          : '';
         var message = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + pf.command +
           '\nRisco: ' + (profile.risk || 'n/d') +
           '\nModo solicitado: ' + modeLabel +
           mutationNotice +
+          dedupPreviewNotice +
           (warnings ? '\n\nAvisos:\n' + warnings : '') +
           '\n\nEsta verificação prévia expira em até 15 segundos. Os logs ficarão disponíveis em tempo real abaixo.';
         if (!confirm(message)) return;

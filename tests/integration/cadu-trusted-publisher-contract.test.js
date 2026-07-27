@@ -99,6 +99,8 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('code: "QUALITY_BLOCKED"');
     expect(index).toContain('blockingWarnings');
     expect(index).toContain('event_past');
+    expect(index).toContain('application_deadline_past');
+    expect(index).toContain('applicationDeadlineExpired');
     expect(index).toContain('deadline_past');
     expect(index).toContain('institutional_or_biographical_release');
     expect(index).toContain('cms_credits_in_description');

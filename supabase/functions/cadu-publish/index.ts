@@ -300,6 +300,15 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
     item.dates && typeof item.dates === "object" &&
     ((item.dates as Record<string, unknown>).isExpired === true || (item.dates as Record<string, unknown>).expired === true)
   );
+  const semanticDates = metadata.dates && typeof metadata.dates === "object"
+    ? metadata.dates as Record<string, unknown>
+    : {};
+  const applicationDeadline = validIsoDate(
+    semanticDates.applicationDeadline || semanticDates.application_deadline,
+  );
+  const applicationDeadlineExpired = row.module === "oportunidades" &&
+    !!applicationDeadline &&
+    applicationDeadline < today;
 
   const block = (warning: string) => {
     if (!blockingWarnings.includes(warning)) blockingWarnings.push(warning);
@@ -309,13 +318,20 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   };
 
   if (explicitExpired) block("source_marks_expired");
+  if (applicationDeadlineExpired) block("application_deadline_past");
   if (row.module === "eventos") {
     const end = validIsoDate(metadata.data_fim_evento) || validIsoDate(item.dateEnd);
     const start = validIsoDate(metadata.data_evento) || validIsoDate(item.dateStart);
     if (end && end < today) block("event_past");
     else if (start && start < today && !end && !futureDates.length) block("event_past");
     else if (!start && latestDate && latestDate < today && !futureDates.length) block("event_past");
-  } else if (hasDeadlineContext && latestDate && latestDate < today && !futureDates.length) {
+  } else if (
+    !applicationDeadlineExpired &&
+    hasDeadlineContext &&
+    latestDate &&
+    latestDate < today &&
+    !futureDates.length
+  ) {
     // F2 B8 (2026-07-06): mudou de block pra warn. Heurística original bloqueava
     // itens válidos como "Transporte XVII SEREX" (vagas remanescentes, texto:
     // "vagas limitadas e preenchimento imediato") e "AUIP bolsas" (sem data
