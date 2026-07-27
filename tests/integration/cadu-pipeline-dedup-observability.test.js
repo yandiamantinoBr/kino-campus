@@ -42,6 +42,10 @@ describe('Cadu dedup observability', () => {
         dedup_similar_image_pairs: 7,
         dedup_ai_pairs: 0,
         dedup_semantic_pairs: 2,
+        dedup_program_identity_pairs: 1,
+        dedup_semantic_distinct: 2,
+        dedup_semantic_ambiguous: 1,
+        dedup_semantic_hides_blocked: 1,
         dedup_preview_reused: 1,
         dedup_hides_planned: 0,
         dedup_reviews_planned: 4,
@@ -56,6 +60,12 @@ describe('Cadu dedup observability', () => {
     expect(html).toContain('imagens similares 7');
     expect(html).toContain('pares avaliados pela IA 0');
     expect(html).toContain('pares semânticos avaliados 2');
+    expect(html).toContain('pares por identidade de programa 1');
+    expect(html).toContain('classificados como distintos 2');
+    expect(html).toContain('classificados como ambíguos 1');
+    expect(html).toContain('recomendações de ocultação bloqueadas 1');
+    expect(html).toMatch(/class="is-warning">classificados como ambíguos 1/);
+    expect(html).toMatch(/class="is-warning">recomendações de ocultação bloqueadas 1/);
     expect(html).toContain('prévia semântica aplicada 1');
     expect(html).toContain('ocultações planejadas 0');
     expect(html).toContain('revisões planejadas 4');
