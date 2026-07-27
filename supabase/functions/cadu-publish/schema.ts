@@ -134,6 +134,11 @@ export interface CaduItem {
   text?: string;
   score?: number | string;
   dates?: Record<string, unknown>;
+  applicationOpensAt?: string;
+  applicationDeadline?: string;
+  eventStartsAt?: string;
+  eventEndsAt?: string;
+  resultPublishedAt?: string;
   category?: string;
   location?: string;
   price?: number | string;

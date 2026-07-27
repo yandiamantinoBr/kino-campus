@@ -1757,3 +1757,50 @@ qualquer substituição deve usar canário, prévia, origem oficial e rollback.
 
 Relatório completo:
 `docs/auditoria/cadu-pipeline-stages-dedup-2026-07-27.md`.
+
+# v17 - Prévia imutável do dedup e datas semânticas (2026-07-27)
+
+## Incidente confirmado
+
+- Simulação `ab28086c`: 137 posts, 3 pares IA, 1 hide e 3 revisões planejadas.
+- Execução real `51ae52ed`: mesma base, mas a nova inferência alterou a
+  recomendação CASLE; 0 hides e 3 revisões foram aplicadas.
+- Não houve conteúdo ocultado incorretamente. A divergência demonstrou que o
+  modo real recalculava a proposta em vez de aplicar a simulação.
+
+## Contrato corrigido
+
+- cadu-api 0.5.14 adiciona `--apply-latest-preview` somente ao estágio
+  `dedup` isolado real.
+- A prévia fica vinculada por SHA-256 ao estado dos posts, aos pares
+  semânticos e ao plano completo de ações.
+- A execução real não chama a IA novamente.
+- O feed é relido antes da primeira escrita; qualquer mudança exige nova
+  simulação.
+- O dedup inline determinístico da pipeline completa permanece inalterado.
+- O Admin mostra referências oficiais, pares semânticos e se uma prévia foi
+  aplicada, além de explicar a exigência no diálogo de confirmação.
+
+## Integridade temporal
+
+- `cadu-publish/mapper.ts` passa a priorizar
+  `dates.applicationDeadline`, `dates.eventStartsAt` e `dates.eventEndsAt`.
+- Datas semânticas válidas são preservadas em `metadata.dates` para
+  auto-close, ranking e auditoria.
+- Um `applicationDeadline` tipado já vencido bloqueia a publicação com
+  `application_deadline_past`, mesmo quando o texto também contém datas futuras
+  de aulas, provas ou resultados.
+- Aliases e extração textual legados permanecem como fallback.
+- Os dois posts CASLE expirados foram encerrados por RPC, sem hard delete.
+
+## Validação operacional concluída
+
+- Simulação: `eee06899-a327-40e9-b23a-e31807d72e0b`.
+- Aplicação real: `471755f2-126b-4fea-95a0-13f56cbc952a`.
+- Os dois relatórios registraram 135 posts, os mesmos 2 pares semânticos e
+  snapshot `799901ac854abe8c8bb0e47a34f3f3170717f3f51901725d73c995ae8aeb4a9f`.
+- O plano teve 3 flags e hash
+  `f4af1df197176ba9ad598903c55e2047ac0c00ad530925ee7b8493622508f00d`
+  nos dois modos.
+- A aplicação registrou `dedup_preview_reused=1`, zero chamadas de IA, zero
+  hides, três flags e zero falhas.

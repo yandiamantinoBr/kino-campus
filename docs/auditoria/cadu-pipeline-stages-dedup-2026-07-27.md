@@ -135,6 +135,61 @@ sobrescreve o resultado estruturado da pipeline completa.
 - execução real não executa auto-close;
 - não existe hard delete nesse estágio.
 
+### Correção do vínculo simulação → aplicação
+
+As runs `ab28086c-d7c4-48a3-8a34-0dc7a2098d05` (simulação) e
+`51ae52ed-31ae-45d3-a2a7-5cb494e23971` (real) usaram os mesmos 137 posts e
+três pares semânticos. Ainda assim, uma nova inferência mudou a recomendação
+do par CASLE de `hide_a` para `manter_ambos`. A execução real aplicou zero
+hides, portanto não houve perda de conteúdo, mas ficou comprovado que o botão
+real recalculava a proposta.
+
+No cadu-api 0.5.14, a execução real isolada:
+
+1. exige `--apply-latest-preview`;
+2. aceita somente prévia dry-run com até 30 minutos;
+3. compara SHA-256 do snapshot dos posts;
+4. exige os mesmos pares e decisões semânticas;
+5. compara SHA-256 do plano completo de ações;
+6. relê o feed imediatamente antes da primeira escrita;
+7. falha sem mutação se qualquer contrato divergir.
+
+O dedup inline da pipeline completa continua
+`--no-llm --days=7 --auto-apply` e não depende dessa prévia.
+
+### Correção do contrato de datas
+
+O artefato formatado do caso CASLE continha
+`dates.applicationDeadline=2026-07-24`, mas a Edge Function ignorava esse
+campo e podia extrair `2026-08-13`, data final das provas, como prazo de
+inscrição. O mapper agora:
+
+- prioriza `applicationDeadline` para oportunidades;
+- prioriza `eventStartsAt`/`eventEndsAt` para eventos;
+- preserva somente datas semânticas válidas em `metadata.dates`;
+- bloqueia `applicationDeadline` tipado já vencido com
+  `application_deadline_past`, sem reendurecer a heurística textual genérica;
+- mantém aliases e fallbacks legados quando os campos tipados não existem.
+
+Os dois posts CASLE já expirados foram encerrados, sem exclusão, pelo RPC
+autenticado `kc_close_post`, com razão
+`prazo_inscricao_encerrado_2026-07-24`.
+
+### Validação após o deploy
+
+O cadu-api 0.5.14 foi promovido pelo sincronizador oficial do VPS. O par de
+runs abaixo validou o contrato:
+
+| Modo | Run | IA | Prévia reutilizada | Resultado |
+|---|---|---:|---:|---|
+| Simulação | `eee06899-a327-40e9-b23a-e31807d72e0b` | 2 pares | 0 | 0 hides, 3 revisões planejadas |
+| Real | `471755f2-126b-4fea-95a0-13f56cbc952a` | 0 pares | 1 | 0 hides, 3 flags, 0 falhas |
+
+Os dois relatórios contêm 135 posts, os mesmos dois pares semânticos, snapshot
+`799901ac854abe8c8bb0e47a34f3f3170717f3f51901725d73c995ae8aeb4a9f` e
+plano `f4af1df197176ba9ad598903c55e2047ac0c00ad530925ee7b8493622508f00d`.
+A releitura imediatamente anterior à escrita produziu o mesmo snapshot.
+
 ## Simulação global `dfc30e45`
 
 Run:

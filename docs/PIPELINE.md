@@ -3,7 +3,7 @@
 Documentação operacional da pipeline automatizada do Cadu. A fonte executável é
 `openclaw-cadu/data/.openclaw/skills/cadu-api/pipeline.py`; o arquivo
 `pipeline/PIPELINE_STAGES.json` deste repositório é um snapshot documental. O
-admin UI (`/admin/cadu.html`) consome o catálogo do cadu-api 0.5.11 e o VPS
+admin UI (`/admin/cadu.html`) consome o catálogo do cadu-api 0.5.14 e o VPS
 Hostinger `srv1597083.hstgr.cloud` executa os scripts no container
 `openclaw-hahq-openclaw-1`.
 
@@ -21,7 +21,7 @@ Hostinger `srv1597083.hstgr.cloud` executa os scripts no container
                   │ HTTPS + Bearer token
                   v
 ┌──────────────────────────────────────┐
-│ cadu-api v0.5.11 (FastAPI, VPS)      │  ← Orquestra runs + persiste
+│ cadu-api v0.5.14 (FastAPI, VPS)      │  ← Orquestra runs + persiste
 │ - Python 3.12 + Docker socket        │
 │ - Dedup automático (sem runs paralelos do mesmo stage)
 │ - Popen polling (detecta término real, não /proc/PID)
@@ -75,8 +75,13 @@ Para estágios isolados:
 - `publish` depende de `_formatted_YYYY-MM-DD.json` fresco. Se o arquivo formatado for anterior ao `_truly_new` do dia, o preflight bloqueia e orienta rodar `format` novamente.
 - `duplicates` usa o relatório `curadoria-v4.x` mais recente; padrões legados `v4.2` e atuais `v4.4` são aceitos.
 - `dedup` isolado audita todos os posts publicados. A simulação é padrão; a
-  execução real oculta somente duplicatas confirmadas e nunca executa
+  execução real exige uma simulação recente com snapshot, pares semânticos e
+  plano de ações idênticos. Ela reaproveita a decisão da prévia sem consultar a
+  IA novamente, oculta somente duplicatas confirmadas e nunca executa
   auto-close. Imagem igual isoladamente gera revisão, não ocultação.
+- O publisher prioriza os papéis semânticos de data do Curador. Uma
+  `applicationDeadline` tipada e vencida bloqueia a publicação, mesmo se o
+  conteúdo mencionar datas futuras de aulas ou resultados.
 
 Auditoria vigente dos estágios e do dedup global:
 `docs/auditoria/cadu-pipeline-stages-dedup-2026-07-27.md`.

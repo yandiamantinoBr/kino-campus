@@ -101,15 +101,75 @@ function isoDateCandidate(value: unknown, fallbackYear?: number): string {
 }
 
 function yearFromOpportunityItem(item: CaduItem): number {
+  const itemRecord = item as Record<string, unknown>;
+  const semanticDates = item.dates && typeof item.dates === "object"
+    ? Object.values(item.dates).map((value) => String(value || "")).join(" ")
+    : "";
   const raw = [
+    semanticDates,
+    itemRecord.applicationOpensAt,
+    itemRecord.applicationDeadline,
+    itemRecord.eventStartsAt,
+    itemRecord.eventEndsAt,
+    itemRecord.resultPublishedAt,
     item.dateEnd,
     item.dateStart,
-    (item as Record<string, unknown>).updatedAt,
-    (item as Record<string, unknown>).updated_at,
+    itemRecord.updatedAt,
+    itemRecord.updated_at,
     item.sourceUrl,
   ].map((value) => String(value || "")).join(" ");
   const match = raw.match(/\b(20\d{2})\b/);
   return match ? Number(match[1]) : new Date().getUTCFullYear();
+}
+
+function normalizeSemanticDates(item: CaduItem): Record<string, string> {
+  const fallbackYear = yearFromOpportunityItem(item);
+  const itemRecord = item as Record<string, unknown>;
+  const dates = item.dates && typeof item.dates === "object"
+    ? item.dates as Record<string, unknown>
+    : {};
+  const aliases: Record<string, unknown[]> = {
+    applicationOpensAt: [
+      dates.applicationOpensAt,
+      dates.application_opens_at,
+      itemRecord.applicationOpensAt,
+      itemRecord.application_opens_at,
+    ],
+    applicationDeadline: [
+      dates.applicationDeadline,
+      dates.application_deadline,
+      itemRecord.applicationDeadline,
+      itemRecord.application_deadline,
+    ],
+    eventStartsAt: [
+      dates.eventStartsAt,
+      dates.event_starts_at,
+      itemRecord.eventStartsAt,
+      itemRecord.event_starts_at,
+    ],
+    eventEndsAt: [
+      dates.eventEndsAt,
+      dates.event_ends_at,
+      itemRecord.eventEndsAt,
+      itemRecord.event_ends_at,
+    ],
+    resultPublishedAt: [
+      dates.resultPublishedAt,
+      dates.result_published_at,
+      itemRecord.resultPublishedAt,
+      itemRecord.result_published_at,
+    ],
+  };
+  const normalized: Record<string, string> = {};
+  for (const [role, candidates] of Object.entries(aliases)) {
+    for (const candidate of candidates) {
+      const iso = isoDateCandidate(candidate, fallbackYear);
+      if (!iso) continue;
+      normalized[role] = iso;
+      break;
+    }
+  }
+  return normalized;
 }
 
 function localDateContext(text: string, index: number, length: number): string {
@@ -199,6 +259,10 @@ function resolveOpportunityDeadline(item: CaduItem, fullText: string): string {
   const fallbackYear = yearFromOpportunityItem(item);
   const dates = item.dates && typeof item.dates === "object" ? item.dates as Record<string, unknown> : {};
   const explicitCandidates = [
+    dates.applicationDeadline,
+    dates.application_deadline,
+    (item as Record<string, unknown>).applicationDeadline,
+    (item as Record<string, unknown>).application_deadline,
     (item as Record<string, unknown>).deadlineDate,
     (item as Record<string, unknown>).deadline_date,
     (item as Record<string, unknown>).deadline,
@@ -614,6 +678,10 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     actionKey,
     visibility,
   };
+  const semanticDates = normalizeSemanticDates(item);
+  if (Object.keys(semanticDates).length > 0) {
+    commonMeta.dates = semanticDates;
+  }
 
   const { tags, tagKeys } = buildTags(
     item,
@@ -636,8 +704,12 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     if (gratuito) price = 0;
 
     // Datas: explicitas tem prioridade; senao tenta intervalo e data unica do texto.
-    let dataEvento = isoDateFromAny(item.dateStart) || parseBrazilianDate(item.dateStart);
-    let dataFim = isoDateFromAny(item.dateEnd) || parseBrazilianDate(item.dateEnd);
+    let dataEvento = semanticDates.eventStartsAt
+      || isoDateFromAny(item.dateStart)
+      || parseBrazilianDate(item.dateStart);
+    let dataFim = semanticDates.eventEndsAt
+      || isoDateFromAny(item.dateEnd)
+      || parseBrazilianDate(item.dateEnd);
     if (!dataEvento || !dataFim) {
       const range = parseDateRange(fullText);
       if (!dataEvento && range.start) dataEvento = range.start;

@@ -59,7 +59,7 @@
     {
       "id": "dedup",
       "name": "Deduplicação visual e textual",
-      "description": "Audita todos os posts ativos e consolida duplicatas confirmadas, preservando o post canônico",
+      "description": "Simula sobre todos os posts ativos e aplica somente uma prévia recente e ainda idêntica",
       "script": "scripts/dedup-kino.js",
       "args": [],
       "estimated_sec": 900,

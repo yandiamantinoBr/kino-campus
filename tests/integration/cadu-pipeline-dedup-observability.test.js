@@ -36,10 +36,13 @@ describe('Cadu dedup observability', () => {
     const html = renderRunSummary({
       metrics: {
         dedup_posts_analyzed: 137,
+        dedup_official_reference_pairs: 1,
         dedup_text_candidates: 36,
         dedup_exact_image_groups: 1,
         dedup_similar_image_pairs: 7,
-        dedup_ai_pairs: 2,
+        dedup_ai_pairs: 0,
+        dedup_semantic_pairs: 2,
+        dedup_preview_reused: 1,
         dedup_hides_planned: 0,
         dedup_reviews_planned: 4,
       },
@@ -47,14 +50,23 @@ describe('Cadu dedup observability', () => {
     });
 
     expect(html).toContain('analisados 137');
+    expect(html).toContain('referências oficiais compartilhadas 1');
     expect(html).toContain('candidatos textuais 36');
     expect(html).toContain('grupos de imagem idêntica 1');
     expect(html).toContain('imagens similares 7');
-    expect(html).toContain('pares avaliados pela IA 2');
+    expect(html).toContain('pares avaliados pela IA 0');
+    expect(html).toContain('pares semânticos avaliados 2');
+    expect(html).toContain('prévia semântica aplicada 1');
     expect(html).toContain('ocultações planejadas 0');
     expect(html).toContain('revisões planejadas 4');
     expect(html).toMatch(/class="is-warning">revisões planejadas 4/);
     expect(html).not.toContain('publicados');
+  });
+
+  test('warns that real dedup applies an immutable recent simulation', () => {
+    expect(controller).toContain("stageId === 'dedup' && dryRun === false");
+    expect(controller).toContain('aplica a simulação recente sem consultar novamente a IA');
+    expect(controller).toContain('o backend bloqueará toda escrita');
   });
 
   test('separates run-produced reports from stale contextual artifacts', () => {

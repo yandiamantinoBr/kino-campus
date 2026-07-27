@@ -8,11 +8,14 @@ const FINISHED_AT = STARTED_AT + 100;
 const DEDUP_METRICS = {
   dedup_posts_analyzed: 137,
   dedup_exact_url_pairs: 0,
+  dedup_official_reference_pairs: 1,
   dedup_text_candidates: 36,
   dedup_exact_image_groups: 1,
   dedup_similar_image_pairs: 7,
   dedup_logo_issues: 0,
-  dedup_ai_pairs: 2,
+  dedup_ai_pairs: 0,
+  dedup_semantic_pairs: 2,
+  dedup_preview_reused: 1,
   dedup_hides_planned: 0,
   dedup_reviews_planned: 4,
   dedup_hidden: 0,
@@ -30,7 +33,7 @@ function dedupRun() {
     started_at: STARTED_AT,
     finished_at: FINISHED_AT,
     exit_code: 0,
-    dry_run: true,
+    dry_run: false,
     summary: {
       metrics: { ...DEDUP_METRICS },
       warnings: [],
@@ -201,7 +204,9 @@ async function mockCaduApi(page) {
         json: {
           content: [
             'Dedup global: 137 publicações ativas analisadas',
-            'Pares enviados à IA: 2',
+            'Pares enviados à IA: 0',
+            'Pares semânticos avaliados: 2',
+            'Prévia semântica aplicada: 1',
             'Ocultações planejadas: 0',
             'Revisões planejadas: 4',
           ].join('\n'),
@@ -269,6 +274,8 @@ async function openDedupDetails(page) {
   const history = page.locator(`[data-run-id="${RUN_ID}"]`);
   await expect(history).toBeVisible();
   await expect(history).toContainText('analisados 137');
+  await expect(history).toContainText('referências oficiais compartilhadas 1');
+  await expect(history).toContainText('prévia semântica aplicada 1');
   await expect(history).toContainText('revisões planejadas 4');
   await history.getByRole('button', { name: 'Ver artefatos e log' }).click();
   const modal = page.locator('#run-details-modal');
