@@ -51,6 +51,8 @@ describe('Cadu publisher safety contract', () => {
     expect(publisher).toContain('postEditLocks = new Map');
     expect(publisher).toContain('async withPostEditLock(postId, task)');
     expect(publisher).toContain('validatePostPatch(post, row, changedFields = {})');
+    expect(publisher).toContain('gallery_image_urls: prepared.images.slice()');
+    expect(publisher).toContain('expectedMetadata.gallery_image_urls = prepared.images.slice()');
     expect(publisher).toContain("code: 'POST_VALIDATE_FAILED'");
   });
 
