@@ -46,17 +46,36 @@ function dedupRun() {
   };
 }
 
-function pipelineSnapshot() {
+function pipelineSnapshot(previewStatus = 'ok') {
   const nowSeconds = Date.now() / 1000;
   const run = dedupRun();
   const relativePath = 'scripts/dedup-kino.js';
-  const checks = [{
-    id: 'script',
-    label: 'Script do estágio',
-    detail: relativePath,
-    blocking: true,
-    status: 'ok',
-  }];
+  const previewCheck = {
+    id: 'dedup_preview_real',
+    label: 'Prévia para execução real',
+    detail: previewStatus === 'ok'
+      ? 'Prévia válida por mais 12 minutos.'
+      : 'A prévia expirou. Execute uma nova simulação.',
+    blocking: false,
+    status: previewStatus,
+  };
+  const checks = [
+    {
+      id: 'script',
+      label: 'Script do estágio',
+      detail: relativePath,
+      blocking: true,
+      status: 'ok',
+    },
+    {
+      id: 'dedup_preview_config',
+      label: 'Contrato da prévia',
+      detail: 'Configuração da prévia disponível.',
+      blocking: true,
+      status: 'ok',
+    },
+    previewCheck,
+  ];
   return {
     contract_version: 'cadu-pipeline-control-v1',
     generated_at: new Date().toISOString(),
@@ -91,7 +110,7 @@ function pipelineSnapshot() {
         },
         checks,
         blockers: [],
-        warnings: [],
+        warnings: previewStatus === 'ok' ? [] : [previewCheck],
         script: {
           exists: true,
           path: `C:\\openclaw\\${relativePath.replace(/\//g, '\\')}`,
@@ -153,7 +172,7 @@ async function installAdminSession(page) {
   });
 }
 
-async function mockCaduApi(page) {
+async function mockCaduApi(page, previewStatus = 'ok') {
   await page.route('**/api/cadu/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -161,7 +180,7 @@ async function mockCaduApi(page) {
     const run = dedupRun();
 
     if (requestPath === '/api/cadu/health') {
-      return route.fulfill({ json: { status: 'ok', version: '0.5.10', ts: Date.now() / 1000 } });
+      return route.fulfill({ json: { status: 'ok', version: '0.5.15', ts: Date.now() / 1000 } });
     }
     if (requestPath === '/api/cadu/openclaw/context') {
       return route.fulfill({
@@ -173,10 +192,10 @@ async function mockCaduApi(page) {
       });
     }
     if (requestPath === '/api/cadu/pipeline') {
-      return route.fulfill({ json: pipelineSnapshot() });
+      return route.fulfill({ json: pipelineSnapshot(previewStatus) });
     }
     if (requestPath === '/api/cadu/pipeline/health') {
-      return route.fulfill({ json: pipelineSnapshot().health });
+      return route.fulfill({ json: pipelineSnapshot(previewStatus).health });
     }
     if (requestPath === '/api/cadu/pipeline/runs') {
       return route.fulfill({ json: { runs: [run] } });
@@ -300,9 +319,9 @@ async function openDedupDetails(page) {
 }
 
 test.describe('Admin Cadu - observabilidade da deduplicação', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await installAdminSession(page);
-    await mockCaduApi(page);
+    await mockCaduApi(page, testInfo.title.includes('prévia expirada') ? 'warning' : 'ok');
   });
 
   test('mostra o funil e separa artefatos atuais no desktop', async ({ page }) => {
@@ -347,6 +366,29 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
     expect(artifactOverflow.scrollWidth).toBeLessThanOrEqual(artifactOverflow.clientWidth + 1);
     await page.screenshot({
       path: path.resolve('output/playwright/cadu-dedup-mobile.png'),
+      fullPage: false,
+    });
+  });
+
+  test('mantém Simular disponível e bloqueia execução real com prévia expirada', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+    const rejectConsent = page.getByRole('button', { name: 'Rejeitar opcionais' }).first();
+    try {
+      await rejectConsent.waitFor({ state: 'visible', timeout: 1500 });
+      await rejectConsent.click();
+    } catch (_) {
+      // O banner pode já ter sido resolvido pelo estado local do navegador.
+    }
+    await page.getByRole('tab', { name: /Pipeline/ }).click();
+    const stage = page.locator('.kc-pipeline-stage').filter({ hasText: 'Deduplicação global' });
+    await expect(stage).toContainText('nova simulação necessária');
+    await expect(stage.getByRole('button', { name: 'Simular' })).toBeEnabled();
+    const realButton = stage.getByRole('button', { name: 'Executar real' });
+    await expect(realButton).toBeDisabled();
+    await expect(realButton).toHaveAttribute('title', /A prévia expirou/);
+    await page.screenshot({
+      path: path.resolve('output/playwright/cadu-dedup-preview-expired.png'),
       fullPage: false,
     });
   });

@@ -5890,6 +5890,28 @@
     }];
   }
 
+  function pipelineStageModePrecondition(stage, dryRun) {
+    if (!stage || stage.id !== 'dedup' || dryRun !== false) return null;
+    var checks = stage.preflight && Array.isArray(stage.preflight.checks)
+      ? stage.preflight.checks
+      : [];
+    var previewCheck = checks.find(function (check) {
+      return check && check.id === 'dedup_preview_real';
+    });
+    if (!previewCheck) {
+      return {
+        canRun: false,
+        detail: 'O backend não confirmou uma prévia recente para a execução real. Execute uma nova simulação.'
+      };
+    }
+    return {
+      canRun: previewCheck.status === 'ok',
+      detail: previewCheck.detail || (previewCheck.status === 'ok'
+        ? 'Prévia recente pronta para aplicação.'
+        : 'Execute uma nova simulação antes da execução real.')
+    };
+  }
+
   function lockPipelineActionButtons(clickedButton) {
     var parent = clickedButton && clickedButton.parentElement;
     var buttons = parent ? Array.prototype.slice.call(parent.querySelectorAll('.kc-pipeline-stage__btn')) : (clickedButton ? [clickedButton] : []);
@@ -5906,8 +5928,9 @@
     };
   }
 
-  function stageChip(text, level) {
-    return '<span class="kc-pipeline-stage__chip' + (level ? ' is-' + escapeHtml(level) : '') + '">' + escapeHtml(text) + '</span>';
+  function stageChip(text, level, title) {
+    return '<span class="kc-pipeline-stage__chip' + (level ? ' is-' + escapeHtml(level) : '') + '"' +
+      (title ? ' title="' + escapeHtml(title) + '"' : '') + '>' + escapeHtml(text) + '</span>';
   }
 
   function effectLabel(effect) {
@@ -5938,13 +5961,21 @@
     var pf = s.preflight || {};
     var profile = pf.profile || {};
     var checks = pf.checks || [];
-    var missing = checks.filter(function (check) { return check.status === 'missing'; });
-    var level = pf.can_run === false ? 'danger' : (missing.length ? 'warning' : 'ok');
+    var attention = checks.filter(function (check) { return check.status !== 'ok'; });
+    var level = pf.can_run === false ? 'danger' : (attention.length ? 'warning' : 'ok');
     var chips = [];
-    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (missing.length ? 'atenção' : 'verificação prévia aprovada'), level));
+    chips.push(stageChip(pf.can_run === false ? 'bloqueado' : (attention.length ? 'atenção' : 'verificação prévia aprovada'), level));
     chips.push(stageChip('risco ' + (profile.risk || 'n/d'), profile.risk === 'high' ? 'danger' : (profile.risk === 'medium' ? 'warning' : 'ok')));
     if (profile.mutates_platform) chips.push(stageChip(profile.default_dry_run ? 'simulação padrão' : 'altera dados reais', profile.default_dry_run ? 'ok' : 'danger'));
     else chips.push(stageChip('sem mutação direta', 'ok'));
+    var dedupPreviewCheck = checks.find(function (check) { return check.id === 'dedup_preview_real'; });
+    if (dedupPreviewCheck) {
+      chips.push(stageChip(
+        dedupPreviewCheck.status === 'ok' ? 'prévia recente pronta' : 'nova simulação necessária',
+        dedupPreviewCheck.status === 'ok' ? 'ok' : 'warning',
+        dedupPreviewCheck.detail
+      ));
+    }
     (profile.effects || []).slice(0, 3).forEach(function (effect) { chips.push(stageChip(effectLabel(effect), '')); });
     if ((profile.effects || []).length > 3) chips.push(stageChip('+' + ((profile.effects || []).length - 3), ''));
     var script = pf.script || {};
@@ -6035,13 +6066,17 @@
       var actionButtons = [];
       function actionButton(dryRun, label, danger) {
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
-        var disabled = (!canRun && !canRefreshControl) || state.pipelineStartPending;
+        var modePrecondition = pipelineStageModePrecondition(s, dryRun);
+        var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
+        var disabled = (!canRefreshControl && (!canRun || modeBlocked)) || state.pipelineStartPending;
         var displayLabel = canRefreshControl ? 'Renovar · ' + label : label;
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
-          : (canRun
-            ? label + ' ' + s.id
-            : (canRefreshControl ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase() : 'Indisponível: ' + blockedReason));
+          : (canRefreshControl
+            ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
+            : (modeBlocked
+              ? 'Indisponível: ' + modePrecondition.detail
+              : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason)));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
@@ -6930,6 +6965,11 @@
           alert('Modo de execução ausente ou inválido no contrato renovado. Nenhuma pipeline foi iniciada.');
           return;
         }
+        var modePrecondition = pipelineStageModePrecondition(stage, dryRun);
+        if (modePrecondition && modePrecondition.canRun === false) {
+          alert(modePrecondition.detail + '\n\nNenhuma execução real foi iniciada.');
+          return;
+        }
         var warnings = (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n');
         var modeLabel = dryRun === true
           ? 'SIMULAÇÃO EXPLÍCITA (dry-run, sem mutação de plataforma)'
@@ -6940,7 +6980,7 @@
             ? '\n\nATENÇÃO: esta execução pode alterar dados reais/plataforma.'
             : '\n\nEste estágio não declara mutação direta de plataforma.');
         var dedupPreviewNotice = stageId === 'dedup' && dryRun === false
-          ? '\n\nEsta ação aplica a simulação recente sem consultar novamente a IA. Se posts, pares ou ações tiverem mudado, o backend bloqueará toda escrita e pedirá uma nova simulação.'
+          ? '\n\n' + modePrecondition.detail + '\nEsta ação aplica a simulação recente sem consultar novamente a IA. Se posts, pares ou ações tiverem mudado, o backend bloqueará toda escrita e pedirá uma nova simulação.'
           : '';
         var message = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + pf.command +
           '\nRisco: ' + (profile.risk || 'n/d') +
@@ -6993,6 +7033,13 @@
       var msg = 'Falha ao iniciar.';
       if (resp.status === 404 && typeof dryRun === 'boolean') {
         msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
+      } else if (resp.status === 412) {
+        var preconditionDetail = resp.data && (resp.data.detail || resp.data);
+        var preconditionMessage = preconditionDetail && (preconditionDetail.message || preconditionDetail);
+        var preconditionHint = preconditionDetail && preconditionDetail.hint;
+        msg = '⚠️ Execução recusada com segurança: ' +
+          (typeof preconditionMessage === 'string' ? preconditionMessage : JSON.stringify(preconditionMessage || 'pré-condição não atendida')) +
+          (preconditionHint ? '\n\nComo resolver: ' + preconditionHint : '');
       } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
         var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';

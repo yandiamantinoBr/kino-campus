@@ -62,6 +62,7 @@ function createRenderPipelineStages(state) {
     'runPipelineStage',
     `"use strict";
      const pipelineControlIsReady = ${extractFunctionSource('pipelineControlIsReady')};
+     const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
      return (${extractFunctionSource('renderPipelineStages')});`
   )(
     state,
@@ -101,6 +102,7 @@ function createRunHarness(dependencies) {
      const findPipelineStage = ${extractFunctionSource('findPipelineStage')};
      const resolvePipelineDryRun = ${extractFunctionSource('resolvePipelineDryRun')};
      const buildPipelineRunRequest = ${extractFunctionSource('buildPipelineRunRequest')};
+     const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
      return (${extractFunctionSource('runPipelineStage')});`
   )(
     dependencies.state,

@@ -84,6 +84,9 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("capabilities.explicit_run_mode_routes === true");
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
+    expect(controller).toContain("function pipelineStageModePrecondition(stage, dryRun)");
+    expect(controller).toContain("check.id === 'dedup_preview_real'");
+    expect(controller).toContain("resp.status === 412");
     expect(controller).toContain('buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities)');
     expect(controller).toContain("path += dryRun ? '/dry-run' : '/real'");
     expect(controller).toContain('body: JSON.stringify(request.payload)');
