@@ -3414,6 +3414,34 @@
   // Tabs + eventos
   // ============================================================
 
+  function keepCaduTabVisible(selectedTab, behavior) {
+    var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs');
+    if (!tabRail || tabRail.scrollWidth <= tabRail.clientWidth) return;
+    var railRect = tabRail.getBoundingClientRect();
+    var selectedRect = selectedTab.getBoundingClientRect();
+    if (
+      selectedRect.left >= railRect.left
+      && selectedRect.right <= railRect.right
+    ) {
+      return;
+    }
+    var centeredLeft = Math.min(
+      Math.max(0, tabRail.scrollWidth - tabRail.clientWidth),
+      Math.max(
+        0,
+        tabRail.scrollLeft
+          + selectedRect.left
+          - railRect.left
+          - Math.max(0, (tabRail.clientWidth - selectedRect.width) / 2)
+      )
+    );
+    if (behavior === 'instant' || typeof tabRail.scrollTo !== 'function') {
+      tabRail.scrollLeft = centeredLeft;
+    } else {
+      tabRail.scrollTo({ left: centeredLeft, behavior: 'smooth' });
+    }
+  }
+
   function switchTab(name, options) {
     var opts = options || {};
     if (['sites', 'feed', 'pipeline', 'reviews', 'openclaw'].indexOf(name) === -1) name = 'sites';
@@ -3427,28 +3455,7 @@
       t.setAttribute('tabindex', selected ? '0' : '-1');
       if (selected) selectedTab = t;
     });
-    var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs');
-    if (tabRail && tabRail.scrollWidth > tabRail.clientWidth) {
-      var railRect = tabRail.getBoundingClientRect();
-      var selectedRect = selectedTab.getBoundingClientRect();
-      if (
-        selectedRect.left < railRect.left
-        || selectedRect.right > railRect.right
-      ) {
-        var centeredLeft = Math.max(
-          0,
-          tabRail.scrollLeft
-            + selectedRect.left
-            - railRect.left
-            - Math.max(0, (tabRail.clientWidth - selectedRect.width) / 2)
-        );
-        if (typeof tabRail.scrollTo === 'function') {
-          tabRail.scrollTo({ left: centeredLeft, behavior: 'smooth' });
-        } else {
-          tabRail.scrollLeft = centeredLeft;
-        }
-      }
-    }
+    keepCaduTabVisible(selectedTab, 'smooth');
     ['sites', 'feed', 'pipeline', 'reviews', 'openclaw'].forEach(function (panelName) {
       var panel = $('#tab-' + panelName);
       if (!panel) return;
@@ -4898,6 +4905,13 @@
       tab.addEventListener('click', function () { switchTab(tab.getAttribute('data-tab')); });
       tab.addEventListener('keydown', function (event) { handleTabKeydown(event, tab); });
     });
+    var tabRailResizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(tabRailResizeTimer);
+      tabRailResizeTimer = setTimeout(function () {
+        keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
+      }, 120);
+    });
 
     // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
     // data-kpi-tab: "sites" | "feed" | "pipeline" | "reviews" | "openclaw" | "" (status, não clicável)
@@ -6097,7 +6111,9 @@
       var cls = (Number(m.published) === 0 && Number(m.publishable || 0) > 0) ? ' class="is-warning"' : '';
       parts.push('<span' + cls + '>publicados ' + escapeHtml(m.published) + '</span>');
     }
-    if (m.updated != null) parts.push('<span>atualizados ' + escapeHtml(m.updated) + '</span>');
+    metric('merged', 'mesclados', false);
+    metric('persisted', 'persistidos', false);
+    metric('updated', 'duplicatas atualizadas', false);
     if (m.discarded != null) parts.push('<span>descartados ' + escapeHtml(m.discarded) + '</span>');
     if (m.ig_profiles_ok != null || m.ig_profiles_failed != null) {
       var igFail = Number(m.ig_profiles_failed || 0);
@@ -6584,6 +6600,9 @@
       total: 'Total',
       publishable: 'Publicáveis',
       published: 'Publicados',
+      merged: 'Posts mesclados',
+      persisted: 'Posts persistidos',
+      updated: 'Duplicatas atualizadas',
       formatted: 'Formatados',
       relevant: 'Relevantes',
       review: 'Em revisão',
@@ -7293,6 +7312,12 @@
     // Pipeline, Revisões ou OpenClaw.
     switchTab(state.currentTab, { skipOperationalRefresh: true });
     if (main) main.style.display = 'block';
+    keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(function () {
+        keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
+      });
+    }
     if (loading) loading.style.display = 'none';
     refreshAll();
   }

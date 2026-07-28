@@ -245,10 +245,13 @@ describe('admin Cadu UX contracts', () => {
   });
 
   test('keeps operational tabs visible and review actions touch-friendly on narrow screens', () => {
+    expect(controller).toContain('function keepCaduTabVisible(selectedTab, behavior)');
     expect(controller).toContain("var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs')");
     expect(controller).toContain('var railRect = tabRail.getBoundingClientRect()');
     expect(controller).toContain('var selectedRect = selectedTab.getBoundingClientRect()');
     expect(controller).toContain("tabRail.scrollTo({ left: centeredLeft, behavior: 'smooth' })");
+    expect(controller).toContain("keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant')");
+    expect(controller).toContain("window.addEventListener('resize'");
     expect(html).toContain('.kc-cadu-tab { flex: 0 0 auto; min-height: 44px; white-space: nowrap;');
     expect(html).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
     expect(html).toContain('.kc-cadu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }');

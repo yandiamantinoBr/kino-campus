@@ -28,6 +28,30 @@ const escapeHtml = (value) => String(value == null ? '' : value)
   .replace(/'/g, '&#039;');
 
 describe('Cadu dedup observability', () => {
+  test('separates publisher persistence from duplicate enrichment updates', () => {
+    const renderRunSummary = Function(
+      'escapeHtml',
+      `"use strict"; return (${extractFunctionSource('renderRunSummary')});`
+    )(escapeHtml);
+    const html = renderRunSummary({
+      metrics: {
+        publishable: 26,
+        published: 0,
+        merged: 9,
+        persisted: 9,
+        updated: 6,
+      },
+      warnings: [],
+    });
+
+    expect(html).toContain('publicáveis 26');
+    expect(html).toContain('publicados 0');
+    expect(html).toContain('mesclados 9');
+    expect(html).toContain('persistidos 9');
+    expect(html).toContain('duplicatas atualizadas 6');
+    expect(html).not.toContain('>atualizados 6<');
+  });
+
   test('renders the standalone dedup funnel without generic publication labels', () => {
     const renderRunSummary = Function(
       'escapeHtml',

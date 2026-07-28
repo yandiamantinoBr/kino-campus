@@ -383,6 +383,31 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
     });
   });
 
+  test('mantém a subaba persistida visível ao abrir no mobile', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('kc:cadu:tab', 'openclaw');
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+
+    const activeTab = page.getByRole('tab', { name: /OpenClaw/ });
+    await expect(activeTab).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(async () => {
+      return page.locator('.kc-cadu-tabs').evaluate((rail) => {
+        const active = rail.querySelector('.kc-cadu-tab.is-active');
+        if (!active) return false;
+        const railRect = rail.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        return activeRect.left >= railRect.left - 1 && activeRect.right <= railRect.right + 1;
+      });
+    }).toBe(true);
+
+    const overflow = await page.evaluate(() => (
+      document.documentElement.scrollWidth - window.innerWidth
+    ));
+    expect(overflow).toBeLessThanOrEqual(1);
+  });
+
   test('mantém Simular disponível e orienta a execução real com prévia expirada', async ({ page }) => {
     const pipelinePosts = [];
     page.on('request', (request) => {
