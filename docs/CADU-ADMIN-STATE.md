@@ -1972,6 +1972,9 @@ Relatório operacional completo:
 - Um `ResizeObserver` nos cinco botões cobre a segunda fonte de mudança tardia:
   os badges operacionais preenchidos após as consultas (`198`, `147`, `ok`,
   etc.) também alteram o `scrollWidth` sem disparar `resize`.
+- Em até 760 px, o rail mantém 8 px de respiro nas duas bordas. A função de
+  reposicionamento usa o `padding-inline` calculado como limite, evitando o
+  recorte subpixel residual da última aba observado em 390 px.
 - O resumo do histórico separa `mesclados`, `persistidos` e
   `duplicatas atualizadas`. Em `bd38466f`, os valores 9/9/6 vêm,
   respectivamente, do publisher e do enriquecimento posterior de duplicatas;

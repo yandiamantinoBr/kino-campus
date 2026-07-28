@@ -3419,9 +3419,12 @@
     if (!tabRail || tabRail.scrollWidth <= tabRail.clientWidth) return;
     var railRect = tabRail.getBoundingClientRect();
     var selectedRect = selectedTab.getBoundingClientRect();
+    var railStyle = window.getComputedStyle(tabRail);
+    var startInset = Math.max(0, parseFloat(railStyle.paddingInlineStart) || 0);
+    var endInset = Math.max(0, parseFloat(railStyle.paddingInlineEnd) || 0);
     if (
-      selectedRect.left >= railRect.left
-      && selectedRect.right <= railRect.right
+      selectedRect.left >= railRect.left + startInset
+      && selectedRect.right <= railRect.right - endInset
     ) {
       return;
     }
