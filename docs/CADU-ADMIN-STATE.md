@@ -1969,6 +1969,9 @@ Relatório operacional completo:
 - O rail também se reposiciona após `document.fonts.ready/loadingdone`; a
   validação em produção encontrou que a fonte de ícones podia ampliar a última
   aba depois do layout inicial e deixá-la cerca de 11 px cortada no mobile.
+- Um `ResizeObserver` nos cinco botões cobre a segunda fonte de mudança tardia:
+  os badges operacionais preenchidos após as consultas (`198`, `147`, `ok`,
+  etc.) também alteram o `scrollWidth` sem disparar `resize`.
 - O resumo do histórico separa `mesclados`, `persistidos` e
   `duplicatas atualizadas`. Em `bd38466f`, os valores 9/9/6 vêm,
   respectivamente, do publisher e do enriquecimento posterior de duplicatas;

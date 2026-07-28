@@ -500,7 +500,9 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
   com 10 itens. Links/ações ganharam alvos táteis maiores.
 - Navegação: a aba operacional selecionada permanece visível no rail móvel,
   inclusive quando restaurada antes de o conteúdo principal ficar visível ou
-  após mudança de viewport ou carregamento tardio das fontes de ícones.
+  após mudança de viewport, carregamento tardio das fontes de ícones ou
+  atualização assíncrona dos badges. Um `ResizeObserver` acompanha a largura
+  efetiva de cada botão.
 - Histórico: `mesclados`, `persistidos` e `duplicatas atualizadas` são métricas
   distintas. No run `bd38466f`, os valores foram 9, 9 e 6; os seis updates
   pertencem ao enriquecimento de duplicatas, não ao resultado do publisher.

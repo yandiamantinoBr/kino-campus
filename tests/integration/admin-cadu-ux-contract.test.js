@@ -253,6 +253,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant')");
     expect(controller).toContain("window.addEventListener('resize'");
     expect(controller).toContain("document.fonts.addEventListener('loadingdone'");
+    expect(controller).toContain("state.tabRailResizeObserver = new window.ResizeObserver");
+    expect(controller).toContain("state.tabRailResizeObserver.observe(tab, { box: 'border-box' })");
     expect(html).toContain('.kc-cadu-tab { flex: 0 0 auto; min-height: 44px; white-space: nowrap;');
     expect(html).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
     expect(html).toContain('.kc-cadu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }');
