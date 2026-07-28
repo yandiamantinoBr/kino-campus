@@ -87,6 +87,9 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("function pipelineStageModePrecondition(stage, dryRun)");
     expect(controller).toContain("check.id === 'dedup_preview_real'");
     expect(controller).toContain("resp.status === 412");
+    expect(controller).toContain("preconditionDetail.code === 'dedup_preview_required'");
+    expect(controller).toContain("detail.code === 'pipeline_runtime_busy'");
+    expect(controller).toContain('Nenhum run foi criado.');
     expect(controller).toContain('buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities)');
     expect(controller).toContain("path += dryRun ? '/dry-run' : '/real'");
     expect(controller).toContain('body: JSON.stringify(request.payload)');

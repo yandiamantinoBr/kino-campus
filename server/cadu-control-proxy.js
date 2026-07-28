@@ -12,6 +12,10 @@ const MAX_SSE_BYTES = 16 * 1024 * 1024;
 const NON_STREAM_TIMEOUT_MS = 25_000;
 const AGENT_SEND_TIMEOUT_MS = 285_000;
 const SSE_TIMEOUT_MS = 285_000;
+const SAFE_UPSTREAM_ERROR_STATUS = new Map([
+  ['dedup_preview_required', 412],
+  ['pipeline_runtime_busy', 409],
+]);
 
 export class CaduProxyLimitError extends Error {
   constructor(code) {
@@ -366,6 +370,10 @@ async function sanitizedUpstreamFailure(upstream) {
   const existingRunId = parsed?.detail?.existing_run_id ?? parsed?.existing_run_id;
   if (status === 409 && typeof existingRunId === 'string' && SAFE_SEGMENT.test(existingRunId)) {
     payload.detail = { existing_run_id: existingRunId };
+  }
+  const errorCode = parsed?.detail?.code ?? parsed?.code;
+  if (typeof errorCode === 'string' && SAFE_UPSTREAM_ERROR_STATUS.get(errorCode) === status) {
+    payload.detail = { ...(payload.detail || {}), code: errorCode };
   }
   return { status, payload };
 }
