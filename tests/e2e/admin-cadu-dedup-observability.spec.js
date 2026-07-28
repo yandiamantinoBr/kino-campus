@@ -402,6 +402,24 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
       });
     }).toBe(true);
 
+    // Reproduz a expansão tardia observada em produção quando a fonte dos
+    // ícones termina de carregar após a restauração da aba persistida.
+    await activeTab.evaluate((tab) => {
+      tab.style.paddingInline = '52px';
+    });
+    await page.evaluate(() => {
+      document.fonts.dispatchEvent(new Event('loadingdone'));
+    });
+    await expect.poll(async () => {
+      return page.locator('.kc-cadu-tabs').evaluate((rail) => {
+        const active = rail.querySelector('.kc-cadu-tab.is-active');
+        if (!active) return false;
+        const railRect = rail.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        return activeRect.left >= railRect.left - 1 && activeRect.right <= railRect.right + 1;
+      });
+    }).toBe(true);
+
     const overflow = await page.evaluate(() => (
       document.documentElement.scrollWidth - window.innerWidth
     ));
