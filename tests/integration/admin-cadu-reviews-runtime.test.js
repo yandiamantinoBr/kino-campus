@@ -95,6 +95,54 @@ function createPage(apiFetchResponse) {
 }
 
 describe('Admin Cadu review center runtime', () => {
+  test('translates incident diagnostics and makes run/chat shortcuts explicit', async () => {
+    const incident = {
+      ...centralItem(),
+      kind: 'pipeline_incident',
+      title: 'Falha: Deduplicação visual e textual',
+      summary: 'A etapa obrigatória falhou.',
+      issues: ['dedup_preview_state_changed', '1_of_9_items_failed'],
+      allowed_decisions: ['acknowledged', 'deferred']
+    };
+    const apiFetchResponse = jest.fn(async () => ({
+      ok: true,
+      data: {
+        items: [incident],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    }));
+    const page = createPage(apiFetchResponse);
+    const runCard = page.window.document.createElement('div');
+    runCard.dataset.runId = incident.run_id;
+    runCard.className = 'kc-pipeline-history-item';
+    page.window.document.body.appendChild(runCard);
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('[data-review-run]'));
+    const listText = page.window.document.getElementById('reviews-list').textContent;
+    expect(listText).toContain('A plataforma mudou depois da simulação');
+    expect(listText).toContain('Falha em 1 de 9 itens');
+
+    page.window.document.querySelector('[data-review-run]').click();
+    await waitFor(() => runCard.classList.contains('is-review-target'));
+    expect(runCard.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center'
+    });
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('[data-review-chat]'));
+    page.window.document.querySelector('[data-review-chat]').click();
+    const chatInput = page.window.document.getElementById('openclaw-chat-input');
+    expect(chatInput.value).toContain('Falha: Deduplicação visual e textual');
+    expect(page.switchTab).toHaveBeenCalledWith('openclaw');
+    page.dom.window.close();
+  });
+
   test('requires a rejection note and records an editorial-only versioned decision', async () => {
     const calls = [];
     const apiFetchResponse = jest.fn(async (url, options = {}) => {

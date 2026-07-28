@@ -3419,12 +3419,36 @@
     if (['sites', 'feed', 'pipeline', 'reviews', 'openclaw'].indexOf(name) === -1) name = 'sites';
     state.currentTab = name;
     try { localStorage.setItem(STORAGE_TAB, name); } catch (e) {}
+    var selectedTab = null;
     $$('.kc-cadu-tab').forEach(function (t) {
       var selected = t.getAttribute('data-tab') === name;
       t.classList.toggle('is-active', selected);
       t.setAttribute('aria-selected', selected ? 'true' : 'false');
       t.setAttribute('tabindex', selected ? '0' : '-1');
+      if (selected) selectedTab = t;
     });
+    var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs');
+    if (tabRail && tabRail.scrollWidth > tabRail.clientWidth) {
+      var railRect = tabRail.getBoundingClientRect();
+      var selectedRect = selectedTab.getBoundingClientRect();
+      if (
+        selectedRect.left < railRect.left
+        || selectedRect.right > railRect.right
+      ) {
+        var centeredLeft = Math.max(
+          0,
+          tabRail.scrollLeft
+            + selectedRect.left
+            - railRect.left
+            - Math.max(0, (tabRail.clientWidth - selectedRect.width) / 2)
+        );
+        if (typeof tabRail.scrollTo === 'function') {
+          tabRail.scrollTo({ left: centeredLeft, behavior: 'smooth' });
+        } else {
+          tabRail.scrollLeft = centeredLeft;
+        }
+      }
+    }
     ['sites', 'feed', 'pipeline', 'reviews', 'openclaw'].forEach(function (panelName) {
       var panel = $('#tab-' + panelName);
       if (!panel) return;

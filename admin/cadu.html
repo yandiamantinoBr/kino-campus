@@ -34,8 +34,8 @@
     .kc-cadu-kpi__label { display: flex; gap: 6px; align-items: center; color: var(--kc-text-dark-secondary); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
     .kc-cadu-kpi strong { display: block; font-size: 1.7rem; line-height: 1; }
     .kc-cadu-kpi small { display: block; margin-top: 6px; color: var(--kc-text-dark-secondary); font-size: .76rem; }
-    .kc-cadu-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--kc-border-dark); margin: 18px 0 12px; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; }
-    .kc-cadu-tab { background: transparent; border: 0; padding: 10px 16px; color: var(--kc-text-dark-secondary); font-size: .92rem; cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; display: inline-flex; gap: 8px; align-items: center; }
+    .kc-cadu-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--kc-border-dark); margin: 18px 0 12px; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; scroll-behavior: smooth; scrollbar-width: thin; }
+    .kc-cadu-tab { flex: 0 0 auto; min-height: 44px; white-space: nowrap; background: transparent; border: 0; padding: 10px 16px; color: var(--kc-text-dark-secondary); font-size: .92rem; cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; display: inline-flex; gap: 8px; align-items: center; }
     .kc-cadu-tab:hover { color: var(--kc-text-dark-primary); }
     .kc-cadu-tab.is-active { color: var(--kc-primary-brand); border-bottom-color: var(--kc-primary-brand); }
     .kc-cadu-tab__badge { background: var(--kc-border-dark); color: var(--kc-text-dark-secondary); border-radius: 10px; padding: 1px 8px; font-size: .74rem; font-weight: 600; }
@@ -117,8 +117,43 @@
     }
 
 /* ===== OpenClaw section ===== */
+.kc-cadu-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.kc-cadu-stat-card {
+  min-width: 0;
+  min-height: 104px;
+  padding: 12px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--kc-bg-dark) 45%, var(--kc-surface-dark));
+}
+.kc-cadu-stat-card__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--kc-text-dark-secondary);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.kc-cadu-stat-card__label i { color: var(--kc-primary-brand); }
+.kc-cadu-stat-card__value {
+  margin-top: 8px;
+  color: var(--kc-text-dark-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 .kc-openclaw-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; margin-top: 12px; }
-@media (max-width: 900px) { .kc-openclaw-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) {
+  .kc-cadu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kc-openclaw-grid { grid-template-columns: 1fr; }
+}
 .kc-openclaw-panel {
   background: var(--kc-bg-card-dark, #1e1e22);
   border: 1px solid var(--kc-border-dark, #333);
@@ -365,6 +400,11 @@
     .kc-pipeline-history-item.is-partial { border-color: rgba(245,158,11,.45); }
     .kc-pipeline-history-item.is-finished { border-color: rgba(148,163,184,.35); border-style: dashed; }
     .kc-pipeline-history-item.is-failed { border-color: rgba(239,68,68,.35); }
+    .kc-pipeline-history-item.is-review-target {
+      border-color: var(--kc-primary-brand);
+      background: color-mix(in srgb, var(--kc-primary-brand) 9%, var(--kc-surface-dark));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--kc-primary-brand) 18%, transparent);
+    }
     .kc-pipeline-history-item__head { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
     .kc-pipeline-history-item__id { font-family: monospace; font-size: .68rem; color: var(--kc-text-dark-secondary); }
     .kc-pipeline-history-item__summary { color: var(--kc-text-dark-secondary); font-size: .7rem; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -711,6 +751,9 @@
         #run-details-modal .kc-modal__inner { max-height: calc(100dvh - 20px); }
       }
     }
+    @media (max-width: 340px) {
+      .kc-cadu-stats { grid-template-columns: minmax(0, 1fr); }
+    }
     /* notification bell + status indicator no hero */
     .kc-cadu-activity-dropdown { position: absolute; right: 0; top: 100%; width: min(360px,calc(100vw - 24px)); min-width: min(320px,calc(100vw - 24px)); max-width: 380px; background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.45); margin-top: 8px; z-index: 9999; }
     .kc-cadu-activity-dropdown[hidden] { display: none !important; }
@@ -747,7 +790,7 @@
     }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
-  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=936b1318fa7dc8ff" />
+  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=368518d1ae15b932" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -1384,7 +1427,7 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=6c7dc4e90514fd08"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=a51cc0a5d6df8388"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=173d852c49bf10ea"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=c953b0c9f890cf9a"></script>
 </body>
 </html>

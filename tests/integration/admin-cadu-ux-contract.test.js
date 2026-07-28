@@ -7,6 +7,14 @@ const controller = fs.readFileSync(
   path.join(ROOT, 'assets/js/controllers/admin/admin-cadu.controller.js'),
   'utf8'
 );
+const reviewsController = fs.readFileSync(
+  path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-reviews.js'),
+  'utf8'
+);
+const reviewsCss = fs.readFileSync(
+  path.join(ROOT, 'assets/css/admin-cadu-reviews.css'),
+  'utf8'
+);
 const html = fs.readFileSync(path.join(ROOT, 'admin/cadu.html'), 'utf8');
 
 describe('admin Cadu UX contracts', () => {
@@ -234,6 +242,19 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('function switchTab(name, options)');
     expect(controller).toContain('!opts.skipOperationalRefresh && name === \'reviews\'');
     expect(controller).toContain('switchTab(state.currentTab, { skipOperationalRefresh: true });');
+  });
+
+  test('keeps operational tabs visible and review actions touch-friendly on narrow screens', () => {
+    expect(controller).toContain("var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs')");
+    expect(controller).toContain('var railRect = tabRail.getBoundingClientRect()');
+    expect(controller).toContain('var selectedRect = selectedTab.getBoundingClientRect()');
+    expect(controller).toContain("tabRail.scrollTo({ left: centeredLeft, behavior: 'smooth' })");
+    expect(html).toContain('.kc-cadu-tab { flex: 0 0 auto; min-height: 44px; white-space: nowrap;');
+    expect(html).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
+    expect(html).toContain('.kc-cadu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }');
+    expect(reviewsCss).toMatch(/\.kc-cadu-review-item__links a,[\s\S]*min-height: 40px;/);
+    expect(reviewsController).toContain("window.matchMedia('(max-width: 700px)').matches");
+    expect(reviewsController).toContain("dedup_preview_state_changed: 'A plataforma mudou depois da simulação'");
   });
 
   test('serializes source writes, preserves dirty drafts and revalidates the exact effect', () => {
