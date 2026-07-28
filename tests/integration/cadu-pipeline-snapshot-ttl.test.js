@@ -63,6 +63,7 @@ function createRenderPipelineStages(state) {
     `"use strict";
      const pipelineControlIsReady = ${extractFunctionSource('pipelineControlIsReady')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
+     const renderDedupProtectedFlow = ${extractFunctionSource('renderDedupProtectedFlow')};
      return (${extractFunctionSource('renderPipelineStages')});`
   )(
     state,

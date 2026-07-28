@@ -13,6 +13,7 @@ describe('admin Cadu UX contracts', () => {
   test('content-addresses immutable Cadu JavaScript assets', () => {
     [
       'assets/js/controllers/admin/admin-cadu-sources.js',
+      'assets/js/controllers/admin/admin-cadu-reviews.js',
       'assets/js/controllers/admin/admin-cadu.controller.js'
     ].forEach((relativePath) => {
       const canonicalText = fs.readFileSync(path.join(ROOT, relativePath), 'utf8').replace(/\r\n/g, '\n');
@@ -80,7 +81,10 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('if (!await ensureFreshPipelineControl())');
     expect(controller).toContain('schedulePipelineControlExpiry();');
     expect(controller).toContain('snapshotGeneration !== state.pipelineRequestGeneration');
-    expect(controller).toContain("var displayLabel = canRefreshControl ? 'Renovar · ' + label : label;");
+    expect(controller).toContain("var displayLabel = canRefreshControl");
+    expect(controller).toContain("'Renovar · ' + label");
+    expect(controller).toContain("'Executar real · simule antes'");
+    expect(controller).toContain("var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;");
     expect(controller).toContain("capabilities.explicit_run_mode_routes === true");
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
@@ -221,6 +225,15 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('function resolveInstitutionalReview(reviewId, decision)');
     expect(controller).toContain('state.institutionalReviewResolveChains[reviewId]');
     expect(controller).toContain('<details class="kc-cadu-review-queue__technical">');
+    expect(controller).toContain('syncInstitutionalReviewPendingCount();');
+    expect(controller).toContain('histórico institucional completo não pôde ser confirmado');
+    expect(controller).toContain('window.KCCaduReviews.setInstitutionalPending(normalized.total)');
+  });
+
+  test('performs only one initial operational refresh for the persisted tab', () => {
+    expect(controller).toContain('function switchTab(name, options)');
+    expect(controller).toContain('!opts.skipOperationalRefresh && name === \'reviews\'');
+    expect(controller).toContain('switchTab(state.currentTab, { skipOperationalRefresh: true });');
   });
 
   test('serializes source writes, preserves dirty drafts and revalidates the exact effect', () => {
