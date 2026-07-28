@@ -1966,6 +1966,9 @@ Relatório operacional completo:
 - Links e decisões têm alvos táteis maiores, a subaba ativa permanece visível
   no rail horizontal inclusive após restauração inicial ou redimensionamento,
   e os KPIs do OpenClaw usam grade 4/2/1 colunas.
+- O rail também se reposiciona após `document.fonts.ready/loadingdone`; a
+  validação em produção encontrou que a fonte de ícones podia ampliar a última
+  aba depois do layout inicial e deixá-la cerca de 11 px cortada no mobile.
 - O resumo do histórico separa `mesclados`, `persistidos` e
   `duplicatas atualizadas`. Em `bd38466f`, os valores 9/9/6 vêm,
   respectivamente, do publisher e do enriquecimento posterior de duplicatas;

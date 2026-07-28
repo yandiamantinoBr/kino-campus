@@ -4912,6 +4912,21 @@
         keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
       }, 120);
     });
+    // Font Awesome pode concluir depois do primeiro layout e ampliar os
+    // rótulos do rail sem disparar resize. Reposicionar também após fontes
+    // tardias evita que a última aba volte a ficar parcialmente cortada.
+    if (document.fonts) {
+      if (document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready.then(function () {
+          keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
+        }).catch(function () {});
+      }
+      if (typeof document.fonts.addEventListener === 'function') {
+        document.fonts.addEventListener('loadingdone', function () {
+          keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
+        });
+      }
+    }
 
     // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
     // data-kpi-tab: "sites" | "feed" | "pipeline" | "reviews" | "openclaw" | "" (status, não clicável)
