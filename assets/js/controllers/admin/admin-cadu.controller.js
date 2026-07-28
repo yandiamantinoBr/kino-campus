@@ -4927,6 +4927,19 @@
         });
       }
     }
+    if (typeof window.ResizeObserver === 'function') {
+      if (state.tabRailResizeObserver) state.tabRailResizeObserver.disconnect();
+      state.tabRailResizeObserver = new window.ResizeObserver(function () {
+        keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
+      });
+      $$('.kc-cadu-tab').forEach(function (tab) {
+        try {
+          state.tabRailResizeObserver.observe(tab, { box: 'border-box' });
+        } catch (e) {
+          state.tabRailResizeObserver.observe(tab);
+        }
+      });
+    }
 
     // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
     // data-kpi-tab: "sites" | "feed" | "pipeline" | "reviews" | "openclaw" | "" (status, não clicável)

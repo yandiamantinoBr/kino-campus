@@ -402,13 +402,10 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
       });
     }).toBe(true);
 
-    // Reproduz a expansão tardia observada em produção quando a fonte dos
-    // ícones termina de carregar após a restauração da aba persistida.
+    // Reproduz a expansão tardia observada em produção quando fontes ou badges
+    // assíncronos alteram a largura após a restauração da aba persistida.
     await activeTab.evaluate((tab) => {
       tab.style.paddingInline = '52px';
-    });
-    await page.evaluate(() => {
-      document.fonts.dispatchEvent(new Event('loadingdone'));
     });
     await expect.poll(async () => {
       return page.locator('.kc-cadu-tabs').evaluate((rail) => {
