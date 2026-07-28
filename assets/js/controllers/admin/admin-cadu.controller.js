@@ -7288,6 +7288,7 @@
       statusPill.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando…';
     }
     var operationalRefresh = Promise.resolve();
+    var reviewSummaryRefresh = Promise.resolve();
     if (state.currentTab === 'openclaw') {
       operationalRefresh = refreshOpenclaw({ force: opts.forceOperational === true });
     } else if (state.currentTab === 'pipeline') {
@@ -7296,6 +7297,10 @@
         typeof window.KCCaduReviews.refresh === 'function') {
       operationalRefresh = window.KCCaduReviews.refresh();
     }
+    if (state.currentTab !== 'reviews' && window.KCCaduReviews &&
+        typeof window.KCCaduReviews.refreshSummary === 'function') {
+      reviewSummaryRefresh = window.KCCaduReviews.refreshSummary();
+    }
     await Promise.all([
       checkHealth(),
       loadSites(),
@@ -7303,6 +7308,7 @@
       loadPendingInstitutionalReviewAuthority(),
       state.currentTab === 'feed' ? loadFeed(true) : Promise.resolve(),
       operationalRefresh,
+      reviewSummaryRefresh,
     ]);
     if (state.currentTab !== 'feed') loadFeed(true); // atualiza contagem mesmo com tab sites
     if (loading) loading.style.display = 'none';

@@ -270,6 +270,23 @@ async function mockCaduApi(page, previewStatus = 'ok', runtimeBusy = false) {
         },
       });
     }
+    if (requestPath === '/api/cadu/reviews') {
+      return route.fulfill({
+        json: {
+          items: [],
+          total: 147,
+          limit: Number(url.searchParams.get('limit')) || 25,
+          offset: 0,
+          has_more: true,
+          providers: [
+            { id: 'pipeline', label: 'Pipeline', queue: 'central', pending: 128, resolved: 0 },
+            { id: 'feed', label: 'Feed Coletado', queue: 'central', pending: 19, resolved: 0 },
+            { id: 'sites', label: 'Mapa UFG', queue: 'institutional', pending: 0, resolved: 0 },
+            { id: 'openclaw', label: 'OpenClaw', queue: 'central', pending: 0, resolved: 0 },
+          ],
+        },
+      });
+    }
     if (requestPath === '/api/cadu/sites/source-registry/readiness') {
       return route.fulfill({ status: 503, json: { ready: false } });
     }
@@ -335,6 +352,14 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
       testInfo.title.includes('prévia expirada') ? 'warning' : 'ok',
       testInfo.title.includes('lock global'),
     );
+  });
+
+  test('atualiza o badge da Central em segundo plano antes de abrir Revisões', async ({ page }) => {
+    await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('tab', { name: /Mapa UFG/ })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#badge-reviews')).toHaveText('147');
+    await expect(page.locator('#badge-reviews')).toHaveAttribute('title', '147 revisões pendentes');
   });
 
   test('mostra o funil e separa artefatos atuais no desktop', async ({ page }) => {
