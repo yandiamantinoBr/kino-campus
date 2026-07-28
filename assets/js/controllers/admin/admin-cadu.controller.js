@@ -1037,6 +1037,17 @@
     return state.pendingInstitutionalReviewsBySource[String(sourceId || '')] || null;
   }
 
+  function syncInstitutionalReviewPendingCount() {
+    var pendingCount = Object.keys(state.pendingInstitutionalReviewsBySource).filter(function (sourceId) {
+      var review = state.pendingInstitutionalReviewsBySource[sourceId];
+      return review && review.state === 'pending';
+    }).length;
+    if (window.KCCaduReviews &&
+        typeof window.KCCaduReviews.setInstitutionalPending === 'function') {
+      window.KCCaduReviews.setInstitutionalPending(pendingCount);
+    }
+  }
+
   function institutionalReviewSubmissionAuthority() {
     if (state.pendingInstitutionalReviewAuthorityState === 'ready') {
       return { allowed: true, loading: false, reason: '' };
@@ -1391,10 +1402,17 @@
       state.pendingInstitutionalReviewsBySource = nextBySource;
       state.pendingInstitutionalReviewAuthorityState = 'ready';
       state.pendingInstitutionalReviewAuthorityError = '';
+      if (typeof syncInstitutionalReviewPendingCount === 'function') {
+        syncInstitutionalReviewPendingCount();
+      }
       if (state.sourceCatalog) renderSitesTable();
       return true;
-    } catch (_) {
+    } catch (error) {
       if (requestGeneration !== state.pendingInstitutionalReviewAuthorityRequestGeneration) return false;
+      console.warn(
+        '[cadu-admin] histórico institucional completo não pôde ser confirmado:',
+        error && error.message ? error.message : error
+      );
       pendingInstitutionalReviewAuthorityFailure();
       return false;
     }
@@ -1422,6 +1440,9 @@
       state.pendingInstitutionalReviewsBySource[sourceId] = pendingInstitutionalReviewReference(latest);
     } else {
       delete state.pendingInstitutionalReviewsBySource[sourceId];
+    }
+    if (typeof syncInstitutionalReviewPendingCount === 'function') {
+      syncInstitutionalReviewPendingCount();
     }
     if (state.sourceCatalog) renderSitesTable();
     return latest;
@@ -1482,6 +1503,12 @@
     state.institutionalReviewLimit = normalized.limit;
     state.institutionalReviewOffset = normalized.offset;
     state.institutionalReviewLoading = false;
+    if (state.institutionalReviewState === 'pending' &&
+        !state.institutionalReviewSourceId &&
+        window.KCCaduReviews &&
+        typeof window.KCCaduReviews.setInstitutionalPending === 'function') {
+      window.KCCaduReviews.setInstitutionalPending(normalized.total);
+    }
     normalized.items.forEach(function (item) {
       var stale = state.staleInstitutionalReviews[item.id];
       if (stale && stale.sourceRevision !== item.source_revision) delete state.staleInstitutionalReviews[item.id];
@@ -1558,6 +1585,9 @@
         createdAt: item.created_at,
         resolvedAt: resolvedReview.resolved_at
       };
+      if (typeof syncInstitutionalReviewPendingCount === 'function') {
+        syncInstitutionalReviewPendingCount();
+      }
       state.institutionalReviews = state.institutionalReviews.filter(function (entry) { return entry.id !== item.id; });
       if (state.institutionalReviewTotal > 0) state.institutionalReviewTotal -= 1;
       if (state.sourceCatalog) renderSitesTable();
@@ -3384,8 +3414,9 @@
   // Tabs + eventos
   // ============================================================
 
-  function switchTab(name) {
-    if (['sites', 'feed', 'pipeline', 'openclaw'].indexOf(name) === -1) name = 'sites';
+  function switchTab(name, options) {
+    var opts = options || {};
+    if (['sites', 'feed', 'pipeline', 'reviews', 'openclaw'].indexOf(name) === -1) name = 'sites';
     state.currentTab = name;
     try { localStorage.setItem(STORAGE_TAB, name); } catch (e) {}
     $$('.kc-cadu-tab').forEach(function (t) {
@@ -3394,7 +3425,7 @@
       t.setAttribute('aria-selected', selected ? 'true' : 'false');
       t.setAttribute('tabindex', selected ? '0' : '-1');
     });
-    ['sites', 'feed', 'pipeline', 'openclaw'].forEach(function (panelName) {
+    ['sites', 'feed', 'pipeline', 'reviews', 'openclaw'].forEach(function (panelName) {
       var panel = $('#tab-' + panelName);
       if (!panel) return;
       var selected = panelName === name;
@@ -3404,15 +3435,19 @@
     if (name === 'feed' && !state.feedDiagnostics && !state.feedDiagnosticsLoading) {
       loadFeedDiagnostics();
     }
+    if (!opts.skipOperationalRefresh && name === 'reviews' && window.KCCaduReviews &&
+        typeof window.KCCaduReviews.refresh === 'function') {
+      window.KCCaduReviews.refresh();
+    }
     var tabPipeline = $('#tab-pipeline');
     if (tabPipeline) {
-      if (name === 'pipeline') {
+      if (!opts.skipOperationalRefresh && name === 'pipeline') {
         refreshPipeline();
       }
     }
     var tabOpenclaw = $('#tab-openclaw');
     if (tabOpenclaw) {
-      if (name === 'openclaw') {
+      if (!opts.skipOperationalRefresh && name === 'openclaw') {
         refreshOpenclaw();
       }
     }
@@ -4841,7 +4876,7 @@
     });
 
     // KPI strip: cada botão leva à aba correspondente, opcionalmente aplicando um filtro.
-    // data-kpi-tab: "sites" | "feed" | "pipeline" | "openclaw" | "" (status, não clicável)
+    // data-kpi-tab: "sites" | "feed" | "pipeline" | "reviews" | "openclaw" | "" (status, não clicável)
     // data-kpi-filter: "all" | "ig=confirmed" | "tier=1" (opcional)
     $$('.kc-cadu-kpi[data-kpi-tab]').forEach(function (btn) {
       var tabName = btn.getAttribute('data-kpi-tab');
@@ -4881,6 +4916,12 @@
       if (btn) {
         askCaduContext({ preventDefault: function () {}, currentTarget: btn });
       }
+      var reviewLink = t && t.closest ? t.closest('[data-open-reviews]') : null;
+      if (reviewLink && window.KCCaduReviews &&
+          typeof window.KCCaduReviews.open === 'function') {
+        ev.preventDefault();
+        window.KCCaduReviews.open(reviewLink.getAttribute('data-open-reviews') || '', 'pending');
+      }
     });
 
     // Notification bell: toggle dropdown + click-outside close
@@ -4915,6 +4956,16 @@
         switchTab('pipeline');
         if (notifDropdown) notifDropdown.setAttribute('hidden', '');
         if (notifBell) notifBell.setAttribute('aria-expanded', 'false');
+      });
+    }
+    var sitesOpenReviews = $('#sites-open-reviews-btn');
+    if (sitesOpenReviews) {
+      sitesOpenReviews.addEventListener('click', function () {
+        if (window.KCCaduReviews && typeof window.KCCaduReviews.open === 'function') {
+          window.KCCaduReviews.open('sites', 'pending');
+        } else {
+          switchTab('reviews');
+        }
       });
     }
 
@@ -5986,6 +6037,29 @@
     return '<div class="kc-pipeline-stage__preflight">' + chips.join('') + '</div>' + scriptHtml;
   }
 
+  function renderDedupProtectedFlow(stage) {
+    if (!stage || stage.id !== 'dedup') return '';
+    var checks = stage.preflight && Array.isArray(stage.preflight.checks)
+      ? stage.preflight.checks
+      : [];
+    var preview = checks.find(function (check) {
+      return check && check.id === 'dedup_preview_real';
+    });
+    var ready = Boolean(preview && preview.status === 'ok');
+    var detail = preview && preview.detail
+      ? preview.detail
+      : 'A execução real exige uma simulação compatível feita nos últimos 30 minutos.';
+    return '<div class="kc-pipeline-dedup-flow ' + (ready ? 'is-ready' : 'is-waiting') + '">' +
+      '<strong><i class="fas fa-shield-halved" aria-hidden="true"></i> Fluxo protegido</strong>' +
+      '<div><span class="' + (ready ? 'is-complete' : 'is-current') + '">1. Simular</span>' +
+      '<i class="fas fa-chevron-right" aria-hidden="true"></i>' +
+      '<span>2. Revisar relatório</span>' +
+      '<i class="fas fa-chevron-right" aria-hidden="true"></i>' +
+      '<span class="' + (ready ? 'is-current' : '') + '">3. Executar real</span></div>' +
+      '<small>' + escapeHtml(detail) + '</small>' +
+      '</div>';
+  }
+
   function renderRunSummary(summary) {
     if (!summary || !summary.metrics) return '';
     var m = summary.metrics || {};
@@ -6008,6 +6082,9 @@
     if (m.ig_new_posts != null) parts.push('<span>IG novos ' + escapeHtml(m.ig_new_posts) + '</span>');
     if (m.ig_relevant_posts != null) parts.push('<span>IG relevantes ' + escapeHtml(m.ig_relevant_posts) + '</span>');
     if (m.ig_seen_skipped != null) parts.push('<span>IG já vistos ' + escapeHtml(m.ig_seen_skipped) + '</span>');
+    if (Number(m.quality_review || 0) > 0) {
+      parts.push('<button type="button" class="kc-pipeline-review-link" data-open-reviews="pipeline">em revisão ' + escapeHtml(m.quality_review) + ' <i class="fas fa-arrow-right" aria-hidden="true"></i></button>');
+    }
     metric('dedup_posts_analyzed', 'analisados', false);
     metric('dedup_exact_url_pairs', 'URLs idênticas', false);
     metric('dedup_official_reference_pairs', 'referências oficiais compartilhadas', false);
@@ -6068,8 +6145,11 @@
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
         var modePrecondition = pipelineStageModePrecondition(s, dryRun);
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
-        var disabled = (!canRefreshControl && (!canRun || modeBlocked)) || state.pipelineStartPending;
-        var displayLabel = canRefreshControl ? 'Renovar · ' + label : label;
+        var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
+        var disabled = (!canRefreshControl && (!canRun || (modeBlocked && !guardedDedupReal))) || state.pipelineStartPending;
+        var displayLabel = canRefreshControl
+          ? 'Renovar · ' + label
+          : (guardedDedupReal ? 'Executar real · simule antes' : label);
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
           : (canRefreshControl
@@ -6078,7 +6158,7 @@
               ? 'Indisponível: ' + modePrecondition.detail
               : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason)));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
-        return '<button class="' + btnClass + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
+        return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
         '</button>';
       }
@@ -6091,6 +6171,7 @@
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
         '<div class="kc-pipeline-stage__desc">' + escapeHtml(s.description) + '</div>' +
         renderStagePreflight(s) +
+        renderDedupProtectedFlow(s) +
         '<div class="kc-pipeline-stage__meta">' +
           '<span class="kc-pipeline-history-item ' + lastCls + '" style="border:none;padding:2px 6px;"><i class="fas fa-clock"></i> ' + escapeHtml(lastTxt) + '</span>' +
           '<span style="margin-left:auto;">~' + escapeHtml(s.estimated_sec) + 's</span>' +
@@ -6929,6 +7010,7 @@
     var restoreButtons = lockPipelineActionButtons(btn);
     var requestedDryRun = dryRun;
     var resp;
+    var focusSimulateAfterRestore = false;
     try {
       // A confirmação é vinculada a uma geração e prazo exatos. Se o diálogo
       // permanecer aberto além do TTL, o laço renova, relê o estágio e pede
@@ -6967,7 +7049,8 @@
         }
         var modePrecondition = pipelineStageModePrecondition(stage, dryRun);
         if (modePrecondition && modePrecondition.canRun === false) {
-          alert(modePrecondition.detail + '\n\nNenhuma execução real foi iniciada.');
+          alert(modePrecondition.detail + '\n\nUse “Simular”, revise o relatório e execute o modo real em até 30 minutos. Nenhuma execução real foi iniciada.');
+          focusSimulateAfterRestore = true;
           return;
         }
         var warnings = (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n');
@@ -7020,6 +7103,13 @@
       // Um refresh pode ter substituído o grupo enquanto o POST aguardava.
       // Reconstrói o DOM atual para não deixar botões novos presos/desbloqueados.
       renderPipelineStages(state.pipelineStages || []);
+      if (focusSimulateAfterRestore) {
+        var simulateButton = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"][data-dry-run="true"]')[0];
+        if (simulateButton) {
+          simulateButton.focus();
+          simulateButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     }
     if (resp && resp.run_id) {
       // Limpa log box pra nova execução
@@ -7107,6 +7197,10 @@
     if (document.hidden) return;
     if (state.currentTab === 'openclaw') refreshOpenclaw();
     if (state.currentTab === 'pipeline') refreshPipeline();
+    if (state.currentTab === 'reviews' && window.KCCaduReviews &&
+        typeof window.KCCaduReviews.refresh === 'function') {
+      window.KCCaduReviews.refresh();
+    }
   });
 
   async function refreshAll(options) {
@@ -7124,6 +7218,9 @@
       operationalRefresh = refreshOpenclaw({ force: opts.forceOperational === true });
     } else if (state.currentTab === 'pipeline') {
       operationalRefresh = refreshPipeline();
+    } else if (state.currentTab === 'reviews' && window.KCCaduReviews &&
+        typeof window.KCCaduReviews.refresh === 'function') {
+      operationalRefresh = window.KCCaduReviews.refresh();
     }
     await Promise.all([
       checkHealth(),
@@ -7159,8 +7256,18 @@
     try {
       state.currentTab = localStorage.getItem(STORAGE_TAB) || 'sites';
     } catch (e) {}
+    if (window.KCCaduReviews && typeof window.KCCaduReviews.init === 'function') {
+      window.KCCaduReviews.init({
+        apiFetchResponse: apiFetchResponse,
+        switchTab: switchTab
+      });
+      syncInstitutionalReviewPendingCount();
+    }
     bindEvents();
-    switchTab(state.currentTab);
+    // refreshAll() abaixo realiza a primeira consulta operacional. Evitar uma
+    // segunda chamada aqui impede aborts espúrios quando a aba persistida é
+    // Pipeline, Revisões ou OpenClaw.
+    switchTab(state.currentTab, { skipOperationalRefresh: true });
     if (main) main.style.display = 'block';
     if (loading) loading.style.display = 'none';
     refreshAll();

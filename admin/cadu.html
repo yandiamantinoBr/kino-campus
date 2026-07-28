@@ -747,6 +747,7 @@
     }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
+  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=936b1318fa7dc8ff" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -867,6 +868,9 @@
         <button class="kc-cadu-tab" id="cadu-tab-pipeline" data-tab="pipeline" role="tab" aria-controls="tab-pipeline" aria-selected="false" tabindex="-1">
           <i class="fas fa-gears"></i> Pipeline <span class="kc-cadu-tab__badge" id="badge-pipeline">—</span>
         </button>
+        <button class="kc-cadu-tab" id="cadu-tab-reviews" data-tab="reviews" role="tab" aria-controls="tab-reviews" aria-selected="false" tabindex="-1">
+          <i class="fas fa-clipboard-check"></i> Revisões <span class="kc-cadu-tab__badge" id="badge-reviews">—</span>
+        </button>
         <button class="kc-cadu-tab" id="cadu-tab-openclaw" data-tab="openclaw" role="tab" aria-controls="tab-openclaw" aria-selected="false" tabindex="-1">
           <i class="fas fa-robot"></i> OpenClaw <span class="kc-cadu-tab__badge" id="badge-openclaw">—</span>
         </button>
@@ -973,39 +977,15 @@
             <button type="button" id="sites-page-next" aria-label="Próxima página" data-i18n-aria-label="aria-label.cadu-sites-page-next">Próxima <i class="fas fa-chevron-right"></i></button>
           </div>
         </div>
-        <section class="kc-cadu-review-queue" id="institutional-review-queue" aria-labelledby="institutional-review-title" aria-busy="true">
-          <div class="kc-cadu-review-queue__head">
-            <div>
-              <h3 id="institutional-review-title"><i class="fas fa-clipboard-check" aria-hidden="true"></i> Fila editorial institucional <span class="kc-cadu-review-queue__count" id="institutional-review-count">0</span></h3>
-              <p>Solicitações duráveis criadas pelo Mapa UFG. Aprovar, rejeitar ou substituir apenas encerra a solicitação: nenhuma dessas ações publica conteúdo nem ativa fonte, Instagram ou pipeline.</p>
-            </div>
-            <button type="button" class="kc-cadu-review-queue__refresh" id="institutional-review-refresh"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar fila</button>
+        <aside class="kc-cadu-review-entry">
+          <div>
+            <strong><i class="fas fa-clipboard-check" aria-hidden="true"></i> As decisões editoriais agora ficam centralizadas</strong>
+            <p>Abra Revisões para consultar solicitações do Mapa UFG junto das pendências da Pipeline e do Feed Coletado.</p>
           </div>
-          <form class="kc-cadu-review-queue__filters" id="institutional-review-filters">
-            <label for="institutional-review-state">Estado
-              <select id="institutional-review-state">
-                <option value="pending" selected>Pendentes</option>
-                <option value="approved">Aprovadas</option>
-                <option value="rejected">Rejeitadas</option>
-                <option value="superseded">Substituídas</option>
-              </select>
-            </label>
-            <label for="institutional-review-source-id">ID canônico da fonte <span id="institutional-review-filter-help">(correspondência exata; não busca trechos)</span>
-              <input id="institutional-review-source-id" type="search" autocomplete="off" maxlength="120" placeholder="Ex.: web.ufg.portal" data-i18n-placeholder="placeholder.cadu-review-source-id" aria-describedby="institutional-review-filter-help">
-            </label>
-            <button type="submit"><i class="fas fa-filter" aria-hidden="true"></i> Aplicar</button>
-            <button type="button" id="institutional-review-clear"><i class="fas fa-eraser" aria-hidden="true"></i> Limpar</button>
-          </form>
-          <div id="institutional-review-status" class="kc-cadu-review-queue__status" role="status" aria-live="polite" aria-atomic="true">Carregando fila editorial institucional…</div>
-          <div class="kc-cadu-review-queue__list" id="institutional-review-list" role="list">
-            <div class="kc-cadu-review-queue__empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Consultando solicitações…</div>
-          </div>
-          <nav class="kc-cadu-review-queue__pager" aria-label="Paginação da fila editorial" data-i18n-aria-label="aria-label.cadu-review-queue-pagination">
-            <span id="institutional-review-page-meta">0 solicitações</span>
-            <button type="button" id="institutional-review-prev" disabled><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
-            <button type="button" id="institutional-review-next" disabled>Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-          </nav>
-        </section>
+          <button type="button" id="sites-open-reviews-btn" class="kc-btn-secondary">
+            Abrir Revisões <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </button>
+        </aside>
       </section>
 
       <!-- ============== TAB: PIPELINE (v0.4.0) ============== -->
@@ -1127,6 +1107,121 @@
             <button type="button" id="feed-load-more-btn-bottom" class="kc-btn-secondary" title="Carregar mais 25 itens no fim da lista (concatena)" data-i18n-tooltip="tooltip.cadu-feed-load-more"><i class="fas fa-plus"></i> Carregar mais</button>
           </div>
         </div>
+      </section>
+
+      <!-- ============== TAB: REVISOES ============== -->
+      <section class="kc-cadu-section kc-cadu-reviews" id="tab-reviews" role="tabpanel" aria-labelledby="cadu-tab-reviews" hidden style="display:none;">
+        <div class="kc-cadu-section-header kc-cadu-reviews__header">
+          <div>
+            <h2 id="reviews-title"><i class="fas fa-clipboard-check" aria-hidden="true"></i> Central de Revisões</h2>
+            <p>Decisões humanas vinculadas à evidência exata de cada origem. A central registra a análise; ela não publica, não ativa fontes e não ignora as proteções da Pipeline.</p>
+          </div>
+          <div class="kc-cadu-section-actions">
+            <button type="button" id="reviews-export-json" class="kc-btn-secondary"><i class="fas fa-file-export" aria-hidden="true"></i> Exportar histórico</button>
+            <button type="button" id="reviews-refresh" class="kc-btn-secondary"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar</button>
+          </div>
+        </div>
+
+        <div class="kc-cadu-reviews__notice" role="note">
+          <i class="fas fa-shield-halved" aria-hidden="true"></i>
+          <div><strong>Aprovação editorial não é publicação.</strong> Itens aprovados ficam registrados para auditoria e futuras melhorias. Qualquer publicação continua exigindo um fluxo separado e suas validações próprias.</div>
+        </div>
+
+        <div class="kc-cadu-review-providers" id="reviews-providers">
+          <div class="kc-cadu-review-provider is-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando origens…</div>
+        </div>
+
+        <form class="kc-cadu-review-filters" id="reviews-filters">
+          <label for="reviews-origin">Origem
+            <select id="reviews-origin">
+              <option value="">Todas</option>
+              <option value="pipeline">Pipeline</option>
+              <option value="feed">Feed Coletado</option>
+              <option value="sites">Mapa UFG</option>
+              <option value="openclaw">OpenClaw</option>
+            </select>
+          </label>
+          <label for="reviews-state">Estado
+            <select id="reviews-state">
+              <option value="pending" selected>Pendentes</option>
+              <option value="resolved">Resolvidas</option>
+              <option value="approved">Aprovadas</option>
+              <option value="changes_requested">Ajustes solicitados</option>
+              <option value="deferred">Adiadas</option>
+              <option value="rejected">Rejeitadas</option>
+              <option value="acknowledged">Incidentes reconhecidos</option>
+            </select>
+          </label>
+          <label class="kc-cadu-review-filters__search" for="reviews-search">Buscar
+            <input id="reviews-search" type="search" autocomplete="off" maxlength="100">
+          </label>
+          <label for="reviews-limit">Por página
+            <select id="reviews-limit">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <button type="submit"><i class="fas fa-filter" aria-hidden="true"></i> Aplicar</button>
+          <button type="button" id="reviews-clear"><i class="fas fa-eraser" aria-hidden="true"></i> Limpar</button>
+        </form>
+
+        <div id="reviews-status" class="kc-cadu-review-status" role="status" aria-live="polite" aria-atomic="true">Abra esta aba para carregar as revisões.</div>
+        <div id="reviews-list" class="kc-cadu-review-list" role="list"></div>
+        <nav class="kc-cadu-review-pager" aria-labelledby="reviews-pagination-label">
+          <span id="reviews-pagination-label" class="kc-sr-only">Paginação da Central de Revisões</span>
+          <span id="reviews-page-meta">0 itens</span>
+          <div>
+            <button type="button" id="reviews-prev" class="kc-btn-secondary" disabled><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+            <button type="button" id="reviews-next" class="kc-btn-secondary" disabled>Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+          </div>
+        </nav>
+
+        <details class="kc-cadu-review-audit" id="reviews-audit">
+          <summary><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Decisões registradas recentemente</summary>
+          <div class="kc-cadu-review-audit__head">
+            <p>Histórico append-only com decisão, responsável, versão da evidência e horário.</p>
+            <button type="button" id="reviews-audit-refresh" class="kc-btn-secondary"><i class="fas fa-rotate" aria-hidden="true"></i> Consultar</button>
+          </div>
+          <div id="reviews-audit-list" class="kc-cadu-review-audit__list">
+            <div class="kc-cadu-review-empty">Abra e consulte para visualizar as decisões.</div>
+          </div>
+        </details>
+
+        <section class="kc-cadu-review-queue" id="institutional-review-queue" aria-labelledby="institutional-review-title" aria-busy="true">
+          <div class="kc-cadu-review-queue__head">
+            <div>
+              <h3 id="institutional-review-title"><i class="fas fa-university" aria-hidden="true"></i> Revisões do Mapa UFG <span class="kc-cadu-review-queue__count" id="institutional-review-count">0</span></h3>
+              <p>Solicitações institucionais usam seu contrato CAS próprio no Supabase. Aprovar, rejeitar ou substituir apenas encerra a solicitação: nenhuma dessas ações publica conteúdo nem ativa fonte, Instagram ou pipeline.</p>
+            </div>
+            <button type="button" class="kc-cadu-review-queue__refresh" id="institutional-review-refresh"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar fila</button>
+          </div>
+          <form class="kc-cadu-review-queue__filters" id="institutional-review-filters">
+            <label for="institutional-review-state">Estado
+              <select id="institutional-review-state">
+                <option value="pending" selected>Pendentes</option>
+                <option value="approved">Aprovadas</option>
+                <option value="rejected">Rejeitadas</option>
+                <option value="superseded">Substituídas</option>
+              </select>
+            </label>
+            <label for="institutional-review-source-id">ID canônico da fonte <span id="institutional-review-filter-help">(correspondência exata; não busca trechos)</span>
+              <input id="institutional-review-source-id" type="search" autocomplete="off" maxlength="120" placeholder="Ex.: web.ufg.portal" data-i18n-placeholder="placeholder.cadu-review-source-id" aria-describedby="institutional-review-filter-help">
+            </label>
+            <button type="submit"><i class="fas fa-filter" aria-hidden="true"></i> Aplicar</button>
+            <button type="button" id="institutional-review-clear"><i class="fas fa-eraser" aria-hidden="true"></i> Limpar</button>
+          </form>
+          <div id="institutional-review-status" class="kc-cadu-review-queue__status" role="status" aria-live="polite" aria-atomic="true">Carregando fila editorial institucional…</div>
+          <div class="kc-cadu-review-queue__list" id="institutional-review-list" role="list">
+            <div class="kc-cadu-review-queue__empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Consultando solicitações…</div>
+          </div>
+          <nav class="kc-cadu-review-queue__pager" aria-label="Paginação da fila editorial" data-i18n-aria-label="aria-label.cadu-review-queue-pagination">
+            <span id="institutional-review-page-meta">0 solicitações</span>
+            <button type="button" id="institutional-review-prev" disabled><i class="fas fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+            <button type="button" id="institutional-review-next" disabled>Próxima <i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+          </nav>
+        </section>
       </section>
 
       <section class="kc-cadu-section" id="tab-openclaw" role="tabpanel" aria-labelledby="cadu-tab-openclaw" hidden style="display:none;">
@@ -1289,6 +1384,7 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=ff5803f84eb79e15"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=6c7dc4e90514fd08"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=a51cc0a5d6df8388"></script>
 </body>
 </html>

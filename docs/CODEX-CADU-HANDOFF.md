@@ -456,3 +456,26 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
   mobile, com backdrop integral e sem overflow horizontal nos artefatos.
 - Evidência completa e casos canário:
   `docs/auditoria/cadu-pipeline-stages-dedup-2026-07-27.md`.
+
+## 22. Atualização Codex - run 27292866 e Central de Revisões (2026-07-28)
+
+- Run completo auditado:
+  `27292866-7346-43a9-8bb1-b9c1dc37f184`, exit code zero, 2.199,9 s.
+  O resultado parcial veio somente de dois timeouts transitórios na etapa
+  opcional `enrich_items`; nenhuma etapa obrigatória falhou.
+- Funil confirmado: 29 novos, 29 formatados, 19 retidos pelo quality gate e 10
+  avaliados pelo publicador, com 1 criação e 9 mesclagens.
+- Dedup real não estava indisponível. Ele exige simulação compatível com TTL de
+  30 minutos. Runs `f9740307…` e `462b79b9…` validaram simulação e aplicação
+  vinculadas, ambas sem mutação.
+- `admin/cadu.html` ganhou a aba **Revisões**, que agrega Pipeline, Feed
+  Coletado e Mapa UFG. OpenClaw permanece como provedor reservado até existir
+  evidência versionável adequada.
+- A fila central usa `/api/cadu/reviews`, decisões CAS por `item_version`,
+  persistência no VPS e audit log. Rejeição e pedido de ajustes exigem nota.
+- Aprovação editorial nunca publica: o contrato de resposta confirma
+  `published: false` e `decision_effect: editorial_record_only`.
+- A fila institucional continua no Supabase com seu contrato CAS próprio; só a
+  visualização foi movida para a aba comum.
+- Contrato completo:
+  `docs/ops/cadu-review-center-contract-2026-07-28.md`.

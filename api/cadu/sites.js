@@ -10,6 +10,7 @@ import {
   buildCaduReviewSignatureHeaders,
   handleCaduSourceReviews,
 } from '../../server/cadu-source-reviews-proxy.js';
+import { handleCaduReviews } from '../../server/cadu-reviews-proxy.js';
 
 const STRONG_CADU_ETAG = /^"[a-f0-9]{64}"$/;
 const CADU_REGISTRY_SHA256 = /^[a-f0-9]{64}$/;
@@ -349,6 +350,16 @@ export default async function handler(req, res) {
       Object.entries(req.query || {}).filter(([key]) => key !== 'path'),
     );
     return handleCaduSourceReviews(req, res, { query: sourceReviewQuery });
+  }
+  if (typeof routerPath === 'string'
+      && (routerPath === 'reviews' || routerPath.startsWith('reviews/'))) {
+    const reviewQuery = Object.fromEntries(
+      Object.entries(req.query || {}).filter(([key]) => key !== 'path'),
+    );
+    return handleCaduReviews(req, res, {
+      path: routerPath,
+      query: reviewQuery,
+    });
   }
 
   configureCors(res);
