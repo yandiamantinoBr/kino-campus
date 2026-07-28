@@ -1850,3 +1850,47 @@ O resumo do run passa a separar:
 Ambiguidade e recomendação bloqueada aparecem com destaque visual. Esses
 contadores explicam por que um par chegou à IA e por que nenhuma ação destrutiva
 foi autorizada.
+
+# v19 - Preflight de prévia e runs 225298f8/09de8f15 (2026-07-27)
+
+## Diagnóstico confirmado
+
+- A Pipeline Completa `225298f8` terminou em 2.495 s, exit code zero, todos os
+  estágios obrigatórios aprovados e apenas
+  `curator_coverage_partial:source_budget_exhausted:1`.
+- A fonte Direito consumiu 75,3 s e classificou 5/25 itens nessa run. Runs
+  anteriores processaram 25/25 e probes posteriores dos dois JSONs responderam
+  HTTP 200 em menos de 0,4 s. A condição foi tratada como degradação transitória,
+  sem aumentar o timeout nem esconder o estado parcial.
+- `@letras.ufg` apresentou grade inválida na run, mas uma prova isolada posterior
+  encontrou 12 posts e 3 relevantes. O perfil foi preservado.
+- O funil final teve 3.024 itens, 26 novos, 17 em revisão de qualidade, 10
+  avaliados pelo publisher, 1 criado e 8 mesclados.
+- Um item foi corretamente recusado por manter imagem temporária do Instagram.
+  O cache usava lista regional fixa e não reconhecia o novo host `gru2`.
+- A deduplicação real `09de8f15` analisou 139 posts, 36 candidatos textuais e 7
+  pares visuais, mas recusou a aplicação porque todas as prévias estavam
+  expiradas. Nenhuma escrita ocorreu.
+
+## Contrato corrigido
+
+- O `cadu-api 0.5.15` informa no preflight se existe prévia recente e rejeita
+  execução real inválida com HTTP 412 antes de reservar ou iniciar uma run.
+- O Admin diferencia a disponibilidade por modo: **Simular** permanece
+  habilitado e **Executar real** exige `dedup_preview_real=ok`.
+- O cartão mostra `prévia recente pronta` ou `nova simulação necessária`, com o
+  detalhe do backend em tooltip e nova validação após renovar o snapshot.
+- O cache aceita hosts HTTPS no domínio exato `cdninstagram.com`, inclusive
+  subdomínios regionais futuros, sem aceitar HTTP, credenciais ou domínios por
+  sufixo enganoso.
+- A barreira final da deduplicação permanece inalterada: snapshot, pares e plano
+  são novamente comparados antes de qualquer mutação.
+
+## Validação
+
+- OpenClaw: 58/58 suítes, sintaxe 171/171 e secret scan de 454 arquivos.
+- KinoCampus: 257 suítes, 4.634 testes e 3 snapshots.
+- Playwright: 3/3 cenários, incluindo desktop, mobile e prévia expirada.
+
+Relatório operacional completo:
+`openclaw-cadu/docs/incidents/2026-07-27-runs-225298f8-09de8f15.md`.
