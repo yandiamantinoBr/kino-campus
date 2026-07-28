@@ -95,6 +95,33 @@ function createPage(apiFetchResponse) {
 }
 
 describe('Admin Cadu review center runtime', () => {
+  test('updates the tab badge from a lightweight summary before the review tab is opened', async () => {
+    const summaryProviders = providers().map((provider) => {
+      if (provider.id === 'pipeline') return { ...provider, pending: 128 };
+      if (provider.id === 'feed') return { ...provider, pending: 19 };
+      return provider;
+    });
+    const apiFetchResponse = jest.fn(async () => ({
+      ok: true,
+      data: { providers: summaryProviders }
+    }));
+    const page = createPage(apiFetchResponse);
+
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('0');
+    const listBeforeSummary = page.window.document.getElementById('reviews-list').textContent;
+    await page.window.KCCaduReviews.refreshSummary();
+
+    expect(apiFetchResponse).toHaveBeenCalledWith(
+      '/api/cadu/reviews?state=pending&limit=1&offset=0',
+      { timeoutMs: 15000 }
+    );
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('147');
+    expect(page.window.document.getElementById('badge-reviews').title).toBe('147 revisões pendentes');
+    expect(page.window.document.querySelector('[data-review-provider="pipeline"]').textContent).toContain('128 pendentes');
+    expect(page.window.document.getElementById('reviews-list').textContent).toBe(listBeforeSummary);
+    page.dom.window.close();
+  });
+
   test('translates incident diagnostics and makes run/chat shortcuts explicit', async () => {
     const incident = {
       ...centralItem(),

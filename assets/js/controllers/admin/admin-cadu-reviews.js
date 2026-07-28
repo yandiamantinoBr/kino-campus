@@ -9,6 +9,7 @@
   var initialized = false;
   var requestGeneration = 0;
   var requestController = null;
+  var summaryRequestGeneration = 0;
   var institutionalPending = 0;
   var DEFAULT_PAGE_LIMIT = (
     typeof window.matchMedia === 'function'
@@ -420,6 +421,7 @@
 
   async function refresh() {
     if (!bridge || typeof bridge.apiFetchResponse !== 'function') return;
+    ++summaryRequestGeneration;
     var generation = ++requestGeneration;
     if (requestController) requestController.abort();
     requestController = typeof AbortController === 'function' ? new AbortController() : null;
@@ -453,6 +455,19 @@
     }, 0);
     setStatus(state.total + ' item(ns) no recorte atual; ' + pending + ' pendência(s) centrais no total. As decisões não publicam automaticamente.');
     render();
+  }
+
+  async function refreshSummary() {
+    if (!bridge || typeof bridge.apiFetchResponse !== 'function') return;
+    var generation = ++summaryRequestGeneration;
+    var envelope = await bridge.apiFetchResponse(
+      '/api/cadu/reviews?state=pending&limit=1&offset=0',
+      { timeoutMs: 15000 }
+    );
+    if (generation !== summaryRequestGeneration) return;
+    if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.providers)) return;
+    state.providers = envelope.data.providers;
+    renderProviders();
   }
 
   async function submitResolution(event) {
@@ -796,6 +811,7 @@
     init: init,
     open: open,
     refresh: refresh,
+    refreshSummary: refreshSummary,
     setInstitutionalPending: setInstitutionalPending
   };
 })();

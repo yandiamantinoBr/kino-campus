@@ -242,6 +242,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('function switchTab(name, options)');
     expect(controller).toContain('!opts.skipOperationalRefresh && name === \'reviews\'');
     expect(controller).toContain('switchTab(state.currentTab, { skipOperationalRefresh: true });');
+    expect(controller).toContain("typeof window.KCCaduReviews.refreshSummary === 'function'");
+    expect(controller).toContain('reviewSummaryRefresh = window.KCCaduReviews.refreshSummary();');
   });
 
   test('keeps operational tabs visible and review actions touch-friendly on narrow screens', () => {
