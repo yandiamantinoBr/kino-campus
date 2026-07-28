@@ -1935,3 +1935,38 @@ Relatório operacional completo:
 ## Referência
 
 `docs/ops/cadu-review-center-contract-2026-07-28.md`.
+
+# v21 - Runs bd38466f/29da18c0/6b0018ac e acabamento da Central (2026-07-28)
+
+## Estado operacional
+
+- A Pipeline `bd38466f` ficou parcial exclusivamente por uma etapa opcional:
+  uma das nove páginas de enriquecimento não passou na validação TLS.
+- O host do PPG Artes da Cena omite o intermediário correto. O runtime passa a
+  recuperar esse intermediário pelo AIA e refazer o download com validação
+  completa. Erros de certificado expirado, hostname ou confiança permanecem
+  bloqueados.
+- A simulação `29da18c0` foi íntegra e calculou plano vazio.
+- O real `6b0018ac` foi corretamente recusado: entre os dois runs, cinco posts
+  foram encerrados e um foi editado pela própria plataforma. Não houve write
+  da deduplicação.
+
+## Diagnóstico e interface
+
+- O contrato de snapshot não foi enfraquecido. Um manifesto aditivo passa a
+  explicar IDs adicionados, removidos e alterados nas próximas divergências.
+- A Central traduz `dedup_preview_state_changed` e razões parciais
+  `N_of_M_items_failed`.
+- O atalho de run espera a atualização do histórico, posiciona e realça o
+  cartão correto.
+- O atalho de chat apenas preenche e confirma o contexto; o envio continua
+  manual.
+- Viewports de até 700 px usam 10 itens inicialmente. 25, 50 e 100 continuam
+  disponíveis.
+- Links e decisões têm alvos táteis maiores, a subaba ativa permanece visível
+  no rail horizontal e os KPIs do OpenClaw usam grade 4/2/1 colunas.
+
+Referências:
+
+- `docs/ops/cadu-review-center-contract-2026-07-28.md`;
+- `openclaw-cadu/docs/incidents/2026-07-28-runs-bd38466f-29da18c0-6b0018ac.md`.

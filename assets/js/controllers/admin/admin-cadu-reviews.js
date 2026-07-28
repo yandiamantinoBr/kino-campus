@@ -10,11 +10,15 @@
   var requestGeneration = 0;
   var requestController = null;
   var institutionalPending = 0;
+  var DEFAULT_PAGE_LIMIT = (
+    typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 700px)').matches
+  ) ? 10 : 25;
   var state = {
     items: [],
     providers: [],
     total: 0,
-    limit: 25,
+    limit: DEFAULT_PAGE_LIMIT,
     offset: 0,
     origin: '',
     reviewState: 'pending',
@@ -68,7 +72,8 @@
     expired: 'Conteúdo expirado',
     opportunity_without_deadline: 'Oportunidade sem prazo',
     quality_review_required: 'Revisão de qualidade necessária',
-    curator_review_required: 'Encaminhado pelo Curador'
+    curator_review_required: 'Encaminhado pelo Curador',
+    dedup_preview_state_changed: 'A plataforma mudou depois da simulação'
   };
 
   function $(selector) {
@@ -193,7 +198,12 @@
   }
 
   function issueLabel(issue) {
-    return ISSUE_LABELS[issue] || String(issue || '').replace(/_/g, ' ');
+    if (ISSUE_LABELS[issue]) return ISSUE_LABELS[issue];
+    var partialMatch = String(issue || '').match(/^(\d+)_of_(\d+)_items_failed$/);
+    if (partialMatch) {
+      return 'Falha em ' + partialMatch[1] + ' de ' + partialMatch[2] + ' itens';
+    }
+    return String(issue || '').replace(/_/g, ' ');
   }
 
   function reviewLinks(item) {
@@ -237,6 +247,21 @@
         '<i class="fas ' + escapeHtml(DECISION_ICONS[decision] || 'fa-check') + '" aria-hidden="true"></i> ' +
         escapeHtml(DECISION_LABELS[decision] || decision) + '</button>';
     }).join('');
+  }
+
+  function focusPipelineRun(runId, attempt) {
+    var run = document.querySelector('[data-run-id="' + runId + '"]');
+    if (!run && attempt < 16) {
+      setTimeout(function () { focusPipelineRun(runId, attempt + 1); }, 250);
+      return;
+    }
+    if (!run) return;
+    $all('.kc-pipeline-history-item.is-review-target').forEach(function (item) {
+      item.classList.remove('is-review-target');
+    });
+    run.classList.add('is-review-target');
+    run.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function () { run.classList.remove('is-review-target'); }, 3600);
   }
 
   function renderItems() {
@@ -311,10 +336,7 @@
       button.addEventListener('click', function () {
         var runId = button.getAttribute('data-review-run');
         if (bridge && typeof bridge.switchTab === 'function') bridge.switchTab('pipeline');
-        setTimeout(function () {
-          var run = document.querySelector('[data-run-id="' + runId + '"]');
-          if (run) run.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 250);
+        focusPipelineRun(runId, 0);
       });
     });
     $all('[data-review-chat]', target).forEach(function (button) {
@@ -330,7 +352,13 @@
             ': "' + item.title + '".' +
             (item.run_id ? ' Run: ' + item.run_id + '.' : '') +
             (item.source_url ? ' Fonte: ' + item.source_url : '');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
           input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+          var chatStatus = $('#openclaw-chat-status');
+          if (chatStatus) {
+            chatStatus.textContent = 'Contexto da revisão carregado. Confira a mensagem antes de enviar.';
+          }
         }
       });
     });
@@ -365,10 +393,10 @@
 
   function responseError(envelope) {
     var data = envelope && envelope.data;
-    if (data && typeof data.detail === 'string') return data.detail;
     if (data && data.code === 'CADU_REVIEW_VERSION_CHANGED') {
       return 'A evidência mudou. A fila foi recarregada e nenhuma decisão foi aplicada.';
     }
+    if (data && typeof data.detail === 'string') return data.detail;
     if (envelope && envelope.status === 401) return 'Sua sessão administrativa expirou. Reautentique e tente novamente.';
     if (envelope && envelope.status === 409) return 'A versão mudou ou já recebeu outra decisão. Atualize antes de continuar.';
     return 'O serviço de revisões não confirmou a operação.';
@@ -672,7 +700,7 @@
     state.origin = ($('#reviews-origin') && $('#reviews-origin').value) || '';
     state.reviewState = ($('#reviews-state') && $('#reviews-state').value) || 'pending';
     state.search = ($('#reviews-search') && $('#reviews-search').value.trim()) || '';
-    state.limit = Number(($('#reviews-limit') && $('#reviews-limit').value) || 25);
+    state.limit = Number(($('#reviews-limit') && $('#reviews-limit').value) || DEFAULT_PAGE_LIMIT);
     state.offset = 0;
     state.decisionDraft = null;
     if (previousOrigin !== state.origin) invalidateAudit('O recorte mudou. Atualizando o histórico correspondente…');
@@ -684,14 +712,14 @@
     state.origin = '';
     state.reviewState = 'pending';
     state.search = '';
-    state.limit = 25;
+    state.limit = DEFAULT_PAGE_LIMIT;
     state.offset = 0;
     ['#reviews-origin', '#reviews-search'].forEach(function (selector) {
       var field = $(selector);
       if (field) field.value = '';
     });
     if ($('#reviews-state')) $('#reviews-state').value = 'pending';
-    if ($('#reviews-limit')) $('#reviews-limit').value = '25';
+    if ($('#reviews-limit')) $('#reviews-limit').value = String(DEFAULT_PAGE_LIMIT);
     if (previousOrigin !== state.origin) invalidateAudit('Consultando o histórico unificado…');
     refresh();
   }
@@ -729,6 +757,10 @@
     bridge = options || {};
     if (initialized) return;
     initialized = true;
+    var limitField = $('#reviews-limit');
+    if (limitField && limitField.querySelector('option[value="' + DEFAULT_PAGE_LIMIT + '"]')) {
+      limitField.value = String(DEFAULT_PAGE_LIMIT);
+    }
     bindEvents();
     render();
   }

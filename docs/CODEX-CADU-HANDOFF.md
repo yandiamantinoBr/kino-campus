@@ -479,3 +479,26 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
   visualização foi movida para a aba comum.
 - Contrato completo:
   `docs/ops/cadu-review-center-contract-2026-07-28.md`.
+
+## 23. Atualização Codex - runs bd38466f/29da18c0/6b0018ac (2026-07-28)
+
+- `bd38466f-7e73-4a2a-bd28-28a07f7b348f`: parcial somente em
+  `enrich_items` (`1_of_9_items_failed`). As etapas obrigatórias passaram; o
+  funil teve 26 novos, 17 no quality gate e 9 mesclados.
+- Causa confirmada: `artesdacenappg.iac.ufg.br` entrega cadeia TLS incompleta.
+  O OpenClaw passou a reutilizar o helper AIA verificado já empregado pelo
+  Curador. Não houve bypass de TLS.
+- `29da18c0-a7f6-47fd-b640-9583e4d84295`: simulação válida de 136 posts, 35
+  candidatos textuais, 7 pares visuais, 2 pares semânticos e plano sem ações.
+- `6b0018ac-9c00-4c78-bfc5-6b180950b55a`: bloqueio correto antes de qualquer
+  write. Cinco posts foram encerrados e um editado depois da simulação.
+- Próximas prévias geram manifesto diagnóstico aditivo com IDs adicionados,
+  removidos e alterados. O hash global, os pares, o plano e o TTL continuam
+  fail-closed.
+- Central de Revisões: motivos técnicos ganharam rótulos em português, o run
+  aberto recebe realce, o chat confirma o contexto sem enviar e o mobile abre
+  com 10 itens. Links/ações ganharam alvos táteis maiores.
+- Navegação: a aba operacional selecionada permanece visível no rail móvel.
+  OpenClaw: os quatro indicadores agora usam grade responsiva.
+- Relatório operacional:
+  `openclaw-cadu/docs/incidents/2026-07-28-runs-bd38466f-29da18c0-6b0018ac.md`.

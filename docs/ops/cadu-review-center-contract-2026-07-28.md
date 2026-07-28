@@ -238,3 +238,29 @@ autorização explícita, idempotência e testes de regressão.
 - troca entre histórico central e institucional;
 - QA desktop/mobile sem overflow;
 - health, readiness e preflight após deploy.
+
+## Validação posterior: runs de 28/07
+
+Os runs `bd38466f`, `29da18c0` e `6b0018ac` foram confrontados com logs,
+artefatos e estado do Supabase.
+
+- `bd38466f` terminou parcial apenas porque o site
+  `artesdacenappg.iac.ufg.br` omite o intermediário correto da cadeia TLS. A
+  Pipeline concluiu todas as etapas obrigatórias, produziu 26 itens novos,
+  reteve 17 no quality gate e mesclou 9.
+- `29da18c0` foi uma simulação válida de 136 posts, sem ocultações nem revisões
+  planejadas.
+- `6b0018ac` falhou corretamente antes de qualquer write: cinco posts foram
+  encerrados e um foi editado entre a simulação e a execução real.
+
+O bloqueio `dedup_preview_state_changed` continua obrigatório. Próximas
+simulações passam a gerar um manifesto diagnóstico para identificar IDs
+adicionados, removidos e alterados sem substituir o hash global de autorização.
+
+A interface traduz esse motivo, realça o run aberto pela Central, confirma o
+preenchimento do chat sem enviar mensagens e usa 10 itens como página inicial
+em viewports de até 700 px. A faixa de subabas mantém a aba ativa visível e os
+indicadores do OpenClaw usam uma grade responsiva.
+
+Relatório operacional completo:
+`openclaw-cadu/docs/incidents/2026-07-28-runs-bd38466f-29da18c0-6b0018ac.md`.
