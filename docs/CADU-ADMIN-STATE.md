@@ -1894,3 +1894,44 @@ foi autorizada.
 
 Relatório operacional completo:
 `openclaw-cadu/docs/incidents/2026-07-27-runs-225298f8-09de8f15.md`.
+
+# v20 - Central de Revisões e run 27292866 (2026-07-28)
+
+## Estado operacional confirmado
+
+- Run `27292866-7346-43a9-8bb1-b9c1dc37f184`: `finished`, exit code zero,
+  2.199,9 segundos e resultado agregado parcial.
+- A única degradação foi `enrich_items`, etapa opcional, por timeout transitório
+  em duas fontes. Os posts já continham três imagens.
+- O funil separou corretamente os 29 novos em 19 itens do quality gate e 10
+  itens avaliados pelo publicador; estes produziram 1 criação e 9 mesclagens.
+- A deduplicação real é executável, mas permanece fail-closed: exige uma
+  simulação feita há no máximo 30 minutos e sobre o mesmo snapshot.
+
+## Implementação
+
+- Nova aba **Revisões** em `admin/cadu.html`.
+- Fila central paginada para Pipeline e Feed Coletado.
+- Fila do Mapa UFG apresentada no mesmo painel, sem substituir o contrato CAS
+  do Supabase.
+- Provedor OpenClaw reservado até haver evidência imutável e não sensível.
+- Histórico consultável e exportação JSON unificada.
+- Decisões centrais vinculadas por UUID e SHA-256 da versão do item.
+- Rejeição e pedido de ajustes exigem justificativa no cliente, no proxy e no
+  `cadu-api`.
+- Aprovação editorial registra análise, mas não publica, não ativa fonte e não
+  executa Pipeline.
+
+## Segurança
+
+- Browser usa somente endpoint same-origin e JWT da sessão.
+- Proxy Vercel revalida `profiles.is_admin`, remove identidade controlada pelo
+  cliente e assina resoluções com HMAC server-side.
+- `cadu-api` reconstrói a evidência atual, recusa versão obsoleta, replay
+  conflitante e nonce repetido.
+- Respostas são `private, no-store`, têm schema e tamanho validados e não expõem
+  os secrets do VPS.
+
+## Referência
+
+`docs/ops/cadu-review-center-contract-2026-07-28.md`.
