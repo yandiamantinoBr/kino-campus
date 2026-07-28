@@ -7010,6 +7010,7 @@
     var restoreButtons = lockPipelineActionButtons(btn);
     var requestedDryRun = dryRun;
     var resp;
+    var focusSimulateAfterRestore = false;
     try {
       // A confirmação é vinculada a uma geração e prazo exatos. Se o diálogo
       // permanecer aberto além do TTL, o laço renova, relê o estágio e pede
@@ -7049,11 +7050,7 @@
         var modePrecondition = pipelineStageModePrecondition(stage, dryRun);
         if (modePrecondition && modePrecondition.canRun === false) {
           alert(modePrecondition.detail + '\n\nUse “Simular”, revise o relatório e execute o modo real em até 30 minutos. Nenhuma execução real foi iniciada.');
-          var simulateButton = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"][data-dry-run="true"]')[0];
-          if (simulateButton) {
-            simulateButton.focus();
-            simulateButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          focusSimulateAfterRestore = true;
           return;
         }
         var warnings = (pf.warnings || []).map(function (w) { return '- ' + (w.label || w.id) + ': ' + (w.detail || w.status); }).join('\n');
@@ -7106,6 +7103,13 @@
       // Um refresh pode ter substituído o grupo enquanto o POST aguardava.
       // Reconstrói o DOM atual para não deixar botões novos presos/desbloqueados.
       renderPipelineStages(state.pipelineStages || []);
+      if (focusSimulateAfterRestore) {
+        var simulateButton = $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"][data-dry-run="true"]')[0];
+        if (simulateButton) {
+          simulateButton.focus();
+          simulateButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
     }
     if (resp && resp.run_id) {
       // Limpa log box pra nova execução

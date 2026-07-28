@@ -290,6 +290,46 @@ async function mockCommonCaduRoutes(page, registryHandler, readinessHandler, ope
     if (path === '/api/cadu/publish' && publishHandler) {
       return publishHandler(route, path);
     }
+    if (path === '/api/cadu/reviews/audit') {
+      const url = new URL(request.url());
+      const limit = Number(url.searchParams.get('limit') || 50);
+      const offset = Number(url.searchParams.get('offset') || 0);
+      return route.fulfill({
+        json: {
+          schema_version: 1,
+          contract_version: 'cadu-review-center-v1',
+          items: [],
+          total: 0,
+          limit,
+          offset,
+          has_more: false
+        }
+      });
+    }
+    if (path === '/api/cadu/reviews') {
+      const url = new URL(request.url());
+      const limit = Number(url.searchParams.get('limit') || 25);
+      const offset = Number(url.searchParams.get('offset') || 0);
+      return route.fulfill({
+        json: {
+          schema_version: 1,
+          contract_version: 'cadu-review-center-v1',
+          items: [],
+          total: 0,
+          limit,
+          offset,
+          has_more: false,
+          providers: [
+            { id: 'pipeline', label: 'Pipeline', queue: 'central', pending: 0, resolved: 0 },
+            { id: 'feed', label: 'Feed Coletado', queue: 'central', pending: 0, resolved: 0 },
+            { id: 'sites', label: 'Mapa UFG', queue: 'institutional', pending: 0, resolved: 0 },
+            { id: 'openclaw', label: 'OpenClaw', queue: 'central', pending: 0, resolved: 0 }
+          ],
+          diagnostics: {},
+          generated_at: 1785200100
+        }
+      });
+    }
     if (path === '/api/cadu/source-reviews') {
       if (sourceReviewsHandler) return sourceReviewsHandler(route, path);
       const url = new URL(request.url());
@@ -368,6 +408,11 @@ async function dismissConsentBanner(page) {
   } catch (_) {
     // The consent script is intentionally optional in this isolated fixture.
   }
+}
+
+async function openReviewsTab(page) {
+  await page.getByRole('tab', { name: /Revisões/ }).click();
+  await expect(page.locator('#institutional-review-queue')).toBeVisible();
 }
 
 test.describe('Admin Cadu — catálogo canônico', () => {
@@ -1376,6 +1421,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     });
 
     await page.goto('/admin/cadu.html');
+    await openReviewsTab(page);
     await expect(page.locator('#institutional-review-count')).toHaveText('11');
     await expect(page.locator('.kc-cadu-review-queue__item')).toHaveCount(10);
     await expect(page.locator('#institutional-review-page-meta')).toHaveText('Exibindo 1–10 de 11');
@@ -1467,6 +1513,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     });
 
     await page.goto('/admin/cadu.html');
+    await openReviewsTab(page);
     await page.locator('#institutional-review-state').selectOption('approved');
     await page.locator('#institutional-review-filters').evaluate((form) => form.requestSubmit());
     const card = page.locator('.kc-cadu-review-queue__item').first();
@@ -1538,6 +1585,7 @@ test.describe('Admin Cadu — catálogo canônico', () => {
     });
 
     await page.goto('/admin/cadu.html');
+    await openReviewsTab(page);
     const card = page.locator('.kc-cadu-review-queue__item').first();
     page.once('dialog', (dialog) => dialog.accept());
     await card.locator('[data-review-decision="approved"]').click();

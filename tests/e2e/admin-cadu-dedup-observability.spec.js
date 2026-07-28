@@ -383,7 +383,14 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
     });
   });
 
-  test('mantém Simular disponível e bloqueia execução real com prévia expirada', async ({ page }) => {
+  test('mantém Simular disponível e orienta a execução real com prévia expirada', async ({ page }) => {
+    const pipelinePosts = [];
+    page.on('request', (request) => {
+      const requestPath = new URL(request.url()).pathname;
+      if (request.method() === 'POST' && requestPath.startsWith('/api/cadu/pipeline/')) {
+        pipelinePosts.push(requestPath);
+      }
+    });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
     const rejectConsent = page.getByRole('button', { name: 'Rejeitar opcionais' }).first();
@@ -396,10 +403,24 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
     await page.getByRole('tab', { name: /Pipeline/ }).click();
     const stage = page.locator('.kc-pipeline-stage').filter({ hasText: 'Deduplicação global' });
     await expect(stage).toContainText('nova simulação necessária');
-    await expect(stage.getByRole('button', { name: 'Simular' })).toBeEnabled();
-    const realButton = stage.getByRole('button', { name: 'Executar real' });
-    await expect(realButton).toBeDisabled();
+    const simulateButton = stage.getByRole('button', { name: 'Simular' });
+    await expect(simulateButton).toBeEnabled();
+    const realButton = stage.getByRole('button', { name: /Executar real/ });
+    await expect(realButton).toBeEnabled();
+    await expect(realButton).toHaveClass(/is-guarded/);
     await expect(realButton).toHaveAttribute('title', /A prévia expirou/);
+
+    const alertMessage = new Promise((resolve) => {
+      page.once('dialog', async (dialog) => {
+        resolve(dialog.message());
+        await dialog.dismiss();
+      });
+    });
+    await realButton.click();
+    await expect(alertMessage).resolves.toContain('Use “Simular”');
+    await expect(simulateButton).toBeFocused();
+    expect(pipelinePosts).toEqual([]);
+
     await page.screenshot({
       path: path.resolve('output/playwright/cadu-dedup-preview-expired.png'),
       fullPage: false,
