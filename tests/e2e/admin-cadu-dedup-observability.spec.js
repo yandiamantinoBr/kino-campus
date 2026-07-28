@@ -398,7 +398,11 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
         if (!active) return false;
         const railRect = rail.getBoundingClientRect();
         const activeRect = active.getBoundingClientRect();
-        return activeRect.left >= railRect.left - 1 && activeRect.right <= railRect.right + 1;
+        const style = getComputedStyle(rail);
+        const startInset = parseFloat(style.paddingInlineStart) || 0;
+        const endInset = parseFloat(style.paddingInlineEnd) || 0;
+        return activeRect.left >= railRect.left + startInset - 1
+          && activeRect.right <= railRect.right - endInset + 1;
       });
     }).toBe(true);
 
@@ -413,7 +417,11 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
         if (!active) return false;
         const railRect = rail.getBoundingClientRect();
         const activeRect = active.getBoundingClientRect();
-        return activeRect.left >= railRect.left - 1 && activeRect.right <= railRect.right + 1;
+        const style = getComputedStyle(rail);
+        const startInset = parseFloat(style.paddingInlineStart) || 0;
+        const endInset = parseFloat(style.paddingInlineEnd) || 0;
+        return activeRect.left >= railRect.left + startInset - 1
+          && activeRect.right <= railRect.right - endInset + 1;
       });
     }).toBe(true);
 

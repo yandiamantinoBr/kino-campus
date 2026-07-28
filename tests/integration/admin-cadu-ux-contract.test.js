@@ -255,7 +255,9 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("document.fonts.addEventListener('loadingdone'");
     expect(controller).toContain("state.tabRailResizeObserver = new window.ResizeObserver");
     expect(controller).toContain("state.tabRailResizeObserver.observe(tab, { box: 'border-box' })");
+    expect(controller).toContain('parseFloat(railStyle.paddingInlineEnd)');
     expect(html).toContain('.kc-cadu-tab { flex: 0 0 auto; min-height: 44px; white-space: nowrap;');
+    expect(html).toContain('.kc-cadu-tabs { padding-inline: 8px; }');
     expect(html).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
     expect(html).toContain('.kc-cadu-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }');
     expect(reviewsCss).toMatch(/\.kc-cadu-review-item__links a,[\s\S]*min-height: 40px;/);

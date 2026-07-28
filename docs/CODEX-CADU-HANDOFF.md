@@ -502,7 +502,9 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
   inclusive quando restaurada antes de o conteúdo principal ficar visível ou
   após mudança de viewport, carregamento tardio das fontes de ícones ou
   atualização assíncrona dos badges. Um `ResizeObserver` acompanha a largura
-  efetiva de cada botão.
+  efetiva de cada botão. Em telas de até 760 px, o rail reserva 8 px nas duas
+  bordas e o cálculo de visibilidade respeita esse respiro, eliminando o
+  recorte subpixel da última aba observado em 390 px.
 - Histórico: `mesclados`, `persistidos` e `duplicatas atualizadas` são métricas
   distintas. No run `bd38466f`, os valores foram 9, 9 e 6; os seis updates
   pertencem ao enriquecimento de duplicatas, não ao resultado do publisher.
