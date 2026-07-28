@@ -41,6 +41,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
   const resolvePipelineDryRun = extractFunction('resolvePipelineDryRun');
   const buildPipelineRunRequest = extractFunction('buildPipelineRunRequest');
   const pipelineStageActionModes = extractFunction('pipelineStageActionModes');
+  const pipelineStageModePrecondition = extractFunction('pipelineStageModePrecondition');
   const lockPipelineActionButtons = extractFunction('lockPipelineActionButtons');
   const isSafePipelineRunId = extractFunction('isSafePipelineRunId');
   const validatePipelineControlSnapshot = Function(
@@ -95,6 +96,39 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(pipelineStageActionModes({ dry_run_available: false }, explicitCapabilities)).toEqual([
       { dryRun: false, label: 'Executar', danger: false },
     ]);
+  });
+
+  test('real dedup requires a recent preview while simulation remains available', () => {
+    const stage = {
+      id: 'dedup',
+      preflight: {
+        checks: [{
+          id: 'dedup_preview_real',
+          status: 'ok',
+          detail: 'Prévia válida por mais 12 minutos.',
+        }],
+      },
+    };
+    expect(pipelineStageModePrecondition(stage, true)).toBeNull();
+    expect(pipelineStageModePrecondition(stage, false)).toEqual({
+      canRun: true,
+      detail: 'Prévia válida por mais 12 minutos.',
+    });
+
+    stage.preflight.checks[0] = {
+      id: 'dedup_preview_real',
+      status: 'warning',
+      detail: 'A prévia expirou. Execute uma nova simulação.',
+    };
+    expect(pipelineStageModePrecondition(stage, false)).toEqual({
+      canRun: false,
+      detail: 'A prévia expirou. Execute uma nova simulação.',
+    });
+    expect(pipelineStageModePrecondition({ id: 'dedup', preflight: { checks: [] } }, false)).toEqual({
+      canRun: false,
+      detail: 'O backend não confirmou uma prévia recente para a execução real. Execute uma nova simulação.',
+    });
+    expect(pipelineStageModePrecondition({ id: 'all', preflight: { checks: [] } }, false)).toBeNull();
   });
 
   test('control snapshot requires an exact fresh contract and complete preflight', () => {
