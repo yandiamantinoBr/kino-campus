@@ -434,6 +434,81 @@ describe('strict Cadu control-plane proxy runtime', () => {
     expect(JSON.stringify(res.body)).not.toContain('private command output');
   });
 
+  test('preserves only enumerated pipeline error codes with their exact status', async () => {
+    global.fetch.mockResolvedValueOnce(upstreamResponse({
+      status: 409,
+      body: JSON.stringify({
+        detail: {
+          code: 'pipeline_runtime_busy',
+          message: 'internal deployment path',
+          hint: 'private operator detail',
+          stderr: 'secret output',
+        },
+      }),
+    }));
+    const busyReq = request({ method: 'POST', path: 'run/dry-run', body: { stage: 'dedup' } });
+    const busyRes = response();
+
+    await pipelineHandler(busyReq, busyRes);
+
+    expect(busyRes.statusCode).toBe(409);
+    expect(busyRes.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 409,
+      detail: { code: 'pipeline_runtime_busy' },
+    });
+    expect(JSON.stringify(busyRes.body)).not.toContain('internal deployment path');
+
+    global.fetch.mockResolvedValueOnce(upstreamResponse({
+      status: 412,
+      body: JSON.stringify({
+        detail: {
+          code: 'dedup_preview_required',
+          message: 'preview report path',
+          token: 'service-secret',
+        },
+      }),
+    }));
+    const previewReq = request({ method: 'POST', path: 'run/real', body: { stage: 'dedup' } });
+    const previewRes = response();
+
+    await pipelineHandler(previewReq, previewRes);
+
+    expect(previewRes.statusCode).toBe(412);
+    expect(previewRes.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 412,
+      detail: { code: 'dedup_preview_required' },
+    });
+    expect(JSON.stringify(previewRes.body)).not.toContain('preview report path');
+    expect(JSON.stringify(previewRes.body)).not.toContain('service-secret');
+  });
+
+  test('drops known pipeline codes when returned with the wrong status', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse({
+      status: 500,
+      body: JSON.stringify({
+        detail: {
+          code: 'pipeline_runtime_busy',
+          message: 'must remain private',
+        },
+      }),
+    }));
+    const req = request({ method: 'POST', path: 'run/dry-run', body: { stage: 'dedup' } });
+    const res = response();
+
+    await pipelineHandler(req, res);
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 500,
+    });
+  });
+
   test('streams only the exact SSE route with redirect blocking and a byte signal', async () => {
     const chunks = [Buffer.from('event: log\ndata: {"line":"ok"}\n\n', 'utf8')];
     let cursor = 0;

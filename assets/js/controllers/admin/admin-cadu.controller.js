@@ -7035,15 +7035,19 @@
         msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
       } else if (resp.status === 412) {
         var preconditionDetail = resp.data && (resp.data.detail || resp.data);
-        var preconditionMessage = preconditionDetail && (preconditionDetail.message || preconditionDetail);
-        var preconditionHint = preconditionDetail && preconditionDetail.hint;
-        msg = '⚠️ Execução recusada com segurança: ' +
-          (typeof preconditionMessage === 'string' ? preconditionMessage : JSON.stringify(preconditionMessage || 'pré-condição não atendida')) +
-          (preconditionHint ? '\n\nComo resolver: ' + preconditionHint : '');
+        if (preconditionDetail && preconditionDetail.code === 'dedup_preview_required') {
+          msg = '⚠️ A execução real foi recusada com segurança porque não há uma prévia recente compatível.\n\nExecute “Simular”, revise o relatório e então tente “Executar real” novamente. Nenhum run real foi criado.';
+        } else {
+          msg = '⚠️ Execução recusada com segurança: pré-condição não atendida. Atualize o painel e revise o diagnóstico antes de tentar novamente.';
+        }
       } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
-        var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
-        msg = '⛔ Já existe uma execução ativa para "' + stageId + '" (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
+        if (detail && detail.code === 'pipeline_runtime_busy') {
+          msg = '⏳ A pipeline está temporariamente ocupada por uma implantação ou manutenção externa.\n\nAguarde a operação terminar, atualize o painel e tente novamente. Nenhum run foi criado.';
+        } else {
+          var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
+          msg = '⛔ Já existe uma execução ativa para "' + stageId + '" (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
+        }
       } else if (resp.status === 400 || resp.status === 422) {
         var validationDetail = resp.data && (resp.data.detail || resp.data);
         msg = '⚠️ Requisição recusada pelo cadu-api (HTTP ' + resp.status + '): ' +

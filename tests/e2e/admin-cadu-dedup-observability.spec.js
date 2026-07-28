@@ -46,7 +46,7 @@ function dedupRun() {
   };
 }
 
-function pipelineSnapshot(previewStatus = 'ok') {
+function pipelineSnapshot(previewStatus = 'ok', runtimeBusy = false) {
   const nowSeconds = Date.now() / 1000;
   const run = dedupRun();
   const relativePath = 'scripts/dedup-kino.js';
@@ -66,6 +66,15 @@ function pipelineSnapshot(previewStatus = 'ok') {
       detail: relativePath,
       blocking: true,
       status: 'ok',
+    },
+    {
+      id: 'pipeline_runtime_lock',
+      label: 'Exclusão mútua da pipeline',
+      detail: runtimeBusy
+        ? 'Lock global ocupado por outra pipeline ou implantação.'
+        : 'Lock global livre; nenhuma pipeline ou implantação está usando os artefatos.',
+      blocking: true,
+      status: runtimeBusy ? 'warning' : 'ok',
     },
     {
       id: 'dedup_preview_config',
@@ -96,7 +105,7 @@ function pipelineSnapshot(previewStatus = 'ok') {
       preflight: {
         stage: 'dedup',
         checked_at: nowSeconds,
-        can_run: true,
+        can_run: !runtimeBusy,
         command: `node ${relativePath} --all-active --report --no-auto-close --emit-cadu-markers --dry-run`,
         profile: {
           risk: 'high',
@@ -109,7 +118,7 @@ function pipelineSnapshot(previewStatus = 'ok') {
           notes: ['A execução real exige confirmação explícita e mantém auto-ocultação desativada.'],
         },
         checks,
-        blockers: [],
+        blockers: runtimeBusy ? [checks[1]] : [],
         warnings: previewStatus === 'ok' ? [] : [previewCheck],
         script: {
           exists: true,
@@ -172,7 +181,7 @@ async function installAdminSession(page) {
   });
 }
 
-async function mockCaduApi(page, previewStatus = 'ok') {
+async function mockCaduApi(page, previewStatus = 'ok', runtimeBusy = false) {
   await page.route('**/api/cadu/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -180,7 +189,7 @@ async function mockCaduApi(page, previewStatus = 'ok') {
     const run = dedupRun();
 
     if (requestPath === '/api/cadu/health') {
-      return route.fulfill({ json: { status: 'ok', version: '0.5.15', ts: Date.now() / 1000 } });
+      return route.fulfill({ json: { status: 'ok', version: '0.5.16', ts: Date.now() / 1000 } });
     }
     if (requestPath === '/api/cadu/openclaw/context') {
       return route.fulfill({
@@ -192,10 +201,10 @@ async function mockCaduApi(page, previewStatus = 'ok') {
       });
     }
     if (requestPath === '/api/cadu/pipeline') {
-      return route.fulfill({ json: pipelineSnapshot(previewStatus) });
+      return route.fulfill({ json: pipelineSnapshot(previewStatus, runtimeBusy) });
     }
     if (requestPath === '/api/cadu/pipeline/health') {
-      return route.fulfill({ json: pipelineSnapshot(previewStatus).health });
+      return route.fulfill({ json: pipelineSnapshot(previewStatus, runtimeBusy).health });
     }
     if (requestPath === '/api/cadu/pipeline/runs') {
       return route.fulfill({ json: { runs: [run] } });
@@ -321,7 +330,11 @@ async function openDedupDetails(page) {
 test.describe('Admin Cadu - observabilidade da deduplicação', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     await installAdminSession(page);
-    await mockCaduApi(page, testInfo.title.includes('prévia expirada') ? 'warning' : 'ok');
+    await mockCaduApi(
+      page,
+      testInfo.title.includes('prévia expirada') ? 'warning' : 'ok',
+      testInfo.title.includes('lock global'),
+    );
   });
 
   test('mostra o funil e separa artefatos atuais no desktop', async ({ page }) => {
@@ -391,5 +404,26 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
       path: path.resolve('output/playwright/cadu-dedup-preview-expired.png'),
       fullPage: false,
     });
+  });
+
+  test('bloqueia os dois modos quando o lock global está ocupado', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+    const rejectConsent = page.getByRole('button', { name: 'Rejeitar opcionais' }).first();
+    try {
+      await rejectConsent.waitFor({ state: 'visible', timeout: 1500 });
+      await rejectConsent.click();
+    } catch (_) {
+      // O banner pode já ter sido resolvido pelo estado local do navegador.
+    }
+    await page.getByRole('tab', { name: /Pipeline/ }).click();
+    const stage = page.locator('.kc-pipeline-stage').filter({ hasText: 'Deduplicação global' });
+    await expect(stage).toContainText('bloqueado');
+    const simulateButton = stage.getByRole('button', { name: 'Simular' });
+    const realButton = stage.getByRole('button', { name: 'Executar real' });
+    await expect(simulateButton).toBeDisabled();
+    await expect(realButton).toBeDisabled();
+    await expect(simulateButton).toHaveAttribute('title', /Lock global ocupado/);
+    await expect(realButton).toHaveAttribute('title', /Lock global ocupado/);
   });
 });
