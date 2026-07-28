@@ -1966,6 +1966,10 @@ Relatório operacional completo:
 - Links e decisões têm alvos táteis maiores, a subaba ativa permanece visível
   no rail horizontal inclusive após restauração inicial ou redimensionamento,
   e os KPIs do OpenClaw usam grade 4/2/1 colunas.
+- O resumo do histórico separa `mesclados`, `persistidos` e
+  `duplicatas atualizadas`. Em `bd38466f`, os valores 9/9/6 vêm,
+  respectivamente, do publisher e do enriquecimento posterior de duplicatas;
+  não representam contagens concorrentes da mesma operação.
 
 Referências:
 

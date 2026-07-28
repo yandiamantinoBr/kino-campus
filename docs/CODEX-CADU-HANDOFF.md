@@ -501,6 +501,9 @@ Próxima ação recomendada: criar scheduler durável/visível para a pipeline, 
 - Navegação: a aba operacional selecionada permanece visível no rail móvel,
   inclusive quando restaurada antes de o conteúdo principal ficar visível ou
   após mudança de viewport.
-  OpenClaw: os quatro indicadores agora usam grade responsiva.
+- Histórico: `mesclados`, `persistidos` e `duplicatas atualizadas` são métricas
+  distintas. No run `bd38466f`, os valores foram 9, 9 e 6; os seis updates
+  pertencem ao enriquecimento de duplicatas, não ao resultado do publisher.
+- OpenClaw: os quatro indicadores agora usam grade responsiva.
 - Relatório operacional:
   `openclaw-cadu/docs/incidents/2026-07-28-runs-bd38466f-29da18c0-6b0018ac.md`.

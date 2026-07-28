@@ -6111,7 +6111,9 @@
       var cls = (Number(m.published) === 0 && Number(m.publishable || 0) > 0) ? ' class="is-warning"' : '';
       parts.push('<span' + cls + '>publicados ' + escapeHtml(m.published) + '</span>');
     }
-    if (m.updated != null) parts.push('<span>atualizados ' + escapeHtml(m.updated) + '</span>');
+    metric('merged', 'mesclados', false);
+    metric('persisted', 'persistidos', false);
+    metric('updated', 'duplicatas atualizadas', false);
     if (m.discarded != null) parts.push('<span>descartados ' + escapeHtml(m.discarded) + '</span>');
     if (m.ig_profiles_ok != null || m.ig_profiles_failed != null) {
       var igFail = Number(m.ig_profiles_failed || 0);
@@ -6598,6 +6600,9 @@
       total: 'Total',
       publishable: 'Publicáveis',
       published: 'Publicados',
+      merged: 'Posts mesclados',
+      persisted: 'Posts persistidos',
+      updated: 'Duplicatas atualizadas',
       formatted: 'Formatados',
       relevant: 'Relevantes',
       review: 'Em revisão',
