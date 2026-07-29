@@ -13,9 +13,11 @@
     notificationPreferences: null,
     notificationChannelTargets: null,
     dataSubjectRequests: [],
+    dataSubjectRequestsLoadSequence: 0,
     privacyActionKeys: Object.create(null),
     privacyActionKeyUserId: '',
-    privacyDownloadsInFlight: Object.create(null),
+    privacyProtocolLeases: new Map(),
+    privacyRequestFocusDisplacement: null,
     privacyBusy: false,
     privacyBusyLease: null,
     accountEmailActionsInFlight: Object.create(null),
@@ -158,9 +160,11 @@
     state.notificationPreferences = getDefaultNotificationPreferences();
     state.notificationChannelTargets = getDefaultNotificationChannelTargets();
     state.dataSubjectRequests = [];
+    state.dataSubjectRequestsLoadSequence += 1;
     state.privacyActionKeys = Object.create(null);
     state.privacyActionKeyUserId = userId;
-    state.privacyDownloadsInFlight = Object.create(null);
+    state.privacyProtocolLeases = new Map();
+    state.privacyRequestFocusDisplacement = null;
     state.privacyBusy = false;
     state.privacyBusyLease = null;
     state.accountEmailActionsInFlight = Object.create(null);
@@ -512,9 +516,7 @@
 
   function hasPrivacyWorkInFlight() {
     if (state.privacyBusy) return true;
-    return Object.keys(state.privacyDownloadsInFlight || {}).some(
-      (protocol) => state.privacyDownloadsInFlight[protocol] === true
-    );
+    return state.privacyProtocolLeases instanceof Map && state.privacyProtocolLeases.size > 0;
   }
 
   function syncBrowserPrivacyClearAvailability() {
@@ -546,6 +548,282 @@
     state.privacyBusy = false;
     state.privacyBusyLease = null;
     syncBrowserPrivacyClearAvailability();
+    return true;
+  }
+
+  function normalizePrivacyProtocol(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function getCurrentPrivacyProtocolLease(protocol) {
+    const normalizedProtocol = normalizePrivacyProtocol(protocol);
+    const leases = state.privacyProtocolLeases;
+    if (!normalizedProtocol || !(leases instanceof Map)) return null;
+    const lease = leases.get(normalizedProtocol);
+    if (
+      !lease ||
+      lease.ownerMap !== leases ||
+      lease.userId !== getUserId(state.user)
+    ) {
+      return null;
+    }
+    return lease;
+  }
+
+  function findPrivacyRequestRow(container, protocol) {
+    const normalizedProtocol = normalizePrivacyProtocol(protocol);
+    if (!container || !normalizedProtocol) return null;
+    return Array.from(container.querySelectorAll('[data-privacy-request-row]')).find(
+      (row) => normalizePrivacyProtocol(row.dataset.privacyRequestProtocol) === normalizedProtocol
+    ) || null;
+  }
+
+  function findPrivacyRequestAction(container, protocol, action) {
+    const row = findPrivacyRequestRow(container, protocol);
+    const normalizedAction = String(action || '').trim();
+    if (!row || !normalizedAction) return null;
+    return Array.from(row.querySelectorAll('[data-privacy-request-action]')).find(
+      (button) => String(button.dataset.privacyRequestAction || '') === normalizedAction
+    ) || null;
+  }
+
+  function capturePrivacyRequestFocus(container) {
+    const active = document.activeElement;
+    if (!container || !active || !container.contains(active)) return null;
+    const row = typeof active.closest === 'function'
+      ? active.closest('[data-privacy-request-row]')
+      : null;
+    if (!row || !container.contains(row)) return null;
+    const actionElement = typeof active.closest === 'function'
+      ? active.closest('[data-privacy-request-action]')
+      : null;
+    const generation = Number(row.dataset.privacyRequestGeneration);
+    return {
+      protocol: normalizePrivacyProtocol(row.dataset.privacyRequestProtocol),
+      action: actionElement
+        ? String(actionElement.dataset.privacyRequestAction || '').trim()
+        : '',
+      generation: Number.isSafeInteger(generation)
+        ? generation
+        : state.accountLoadGeneration,
+      userId: getUserId(state.user),
+      sourceElement: active,
+    };
+  }
+
+  function canRestorePrivacyRequestFocus(intent) {
+    return Boolean(
+      intent &&
+      intent.protocol &&
+      intent.userId === getUserId(state.user) &&
+      intent.generation === state.accountLoadGeneration
+    );
+  }
+
+  function focusPrivacyRequestElement(element) {
+    if (!element || element.disabled === true || typeof element.focus !== 'function') return false;
+    if (
+      !/^(?:A|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(String(element.tagName || '')) &&
+      !element.hasAttribute('tabindex')
+    ) {
+      element.setAttribute('tabindex', '-1');
+    }
+    try {
+      element.focus({ preventScroll: true });
+    } catch (_) {
+      try {
+        element.focus();
+      } catch (_) {
+        return false;
+      }
+    }
+    return document.activeElement === element;
+  }
+
+  function restorePrivacyRequestFocus(container, intent) {
+    if (!container || !canRestorePrivacyRequestFocus(intent)) return null;
+    const action = findPrivacyRequestAction(container, intent.protocol, intent.action);
+    if (action && action.disabled !== true && focusPrivacyRequestElement(action)) {
+      return action;
+    }
+    const row = findPrivacyRequestRow(container, intent.protocol);
+    if (row && focusPrivacyRequestElement(row)) return row;
+    const refreshButton = $('#settingsRefreshDataRequests');
+    if (
+      refreshButton &&
+      refreshButton.disabled !== true &&
+      focusPrivacyRequestElement(refreshButton)
+    ) {
+      return refreshButton;
+    }
+    const status = $('#settingsPrivacyDataStatus');
+    if (status && focusPrivacyRequestElement(status)) return status;
+    return focusPrivacyRequestElement(container) ? container : null;
+  }
+
+  function beginDataSubjectRequestRender(container) {
+    let intent = capturePrivacyRequestFocus(container);
+    let lease = intent && intent.action
+      ? getCurrentPrivacyProtocolLease(intent.protocol)
+      : null;
+    const active = document.activeElement;
+    const displacement = state.privacyRequestFocusDisplacement;
+    const validDisplacement = Boolean(
+      displacement &&
+      displacement.lease &&
+      displacement.lease.ownerMap === state.privacyProtocolLeases &&
+      displacement.lease.ownerMap.get(displacement.lease.protocol) === displacement.lease &&
+      canRestorePrivacyRequestFocus(displacement.intent)
+    );
+    if (
+      intent &&
+      !intent.action &&
+      validDisplacement &&
+      intent.protocol === displacement.intent.protocol &&
+      active === displacement.lease.focus.fallbackElement
+    ) {
+      intent = displacement.intent;
+      lease = displacement.lease;
+    } else if (
+      !intent &&
+      (active === document.body || active === document.documentElement) &&
+      validDisplacement
+    ) {
+      intent = displacement.intent;
+      lease = displacement.lease;
+    } else if (!intent && active && active !== document.body && active !== document.documentElement) {
+      state.privacyRequestFocusDisplacement = null;
+    }
+    container.replaceChildren();
+    return { intent, lease };
+  }
+
+  function finishDataSubjectRequestRender(container, renderContext) {
+    const context = renderContext || {};
+    const intent = context.intent;
+    if (!intent) return null;
+    const focused = restorePrivacyRequestFocus(container, intent);
+    if (
+      context.lease &&
+      context.lease.focus &&
+      context.lease.ownerMap.get(context.lease.protocol) === context.lease
+    ) {
+      context.lease.focus.intent = intent;
+      context.lease.focus.fallbackElement = focused;
+    }
+    return focused;
+  }
+
+  function syncPrivacyProtocolControls(protocol, rowOverride) {
+    const container = $('#settingsDataSubjectRequests');
+    const normalizedProtocol = normalizePrivacyProtocol(protocol);
+    const row = rowOverride || findPrivacyRequestRow(container, normalizedProtocol);
+    if (!row || !normalizedProtocol) return;
+    const busy = Boolean(getCurrentPrivacyProtocolLease(normalizedProtocol));
+    row.setAttribute('aria-busy', busy ? 'true' : 'false');
+    Array.from(row.querySelectorAll('[data-privacy-request-action]')).forEach((button) => {
+      if (busy) {
+        button.dataset.privacyProtocolLeaseDisabled = '1';
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+        return;
+      }
+      if (button.dataset.privacyProtocolLeaseDisabled === '1') {
+        delete button.dataset.privacyProtocolLeaseDisabled;
+        button.disabled = false;
+        button.setAttribute('aria-disabled', 'false');
+      }
+    });
+  }
+
+  function reportPrivacyProtocolBusy(protocol) {
+    const normalizedProtocol = normalizePrivacyProtocol(protocol);
+    setPrivacyStatus(
+      `Já existe uma operação em andamento para o protocolo ${normalizedProtocol}. Aguarde a conclusão antes de baixar ou cancelar este pedido.`,
+      'info'
+    );
+  }
+
+  function beginPrivacyProtocolOperation(protocol, action, button) {
+    const normalizedProtocol = normalizePrivacyProtocol(protocol);
+    const normalizedAction = String(action || '').trim();
+    const userId = getUserId(state.user);
+    const ownerMap = state.privacyProtocolLeases;
+    if (!normalizedProtocol || !userId || !(ownerMap instanceof Map)) return null;
+    if (ownerMap.has(normalizedProtocol)) {
+      reportPrivacyProtocolBusy(normalizedProtocol);
+      return null;
+    }
+    const focusIntent = capturePrivacyRequestFocus($('#settingsDataSubjectRequests'));
+    const ownsFocusedAction = Boolean(
+      focusIntent &&
+      focusIntent.protocol === normalizedProtocol &&
+      focusIntent.action === normalizedAction &&
+      document.activeElement === button
+    );
+    const lease = {
+      protocol: normalizedProtocol,
+      action: normalizedAction,
+      generation: state.accountLoadGeneration,
+      userId,
+      ownerMap,
+      focus: {
+        intent: ownsFocusedAction ? focusIntent : null,
+        fallbackElement: null,
+      },
+    };
+    ownerMap.set(normalizedProtocol, lease);
+    if (ownsFocusedAction) {
+      state.privacyRequestFocusDisplacement = {
+        lease,
+        intent: focusIntent,
+      };
+    }
+    syncPrivacyProtocolControls(normalizedProtocol);
+    syncBrowserPrivacyClearAvailability();
+    return lease;
+  }
+
+  function endPrivacyProtocolOperation(lease) {
+    if (
+      !lease ||
+      !(lease.ownerMap instanceof Map) ||
+      lease.ownerMap.get(lease.protocol) !== lease
+    ) {
+      return false;
+    }
+    lease.ownerMap.delete(lease.protocol);
+    const ownsCurrentAccountMap = (
+      state.privacyProtocolLeases === lease.ownerMap &&
+      getUserId(state.user) === lease.userId
+    );
+    if (!ownsCurrentAccountMap) return false;
+
+    const intent = lease.focus && lease.focus.intent;
+    const fallbackElement = lease.focus && lease.focus.fallbackElement;
+    const displacement = state.privacyRequestFocusDisplacement;
+    const shouldRestoreFocus = Boolean(
+      canRestorePrivacyRequestFocus(intent) &&
+      (
+        (fallbackElement && document.activeElement === fallbackElement) ||
+        (
+          displacement &&
+          displacement.lease === lease &&
+          document.activeElement === document.body
+        )
+      )
+    );
+    syncPrivacyProtocolControls(lease.protocol);
+    syncBrowserPrivacyClearAvailability();
+    if (shouldRestoreFocus) {
+      restorePrivacyRequestFocus($('#settingsDataSubjectRequests'), intent);
+    }
+    if (
+      state.privacyRequestFocusDisplacement &&
+      state.privacyRequestFocusDisplacement.lease === lease
+    ) {
+      state.privacyRequestFocusDisplacement = null;
+    }
     return true;
   }
 
@@ -776,7 +1054,7 @@
     if (hasPrivacyWorkInFlight()) {
       syncBrowserPrivacyClearAvailability();
       setPrivacyStatus(
-        'Aguarde a criação ou o download do protocolo terminar antes de limpar os dados locais. Nenhuma chave da operação em andamento foi removida.',
+        'Aguarde a operação do protocolo terminar antes de limpar os dados locais. Nenhuma chave da operação em andamento foi removida.',
         'warn'
       );
       return false;
@@ -843,7 +1121,7 @@
   function renderDataSubjectRequests(items) {
     const container = $('#settingsDataSubjectRequests');
     if (!container) return;
-    container.replaceChildren();
+    const renderContext = beginDataSubjectRequestRender(container);
     container.setAttribute('aria-busy', 'false');
 
     const allRequests = Array.isArray(items) ? items : [];
@@ -855,13 +1133,19 @@
       empty.setAttribute('role', 'listitem');
       empty.textContent = 'Nenhum pedido protocolado nesta conta.';
       container.appendChild(empty);
+      finishDataSubjectRequestRender(container, renderContext);
       return;
     }
 
     requests.forEach((request) => {
+      const protocol = normalizePrivacyProtocol(request && request.protocol);
       const row = document.createElement('article');
       row.className = 'kc-settings-row';
       row.setAttribute('role', 'listitem');
+      row.setAttribute('tabindex', '-1');
+      row.setAttribute('data-privacy-request-row', '');
+      row.dataset.privacyRequestProtocol = protocol;
+      row.dataset.privacyRequestGeneration = String(state.accountLoadGeneration);
 
       const body = document.createElement('div');
       body.className = 'kc-settings-network__body';
@@ -914,6 +1198,9 @@
         supplementDownload.type = 'button';
         supplementDownload.className = 'kc-settings-btn';
         supplementDownload.textContent = 'Baixar complemento integral';
+        supplementDownload.dataset.privacyRequestProtocol = protocol;
+        supplementDownload.dataset.privacyRequestAction = 'download_supplement';
+        supplementDownload.setAttribute('aria-disabled', 'false');
         supplementDownload.setAttribute(
           'aria-label',
           `Baixar complemento integral do protocolo ${String(request.protocol || 'indisponível')}`
@@ -932,6 +1219,9 @@
         download.type = 'button';
         download.className = 'kc-settings-btn';
         download.textContent = 'Baixar novamente';
+        download.dataset.privacyRequestProtocol = protocol;
+        download.dataset.privacyRequestAction = 'download_export';
+        download.setAttribute('aria-disabled', 'false');
         download.setAttribute(
           'aria-label',
           `Baixar novamente ${PRIVACY_KIND_LABELS[request.request_kind] || 'solicitação'} do protocolo ${String(request.protocol || 'indisponível')}`
@@ -947,6 +1237,9 @@
         cancel.type = 'button';
         cancel.className = 'kc-settings-btn is-danger';
         cancel.textContent = 'Cancelar pedido';
+        cancel.dataset.privacyRequestProtocol = protocol;
+        cancel.dataset.privacyRequestAction = 'cancel';
+        cancel.setAttribute('aria-disabled', 'false');
         cancel.setAttribute(
           'aria-label',
           `Cancelar ${PRIVACY_KIND_LABELS[request.request_kind] || 'solicitação'} do protocolo ${String(request.protocol || 'indisponível')}`
@@ -959,35 +1252,40 @@
 
       row.append(body, actions);
       container.appendChild(row);
+      syncPrivacyProtocolControls(protocol, row);
     });
+    finishDataSubjectRequestRender(container, renderContext);
   }
 
   function renderDataSubjectRequestsUnavailable() {
     const container = $('#settingsDataSubjectRequests');
     if (!container) return;
-    container.replaceChildren();
+    const renderContext = beginDataSubjectRequestRender(container);
     container.setAttribute('aria-busy', 'false');
     const unavailable = document.createElement('p');
     unavailable.className = 'kc-settings-help';
     unavailable.setAttribute('role', 'listitem');
     unavailable.textContent = 'Não foi possível consultar seus protocolos agora. Isso não significa que não existam pedidos. Tente atualizar novamente ou use a Central de Ajuda.';
     container.appendChild(unavailable);
+    finishDataSubjectRequestRender(container, renderContext);
   }
 
   function renderDataSubjectRequestsLoading() {
     const container = $('#settingsDataSubjectRequests');
     if (!container) return;
-    container.replaceChildren();
+    const renderContext = beginDataSubjectRequestRender(container);
     container.setAttribute('aria-busy', 'true');
     const loading = document.createElement('p');
     loading.className = 'kc-settings-help';
     loading.setAttribute('role', 'listitem');
     loading.textContent = 'Consultando os protocolos desta conta...';
     container.appendChild(loading);
+    finishDataSubjectRequestRender(container, renderContext);
   }
 
   async function loadDataSubjectRequests(options) {
     const opts = options || {};
+    const loadSequence = ++state.dataSubjectRequestsLoadSequence;
     if (!state.user || !window.KCAPI || typeof window.KCAPI.listDataSubjectRequests !== 'function') {
       renderDataSubjectRequestsUnavailable();
       setPrivacyStatus('Os controles autenticados não estão disponíveis neste ambiente. Use a Central de Ajuda.', 'warn');
@@ -996,6 +1294,10 @@
 
     const generation = state.accountLoadGeneration;
     const userId = getUserId(state.user);
+    const isCurrentLoad = () => (
+      state.dataSubjectRequestsLoadSequence === loadSequence &&
+      isActiveAccountLoad(generation, userId)
+    );
     const refreshButton = $('#settingsRefreshDataRequests');
     const requestsContainer = $('#settingsDataSubjectRequests');
     if (requestsContainer) requestsContainer.setAttribute('aria-busy', 'true');
@@ -1009,7 +1311,7 @@
         limit: requestedLimit,
         expected_user_id: userId,
       });
-      if (!isActiveAccountLoad(generation, userId)) return [];
+      if (!isCurrentLoad()) return [];
       if (!result || result.ok === false || result.error) {
         if (state.dataSubjectRequests.length) {
           renderDataSubjectRequests(state.dataSubjectRequests);
@@ -1040,10 +1342,10 @@
             ? { ...request, supplement: detail.data.supplement || null }
             : request;
         }));
-        if (!isActiveAccountLoad(generation, userId)) return [];
+        if (!isCurrentLoad()) return [];
         requests = enriched;
       }
-      if (!isActiveAccountLoad(generation, userId)) return [];
+      if (!isCurrentLoad()) return [];
       state.dataSubjectRequests = requests;
       reconcilePrivacyActionKeys(state.dataSubjectRequests);
       renderDataSubjectRequests(state.dataSubjectRequests);
@@ -1055,7 +1357,7 @@
       }
       return state.dataSubjectRequests;
     } catch (_) {
-      if (!isActiveAccountLoad(generation, userId)) return [];
+      if (!isCurrentLoad()) return [];
       if (state.dataSubjectRequests.length) {
         renderDataSubjectRequests(state.dataSubjectRequests);
       } else {
@@ -1151,7 +1453,7 @@
   }
 
   async function downloadDataSubjectExport(request, button) {
-    const protocol = String(request && request.protocol || '').trim().toUpperCase();
+    const protocol = normalizePrivacyProtocol(request && request.protocol);
     if (hasActiveAccountErasure(state.dataSubjectRequests)) {
       setActionButtonState(button, 'idle');
       setPrivacyStatus(
@@ -1164,18 +1466,10 @@
       setPrivacyStatus('Não foi possível iniciar o download. Use o protocolo na Central de Ajuda.', 'error');
       return false;
     }
-    const downloadsInFlight = state.privacyDownloadsInFlight;
-    if (downloadsInFlight[protocol] === true) {
-      setPrivacyStatus(
-        `Já existe um download em preparação para o protocolo ${protocol}. Aguarde a conclusão antes de tentar novamente.`,
-        'info'
-      );
-      return false;
-    }
-    downloadsInFlight[protocol] = true;
-    syncBrowserPrivacyClearAvailability();
-    const generation = state.accountLoadGeneration;
-    const userId = getUserId(state.user);
+    const protocolLease = beginPrivacyProtocolOperation(protocol, 'download_export', button);
+    if (!protocolLease) return false;
+    const generation = protocolLease.generation;
+    const userId = protocolLease.userId;
     setActionButtonState(button, 'loading', 'Preparando JSON...');
     setPrivacyStatus(`Preparando a cópia do protocolo ${protocol}. Não feche esta página.`, 'info');
     try {
@@ -1215,20 +1509,15 @@
       setPrivacyStatus(`Não foi possível baixar o protocolo ${protocol}. Tente novamente ou use a Central de Ajuda.`, 'error');
       return false;
     } finally {
-      const belongsToCurrentAccount = (
-        state.privacyDownloadsInFlight === downloadsInFlight &&
-        getUserId(state.user) === userId
-      );
-      delete downloadsInFlight[protocol];
-      syncBrowserPrivacyClearAvailability();
-      if (belongsToCurrentAccount && !isActiveAccountLoad(generation, userId)) {
+      const endedCurrentLease = endPrivacyProtocolOperation(protocolLease);
+      if (endedCurrentLease && !isActiveAccountLoad(generation, userId)) {
         setActionButtonState(button, 'idle');
       }
     }
   }
 
   async function downloadDataSubjectSupplement(request, button) {
-    const protocol = String(request && request.protocol || '').trim().toUpperCase();
+    const protocol = normalizePrivacyProtocol(request && request.protocol);
     const artifactRef = String(
       request && request.supplement && request.supplement.artifact_ref || ''
     ).trim();
@@ -1249,18 +1538,10 @@
       setPrivacyStatus('O complemento ainda não está disponível. Acompanhe o protocolo na Central de Ajuda.', 'warn');
       return false;
     }
-    const downloadsInFlight = state.privacyDownloadsInFlight;
-    if (downloadsInFlight[protocol] === true) {
-      setPrivacyStatus(
-        `Já existe um download em preparação para o protocolo ${protocol}. Aguarde a conclusão antes de tentar novamente.`,
-        'info'
-      );
-      return false;
-    }
-    downloadsInFlight[protocol] = true;
-    syncBrowserPrivacyClearAvailability();
-    const generation = state.accountLoadGeneration;
-    const userId = getUserId(state.user);
+    const protocolLease = beginPrivacyProtocolOperation(protocol, 'download_supplement', button);
+    if (!protocolLease) return false;
+    const generation = protocolLease.generation;
+    const userId = protocolLease.userId;
     setActionButtonState(button, 'loading', 'Validando complemento...');
     try {
       const result = await window.KCAPI.downloadDataSubjectSupplement(protocol, artifactRef, {
@@ -1291,13 +1572,8 @@
       setPrivacyStatus(`Não foi possível baixar o complemento do protocolo ${protocol}.`, 'error');
       return false;
     } finally {
-      const belongsToCurrentAccount = (
-        state.privacyDownloadsInFlight === downloadsInFlight &&
-        getUserId(state.user) === userId
-      );
-      delete downloadsInFlight[protocol];
-      syncBrowserPrivacyClearAvailability();
-      if (belongsToCurrentAccount && !isActiveAccountLoad(generation, userId)) {
+      const endedCurrentLease = endPrivacyProtocolOperation(protocolLease);
+      if (endedCurrentLease && !isActiveAccountLoad(generation, userId)) {
         setActionButtonState(button, 'idle');
       }
     }
@@ -1440,18 +1716,24 @@
   }
 
   async function cancelDataSubjectRequest(request, button) {
-    const protocol = String(request && request.protocol || '').trim();
+    const protocol = normalizePrivacyProtocol(request && request.protocol);
     if (!protocol || !window.KCAPI || typeof window.KCAPI.cancelDataSubjectRequest !== 'function') return;
+    if (getCurrentPrivacyProtocolLease(protocol)) {
+      reportPrivacyProtocolBusy(protocol);
+      return false;
+    }
     const isErasure = request.request_kind === 'account_erasure';
     const confirmed = window.confirm(
       isErasure
         ? `Cancelar o pedido de exclusão ${protocol}? Alterações reversíveis já aplicadas serão tratadas pelo atendimento.`
         : `Cancelar o pedido ${protocol}?`
     );
-    if (!confirmed) return;
+    if (!confirmed) return false;
 
-    const generation = state.accountLoadGeneration;
-    const userId = getUserId(state.user);
+    const protocolLease = beginPrivacyProtocolOperation(protocol, 'cancel', button);
+    if (!protocolLease) return false;
+    const generation = protocolLease.generation;
+    const userId = protocolLease.userId;
     setActionButtonState(button, 'loading', 'Cancelando...');
     try {
       const result = await window.KCAPI.cancelDataSubjectRequest(protocol, {
@@ -1474,10 +1756,17 @@
         'success'
       );
       await loadDataSubjectRequests({ silent: true });
+      return true;
     } catch (_) {
-      if (!isActiveAccountLoad(generation, userId)) return;
+      if (!isActiveAccountLoad(generation, userId)) return false;
       setActionButtonState(button, 'idle');
       setPrivacyStatus(`Não foi possível cancelar o protocolo ${protocol}.`, 'error');
+      return false;
+    } finally {
+      const endedCurrentLease = endPrivacyProtocolOperation(protocolLease);
+      if (endedCurrentLease && !isActiveAccountLoad(generation, userId)) {
+        setActionButtonState(button, 'idle');
+      }
     }
   }
 
@@ -1493,7 +1782,9 @@
       clearTimeout(button._kcResetTimer);
       button._kcResetTimer = null;
     }
-    button.disabled = false;
+    const protocolLeaseDisabled = button.dataset.privacyProtocolLeaseDisabled === '1';
+    button.disabled = protocolLeaseDisabled;
+    button.setAttribute('aria-disabled', protocolLeaseDisabled ? 'true' : 'false');
     button.setAttribute('aria-busy', 'false');
     button.classList.remove('is-loading', 'is-success', 'is-warn');
     const defaultHtml = cacheButtonHtml(button);
@@ -1507,7 +1798,12 @@
     if (!button) return;
     cacheButtonHtml(button);
     button.classList.remove('is-loading', 'is-success', 'is-warn');
-    button.disabled = false;
+    const protocolLeaseDisabled = button.dataset.privacyProtocolLeaseDisabled === '1';
+    button.disabled = protocolLeaseDisabled;
+    button.setAttribute(
+      'aria-disabled',
+      mode === 'loading' || protocolLeaseDisabled ? 'true' : 'false'
+    );
     button.setAttribute('aria-busy', mode === 'loading' ? 'true' : 'false');
 
     if (mode === 'loading') {

@@ -128,9 +128,17 @@ describe('settings search personalization controls', () => {
     expect(controller).toContain(
       'window.KCAPI.getDataSubjectRequest(request.protocol, {\n            expected_user_id: userId,',
     );
-    expect(controller).toContain('privacyDownloadsInFlight: Object.create(null)');
-    expect(controller).toContain('downloadsInFlight[protocol] === true');
-    expect(controller).toContain('delete downloadsInFlight[protocol]');
+    expect(controller).toContain('privacyProtocolLeases: new Map()');
+    expect(controller).toContain('function beginPrivacyProtocolOperation(protocol, action, button)');
+    expect(controller).toContain('function endPrivacyProtocolOperation(lease)');
+    expect(controller).toContain('lease.ownerMap.get(lease.protocol) !== lease');
+    expect(controller).toContain("beginPrivacyProtocolOperation(protocol, 'download_export', button)");
+    expect(controller).toContain("beginPrivacyProtocolOperation(protocol, 'download_supplement', button)");
+    expect(controller).toContain("beginPrivacyProtocolOperation(protocol, 'cancel', button)");
+    expect(controller).toContain('data-privacy-request-action');
+    expect(controller).toContain('function capturePrivacyRequestFocus(container)');
+    expect(controller).toContain('function restorePrivacyRequestFocus(container, intent)');
+    expect(controller).toContain('privacyRequestFocusDisplacement: null');
     expect(controller).toContain('function hasPrivacyWorkInFlight()');
     expect(controller).toContain('function syncBrowserPrivacyClearAvailability()');
     expect(controller).toContain('privacyBusyLease: null');
@@ -164,6 +172,9 @@ describe('settings search personalization controls', () => {
     expect(controller).toContain("document.addEventListener('kc:authchange'");
     expect(controller).toContain('profileBelongsToUser');
     expect(controller).toContain('renderDataSubjectRequestsLoading');
+    expect(controller).toContain('dataSubjectRequestsLoadSequence: 0');
+    expect(controller).toContain('const loadSequence = ++state.dataSubjectRequestsLoadSequence');
+    expect(controller).toContain('state.dataSubjectRequestsLoadSequence === loadSequence');
     expect(css).toContain('.kc-settings-btn.is-warn');
   });
 
