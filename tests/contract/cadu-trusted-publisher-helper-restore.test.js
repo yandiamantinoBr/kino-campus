@@ -7,6 +7,10 @@ const RESTORE = path.join(
   ROOT,
   'supabase/migrations/20260714204000_restore_trusted_publisher_helper.sql',
 );
+const SEED_RESTORE = path.join(
+  ROOT,
+  'supabase/migrations/20260729172316_restore_cadu_trusted_publisher_seed.sql',
+);
 
 function normalized(file) {
   return fs.readFileSync(file, 'utf8').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -36,5 +40,19 @@ describe('trusted publisher helper on fresh V76 databases', () => {
       'grant execute on function kc_private.kc_is_trusted_publisher(uuid) to service_role',
     );
     expect(migration).not.toMatch(/execute\s+format\s*\(/);
+  });
+
+  test('restores the Cadu seed only for the existing administrative profile', () => {
+    const migration = normalized(SEED_RESTORE);
+
+    expect(migration).toContain('insert into public.kc_trusted_publishers (user_id, label)');
+    expect(migration).toContain('from public.profiles as profile');
+    expect(migration).toContain(
+      "profile.id = '2345582d-8bf7-4393-aa0d-f9953d0e02ca'::uuid",
+    );
+    expect(migration).toContain('profile.is_admin is true');
+    expect(migration).toContain('on conflict (user_id) do nothing');
+    expect(migration).not.toContain('insert into public.profiles');
+    expect(migration).not.toContain('insert into auth.users');
   });
 });
