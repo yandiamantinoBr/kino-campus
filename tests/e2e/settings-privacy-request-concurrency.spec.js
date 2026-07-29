@@ -17,6 +17,28 @@ async function mockSettingsSession(page, user) {
   });
 }
 
+const FAILURE_ACTION_CASES = [
+  { action: 'download_export', label: 'download principal' },
+  { action: 'download_supplement', label: 'download do complemento' },
+  { action: 'cancel', label: 'cancelamento' },
+];
+
+async function expectProtocolLeaseState(row, clearButton, busy) {
+  await expect(row).toHaveAttribute('aria-busy', busy ? 'true' : 'false');
+  if (busy) {
+    await expect(clearButton).toBeDisabled();
+  } else {
+    await expect(clearButton).toBeEnabled();
+  }
+  expect(await row.locator('[data-privacy-request-action]').evaluateAll(
+    (buttons, expectedBusy) => buttons.every((button) => (
+      button.disabled === expectedBusy &&
+      button.getAttribute('aria-disabled') === (expectedBusy ? 'true' : 'false')
+    )),
+    busy,
+  )).toBe(true);
+}
+
 test.describe('concorrência e foco dos protocolos em configurações', () => {
   test('serializa ações irmãs, mantém protocolos distintos paralelos e restaura foco com fallback', async ({ page }) => {
     const user = {
@@ -473,5 +495,217 @@ test.describe('concorrência e foco dos protocolos em configurações', () => {
       protocol,
       action: 'download_export',
     });
+  });
+
+  FAILURE_ACTION_CASES.forEach(({ action, label }, index) => {
+    test(`${label} libera lease e permite retry após ok:false e exceção`, async ({ page }) => {
+      const suffix = String(index + 1);
+      const user = {
+        id: `55555555-5555-4555-8555-55555555555${suffix}`,
+        email: `privacy-failure-${index + 1}@example.invalid`,
+      };
+      const protocol = `KC-DSR-20260729-FAILURE000000000${suffix}`;
+      const artifactRef = `KEA-FAILURE00000000000000000000000${suffix}`;
+      await mockSettingsSession(page, user);
+
+      await page.route('**/assets/js/api/kc-api.client.js*', async (route) => {
+        await route.fulfill({
+          contentType: 'application/javascript; charset=utf-8',
+          body: `
+            window.__targetFailureAction = '${action}';
+            window.__failureActionCalls = 0;
+            window.__pendingFailureAction = null;
+            window.__failureSuccessResult = function () {
+              if (window.__targetFailureAction === 'cancel') {
+                return { ok: true, data: { status: 'cancelled' }, error: null };
+              }
+              return {
+                ok: true,
+                data: {
+                  filename: 'privacy-retry.json',
+                  export: {
+                    schema_version: 1,
+                    manifest: { completeness: 'complete_within_automated_scope' },
+                    data: {}
+                  }
+                },
+                error: null
+              };
+            };
+            window.__runFailureAction = function (invokedAction) {
+              if (invokedAction !== window.__targetFailureAction) {
+                return Promise.reject(new Error('unexpected privacy action'));
+              }
+              window.__failureActionCalls += 1;
+              return new Promise(function (resolve, reject) {
+                window.__pendingFailureAction = { resolve: resolve, reject: reject };
+              });
+            };
+            window.__settleFailureAction = function (mode) {
+              var pending = window.__pendingFailureAction;
+              window.__pendingFailureAction = null;
+              if (!pending) throw new Error('missing pending privacy action');
+              if (mode === 'throw') {
+                pending.reject(new Error('Falha lançada para teste.'));
+                return;
+              }
+              if (mode === 'ok_false') {
+                pending.resolve({
+                  ok: false,
+                  data: null,
+                  error: { code: 'TEST_FAILURE', message: 'Falha controlada para teste.' }
+                });
+                return;
+              }
+              pending.resolve(window.__failureSuccessResult());
+            };
+            window.confirm = function () { return true; };
+            window.KCAPI = {
+              ENV: { driver: 'supabase', DATA_DRIVER: 'supabase', isProduction: false },
+              registerAdapter: function () {},
+              getCurrentUser: async function () { return window.__settingsPrivacyUser; },
+              getCurrentProfile: function () { return null; },
+              getSearchPreferences: async function () { return null; },
+              listDataSubjectRequests: async function () {
+                return {
+                  ok: true,
+                  data: {
+                    items: [{
+                      protocol: '${protocol}',
+                      request_kind: 'data_access_copy',
+                      status: 'partial_failure',
+                      created_at: '2026-07-29T12:00:00.000Z',
+                      expires_at: '${FUTURE_EXPIRY}'
+                    }],
+                    total: 1,
+                    has_more: false
+                  },
+                  error: null
+                };
+              },
+              getDataSubjectRequest: async function () {
+                return {
+                  ok: true,
+                  data: {
+                    supplement: {
+                      artifact_ref: '${artifactRef}',
+                      status: 'delivered',
+                      expires_at: '${FUTURE_EXPIRY}',
+                      version: 3
+                    }
+                  },
+                  error: null
+                };
+              },
+              downloadDataSubjectExport: async function () {
+                return window.__runFailureAction('download_export');
+              },
+              downloadDataSubjectSupplement: async function () {
+                return window.__runFailureAction('download_supplement');
+              },
+              cancelDataSubjectRequest: async function () {
+                return window.__runFailureAction('cancel');
+              }
+            };
+          `,
+        });
+      });
+
+      await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+      const row = page.locator(
+        `[data-privacy-request-row][data-privacy-request-protocol="${protocol}"]`,
+      );
+      const actionButton = row.locator(`[data-privacy-request-action="${action}"]`);
+      const clearButton = page.locator('#settingsClearBrowserPrivacyData');
+      await expect(row).toBeVisible({ timeout: 15000 });
+      await expect(row.locator('[data-privacy-request-action]')).toHaveCount(3);
+
+      for (const [attempt, failureMode] of ['ok_false', 'throw'].entries()) {
+        await actionButton.focus();
+        await actionButton.dispatchEvent('click');
+        await expect.poll(() => page.evaluate(() => window.__failureActionCalls))
+          .toBe(attempt + 1);
+        await expectProtocolLeaseState(row, clearButton, true);
+
+        await page.evaluate((mode) => {
+          window.__settleFailureAction(mode);
+        }, failureMode);
+        await expectProtocolLeaseState(row, clearButton, false);
+        await expect(actionButton).toBeFocused();
+      }
+
+      await actionButton.dispatchEvent('click');
+      await expect.poll(() => page.evaluate(() => window.__failureActionCalls)).toBe(3);
+      await expectProtocolLeaseState(row, clearButton, true);
+      await page.evaluate(() => {
+        window.__settleFailureAction('success');
+      });
+      await expectProtocolLeaseState(row, clearButton, false);
+      await expect(actionButton).toBeFocused();
+    });
+  });
+
+  test('focaliza a própria linha quando a ação some após o cancelamento', async ({ page }) => {
+    const user = {
+      id: '66666666-6666-4666-8666-666666666666',
+      email: 'privacy-row-fallback@example.invalid',
+    };
+    const protocol = 'KC-DSR-20260729-ROWFALLBACK000001';
+    await mockSettingsSession(page, user);
+
+    await page.route('**/assets/js/api/kc-api.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.__rowFallbackStatus = 'received';
+          window.confirm = function () { return true; };
+          window.KCAPI = {
+            ENV: { driver: 'supabase', DATA_DRIVER: 'supabase', isProduction: false },
+            registerAdapter: function () {},
+            getCurrentUser: async function () { return window.__settingsPrivacyUser; },
+            getCurrentProfile: function () { return null; },
+            getSearchPreferences: async function () { return null; },
+            listDataSubjectRequests: async function () {
+              return {
+                ok: true,
+                data: {
+                  items: [{
+                    protocol: '${protocol}',
+                    request_kind: 'data_access_copy',
+                    status: window.__rowFallbackStatus,
+                    created_at: '2026-07-29T13:00:00.000Z'
+                  }],
+                  total: 1,
+                  has_more: false
+                },
+                error: null
+              };
+            },
+            cancelDataSubjectRequest: async function () {
+              window.__rowFallbackStatus = 'cancelled';
+              return { ok: true, data: { status: 'cancelled' }, error: null };
+            }
+          };
+        `,
+      });
+    });
+
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    const row = page.locator(
+      `[data-privacy-request-row][data-privacy-request-protocol="${protocol}"]`,
+    );
+    const cancelButton = row.locator('[data-privacy-request-action="cancel"]');
+    await expect(cancelButton).toBeVisible({ timeout: 15000 });
+    await cancelButton.focus();
+    await cancelButton.dispatchEvent('click');
+
+    await expect(row).toContainText('Cancelado');
+    await expect(row.locator('[data-privacy-request-action]')).toHaveCount(0);
+    await expect(row).toHaveAttribute('aria-busy', 'false');
+    await expect(row).toHaveAttribute('tabindex', '-1');
+    await expect(row).toBeFocused();
+    await expect(page.locator('#settingsClearBrowserPrivacyData')).toBeEnabled();
+    await expect.poll(() => page.evaluate(() => document.activeElement === document.body))
+      .toBe(false);
   });
 });
