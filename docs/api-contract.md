@@ -598,14 +598,214 @@ Cria ticket de suporte.
   subject: string,
   message: string,
   priority?: 'low' | 'normal' | 'high' | 'urgent',
-  pagePath?: string | null,
-  contactEmail?: string | null,
-  allowContact?: boolean,
+  page_path?: string | null,
+  contact_email?: string | null,
+  allow_contact?: boolean,
   metadata?: object,
+  expected_auth_state: 'anonymous' | 'authenticated',
+  expected_user_id?: string | null,
 }
 ```
 
-**Retorno:** `Promise<{ ok: boolean, error?: object }>`
+**Retorno:**
+
+```javascript
+Promise<{
+  ok: boolean,
+  data?: {
+    id: string, // referência interna do atendimento
+    created_at: string,
+    data_subject_request: DataSubjectRequest | null,
+    protocol: string | null,
+    reused_existing_data_subject_request: boolean,
+  },
+  notification?: object,
+  error?: object,
+}>
+```
+
+Observações:
+
+- os nomes do payload são `snake_case`; a fachada não traduz aliases em
+  `camelCase`;
+- pedidos de privacidade usam `metadata.request_kind` com um dos valores
+  `data_access_copy`, `data_portability` ou `account_erasure`;
+- com sessão válida, ticket e protocolo são criados ou reutilizados atomicamente;
+  sem sessão, o formulário produz apenas uma referência de atendimento. O
+  protocolo só pode ser vinculado depois da verificação de identidade;
+- a sessão autenticada não autoriza o navegador a enviar `user_id`: a identidade
+  é sempre derivada no servidor;
+- o controller preenche `expected_auth_state` e, quando autenticado,
+  `expected_user_id` com o estado observado antes do envio. Adapter e RPC
+  revalidam ambos imediatamente antes da gravação. Um rascunho iniciado como
+  visitante falha com `ACCOUNT_CHANGED`/`AUTH_ACCOUNT_CHANGED` se uma conta
+  aparecer durante o envio, em vez de ser atribuído a ela;
+- integrações que chamam a fachada diretamente também devem enviar essa
+  expectativa. Clientes legados com `expected_user_id` continuam compatíveis;
+  clientes sem qualquer expectativa só podem gravar enquanto permanecerem
+  anônimos.
+
+---
+
+### `KCAPI.createDataSubjectRequest(payload)`
+
+Cria ou reutiliza de forma idempotente uma solicitação autenticada de direito do
+titular.
+
+```javascript
+{
+  request_kind: 'data_access_copy' | 'data_portability' | 'account_erasure',
+  request_source?: 'settings' | 'help' | string,
+  idempotency_key?: string, // gerada pela fachada quando omitida
+}
+```
+
+O formato direto atualmente suportado é JSON. E-mail e `user_id` não fazem parte
+do payload: são derivados da sessão ativa.
+
+**Retorno:**
+
+```javascript
+Promise<{
+  ok: boolean,
+  data?: {
+    request: DataSubjectRequest,
+    reused_existing: boolean,
+    reuse_reason: string | null,
+  },
+  error?: { code: string, message: string },
+}>
+```
+
+---
+
+### `KCAPI.listDataSubjectRequests(options?)`
+
+Lista somente protocolos pertencentes à sessão atual, em ordem decrescente de
+criação.
+
+```javascript
+{
+  limit?: number, // 1..100; padrão 50
+  expected_user_id?: string,
+}
+```
+
+**Retorno:** `Promise<{ ok: boolean, data?: { items: DataSubjectRequest[], total: number }, error?: object }>`
+
+---
+
+### `KCAPI.getDataSubjectRequest(protocol, options?)`
+
+Consulta um protocolo do próprio titular. Inclui a linha do tempo pública, sem
+identificador do operador, e o estado de eventual suplemento assistido.
+
+`options.expected_user_id` vincula a consulta à conta capturada pela interface.
+
+**Retorno:**
+
+```javascript
+Promise<{
+  ok: boolean,
+  data?: {
+    request: DataSubjectRequest,
+    events: Array<{
+      status: string,
+      event_type: string,
+      public_message: string | null,
+      created_at: string,
+    }>,
+    supplement: object | null,
+  },
+  error?: object,
+}>
+```
+
+---
+
+### `KCAPI.downloadDataSubjectExport(protocol, options?)`
+
+Reserva uma tentativa e gera a cópia eletrônica limitada do próprio titular. O
+servidor exige sessão ativa também durante a geração, usa `Cache-Control:
+no-store`, protege dados de terceiros e pode devolver um manifesto parcial com
+suplemento assistido pendente.
+
+`options.expected_user_id` é revalidado no adapter e na Edge antes da reserva.
+
+**Retorno:** `Promise<{ ok: boolean, data?: { filename: string, content_type: 'application/json', request: DataSubjectRequest, export: object, supplement: object | null }, error?: object }>`
+
+---
+
+### `KCAPI.downloadDataSubjectSupplement(protocol, artifactRef, options?)`
+
+Baixa o artefato integral assistido após nova validação de sessão, titularidade,
+estado, expiração, hash e tamanho. A entrega consumida é registrada de forma
+atômica; o bucket privado nunca é exposto diretamente ao navegador.
+`options.expected_user_id` impede que a troca de conta reutilize uma ação de
+download já iniciada.
+
+**Retorno:** usa a mesma forma de download, acrescentando `supplement` com o
+comprovante de consumo.
+
+---
+
+### `KCAPI.cancelDataSubjectRequest(protocol, options?)`
+
+Cancela uma solicitação ainda reversível pertencente ao titular. Exportações em
+falha parcial também são canceláveis; artefatos privados deixam de ser
+entregáveis e entram no fluxo de limpeza. A etapa irreversível da exclusão não
+pode ser cancelada.
+`options.expected_user_id` é obrigatório no controller autenticado para que a
+troca de conta falhe antes da mutação.
+
+**Retorno:** `Promise<{ ok: boolean, data?: { request: DataSubjectRequest }, error?: object }>`
+
+---
+
+### `KCAPI.processDataExportSupplement(payload)`
+
+Operação administrativa para preparar, revisar, validar, publicar ou limpar o
+suplemento assistido. Exige sessão administrativa ativa, claims com lease e
+versão CAS; não é uma API de usuário final.
+
+**Retorno:** `Promise<{ ok: boolean, data?: object, error?: object }>`
+
+---
+
+### `DataSubjectRequest`
+
+Forma pública resumida. Campos internos, e-mail, hashes operacionais, claims e
+identificadores de atores não integram este contrato.
+
+```javascript
+{
+  id: string,
+  protocol: string,
+  help_request_id: string | null,
+  request_kind: 'data_access_copy' | 'data_portability' | 'account_erasure',
+  requested_format: 'json',
+  request_source: string,
+  export_schema_version: string,
+  scope: string[],
+  status:
+    | 'received'
+    | 'processing'
+    | 'ready'
+    | 'pending_confirmation'
+    | 'completed'
+    | 'cancelled'
+    | 'failed'
+    | 'partial_failure'
+    | 'expired',
+  ready_at: string | null,
+  expires_at: string | null,
+  completed_at: string | null,
+  cancelled_at: string | null,
+  retention_until: string | null,
+  created_at: string,
+  updated_at: string,
+}
+```
 
 ---
 

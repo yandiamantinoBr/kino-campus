@@ -1,8 +1,14 @@
 # KinoCampus — Schema do Banco de Dados
 
-**Banco:** PostgreSQL (Supabase) | **Baseline do repositório:** `132` migrations SQL em `supabase/migrations/`
+**Banco:** PostgreSQL (Supabase) | **Fonte de verdade:** migrations SQL ativas em `supabase/migrations/`
 
-> **Estado documental:** v75.1.0 (2026-06-11). As anotações de versão ao longo deste documento (`v9.x.x`, `v9.1.x`, `v11.x.x`, etc.) são marcadores históricos que indicam quando cada tabela, coluna ou trigger foi introduzido — não indicam a versão atual do repositório. O inventário local reflete 132 migrations SQL versionadas em `supabase/migrations/`; a reconciliação com o histórico remoto do Supabase deve ser feita antes de qualquer nova migration operacional.
+> **Estado documental:** 2026-07-29, incluindo o hardening de autorização
+> `20260728234000`, a reconciliação de workers privados `20260728235000`, o
+> arquivamento seguro de conversas `20260729000000`, a reconciliação global dos
+> guards de sessão `20260729001000` e o expand session-bound de exportação
+> administrativa `20260729006000`. As anotações `v9.x`/`v11.x` continuam como
+> marcadores históricos de introdução. Não se mantém contagem manual: a presença
+> local de uma migration não comprova aplicação no projeto remoto.
 
 > Atualização operacional em 2026-06-11: o advisor remoto indicou `auth_leaked_password_protection` como WARN; `extension_in_public` (`unaccent`) não apareceu como advisor ativo nessa leitura, mas segue como histórico/watchlist. Não mover extensão nem alterar Auth Dashboard por migration improvisada; seguir `docs/ops/v19-operational-runbook.md` e `docs/ops/v28-unaccent-fts-dependency-audit.md`.
 
@@ -52,7 +58,7 @@
 |--------|------|-----------|
 | `id` | UUID PK | |
 | `legacy_id` | TEXT UNIQUE | **[DEPRECATED v9.0.4]** ID legado (importação v6/v7). Verificar `kc_admin_legacy_id_stats()` antes de remover. |
-| `author_id` | UUID FK | Referencia `profiles.id` |
+| `author_id` | UUID FK NULL | Referencia `profiles.id`; `ON DELETE SET NULL` preserva conteúdo necessário após exclusão da conta |
 | `title` | TEXT | Título do post |
 | `description` | TEXT | Descrição completa |
 | `price` | NUMERIC | Preço em BRL (NULL se sem preço) |
@@ -61,8 +67,8 @@
 | `category` | TEXT | Label da categoria selecionada |
 | `image_url` | TEXT | URL canônica da imagem de capa; fallback direto quando `post_media`/OG não resolvem |
 | `metadata` | JSONB | Dados extras do módulo (tipo, topico, status, etc.) |
-| `status` | TEXT | `'published'` / `'hidden'` / `'expired'` / `'pending'` / `'deleted'` |
-| `visibility` | TEXT | `'public'` / `'private'` |
+| `status` | TEXT | `'published'` / `'pending'` / `'hidden'` / `'deleted'` / `'expired'` / `'closed'` |
+| `visibility` | TEXT | `'public'` / `'community'` |
 | `expires_at` | TIMESTAMPTZ | Data de expiração (7d caronas, 30d outros) |
 | `bumped_at` | TIMESTAMPTZ | Última vez que foi bumped (cooldown 1d) |
 | `last_comment_at` | TIMESTAMPTZ | Data do comentário mais recente (feed `comentados`) |
@@ -75,10 +81,13 @@
 | `updated_at` | TIMESTAMPTZ | Auto-atualizado por trigger |
 
 **RLS:**
-- SELECT: público (status='published', visibility='public') + próprio autor + admin
+- SELECT anônimo: conteúdo `published`/`closed` com `visibility='public'`
+- SELECT autenticado: conteúdo `published`/`closed` com `visibility IN ('public','community')`, além do próprio autor e admin
 - INSERT: apenas autenticado (author_id = auth.uid())
 - UPDATE: próprio autor ou admin
 - DELETE: próprio autor (apenas status published/pending) ou admin (qualquer)
+
+As RPCs endurecidas em `20260728234000` reutilizam `kc_can_read_post(...)` para não divergir dessa fronteira. Contagens de categoria, estado de avaliação e contadores de share/cupom não confirmam posts invisíveis. `kc_get_personalized_tabs(...)` é ainda mais estrita: usa apenas `status='published'`, com `public` para `anon` e `public/community` para autenticado.
 
 **Triggers:**
 - `kc_set_post_expires_at` — define `expires_at` ao criar post
@@ -179,7 +188,7 @@
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID PK | |
-| `target_user_id` | UUID FK | Usuário avaliado (`profiles.id`) |
+| `target_user_id` | UUID FK NULL | Usuário avaliado; `ON DELETE SET NULL` após exclusão da conta |
 | `rater_user_id` | UUID FK | Usuário que avaliou (`profiles.id`) |
 | `context_post_id` | UUID FK NULL | Post do alvo que contextualiza a avaliação |
 | `rating` | SMALLINT | Nota entre `1` e `5` |
@@ -194,7 +203,7 @@
 - `char_length(comment) <= 280`
 - `target_user_id <> rater_user_id`
 
-**RLS:** SELECT/INSERT/UPDATE apenas para o próprio avaliador e/ou alvo autenticado; leitura pública agregada acontece via RPCs.
+**RLS:** SELECT/INSERT/UPDATE apenas para o próprio avaliador e/ou alvo autenticado; leitura agregada acontece via RPCs. Desde `20260728234000`, resumo de perfil privado só é real para titular/admin/service; caller não relacionado recebe `{ average: null, count: 0 }`. O estado de avaliação também valida a visibilidade do perfil e do post de contexto antes de revelar existência/interação.
 
 **Triggers / helpers:**
 - `kc_user_ratings_set_updated_at()` — atualiza `updated_at`
@@ -344,6 +353,13 @@ O rate limit por sessão reduz rajadas, mas pode ser contornado pela rotação d
 
 **Nota v10:** o admin usa esta tabela `public.help_requests` como fonte canônica. A paginação server-side passou a usar `public.kc_admin_list_help_requests_paged(...)`, sem criar tabela paralela.
 
+**Nota de integridade 20260729011000:** o formulário público grava pelo RPC
+`kc_create_help_request_with_notification_claim_v2(jsonb)`. O wrapper compara
+`expected_auth_state` e `expected_user_id` ao contexto Auth atual antes de chamar
+o corpo legado. Rascunhos visitantes não podem adquirir uma conta que apareça
+durante o envio; usuários Auth anônimos também são persistidos com `user_id`
+nulo até verificação e vínculo auditados.
+
 ---
 
 ### `home_category_affinity` — Personalização da Homepage
@@ -351,10 +367,116 @@ O rate limit por sessão reduz rajadas, mas pode ser contornado pela rotação d
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
 | `id` | UUID PK | |
-| `user_id` | UUID FK | |
-| `category` | TEXT | Categoria de afinidade |
-| `affinity_score` | NUMERIC | Score (calculado pelo sistema) |
-| `last_updated` | TIMESTAMPTZ | |
+| `owner_kind` | TEXT | `'user'` ou formato legado `'session'` |
+| `owner_key` | TEXT | Chave única do owner; para usuário deve ser `user_id::text` |
+| `user_id` | UUID FK NULL | Titular autenticado; `ON DELETE CASCADE` |
+| `session_id` | TEXT NULL | Campo legado; novas afinidades server-side não usam sessão |
+| `module_key` | TEXT | Módulo normalizado |
+| `category_key` | TEXT | Categoria normalizada |
+| `score` | NUMERIC(12,2) | Score acumulado |
+| `interactions_count` | INTEGER | Número acumulado de interações |
+| `created_at` | TIMESTAMPTZ | |
+| `updated_at` | TIMESTAMPTZ | Auto-atualizado |
+
+**UNIQUE:** `(owner_kind, owner_key, module_key, category_key)`.
+
+**Privacidade/ACL desde `20260728234000`:**
+
+- linhas anônimas `owner_kind='session'` foram removidas e não voltam a ser criadas pelas RPCs;
+- `kc_track_home_category_affinity` e `kc_list_home_category_affinity` são `authenticated`-only, vinculam os dados a `auth.uid()` e exigem evento afirmativo de consentimento de analytics;
+- o valor cru de `p_session_id` serve apenas para verificar o hash do consentimento e não é gravado na afinidade;
+- RLS permite ao autenticado selecionar somente a própria afinidade de usuário; `service_role` mantém acesso operacional;
+- `kc_get_personalized_tabs` só usa esse score para o próprio titular consentido. Sem consentimento ou em `anon`, retorna ranking agregado por posts visíveis.
+
+---
+
+### `chat_conversations` — Conversas privadas
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `participant_low` | UUID FK NULL | Participante de menor UUID; `ON DELETE SET NULL` |
+| `participant_high` | UUID FK NULL | Participante de maior UUID; `ON DELETE SET NULL` |
+| `created_at` | TIMESTAMPTZ | |
+| `last_message_at` | TIMESTAMPTZ NULL | Timestamp denormalizado da última mensagem não apagada |
+| `last_message_preview` | TEXT NULL | Preview plaintext de até 120 caracteres, mantido por trigger |
+| `last_message_sender` | UUID FK NULL | Remetente da última mensagem; `ON DELETE SET NULL` |
+| `last_message_type` | TEXT NULL | `text` / `image` / `audio` / `document` |
+| `archived_by_low` | BOOLEAN | Arquivamento do participante low |
+| `archived_by_high` | BOOLEAN | Arquivamento do participante high |
+
+O par ordenado é único enquanto ambos os participantes existem. Participantes nullable permitem preservar a conversa necessária para o usuário remanescente após exclusão da outra conta; a listagem retorna nome neutro `Conta excluida`.
+
+### `chat_messages` — Mensagens privadas
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | |
+| `conversation_id` | UUID FK | Conversa; `ON DELETE CASCADE` |
+| `sender_id` | UUID FK NULL | Remetente; `ON DELETE SET NULL` |
+| `message_type` | TEXT | `text` / `image` / `audio` / `document` |
+| `content` | TEXT NULL | Texto ou legenda; limpo no soft-delete |
+| `media_path` | TEXT NULL | Objeto sob o prefixo da conversa/remetente; limpo no soft-delete |
+| `e2e_envelope` | JSONB NULL | Envelope opcional de criptografia |
+| `created_at` | TIMESTAMPTZ | |
+| `edited_at` | TIMESTAMPTZ NULL | |
+| `deleted_at` | TIMESTAMPTZ NULL | Soft-delete |
+| `read_at` | TIMESTAMPTZ NULL | Checkmark denormalizado |
+| `reply_to_id` | UUID FK NULL | Mensagem respondida; `ON DELETE SET NULL` |
+
+### `chat_read_state` — Cursor de leitura por participante
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `conversation_id` | UUID PK/FK | Parte da PK composta |
+| `user_id` | UUID PK/FK | Parte da PK composta; `ON DELETE CASCADE` |
+| `last_read_msg_id` | UUID FK NULL | Marcador validado da mesma conversa |
+| `last_read_at` | TIMESTAMPTZ | Avança monotonicamente |
+
+### `user_blocks` — Bloqueios de chat
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `id` | UUID PK | Identificador substituto |
+| `blocker_id` | UUID FK | Titular do bloqueio; `ON DELETE CASCADE` |
+| `blocked_id` | UUID FK NULL | Alvo ativo; `ON DELETE SET NULL` |
+| `blocked_subject_hash` | TEXT | Token aleatório hexadecimal de 64 caracteres, não derivado do UUID |
+| `reason` | TEXT NULL | Razão opcional |
+| `created_at` | TIMESTAMPTZ | |
+
+**RLS e RPCs do chat:** leitura é limitada aos participantes e estado de leitura/bloqueio ao próprio usuário. A superfície `kc_chat_*` de cliente é `authenticated`-only e os workers `SECURITY DEFINER` ficam em `kc_private`. Start/block/unblock serializam o par com advisory lock; edit/delete exigem remetente; report/mark-read validam participação e a conversa do marcador.
+
+**Arquivamento seguro (`20260729000000`):**
+
+- `PUBLIC`, `anon` e `authenticated` não têm `UPDATE` direto em `chat_conversations`; `service_role` conserva o acesso interno;
+- a policy ampla `chat_conv_update_own`, que filtrava linhas mas não limitava colunas, foi removida;
+- archive e unarchive passam por `kc_chat_set_conversation_archived(uuid, boolean)`, exigem sessão ativa e participação;
+- o worker altera exclusivamente `archived_by_low` ou `archived_by_high`, conforme o lado de `auth.uid()`;
+- conversa ausente e conversa de terceiro são indistinguíveis para o caller;
+- participantes não podem trocar identidades, adulterar `last_message_*` nem alterar o flag do outro participante.
+
+**Consistência segura do preview (`20260728235000`):**
+
+- `chat_msg_after_insert_denormalize` recalcula `last_message_*` e desarquiva a conversa;
+- `chat_msg_after_update_refresh_preview` reage a edição e soft-delete;
+- `kc_chat_refresh_conversation_preview` considera somente `deleted_at IS NULL`, desempata por `(created_at DESC, id DESC)` e bloqueia a conversa durante o refresh;
+- se a última mensagem for apagada, o preview volta à mensagem não apagada anterior; se não houver outra, todos os campos `last_message_*` ficam `NULL`. Assim, o plaintext apagado não permanece na inbox.
+
+---
+
+### `post_engagement_rate_windows` — Janela de contadores públicos *(20260728234000)*
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| `post_id` | UUID PK/FK | Post; `ON DELETE CASCADE` |
+| `event_type` | TEXT PK | `share` ou `coupon_click` |
+| `window_started_at` | TIMESTAMPTZ PK | Início do dia UTC (`date_trunc('day', now())`) |
+| `event_count` | INTEGER | Contagem atômica, `0..1000` |
+| `updated_at` | TIMESTAMPTZ | |
+
+**Privacidade/ACL:** não armazena usuário, IP, dispositivo nem sessão. RLS está ativa; `anon`/`authenticated` não têm privilégio de tabela e somente `service_role` mantém acesso direto. O helper privado de claim também não tem `EXECUTE` de API. A migration `20260729001000` reaplica o trigger global e a policy restritiva de sessão ativa, pois esta tabela foi criada depois da instalação inicial dos guards.
+
+**Limites:** `kc_track_share` aceita até 25 eventos por post/dia e `kc_track_coupon_click` até 50. Ambas exigem post publicado e visível ao caller. Ao esgotar a janela retornam `RATE_LIMITED` com `counted=false`, sem alterar o agregado editorial; janelas anteriores a 30 dias são podadas oportunisticamente.
 
 ---
 
@@ -376,7 +498,7 @@ O rate limit por sessão reduz rajadas, mas pode ser contornado pela rotação d
 |--------|------|-----------|
 | `id` | UUID PK | |
 | `user_id` | UUID FK | Referencia `profiles.id` (CASCADE DELETE) |
-| `type` | TEXT | `'comment_on_post'` / `'vote_on_post'` / `'post_expired'` / `'post_reported'` / `'comment_reply'` / `'system'` |
+| `type` | TEXT | `'comment_on_post'` / `'vote_on_post'` / `'post_expired'` / `'post_reported'` / `'comment_reply'` / `'direct_message'` / `'system'` |
 | `title` | TEXT | Título da notificação |
 | `body` | TEXT | Corpo/preview |
 | `data` | JSONB | Dados extras (post_id, actor_id, module, etc.) |
@@ -542,6 +664,124 @@ O rate limit por sessão reduz rajadas, mas pode ser contornado pela rotação d
 
 ---
 
+### `data_subject_requests` — Protocolos de titulares *(20260728183022+)*
+
+Registro público mínimo de pedidos autenticados de acesso/cópia,
+portabilidade e exclusão. O pacote exportado não é persistido nesta tabela.
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | UUID PK | Identificador interno |
+| `protocol` | TEXT UNIQUE | Formato aleatório `KC-DSR-YYYYMMDD-{16 hex}`; não deriva de e-mail/UUID |
+| `user_id` | UUID FK `auth.users` | Titular; `ON DELETE SET NULL` para preservar recibo mínimo |
+| `help_request_id` | UUID FK `help_requests` | Atendimento vinculado, quando houver |
+| `subject_hash` | TEXT | Token opaco aleatório de 64 hex; não é hash de e-mail |
+| `request_kind` | TEXT | `data_access_copy`, `data_portability` ou `account_erasure` |
+| `status` | TEXT | `received`, `processing`, `ready`, `pending_confirmation`, `completed`, `cancelled`, `failed`, `partial_failure` ou `expired` |
+| `idempotency_key` | TEXT | Única por titular/finalidade para retry seguro |
+| `request_source` | TEXT | `settings`, `help` ou `api` |
+| `requested_format` | TEXT | Somente `json` nesta versão |
+| `scope` | JSONB | Categorias solicitadas |
+| `ready_at`, `expires_at` | TIMESTAMPTZ | Janela de download; não altera a retenção do protocolo |
+| `retention_until` | TIMESTAMPTZ | Revisão/expurgo do recibo mínimo; padrão versionado de 5 anos |
+
+**RLS:** `authenticated` lê apenas `user_id = auth.uid()` com sessão ativa.
+Criação, cancelamento e transições passam por RPC/Edge; `anon` não lê a fila.
+`failed` e `partial_failure` vencidos não são apagados silenciosamente pelo job
+de retenção.
+
+### `data_subject_request_events` — Eventos monotônicos do protocolo
+
+Histórico append-only de estado e mensagem pública segura. Cada transição grava
+o pedido e seu evento na mesma transação; não recebe pacote exportado, e-mail,
+token ou nota administrativa.
+
+### `account_erasure_requests` — Workflow operacional de exclusão
+
+Máquina de estados separada do protocolo público. Mantém confirmação verificada,
+evidência hash, versão/claim CAS, lease, resultado por etapa e
+`retention_until`. `operation_claim_session_id`, introduzido em
+`20260729004000`, vincula toda mutação à sessão administrativa ativa.
+
+Administradores autenticados podem inspecionar a fila, mas a migration
+`20260729005000` remove INSERT/UPDATE direto do navegador: toda mutação é
+service-write-only por Edge/RPC. A barreira privada
+`kc_private.account_erasure_subject_closures` impede novos DSRs/exports depois
+do primeiro claim irreversível.
+
+**Ponte anônima 20260729012000:** o Help público de exclusão pode chegar sem
+DSR. O wrapper service-only de vínculo adquire os locks de titular e Help,
+revalida a sessão administrativa e o único Auth do e-mail e, somente quando há
+zero DSR e o Help continua anônimo, cria exatamente um protocolo
+`account_erasure` com `subject_hash` e idempotência aleatórios. Um DSR existente
+é validado/reutilizado; mais de um, metadata forjada, outro fluxo aberto ou
+estado avançado falham fechados. Materialização, eventos, workflow e ledger
+compartilham a transação, sem folha privada executável diretamente por papel de
+API.
+
+### Exportação assistida privada *(20260728220000 / 20260729006000 / 20260729008000)*
+
+| Tabela privada | Função |
+|---|---|
+| `kc_private.data_export_artifacts` | Metadados CAS do objeto temporário: referência `KEA-*`, bucket/path opacos, status, hashes, tamanho, leases, reserva de download e purge |
+| `kc_private.data_export_processor_tasks` | Matriz de processadores automáticos/manuais; `manual_follow_up` bloqueia finalização sem evidência hash |
+| `kc_private.data_export_media_refs` | Mapeia referências `KEM-*` para mídia de chat do próprio titular sem expor o caminho antes da reserva válida |
+| `kc_private.data_export_ticket_identity_links` | Evidência imutável de que um Help anônimo foi verificado e ligado à DSR canônica |
+
+`data_export_artifacts.status` admite `queued`, `claimed`, `ready`,
+`download_reserved`, `delivered`, `failed`, `expired`, `purging` e `purged`.
+`object_path` aceita somente `objects/{64 hex}.json`; `byte_size` é limitado a
+16 MiB. A migration `20260729006000` adiciona `claimed_session_id`: o claim
+administrativo registra `auth.sessions.id`, continuações token-bound revalidam
+essa mesma sessão e o trigger limpa o vínculo quando o artefato deixa de estar
+`claimed`.
+
+A `20260729008000` acrescenta `download_return_status` e `delivery_count`. Um
+artefato `delivered` pode receber nova reserva até `expires_at`; se a reserva
+expirar, o trigger/reader restaura o estado terminal em vez de publicar um falso
+`ready`. `data_export_processor_tasks` passa a guardar
+`delivery_attested`, `delivery_channel` e `delivered_out_of_band_at`: esses
+campos provam somente uma entrega separada, enquanto a projeção declara
+`content_in_export=false`. A resolução de mídias fica limitada a 100 referências
+por artefato. O claim de retenção comum usa `expires_at` também para artefatos
+`delivered`, preservando a janela de novo download; somente o fluxo de exclusão
+confirmada pode antecipar o expurgo coordenado. As reservas do titular falham
+enquanto existir uma DSR de exclusão ativa, sem persistir ou devolver nova
+capacidade.
+
+Não há grants diretos dessas tabelas para `anon`/`authenticated`. Na fase
+**expand**, as assinaturas administrativas vinculadas a
+`p_actor_session_id` coexistem temporariamente com as assinaturas públicas
+exigidas pela Edge anterior. Os cinco wrappers actor-only de compatibilidade
+resolvem a sessão somente quando há exatamente uma sessão administrativa ativa;
+zero ou mais de uma falham fechado. Os workers privados permanecem sem exposição
+direta. A revogação dessas assinaturas públicas pertence a uma migration
+**contract** posterior, depois de telemetria e ausência comprovada de
+consumidores antigos.
+
+Na aplicação da `06000`, um claim preexistente ainda vivo e com exatamente uma
+sessão ativa recebe esse `claimed_session_id`. Qualquer claim remanescente sem
+vínculo muda para `failed`, limpa a lease e recebe
+`EXPORT_SESSION_BINDING_MIGRATION_RETRY`. Como proteção de corrida, a primeira
+continuação de um claim pre-expand ainda sem sessão só pode vincular a sessão
+única sob o mesmo artefato, versão, token, status e lease CAS.
+
+### Retenção e comunicação privada LGPD
+
+| Tabela privada | Função |
+|---|---|
+| `account_erasure_completion_outbox` | Destinatário cifrado em AES-256-GCM até aceite/TTL; ciphertext e nonce são nulificados após aceite |
+| `account_erasure_completion_outbox_schedule_state` | Prova fail-closed do job horário de expurgo |
+| `data_subject_request_retention_schedule_state` | Estado do job diário de minimização de protocolos |
+| `data_export_retention_runs` | Execuções deduplicadas por nonce, sem PII/caminho de objeto |
+| `data_export_retention_alerts` | Alertas duráveis por código e contagens |
+| `data_export_retention_schedule_state` | Estado de Cron, pg_net, Vault, project-ref, jobs, sucessos e falhas |
+
+O expurgo de artefato é Storage-first: o metadado só vira `purged` depois de
+confirmar a ausência do objeto. Falhas permanecem retryable e visíveis.
+
+---
+
 ## Indexes
 
 ```sql
@@ -583,6 +823,23 @@ idx_post_view_events_post_id   ON post_view_events(post_id)                     
 idx_post_view_events_created_at ON post_view_events(created_at)                      -- v9.3.1
 idx_post_view_events_user_id   ON post_view_events(user_id)                          -- v9.3.3
 idx_posts_view_count           ON posts(view_count DESC) WHERE status = 'published'  -- v9.3.1
+idx_chat_conv_low_lastmsg      ON chat_conversations(participant_low, last_message_at DESC NULLS LAST)
+idx_chat_conv_high_lastmsg     ON chat_conversations(participant_high, last_message_at DESC NULLS LAST)
+idx_chat_msg_conv_created      ON chat_messages(conversation_id, created_at DESC)
+idx_chat_msg_sender_created    ON chat_messages(sender_id, created_at DESC)
+user_blocks_active_pair_unique ON user_blocks(blocker_id, blocked_id)
+user_blocks_subject_unique     ON user_blocks(blocker_id, blocked_subject_hash)
+home_category_affinity_unique  ON home_category_affinity(owner_kind, owner_key, module_key, category_key)
+post_engagement_rate_windows_pkey ON post_engagement_rate_windows(post_id, event_type, window_started_at)
+post_engagement_rate_windows_prune_idx ON post_engagement_rate_windows(window_started_at)
+data_subject_requests_owner_kind_idempotency_uidx ON data_subject_requests(user_id, request_kind, idempotency_key) WHERE user_id IS NOT NULL
+data_subject_requests_owner_created_idx ON data_subject_requests(user_id, created_at DESC) WHERE user_id IS NOT NULL
+data_subject_requests_admin_queue_idx ON data_subject_requests(request_kind, status, created_at)
+data_subject_requests_expiry_idx ON data_subject_requests(expires_at) WHERE expires_at IS NOT NULL AND status = 'ready'
+data_export_artifacts_queue_idx ON kc_private.data_export_artifacts(status, created_at)
+data_export_artifacts_expiry_idx ON kc_private.data_export_artifacts(expires_at) WHERE status IN ('ready', 'download_reserved')
+data_export_retention_runs_running_idx ON kc_private.data_export_retention_runs(started_at) WHERE status = 'running'
+data_export_retention_alerts_active_idx ON kc_private.data_export_retention_alerts(last_seen_at DESC) WHERE active
 ```
 
 **Paginação v9.2.2:** o feed incremental usa a RPC `kc_get_feed_cursor()` com cursor opaco. A ordenação preserva `bumped_at`, `last_comment_at` ou `highlight_score` conforme o tipo de feed.
@@ -600,6 +857,14 @@ idx_posts_view_count           ON posts(view_count DESC) WHERE status = 'publish
 **Analytics de post v9.3.1:** `posts.view_count` armazena contagem denormalizada de visualizacoes. `post_view_events` registra eventos granulares com anti-spam (1 view/usuario/post/hora). Self-views (autor vendo proprio post) nao contam. Retencao: 6 meses via `kc_prune_old_analytics()`. RPCs: `kc_track_view(p_post_id)` para registrar, `kc_get_post_analytics(p_post_id)` para metricas (autor-only).
 
 **Reputacao v9.1.2.0:** a fundacao de `user_ratings` adiciona agregados em `profiles`, triggers de sincronizacao e RPCs dedicadas com `SET search_path = ''`. A elegibilidade usa apenas interacoes persistidas (`comments`, `post_votes`, `saved_posts`) e a identidade do avaliador pode ser anonimizada nas listagens publicas.
+
+**Hardening de autorização 20260728234000:** remove grants implícitos de `PUBLIC`, separa funções trigger-only/service-only, vincula limites de post ao próprio usuário, fecha leituras administrativas de banners, aplica privacidade a ratings/perfis e unifica a visibilidade de categorias/engajamento com `kc_can_read_post`. Afinidade server-side passa a ser somente do titular autenticado e consentido.
+
+**Reconciliação 20260728235000:** restaura 13 folhas privadas omitidas pela baseline para ads, tabs, chat e reativação de post; restringe wrappers de chat a `authenticated`; remove `anon` das ações autenticadas de post; recompõe os triggers de preview do chat e impede reativação de conteúdo cujo autor já foi apagado.
+
+**Arquivamento seguro de conversa 20260729000000:** substitui o `UPDATE` amplo de participante por uma RPC vinculada a `auth.uid()` e à sessão ativa, remove a policy permissiva e preserva as colunas de participantes e preview como estado exclusivamente server-side.
+
+**Reconciliação dos guards 20260729001000:** reexecuta o instalador canônico de proteção contra JWT revogado sobre todas as tabelas públicas atuais e interrompe a migration se trigger, policy restritiva, hook do PostgREST ou policy do Storage permanecerem incompletos. Isso restaura `write_quiescence=true` sem ampliar privilégios de tabela.
 
 ### `kc_invited_emails` - Convites Externos Administrativos (v9.1.0.3)
 
@@ -619,26 +884,40 @@ idx_posts_view_count           ON posts(view_count DESC) WHERE status = 'publish
 
 ## Storage Buckets
 
-**`kino-media`** (público para leitura):
-- `profile-avatars/{userId}/{timestamp}-avatar.{ext}` — avatares
-- `post-media/{userId}/{postId}/{timestamp}-image-N.{ext}` — imagens de posts
+| Bucket | Visibilidade e limite | Caminho/uso | Autorização |
+|---|---|---|---|
+| `kino-media` | público para leitura | `profile-avatars/{userId}/...` e `post-media/{userId}/{postId}/...` | escrita autenticada nos caminhos validados; alteração e exclusão limitadas ao proprietário |
+| `kino-chat-media` | privado; 15 MiB; imagens, áudio, PDF e DOC/DOCX permitidos | `chat-media/{conversationId}/{senderId}/{filename}` | leitura somente pelos participantes da conversa; criação, alteração e exclusão somente pelo remetente participante, sempre com sessão ativa |
+| `kino-data-exports` | privado; 16 MiB; somente `application/json` | `objects/{sha256-aleatório}.json` para complementos temporários | nenhuma policy de acesso direto pelo navegador; somente Edge Functions com sessão/titularidade revalidadas e `service_role` acessam o objeto |
 
-**RLS Storage:**
-- SELECT: público
-- INSERT: somente autenticado
-- UPDATE/DELETE: somente owner (auth.uid() = owner)
+O bucket público não deve receber novos anexos de chat. A policy temporária no
+prefixo legado existe apenas para a limpeza pelo remetente durante o cutover e
+deve ser removida depois da cópia, validação SHA-256 e retirada dos objetos
+legados. Uma policy `RESTRICTIVE` global também exige sessão ativa para qualquer
+acesso autenticado ao Storage; `kino-data-exports` possui negação adicional
+explícita para `anon` e `authenticated`.
 
 ## pg_cron Jobs
 
-```sql
--- Expira posts diariamente às 03:00
-SELECT cron.schedule('kc-expire-old-posts', '0 3 * * *', 'SELECT public.kc_expire_old_posts()');
+Esta é a configuração versionada/esperada. Estado remoto deve ser verificado em
+`cron.job` e, para os fluxos LGPD, nas respectivas tabelas privadas de
+`schedule_state`; a presença da migration no repositório não comprova que o job
+está ativo.
 
--- (v9.0.4 + v9.3.1) Purga analytics mensalmente às 04:00 (dia 1 de cada mês)
-SELECT cron.schedule('kc-prune-analytics', '0 4 1 * *', 'SELECT public.kc_prune_old_analytics()');
--- search_queries: remove > 6 meses | audit_log: remove > 1 ano | post_view_events: remove > 6 meses
+| Job | Schedule | Operação |
+|---|---|---|
+| `kc-expire-old-posts` | `0 3 * * *` | `public.kc_expire_old_posts()` |
+| `kc-prune-analytics` | `0 4 1 * *` | Retenção mensal de busca, audit log e views |
+| `kc-prune-notifications` | `0 5 1 * *` | Notificações lidas com mais de 90 dias |
+| `kc-dispatch-notification-outbox` | `*/5 * * * *` | Dispatch externo via runtime privado/pg_net |
+| `kc-refresh-highlight-scores` | `15 */6 * * *` | Recalcula scores do feed |
+| `kc-dsr-retention-purge-daily` | `17 3 * * *` | `kc_purge_expired_data_subject_requests(500)` |
+| `kc-help-notification-claim-purge-daily` | `41 3 * * *` | `kc_purge_help_request_notification_claims(500)` |
+| `kc-erasure-completion-outbox-purge-hourly` | `11 * * * *` | `kc_purge_expired_account_erasure_completion_outbox(500)` |
+| `kc-data-export-retention-purge` | `*/15 * * * *` | Dispara lote de até 50 no worker Storage-first |
+| `kc-data-export-retention-monitor` | `7 * * * *` | Monitora jobs, backlog, falhas e sucesso recente |
 
--- (v9.1.0) Purga notificações lidas mensalmente às 05:00 (dia 1 de cada mês)
-SELECT cron.schedule('kc-prune-notifications', '0 5 1 * *', 'SELECT public.kc_prune_old_notifications()');
--- Remove notificações lidas > 90 dias
-```
+Os três primeiros jobs de privacidade usam rotina SQL local. O purge de
+artefatos assistidos usa `pg_cron` + `pg_net` + Vault e permanece
+`scheduled=false` quando extensão, isolamento, endpoint, project-ref ou segredo
+não passam no preflight.

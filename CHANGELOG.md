@@ -2,6 +2,40 @@
 
 ---
 
+## [v76.43] - 2026-07-29 - direitos do titular, portabilidade e exclusão segura
+
+### Adicionado
+
+- Configurações autenticadas para solicitar, acompanhar, cancelar e baixar cópia de acesso ou portabilidade, com pedido direto de exclusão e alternativa pela Central de Ajuda.
+- Protocolos de direitos do titular, histórico de eventos, exportação JSON íntegra, manifesto de dados locais permitidos e complemento privado para fontes que exigem tratamento assistido.
+- Fluxo operacional de exclusão com vínculo de identidade, confirmação, orientação de cópia anterior, fases reversível e irreversível, revisão de operadores, recibo e notificação final.
+- Tickets anônimos de exclusão podem materializar exatamente um protocolo durante
+  o vínculo administrativo verificado; um protocolo existente é reutilizado,
+  duplicidades falham sem gravação parcial e a interface só libera o workflow
+  depois que a fila canônica confirma o titular.
+- Retenção e expurgo automatizados dos artefatos de exportação, redownload controlado dentro da validade e scripts de verificação, implantação e migração segura de mídias de chat.
+- Mapeamento público em Privacidade, Transparência e Ajuda, além de runbooks, catálogo de RPCs, contrato de API e inventário de schema atualizados.
+- A Central de Ajuda distingue no cartão persistente o protocolo do titular da referência de atendimento e orienta o acompanhamento autenticado sem sugerir consulta pública inexistente.
+
+### Segurança
+
+- Sessão ativa e identidade esperada são verificadas no navegador, adapters, Edge Functions e RPCs; claims, downloads e exclusão falham fechados em troca de conta ou sessão expirada.
+- Corpos de requisição têm limites explícitos; erros de provedores não expõem respostas brutas; referências de evidência são persistidas somente como hashes contextualizados.
+- Artefatos ficam em bucket privado, com reserva vinculada à sessão, token efêmero, integridade SHA-256, expiração, limite de tentativas e URLs de mídia assinadas em lotes.
+- Exclusão usa locks determinísticos, transições atômicas, fechamento do titular, checkpoint recuperável antes da remoção no Auth e pós-condições para banco, Storage e integrações.
+- O painel administrativo apaga imediatamente dados pessoais do estado e do DOM em logout ou troca de conta e ignora respostas assíncronas da sessão anterior.
+- O formulário de Ajuda vincula a gravação ao estado Auth observado; login, logout ou troca de conta durante o envio falham antes de criar ticket ou protocolo, e pedidos visitantes permanecem sem proprietário até verificação auditada.
+- Marcadores técnicos, tokens, credenciais, caches e dados de outra conta são excluídos da portabilidade local; a limpeza do navegador permanece limitada à conta ativa.
+- Toda mutação administrativa de exclusão ou suplemento é reconciliada por leitura exata e pós-condição específica; resposta perdida ou diagnóstico inconclusivo bloqueia repetição até uma recarga autoritativa.
+
+### Operação
+
+- Migrations são aditivas e protegidas por capabilities; o deploy publica backend antes da interface e inclui preflight, lint, pgTAP, contratos, testes Deno, Jest e Playwright.
+- O cache estático usa revisão exata do commit e namespace versionado do service worker para evitar mistura de HTML e JavaScript entre versões.
+- A migração do chat adota bucket privado com cópia, verificação e arquivamento antes da retirada futura do caminho público legado.
+
+---
+
 ## [v76.42] - 2026-06-20 - combobox, cancelamento e métricas locais da busca
 
 ### Adicionado

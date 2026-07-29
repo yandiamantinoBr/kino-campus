@@ -18,17 +18,27 @@ O KinoCampus usa três camadas de configuração:
 | `SUPABASE_ANON_KEY` | substitui `__KC_SUPABASE_ANON_KEY__` em `assets/js/boot/kc-env.js` |
 | `KC_APP_ENV` | alimenta `__KC_APP_ENV__` e normaliza `production` ou `development` |
 | `KC_DRIVER` | alimenta `__KC_DRIVER__`; em produção deve resultar em `supabase` |
+| `KC_BUILD_REVISION` | revisão estável usada para alinhar `?v=` dos assets, Service Worker e precache; em CI/deploy é obrigatória quando nenhuma revisão do provedor estiver disponível |
 
 Aliases aceitos pelo `scripts/inject-env.js`:
 
-- URL: `SUPABASE_URL`, `KC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `VITE_SUPABASE_URL`
-- key: `SUPABASE_ANON_KEY`, `KC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_PUBLIC_KEY`
+- URL: `SUPABASE_URL`, `KC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
+  `VITE_SUPABASE_URL`, `REACT_APP_SUPABASE_URL`
+- chave pública: `SUPABASE_ANON_KEY`, `KC_SUPABASE_ANON_KEY`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_PUBLIC_KEY`,
+  `NEXT_PUBLIC_SUPABASE_PUBLIC_KEY`, `VITE_SUPABASE_ANON_KEY`,
+  `REACT_APP_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PUBLIC_KEY`,
+  `REACT_APP_SUPABASE_PUBLIC_KEY`
+- revisão de build: `KC_BUILD_REVISION`, `VERCEL_GIT_COMMIT_SHA`, `GITHUB_SHA`,
+  `VERCEL_DEPLOYMENT_ID`, `BUILD_ID`, nessa ordem
 
 ### Build invariants
 
 - `vercel.json` deve manter `buildCommand = "node scripts/inject-env.js"`
 - produção deve compilar com `driver = "supabase"`
 - placeholders `__KC_*__` não podem permanecer no artefato publicado
+- uma única revisão normalizada deve aparecer nos HTMLs, no precache e no
+  namespace do Service Worker; não reutilize uma revisão para artefatos diferentes
 
 ## `KC_ENV` em runtime
 
@@ -49,6 +59,7 @@ window.KC_ENV = {
     url: 'https://...supabase.co',
     anonKey: 'eyJ...',
     storageBucket: 'kino-media',
+    chatStorageBucket: 'kino-chat-media',
   },
   AUTH_ALLOWED_DOMAINS: ['ufg.br', 'discente.ufg.br', 'egresso.ufg.br'],
   auth: {
@@ -71,11 +82,53 @@ window.KC_ENV = {
 
 Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e automações:
 
+#### Base das Edge Functions LGPD
+
+| Variável | Uso |
+|----------|-----|
+| `SUPABASE_URL` | URL do próprio projeto Supabase |
+| `SUPABASE_ANON_KEY` | chave pública usada para validar o JWT do chamador; `kc-data-subject-request` também aceita `SUPABASE_PUBLISHABLE_KEY` |
+| `SUPABASE_PUBLISHABLE_KEY` | alternativa publishable somente onde o handler a declara; não substitui automaticamente `SUPABASE_ANON_KEY` em `kc-account-erasure` ou `kc-data-export-admin` |
+| `SUPABASE_SERVICE_ROLE_KEY` | cliente privilegiado exclusivamente server-side; nunca expor ao frontend, log, pacote de exportação ou documentação pública |
+| `KC_ALLOWED_ORIGINS` | allowlist explícita de origens, separada por vírgula |
+| `KC_APP_BASE_URL` | URL base HTTPS usada nos links de confirmação e retorno |
+| `KC_STORAGE_BUCKET` | bucket público de posts/avatares; padrão `kino-media` |
+| `KC_CHAT_STORAGE_BUCKET` | bucket privado de chat; padrão `kino-chat-media` |
+
+As rotas autenticadas derivam o usuário e o `session_id` do JWT. O identificador
+da sessão não é variável de ambiente: desde `20260729006000`, as operações
+administrativas de exportação persistem e revalidam a sessão exata que obteve o
+claim. Revogar ou trocar essa sessão invalida a continuação, mesmo que outra
+sessão do mesmo administrador permaneça ativa.
+
+#### Exclusão, confirmação e comunicação
+
+| Variável | Uso e restrições |
+|----------|------------------|
+| `KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64` | chave aleatória Base64/Base64URL que deve decodificar para exatamente 32 bytes; não rotacionar sem tratar workflows cifrados pendentes |
+| `KC_ERASURE_OUTBOX_KEY_VERSION` | identificador da chave, padrão `v1`, até 64 caracteres seguros |
+| `KC_ERASURE_OUTBOX_TTL_SECONDS` | retenção da outbox cifrada; intervalo `900`–`86400`, padrão `21600` (6 horas) |
+| `KC_SMTP_USER` | usuário SMTP; obrigatório para enviar confirmação/conclusão |
+| `KC_SMTP_PASS` | senha SMTP; obrigatória para enviar confirmação/conclusão |
+| `KC_SMTP_HOST` | host SMTP; padrão versionado `smtp.hostinger.com` |
+| `KC_SMTP_PORT` | porta SMTP; padrão versionado `465` |
+| `KC_SMTP_FROM_NAME` | nome do remetente; padrão `KinoCampus` |
+| `KC_SMTP_FROM_EMAIL` | endereço do remetente; padrão `contato@kinocampus.com.br` |
+| `KC_ADMIN_NOTIFICATION_EMAIL` | reply-to administrativo; fallback para o endereço do remetente |
+| `KC_AUTH_USER_SCAN_MAX_PAGES` | teto defensivo da busca administrativa em Auth; padrão `50`, máximo efetivo `100` |
+
+#### Retenção física de exportações
+
+| Variável | Uso e restrições |
+|----------|------------------|
+| `KC_DATA_EXPORT_RETENTION_SECRET` | segredo exclusivo do worker máquina-a-máquina; mínimo 32 caracteres e cópia correspondente cifrada no Vault |
+
+#### Outras integrações
+
 | Variável | Uso |
 |----------|-----|
 | `KC_NOTIFY_HMAC_SECRET` | assinatura HMAC da Edge Function de reports |
 | `ADMIN_REPORTS_WEBHOOK_URL` | webhook de alertas administrativos |
-| `KC_APP_BASE_URL` | URL base usada em links gerados por funções |
 | `KC_NOTIFICATION_DISPATCH_SECRET` | autenticacao customizada da Edge Function de dispatch externo |
 | `KC_NOTIFICATION_EMAIL_PROVIDER` | provider do canal de e-mail (`resend`) |
 | `KC_NOTIFICATION_EMAIL_API_KEY` | credencial do provider de e-mail |
@@ -111,6 +164,10 @@ Inventario versionado no repo. O estado remoto deve ser confirmado antes de qual
 - `notify-admin-reports-threshold`
 - `kc-invite-user`
 - `kc-dispatch-notification-outbox`
+- `kc-data-subject-request`
+- `kc-data-export-admin`
+- `kc-account-erasure`
+- `kc-data-export-retention`
 - `kc-ga4-reports`
 - `kc-search-console-reports`
 - `kc-analytics-subject-id`
@@ -140,13 +197,11 @@ O comando não imprime chaves privadas nem endereços das contas técnicas. A ex
 deve terminar com respostas `200` das duas APIs e confirmação de digests; qualquer
 divergência interrompe o processo com erro.
 
-Verificação V76 (2026-06-15): `notify-admin-reports-threshold` foi publicada no projeto
-Supabase remoto (`wacyrkwhkvzwkqpolrbg`) como Edge Function `ACTIVE`, versão 1,
-`verify_jwt=true`, sha `374ec4256c0daf825ce1976fdf6afc58ee818ab20ddb743cde149dc5655a4476`.
-A publicação foi intencionalmente **deploy-only**: `KC_NOTIFY_HMAC_SECRET`,
-`ADMIN_REPORTS_WEBHOOK_URL` e `KC_APP_BASE_URL` seguem ausentes nos secrets remotos,
-e nenhum setting de banco foi configurado nesta etapa. Não ativar o envio real antes de
-definir webhook controlado, HMAC forte e settings `app.settings.kc_notify_*`.
+Registro histórico V76 (2026-06-15): houve verificação de uma publicação
+`deploy-only` de `notify-admin-reports-threshold`. Esse registro não comprova o
+estado remoto atual, a presença de secrets ou os settings de banco. Antes de
+ativar envio real, consulte o projeto-alvo e confirme a versão, `verify_jwt`,
+webhook controlado, HMAC forte e `app.settings.kc_notify_*`.
 
 Para publicar ou republicar:
 
@@ -154,6 +209,10 @@ Para publicar ou republicar:
 supabase functions deploy notify-admin-reports-threshold
 supabase functions deploy kc-invite-user
 supabase functions deploy kc-dispatch-notification-outbox
+supabase functions deploy kc-data-subject-request
+supabase functions deploy kc-data-export-admin
+supabase functions deploy kc-account-erasure
+supabase functions deploy kc-data-export-retention --no-verify-jwt
 supabase functions deploy kc-ga4-reports
 supabase functions deploy kc-search-console-reports
 supabase functions deploy kc-analytics-subject-id
@@ -179,20 +238,77 @@ Observacoes:
 - sem URL funcional e secret valido, o helper retorna `NULL` e o fluxo externo permanece fail-closed
 - a Edge Function aceita o segredo de `notification_dispatch_runtime.dispatch_secret` e continua compativel com `KC_NOTIFICATION_DISPATCH_SECRET`
 
+### Retenção automática de exportações LGPD
+
+`kc-data-export-retention` usa `verify_jwt=false` apenas porque o cron não possui
+sessão de usuário. O handler usa `KC_DATA_EXPORT_RETENTION_SECRET` somente como
+chave para validar a assinatura HMAC; o valor reutilizável não trafega no header.
+A requisição leva timestamp, nonce e assinatura de curta duração, comparada em
+tempo constante antes de inicializar o client service-role.
+
+O banco mantém os valores cifrados no Supabase Vault, nunca em tabela pública:
+
+| Nome no Vault | Uso |
+|---|---|
+| `kc_data_export_retention_function_url` | endpoint canônico e exato da Edge Function |
+| `kc_data_export_retention_project_ref` | `project-ref` de 20 caracteres que deve corresponder exatamente ao host do endpoint e ao projeto do rollout |
+| `kc_data_export_retention_secret` | mesmo valor de `KC_DATA_EXPORT_RETENTION_SECRET` |
+
+O valor de `kc_data_export_retention_secret` nunca é enviado ao `pg_net`. A
+função de banco deriva uma assinatura HMAC-SHA-256 de curta duração sobre
+método, path fixo, corpo, timestamp e nonce; somente essa assinatura transitória
+entra em `net.http_request_queue`. O nonce é deduplicado no log privado de
+execuções. `net` e `vault` não podem estar nos schemas expostos/search path do
+PostgREST, e `anon`/`authenticated` não podem acessar
+`vault.decrypted_secrets`. O preflight de deploy verifica essas condições sem
+alterar ACLs gerenciadas do Supabase.
+
+Configuração, rotação, smoke e rollback estão documentados em
+`docs/privacy/data-export-supplement-runbook.md`.
+
+### Schedules de privacidade versionados
+
+As migrations declaram os jobs esperados abaixo. A presença e a próxima execução
+devem ser confirmadas em `cron.job`/`cron.job_run_details` no projeto de destino;
+o repositório não prova que o scheduler remoto está ativo.
+
+| Job | Schedule esperado |
+|-----|-------------------|
+| `kc-dsr-retention-purge-daily` | `17 3 * * *` |
+| `kc-help-notification-claim-purge-daily` | `41 3 * * *` |
+| `kc-erasure-completion-outbox-purge-hourly` | `11 * * * *` |
+| `kc-data-export-retention-purge` | `*/15 * * * *` |
+| `kc-data-export-retention-monitor` | `7 * * * *` |
+
 ## Banco e storage
 
 ### Storage esperado
 
-- bucket: `kino-media`
-- caminhos principais:
-  - `post-media/{uid}/{postId}/...`
-  - `profile-avatars/{userId}/{timestamp}-avatar.{ext}`
+| Bucket | Visibilidade/contrato | Caminhos principais |
+|--------|-----------------------|---------------------|
+| `kino-media` | público para posts e avatares | `post-media/{uid}/{postId}/...`; `profile-avatars/{userId}/{timestamp}-avatar.{ext}` |
+| `kino-chat-media` | privado, até 15 MiB por objeto; leitura mediada por participação e URL assinada | `chat-media/...` |
+| `kino-data-exports` | privado, somente JSON, até 16 MiB; sem policy direta de leitura pelo titular | `objects/{64-hex}.json` |
+
+Durante o cutover de chat, inventarie o prefixo legado `chat-media/...` também em
+`kino-media`. A documentação versionada não comprova que o bucket remoto, seus
+limites, tipos MIME ou policies estão configurados corretamente.
 
 ### Migrations
 
-- o diretorio `supabase/migrations/` contem `83` arquivos na baseline atual
-- as migrations da v10 admin já estão aplicadas no banco principal atual
-- em ambientes novos ou paralelos, a aplicação continua sendo uma vez por banco
+- a fonte de verdade versionada é a ordem dos arquivos em `supabase/migrations/`;
+  não mantenha uma contagem manual, pois ela fica obsoleta a cada migration;
+- os contratos LGPD atuais incluem a sequência até
+  `20260729006000_bind_data_export_admin_work_to_session.sql`;
+- a `06000` é expand-only: assinaturas session-bound novas coexistem
+  temporariamente com cinco wrappers públicos actor-only necessários à Edge
+  anterior. Eles exigem exatamente uma sessão administrativa ativa; zero ou
+  múltiplas sessões falham fechado. Workers privados continuam fechados e a
+  revogação fica para contract posterior baseado em telemetria;
+- a presença de um arquivo no repositório não significa que ele foi aplicado no
+  banco remoto. Compare o histórico local e remoto antes de qualquer rollout;
+- em ambiente novo ou paralelo, aplique cada migration uma única vez e valide os
+  contratos/capabilities antes de liberar as Edge Functions.
 
 ## Desenvolvimento local
 
