@@ -13,8 +13,8 @@
  *  3. Aplicamos regra de DIVERSIDADE: garantir ≥4 módulos distintos no top-N
  *     (rebalanceando se um módulo dominar).
  *  4. Cache em sessionStorage (TTL 10 min) para evitar refetch.
- *  5. Clique em uma aba registra afinidade via kc_track_home_category_affinity
- *     (já existente), fechando o loop de personalização.
+ *  5. Clique em uma aba registra afinidade pelo controlador central de
+ *     categorias, que mantém visitantes anônimos somente no navegador.
  */
 (function () {
   'use strict';
@@ -280,18 +280,8 @@
           }).catch(function () {});
         }
       } catch (_) { }
-      try {
-        const sb = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
-          ? window.KCSupabase.getClient() : null;
-        if (!sb) return;
-        // Fire-and-forget; não bloqueia navegação
-        sb.rpc('kc_track_home_category_affinity', {
-          p_module_key: moduleKey,
-          p_category_key: categoryKey || null,
-          p_session_id: (window.KCSession && window.KCSession.getAnonId && window.KCSession.getAnonId()) || null,
-          p_weight: 1.0,
-        }).then(() => {}).catch(() => {});
-      } catch (_) { /* ignore */ }
+      // kc-home-categories.js observes this click too and applies the
+      // consent/identity rules. Avoid a duplicate RPC with a legacy payload.
     }, true);
   }
 

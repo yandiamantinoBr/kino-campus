@@ -46,6 +46,11 @@
     return null;
   }
 
+  function resolveStorageKey(options) {
+    var key = String(options && options.storageKey || '').trim();
+    return key || STORAGE_KEY;
+  }
+
   function emptyState() {
     return { version: VERSION, purpose: PURPOSE_VERSION, updatedAt: null, features: {} };
   }
@@ -83,7 +88,7 @@
     var storage = resolveStorage(opts.storage);
     if (!storage) return emptyState();
     try {
-      var raw = storage.getItem(STORAGE_KEY);
+      var raw = storage.getItem(resolveStorageKey(opts));
       return normalizeState(raw ? JSON.parse(raw) : null, opts);
     } catch (_) {
       return emptyState();
@@ -98,7 +103,7 @@
     var normalized = normalizeState(state, { now: current });
     normalized.updatedAt = iso(current);
     try {
-      storage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      storage.setItem(resolveStorageKey(opts), JSON.stringify(normalized));
       return normalized;
     } catch (_) {
       return false;
@@ -177,7 +182,7 @@
     var signals = extractSignals(post, opts.registry);
     if (!signals.length) return false;
     var current = nowMs(opts.now);
-    var state = load({ storage: opts.storage, now: current });
+    var state = load({ storage: opts.storage, storageKey: opts.storageKey, now: current });
     signals.forEach(function (signal) {
       var previous = state.features[signal.key] || {};
       state.features[signal.key] = {
@@ -186,7 +191,7 @@
         expiresAt: iso(current + TTL_MS)
       };
     });
-    return save(state, { storage: opts.storage, now: current });
+    return save(state, { storage: opts.storage, storageKey: opts.storageKey, now: current });
   }
 
   function affinityStrength(row, current) {
@@ -326,7 +331,7 @@
     if (!personalized(opts.preferences) || opts.sortBy && opts.sortBy !== 'relevance') return list.slice();
     var current = nowMs(opts.now);
     var affinity = opts.preferences.localAffinityConsent === true
-      ? load({ storage: opts.storage, now: current })
+      ? load({ storage: opts.storage, storageKey: opts.storageKey, now: current })
       : emptyState();
     return list.map(function (post, index) {
       return scoreCandidate(post, index, opts.preferences, affinity, opts.registry, current);

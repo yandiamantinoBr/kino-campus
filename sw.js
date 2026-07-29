@@ -1,5 +1,5 @@
 /**
- * KinoCampus Service Worker - v12.13.2
+ * KinoCampus Service Worker - v12.13.3
  *
  * Estrategia:
  *   - Shell local versionado (CSS + JS core): stale-while-revalidate
@@ -10,12 +10,14 @@
  * Ativado somente quando KCFF.isEnabled('sw.enabled') === true (kill-switch).
  * Por padrao disabled; habilitar via KC_ENV.flags.sw.enabled = true.
  *
- * Atualizar CACHE_VERSION a cada release que muda os shell assets.
+ * A fonte mantém versões legíveis para desenvolvimento. No dist, o build troca
+ * CACHE_VERSION e todos os ?v= de SHELL_ASSETS pela mesma revisão imutável.
  */
 
 'use strict';
 
-var CACHE_VERSION = 'kc-shell-v12.13.2';
+var CACHE_PREFIX = 'kc-shell-';
+var CACHE_VERSION = 'kc-shell-v12.13.3';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';
 
@@ -25,12 +27,12 @@ var PAGE_CACHE = CACHE_VERSION + ':pages';
 var SHELL_ASSETS = [
   '/assets/css/styles.css?v=8.6.12',
   '/assets/css/kc-chat-shortcut.css?v=8.6.1',
-  '/assets/css/kc-public-shell.css?v=8.6.1',
+  '/assets/css/kc-public-shell.css?v=8.6.13',
   '/assets/js/boot/kc-constants.js?v=8.6.1',
-  '/assets/js/boot/kc-env.js?v=8.6.1',
+  '/assets/js/boot/kc-env.js?v=8.6.13',
   '/assets/js/boot/kc-feature-flags.js?v=8.6.1',
   '/assets/js/boot/kc-sw-register.js?v=8.6.1',
-  '/assets/js/core/kc-i18n.js?v=8.6.12',
+  '/assets/js/core/kc-i18n.js?v=8.6.13',
   '/assets/js/utils/kc-utils.string.js?v=8.6.3',
   '/assets/js/utils/kc-utils.format.js?v=8.6.1',
   '/assets/js/utils/kc-utils.dom.js?v=8.6.1',
@@ -131,7 +133,11 @@ self.addEventListener('activate', function (event) {
       .then(function (keys) {
         return Promise.all(
           keys
-            .filter(function (k) { return k.indexOf(CACHE_VERSION) !== 0; })
+            .filter(function (k) {
+              return k.indexOf(CACHE_PREFIX) === 0
+                && k !== ASSET_CACHE
+                && k !== PAGE_CACHE;
+            })
             .map(function (k) { return caches.delete(k); })
         );
       })

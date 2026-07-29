@@ -12,12 +12,18 @@
 // Headers: Authorization: Bearer <access_token>
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isCurrentSessionActive } from "../_shared/active-session.ts";
+import {
+  BoundedRequestBodyError,
+  readBoundedRequestText,
+} from "../_shared/bounded-request-body.ts";
 
 const SUPABASE_URL        = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY   = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SITE_URL            = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com.br").replace(/\/$/, "");
 const INVITE_REDIRECT_URL = `${SITE_URL}/auth-callback.html`;
+const MAX_REQUEST_BODY_BYTES = 4 * 1024;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin":  "*",
@@ -30,6 +36,14 @@ function json(status: number, body: Record<string, unknown>) {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS },
   });
+}
+
+function safeErrorCode(error: unknown, fallback: string) {
+  const value = error && typeof error === "object" && !Array.isArray(error)
+    ? String((error as Record<string, unknown>).code || "")
+    : "";
+  const code = value.trim().toUpperCase();
+  return /^[A-Z0-9_]{1,80}$/.test(code) ? code : fallback;
 }
 
 Deno.serve(async (req) => {
@@ -57,6 +71,12 @@ Deno.serve(async (req) => {
   if (authError || !user) {
     return json(401, { error: "Sessão inválida. Faça login novamente." });
   }
+  if (!(await isCurrentSessionActive(userClient))) {
+    return json(401, {
+      code: "SESSION_NOT_ACTIVE",
+      error: "Sessão encerrada. Faça login novamente.",
+    });
+  }
 
   // ── 2. Verificar se é admin ───────────────────────────────────────────────
   const { data: profile, error: profileError } = await userClient
@@ -72,8 +92,19 @@ Deno.serve(async (req) => {
   // ── 3. Validar body ───────────────────────────────────────────────────────
   let body: { email?: string; note?: string };
   try {
-    body = await req.json();
-  } catch {
+    const rawBody = await readBoundedRequestText(req, MAX_REQUEST_BODY_BYTES);
+    const parsed = JSON.parse(rawBody);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("not-object");
+    }
+    body = parsed;
+  } catch (error) {
+    if (
+      error instanceof BoundedRequestBodyError &&
+      error.code === "BODY_TOO_LARGE"
+    ) {
+      return json(413, { error: "Body muito grande." });
+    }
     return json(400, { error: "Body inválido. Envie JSON com { email, note? }." });
   }
 
@@ -110,7 +141,9 @@ Deno.serve(async (req) => {
     );
 
   if (whitelistError) {
-    console.error("[kc-invite-user] whitelist upsert error:", whitelistError);
+    console.error("[kc-invite-user] whitelist upsert failed", {
+      code: safeErrorCode(whitelistError, "WHITELIST_UPSERT_FAILED"),
+    });
     return json(500, { error: "Falha ao registrar convite. Tente novamente." });
   }
 
@@ -151,17 +184,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.error("[kc-invite-user] generateLink error:", linkError);
+    console.error("[kc-invite-user] invite link generation failed", {
+      code: safeErrorCode(linkError, "INVITE_LINK_PROVIDER_FAILED"),
+    });
     return json(500, {
-      error: `Falha ao gerar link de convite: ${linkError.message}`,
+      error: "Falha ao gerar link de convite. Tente novamente.",
     });
   }
 
   const inviteLink: string = (linkData as any)?.properties?.action_link ?? "";
 
   if (!inviteLink) {
-    console.error("[kc-invite-user] action_link vazio. linkData:", JSON.stringify(linkData));
-    return json(500, { error: "Falha ao gerar link de convite: link não retornado pelo servidor." });
+    console.error("[kc-invite-user] invite link missing", {
+      code: "INVITE_LINK_MISSING",
+    });
+    return json(500, {
+      error: "Falha ao gerar link de convite. Tente novamente.",
+    });
   }
 
   // ── 8. Registrar no audit_log ─────────────────────────────────────────────
@@ -172,7 +211,11 @@ Deno.serve(async (req) => {
     actor_id: user.id,
     payload: { email, note, expires_at: expiresAt },
   }).then(({ error: auditErr }) => {
-    if (auditErr) console.error("[kc-invite-user] audit_log insert error:", auditErr);
+    if (auditErr) {
+      console.error("[kc-invite-user] audit log insert failed", {
+        code: safeErrorCode(auditErr, "AUDIT_INSERT_FAILED"),
+      });
+    }
   });
 
   return json(200, {

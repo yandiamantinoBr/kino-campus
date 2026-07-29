@@ -56,6 +56,16 @@
 
   function getSessionId() {
     return Utils.ensureSessionId(getStorage(), function () {
+      try {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return window.crypto.randomUUID().replace(/-/g, '');
+        }
+        if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+          const bytes = new Uint8Array(24);
+          window.crypto.getRandomValues(bytes);
+          return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+        }
+      } catch (_) { }
       return Math.random().toString(36).slice(2);
     }, Date.now);
   }
@@ -167,6 +177,11 @@
     if (!isSupabaseMode()) return false;
 
     await maybeMergeSessionAffinity();
+
+    // Anonymous affinity stays in the browser. After sign-in, pending
+    // consented events can be written only to the authenticated owner's rows.
+    const user = await getCurrentUser();
+    if (!user || !user.id) return true;
 
     const client = getClient();
     if (!client || typeof client.rpc !== 'function') return false;
@@ -286,6 +301,9 @@
 
   async function fetchAffinityViaRpc() {
     if (!hasAnalyticsConsent()) return null;
+    const user = await getCurrentUser();
+    if (!user || !user.id) return null;
+
     const client = getClient();
     if (!client || typeof client.rpc !== 'function') return null;
 

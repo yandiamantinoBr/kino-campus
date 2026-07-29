@@ -1191,6 +1191,22 @@
     return { ok: false, error: { message: 'Fluxo LGPD indisponivel neste driver.' } };
   }
 
+  function callPrivacyHelpMethod(method, args) {
+    const helpModule = getHelpModule();
+    if (helpModule && typeof helpModule[method] === 'function') {
+      return helpModule[method](...args, { getActiveDriver });
+    }
+    return Promise.resolve({ ok: false, data: null, error: { code: 'BACKEND_REQUIRED', message: 'Fluxo de privacidade indisponível neste ambiente.' } });
+  }
+
+  function createDataSubjectRequest(payload = {}) { return callPrivacyHelpMethod('createDataSubjectRequest', [payload]); }
+  function listDataSubjectRequests(options = {}) { return callPrivacyHelpMethod('listDataSubjectRequests', [options]); }
+  function getDataSubjectRequest(protocol, options = {}) { return callPrivacyHelpMethod('getDataSubjectRequest', [protocol, options]); }
+  function downloadDataSubjectExport(protocol, options = {}) { return callPrivacyHelpMethod('downloadDataSubjectExport', [protocol, options]); }
+  function downloadDataSubjectSupplement(protocol, artifactRef, options = {}) { return callPrivacyHelpMethod('downloadDataSubjectSupplement', [protocol, artifactRef, options]); }
+  function cancelDataSubjectRequest(protocol, options = {}) { return callPrivacyHelpMethod('cancelDataSubjectRequest', [protocol, options]); }
+  function processDataExportSupplement(payload = {}) { return callPrivacyHelpMethod('processDataExportSupplement', [payload]); }
+
   // v9.3.5.4: solicitacoes de acesso externo (admin)
   async function listExternalAccessRequests(filters = {}) {
     const helpModule = getHelpModule();
@@ -1444,6 +1460,13 @@
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,
+    createDataSubjectRequest,
+    listDataSubjectRequests,
+    getDataSubjectRequest,
+    downloadDataSubjectExport,
+    downloadDataSubjectSupplement,
+    cancelDataSubjectRequest,
+    processDataExportSupplement,
     listExternalAccessRequests,
     decideExternalAccessRequest,
     getNotificationPreferences,

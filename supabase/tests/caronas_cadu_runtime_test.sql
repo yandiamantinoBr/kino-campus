@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(88);
+select extensions.plan(90);
 
 select extensions.has_table('public', 'caronas_locations', 'caronas location table exists');
 select extensions.has_table('public', 'kc_unit_meta', 'Cadu unit metadata table exists');
@@ -26,8 +26,34 @@ select extensions.is((select count(*)::integer from public.caronas_locations whe
 
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.caronas_locations'::regclass), 'caronas locations has RLS enabled');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.kc_unit_meta'::regclass), 'unit metadata has RLS enabled');
-select extensions.is((select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'caronas_locations'), 1, 'caronas locations has one select policy');
-select extensions.is((select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'kc_unit_meta'), 1, 'unit metadata has only the compatibility read policy');
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'caronas_locations'
+      and policyname in (
+        'caronas_locations_select_public',
+        'kc_active_session_restrictive'
+      )
+  ),
+  2,
+  'caronas locations has its read policy and the active-session guard'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'kc_unit_meta'
+      and policyname in (
+        'kc_unit_meta_select_public',
+        'kc_active_session_restrictive'
+      )
+  ),
+  2,
+  'unit metadata has compatibility read and active-session guard policies'
+);
 
 select extensions.ok(has_table_privilege('anon', 'public.caronas_locations', 'select'), 'anon can read caronas locations');
 select extensions.ok(not has_table_privilege('anon', 'public.caronas_locations', 'insert,update,delete'), 'anon cannot write caronas locations');
@@ -136,6 +162,33 @@ select extensions.is(
   'metadata deployment contract reports the complete phase-A boundary ready'
 );
 reset role;
+
+savepoint cadu_probe_active_session_trigger;
+drop trigger kc_active_session_write_guard on public.kc_unit_meta;
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,touchTrigger}')::boolean,
+  false,
+  'metadata contract rejects a missing active-session statement trigger'
+);
+rollback to savepoint cadu_probe_active_session_trigger;
+release savepoint cadu_probe_active_session_trigger;
+
+savepoint cadu_probe_active_session_policy;
+drop policy kc_active_session_restrictive on public.kc_unit_meta;
+create policy kc_active_session_restrictive
+  on public.kc_unit_meta
+  as restrictive
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+select extensions.is(
+  (public.kc_cadu_metadata_contract() #>> '{checks,browserWritesRevoked}')::boolean,
+  false,
+  'metadata contract rejects a weakened active-session policy'
+);
+rollback to savepoint cadu_probe_active_session_policy;
+release savepoint cadu_probe_active_session_policy;
 
 savepoint cadu_probe_cross_platform_eol;
 do $probe$

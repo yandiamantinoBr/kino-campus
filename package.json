@@ -11,8 +11,9 @@
   },
   "scripts": {
     "test": "jest",
-    "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report output/playwright-report",
+    "test:cache-artifact": "jest tests/integration/asset-cache-bust.test.js tests/unit/sw.test.js --runInBand",
+    "test:e2e": "node node_modules/@playwright/test/cli.js test",
+    "test:e2e:report": "node node_modules/@playwright/test/cli.js show-report output/playwright-report",
     "lhci": "lhci autorun",
     "check:hygiene": "node scripts/hygiene-check.js",
     "seo:audit": "node scripts/seo-audit.js",
@@ -21,6 +22,7 @@
     "check:scripts": "node scripts/validate-script-chains.js",
     "check:routes": "node scripts/validate-public-routes.js",
     "check:version": "node scripts/validate-version-map.js",
+    "check:dist-cache": "node scripts/static-cache-revision.js --check dist",
     "check:all": "npm run check:version && npm run check:structure && npm run check:scripts && npm run check:routes && npm run check:hygiene && npm run check:search-registry && npm run cadu:sources:check && npm test",
     "audit:css": "node scripts/audit-css-ownership.js",
     "audit:css-baseline": "node scripts/capture-css-visual-baseline.js",
@@ -75,6 +77,15 @@
   },
   "overrides": {
     "tmp": "0.2.7",
+    "body-parser": "1.20.6",
+    "brace-expansion": "5.0.8",
+    "fast-uri": "3.1.4",
+    "glob": "13.0.6",
+    "test-exclude": "8.0.0",
+    "chrome-launcher": "1.2.1",
+    "@vercel/og": {
+      "sharp": "0.35.0"
+    },
     "@lhci/cli": {
       "uuid": "11.1.1"
     },

@@ -85,6 +85,13 @@ const EXPECTED_KCAPI_MEMBERS = [
   'listAdminHelpRequests',
   'updateAdminHelpRequest',
   'processAccountErasure',
+  'createDataSubjectRequest',
+  'listDataSubjectRequests',
+  'getDataSubjectRequest',
+  'downloadDataSubjectExport',
+  'downloadDataSubjectSupplement',
+  'cancelDataSubjectRequest',
+  'processDataExportSupplement',
   'listExternalAccessRequests',
   'decideExternalAccessRequest',
   'getNotificationPreferences',
@@ -188,9 +195,9 @@ describe('kc-api.client.js - source shape', () => {
     expect(source.trim().endsWith('})();')).toBe(true);
   });
 
-  test('mantem snapshot completo dos 109 membros publicos de window.KCAPI', () => {
+  test('mantem snapshot completo dos 116 membros publicos de window.KCAPI', () => {
     expect(extractFacadeMembers(facadeBlock)).toEqual(EXPECTED_KCAPI_MEMBERS);
-    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(109);
+    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(116);
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {

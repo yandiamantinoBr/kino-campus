@@ -33,7 +33,7 @@ describe('search-results.html', () => {
     const html = read('search-results.html');
 
     expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.2');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.9');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.13');
   });
 });
 

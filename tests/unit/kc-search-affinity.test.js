@@ -88,6 +88,32 @@ describe('afinidade local e reranking responsável', () => {
     expect(Date.parse(stored.features['module:eventos'].expiresAt) - Date.parse(now)).toBe(Affinity.TTL_MS);
   });
 
+  test('respeita uma chave de armazenamento vinculada à conta', () => {
+    const storage = memoryStorage();
+    const accountKey = 'kc_search_affinity_v1:account-a';
+    const result = Affinity.recordInteraction(eventPost('e1', 1), {
+      preferences: preferences({ localAffinityConsent: true }),
+      registry: Registry,
+      storage,
+      storageKey: accountKey,
+      source: 'results-click',
+      now
+    });
+
+    expect(result).toBeTruthy();
+    expect(storage.getItem(Affinity.STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(storage.getItem(accountKey))).toMatchObject({
+      features: { 'module:eventos': { count: 1 } }
+    });
+    expect(Affinity.rerank([eventPost('e2', 1)], {
+      preferences: preferences({ localAffinityConsent: true }),
+      registry: Registry,
+      storage,
+      storageKey: accountKey,
+      now
+    })[0]._kcPersonalization.reasons.map((reason) => reason.type)).toContain('local-affinity');
+  });
+
   test('poda expirados, payload inválido e limita o número de features', () => {
     const features = {
       expired: { count: 20, updatedAt: '2026-01-01T00:00:00.000Z', expiresAt: '2026-01-02T00:00:00.000Z' },

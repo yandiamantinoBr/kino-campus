@@ -103,6 +103,31 @@
     };
   }
 
+  function getPrivacyRequestKind(payload, deps) {
+    var input = (payload && typeof payload === 'object') ? payload : {};
+    var shared = getHelpUtils(deps);
+    var kind = '';
+    if (shared && typeof shared.getPrivacyRequestKind === 'function') {
+      kind = String(shared.getPrivacyRequestKind(
+        input.type,
+        input.topic,
+        input.subtopic
+      ) || '').trim();
+    }
+    if (!kind && input.metadata && typeof input.metadata === 'object') {
+      kind = String(input.metadata.request_kind || '').trim();
+    }
+    if (!kind) {
+      var subtopic = String(input.subtopic || '').trim();
+      if (subtopic === 'account_data_copy') kind = 'data_access_copy';
+      if (subtopic === 'account_data_portability') kind = 'data_portability';
+      if (subtopic === 'account_deletion') kind = 'account_erasure';
+    }
+    return ['data_access_copy', 'data_portability', 'account_erasure'].indexOf(kind) >= 0
+      ? kind
+      : '';
+  }
+
   function readHelpRequests(deps) {
     try {
       var raw = localStorage.getItem(HELP_REQUESTS_STORAGE_KEY);
@@ -136,6 +161,8 @@
     var limit = Number(meta.limit);
     var offset = Number(meta.offset);
     return Object.assign(list, {
+      ok: meta.ok !== false,
+      error: meta.error && typeof meta.error === 'object' ? meta.error : null,
       totalCount: Number.isFinite(totalCount) ? totalCount : list.length,
       limit: Number.isFinite(limit) ? limit : list.length,
       offset: Number.isFinite(offset) ? offset : 0,
@@ -145,6 +172,16 @@
 
   async function createHelpRequest(payload, deps) {
     var normalized = normalizeHelpPayload(payload, deps);
+    if (getPrivacyRequestKind(normalized, deps)) {
+      return {
+        ok: false,
+        data: null,
+        error: {
+          code: 'BACKEND_REQUIRED',
+          message: 'Solicitações de privacidade exigem conexão segura com o servidor. Nenhum dado deste pedido foi salvo neste navegador.',
+        },
+      };
+    }
     if (!normalized.subject || !normalized.message || !normalized.contact_email) {
       return { ok: false, error: { message: 'Preencha assunto, descricao e e-mail de retorno.' } };
     }
@@ -178,9 +215,34 @@
 
   async function listAdminHelpRequests(filters, deps) {
     if (filters === undefined) filters = {};
+    var requestId = String(filters.requestId || filters.request_id || '').trim().toLowerCase();
+    if (
+      requestId
+      && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)
+    ) {
+      return attachLocalAdminHelpListMeta([], {
+        ok: false,
+        error: { message: 'Pedido de ajuda invalido.' },
+        totalCount: 0,
+        limit: 1,
+        offset: 0,
+        hasMore: false,
+      });
+    }
     var current = readHelpRequests(deps).slice().sort(function (a, b) {
       return new Date((b && b.created_at) || 0).getTime() - new Date((a && a.created_at) || 0).getTime();
     });
+    if (requestId) {
+      var exactRow = current.find(function (item) {
+        return String((item && item.id) || '').trim().toLowerCase() === requestId;
+      });
+      return attachLocalAdminHelpListMeta(exactRow ? [exactRow] : [], {
+        totalCount: exactRow ? 1 : 0,
+        limit: 1,
+        offset: 0,
+        hasMore: false,
+      });
+    }
     var query = String(filters.query || '').trim().toLowerCase();
     var limit = Math.max(1, Math.min(100, Number(filters.limit) || 25));
     var offset = Math.max(0, Number(filters.offset) || 0);
@@ -288,10 +350,73 @@
     };
   }
 
+  function buildDataSubjectBackendRequired(message, data) {
+    return {
+      ok: false,
+      data: data === undefined ? null : data,
+      error: {
+        code: 'BACKEND_REQUIRED',
+        message: message,
+      },
+    };
+  }
+
+  // Pedidos de titular nunca sao persistidos em localStorage: o protocolo,
+  // a verificacao de identidade e a exportacao pertencem ao backend autenticado.
+  async function createDataSubjectRequest() {
+    return buildDataSubjectBackendRequired(
+      'Solicitacoes de dados exigem uma conta conectada.',
+    );
+  }
+
+  async function listDataSubjectRequests() {
+    return buildDataSubjectBackendRequired(
+      'Historico de solicitacoes indisponivel no modo local.',
+      { items: [], total: 0 },
+    );
+  }
+
+  async function getDataSubjectRequest() {
+    return buildDataSubjectBackendRequired(
+      'Consulta de protocolo indisponivel no modo local.',
+    );
+  }
+
+  async function downloadDataSubjectExport() {
+    return buildDataSubjectBackendRequired(
+      'Download de dados exige uma conta conectada.',
+    );
+  }
+
+  async function downloadDataSubjectSupplement() {
+    return buildDataSubjectBackendRequired(
+      'Complemento integral exige uma conta conectada.',
+    );
+  }
+
+  async function cancelDataSubjectRequest() {
+    return buildDataSubjectBackendRequired(
+      'Cancelamento de solicitacao indisponivel no modo local.',
+    );
+  }
+
+  async function processDataExportSupplement() {
+    return buildDataSubjectBackendRequired(
+      'Administracao do suplemento indisponivel no modo local.',
+    );
+  }
+
   window._KCLA.help = Object.freeze({
     createHelpRequest: createHelpRequest,
     listAdminHelpRequests: listAdminHelpRequests,
     updateAdminHelpRequest: updateAdminHelpRequest,
     processAccountErasure: processAccountErasure,
+    createDataSubjectRequest: createDataSubjectRequest,
+    listDataSubjectRequests: listDataSubjectRequests,
+    getDataSubjectRequest: getDataSubjectRequest,
+    downloadDataSubjectExport: downloadDataSubjectExport,
+    downloadDataSubjectSupplement: downloadDataSubjectSupplement,
+    cancelDataSubjectRequest: cancelDataSubjectRequest,
+    processDataExportSupplement: processDataExportSupplement,
   });
 }());

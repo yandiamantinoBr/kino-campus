@@ -32,7 +32,15 @@
 
   async function listAdminHelpRequests(filters = {}, deps = {}) {
     const driver = getActiveDriverOrNull(deps);
-    if (!driver || typeof driver.listAdminHelpRequests !== 'function') return [];
+    if (!driver || typeof driver.listAdminHelpRequests !== 'function') {
+      return {
+        ok: false,
+        error: { message: 'Triagem de ajuda indisponível neste driver.' },
+        rows: [],
+        totalCount: 0,
+        hasMore: false,
+      };
+    }
     return driver.listAdminHelpRequests(filters);
   }
 
@@ -50,6 +58,89 @@
       return { ok: false, error: { message: 'Fluxo LGPD indisponivel neste driver.' } };
     }
     return driver.processAccountErasure(payload);
+  }
+
+  async function createDataSubjectRequest(payload = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.createDataSubjectRequest !== 'function') {
+      return {
+        ok: false,
+        data: null,
+        error: { code: 'BACKEND_REQUIRED', message: 'Solicita\u00E7\u00F5es de dados exigem uma conta conectada.' },
+      };
+    }
+    return driver.createDataSubjectRequest(payload);
+  }
+
+  async function listDataSubjectRequests(options = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.listDataSubjectRequests !== 'function') {
+      return {
+        ok: false,
+        data: { items: [], total: 0 },
+        error: { code: 'BACKEND_REQUIRED', message: 'Hist\u00F3rico de solicita\u00E7\u00F5es indispon\u00EDvel.' },
+      };
+    }
+    return driver.listDataSubjectRequests(options);
+  }
+
+  async function getDataSubjectRequest(protocol, options = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.getDataSubjectRequest !== 'function') {
+      return {
+        ok: false,
+        data: null,
+        error: { code: 'BACKEND_REQUIRED', message: 'Consulta de protocolo indispon\u00EDvel.' },
+      };
+    }
+    return driver.getDataSubjectRequest(protocol, options);
+  }
+
+  async function downloadDataSubjectExport(protocol, options = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.downloadDataSubjectExport !== 'function') {
+      return {
+        ok: false,
+        data: null,
+        error: { code: 'BACKEND_REQUIRED', message: 'Download de dados exige uma conta conectada.' },
+      };
+    }
+    return driver.downloadDataSubjectExport(protocol, options);
+  }
+
+  async function downloadDataSubjectSupplement(protocol, artifactRef, options = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.downloadDataSubjectSupplement !== 'function') {
+      return {
+        ok: false,
+        data: null,
+        error: { code: 'BACKEND_REQUIRED', message: 'Complemento integral exige uma conta conectada.' },
+      };
+    }
+    return driver.downloadDataSubjectSupplement(protocol, artifactRef, options);
+  }
+
+  async function cancelDataSubjectRequest(protocol, options = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.cancelDataSubjectRequest !== 'function') {
+      return {
+        ok: false,
+        data: null,
+        error: { code: 'BACKEND_REQUIRED', message: 'Cancelamento de solicita\u00E7\u00E3o indispon\u00EDvel.' },
+      };
+    }
+    return driver.cancelDataSubjectRequest(protocol, options);
+  }
+
+  async function processDataExportSupplement(payload = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.processDataExportSupplement !== 'function') {
+      return {
+        ok: false,
+        error: { code: 'BACKEND_REQUIRED', message: 'Administração do suplemento indisponível.' },
+      };
+    }
+    return driver.processDataExportSupplement(payload);
   }
 
   async function listExternalAccessRequests(filters = {}, deps = {}) {
@@ -95,6 +186,13 @@
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,
+    createDataSubjectRequest,
+    listDataSubjectRequests,
+    getDataSubjectRequest,
+    downloadDataSubjectExport,
+    downloadDataSubjectSupplement,
+    cancelDataSubjectRequest,
+    processDataExportSupplement,
     listExternalAccessRequests,
     decideExternalAccessRequest,
     inviteExternalUser,

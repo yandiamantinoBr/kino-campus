@@ -99,11 +99,18 @@ describe('local.help.adapter.js - contrato estatico', () => {
     expect(Object.isFrozen(help())).toBe(true);
   });
 
-  test('expoe exatamente 4 chaves publicas', () => {
+  test('expoe somente o contrato publico de ajuda e direitos do titular', () => {
     expect(Object.keys(help()).sort()).toEqual([
+      'cancelDataSubjectRequest',
+      'createDataSubjectRequest',
       'createHelpRequest',
+      'downloadDataSubjectExport',
+      'downloadDataSubjectSupplement',
+      'getDataSubjectRequest',
       'listAdminHelpRequests',
+      'listDataSubjectRequests',
       'processAccountErasure',
+      'processDataExportSupplement',
       'updateAdminHelpRequest',
     ]);
   });
@@ -116,6 +123,35 @@ describe('local.help.adapter.js - contrato estatico', () => {
 });
 
 describe('local.help.adapter.js - createHelpRequest', () => {
+  test.each([
+    ['account_data_copy', 'data_access_copy'],
+    ['account_data_portability', 'data_portability'],
+    ['account_deletion', 'account_erasure'],
+  ])('recusa %s sem backend e não persiste PII local', async (subtopic, requestKind) => {
+    const result = await help().createHelpRequest({
+      type: 'account_access',
+      topic: 'onboarding_settings',
+      subtopic,
+      subject: 'Direito do titular',
+      message: 'Solicitação que não pode virar protocolo local fictício.',
+      contact_email: 'titular@example.com',
+      metadata: {
+        request_kind: requestKind,
+        account_email: 'titular@example.com',
+      },
+    }, buildDeps());
+
+    expect(result).toMatchObject({
+      ok: false,
+      data: null,
+      error: {
+        code: 'BACKEND_REQUIRED',
+      },
+    });
+    expect(result.error.message).toContain('Nenhum dado');
+    expect(global.localStorage.getItem('kc_help_requests')).toBeNull();
+  });
+
   test('rejeita payload sem campos obrigatorios', async () => {
     const result = await help().createHelpRequest({
       type: 'question',
@@ -384,6 +420,91 @@ describe('local.help.adapter.js - listAdminHelpRequests', () => {
     expect(result).toHaveLength(0);
     expect(result.totalCount).toBe(0);
     expect(result.hasMore).toBe(false);
+  });
+
+  test('requestId faz lookup UUID exato ignorando filtros e paginação', async () => {
+    const requestId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const exactRow = {
+      id: requestId,
+      type: 'account_access',
+      topic: 'onboarding_settings',
+      subtopic: 'account_data_copy',
+      subject: 'Linha exata',
+      message: 'Linha que não corresponde aos filtros conflitantes.',
+      priority: 'normal',
+      status: 'resolved',
+      page_path: '/settings.html',
+      contact_email: 'titular@example.com',
+      metadata: {},
+      created_at: '2026-04-24T09:00:00.000Z',
+      updated_at: '2026-04-24T09:00:00.000Z',
+    };
+    seedHelpRequests([
+      exactRow,
+      {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        type: 'report',
+        subject: 'Outra linha',
+        message: 'Outra mensagem',
+        priority: 'urgent',
+        status: 'archived',
+        created_at: '2026-04-25T09:00:00.000Z',
+      },
+    ]);
+
+    const result = await help().listAdminHelpRequests({
+      requestId: `  ${requestId.toUpperCase()}  `,
+      status: 'archived',
+      type: 'report',
+      priority: 'urgent',
+      query: 'não corresponde',
+      limit: 1,
+      offset: 999,
+    }, buildDeps());
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(expect.objectContaining({
+      id: requestId,
+      subject: exactRow.subject,
+      message: exactRow.message,
+      status: exactRow.status,
+      priority: exactRow.priority,
+      contact_email: exactRow.contact_email,
+    }));
+    expect(result).toMatchObject({
+      ok: true,
+      totalCount: 1,
+      limit: 1,
+      offset: 0,
+      hasMore: false,
+    });
+  });
+
+  test('requestId inválido falha antes de ler a listagem local geral', async () => {
+    const getItem = jest.spyOn(global.localStorage, 'getItem');
+    try {
+      const result = await help().listAdminHelpRequests({
+        requestId: 'not-a-valid-uuid',
+        status: 'resolved',
+        limit: 100,
+        offset: 100,
+      }, buildDeps());
+
+      expect(result).toHaveLength(0);
+      expect(result).toMatchObject({
+        ok: false,
+        totalCount: 0,
+        limit: 1,
+        offset: 0,
+        hasMore: false,
+        error: {
+          message: expect.stringMatching(/inválido|invalido/i),
+        },
+      });
+      expect(getItem).not.toHaveBeenCalled();
+    } finally {
+      getItem.mockRestore();
+    }
   });
 });
 

@@ -55,6 +55,11 @@ select extensions.ok(has_function_privilege('service_role', 'public.notify_admin
 
 insert into auth.users (id, email)
 values ('00000000-0000-4000-8000-000000000222', 'rpc-helper-admin@example.test');
+insert into auth.sessions (id, user_id)
+values (
+  '10000000-0000-4000-8000-000000000222',
+  '00000000-0000-4000-8000-000000000222'
+);
 insert into public.profiles (id, is_admin, full_name)
 values ('00000000-0000-4000-8000-000000000222', true, 'RPC Helper Admin');
 
@@ -76,7 +81,7 @@ values ('invite-to-revoke@example.test', '00000000-0000-4000-8000-000000000222',
 
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000222","role":"authenticated"}',
+  '{"sub":"00000000-0000-4000-8000-000000000222","role":"authenticated","session_id":"10000000-0000-4000-8000-000000000222"}',
   true
 );
 set local role authenticated;
@@ -128,10 +133,17 @@ select extensions.ok(
   (select entity_id is not null from public.audit_log where action = 'invite_revoked' and entity_type = 'invites' limit 1),
   'invite audit event stores a valid UUID entity id'
 );
-select extensions.is(
-  (select payload->>'email' from public.audit_log where action = 'invite_revoked' and entity_type = 'invites' limit 1),
-  'invite-to-revoke@example.test',
-  'invite audit payload retains the reviewed email'
+select extensions.ok(
+  (
+    select not (payload ? 'email')
+      and payload ->> 'email_hash' ~ '^[a-f0-9]{64}$'
+      and payload ->> 'email_redacted' = 'true'
+    from public.audit_log
+    where action = 'invite_revoked'
+      and entity_type = 'invites'
+    limit 1
+  ),
+  'invite audit payload retains only a pseudonymous hash'
 );
 
 select * from extensions.finish();

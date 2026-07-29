@@ -73,6 +73,7 @@
       url: '__KC_SUPABASE_URL__',
       anonKey: '__KC_SUPABASE_ANON_KEY__',
       storageBucket: 'kino-media',
+      chatStorageBucket: 'kino-chat-media',
     },
 
     // Auth (registro)

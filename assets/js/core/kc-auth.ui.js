@@ -2,13 +2,18 @@
   'use strict';
 
   const VERSION = '8.6.1';
-  const LEGAL_VERSION = '2026-05-07';
+  const TERMS_VERSION = '2026-06-04';
+  const PRIVACY_VERSION = '2026-07-29';
+  // An old metadata record without explicit document versions cannot be
+  // relabelled as acceptance of the current texts.
+  const LEGACY_UNVERSIONED = 'legacy-unversioned';
   const AUTH_INTENT_KEY = 'kc:auth:intents';
   const SHELL_SNAPSHOT_KEY = 'auth-shell';
   const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
   const shared = window.KCAccountProfileUtils || {};
   const modalState = { panel: 'login', nextPath: '', trapHandler: null };
   const renderState = { inited: false, initScheduled: false, lastUiSignature: '' };
+  const logoutState = { active: false, promise: null };
 
   function $(selector, root) { return (root || document).querySelector(selector); }
   function $all(selector, root) { return Array.from((root || document).querySelectorAll(selector)); }
@@ -352,6 +357,81 @@
     el.className = `kc-auth-status show ${tone || 'info'}`;
   }
 
+  function ensureGlobalAuthStatus() {
+    let status = $('#kcAuthGlobalStatus');
+    if (status) return status;
+    if (!document.body) return null;
+    status = document.createElement('div');
+    status.id = 'kcAuthGlobalStatus';
+    status.className = 'kc-auth-status kc-auth-global-status';
+    status.hidden = true;
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    status.setAttribute('aria-atomic', 'true');
+    status.style.position = 'fixed';
+    status.style.top = 'max(1rem, env(safe-area-inset-top))';
+    status.style.left = '50%';
+    status.style.transform = 'translateX(-50%)';
+    status.style.zIndex = '10000';
+    status.style.width = 'min(calc(100% - 2rem), 36rem)';
+    status.style.maxWidth = '36rem';
+    status.style.margin = '0';
+    status.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.32)';
+    status.style.pointerEvents = 'none';
+    document.body.appendChild(status);
+    return status;
+  }
+
+  function setGlobalAuthStatus(message, tone) {
+    const status = ensureGlobalAuthStatus();
+    if (!status) return;
+    const normalized = String(message || '').trim();
+    if (!normalized) {
+      status.textContent = '';
+      status.className = 'kc-auth-status kc-auth-global-status';
+      status.hidden = true;
+      status.setAttribute('aria-live', 'polite');
+      return;
+    }
+    const normalizedTone = String(tone || 'info').trim() || 'info';
+    status.hidden = false;
+    status.textContent = normalized;
+    status.className = `kc-auth-status kc-auth-global-status show ${normalizedTone}`;
+    status.setAttribute('aria-live', normalizedTone === 'error' ? 'assertive' : 'polite');
+  }
+
+  function isAuthModalVisible() {
+    const modal = $('#kcAuthModal');
+    return Boolean(
+      modal &&
+      modal.classList.contains('active') &&
+      modal.getAttribute('aria-hidden') !== 'true'
+    );
+  }
+
+  function setLogoutStatus(message, tone) {
+    setStatus(message, tone);
+    if (isAuthModalVisible()) {
+      setGlobalAuthStatus('', 'info');
+      return;
+    }
+    setGlobalAuthStatus(message, tone);
+  }
+
+  function setLogoutControlsBusy(active) {
+    const busy = active === true;
+    [
+      '#kcAuthLogoutBtn',
+      '#mobileMenuLogoutBtn',
+      '#kcDropdownLogoutBtn',
+    ].forEach((selector) => {
+      const button = $(selector);
+      if (!button) return;
+      button.disabled = busy;
+      button.setAttribute('aria-busy', busy ? 'true' : 'false');
+    });
+  }
+
   function toggleExternalAccessPrompt(email, show) {
     const prompt = $('#kcAuthExternalAccessPrompt');
     const emailInput = $('#kcExternalAccessEmail');
@@ -366,8 +446,8 @@
     return {
       display_name: String(email || '').split('@')[0],
       terms_accepted: true,
-      terms_version: LEGAL_VERSION,
-      privacy_version: LEGAL_VERSION,
+      terms_version: TERMS_VERSION,
+      privacy_version: PRIVACY_VERSION,
       legal_accepted_at: acceptedAt,
       legal_acceptance_source: 'kc-auth-card',
     };
@@ -385,8 +465,8 @@
     const acceptedAt = String(meta.legal_accepted_at || meta.accepted_at || new Date().toISOString());
     const payload = {
       user_id: user.id,
-      terms_version: String(meta.terms_version || LEGAL_VERSION),
-      privacy_version: String(meta.privacy_version || LEGAL_VERSION),
+      terms_version: String(meta.terms_version || LEGACY_UNVERSIONED),
+      privacy_version: String(meta.privacy_version || LEGACY_UNVERSIONED),
       accepted_at: acceptedAt,
       source: String(meta.legal_acceptance_source || 'kc-auth-card'),
       metadata: {
@@ -589,7 +669,8 @@
     dropdown.setAttribute('aria-hidden', 'false');
     button.classList.add('kc-dropdown-open');
     const logoutButton = $('#kcDropdownLogoutBtn');
-    if (logoutButton) logoutButton.addEventListener('click', doLogout, { once: true });
+    if (logoutButton) logoutButton.addEventListener('click', doLogout);
+    setLogoutControlsBusy(logoutState.active);
   }
 
   function closeProfileDropdown() {
@@ -646,6 +727,7 @@
     cookiePrefsButton.type = 'button';
     cookiePrefsButton.setAttribute('data-kc-cookie-preferences', '');
     logoutButton.type = 'button';
+    setLogoutControlsBusy(logoutState.active);
 
     const settingsLink = $('#mobileMenuSettingsLink');
     const setupLink = $('#mobileMenuAccountSetupLink');
@@ -719,6 +801,7 @@
     overlayLock.lock('auth-modal');
     document.body.classList.add('kc-modal-open');
     trapFocus();
+    setGlobalAuthStatus('', 'info');
     refreshUIFromUser(true);
     setPanel(opts.tab || (getCurrentUser() ? 'user' : 'login'));
     setTimeout(function () {
@@ -871,6 +954,8 @@
     setStatus('Enviando solicitação de acesso externo...', 'info');
 
     const payload = {
+      expected_auth_state: 'anonymous',
+      expected_user_id: null,
       type: 'external_access',
       topic: 'non_institutional_email',
       subtopic: affiliation ? 'has_context' : 'needs_context',
@@ -932,22 +1017,50 @@
   }
 
   async function doLogout() {
-    setStatus(window.KCi18n ? window.KCi18n.t('auth.logging-out') : 'Saindo...', 'info');
-    try {
-      writeShellSnapshot(null, null);
-      await window.KCAPI.logout();
+    if (logoutState.active) return logoutState.promise || false;
+
+    const loggingOutMessage = window.KCi18n
+      ? window.KCi18n.t('auth.logging-out')
+      : 'Saindo...';
+    const failureMessage = window.KCi18n
+      ? window.KCi18n.t('auth.logout-failed')
+      : 'Não foi possível sair agora. Sua sessão continua ativa.';
+
+    logoutState.active = true;
+    setLogoutControlsBusy(true);
+    setLogoutStatus(loggingOutMessage, 'info');
+
+    const operation = Promise.resolve().then(async function () {
       try {
-        if (window.KCEvents && typeof window.KCEvents.track === 'function') {
-          window.KCEvents.track('kc_logout', {});
+        const loggedOut = await window.KCAPI.logout();
+        if (loggedOut !== true) {
+          setLogoutStatus(failureMessage, 'error');
+          return false;
         }
-      } catch (_) {}
-      closeProfileDropdown();
-      if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
-      closeModal();
-    } catch (error) {
-      console.error('[KCAuthUI] logout failed:', error);
-      setStatus(window.KCi18n ? window.KCi18n.t('auth.logout-failed') : 'Não foi possível sair agora.', 'error');
-    }
+        writeShellSnapshot(null, null);
+        try {
+          if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+            window.KCEvents.track('kc_logout', {});
+          }
+        } catch (_) {}
+        setGlobalAuthStatus('', 'info');
+        closeProfileDropdown();
+        if (typeof window.closeMobileMenu === 'function') window.closeMobileMenu();
+        closeModal();
+        return true;
+      } catch (error) {
+        console.error('[KCAuthUI] logout failed:', error);
+        setLogoutStatus(failureMessage, 'error');
+        return false;
+      }
+    });
+
+    logoutState.promise = operation.finally(function () {
+      logoutState.active = false;
+      logoutState.promise = null;
+      setLogoutControlsBusy(false);
+    });
+    return logoutState.promise;
   }
 
   function refreshHeaderLabel(user, profile, options) {
@@ -1104,6 +1217,7 @@
       mobileLogout.dataset.bound = '1';
       mobileLogout.addEventListener('click', doLogout);
     }
+    setLogoutControlsBusy(logoutState.active);
   }
 
   function wireTriggers() {
@@ -1134,6 +1248,7 @@
     applyCachedShellSnapshotToHeader();
     ensureMobileMenuStructure();
     ensureModal();
+    ensureGlobalAuthStatus();
     bindModalEvents();
     wireTriggers();
     refreshUIFromUser(true);

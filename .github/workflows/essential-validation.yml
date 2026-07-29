@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Dependency security audit
+        run: npm audit --audit-level=high
+
       - name: Version map
         run: npm run check:version
 
@@ -63,10 +66,10 @@ jobs:
         run: npm test -- --runInBand
 
       - name: Install Playwright chromium
-        run: npx playwright install --with-deps chromium
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
 
       - name: Playwright E2E (chromium)
-        run: npx playwright test
+        run: npm run test:e2e
 
       - name: Upload Playwright report
         if: always()

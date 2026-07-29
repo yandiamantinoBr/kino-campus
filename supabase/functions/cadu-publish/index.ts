@@ -25,6 +25,7 @@
 // --no-verify-jwt.
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { isCurrentSessionActive } from "../_shared/active-session.ts";
 import { CaduItem, validateItem } from "./schema.ts";
 import { deepMergeMetadata, mapItemToPost, MAX_IMAGE_COUNT } from "./mapper.ts";
 import {
@@ -1061,6 +1062,13 @@ Deno.serve(async (req) => {
   const { data: { user }, error: authError } = await userClient.auth.getUser();
   if (authError || !user) {
     return json(401, { ok: false, code: "AUTH_INVALID", message: "Sessao invalida. Refaca o login do Cadu." });
+  }
+  if (!(await isCurrentSessionActive(userClient))) {
+    return json(401, {
+      ok: false,
+      code: "SESSION_NOT_ACTIVE",
+      message: "Sessao encerrada. Refaca o login do Cadu.",
+    });
   }
 
   // 2) Cliente privilegiado + allowlist

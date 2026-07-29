@@ -610,6 +610,13 @@ body.kc-settings-page .kc-settings-input {
   box-shadow: none;
 }
 
+.kc-settings-btn.is-warn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.38);
+  color: #fbbf24;
+  box-shadow: none;
+}
+
 .kc-settings-status {
   display: none;
   padding: 12px 14px;

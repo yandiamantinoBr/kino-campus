@@ -11,7 +11,9 @@ const CONFIG = fs.readFileSync(path.join(ROOT, 'supabase/config.toml'), 'utf8');
 describe('analytics subject id Edge Function hardening', () => {
   test('requires gateway JWT and validates the bearer again with Supabase Auth', () => {
     expect(CONFIG).toMatch(/\[functions\.kc-analytics-subject-id\]\s*verify_jwt = true/);
-    expect(INDEX).toContain('admin.auth.getUser(bearer[1])');
+    expect(INDEX).toContain('userClient.auth.getUser(bearer[1])');
+    expect(INDEX).toContain('await isCurrentSessionActive(userClient)');
+    expect(INDEX).toContain('SESSION_NOT_ACTIVE');
     expect(INDEX).toContain('authentication_required');
   });
 

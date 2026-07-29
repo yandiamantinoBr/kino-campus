@@ -3,6 +3,7 @@
 // the Edge Functions runtime.
 
 import { createClient } from "@supabase/supabase-js";
+import { isCurrentSessionActive } from "../_shared/active-session.ts";
 import {
   createAnalyticsSubjectId,
   isValidAnalyticsIdSecret,
@@ -110,23 +111,30 @@ Deno.serve(async (req: Request) => {
   }
 
   const supabaseUrl = env("SUPABASE_URL");
-  const serviceKey = env("SUPABASE_SERVICE_ROLE_KEY") ||
-    env("SUPABASE_SECRET_KEY");
+  const anonKey = env("SUPABASE_ANON_KEY");
   const analyticsSecret = env("KC_ANALYTICS_ID_SECRET");
   if (
-    !supabaseUrl || !serviceKey || !isValidAnalyticsIdSecret(analyticsSecret)
+    !supabaseUrl || !anonKey || !isValidAnalyticsIdSecret(analyticsSecret)
   ) {
     return json(req, 503, { ok: false, error: "configuration_unavailable" });
   }
 
   try {
-    const admin = createClient(supabaseUrl, serviceKey, {
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: {
+        headers: {
+          Authorization: req.headers.get("authorization") ?? "",
+        },
+      },
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { data, error } = await admin.auth.getUser(bearer[1]);
+    const { data, error } = await userClient.auth.getUser(bearer[1]);
     const userId = data?.user?.id ?? "";
     if (error || !userId) {
       return json(req, 401, { ok: false, error: "authentication_required" });
+    }
+    if (!(await isCurrentSessionActive(userClient))) {
+      return json(req, 401, { ok: false, error: "SESSION_NOT_ACTIVE" });
     }
 
     const subjectId = await createAnalyticsSubjectId(analyticsSecret, userId);

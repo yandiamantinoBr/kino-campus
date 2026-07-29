@@ -13,23 +13,20 @@ on:
     workflows: [Essential Validation]
     branches: [kinocampus-V75.0-foundations]
     types: [completed]
-  workflow_dispatch:
-    inputs:
-      function_name:
-        description: 'Edge function name to deploy (empty = all)'
-        required: false
-        default: ''
 
 permissions:
   contents: read
 
+concurrency:
+  group: kino-campus-production-edge-deploy
+  cancel-in-progress: false
+
 jobs:
   detect-changes:
-    name: Detect changed functions
+    name: Prepare complete function matrix
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.conclusion == 'success')
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -41,11 +38,9 @@ jobs:
           fetch-depth: 50
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Detect changed edge functions
+      - name: Select all edge functions from the validated SHA
         id: detect
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          REQUESTED_FUNCTION: ${{ inputs.function_name }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           list_all_functions() {
@@ -53,66 +48,21 @@ jobs:
               -printf '%f\n' | sort
           }
 
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            REQUESTED="$REQUESTED_FUNCTION"
-            if [ -n "$REQUESTED" ]; then
-              if ! [[ "$REQUESTED" =~ ^[a-z0-9_-]+$ ]] || [ ! -d "supabase/functions/$REQUESTED" ]; then
-                echo "Invalid Edge Function name: $REQUESTED" >&2
-                exit 1
-              fi
-              CHANGED="$REQUESTED"
-            else
-              CHANGED=$(list_all_functions | paste -sd, -)
-            fi
-          else
-            if ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "Invalid validated commit SHA: $HEAD_SHA" >&2
-              exit 1
-            fi
-
-            CHANGED_FILES=$(git diff --name-only "${HEAD_SHA}^" "$HEAD_SHA")
-            if grep -Eq '^supabase/functions/_shared/|^supabase/functions/[^/]+$' <<< "$CHANGED_FILES"; then
-              echo 'Shared Edge Function code or configuration changed; all functions must be rebuilt.'
-              CHANGED=$(list_all_functions | paste -sd, -)
-            else
-              CONFIG_FUNCTIONS=""
-              if grep -Fxq 'supabase/config.toml' <<< "$CHANGED_FILES"; then
-                BEFORE_CONFIG="$RUNNER_TEMP/supabase-config-before.toml"
-                git show "${HEAD_SHA}^:supabase/config.toml" > "$BEFORE_CONFIG"
-                CONFIG_FUNCTIONS=$(python3 - "$BEFORE_CONFIG" 'supabase/config.toml' <<'PY'
-          import sys
-          import tomllib
-
-          def read_functions(path):
-              with open(path, "rb") as handle:
-                  return tomllib.load(handle).get("functions", {})
-
-          before = read_functions(sys.argv[1])
-          after = read_functions(sys.argv[2])
-          for name in sorted(set(before) | set(after)):
-              if before.get(name) != after.get(name):
-                  print(name)
-          PY
-                )
-              fi
-
-              CHANGED=$({
-                awk -F/ \
-                  '$1 == "supabase" && $2 == "functions" && $3 != "_shared" { print $3 }' \
-                  <<< "$CHANGED_FILES"
-                printf '%s\n' "$CONFIG_FUNCTIONS"
-              } | sed '/^$/d' | sort -u | paste -sd, -)
-            fi
+          if ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid validated commit SHA: $HEAD_SHA" >&2
+            exit 1
           fi
 
+          # workflow_run does not expose the complete before..after range of the
+          # original push. Rebuild every function so multi-commit pushes and a
+          # later CI-fix commit cannot strand older function changes undeployed.
+          CHANGED=$(list_all_functions | paste -sd, -)
           if [ -z "$CHANGED" ]; then
-            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
-            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
-            echo 'No Edge Function changes detected.'
-            exit 0
+            echo 'No Edge Function directories found.' >&2
+            exit 1
           fi
 
-          echo "Changed functions: $CHANGED"
+          echo "Functions selected from validated SHA $HEAD_SHA: $CHANGED"
           MATRIX=""
           for fn in $(echo "$CHANGED" | tr ',' ' '); do
             if ! [[ "$fn" =~ ^[a-z0-9_-]+$ ]]; then
@@ -129,15 +79,250 @@ jobs:
           echo "matrix={\"include\":[${MATRIX}]}" >> "$GITHUB_OUTPUT"
           echo 'has_changes=true' >> "$GITHUB_OUTPUT"
 
-  deploy:
-    name: Deploy ${{ matrix.function }}
+  preflight:
+    name: Verify production prerequisites
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.105.0
+
+      - name: Link exact production project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref wacyrkwhkvzwkqpolrbg
+          test "$(tr -d '\r\n' < supabase/.temp/project-ref)" = "wacyrkwhkvzwkqpolrbg"
+
+      - name: Verify required migrations are already applied
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          RESPONSE=$(curl --fail-with-body --retry 3 --retry-all-errors -sS \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            'https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/database/migrations')
+          RESPONSE="$RESPONSE" python3 - <<'PY'
+          import json
+          import os
+          import re
+
+          required = {
+              "20260728183022",
+              "20260728184500",
+              "20260728185000",
+              "20260728210000",
+              "20260728220000",
+              "20260728230000",
+              "20260728231500",
+              "20260728233000",
+              "20260728234000",
+              "20260728235000",
+              "20260729000000",
+              "20260729001000",
+              "20260729003000",
+              "20260729004000",
+              "20260729005000",
+              "20260729006000",
+              "20260729007000",
+              "20260729008000",
+              "20260729009000",
+              "20260729011000",
+              "20260729012000",
+          }
+          payload = json.loads(os.environ["RESPONSE"])
+
+          if isinstance(payload, list):
+              rows = payload
+          elif isinstance(payload, dict):
+              rows = []
+              for key in ("result", "data", "migrations", "rows"):
+                  candidate = payload.get(key)
+                  if isinstance(candidate, list):
+                      rows = candidate
+                      break
+              if not rows and "version" in payload:
+                  rows = [payload]
+          else:
+              rows = []
+
+          present = {
+              str(row["version"])
+              for row in rows
+              if isinstance(row, dict)
+              and isinstance(row.get("version"), (str, int))
+              and re.fullmatch(r"[0-9]{14}", str(row["version"]))
+          }
+          missing = sorted(required - present)
+          if missing:
+              raise SystemExit(
+                  "Required migrations must be applied before Edge deploy; missing: "
+                  + ", ".join(missing)
+              )
+          print("Required migration history is present.")
+          PY
+
+      - name: Verify canonical privacy schema contract
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: wacyrkwhkvzwkqpolrbg
+        run: |
+          POSTGREST_RESPONSE=$(curl --fail-with-body --retry 3 --retry-all-errors -sS \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/postgrest")
+          POSTGREST_RESPONSE="$POSTGREST_RESPONSE" python3 - <<'PY'
+          import json
+          import os
+
+          payload = json.loads(os.environ["POSTGREST_RESPONSE"])
+          if not isinstance(payload, dict):
+              raise SystemExit("PostgREST config returned an unexpected response")
+          exposed = {
+              item.strip()
+              for item in str(payload.get("db_schema", "")).split(",")
+              if item.strip()
+          }
+          extra_path = {
+              item.strip()
+              for item in str(payload.get("db_extra_search_path", "")).split(",")
+              if item.strip()
+          }
+          forbidden = {"net", "vault"}
+          leaked = sorted(forbidden & (exposed | extra_path))
+          if leaked:
+              raise SystemExit(
+                  "Sensitive schemas must not be exposed by PostgREST: "
+                  + ", ".join(leaked)
+              )
+          print("Sensitive schemas are absent from PostgREST exposure.")
+          PY
+
+          test -s scripts/verify-privacy-schema.sql
+          QUERY=$(python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          placeholder = "__KC_EXPECTED_PROJECT_REF__"
+          query = Path("scripts/verify-privacy-schema.sql").read_text(
+              encoding="utf-8"
+          )
+          if query.count(placeholder) != 1:
+              raise SystemExit(
+                  "Privacy schema gate must contain one project-ref placeholder"
+              )
+          print(query.replace(placeholder, os.environ["PROJECT_REF"]))
+          PY
+          )
+          REQUEST_BODY=$(QUERY="$QUERY" python3 - <<'PY'
+          import json
+          import os
+
+          print(json.dumps({
+              "query": os.environ["QUERY"],
+              "parameters": [],
+          }))
+          PY
+          )
+          RESPONSE=$(curl --fail-with-body --retry 3 --retry-all-errors -sS \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$REQUEST_BODY" \
+            'https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/database/query/read-only')
+          RESPONSE="$RESPONSE" python3 - <<'PY'
+          import json
+          import os
+
+          payload = json.loads(os.environ["RESPONSE"])
+          if isinstance(payload, dict):
+              rows = payload.get("result") or payload.get("data") or payload.get("rows") or []
+          elif isinstance(payload, list):
+              rows = payload
+          else:
+              rows = []
+          if len(rows) != 1 or not isinstance(rows[0], dict):
+              raise SystemExit("Privacy schema gate returned an unexpected response")
+          non_boolean = sorted(
+              name for name, available in rows[0].items()
+              if not isinstance(available, bool)
+          )
+          if non_boolean:
+              raise SystemExit(
+                  "Privacy schema gate returned non-boolean capabilities: "
+                  + ", ".join(non_boolean)
+              )
+          missing = sorted(
+              name for name, available in rows[0].items()
+              if available is not True
+          )
+          if missing:
+              raise SystemExit(
+                  "Privacy schema prerequisites are incomplete: "
+                  + ", ".join(missing)
+              )
+          print("Canonical privacy schema prerequisites are present.")
+          PY
+
+      - name: Verify required secret names without reading values
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          SECRET_JSON=$(supabase secrets list \
+            --project-ref wacyrkwhkvzwkqpolrbg \
+            --output json)
+          SECRET_JSON="$SECRET_JSON" python3 - <<'PY'
+          import json
+          import os
+
+          required = {
+              "ADMIN_REPORTS_WEBHOOK_URL",
+              "KC_ANALYTICS_ID_SECRET",
+              "KC_APP_BASE_URL",
+              "KC_DATA_EXPORT_RETENTION_SECRET",
+              "KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64",
+              "KC_GA4_PROPERTY_ID",
+              "KC_GA4_SA_KEY",
+              "KC_NOTIFY_HMAC_SECRET",
+              "KC_SEARCH_CONSOLE_SA_KEY",
+              "KC_SEARCH_CONSOLE_SITE_URL",
+              "KC_SMTP_PASS",
+              "KC_SMTP_USER",
+          }
+          rows = json.loads(os.environ["SECRET_JSON"])
+          if not isinstance(rows, list):
+              raise SystemExit("Supabase secret inventory returned an unexpected response")
+          present = {
+              str(row.get("name", "")).strip()
+              for row in rows
+              if isinstance(row, dict)
+          }
+          missing = sorted(required - present)
+          if missing:
+              raise SystemExit(
+                  "Required Edge Function secret names are absent: "
+                  + ", ".join(missing)
+              )
+          print("Required secret names are present; values were not read.")
+          PY
+
+  deploy:
+    name: Deploy ${{ matrix.function }}
+    needs: [detect-changes, preflight]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
     strategy:
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
       fail-fast: false
+      max-parallel: 3
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:

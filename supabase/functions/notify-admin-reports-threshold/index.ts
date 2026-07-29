@@ -1,4 +1,8 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  BoundedRequestBodyError,
+  readBoundedRequestText,
+} from "../_shared/bounded-request-body.ts";
 
 type ReasonCountMap = Record<string, number>;
 
@@ -6,6 +10,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const SIGNATURE_MAX_AGE_SECONDS = 5 * 60;
 const DEFAULT_THRESHOLD = 3;
 const DEFAULT_COOLDOWN_HOURS = 24;
+const MAX_REQUEST_BODY_BYTES = 1024;
 
 function json(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
@@ -110,8 +115,14 @@ Deno.serve(async (req) => {
 
   let rawBody = "";
   try {
-    rawBody = await req.text();
-  } catch (_) {
+    rawBody = await readBoundedRequestText(req, MAX_REQUEST_BODY_BYTES);
+  } catch (error) {
+    if (
+      error instanceof BoundedRequestBodyError &&
+      error.code === "BODY_TOO_LARGE"
+    ) {
+      return json(413, { ok: false, error: "body_too_large" });
+    }
     return json(400, { ok: false, error: "invalid_request_body" });
   }
 

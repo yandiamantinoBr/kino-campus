@@ -10,9 +10,18 @@ select extensions.ok(
   'search queries has RLS enabled'
 );
 select extensions.is(
-  (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'search_queries'),
-  1,
-  'search queries keeps only the admin select policy'
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'search_queries'
+      and policyname in (
+        'search_queries_select_admin',
+        'kc_active_session_restrictive'
+      )
+  ),
+  2,
+  'search queries keeps the admin policy and the active-session guard'
 );
 select extensions.ok(
   not has_table_privilege('anon', 'public.search_queries', 'insert'),
@@ -296,6 +305,16 @@ insert into auth.users (id, email)
 values
   ('00000000-0000-4000-8000-000000000551', 'search-nonadmin@example.test'),
   ('00000000-0000-4000-8000-000000000552', 'search-admin@example.test');
+insert into auth.sessions (id, user_id)
+values
+  (
+    '10000000-0000-4000-8000-000000000551',
+    '00000000-0000-4000-8000-000000000551'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000552',
+    '00000000-0000-4000-8000-000000000552'
+  );
 insert into public.profiles (id, is_admin, full_name)
 values
   ('00000000-0000-4000-8000-000000000551', false, 'Search Contract Member'),
@@ -303,7 +322,7 @@ values
 
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000551","role":"authenticated"}',
+  '{"sub":"00000000-0000-4000-8000-000000000551","role":"authenticated","session_id":"10000000-0000-4000-8000-000000000551"}',
   true
 );
 set local role authenticated;
@@ -323,7 +342,7 @@ reset role;
 
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000552","role":"authenticated"}',
+  '{"sub":"00000000-0000-4000-8000-000000000552","role":"authenticated","session_id":"10000000-0000-4000-8000-000000000552"}',
   true
 );
 set local role authenticated;

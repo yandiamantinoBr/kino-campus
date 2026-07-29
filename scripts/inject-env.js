@@ -18,6 +18,10 @@
 
 const fs   = require('fs');
 const path = require('path');
+const {
+  resolveBuildRevision,
+  applyStaticCacheRevision,
+} = require('./static-cache-revision');
 
 // ── Contexto de execução (CI vs local) ─────────────────────────────────────
 const isCI = (
@@ -203,62 +207,38 @@ if (content === original) {
   fs.writeFileSync(ENV_FILE, content, 'utf8');
 }
 
-// ── Cache-busting automático dos assets (?v=) ──────────────────────────────
+// ── Cache-busting consistente do artefato público ───────────────────────────
 // Os assets (/assets/*) são servidos com cache imutável de 1 ano. Como o ?v dos
 // HTML é fixo, quem já visitou o site continua executando JS/CSS antigos por muito
 // tempo (causa de "atualização demora a aparecer / outro navegador funciona").
-// Aqui reescrevemos APENAS o valor de ?v= para um token do deploy. Trocar a query
-// string muda só a CHAVE de cache — o arquivo servido é o mesmo — então é seguro
-// e não pode quebrar o carregamento. Roda só em CI/deploy; a fonte fica com ?v fixo.
+// O build reescreve o ?v= de todos os HTMLs, o precache e o namespace do Service
+// Worker com a MESMA revisão. Depois valida o dist; divergência em CI/deploy
+// encerra o build em vez de publicar uma combinação de caches incompatível.
 function applyAssetCacheBust() {
-  if (!isCI) {
-    console.log('ℹ️  inject-env.js: cache-bust de assets ignorado (execução local).');
-    return;
-  }
-  const token = String(
-    process.env.VERCEL_GIT_COMMIT_SHA ||
-    process.env.VERCEL_DEPLOYMENT_ID ||
-    process.env.GITHUB_SHA ||
-    Date.now()
-  ).replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
-  if (!token) return;
-
-  const repoRoot = path.join(__dirname, '..', 'dist');
-  // Coleta o HTML servido em TODA a árvore (raiz + subpastas como admin/).
-  // Antes o cache-bust só cobria a raiz, então admin/*.html ficava com ?v fixo
-  // e os usuários recorrentes nunca recebiam o JS/CSS novo do painel admin.
-  const SKIP_DIRS = new Set([
-    'node_modules', '.git', '.github', '.vercel', '.claude', 'tests', 'test',
-    'docs', 'services', 'supabase', 'scripts', 'output', 'coverage', '.export-samples',
-  ]);
-  function collectHtmlFiles(dir, depth, acc) {
-    if (depth > 4) return acc;
-    let entries = [];
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return acc; }
-    entries.forEach((entry) => {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) return;
-        collectHtmlFiles(full, depth + 1, acc);
-      } else if (/\.html$/i.test(entry.name)) {
-        acc.push(full);
-      }
-    });
-    return acc;
-  }
-  const htmlFiles = collectHtmlFiles(repoRoot, 0, []);
-
-  let changed = 0;
-  htmlFiles.forEach((fp) => {
-    let html;
-    try { html = fs.readFileSync(fp, 'utf8'); } catch (_) { return; }
-    // Substitui SOMENTE o valor de ?v= (não altera o caminho do arquivo).
-    const next = html.replace(/(\?v=)[0-9A-Za-z._-]+/g, `$1${token}`);
-    if (next !== html) {
-      try { fs.writeFileSync(fp, next, 'utf8'); changed++; } catch (_) { }
+  const revision = resolveBuildRevision(process.env);
+  const productionBuild = isCI || process.env.NODE_ENV === 'production';
+  if (!revision) {
+    if (productionBuild) {
+      throw new Error(
+        'KC_BUILD_REVISION_REQUIRED: configure KC_BUILD_REVISION ou forneça a revisão do provedor de deploy.',
+      );
     }
+    console.log(
+      'ℹ️  inject-env.js: revisão de cache ignorada localmente; defina KC_BUILD_REVISION para validar o dist.',
+    );
+    return null;
+  }
+
+  const result = applyStaticCacheRevision({
+    outputRoot: path.join(__dirname, '..', 'dist'),
+    revision,
   });
-  console.log(`🔄 inject-env.js: cache-bust de assets aplicado (?v=${token}) em ${changed} HTML.`);
+  console.log(
+    `🔄 inject-env.js: revisão ${result.revision} aplicada e validada `
+    + `em ${result.htmlFiles} HTML, ${result.htmlAssets} referências e `
+    + `${result.shellAssets} itens de precache.`,
+  );
+  return result;
 }
 
 // Cria primeiro o artefato público por allowlist. O cache-bust abaixo opera
@@ -270,12 +250,9 @@ const staticOutput = buildStaticOutput({
 });
 console.log(`Static output isolated in dist (${staticOutput.rootFiles} root files).`);
 
-try {
-  applyAssetCacheBust();
-} catch (cacheBustErr) {
-  // Nunca derruba o build por causa do cache-bust (degrada para o ?v fixo).
-  console.warn('⚠️  inject-env.js: cache-bust de assets falhou (ignorado):', (cacheBustErr && cacheBustErr.message) || cacheBustErr);
-}
+// Não envolver em fallback silencioso: em produção, HTML, precache e namespace
+// precisam pertencer à mesma revisão ou o artefato não pode ser publicado.
+applyAssetCacheBust();
 
 // ── Relatório ────────────────────────────────────────────────────────────────
 console.log('');

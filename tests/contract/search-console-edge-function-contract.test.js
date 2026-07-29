@@ -14,7 +14,9 @@ describe('Search Console Edge Function contract', () => {
     expect(CONFIG).toMatch(
       /\[functions\.kc-search-console-reports\]\s*verify_jwt\s*=\s*true/,
     );
-    expect(INDEX).toMatch(/admin\.auth\.getUser\(\s*match\[1\],?\s*\)/);
+    expect(INDEX).toMatch(/userClient\.auth\.getUser\(\s*match\[1\],?\s*\)/);
+    expect(INDEX).toContain('await isCurrentSessionActive(userClient)');
+    expect(INDEX).toContain('SESSION_NOT_ACTIVE');
     expect(INDEX).toContain('.from("profiles")');
     expect(INDEX).toContain('.select("is_admin")');
     expect(INDEX).toContain('profile?.is_admin === true');

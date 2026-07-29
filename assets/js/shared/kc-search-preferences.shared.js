@@ -20,6 +20,7 @@
   var PURPOSE_VERSION = 'search-personalization-v1';
   var STORAGE_KEY = 'kc_search_preferences_v1';
   var AFFINITY_STORAGE_KEY = 'kc_search_affinity_v1';
+  var ACCOUNT_STORAGE_SEPARATOR = ':';
   var MODES = Object.freeze({ STANDARD: 'standard', PERSONALIZED: 'personalized' });
   var MODULE_KEYS = Object.freeze([
     'achados-perdidos', 'caronas', 'compra-venda', 'eventos', 'moradia', 'oportunidades'
@@ -159,6 +160,73 @@
     return null;
   }
 
+  function normalizeUserId(value) {
+    var userId = String(value || '').trim();
+    if (!userId || userId.length > 160 || /[\u0000-\u001f\u007f]/.test(userId)) return '';
+    return userId;
+  }
+
+  function storageKeyForUser(userId) {
+    var normalized = normalizeUserId(userId);
+    if (!normalized) return '';
+    return STORAGE_KEY + ACCOUNT_STORAGE_SEPARATOR + encodeURIComponent(normalized);
+  }
+
+  function affinityStorageKeyForUser(userId) {
+    var normalized = normalizeUserId(userId);
+    if (!normalized) return '';
+    return AFFINITY_STORAGE_KEY + ACCOUNT_STORAGE_SEPARATOR + encodeURIComponent(normalized);
+  }
+
+  function resolveStorageScope(options, requireAccountOwner) {
+    var opts = options || {};
+    var accountScope = opts.scope === 'account' || !!opts.userId;
+    if (!accountScope) {
+      return {
+        scope: 'local',
+        userId: '',
+        preferencesKey: STORAGE_KEY,
+        affinityKey: AFFINITY_STORAGE_KEY
+      };
+    }
+    var userId = normalizeUserId(opts.userId);
+    if (!userId) {
+      if (requireAccountOwner) throw new Error('KC_SEARCH_PREFERENCES_ACCOUNT_OWNER_REQUIRED');
+      return null;
+    }
+    return {
+      scope: 'account',
+      userId: userId,
+      preferencesKey: storageKeyForUser(userId),
+      affinityKey: affinityStorageKeyForUser(userId)
+    };
+  }
+
+  function parseStoredPreferences(raw, scope) {
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!scope || scope.scope !== 'account') return parsed;
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      String(parsed.ownerUserId || '') !== scope.userId ||
+      !parsed.preferences ||
+      typeof parsed.preferences !== 'object'
+    ) {
+      return null;
+    }
+    return parsed.preferences;
+  }
+
+  function serializeStoredPreferences(state, scope) {
+    if (!scope || scope.scope !== 'account') return state;
+    return {
+      envelopeVersion: 1,
+      ownerUserId: scope.userId,
+      preferences: state
+    };
+  }
+
   function parseTime(value) {
     if (!value) return 0;
     var ms = Date.parse(value);
@@ -201,9 +269,11 @@
     var opts = options || {};
     var storage = resolveStorage(opts.storage);
     if (!storage) return defaultState();
+    var scope = resolveStorageScope(opts, false);
+    if (!scope) return defaultState();
     try {
-      var raw = storage.getItem(STORAGE_KEY);
-      return normalizeState(raw ? JSON.parse(raw) : null, opts.registry);
+      var raw = storage.getItem(scope.preferencesKey);
+      return normalizeState(parseStoredPreferences(raw, scope), opts.registry);
     } catch (_) {
       return defaultState();
     }
@@ -213,11 +283,12 @@
     var opts = options || {};
     var storage = resolveStorage(opts.storage);
     if (!storage) throw new Error('KC_SEARCH_PREFERENCES_STORAGE_UNAVAILABLE');
+    var scope = resolveStorageScope(opts, opts.scope === 'account' || !!opts.userId);
     var now = typeof opts.now === 'function' ? opts.now() : new Date().toISOString();
     var normalized = normalizeState(input, opts.registry);
     normalized.updatedAt = now;
     normalized.consent.updatedAt = now;
-    if (opts.scope === 'account') {
+    if (scope.scope === 'account') {
       normalized.sync.scope = 'account';
       normalized.sync.remoteUpdatedAt = now;
       normalized.sync.lastSyncedAt = now;
@@ -228,17 +299,21 @@
         normalized.sync.lastSyncedAt = normalized.sync.lastSyncedAt || null;
       }
     }
-    storage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-    if (!normalized.localAffinityConsent) storage.removeItem(AFFINITY_STORAGE_KEY);
+    storage.setItem(
+      scope.preferencesKey,
+      JSON.stringify(serializeStoredPreferences(normalized, scope))
+    );
+    if (!normalized.localAffinityConsent) storage.removeItem(scope.affinityKey);
     return clone(normalized);
   }
 
   function clear(options) {
     var opts = options || {};
     var storage = resolveStorage(opts.storage);
+    var scope = resolveStorageScope(opts, opts.scope === 'account' || !!opts.userId);
     if (storage) {
-      storage.removeItem(STORAGE_KEY);
-      storage.removeItem(AFFINITY_STORAGE_KEY);
+      storage.removeItem(scope.preferencesKey);
+      storage.removeItem(scope.affinityKey);
     }
     return defaultState();
   }
@@ -246,18 +321,30 @@
   function exportData(options) {
     var opts = options || {};
     var storage = resolveStorage(opts.storage);
+    var scope = resolveStorageScope(opts, opts.scope === 'account' || !!opts.userId);
     var state = load(opts);
     var affinity = null;
     if (state.localAffinityConsent && storage) {
       try {
-        var raw = storage.getItem(AFFINITY_STORAGE_KEY);
+        var raw = storage.getItem(scope.affinityKey);
         affinity = raw ? JSON.parse(raw) : null;
       } catch (_) {}
     }
     return {
       exportVersion: 2,
+      dataKind: 'kinocampus-search-preferences',
       exportedAt: typeof opts.now === 'function' ? opts.now() : new Date().toISOString(),
       scope: state.sync && state.sync.scope === 'account' ? 'account-and-local-cache' : 'local-browser-only',
+      includes: [
+        'saved-search-preferences',
+        'local-search-affinity-when-consented'
+      ],
+      excludes: [
+        'full-account-data',
+        'posts-and-media',
+        'messages-and-support-requests',
+        'authentication-secrets'
+      ],
       preferences: state,
       localAffinity: affinity
     };
@@ -308,6 +395,8 @@
     PURPOSE_VERSION: PURPOSE_VERSION,
     STORAGE_KEY: STORAGE_KEY,
     AFFINITY_STORAGE_KEY: AFFINITY_STORAGE_KEY,
+    storageKeyForUser: storageKeyForUser,
+    affinityStorageKeyForUser: affinityStorageKeyForUser,
     MODES: MODES,
     MODULE_KEYS: MODULE_KEYS,
     defaultState: defaultState,

@@ -15,14 +15,67 @@
   const FALLBACK_STATUS_VALUES = Object.freeze(['new', 'triaged', 'in_progress', 'resolved', 'archived']);
   const FALLBACK_PRIORITY_VALUES = Object.freeze(['low', 'normal', 'high', 'urgent']);
   const LGPD_STATUS_LABELS = Object.freeze({
+    confirmed: 'Confirmacao registrada',
+    partial_failure: 'Execucao parcial; revisao obrigatoria',
     diagnosed: 'Diagnóstico preparado',
     pending_confirmation: 'Aguardando confirmação',
     reversible_applied: 'Ocultação reversível aplicada',
     erased: 'Exclusão executada',
     cancelled: 'Cancelado',
     failed: 'Falhou',
+    post_core_redacted: 'Núcleo excluído; carregar estado seguro',
     'não iniciado': 'Não iniciado',
   });
+  const LGPD_ACTIONS = new Set([
+    'link_verified_identity',
+    'diagnose',
+    'apply_reversible',
+    'record_confirmation_delivery',
+    'cancel_reversible',
+    'generate_receipt',
+    'erase_confirmed',
+    'retry_finalize',
+  ]);
+  const LGPD_POST_CORE_ACTIONS = new Set([
+    'diagnose',
+    'generate_receipt',
+    'retry_finalize',
+  ]);
+  const LGPD_MUTATING_ACTIONS = new Set([
+    'link_verified_identity',
+    'apply_reversible',
+    'record_confirmation_delivery',
+    'cancel_reversible',
+    'erase_confirmed',
+    'retry_finalize',
+  ]);
+  const LGPD_RETRY_FINALIZE_FAILURE_STAGES = new Set([
+    'completion_email',
+    'completion_outbox',
+    'help_redaction',
+    'external_processors',
+    'data_subject_finalization',
+    'final_workflow',
+    'postconditions',
+  ]);
+  const EXPORT_MUTATING_ACTIONS = new Set([
+    'link_verified_ticket',
+    'record_processor',
+    'build',
+    'retry',
+    'purge',
+  ]);
+  const VERIFIED_ERASURE_IDENTITY_SOURCES = new Set([
+    'authenticated_account',
+    'admin_verified_anonymous_erasure',
+  ]);
+  const VERIFIED_DATA_EXPORT_IDENTITY_SOURCES = new Set([
+    'authenticated_account',
+    'admin_verified_anonymous_ticket',
+  ]);
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const SHA256_RE = /^[a-f0-9]{64}$/i;
+  const EXPORT_ARTIFACT_REF_RE = /^KEA-[A-F0-9]{32}$/;
 
   const state = {
     rows: [],
@@ -39,7 +92,15 @@
       isLoadingMore: false,
     },
     erasureResults: {},
+    erasureBusy: {},
+    erasureUncertain: {},
+    exportSupplementResults: {},
+    exportSupplementBusy: {},
+    exportSupplementUncertain: {},
     requestToken: 0,
+    authGeneration: 0,
+    authorizedAdminUserId: '',
+    isAuthorized: false,
   };
 
   let eventsBound = false;
@@ -52,7 +113,15 @@
     if (window.KCUtils && typeof window.KCUtils.escapeHtml === 'function') {
       return window.KCUtils.escapeHtml(String(value == null ? '' : value));
     }
-    return String(value == null ? '' : value);
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (character) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[character];
+    });
   }
 
   function toFiniteNumber(value, fallback) {
@@ -103,7 +172,80 @@
     const loading = $('#admin-loading');
     const content = $('#admin-content');
     if (loading) loading.style.display = active ? 'flex' : 'none';
-    if (content) content.style.display = active ? 'none' : 'block';
+    if (content) content.style.display = !active && state.isAuthorized ? 'block' : 'none';
+  }
+
+  function captureAdminContext() {
+    if (!state.isAuthorized || !state.authorizedAdminUserId) return null;
+    return {
+      generation: state.authGeneration,
+      userId: state.authorizedAdminUserId,
+    };
+  }
+
+  function isActiveAdminContext(context) {
+    return Boolean(
+      context
+      && state.isAuthorized
+      && context.generation === state.authGeneration
+      && context.userId === state.authorizedAdminUserId
+    );
+  }
+
+  function clearSensitiveAdminState(options = {}) {
+    state.authGeneration += 1;
+    state.requestToken += 1;
+    state.authorizedAdminUserId = '';
+    state.isAuthorized = false;
+    state.rows = [];
+    state.filters.status = 'all';
+    state.filters.type = 'all';
+    state.filters.priority = 'all';
+    state.filters.query = '';
+    state.pagination.limit = HELP_PAGE_SIZE;
+    state.pagination.totalCount = 0;
+    state.pagination.hasMore = false;
+    state.pagination.isLoadingMore = false;
+    state.erasureResults = Object.create(null);
+    state.erasureBusy = Object.create(null);
+    state.erasureUncertain = Object.create(null);
+    state.exportSupplementResults = Object.create(null);
+    state.exportSupplementBusy = Object.create(null);
+    state.exportSupplementUncertain = Object.create(null);
+
+    const queryField = $('#helpQueryFilter');
+    if (queryField) {
+      window.clearTimeout(queryField._kcTimer);
+      queryField._kcTimer = null;
+      queryField.value = '';
+    }
+    [
+      ['#helpStatusFilter', 'all'],
+      ['#helpTypeFilter', 'all'],
+      ['#helpPriorityFilter', 'all'],
+    ].forEach(([selector, value]) => {
+      const field = $(selector);
+      if (field) field.value = value;
+    });
+
+    const summary = $('#helpSummary');
+    const list = $('#helpRequestsList');
+    if (summary) summary.replaceChildren();
+    if (list) list.replaceChildren();
+    hideError();
+
+    const loading = $('#admin-loading');
+    const loadingText = loading && loading.querySelector('span');
+    if (loadingText) loadingText.textContent = 'Verificando acesso...';
+    if (loading) loading.style.display = options.showChecking === false ? 'none' : 'flex';
+    const content = $('#admin-content');
+    if (content) content.style.display = 'none';
+  }
+
+  function denyAdminAccess(message, generation) {
+    if (generation !== state.authGeneration) return;
+    clearSensitiveAdminState({ showChecking: false });
+    showError(message);
   }
 
   function showToast(message, type) {
@@ -127,7 +269,7 @@
       ? String(error.body.error || error.body.message || '').toLowerCase()
       : '';
     const value = [code, body].filter(Boolean).join(' ');
-    if (value.indexOf('invalid_session') >= 0 || value.indexOf('missing authorization') >= 0 || value.indexOf('unauthorized') >= 0) {
+    if (value.indexOf('invalid_session') >= 0 || value.indexOf('session_not_active') >= 0 || value.indexOf('missing authorization') >= 0 || value.indexOf('unauthorized') >= 0) {
       return 'Sua sessão administrativa expirou ou foi trocada. Entre novamente com uma conta administradora e recarregue esta página.';
     }
     if (value.indexOf('not_authorized') >= 0) {
@@ -139,6 +281,193 @@
     if (value.indexOf('valid_target_email_required') >= 0) {
       return 'Não foi possível identificar o e-mail alvo da conta. Confira o campo de e-mail do pedido de ajuda.';
     }
+    if (value.indexOf('valid_account_email_required') >= 0) {
+      return 'Informe o e-mail exato da conta cuja identidade foi verificada. O vínculo não aceita e-mail ausente ou inválido.';
+    }
+    if (value.indexOf('target_email_mismatch') >= 0) {
+      return 'O e-mail enviado pela interface não confere com o pedido armazenado. Recarregue o ticket antes de continuar.';
+    }
+    if (value.indexOf('identity_email_synchronization_failed') >= 0) {
+      return 'A identidade foi localizada pelo UUID, mas o e-mail operacional atual do Auth não pôde ser sincronizado com segurança. Nenhuma ação LGPD foi executada; atualize a fila e investigue antes de repetir.';
+    }
+    if (
+      value.indexOf('identity_link_capability_missing') >= 0
+      || value.indexOf('identity_link_workflow_missing') >= 0
+    ) {
+      return 'A vinculação auditada de identidade ainda não está disponível por completo. Não prossiga com ações LGPD até aplicar e validar as migrations necessárias.';
+    }
+    if (
+      value.indexOf('identity_link_result_invalid') >= 0
+      || value.indexOf('identity_link_failed') >= 0
+    ) {
+      return 'O servidor não comprovou o vínculo entre ticket, titular, protocolo e workflow. Recarregue a fila e revise o estado antes de tentar novamente.';
+    }
+    if (
+      value.indexOf('erasure_identity_account_not_unique') >= 0
+      || value.indexOf('erasure_identity_dsr_not_unique') >= 0
+      || value.indexOf('erasure_identity_workflow_not_unique') >= 0
+      || value.indexOf('erasure_identity_subject_conflict') >= 0
+      || value.indexOf('erasure_identity_link_conflict') >= 0
+      || value.indexOf('erasure_identity_dsr_materialization_conflict') >= 0
+    ) {
+      return 'Há registros conflitantes ou não únicos para essa identidade. O vínculo foi bloqueado; investigue conta, protocolo e workflow sem repetir ações destrutivas.';
+    }
+    if (
+      value.indexOf('erasure_identity_account_changed') >= 0
+      || value.indexOf('erasure_identity_help_changed') >= 0
+      || value.indexOf('erasure_identity_dsr_changed') >= 0
+      || value.indexOf('erasure_identity_workflow_changed') >= 0
+      || value.indexOf('erasure_identity_help_mismatch') >= 0
+      || value.indexOf('erasure_identity_dsr_mismatch') >= 0
+    ) {
+      return 'O ticket, a conta ou o protocolo mudou durante a verificação. Atualize a fila e refaça a conferência de identidade.';
+    }
+    if (
+      value.indexOf('erasure_identity_help_state_invalid') >= 0
+      || value.indexOf('erasure_identity_dsr_state_invalid') >= 0
+      || value.indexOf('erasure_identity_workflow_state_invalid') >= 0
+      || value.indexOf('erasure_identity_subject_closed') >= 0
+    ) {
+      return 'O pedido está em um estado que não permite criar ou repetir esse vínculo. Revise o histórico e o protocolo antes de qualquer nova ação.';
+    }
+    if (
+      value.indexOf('erasure_identity_profile_missing') >= 0
+      || value.indexOf('erasure_identity_help_not_found') >= 0
+    ) {
+      return 'A conta ou o ticket verificado deixou de existir. Atualize a fila e confirme o titular antes de continuar.';
+    }
+    if (
+      value.indexOf('identity_link_required') >= 0
+      || value.indexOf('data_subject_request_link_invalid') >= 0
+    ) {
+      return 'O vínculo canônico entre ticket, titular e protocolo não foi confirmado. Nenhuma ação foi executada; atualize a fila ou use somente a recuperação pós-exclusão indicada pelo sistema.';
+    }
+    if (
+      value.indexOf('identity_target_mismatch') >= 0
+      || value.indexOf('workflow_target_mismatch') >= 0
+      || value.indexOf('data_subject_request_link_mismatch') >= 0
+    ) {
+      return 'O titular autenticado, o ticket, o protocolo e a conta alvo não coincidem. O fluxo foi bloqueado para impedir alteração de dados de terceiros.';
+    }
+    if (
+      value.indexOf('identity_attestation_required') >= 0
+      || value.indexOf('identity_reference_required') >= 0
+      || value.indexOf('identity_channel_invalid') >= 0
+      || value.indexOf('identity_verified_at_required') >= 0
+      || value.indexOf('identity_verified_at_in_future') >= 0
+      || value.indexOf('erasure_identity_link_input_invalid') >= 0
+    ) {
+      return 'Este ticket legado/anônimo exige validação independente da identidade antes de qualquer ocultação de dados.';
+    }
+    if (value.indexOf('help_request_is_not_account_erasure') >= 0) {
+      return 'Este ticket não é uma solicitação de exclusão. Pedidos de acesso ou portabilidade não podem abrir controles destrutivos.';
+    }
+    if (value.indexOf('erasure_help_request_required') >= 0) {
+      return 'A exclusão exige um pedido de titular protocolado e classificado como exclusão de conta.';
+    }
+    if (value.indexOf('invalid_workflow_transition') >= 0 || value.indexOf('workflow_state_conflict') >= 0) {
+      return 'Esta ação não é válida no estado atual ou o pedido foi alterado em outra sessão. Execute um novo diagnóstico.';
+    }
+    if (value.indexOf('workflow_action_in_progress') >= 0) {
+      return 'Outra ação deste pedido já está em andamento. Aguarde e atualize o diagnóstico antes de repetir.';
+    }
+    if (value.indexOf('workflow_claim_capability_missing') >= 0 || value.indexOf('workflow_claim_lost') >= 0) {
+      return 'O controle atomico de concorrencia nao esta disponivel ou o claim foi perdido. Nao repita a etapa irreversivel; aplique a migracao correta e execute novo diagnostico.';
+    }
+    if (
+      value.indexOf('erasure_copy_request_not_linked') >= 0
+      || value.indexOf('erasure_copy_not_proven_delivered') >= 0
+    ) {
+      return 'O titular pediu uma cópia antes da exclusão. Gere a cópia e aguarde o download comprovado; a exclusão irreversível permanece bloqueada.';
+    }
+    if (
+      value.indexOf('erasure_copy_guidance_decision_required') >= 0
+      || value.indexOf('copy_gate_decision') >= 0
+    ) {
+      return 'Registre a decisão orientada do titular sobre receber uma cópia antes de continuar.';
+    }
+    if (
+      value.indexOf('erasure_copy_gate') >= 0
+      || value.indexOf('erasure_copy_preference') >= 0
+    ) {
+      return 'A verificação obrigatória da cópia anterior à exclusão não foi concluída. Execute um novo diagnóstico e corrija a pendência.';
+    }
+    if (value.indexOf('data_export_artifact_active_build_in_progress') >= 0) {
+      return 'Há uma exportação em geração com lease ativa. Aguarde o horário de nova tentativa indicado pelo backend e execute a exclusão novamente.';
+    }
+    if (value.indexOf('data_export_artifact') >= 0 || value.indexOf('export_artifact_purge') >= 0) {
+      return 'Não foi possível comprovar a remoção de todos os arquivos privados de exportação. A exclusão parou antes de apagar o banco/Auth; execute novamente após revisar o Storage.';
+    }
+    if (value.indexOf('data_subject_request_cancelled') >= 0) {
+      return 'O titular cancelou o protocolo. Nenhuma exclusao pode continuar; use apenas a restauracao/cancelamento reversivel pendente.';
+    }
+    if (value.indexOf('data_subject_request_completed') >= 0 || value.indexOf('data_subject_request_expired') >= 0) {
+      return 'O protocolo vinculado esta em estado terminal. Revise o historico antes de qualquer nova operacao.';
+    }
+    if (value.indexOf('data_subject_transition_capability_missing') >= 0 || value.indexOf('data_subject_status_conflict') >= 0) {
+      return 'Nao foi possivel sincronizar o protocolo do titular de forma atomica. O fluxo foi bloqueado para evitar divergencia de status.';
+    }
+    if (value.indexOf('confirmation_delivery_not_proven') >= 0) {
+      return 'O envio do e-mail de confirmação ainda não foi comprovado. Registre o envio automático ou manual antes de continuar.';
+    }
+    if (value.indexOf('confirmation_attestation_required') >= 0 || value.indexOf('confirmation_reference_required') >= 0) {
+      return 'Informe a referência da resposta do titular, a data e confirme a validação no e-mail da conta.';
+    }
+    if (value.indexOf('confirmation_predates_delivery') >= 0) {
+      return 'A resposta registrada é anterior ao envio do pedido de confirmação. Revise as datas.';
+    }
+    if (value.indexOf('delivery_attestation_required') >= 0 || value.indexOf('delivery_reference_required') >= 0) {
+      return 'Para registrar envio manual, informe referência, data e confirme que usou o e-mail titular.';
+    }
+    if (value.indexOf('erasure_preflight_blocked') >= 0 || value.indexOf('safe_erasure_schema_unavailable') >= 0) {
+      return 'A exclusão foi bloqueada pelo diagnóstico para evitar dano colateral. Revise conta administrativa, FKs, chat compartilhado, inventário, capability v3 e chave da caixa de saída criptografada.';
+    }
+    if (value.indexOf('account_ban_failed') >= 0) {
+      return 'Nao foi possivel bloquear novos logins antes da exclusao. Nenhuma limpeza irreversivel adicional deve continuar.';
+    }
+    if (value.indexOf('session_revocation_failed') >= 0) {
+      return 'A conta foi restringida, mas a revogacao de sessoes nao foi comprovada. O estado permanece parcial e exige correcao antes de retomar.';
+    }
+    if (value.indexOf('database_quiescence_verification_failed') >= 0) {
+      return 'A barreira contra novas escritas não pôde ser comprovada após revogar as sessões. Nenhuma limpeza adicional deve continuar.';
+    }
+    if (value.indexOf('storage_cleanup_failed') >= 0 || value.indexOf('storage_inventory_incomplete') >= 0 || value.indexOf('storage_verification_failed') >= 0) {
+      return 'A limpeza de arquivos não foi comprovada. Nada deve ser marcado como concluído; corrija o Storage e tente novamente.';
+    }
+    if (value.indexOf('external_processor_follow_up_required') >= 0) {
+      return 'O núcleo da conta foi tratado, mas operadores externos ainda precisam de revisão registrada antes do recibo final.';
+    }
+    if (value.indexOf('provider_outcomes_incomplete') >= 0 || value.indexOf('provider_attestation_required') >= 0) {
+      return 'Conclua e ateste a revisão de cada operador externo listado antes de finalizar.';
+    }
+    if (value.indexOf('notification_provider_retention_required') >= 0) {
+      return 'O provedor SMTP não pode ser marcado como excluído antes de enviar o comprovante final. Documente a retenção temporária, a base e a data futura de revisão.';
+    }
+    if (value.indexOf('provider_retention_') >= 0) {
+      return 'Para cada retenção, registre uma base/justificativa e uma data futura de revisão.';
+    }
+    if (
+      value.indexOf('completion_outbox_unavailable') >= 0
+      || value.indexOf('completion_outbox_encryption_unavailable') >= 0
+      || value.indexOf('completion_outbox_key_') >= 0
+    ) {
+      return 'A caixa de saída criptografada do comprovante final não está pronta. Corrija a chave externa e a migração antes de qualquer exclusão irreversível.';
+    }
+    if (value.indexOf('completion_outbox_expired_manual_delivery_required') >= 0) {
+      return 'O destinatário cifrado expirou e foi removido. Não tente reconstruí-lo: entregue o comprovante por um canal já verificado e registre a evidência manual completa.';
+    }
+    if (value.indexOf('completion_outbox_delivery_in_progress') >= 0) {
+      return 'Já existe uma tentativa de entrega do comprovante em andamento. Aguarde a conclusão e atualize o ticket antes de tentar novamente.';
+    }
+    if (value.indexOf('completion_outbox_delivery_ambiguous') >= 0) {
+      return 'O SMTP respondeu, mas o aceite não foi consolidado no banco. Verifique mailbox/log do provedor antes de reenviar; se houve entrega, registre a evidência manual.';
+    }
+    if (value.indexOf('completion_notification_pending') >= 0) {
+      return 'A exclusão e o recibo foram finalizados, mas o SMTP não confirmou a entrega. Tente novamente; se entregar por um canal verificado, preencha a evidência manual completa.';
+    }
+    if (value.indexOf('completion_email_failed') >= 0) {
+      return 'A conclusão não foi enviada. O fluxo permanece parcial e pode ser retomado sem repetir a exclusão do núcleo.';
+    }
     if (value.indexOf('confirmation_phrase_mismatch') >= 0) {
       return 'A frase de confirmação irreversível não confere com o e-mail alvo.';
     }
@@ -149,45 +478,64 @@
     return 'Não foi possível processar o fluxo LGPD. Recarregue a página e confirme que você está logado como administrador.';
   }
 
-  async function checkAdminAccess() {
+  async function checkAdminAccess(expectedContext = {}) {
+    const generation = Number.isInteger(expectedContext.generation)
+      ? expectedContext.generation
+      : state.authGeneration;
+    const expectedUserId = String(expectedContext.userId || '').trim();
+    const hasSessionUser = Object.prototype.hasOwnProperty.call(expectedContext, 'sessionUser');
+    const isCurrentGeneration = () => generation === state.authGeneration;
+    const rejectAccess = (message) => {
+      if (isCurrentGeneration()) denyAdminAccess(message, generation);
+      return null;
+    };
     const driver = window.KCAPI && window.KCAPI.ENV && window.KCAPI.ENV.driver;
-    if (driver === 'local') return true;
+    if (driver === 'local') {
+      const localUserId = 'local-admin';
+      if (expectedUserId && expectedUserId !== localUserId) {
+        return rejectAccess('A sessão administrativa foi trocada. Recarregue o painel.');
+      }
+      return isCurrentGeneration() ? { generation, userId: localUserId } : null;
+    }
     if (driver !== 'supabase') {
-      showError('O painel de ajuda requer driver=supabase.');
-      return false;
+      return rejectAccess('O painel de ajuda requer driver=supabase.');
     }
 
-    const user = await window.KCAPI.getCurrentUser();
+    const user = hasSessionUser
+      ? expectedContext.sessionUser
+      : await window.KCAPI.getCurrentUser();
+    if (!isCurrentGeneration()) return null;
     if (!user) {
-      showError('Você precisa estar autenticado para acessar este painel.');
-      return false;
+      return rejectAccess('Você precisa estar autenticado para acessar este painel.');
+    }
+    const userId = String(user.id || '').trim();
+    if (!userId || (expectedUserId && expectedUserId !== userId)) {
+      return rejectAccess('A sessão administrativa foi trocada. Entre novamente com uma conta administradora.');
     }
 
     const client = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
       ? window.KCSupabase.getClient()
       : null;
     if (!client) {
-      showError('Supabase client não disponível.');
-      return false;
+      return rejectAccess('Supabase client não disponível.');
     }
 
     const profileResult = await client
       .from('profiles')
       .select('is_admin')
-      .eq('id', user.id)
+      .eq('id', userId)
       .maybeSingle();
 
+    if (!isCurrentGeneration()) return null;
     if (profileResult && profileResult.error) {
-      showError('Não foi possível validar seu acesso administrativo.');
-      return false;
+      return rejectAccess('Não foi possível validar seu acesso administrativo.');
     }
 
     if (!profileResult.data || profileResult.data.is_admin !== true) {
-      showError('Acesso negado. Apenas administradores podem acessar este painel.');
-      return false;
+      return rejectAccess('Acesso negado. Apenas administradores podem acessar este painel.');
     }
 
-    return true;
+    return { generation, userId };
   }
 
   function populateTypeFilter() {
@@ -229,6 +577,10 @@
   function renderSummary(rows) {
     const target = $('#helpSummary');
     if (!target) return;
+    if (!state.isAuthorized) {
+      target.replaceChildren();
+      return;
+    }
 
     const list = Array.isArray(rows) ? rows : [];
     const totalCount = Math.max(list.length, toFiniteNumber(state.pagination.totalCount, list.length));
@@ -248,6 +600,12 @@
     const list = $('#helpRequestsList');
     if (!list) return;
     list.innerHTML = '<div class="kc-admin-help-empty">Nenhum pedido de ajuda encontrado para os filtros atuais.</div>';
+  }
+
+  function renderUnavailable() {
+    const list = $('#helpRequestsList');
+    if (!list) return;
+    list.innerHTML = '<div class="kc-admin-help-empty" role="status">A fila não pôde ser consultada agora. Os totais exibidos não representam o estado atual; tente novamente.</div>';
   }
 
   function buildLabel(map, value, fallback) {
@@ -328,7 +686,9 @@
 
   function getLgpdTargetEmail(row) {
     const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
-    const explicit = String(metadata.account_email || metadata.email || row.contact_email || '').trim().toLowerCase();
+    // contact_email is the canonical Help field checked by the server-side binder.
+    // Anonymous metadata remains untrusted until the verified link normalizes it.
+    const explicit = String(row.contact_email || metadata.account_email || metadata.email || '').trim().toLowerCase();
     if (explicit) return explicit;
     const haystack = [row && row.subject, row && row.message, row && row.topic].join(' ');
     const match = haystack.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
@@ -338,6 +698,19 @@
   function isLgpdErasureRequest(row) {
     if (!row || typeof row !== 'object') return false;
     const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const requestKind = String(metadata.request_kind || '').trim().toLowerCase();
+    const type = String(row.type || '').trim().toLowerCase();
+    const topic = String(row.topic || '').trim().toLowerCase();
+    const subtopic = String(row.subtopic || '').trim().toLowerCase();
+    const canonicalTuple = type === 'account_access'
+      && topic === 'onboarding_settings'
+      && subtopic === 'account_deletion';
+    if (requestKind === 'data_access_copy' || requestKind === 'data_portability') return false;
+    if (requestKind) return requestKind === 'account_erasure' && canonicalTuple;
+    if (canonicalTuple) return true;
+
+    // Fallback exclusivo para tickets legados sem discriminador estruturado.
+    // A simples menção a "LGPD" nunca deve abrir controles destrutivos.
     const text = normalizeSearchText([
       row.type,
       row.topic,
@@ -346,29 +719,426 @@
       row.message,
       row.contact_email,
       metadata.account_email,
-      metadata.request_kind,
     ].join(' '));
-    const hasErasureSignal = /(lgpd|artigo 18|exclusao|excluir|eliminacao|eliminar|remocao|remover|dados cadastrais|apagar conta|deletar conta)/.test(text);
-    const isAccountRequest = String(row.type || '').trim() === 'account_access';
-    return hasErasureSignal || (isAccountRequest && /(conta|dados|perfil)/.test(text) && /(excl|remov|elimin|apag|delet)/.test(text));
+    const isAccountRequest = type === 'account_access' && topic === 'onboarding_settings';
+    const hasErasureVerb = /\b(exclusao|excluir|eliminacao|eliminar|remocao|remover|apagar|deletar|encerrar)\b/.test(text);
+    const hasAccountTarget = /\b(minha conta|conta do usuario|conta e dados|perfil|dados pessoais|dados cadastrais)\b/.test(text);
+    return isAccountRequest && hasErasureVerb && hasAccountTarget;
+  }
+
+  function getHelpMetadata(row) {
+    return row && row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {};
+  }
+
+  function hasCanonicalErasureLink(row) {
+    if (!isLgpdErasureRequest(row)) return false;
+    const metadata = getHelpMetadata(row);
+    return Boolean(
+      UUID_RE.test(String(row && row.user_id || '').trim())
+      && UUID_RE.test(String(metadata.data_subject_request_id || '').trim())
+      && VERIFIED_ERASURE_IDENTITY_SOURCES.has(
+        String(metadata.identity_source || '').trim().toLowerCase()
+      )
+    );
+  }
+
+  function isRedactedPostCoreErasure(row) {
+    if (!isLgpdErasureRequest(row)) return false;
+    const metadata = getHelpMetadata(row);
+    const marker = metadata.lgpd_erasure && typeof metadata.lgpd_erasure === 'object'
+      ? metadata.lgpd_erasure
+      : {};
+    return Boolean(
+      !String(row && row.user_id || '').trim()
+      && String(row && row.status || '').trim() === 'resolved'
+      && marker.contact_redacted === true
+      && marker.content_redacted === true
+      && UUID_RE.test(String(marker.request_id || '').trim())
+      && SHA256_RE.test(String(marker.subject_hash || '').trim())
+      && Number.isFinite(Date.parse(String(marker.erased_at || '')))
+    );
+  }
+
+  function isPostCoreProbeCandidate(row) {
+    if (!isLgpdErasureRequest(row) || String(row && row.user_id || '').trim()) return false;
+    const metadata = getHelpMetadata(row);
+    return Boolean(
+      UUID_RE.test(String(metadata.data_subject_request_id || '').trim())
+      && VERIFIED_ERASURE_IDENTITY_SOURCES.has(
+        String(metadata.identity_source || '').trim().toLowerCase()
+      )
+    );
+  }
+
+  function hasConfirmedPostCoreWorkflow(result) {
+    const request = result && result.request && typeof result.request === 'object'
+      ? result.request
+      : {};
+    const metadata = request.metadata && typeof request.metadata === 'object'
+      ? request.metadata
+      : {};
+    const receipt = request.receipt && typeof request.receipt === 'object'
+      ? request.receipt
+      : (result && result.receipt && typeof result.receipt === 'object' ? result.receipt : {});
+    return Boolean(
+      request.status === 'erased'
+      || metadata.auth_deleted === true
+      || receipt.result === 'erased'
+      || receipt.auth_deleted === true
+    );
+  }
+
+  function hasRecoverablePostCoreWorkflow(result) {
+    const request = result && result.request && typeof result.request === 'object'
+      ? result.request
+      : {};
+    const metadata = request.metadata && typeof request.metadata === 'object'
+      ? request.metadata
+      : {};
+    const status = String(request.status || '').trim();
+    const failureStage = String(metadata.failure_stage || '').trim();
+    const completionStatus = String(metadata.completion_email_status || '').trim();
+    return Boolean(
+      metadata.auth_deleted === true
+      && (
+        (
+          ['failed', 'partial_failure'].includes(status)
+          && LGPD_RETRY_FINALIZE_FAILURE_STAGES.has(failureStage)
+        )
+        || (
+          status === 'erased'
+          && metadata.notification_pending === true
+          && !['sent', 'sent_manual'].includes(completionStatus)
+        )
+      )
+    );
+  }
+
+  function isAuthoritativeRecoverableRetryFailure(result, diagnosedResult) {
+    if (!result || result.ok !== false || !diagnosedResult) return false;
+    const error = result.error && typeof result.error === 'object'
+      ? result.error
+      : {};
+    const envelope = error.body && typeof error.body === 'object'
+      ? error.body
+      : result;
+    const projectedRequest = envelope.request && typeof envelope.request === 'object'
+      ? envelope.request
+      : (result.request && typeof result.request === 'object' ? result.request : null);
+    if (
+      envelope.retryable !== true
+      || String(envelope.next_action || '').trim() !== 'retry_finalize'
+      || !projectedRequest
+      || !hasRecoverablePostCoreWorkflow({ request: projectedRequest })
+      || !hasRecoverablePostCoreWorkflow(diagnosedResult)
+    ) return false;
+
+    const diagnosedRequest = diagnosedResult.request && typeof diagnosedResult.request === 'object'
+      ? diagnosedResult.request
+      : {};
+    const projectedMetadata = projectedRequest.metadata && typeof projectedRequest.metadata === 'object'
+      ? projectedRequest.metadata
+      : {};
+    const diagnosedMetadata = diagnosedRequest.metadata && typeof diagnosedRequest.metadata === 'object'
+      ? diagnosedRequest.metadata
+      : {};
+    const optionalFields = [
+      'notification_pending',
+      'completion_email_status',
+    ];
+    return Boolean(
+      String(projectedRequest.status || '').trim() === String(diagnosedRequest.status || '').trim()
+      && projectedMetadata.auth_deleted === true
+      && diagnosedMetadata.auth_deleted === true
+      && String(projectedMetadata.failure_stage || '').trim()
+        === String(diagnosedMetadata.failure_stage || '').trim()
+      && optionalFields.every((field) => (
+        !Object.prototype.hasOwnProperty.call(projectedMetadata, field)
+        || projectedMetadata[field] === diagnosedMetadata[field]
+      ))
+    );
+  }
+
+  function canOfferErasureIdentityLink(row) {
+    if (!isLgpdErasureRequest(row)) return false;
+    const metadata = getHelpMetadata(row);
+    return Boolean(
+      !String(row && row.user_id || '').trim()
+      && !String(metadata.data_subject_request_id || '').trim()
+      && !isRedactedPostCoreErasure(row)
+    );
+  }
+
+  function canProbeErasureWorkflow(row) {
+    return hasCanonicalErasureLink(row)
+      || isRedactedPostCoreErasure(row)
+      || isPostCoreProbeCandidate(row);
+  }
+
+  function canRunErasureAction(row, action) {
+    if (!LGPD_ACTIONS.has(action) || !isLgpdErasureRequest(row)) return false;
+    const id = String(row && row.id || '').trim();
+    if (
+      state.erasureUncertain[id]
+      && LGPD_MUTATING_ACTIONS.has(action)
+    ) return false;
+    if (action === 'link_verified_identity') return canOfferErasureIdentityLink(row);
+    if (hasCanonicalErasureLink(row)) return true;
+    if (!LGPD_POST_CORE_ACTIONS.has(action)) return false;
+    if (action === 'diagnose' || action === 'generate_receipt') {
+      return canProbeErasureWorkflow(row);
+    }
+    const result = state.erasureResults[String(row && row.id || '')] || null;
+    return hasRecoverablePostCoreWorkflow(result);
+  }
+
+  function getDataExportRequestKind(row) {
+    if (!row || typeof row !== 'object') return '';
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const requestKind = String(metadata.request_kind || '').trim().toLowerCase();
+    const type = String(row.type || '').trim().toLowerCase();
+    const topic = String(row.topic || '').trim().toLowerCase();
+    const subtopic = String(row.subtopic || '').trim().toLowerCase();
+    const canonicalKind = type === 'account_access' && topic === 'onboarding_settings'
+      ? (
+          subtopic === 'account_data_copy'
+            ? 'data_access_copy'
+            : subtopic === 'account_data_portability'
+              ? 'data_portability'
+              : ''
+        )
+      : '';
+    if (requestKind && requestKind !== canonicalKind) return '';
+    return requestKind || canonicalKind;
+  }
+
+  function isDataExportSupplementRequest(row) {
+    return Boolean(getDataExportRequestKind(row));
+  }
+
+  function hasCanonicalDataExportLink(row) {
+    if (!isDataExportSupplementRequest(row)) return false;
+    const metadata = row && row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {};
+    return Boolean(
+      UUID_RE.test(String(row && row.user_id || '').trim())
+      && UUID_RE.test(String(metadata.data_subject_request_id || '').trim())
+      && EXPORT_ARTIFACT_REF_RE.test(
+        String(metadata.export_artifact_ref || '').trim().toUpperCase()
+      )
+      && VERIFIED_DATA_EXPORT_IDENTITY_SOURCES.has(
+        String(metadata.identity_source || '').trim().toLowerCase()
+      )
+    );
+  }
+
+  function isDataExportCleanupCandidate(row) {
+    if (!isDataExportSupplementRequest(row) || String(row && row.user_id || '').trim()) {
+      return false;
+    }
+    const metadata = getHelpMetadata(row);
+    return Boolean(
+      UUID_RE.test(String(metadata.data_subject_request_id || '').trim())
+      && VERIFIED_DATA_EXPORT_IDENTITY_SOURCES.has(
+        String(metadata.identity_source || '').trim().toLowerCase()
+      )
+      && EXPORT_ARTIFACT_REF_RE.test(
+        String(metadata.export_artifact_ref || '').trim().toUpperCase()
+      )
+      && String(metadata.export_artifact_status || '').trim()
+    );
+  }
+
+  function canOfferDataExportIdentityLink(row) {
+    if (!isDataExportSupplementRequest(row)) return false;
+    const metadata = getHelpMetadata(row);
+    return Boolean(
+      !String(row && row.user_id || '').trim()
+      && !String(metadata.data_subject_request_id || '').trim()
+      && !String(metadata.export_artifact_ref || '').trim()
+    );
+  }
+
+  function isDataExportPurgeEligible(status, expiresAt) {
+    const normalized = String(status || '').trim().toLowerCase();
+    const expiry = Date.parse(String(expiresAt || ''));
+    const expired = Number.isFinite(expiry) && expiry <= Date.now();
+    return ['failed', 'expired', 'delivered'].includes(normalized)
+      || (['ready', 'download_reserved'].includes(normalized) && expired);
+  }
+
+  function canRunDataExportAction(row, action) {
+    if (!isDataExportSupplementRequest(row)) return false;
+    const id = String(row && row.id || '').trim();
+    const uncertain = Boolean(state.exportSupplementUncertain[id]);
+    if (
+      uncertain
+      && EXPORT_MUTATING_ACTIONS.has(action)
+    ) return false;
+    if (
+      action === 'diagnose'
+      && uncertain
+      && (hasCanonicalDataExportLink(row) || isDataExportCleanupCandidate(row))
+    ) return true;
+    if (action === 'link_verified_ticket') return canOfferDataExportIdentityLink(row);
+    if (hasCanonicalDataExportLink(row)) return true;
+    if (action !== 'purge' || !isDataExportCleanupCandidate(row)) return false;
+    const metadata = getHelpMetadata(row);
+    return isDataExportPurgeEligible(
+      metadata.export_artifact_status,
+      metadata.export_artifact_expires_at
+    );
+  }
+
+  function buildDataExportSupplementPanel(row) {
+    if (!isDataExportSupplementRequest(row)) return '';
+    const id = String(row.id || '');
+    const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const requestKind = getDataExportRequestKind(row);
+    const result = state.exportSupplementResults[id] || {};
+    const artifact = result.artifact && typeof result.artifact === 'object'
+      ? result.artifact
+      : {};
+    const artifactRef = String(artifact.artifact_ref || metadata.export_artifact_ref || '');
+    // A response body is not authority for unlocking assisted export work.
+    // The Help row must be reloaded with its canonical owner and DSR relation.
+    const canonicalLinked = hasCanonicalDataExportLink(row);
+    const cleanupOnly = isDataExportCleanupCandidate(row);
+    const linked = canonicalLinked || cleanupOnly;
+    const status = String(artifact.status || metadata.export_artifact_status || (linked ? 'queued' : 'identity_pending'));
+    const busy = state.exportSupplementBusy[id] === true;
+    const uncertain = Boolean(state.exportSupplementUncertain[id]);
+    const mutationDisabled = busy || uncertain;
+    if (!linked) {
+      if (!canOfferDataExportIdentityLink(row)) {
+        return [
+          `<section class="kc-admin-lgpd-panel" data-export-supplement-panel${busy ? ' aria-busy="true"' : ''}>`,
+          '  <div class="kc-admin-lgpd-panel__head">',
+          '    <div><strong><i class="fas fa-file-shield" aria-hidden="true"></i> Cópia integral bloqueada</strong><p>A relação entre ticket, titular, protocolo e artefato está incompleta. Não vincule novamente nem inicie coleta; faça uma revisão técnica do DSR.</p></div>',
+          '    <span class="kc-admin-help-chip">revisão técnica</span>',
+          '  </div>',
+          '</section>',
+        ].join('');
+      }
+      const accountEmail = getLgpdTargetEmail(row);
+      return [
+        `<section class="kc-admin-lgpd-panel" data-export-supplement-panel${busy ? ' aria-busy="true"' : ''}>`,
+        '  <div class="kc-admin-lgpd-panel__head">',
+        '    <div><strong><i class="fas fa-file-shield" aria-hidden="true"></i> Vincular cópia integral</strong><p>Este pedido ainda não possui protocolo autenticado. Valide a titularidade antes de criar o vínculo e iniciar a coleta assistida.</p></div>',
+        '    <span class="kc-admin-help-chip">identidade pendente</span>',
+        '  </div>',
+        '  <div class="kc-admin-lgpd-danger" data-export-identity-link>',
+        `    <label><span>E-mail exato da conta</span><input type="email" data-export-account-email value="${esc(accountEmail)}" autocomplete="off"${mutationDisabled ? ' disabled' : ''} /></label>`,
+        '    <label><span>Canal de validação da identidade</span><select data-export-identity-channel',
+        mutationDisabled ? ' disabled>' : '>',
+        '      <option value="verified_email_challenge">Desafio respondido no e-mail da conta</option>',
+        '      <option value="support_mailbox_reply">Resposta validada na caixa de suporte</option>',
+        '      <option value="identity_document_review">Documento revisado por canal seguro</option>',
+        '      <option value="in_person_verification">Validação presencial</option>',
+        '    </select></label>',
+        `    <label><span>Referência da validação</span><input type="text" data-export-identity-reference placeholder="Message-ID, protocolo ou registro; será armazenado somente como hash" autocomplete="off"${mutationDisabled ? ' disabled' : ''} /></label>`,
+        `    <label><span>Identidade validada em</span><input type="datetime-local" data-export-identity-at${mutationDisabled ? ' disabled' : ''} /></label>`,
+        `    <label><span><input type="checkbox" data-export-identity-attested style="width:auto"${mutationDisabled ? ' disabled' : ''} /> Confirmo que validei a identidade antes de vincular o ticket à conta</span></label>`,
+        `    <input type="hidden" data-export-request-kind value="${esc(requestKind)}" />`,
+        `    <button type="button" data-export-action="link_verified_ticket"${mutationDisabled ? ' disabled' : ''}><i class="fas fa-link" aria-hidden="true"></i> Validar e criar protocolo</button>`,
+        '  </div>',
+        '</section>',
+      ].join('');
+    }
+    const expiresAt = Date.parse(String(artifact.expires_at || ''));
+    const expired = Number.isFinite(expiresAt) && expiresAt <= Date.now();
+    const purgeEligible = isDataExportPurgeEligible(
+      status,
+      artifact.expires_at || metadata.export_artifact_expires_at
+    );
+    const buildAllowed = ['queued', 'failed', 'expired'].includes(status)
+      || (['ready', 'download_reserved'].includes(status) && expired);
+    const buildAction = status === 'failed' ? 'retry' : 'build';
+    const buildLabel = status === 'failed'
+      ? 'Tentar novamente'
+      : status === 'expired' || expired
+        ? 'Reabrir download'
+        : 'Gerar complemento';
+    const processors = !cleanupOnly && Array.isArray(artifact.processors)
+      ? artifact.processors
+      : [];
+    const pending = processors.filter((item) => item && item.status === 'manual_follow_up');
+    const processorFields = pending.map((item) => [
+      '<div class="kc-admin-lgpd-danger" data-export-processor-row>',
+      `  <p><strong>${esc(item.processor)}</strong> · ${esc(item.treatment)}</p>`,
+      `  <input type="hidden" data-export-processor value="${esc(item.processor)}" />`,
+      `  <label><span>Resultado</span><select data-export-outcome${busy ? ' disabled' : ''}><option value="supplied_out_of_band">Entregue fora da plataforma (não incluído no JSON)</option><option value="no_account_data">Operador confirmou ausência de dados da conta</option></select></label>`,
+      `  <label><span>Referência da evidência</span><input type="text" data-export-evidence placeholder="Ticket ou registro; será guardado somente como hash" autocomplete="off"${busy ? ' disabled' : ''} /></label>`,
+      `  <label data-export-delivery-field><span>Canal da entrega externa</span><select data-export-delivery-channel${busy ? ' disabled' : ''}><option value="">Selecione</option><option value="support_mailbox">Caixa de suporte</option><option value="secure_file_transfer">Transferência segura de arquivo</option><option value="provider_portal">Portal do operador</option><option value="in_person">Entrega presencial</option></select></label>`,
+      `  <label data-export-delivery-field><span>Entregue fora da plataforma em</span><input type="datetime-local" data-export-delivered-at${busy ? ' disabled' : ''} /></label>`,
+      `  <label data-export-delivery-field><span><input type="checkbox" data-export-delivery-attested style="width:auto"${busy ? ' disabled' : ''} /> Confirmo que a entrega externa foi concluída e que esse conteúdo não está no JSON</span></label>`,
+      `  <button type="button" data-export-processor-save${mutationDisabled ? ' disabled' : ''}>Registrar evidência</button>`,
+      '</div>',
+    ].join('')).join('');
+    return [
+      `<section class="kc-admin-lgpd-panel" data-export-supplement-panel${busy ? ' aria-busy="true"' : ''}>`,
+      '  <div class="kc-admin-lgpd-panel__head">',
+      '    <div><strong><i class="fas fa-file-shield" aria-hidden="true"></i> Complemento integral da cópia</strong><p>O atendimento não pode ser fechado enquanto houver operador pendente ou até a entrega integral ser comprovada.</p></div>',
+      `    <span class="kc-admin-help-chip">${esc(status)}</span>`,
+      '  </div>',
+      uncertain
+        ? '  <p class="kc-admin-lgpd-warning">Resultado anterior indeterminado: não repita mutações até concluir um novo diagnóstico seguro.</p>'
+        : '',
+      '  <div class="kc-admin-help-meta">',
+      `    <div><strong>Artefato</strong><span>${esc(artifactRef || 'A diagnosticar')}</span></div>`,
+      `    <div><strong>Bloqueios</strong><span>${esc(Number(artifact.blocking_processor_count || pending.length))}</span></div>`,
+      `    <div><strong>Expira em</strong><span>${esc(formatDateTime(artifact.expires_at))}</span></div>`,
+      '  </div>',
+      processorFields,
+      '  <div class="kc-admin-lgpd-actions">',
+      `    <button type="button" data-export-action="diagnose"${busy || (cleanupOnly && !uncertain) ? ' disabled' : ''}><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Diagnosticar</button>`,
+      `    <button type="button" data-export-action="${buildAction}"${mutationDisabled || cleanupOnly || !buildAllowed ? ' disabled' : ''} title="${esc(cleanupOnly ? 'Conta removida: somente o expurgo elegível permanece disponível' : buildAllowed ? buildLabel : 'Diagnostique ou aguarde o estado elegível')}"><i class="fas fa-box-archive" aria-hidden="true"></i> ${esc(buildLabel)}</button>`,
+      `    <button type="button" data-export-action="purge"${mutationDisabled || !purgeEligible ? ' disabled' : ''} title="${esc(purgeEligible ? 'Remove definitivamente o arquivo privado já elegível' : 'Disponível somente após entrega, falha ou expiração')}"><i class="fas fa-trash-can" aria-hidden="true"></i> Expurgar artefato elegível</button>`,
+      '  </div>',
+      '</section>',
+    ].join('');
   }
 
   function summarizeCounts(counts) {
     const input = counts && typeof counts === 'object' ? counts : {};
     const labels = {
+      active_admins: 'Administradores ativos',
+      comment_likes_on_authored_comments: 'Curtidas de terceiros preservadas',
+      user_blocks_received: 'Bloqueios de seguranca recebidos',
+      user_ratings_received: 'Avaliacoes de terceiros recebidas',
       profiles: 'Perfil',
       posts: 'Publicações',
       post_media: 'Mídias',
       comments: 'Comentários',
+      comment_likes: 'Curtidas em comentários',
       post_votes: 'Votos',
       saved_posts: 'Salvos',
       reports: 'Denúncias',
+      post_view_events: 'Visualizações vinculadas',
+      search_queries: 'Buscas vinculadas',
+      home_category_affinity: 'Afinidade da página inicial',
+      search_preferences: 'Preferências de busca',
       help_requests: 'Pedidos de ajuda',
       chat_conversations: 'Conversas',
       chat_messages: 'Mensagens',
+      chat_messages_third_party: 'Mensagens de terceiros em conversas',
+      chat_read_state: 'Estado de leitura',
+      chat_reactions: 'Reações no chat',
+      notifications: 'Notificações',
       notification_preferences: 'Preferências',
+      notification_channel_targets: 'Destinos de notificação',
+      notification_delivery_outbox: 'Entregas pendentes',
+      notification_delivery_attempts: 'Tentativas de entrega',
       privacy_analytics_events: 'Eventos de analytics',
       privacy_consent_events: 'Consentimentos',
+      user_legal_acceptances: 'Aceites legais',
+      user_blocks: 'Bloqueios',
+      user_ratings: 'Avaliações',
+      kc_invited_emails: 'Convites por e-mail',
+      audit_log_actor: 'Eventos de auditoria',
     };
     const keys = Object.keys(labels);
     return keys
@@ -388,16 +1158,89 @@
     ].join('');
   }
 
+  function getManualProviderIds(result) {
+    const diagnostics = result && result.diagnostics && typeof result.diagnostics === 'object' ? result.diagnostics : {};
+    const request = result && result.request && typeof result.request === 'object' ? result.request : {};
+    const metadata = request.metadata && typeof request.metadata === 'object' ? request.metadata : {};
+    const tasks = Array.isArray(diagnostics.external_processors)
+      ? diagnostics.external_processors
+      : (Array.isArray(metadata.external_processors) ? metadata.external_processors : []);
+    return tasks
+      .filter((task) => task && task.status === 'manual_policy_follow_up')
+      .map((task) => String(task.provider || '').trim())
+      .filter(Boolean);
+  }
+
   function buildLgpdPanel(row) {
     if (!isLgpdErasureRequest(row)) return '';
     const targetEmail = getLgpdTargetEmail(row);
     const result = state.erasureResults[String(row.id || '')] || null;
     const request = result && result.request ? result.request : null;
+    const id = String(row && row.id || '');
+    const busy = state.erasureBusy[id] === true;
+    const uncertain = Boolean(state.erasureUncertain[id]);
+    // Before core erasure, only a canonical owner + DSR link unlocks mutations.
+    // Once Auth/profile removal starts, Help.user_id is intentionally cleared,
+    // so only the narrow post-core recovery/read-only surface may remain.
+    const canonicalIdentityLinked = hasCanonicalErasureLink(row);
+    const redactedPostCore = isRedactedPostCoreErasure(row);
+    const postCoreProbeCandidate = isPostCoreProbeCandidate(row);
+    const confirmedPostCore = hasConfirmedPostCoreWorkflow(result);
+    const identityLinkRequired = canOfferErasureIdentityLink(row);
+    const identityStateInconsistent = !canonicalIdentityLinked
+      && !identityLinkRequired
+      && !redactedPostCore
+      && !postCoreProbeCandidate;
+    const workflowActionDisabled = busy || uncertain || !canonicalIdentityLinked;
+    const readOnlyActionDisabled = busy || !canProbeErasureWorkflow(row);
+    const retryActionDisabled = busy || uncertain || !(
+      canonicalIdentityLinked
+      || hasRecoverablePostCoreWorkflow(result)
+    );
     const diagnostics = result && result.diagnostics ? result.diagnostics : null;
     const countsHtml = diagnostics && diagnostics.counts ? summarizeCounts(diagnostics.counts) : '';
-    const status = request && request.status ? String(request.status) : 'não iniciado';
+    const redactedMarker = redactedPostCore
+      ? getHelpMetadata(row).lgpd_erasure
+      : {};
+    const status = request && request.status
+      ? String(request.status)
+      : redactedPostCore
+        ? 'post_core_redacted'
+        : 'não iniciado';
+    const requestMetadata = request && request.metadata && typeof request.metadata === 'object' ? request.metadata : {};
+    const helpMetadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const copyPreference = String(helpMetadata.export_before_erasure || '').trim();
+    const copyGate = requestMetadata.pre_erasure_copy_gate && typeof requestMetadata.pre_erasure_copy_gate === 'object'
+      ? requestMetadata.pre_erasure_copy_gate
+      : {};
+    const copyDecision = requestMetadata.pre_erasure_copy_decision && typeof requestMetadata.pre_erasure_copy_decision === 'object'
+      ? requestMetadata.pre_erasure_copy_decision
+      : {};
+    const copyDecisionRequired = (!copyPreference || copyPreference === 'need_guidance')
+      && copyDecision.attested !== true;
+    const copyGateLabel = copyGate.ok === true
+      ? (copyGate.copy_required ? 'Cópia entregue e vinculada' : 'Cópia dispensada conforme escolha/decisão')
+      : copyPreference === 'request_copy_first'
+        ? 'Aguardando cópia comprovadamente baixada'
+        : copyDecisionRequired
+          ? 'Aguardando decisão de orientação'
+          : 'Será validado antes da exclusão';
+    const failureStage = String(requestMetadata.failure_stage || '').trim();
+    const exportArtifactCleanup = result
+      && result.data_export_artifact_cleanup
+      && typeof result.data_export_artifact_cleanup === 'object'
+      ? result.data_export_artifact_cleanup
+      : {};
+    const exportRetryTimestamp = Date.parse(String(exportArtifactCleanup.retry_after || ''));
+    const exportRetryLabel = Number.isFinite(exportRetryTimestamp)
+      ? new Date(exportRetryTimestamp).toLocaleString('pt-BR')
+      : '';
     const statusLabel = buildLabel(LGPD_STATUS_LABELS, status, status);
-    const erasedAt = request && request.erased_at || result && result.receipt && result.receipt.erased_at || '';
+    const coreErasedAt = request && request.erased_at
+      || result && result.receipt && result.receipt.erased_at
+      || redactedMarker.erased_at
+      || '';
+    const erasedAt = status === 'erased' ? coreErasedAt : '';
     const canClose = erasedAt
       ? 'Sim, após revisar o recibo interno.'
       : status === 'pending_confirmation' || status === 'reversible_applied'
@@ -406,39 +1249,208 @@
           ? 'Não. Fluxo sem confirmação final.'
           : 'Não. Diagnóstico pendente.';
     const expectedPhrase = targetEmail ? `EXCLUIR ${targetEmail}` : 'EXCLUIR email@domínio';
-    const warning = result && Array.isArray(result.warnings) && result.warnings.length
-      ? `<p class="kc-admin-lgpd-warning">${esc(result.warnings.join(' | '))}</p>`
+    const confirmationSummary = canonicalIdentityLinked
+      ? expectedPhrase
+      : redactedPostCore || confirmedPostCore || postCoreProbeCandidate
+        ? 'Não aplicável no modo pós-exclusão'
+        : 'Bloqueada até a confirmação do vínculo';
+    const postCoreSurface = redactedPostCore
+      || confirmedPostCore
+      || postCoreProbeCandidate;
+    const finalReadOnly = Boolean(
+      request
+      && request.status === 'erased'
+      && requestMetadata.notification_pending !== true
+      && !failureStage
+    );
+    const warningItems = []
+      .concat(result && Array.isArray(result.warnings) ? result.warnings : [])
+      .concat(diagnostics && Array.isArray(diagnostics.errors) ? diagnostics.errors : [])
+      .concat(diagnostics && Array.isArray(diagnostics.blockers) ? diagnostics.blockers : [])
+      .concat(failureStage ? [`Etapa pendente: ${failureStage}`] : [])
+      .concat(exportRetryLabel ? [`Nova tentativa segura após: ${exportRetryLabel}`] : [])
+      .concat(uncertain ? ['Resultado anterior indeterminado: não repita mutações até concluir um novo diagnóstico seguro.'] : [])
+      .filter(Boolean);
+    const warning = warningItems.length
+      ? `<p class="kc-admin-lgpd-warning">${esc(warningItems.join(' | '))}</p>`
       : '';
     const emailDraft = buildEmailDraftPreview(result);
+    const manualProviders = getManualProviderIds(result);
+    const identityAssurance = diagnostics && diagnostics.identity_assurance && typeof diagnostics.identity_assurance === 'object'
+      ? diagnostics.identity_assurance
+      : null;
+    const identityNeedsManualEvidence = identityAssurance && identityAssurance.requires_manual_evidence === true;
+    const showIdentityEvidence = identityLinkRequired
+      || (canonicalIdentityLinked && identityNeedsManualEvidence);
+    const notificationStateKnown = Boolean(request);
+    const notificationPending = requestMetadata.notification_pending === true;
+    const notificationLabel = notificationStateKnown
+      ? (notificationPending ? 'Envio manual pendente' : 'Sem pendência registrada')
+      : redactedPostCore || postCoreProbeCandidate
+        ? 'Desconhecida — carregue o estado seguro'
+        : 'Sem pendência registrada';
+    const identityStateLabel = redactedPostCore
+      ? 'Dados do ticket redigidos; fluxo pós-exclusão'
+      : confirmedPostCore
+        ? 'Núcleo excluído; recuperação pós-exclusão'
+        : postCoreProbeCandidate
+          ? 'Vínculo histórico; carregue o estado seguro'
+          : identityStateInconsistent
+            ? 'Relação canônica inconsistente; revisão técnica obrigatória'
+            : identityLinkRequired
+              ? 'Aguardando vínculo verificado'
+              : identityAssurance
+                ? (identityAssurance.verified ? 'Verificado' : 'Exige prova manual')
+                : 'Vínculo canônico confirmado';
+    const identityGuidance = redactedPostCore
+      ? 'O ticket já foi redigido. Não recrie o vínculo nem reabra etapas destrutivas; use somente diagnóstico, recibo e recuperação pós-exclusão.'
+      : confirmedPostCore
+        ? 'A remoção do núcleo já começou. Somente diagnóstico, recibo e finalização de pendências pós-exclusão permanecem disponíveis.'
+        : postCoreProbeCandidate
+          ? 'O perfil já não está disponível, mas há um vínculo histórico. Carregue o estado; o servidor só permitirá recuperação se o checkpoint e a prova armazenada coincidirem.'
+          : identityStateInconsistent
+            ? 'O ticket possui uma relação incompleta entre titular e protocolo. O fluxo está bloqueado; investigue o DSR e o workflow sem tentar vincular ou alterar dados.'
+            : identityLinkRequired
+              ? 'Ticket sem titular vinculado: valide a identidade e crie o vínculo auditado antes de qualquer diagnóstico ou ocultação.'
+              : identityNeedsManualEvidence
+                ? 'Ticket legado/anônimo: valide a titularidade antes de ocultar qualquer dado.'
+                : 'O vínculo canônico foi confirmado pelo ticket e pelo protocolo.';
+    const providerOutcomeFields = manualProviders.map((provider) => {
+      const isFinalNotificationProvider = provider === 'hostinger_smtp_mailbox';
+      return [
+        `<label><span>${esc(provider)}</span>`,
+        `<select data-lgpd-provider-outcome data-provider="${esc(provider)}">`,
+        '<option value="">Selecione o resultado</option>',
+        ...(isFinalNotificationProvider
+          ? ['<option value="retention_documented">Retenção pré-conclusão e entrega documentada</option>']
+          : [
+            '<option value="deleted">Excluído no operador</option>',
+            '<option value="retention_documented">Retenção documentada</option>',
+            '<option value="not_applicable">Não aplicável, com justificativa no registro</option>',
+          ]),
+        '</select></label>',
+        `<label><span>Base/justificativa de retenção — ${esc(provider)}</span><input type="text" data-lgpd-provider-retention-basis data-provider="${esc(provider)}" placeholder="${esc(isFinalNotificationProvider ? 'Obrigatório: tratamento pré-conclusão e logs de entrega' : 'Obrigatório se houver retenção documentada')}" autocomplete="off" /></label>`,
+        `<label><span>Data de revisão da retenção — ${esc(provider)}</span><input type="datetime-local" data-lgpd-provider-retention-at data-provider="${esc(provider)}" /></label>`,
+      ].join('');
+    }).join('');
+    const providerSummary = manualProviders.length
+      ? manualProviders.join(', ')
+      : 'Execute o diagnóstico para carregar a matriz de operadores.';
 
     return [
-      '<section class="kc-admin-lgpd-panel" data-lgpd-panel>',
+      `<section class="kc-admin-lgpd-panel" data-lgpd-panel aria-labelledby="lgpd-title-${esc(id)}" aria-describedby="lgpd-guidance-${esc(id)}"${busy ? ' aria-busy="true"' : ''}>`,
+      `  <span class="sr-only" data-lgpd-live role="status" aria-live="polite">${busy ? 'Processando solicitação LGPD.' : ''}</span>`,
       '  <div class="kc-admin-lgpd-panel__head">',
       '    <div>',
-      '      <strong><i class="fas fa-shield-heart" aria-hidden="true"></i> Solicitação LGPD</strong>',
+      `      <strong id="lgpd-title-${esc(id)}"><i class="fas fa-shield-heart" aria-hidden="true"></i> Solicitação LGPD</strong>`,
       '      <p>Fluxo seguro: diagnosticar, ocultar de forma reversível, pedir confirmação e só então executar a eliminação irreversível.</p>',
       '    </div>',
       `    <span class="kc-admin-help-chip"><i class="fas fa-circle-info" aria-hidden="true"></i>${esc(statusLabel)}</span>`,
       '  </div>',
       '  <div class="kc-admin-help-meta">',
       `    <div><strong>E-mail alvo</strong><span>${esc(targetEmail || 'Não informado')}</span></div>`,
-      `    <div><strong>Confirmação irreversível</strong><span>${esc(expectedPhrase)}</span></div>`,
-      `    <div><strong>Dados excluídos</strong><span>${erasedAt ? 'Sim' : 'Não'}</span></div>`,
+      `    <div><strong>Confirmação irreversível</strong><span>${esc(confirmationSummary)}</span></div>`,
+      `    <div><strong>Núcleo excluído</strong><span>${coreErasedAt ? 'Sim' : 'Não'}</span></div>`,
+      `    <div><strong>Fluxo integral finalizado</strong><span>${erasedAt ? 'Sim' : 'Não'}</span></div>`,
       `    <div><strong>Pode fechar?</strong><span>${esc(canClose)}</span></div>`,
+      `    <div><strong>Vínculo de identidade</strong><span>${esc(identityStateLabel)}</span></div>`,
+      `    <div><strong>Notificação final</strong><span>${esc(notificationLabel)}</span></div>`,
+      canonicalIdentityLinked
+        ? `    <div><strong>Cópia antes da exclusão</strong><span>${esc(copyGateLabel)}</span></div>`
+        : '',
       '  </div>',
       countsHtml ? `<div class="kc-admin-lgpd-counts">${countsHtml}</div>` : '',
       warning,
       emailDraft,
-      '  <div class="kc-admin-lgpd-actions">',
-      '    <button type="button" data-lgpd-action="diagnose"><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Preparar diagnóstico</button>',
-      '    <button type="button" data-lgpd-action="apply_reversible"><i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar conta e pedir confirmação</button>',
-      '    <button type="button" data-lgpd-action="generate_receipt"><i class="fas fa-receipt" aria-hidden="true"></i> Gerar recibo interno</button>',
-      '    <button type="button" data-lgpd-export><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Exportar relatório LGPD</button>',
+      '  <div class="kc-admin-lgpd-danger">',
+      `    <p id="lgpd-guidance-${esc(id)}" data-lgpd-identity-guidance>${esc(identityGuidance)}</p>`,
+      showIdentityEvidence && identityLinkRequired
+        ? `    <label><span>E-mail exato da conta verificada</span><input type="email" data-lgpd-account-email value="${esc(targetEmail)}" autocomplete="off" required aria-required="true"${busy ? ' disabled' : ''} /></label>`
+        : '',
+      showIdentityEvidence
+        ? `    <label><span>Canal de validação da identidade</span><select data-lgpd-identity-channel required aria-required="true"${busy ? ' disabled' : ''}><option value="verified_email_challenge">Desafio enviado e respondido no e-mail da conta</option><option value="support_mailbox_reply">Resposta validada na caixa de suporte</option><option value="identity_document_review">Documento revisado por canal seguro</option><option value="in_person_verification">Validação presencial</option></select></label>`
+        : '',
+      showIdentityEvidence
+        ? `    <label><span>Referência da validação</span><input type="text" data-lgpd-identity-reference placeholder="Message-ID, protocolo ou registro; será armazenado apenas como hash" autocomplete="off" minlength="6" required aria-required="true"${busy ? ' disabled' : ''} /></label>`
+        : '',
+      showIdentityEvidence
+        ? `    <label><span>Identidade validada em</span><input type="datetime-local" data-lgpd-identity-at required aria-required="true"${busy ? ' disabled' : ''} /></label>`
+        : '',
+      showIdentityEvidence
+        ? `    <label><span><input type="checkbox" data-lgpd-identity-attested style="width:auto" required aria-required="true"${busy ? ' disabled' : ''} /> Confirmo que a identidade do titular foi validada antes de qualquer ocultação</span></label>`
+        : '',
+      identityLinkRequired
+        ? `    <button type="button" data-lgpd-action="link_verified_identity" aria-describedby="lgpd-guidance-${esc(id)}"${busy || uncertain ? ' disabled' : ''}><i class="fas fa-link" aria-hidden="true"></i> Vincular identidade ao protocolo</button>`
+        : '',
+      '  </div>',
+      canonicalIdentityLinked || postCoreSurface
+        ? [
+          '  <div class="kc-admin-lgpd-actions">',
+          `    <button type="button" data-lgpd-action="diagnose" aria-describedby="lgpd-guidance-${esc(id)}"${readOnlyActionDisabled ? ' disabled' : ''}><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> ${postCoreSurface ? 'Carregar estado seguro' : 'Preparar diagnóstico'}</button>`,
+          canonicalIdentityLinked
+            ? `    <button type="button" data-lgpd-action="apply_reversible"${workflowActionDisabled ? ' disabled' : ''}><i class="fas fa-eye-slash" aria-hidden="true"></i> Ocultar conta e pedir confirmação</button>`
+            : '',
+          canonicalIdentityLinked
+            ? `    <button type="button" data-lgpd-action="cancel_reversible"${workflowActionDisabled ? ' disabled' : ''}><i class="fas fa-rotate-left" aria-hidden="true"></i> Cancelar e restaurar</button>`
+            : '',
+          `    <button type="button" data-lgpd-action="generate_receipt" aria-describedby="lgpd-guidance-${esc(id)}"${readOnlyActionDisabled ? ' disabled' : ''}><i class="fas fa-receipt" aria-hidden="true"></i> Gerar recibo interno</button>`,
+          `    <button type="button" data-lgpd-export aria-describedby="lgpd-guidance-${esc(id)}"${readOnlyActionDisabled ? ' disabled' : ''}><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Exportar relatório LGPD</button>`,
+          '  </div>',
+        ].join('')
+        : '',
+      canonicalIdentityLinked
+        ? [
+          '  <div class="kc-admin-lgpd-danger">',
+      '    <label><span>Referência do envio manual (somente se o SMTP falhou)</span><input type="text" data-lgpd-delivery-reference placeholder="Message-ID ou protocolo; será armazenado apenas como hash" autocomplete="off" /></label>',
+      '    <label><span>Enviado em</span><input type="datetime-local" data-lgpd-delivery-at /></label>',
+      '    <label><span><input type="checkbox" data-lgpd-delivery-attested style="width:auto" /> Confirmo que enviei o pedido pelo e-mail titular</span></label>',
+      `    <button type="button" data-lgpd-action="record_confirmation_delivery"${workflowActionDisabled ? ' disabled' : ''}><i class="fas fa-envelope-circle-check" aria-hidden="true"></i> Registrar envio manual</button>`,
+      '  </div>',
+        ].join('')
+        : '',
+      canonicalIdentityLinked && copyDecisionRequired
+        ? [
+          '  <div class="kc-admin-lgpd-danger">',
+          `    <p>${copyPreference === 'need_guidance' ? 'O titular pediu orientação.' : 'Este ticket legado não registrou a preferência de cópia.'} Registre a decisão antes da etapa irreversível; a referência será armazenada somente como hash.</p>`,
+          '    <label><span>Decisão após orientação</span><select data-lgpd-copy-decision><option value="">Selecione</option><option value="request_copy_first">Fornecer cópia antes de excluir</option><option value="no_copy_needed">Titular dispensou a cópia</option></select></label>',
+          '    <label><span>Referência da orientação/decisão</span><input type="text" data-lgpd-copy-reference placeholder="Message-ID ou protocolo" autocomplete="off" /></label>',
+          '    <label><span>Decisão registrada em</span><input type="datetime-local" data-lgpd-copy-at /></label>',
+          '    <label><span><input type="checkbox" data-lgpd-copy-attested style="width:auto" /> Confirmo que a decisão do titular foi registrada</span></label>',
+          '  </div>',
+        ].join('')
+        : '',
+      canonicalIdentityLinked
+        ? [
+          '  <div class="kc-admin-lgpd-danger">',
+      '    <label><span>Referência da resposta do titular</span><input type="text" data-lgpd-evidence-reference placeholder="Message-ID ou protocolo; será armazenado apenas como hash" autocomplete="off" /></label>',
+      '    <label><span>Resposta recebida em</span><input type="datetime-local" data-lgpd-evidence-at /></label>',
+      '    <label><span><input type="checkbox" data-lgpd-evidence-attested style="width:auto" /> Confirmo que validei a resposta no e-mail titular</span></label>',
+      `    <label><span>Digite exatamente <code>${esc(expectedPhrase)}</code></span><input type="text" data-lgpd-confirmation placeholder="${esc(expectedPhrase)}" autocomplete="off" /></label>`,
+      `    <button type="button" data-lgpd-action="erase_confirmed"${workflowActionDisabled ? ' disabled' : ''}><i class="fas fa-user-slash" aria-hidden="true"></i> Executar exclusão confirmada</button>`,
       '  </div>',
       '  <div class="kc-admin-lgpd-danger">',
-      `    <label><span>Digite exatamente <code>${esc(expectedPhrase)}</code></span><input type="text" data-lgpd-confirmation placeholder="${esc(expectedPhrase)}" autocomplete="off" /></label>`,
-      '    <button type="button" data-lgpd-action="erase_confirmed"><i class="fas fa-user-slash" aria-hidden="true"></i> Executar exclusão confirmada</button>',
+      `    <label><span>Motivo do cancelamento</span><input type="text" data-lgpd-cancellation-reason placeholder="Motivo operacional; será armazenado apenas como hash" autocomplete="off" /></label>`,
       '  </div>',
+        ].join('')
+        : '',
+      (canonicalIdentityLinked || (postCoreSurface && !finalReadOnly))
+        ? [
+          '  <div class="kc-admin-lgpd-danger">',
+      `    <label><span>Operadores a revisar</span><input type="text" value="${esc(providerSummary)}" readonly /></label>`,
+      providerOutcomeFields,
+      '    <label><span>Referência da revisão dos operadores</span><input type="text" data-lgpd-provider-reference placeholder="Ticket ou registro; será armazenado apenas como hash" autocomplete="off" /></label>',
+      '    <label><span>Revisão concluída em</span><input type="datetime-local" data-lgpd-provider-at /></label>',
+      '    <label><span><input type="checkbox" data-lgpd-provider-attested style="width:auto" /> Confirmo que concluí a exclusão ou documentei a retenção em cada operador listado</span></label>',
+      `    <button type="button" data-lgpd-action="retry_finalize"${retryActionDisabled ? ' disabled' : ''}><i class="fas fa-list-check" aria-hidden="true"></i> Finalizar operadores e recibo</button>`,
+      '  </div>',
+      '  <div class="kc-admin-lgpd-danger">',
+      '    <p>Se o SMTP falhar, clique novamente em “Finalizar operadores e recibo” para reenvio automático pelo destinatário cifrado. Preencha os campos abaixo somente se a entrega ocorreu manualmente.</p>',
+      '    <label><span>Referência do envio manual do comprovante final</span><input type="text" data-lgpd-completion-reference placeholder="Somente para entrega manual já realizada" autocomplete="off" /></label>',
+      '    <label><span>Comprovante final entregue em</span><input type="datetime-local" data-lgpd-completion-at /></label>',
+      '    <label><span><input type="checkbox" data-lgpd-completion-attested style="width:auto" /> Confirmo que o comprovante final foi entregue manualmente ao titular</span></label>',
+      '  </div>',
+        ].join('')
+        : '',
       '</section>',
     ].join('');
   }
@@ -479,6 +1491,10 @@
   function renderRows(rows) {
     const list = $('#helpRequestsList');
     if (!list) return;
+    if (!state.isAuthorized) {
+      list.replaceChildren();
+      return;
+    }
 
     if (!Array.isArray(rows) || !rows.length) {
       renderEmpty();
@@ -518,6 +1534,7 @@
         `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Não' : 'Sim'}</span></div>`,
         '  </div>',
         metadataSummary,
+        buildDataExportSupplementPanel(row),
         buildLgpdPanel(row),
         '  <div class="kc-admin-help-actions">',
         `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
@@ -566,8 +1583,39 @@
     return merged;
   }
 
+  async function loadHelpRequestById(helpRequestId, adminContext) {
+    const id = String(helpRequestId || '').trim();
+    if (!UUID_RE.test(id) || !isActiveAdminContext(adminContext)) return null;
+    const result = await window.KCAPI.listAdminHelpRequests({
+      requestId: id,
+      limit: 1,
+      offset: 0,
+    });
+    if (!isActiveAdminContext(adminContext)) return null;
+    if (result && result.ok === false) {
+      throw new Error(
+        result.error && result.error.message
+          ? String(result.error.message)
+          : 'HELP_REQUEST_LOOKUP_UNAVAILABLE'
+      );
+    }
+    const payload = unwrapRowsResponse(result, 1, 0);
+    const row = payload.rows.find(
+      (item) => String(item && item.id || '').trim() === id
+    ) || null;
+    if (!row) return null;
+    const currentIndex = state.rows.findIndex(
+      (item) => String(item && item.id || '').trim() === id
+    );
+    if (currentIndex >= 0) state.rows[currentIndex] = row;
+    return row;
+  }
+
   async function loadRows(options = {}) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
     const append = options.append === true;
+    let loadFailed = false;
     const requestedLimit = Math.max(1, Math.min(100, toFiniteNumber(options.limit, state.pagination.limit || HELP_PAGE_SIZE)));
     const requestedOffset = append ? state.rows.length : Math.max(0, toFiniteNumber(options.offset, 0));
     const requestToken = state.requestToken + 1;
@@ -592,33 +1640,49 @@
         offset: requestedOffset,
       });
 
-      if (requestToken !== state.requestToken) return;
+      if (requestToken !== state.requestToken || !isActiveAdminContext(adminContext)) return;
+      if (result && result.ok === false) {
+        throw new Error(
+          result.error && result.error.message
+            ? String(result.error.message)
+            : 'HELP_REQUEST_LIST_UNAVAILABLE'
+        );
+      }
 
       const payload = unwrapRowsResponse(result, requestedLimit, requestedOffset);
       state.rows = append ? mergeRows(state.rows, payload.rows) : payload.rows;
+      if (!append) {
+        state.erasureUncertain = Object.create(null);
+        state.exportSupplementUncertain = Object.create(null);
+      }
       state.pagination.limit = payload.limit;
       state.pagination.totalCount = payload.totalCount;
       state.pagination.hasMore = payload.hasMore && state.rows.length < payload.totalCount;
       renderSummary(state.rows);
       renderRows(state.rows);
     } catch (error) {
-      if (requestToken !== state.requestToken) return;
-      console.error('[AdminHelp] load failed:', error);
+      if (requestToken !== state.requestToken || !isActiveAdminContext(adminContext)) return;
+      loadFailed = true;
+      console.error('[AdminHelp] load_failed');
       if (append) {
         showToast('Não foi possível carregar mais pedidos de ajuda.', 'error');
         renderRows(state.rows);
       } else {
         showError('Não foi possível carregar os pedidos de ajuda.');
+        if (state.rows.length) renderRows(state.rows);
+        else renderUnavailable();
       }
     } finally {
-      if (requestToken !== state.requestToken) return;
+      if (requestToken !== state.requestToken || !isActiveAdminContext(adminContext)) return;
       state.pagination.isLoadingMore = false;
       if (!append) showLoading(false);
-      renderRows(state.rows);
+      if (!loadFailed) renderRows(state.rows);
     }
   }
 
   async function saveRow(card) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
     const id = String(card && card.getAttribute('data-help-id') || '').trim();
     if (!id) return;
 
@@ -634,6 +1698,8 @@
       showToast('Urgência inválida para triagem.', 'error');
       return;
     }
+    const access = await checkAdminAccess(adminContext);
+    if (!access || !isActiveAdminContext(adminContext)) return;
 
     const button = card.querySelector('[data-help-save]');
     if (button) {
@@ -643,6 +1709,7 @@
 
     try {
       const result = await window.KCAPI.updateAdminHelpRequest(id, { status, priority });
+      if (!isActiveAdminContext(adminContext)) return;
       if (!result || result.ok === false) {
         showToast((result && result.error && result.error.message) || 'Não foi possível salvar a triagem.', 'error');
         return;
@@ -652,10 +1719,11 @@
         limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE),
       });
     } catch (error) {
-      console.error('[AdminHelp] save failed:', error);
+      if (!isActiveAdminContext(adminContext)) return;
+      console.error('[AdminHelp] save_failed');
       showToast('Não foi possível salvar a triagem.', 'error');
     } finally {
-      if (button) {
+      if (button && isActiveAdminContext(adminContext)) {
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem';
       }
@@ -730,10 +1798,14 @@
   }
 
   async function handleHelpExport(kind) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
     if (!window.KCAdminExport) {
       showToast('Exportador admin indisponível.', 'error');
       return;
     }
+    const access = await checkAdminAccess(adminContext);
+    if (!access || !isActiveAdminContext(adminContext)) return;
     const date = new Date().toISOString().slice(0, 10);
     const report = buildHelpExportReport();
     if (kind === 'pdf') {
@@ -751,24 +1823,42 @@
     const receipt = result.receipt || request.receipt || {};
     const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
     const requestMetadata = request && request.metadata && typeof request.metadata === 'object' ? request.metadata : {};
-    const targetEmail = getLgpdTargetEmail(row);
     const target = result.target || {};
     const countLabels = {
       profiles: 'Perfil cadastral',
       posts: 'Publicações',
       post_media: 'Mídias de publicações',
       comments: 'Comentários',
+      comment_likes: 'Curtidas em comentários',
       post_votes: 'Votos realizados',
       saved_posts: 'Publicações salvas',
       reports: 'Denúncias registradas',
+      post_view_events: 'Visualizações vinculadas',
+      search_queries: 'Buscas vinculadas',
+      home_category_affinity: 'Afinidade da página inicial',
+      search_preferences: 'Preferências de busca',
       help_requests: 'Pedidos de ajuda',
       chat_conversations: 'Conversas',
       chat_messages: 'Mensagens',
+      chat_messages_third_party: 'Mensagens de terceiros em conversas compartilhadas',
+      chat_read_state: 'Estado de leitura do chat',
+      chat_reactions: 'Reações no chat',
+      notifications: 'Notificações',
       notification_preferences: 'Preferências de notificação',
+      notification_channel_targets: 'Destinos privados de notificação',
+      notification_delivery_outbox: 'Fila de entrega',
+      notification_delivery_attempts: 'Tentativas de entrega',
       privacy_analytics_events: 'Eventos opcionais de analytics',
       privacy_consent_events: 'Histórico de consentimento',
+      user_legal_acceptances: 'Aceites legais',
+      user_blocks: 'Bloqueios',
+      user_ratings: 'Avaliações',
+      kc_invited_emails: 'Convites por e-mail',
+      audit_log_actor: 'Eventos de auditoria',
     };
     const statusLabels = {
+      confirmed: 'Confirmação registrada',
+      partial_failure: 'Execução parcial; revisão obrigatória',
       diagnosed: 'Diagnóstico preparado',
       pending_confirmation: 'Aguardando confirmação do titular',
       reversible_applied: 'Ocultação reversível aplicada',
@@ -778,7 +1868,8 @@
     };
     const status = request.status || (result.action === 'diagnose' ? 'diagnosed' : 'não iniciado');
     const hasDiagnostics = Boolean(diagnostics && diagnostics.counts);
-    const erasedAt = request.erased_at || receipt.erased_at || '';
+    const coreErasedAt = request.erased_at || receipt.erased_at || '';
+    const erasedAt = status === 'erased' ? coreErasedAt : '';
     const confirmationRequestedAt = request.confirmation_requested_at || '';
     const userFoundKnown = Object.prototype.hasOwnProperty.call(target, 'user_found');
     const userFoundLabel = userFoundKnown
@@ -844,8 +1935,8 @@
         pedido_de_ajuda: row && row.id || '',
         status_do_pedido: row && row.status || '',
         status_lgpd: statusLabels[status] || status,
-        e_mail_alvo: targetEmail || 'Não informado',
-        hash_do_e_mail: target.email_hash || request.email_hash || '',
+        dominio_do_e_mail: request.target_email_domain || 'Não informado',
+        identificador_pseudonimo_do_titular: target.subject_hash || target.email_hash || request.email_hash || '',
       },
       kpis: {
         auth: userFoundKnown ? (target.user_found ? 'Encontrado' : 'Não encontrado') : 'Pendente',
@@ -875,15 +1966,6 @@
           }, {
             campo: 'Tipo',
             valor: buildLabel(Help.HELP_TYPE_LABELS, row && row.type, row && row.type || ''),
-          }, {
-            campo: 'Assunto',
-            valor: row && (row.subject || row.title) || '',
-          }, {
-            campo: 'E-mail informado',
-            valor: targetEmail || 'Não informado',
-          }, {
-            campo: 'Mensagem do titular',
-            valor: row && row.message || '',
           }],
         },
         {
@@ -950,8 +2032,8 @@
             campo: 'Eliminado/anonimizado em',
             valor: formatDateTime(erasedAt),
           }, {
-            campo: 'Hash do e-mail',
-            valor: target.email_hash || request.email_hash || receipt.email_hash || '',
+            campo: 'Identificador pseudônimo do titular',
+            valor: target.subject_hash || target.email_hash || request.email_hash || receipt.subject_hash || receipt.email_hash || '',
           }, {
             campo: 'Observações',
             valor: warnings.length ? warnings.join(' | ') : 'Sem avisos registrados.',
@@ -969,7 +2051,7 @@
             descricao: 'A exclusão irreversível exige confirmação enviada pelo e-mail titular antes da execução final.',
           }, {
             item: 'Retenção mínima',
-            descricao: 'Podem ser mantidos registros mínimos de auditoria, hash do e-mail, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
+            descricao: 'Podem ser mantidos registros mínimos de auditoria, identificador derivado de UUID de alta entropia, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
           }, {
             item: 'Publicações e conteúdo',
             descricao: 'Conteúdos vinculados ao titular devem ficar ocultos da comunidade e ser anonimizados ou removidos após confirmação final.',
@@ -980,18 +2062,28 @@
   }
 
   async function exportLgpdReport(row) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
+    const id = String(row && row.id || '').trim();
+    if (!id || !canProbeErasureWorkflow(row)) {
+      showToast('Confirme primeiro o vínculo canônico do protocolo. Nenhum diagnóstico ou relatório foi gerado.', 'error');
+      return;
+    }
     if (!window.KCAdminExport) {
       showToast('Exportador admin indisponível.', 'error');
       return;
     }
-    const id = String(row && row.id || '');
-    const targetEmail = getLgpdTargetEmail(row);
+    const access = await checkAdminAccess(adminContext);
+    if (!access || !isActiveAdminContext(adminContext)) return;
+    const currentRow = state.rows.find(
+      (item) => String(item && item.id || '').trim() === id
+    );
+    if (!currentRow || !canProbeErasureWorkflow(currentRow)) {
+      showToast('O vínculo do protocolo mudou durante a autorização. Atualize a fila antes de exportar.', 'error');
+      return;
+    }
+    const targetEmail = getLgpdTargetEmail(currentRow);
     if (window.KCAPI && typeof window.KCAPI.processAccountErasure === 'function' && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)) {
-      const allowed = await checkAdminAccess();
-      if (!allowed) {
-        showToast('Entre novamente com uma conta administradora antes de preparar o relatório LGPD.', 'error');
-        return;
-      }
       const result = await window.KCAPI.processAccountErasure({
         action: 'diagnose',
         actionKey: 'diagnose',
@@ -999,38 +2091,636 @@
         helpRequestId: id,
         target_email: targetEmail,
         targetEmail,
-        help_request: row,
       });
+      if (!isActiveAdminContext(adminContext)) return;
       if (result && result.ok !== false) {
         state.erasureResults[id] = result;
         renderRows(state.rows);
-      } else if (result && result.error && result.error.message) {
-        showToast(friendlyLgpdErrorMessage(result.error), 'error');
+      } else {
+        showToast(friendlyLgpdErrorMessage(result && result.error), 'error');
+        return;
       }
     }
+    if (!isActiveAdminContext(adminContext)) return;
     const date = new Date().toISOString().slice(0, 10);
-    await window.KCAdminExport.exportReportPDF(`kc-lgpd-${date}.pdf`, buildLgpdExportReport(row));
+    await window.KCAdminExport.exportReportPDF(
+      `kc-lgpd-${date}.pdf`,
+      buildLgpdExportReport(currentRow)
+    );
+  }
+
+  function readIsoDateTime(card, selector) {
+    const raw = String(card.querySelector(selector)?.value || '').trim();
+    if (!raw) return '';
+    const parsed = new Date(raw);
+    return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : '';
+  }
+
+  function setFieldInvalid(card, selector, invalid) {
+    const field = card && card.querySelector(selector);
+    if (!field) return;
+    if (invalid) field.setAttribute('aria-invalid', 'true');
+    else field.removeAttribute('aria-invalid');
+  }
+
+  function hasValidTimestamp(value) {
+    return Number.isFinite(Date.parse(String(value || '')));
+  }
+
+  function isErasureMutationPostconditionConfirmed(action, row, result) {
+    const request = result && result.request && typeof result.request === 'object'
+      ? result.request
+      : {};
+    const metadata = request.metadata && typeof request.metadata === 'object'
+      ? request.metadata
+      : {};
+    const status = String(request.status || '').trim();
+    if (action === 'link_verified_identity') return hasCanonicalErasureLink(row);
+    if (action === 'apply_reversible') {
+      return Boolean(
+        hasValidTimestamp(request.reversible_applied_at)
+        && ['reversible_applied', 'pending_confirmation', 'confirmed', 'partial_failure', 'erased'].includes(status)
+      );
+    }
+    if (action === 'record_confirmation_delivery') {
+      const delivery = metadata.confirmation_delivery && typeof metadata.confirmation_delivery === 'object'
+        ? metadata.confirmation_delivery
+        : {};
+      return Boolean(
+        hasValidTimestamp(request.confirmation_requested_at)
+        && ['sent_manual', 'sent'].includes(String(delivery.status || '').trim())
+        && ['pending_confirmation', 'confirmed', 'partial_failure', 'erased'].includes(status)
+      );
+    }
+    if (action === 'cancel_reversible') {
+      return status === 'cancelled'
+        && metadata.cancelled
+        && typeof metadata.cancelled === 'object';
+    }
+    if (action === 'erase_confirmed') {
+      return Boolean(
+        metadata.auth_deleted === true
+        || status === 'erased'
+      );
+    }
+    if (action === 'retry_finalize') {
+      return Boolean(
+        status === 'erased'
+        && metadata.notification_pending === false
+        && metadata.retryable === false
+        && !String(metadata.failure_stage || '').trim()
+        && ['sent', 'sent_manual'].includes(
+          String(metadata.completion_email_status || '').trim()
+        )
+      );
+    }
+    return false;
+  }
+
+  async function reconcileErasureMutation(id, action, adminContext) {
+    let row = null;
+    try {
+      row = await loadHelpRequestById(id, adminContext);
+    } catch (_) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    if (!isActiveAdminContext(adminContext)) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    if (action === 'link_verified_identity') {
+      return {
+        known: Boolean(row),
+        committed: hasCanonicalErasureLink(row),
+        row,
+        result: null,
+      };
+    }
+    if (!row) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    let result = null;
+    try {
+      result = await window.KCAPI.processAccountErasure({
+        action: 'diagnose',
+        actionKey: 'diagnose',
+        help_request_id: id,
+        helpRequestId: id,
+        target_email: getLgpdTargetEmail(row),
+        targetEmail: getLgpdTargetEmail(row),
+      });
+    } catch (_) {
+      return { known: false, committed: false, row, result: null };
+    }
+    if (!isActiveAdminContext(adminContext)) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    if (!result || result.ok === false || !result.request) {
+      return { known: false, committed: false, row, result };
+    }
+    state.erasureResults[id] = result;
+    return {
+      known: true,
+      committed: isErasureMutationPostconditionConfirmed(action, row, result),
+      row,
+      result,
+    };
+  }
+
+  function exportProcessorStoredStatus(outcome) {
+    return String(outcome || '').trim() === 'no_account_data'
+      ? 'no_account_data'
+      : 'sanitized_disclosure';
+  }
+
+  function isExportMutationPostconditionConfirmed(
+    action,
+    row,
+    result,
+    payload,
+    previousArtifactVersion
+  ) {
+    const artifact = result && result.artifact && typeof result.artifact === 'object'
+      ? result.artifact
+      : {};
+    const artifactRef = String(
+      artifact.artifact_ref || getHelpMetadata(row).export_artifact_ref || ''
+    ).trim().toUpperCase();
+    if (!EXPORT_ARTIFACT_REF_RE.test(artifactRef)) return false;
+    if (action === 'link_verified_ticket') return hasCanonicalDataExportLink(row);
+    if (action === 'record_processor') {
+      const processor = String(payload && payload.processor || '').trim().toLowerCase();
+      const expectedStatus = exportProcessorStoredStatus(payload && payload.outcome);
+      const processors = Array.isArray(artifact.processors) ? artifact.processors : [];
+      const version = Number(artifact.version);
+      const versionAdvanced = Number.isFinite(previousArtifactVersion)
+        ? version > previousArtifactVersion
+        : Number.isInteger(version) && version > 0;
+      return versionAdvanced && processors.some((entry) => (
+        entry
+        && String(entry.processor || '').trim().toLowerCase() === processor
+        && String(entry.status || '').trim().toLowerCase() === expectedStatus
+        && SHA256_RE.test(String(entry.evidence_sha256 || '').trim())
+        && hasValidTimestamp(entry.resolved_at)
+      ));
+    }
+    if (action === 'build' || action === 'retry') {
+      return Boolean(
+        String(artifact.status || '').trim().toLowerCase() === 'ready'
+        && SHA256_RE.test(String(artifact.sha256 || '').trim())
+        && Number(artifact.byte_size) > 0
+        && hasValidTimestamp(artifact.ready_at)
+        && Date.parse(String(artifact.expires_at || '')) > Date.now()
+      );
+    }
+    if (action === 'purge') {
+      return String(artifact.status || '').trim().toLowerCase() === 'purged';
+    }
+    return false;
+  }
+
+  async function reconcileExportMutation(
+    id,
+    action,
+    payload,
+    previousArtifactVersion,
+    adminContext
+  ) {
+    let row = null;
+    try {
+      row = await loadHelpRequestById(id, adminContext);
+    } catch (_) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    if (!isActiveAdminContext(adminContext)) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    if (action === 'link_verified_ticket') {
+      return {
+        known: Boolean(row),
+        committed: hasCanonicalDataExportLink(row),
+        row,
+        result: null,
+      };
+    }
+    if (!row) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    const artifactRef = String(
+      payload && payload.artifact_ref
+      || getHelpMetadata(row).export_artifact_ref
+      || ''
+    ).trim().toUpperCase();
+    let result = null;
+    try {
+      result = await window.KCAPI.processDataExportSupplement({
+        action: 'diagnose',
+        help_request_id: id,
+        artifact_ref: artifactRef,
+      });
+    } catch (_) {
+      return { known: false, committed: false, row, result: null };
+    }
+    if (!isActiveAdminContext(adminContext)) {
+      return { known: false, committed: false, row: null, result: null };
+    }
+    if (!result || result.ok === false || !result.artifact) {
+      return { known: false, committed: false, row, result };
+    }
+    state.exportSupplementResults[id] = result;
+    return {
+      known: true,
+      committed: isExportMutationPostconditionConfirmed(
+        action,
+        row,
+        result,
+        payload,
+        previousArtifactVersion
+      ),
+      row,
+      result,
+    };
+  }
+
+  function markErasureOutcomeUncertain(id, action) {
+    state.erasureUncertain[id] = {
+      action,
+      recordedAt: new Date().toISOString(),
+    };
+  }
+
+  function markExportOutcomeUncertain(id, action) {
+    state.exportSupplementUncertain[id] = {
+      action,
+      recordedAt: new Date().toISOString(),
+    };
+  }
+
+  async function settleErasureMutationResult(options) {
+    const {
+      id,
+      action,
+      result,
+      currentResult,
+      adminContext,
+      transportFailed,
+    } = options;
+    const reconciliation = await reconcileErasureMutation(
+      id,
+      action,
+      adminContext
+    );
+    if (!isActiveAdminContext(adminContext)) return;
+    if (reconciliation.committed) {
+      delete state.erasureUncertain[id];
+      if (action === 'link_verified_identity' && result && result.request) {
+        state.erasureResults[id] = {
+          ...(currentResult || {}),
+          ...result,
+        };
+      }
+      renderRows(state.rows);
+      if (transportFailed || !result || result.ok === false) {
+        showToast(
+          'A resposta foi interrompida, mas a pós-condição específica foi confirmada por leitura autoritativa. A operação não foi repetida.',
+          'success'
+        );
+        return;
+      }
+      const protocol = String(
+        result.protocol
+        || getHelpMetadata(reconciliation.row).protocol
+        || ''
+      ).trim();
+      const successMessages = {
+        link_verified_identity: /^KC-DSR-[0-9]{8}-[A-F0-9]{16}$/.test(protocol)
+          ? `Identidade vinculada ao protocolo ${protocol}.`
+          : 'Identidade vinculada e confirmada pela leitura autoritativa do ticket.',
+        apply_reversible: 'Ocultação reversível confirmada pela leitura do workflow.',
+        record_confirmation_delivery: 'Envio manual registrado com referência protegida por hash.',
+        cancel_reversible: 'Fluxo cancelado e alterações reversíveis restauradas.',
+        erase_confirmed: 'Exclusão do núcleo confirmada; revise os operadores antes do recibo final.',
+        retry_finalize: 'Operadores revisados, comprovante enviado e fluxo finalizado.',
+      };
+      showToast(successMessages[action] || 'Fluxo LGPD atualizado.', 'success');
+      return;
+    }
+
+    if (
+      action === 'retry_finalize'
+      && result
+      && result.ok === false
+      && reconciliation.known
+      && reconciliation.row
+      && isAuthoritativeRecoverableRetryFailure(
+        result,
+        reconciliation.result
+      )
+    ) {
+      delete state.erasureUncertain[id];
+      renderRows(state.rows);
+      showToast(friendlyLgpdErrorMessage(result.error || result), 'error');
+      return;
+    }
+
+    if (result && result.request && !reconciliation.result) {
+      state.erasureResults[id] = {
+        ...(currentResult || {}),
+        ...result,
+        diagnostics: result.diagnostics
+          || (currentResult && currentResult.diagnostics),
+      };
+    }
+    markErasureOutcomeUncertain(id, action);
+    renderRows(state.rows);
+    showToast(
+      action === 'link_verified_identity'
+        ? 'O servidor e a leitura autoritativa não confirmaram o vínculo canônico. O resultado é indeterminado; não repita a ação antes de recarregar o ticket.'
+        : reconciliation.known
+          ? 'A leitura segura não confirmou a pós-condição desta operação. As mutações ficaram bloqueadas; não repita a ação antes de executar Preparar diagnóstico.'
+          : 'O resultado da operação é indeterminado. As mutações ficaram bloqueadas; não repita a ação até recarregar e executar Preparar diagnóstico.',
+      'error'
+    );
+  }
+
+  async function settleExportMutationResult(options) {
+    const {
+      id,
+      action,
+      payload,
+      result,
+      previousArtifactVersion,
+      adminContext,
+      transportFailed,
+    } = options;
+    const reconciliation = await reconcileExportMutation(
+      id,
+      action,
+      payload,
+      previousArtifactVersion,
+      adminContext
+    );
+    if (!isActiveAdminContext(adminContext)) return;
+    if (reconciliation.committed) {
+      delete state.exportSupplementUncertain[id];
+      if (action === 'link_verified_ticket' && result && result.ok !== false) {
+        state.exportSupplementResults[id] = result;
+      }
+      renderRows(state.rows);
+      if (transportFailed || !result || result.ok === false) {
+        showToast(
+          'A resposta foi interrompida, mas a pós-condição específica do artefato foi confirmada. A operação não foi repetida.',
+          'success'
+        );
+        return;
+      }
+      const successMessages = {
+        link_verified_ticket: 'Identidade, protocolo e artefato confirmados por leitura autoritativa.',
+        record_processor: 'Evidência do operador confirmada somente por hash.',
+        build: 'Complemento privado íntegro e disponível foi confirmado.',
+        retry: 'Complemento privado íntegro e disponível foi confirmado.',
+        purge: 'Expurgo do artefato foi confirmado.',
+      };
+      showToast(successMessages[action] || 'Suplemento atualizado.', 'success');
+      return;
+    }
+
+    markExportOutcomeUncertain(id, action);
+    renderRows(state.rows);
+    showToast(
+      action === 'link_verified_ticket'
+        ? 'O servidor respondeu, mas a leitura autoritativa não confirmou o vínculo completo entre ticket, protocolo e artefato. Não repita a ação antes de recarregar.'
+        : reconciliation.known
+          ? 'A leitura segura não confirmou a pós-condição específica do artefato. As mutações ficaram bloqueadas; não repita a ação antes de executar Diagnosticar.'
+          : 'O resultado do suplemento é indeterminado. As mutações ficaram bloqueadas; não repita a ação até recarregar e diagnosticar o artefato.',
+      'error'
+    );
   }
 
   async function handleLgpdAction(card, action) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
     const id = String(card && card.getAttribute('data-help-id') || '').trim();
-    if (!id) return;
-    const row = state.rows.find((item) => String(item && item.id || '') === id);
+    if (!id || !LGPD_ACTIONS.has(action) || state.erasureBusy[id] === true) return;
+    let row = state.rows.find((item) => String(item && item.id || '') === id);
     if (!row) return;
-    const allowed = await checkAdminAccess();
-    if (!allowed) {
-      showToast('Entre novamente com uma conta administradora antes de executar o fluxo LGPD.', 'error');
+    if (!canRunErasureAction(row, action)) {
+      showToast(
+        action === 'retry_finalize'
+          ? 'Carregue primeiro o estado pós-exclusão. A finalização permanece bloqueada até o servidor confirmar o checkpoint e a prova armazenada.'
+          : 'A ação foi bloqueada porque o ticket não possui o vínculo canônico exigido para esta etapa.',
+        'error'
+      );
       return;
     }
-    const targetEmail = getLgpdTargetEmail(row);
+    const allowed = await checkAdminAccess(adminContext);
+    if (!allowed || !isActiveAdminContext(adminContext)) {
+      if (isActiveAdminContext(adminContext)) {
+        showToast('Entre novamente com uma conta administradora antes de executar o fluxo LGPD.', 'error');
+      }
+      return;
+    }
+    if (state.erasureBusy[id] === true) return;
+    row = state.rows.find((item) => String(item && item.id || '') === id);
+    if (!row || !canRunErasureAction(row, action)) {
+      showToast('O estado do vínculo mudou durante a autorização. Atualize a fila antes de continuar.', 'error');
+      return;
+    }
+    const verifiedAccountEmail = String(
+      card.querySelector('[data-lgpd-account-email]')?.value || getLgpdTargetEmail(row)
+    ).trim().toLowerCase();
+    const targetEmail = action === 'link_verified_identity'
+      ? verifiedAccountEmail
+      : getLgpdTargetEmail(row);
     const confirmation = String(card.querySelector('[data-lgpd-confirmation]')?.value || '').trim();
+    const evidenceReference = String(card.querySelector('[data-lgpd-evidence-reference]')?.value || '').trim();
+    const evidenceAt = readIsoDateTime(card, '[data-lgpd-evidence-at]');
+    const evidenceAttested = card.querySelector('[data-lgpd-evidence-attested]')?.checked === true;
+    const deliveryReference = String(card.querySelector('[data-lgpd-delivery-reference]')?.value || '').trim();
+    const deliveryAt = readIsoDateTime(card, '[data-lgpd-delivery-at]');
+    const deliveryAttested = card.querySelector('[data-lgpd-delivery-attested]')?.checked === true;
+    const cancellationReason = String(card.querySelector('[data-lgpd-cancellation-reason]')?.value || '').trim();
+    const providerReference = String(card.querySelector('[data-lgpd-provider-reference]')?.value || '').trim();
+    const providerAt = readIsoDateTime(card, '[data-lgpd-provider-at]');
+    const providerAttested = card.querySelector('[data-lgpd-provider-attested]')?.checked === true;
+    const identityChannel = String(card.querySelector('[data-lgpd-identity-channel]')?.value || '').trim();
+    const identityReference = String(card.querySelector('[data-lgpd-identity-reference]')?.value || '').trim();
+    const identityAt = readIsoDateTime(card, '[data-lgpd-identity-at]');
+    const identityAttested = card.querySelector('[data-lgpd-identity-attested]')?.checked === true;
+    const completionReference = String(card.querySelector('[data-lgpd-completion-reference]')?.value || '').trim();
+    const completionAt = readIsoDateTime(card, '[data-lgpd-completion-at]');
+    const completionAttested = card.querySelector('[data-lgpd-completion-attested]')?.checked === true;
+    const copyDecisionValue = String(card.querySelector('[data-lgpd-copy-decision]')?.value || '').trim();
+    const copyDecisionReference = String(card.querySelector('[data-lgpd-copy-reference]')?.value || '').trim();
+    const copyDecisionAt = readIsoDateTime(card, '[data-lgpd-copy-at]');
+    const copyDecisionAttested = card.querySelector('[data-lgpd-copy-attested]')?.checked === true;
+    const currentResult = state.erasureResults[id] || {};
+    const manualProviders = getManualProviderIds(currentResult);
+    const providerOutcomes = {};
+    const providerRetentions = {};
+    card.querySelectorAll('[data-lgpd-provider-outcome]').forEach((field) => {
+      const provider = String(field.getAttribute('data-provider') || '').trim();
+      const outcome = String(field.value || '').trim();
+      if (provider && outcome) providerOutcomes[provider] = outcome;
+    });
+    manualProviders.forEach((provider) => {
+      if (providerOutcomes[provider] !== 'retention_documented') return;
+      const escapedProvider = window.CSS && typeof window.CSS.escape === 'function'
+        ? window.CSS.escape(provider)
+        : provider.replace(/["\\]/g, '\\$&');
+      const basis = String(card.querySelector(`[data-lgpd-provider-retention-basis][data-provider="${escapedProvider}"]`)?.value || '').trim();
+      const reviewAt = readIsoDateTime(card, `[data-lgpd-provider-retention-at][data-provider="${escapedProvider}"]`);
+      providerRetentions[provider] = { legal_basis: basis, review_at: reviewAt };
+    });
+    const currentRequest = currentResult && currentResult.request && typeof currentResult.request === 'object'
+      ? currentResult.request
+      : {};
+    const currentMetadata = currentRequest.metadata && typeof currentRequest.metadata === 'object'
+      ? currentRequest.metadata
+      : {};
+    const helpMetadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const existingCopyDecision = currentMetadata.pre_erasure_copy_decision
+      && typeof currentMetadata.pre_erasure_copy_decision === 'object'
+      ? currentMetadata.pre_erasure_copy_decision
+      : {};
+    const identityNeedsManual = Boolean(
+      currentResult
+      && currentResult.diagnostics
+      && currentResult.diagnostics.identity_assurance
+      && currentResult.diagnostics.identity_assurance.requires_manual_evidence === true
+    );
+    const completionNotificationPending = currentRequest.status === 'erased'
+      && currentMetadata.notification_pending === true;
+    if (
+      action === 'link_verified_identity'
+      && (
+        String(row.user_id || '').trim()
+        || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(verifiedAccountEmail)
+      )
+    ) {
+      setFieldInvalid(card, '[data-lgpd-account-email]', true);
+      showToast('Informe o e-mail exato da conta ainda não vinculada e atualize a fila se o ticket já mudou.', 'error');
+      return;
+    }
+    if (
+      action === 'link_verified_identity'
+      && (
+        ![
+          'verified_email_challenge',
+          'support_mailbox_reply',
+          'identity_document_review',
+          'in_person_verification',
+        ].includes(identityChannel)
+        || identityReference.length < 6
+        || !identityAt
+        || Date.parse(identityAt) < Date.now() - (30 * 24 * 60 * 60 * 1000)
+        || Date.parse(identityAt) > Date.now() + (5 * 60 * 1000)
+        || !identityAttested
+      )
+    ) {
+      setFieldInvalid(
+        card,
+        '[data-lgpd-identity-channel]',
+        ![
+          'verified_email_challenge',
+          'support_mailbox_reply',
+          'identity_document_review',
+          'in_person_verification',
+        ].includes(identityChannel)
+      );
+      setFieldInvalid(card, '[data-lgpd-identity-reference]', identityReference.length < 6);
+      setFieldInvalid(
+        card,
+        '[data-lgpd-identity-at]',
+        !identityAt
+          || Date.parse(identityAt) < Date.now() - (30 * 24 * 60 * 60 * 1000)
+          || Date.parse(identityAt) > Date.now() + (5 * 60 * 1000)
+      );
+      setFieldInvalid(card, '[data-lgpd-identity-attested]', !identityAttested);
+      showToast('Informe e ateste canal, referência e data válida da verificação antes de vincular a identidade.', 'error');
+      return;
+    }
     if (action === 'erase_confirmed' && confirmation !== `EXCLUIR ${targetEmail}`) {
       showToast('Digite a frase de confirmação exatamente como exibida antes da exclusão irreversível.', 'error');
       return;
     }
+    if (action === 'erase_confirmed' && (!evidenceReference || !evidenceAt || !evidenceAttested)) {
+      showToast('Registre a referência, a data e a validação da resposta do titular antes da exclusão.', 'error');
+      return;
+    }
+    if (
+      action === 'erase_confirmed'
+      && (
+        !String(helpMetadata.export_before_erasure || '').trim()
+        || String(helpMetadata.export_before_erasure || '').trim() === 'need_guidance'
+      )
+      && existingCopyDecision.attested !== true
+      && (!copyDecisionValue || !copyDecisionReference || !copyDecisionAt || !copyDecisionAttested)
+    ) {
+      showToast('Registre e ateste a decisão do titular sobre receber uma cópia antes da exclusão.', 'error');
+      return;
+    }
+    if (action === 'record_confirmation_delivery' && (!deliveryReference || !deliveryAt || !deliveryAttested)) {
+      showToast('Informe referência, data e ateste o envio manual pelo e-mail titular.', 'error');
+      return;
+    }
+    if (
+      action === 'apply_reversible'
+      && identityNeedsManual
+      && (!identityChannel || !identityReference || !identityAt || !identityAttested)
+    ) {
+      showToast('Valide e ateste a identidade do titular antes de ocultar qualquer dado deste ticket legado/anônimo.', 'error');
+      return;
+    }
+    if (action === 'cancel_reversible' && cancellationReason.length < 8) {
+      showToast('Informe um motivo operacional com pelo menos 8 caracteres para cancelar e restaurar.', 'error');
+      return;
+    }
+    if (
+      action === 'retry_finalize'
+      && !completionNotificationPending
+      && (
+        !providerReference
+        || !providerAt
+        || !providerAttested
+        || !manualProviders.length
+        || manualProviders.some((provider) => !providerOutcomes[provider])
+        || manualProviders.some((provider) => (
+          providerOutcomes[provider] === 'retention_documented'
+          && (
+            !providerRetentions[provider]
+            || String(providerRetentions[provider].legal_basis || '').trim().length < 8
+            || !providerRetentions[provider].review_at
+          )
+        ))
+      )
+    ) {
+      showToast('Execute o diagnóstico e registre a revisão concluída de todos os operadores externos.', 'error');
+      return;
+    }
+    if (
+      action === 'retry_finalize'
+      && completionNotificationPending
+      && (completionReference || completionAt || completionAttested)
+      && (!completionReference || !completionAt || !completionAttested)
+    ) {
+      showToast('Complete todos os campos de entrega manual ou deixe todos vazios para tentar o reenvio automático.', 'error');
+      return;
+    }
     const button = card.querySelector(`[data-lgpd-action="${action}"]`);
+    const focusAction = action;
+    state.erasureBusy[id] = true;
+    const panel = card.querySelector('[data-lgpd-panel]');
+    if (panel) {
+      panel.setAttribute('aria-busy', 'true');
+      const liveStatus = panel.querySelector('[data-lgpd-live]');
+      if (liveStatus) liveStatus.textContent = 'Processando solicitação LGPD.';
+      panel.querySelectorAll('button, input, select, textarea').forEach((control) => {
+        control.disabled = true;
+      });
+    }
     if (button) {
       button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
       button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Processando...';
     }
     try {
@@ -1039,37 +2729,307 @@
         actionKey: action,
         help_request_id: id,
         helpRequestId: id,
+        account_email: verifiedAccountEmail,
+        accountEmail: verifiedAccountEmail,
         target_email: targetEmail,
         targetEmail,
         confirmation_phrase: confirmation,
         confirmationPhrase: confirmation,
-        help_request: row,
+        confirmation_evidence: {
+          channel: 'email_reply',
+          reference: evidenceReference,
+          received_at: evidenceAt,
+          attested: evidenceAttested,
+        },
+        confirmationEvidence: {
+          channel: 'email_reply',
+          reference: evidenceReference,
+          received_at: evidenceAt,
+          attested: evidenceAttested,
+        },
+        identity_evidence: {
+          channel: identityChannel,
+          reference: identityReference,
+          verified_at: identityAt,
+          attested: identityAttested,
+        },
+        delivery_evidence: {
+          channel: 'manual_email',
+          reference: deliveryReference,
+          delivered_at: deliveryAt,
+          attested: deliveryAttested,
+        },
+        deliveryEvidence: {
+          channel: 'manual_email',
+          reference: deliveryReference,
+          delivered_at: deliveryAt,
+          attested: deliveryAttested,
+        },
+        cancellation_reason: cancellationReason,
+        cancellationReason,
+        copy_gate_decision: copyDecisionValue
+          ? {
+            decision: copyDecisionValue,
+            channel: 'admin_guidance_review',
+            reference: copyDecisionReference,
+            decided_at: copyDecisionAt,
+            attested: copyDecisionAttested,
+          }
+          : undefined,
+        provider_evidence: {
+          channel: 'admin_provider_review',
+          reference: providerReference,
+          completed_at: providerAt,
+          attested: providerAttested,
+          outcomes: providerOutcomes,
+          retentions: providerRetentions,
+        },
+        completion_delivery_evidence: {
+          channel: 'manual_email',
+          reference: completionReference,
+          delivered_at: completionAt,
+          attested: completionAttested,
+        },
       });
+      if (!isActiveAdminContext(adminContext)) return;
+      if (LGPD_MUTATING_ACTIONS.has(action)) {
+        await settleErasureMutationResult({
+          id,
+          action,
+          result,
+          currentResult,
+          adminContext,
+          transportFailed: false,
+        });
+        return;
+      }
+      if (action === 'diagnose' && result && result.ok !== false) {
+        delete state.erasureUncertain[id];
+      }
       if (!result || result.ok === false) {
+        if (result && result.request) {
+          state.erasureResults[id] = {
+            ...currentResult,
+            ...result,
+            diagnostics: result.diagnostics || currentResult.diagnostics,
+          };
+          renderRows(state.rows);
+        }
         showToast(friendlyLgpdErrorMessage(result && result.error), 'error');
         return;
       }
       state.erasureResults[id] = result;
-      showToast(action === 'erase_confirmed' ? 'Exclusão LGPD confirmada.' : 'Fluxo LGPD atualizado.', 'success');
-      if (action === 'apply_reversible' || action === 'erase_confirmed') {
-        await loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
-      } else {
-        renderRows(state.rows);
-      }
+      showToast('Fluxo LGPD atualizado.', 'success');
+      renderRows(state.rows);
     } catch (error) {
-      console.error('[AdminHelp] lgpd action failed:', error);
+      if (!isActiveAdminContext(adminContext)) return;
+      console.error('[AdminHelp] lgpd_action_failed');
+      if (LGPD_MUTATING_ACTIONS.has(action)) {
+        await settleErasureMutationResult({
+          id,
+          action,
+          result: null,
+          currentResult,
+          adminContext,
+          transportFailed: true,
+        });
+        return;
+      }
       showToast(friendlyLgpdErrorMessage(error), 'error');
     } finally {
-      if (button) {
-        button.disabled = false;
+      if (isActiveAdminContext(adminContext)) {
+        delete state.erasureBusy[id];
         renderRows(state.rows);
+        const refreshedCard = document.querySelector(`[data-help-id="${id}"]`);
+        const nextFocus = refreshedCard && (
+          refreshedCard.querySelector(`[data-lgpd-action="${focusAction}"]`)
+          || refreshedCard.querySelector('[data-lgpd-action="diagnose"]')
+          || refreshedCard.querySelector('[data-lgpd-export]')
+          || refreshedCard.querySelector('[data-help-save]')
+        );
+        if (nextFocus && typeof nextFocus.focus === 'function') nextFocus.focus();
       }
+    }
+  }
+
+  async function handleDataExportSupplementAction(card, action, processorRow) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
+    const id = String(card && card.getAttribute('data-help-id') || '').trim();
+    if (!id || !window.KCAPI || typeof window.KCAPI.processDataExportSupplement !== 'function') return;
+    const allowedActions = ['link_verified_ticket', 'diagnose', 'record_processor', 'build', 'retry', 'purge'];
+    if (!allowedActions.includes(action) || state.exportSupplementBusy[id] === true) return;
+    let row = state.rows.find((item) => String(item && item.id || '').trim() === id);
+    if (!row || !canRunDataExportAction(row, action)) {
+      showToast('A ação do suplemento foi bloqueada porque o vínculo canônico ou a elegibilidade de expurgo não foi confirmado.', 'error');
+      return;
+    }
+    const access = await checkAdminAccess(adminContext);
+    if (!access || !isActiveAdminContext(adminContext)) {
+      if (isActiveAdminContext(adminContext)) {
+        showToast('Entre novamente com uma conta administradora.', 'error');
+      }
+      return;
+    }
+    if (state.exportSupplementBusy[id] === true) return;
+    row = state.rows.find((item) => String(item && item.id || '').trim() === id);
+    if (!row || !canRunDataExportAction(row, action)) {
+      showToast('O estado do protocolo ou do artefato mudou durante a autorização. Atualize a fila antes de continuar.', 'error');
+      return;
+    }
+    if (
+      action === 'purge'
+      && typeof window.confirm === 'function'
+      && !window.confirm('Expurgar definitivamente este arquivo privado? Esta ação não pode ser desfeita.')
+    ) {
+      return;
+    }
+    const payload = { action, help_request_id: id };
+    if (action === 'purge') {
+      const artifactRef = String(
+        getHelpMetadata(row).export_artifact_ref || ''
+      ).trim().toUpperCase();
+      if (EXPORT_ARTIFACT_REF_RE.test(artifactRef)) {
+        payload.artifact_ref = artifactRef;
+      }
+    }
+    if (action === 'link_verified_ticket') {
+      const identityPanel = card.querySelector('[data-export-identity-link]');
+      const accountEmail = String(identityPanel && identityPanel.querySelector('[data-export-account-email]')?.value || '').trim().toLowerCase();
+      const requestKind = String(identityPanel && identityPanel.querySelector('[data-export-request-kind]')?.value || '').trim().toLowerCase();
+      const identityChannel = String(identityPanel && identityPanel.querySelector('[data-export-identity-channel]')?.value || '').trim();
+      const identityReference = String(identityPanel && identityPanel.querySelector('[data-export-identity-reference]')?.value || '').trim();
+      const identityVerifiedAt = String(identityPanel && identityPanel.querySelector('[data-export-identity-at]')?.value || '').trim();
+      const identityAttested = Boolean(identityPanel && identityPanel.querySelector('[data-export-identity-attested]')?.checked);
+      const verifiedAtMs = Date.parse(identityVerifiedAt);
+      if (
+        !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(accountEmail)
+        || !['data_access_copy', 'data_portability'].includes(requestKind)
+        || ![
+          'verified_email_challenge',
+          'support_mailbox_reply',
+          'identity_document_review',
+          'in_person_verification',
+        ].includes(identityChannel)
+        || identityReference.length < 8
+        || !Number.isFinite(verifiedAtMs)
+        || verifiedAtMs < Date.now() - 30 * 24 * 60 * 60 * 1000
+        || verifiedAtMs > Date.now() + 5 * 60 * 1000
+        || !identityAttested
+      ) {
+        showToast('Informe o e-mail exato, a referência, a data recente e confirme a validação da identidade.', 'error');
+        return;
+      }
+      payload.account_email = accountEmail;
+      payload.request_kind = requestKind;
+      payload.identity_channel = identityChannel;
+      payload.identity_reference = identityReference;
+      payload.identity_verified_at = new Date(verifiedAtMs).toISOString();
+      payload.identity_attested = true;
+    }
+    if (action === 'record_processor' && processorRow) {
+      payload.processor = String(processorRow.querySelector('[data-export-processor]')?.value || '').trim();
+      payload.outcome = String(processorRow.querySelector('[data-export-outcome]')?.value || '').trim();
+      payload.evidence_reference = String(processorRow.querySelector('[data-export-evidence]')?.value || '').trim();
+      if (payload.evidence_reference.length < 8) {
+        showToast('Informe uma referência de evidência com pelo menos 8 caracteres.', 'error');
+        return;
+      }
+      if (payload.outcome === 'supplied_out_of_band') {
+        const deliveryChannel = String(processorRow.querySelector('[data-export-delivery-channel]')?.value || '').trim();
+        const deliveredAtInput = String(processorRow.querySelector('[data-export-delivered-at]')?.value || '').trim();
+        const deliveredAtMs = Date.parse(deliveredAtInput);
+        const deliveryAttested = processorRow.querySelector('[data-export-delivery-attested]')?.checked === true;
+        if (
+          !['support_mailbox', 'secure_file_transfer', 'provider_portal', 'in_person'].includes(deliveryChannel)
+          || !Number.isFinite(deliveredAtMs)
+          || deliveredAtMs < Date.now() - 365 * 24 * 60 * 60 * 1000
+          || deliveredAtMs > Date.now() + 5 * 60 * 1000
+          || !deliveryAttested
+        ) {
+          showToast('Informe o canal e a data da entrega externa e confirme que o conteúdo não está no JSON.', 'error');
+          return;
+        }
+        payload.delivery_channel = deliveryChannel;
+        payload.delivered_out_of_band_at = new Date(deliveredAtMs).toISOString();
+        payload.delivery_attested = true;
+      }
+    }
+    state.exportSupplementBusy[id] = true;
+    renderRows(state.rows);
+    const previousArtifactVersion = Number(
+      state.exportSupplementResults[id]
+      && state.exportSupplementResults[id].artifact
+      && state.exportSupplementResults[id].artifact.version
+    );
+    try {
+      const result = await window.KCAPI.processDataExportSupplement(payload);
+      if (!isActiveAdminContext(adminContext)) return;
+      if (EXPORT_MUTATING_ACTIONS.has(action)) {
+        await settleExportMutationResult({
+          id,
+          action,
+          payload,
+          result,
+          previousArtifactVersion,
+          adminContext,
+          transportFailed: false,
+        });
+        return;
+      }
+      if (action === 'diagnose' && result && result.ok !== false) {
+        delete state.exportSupplementUncertain[id];
+      }
+      if (!result || result.ok === false) {
+        showToast(String(result && result.error && result.error.message || 'Falha no suplemento.'), 'error');
+        return;
+      }
+      state.exportSupplementResults[id] = result;
+      showToast('Diagnóstico do suplemento atualizado.', 'success');
+    } catch (error) {
+      if (!isActiveAdminContext(adminContext)) return;
+      console.error('[AdminHelp] export_supplement_action_failed');
+      if (EXPORT_MUTATING_ACTIONS.has(action)) {
+        await settleExportMutationResult({
+          id,
+          action,
+          payload,
+          result: null,
+          previousArtifactVersion,
+          adminContext,
+          transportFailed: true,
+        });
+        return;
+      }
+      showToast(String(error && error.message || 'Falha no suplemento.'), 'error');
+    } finally {
+      if (!isActiveAdminContext(adminContext)) return;
+      delete state.exportSupplementBusy[id];
+      renderRows(state.rows);
+      const refreshedCard = document.querySelector(`[data-help-id="${id}"]`);
+      const nextFocus = refreshedCard && refreshedCard.querySelector(
+        action === 'record_processor'
+          ? '[data-export-processor-save]'
+          : `[data-export-action="${action}"], [data-export-action="diagnose"]`
+      );
+      if (nextFocus && typeof nextFocus.focus === 'function') nextFocus.focus();
     }
   }
 
   function bindEvents() {
     if (eventsBound) return;
     eventsBound = true;
+
+    document.addEventListener('kc:authchange', function (event) {
+      const detail = event && event.detail && typeof event.detail === 'object'
+        ? event.detail
+        : null;
+      reauthorizeAdminView(
+        detail && Object.prototype.hasOwnProperty.call(detail, 'user')
+          ? { sessionUser: detail.user }
+          : {}
+      );
+    });
 
     ['#helpStatusFilter', '#helpTypeFilter', '#helpPriorityFilter'].forEach((selector) => {
       const field = $(selector);
@@ -1094,12 +3054,29 @@
     }
 
     const exportXlsx = $('#helpExportXlsx');
-    if (exportXlsx) exportXlsx.addEventListener('click', () => handleHelpExport('xlsx').catch(console.error));
+    if (exportXlsx) exportXlsx.addEventListener('click', () => handleHelpExport('xlsx').catch(() => console.error('[AdminHelp] export_xlsx_failed')));
     const exportPdf = $('#helpExportPdf');
-    if (exportPdf) exportPdf.addEventListener('click', () => handleHelpExport('pdf').catch(console.error));
+    if (exportPdf) exportPdf.addEventListener('click', () => handleHelpExport('pdf').catch(() => console.error('[AdminHelp] export_pdf_failed')));
+
+    document.addEventListener('change', function (event) {
+      const outcome = event.target && event.target.closest
+        ? event.target.closest('[data-export-outcome]')
+        : null;
+      if (!outcome) return;
+      const processorRow = outcome.closest('[data-export-processor-row]');
+      if (!processorRow) return;
+      const externalDelivery = outcome.value === 'supplied_out_of_band';
+      processorRow.querySelectorAll('[data-export-delivery-field] input, [data-export-delivery-field] select').forEach((field) => {
+        field.disabled = !externalDelivery;
+        if (!externalDelivery) {
+          if (field.type === 'checkbox') field.checked = false;
+          else field.value = '';
+        }
+      });
+    });
 
     document.addEventListener('click', function (event) {
-      const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export]') : null;
+      const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]') : null;
       if (!target) return;
 
       if (target.hasAttribute('data-help-load-more')) {
@@ -1111,10 +3088,32 @@
       }
 
       const card = target.closest('[data-help-id]');
+      if (target.hasAttribute('data-export-action')) {
+        event.preventDefault();
+        if (card) {
+          handleDataExportSupplementAction(
+            card,
+            String(target.getAttribute('data-export-action') || ''),
+            null
+          ).catch(() => console.error('[AdminHelp] export_supplement_action_unhandled'));
+        }
+        return;
+      }
+      if (target.hasAttribute('data-export-processor-save')) {
+        event.preventDefault();
+        if (card) {
+          handleDataExportSupplementAction(
+            card,
+            'record_processor',
+            target.closest('[data-export-processor-row]')
+          ).catch(() => console.error('[AdminHelp] export_supplement_evidence_unhandled'));
+        }
+        return;
+      }
       if (target.hasAttribute('data-lgpd-action')) {
         event.preventDefault();
         if (card) {
-          handleLgpdAction(card, String(target.getAttribute('data-lgpd-action') || '')).catch(console.error);
+          handleLgpdAction(card, String(target.getAttribute('data-lgpd-action') || '')).catch(() => console.error('[AdminHelp] lgpd_action_unhandled'));
         }
         return;
       }
@@ -1123,7 +3122,7 @@
         event.preventDefault();
         const id = String(card && card.getAttribute('data-help-id') || '').trim();
         const row = state.rows.find((item) => String(item && item.id || '') === id);
-        if (row) exportLgpdReport(row).catch(console.error);
+        if (row) exportLgpdReport(row).catch(() => console.error('[AdminHelp] lgpd_export_failed'));
         return;
       }
 
@@ -1142,18 +3141,41 @@
     }
   }
 
-  async function init() {
-    populateTypeFilter();
-    bindEvents();
-
-    const allowed = await checkAdminAccess();
-    if (!allowed) {
-      showLoading(false);
+  async function reauthorizeAdminView(options = {}) {
+    clearSensitiveAdminState();
+    const generation = state.authGeneration;
+    let access = null;
+    try {
+      access = await checkAdminAccess({
+        generation,
+        ...(Object.prototype.hasOwnProperty.call(options, 'sessionUser')
+          ? { sessionUser: options.sessionUser }
+          : {}),
+      });
+    } catch (_) {
+      if (generation === state.authGeneration) {
+        denyAdminAccess('Não foi possível validar seu acesso administrativo.', generation);
+      }
+      console.error('[AdminHelp] admin_access_check_failed');
+      return;
+    }
+    if (!access || generation !== state.authGeneration) {
+      if (generation === state.authGeneration) showLoading(false);
       return;
     }
 
+    state.authorizedAdminUserId = access.userId;
+    state.isAuthorized = true;
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return;
     showLoadingSkeletons();
     await loadRows();
+  }
+
+  async function init() {
+    populateTypeFilter();
+    bindEvents();
+    await reauthorizeAdminView();
   }
 
   if (document.readyState === 'loading') {
