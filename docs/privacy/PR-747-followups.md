@@ -65,11 +65,18 @@ Issue: [#751](https://github.com/yandiamantinoBr/kino-campus/issues/751) (closed
 
 ## P2 (nice-to-have)
 
-### 5. Auto-redirect visitante → autenticado após login
+### 5. Auto-redirect visitante → autenticado após login ✅ RESOLVIDO em [PR #758](https://github.com/yandiamantinoBr/kino-campus/pull/758)
 
-- **Sintoma:** um visitante (não autenticado) que preenche o form de LGPD com Turnstile, depois faz login, perde o estado.
-- **Onde:** `kc-create-privacy-help-guest` (EXPAND phase).
-- **Próximo passo:** guardar o payload do form em `localStorage` antes do login e re-aplicar depois.
+Issue: [#752](https://github.com/yandiamantinoBr/kino-campus/issues/752) (closed)
+
+- **Sintoma:** um visitante (não autenticado) que preenche o form de LGPD com Turnstile, depois faz login, perdia o estado.
+- **Solução aplicada:**
+  - **Stash** do payload em `sessionStorage` (não `localStorage`, para que feche junto com a aba) com chave `kc-privacy-pending-payload-v1` e TTL de 15 minutos.
+  - Envelope `{v: 1, created_at_ms, request_kind, payload}` valida versão, TTL, e request_kind permitido (`data_access_copy`, `data_portability`, `account_erasure`).
+  - **Restore** automático em `init()` após `hydrateUser` + `recoverPendingPrivacySubmissions`, mas SÓ se o user está autenticado E o form está pristine (sem input novo).
+  - **Clear** do stash em 3 pontos: (a) submit bem-sucedido, (b) user já autenticado no submit (stash stale), (c) restore aplicado.
+  - **Privacy:** o form é re-aplicado mas NÃO auto-submetido. O user é solicitado a revisar e re-enviar. PII não é logada em console.
+- **Validação:** 199/199 tests OK. Todos os 5 checks de CI passaram.
 
 ### 6. Cobertura do diagnóstico de erasure
 
