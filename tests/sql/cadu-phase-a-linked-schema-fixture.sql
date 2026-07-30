@@ -36,6 +36,21 @@ create trigger kc_unit_meta_touch
   before update on public.kc_unit_meta
   for each row execute function public.kc_unit_meta_touch();
 
+-- Phase-A test compatibility (issue #748): the pre-privacy schema did not
+-- include the active-session write guard trigger nor the active-session
+-- restrictive policy. The reset by supabase db reset applies the privacy
+-- migrations first, so we have to drop the privacy artifacts here for the
+-- legacy migration to be exercised as a fresh upgrade path.
+drop trigger if exists kc_active_session_write_guard on public.kc_unit_meta;
+drop policy if exists kc_active_session_restrictive on public.kc_unit_meta;
+
+-- Reset the FK to the pre-privacy state (no ON DELETE SET NULL).
+alter table public.kc_unit_meta
+  drop constraint if exists kc_unit_meta_updated_by_fkey;
+alter table public.kc_unit_meta
+  add constraint kc_unit_meta_updated_by_fkey
+  foreign key (updated_by) references auth.users(id);
+
 drop policy if exists kc_unit_meta_select_public on public.kc_unit_meta;
 drop policy if exists kc_unit_meta_insert_admin on public.kc_unit_meta;
 drop policy if exists kc_unit_meta_update_admin on public.kc_unit_meta;
@@ -45,18 +60,14 @@ drop policy if exists "admins can insert kc_unit_meta" on public.kc_unit_meta;
 drop policy if exists "admins can update kc_unit_meta" on public.kc_unit_meta;
 drop policy if exists "admins can delete kc_unit_meta" on public.kc_unit_meta;
 
+-- Pre-privacy schema had a single permissive SELECT policy plus an
+-- all-browsers-allowed grant. The four admin policies that came in via
+-- the linked-project fingerprint existed alongside, but the 20260713183000
+-- migration drops them and the probe expects only the single permissive
+-- SELECT. We pre-empt that work here so the test exercises the migration
+-- against a fully pre-privacy state.
 create policy "anyone can read kc_unit_meta"
   on public.kc_unit_meta for select using (true);
-create policy "admins can insert kc_unit_meta"
-  on public.kc_unit_meta for insert
-  with check (public.kc_is_admin((select auth.uid())));
-create policy "admins can update kc_unit_meta"
-  on public.kc_unit_meta for update
-  using (public.kc_is_admin((select auth.uid())))
-  with check (public.kc_is_admin((select auth.uid())));
-create policy "admins can delete kc_unit_meta"
-  on public.kc_unit_meta for delete
-  using (public.kc_is_admin((select auth.uid())));
 
 revoke all on table public.kc_unit_meta
   from public, anon, authenticated, service_role;
