@@ -22,7 +22,7 @@ const htmlFiles = PAGE_MANIFEST.ALL_HTML_PAGES;
 const B2_GATE = {
   minLines: 800,
   minKeys: 440,
-  publicMethods: 9,
+  publicMethods: 10,
   minAriaMarkings: 189,
   minPlaceholderMarkings: 59,
   minTooltipMarkings: 55,
@@ -65,7 +65,7 @@ describe('v12.7.3 — gate B2: kc-i18n.js integridade', () => {
     expect(Object.keys(i18n)).toHaveLength(B2_GATE.publicMethods);
   });
 
-  test('contrato publico KCi18n contem todos os 9 metodos esperados', () => {
+  test('contrato publico KCi18n contem todos os 10 metodos esperados', () => {
     const i18n = resetAndLoad();
     const expected = [
       'locale',
@@ -77,6 +77,7 @@ describe('v12.7.3 — gate B2: kc-i18n.js integridade', () => {
       'applyAriaLabels',
       'applyPlaceholders',
       'applyTooltips',
+      'applyTexts',
     ];
     expected.forEach((method) => {
       expect(Object.keys(i18n)).toContain(method);
@@ -152,12 +153,13 @@ describe('v12.7.3 — gate B2: infraestrutura no kc-i18n.js', () => {
     expect(source).toMatch(/function\s+applyRuntimeI18n\s*\(/);
   });
 
-  test('fonte define todos os 5 helpers de superficie', () => {
+  test('fonte define todos os 6 helpers de superficie', () => {
     expect(source).toMatch(/function\s+applyDocumentMetadata\s*\(/);
     expect(source).toMatch(/function\s+applyStaticAlts\s*\(/);
     expect(source).toMatch(/function\s+applyAriaLabels\s*\(/);
     expect(source).toMatch(/function\s+applyPlaceholders\s*\(/);
     expect(source).toMatch(/function\s+applyTooltips\s*\(/);
+    expect(source).toMatch(/function\s+applyTexts\s*\(/);
   });
 
   test('fonte expoe todos os helpers no objeto KCi18n', () => {
@@ -166,6 +168,7 @@ describe('v12.7.3 — gate B2: infraestrutura no kc-i18n.js', () => {
     expect(source).toMatch(/applyAriaLabels\s*:\s*applyAriaLabels/);
     expect(source).toMatch(/applyPlaceholders\s*:\s*applyPlaceholders/);
     expect(source).toMatch(/applyTooltips\s*:\s*applyTooltips/);
+    expect(source).toMatch(/applyTexts\s*:\s*applyTexts/);
   });
 
   test('fonte contem as 6 categorias de runtime (aria-label, placeholder, tooltip, alt, meta-title, meta-description)', () => {

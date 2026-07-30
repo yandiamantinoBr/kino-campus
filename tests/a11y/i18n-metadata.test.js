@@ -41,6 +41,7 @@ describe('kc-i18n.js - metadata runtime contract', () => {
       'applyDocumentMetadata',
       'applyPlaceholders',
       'applyStaticAlts',
+      'applyTexts',
       'applyTooltips',
       'keys',
       'locale',
@@ -52,6 +53,7 @@ describe('kc-i18n.js - metadata runtime contract', () => {
     expect(typeof i18n.applyAriaLabels).toBe('function');
     expect(typeof i18n.applyPlaceholders).toBe('function');
     expect(typeof i18n.applyTooltips).toBe('function');
+    expect(typeof i18n.applyTexts).toBe('function');
   });
 
   test('dicionario contem chaves de title, description e alt da v12.7.0', () => {

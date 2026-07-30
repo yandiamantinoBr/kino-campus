@@ -26,7 +26,9 @@ Esta página lista itens identificados durante o trabalho da PR #747 mas que **n
 - **Onde:** os 10 textos listados em `settings.html#settingsPrivacyData`.
 - **Próximo passo:** adicionar as chaves no `assets/js/core/kc-i18n.js` e usar `KCi18n.t()` no HTML (ou em JS controller se for renderizado dinamicamente).
 
-### 4. Service Worker cache-bust
+### 4. Service Worker cache-bust ✅ RESOLVIDO em [PR #754](https://github.com/yandiamantinoBr/kino-campus/pull/754)
+
+Issue: [#751](https://github.com/yandiamantinoBr/kino-campus/issues/751) (closed)
 
 - **Sintoma:** o `kc-public-shell.css` foi modificado (+45 linhas: widget de Turnstile) na PR, mas o `?v=8.6.13` em todos os 13 HTMLs não foi bumpado.
 - **Impacto:** usuários com SW ativo vão continuar com a versão antiga do CSS (sem o widget de Turnstile).
