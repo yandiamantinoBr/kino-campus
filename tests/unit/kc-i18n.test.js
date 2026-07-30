@@ -232,6 +232,34 @@ describe('KCi18n - Modulo de Internacionalizacao (pt-BR)', () => {
         expect(i18n.keys()).toContain('module.' + mod);
       });
     });
+
+    // ── 5b. LGPD FAQ (issue #749) ──────────────────────────────────────────
+    describe('LGPD FAQ (issue #749) — chaves de ajuda.html#faq-lgpd', () => {
+      test('categoria lgpd cobre titulo, intro, 6 perguntas e 6 respostas', () => {
+        const expected = [
+          'lgpd.faq-title', 'lgpd.faq-intro',
+          'lgpd.faq-q1', 'lgpd.faq-a1',
+          'lgpd.faq-q2', 'lgpd.faq-a2',
+          'lgpd.faq-q3', 'lgpd.faq-a3',
+          'lgpd.faq-q4', 'lgpd.faq-a4',
+          'lgpd.faq-q5', 'lgpd.faq-a5',
+          'lgpd.faq-q6', 'lgpd.faq-a6',
+          'lgpd.faq-back',
+        ];
+        expected.forEach((key) => {
+          expect(i18n.keys()).toContain(key);
+          expect(i18n.t(key)).not.toBe(key); // chave existe
+          expect(i18n.t(key).length).toBeGreaterThan(0);
+        });
+      });
+
+      test('FAQ retorna perguntas/respostas distintas (sem colisao de chaves)', () => {
+        const questions = ['lgpd.faq-q1','lgpd.faq-q2','lgpd.faq-q3','lgpd.faq-q4','lgpd.faq-q5','lgpd.faq-q6'];
+        const answers = ['lgpd.faq-a1','lgpd.faq-a2','lgpd.faq-a3','lgpd.faq-a4','lgpd.faq-a5','lgpd.faq-a6'];
+        const allValues = new Set([...questions, ...answers].map((k) => i18n.t(k)));
+        expect(allValues.size).toBe(questions.length + answers.length);
+      });
+    });
   });
 
   // ── 6. applyTexts() — runtime textContent / innerHTML ─────────────────

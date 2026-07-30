@@ -738,10 +738,28 @@
     'privacy.list-loading':               'Carregando seus protocolos recentes...',
     'privacy.search-preferences':  'Gerenciar dados da busca',
     'privacy.read-policy':         'Ler privacidade',
+    'privacy.lgpd-faq':            'FAQ LGPD na Central de Ajuda',
     'privacy.help-center':           'Detalhe o pedido na Central de Ajuda',
     'privacy.download-first':        'Baixe seus dados primeiro',
     'privacy.copy-form':             'formulário de cópia',
     'privacy.erasure-form':          'formulário de exclusão',
+    // ── Privacidade / LGPD / FAQ (issue #749) ────────────────────────────
+    // ajuda.html#faq-lgpd
+    'lgpd.faq-title':       'FAQ — LGPD e seus dados',
+    'lgpd.faq-intro':       'Respostas curtas sobre cópia, portabilidade, exclusão, cancelamento, prazo e o que acontece com mensagens, publicações e registros sob retenção. Esta FAQ é complementar à Central de Ajuda; em caso de dúvida específica, abra um pedido.',
+    'lgpd.faq-q1':         'Como pedir exclusão da conta?',
+    'lgpd.faq-a1':           'Dentro da conta, em Configurações, use “Solicitar exclusão da conta”. O pedido entra em fila, é vinculado ao seu titular e exige confirmação final por e-mail antes da etapa irreversível. Sem acesso à conta autenticada, abra o formulário de exclusão pela Central de Ajuda: o atendimento verifica a titularidade e só então vincula o protocolo.',
+    'lgpd.faq-q2':         'Posso cancelar o pedido depois de enviar?',
+    'lgpd.faq-a2':           'Sim, enquanto o pedido ainda não foi claim para a etapa irreversível. Dentro da conta, use “Cancelar pedido” em Configurações. Se você não tem mais acesso, responda ao e-mail do atendimento o quanto antes. Após o claim, o cancelamento não é mais possível.',
+    'lgpd.faq-q3':         'O que acontece com minhas mensagens de chat?',
+    'lgpd.faq-a3':           'Mensagens trocadas com outros titulares são tratadas como conteúdo coautorado. A estrutura da conversa é preservada para não apagar a expressão do outro participante; identificadores do titular solicitante são redacted. O atendimento informa exatamente o que foi removido, anonimizado ou preservado antes da etapa irreversível.',
+    'lgpd.faq-q4':         'Como exportar meus dados?',
+    'lgpd.faq-a4':           'Dentro da conta, em Configurações, use “Baixar meus dados (JSON)”. O arquivo reúne a parte automatizada disponível no servidor e os dados locais permitidos deste navegador. Categorias incompletas aparecem no manifesto. Precisa de outro formato ou portabilidade para um serviço específico? Use Configurações → “Solicitar portabilidade” ou a Central de Ajuda.',
+    'lgpd.faq-q5':         'Quanto tempo leva o processo?',
+    'lgpd.faq-a5':           'Confirmação de tratamento ou acesso simplificado costumam ser imediatos. Uma declaração completa de acesso pode levar até 15 dias. Exclusão e portabilidade não têm prazo único: o protocolo informa o andamento, verificações pendentes, dependências e qualquer impedimento de fato ou de direito.',
+    'lgpd.faq-q6':         'O que acontece com publicações e dados que precisam ser mantidos?',
+    'lgpd.faq-a6':           'Publicações podem ser ocultadas de forma reversível durante a análise. Conteúdo compartilhado com outras pessoas e registros sujeitos a retenção legal ou justificativa (segurança, antifraude, auditoria) são avaliados caso a caso. O atendimento informa as categorias eliminadas, anonimizadas ou preservadas antes da etapa irreversível.',
+    'lgpd.faq-back':           'Voltar para a Central de Ajuda',
   };
 
   /**
