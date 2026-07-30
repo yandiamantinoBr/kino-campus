@@ -139,6 +139,302 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
     expect(stored.metadata).not.toHaveProperty('user_agent');
   });
 
+  test('visitante envia prova efêmera somente no transporte e o widget é resetado', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.KC_ENV = {
+        TURNSTILE_SITE_KEY: 'turnstile-public-test-site-key'
+      };
+    });
+    await page.route('**/assets/js/api/kc-supabase.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.KCSupabase = {
+            getUser: function () { return null; },
+            getCurrentUser: async function () { return null; }
+          };
+        `
+      });
+    });
+    await page.route('**/assets/js/api/kc-api.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.KCAPI = {
+            ENV: { driver: 'supabase', DATA_DRIVER: 'supabase', isProduction: false },
+            registerAdapter: function () {},
+            getCurrentProfile: function () { return null; },
+            getMyProfile: async function () { return null; },
+            recoverPrivacyHelpRequest: async function () {
+              return { ok: false, error: { idempotency: { safe_to_replace: false } } };
+            },
+            createHelpRequest: async function (payload) {
+              window.__guestPrivacyPayload = JSON.parse(JSON.stringify(payload));
+              return {
+                ok: true,
+                data: {
+                  id: '66666666-6666-4666-8666-666666666666',
+                  created_at: '2026-07-29T20:00:00.000Z'
+                }
+              };
+            }
+          };
+        `
+      });
+    });
+    await page.route(
+      'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
+      async (route) => {
+        await route.fulfill({
+          contentType: 'application/javascript; charset=utf-8',
+          body: `
+            window.__turnstileResetCount = 0;
+            window.turnstile = {
+              render: function (target, options) {
+                window.__turnstileOptions = options;
+                target.setAttribute('data-test-widget', 'ready');
+                return 'help-privacy-widget';
+              },
+              reset: function () {
+                window.__turnstileResetCount += 1;
+              },
+              remove: function () {}
+            };
+          `
+        });
+      }
+    );
+
+    await page.goto('/ajuda.html?request=account_erasure#helpRequestForm', {
+      waitUntil: 'domcontentloaded'
+    });
+    await expect(page.locator('#helpPrivacyVerification')).toBeVisible();
+    await expect(page.locator('#helpPrivacyTurnstileWidget')).toHaveAttribute(
+      'data-test-widget',
+      'ready'
+    );
+    await page.locator('#helpSubtopic').dispatchEvent('change');
+    await page.evaluate(() => {
+      window.__turnstileOptions.callback('turnstile-one-time-proof');
+    });
+    await expect(page.locator('#helpPrivacyVerificationStatus')).toContainText(
+      'Verificação concluída'
+    );
+    await page.locator('[data-help-conditional="account_email"]').fill('guest@example.com');
+    await page.locator('[data-help-conditional="export_before_erasure"]').selectOption('no_copy_needed');
+    await page.locator('#helpMessage').fill(
+      'Solicito a exclusão da conta e dos dados associados após a verificação.'
+    );
+    await page.locator('#helpContactEmail').fill('guest@example.com');
+    await page.locator('#helpSubmitButton').click();
+
+    await expect(page.locator('#helpProtocolValue')).toHaveText(
+      '66666666-6666-4666-8666-666666666666'
+    );
+    await expect.poll(
+      async () => page.evaluate(() => window.__turnstileResetCount)
+    ).toBe(1);
+
+    const transport = await page.evaluate(() => {
+      const payload = window.__guestPrivacyPayload;
+      const storageDump = [];
+      for (const storage of [window.localStorage, window.sessionStorage]) {
+        for (let index = 0; index < storage.length; index += 1) {
+          const key = storage.key(index);
+          storageDump.push(`${key}:${storage.getItem(key)}`);
+        }
+      }
+      return {
+        token: payload.turnstile_token,
+        metadata: payload.metadata,
+        storageDump,
+        action: window.__turnstileOptions.action,
+        scriptCount: document.querySelectorAll(
+          'script[src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"]'
+        ).length
+      };
+    });
+    expect(transport.token).toBe('turnstile-one-time-proof');
+    expect(transport.action).toBe('help_privacy_guest');
+    expect(transport.metadata).not.toHaveProperty('turnstile_token');
+    expect(transport.storageDump.join('\n')).not.toContain('turnstile-one-time-proof');
+    expect(transport.scriptCount).toBe(1);
+  });
+
+  test('troca A→B não permite que a resposta tardia de A libere a operação de B', async ({ page }) => {
+    const accountA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const accountB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    await page.addInitScript(({ accountA: initialAccount }) => {
+      window.__helpCurrentUser = {
+        id: initialAccount,
+        email: 'a@example.com',
+        is_anonymous: false
+      };
+    }, { accountA });
+    await page.route('**/assets/js/api/kc-supabase.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.KCSupabase = {
+            getUser: function () { return window.__helpCurrentUser; },
+            getCurrentUser: async function () { return window.__helpCurrentUser; }
+          };
+        `
+      });
+    });
+    await page.route('**/assets/js/api/kc-api.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.__helpCreateResolvers = {};
+          window.__helpCreateCalls = [];
+          window.KCAPI = {
+            ENV: { driver: 'supabase', DATA_DRIVER: 'supabase', isProduction: false },
+            registerAdapter: function () {},
+            getCurrentProfile: function () { return null; },
+            getMyProfile: async function () { return null; },
+            recoverPrivacyHelpRequest: async function () {
+              return { ok: false, error: { idempotency: { safe_to_replace: false } } };
+            },
+            createHelpRequest: function (payload) {
+              var owner = payload.expected_user_id;
+              window.__helpCreateCalls.push(owner);
+              return new Promise(function (resolve) {
+                window.__helpCreateResolvers[owner] = resolve;
+              });
+            }
+          };
+        `
+      });
+    });
+    await page.goto('/ajuda.html?request=data_access_copy#helpRequestForm', {
+      waitUntil: 'domcontentloaded'
+    });
+
+    const fillCopyRequest = async (email, message) => {
+      await page.locator('[data-help-conditional="account_email"]').fill(email);
+      await page.locator('[data-help-conditional="data_scope"]').selectOption('all_account_data');
+      await page.locator('[data-help-conditional="data_copy_format"]').selectOption('structured');
+      await page.locator('#helpMessage').fill(message);
+      await page.locator('#helpContactEmail').fill(email);
+    };
+
+    await fillCopyRequest('a@example.com', 'Solicito a cópia referente à conta A antes da troca.');
+    await page.locator('#helpSubmitButton').click();
+    await expect(page.locator('#helpSubmitButton')).toBeDisabled();
+
+    await page.evaluate(({ accountB: nextAccount }) => {
+      window.__helpCurrentUser = {
+        id: nextAccount,
+        email: 'b@example.com',
+        is_anonymous: false
+      };
+      document.dispatchEvent(new CustomEvent('kc:authchange', {
+        detail: { user: window.__helpCurrentUser }
+      }));
+    }, { accountB });
+    await expect(page.locator('#helpContactEmail')).toHaveValue('b@example.com');
+    await fillCopyRequest('b@example.com', 'Solicito a cópia referente à conta B após a troca.');
+    await page.locator('#helpSubmitButton').click();
+    await expect.poll(
+      async () => page.evaluate(() => window.__helpCreateCalls)
+    ).toEqual([accountA, accountB]);
+    await expect(page.locator('#helpSubmitButton')).toBeDisabled();
+
+    await page.evaluate(({ accountA: previousAccount }) => {
+      window.__helpCreateResolvers[previousAccount]({
+        ok: true,
+        data: { id: 'aaaaaaaa-0000-4000-8000-000000000001' }
+      });
+    }, { accountA });
+    await expect(page.locator('#helpSubmitButton')).toBeDisabled();
+    await expect(page.locator('#helpRequestForm')).toHaveAttribute('aria-busy', 'true');
+
+    await page.evaluate(({ accountB: currentAccount }) => {
+      window.__helpCreateResolvers[currentAccount]({
+        ok: true,
+        data: { id: 'bbbbbbbb-0000-4000-8000-000000000002' }
+      });
+    }, { accountB });
+    await expect(page.locator('#helpSubmitButton')).toBeEnabled();
+    await expect(page.locator('#helpRequestForm')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.locator('#helpProtocolValue')).toHaveText(
+      'bbbbbbbb-0000-4000-8000-000000000002'
+    );
+  });
+
+  test('refresh da mesma conta não solta submit pendente antes da própria resposta', async ({ page }) => {
+    const accountId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    await page.addInitScript(({ accountId: initialAccount }) => {
+      window.__helpCurrentUser = {
+        id: initialAccount,
+        email: 'same@example.com',
+        is_anonymous: false
+      };
+    }, { accountId });
+    await page.route('**/assets/js/api/kc-supabase.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.KCSupabase = {
+            getUser: function () { return window.__helpCurrentUser; },
+            getCurrentUser: async function () { return window.__helpCurrentUser; }
+          };
+        `
+      });
+    });
+    await page.route('**/assets/js/api/kc-api.client.js*', async (route) => {
+      await route.fulfill({
+        contentType: 'application/javascript; charset=utf-8',
+        body: `
+          window.KCAPI = {
+            ENV: { driver: 'supabase', DATA_DRIVER: 'supabase', isProduction: false },
+            registerAdapter: function () {},
+            getCurrentProfile: function () { return null; },
+            getMyProfile: async function () { return null; },
+            recoverPrivacyHelpRequest: async function () {
+              return { ok: false, error: { idempotency: { safe_to_replace: false } } };
+            },
+            createHelpRequest: function () {
+              return new Promise(function (resolve) {
+                window.__sameAccountSubmitResolve = resolve;
+              });
+            }
+          };
+        `
+      });
+    });
+    await page.goto('/ajuda.html?request=data_access_copy#helpRequestForm', {
+      waitUntil: 'domcontentloaded'
+    });
+    await page.locator('[data-help-conditional="account_email"]').fill('same@example.com');
+    await page.locator('[data-help-conditional="data_scope"]').selectOption('all_account_data');
+    await page.locator('[data-help-conditional="data_copy_format"]').selectOption('structured');
+    await page.locator('#helpMessage').fill(
+      'Solicito a cópia e mantenho o mesmo usuário durante a atualização.'
+    );
+    await page.locator('#helpContactEmail').fill('same@example.com');
+    await page.locator('#helpSubmitButton').click();
+    await expect(page.locator('#helpSubmitButton')).toBeDisabled();
+
+    await page.evaluate(() => {
+      document.dispatchEvent(new CustomEvent('kc:authchange', {
+        detail: { user: window.__helpCurrentUser }
+      }));
+    });
+    await expect(page.locator('#helpSubmitButton')).toBeDisabled();
+    await expect(page.locator('#helpRequestForm')).toHaveAttribute('aria-busy', 'true');
+
+    await page.evaluate(() => {
+      window.__sameAccountSubmitResolve({
+        ok: true,
+        data: { id: 'cccccccc-0000-4000-8000-000000000003' }
+      });
+    });
+    await expect(page.locator('#helpSubmitButton')).toBeEnabled();
+    await expect(page.locator('#helpRequestForm')).toHaveAttribute('aria-busy', 'false');
+  });
+
   test('card de Configurações permanece dentro do layout e sem rolagem horizontal no mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });

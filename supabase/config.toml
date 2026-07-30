@@ -413,6 +413,11 @@ verify_jwt = true
 [functions.kc-help-request-notify]
 verify_jwt = true
 
+# Browser guests have no JWT by design. This gateway validates an exact
+# Turnstile action + hostname server-side, then calls a service-role-only RPC.
+[functions.kc-create-privacy-help-guest]
+verify_jwt = false
+
 # Administracao do suplemento privado de exportacao. O gateway valida o JWT e
 # o handler repete sessao ativa + profiles.is_admin antes de qualquer mutacao.
 [functions.kc-data-export-admin]

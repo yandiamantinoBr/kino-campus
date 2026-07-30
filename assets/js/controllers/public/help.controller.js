@@ -35,14 +35,37 @@
     account_data_portability: 'Você está solicitando portabilidade. O formato e a viabilidade serão analisados conforme as categorias envolvidas e os padrões disponíveis.',
     account_deletion: 'Você está solicitando exclusão. O envio abre uma análise e não elimina a conta imediatamente; a titularidade e a confirmação final serão verificadas antes da etapa irreversível.',
   });
-
+  const PRIVACY_IDEMPOTENCY_STORAGE_PREFIX = 'kc_help_privacy_idempotency_v1';
+  const PRIVACY_IDEMPOTENCY_CLOCK_SKEW_MS = 5 * 60 * 1000;
+  const PRIVACY_IDEMPOTENCY_KEY_RE = /^[a-f0-9]{64}$/;
+  const PRIVACY_IDEMPOTENCY_KINDS = new Set([
+    'data_access_copy',
+    'data_portability',
+    'account_erasure',
+  ]);
+  const TURNSTILE_SCRIPT_ID = 'kc-help-privacy-turnstile-script';
+  const TURNSTILE_SCRIPT_URL =
+    'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  const TURNSTILE_ACTION = 'help_privacy_guest';
+  const TURNSTILE_TOKEN_MAX_CHARS = 2048;
+  let turnstileScriptPromise = null;
   const state = {
     user: null,
     profile: null,
+    authResolved: false,
     submitting: false,
+    operationOwner: null,
+    operationSequence: 0,
     accountLoadGeneration: 0,
     conditionalFieldKeys: [],
     deepLinkPreset: null,
+    privacyIdempotencyMemory: Object.create(null),
+    privacyRecoveryBlocked: false,
+    privacyRecoveryInProgress: false,
+    turnstileToken: '',
+    turnstileWidgetId: null,
+    turnstileSiteKey: '',
+    turnstileRenderGeneration: 0,
   };
 
   function $(selector) {
@@ -64,6 +87,300 @@
     return Boolean(getUserId(user) && user.is_anonymous !== true);
   }
 
+  function getPrivacyRequestKind(type, topic, subtopic) {
+    const requestKind = Help.getPrivacyRequestKind
+      ? Help.getPrivacyRequestKind(type, topic, subtopic)
+      : '';
+    return PRIVACY_IDEMPOTENCY_KINDS.has(requestKind) ? requestKind : '';
+  }
+
+  function getCurrentPrivacyRequestKind() {
+    return getPrivacyRequestKind(
+      getCurrentType(),
+      getCurrentTopic(),
+      getCurrentSubtopic()
+    );
+  }
+
+  function getTurnstileSiteKey() {
+    const env = window.KC_ENV && typeof window.KC_ENV === 'object'
+      ? window.KC_ENV
+      : {};
+    const privacyHelp =
+      env.privacyHelp &&
+      typeof env.privacyHelp === 'object' &&
+      !Array.isArray(env.privacyHelp)
+        ? env.privacyHelp
+        : {};
+    const siteKey = String(
+      env.TURNSTILE_SITE_KEY || privacyHelp.turnstileSiteKey || ''
+    ).trim();
+    if (
+      !siteKey ||
+      /^__KC_[A-Z0-9_]+__$/.test(siteKey) ||
+      /^<[^>]+>$/.test(siteKey)
+    ) {
+      return '';
+    }
+    return siteKey;
+  }
+
+  function setPrivacyVerificationStatus(message, tone) {
+    const status = $('#helpPrivacyVerificationStatus');
+    if (!status) return;
+    status.textContent = String(message || '');
+    status.className = `kc-help-verification-status${tone ? ` is-${tone}` : ''}`;
+  }
+
+  function removePrivacyTurnstileWidget() {
+    state.turnstileToken = '';
+    const widgetId = state.turnstileWidgetId;
+    state.turnstileWidgetId = null;
+    state.turnstileSiteKey = '';
+    if (
+      widgetId !== null &&
+      window.turnstile &&
+      typeof window.turnstile.remove === 'function'
+    ) {
+      try {
+        window.turnstile.remove(widgetId);
+      } catch (_) { }
+    }
+    const target = $('#helpPrivacyTurnstileWidget');
+    if (target) target.textContent = '';
+  }
+
+  function loadTurnstileApi() {
+    if (
+      window.turnstile &&
+      typeof window.turnstile.render === 'function'
+    ) {
+      return Promise.resolve(window.turnstile);
+    }
+    if (turnstileScriptPromise) return turnstileScriptPromise;
+
+    turnstileScriptPromise = new Promise((resolve, reject) => {
+      let settled = false;
+      let script = document.getElementById(TURNSTILE_SCRIPT_ID);
+      const shouldAppend = !script;
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        if (
+          !error &&
+          window.turnstile &&
+          typeof window.turnstile.render === 'function'
+        ) {
+          resolve(window.turnstile);
+          return;
+        }
+        if (
+          script &&
+          script.id === TURNSTILE_SCRIPT_ID &&
+          script.parentNode
+        ) {
+          script.parentNode.removeChild(script);
+        }
+        reject(error || new Error('TURNSTILE_API_UNAVAILABLE'));
+      };
+      const timeoutId = window.setTimeout(
+        () => finish(new Error('TURNSTILE_API_TIMEOUT')),
+        15000
+      );
+
+      if (!script) {
+        script = document.createElement('script');
+        script.id = TURNSTILE_SCRIPT_ID;
+        script.src = TURNSTILE_SCRIPT_URL;
+        script.async = true;
+        script.defer = true;
+      }
+      script.addEventListener('load', () => finish(null), { once: true });
+      script.addEventListener(
+        'error',
+        () => finish(new Error('TURNSTILE_SCRIPT_FAILED')),
+        { once: true }
+      );
+      if (shouldAppend) document.head.appendChild(script);
+    });
+    turnstileScriptPromise.catch(() => {
+      turnstileScriptPromise = null;
+    });
+    return turnstileScriptPromise;
+  }
+
+  function isGuestPrivacyRoute() {
+    return Boolean(
+      state.authResolved &&
+      !isAuthenticatedAccountUser(state.user) &&
+      getCurrentPrivacyRequestKind()
+    );
+  }
+
+  async function syncPrivacyVerification() {
+    const container = $('#helpPrivacyVerification');
+    const target = $('#helpPrivacyTurnstileWidget');
+    if (!container || !target) return;
+    const shouldRender = isGuestPrivacyRoute();
+    container.hidden = !shouldRender;
+    if (!shouldRender) {
+      state.turnstileRenderGeneration += 1;
+      removePrivacyTurnstileWidget();
+      setPrivacyVerificationStatus('', '');
+      return;
+    }
+
+    const siteKey = getTurnstileSiteKey();
+    if (!siteKey) {
+      state.turnstileRenderGeneration += 1;
+      removePrivacyTurnstileWidget();
+      setPrivacyVerificationStatus(
+        'A verificação de segurança não está configurada neste ambiente. Entre na sua conta ou tente novamente mais tarde.',
+        'error'
+      );
+      return;
+    }
+    if (
+      state.turnstileWidgetId !== null &&
+      state.turnstileSiteKey === siteKey
+    ) {
+      return;
+    }
+
+    const generation = ++state.turnstileRenderGeneration;
+    removePrivacyTurnstileWidget();
+    setPrivacyVerificationStatus('Carregando verificação de segurança...', 'info');
+    try {
+      const api = await loadTurnstileApi();
+      if (
+        generation !== state.turnstileRenderGeneration ||
+        !isGuestPrivacyRoute()
+      ) {
+        return;
+      }
+      const widgetId = api.render(target, {
+        sitekey: siteKey,
+        action: TURNSTILE_ACTION,
+        theme: 'auto',
+        callback(token) {
+          if (
+            generation !== state.turnstileRenderGeneration ||
+            !isGuestPrivacyRoute()
+          ) {
+            return;
+          }
+          const normalizedToken = String(token || '').trim();
+          state.turnstileToken =
+            normalizedToken &&
+            normalizedToken.length <= TURNSTILE_TOKEN_MAX_CHARS
+              ? normalizedToken
+              : '';
+          setPrivacyVerificationStatus(
+            state.turnstileToken
+              ? 'Verificação concluída. Você já pode enviar o pedido.'
+              : 'Não foi possível confirmar a verificação. Tente novamente.',
+            state.turnstileToken ? 'success' : 'error'
+          );
+        },
+        'expired-callback'() {
+          if (generation !== state.turnstileRenderGeneration) return;
+          state.turnstileToken = '';
+          setPrivacyVerificationStatus(
+            'A verificação expirou. Conclua uma nova verificação antes de enviar.',
+            'warn'
+          );
+        },
+        'error-callback'() {
+          if (generation !== state.turnstileRenderGeneration) return;
+          state.turnstileToken = '';
+          setPrivacyVerificationStatus(
+            'A verificação não pôde ser concluída. Tente novamente ou entre na sua conta.',
+            'error'
+          );
+        },
+      });
+      if (widgetId === null || typeof widgetId === 'undefined') {
+        throw new Error('TURNSTILE_RENDER_FAILED');
+      }
+      state.turnstileWidgetId = widgetId;
+      state.turnstileSiteKey = siteKey;
+      setPrivacyVerificationStatus(
+        'Conclua a verificação de segurança para habilitar o envio visitante.',
+        'info'
+      );
+    } catch (_) {
+      if (
+        generation !== state.turnstileRenderGeneration ||
+        !isGuestPrivacyRoute()
+      ) {
+        return;
+      }
+      state.turnstileRenderGeneration += 1;
+      removePrivacyTurnstileWidget();
+      setPrivacyVerificationStatus(
+        'Não foi possível carregar a verificação de segurança. Tente novamente mais tarde ou entre na sua conta.',
+        'error'
+      );
+    }
+  }
+
+  function resetPrivacyTurnstile() {
+    state.turnstileToken = '';
+    if (
+      state.turnstileWidgetId !== null &&
+      window.turnstile &&
+      typeof window.turnstile.reset === 'function'
+    ) {
+      try {
+        window.turnstile.reset(state.turnstileWidgetId);
+        setPrivacyVerificationStatus(
+          'Conclua uma nova verificação de segurança antes de outro envio.',
+          'info'
+        );
+        return;
+      } catch (_) { }
+    }
+    syncPrivacyVerification().catch(function () {});
+  }
+
+  function getPrivacyVerificationForSubmission(payload) {
+    const requestKind = getPrivacyRequestKind(
+      payload && payload.type,
+      payload && payload.topic,
+      payload && payload.subtopic
+    );
+    if (!requestKind || isAuthenticatedAccountUser(state.user)) {
+      return { required: false, ok: true, token: '' };
+    }
+    if (!state.authResolved) {
+      return {
+        required: true,
+        ok: false,
+        token: '',
+        message: 'Aguarde a confirmação do estado da sua conta antes de enviar este pedido.',
+      };
+    }
+    if (!getTurnstileSiteKey()) {
+      return {
+        required: true,
+        ok: false,
+        token: '',
+        message: 'A verificação de segurança não está configurada neste ambiente. Entre na sua conta ou tente novamente mais tarde.',
+      };
+    }
+    const token = String(state.turnstileToken || '').trim();
+    if (!token) {
+      return {
+        required: true,
+        ok: false,
+        token: '',
+        message: 'Conclua a verificação de segurança antes de enviar o pedido ou entre na sua conta.',
+      };
+    }
+    return { required: true, ok: true, token };
+  }
+
   function isActiveAccountLoad(generation, userId) {
     return (
       state.accountLoadGeneration === generation &&
@@ -77,8 +394,535 @@
     return Boolean(ownerId && ownerId === String(userId || '').trim());
   }
 
+  async function sha256Utf8(value) {
+    if (
+      !window.crypto ||
+      !window.crypto.subtle ||
+      typeof window.crypto.subtle.digest !== 'function' ||
+      typeof window.TextEncoder !== 'function'
+    ) {
+      return '';
+    }
+    const encoded = new window.TextEncoder().encode(String(value || ''));
+    const digest = await window.crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  function generatePrivacyIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(32);
+      window.crypto.getRandomValues(bytes);
+      return Array.from(bytes)
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+    }
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return `${window.crypto.randomUUID()}${window.crypto.randomUUID()}`
+        .replace(/-/g, '')
+        .toLowerCase();
+    }
+    return '';
+  }
+
+  function sortJsonForFingerprint(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => sortJsonForFingerprint(item));
+    }
+    if (!value || typeof value !== 'object') return value;
+    return Object.keys(value)
+      .sort()
+      .reduce((result, key) => {
+        if (typeof value[key] !== 'undefined') {
+          result[key] = sortJsonForFingerprint(value[key]);
+        }
+        return result;
+      }, {});
+  }
+
+  function buildPrivacyFingerprintShape(payload, requestKind) {
+    const input = payload && typeof payload === 'object' ? payload : {};
+    const rawMetadata = input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+      ? input.metadata
+      : {};
+    const metadata = { request_kind: requestKind };
+    const allowedMetadataKeys = ['route', 'source', 'account_email'];
+    if (requestKind === 'data_access_copy') {
+      allowedMetadataKeys.push('data_scope', 'data_copy_format');
+    } else if (requestKind === 'data_portability') {
+      allowedMetadataKeys.push('data_scope', 'portability_context');
+    } else if (requestKind === 'account_erasure') {
+      allowedMetadataKeys.push('export_before_erasure');
+    }
+    allowedMetadataKeys.forEach((key) => {
+      if (rawMetadata[key] !== null && typeof rawMetadata[key] !== 'undefined') {
+        metadata[key] = rawMetadata[key];
+      }
+    });
+    return sortJsonForFingerprint({
+      version: 1,
+      request_kind: requestKind,
+      type: String(input.type || '').trim().toLowerCase(),
+      topic: String(input.topic || '').trim().toLowerCase(),
+      subtopic: String(input.subtopic || '').trim().toLowerCase(),
+      subject: String(input.subject || '').trim(),
+      message: String(input.message || '').trim(),
+      priority: String(input.priority || 'normal').trim().toLowerCase(),
+      page_path: String(input.page_path || '').trim() || null,
+      contact_email: String(input.contact_email || '').trim().toLowerCase(),
+      allow_contact: input.allow_contact !== false,
+      metadata,
+    });
+  }
+
+  function getPrivacyCallerScope() {
+    const authenticated = isAuthenticatedAccountUser(state.user);
+    return {
+      authState: authenticated ? 'authenticated' : 'anonymous',
+      callerId: getUserId(state.user) || 'guest',
+    };
+  }
+
+  function getPrivacyIdempotencyStorage() {
+    try {
+      return window.sessionStorage || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function parsePrivacyIdempotencyRecord(raw, scopeHash, now) {
+    let parsed = raw;
+    try {
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed || 'null');
+    } catch (_) {
+      return null;
+    }
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      Array.isArray(parsed) ||
+      parsed.version !== 1 ||
+      parsed.scope_hash !== scopeHash ||
+      !parsed.entries ||
+      typeof parsed.entries !== 'object' ||
+      Array.isArray(parsed.entries)
+    ) {
+      return null;
+    }
+    const entryKeys = Object.keys(parsed.entries);
+    if (
+      entryKeys.some((kind) => !PRIVACY_IDEMPOTENCY_KINDS.has(kind))
+    ) {
+      return null;
+    }
+    const entries = {};
+    for (const kind of PRIVACY_IDEMPOTENCY_KINDS) {
+      const entry = parsed.entries[kind];
+      if (typeof entry === 'undefined') continue;
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return null;
+      }
+      const createdAt = Number(entry.created_at_ms);
+      if (
+        !PRIVACY_IDEMPOTENCY_KEY_RE.test(String(entry.key || '')) ||
+        !/^[a-f0-9]{64}$/.test(String(entry.fingerprint || '')) ||
+        !Number.isFinite(createdAt) ||
+        createdAt <= 0 ||
+        createdAt > now + PRIVACY_IDEMPOTENCY_CLOCK_SKEW_MS
+      ) {
+        return null;
+      }
+      entries[kind] = {
+        key: String(entry.key),
+        fingerprint: String(entry.fingerprint),
+        created_at_ms: createdAt,
+      };
+    }
+    return {
+      version: 1,
+      scope_hash: scopeHash,
+      entries,
+    };
+  }
+
+  function readPrivacyIdempotencyRecord(scopeHash) {
+    const storageKey = `${PRIVACY_IDEMPOTENCY_STORAGE_PREFIX}:${scopeHash}`;
+    const storage = getPrivacyIdempotencyStorage();
+    const now = Date.now();
+    if (!storage) {
+      const memoryRecord = state.privacyIdempotencyMemory[storageKey] || null;
+      return {
+        storage: null,
+        storageKey,
+        durable: false,
+        corrupt: Boolean(
+          memoryRecord &&
+          !parsePrivacyIdempotencyRecord(memoryRecord, scopeHash, now)
+        ),
+        record: parsePrivacyIdempotencyRecord(
+          memoryRecord,
+          scopeHash,
+          now
+        ) || { version: 1, scope_hash: scopeHash, entries: {} },
+      };
+    }
+    let raw = null;
+    try {
+      raw = storage.getItem(storageKey);
+    } catch (_) {
+      return {
+        storage: null,
+        storageKey,
+        durable: false,
+        corrupt: false,
+        record: { version: 1, scope_hash: scopeHash, entries: {} },
+      };
+    }
+    let durable = raw !== null;
+    if (raw === null && state.privacyIdempotencyMemory[storageKey]) {
+      raw = state.privacyIdempotencyMemory[storageKey];
+      durable = false;
+    }
+    const record = parsePrivacyIdempotencyRecord(raw, scopeHash, now);
+    return {
+      storage,
+      storageKey,
+      durable: Boolean(record && durable),
+      corrupt: Boolean(raw !== null && !record),
+      record: record || { version: 1, scope_hash: scopeHash, entries: {} },
+    };
+  }
+
+  function persistPrivacyIdempotencyRecord(context) {
+    const record = context && context.record;
+    if (!context || !record || context.corrupt) return false;
+    const hasEntries = Object.keys(record.entries || {}).length > 0;
+    if (!context.storage) {
+      if (hasEntries) {
+        state.privacyIdempotencyMemory[context.storageKey] = record;
+      } else {
+        delete state.privacyIdempotencyMemory[context.storageKey];
+      }
+      context.durable = false;
+      return false;
+    }
+    try {
+      if (hasEntries) {
+        const serialized = JSON.stringify(record);
+        context.storage.setItem(context.storageKey, serialized);
+        if (context.storage.getItem(context.storageKey) !== serialized) {
+          state.privacyIdempotencyMemory[context.storageKey] = record;
+          context.durable = false;
+          return false;
+        }
+      } else {
+        context.storage.removeItem(context.storageKey);
+        if (context.storage.getItem(context.storageKey) !== null) {
+          context.durable = false;
+          return false;
+        }
+      }
+      delete state.privacyIdempotencyMemory[context.storageKey];
+      context.durable = true;
+      return true;
+    } catch (_) {
+      if (hasEntries) {
+        state.privacyIdempotencyMemory[context.storageKey] = record;
+      }
+      context.durable = false;
+      return false;
+    }
+  }
+
+  async function preparePrivacyIdempotency(payload) {
+    const requestKind = Help.getPrivacyRequestKind
+      ? Help.getPrivacyRequestKind(payload.type, payload.topic, payload.subtopic)
+      : '';
+    if (!PRIVACY_IDEMPOTENCY_KINDS.has(requestKind)) {
+      return { ok: true, payload, token: null };
+    }
+    const caller = getPrivacyCallerScope();
+    const scopeHash = await sha256Utf8(
+      `help-privacy-caller:v1:${caller.authState}:${caller.callerId}`
+    );
+    const fingerprint = await sha256Utf8(
+      JSON.stringify(buildPrivacyFingerprintShape(payload, requestKind))
+    );
+    if (!scopeHash || !fingerprint) {
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_CRYPTO_UNAVAILABLE',
+          message: 'O navegador não disponibilizou a proteção criptográfica necessária para este envio. Atualize a página ou tente em outro navegador.',
+        },
+      };
+    }
+
+    const context = readPrivacyIdempotencyRecord(scopeHash);
+    if (state.privacyRecoveryBlocked || context.corrupt) {
+      state.privacyRecoveryBlocked = true;
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_STORAGE_CORRUPT',
+          message: 'A proteção de uma tentativa anterior está incompleta no armazenamento desta sessão. Para evitar duplicidade, nenhum novo pedido de privacidade será enviado nesta aba. Aguarde a confirmação do atendimento ou encerre esta sessão do navegador.',
+        },
+      };
+    }
+    let entry = context.record.entries[requestKind] || null;
+    if (entry && entry.fingerprint !== fingerprint) {
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_PAYLOAD_CONFLICT',
+          message: 'O conteúdo mudou desde uma tentativa que ainda pode ter sido recebida. Para evitar duplicidade, restaure os mesmos dados da tentativa anterior ou confirme o atendimento antes de iniciar outro pedido.',
+        },
+      };
+    }
+    if (!entry) {
+      const key = generatePrivacyIdempotencyKey();
+      if (!PRIVACY_IDEMPOTENCY_KEY_RE.test(key)) {
+        return {
+          ok: false,
+          error: {
+            code: 'HELP_IDEMPOTENCY_CRYPTO_UNAVAILABLE',
+            message: 'Não foi possível gerar uma chave segura para este envio. Atualize a página e tente novamente.',
+          },
+        };
+      }
+      const now = Date.now();
+      entry = {
+        key,
+        fingerprint,
+        created_at_ms: now,
+      };
+      context.record.entries[requestKind] = entry;
+    }
+    if (!context.durable && !persistPrivacyIdempotencyRecord(context)) {
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_STORAGE_UNAVAILABLE',
+          message: 'O navegador não conseguiu guardar com segurança a proteção deste envio. Libere o armazenamento da sessão ou tente em outro navegador.',
+        },
+      };
+    }
+
+    return {
+      ok: true,
+      payload: Object.assign({}, payload, {
+        idempotency_key: entry.key,
+      }),
+      token: {
+        scopeHash,
+        requestKind,
+        key: entry.key,
+        fingerprint: entry.fingerprint,
+      },
+    };
+  }
+
+  function clearPrivacyIdempotencyToken(token) {
+    if (!token || !PRIVACY_IDEMPOTENCY_KINDS.has(token.requestKind)) return;
+    const context = readPrivacyIdempotencyRecord(token.scopeHash);
+    if (context.corrupt) return;
+    const entry = context.record.entries[token.requestKind];
+    if (
+      !entry ||
+      entry.key !== token.key ||
+      entry.fingerprint !== token.fingerprint
+    ) {
+      return;
+    }
+    delete context.record.entries[token.requestKind];
+    persistPrivacyIdempotencyRecord(context);
+  }
+
+  async function getPrivacyRecoveryContexts() {
+    const caller = getPrivacyCallerScope();
+    const descriptors = [{
+      authState: caller.authState,
+      callerId: caller.callerId,
+    }];
+    if (caller.authState === 'authenticated' && caller.callerId !== 'guest') {
+      descriptors.push({
+        authState: 'anonymous',
+        callerId: caller.callerId,
+      });
+    }
+    const contexts = [];
+    for (const descriptor of descriptors) {
+      const scopeHash = await sha256Utf8(
+        `help-privacy-caller:v1:${descriptor.authState}:${descriptor.callerId}`
+      );
+      if (!scopeHash) continue;
+      contexts.push({
+        authState: descriptor.authState,
+        scopeHash,
+        storageContext: readPrivacyIdempotencyRecord(scopeHash),
+      });
+    }
+    return contexts;
+  }
+
+  function getReceiptReference(data) {
+    const payload = data && typeof data === 'object' ? data : {};
+    const dataSubjectProtocol = String(
+      payload.protocol ||
+      (
+        payload.data_subject_request &&
+        payload.data_subject_request.protocol
+      ) ||
+      ''
+    ).trim();
+    const reference = String(
+      dataSubjectProtocol || payload.id || payload.out_id || ''
+    ).trim();
+    return { dataSubjectProtocol, reference };
+  }
+
+  function renderRecoveredPrivacyReceipt(data) {
+    const receipt = getReceiptReference(data);
+    if (!receipt.reference) return false;
+    setProtocol(
+      receipt.reference,
+      receipt.dataSubjectProtocol
+        ? 'data_subject_protocol'
+        : 'help_reference'
+    );
+    setStatus(
+      receipt.dataSubjectProtocol
+        ? `Recuperamos a tentativa anterior sem reenviar seus dados. Protocolo do titular: ${receipt.dataSubjectProtocol}.`
+        : `Recuperamos a tentativa anterior sem reenviar seus dados. Referência de atendimento: ${receipt.reference}.`,
+      'success'
+    );
+    return true;
+  }
+
+  async function recoverPendingPrivacySubmissions() {
+    if (state.submitting || state.operationOwner) return;
+    const generation = state.accountLoadGeneration;
+    const userId = getUserId(state.user);
+    state.privacyRecoveryBlocked = false;
+    const contexts = await getPrivacyRecoveryContexts();
+    if (!isActiveAccountLoad(generation, userId)) return;
+
+    const corruptContext = contexts.find(
+      (item) => item.storageContext.corrupt
+    );
+    if (corruptContext) {
+      state.privacyRecoveryBlocked = true;
+      setStatus(
+        'A proteção de uma tentativa anterior está corrompida nesta sessão. Para evitar duplicidade, nenhum novo pedido de privacidade será enviado nesta aba; o registro bruto foi preservado para recuperação segura.',
+        'error'
+      );
+      return;
+    }
+
+    const pending = [];
+    contexts.forEach((item) => {
+      Object.entries(item.storageContext.record.entries || {})
+        .forEach(([requestKind, entry]) => {
+          pending.push({
+            sourceAuthState: item.authState,
+            scopeHash: item.scopeHash,
+            requestKind,
+            entry,
+          });
+        });
+    });
+    if (!pending.length) return;
+    if (
+      !window.KCAPI ||
+      typeof window.KCAPI.recoverPrivacyHelpRequest !== 'function'
+    ) {
+      setStatus(
+        'Há uma tentativa anterior protegida contra duplicidade, mas a recuperação não está disponível neste ambiente. A chave foi mantida.',
+        'warn'
+      );
+      return;
+    }
+
+    const operationOwner = acquireSubmitOperation('recovery');
+    if (!operationOwner) return;
+    setStatus('Verificando uma tentativa anterior sem reenviar seus dados...', 'info');
+    const currentCaller = getPrivacyCallerScope();
+    let recoveredData = null;
+    let retiredCount = 0;
+    let ambiguousCount = 0;
+    try {
+      for (const item of pending) {
+        const result = await window.KCAPI.recoverPrivacyHelpRequest({
+          idempotency_key: item.entry.key,
+          request_kind: item.requestKind,
+          expected_auth_state: currentCaller.authState,
+          expected_user_id:
+            currentCaller.authState === 'authenticated'
+              ? currentCaller.callerId
+              : null,
+          source_auth_state: item.sourceAuthState,
+        });
+        if (!isActiveAccountLoad(generation, userId)) return;
+        const token = {
+          scopeHash: item.scopeHash,
+          requestKind: item.requestKind,
+          key: item.entry.key,
+          fingerprint: item.entry.fingerprint,
+        };
+        if (result && result.ok === true) {
+          clearPrivacyIdempotencyToken(token);
+          recoveredData = result.data || recoveredData;
+          continue;
+        }
+        if (
+          result &&
+          result.error &&
+          result.error.idempotency &&
+          result.error.idempotency.safe_to_replace === true
+        ) {
+          clearPrivacyIdempotencyToken(token);
+          retiredCount += 1;
+          continue;
+        }
+        ambiguousCount += 1;
+      }
+    } catch (_) {
+      ambiguousCount += 1;
+    } finally {
+      releaseSubmitOperation(operationOwner);
+    }
+    if (!isActiveAccountLoad(generation, userId)) return;
+    if (recoveredData && renderRecoveredPrivacyReceipt(recoveredData)) {
+      if (ambiguousCount > 0) {
+        setStatus(
+          'Recuperamos uma referência anterior, mas outra tentativa ainda está sendo verificada. Nenhuma chave ambígua foi removida.',
+          'warn'
+        );
+      }
+      return;
+    }
+    if (ambiguousCount > 0) {
+      setStatus(
+        currentCaller.authState === 'anonymous' &&
+          currentCaller.callerId === 'guest'
+          ? 'Ainda não foi possível confirmar se a tentativa visitante chegou ao servidor. A chave foi mantida; aguarde e use esta mesma aba para tentar recuperar novamente.'
+          : 'Ainda não foi possível confirmar uma tentativa anterior. A chave foi mantida para evitar duplicidade.',
+        'warn'
+      );
+      return;
+    }
+    if (retiredCount > 0) {
+      setStatus(
+        'Uma tentativa anterior sem recibo foi encerrada com segurança. Revise o formulário antes de enviar um novo pedido.',
+        'info'
+      );
+    }
+  }
+
   function resetAccountBoundForm() {
-    setSubmitState(false);
+    invalidateSubmitOperation();
     setProtocol('');
     const form = $('#helpRequestForm');
     if (form) form.reset();
@@ -110,7 +954,7 @@
     status.className = `kc-settings-status is-visible${tone ? ` is-${tone}` : ''}`;
   }
 
-  function setSubmitState(active) {
+  function renderSubmitState(active, operationKind) {
     state.submitting = !!active;
     const form = $('#helpRequestForm');
     if (form) form.setAttribute('aria-busy', state.submitting ? 'true' : 'false');
@@ -119,8 +963,33 @@
     button.disabled = state.submitting;
     button.setAttribute('aria-busy', state.submitting ? 'true' : 'false');
     button.innerHTML = state.submitting
-      ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando pedido...</span>'
+      ? operationKind === 'recovery'
+        ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Verificando tentativa...</span>'
+        : '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i><span>Enviando pedido...</span>'
       : '<i class="fas fa-paper-plane" aria-hidden="true"></i><span>Enviar pedido</span>';
+  }
+
+  function acquireSubmitOperation(operationKind) {
+    if (state.operationOwner) return null;
+    const owner = Object.freeze({
+      id: ++state.operationSequence,
+      kind: String(operationKind || 'submit'),
+    });
+    state.operationOwner = owner;
+    renderSubmitState(true, owner.kind);
+    return owner;
+  }
+
+  function releaseSubmitOperation(owner) {
+    if (!owner || state.operationOwner !== owner) return false;
+    state.operationOwner = null;
+    renderSubmitState(false, '');
+    return true;
+  }
+
+  function invalidateSubmitOperation() {
+    state.operationOwner = null;
+    renderSubmitState(false, '');
   }
 
   function setProtocol(protocol, kind) {
@@ -219,6 +1088,7 @@
       container.innerHTML = '';
       container.style.display = 'none';
       updatePrivacyRequestGuidance();
+      syncPrivacyVerification().catch(function () {});
       return;
     }
 
@@ -271,6 +1141,7 @@
     }).join('');
     updatePrivacyRequestGuidance();
     prefillContext();
+    syncPrivacyVerification().catch(function () {});
   }
 
   function populateTopics() {
@@ -347,9 +1218,13 @@
   async function hydrateUser(options) {
     const opts = options || {};
     const generation = ++state.accountLoadGeneration;
+    state.authResolved = false;
+    syncPrivacyVerification().catch(function () {});
     if (!window.KCSupabase) {
       state.user = null;
       state.profile = null;
+      state.authResolved = true;
+      syncPrivacyVerification().catch(function () {});
       return { generation, userId: '' };
     }
     let nextUser = Object.prototype.hasOwnProperty.call(opts, 'sessionUser')
@@ -368,6 +1243,7 @@
     const previousUserId = getUserId(state.user);
     const userId = getUserId(nextUser);
     state.user = nextUser || null;
+    state.authResolved = true;
     if (previousUserId !== userId) {
       state.profile = null;
       resetAccountBoundForm();
@@ -387,12 +1263,16 @@
       }
       if (isActiveAccountLoad(generation, userId)) state.profile = profile;
     }
+    if (isActiveAccountLoad(generation, userId)) {
+      syncPrivacyVerification().catch(function () {});
+    }
     return { generation, userId, stale: !isActiveAccountLoad(generation, userId) };
   }
 
   async function refreshHelpPage(options) {
     const opts = options || {};
     const generation = state.accountLoadGeneration + 1;
+    state.privacyRecoveryInProgress = true;
     setStatus('Atualizando a central de ajuda...', 'info');
     try {
       const accountLoad = await hydrateUser(
@@ -403,10 +1283,15 @@
       if (accountLoad && accountLoad.stale) return;
       prefillContext();
       setStatus('Central de ajuda atualizada.', 'success');
+      await recoverPendingPrivacySubmissions();
     } catch (error) {
       if (state.accountLoadGeneration !== generation) return;
       console.warn('[Help] refresh failed.');
       setStatus('Não foi possível atualizar a central de ajuda agora.', 'error');
+    } finally {
+      if (state.accountLoadGeneration === generation) {
+        state.privacyRecoveryInProgress = false;
+      }
     }
   }
 
@@ -464,9 +1349,34 @@
     });
   }
 
+  function validateNormalizedHelpPayload(payload) {
+    const subject = String(payload && payload.subject || '').trim();
+    const message = String(payload && payload.message || '').trim();
+    const email = String(payload && payload.contact_email || '')
+      .trim()
+      .toLowerCase();
+    const pagePath = String(payload && payload.page_path || '').trim();
+    if (subject.length < 3 || subject.length > 140) {
+      return 'O assunto deve ter entre 3 e 140 caracteres, sem contar espaços nas extremidades.';
+    }
+    if (message.length < 10 || message.length > 4000) {
+      return 'A descrição deve ter entre 10 e 4.000 caracteres, sem contar espaços nas extremidades.';
+    }
+    if (
+      email.length > 255 ||
+      !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
+    ) {
+      return 'Informe um e-mail de retorno válido com até 255 caracteres.';
+    }
+    if (pagePath.length > 255) {
+      return 'O caminho da página ultrapassa o limite seguro.';
+    }
+    return '';
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
-    if (state.submitting) return;
+    if (state.submitting || state.privacyRecoveryInProgress) return;
 
     if (!window.KCAPI || typeof window.KCAPI.createHelpRequest !== 'function') {
       setStatus('O envio de pedidos de ajuda não está disponível neste ambiente.', 'error');
@@ -475,9 +1385,15 @@
 
     const generation = state.accountLoadGeneration;
     const userId = getUserId(state.user);
-    const payload = buildPayload();
+    let payload = buildPayload();
     if (!payload.subject || !payload.message || !payload.contact_email || !payload.type || !payload.topic || !payload.priority) {
       setStatus('Preencha categoria, tema, assunto, descrição, urgência e e-mail para retorno.', 'warn');
+      return;
+    }
+    const normalizedValidationError =
+      validateNormalizedHelpPayload(payload);
+    if (normalizedValidationError) {
+      setStatus(normalizedValidationError, 'warn');
       return;
     }
     const firstInvalidConditional = document.querySelector('#helpConditionalFields [required]:invalid');
@@ -487,15 +1403,67 @@
       firstInvalidConditional.focus();
       return;
     }
+    const privacyVerification =
+      getPrivacyVerificationForSubmission(payload);
+    if (!privacyVerification.ok) {
+      setStatus(privacyVerification.message, 'error');
+      setPrivacyVerificationStatus(privacyVerification.message, 'error');
+      const verification = $('#helpPrivacyVerification');
+      if (verification && typeof verification.focus === 'function') {
+        verification.focus();
+      }
+      syncPrivacyVerification().catch(function () {});
+      return;
+    }
 
-    setSubmitState(true);
+    const operationOwner = acquireSubmitOperation('submit');
+    if (!operationOwner) return;
     setProtocol('');
     setStatus('Enviando seu pedido de ajuda...', 'info');
 
+    let privacyIdempotencyToken = null;
+    const guestPrivacyAttempt = privacyVerification.required === true;
     try {
-      const result = await window.KCAPI.createHelpRequest(payload);
+      const prepared = await preparePrivacyIdempotency(payload);
+      if (!isActiveAccountLoad(generation, userId)) return;
+      if (!prepared || prepared.ok === false) {
+        setStatus(
+          (prepared && prepared.error && prepared.error.message)
+            || 'Não foi possível preparar a proteção contra envios duplicados.',
+          'error'
+        );
+        return;
+      }
+      payload = prepared.payload;
+      privacyIdempotencyToken = prepared.token;
+      if (guestPrivacyAttempt) {
+        payload = Object.assign({}, payload, {
+          turnstile_token: privacyVerification.token,
+        });
+        state.turnstileToken = '';
+      }
+      let result;
+      try {
+        result = await window.KCAPI.createHelpRequest(payload);
+      } finally {
+        if (
+          payload &&
+          Object.prototype.hasOwnProperty.call(payload, 'turnstile_token')
+        ) {
+          delete payload.turnstile_token;
+        }
+        if (guestPrivacyAttempt) resetPrivacyTurnstile();
+      }
       if (!isActiveAccountLoad(generation, userId)) return;
       if (!result || result.ok === false) {
+        if (
+          result &&
+          result.error &&
+          result.error.idempotency &&
+          result.error.idempotency.safe_to_replace === true
+        ) {
+          clearPrivacyIdempotencyToken(privacyIdempotencyToken);
+        }
         setStatus((result && result.error && result.error.message) || 'Não foi possível enviar seu pedido agora.', 'error');
         return;
       }
@@ -511,6 +1479,14 @@
         || result.id
         || ''
       ).trim();
+      if (!protocol) {
+        setStatus(
+          'O servidor não confirmou uma referência para o pedido. Para evitar duplicidade, não reenvie agora; tente recuperar esta mesma tentativa mais tarde.',
+          'error'
+        );
+        return;
+      }
+      clearPrivacyIdempotencyToken(privacyIdempotencyToken);
       setProtocol(
         protocol,
         dataSubjectProtocol ? 'data_subject_protocol' : 'help_reference'
@@ -524,7 +1500,11 @@
         'success'
       );
       try {
-        if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
+        if (
+          !(result.data && result.data.idempotency_replayed === true) &&
+          window.KCPrivacyAnalytics &&
+          typeof window.KCPrivacyAnalytics.track === 'function'
+        ) {
           window.KCPrivacyAnalytics.track('help_submit', {
             source: 'help_form',
             status: 'submitted',
@@ -545,7 +1525,10 @@
       console.error('[Help] submit failed.');
       setStatus('Não foi possível enviar seu pedido agora.', 'error');
     } finally {
-      if (isActiveAccountLoad(generation, userId)) setSubmitState(false);
+      if (payload && Object.prototype.hasOwnProperty.call(payload, 'turnstile_token')) {
+        delete payload.turnstile_token;
+      }
+      releaseSubmitOperation(operationOwner);
     }
   }
 
@@ -558,6 +1541,7 @@
     setProtocol('');
     setStatus('', '');
     if (!applyPrivacyDeepLinkPreset()) prefillContext();
+    resetPrivacyTurnstile();
   }
 
   function bindEvents() {
@@ -612,6 +1596,7 @@
   }
 
   async function init() {
+    state.privacyRecoveryInProgress = true;
     state.deepLinkPreset = readPrivacyDeepLink();
     renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
     renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
@@ -626,6 +1611,11 @@
     }
 
     prefillContext();
+    try {
+      await recoverPendingPrivacySubmissions();
+    } finally {
+      state.privacyRecoveryInProgress = false;
+    }
     initPullToRefresh();
     try {
       if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {

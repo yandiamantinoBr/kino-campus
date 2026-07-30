@@ -30,6 +30,24 @@
     return driver.createHelpRequest(payload);
   }
 
+  async function recoverPrivacyHelpRequest(payload = {}, deps = {}) {
+    const driver = getActiveDriverOrNull(deps);
+    if (!driver || typeof driver.recoverPrivacyHelpRequest !== 'function') {
+      return {
+        ok: false,
+        error: {
+          code: 'BACKEND_REQUIRED',
+          message: 'Recuperação de pedidos indisponível neste driver.',
+          idempotency: {
+            safe_to_replace: false,
+            response_confirmed: false,
+          },
+        },
+      };
+    }
+    return driver.recoverPrivacyHelpRequest(payload);
+  }
+
   async function listAdminHelpRequests(filters = {}, deps = {}) {
     const driver = getActiveDriverOrNull(deps);
     if (!driver || typeof driver.listAdminHelpRequests !== 'function') {
@@ -183,6 +201,7 @@
 
   window._KCAPI.help = {
     createHelpRequest,
+    recoverPrivacyHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,

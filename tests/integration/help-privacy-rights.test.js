@@ -72,6 +72,63 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(controller).toContain("document.querySelector('#helpConditionalFields [required]:invalid')");
   });
 
+  test('visitante usa Turnstile explícito somente nas três rotas LGPD', () => {
+    const html = read('ajuda.html');
+    const css = read('assets/css/kc-public-shell.css');
+    const controller = read('assets/js/controllers/public/help.controller.js');
+    const adapter = read('assets/js/adapters/supabase/supabase.admin.adapter.js');
+    const edge = read('supabase/functions/kc-create-privacy-help-guest/index.ts');
+
+    expect(html).toMatch(
+      /id="helpPrivacyVerification"[^>]*role="group"[^>]*aria-labelledby="helpPrivacyVerificationTitle"/
+    );
+    expect(html).toMatch(
+      /id="helpPrivacyVerificationStatus"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/
+    );
+    expect(html).toContain('id="helpPrivacyTurnstileWidget"');
+    expect(html).toContain('data-kc-login="true"');
+    expect(css).toContain('.kc-help-verification[hidden]');
+    expect(css).toContain('.kc-help-turnstile-widget');
+
+    expect(controller).toContain(
+      "'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'"
+    );
+    expect(controller).toContain("const TURNSTILE_ACTION = 'help_privacy_guest'");
+    expect(controller).toContain('const TURNSTILE_TOKEN_MAX_CHARS = 2048');
+    expect(controller).toContain(
+      'normalizedToken.length <= TURNSTILE_TOKEN_MAX_CHARS'
+    );
+    expect(controller).toContain('action: TURNSTILE_ACTION');
+    expect(edge).toContain('const TURNSTILE_ACTION = "help_privacy_guest"');
+    expect(controller).toContain('env.TURNSTILE_SITE_KEY || privacyHelp.turnstileSiteKey');
+    expect(controller).toContain('state.authResolved &&');
+    expect(controller).toContain('!isAuthenticatedAccountUser(state.user)');
+    expect(controller).toContain("'expired-callback'");
+    expect(controller).toContain("'error-callback'");
+    expect(controller).toContain('window.turnstile.reset(state.turnstileWidgetId)');
+    expect(controller).toContain('turnstile_token: privacyVerification.token');
+    expect(controller.indexOf('preparePrivacyIdempotency(payload)')).toBeLessThan(
+      controller.indexOf('turnstile_token: privacyVerification.token')
+    );
+    expect(controller).not.toMatch(
+      /(?:localStorage|sessionStorage)\.(?:setItem|getItem)\([^)]*turnstile/iu
+    );
+    const fingerprint = controller.slice(
+      controller.indexOf('function buildPrivacyFingerprintShape('),
+      controller.indexOf('function getPrivacyCallerScope(')
+    );
+    expect(fingerprint).not.toContain('turnstile');
+
+    expect(adapter).toContain("'kc-create-privacy-help-guest'");
+    expect(adapter).toContain('turnstile_token: turnstileToken');
+    expect(adapter).toContain('payload: rpcPayload');
+    expect(adapter).toContain("client.rpc(rpcName");
+    expect(adapter).toContain('error.context.json()');
+    expect(adapter).not.toMatch(
+      /console\.(?:log|debug|info|warn|error)\([^)]*turnstileToken/iu
+    );
+  });
+
   test('RPC do formulário vincula a gravação ao estado Auth observado', () => {
     const migration = read('supabase/migrations/20260729011000_harden_help_expected_auth_state.sql');
     const adapter = read('assets/js/adapters/supabase/supabase.admin.adapter.js');

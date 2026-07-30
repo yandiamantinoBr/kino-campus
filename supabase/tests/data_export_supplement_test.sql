@@ -1678,11 +1678,12 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$
     select *
-    from public.kc_create_help_request_with_notification_claim_v2(
+    from public.kc_create_privacy_help_request_v1(
       pg_catalog.jsonb_build_object(
         'expected_auth_state', 'authenticated',
         'expected_user_id',
           '00000000-0000-4000-8000-000000000761',
+        'idempotency_key', repeat('1', 64),
         'type', 'account_access',
         'topic', 'onboarding_settings',
         'subtopic', 'account_data_portability',
@@ -1718,10 +1719,11 @@ select extensions.ok(
 
 insert into kc_supplement_test_state (key, value)
 select 'authenticated_help_form', to_jsonb(created)
-from public.kc_create_help_request_with_notification_claim_v2(
+from public.kc_create_privacy_help_request_v1(
   jsonb_build_object(
     'expected_auth_state', 'authenticated',
     'expected_user_id', '00000000-0000-4000-8000-000000000764',
+    'idempotency_key', repeat('2', 64),
     'type', 'account_access',
     'topic', 'onboarding_settings',
     'subtopic', 'account_data_copy',
@@ -1736,10 +1738,11 @@ from public.kc_create_help_request_with_notification_claim_v2(
 ) created;
 insert into kc_supplement_test_state (key, value)
 select 'authenticated_help_form_replay', to_jsonb(created)
-from public.kc_create_help_request_with_notification_claim_v2(
+from public.kc_create_privacy_help_request_v1(
   jsonb_build_object(
     'expected_auth_state', 'authenticated',
     'expected_user_id', '00000000-0000-4000-8000-000000000764',
+    'idempotency_key', repeat('2', 64),
     'type', 'account_access',
     'topic', 'onboarding_settings',
     'subtopic', 'account_data_copy',
@@ -1757,7 +1760,7 @@ select extensions.ok(
     select first.value ->> 'out_protocol' ~ '^KC-DSR-[0-9]{8}-[A-F0-9]{16}$'
       and first.value #>> '{out_data_subject_request,status}' = 'ready'
       and replay.value ->> 'out_protocol' = first.value ->> 'out_protocol'
-      and replay.value ->> 'out_reused_existing' = 'true'
+      and replay.value ->> 'out_idempotency_replayed' = 'true'
     from kc_supplement_test_state first
     cross join kc_supplement_test_state replay
     where first.key = 'authenticated_help_form'
@@ -1791,9 +1794,10 @@ select set_config(
 set local role anon;
 insert into kc_supplement_test_state (key, value)
 select 'anonymous_help_form', to_jsonb(created)
-from public.kc_create_help_request_with_notification_claim_v2(
+from public.kc_create_privacy_help_request_v1(
   jsonb_build_object(
     'expected_auth_state', 'anonymous',
+    'idempotency_key', repeat('3', 64),
     'type', 'account_access',
     'topic', 'onboarding_settings',
     'subtopic', 'account_data_portability',

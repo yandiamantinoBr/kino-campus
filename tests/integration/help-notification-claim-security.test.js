@@ -8,6 +8,9 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'u
 
 const MIGRATION = read('supabase/migrations/20260728210000_help_request_notification_claims.sql');
 const PRIVACY_MIGRATION = read('supabase/migrations/20260728220000_data_export_supplement_workflow.sql');
+const PRIVACY_IDEMPOTENCY_MIGRATION = read(
+  'supabase/migrations/20260729190653_help_submission_idempotency.sql',
+);
 const EDGE = read('supabase/functions/kc-help-request-notify/index.ts');
 const ADAPTER = read('assets/js/adapters/supabase/supabase.admin.adapter.js');
 const CONFIG = read('supabase/config.toml');
@@ -111,18 +114,30 @@ describe('kc-help-request-notify privileged boundary', () => {
 });
 
 describe('help frontend claim handling', () => {
-  test('uses the atomic RPC and forwards the proof directly to the Edge Function', () => {
-    expect(ADAPTER).toContain("client.rpc('kc_create_help_request_with_notification_claim_v2'");
+  test('keeps claims on generic/external Help and privacy on the claim-free idempotent path', () => {
+    expect(ADAPTER).toContain("'kc_create_help_request_with_notification_claim_v2'");
+    expect(ADAPTER).toContain("'kc_create_privacy_help_request_v1'");
+    expect(ADAPTER).toContain("'kc-create-privacy-help-guest'");
     expect(PRIVACY_MIGRATION).toContain(
       'kc_create_help_request_with_notification_claim_v2',
     );
     expect(PRIVACY_MIGRATION).toContain(
       'from kc_private.kc_create_help_request_with_notification_claim(p_payload)',
     );
+    expect(PRIVACY_IDEMPOTENCY_MIGRATION).toContain(
+      'HELP_PRIVACY_IDEMPOTENT_RPC_REQUIRED',
+    );
+    expect(PRIVACY_IDEMPOTENCY_MIGRATION).toContain(
+      'kc_create_privacy_help_request_v1',
+    );
     expect(ADAPTER).toContain('row.out_notification_claim');
+    expect(ADAPTER).toContain('if (privacyRequestKind && notificationClaim)');
     expect(ADAPTER).toContain('notification_claim: String(notificationClaim || \'\')');
     expect(ADAPTER).toContain(
       'notifyExternalHelpRequest(client, createdRow, notificationClaim)'
+    );
+    expect(ADAPTER).toContain(
+      '!isExternalAccessHelpRequest(row)',
     );
   });
 

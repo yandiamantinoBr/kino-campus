@@ -523,28 +523,42 @@ select extensions.ok(
 );
 select extensions.ok(
   (
-    select prosrc like '%status in (''completed'', ''cancelled'', ''expired'')%'
-      and prosrc not like
+    select base_row.prosrc like
+        '%status in (''completed'', ''cancelled'', ''expired'')%'
+      and base_row.prosrc not like
         '%status in (''completed'', ''cancelled'', ''failed'', ''partial_failure'', ''expired'')%'
-      and prosrc like '%overdue_unresolved_requests%'
-      and prosrc like '%contact_email = ''purged-''%'
-    from pg_proc
-    where oid =
-      'kc_private.kc_purge_expired_data_subject_requests(integer)'::regprocedure
+      and base_row.prosrc like '%overdue_unresolved_requests%'
+      and base_row.prosrc like '%contact_email = ''purged-''%'
+      and wrapper_row.prosrc like
+        '%kc_purge_expired_data_subject_requests_privacy_base%'
+      and wrapper_row.prosrc like
+        '%kc_cleanup_privacy_help_tombstones_v1%'
+    from pg_proc base_row
+    cross join pg_proc wrapper_row
+    where base_row.oid =
+      'kc_private.kc_purge_expired_data_subject_requests_privacy_base(integer)'::regprocedure
+      and wrapper_row.oid =
+        'kc_private.kc_purge_expired_data_subject_requests(integer)'::regprocedure
   ),
-  'retention purge redacts linked tickets and leaves unresolved requests for review'
+  'retention purge base redacts tickets while its wrapper adds bounded privacy-state cleanup'
 );
 select extensions.ok(
   (
-    select prosrc like '%from public.account_erasure_requests%'
-      and prosrc like '%status in (''erased'', ''cancelled'')%'
-      and prosrc like '%overdue_unresolved_erasure_requests%'
-      and prosrc like '%purged_erasure_requests%'
-    from pg_proc
-    where oid =
-      'kc_private.kc_purge_expired_data_subject_requests(integer)'::regprocedure
+    select base_row.prosrc like
+        '%from public.account_erasure_requests%'
+      and base_row.prosrc like '%status in (''erased'', ''cancelled'')%'
+      and base_row.prosrc like '%overdue_unresolved_erasure_requests%'
+      and base_row.prosrc like '%purged_erasure_requests%'
+      and wrapper_row.prosrc like
+        '%kc_purge_expired_data_subject_requests_privacy_base%'
+    from pg_proc base_row
+    cross join pg_proc wrapper_row
+    where base_row.oid =
+      'kc_private.kc_purge_expired_data_subject_requests_privacy_base(integer)'::regprocedure
+      and wrapper_row.oid =
+        'kc_private.kc_purge_expired_data_subject_requests(integer)'::regprocedure
   ),
-  'retention purge includes resolved erasure operations and alerts on unresolved ones'
+  'retention purge base keeps erasure semantics behind the compatible wrapper'
 );
 select extensions.ok(
   exists (
@@ -764,7 +778,7 @@ select extensions.lives_ok(
   )$$,
   'noncanonical help tuple ignores spoofed privacy request_kind'
 );
-select extensions.lives_ok(
+select extensions.throws_ok(
   $$select public.kc_create_help_request(
     jsonb_build_object(
       'type', 'account_access',
@@ -776,7 +790,36 @@ select extensions.lives_ok(
       'metadata', jsonb_build_object('request_kind', 'account_erasure')
     )
   )$$,
-  'canonical privacy tuple overwrites spoofed request_kind'
+  '22023',
+  'HELP_PRIVACY_IDEMPOTENT_RPC_REQUIRED',
+  'legacy Help RPC rejects a canonical privacy tuple'
+);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000753","role":"authenticated","is_anonymous":false,"session_id":"10000000-0000-4000-8000-000000000753"}',
+  true
+);
+select extensions.lives_ok(
+  $$select * from public.kc_create_privacy_help_request_v1(
+    jsonb_build_object(
+      'expected_auth_state', 'authenticated',
+      'expected_user_id', '00000000-0000-4000-8000-000000000753',
+      'idempotency_key', repeat('9', 64),
+      'type', 'account_access',
+      'topic', 'onboarding_settings',
+      'subtopic', 'account_data_portability',
+      'subject', 'Classificacao canonica',
+      'message', 'Mensagem valida para testar classificacao canonica.',
+      'contact_email', 'dsr-admin@example.test',
+      'metadata', jsonb_build_object('request_kind', 'account_erasure')
+    )
+  )$$,
+  'idempotent privacy RPC derives the canonical request_kind'
+);
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000751","role":"authenticated","is_anonymous":false,"session_id":"10000000-0000-4000-8000-000000000751"}',
+  true
 );
 
 reset role;

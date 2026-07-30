@@ -18,6 +18,9 @@ const DELIVERY_HARDENING_MIGRATION = read(
 const ERASURE_CLOSURE_MIGRATION = read(
   'supabase/migrations/20260729004000_close_erasure_races_and_renew_leases.sql',
 );
+const PRIVACY_HELP_IDEMPOTENCY_MIGRATION = read(
+  'supabase/migrations/20260729190653_help_submission_idempotency.sql',
+);
 const ADMIN_EDGE = read('supabase/functions/kc-data-export-admin/index.ts');
 const PROCESSORS = read('supabase/functions/_shared/data-processors.ts');
 const ACTIVE_SESSION = read('supabase/functions/_shared/active-session.ts');
@@ -415,7 +418,7 @@ describe('authenticated data-subject request backend', () => {
     expect(ADMIN_EDGE).not.toContain('p_identity_reference');
   });
 
-  test('atomically gives an authenticated privacy form submission a DSR protocol', () => {
+  test('atomically gives an authenticated idempotent privacy submission a DSR protocol', () => {
     expect(SUPPLEMENT_MIGRATION).toContain(
       'kc_create_help_request_with_notification_claim_v2',
     );
@@ -425,8 +428,29 @@ describe('authenticated data-subject request backend', () => {
     expect(SUPPLEMENT_MIGRATION).toContain(
       "'identity_source', 'authenticated_account'",
     );
+    expect(PRIVACY_HELP_IDEMPOTENCY_MIGRATION).toContain(
+      'kc_create_privacy_help_request_v1',
+    );
+    expect(PRIVACY_HELP_IDEMPOTENCY_MIGRATION).toContain(
+      'kc_help_request_v2_20260729_idempotency_base',
+    );
+    expect(PRIVACY_HELP_IDEMPOTENCY_MIGRATION).toContain(
+      'out_data_subject_request := v_created.out_data_subject_request',
+    );
+    expect(PRIVACY_HELP_IDEMPOTENCY_MIGRATION).toContain(
+      'out_protocol := v_created.out_protocol',
+    );
     expect(SUPABASE_ADAPTER).toContain(
-      "client.rpc('kc_create_help_request_with_notification_claim_v2'",
+      "? 'kc_create_privacy_help_request_v1'",
+    );
+    expect(SUPABASE_ADAPTER).toContain(
+      ": 'kc_create_help_request_with_notification_claim_v2'",
+    );
+    expect(SUPABASE_ADAPTER).toContain(
+      "'kc-create-privacy-help-guest'",
+    );
+    expect(SUPABASE_ADAPTER).toContain(
+      'validatePrivacyHelpRpcEnvelope(row, expectedAuthState)',
     );
     expect(SUPABASE_ADAPTER).toContain('out_data_subject_request');
     expect(SUPABASE_ADAPTER).toContain('out_protocol');
@@ -637,10 +661,13 @@ describe('authenticated data-subject request backend', () => {
       'window.KCAPI.getDataSubjectRequest(request.protocol, {',
     );
     expect(SETTINGS_CONTROLLER).toContain(
-      'privacyDownloadsInFlight: Object.create(null)',
+      'privacyProtocolLeases: new Map()',
     );
     expect(SETTINGS_CONTROLLER).toContain(
-      'delete downloadsInFlight[protocol]',
+      'lease.ownerMap.delete(lease.protocol)',
+    );
+    expect(SETTINGS_CONTROLLER).toContain(
+      'endPrivacyProtocolOperation(protocolLease)',
     );
     expect(DELIVERY_HARDENING_MIGRATION).toContain(
       "download_return_status = 'delivered'",
