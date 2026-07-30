@@ -20,11 +20,20 @@ Esta página lista itens identificados durante o trabalho da PR #747 mas que **n
 - **Onde:** `ajuda.html` (categoria `Conta e acesso > Onboarding > Exclusão`).
 - **Próximo passo:** criar uma FAQ `category=account_access&topic=lgpd_basics` com perguntas como "Como pedir exclusão da conta?", "Posso cancelar o pedido?", "O que acontece com minhas mensagens de chat?".
 
-### 3. i18n dos textos de privacidade
+### 3. i18n dos textos de privacidade ✅ RESOLVIDO em [PR #755](https://github.com/yandiamantinoBr/kino-campus/pull/755)
 
-- **Sintoma:** os textos de privacidade em `settings.html` (seção `settingsPrivacyData`) e `ajuda.html` estão hard-coded em pt-BR. Não passam pelo `KCi18n.t()`.
-- **Onde:** os 10 textos listados em `settings.html#settingsPrivacyData`.
-- **Próximo passo:** adicionar as chaves no `assets/js/core/kc-i18n.js` e usar `KCi18n.t()` no HTML (ou em JS controller se for renderizado dinamicamente).
+Issue: [#750](https://github.com/yandiamantinoBr/kino-campus/issues/750) (closed)
+
+- **Sintoma:** os textos de privacidade em `settings.html` (seção `settingsPrivacyData`) estavam hard-coded em pt-BR e não passavam pelo `KCi18n.t()`.
+- **Onde:** 14 elementos sob `#settingsPrivacyData` (3 com `data-i18n-params` para links inline).
+- **Solução aplicada:**
+  - 18 novas chaves adicionadas em `assets/js/core/kc-i18n.js` sob o namespace `privacy.*` (todas respeitando o formato `categoria.nome` exigido pelo test B2-gate).
+  - Nova função `applyTexts()` em `kc-i18n.js` que resolve `data-i18n-text="chave"`, interpola `{placeholder}` a partir de `data-i18n-params` (JSON) e escreve em `innerHTML` por default (ou `textContent` se `data-i18n-text-escape="true"`).
+  - `applyTexts()` é chamado por `applyRuntimeI18n()` e exposto em `window.KCi18n.applyTexts`.
+  - 10 novos tests em `tests/unit/kc-i18n.test.js`.
+  - `tests/a11y/i18n-b2-gate.test.js` e `tests/a11y/i18n-metadata.test.js` atualizados (10 métodos públicos em vez de 9).
+- **Validação:** `node --check` OK; `npm run check:hygiene` OK; `npm run check:structure` OK (174 itens); Jest 4919/4919 OK (no CI).
+- **Pendência correlata:** o FAQ de LGPD em `ajuda.html` (item #2) ainda tem textos hard-coded; será tratado em uma PR separada quando o item #2 for puxado.
 
 ### 4. Service Worker cache-bust ✅ RESOLVIDO em [PR #754](https://github.com/yandiamantinoBr/kino-campus/pull/754)
 
