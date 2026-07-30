@@ -41,6 +41,7 @@
   let dropdownRenderSeq = 0;
   let structuredSearchRuntimePromise = null;
   let searchPersonalizationRuntimePromise = null;
+  let searchPreferenceScopePromise = null;
   let structuredDismissalQuery = '';
   let structuredDismissedSignals = new Set();
   let lastStructuredResultsView = null;
@@ -219,7 +220,15 @@
     if (SEARCH_SCRIPT_SRC) {
       try { src = new URL(`../shared/${file}`, SEARCH_SCRIPT_SRC).toString(); } catch (_) {}
     }
-    const version = String((window.KC_ENV && (window.KC_ENV.version || window.KC_ENV.APP_VERSION)) || '').trim();
+    let scriptVersion = '';
+    if (SEARCH_SCRIPT_SRC) {
+      try { scriptVersion = new URL(SEARCH_SCRIPT_SRC).searchParams.get('v') || ''; } catch (_) {}
+    }
+    const version = String(
+      scriptVersion ||
+      (window.KC_ENV && (window.KC_ENV.version || window.KC_ENV.APP_VERSION)) ||
+      ''
+    ).trim();
     if (version && !/[?&]v=/.test(src)) {
       src += `${src.includes('?') ? '&' : '?'}v=${encodeURIComponent(version)}`;
     }
@@ -314,30 +323,68 @@
     return searchPersonalizationRuntimePromise;
   }
 
+  function resolveSearchPreferenceScope() {
+    if (searchPreferenceScopePromise) return searchPreferenceScopePromise;
+    searchPreferenceScopePromise = Promise.resolve().then(async () => {
+      if (!(window.KCAPI && typeof window.KCAPI.getCurrentUser === 'function')) {
+        return { scope: 'local', userId: '' };
+      }
+      const user = await window.KCAPI.getCurrentUser();
+      const userId = String(user && user.id || '').trim();
+      return userId ? { scope: 'account', userId } : { scope: 'local', userId: '' };
+    }).catch(() => ({ scope: 'local', userId: '' }));
+    return searchPreferenceScopePromise;
+  }
+
+  function affinityStorageKeyForScope(preferencesApi, scope) {
+    if (
+      scope &&
+      scope.userId &&
+      preferencesApi &&
+      typeof preferencesApi.affinityStorageKeyForUser === 'function'
+    ) {
+      return preferencesApi.affinityStorageKeyForUser(scope.userId);
+    }
+    return preferencesApi && preferencesApi.AFFINITY_STORAGE_KEY
+      ? preferencesApi.AFFINITY_STORAGE_KEY
+      : 'kc_search_affinity_v1';
+  }
+
   async function applySearchPersonalization(results, options = {}) {
     const source = Array.isArray(results) ? results : [];
     if (options.disabled === true) return source.slice();
     const runtime = await loadSearchPersonalizationRuntime();
     if (!runtime) return source;
-    const preferences = runtime.preferences.load({ registry: runtime.registry });
+    const scope = await resolveSearchPreferenceScope();
+    const preferences = runtime.preferences.load({
+      registry: runtime.registry,
+      scope: scope.scope,
+      userId: scope.userId || undefined
+    });
     if (!runtime.preferences.isPersonalized(preferences)) return source;
     return runtime.affinity.rerank(source, {
       preferences,
       registry: runtime.registry,
-      sortBy: options.sortBy || 'relevance'
+      sortBy: options.sortBy || 'relevance',
+      storageKey: affinityStorageKeyForScope(runtime.preferences, scope)
     });
   }
 
   function recordSearchResultInteraction(post, source) {
     if (!post || !isSearchPersonalizationEnabled()) return;
-    loadSearchPersonalizationRuntime().then((runtime) => {
+    Promise.all([loadSearchPersonalizationRuntime(), resolveSearchPreferenceScope()]).then(([runtime, scope]) => {
       if (!runtime) return;
-      const preferences = runtime.preferences.load({ registry: runtime.registry });
+      const preferences = runtime.preferences.load({
+        registry: runtime.registry,
+        scope: scope.scope,
+        userId: scope.userId || undefined
+      });
       runtime.affinity.recordInteraction(post, {
         preferences,
         registry: runtime.registry,
         source,
-        automated: !!(window.navigator && window.navigator.webdriver)
+        automated: !!(window.navigator && window.navigator.webdriver),
+        storageKey: affinityStorageKeyForScope(runtime.preferences, scope)
       });
     }).catch(() => {});
   }
@@ -2051,11 +2098,19 @@
   }
 
   window.addEventListener('storage', (event) => {
-    if (!event || event.key === 'kc_search_preferences_v1' || event.key === 'kc_search_affinity_v1') {
+    if (
+      !event ||
+      String(event.key || '').startsWith('kc_search_preferences_v1') ||
+      String(event.key || '').startsWith('kc_search_affinity_v1')
+    ) {
       searchPersonalizationRuntimePromise = null;
     }
   });
   window.addEventListener('kc:search-preferences-change', () => {
+    searchPersonalizationRuntimePromise = null;
+  });
+  document.addEventListener('kc:authchange', () => {
+    searchPreferenceScopePromise = null;
     searchPersonalizationRuntimePromise = null;
   });
 

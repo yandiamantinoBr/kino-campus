@@ -1,0 +1,2733 @@
+-- ============================================================================
+-- KinoCampus - solicitacoes de titulares e exportacao de dados (LGPD)
+-- ============================================================================
+-- Contratos:
+--   * identidade sempre derivada de auth.uid()/auth.users;
+--   * criacao atomica de protocolo + ticket de ajuda;
+--   * leitura owner-only (ou admin) via Data API;
+--   * escrita somente por RPCs validadas/Edge Functions;
+--   * pacotes de exportacao nao sao persistidos no banco;
+--   * estados monotonicamente validados e exportacoes de curta duracao.
+-- ============================================================================
+
+begin;
+
+create table public.data_subject_requests (
+  id uuid primary key default gen_random_uuid(),
+  protocol text not null unique,
+  user_id uuid references auth.users(id) on delete set null,
+  help_request_id uuid references public.help_requests(id) on delete set null,
+  subject_hash text not null,
+  request_kind text not null,
+  status text not null default 'received',
+  idempotency_key text not null,
+  requested_format text not null default 'json',
+  request_source text not null default 'settings',
+  export_schema_version integer not null default 1,
+  scope jsonb not null default '[]'::jsonb,
+  ready_at timestamptz,
+  expires_at timestamptz,
+  completed_at timestamptz,
+  cancelled_at timestamptz,
+  retention_until timestamptz not null default (now() + interval '5 years'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint data_subject_requests_protocol_check
+    check (protocol ~ '^KC-DSR-[0-9]{8}-[A-F0-9]{16}$'),
+  constraint data_subject_requests_subject_hash_check
+    check (subject_hash ~ '^[a-f0-9]{64}$'),
+  constraint data_subject_requests_kind_check
+    check (request_kind in ('data_access_copy', 'data_portability', 'account_erasure')),
+  constraint data_subject_requests_status_check
+    check (status in (
+      'received',
+      'processing',
+      'ready',
+      'pending_confirmation',
+      'completed',
+      'cancelled',
+      'failed',
+      'partial_failure',
+      'expired'
+    )),
+  constraint data_subject_requests_idempotency_key_check
+    check (idempotency_key ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'),
+  constraint data_subject_requests_requested_format_check
+    check (requested_format = 'json'),
+  constraint data_subject_requests_source_check
+    check (request_source in ('settings', 'help', 'api')),
+  constraint data_subject_requests_export_schema_version_check
+    check (export_schema_version between 1 and 1000),
+  constraint data_subject_requests_scope_array_check
+    check (jsonb_typeof(scope) = 'array'),
+  constraint data_subject_requests_expiry_check
+    check (expires_at is null or expires_at > created_at),
+  constraint data_subject_requests_ready_check
+    check (ready_at is null or ready_at >= created_at),
+  constraint data_subject_requests_completed_check
+    check (completed_at is null or completed_at >= created_at),
+  constraint data_subject_requests_cancelled_check
+    check (cancelled_at is null or cancelled_at >= created_at),
+  constraint data_subject_requests_retention_check
+    check (retention_until > created_at)
+);
+
+comment on table public.data_subject_requests is
+  'Pedidos autenticados de acesso/copia, portabilidade e exclusao. O pacote exportado e gerado sob demanda e nunca persistido nesta tabela.';
+comment on column public.data_subject_requests.protocol is
+  'Protocolo publico, aleatorio e nao derivado de e-mail ou UUID do titular.';
+comment on column public.data_subject_requests.subject_hash is
+  'Token opaco aleatorio por pedido, sem derivacao de e-mail ou UUID e preservado apenas no recibo minimo.';
+comment on column public.data_subject_requests.idempotency_key is
+  'Chave fornecida pela aplicacao; unica por titular e tipo para impedir tickets duplicados em retry.';
+comment on column public.data_subject_requests.expires_at is
+  'Fim da janela curta em que uma exportacao pronta pode ser obtida.';
+comment on column public.data_subject_requests.retention_until is
+  'Data de revisao/expurgo do registro minimo de protocolo. Nao prolonga a janela de download e nao guarda o pacote nem e-mail cru.';
+
+create unique index data_subject_requests_owner_kind_idempotency_uidx
+  on public.data_subject_requests (user_id, request_kind, idempotency_key)
+  where user_id is not null;
+
+create index data_subject_requests_owner_created_idx
+  on public.data_subject_requests (user_id, created_at desc)
+  where user_id is not null;
+
+create index data_subject_requests_admin_queue_idx
+  on public.data_subject_requests (request_kind, status, created_at asc);
+
+create index data_subject_requests_expiry_idx
+  on public.data_subject_requests (expires_at)
+  where expires_at is not null
+    and status = 'ready';
+
+create table public.data_subject_request_events (
+  id bigint generated by default as identity primary key,
+  request_id uuid not null references public.data_subject_requests(id) on delete cascade,
+  actor_user_id uuid references auth.users(id) on delete set null,
+  status text not null,
+  event_type text not null,
+  public_message text,
+  created_at timestamptz not null default now(),
+  constraint data_subject_request_events_status_check
+    check (status in (
+      'received',
+      'processing',
+      'ready',
+      'pending_confirmation',
+      'completed',
+      'cancelled',
+      'failed',
+      'partial_failure',
+      'expired'
+    )),
+  constraint data_subject_request_events_type_check
+    check (event_type in (
+      'created',
+      'status_changed',
+      'download_attempted',
+      'downloaded',
+      'cancelled',
+      'expired',
+      'processing_error'
+    )),
+  constraint data_subject_request_events_message_check
+    check (public_message is null or char_length(public_message) between 1 and 280)
+);
+
+comment on table public.data_subject_request_events is
+  'Linha do tempo publica e sem notas internas dos pedidos de titulares.';
+
+create index data_subject_request_events_request_created_idx
+  on public.data_subject_request_events (request_id, created_at asc, id asc);
+
+create or replace function kc_private.kc_validate_data_subject_status_transition()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.status = old.status then
+    return new;
+  end if;
+
+  if not (
+    (old.status = 'received' and new.status in ('processing', 'pending_confirmation', 'cancelled', 'failed'))
+    or (
+      old.status = 'received'
+      and new.status = 'ready'
+      and old.request_kind in ('data_access_copy', 'data_portability')
+    )
+    or (old.status = 'processing' and new.status in ('ready', 'pending_confirmation', 'completed', 'cancelled', 'failed', 'partial_failure'))
+    or (old.status = 'ready' and new.status in ('completed', 'cancelled', 'failed', 'partial_failure', 'expired'))
+    or (old.status = 'pending_confirmation' and new.status in ('processing', 'completed', 'cancelled', 'failed', 'partial_failure'))
+    or (old.status = 'failed' and new.status in ('processing', 'cancelled'))
+    or (
+      old.status = 'failed'
+      and new.status = 'ready'
+      and old.request_kind in ('data_access_copy', 'data_portability')
+    )
+    or (old.status = 'partial_failure' and new.status in ('processing', 'completed', 'cancelled'))
+  ) then
+    raise exception using
+      errcode = '23514',
+      message = 'DSR_INVALID_STATUS_TRANSITION',
+      detail = old.status || ' -> ' || new.status;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function kc_private.kc_validate_data_subject_status_transition() from public, anon, authenticated;
+
+drop trigger if exists trg_data_subject_requests_status_transition on public.data_subject_requests;
+create trigger trg_data_subject_requests_status_transition
+before update of status on public.data_subject_requests
+for each row execute function kc_private.kc_validate_data_subject_status_transition();
+
+drop trigger if exists trg_data_subject_requests_set_updated_at on public.data_subject_requests;
+create trigger trg_data_subject_requests_set_updated_at
+before update on public.data_subject_requests
+for each row execute function public.kc_set_updated_at();
+
+-- Confirma que o JWT pertence a uma sessao ainda existente. A funcao e
+-- definida antes das policies e RPCs owner para que todos os caminhos de
+-- leitura/escrita falhem fechados depois da revogacao de auth.sessions.
+create or replace function kc_private.kc_is_current_session_active()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    auth.uid() is not null
+    and coalesce(auth.jwt() ->> 'is_anonymous', 'false') <> 'true'
+    and coalesce(auth.jwt() ->> 'session_id', '') ~
+      '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and exists (
+      select 1
+      from auth.sessions session_row
+      where session_row.id = (auth.jwt() ->> 'session_id')::uuid
+        and session_row.user_id = auth.uid()
+    );
+$$;
+
+create or replace function public.kc_is_current_session_active()
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select kc_private.kc_is_current_session_active();
+$$;
+
+revoke all on function kc_private.kc_is_current_session_active()
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_is_current_session_active()
+  to authenticated;
+revoke all on function public.kc_is_current_session_active()
+  from public, anon;
+grant execute on function public.kc_is_current_session_active()
+  to authenticated;
+
+alter table public.data_subject_requests enable row level security;
+alter table public.data_subject_request_events enable row level security;
+
+create policy data_subject_requests_select_owner_or_admin
+  on public.data_subject_requests
+  for select
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and (
+      user_id = (select auth.uid())
+      or public.kc_is_admin((select auth.uid()))
+    )
+  );
+
+create policy data_subject_requests_update_admin
+  on public.data_subject_requests
+  for update
+  to authenticated
+  using (public.kc_is_admin((select auth.uid())))
+  with check (public.kc_is_admin((select auth.uid())));
+
+create policy data_subject_request_events_select_owner_or_admin
+  on public.data_subject_request_events
+  for select
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and exists (
+      select 1
+      from public.data_subject_requests request_row
+      where request_row.id = data_subject_request_events.request_id
+        and (
+          request_row.user_id = (select auth.uid())
+          or public.kc_is_admin((select auth.uid()))
+        )
+    )
+  );
+
+revoke all on table public.data_subject_requests from public, anon, authenticated;
+revoke all on table public.data_subject_request_events from public, anon, authenticated;
+grant select on table public.data_subject_requests to authenticated;
+grant select on table public.data_subject_request_events to authenticated;
+grant all on table public.data_subject_requests to service_role;
+grant all on table public.data_subject_request_events to service_role;
+grant usage, select on sequence public.data_subject_request_events_id_seq to service_role;
+
+-- Criacao atomica e idempotente do protocolo e do ticket de ajuda.
+create or replace function kc_private.kc_create_data_subject_request(
+  p_request_kind text,
+  p_idempotency_key text,
+  p_requested_format text default 'json',
+  p_request_source text default 'settings'
+)
+returns public.data_subject_requests
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text;
+  v_request_kind text := lower(trim(coalesce(p_request_kind, '')));
+  v_idempotency_key text := trim(coalesce(p_idempotency_key, ''));
+  v_requested_format text := lower(trim(coalesce(p_requested_format, 'json')));
+  v_request_source text := lower(trim(coalesce(p_request_source, 'settings')));
+  v_request_id uuid;
+  v_protocol text;
+  v_help_request_id uuid;
+  v_subtopic text;
+  v_subject text;
+  v_message text;
+  v_scope jsonb;
+  v_existing public.data_subject_requests%rowtype;
+  v_result public.data_subject_requests%rowtype;
+begin
+  if v_uid is null
+     or coalesce(auth.jwt() ->> 'is_anonymous', 'false') = 'true'
+     or not kc_private.kc_is_current_session_active() then
+    raise exception using errcode = '42501', message = 'DSR_AUTH_REQUIRED';
+  end if;
+
+  if v_request_kind not in ('data_access_copy', 'data_portability', 'account_erasure') then
+    raise exception using errcode = '22023', message = 'DSR_INVALID_REQUEST_KIND';
+  end if;
+
+  if v_idempotency_key !~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$' then
+    raise exception using errcode = '22023', message = 'DSR_INVALID_IDEMPOTENCY_KEY';
+  end if;
+
+  if v_requested_format <> 'json' then
+    raise exception using errcode = '22023', message = 'DSR_UNSUPPORTED_FORMAT';
+  end if;
+
+  if v_request_source not in ('settings', 'help', 'api') then
+    raise exception using errcode = '22023', message = 'DSR_INVALID_SOURCE';
+  end if;
+
+  select lower(trim(user_row.email))
+    into v_email
+  from auth.users user_row
+  where user_row.id = v_uid;
+
+  if v_email is null or v_email = '' then
+    raise exception using errcode = '23514', message = 'DSR_ACCOUNT_EMAIL_REQUIRED';
+  end if;
+
+  -- Serializa a janela de rate limit por titular para evitar corrida.
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(v_uid::text, 7357)
+  );
+
+  select request_row.*
+    into v_existing
+  from public.data_subject_requests request_row
+  where request_row.user_id = v_uid
+    and request_row.request_kind = v_request_kind
+    and request_row.idempotency_key = v_idempotency_key
+  order by request_row.created_at desc
+  limit 1;
+
+  if found then
+    return v_existing;
+  end if;
+
+  if (
+    select count(*)
+    from public.data_subject_requests request_row
+    where request_row.user_id = v_uid
+      and request_row.created_at > now() - interval '24 hours'
+  ) >= 10 then
+    raise exception using errcode = 'P0001', message = 'DSR_RATE_LIMIT_24H';
+  end if;
+
+  if exists (
+    select 1
+    from public.data_subject_requests request_row
+    where request_row.user_id = v_uid
+      and request_row.request_kind = v_request_kind
+      and request_row.created_at > now() - interval '5 minutes'
+  ) then
+    raise exception using errcode = 'P0001', message = 'DSR_RATE_LIMIT_WINDOW';
+  end if;
+
+  v_request_id := gen_random_uuid();
+  v_protocol := 'KC-DSR-'
+    || to_char(now() at time zone 'UTC', 'YYYYMMDD')
+    || '-'
+    || upper(substr(replace(v_request_id::text, '-', ''), 1, 16));
+
+  v_subtopic := case v_request_kind
+    when 'account_erasure' then 'account_deletion'
+    when 'data_portability' then 'account_data_portability'
+    else 'account_data_copy'
+  end;
+  v_subject := case v_request_kind
+    when 'account_erasure' then 'Solicitacao de exclusao de conta e dados'
+    when 'data_portability' then 'Solicitacao de portabilidade de dados'
+    else 'Solicitacao de copia dos dados'
+  end;
+  v_message := 'Pedido autenticado criado pela plataforma. Protocolo: ' || v_protocol || '.';
+  v_scope := case v_request_kind
+    when 'account_erasure' then jsonb_build_array(
+      'account',
+      'profile',
+      'authored_content',
+      'interactions',
+      'communications',
+      'preferences',
+      'consents',
+      'storage_objects',
+      'linked_identifiers'
+    )
+    else jsonb_build_array(
+      'authentication',
+      'profile',
+      'authored_content',
+      'interactions',
+      'communications_authored',
+      'preferences',
+      'consents',
+      'linked_activity',
+      'support_requests',
+      'account_operations',
+      'media_manifest'
+    )
+  end;
+  v_help_request_id := gen_random_uuid();
+
+  insert into public.help_requests (
+    id,
+    user_id,
+    type,
+    topic,
+    subtopic,
+    subject,
+    message,
+    priority,
+    status,
+    page_path,
+    contact_email,
+    allow_contact,
+    metadata
+  ) values (
+    v_help_request_id,
+    v_uid,
+    'account_access',
+    'onboarding_settings',
+    v_subtopic,
+    v_subject,
+    v_message,
+    'normal',
+    'new',
+    '/settings.html',
+    v_email,
+    true,
+    jsonb_build_object(
+      'request_kind', v_request_kind,
+      'protocol', v_protocol,
+      'data_subject_request_id', v_request_id,
+      'requested_format', v_requested_format,
+      'request_source', v_request_source,
+      'export_schema_version', 1,
+      'identity_source', 'authenticated_account'
+    )
+  );
+
+  insert into public.data_subject_requests (
+    id,
+    protocol,
+    user_id,
+    help_request_id,
+    subject_hash,
+    request_kind,
+    status,
+    idempotency_key,
+    requested_format,
+    request_source,
+    export_schema_version,
+    scope
+  ) values (
+    v_request_id,
+    v_protocol,
+    v_uid,
+    v_help_request_id,
+    encode(extensions.gen_random_bytes(32), 'hex'),
+    v_request_kind,
+    'received',
+    v_idempotency_key,
+    v_requested_format,
+    v_request_source,
+    1,
+    v_scope
+  )
+  returning * into v_result;
+
+  insert into public.data_subject_request_events (
+    request_id,
+    actor_user_id,
+    status,
+    event_type,
+    public_message
+  ) values (
+    v_result.id,
+    v_uid,
+    'received',
+    'created',
+    'Solicitacao recebida e protocolada.'
+  );
+
+  return v_result;
+end;
+$$;
+
+create or replace function public.kc_create_data_subject_request(
+  p_request_kind text,
+  p_idempotency_key text,
+  p_requested_format text default 'json',
+  p_request_source text default 'settings'
+)
+returns public.data_subject_requests
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  select kc_private.kc_create_data_subject_request($1, $2, $3, $4);
+$$;
+
+revoke all on function kc_private.kc_create_data_subject_request(text, text, text, text)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_create_data_subject_request(text, text, text, text)
+  to authenticated;
+revoke all on function public.kc_create_data_subject_request(text, text, text, text)
+  from public, anon;
+grant execute on function public.kc_create_data_subject_request(text, text, text, text)
+  to authenticated;
+
+create or replace function kc_private.kc_cancel_data_subject_request(p_protocol text)
+returns public.data_subject_requests
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_protocol text := upper(trim(coalesce(p_protocol, '')));
+  v_previous_status text;
+  v_now timestamptz := now();
+  v_result public.data_subject_requests%rowtype;
+begin
+  if v_uid is null
+     or coalesce(auth.jwt() ->> 'is_anonymous', 'false') = 'true'
+     or not kc_private.kc_is_current_session_active() then
+    raise exception using errcode = '42501', message = 'DSR_AUTH_REQUIRED';
+  end if;
+
+  select request_row.*
+    into v_result
+  from public.data_subject_requests request_row
+  where request_row.protocol = v_protocol
+    and request_row.user_id = v_uid
+  for update;
+
+  if not found
+     or not (
+       (
+         v_result.request_kind in ('data_access_copy', 'data_portability')
+         and v_result.status in ('received', 'processing', 'ready', 'failed')
+       )
+       or (
+         v_result.request_kind = 'account_erasure'
+         and v_result.status in ('received', 'pending_confirmation')
+       )
+     ) then
+    raise exception using errcode = 'P0002', message = 'DSR_NOT_FOUND_OR_NOT_CANCELLABLE';
+  end if;
+
+  v_previous_status := v_result.status;
+
+  update public.data_subject_requests request_row
+  set
+    status = 'cancelled',
+    cancelled_at = v_now
+  where request_row.id = v_result.id
+  returning * into v_result;
+
+  if v_result.request_kind = 'account_erasure'
+     and v_previous_status = 'pending_confirmation' then
+    -- A reversao operacional pode ainda estar pendente. O cancelamento impede
+    -- a etapa irreversivel, mas o ticket continua aberto ate a restauracao.
+    update public.help_requests help_row
+    set
+      status = 'in_progress',
+      priority = case
+        when help_row.priority in ('low', 'normal') then 'high'
+        else help_row.priority
+      end,
+      metadata = coalesce(help_row.metadata, '{}'::jsonb)
+        || jsonb_build_object(
+          'data_subject_request_status', 'cancelled',
+          'cancellation_requested_at', v_now,
+          'reversible_restore_required', true
+        )
+    where help_row.id = v_result.help_request_id;
+  else
+    update public.help_requests help_row
+    set
+      status = 'archived',
+      metadata = coalesce(help_row.metadata, '{}'::jsonb)
+        || jsonb_build_object(
+          'data_subject_request_status', 'cancelled',
+          'cancelled_at', v_now,
+          'reversible_restore_required', false
+        )
+    where help_row.id = v_result.help_request_id;
+  end if;
+
+  insert into public.data_subject_request_events (
+    request_id,
+    actor_user_id,
+    status,
+    event_type,
+    public_message
+  ) values (
+    v_result.id,
+    v_uid,
+    'cancelled',
+    'cancelled',
+    case
+      when v_result.request_kind = 'account_erasure'
+       and v_previous_status = 'pending_confirmation'
+        then 'Cancelamento registrado; a restauracao reversivel segue em atendimento.'
+      else 'Solicitacao cancelada pelo titular antes da conclusao.'
+    end
+  );
+
+  return v_result;
+end;
+$$;
+
+create or replace function public.kc_cancel_data_subject_request(p_protocol text)
+returns public.data_subject_requests
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  select kc_private.kc_cancel_data_subject_request($1);
+$$;
+
+revoke all on function kc_private.kc_cancel_data_subject_request(text)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_cancel_data_subject_request(text)
+  to authenticated;
+revoke all on function public.kc_cancel_data_subject_request(text)
+  from public, anon;
+grant execute on function public.kc_cancel_data_subject_request(text)
+  to authenticated;
+
+-- Transicao CAS + evento em uma unica transacao. Somente o backend com
+-- service_role pode operar a fila; requests canceladas/concluidas sao terminais.
+create or replace function kc_private.kc_transition_data_subject_request(
+  p_request_id uuid,
+  p_expected_status text,
+  p_new_status text,
+  p_actor_id uuid,
+  p_event_type text,
+  p_public_message text
+)
+returns public.data_subject_requests
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_expected_status text := lower(trim(coalesce(p_expected_status, '')));
+  v_new_status text := lower(trim(coalesce(p_new_status, '')));
+  v_event_type text := lower(trim(coalesce(p_event_type, '')));
+  v_public_message text := nullif(btrim(coalesce(p_public_message, '')), '');
+  v_now timestamptz := now();
+  v_result public.data_subject_requests%rowtype;
+begin
+  if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+  if p_request_id is null
+     or v_expected_status = ''
+     or v_new_status = ''
+     or v_event_type = '' then
+    raise exception using errcode = '22023', message = 'DSR_TRANSITION_ARGUMENTS_REQUIRED';
+  end if;
+  if v_expected_status in ('cancelled', 'completed', 'expired') then
+    raise exception using errcode = '23514', message = 'DSR_TERMINAL_STATE';
+  end if;
+  if v_event_type not in (
+    'status_changed',
+    'downloaded',
+    'cancelled',
+    'expired',
+    'processing_error'
+  ) then
+    raise exception using errcode = '22023', message = 'DSR_INVALID_EVENT_TYPE';
+  end if;
+  if v_public_message is null or char_length(v_public_message) > 280 then
+    raise exception using errcode = '22023', message = 'DSR_PUBLIC_MESSAGE_INVALID';
+  end if;
+  if p_actor_id is not null and not public.kc_is_admin(p_actor_id) then
+    raise exception using errcode = '42501', message = 'DSR_ACTOR_MUST_BE_ADMIN';
+  end if;
+  if v_new_status = 'cancelled' and v_event_type <> 'cancelled' then
+    raise exception using errcode = '22023', message = 'DSR_CANCEL_EVENT_REQUIRED';
+  end if;
+  if v_new_status = 'expired' and v_event_type <> 'expired' then
+    raise exception using errcode = '22023', message = 'DSR_EXPIRY_EVENT_REQUIRED';
+  end if;
+
+  update public.data_subject_requests request_row
+  set
+    status = v_new_status,
+    ready_at = case
+      when v_new_status = 'ready' then v_now
+      when v_new_status = 'processing' and v_expected_status = 'failed' then null
+      else request_row.ready_at
+    end,
+    expires_at = case
+      when v_new_status = 'ready' then v_now + interval '15 minutes'
+      when v_new_status = 'processing' and v_expected_status = 'failed' then null
+      else request_row.expires_at
+    end,
+    completed_at = case
+      when v_new_status = 'completed' then coalesce(request_row.completed_at, v_now)
+      else request_row.completed_at
+    end,
+    cancelled_at = case
+      when v_new_status = 'cancelled' then coalesce(request_row.cancelled_at, v_now)
+      else request_row.cancelled_at
+    end
+  where request_row.id = p_request_id
+    and request_row.status = v_expected_status
+    and request_row.status not in ('cancelled', 'completed', 'expired')
+  returning * into v_result;
+
+  if not found then
+    if exists (
+      select 1
+      from public.data_subject_requests request_row
+      where request_row.id = p_request_id
+        and request_row.status in ('cancelled', 'completed', 'expired')
+    ) then
+      raise exception using errcode = '23514', message = 'DSR_TERMINAL_STATE';
+    end if;
+    raise exception using errcode = '40001', message = 'DSR_STATUS_CONFLICT';
+  end if;
+
+  if v_new_status = 'partial_failure' then
+    update public.help_requests help_row
+    set
+      status = 'in_progress',
+      priority = case
+        when help_row.priority in ('low', 'normal') then 'high'
+        else help_row.priority
+      end,
+      metadata = coalesce(help_row.metadata, '{}'::jsonb)
+        || jsonb_build_object(
+          'data_subject_request_status', 'partial_failure',
+          'manual_supplement_required', true,
+          'manual_supplement_requested_at', v_now
+        )
+    where help_row.id = v_result.help_request_id;
+  elsif v_new_status = 'completed' then
+    update public.help_requests help_row
+    set
+      status = 'archived',
+      metadata = coalesce(help_row.metadata, '{}'::jsonb)
+        || jsonb_build_object(
+          'data_subject_request_status', 'completed',
+          'completed_at', v_now,
+          'manual_supplement_required', false
+        )
+    where help_row.id = v_result.help_request_id;
+  elsif v_new_status = 'cancelled' then
+    if v_result.request_kind = 'account_erasure'
+       and v_expected_status <> 'received' then
+      update public.help_requests help_row
+      set
+        status = 'in_progress',
+        priority = case
+          when help_row.priority in ('low', 'normal') then 'high'
+          else help_row.priority
+        end,
+        metadata = coalesce(help_row.metadata, '{}'::jsonb)
+          || jsonb_build_object(
+            'data_subject_request_status', 'cancelled',
+            'cancellation_requested_at', v_now,
+            'reversible_restore_required', true
+          )
+      where help_row.id = v_result.help_request_id;
+    else
+      update public.help_requests help_row
+      set
+        status = 'archived',
+        metadata = coalesce(help_row.metadata, '{}'::jsonb)
+          || jsonb_build_object(
+            'data_subject_request_status', 'cancelled',
+            'cancelled_at', v_now,
+            'reversible_restore_required', false
+          )
+      where help_row.id = v_result.help_request_id;
+    end if;
+  end if;
+
+  insert into public.data_subject_request_events (
+    request_id,
+    actor_user_id,
+    status,
+    event_type,
+    public_message
+  ) values (
+    v_result.id,
+    p_actor_id,
+    v_result.status,
+    v_event_type,
+    v_public_message
+  );
+
+  return v_result;
+end;
+$$;
+
+create or replace function public.kc_transition_data_subject_request(
+  p_request_id uuid,
+  p_expected_status text,
+  p_new_status text,
+  p_actor_id uuid,
+  p_event_type text,
+  p_public_message text
+)
+returns public.data_subject_requests
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  select kc_private.kc_transition_data_subject_request($1, $2, $3, $4, $5, $6);
+$$;
+
+revoke all on function kc_private.kc_transition_data_subject_request(uuid, text, text, uuid, text, text)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_transition_data_subject_request(uuid, text, text, uuid, text, text)
+  to service_role;
+revoke all on function public.kc_transition_data_subject_request(uuid, text, text, uuid, text, text)
+  from public, anon, authenticated;
+grant execute on function public.kc_transition_data_subject_request(uuid, text, text, uuid, text, text)
+  to service_role;
+
+-- EXPAND PHASE: midias de chat passam a ter um bucket privado dedicado. O
+-- prefixo permanece estavel e clientes novos escrevem no bucket privado, mas
+-- clientes publicados anteriormente ainda usam kino-media/chat-media.
+-- CONTRACT PHASE DEFERRED: somente depois da adocao do novo cliente e da
+-- copia/verificacao do inventario deve outra migration remover as policies
+-- legadas de SELECT/INSERT/UPDATE/DELETE abaixo.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+) values (
+  'kino-chat-media',
+  'kino-chat-media',
+  false,
+  15728640,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/m4a',
+    'audio/x-m4a',
+    'audio/aac',
+    'audio/ogg',
+    'audio/wav',
+    'audio/x-wav',
+    'audio/webm',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]::text[]
+)
+on conflict (id) do update set
+  name = excluded.name,
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types,
+  updated_at = now();
+
+-- Compatibilidade estrita do bucket legado. Recriar as policies elimina
+-- variantes historicas mais amplas e mantem somente sessao ativa, participante
+-- da conversa e pasta exata do proprio remetente. SELECT tambem e reafirmado
+-- porque upload com RETURNING e upsert dependem dele.
+drop policy if exists storage_chat_media_select_participant on storage.objects;
+drop policy if exists storage_chat_media_insert_sender on storage.objects;
+drop policy if exists storage_chat_media_update_sender on storage.objects;
+drop policy if exists storage_chat_media_delete_sender on storage.objects;
+drop policy if exists storage_chat_media_insert_participant on storage.objects;
+drop policy if exists storage_chat_media_update_participant on storage.objects;
+drop policy if exists storage_chat_media_delete_participant on storage.objects;
+
+create policy storage_chat_media_select_participant
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+create policy storage_chat_media_insert_sender
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+create policy storage_chat_media_update_sender
+  on storage.objects
+  for update
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  )
+  with check (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+create policy storage_chat_media_delete_sender
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+drop policy if exists storage_kino_chat_media_select_participant
+  on storage.objects;
+drop policy if exists storage_kino_chat_media_insert_sender
+  on storage.objects;
+drop policy if exists storage_kino_chat_media_update_sender
+  on storage.objects;
+drop policy if exists storage_kino_chat_media_delete_sender
+  on storage.objects;
+
+create policy storage_kino_chat_media_select_participant
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-chat-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+create policy storage_kino_chat_media_insert_sender
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-chat-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+create policy storage_kino_chat_media_update_sender
+  on storage.objects
+  for update
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-chat-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  )
+  with check (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-chat-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+create policy storage_kino_chat_media_delete_sender
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    public.kc_is_current_session_active()
+    and bucket_id = 'kino-chat-media'
+    and (storage.foldername(name))[1] = 'chat-media'
+    and pg_catalog.cardinality(storage.foldername(name)) = 3
+    and (storage.foldername(name))[3] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.chat_conversations conversation_row
+      where conversation_row.id::text = (storage.foldername(name))[2]
+        and (select auth.uid()) in (
+          conversation_row.participant_low,
+          conversation_row.participant_high
+        )
+    )
+  );
+
+-- Policy RESTRICTIVE global do Storage: as policies permissivas continuam
+-- decidindo bucket/pasta/acao, mas todo acesso authenticated passa tambem
+-- pelo gate de sessao. Buckets futuros falham fechados por padrao.
+drop policy if exists kc_kino_media_active_session_restrictive
+  on storage.objects;
+drop policy if exists kc_storage_active_session_restrictive
+  on storage.objects;
+create policy kc_storage_active_session_restrictive
+  on storage.objects
+  as restrictive
+  for all
+  to authenticated
+  using (public.kc_is_current_session_active())
+  with check (public.kc_is_current_session_active());
+
+-- Reserva atomica de uma tentativa de download para evitar recomputacoes
+-- concorrentes/abusivas do mesmo pacote durante a janela curta.
+create or replace function kc_private.kc_reserve_data_subject_download(
+  p_request_id uuid,
+  p_user_id uuid,
+  p_limit integer default 5,
+  p_window_seconds integer default 900
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_request public.data_subject_requests%rowtype;
+  v_limit integer := coalesce(p_limit, 5);
+  v_window integer := coalesce(p_window_seconds, 900);
+begin
+  if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+  if p_request_id is null or p_user_id is null then
+    raise exception using errcode = '22023', message = 'DOWNLOAD_RESERVATION_ARGUMENTS_REQUIRED';
+  end if;
+  if v_limit < 1 or v_limit > 20 or v_window < 60 or v_window > 86400 then
+    raise exception using errcode = '22023', message = 'DOWNLOAD_RESERVATION_LIMIT_INVALID';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(p_request_id::text, 9137)
+  );
+
+  select request_row.*
+    into v_request
+  from public.data_subject_requests request_row
+  where request_row.id = p_request_id
+    and request_row.user_id = p_user_id
+  for update;
+
+  if not found then
+    raise exception using errcode = 'P0002', message = 'DSR_NOT_FOUND';
+  end if;
+  if v_request.request_kind not in ('data_access_copy', 'data_portability')
+     or v_request.status not in ('ready', 'completed', 'partial_failure')
+     or v_request.expires_at is null
+     or v_request.expires_at <= now() then
+    raise exception using
+      errcode = '23514',
+      message = 'DSR_DOWNLOAD_NOT_AVAILABLE';
+  end if;
+
+  if (
+    select count(*)
+    from public.data_subject_request_events event_row
+    where event_row.request_id = p_request_id
+      and event_row.event_type = 'download_attempted'
+      and event_row.created_at > now() - make_interval(secs => v_window)
+  ) >= v_limit then
+    return false;
+  end if;
+
+  insert into public.data_subject_request_events (
+    request_id,
+    actor_user_id,
+    status,
+    event_type,
+    public_message
+  ) values (
+    v_request.id,
+    p_user_id,
+    v_request.status,
+    'download_attempted',
+    'Tentativa autenticada de download registrada.'
+  );
+
+  return true;
+end;
+$$;
+
+create or replace function public.kc_reserve_data_subject_download(
+  p_request_id uuid,
+  p_user_id uuid,
+  p_limit integer default 5,
+  p_window_seconds integer default 900
+)
+returns boolean
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  select kc_private.kc_reserve_data_subject_download($1, $2, $3, $4);
+$$;
+
+revoke all on function kc_private.kc_reserve_data_subject_download(uuid, uuid, integer, integer)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_reserve_data_subject_download(uuid, uuid, integer, integer)
+  to service_role;
+revoke all on function public.kc_reserve_data_subject_download(uuid, uuid, integer, integer)
+  from public, anon, authenticated;
+grant execute on function public.kc_reserve_data_subject_download(uuid, uuid, integer, integer)
+  to service_role;
+
+-- Preserva a prioridade "urgent" que a tabela e a UI ja aceitam. A versao
+-- anterior do worker privado rebaixava esse valor silenciosamente para normal.
+create or replace function kc_private.kc_create_help_request(
+  p_payload jsonb
+)
+returns table (
+  out_id uuid,
+  out_created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_created_at timestamptz;
+  v_user uuid := auth.uid();
+  v_type text;
+  v_topic text;
+  v_subtopic text;
+  v_derived_request_kind text;
+  v_subject text;
+  v_message text;
+  v_email text;
+  v_requested_priority text;
+  v_priority text;
+  v_page_path text;
+  v_metadata jsonb;
+  v_allow_contact boolean;
+  v_rate_key text;
+  v_rate_count integer;
+begin
+  if p_payload is null or jsonb_typeof(p_payload) <> 'object' then
+    raise invalid_parameter_value using message = 'payload must be an object';
+  end if;
+
+  v_type := nullif(btrim(coalesce(p_payload->>'type', '')), '');
+  v_topic := nullif(btrim(coalesce(p_payload->>'topic', '')), '');
+  v_subtopic := nullif(btrim(coalesce(p_payload->>'subtopic', '')), '');
+  v_subject := btrim(coalesce(p_payload->>'subject', ''));
+  v_message := btrim(coalesce(p_payload->>'message', ''));
+  v_email := lower(btrim(coalesce(p_payload->>'contact_email', '')));
+  v_requested_priority := left(
+    lower(btrim(coalesce(p_payload->>'priority', 'normal'))),
+    40
+  );
+  v_page_path := nullif(btrim(coalesce(p_payload->>'page_path', '')), '');
+  v_metadata := coalesce(p_payload->'metadata', '{}'::jsonb);
+  v_allow_contact := case lower(coalesce(p_payload->>'allow_contact', 'true'))
+    when 'false' then false
+    else true
+  end;
+
+  if v_type is null then
+    raise invalid_parameter_value using message = 'type is required';
+  end if;
+  if v_topic is null then
+    raise invalid_parameter_value using message = 'topic is required';
+  end if;
+  if char_length(v_subject) < 3 or char_length(v_subject) > 140 then
+    raise invalid_parameter_value using message = 'subject must have between 3 and 140 characters';
+  end if;
+  if char_length(v_message) < 10 or char_length(v_message) > 4000 then
+    raise invalid_parameter_value using message = 'message must have between 10 and 4000 characters';
+  end if;
+  if char_length(v_email) > 255
+     or v_email !~* '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    raise invalid_parameter_value using message = 'valid contact_email is required';
+  end if;
+  if v_page_path is not null and char_length(v_page_path) > 255 then
+    raise invalid_parameter_value using message = 'page_path is too long';
+  end if;
+  if jsonb_typeof(v_metadata) <> 'object' then
+    raise invalid_parameter_value using message = 'metadata must be an object';
+  end if;
+
+  v_derived_request_kind := case
+    when v_type = 'account_access'
+     and v_topic = 'onboarding_settings'
+     and v_subtopic = 'account_deletion'
+      then 'account_erasure'
+    when v_type = 'account_access'
+     and v_topic = 'onboarding_settings'
+     and v_subtopic = 'account_data_copy'
+      then 'data_access_copy'
+    when v_type = 'account_access'
+     and v_topic = 'onboarding_settings'
+     and v_subtopic = 'account_data_portability'
+      then 'data_portability'
+    else null
+  end;
+  v_metadata := v_metadata - 'request_kind';
+  if v_derived_request_kind is not null then
+    v_metadata := v_metadata
+      || jsonb_build_object('request_kind', v_derived_request_kind);
+  end if;
+
+  if v_requested_priority not in ('low', 'normal', 'high', 'urgent') then
+    v_priority := 'normal';
+  elsif v_requested_priority = 'urgent'
+        and not (v_type = 'report' and v_topic = 'security') then
+    -- "Urgent" informado pelo cliente nao concede autoridade nem aciona
+    -- operacoes destrutivas. Fora do fluxo estruturado de seguranca, o teto
+    -- efetivo e "high" e o pedido original fica apenas na metadata.
+    v_priority := 'high';
+  else
+    v_priority := v_requested_priority;
+  end if;
+  if v_priority not in ('low', 'normal', 'high', 'urgent') then
+    v_priority := 'normal';
+  end if;
+
+  v_metadata := v_metadata || jsonb_build_object(
+    'requested_priority', v_requested_priority,
+    'effective_priority', v_priority
+  );
+
+  -- Rate limit transacional por conta autenticada ou hash de e-mail para
+  -- solicitacoes anonimas. Evita corrida sem persistir novo identificador.
+  v_rate_key := coalesce(
+    v_user::text,
+    encode(extensions.digest(convert_to(v_email, 'UTF8'), 'sha256'), 'hex')
+  );
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('help-request:' || v_rate_key, 7193)
+  );
+
+  select count(*)::integer
+    into v_rate_count
+  from public.help_requests help_row
+  where help_row.created_at > now() - interval '1 hour'
+    and (
+      (v_user is not null and help_row.user_id = v_user)
+      or (
+        v_user is null
+        and help_row.user_id is null
+        and lower(help_row.contact_email) = v_email
+      )
+    );
+
+  if v_rate_count >= 10 then
+    raise exception using errcode = 'P0001', message = 'HELP_RATE_LIMIT_1H';
+  end if;
+
+  insert into public.help_requests (
+    user_id,
+    type,
+    topic,
+    subtopic,
+    subject,
+    message,
+    priority,
+    status,
+    page_path,
+    contact_email,
+    allow_contact,
+    metadata,
+    admin_status,
+    admin_decided_at,
+    admin_decided_by,
+    admin_note
+  )
+  values (
+    v_user,
+    v_type,
+    v_topic,
+    v_subtopic,
+    v_subject,
+    v_message,
+    v_priority,
+    'new',
+    v_page_path,
+    v_email,
+    v_allow_contact,
+    v_metadata,
+    'pending',
+    null,
+    null,
+    null
+  )
+  returning id, created_at into v_id, v_created_at;
+
+  out_id := v_id;
+  out_created_at := v_created_at;
+  return next;
+end;
+$$;
+
+-- ============================================================================
+-- Hardening aditivo do fluxo administrativo de exclusao existente.
+-- Nao remove estados/colunas legados e deixa o claim pronto para a Edge Function.
+-- ============================================================================
+
+alter table public.account_erasure_requests
+  add column if not exists data_subject_request_id uuid
+    references public.data_subject_requests(id) on delete set null,
+  add column if not exists confirmation_channel text,
+  add column if not exists confirmation_evidence_hash text,
+  add column if not exists confirmation_received_at timestamptz,
+  add column if not exists confirmation_recorded_by uuid
+    references public.profiles(id) on delete set null,
+  add column if not exists operation_version integer not null default 1,
+  add column if not exists operation_claim_token uuid,
+  add column if not exists operation_claimed_at timestamptz,
+  add column if not exists operation_claim_expires_at timestamptz,
+  add column if not exists operation_claimed_by uuid
+    references public.profiles(id) on delete set null,
+  add column if not exists retention_until timestamptz
+    not null default (now() + interval '5 years');
+
+alter table public.account_erasure_requests
+  drop constraint if exists account_erasure_requests_status_check;
+
+alter table public.account_erasure_requests
+  add constraint account_erasure_requests_status_check
+  check (status in (
+    'diagnosed',
+    'pending_confirmation',
+    'confirmation_delivery_failed',
+    'confirmed',
+    'reversible_applied',
+    'erased',
+    'cancelled',
+    'failed',
+    'partial_failure'
+  ));
+
+alter table public.account_erasure_requests
+  add constraint account_erasure_confirmation_channel_check
+    check (
+      confirmation_channel is null
+      or (
+        char_length(confirmation_channel) between 2 and 40
+        and confirmation_channel ~ '^[a-z][a-z0-9_]*$'
+      )
+    ),
+  add constraint account_erasure_confirmation_evidence_hash_check
+    check (
+      confirmation_evidence_hash is null
+      or confirmation_evidence_hash ~ '^[a-f0-9]{64}$'
+    ),
+  add constraint account_erasure_operation_version_check
+    check (operation_version between 1 and 2147483647),
+  add constraint account_erasure_claim_expiry_check
+    check (
+      operation_claim_expires_at is null
+      or (
+        operation_claimed_at is not null
+        and operation_claim_expires_at > operation_claimed_at
+      )
+    ),
+  add constraint account_erasure_claim_fields_check
+    check (
+      (
+        operation_claim_token is null
+        and operation_claimed_at is null
+        and operation_claim_expires_at is null
+        and operation_claimed_by is null
+      )
+      or (
+        operation_claim_token is not null
+        and operation_claimed_at is not null
+        and operation_claim_expires_at is not null
+        and operation_claimed_by is not null
+      )
+    ),
+  add constraint account_erasure_retention_check
+    check (retention_until > created_at);
+
+create unique index account_erasure_requests_data_subject_uidx
+  on public.account_erasure_requests (data_subject_request_id)
+  where data_subject_request_id is not null;
+
+create unique index account_erasure_requests_claim_token_uidx
+  on public.account_erasure_requests (operation_claim_token)
+  where operation_claim_token is not null;
+
+create index account_erasure_requests_confirmation_queue_idx
+  on public.account_erasure_requests (status, confirmation_received_at, requested_at)
+  where status in ('pending_confirmation', 'confirmation_delivery_failed', 'confirmed', 'partial_failure');
+
+create index account_erasure_requests_retention_idx
+  on public.account_erasure_requests (retention_until, id)
+  where status in ('erased', 'cancelled', 'failed', 'partial_failure');
+
+comment on column public.account_erasure_requests.retention_until is
+  'Data de expurgo do registro operacional detalhado. erased/cancelled vencidos sao agregados e removidos; failed/partial_failure vencidos geram alerta.';
+
+-- Claim otimista e atomico para uma operacao administrativa de exclusao.
+-- A funcao nao altera o status: o chamador deve concluir usando o token e a
+-- operation_version retornados. Claims vencidos podem ser substituidos.
+create or replace function kc_private.kc_claim_account_erasure_operation(
+  p_request_id uuid,
+  p_expected_status text,
+  p_expected_version integer,
+  p_actor_id uuid,
+  p_ttl_seconds integer default 300
+)
+returns table (
+  out_request_id uuid,
+  out_claim_token uuid,
+  out_operation_version integer,
+  out_claim_expires_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row public.account_erasure_requests%rowtype;
+  v_claim_token uuid := gen_random_uuid();
+  v_claimed_at timestamptz := now();
+  v_ttl_seconds integer := coalesce(p_ttl_seconds, 300);
+begin
+  if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+  if p_request_id is null
+     or p_actor_id is null
+     or p_expected_version is null
+     or nullif(trim(coalesce(p_expected_status, '')), '') is null then
+    raise exception using errcode = '22023', message = 'ERASURE_CLAIM_ARGUMENTS_REQUIRED';
+  end if;
+  if not public.kc_is_admin(p_actor_id) then
+    raise exception using errcode = '42501', message = 'ERASURE_ADMIN_REQUIRED';
+  end if;
+  if v_ttl_seconds < 30 or v_ttl_seconds > 900 then
+    raise exception using errcode = '22023', message = 'ERASURE_CLAIM_TTL_INVALID';
+  end if;
+
+  select request_row.*
+    into v_row
+  from public.account_erasure_requests request_row
+  where request_row.id = p_request_id
+  for update;
+
+  if not found then
+    raise exception using errcode = 'P0002', message = 'ERASURE_REQUEST_NOT_FOUND';
+  end if;
+  if v_row.status <> p_expected_status then
+    raise exception using
+      errcode = '40001',
+      message = 'ERASURE_STATUS_CONFLICT',
+      detail = v_row.status;
+  end if;
+  if v_row.operation_version <> p_expected_version then
+    raise exception using
+      errcode = '40001',
+      message = 'ERASURE_VERSION_CONFLICT',
+      detail = v_row.operation_version::text;
+  end if;
+  if v_row.operation_claim_token is not null
+     and v_row.operation_claim_expires_at > v_claimed_at then
+    raise exception using
+      errcode = '55P03',
+      message = 'ERASURE_OPERATION_ALREADY_CLAIMED';
+  end if;
+
+  update public.account_erasure_requests request_row
+  set
+    operation_claim_token = v_claim_token,
+    operation_claimed_at = v_claimed_at,
+    operation_claim_expires_at = v_claimed_at
+      + make_interval(secs => v_ttl_seconds),
+    operation_claimed_by = p_actor_id,
+    operation_version = request_row.operation_version + 1
+  where request_row.id = p_request_id
+  returning
+    request_row.id,
+    request_row.operation_claim_token,
+    request_row.operation_version,
+    request_row.operation_claim_expires_at
+  into
+    out_request_id,
+    out_claim_token,
+    out_operation_version,
+    out_claim_expires_at;
+
+  return next;
+end;
+$$;
+
+create or replace function public.kc_claim_account_erasure_operation(
+  p_request_id uuid,
+  p_expected_status text,
+  p_expected_version integer,
+  p_actor_id uuid,
+  p_ttl_seconds integer default 300
+)
+returns table (
+  out_request_id uuid,
+  out_claim_token uuid,
+  out_operation_version integer,
+  out_claim_expires_at timestamptz
+)
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  select *
+  from kc_private.kc_claim_account_erasure_operation($1, $2, $3, $4, $5);
+$$;
+
+revoke all on function kc_private.kc_claim_account_erasure_operation(uuid, text, integer, uuid, integer)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_claim_account_erasure_operation(uuid, text, integer, uuid, integer)
+  to service_role;
+revoke all on function public.kc_claim_account_erasure_operation(uuid, text, integer, uuid, integer)
+  from public, anon, authenticated;
+grant execute on function public.kc_claim_account_erasure_operation(uuid, text, integer, uuid, integer)
+  to service_role;
+
+-- Chamavel somente com service_role. Revoga refresh sessions antes de qualquer
+-- pseudonimizacao/exclusao; access tokens emitidos continuam validos ate expirar.
+create or replace function kc_private.kc_revoke_user_sessions_for_erasure(p_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_sessions_deleted bigint := 0;
+  v_refresh_tokens_deleted bigint := 0;
+  v_session_ids uuid[] := '{}'::uuid[];
+begin
+  if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+  if p_user_id is null then
+    raise exception using errcode = '22023', message = 'TARGET_USER_REQUIRED';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('erasure-sessions:' || p_user_id::text, 7319)
+  );
+
+  select coalesce(array_agg(session_row.id), '{}'::uuid[])
+    into v_session_ids
+  from auth.sessions session_row
+  where session_row.user_id = p_user_id;
+
+  -- Apaga refresh tokens explicitamente antes das sessions para produzir
+  -- contagens verificaveis mesmo quando a FK do GoTrue usa CASCADE.
+  delete from auth.refresh_tokens token_row
+  where token_row.user_id = p_user_id::text
+    or token_row.session_id = any(v_session_ids);
+  get diagnostics v_refresh_tokens_deleted = row_count;
+
+  delete from auth.sessions session_row
+  where session_row.user_id = p_user_id;
+  get diagnostics v_sessions_deleted = row_count;
+
+  if exists (
+    select 1
+    from auth.sessions session_row
+    where session_row.user_id = p_user_id
+  ) or exists (
+    select 1
+    from auth.refresh_tokens token_row
+    where token_row.user_id = p_user_id::text
+      or token_row.session_id = any(v_session_ids)
+  ) then
+    raise exception using
+      errcode = 'P0001',
+      message = 'SESSION_REVOCATION_INCOMPLETE';
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'sessions_deleted', v_sessions_deleted,
+    'refresh_tokens_deleted', v_refresh_tokens_deleted
+  );
+end;
+$$;
+
+create or replace function public.kc_revoke_user_sessions_for_erasure(p_user_id uuid)
+returns jsonb
+language sql
+volatile
+security invoker
+set search_path = ''
+as $$
+  select kc_private.kc_revoke_user_sessions_for_erasure($1);
+$$;
+
+revoke all on function kc_private.kc_revoke_user_sessions_for_erasure(uuid)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_revoke_user_sessions_for_erasure(uuid)
+  to service_role;
+revoke all on function public.kc_revoke_user_sessions_for_erasure(uuid)
+  from public, anon, authenticated;
+grant execute on function public.kc_revoke_user_sessions_for_erasure(uuid)
+  to service_role;
+
+-- ============================================================================
+-- Exclusao preservando conteudo de terceiros e registros de seguranca.
+-- A identidade removida vira NULL (com token aleatorio nao correlacionavel no
+-- caso dos bloqueios), enquanto autoria/linhas de terceiros sobrevivem.
+-- ============================================================================
+
+alter table public.chat_conversations
+  alter column participant_low drop not null,
+  alter column participant_high drop not null;
+alter table public.chat_conversations
+  drop constraint if exists chat_conversations_participant_low_fkey,
+  drop constraint if exists chat_conversations_participant_high_fkey;
+alter table public.chat_conversations
+  add constraint chat_conversations_participant_low_fkey
+    foreign key (participant_low) references public.profiles(id) on delete set null,
+  add constraint chat_conversations_participant_high_fkey
+    foreign key (participant_high) references public.profiles(id) on delete set null;
+
+alter table public.chat_messages
+  alter column sender_id drop not null;
+alter table public.chat_messages
+  drop constraint if exists chat_messages_sender_id_fkey;
+alter table public.chat_messages
+  add constraint chat_messages_sender_id_fkey
+    foreign key (sender_id) references public.profiles(id) on delete set null;
+
+alter table public.comments
+  alter column author_id drop not null;
+alter table public.comments
+  drop constraint if exists comments_author_id_fkey;
+alter table public.comments
+  add constraint comments_author_id_fkey
+    foreign key (author_id) references public.profiles(id) on delete set null;
+
+alter table public.reports
+  alter column reporter_id drop not null;
+alter table public.reports
+  drop constraint if exists reports_reporter_id_fkey;
+alter table public.reports
+  add constraint reports_reporter_id_fkey
+    foreign key (reporter_id) references public.profiles(id) on delete set null;
+
+create or replace function kc_private.kc_pseudonymize_deleted_comment_author()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if old.author_id is not null and new.author_id is null then
+    new.author_name := 'Conta excluida';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function kc_private.kc_pseudonymize_deleted_comment_author()
+  from public, anon, authenticated, service_role;
+
+drop trigger if exists trg_comments_pseudonymize_deleted_author on public.comments;
+create trigger trg_comments_pseudonymize_deleted_author
+before update of author_id on public.comments
+for each row execute function kc_private.kc_pseudonymize_deleted_comment_author();
+
+alter table public.user_ratings
+  alter column target_user_id drop not null;
+alter table public.user_ratings
+  drop constraint if exists user_ratings_target_user_id_fkey;
+alter table public.user_ratings
+  add constraint user_ratings_target_user_id_fkey
+    foreign key (target_user_id) references public.profiles(id) on delete set null;
+
+-- user_blocks usava (blocker_id, blocked_id) como PK; PK nao aceita NULL.
+-- Um id substituto preserva o contrato de DML pelo par, enquanto um token
+-- opaco aleatorio distingue registros de seguranca apos a exclusao do alvo.
+alter table public.user_blocks
+  add column if not exists id uuid default gen_random_uuid(),
+  add column if not exists blocked_subject_hash text;
+
+update public.user_blocks block_row
+set blocked_subject_hash = encode(extensions.gen_random_bytes(32), 'hex')
+where block_row.blocked_subject_hash is null
+  and block_row.blocked_id is not null;
+
+alter table public.user_blocks
+  drop constraint if exists user_blocks_pkey;
+alter table public.user_blocks
+  alter column id set not null,
+  alter column blocked_id drop not null,
+  alter column blocked_subject_hash set not null;
+alter table public.user_blocks
+  add constraint user_blocks_pkey primary key (id),
+  add constraint user_blocks_blocked_subject_hash_check
+    check (blocked_subject_hash ~ '^[a-f0-9]{64}$'),
+  add constraint user_blocks_active_pair_unique
+    unique (blocker_id, blocked_id),
+  add constraint user_blocks_subject_unique
+    unique (blocker_id, blocked_subject_hash);
+
+create or replace function kc_private.kc_set_user_block_subject_hash()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.blocked_id is null then
+      raise exception using
+        errcode = '23514',
+        message = 'USER_BLOCK_SUBJECT_REQUIRED';
+    end if;
+    new.blocked_subject_hash :=
+      encode(extensions.gen_random_bytes(32), 'hex');
+    return new;
+  end if;
+
+  if new.blocked_id is distinct from old.blocked_id then
+    if new.blocked_id is null then
+      -- Acao referencial ON DELETE SET NULL: conserva o token aleatorio que
+      -- nao permite testar/reconstruir o UUID do alvo removido.
+      new.blocked_subject_hash := old.blocked_subject_hash;
+    else
+      new.blocked_subject_hash :=
+        encode(extensions.gen_random_bytes(32), 'hex');
+    end if;
+  else
+    -- Valor enviado pelo cliente nunca e autoridade.
+    new.blocked_subject_hash := old.blocked_subject_hash;
+  end if;
+
+  if new.blocked_subject_hash is null then
+    raise exception using
+      errcode = '23514',
+      message = 'USER_BLOCK_SUBJECT_REQUIRED';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function kc_private.kc_set_user_block_subject_hash()
+  from public, anon, authenticated, service_role;
+
+drop trigger if exists trg_user_blocks_set_subject_hash on public.user_blocks;
+create trigger trg_user_blocks_set_subject_hash
+before insert or update of blocked_id, blocked_subject_hash on public.user_blocks
+for each row execute function kc_private.kc_set_user_block_subject_hash();
+
+alter table public.user_blocks
+  drop constraint if exists user_blocks_blocked_id_fkey;
+alter table public.user_blocks
+  add constraint user_blocks_blocked_id_fkey
+    foreign key (blocked_id) references public.profiles(id) on delete set null;
+
+alter table public.kc_unit_meta
+  drop constraint if exists kc_unit_meta_updated_by_fkey;
+alter table public.kc_unit_meta
+  add constraint kc_unit_meta_updated_by_fkey
+    foreign key (updated_by) references auth.users(id) on delete set null;
+
+alter table public.cadu_institutional_source_reviews
+  alter column requested_by drop not null,
+  drop constraint if exists cadu_institutional_source_reviews_requested_by_fkey,
+  drop constraint if exists cadu_institutional_source_reviews_resolved_by_fkey,
+  drop constraint if exists cadu_institutional_source_reviews_state_check;
+
+alter table public.cadu_institutional_source_reviews
+  add constraint cadu_institutional_source_reviews_requested_by_fkey
+    foreign key (requested_by) references public.profiles(id) on delete set null,
+  add constraint cadu_institutional_source_reviews_resolved_by_fkey
+    foreign key (resolved_by) references public.profiles(id) on delete set null,
+  add constraint cadu_institutional_source_reviews_state_check
+    check (
+      state in ('pending', 'approved', 'rejected', 'superseded')
+      and (
+        (
+          state = 'pending'
+          and resolved_by is null
+          and resolved_at is null
+          and resolution_note is null
+        )
+        or (
+          state <> 'pending'
+          and resolved_at is not null
+          and (resolution_note is null or length(resolution_note) <= 1000)
+        )
+      )
+    );
+
+-- Mantem o envelope editorial imutavel, com uma unica excecao: a acao
+-- referencial SET NULL quando o perfil do solicitante/resolvedor e apagado.
+create or replace function kc_private.kc_guard_cadu_institutional_review()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if (
+    new.requested_by is distinct from old.requested_by
+    or new.resolved_by is distinct from old.resolved_by
+  )
+  and (
+    new.requested_by is not distinct from old.requested_by
+    or (old.requested_by is not null and new.requested_by is null)
+  )
+  and (
+    new.resolved_by is not distinct from old.resolved_by
+    or (old.resolved_by is not null and new.resolved_by is null)
+  )
+  and (
+    to_jsonb(new) - array['requested_by', 'resolved_by']
+    = to_jsonb(old) - array['requested_by', 'resolved_by']
+  ) then
+    return new;
+  end if;
+
+  if new.requested_by is distinct from old.requested_by
+     or new.source_id is distinct from old.source_id
+     or new.source_url is distinct from old.source_url
+     or new.content_url is distinct from old.content_url
+     or new.instagram_handle is distinct from old.instagram_handle
+     or new.content_kind is distinct from old.content_kind
+     or new.intent is distinct from old.intent
+     or new.idempotency_key is distinct from old.idempotency_key
+     or new.source_revision is distinct from old.source_revision
+     or new.registry_sha256 is distinct from old.registry_sha256
+     or new.name is distinct from old.name
+     or new.note is distinct from old.note
+     or new.tier is distinct from old.tier
+     or new.category is distinct from old.category
+     or new.origin is distinct from old.origin
+     or new.created_at is distinct from old.created_at then
+    raise exception 'cadu_review_envelope_is_immutable' using errcode = '23514';
+  end if;
+
+  if old.state <> 'pending' then
+    if new is distinct from old then
+      raise exception 'cadu_review_terminal_state_is_immutable'
+        using errcode = '23514';
+    end if;
+    return new;
+  end if;
+
+  if new.state = 'pending' then
+    if new.resolved_by is not null
+       or new.resolved_at is not null
+       or new.resolution_note is not null then
+      raise exception 'cadu_review_pending_resolution_is_invalid'
+        using errcode = '23514';
+    end if;
+  elsif new.state not in ('approved', 'rejected', 'superseded')
+        or new.resolved_by is null
+        or new.resolved_at is null then
+    raise exception 'cadu_review_resolution_is_invalid' using errcode = '23514';
+  end if;
+
+  new.updated_at := clock_timestamp();
+  return new;
+end;
+$$;
+
+-- O participante remanescente pode consultar o historico, mas nenhuma nova
+-- mensagem e aceita quando a outra ponta foi apagada/pseudonimizada.
+create or replace function kc_private.kc_chat_send_message(
+  p_conversation_id uuid,
+  p_content text,
+  p_message_type text,
+  p_media_path text
+)
+returns table (out_message_id uuid, out_created_at timestamptz)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_conv public.chat_conversations%rowtype;
+  v_other uuid;
+  v_recent_count integer;
+  v_limit integer;
+  v_msg_id uuid;
+  v_created timestamptz;
+  v_content_clean text;
+  v_media_pattern text;
+begin
+  if v_user is null then raise exception 'unauthenticated'; end if;
+  if p_conversation_id is null then raise exception 'invalid_conversation'; end if;
+  if p_message_type not in ('text', 'image', 'audio', 'document') then
+    raise exception 'invalid_message_type';
+  end if;
+
+  select conversation_row.*
+    into v_conv
+  from public.chat_conversations conversation_row
+  where conversation_row.id = p_conversation_id
+  for update;
+
+  if not found then raise exception 'conversation_not_found'; end if;
+  if v_user is distinct from v_conv.participant_low
+     and v_user is distinct from v_conv.participant_high then
+    raise exception 'not_a_participant';
+  end if;
+
+  if v_user = v_conv.participant_low then
+    v_other := v_conv.participant_high;
+  elsif v_user = v_conv.participant_high then
+    v_other := v_conv.participant_low;
+  else
+    raise exception 'not_a_participant';
+  end if;
+
+  if v_other is null then
+    raise exception 'conversation_closed';
+  end if;
+
+  -- Mantem o perfil-alvo vivo ate o commit desta operacao. A exclusao
+  -- concorrente espera este lock e depois fecha a conversa via SET NULL.
+  perform 1
+  from public.profiles profile_row
+  where profile_row.id = v_other
+  for key share;
+  if not found then
+    raise exception 'conversation_closed';
+  end if;
+
+  if exists (
+    select 1
+    from public.user_blocks block_row
+    where (block_row.blocker_id = v_user and block_row.blocked_id = v_other)
+       or (block_row.blocker_id = v_other and block_row.blocked_id = v_user)
+  ) then
+    raise exception 'blocked';
+  end if;
+
+  if p_message_type = 'text' then
+    v_content_clean := trim(coalesce(p_content, ''));
+    if length(v_content_clean) = 0 then raise exception 'empty_content'; end if;
+    if length(v_content_clean) > 4000 then raise exception 'content_too_long'; end if;
+    if p_media_path is not null then raise exception 'text_must_have_no_media'; end if;
+  else
+    if p_media_path is null then raise exception 'media_must_have_path'; end if;
+    v_media_pattern := '^chat-media/' || p_conversation_id::text || '/' || v_user::text
+      || '/[A-Za-z0-9._-]+\.(jpg|jpeg|png|webp|gif|mp3|m4a|ogg|wav|aac|pdf|doc|docx)$';
+    if p_media_path !~ v_media_pattern then
+      raise exception 'invalid_media_path_prefix';
+    end if;
+    v_content_clean := nullif(trim(coalesce(p_content, '')), '');
+    if v_content_clean is not null and length(v_content_clean) > 1000 then
+      raise exception 'caption_too_long';
+    end if;
+  end if;
+
+  v_limit := case when kc_private.kc_chat_is_new_user(v_user) then 5 else 30 end;
+  select count(*) into v_recent_count
+  from public.chat_messages message_row
+  where message_row.sender_id = v_user
+    and message_row.created_at > now() - interval '1 minute';
+  if v_recent_count >= v_limit then
+    raise exception 'rate_limit_exceeded'
+      using hint = format('Aguarde 1 minuto. Limite: %s msg/min', v_limit);
+  end if;
+
+  insert into public.chat_messages (
+    conversation_id,
+    sender_id,
+    message_type,
+    content,
+    media_path
+  ) values (
+    p_conversation_id,
+    v_user,
+    p_message_type,
+    v_content_clean,
+    p_media_path
+  )
+  returning id, created_at into v_msg_id, v_created;
+
+  out_message_id := v_msg_id;
+  out_created_at := v_created;
+  return next;
+end;
+$$;
+
+revoke all on function kc_private.kc_chat_send_message(uuid, text, text, text)
+  from public, anon, authenticated;
+grant execute on function kc_private.kc_chat_send_message(uuid, text, text, text)
+  to authenticated;
+
+-- Recibo agregado, sem protocolo, titular, e-mail, UUID ou texto livre.
+-- Ele demonstra a execucao da politica de retencao sem recriar um dossie.
+create table kc_private.data_subject_request_purge_aggregates (
+  period_month date not null,
+  request_kind text not null,
+  final_status text not null,
+  purged_request_count bigint not null default 0,
+  purged_event_count bigint not null default 0,
+  last_purged_at timestamptz not null default now(),
+  constraint data_subject_request_purge_aggregates_pkey
+    primary key (period_month, request_kind, final_status),
+  constraint data_subject_request_purge_aggregates_kind_check
+    check (request_kind in ('data_access_copy', 'data_portability', 'account_erasure')),
+  constraint data_subject_request_purge_aggregates_status_check
+    check (final_status in ('completed', 'cancelled', 'expired', 'erased')),
+  constraint data_subject_request_purge_aggregates_counts_check
+    check (purged_request_count >= 0 and purged_event_count >= 0)
+);
+
+comment on table kc_private.data_subject_request_purge_aggregates is
+  'Prova operacional minima e agregada da purga de DSR; nao contem protocolo, identificador do titular ou texto livre.';
+
+revoke all on table kc_private.data_subject_request_purge_aggregates
+  from public, anon, authenticated, service_role;
+
+create or replace function kc_private.kc_purge_expired_data_subject_requests(
+  p_limit integer default 500
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_limit integer := coalesce(p_limit, 500);
+  v_now timestamptz := now();
+  v_purged_requests integer := 0;
+  v_purged_events bigint := 0;
+  v_purged_erasure_requests integer := 0;
+  v_overdue_active integer := 0;
+  v_overdue_unresolved integer := 0;
+  v_overdue_active_erasure integer := 0;
+  v_overdue_unresolved_erasure integer := 0;
+  v_remaining integer;
+  v_row record;
+begin
+  if v_limit < 1 or v_limit > 5000 then
+    raise exception using errcode = '22023', message = 'DSR_PURGE_LIMIT_INVALID';
+  end if;
+
+  for v_row in
+    select
+      request_row.id,
+      request_row.created_at,
+      request_row.request_kind,
+      request_row.status,
+      request_row.help_request_id,
+      (
+        select count(*)
+        from public.data_subject_request_events event_row
+        where event_row.request_id = request_row.id
+      )::bigint as event_count
+    from public.data_subject_requests request_row
+    where request_row.retention_until <= v_now
+      and request_row.status in ('completed', 'cancelled', 'expired')
+    order by request_row.retention_until asc, request_row.id asc
+    limit v_limit
+    for update of request_row skip locked
+  loop
+    insert into kc_private.data_subject_request_purge_aggregates as aggregate_row (
+      period_month,
+      request_kind,
+      final_status,
+      purged_request_count,
+      purged_event_count,
+      last_purged_at
+    ) values (
+      date_trunc('month', v_row.created_at at time zone 'UTC')::date,
+      v_row.request_kind,
+      v_row.status,
+      1,
+      v_row.event_count,
+      v_now
+    )
+    on conflict (period_month, request_kind, final_status)
+    do update set
+      purged_request_count = aggregate_row.purged_request_count + 1,
+      purged_event_count = aggregate_row.purged_event_count + excluded.purged_event_count,
+      last_purged_at = excluded.last_purged_at;
+
+    -- O ticket nasceu junto do DSR e continha e-mail, protocolo e UUID do
+    -- pedido. Ele e redigido antes do DELETE para que o expurgo nao deixe uma
+    -- copia lateral desses identificadores.
+    update public.help_requests help_row
+    set
+      user_id = null,
+      subtopic = null,
+      subject = 'Solicitacao de titular expurgada',
+      message = 'Registro detalhado removido conforme a politica de retencao.',
+      status = 'archived',
+      page_path = null,
+      contact_email = 'purged-' || gen_random_uuid()::text || '@invalid.local',
+      allow_contact = false,
+      metadata = jsonb_build_object(
+        'record_state', 'retention_purged',
+        'retention_purged_at', v_now
+      ),
+      admin_status = 'na',
+      admin_decided_at = null,
+      admin_decided_by = null,
+      admin_note = null
+    where help_row.id = v_row.help_request_id;
+
+    delete from public.data_subject_requests request_row
+    where request_row.id = v_row.id;
+
+    v_purged_requests := v_purged_requests + 1;
+    v_purged_events := v_purged_events + v_row.event_count;
+  end loop;
+
+  v_remaining := greatest(v_limit - v_purged_requests, 0);
+  if v_remaining > 0 then
+    for v_row in
+      select
+        erasure_row.id,
+        erasure_row.created_at,
+        erasure_row.status,
+        erasure_row.help_request_id
+      from public.account_erasure_requests erasure_row
+      where erasure_row.retention_until <= v_now
+        and erasure_row.status in ('erased', 'cancelled')
+      order by erasure_row.retention_until asc, erasure_row.id asc
+      limit v_remaining
+      for update of erasure_row skip locked
+    loop
+      insert into kc_private.data_subject_request_purge_aggregates as aggregate_row (
+        period_month,
+        request_kind,
+        final_status,
+        purged_request_count,
+        purged_event_count,
+        last_purged_at
+      ) values (
+        date_trunc('month', v_row.created_at at time zone 'UTC')::date,
+        'account_erasure',
+        v_row.status,
+        1,
+        0,
+        v_now
+      )
+      on conflict (period_month, request_kind, final_status)
+      do update set
+        purged_request_count = aggregate_row.purged_request_count + 1,
+        purged_event_count = aggregate_row.purged_event_count,
+        last_purged_at = excluded.last_purged_at;
+
+      update public.help_requests help_row
+      set
+        user_id = null,
+        subtopic = null,
+        subject = 'Solicitacao de titular expurgada',
+        message = 'Registro detalhado removido conforme a politica de retencao.',
+        status = 'archived',
+        page_path = null,
+        contact_email = 'purged-' || gen_random_uuid()::text || '@invalid.local',
+        allow_contact = false,
+        metadata = jsonb_build_object(
+          'record_state', 'retention_purged',
+          'retention_purged_at', v_now
+        ),
+        admin_status = 'na',
+        admin_decided_at = null,
+        admin_decided_by = null,
+        admin_note = null
+      where help_row.id = v_row.help_request_id;
+
+      delete from public.account_erasure_requests erasure_row
+      where erasure_row.id = v_row.id;
+
+      v_purged_erasure_requests := v_purged_erasure_requests + 1;
+    end loop;
+  end if;
+
+  select count(*)::integer
+    into v_overdue_active
+  from public.data_subject_requests request_row
+  where request_row.retention_until <= v_now
+    and request_row.status in ('received', 'processing', 'ready', 'pending_confirmation');
+
+  select count(*)::integer
+    into v_overdue_unresolved
+  from public.data_subject_requests request_row
+  where request_row.retention_until <= v_now
+    and request_row.status in ('failed', 'partial_failure');
+
+  select count(*)::integer
+    into v_overdue_active_erasure
+  from public.account_erasure_requests erasure_row
+  where erasure_row.retention_until <= v_now
+    and erasure_row.status in (
+      'diagnosed',
+      'pending_confirmation',
+      'confirmation_delivery_failed',
+      'confirmed',
+      'reversible_applied'
+    );
+
+  select count(*)::integer
+    into v_overdue_unresolved_erasure
+  from public.account_erasure_requests erasure_row
+  where erasure_row.retention_until <= v_now
+    and erasure_row.status in ('failed', 'partial_failure');
+
+  return jsonb_build_object(
+    'purged_requests', v_purged_requests,
+    'purged_events', v_purged_events,
+    'purged_erasure_requests', v_purged_erasure_requests,
+    'purged_total_requests', v_purged_requests + v_purged_erasure_requests,
+    'overdue_active_requests', v_overdue_active + v_overdue_active_erasure,
+    'overdue_active_dsr_requests', v_overdue_active,
+    'overdue_active_erasure_requests', v_overdue_active_erasure,
+    'overdue_unresolved_requests',
+      v_overdue_unresolved + v_overdue_unresolved_erasure,
+    'overdue_unresolved_dsr_requests', v_overdue_unresolved,
+    'overdue_unresolved_erasure_requests', v_overdue_unresolved_erasure,
+    'has_operational_alert',
+      v_overdue_active > 0
+      or v_overdue_unresolved > 0
+      or v_overdue_active_erasure > 0
+      or v_overdue_unresolved_erasure > 0,
+    'executed_at', v_now
+  );
+end;
+$$;
+
+revoke all on function kc_private.kc_purge_expired_data_subject_requests(integer)
+  from public, anon, authenticated, service_role;
+
+create or replace function public.kc_purge_expired_data_subject_requests(
+  p_limit integer default 500
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+  return kc_private.kc_purge_expired_data_subject_requests(p_limit);
+end;
+$$;
+
+revoke all on function public.kc_purge_expired_data_subject_requests(integer)
+  from public, anon, authenticated;
+grant execute on function public.kc_purge_expired_data_subject_requests(integer)
+  to service_role;
+
+comment on function public.kc_purge_expired_data_subject_requests(integer) is
+  'Service-role facade for the idempotent retention purge. failed/partial requests are never auto-purged and are returned as an operational alert. Download expires_at is unrelated.';
+
+create table kc_private.data_subject_request_retention_schedule_state (
+  singleton boolean primary key default true check (singleton),
+  cron_available boolean not null,
+  scheduled boolean not null,
+  job_id bigint,
+  schedule text not null default '17 3 * * *',
+  checked_at timestamptz not null default now(),
+  operational_alert text
+);
+
+revoke all on table kc_private.data_subject_request_retention_schedule_state
+  from public, anon, authenticated, service_role;
+
+-- Agenda quando pg_cron esta disponivel. Ambientes locais sem a extensao
+-- recebem alerta persistente + WARNING, em vez de aparentar enforcement.
+do $$
+declare
+  v_job_id bigint;
+  v_existing boolean := false;
+begin
+  if to_regclass('cron.job') is null
+     or to_regprocedure('cron.schedule(text,text,text)') is null then
+    insert into kc_private.data_subject_request_retention_schedule_state (
+      singleton,
+      cron_available,
+      scheduled,
+      job_id,
+      operational_alert
+    ) values (
+      true,
+      false,
+      false,
+      null,
+      'PG_CRON_UNAVAILABLE_DSR_RETENTION_NOT_SCHEDULED'
+    )
+    on conflict (singleton) do update set
+      cron_available = excluded.cron_available,
+      scheduled = excluded.scheduled,
+      job_id = excluded.job_id,
+      checked_at = now(),
+      operational_alert = excluded.operational_alert;
+    raise warning 'PG_CRON_UNAVAILABLE_DSR_RETENTION_NOT_SCHEDULED';
+    return;
+  end if;
+
+  execute
+    'select exists (select 1 from cron.job where jobname = $1)'
+    into v_existing
+    using 'kc-dsr-retention-purge-daily';
+  if v_existing then
+    execute 'select cron.unschedule($1)'
+      using 'kc-dsr-retention-purge-daily';
+  end if;
+
+  execute 'select cron.schedule($1, $2, $3)'
+    into v_job_id
+    using
+      'kc-dsr-retention-purge-daily',
+      '17 3 * * *',
+      'select kc_private.kc_purge_expired_data_subject_requests(500);';
+
+  insert into kc_private.data_subject_request_retention_schedule_state (
+    singleton,
+    cron_available,
+    scheduled,
+    job_id,
+    operational_alert
+  ) values (
+    true,
+    true,
+    true,
+    v_job_id,
+    null
+  )
+  on conflict (singleton) do update set
+    cron_available = excluded.cron_available,
+    scheduled = excluded.scheduled,
+    job_id = excluded.job_id,
+    checked_at = now(),
+    operational_alert = excluded.operational_alert;
+exception
+  when others then
+    insert into kc_private.data_subject_request_retention_schedule_state (
+      singleton,
+      cron_available,
+      scheduled,
+      job_id,
+      operational_alert
+    ) values (
+      true,
+      true,
+      false,
+      null,
+      'DSR_RETENTION_CRON_SCHEDULE_FAILED:' || sqlstate
+    )
+    on conflict (singleton) do update set
+      cron_available = excluded.cron_available,
+      scheduled = excluded.scheduled,
+      job_id = excluded.job_id,
+      checked_at = now(),
+      operational_alert = excluded.operational_alert;
+    raise warning 'DSR retention cron scheduling failed: %', sqlerrm;
+end;
+$$;
+
+-- ============================================================================
+-- Barreira global para JWT authenticated cuja auth.sessions foi revogada.
+-- ============================================================================
+
+create or replace function public.kc_enforce_active_session_pre_request()
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(auth.jwt() ->> 'role', '') = 'authenticated'
+     and not kc_private.kc_is_current_session_active() then
+    raise exception using
+      errcode = '42501',
+      message = 'AUTH_SESSION_NOT_ACTIVE';
+  end if;
+end;
+$$;
+
+revoke all on function public.kc_enforce_active_session_pre_request()
+  from public, anon, authenticated, service_role, authenticator;
+grant execute on function public.kc_enforce_active_session_pre_request()
+  to anon, authenticated, service_role, authenticator;
+
+comment on function public.kc_enforce_active_session_pre_request() is
+  'PostgREST pre-request fail-closed gate. Emergency rollback: ALTER ROLE authenticator RESET pgrst.db_pre_request; then NOTIFY pgrst, ''reload config''.';
+
+alter role authenticator
+  set pgrst.db_pre_request = 'public.kc_enforce_active_session_pre_request';
+notify pgrst, 'reload config';
+
+create or replace function kc_private.kc_guard_active_session_dml()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(auth.jwt() ->> 'role', '') = 'authenticated'
+     and not kc_private.kc_is_current_session_active() then
+    raise exception using
+      errcode = '42501',
+      message = 'AUTH_SESSION_NOT_ACTIVE';
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function kc_private.kc_guard_active_session_dml()
+  from public, anon, authenticated, service_role;
+
+create or replace function kc_private.kc_install_active_session_guards()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_table record;
+  v_installed integer := 0;
+begin
+  for v_table in
+    select
+      namespace_row.nspname as schema_name,
+      class_row.relname as table_name,
+      class_row.relrowsecurity as has_rls
+    from pg_catalog.pg_class class_row
+    join pg_catalog.pg_namespace namespace_row
+      on namespace_row.oid = class_row.relnamespace
+    where namespace_row.nspname = 'public'
+      and class_row.relkind in ('r', 'p')
+      and not exists (
+        select 1
+        from pg_catalog.pg_depend dependency_row
+        where dependency_row.classid = 'pg_class'::regclass
+          and dependency_row.objid = class_row.oid
+          and dependency_row.deptype = 'e'
+      )
+    order by class_row.relname
+  loop
+    execute format(
+      'drop trigger if exists kc_active_session_write_guard on %I.%I',
+      v_table.schema_name,
+      v_table.table_name
+    );
+    execute format(
+      'create trigger kc_active_session_write_guard '
+      || 'before insert or update or delete on %I.%I '
+      || 'for each statement execute function kc_private.kc_guard_active_session_dml()',
+      v_table.schema_name,
+      v_table.table_name
+    );
+
+    if v_table.has_rls then
+      execute format(
+        'drop policy if exists kc_active_session_restrictive on %I.%I',
+        v_table.schema_name,
+        v_table.table_name
+      );
+      execute format(
+        'create policy kc_active_session_restrictive on %I.%I '
+        || 'as restrictive for all to authenticated '
+        || 'using (public.kc_is_current_session_active()) '
+        || 'with check (public.kc_is_current_session_active())',
+        v_table.schema_name,
+        v_table.table_name
+      );
+    end if;
+
+    v_installed := v_installed + 1;
+  end loop;
+
+  return v_installed;
+end;
+$$;
+
+revoke all on function kc_private.kc_install_active_session_guards()
+  from public, anon, authenticated, service_role;
+
+select kc_private.kc_install_active_session_guards();
+
+create or replace function public.kc_active_session_guard_coverage()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with app_tables as (
+    select
+      class_row.oid,
+      class_row.relrowsecurity
+    from pg_catalog.pg_class class_row
+    join pg_catalog.pg_namespace namespace_row
+      on namespace_row.oid = class_row.relnamespace
+    where namespace_row.nspname = 'public'
+      and class_row.relkind in ('r', 'p')
+      and not exists (
+        select 1
+        from pg_catalog.pg_depend dependency_row
+        where dependency_row.classid = 'pg_class'::regclass
+          and dependency_row.objid = class_row.oid
+          and dependency_row.deptype = 'e'
+      )
+  ),
+  missing_triggers as (
+    select table_row.oid
+    from app_tables table_row
+    where not exists (
+      select 1
+      from pg_catalog.pg_trigger trigger_row
+      where trigger_row.tgrelid = table_row.oid
+        and trigger_row.tgname = 'kc_active_session_write_guard'
+        and not trigger_row.tgisinternal
+    )
+  ),
+  missing_policies as (
+    select table_row.oid
+    from app_tables table_row
+    where table_row.relrowsecurity
+      and not exists (
+        select 1
+        from pg_catalog.pg_policy policy_row
+        where policy_row.polrelid = table_row.oid
+          and policy_row.polname = 'kc_active_session_restrictive'
+          and not policy_row.polpermissive
+      )
+  )
+  select jsonb_build_object(
+    'ok',
+      not exists (select 1 from missing_triggers)
+      and not exists (select 1 from missing_policies)
+      and exists (
+        select 1
+        from pg_catalog.pg_db_role_setting role_setting,
+          lateral unnest(role_setting.setconfig) setting_value
+        where role_setting.setrole = 'authenticator'::regrole
+          and setting_value =
+            'pgrst.db_pre_request=public.kc_enforce_active_session_pre_request'
+      )
+      and exists (
+        select 1
+        from pg_catalog.pg_policy policy_row
+        where policy_row.polrelid = 'storage.objects'::regclass
+          and policy_row.polname = 'kc_storage_active_session_restrictive'
+          and not policy_row.polpermissive
+      ),
+    'public_table_count', (select count(*) from app_tables),
+    'rls_table_count', (select count(*) from app_tables where relrowsecurity),
+    'missing_write_trigger_count', (select count(*) from missing_triggers),
+    'missing_restrictive_policy_count', (select count(*) from missing_policies),
+    'postgrest_pre_request_installed', exists (
+      select 1
+      from pg_catalog.pg_db_role_setting role_setting,
+        lateral unnest(role_setting.setconfig) setting_value
+      where role_setting.setrole = 'authenticator'::regrole
+        and setting_value =
+          'pgrst.db_pre_request=public.kc_enforce_active_session_pre_request'
+    ),
+    'storage_restrictive_policy_installed', exists (
+      select 1
+      from pg_catalog.pg_policy policy_row
+      where policy_row.polrelid = 'storage.objects'::regclass
+        and policy_row.polname = 'kc_storage_active_session_restrictive'
+        and not policy_row.polpermissive
+    )
+  );
+$$;
+
+revoke all on function public.kc_active_session_guard_coverage()
+  from public, anon, authenticated;
+grant execute on function public.kc_active_session_guard_coverage()
+  to service_role;
+
+-- Gate fail-closed consumido pelo worker de exclusao antes do hard-delete.
+-- Os flags so sao publicados depois de os FKs/triggers seguros existirem.
+create or replace function public.kc_account_erasure_capabilities()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_guard_coverage jsonb;
+begin
+  if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    raise exception using errcode = '42501', message = 'SERVICE_ROLE_REQUIRED';
+  end if;
+
+  v_guard_coverage := public.kc_active_session_guard_coverage();
+
+  return jsonb_build_object(
+    'version', 1,
+    'write_quiescence', coalesce((v_guard_coverage ->> 'ok')::boolean, false),
+    'chat_preserving_delete', true,
+    'cadu_set_null', true,
+    'unit_meta_set_null', true,
+    'community_content_preserving_delete', true,
+    'safety_records_preserving_delete', true
+  );
+end;
+$$;
+
+revoke all on function public.kc_account_erasure_capabilities()
+  from public, anon, authenticated;
+grant execute on function public.kc_account_erasure_capabilities()
+  to service_role;
+
+commit;

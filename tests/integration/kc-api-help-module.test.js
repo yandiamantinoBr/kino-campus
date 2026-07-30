@@ -37,6 +37,7 @@ describe('kc-api.help.js - exported help/invites domain', () => {
   test('exporta apenas o grupo de help-requests e invites', () => {
     [
       'createHelpRequest,',
+      'recoverPrivacyHelpRequest,',
       'listAdminHelpRequests,',
       'updateAdminHelpRequest,',
       'processAccountErasure,',
@@ -54,6 +55,9 @@ describe('kc-api.help.js - exported help/invites domain', () => {
   });
 
   test('mantem fallbacks canonicos de indisponibilidade por driver', () => {
+    expect(source).toContain("code: 'BACKEND_REQUIRED'");
+    expect(source).toContain('safe_to_replace: false');
+    expect(source).toContain('response_confirmed: false');
     expect(source).toContain("return { ok: false, error: { message: 'Pedidos de ajuda indisponíveis neste driver.' } };");
     expect(source).toContain("return { ok: false, error: { message: 'Triagem de ajuda indisponível neste driver.' } };");
     expect(source).toContain("return { ok: false, error: 'DRIVER_NAO_SUPORTA' };");
@@ -62,14 +66,21 @@ describe('kc-api.help.js - exported help/invites domain', () => {
     expect(source).toContain("return { ok: false, error: { message: 'Funcionalidade indisponível neste driver.' } };");
     expect(source).toContain('items: [], total: 0');
     expect(source).toContain('return { data: [], error: null };');
-    expect(source).toContain('return [];');
+    expect(source).toContain('rows: []');
+    expect(source).toContain('if (!driver || typeof driver.listAdminHelpRequests');
   });
 
   test('mantem delegacao por driver ativo em cada metodo', () => {
     expect(source).toContain('return driver.createHelpRequest(payload);');
+    expect(source).toContain('return driver.recoverPrivacyHelpRequest(payload);');
     expect(source).toContain('return driver.listAdminHelpRequests(filters);');
     expect(source).toContain('return driver.updateAdminHelpRequest(id, patch);');
     expect(source).toContain('return driver.processAccountErasure(payload);');
+    expect(source).toContain('return driver.listDataSubjectRequests(options);');
+    expect(source).toContain('return driver.getDataSubjectRequest(protocol, options);');
+    expect(source).toContain('return driver.downloadDataSubjectExport(protocol, options);');
+    expect(source).toContain('return driver.downloadDataSubjectSupplement(protocol, artifactRef, options);');
+    expect(source).toContain('return driver.cancelDataSubjectRequest(protocol, options);');
     expect(source).toContain('return driver.listExternalAccessRequests(filters);');
     expect(source).toContain('return driver.decideExternalAccessRequest(payload);');
     expect(source).toContain('return driver.inviteExternalUser(email, note);');

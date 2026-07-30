@@ -5,7 +5,12 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../..');
 const MIGRATION = path.join(ROOT, 'supabase/migrations/20260710012926_reconcile_runtime_rpc_helpers.sql');
+const PRIVACY_HARDENING_MIGRATION = path.join(
+  ROOT,
+  'supabase/migrations/20260728233000_harden_account_erasure_privacy_postconditions.sql',
+);
 const sql = fs.readFileSync(MIGRATION, 'utf8');
+const privacyHardeningSql = fs.readFileSync(PRIVACY_HARDENING_MIGRATION, 'utf8');
 
 describe('runtime RPC helper reconciliation', () => {
   test('promotes private helpers required by active public RPCs', () => {
@@ -30,9 +35,13 @@ describe('runtime RPC helper reconciliation', () => {
     expect(sql).toContain("coalesce(p.description, '') as content");
   });
 
-  test('uses a UUID audit identity when revoking email-only invites', () => {
-    expect(sql).toContain("'invite_revoked'");
-    expect(sql).toContain('gen_random_uuid()');
-    expect(sql).toContain("jsonb_build_object('email', v_email, 'deleted_count', v_deleted)");
+  test('uses a UUID audit identity and never retains the raw invite e-mail', () => {
+    expect(privacyHardeningSql).toContain("'invite_revoked'");
+    expect(privacyHardeningSql).toContain('extensions.gen_random_uuid()');
+    expect(privacyHardeningSql).toContain("'email_hash', v_email_hash");
+    expect(privacyHardeningSql).toContain("'email_redacted', true");
+    expect(privacyHardeningSql).not.toContain(
+      "jsonb_build_object('email', v_email, 'deleted_count', v_deleted)",
+    );
   });
 });

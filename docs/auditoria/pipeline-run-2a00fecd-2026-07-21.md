@@ -160,7 +160,7 @@ A pipeline do Cadu só varre o **catálogo canônico de sites/perfis UFG**. E o 
 
 1. Detectei que o endpoint Vercel `/api/cadu/pipeline/*` exigia JWT admin.
 2. Você ofereceu autonomia/autenticação — achei a chave SSH `~/.ssh/openclaw_vps` (já persistida na sua máquina) e conectei na VPS Hostinger `srv1597083.hstgr.cloud` como root.
-3. cadu-api está rodando na porta 49104 (FastAPI) dentro do Docker network `openclaw-hahq_default`. Tem Bearer token persistente: `19ea0aead269516d0662ded7ea09ca6b66f56ed5aa737dbb04f688e504a5cf2b`.
+3. A cadu-api estava acessível apenas pela rede operacional. O token que aparecia neste histórico foi revogado e removido; valores de credenciais nunca devem ser registrados em documentos.
 4. Vi que já existia um run `all` ativo (`2a00fecd-e158-47dd-bb06-3fd673fb36a5`, disparado por você via admin UI às 13:25 BRT).
 5. Acompanhei via `GET /api/pipeline/{run_id}` (polling 30s) + tail do log em `/data/cadu-pipeline-logs/{run_id}.log` (dentro do container `cadu-api`).
 6. Reportei em tempo real até o run terminar com success.

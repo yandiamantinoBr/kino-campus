@@ -44,7 +44,42 @@ describe('chat continuity contract', () => {
     expect(controller).toContain('cleanupUploadedChatImage');
     expect(controller).toContain('revokeObjectURL');
     expect(facade).toContain('deleteUploadedMedia');
-    expect(supabaseAdapter).toContain('client.storage.from(bucket).remove([path])');
+    expect(supabaseAdapter).toContain('client.storage.from(privateBucket).remove([path])');
+    expect(supabaseAdapter).toContain('client.storage.from(legacyBucket).remove([path])');
+    expect(supabaseAdapter).toContain("'kino-chat-media'");
+  });
+
+  test('chat media rollout expands privately while keeping strict legacy clients compatible', () => {
+    const migration = read(
+      'supabase/migrations/20260728183022_data_subject_requests_and_export.sql'
+    );
+    const legacyPolicies = [
+      'storage_chat_media_select_participant',
+      'storage_chat_media_insert_sender',
+      'storage_chat_media_update_sender',
+      'storage_chat_media_delete_sender',
+    ];
+
+    expect(migration).toContain("'kino-chat-media'");
+    expect(migration).toContain('-- CONTRACT PHASE DEFERRED:');
+    legacyPolicies.forEach((policyName) => {
+      expect(migration).toContain(`create policy ${policyName}`);
+    });
+    expect(migration).toContain("bucket_id = 'kino-media'");
+    expect(migration).toContain("(storage.foldername(name))[1] = 'chat-media'");
+    expect(migration).toContain('pg_catalog.cardinality(storage.foldername(name)) = 3');
+    expect(migration).toContain(
+      "(storage.foldername(name))[3] = (select auth.uid())::text"
+    );
+    expect(migration).toContain('public.kc_is_current_session_active()');
+    expect(migration).toContain('conversation_row.participant_low');
+    expect(migration).toContain('conversation_row.participant_high');
+    expect(migration).not.toContain(
+      'create policy storage_chat_media_insert_participant'
+    );
+    expect(migration).not.toContain(
+      'create policy storage_chat_media_update_participant'
+    );
   });
 
   test('chat inbox keeps drafts, filters conversations and debounces realtime reloads', () => {
@@ -157,12 +192,47 @@ describe('chat continuity contract', () => {
     const facade = read('assets/js/api/kc-api.chat.js');
     const localAdapter = read('assets/js/adapters/local/local.chat.adapter.js');
     const supabaseAdapter = read('assets/js/adapters/supabase/supabase.chat.adapter.js');
+    const migration = read(
+      'supabase/migrations/20260729000000_secure_chat_conversation_archive_rpc.sql'
+    );
 
+    expect(facade).toContain('setConversationArchived: safe(\'setConversationArchived\')');
     expect(facade).toContain('deleteConversation: safe(\'deleteConversation\')');
+    expect(localAdapter).toContain('setConversationArchived: notSupported');
     expect(localAdapter).toContain('deleteConversation: notSupported');
     expect(localAdapter).toContain('uploadChatMedia: notSupported');
+    expect(supabaseAdapter).toContain("client.rpc('kc_chat_set_conversation_archived'");
+    expect(supabaseAdapter).not.toContain("client.from('chat_conversations')");
     expect(supabaseAdapter).toContain('options.includeArchived !== true');
     expect(supabaseAdapter).toContain('list = list.filter(function (c) { return !c.archived; });');
+    expect(migration).toContain(
+      'create or replace function public.kc_chat_set_conversation_archived('
+    );
+    expect(migration).toContain('if not public.kc_is_current_session_active() then');
+    expect(migration).toContain('conversation_row.participant_low = v_user_id');
+    expect(migration).not.toContain("raise exception 'not_a_participant'");
+    expect(migration).toContain('set archived_by_low = p_archived');
+    expect(migration).toContain('set archived_by_high = p_archived');
+    expect(migration).toContain('-- CONTRACT PHASE DEFERRED:');
+    expect(migration.indexOf('create policy chat_conv_update_own')).toBeGreaterThan(
+      migration.indexOf('drop policy if exists chat_conv_update_own')
+    );
+    expect(migration).toContain('public.kc_is_current_session_active()');
+    expect(migration).toContain(
+      'create or replace function kc_private.kc_guard_legacy_chat_archive_update()'
+    );
+    expect(migration).toContain("to_jsonb(new) - 'archived_by_low'");
+    expect(migration).toContain("to_jsonb(new) - 'archived_by_high'");
+    expect(migration).toContain("message = 'CHAT_LEGACY_UPDATE_RESTRICTED'");
+    expect(migration).toContain(
+      'grant update on table public.chat_conversations\n  to authenticated;'
+    );
+    expect(migration).not.toContain(
+      'revoke update on table public.chat_conversations\n  from public, anon, authenticated;'
+    );
+    expect(migration).toContain(
+      'grant execute on function public.kc_chat_set_conversation_archived(\n  uuid,\n  boolean\n)\n  to authenticated;'
+    );
   });
 
   test('chat reply persistence uses RPC instead of direct table update', () => {

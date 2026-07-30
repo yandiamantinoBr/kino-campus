@@ -92,6 +92,16 @@ describe('moderação — decisão externa idempotente e nota interna', () => {
     expect(edge).toMatch(/return json\(200, \{[\s\S]*?delivery_status: "failed"/);
   });
 
+  test('erros de provedores ficam em códigos estáveis sem detalhes brutos', () => {
+    expect(edge).toContain('safeErrorCode');
+    expect(edge).not.toContain('detail: msg');
+    expect(edge).not.toContain('error_message: msg');
+    expect(edge).not.toContain('rejection send error:');
+    expect(edge).not.toContain('previousDelivery.error_message');
+    expect(edge).not.toContain('previousDelivery.smtp_error');
+    expect(edge).toContain('error_code: errorCode');
+  });
+
   test('painel não afirma persistência antes de verificar a conclusão CAS', () => {
     const approvalStart = external.indexOf("if (decision === 'approved') {");
     const persistenceCheck = external.indexOf("if (data.delivery_state_persisted === false)", approvalStart);

@@ -450,6 +450,51 @@ body.kc-settings-page .kc-settings-input {
   margin-top: 4px;
 }
 
+.kc-help-verification {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 124, 0, 0.24);
+  border-radius: 16px;
+  background: rgba(255, 124, 0, 0.06);
+}
+
+.kc-help-verification[hidden] {
+  display: none;
+}
+
+.kc-help-verification strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-help-verification p {
+  margin: 0;
+  color: var(--kc-text-dark-secondary);
+  line-height: 1.55;
+}
+
+.kc-help-turnstile-widget {
+  max-width: 100%;
+  min-height: 65px;
+  overflow: hidden;
+}
+
+.kc-help-verification-status {
+  min-height: 1.4em;
+  font-size: 0.86rem;
+}
+
+.kc-help-verification-status.is-error {
+  color: var(--kc-danger, #ef4444);
+}
+
+.kc-help-verification-status.is-success {
+  color: var(--kc-success, #22c55e);
+}
+
 .kc-help-list--single {
   grid-template-columns: 1fr;
 }
@@ -607,6 +652,13 @@ body.kc-settings-page .kc-settings-input {
   background: rgba(59, 201, 125, 0.14);
   border-color: rgba(59, 201, 125, 0.34);
   color: #9ae6a0;
+  box-shadow: none;
+}
+
+.kc-settings-btn.is-warn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.38);
+  color: #fbbf24;
   box-shadow: none;
 }
 

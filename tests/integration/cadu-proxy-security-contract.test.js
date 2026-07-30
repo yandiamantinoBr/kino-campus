@@ -23,8 +23,21 @@ function extractFunction(source, name) {
 
 describe('Cadu proxy security boundary', () => {
   const auth = read('server/cadu-auth.mjs');
+  const retiredAuthProxy = read('supabase/functions/cadu-auth-proxy/index.ts');
   const feed = read('api/cadu/feed.js');
   const classifyCaduFeedPath = extractFunction(feed, 'classifyCaduFeedPath');
+
+  test('retired Edge auth proxy is a fail-closed tombstone and cannot mint sessions', () => {
+    expect(retiredAuthProxy).toContain('error: "endpoint_retired"');
+    expect(retiredAuthProxy).toContain('status: 410');
+    expect(retiredAuthProxy).toContain('"Cache-Control": "no-store"');
+    expect(retiredAuthProxy).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(retiredAuthProxy).not.toContain('CADU_KINO_PASSWORD');
+    expect(retiredAuthProxy).not.toContain('signInWithPassword');
+    expect(retiredAuthProxy).not.toContain('refresh_token');
+    expect(retiredAuthProxy).not.toContain('access_token');
+    expect(retiredAuthProxy).not.toContain('"Access-Control-Allow-Origin": "*"');
+  });
 
   test('admin session tokens are accepted only through Authorization headers', () => {
     expect(auth).toContain("match(/^Bearer\\s+(.+)$/i)");

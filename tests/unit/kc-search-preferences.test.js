@@ -112,13 +112,80 @@ describe('preferências explícitas de busca', () => {
     });
     expect(exported).toMatchObject({
       exportVersion: 2,
+      dataKind: 'kinocampus-search-preferences',
       scope: 'local-browser-only',
+      includes: ['saved-search-preferences', 'local-search-affinity-when-consented'],
+      excludes: expect.arrayContaining(['full-account-data', 'authentication-secrets']),
       preferences: { modules: ['oportunidades'] },
       localAffinity: { version: 1, features: {} }
     });
 
     Preferences.clear({ storage });
     expect(storage.snapshot()).toEqual({});
+  });
+
+  test('isola cache e afinidade por conta sem adotar o registro legado global', () => {
+    const storage = memoryStorage();
+    const accountA = '00000000-0000-4000-8000-00000000000a';
+    const accountB = '00000000-0000-4000-8000-00000000000b';
+
+    Preferences.save({ mode: 'personalized', modules: ['eventos'] }, {
+      storage,
+      registry: Registry,
+      now: () => '2026-07-29T10:00:00.000Z'
+    });
+    Preferences.save({ mode: 'personalized', modules: ['moradia'], localAffinityConsent: true }, {
+      storage,
+      registry: Registry,
+      scope: 'account',
+      userId: accountA,
+      now: () => '2026-07-29T11:00:00.000Z'
+    });
+    storage.setItem(
+      Preferences.affinityStorageKeyForUser(accountA),
+      JSON.stringify({ version: 1, features: { 'module:moradia': { count: 2 } } })
+    );
+
+    expect(Preferences.load({ storage, registry: Registry }).modules).toEqual(['eventos']);
+    expect(Preferences.load({
+      storage, registry: Registry, scope: 'account', userId: accountA
+    }).modules).toEqual(['moradia']);
+    expect(Preferences.load({
+      storage, registry: Registry, scope: 'account', userId: accountB
+    })).toEqual(Preferences.defaultState());
+
+    const storedA = JSON.parse(storage.getItem(Preferences.storageKeyForUser(accountA)));
+    expect(storedA).toMatchObject({
+      envelopeVersion: 1,
+      ownerUserId: accountA,
+      preferences: { modules: ['moradia'], sync: { scope: 'account' } }
+    });
+    expect(storage.getItem(Preferences.storageKeyForUser(accountB))).toBeNull();
+
+    const exportedA = Preferences.exportData({
+      storage, registry: Registry, scope: 'account', userId: accountA
+    });
+    expect(exportedA).toMatchObject({
+      scope: 'account-and-local-cache',
+      preferences: { modules: ['moradia'] },
+      localAffinity: { version: 1 }
+    });
+
+    Preferences.clear({ storage, scope: 'account', userId: accountA });
+    expect(storage.getItem(Preferences.storageKeyForUser(accountA))).toBeNull();
+    expect(storage.getItem(Preferences.affinityStorageKeyForUser(accountA))).toBeNull();
+    expect(Preferences.load({ storage, registry: Registry }).modules).toEqual(['eventos']);
+  });
+
+  test('falha fechada quando o escopo de conta não informa o titular', () => {
+    const storage = memoryStorage();
+    expect(() => Preferences.save({ mode: 'personalized' }, {
+      storage, registry: Registry, scope: 'account'
+    })).toThrow('KC_SEARCH_PREFERENCES_ACCOUNT_OWNER_REQUIRED');
+    expect(() => Preferences.clear({ storage, scope: 'account' }))
+      .toThrow('KC_SEARCH_PREFERENCES_ACCOUNT_OWNER_REQUIRED');
+    expect(Preferences.load({ storage, registry: Registry, scope: 'account' }))
+      .toEqual(Preferences.defaultState());
   });
 
   test('toRemotePayload não quebra sem registry e preserva features já normalizadas', () => {

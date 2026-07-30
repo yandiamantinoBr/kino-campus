@@ -41,6 +41,7 @@
       return Promise.resolve({ ok: true, data: { i_blocked: false, they_blocked: false } });
     },
     reportMessage: notSupported,
+    setConversationArchived: notSupported,
     deleteConversation: notSupported,
     subscribeChat: function () { return null; },
     unsubscribeChat: function () {},

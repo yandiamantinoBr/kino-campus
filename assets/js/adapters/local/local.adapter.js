@@ -17,7 +17,6 @@
   const LOCAL_NAMESPACE_KEYS = ['notifications', 'ratings', 'saved', 'postsRead', 'postsWrite', 'profile', 'help'];
   const asyncNull = async function () { return null; };
   const asyncFalse = async function () { return { ok: false }; };
-
   window._KCLA = window._KCLA || {};
   LOCAL_NAMESPACE_KEYS.forEach((key) => { window._KCLA[key] = window._KCLA[key] || {}; });
 
@@ -380,7 +379,13 @@
   const listAdminHelpRequests = createAsyncDelegate('help', 'listAdminHelpRequests', buildLocalHelpDeps, (filters) => buildDefaultLocalAdminHelpListFallback(filters || {}), ensureObjectArg(0));
   const updateAdminHelpRequest = createAsyncDelegate('help', 'updateAdminHelpRequest', buildLocalHelpDeps, () => buildUnavailableResult('Gest\u00E3o local de pedidos de ajuda indispon\u00EDvel.'), ensureObjectArg(1));
   const processAccountErasure = createAsyncDelegate('help', 'processAccountErasure', buildLocalHelpDeps, () => buildUnavailableResult('Fluxo LGPD local indisponivel.'), ensureObjectArg(0));
-
+  const createDataSubjectRequest = createAsyncDelegate('help', 'createDataSubjectRequest', buildLocalHelpDeps, () => buildUnavailableResult('Solicitacoes de dados exigem uma conta conectada.'), ensureObjectArg(0));
+  const listDataSubjectRequests = createAsyncDelegate('help', 'listDataSubjectRequests', buildLocalHelpDeps, () => ({ ok: false, data: { items: [], total: 0 }, error: { code: 'BACKEND_REQUIRED', message: 'Historico de solicitacoes indisponivel no modo local.' } }), ensureObjectArg(0));
+  const getDataSubjectRequest = createAsyncDelegate('help', 'getDataSubjectRequest', buildLocalHelpDeps, () => buildUnavailableResult('Consulta de protocolo indisponivel no modo local.'));
+  const downloadDataSubjectExport = createAsyncDelegate('help', 'downloadDataSubjectExport', buildLocalHelpDeps, () => buildUnavailableResult('Download de dados exige uma conta conectada.'));
+  const downloadDataSubjectSupplement = createAsyncDelegate('help', 'downloadDataSubjectSupplement', buildLocalHelpDeps, () => buildUnavailableResult('Complemento integral exige uma conta conectada.'));
+  const cancelDataSubjectRequest = createAsyncDelegate('help', 'cancelDataSubjectRequest', buildLocalHelpDeps, () => buildUnavailableResult('Cancelamento de solicitacao indisponivel no modo local.'));
+  const processDataExportSupplement = createAsyncDelegate('help', 'processDataExportSupplement', buildLocalHelpDeps, () => buildUnavailableResult('Administracao do suplemento indisponivel no modo local.'), ensureObjectArg(0));
   const getNotificationPreferences = createAsyncDelegate('notifications', 'getNotificationPreferences', null, buildDefaultLocalNotificationPreferencesFallback);
   const updateNotificationPreferences = createAsyncDelegate('notifications', 'updateNotificationPreferences', null, () => buildUnavailableResult('Preferencias de notificacao locais indisponiveis.'), ensureObjectArg(0));
   async function getSearchPreferences() {
@@ -454,6 +459,13 @@
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,
+    createDataSubjectRequest,
+    listDataSubjectRequests,
+    getDataSubjectRequest,
+    downloadDataSubjectExport,
+    downloadDataSubjectSupplement,
+    cancelDataSubjectRequest,
+    processDataExportSupplement,
     getNotificationPreferences,
     updateNotificationPreferences,
     getSearchPreferences,

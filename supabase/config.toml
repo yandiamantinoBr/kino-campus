@@ -398,6 +398,36 @@ verify_jwt = true
 [functions.kc-analytics-subject-id]
 verify_jwt = true
 
+# Exclusao assistida exige um JWT valido no gateway e repete, no handler e nos
+# RPCs, as verificacoes de sessao ativa e de administrador.
+[functions.kc-account-erasure]
+verify_jwt = true
+
+# Pedidos autenticados de titulares e exportacao JSON gerada sob demanda.
+# O handler repete a validacao do usuario e confirma auth.sessions.
+[functions.kc-data-subject-request]
+verify_jwt = true
+
+# O gateway exige um JWT valido (inclusive anon); o handler diferencia anon de
+# authenticated, valida sessao ativa e exige claim de posse para o fluxo anon.
+[functions.kc-help-request-notify]
+verify_jwt = true
+
+# Browser guests have no JWT by design. This gateway validates an exact
+# Turnstile action + hostname server-side, then calls a service-role-only RPC.
+[functions.kc-create-privacy-help-guest]
+verify_jwt = false
+
+# Administracao do suplemento privado de exportacao. O gateway valida o JWT e
+# o handler repete sessao ativa + profiles.is_admin antes de qualquer mutacao.
+[functions.kc-data-export-admin]
+verify_jwt = true
+
+# Worker maquina-a-maquina do pg_cron. O gateway JWT fica desabilitado somente
+# porque o handler exige KC_DATA_EXPORT_RETENTION_SECRET em comparacao constante.
+[functions.kc-data-export-retention]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

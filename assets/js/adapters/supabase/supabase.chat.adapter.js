@@ -21,6 +21,7 @@
  *   - kc_chat_unblock_user(p_other_user_id)
  *   - kc_chat_is_blocked(p_other_user_id)
  *   - kc_chat_report_message(p_message_id, p_reason, p_details)
+ *   - kc_chat_set_conversation_archived(p_conversation_id, p_archived)
  */
 'use strict';
 
@@ -39,11 +40,32 @@
       ? window._KCSA.getCurrentUser() : Promise.resolve(null);
   }
 
-  function getBucketName() {
+  function getChatBucketName() {
+    var ENV = (window.KCAPI && window.KCAPI.ENV) || {};
+    return (ENV && (ENV.STORAGE_BUCKET_CHAT_MEDIA || (ENV.supabase && ENV.supabase.chatStorageBucket)))
+      ? String(ENV.STORAGE_BUCKET_CHAT_MEDIA || ENV.supabase.chatStorageBucket)
+      : 'kino-chat-media';
+  }
+
+  function getLegacyChatBucketName() {
     var ENV = (window.KCAPI && window.KCAPI.ENV) || {};
     return (ENV && (ENV.STORAGE_BUCKET_POST_MEDIA || (ENV.supabase && ENV.supabase.storageBucket)))
       ? String(ENV.STORAGE_BUCKET_POST_MEDIA || ENV.supabase.storageBucket)
       : 'kino-media';
+  }
+
+  function createOpaqueFilename(extension) {
+    var suffix = '';
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      var bytes = new Uint8Array(12);
+      window.crypto.getRandomValues(bytes);
+      suffix = Array.from(bytes)
+        .map(function (byte) { return byte.toString(16).padStart(2, '0'); })
+        .join('');
+    } else {
+      suffix = Date.now() + '-' + Math.random().toString(36).slice(2, 14);
+    }
+    return suffix + '.' + extension;
   }
 
   // ── Normalização de retornos das RPCs ────────────────────────────────────
@@ -177,15 +199,15 @@
       ext = window._KCSA.media.extFromMime(compressed.type || mime) || 'jpg';
     }
 
-    var bucket = getBucketName();
-    var filename = Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + ext;
+    var bucket = getChatBucketName();
+    var filename = createOpaqueFilename(ext);
     var path = 'chat-media/' + conversationId + '/' + user.id + '/' + filename;
     var up = await client.storage.from(bucket).upload(path, compressed, {
       contentType: compressed.type || mime || 'application/octet-stream',
       upsert: false,
     });
     if (up && up.error) {
-      return { ok: false, error: { message: 'Falha no upload da imagem.', detail: up.error.message } };
+      return { ok: false, error: { message: 'Falha no upload da imagem.' } };
     }
     return { ok: true, data: { path: path, bucket: bucket } };
   }
@@ -260,15 +282,15 @@
       return { ok: false, error: { message: 'O arquivo parece estar corrompido ou não corresponde ao tipo declarado.' } };
     }
 
-    var bucket = getBucketName();
-    var filename = Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + info.ext;
+    var bucket = getChatBucketName();
+    var filename = createOpaqueFilename(info.ext);
     var path = 'chat-media/' + conversationId + '/' + user.id + '/' + filename;
     var up = await client.storage.from(bucket).upload(path, file, {
       contentType: mime || 'application/octet-stream',
       upsert: false,
     });
     if (up && up.error) {
-      return { ok: false, error: { message: 'Falha no upload do arquivo.', detail: up.error.message } };
+      return { ok: false, error: { message: 'Falha no upload do arquivo.' } };
     }
     return { ok: true, data: { path: path, bucket: bucket, mediaType: info.type, ext: info.ext } };
   }
@@ -276,22 +298,36 @@
   async function getSignedUrl(path, expiresInSeconds) {
     var client = getClient();
     if (!client || !path) return null;
-    var bucket = getBucketName();
-    var s = await client.storage.from(bucket).createSignedUrl(path, expiresInSeconds || 3600);
-    if (s && s.error) return null;
-    return (s && s.data && s.data.signedUrl) ? s.data.signedUrl : null;
+    var privateBucket = getChatBucketName();
+    var legacyBucket = getLegacyChatBucketName();
+    var s = await client.storage.from(privateBucket).createSignedUrl(path, expiresInSeconds || 3600);
+    if (s && !s.error && s.data && s.data.signedUrl) return s.data.signedUrl;
+
+    // Compatibilidade temporária para anexos anteriores ao bucket privado.
+    // Depois da cópia verificada e remoção no bucket público, este caminho
+    // retorna vazio sem tornar novos uploads públicos.
+    if (legacyBucket === privateBucket) return null;
+    var legacy = await client.storage.from(legacyBucket).createSignedUrl(path, expiresInSeconds || 3600);
+    if (legacy && legacy.error) return null;
+    return (legacy && legacy.data && legacy.data.signedUrl) ? legacy.data.signedUrl : null;
   }
 
   async function deleteUploadedMedia(path) {
     var client = getClient();
     if (!client || !path) return { ok: false };
-    var bucket = getBucketName();
+    var privateBucket = getChatBucketName();
+    var legacyBucket = getLegacyChatBucketName();
     try {
-      var r = await client.storage.from(bucket).remove([path]);
-      if (r && r.error) return { ok: false, error: { message: r.error.message } };
+      var primary = await client.storage.from(privateBucket).remove([path]);
+      var legacy = legacyBucket === privateBucket
+        ? null
+        : await client.storage.from(legacyBucket).remove([path]);
+      if ((primary && primary.error) || (legacy && legacy.error)) {
+        return { ok: false, error: { message: 'Não foi possível remover o anexo.' } };
+      }
       return { ok: true };
-    } catch (e) {
-      return { ok: false, error: { message: (e && e.message) || String(e) } };
+    } catch (_) {
+      return { ok: false, error: { message: 'Não foi possível remover o anexo.' } };
     }
   }
 
@@ -381,10 +417,9 @@
       if (r.error) return { ok: false, error: { message: r.error.message } };
       var row = Array.isArray(r.data) ? r.data[0] : r.data;
       var mediaPath = row ? row.out_media_path : null;
-      // Hard-delete da imagem no Storage
+      // Hard-delete do anexo no bucket privado e no legado durante o cutover.
       if (mediaPath) {
-        var bucket = getBucketName();
-        try { await client.storage.from(bucket).remove([mediaPath]); } catch (_) {}
+        await deleteUploadedMedia(mediaPath);
       }
       return { ok: true, data: { media_path: mediaPath || null } };
     } catch (e) {
@@ -504,25 +539,27 @@
   }
 
   // ── Excluir (arquivar) conversa para o usuário atual ──────────────────────
-  async function deleteConversation(conversationId, myUserId) {
+  async function setConversationArchived(conversationId, archived) {
     var client = getClient();
-    if (!client || !conversationId || !myUserId) return { ok: false, error: { message: 'Parâmetros inválidos.' } };
+    if (!client || !conversationId || typeof archived !== 'boolean') {
+      return { ok: false, error: { message: 'Parâmetros inválidos.' } };
+    }
     try {
-      var q = await client.from('chat_conversations')
-        .select('id, participant_low, participant_high').eq('id', conversationId).limit(1);
-      if (q.error) return { ok: false, error: { message: q.error.message } };
-      var row = Array.isArray(q.data) ? q.data[0] : q.data;
-      if (!row) return { ok: false, error: { message: 'Conversa não encontrada.' } };
-      var patch = {};
-      if (String(row.participant_low) === String(myUserId)) patch.archived_by_low = true;
-      else if (String(row.participant_high) === String(myUserId)) patch.archived_by_high = true;
-      else return { ok: false, error: { message: 'Você não participa desta conversa.' } };
-      var u = await client.from('chat_conversations').update(patch).eq('id', conversationId);
-      if (u.error) return { ok: false, error: { message: u.error.message } };
-      return { ok: true };
+      var r = await client.rpc('kc_chat_set_conversation_archived', {
+        p_conversation_id: conversationId,
+        p_archived: archived,
+      });
+      if (r.error) return { ok: false, error: { message: r.error.message } };
+      return { ok: true, data: r.data || { archived: archived } };
     } catch (e) {
       return { ok: false, error: { message: (e && e.message) || String(e) } };
     }
+  }
+
+  // Mantém o contrato legado. Identidade e participação são resolvidas no
+  // banco; o myUserId recebido por callers antigos não é autoridade.
+  async function deleteConversation(conversationId, _myUserId) {
+    return setConversationArchived(conversationId, true);
   }
 
   // ── report_message ───────────────────────────────────────────────────────
@@ -668,6 +705,7 @@
     blockUser: blockUser,
     unblockUser: unblockUser,
     isBlocked: isBlocked,
+    setConversationArchived: setConversationArchived,
     deleteConversation: deleteConversation,
     reportMessage: reportMessage,
     subscribeChat: subscribeChat,

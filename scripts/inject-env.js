@@ -18,6 +18,10 @@
 
 const fs   = require('fs');
 const path = require('path');
+const {
+  resolveBuildRevision,
+  applyStaticCacheRevision,
+} = require('./static-cache-revision');
 
 // ── Contexto de execução (CI vs local) ─────────────────────────────────────
 const isCI = (
@@ -65,6 +69,25 @@ const SUPABASE_PUBLIC_KEY = resolveEnv([
   'VITE_SUPABASE_PUBLIC_KEY',
   'REACT_APP_SUPABASE_PUBLIC_KEY',
 ]);
+
+const TURNSTILE_SITE_KEY = resolveEnv([
+  'KC_TURNSTILE_SITE_KEY',
+  'TURNSTILE_SITE_KEY',
+  'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+  'VITE_TURNSTILE_SITE_KEY',
+]);
+const TURNSTILE_TEST_SITE_KEYS = new Set([
+  '1x00000000000000000000AA',
+  '2x00000000000000000000AB',
+  '1x00000000000000000000BB',
+  '2x00000000000000000000BB',
+  '3x00000000000000000000FF',
+]);
+const isProductionDeployment = (
+  String(process.env.VERCEL_ENV || '').trim().toLowerCase() === 'production' ||
+  String(process.env.KC_APP_ENV || '').trim().toLowerCase() === 'production' ||
+  String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production'
+);
 
 function keyLogSummary(key, prefixLength = 6) {
   if (!key) return 'detected: no';
@@ -119,6 +142,29 @@ if ((!hasLegacyJwtPrefix && !hasPublishablePrefix) || (hasLegacyJwtPrefix && leg
   console.error('   Copie a chave em Supabase Dashboard → Project Settings → API (chave "anon" / "publishable").');
   process.exit(1);
 }
+if (
+  TURNSTILE_SITE_KEY &&
+  (
+    TURNSTILE_SITE_KEY.length > 128 ||
+    !/^[A-Za-z0-9_-]+$/.test(TURNSTILE_SITE_KEY)
+  )
+) {
+  console.error('❌ inject-env.js: KC_TURNSTILE_SITE_KEY tem formato inválido.');
+  process.exit(1);
+}
+if (isProductionDeployment && !TURNSTILE_SITE_KEY) {
+  console.error(
+    '❌ TURNSTILE_SITE_KEY_REQUIRED: configure uma site key real antes do build de produção.'
+  );
+  process.exit(1);
+}
+if (
+  isProductionDeployment &&
+  TURNSTILE_TEST_SITE_KEYS.has(TURNSTILE_SITE_KEY)
+) {
+  console.error('❌ TURNSTILE_TEST_SITE_KEY_FORBIDDEN: chaves de teste não podem entrar em produção.');
+  process.exit(1);
+}
 
 // ── Localização do kc-env.js ────────────────────────────────────────────────
 // Tenta vários caminhos possíveis dependendo da estrutura do repositório
@@ -157,6 +203,7 @@ const original = content;
 const REQUIRED_PLACEHOLDERS = [
   '__KC_SUPABASE_URL__',
   '__KC_SUPABASE_ANON_KEY__',
+  '__KC_TURNSTILE_SITE_KEY__',
   '__KC_DRIVER__',
 ];
 
@@ -171,6 +218,7 @@ if (missingPlaceholders.length > 0) {
 const REPLACEMENTS = {
   __KC_SUPABASE_URL__: SUPABASE_URL,
   __KC_SUPABASE_ANON_KEY__: SUPABASE_PUBLIC_KEY,
+  __KC_TURNSTILE_SITE_KEY__: TURNSTILE_SITE_KEY,
   __KC_DRIVER__: 'supabase',
 };
 
@@ -203,62 +251,38 @@ if (content === original) {
   fs.writeFileSync(ENV_FILE, content, 'utf8');
 }
 
-// ── Cache-busting automático dos assets (?v=) ──────────────────────────────
+// ── Cache-busting consistente do artefato público ───────────────────────────
 // Os assets (/assets/*) são servidos com cache imutável de 1 ano. Como o ?v dos
 // HTML é fixo, quem já visitou o site continua executando JS/CSS antigos por muito
 // tempo (causa de "atualização demora a aparecer / outro navegador funciona").
-// Aqui reescrevemos APENAS o valor de ?v= para um token do deploy. Trocar a query
-// string muda só a CHAVE de cache — o arquivo servido é o mesmo — então é seguro
-// e não pode quebrar o carregamento. Roda só em CI/deploy; a fonte fica com ?v fixo.
+// O build reescreve o ?v= de todos os HTMLs, o precache e o namespace do Service
+// Worker com a MESMA revisão. Depois valida o dist; divergência em CI/deploy
+// encerra o build em vez de publicar uma combinação de caches incompatível.
 function applyAssetCacheBust() {
-  if (!isCI) {
-    console.log('ℹ️  inject-env.js: cache-bust de assets ignorado (execução local).');
-    return;
-  }
-  const token = String(
-    process.env.VERCEL_GIT_COMMIT_SHA ||
-    process.env.VERCEL_DEPLOYMENT_ID ||
-    process.env.GITHUB_SHA ||
-    Date.now()
-  ).replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
-  if (!token) return;
-
-  const repoRoot = path.join(__dirname, '..', 'dist');
-  // Coleta o HTML servido em TODA a árvore (raiz + subpastas como admin/).
-  // Antes o cache-bust só cobria a raiz, então admin/*.html ficava com ?v fixo
-  // e os usuários recorrentes nunca recebiam o JS/CSS novo do painel admin.
-  const SKIP_DIRS = new Set([
-    'node_modules', '.git', '.github', '.vercel', '.claude', 'tests', 'test',
-    'docs', 'services', 'supabase', 'scripts', 'output', 'coverage', '.export-samples',
-  ]);
-  function collectHtmlFiles(dir, depth, acc) {
-    if (depth > 4) return acc;
-    let entries = [];
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return acc; }
-    entries.forEach((entry) => {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) return;
-        collectHtmlFiles(full, depth + 1, acc);
-      } else if (/\.html$/i.test(entry.name)) {
-        acc.push(full);
-      }
-    });
-    return acc;
-  }
-  const htmlFiles = collectHtmlFiles(repoRoot, 0, []);
-
-  let changed = 0;
-  htmlFiles.forEach((fp) => {
-    let html;
-    try { html = fs.readFileSync(fp, 'utf8'); } catch (_) { return; }
-    // Substitui SOMENTE o valor de ?v= (não altera o caminho do arquivo).
-    const next = html.replace(/(\?v=)[0-9A-Za-z._-]+/g, `$1${token}`);
-    if (next !== html) {
-      try { fs.writeFileSync(fp, next, 'utf8'); changed++; } catch (_) { }
+  const revision = resolveBuildRevision(process.env);
+  const productionBuild = isCI || process.env.NODE_ENV === 'production';
+  if (!revision) {
+    if (productionBuild) {
+      throw new Error(
+        'KC_BUILD_REVISION_REQUIRED: configure KC_BUILD_REVISION ou forneça a revisão do provedor de deploy.',
+      );
     }
+    console.log(
+      'ℹ️  inject-env.js: revisão de cache ignorada localmente; defina KC_BUILD_REVISION para validar o dist.',
+    );
+    return null;
+  }
+
+  const result = applyStaticCacheRevision({
+    outputRoot: path.join(__dirname, '..', 'dist'),
+    revision,
   });
-  console.log(`🔄 inject-env.js: cache-bust de assets aplicado (?v=${token}) em ${changed} HTML.`);
+  console.log(
+    `🔄 inject-env.js: revisão ${result.revision} aplicada e validada `
+    + `em ${result.htmlFiles} HTML, ${result.htmlAssets} referências e `
+    + `${result.shellAssets} itens de precache.`,
+  );
+  return result;
 }
 
 // Cria primeiro o artefato público por allowlist. O cache-bust abaixo opera
@@ -270,18 +294,16 @@ const staticOutput = buildStaticOutput({
 });
 console.log(`Static output isolated in dist (${staticOutput.rootFiles} root files).`);
 
-try {
-  applyAssetCacheBust();
-} catch (cacheBustErr) {
-  // Nunca derruba o build por causa do cache-bust (degrada para o ?v fixo).
-  console.warn('⚠️  inject-env.js: cache-bust de assets falhou (ignorado):', (cacheBustErr && cacheBustErr.message) || cacheBustErr);
-}
+// Não envolver em fallback silencioso: em produção, HTML, precache e namespace
+// precisam pertencer à mesma revisão ou o artefato não pode ser publicado.
+applyAssetCacheBust();
 
 // ── Relatório ────────────────────────────────────────────────────────────────
 console.log('');
 console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');
 console.log('   SUPABASE_URL      →', SUPABASE_URL);
 console.log('   SUPABASE_PUBLIC_KEY (SUPABASE_ANON_KEY compat) →', keyLogSummary(SUPABASE_PUBLIC_KEY));
+console.log('   KC_TURNSTILE_SITE_KEY →', TURNSTILE_SITE_KEY ? 'detected: yes' : 'detected: no (guest privacy requests fail closed)');
 console.log('   driver            →', stillHasDriverPlaceholder ? '⚠️  placeholder __KC_DRIVER__ ainda presente' : '✅ supabase');
 console.log('   Arquivo           →', ENV_FILE);
 console.log('');

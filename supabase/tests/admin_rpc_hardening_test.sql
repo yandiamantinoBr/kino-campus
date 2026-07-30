@@ -13,10 +13,49 @@ select extensions.is(
   0,
   'anonymous callers cannot execute administrative RPCs'
 );
-select extensions.is(
-  (select count(*)::integer from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname like 'kc_admin_%' and not has_function_privilege('authenticated', p.oid, 'execute')),
-  0,
-  'authenticated callers can reach administrative RPC authorization checks'
+select extensions.ok(
+  (
+    select not exists (
+      select 1
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname like 'kc_admin_%'
+        and p.oid not in (
+          'public.kc_admin_read_data_export_artifact(uuid,text,uuid)'::regprocedure,
+          'public.kc_admin_read_data_export_artifact(uuid,text,uuid,uuid)'::regprocedure
+        )
+        and not has_function_privilege('authenticated', p.oid, 'execute')
+    )
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.kc_admin_read_data_export_artifact(uuid,text,uuid)',
+    'execute'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.kc_admin_read_data_export_artifact(uuid,text,uuid,uuid)',
+    'execute'
+  )
+  and has_function_privilege(
+    'service_role',
+    'public.kc_admin_read_data_export_artifact(uuid,text,uuid)',
+    'execute'
+  )
+  and coalesce(
+    obj_description(
+      'public.kc_admin_read_data_export_artifact(uuid,text,uuid)'::regprocedure,
+      'pg_proc'
+    ),
+    ''
+  ) like 'CONTRACT DEFERRED:%'
+  and has_function_privilege(
+    'service_role',
+    'public.kc_admin_read_data_export_artifact(uuid,text,uuid,uuid)',
+    'execute'
+  ),
+  'browser admin RPCs stay callable while artifact reads remain service-only and the legacy overload is explicitly deferred'
 );
 select extensions.ok(
   not (select prosecdef from pg_proc where oid = 'public.kc_admin_save_banner(jsonb)'::regprocedure),
@@ -53,12 +92,17 @@ select extensions.ok(
 
 insert into auth.users (id, email)
 values ('00000000-0000-4000-8000-000000000444', 'banner-admin@example.test');
+insert into auth.sessions (id, user_id)
+values (
+  '10000000-0000-4000-8000-000000000444',
+  '00000000-0000-4000-8000-000000000444'
+);
 insert into public.profiles (id, is_admin, full_name)
 values ('00000000-0000-4000-8000-000000000444', true, 'Banner Contract Admin');
 
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000444","role":"authenticated"}',
+  '{"sub":"00000000-0000-4000-8000-000000000444","role":"authenticated","session_id":"10000000-0000-4000-8000-000000000444"}',
   true
 );
 set local role authenticated;

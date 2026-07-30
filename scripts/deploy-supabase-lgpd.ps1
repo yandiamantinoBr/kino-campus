@@ -1,12 +1,93 @@
 param(
   [string]$ProjectRef = "wacyrkwhkvzwkqpolrbg",
-  [string]$FunctionName = "kc-account-erasure",
-  [string]$MigrationFile = "supabase/migrations/_archive-v75/20260525143000_lgpd_account_erasure_requests.sql",
-  [string]$MigrationName = "20260525143000_lgpd_account_erasure_requests",
-  [switch]$DryRun
+  [string[]]$FunctionNames = @(
+    "cadu-publish",
+    "kc-account-erasure",
+    "kc-analytics-subject-id",
+    "kc-create-privacy-help-guest",
+    "kc-data-subject-request",
+    "kc-data-export-admin",
+    "kc-data-export-retention",
+    "kc-external-access-decide",
+    "kc-ga4-reports",
+    "kc-help-request-notify",
+    "kc-invite-user",
+    "kc-search-console-reports"
+  ),
+  [switch]$DeployFunctions
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+$SupabaseCliPackage = "supabase@2.105.0"
+
+$RequiredMigrations = @(
+  "20260728183022",
+  "20260728184500",
+  "20260728185000",
+  "20260728210000",
+  "20260728220000",
+  "20260728230000",
+  "20260728231500",
+  "20260728233000",
+  "20260728234000",
+  "20260728235000",
+  "20260729000000",
+  "20260729001000",
+  "20260729003000",
+  "20260729004000",
+  "20260729005000",
+  "20260729006000",
+  "20260729007000",
+  "20260729008000",
+  "20260729009000",
+  "20260729011000",
+  "20260729012000",
+  "20260729172316",
+  "20260729190653",
+  "20260729203000"
+)
+$RequiredSecretsByFunction = @{
+  "kc-account-erasure" = @(
+    "KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64",
+    "KC_SMTP_USER",
+    "KC_SMTP_PASS"
+  )
+  "kc-analytics-subject-id" = @(
+    "KC_ANALYTICS_ID_SECRET"
+  )
+  "kc-create-privacy-help-guest" = @(
+    "KC_PRIVACY_HELP_ALLOWED_ORIGINS",
+    "KC_TURNSTILE_ENVIRONMENT",
+    "KC_TURNSTILE_EXPECTED_HOSTNAMES",
+    "KC_TURNSTILE_SECRET_KEY"
+  )
+  "kc-data-export-retention" = @(
+    "KC_DATA_EXPORT_RETENTION_SECRET"
+  )
+  "kc-external-access-decide" = @(
+    "KC_SMTP_USER",
+    "KC_SMTP_PASS"
+  )
+  "kc-ga4-reports" = @(
+    "KC_GA4_SA_KEY",
+    "KC_GA4_PROPERTY_ID"
+  )
+  "kc-help-request-notify" = @(
+    "KC_SMTP_USER",
+    "KC_SMTP_PASS"
+  )
+  "kc-search-console-reports" = @(
+    "KC_SEARCH_CONSOLE_SA_KEY",
+    "KC_SEARCH_CONSOLE_SITE_URL"
+  )
+}
+$RequiredSecrets = @(
+  $FunctionNames |
+    Where-Object { $RequiredSecretsByFunction.ContainsKey($_) } |
+    ForEach-Object { $RequiredSecretsByFunction[$_] } |
+    Sort-Object -Unique
+)
 
 function Write-Step {
   param([string]$Message)
@@ -18,7 +99,7 @@ function Require-Command {
   param([string]$Name)
   $command = Get-Command $Name -ErrorAction SilentlyContinue
   if (-not $command) {
-    throw "Comando '$Name' nao encontrado. Instale ou rode via npx conforme indicado."
+    throw "Comando '$Name' nao encontrado."
   }
   return $command.Source
 }
@@ -27,20 +108,24 @@ function Resolve-Deno {
   $command = Get-Command deno -ErrorAction SilentlyContinue
   if ($command) { return $command.Source }
 
-  $wingetPath = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages\DenoLand.Deno_Microsoft.Winget.Source_8wekyb3d8bbwe\deno.exe"
-  if (Test-Path $wingetPath) { return $wingetPath }
+  $candidate = Join-Path `
+    $env:LOCALAPPDATA `
+    "Microsoft\WinGet\Packages\DenoLand.Deno_Microsoft.Winget.Source_8wekyb3d8bbwe\deno.exe"
+  if (Test-Path -LiteralPath $candidate) { return $candidate }
 
-  throw "Deno nao encontrado. Instale com: winget install DenoLand.Deno --accept-source-agreements --accept-package-agreements"
+  throw "Deno nao encontrado."
 }
 
 function Get-SupabaseAccessToken {
-  if ($env:SUPABASE_ACCESS_TOKEN) { return $env:SUPABASE_ACCESS_TOKEN.Trim() }
+  if ($env:SUPABASE_ACCESS_TOKEN) {
+    return $env:SUPABASE_ACCESS_TOKEN.Trim()
+  }
 
-  if ($IsWindows -or $env:OS -eq "Windows_NT") {
+  if ($env:OS -eq "Windows_NT") {
     $source = @"
 using System;
 using System.Runtime.InteropServices;
-public class KinoSupabaseCredentialReader {
+public class KinoSupabaseCredentialReaderV2 {
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
   public struct CREDENTIAL {
     public uint Flags;
@@ -57,153 +142,340 @@ public class KinoSupabaseCredentialReader {
     public string UserName;
   }
   [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
-  public static extern bool CredRead(string target, uint type, int reservedFlag, out IntPtr credentialPtr);
+  public static extern bool CredRead(
+    string target,
+    uint type,
+    int reservedFlag,
+    out IntPtr credentialPtr
+  );
   [DllImport("advapi32.dll", SetLastError=true)]
   public static extern void CredFree(IntPtr buffer);
   public static string ReadToken() {
-    IntPtr credPtr;
-    if (!CredRead("Supabase CLI:supabase", 1, 0, out credPtr)) return null;
+    IntPtr credentialPointer;
+    if (!CredRead(
+      "Supabase CLI:supabase",
+      1,
+      0,
+      out credentialPointer
+    )) return null;
     try {
-      var cred = (CREDENTIAL)Marshal.PtrToStructure(credPtr, typeof(CREDENTIAL));
-      if (cred.CredentialBlobSize == 0) return "";
-      byte[] bytes = new byte[cred.CredentialBlobSize];
-      Marshal.Copy(cred.CredentialBlob, bytes, 0, (int)cred.CredentialBlobSize);
+      var credential = (CREDENTIAL)Marshal.PtrToStructure(
+        credentialPointer,
+        typeof(CREDENTIAL)
+      );
+      if (credential.CredentialBlobSize == 0) return "";
+      byte[] bytes = new byte[credential.CredentialBlobSize];
+      Marshal.Copy(
+        credential.CredentialBlob,
+        bytes,
+        0,
+        (int)credential.CredentialBlobSize
+      );
       return System.Text.Encoding.UTF8.GetString(bytes).TrimEnd('\0');
     } finally {
-      CredFree(credPtr);
+      CredFree(credentialPointer);
     }
   }
 }
 "@
-    if (-not ("KinoSupabaseCredentialReader" -as [type])) {
+    if (-not ("KinoSupabaseCredentialReaderV2" -as [type])) {
       Add-Type -TypeDefinition $source | Out-Null
     }
-    $token = [KinoSupabaseCredentialReader]::ReadToken()
-    if ($token) { return $token.Trim() }
+    $credentialToken = [KinoSupabaseCredentialReaderV2]::ReadToken()
+    if ($credentialToken) { return $credentialToken.Trim() }
   }
 
-  throw "Token Supabase nao encontrado. Rode: npx supabase login --token <token> ou defina SUPABASE_ACCESS_TOKEN."
+  throw (
+    "Token Supabase nao encontrado. Rode 'npx supabase login' ou defina " +
+    "SUPABASE_ACCESS_TOKEN somente no processo."
+  )
 }
 
 function Invoke-SupabaseManagementApi {
   param(
+    [ValidateSet("Get", "Post")]
     [string]$Method,
     [string]$Path,
-    [object]$Body = $null,
-    [hashtable]$ExtraHeaders = @{}
+    [object]$Body = $null
   )
 
-  $token = Get-SupabaseAccessToken
   $headers = @{
-    Authorization = "Bearer $token"
+    Authorization = "Bearer $(Get-SupabaseAccessToken)"
     "Content-Type" = "application/json"
   }
-  foreach ($key in $ExtraHeaders.Keys) {
-    $headers[$key] = $ExtraHeaders[$key]
-  }
-
-  $params = @{
+  $parameters = @{
     Method = $Method
     Uri = "https://api.supabase.com$Path"
     Headers = $headers
   }
   if ($null -ne $Body) {
-    $params.Body = ($Body | ConvertTo-Json -Compress -Depth 20)
+    $parameters.Body = $Body | ConvertTo-Json -Compress -Depth 20
   }
-
-  return Invoke-RestMethod @params
+  return Invoke-RestMethod @parameters
 }
 
-function Invoke-SupabaseDatabaseQuery {
-  param(
-    [string]$Query,
-    [bool]$ReadOnly = $true
-  )
+function Invoke-ReadOnlyDatabaseQuery {
+  param([string]$Query)
   return Invoke-SupabaseManagementApi `
     -Method "Post" `
-    -Path "/v1/projects/$ProjectRef/database/query" `
-    -Body ([pscustomobject]@{ query = $Query; read_only = $ReadOnly })
+    -Path "/v1/projects/$ProjectRef/database/query/read-only" `
+    -Body ([pscustomobject]@{
+      query = $Query
+      parameters = @()
+    })
 }
 
-function Get-AccountErasureTableStatus {
-  $query = @"
-select
-  to_regclass('public.account_erasure_requests') as account_erasure_requests,
-  exists(select 1 from pg_policies where schemaname = 'public' and tablename = 'account_erasure_requests' and policyname = 'account_erasure_requests_select_admin') as select_policy_exists,
-  exists(select 1 from pg_tables where schemaname = 'public' and tablename = 'account_erasure_requests') as table_exists;
-"@
-  return Invoke-SupabaseDatabaseQuery -Query $query -ReadOnly $true
-}
-
-function Test-MigrationHistoryContainsLocalVersion {
-  $history = Invoke-SupabaseManagementApi -Method "Get" -Path "/v1/projects/$ProjectRef/database/migrations"
-  return (($history | ConvertTo-Json -Depth 20) -match "20260525143000")
-}
-
-Require-Command "npx" | Out-Null
-$deno = Resolve-Deno
-
-Write-Step "Validando Deno"
-& $deno --version
-
-Write-Step "Validando Supabase CLI via npx"
-npx supabase --version
-
-Write-Step "Validando autenticacao Supabase"
-$authOutput = & npx supabase --dns-resolver https projects list --output json 2>&1
-if ($LASTEXITCODE -ne 0) {
-  throw "Supabase CLI nao autenticado. Rode: npx supabase login --token <token>"
-}
-
-Write-Step "Validando token da Management API"
-$project = Invoke-SupabaseManagementApi -Method "Get" -Path "/v1/projects/$ProjectRef"
-Write-Host ("Projeto Supabase: {0} ({1})" -f $project.name, $project.status)
-
-Write-Step "Validando TypeScript da Edge Function"
-$env:DENO_DIR = Join-Path $env:TEMP "kino-deno-cache"
-& $deno check --no-lock --node-modules-dir=auto "supabase/functions/$FunctionName/index.ts"
-
-Write-Step "Verificando migration LGPD remota"
-$status = Get-AccountErasureTableStatus
-$row = @($status)[0]
-$tableExists = [bool]$row.table_exists
-$historyContainsVersion = Test-MigrationHistoryContainsLocalVersion
-
-Write-Host ("Tabela account_erasure_requests: {0}" -f $(if ($tableExists) { "existe" } else { "ausente" }))
-Write-Host ("Historico remoto contem 20260525143000: {0}" -f $historyContainsVersion)
-
-if (-not (Test-Path $MigrationFile)) {
-  throw "Migration local nao encontrada: $MigrationFile"
-}
-
-if (-not $tableExists -or -not $historyContainsVersion) {
-  if ($DryRun) {
-    Write-Step "Dry-run das migrations"
-    Write-Host "A migration LGPD seria aplicada pela Management API."
-  } else {
-    Write-Step "Aplicando migration LGPD pela Management API"
-    $sql = [string](Get-Content $MigrationFile -Raw)
-    Invoke-SupabaseManagementApi `
-      -Method "Post" `
-      -Path "/v1/projects/$ProjectRef/database/migrations" `
-      -ExtraHeaders @{ "Idempotency-Key" = "kino-lgpd-account-erasure-20260525143000" } `
-      -Body ([pscustomobject]@{ query = $sql; name = $MigrationName }) | Out-Null
+function Get-FirstResultRow {
+  param([object]$Response)
+  if ($Response -is [System.Array]) {
+    return @($Response)[0]
   }
+  foreach ($propertyName in @("result", "data", "rows")) {
+    if ($Response.PSObject.Properties.Name -contains $propertyName) {
+      return @($Response.$propertyName)[0]
+    }
+  }
+  return $Response
 }
 
-Write-Step "Verificando tabela LGPD"
-Get-AccountErasureTableStatus | ConvertTo-Json -Depth 8
+function Get-MigrationVersionSet {
+  param([object]$History)
 
-if ($DryRun) {
-  Write-Step "Dry-run encerrado: deploy da Edge Function nao executado"
-  exit 0
+  $rows = @()
+  if ($History -is [System.Array]) {
+    $rows = @($History)
+  } elseif ($null -ne $History) {
+    foreach ($propertyName in @("result", "data", "migrations", "rows")) {
+      if ($History.PSObject.Properties.Name -contains $propertyName) {
+        $rows = @($History.$propertyName)
+        break
+      }
+    }
+    if (
+      $rows.Count -eq 0 -and
+      $History.PSObject.Properties.Name -contains "version"
+    ) {
+      $rows = @($History)
+    }
+  }
+
+  return @(
+    $rows |
+      ForEach-Object {
+        if (
+          $null -ne $_ -and
+          $_.PSObject.Properties.Name -contains "version"
+        ) {
+          $version = [string]$_.version
+          if ($version -cmatch "^[0-9]{14}$") {
+            $version
+          }
+        }
+      } |
+      Sort-Object -Unique
+  )
 }
 
-Write-Step "Fazendo deploy da Edge Function $FunctionName"
-npx supabase --dns-resolver https functions deploy $FunctionName --project-ref $ProjectRef --use-api
+$repositoryRoot = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
+$previousLocation = Get-Location
 
-Write-Step "Verificando Edge Functions no projeto"
-npx supabase --dns-resolver https functions list --project-ref $ProjectRef
+try {
+  Set-Location -LiteralPath $repositoryRoot
+  if ($ProjectRef -cnotmatch "^[a-z0-9]{20}$") {
+    throw "ProjectRef Supabase invalido."
+  }
+  Require-Command "npx" | Out-Null
+  $deno = Resolve-Deno
 
-Write-Host ""
-Write-Host "LGPD Supabase deploy concluido." -ForegroundColor Green
+  Write-Step "Validando arquivos e migration chain local"
+  foreach ($version in $RequiredMigrations) {
+    $matches = @(
+      Get-ChildItem -LiteralPath "supabase/migrations" -File |
+        Where-Object { $_.Name.StartsWith($version + "_") }
+    )
+    if ($matches.Count -ne 1) {
+      throw "Esperada exatamente uma migration ativa para $version."
+    }
+  }
+  foreach ($functionName in $FunctionNames) {
+    if ($functionName -notmatch "^[a-z0-9_-]+$") {
+      throw "Nome de Edge Function invalido: $functionName"
+    }
+    $entrypoint = "supabase/functions/$functionName/index.ts"
+    if (-not (Test-Path -LiteralPath $entrypoint)) {
+      throw "Edge Function local ausente: $entrypoint"
+    }
+    $denoConfig = "supabase/functions/$functionName/deno.json"
+    if (Test-Path -LiteralPath $denoConfig) {
+      & $deno check `
+        --no-lock `
+        --node-modules-dir=none `
+        --config $denoConfig `
+        $entrypoint
+    } else {
+      & $deno check --no-lock --node-modules-dir=none $entrypoint
+    }
+    if ($LASTEXITCODE -ne 0) {
+      throw "Deno check falhou para $functionName."
+    }
+  }
+
+  $linkedProjectFile = Join-Path $repositoryRoot.Path "supabase/.temp/project-ref"
+  if (-not (Test-Path -LiteralPath $linkedProjectFile)) {
+    throw (
+      "Projeto Supabase nao vinculado. Execute 'npx $SupabaseCliPackage " +
+      "link --project-ref $ProjectRef'."
+    )
+  }
+  $linkedProjectRef = (
+    Get-Content -LiteralPath $linkedProjectFile -Raw -Encoding UTF8
+  ).Trim()
+  if ($linkedProjectRef -ne $ProjectRef) {
+    throw (
+      "Projeto vinculado ($linkedProjectRef) difere do projeto solicitado " +
+      "($ProjectRef). Nenhuma verificacao remota foi executada."
+    )
+  }
+
+  Write-Step "Validando autenticacao e projeto remoto"
+  $project = Invoke-SupabaseManagementApi `
+    -Method "Get" `
+    -Path "/v1/projects/$ProjectRef"
+  Write-Host ("Projeto: {0}; status: {1}" -f $project.name, $project.status)
+
+  $postgrestConfig = Invoke-SupabaseManagementApi `
+    -Method "Get" `
+    -Path "/v1/projects/$ProjectRef/postgrest"
+  $postgrestSchemas = @(
+    @(
+      [string]$postgrestConfig.db_schema,
+      [string]$postgrestConfig.db_extra_search_path
+    ) |
+      ForEach-Object { $_ -split "," } |
+      ForEach-Object { $_.Trim() } |
+      Where-Object { $_ } |
+      Sort-Object -Unique
+  )
+  $sensitiveExposedSchemas = @(
+    @("net", "vault") |
+      Where-Object { $_ -in $postgrestSchemas }
+  )
+  if ($sensitiveExposedSchemas.Count -gt 0) {
+    throw (
+      "Schemas sensiveis expostos pelo PostgREST: " +
+      ($sensitiveExposedSchemas -join ", ")
+    )
+  }
+
+  Write-Step "Comparando migrations sem aplicar mudancas"
+  & npx --yes $SupabaseCliPackage db push --linked --dry-run
+  if ($LASTEXITCODE -ne 0) {
+    throw "Dry-run do db push falhou. Nenhum deploy deve ser executado."
+  }
+
+  $history = Invoke-SupabaseManagementApi `
+    -Method "Get" `
+    -Path "/v1/projects/$ProjectRef/database/migrations"
+  $remoteMigrationVersions = @(Get-MigrationVersionSet -History $history)
+  $missingMigrations = @(
+    $RequiredMigrations |
+      Where-Object { $remoteMigrationVersions -cnotcontains $_ }
+  )
+  if ($missingMigrations.Count -gt 0) {
+    throw (
+      "Migrations ainda nao registradas no remoto: " +
+      ($missingMigrations -join ", ") +
+      ". Aplique a cadeia com 'npx supabase db push' e repita a validacao."
+    )
+  }
+
+  $schemaContractPath = Join-Path $repositoryRoot.Path "scripts/verify-privacy-schema.sql"
+  if (-not (Test-Path -LiteralPath $schemaContractPath)) {
+    throw "Contrato de preflight ausente: scripts/verify-privacy-schema.sql"
+  }
+  $schemaQuery = Get-Content -LiteralPath $schemaContractPath -Raw -Encoding UTF8
+  if ([string]::IsNullOrWhiteSpace($schemaQuery)) {
+    throw "Contrato de preflight de privacidade esta vazio."
+  }
+  $projectRefPlaceholder = "__KC_EXPECTED_PROJECT_REF__"
+  if (
+    (
+      [regex]::Matches(
+        $schemaQuery,
+        [regex]::Escape($projectRefPlaceholder)
+      )
+    ).Count -ne 1
+  ) {
+    throw "Contrato de preflight nao possui placeholder unico de project-ref."
+  }
+  $schemaQuery = $schemaQuery.Replace($projectRefPlaceholder, $ProjectRef)
+  $schemaResponse = Invoke-ReadOnlyDatabaseQuery -Query $schemaQuery
+  $schemaRow = Get-FirstResultRow -Response $schemaResponse
+  $missingCapabilities = @(
+    $schemaRow.PSObject.Properties |
+      Where-Object { $_.Value -ne $true } |
+      ForEach-Object { $_.Name }
+  )
+
+  Write-Step "Validando nomes de secrets (valores nunca sao lidos)"
+  $secretOutput = & npx --yes $SupabaseCliPackage secrets list `
+    --project-ref $ProjectRef `
+    --output json
+  if ($LASTEXITCODE -ne 0) {
+    throw "Nao foi possivel listar os nomes dos secrets remotos."
+  }
+  $secretRows = @(($secretOutput -join [Environment]::NewLine) | ConvertFrom-Json)
+  $secretNames = @(
+    $secretRows |
+      ForEach-Object { $_.name } |
+      Where-Object { $_ }
+  )
+  $missingSecrets = @(
+    $RequiredSecrets |
+      Where-Object { $_ -notin $secretNames }
+  )
+
+  if ($missingCapabilities.Count -gt 0) {
+    throw (
+      "Schema/capabilities remotos incompletos: " +
+      ($missingCapabilities -join ", ")
+    )
+  }
+  if ($missingSecrets.Count -gt 0) {
+    throw (
+      "Secrets obrigatorios ausentes: " +
+      ($missingSecrets -join ", ")
+    )
+  }
+
+  Write-Host "Validacao LGPD remota concluida sem alteracoes." -ForegroundColor Green
+
+  if (-not $DeployFunctions) {
+    Write-Host (
+      "Nenhuma funcao foi publicada. Use -DeployFunctions somente depois " +
+      "desta validacao ficar verde."
+    )
+    exit 0
+  }
+
+  Write-Step "Publicando somente as Edge Functions explicitamente selecionadas"
+  foreach ($functionName in $FunctionNames) {
+    & npx --yes $SupabaseCliPackage functions deploy `
+      $functionName `
+      --project-ref $ProjectRef `
+      --use-api
+    if ($LASTEXITCODE -ne 0) {
+      throw "Deploy falhou para $functionName."
+    }
+  }
+
+  Write-Step "Verificando estado das Edge Functions"
+  & npx --yes $SupabaseCliPackage functions list --project-ref $ProjectRef
+  if ($LASTEXITCODE -ne 0) {
+    throw "Nao foi possivel verificar as Edge Functions publicadas."
+  }
+  Write-Host "Deploy LGPD concluido." -ForegroundColor Green
+}
+finally {
+  Set-Location -LiteralPath $previousLocation
+}

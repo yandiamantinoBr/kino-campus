@@ -32,6 +32,11 @@
 //   via service-role client. Non-admin requests get 403.
 
 import { createClient } from "@supabase/supabase-js";
+import { isCurrentSessionActive } from "../_shared/active-session.ts";
+import {
+  BoundedRequestBodyError,
+  readBoundedRequestText,
+} from "../_shared/bounded-request-body.ts";
 import {
   parseServiceAccountSecret,
   type ServiceAccountKey,
@@ -242,6 +247,7 @@ async function getAccessToken(saKey: ServiceAccountKey): Promise<string> {
 interface CallerContext {
   isAdmin: boolean;
   userId: string | null;
+  error: "AUTHENTICATION_REQUIRED" | "SESSION_NOT_ACTIVE" | null;
 }
 
 async function resolveCaller(req: Request): Promise<CallerContext> {
@@ -249,29 +255,64 @@ async function resolveCaller(req: Request): Promise<CallerContext> {
   const jwt = authHeader.toLowerCase().startsWith("bearer ")
     ? authHeader.slice(7).trim()
     : "";
-  if (!jwt) return { isAdmin: false, userId: null };
+  if (!jwt) {
+    return {
+      isAdmin: false,
+      userId: null,
+      error: "AUTHENTICATION_REQUIRED",
+    };
+  }
 
   const supabaseUrl = getEnv("SUPABASE_URL");
+  const anonKey = getEnv("SUPABASE_ANON_KEY");
   const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceKey) return { isAdmin: false, userId: null };
-
-  const admin = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  if (!supabaseUrl || !anonKey || !serviceKey) {
+    return {
+      isAdmin: false,
+      userId: null,
+      error: "AUTHENTICATION_REQUIRED",
+    };
+  }
 
   try {
-    const { data: userData } = await admin.auth.getUser(jwt);
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: userData, error: userError } = await userClient.auth.getUser(
+      jwt,
+    );
     const userId = userData?.user?.id ?? null;
-    if (!userId) return { isAdmin: false, userId: null };
+    if (userError || !userId) {
+      return {
+        isAdmin: false,
+        userId: null,
+        error: "AUTHENTICATION_REQUIRED",
+      };
+    }
+    if (!(await isCurrentSessionActive(userClient))) {
+      return {
+        isAdmin: false,
+        userId,
+        error: "SESSION_NOT_ACTIVE",
+      };
+    }
 
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const { data: profile } = await admin
       .from("profiles")
       .select("is_admin")
       .eq("id", userId)
       .maybeSingle();
-    return { isAdmin: profile?.is_admin === true, userId };
+    return { isAdmin: profile?.is_admin === true, userId, error: null };
   } catch (_) {
-    return { isAdmin: false, userId: null };
+    return {
+      isAdmin: false,
+      userId: null,
+      error: "AUTHENTICATION_REQUIRED",
+    };
   }
 }
 
@@ -664,6 +705,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const caller = await resolveCaller(req);
+  if (caller.error) {
+    return json(req, 401, { error: caller.error });
+  }
   if (!caller.isAdmin) {
     return json(req, 403, { error: "admin_required" });
   }
@@ -673,18 +717,15 @@ Deno.serve(async (req: Request) => {
 
   let body: unknown;
   try {
-    const declaredLength = Number(req.headers.get("content-length"));
+    const text = await readBoundedRequestText(req, MAX_REQUEST_BODY_BYTES);
+    body = text.trim() ? JSON.parse(text) : {};
+  } catch (error) {
     if (
-      Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES
+      error instanceof BoundedRequestBodyError &&
+      error.code === "BODY_TOO_LARGE"
     ) {
       return json(req, 413, { error: "body_too_large" });
     }
-    const text = await req.text();
-    if (new TextEncoder().encode(text).byteLength > MAX_REQUEST_BODY_BYTES) {
-      return json(req, 413, { error: "body_too_large" });
-    }
-    body = text.trim() ? JSON.parse(text) : {};
-  } catch (_) {
     return json(req, 400, { error: "invalid_json" });
   }
 

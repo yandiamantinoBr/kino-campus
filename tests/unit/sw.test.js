@@ -77,12 +77,19 @@ describe('sw.js — integridade', function () {
     expect(SW).toContain('url.searchParams.has');
     expect(SW).not.toContain('RUNTIME_VERSION');
     expect(SW).toContain("'/assets/css/styles.css?v=8.6.12'");
-    expect(SW).toContain("'/assets/js/core/kc-i18n.js?v=8.6.12'");
+    expect(SW).toContain("'/assets/js/core/kc-i18n.js?v=8.6.13'");
   });
 
   test('skipWaiting e clients.claim presentes', function () {
     expect(SW).toContain('self.skipWaiting()');
     expect(SW).toContain('self.clients.claim()');
+  });
+
+  test('activate remove revisões antigas sem apagar caches de outros recursos', function () {
+    expect(SW).toContain("var CACHE_PREFIX = 'kc-shell-'");
+    expect(SW).toContain('k.indexOf(CACHE_PREFIX) === 0');
+    expect(SW).toMatch(/k !== ASSET_CACHE\s*&& k !== PAGE_CACHE/);
+    expect(SW).not.toContain('k.indexOf(CACHE_VERSION)');
   });
 
 });

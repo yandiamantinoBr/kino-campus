@@ -23,7 +23,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Build | `node scripts/inject-env.js` (substitui 4 placeholders `__KC_*__` + cache-busting `?v=<commit-hash>`) |
 | Tamanho JS | `assets/js/` ~1.5 MB; fachada `kc-api.client.js` ~55 KB (com submódulos `_KCAPI.*` extraídos) |
 | Tamanho CSS | `assets/css/` ~422 KB total; `styles.css` monolito ~274 KB (reduzido de 287 KB via micro-splits) |
-| Testes | Jest: 195 suites · 3806 testes; Playwright: 13 specs E2E (chromium) |
+| Testes | Jest (unitário/integração/contrato), Playwright E2E, pgTAP e verificações Deno/SQL |
 
 ## Documentação Técnica
 
@@ -140,17 +140,38 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 |---|---|
 | Notificações in-app | Realtime publication em `notifications` table; `kc-notifications.js` (29 KB); sino com `display:none` quando deslogado |
 | Chat 1-a-1 (DM) | Schema completo (`v9.3.5.10_chat_schema.sql` + 5 migrations de hardening); `chat-inbox.controller.js` (50 KB); rota `/mensagens` |
-| Help requests | Formulário em `/ajuda.html`; fila admin em `/admin/help-requests.html`; notificação via `kc-help-request-notify` |
+| Help requests | Formulário em `/ajuda.html`; pedidos LGPD visitantes usam Turnstile server-side, chave idempotente por sessão e recuperação sem reenviar PII; fila admin em `/admin/help-requests.html`; notificação via `kc-help-request-notify` para os fluxos que a exigem |
 | Banners admin | Carousel no header; CRUD em `/admin/banners.html`; `v8.3.2.0_hero_banners.sql` |
 
 ### LGPD e privacidade
 
 | Feature | Como funciona |
 |---|---|
-| Account erasure (Art. 18 VI) | 2 passos (restriction → erasure) com confirmação por e-mail; `kc-account-erasure` Edge Function + runbook em `docs/privacy/` |
+| Acesso, cópia e portabilidade | Solicitação direta autenticada em `/settings.html`, protocolo aleatório `KC-DSR-*` e histórico; exportação JSON `no-store`, com fluxo assistido no bucket privado `kino-data-exports` quando uma fonte excede os limites automáticos |
+| Exclusão de conta (Art. 18 VI) | Confirmação verificada, preferência de cópia, restrições reversíveis, claim idempotente, limpeza de Storage/banco/Auth, checagem pós-operação e comprovante; `kc-account-erasure` + runbooks em `docs/privacy/` |
+| Central de Ajuda | Formulário alternativo para quem perdeu acesso; visitante passa pelo gateway Turnstile, evita duplicidade mesmo após perda de resposta/reload, recebe referência de atendimento e só vincula o protocolo depois da verificação de identidade |
+| Retenção de DSR e artefatos | Registro mínimo do protocolo tem revisão de retenção separada da janela de download; objetos assistidos são expurgados primeiro no Storage e só depois têm metadados minimizados |
+| Administração vinculada à sessão | Claims de exclusão e novos claims de exportação assistida registram a sessão administrativa ativa; demissão, logout ou revogação impedem continuação privilegiada com a lease anterior |
 | Consentimento de acesso externo | `v9.3.5.0_lgpd_consent_external_access.sql` + `kc-external-access-decide` Edge Function |
 | Privacy analytics | Métricas em `/admin/privacy-analytics.html`; `v9.3.5.16_privacy_analytics.sql` |
 | Anti-spam e rate-limit | Trigger `kc_anti_spam_gate`; `kc_check_post_flood_limit` RPC; controles admin-configuráveis |
+
+Limites versionados da exportação:
+
+| Caminho | Limites principais |
+|---|---|
+| Download direto | 2.500 linhas por categoria, 25.000 linhas/3 MiB de fontes, JSON final de 8 MiB, até 100 referências de mídia de chat e janela de 15 minutos |
+| Suplemento assistido | 10.000 linhas por categoria, 100.000 linhas/12 MiB de fontes, artefato final de 16 MiB, lease inicial de 15 minutos, renovação para upload por 30 minutos e disponibilidade por até 7 dias |
+| Retenção automática | lote máximo de 100 objetos, até 3 tentativas de remoção por execução e assinatura máquina-a-máquina válida por 120 segundos |
+
+O contrato canônico está em
+[`docs/privacy/data-subject-rights-map.md`](docs/privacy/data-subject-rights-map.md);
+os procedimentos operacionais ficam em
+[`docs/privacy/account-erasure-runbook.md`](docs/privacy/account-erasure-runbook.md),
+o contrato de identidade/pós-core em
+[`docs/privacy/account-erasure-identity-link-and-projection.md`](docs/privacy/account-erasure-identity-link-and-projection.md)
+e o fluxo assistido de exportação em
+[`docs/privacy/data-export-supplement-runbook.md`](docs/privacy/data-export-supplement-runbook.md).
 
 ### Automação (Cadu Bot)
 
@@ -238,19 +259,23 @@ Acesse `http://localhost:5500/index.html`.
 
 ### 1) Migrations
 
-**Arquitetura atual (V76.47, 2026-06-21):** as 132 migrations legacy foram consolidadas em **1 baseline** + migrations operacionais incrementais. Os arquivos originais foram preservados em `supabase/migrations/_archive-v75/` para referência histórica.
+**Arquitetura atual:** as 132 migrations legacy foram consolidadas em **1 baseline**,
+seguida pelas migrations operacionais incrementais em `supabase/migrations/`. Os
+arquivos originais continuam preservados em `supabase/migrations/_archive-v75/`
+somente para referência histórica.
 
 | Arquivo | Tamanho | Função |
 |---|---|---|
 | `00000000000001_baseline_v76.sql` | ~410 KB | Schema `public` consolidado (PostgreSQL 17.6, `pg_dump --schema-only`). Validação local via `supabase db reset` |
-| `20260622132300_audit_fixes_2026_06_22.sql` | ~10 KB | Migration operacional de auditoria (categorias/acentos/eventos passados). Aplicada em prod em 2026-06-22 |
+| `20*.sql` | conjunto incremental | Migrations operacionais aplicadas estritamente em ordem cronológica; inclui os controles de privacidade, exportação e exclusão |
 | `_archive-v75/*.sql` | 132 arquivos | Cadeia legacy v8.x a v11.22 preservada para auditoria. **Não aplicar** |
 
 Para um projeto novo:
 
 1. `supabase schema-bootstrap-v8.1.2.3.sql` + `supabase schema-update-v8.1.3.2.sql` (bootstrap pré-migrations, fora do diretório `migrations/`)
 2. Aplique a baseline consolidada: `00000000000001_baseline_v76.sql`
-3. Aplique as migrations operacionais em ordem cronológica (atualmente apenas a `20260622132300_audit_fixes_2026_06_22.sql`)
+3. Aplique todas as migrations operacionais ativas em ordem cronológica; não
+   selecione apenas arquivos recentes e nunca aplique `_archive-v75/`.
 
 Origem: PR #611 (`8fd3c19 feat(db): consolidate 132 legacy migrations into single baseline`). Documentação adicional em `docs/qa/reports/report-v76-migration-baseline-2026-06-21.md`.
 
@@ -258,10 +283,16 @@ Origem: PR #611 (`8fd3c19 feat(db): consolidate 132 legacy migrations into singl
 
 ### 2) Storage
 
-Bucket esperado: `kino-media`.
+| Bucket | Visibilidade | Uso |
+|---|---|---|
+| `kino-media` | público | posts e avatares (`post-media/...`, `profile-avatars/...`) |
+| `kino-chat-media` | privado | anexos do chat; leitura limitada aos participantes por política e sessão ativa |
+| `kino-data-exports` | privado | artefatos JSON temporários de exportação assistida; acesso somente por funções validadas |
 
-- `post-media/{uid}/{postId}/{timestamp}-image-{n}.{ext}`
-- `profile-avatars/{userId}/{timestamp}-avatar.{ext}`
+O cutover de anexos legados de chat deve usar
+`scripts/migrate-chat-media-to-private.ps1`: primeiro copiar e verificar o SHA-256,
+depois publicar o frontend que lê o bucket privado e só então remover a cópia
+legada. Não torne os dois buckets privados públicos para simplificar a migração.
 
 ### 3) KC_ENV
 
@@ -273,7 +304,8 @@ driver: "supabase",
 supabase: {
   url: "https://SEU_PROJECT_ID.supabase.co",
   anonKey: "SUA_ANON_KEY",
-  storageBucket: "kino-media"
+  storageBucket: "kino-media",
+  chatStorageBucket: "kino-chat-media"
 }
 ```
 
@@ -281,35 +313,85 @@ Em produção, `driver = "supabase"` é obrigatório. `local` é apenas para des
 
 ### 4) Edge Functions
 
-Verificação remota em 2026-07-10: o projeto Supabase `Kino Campus`
-(`wacyrkwhkvzwkqpolrbg`, West US/Oregon) possui **8 Edge Functions `ACTIVE`**. Versões numéricas
-são estado de deploy, não contrato de código; consulte a Management API/CLI durante um diagnóstico.
+O repositório mantém o conjunto abaixo. Estado e versão remotos são dados de
+deploy, não contrato de código; consulte a Management API/CLI antes de diagnosticar
+produção.
 
 | Função | JWT no gateway | Responsabilidade |
 |---|---|---|
 | `cadu-publish` | `true` (default) | Publicação automática via Cadu Bot; o handler revalida usuário e allowlist |
-| `kc-account-erasure` | `true` (default) | LGPD Art. 18 VI — exclusão de conta em 2 passos com confirmação por e-mail |
+| `cadu-auth-proxy` | fail-closed | endpoint legado aposentado; não autentica nem mantém credenciais |
+| `kc-account-erasure` | `true` (default) | Exclusão em etapas, com confirmação, locks, limpeza, pós-condições e comprovante |
+| `kc-analytics-subject-id` | `true` (TOML) | Deriva identificador analítico pseudônimo somente para sessão ativa e consentida |
+| `kc-create-privacy-help-guest` | `false` (TOML) | Gateway público dos três pedidos LGPD visitantes; exige Turnstile válido e chama somente o wrapper SQL de `service_role` |
+| `kc-data-subject-request` | `true` (TOML) | Cria, lista, consulta, cancela e entrega solicitações/exportações do próprio titular |
+| `kc-data-export-admin` | `true` (TOML) | Monta e valida o suplemento integral assistido, com claims/CAS vinculados à sessão administrativa |
+| `kc-data-export-retention` | `false` (TOML) | Worker máquina-a-máquina para expurgo Storage-first; exige assinatura HMAC curta derivada de segredo dedicado |
 | `kc-dispatch-notification-outbox` | `false` (TOML) | Dispatch por secret próprio; e-mail Resend + WhatsApp Twilio, gated por secrets |
 | `kc-external-access-decide` | `true` (default) | Decisão administrativa de acesso externo e comunicação por e-mail |
 | `kc-ga4-reports` | `true` (default) | Proxy admin server-side para a GA4 Data API |
-| `kc-help-request-notify` | `true` (default) | Notificação de pedidos de acesso externo para o canal admin |
+| `kc-help-request-notify` | `true` (TOML) | Reivindica e envia notificação de atendimento sem expor payloads sensíveis |
 | `kc-invite-user` | `false` (TOML) | Convite externo; valida JWT e privilégio admin dentro do handler |
+| `kc-search-console-reports` | `true` (TOML) | Proxy administrativo para relatórios do Search Console |
 | `notify-admin-reports-threshold` | `true` (default) | Alerta HMAC de reports; fail-closed sem webhook e secrets operacionais |
 
-O workflow `Deploy Edge Functions` publica somente funções alteradas depois de `Essential
-Validation` verde em push da branch base. Deploy manual deve ser excepcional; o CLI lê os modos
-de autenticação versionados em `supabase/config.toml`:
+O workflow `Deploy Edge Functions` executa um único preflight antes de qualquer
+publicação: confere o projeto exato, toda a cadeia de migrations exigida, o schema
+canônico em `scripts/verify-privacy-schema.sql` e os nomes de secrets requeridos
+sem ler seus valores. Com o preflight aprovado, republica o conjunto completo de
+funções para impedir deriva entre handlers compartilhados. O CLI lê os modos de
+autenticação versionados em `supabase/config.toml`.
 
-```bash
-supabase functions deploy cadu-publish
-supabase functions deploy kc-account-erasure
-supabase functions deploy kc-dispatch-notification-outbox
-supabase functions deploy kc-external-access-decide
-supabase functions deploy kc-ga4-reports
-supabase functions deploy kc-help-request-notify
-supabase functions deploy kc-invite-user
-supabase functions deploy notify-admin-reports-threshold
+O fluxo manual de privacidade é deliberadamente não mutante por padrão:
+
+```powershell
+.\scripts\deploy-supabase-lgpd.ps1
+# somente após revisar o preflight:
+.\scripts\deploy-supabase-lgpd.ps1 -DeployFunctions
 ```
+
+Nunca use `--no-verify-jwt` fora das funções explicitamente configuradas com
+`verify_jwt = false`; mesmo nessas funções, o handler exige o segredo ou privilégio
+próprio.
+
+#### Ordem de rollout LGPD
+
+O repositório descreve o contrato pretendido; ele não comprova quais migrations,
+funções, secrets, jobs ou versões estão ativos no projeto remoto. Confirme o
+`project-ref`, o histórico remoto e o schema antes de cada etapa.
+
+1. **Banco/expand:** aplique as migrations aditivas e de hardening em ordem,
+   até `20260729203000_help_privacy_guest_gateway_expand.sql`.
+   Valide schema, grants, guards, recovery/quiescência e claims preexistentes. A
+   `06000` adiciona as assinaturas vinculadas à sessão. Os cinco wrappers
+   actor-only necessários à Edge anterior permanecem temporariamente executáveis
+   apenas quando existe exatamente uma sessão administrativa ativa; zero ou
+   múltiplas sessões falham fechado. Os workers privados continuam fechados.
+2. **Edge:** configure origens/hostnames exatos, ambiente e secret Turnstile,
+   rate-limit/WAF distribuído e alertas; publique
+   `kc-create-privacy-help-guest` junto das versões compatíveis de
+   `kc-data-export-admin`,
+   `kc-data-subject-request`, `kc-account-erasure` e
+   `kc-data-export-retention`. Execute canários com sessão administrativa ativa,
+   revogada e substituída, além de retomada/expiração de lease, antes de ampliar
+   tráfego.
+3. **Frontend:** configure uma site key Turnstile real no build de produção e
+   publique os clientes que preservam idempotência por conta,
+   recuperam uma resposta perdida sem persistir o conteúdo pessoal do formulário,
+   apresentam protocolo/referência corretamente e usam as ações Edge atuais.
+4. **Cópia e verificação:** migre/verifique anexos privados, execute pgTAP,
+   contract tests, preflights, advisors e smokes somente com contas
+   descartáveis; confirme também buckets, jobs, Vault, telemetria de assinatura
+   e a reconciliação de claims preexistentes: lease viva + uma sessão ativa é
+   vinculada, enquanto os demais claims sem sessão viram falha retryable
+   `EXPORT_SESSION_BINDING_MIGRATION_RETRY`.
+5. **Contract diferido:** após canário e janela de cache, mova e renomeie o
+   template pendente com um timestamp novo posterior ao histórico remoto.
+   Somente essa migration posterior pode revogar as
+   assinaturas públicas antigas e remover os guardas transitórios, após a Edge
+   nova estar estável e a telemetria demonstrar ausência de consumidores
+   antigos. A retirada do `UPDATE` legado de arquivamento de conversa também
+   permanece diferida; não antecipe nenhum desses contratos no rollout expand.
 
 Segredos obrigatórios de `kc-dispatch-notification-outbox`:
 
@@ -348,7 +430,9 @@ Observações:
 
 ### 5) Cron jobs (pg_cron)
 
-Quatro jobs agendados via `pg_cron` no banco principal (configurados em `docs/db-schema.md:629-640`):
+Jobs versionados/esperados via `pg_cron`. A presença no repositório não comprova
+que estejam ativos no projeto remoto; confirme `cron.job` e as tabelas privadas
+de `schedule_state`:
 
 | Job | Schedule | Função SQL | Origem |
 |---|---|---|---|
@@ -356,6 +440,12 @@ Quatro jobs agendados via `pg_cron` no banco principal (configurados em `docs/db
 | `kc-prune-analytics` | `0 4 1 * *` (04:00 dia 1) | `public.kc_prune_old_analytics()` | Limpeza de `search_queries` (>6m), `audit_log` (>1a), `post_view_events` (>6m) |
 | `kc-prune-notifications` | `0 5 1 * *` (05:00 dia 1) | `public.kc_prune_old_notifications()` | Remove notificações lidas com > 90 dias |
 | `kc-dispatch-notification-outbox` | `*/5 * * * *` (a cada 5 min) | `public.kc_trigger_notification_dispatch()` | Consome a outbox via `pg_net.http_post`. **Fail-closed** sem `notification_dispatch_runtime` ou fallback `app.settings.kc_notification_dispatch_*` |
+| `kc-refresh-highlight-scores` | `15 */6 * * *` | `public.kc_refresh_highlight_scores()` | Recalcula scores denormalizados do feed |
+| `kc-dsr-retention-purge-daily` | `17 3 * * *` | `kc_private.kc_purge_expired_data_subject_requests(500)` | Minimiza protocolos vencidos; falhas/atendimentos parciais viram alerta |
+| `kc-help-notification-claim-purge-daily` | `41 3 * * *` | `kc_private.kc_purge_help_request_notification_claims(500)` | Expurga claims de notificação vencidos |
+| `kc-erasure-completion-outbox-purge-hourly` | `11 * * * *` | `kc_private.kc_purge_expired_account_erasure_completion_outbox(500)` | Expurga destinatários cifrados vencidos |
+| `kc-data-export-retention-purge` | `*/15 * * * *` | `kc_private.kc_trigger_data_export_retention(50, 'pg_cron')` | Aciona o worker Storage-first por HMAC curto |
+| `kc-data-export-retention-monitor` | `7 * * * *` | `kc_private.kc_monitor_data_export_retention()` | Detecta execução travada, backlog e ausência de sucesso recente |
 
 ### 6) Settings de banco fora do git
 
@@ -414,8 +504,9 @@ Se surgir SQL fora do fluxo oficial:
 
 ```bash
 npm run check:all          # 6 gates: version, structure, scripts, routes, hygiene, search registry
-npm test                   # Jest: 195 suites · 3806 testes
-npx playwright test        # 13 specs E2E (chromium) — gate de regressão real
+npm test                   # Jest unitário, integração e contratos
+npx playwright test        # E2E em navegador real (chromium)
+supabase test db --local supabase/tests # pgTAP/RLS/RPC após db reset local
 npm run benchmark:search-shadow # 12 cenários sintéticos, sem consultas reais
 npm run check:search-registry   # confirma paridade do snapshot gerado
 npm test -- --runInBand    # sequencial (mais lento, mais estável em CI)

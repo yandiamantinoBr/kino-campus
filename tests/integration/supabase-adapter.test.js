@@ -34,6 +34,7 @@ beforeAll(() => {
   require('../../assets/js/adapters/supabase/supabase.posts-write.adapter.js');
   require('../../assets/js/adapters/supabase/supabase.profiles.adapter.js');
   require('../../assets/js/adapters/supabase/supabase.chat.adapter.js');
+  require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
   require('../../assets/js/adapters/supabase/supabase.adapter.js');
 });
 
@@ -63,6 +64,20 @@ describe('Supabase Adapter - getFeedCursor', () => {
     expect(driver.chat).toBe(window._KCSA.chat);
     expect(typeof driver.chat.unreadTotal).toBe('function');
     expect(typeof driver.chat.deleteUploadedMedia).toBe('function');
+  });
+
+  test('liga os fluxos de suplemento do titular e do admin ao driver Supabase', () => {
+    expect(driver.downloadDataSubjectSupplement)
+      .toBe(window._KCSA.admin.downloadDataSubjectSupplement);
+    expect(driver.processDataExportSupplement)
+      .toBe(window._KCSA.admin.processDataExportSupplement);
+  });
+
+  test('liga create e recovery idempotentes de Help ao sub-adapter administrativo', () => {
+    expect(driver.createHelpRequest)
+      .toBe(window._KCSA.admin.createHelpRequest);
+    expect(driver.recoverPrivacyHelpRequest)
+      .toBe(window._KCSA.admin.recoverPrivacyHelpRequest);
   });
 
   test('normaliza posts do payload e preserva nextCursor/hasMore', async () => {

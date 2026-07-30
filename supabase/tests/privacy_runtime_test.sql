@@ -30,14 +30,32 @@ select extensions.ok(
   'privacy consent events has RLS enabled'
 );
 select extensions.is(
-  (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'privacy_analytics_events'),
-  1,
-  'privacy analytics events keeps only the admin select policy'
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'privacy_analytics_events'
+      and policyname in (
+        'privacy_analytics_events_select_admin',
+        'kc_active_session_restrictive'
+      )
+  ),
+  2,
+  'privacy analytics events keeps the admin policy and active-session guard'
 );
 select extensions.is(
-  (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'privacy_consent_events'),
-  1,
-  'privacy consent events keeps only the admin select policy'
+  (
+    select count(*)::integer
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'privacy_consent_events'
+      and policyname in (
+        'privacy_consent_events_select_admin',
+        'kc_active_session_restrictive'
+      )
+  ),
+  2,
+  'privacy consent events keeps the admin policy and active-session guard'
 );
 
 select extensions.ok(

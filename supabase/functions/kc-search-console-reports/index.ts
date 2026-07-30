@@ -13,6 +13,11 @@
 // never returned to the caller.
 
 import { createClient } from "@supabase/supabase-js";
+import { isCurrentSessionActive } from "../_shared/active-session.ts";
+import {
+  BoundedRequestBodyError,
+  readBoundedRequestText,
+} from "../_shared/bounded-request-body.ts";
 import {
   parseServiceAccountSecret,
   type ServiceAccountKey,
@@ -150,38 +155,53 @@ function problemResponse(req: Request, error: PublicProblem): Response {
 
 interface CallerContext {
   isAdmin: boolean;
+  error: "AUTHENTICATION_REQUIRED" | "SESSION_NOT_ACTIVE" | null;
 }
 
 async function resolveCaller(req: Request): Promise<CallerContext> {
   const authHeader = req.headers.get("authorization") ?? "";
   const match = /^Bearer\s+([^\s]+)$/i.exec(authHeader.trim());
-  if (!match) return { isAdmin: false };
+  if (!match) return { isAdmin: false, error: "AUTHENTICATION_REQUIRED" };
 
   const supabaseUrl = getEnv("SUPABASE_URL");
+  const anonKey = getEnv("SUPABASE_ANON_KEY");
   const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY") ||
     getEnv("SUPABASE_SECRET_KEY");
-  if (!supabaseUrl || !serviceKey) return { isAdmin: false };
-
-  const admin = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  if (!supabaseUrl || !anonKey || !serviceKey) {
+    return { isAdmin: false, error: "AUTHENTICATION_REQUIRED" };
+  }
 
   try {
-    const { data: userData, error: userError } = await admin.auth.getUser(
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: userData, error: userError } = await userClient.auth.getUser(
       match[1],
     );
     const userId = userData?.user?.id ?? null;
-    if (userError || !userId) return { isAdmin: false };
+    if (userError || !userId) {
+      return { isAdmin: false, error: "AUTHENTICATION_REQUIRED" };
+    }
+    if (!(await isCurrentSessionActive(userClient))) {
+      return { isAdmin: false, error: "SESSION_NOT_ACTIVE" };
+    }
 
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const { data: profile, error: profileError } = await admin
       .from("profiles")
       .select("is_admin")
       .eq("id", userId)
       .maybeSingle();
 
-    return { isAdmin: !profileError && profile?.is_admin === true };
+    return {
+      isAdmin: !profileError && profile?.is_admin === true,
+      error: null,
+    };
   } catch (_) {
-    return { isAdmin: false };
+    return { isAdmin: false, error: "AUTHENTICATION_REQUIRED" };
   }
 }
 
@@ -542,24 +562,21 @@ async function readJsonBody(req: Request): Promise<unknown> {
     );
   }
 
-  const declaredLength = Number(req.headers.get("content-length"));
-  if (
-    Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES
-  ) {
-    throw problem(
-      413,
-      "body_too_large",
-      "Request body exceeds the allowed size.",
-    );
-  }
-
-  const text = await req.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_REQUEST_BODY_BYTES) {
-    throw problem(
-      413,
-      "body_too_large",
-      "Request body exceeds the allowed size.",
-    );
+  let text: string;
+  try {
+    text = await readBoundedRequestText(req, MAX_REQUEST_BODY_BYTES);
+  } catch (error) {
+    if (
+      error instanceof BoundedRequestBodyError &&
+      error.code === "BODY_TOO_LARGE"
+    ) {
+      throw problem(
+        413,
+        "body_too_large",
+        "Request body exceeds the allowed size.",
+      );
+    }
+    throw problem(400, "invalid_json", "Request body must contain valid JSON.");
   }
   try {
     return JSON.parse(text);
@@ -570,6 +587,9 @@ async function readJsonBody(req: Request): Promise<unknown> {
 
 async function handlePost(req: Request): Promise<Response> {
   const caller = await resolveCaller(req);
+  if (caller.error) {
+    return json(req, 401, { ok: false, error: caller.error });
+  }
   if (!caller.isAdmin) {
     return json(req, 403, { ok: false, error: "admin_required" });
   }

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var REGISTRY_SRC = 'assets/js/shared/kc-search-registry.generated.js?v=8.6.1';
+  var REGISTRY_SRC = 'assets/js/shared/kc-search-registry.generated.js?v=8.6.13';
   var moduleIcons = {
     'achados-perdidos': 'fa-magnifying-glass',
     caronas: 'fa-car',
@@ -11,7 +11,9 @@
     oportunidades: 'fa-briefcase'
   };
   var currentRegistry = null;
-  var accountSession = false;
+  var accountUserId = '';
+  var accountLoadGeneration = 0;
+  var accountHydrating = false;
   var lastSyncedState = null;
 
   function $(selector) { return document.querySelector(selector); }
@@ -33,7 +35,7 @@
   function setSyncHint(state) {
     var hint = $('#settingsSearchPreferencesSyncHint');
     if (!hint) return;
-    if (!accountSession) {
+    if (!accountUserId) {
       hint.innerHTML = '<i class="fas fa-laptop" aria-hidden="true"></i> '
         + '<span>Visitante: as escolhas ficam só neste navegador. Entre na conta para usá-las em qualquer dispositivo.</span>';
       return;
@@ -181,13 +183,30 @@
   function syncAvailability() {
     var personalized = $('#settingsSearchPersonalized') && $('#settingsSearchPersonalized').checked;
     var controls = document.querySelectorAll('[data-search-preference-module], [data-search-preference-feature], #settingsSearchAffinity');
-    controls.forEach(function (control) { control.disabled = !personalized; });
+    controls.forEach(function (control) { control.disabled = accountHydrating || !personalized; });
+    var modeToggle = $('#settingsSearchPersonalized');
+    if (modeToggle) modeToggle.disabled = accountHydrating;
     var label = $('#settingsSearchModeLabel');
     if (label) label.textContent = personalized ? 'Personalização ativa' : 'Ordem padrão';
     var panel = $('#settingsSearchPreferenceControls');
-    if (panel) panel.classList.toggle('is-disabled', !personalized);
+    if (panel) panel.classList.toggle('is-disabled', accountHydrating || !personalized);
     var affinity = $('#settingsSearchAffinity');
     if (affinity && !personalized) affinity.checked = false;
+  }
+
+  function setAccountHydrating(active) {
+    accountHydrating = active === true;
+    var card = $('#settingsSearchPreferences');
+    if (card) card.setAttribute('aria-busy', accountHydrating ? 'true' : 'false');
+    [
+      '#settingsSaveSearchPreferences',
+      '#settingsExportSearchPreferences',
+      '#settingsClearSearchPreferences'
+    ].forEach(function (selector) {
+      var button = $(selector);
+      if (button) button.disabled = accountHydrating;
+    });
+    syncAvailability();
   }
 
   function collectState() {
@@ -232,20 +251,45 @@
   }
 
   async function resolveAccountSession() {
-    if (!hasAccountApi()) return false;
+    if (!hasAccountApi()) return '';
     try {
       var sessionUser = await window.KCAPI.getCurrentUser();
-      return !!(sessionUser && sessionUser.id);
+      return String(sessionUser && sessionUser.id || '').trim();
     } catch (_) {
-      return false;
+      return '';
     }
   }
 
-  async function hydrateFromAccount() {
-    var local = window.KCSearchPreferences.load({ registry: currentRegistry });
-    accountSession = await resolveAccountSession();
-    if (!accountSession) {
-      populate(local);
+  function currentStorageOptions() {
+    if (!accountUserId) return { registry: currentRegistry, scope: 'local' };
+    return {
+      registry: currentRegistry,
+      scope: 'account',
+      userId: accountUserId
+    };
+  }
+
+  function isActiveAccountLoad(generation, userId) {
+    return (
+      accountLoadGeneration === generation &&
+      accountUserId === String(userId || '').trim()
+    );
+  }
+
+  async function hydrateFromAccount(options) {
+    var opts = options || {};
+    var generation = ++accountLoadGeneration;
+    var nextUserId = Object.prototype.hasOwnProperty.call(opts, 'sessionUser')
+      ? String(opts.sessionUser && opts.sessionUser.id || '').trim()
+      : await resolveAccountSession();
+    if (generation !== accountLoadGeneration) return lastSyncedState;
+    accountUserId = nextUserId;
+    var storageOptions = currentStorageOptions();
+    var local = window.KCSearchPreferences.load(storageOptions);
+    setAccountHydrating(!!accountUserId);
+    populate(local);
+    if (!accountUserId) {
+      setAccountHydrating(false);
       setStatus('', 'info');
       return local;
     }
@@ -253,6 +297,7 @@
     setStatus('Carregando preferências da conta…', 'info');
     try {
       var remote = await window.KCAPI.getSearchPreferences();
+      if (!isActiveAccountLoad(generation, nextUserId)) return lastSyncedState;
       var merge = window.KCSearchPreferences.mergeLocalAndRemote(local, remote, currentRegistry);
       var state = merge.state;
 
@@ -260,6 +305,7 @@
         state = window.KCSearchPreferences.save(state, {
           registry: currentRegistry,
           scope: 'account',
+          userId: accountUserId,
           now: function () { return state.updatedAt || new Date().toISOString(); }
         });
       }
@@ -268,10 +314,12 @@
         var push = await window.KCAPI.updateSearchPreferences(
           window.KCSearchPreferences.toRemotePayload(state, currentRegistry)
         );
+        if (!isActiveAccountLoad(generation, nextUserId)) return lastSyncedState;
         if (push && push.ok && push.data && push.data.preferences) {
           state = window.KCSearchPreferences.save(push.data.preferences, {
             registry: currentRegistry,
             scope: 'account',
+            userId: accountUserId,
             now: function () {
               return (push.data.preferences.updatedAt) || new Date().toISOString();
             }
@@ -284,10 +332,12 @@
         window.KCSearchPreferences.save(state, {
           registry: currentRegistry,
           scope: 'account',
+          userId: accountUserId,
           now: function () { return state.updatedAt || new Date().toISOString(); }
         });
       }
 
+      setAccountHydrating(false);
       populate(state);
       emitChange(state);
       setStatus(
@@ -298,7 +348,9 @@
       );
       return state;
     } catch (error) {
+      if (!isActiveAccountLoad(generation, nextUserId)) return lastSyncedState;
       console.error('[SearchPreferences] hydrate failed:', error);
+      setAccountHydrating(false);
       populate(local);
       setStatus('Não foi possível sincronizar agora. Usando o cache deste navegador.', 'error');
       return local;
@@ -306,18 +358,26 @@
   }
 
   async function save() {
+    if (accountHydrating) {
+      setStatus('Aguarde a conclusão da troca de conta antes de salvar.', 'info');
+      return;
+    }
+    var generation = accountLoadGeneration;
+    var ownerUserId = accountUserId;
     var draft = collectState();
     try {
       var state = window.KCSearchPreferences.save(draft, {
         registry: currentRegistry,
-        scope: accountSession ? 'account' : 'local'
+        scope: accountUserId ? 'account' : 'local',
+        userId: accountUserId || undefined
       });
 
-      if (accountSession) {
+      if (accountUserId) {
         setStatus('Salvando na conta…', 'info');
         var remoteResult = await window.KCAPI.updateSearchPreferences(
           window.KCSearchPreferences.toRemotePayload(state, currentRegistry)
         );
+        if (!isActiveAccountLoad(generation, ownerUserId)) return;
         if (!remoteResult || !remoteResult.ok) {
           // Local save already succeeded — keep it and surface the remote error.
           populate(state);
@@ -336,6 +396,7 @@
           {
             registry: currentRegistry,
             scope: 'account',
+            userId: accountUserId,
             now: function () {
               return (remoteResult.data
                 && remoteResult.data.preferences
@@ -348,7 +409,7 @@
 
       populate(state);
       emitChange(state);
-      if (accountSession) {
+      if (accountUserId) {
         setStatus(
           state.mode === 'personalized'
             ? 'Preferências salvas na conta. A busca já prioriza seus módulos e assuntos em qualquer dispositivo.'
@@ -364,48 +425,119 @@
         );
       }
     } catch (error) {
+      if (!isActiveAccountLoad(generation, ownerUserId)) return;
       console.error('[SearchPreferences] save failed:', error);
       setStatus('Não foi possível salvar as preferências: ' + ((error && error.message) || 'erro desconhecido'), 'error');
     }
   }
 
   async function clear() {
-    var confirmMsg = accountSession
+    if (accountHydrating) {
+      setStatus('Aguarde a conclusão da troca de conta antes de remover preferências.', 'info');
+      return;
+    }
+    var confirmMsg = accountUserId
       ? 'Remover preferências de busca da conta e deste navegador? A busca volta à ordem padrão em todos os dispositivos.'
       : 'Remover preferências e afinidade de busca deste navegador?';
     if (!window.confirm(confirmMsg)) return;
 
-    var state = window.KCSearchPreferences.clear();
-    if (accountSession) {
+    var generation = accountLoadGeneration;
+    var ownerUserId = accountUserId;
+    var state = window.KCSearchPreferences.clear(currentStorageOptions());
+    if (accountUserId) {
       try {
         var remoteResult = await window.KCAPI.updateSearchPreferences(
           window.KCSearchPreferences.toRemotePayload(state, currentRegistry)
         );
+        if (!isActiveAccountLoad(generation, ownerUserId)) return;
         if (remoteResult && remoteResult.ok) {
           state = window.KCSearchPreferences.save(
             (remoteResult.data && remoteResult.data.preferences) || state,
-            { registry: currentRegistry, scope: 'account' }
+            { registry: currentRegistry, scope: 'account', userId: accountUserId }
           );
         }
       } catch (error) {
+        if (!isActiveAccountLoad(generation, ownerUserId)) return;
         console.error('[SearchPreferences] remote clear failed:', error);
       }
     }
     populate(state);
     emitChange(state);
     setStatus(
-      accountSession
+      accountUserId
         ? 'Preferências removidas da conta e deste navegador.'
         : 'Preferências e afinidade removidas deste navegador.',
       'success'
     );
   }
 
+  function exportLocalPreferences() {
+    if (accountHydrating) {
+      setStatus('Aguarde a conclusão da troca de conta antes de baixar preferências.', 'info');
+      return;
+    }
+    if (!window.KCSearchPreferences || typeof window.KCSearchPreferences.exportData !== 'function') {
+      setStatus('A exportação das preferências não está disponível neste navegador.', 'error');
+      return;
+    }
+
+    try {
+      var exported = window.KCSearchPreferences.exportData(currentStorageOptions());
+      var content = JSON.stringify(exported, null, 2);
+      var blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+      var objectUrl = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      var exportedAt = new Date(exported.exportedAt || Date.now());
+      var datePart = Number.isNaN(exportedAt.getTime())
+        ? new Date().toISOString().slice(0, 10)
+        : exportedAt.toISOString().slice(0, 10);
+
+      link.href = objectUrl;
+      link.download = 'kinocampus-preferencias-busca-' + datePart + '.json';
+      link.hidden = true;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 0);
+      setStatus(
+        'Arquivo JSON gerado com as preferências salvas e a afinidade consentida disponível neste navegador. Ele não contém os demais dados da sua conta.',
+        'success'
+      );
+    } catch (error) {
+      console.error('[SearchPreferences] export failed:', error);
+      setStatus('Não foi possível gerar o arquivo de preferências neste navegador.', 'error');
+    }
+  }
+
   function bindEvents() {
     $('#settingsSearchPersonalized').addEventListener('change', syncAvailability);
     $('#settingsSaveSearchPreferences').addEventListener('click', function () { save(); });
+    var exportBtn = $('#settingsExportSearchPreferences');
+    if (exportBtn) exportBtn.addEventListener('click', exportLocalPreferences);
     var clearBtn = $('#settingsClearSearchPreferences');
     if (clearBtn) clearBtn.addEventListener('click', function () { clear(); });
+    document.addEventListener('kc:authchange', function (event) {
+      var detail = event && event.detail && typeof event.detail === 'object'
+        ? event.detail
+        : {};
+      var sessionUser = detail.user || (detail.session && detail.session.user) || null;
+      hydrateFromAccount({ sessionUser: sessionUser });
+    });
+    window.addEventListener('kc:privacy-local-data-cleared', function (event) {
+      var detail = event && event.detail && typeof event.detail === 'object'
+        ? event.detail
+        : {};
+      var clearedUserId = String(detail.userId || '').trim();
+      if (clearedUserId !== accountUserId) return;
+      if (accountUserId) {
+        hydrateFromAccount({ sessionUser: { id: accountUserId } });
+        return;
+      }
+      var state = window.KCSearchPreferences.load(currentStorageOptions());
+      populate(state);
+      emitChange(state);
+      setStatus('Preferências locais removidas deste navegador.', 'success');
+    });
   }
 
   async function init() {

@@ -6,6 +6,7 @@
 
 - release consolidada: `v75.1.0`
 - linha de trabalho atual: `v76.53` (busca orientada ao schema e personalização responsável; cadeia de migrations reparada; CI executa 83 specs Playwright; chat com checkmarks de leitura, reações emoji e reply/quote em produção; SQL estruturado segue em No-Go apenas pelo timeout 1500ms em 50k, runtime frontend `8.6.1` inalterado)
+- controles de dados em consolidação: entrada direta autenticada, formulário alternativo, vínculo pós-verificação, cópia estruturada, suplemento privado e exclusão com comprovante
 - branch-base operacional: `kinocampus-V75.0-foundations`
 - documento historico da v75: [../RELATORIO-KINOCAMPUS-V75.md](../RELATORIO-KINOCAMPUS-V75.md)
 
@@ -30,6 +31,11 @@
 | [module-schemas.md](./module-schemas.md) | schemas de criacao e metadados dos 6 modulos publicos |
 | [env-vars.md](./env-vars.md) | build-time, runtime, `KC_ENV`, Supabase e observacoes de drift de versao |
 | [design-system.md](./design-system.md) | tokens visuais, componentes CSS, popovers e convencoes responsivas |
+| [privacy/data-subject-rights-map.md](./privacy/data-subject-rights-map.md) | contrato canônico de acesso, cópia, portabilidade, exclusão, canais e limites por categoria |
+| [privacy/account-erasure-runbook.md](./privacy/account-erasure-runbook.md) | procedimento de exclusão, confirmação, preservação de terceiros, pós-condições, provedores e recibo |
+| [privacy/account-erasure-identity-link-and-projection.md](./privacy/account-erasure-identity-link-and-projection.md) | vínculo auditado Help/DSR/Auth, autoridade do UUID, sincronização do e-mail e projeção pós-core minimizada |
+| [privacy/data-export-supplement-runbook.md](./privacy/data-export-supplement-runbook.md) | geração, entrega, expurgo e recuperação do complemento privado de exportação |
+| [privacy/account-erasure-supabase-deploy.md](./privacy/account-erasure-supabase-deploy.md) | pré-validação, migrations, secrets, funções, rollback e smoke do rollout Supabase |
 
 ## Documentos operacionais complementares
 
@@ -178,6 +184,10 @@ KCAPI.getTopContributors('month', 'moradia', 10);
 
 // Admin - pedidos de ajuda
 KCAPI.listAdminHelpRequests({ status: 'new', type: 'question', limit: 25, offset: 0 });
+
+// Titular autenticado - criar protocolo e baixar cópia JSON
+const opened = await KCAPI.createDataSubjectRequest({ request_kind: 'data_access_copy' });
+await KCAPI.downloadDataSubjectExport(opened.data.request.protocol);
 
 // Sanitizacao obrigatoria antes de innerHTML
 el.innerHTML = window.KCUtils.escapeHtml(userContent);

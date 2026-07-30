@@ -31,6 +31,12 @@
     Object.freeze({ value: 'archived', label: 'Arquivado' }),
   ]);
 
+  const PRIVACY_REQUEST_KINDS_BY_SUBTOPIC = Object.freeze({
+    account_data_copy: 'data_access_copy',
+    account_data_portability: 'data_portability',
+    account_deletion: 'account_erasure',
+  });
+
   const HELP_MODULE_OPTIONS = Object.freeze([
     Object.freeze({ value: 'index', label: 'Página inicial' }),
     Object.freeze({ value: 'compra_venda', label: 'Compra e Venda' }),
@@ -144,6 +150,8 @@
       Object.freeze({ value: 'settings_not_saving', label: 'Configurações não salvam' }),
       Object.freeze({ value: 'profile_visibility', label: 'Privacidade e visibilidade' }),
       Object.freeze({ value: 'avatar_profile', label: 'Foto, avatar ou emoji' }),
+      Object.freeze({ value: 'account_data_copy', label: 'Cópia dos meus dados' }),
+      Object.freeze({ value: 'account_data_portability', label: 'Portabilidade dos meus dados' }),
       Object.freeze({ value: 'account_deletion', label: 'Exclusão de conta e dados' }),
     ]),
     'external_access|non_institutional_email': Object.freeze([
@@ -247,6 +255,8 @@
       type: 'email',
       placeholder: 'seu.email@ufg.br',
       maxLength: 255,
+      autocomplete: 'email',
+      help: 'Informe o e-mail exato usado na conta. Ele não será incluído no endereço desta página.',
     }),
     device_context: Object.freeze({
       key: 'device_context',
@@ -265,6 +275,64 @@
         Object.freeze({ value: 'entire_platform', label: 'Afeta a plataforma toda' }),
       ]),
     }),
+    data_scope: Object.freeze({
+      key: 'data_scope',
+      label: 'Dados solicitados',
+      type: 'select',
+      required: true,
+      wide: true,
+      options: Object.freeze([
+        Object.freeze({ value: 'all_account_data', label: 'Todos os dados associados à minha conta' }),
+        Object.freeze({ value: 'profile_account', label: 'Conta, perfil e preferências' }),
+        Object.freeze({ value: 'posts_interactions', label: 'Publicações, mídias e interações' }),
+        Object.freeze({ value: 'messages_support', label: 'Mensagens e atendimentos' }),
+        Object.freeze({ value: 'analytics_consents', label: 'Consentimentos e dados de uso vinculáveis' }),
+        Object.freeze({ value: 'specific_categories', label: 'Somente categorias específicas (descrever abaixo)' }),
+      ]),
+      help: 'A resposta pode excluir dados de terceiros, segredos de segurança e registros que precisem ser legalmente preservados.',
+    }),
+    data_copy_format: Object.freeze({
+      key: 'data_copy_format',
+      label: 'Formato preferido',
+      type: 'select',
+      required: true,
+      wide: true,
+      options: Object.freeze([
+        Object.freeze({ value: 'structured', label: 'Arquivo estruturado (JSON e, quando aplicável, CSV)' }),
+        Object.freeze({ value: 'readable', label: 'Relatório legível' }),
+        Object.freeze({ value: 'both', label: 'Ambos, se disponíveis' }),
+      ]),
+      help: 'Este formulário registra uma solicitação. O download integral da conta ainda não é gerado imediatamente nesta página.',
+    }),
+    portability_context: Object.freeze({
+      key: 'portability_context',
+      label: 'Contexto da portabilidade',
+      type: 'textarea',
+      rows: 3,
+      wide: true,
+      placeholder: 'Informe o formato ou serviço de destino pretendido, sem incluir senhas, tokens ou dados desnecessários.',
+      maxLength: 1200,
+      help: 'A viabilidade e o formato serão analisados conforme os dados envolvidos e os padrões disponíveis.',
+    }),
+    export_before_erasure: Object.freeze({
+      key: 'export_before_erasure',
+      label: 'Cópia dos dados antes da exclusão',
+      type: 'select',
+      required: true,
+      wide: true,
+      options: Object.freeze([
+        Object.freeze({ value: 'request_copy_first', label: 'Sim, quero solicitar uma cópia antes da exclusão' }),
+        Object.freeze({ value: 'no_copy_needed', label: 'Não preciso de uma cópia antes da exclusão' }),
+        Object.freeze({ value: 'need_guidance', label: 'Ainda não sei; quero orientação' }),
+      ]),
+      help: 'Enviar este formulário não exclui a conta imediatamente. A titularidade e a confirmação final serão verificadas antes da etapa irreversível.',
+    }),
+  });
+
+  const HELP_PRIVACY_CONDITIONAL_FIELDS = Object.freeze({
+    account_data_copy: Object.freeze(['account_email', 'data_scope', 'data_copy_format']),
+    account_data_portability: Object.freeze(['account_email', 'data_scope', 'portability_context']),
+    account_deletion: Object.freeze(['account_email', 'export_before_erasure']),
   });
 
   const HELP_CONDITIONAL_FIELDS = Object.freeze({
@@ -359,14 +427,28 @@
 
   function getHelpConditionalFields(type, topic, subtopic) {
     const key = `${normalizeKey(type)}|${normalizeKey(topic)}`;
-    const fields = HELP_CONDITIONAL_FIELDS[key] ? HELP_CONDITIONAL_FIELDS[key].slice() : [];
     const subtypeValue = normalizeKey(subtopic);
+    const privacyFields = key === 'account_access|onboarding_settings'
+      ? HELP_PRIVACY_CONDITIONAL_FIELDS[subtypeValue]
+      : null;
+    const fields = privacyFields
+      ? privacyFields.slice()
+      : (HELP_CONDITIONAL_FIELDS[key] ? HELP_CONDITIONAL_FIELDS[key].slice() : []);
     if (subtypeValue === 'visibility_issue' && fields.indexOf('expected_result') === -1) {
       fields.push('expected_result');
     }
     return fields
-      .map((fieldKey) => CONDITIONAL_FIELD_TEMPLATES[fieldKey] || null)
+      .map((fieldKey) => {
+        const template = CONDITIONAL_FIELD_TEMPLATES[fieldKey] || null;
+        if (!template || !privacyFields || fieldKey !== 'account_email') return template;
+        return Object.freeze(Object.assign({}, template, { required: true }));
+      })
       .filter(Boolean);
+  }
+
+  function getPrivacyRequestKind(type, topic, subtopic) {
+    if (normalizeKey(type) !== 'account_access' || normalizeKey(topic) !== 'onboarding_settings') return '';
+    return PRIVACY_REQUEST_KINDS_BY_SUBTOPIC[normalizeKey(subtopic)] || '';
   }
 
   const HELP_TYPE_LABELS = buildLabelMap(HELP_TYPE_OPTIONS);
@@ -453,6 +535,8 @@
     const message = trimText(raw.message, 4000);
     const conditionalFields = getHelpConditionalFields(type, topic, subtopic);
     const metadata = normalizeConditionalMetadata(raw.metadata, conditionalFields);
+    const privacyRequestKind = getPrivacyRequestKind(type, topic, subtopic);
+    if (privacyRequestKind) metadata.request_kind = privacyRequestKind;
     const pagePath = trimText(raw.page_path || metadata.page_path || '', 255);
     const allowContact = raw.allow_contact !== false;
 
@@ -477,6 +561,7 @@
     HELP_PRIORITY_OPTIONS,
     HELP_STATUS_OPTIONS,
     HELP_MODULE_OPTIONS,
+    PRIVACY_REQUEST_KINDS_BY_SUBTOPIC,
     HELP_TYPE_LABELS,
     HELP_TOPIC_LABELS,
     HELP_PRIORITY_LABELS,
@@ -488,6 +573,7 @@
     getHelpTopicOptions,
     getHelpSubtopicOptions,
     getHelpConditionalFields,
+    getPrivacyRequestKind,
     normalizeHelpRequestInput,
   });
 }));

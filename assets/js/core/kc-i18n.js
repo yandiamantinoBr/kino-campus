@@ -252,7 +252,7 @@
     'auth.resend-failed':        'Não foi possível reenviar a confirmação.',
     'auth.resend-sent':          'Novo e-mail enviado. Abra o link recebido para concluir o cadastro.',
     'auth.logging-out':          'Saindo...',
-    'auth.logout-failed':        'Não foi possível sair agora.',
+    'auth.logout-failed':        'Não foi possível sair agora. Sua sessão continua ativa.',
     'auth.login-to-publish':     'Faça login para publicar.',
     'auth.profile-ready':        'Conta pronta para publicar e receber contatos',
     'auth.profile-incomplete':   'Cadastro incompleto: finalize seu onboarding',
@@ -380,6 +380,7 @@
     'aria-label.search-submit':         'Buscar',
     'aria-label.notifications-bell':    'Notificações',
     'aria-label.notifications':         'Notificações',
+    'aria-label.settings-data-subject-requests': 'Pedidos recentes sobre seus dados',
     'aria-label.theme-toggle':          'Alternar tema claro/escuro',
     'aria-label.theme-toggle-admin':    'Alternar tema',
     'aria-label.menu-open':             'Abrir menu',
@@ -432,6 +433,7 @@
     'aria-label.profile-legacy-badge':  'Perfil de exemplo',
     'aria-label.profile-tabs':          'Seções do perfil',
     'aria-label.start-chat':            'Iniciar conversa',
+    'aria-label.help-privacy-security-challenge': 'Desafio de verificação de segurança',
 
     // Mensagens
     'aria-label.chat-list':             'Lista de conversas',

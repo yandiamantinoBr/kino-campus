@@ -23,6 +23,11 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { isCurrentSessionActive } from "../_shared/active-session.ts";
+import {
+  BoundedRequestBodyError,
+  readBoundedRequestText,
+} from "../_shared/bounded-request-body.ts";
 
 type JsonObject = Record<string, unknown>;
 
@@ -33,6 +38,7 @@ const DEFAULT_SMTP_PORT = 465;
 const DEFAULT_FROM_NAME = "Kino Campus";
 const DEFAULT_FROM_EMAIL = "contato@kinocampus.com.br";
 const DEFAULT_ADMIN_EMAIL = "contato@kinocampus.com.br";
+const MAX_REQUEST_BODY_BYTES = 8 * 1024;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -67,6 +73,11 @@ function escapeHtml(v: unknown) {
 function asObject(value: unknown): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as JsonObject;
+}
+
+function safeErrorCode(error: unknown, fallback: string) {
+  const code = String(asObject(error).code || "").trim().toUpperCase();
+  return /^[A-Z0-9_]{1,80}$/.test(code) ? code : fallback;
 }
 
 function brandedHeader() {
@@ -197,9 +208,27 @@ Deno.serve(async (req) => {
   });
   const { data: { user }, error: authErr } = await userClient.auth.getUser();
   if (authErr || !user) return json(401, { ok: false, error: "invalid_session" });
+  if (!(await isCurrentSessionActive(userClient))) {
+    return json(401, { ok: false, error: "SESSION_NOT_ACTIVE" });
+  }
 
   let body: { help_request_id?: unknown; decision?: unknown; admin_note?: unknown };
-  try { body = await req.json(); } catch { return json(400, { ok: false, error: "invalid_json" }); }
+  try {
+    const rawBody = await readBoundedRequestText(req, MAX_REQUEST_BODY_BYTES);
+    const parsed = JSON.parse(rawBody);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("not-object");
+    }
+    body = parsed;
+  } catch (error) {
+    if (
+      error instanceof BoundedRequestBodyError &&
+      error.code === "BODY_TOO_LARGE"
+    ) {
+      return json(413, { ok: false, error: "body_too_large" });
+    }
+    return json(400, { ok: false, error: "invalid_json" });
+  }
 
   const helpRequestId = String(body.help_request_id || "").toLowerCase().trim();
   const decision = String(body.decision || "").toLowerCase().trim();
@@ -219,12 +248,14 @@ Deno.serve(async (req) => {
     },
   );
   if (rpcErr) {
-    console.error("[kc-external-access-decide] rpc error:", rpcErr);
     const msg = rpcErr.message || "";
     if (msg.includes("not_authenticated")) return json(401, { ok: false, error: "not_authenticated" });
     if (msg.includes("not_authorized")) return json(403, { ok: false, error: "not_authorized" });
     if (msg.includes("not_found_or_not_pending")) return json(409, { ok: false, error: "already_decided" });
-    return json(500, { ok: false, error: "rpc_failed", detail: msg });
+    console.error("[kc-external-access-decide] rpc failed", {
+      code: safeErrorCode(rpcErr, "RPC_FAILED"),
+    });
+    return json(500, { ok: false, error: "rpc_failed" });
   }
   const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
   if (!row || !row.out_id) return json(500, { ok: false, error: "empty_rpc_response" });
@@ -250,7 +281,9 @@ Deno.serve(async (req) => {
       },
     );
     if (error) {
-      console.error("[kc-external-access-decide] delivery completion error:", error);
+      console.error("[kc-external-access-decide] delivery completion failed", {
+        code: safeErrorCode(error, "DELIVERY_COMPLETION_FAILED"),
+      });
       return false;
     }
     return data === true;
@@ -259,11 +292,14 @@ Deno.serve(async (req) => {
   // Terminal results are replayed without delivery. A different in-flight
   // claim also returns without sending, which closes the concurrent-click race.
   if (["sent", "link_generated", "failed"].includes(previousStatus)) {
-    const previousError = String(
-      previousDelivery.smtp_error ||
-      previousDelivery.error_message ||
-      "",
-    ) || null;
+    const storedErrorCode = String(previousDelivery.error_code || "")
+      .trim()
+      .toUpperCase();
+    const previousError = /^[A-Z0-9_]{1,80}$/.test(storedErrorCode)
+      ? storedErrorCode
+      : (previousStatus === "failed" || previousStatus === "link_generated"
+        ? "DELIVERY_PROVIDER_FAILED"
+        : null);
     return json(200, {
       ok: true,
       decision,
@@ -299,8 +335,7 @@ Deno.serve(async (req) => {
   }
 
   if (previousStatus !== "processing" || persistedClaimId !== deliveryClaimId) {
-    console.error("[kc-external-access-decide] delivery claim missing:", {
-      helpRequestId,
+    console.error("[kc-external-access-decide] delivery claim missing", {
       decision,
       previousStatus,
     });
@@ -318,12 +353,18 @@ Deno.serve(async (req) => {
       .from("kc_invited_emails")
       .upsert({ email: requesterEmail, invited_by: user.id, note: null, expires_at: expiresAt, used_at: null }, { onConflict: "email" });
     if (whitelistErr) {
-      console.error("[kc-external-access-decide] whitelist upsert error:", whitelistErr);
+      const errorCode = safeErrorCode(
+        whitelistErr,
+        "WHITELIST_UPSERT_FAILED",
+      );
+      console.error("[kc-external-access-decide] whitelist upsert failed", {
+        code: errorCode,
+      });
       const failure = {
         status: "failed",
         provider: "supabase_auth",
         failed_at: new Date().toISOString(),
-        error_message: `whitelist_failed: ${whitelistErr.message || "unknown"}`,
+        error_code: errorCode,
       };
       const deliveryStatePersisted = await completeDelivery(failure);
       return json(200, {
@@ -336,7 +377,7 @@ Deno.serve(async (req) => {
         invite_sent_to: requesterEmail,
         invite_sent: false,
         invite_link: null,
-        smtp_error: String(failure.error_message),
+        smtp_error: errorCode,
         message: "Solicitação aprovada, mas o convite não pôde ser preparado.",
       });
     }
@@ -362,25 +403,42 @@ Deno.serve(async (req) => {
       if (alreadyExists) {
         inviteSent = true;
       } else {
-        inviteSendError = msg;
-        console.warn("[kc-external-access-decide] inviteUserByEmail failed, fallback to generateLink:", msg);
+        inviteSendError = safeErrorCode(
+          inviteRes.error,
+          "INVITE_EMAIL_PROVIDER_FAILED",
+        );
+        console.warn(
+          "[kc-external-access-decide] invite email failed; trying manual link",
+          { code: inviteSendError },
+        );
         try {
           const linkRes = await adminClient.auth.admin.generateLink({ type: "invite", email: requesterEmail, options: { redirectTo, data: userMetadata } });
           if (!linkRes.error && linkRes.data) {
             const props = (linkRes.data as { properties?: { action_link?: string } }).properties;
             if (props && props.action_link) inviteLink = props.action_link;
           } else if (linkRes.error) {
-            console.error("[kc-external-access-decide] generateLink also failed:", linkRes.error);
+            inviteSendError = safeErrorCode(
+              linkRes.error,
+              "INVITE_LINK_PROVIDER_FAILED",
+            );
+            console.error(
+              "[kc-external-access-decide] manual invite link failed",
+              { code: inviteSendError },
+            );
           }
-        } catch (e) {
-          console.error("[kc-external-access-decide] generateLink exception:", e);
+        } catch {
+          inviteSendError = "INVITE_LINK_PROVIDER_FAILED";
+          console.error(
+            "[kc-external-access-decide] manual invite link failed",
+            { code: inviteSendError },
+          );
         }
         if (!inviteLink) {
           const failedDelivery = {
             status: "failed",
             provider: "supabase_auth",
             failed_at: new Date().toISOString(),
-            error_message: msg,
+            error_code: inviteSendError || "INVITE_PROVIDER_FAILED",
           };
           const deliveryStatePersisted = await completeDelivery(failedDelivery);
           return json(200, {
@@ -393,7 +451,7 @@ Deno.serve(async (req) => {
             invite_sent_to: requesterEmail,
             invite_sent: false,
             invite_link: null,
-            smtp_error: msg,
+            smtp_error: failedDelivery.error_code,
             message: "Solicitação aprovada, mas o convite não foi entregue.",
           });
         }
@@ -402,7 +460,7 @@ Deno.serve(async (req) => {
 
     const inviteMetaStatus = inviteSent
       ? { status: "sent", provider: "supabase_auth", sent_at: new Date().toISOString(), redirect_to: redirectTo }
-      : { status: "link_generated", provider: "supabase_auth_manual_send", generated_at: new Date().toISOString(), redirect_to: redirectTo, invite_link: inviteLink, smtp_error: inviteSendError, note: "SMTP indisponível. Link gerado para envio manual." };
+      : { status: "link_generated", provider: "supabase_auth_manual_send", generated_at: new Date().toISOString(), redirect_to: redirectTo, invite_link: inviteLink, error_code: inviteSendError, note: "SMTP indisponível. Link gerado para envio manual." };
 
     const deliveryStatePersisted = await completeDelivery(inviteMetaStatus);
 
@@ -439,18 +497,18 @@ Deno.serve(async (req) => {
     rejectionResult = {
       status: "sent",
       provider: "hostinger_smtp",
-      to: requesterEmail,
       sent_at: new Date().toISOString(),
     };
   } catch (e) {
-    const msg = (e as Error)?.message || String(e);
-    console.error("[kc-external-access-decide] rejection send error:", msg);
+    const errorCode = safeErrorCode(e, "SMTP_DELIVERY_FAILED");
+    console.error("[kc-external-access-decide] rejection delivery failed", {
+      code: errorCode,
+    });
     rejectionResult = {
       status: "failed",
       provider: "hostinger_smtp",
-      to: requesterEmail,
       failed_at: new Date().toISOString(),
-      error_message: msg,
+      error_code: errorCode,
     };
   }
 
@@ -466,6 +524,8 @@ Deno.serve(async (req) => {
     help_request_id: row.out_id,
     email_sent: sentOk,
     sent_to: requesterEmail,
-    smtp_error: sentOk ? null : String(rejectionResult.error_message || "rejection_email_failed"),
+    smtp_error: sentOk
+      ? null
+      : String(rejectionResult.error_code || "SMTP_DELIVERY_FAILED"),
   });
 });

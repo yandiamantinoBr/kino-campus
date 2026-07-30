@@ -367,6 +367,17 @@ values
   ('00000000-0000-4000-8000-000000000555', 'dashboard-private@example.test'),
   ('00000000-0000-4000-8000-000000000556', 'dashboard-nameless@example.test');
 
+insert into auth.sessions (id, user_id)
+values
+  (
+    '10000000-0000-4000-8000-000000000551',
+    '00000000-0000-4000-8000-000000000551'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000554',
+    '00000000-0000-4000-8000-000000000554'
+  );
+
 insert into public.profiles (
   id,
   full_name,
@@ -1074,7 +1085,7 @@ select extensions.is(
 
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000551","role":"authenticated"}',
+  '{"sub":"00000000-0000-4000-8000-000000000551","role":"authenticated","session_id":"10000000-0000-4000-8000-000000000551"}',
   true
 );
 set local role authenticated;
@@ -1775,7 +1786,7 @@ select extensions.results_eq(
 reset role;
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-4000-8000-000000000554","role":"authenticated"}',
+  '{"sub":"00000000-0000-4000-8000-000000000554","role":"authenticated","session_id":"10000000-0000-4000-8000-000000000554"}',
   true
 );
 set local role authenticated;

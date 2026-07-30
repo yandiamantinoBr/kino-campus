@@ -17,6 +17,10 @@ function createPage(enabled, failureFile) {
   });
   const { window } = dom;
   Object.defineProperty(window.document, 'readyState', { configurable: true, value: 'loading' });
+  Object.defineProperty(window.document, 'currentScript', {
+    configurable: true,
+    value: { src: 'https://www.kinocampus.com.br/assets/js/features/kc-search.js?v=8.6.13' }
+  });
   window.KC_ENV = { version: '8.6.1' };
   window.KCFF = { isEnabled: jest.fn((name) => name === 'search.structuredRuntime' && enabled) };
   window.console.warn = jest.fn();
@@ -94,7 +98,7 @@ describe('lazy loader do runtime estruturado de busca', () => {
   test('URLs são locais, versionadas e não alteram HTML estaticamente', () => {
     const page = createPage(false);
     const resolve = page.window.kcSearch.__internals.resolveStructuredSearchAsset;
-    expect(resolve('kc-search-registry.generated.js')).toBe('/assets/js/shared/kc-search-registry.generated.js?v=8.6.1');
+    expect(resolve('kc-search-registry.generated.js')).toBe('https://www.kinocampus.com.br/assets/js/shared/kc-search-registry.generated.js?v=8.6.13');
     expect(SOURCE).toContain("window.KCFF.isEnabled('search.structuredRuntime', false)");
     expect(SOURCE).toContain("window.KCFF.isEnabled('search.structuredPilot', false)");
     expect((SOURCE.match(/runtime\.pipeline\.runShadow/g) || [])).toHaveLength(1);

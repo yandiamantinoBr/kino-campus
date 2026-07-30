@@ -31,7 +31,7 @@
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
 <link rel="stylesheet" href="assets/css/styles.css?v=8.6.12" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.1" />
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.13" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body class="kc-shell-page kc-help-page" data-kc-mobile-active="menu">
@@ -86,13 +86,13 @@
           <section class="kc-help-card">
             <h2>Precisa de ajuda agora?</h2>
             <div class="kc-help-inline-chips">
-              <a class="kc-help-chip" href="mailto:ajuda@kinocampus.com.br"><i class="fas fa-life-ring"></i><span>ajuda@kinocampus.com.br</span></a>
-              <a class="kc-help-chip" href="mailto:contato@kinocampus.com.br"><i class="fas fa-paper-plane"></i><span>contato@kinocampus.com.br</span></a>
-              <a class="kc-help-chip" href="https://wa.me/5541991427217" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i><span>+55 (41) 99142-7217</span></a>
+              <a class="kc-help-chip" href="mailto:ajuda@kinocampus.com.br"><i class="fas fa-life-ring" aria-hidden="true"></i><span>ajuda@kinocampus.com.br</span></a>
+              <a class="kc-help-chip" href="mailto:contato@kinocampus.com.br"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>contato@kinocampus.com.br</span></a>
+              <a class="kc-help-chip" href="https://wa.me/5541991427217" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i><span>+55 (41) 99142-7217</span></a>
             </div>
             <div class="kc-help-disclaimer">
-              <strong><i class="fas fa-heart"></i> Aviso</strong>
-              <p>Pedidos de ajuda e suporte devem ir para <strong>ajuda@kinocampus.com.br</strong> ou para o formulário abaixo. O e-mail <strong>contato@kinocampus.com.br</strong> fica reservado para parcerias e contato formal. Hoje o KinoCampus é mantido apenas por mim, Yan Diamantino, e eu sigo fazendo o possível para responder a comunidade com cuidado.</p>
+              <strong><i class="fas fa-heart" aria-hidden="true"></i> Aviso</strong>
+              <p>O formulário abaixo é o canal preferencial para solicitações sobre dados pessoais. Se ele estiver indisponível, use <strong>contato@kinocampus.com.br</strong> para contato formal ou de privacidade; <strong>ajuda@kinocampus.com.br</strong> atende suporte comum. Não envie documentos, senhas, tokens ou dados sensíveis pelo WhatsApp, que não é canal de exercício de direitos. Hoje o KinoCampus é mantido apenas por mim, Yan Diamantino, e eu sigo fazendo o possível para responder a comunidade com cuidado.</p>
             </div>
           </section>
 
@@ -100,20 +100,53 @@
             <h2>Solicitações de suporte</h2>
             <div class="kc-help-list">
               <article class="kc-help-item">
-                <strong><i class="fas fa-inbox"></i> O que pode ser solicitado</strong>
+                <strong><i class="fas fa-inbox" aria-hidden="true"></i> O que pode ser solicitado</strong>
                 <p>Use esta central para dúvidas de uso, problemas de conta, acesso externo, denúncias operacionais, sugestões, correções de publicação e solicitações relacionadas à LGPD.</p>
               </article>
               <article class="kc-help-item">
-                <strong><i class="fas fa-clipboard-check"></i> Como o pedido é tratado</strong>
+                <strong><i class="fas fa-clipboard-check" aria-hidden="true"></i> Como o pedido é tratado</strong>
                 <p>O pedido entra em uma fila administrativa, pode ser classificado por tema e prioridade, e a resposta normalmente acontece pelo e-mail informado no formulário.</p>
               </article>
               <article class="kc-help-item">
-                <strong><i class="fas fa-user-lock"></i> Privacidade do atendimento</strong>
+                <strong><i class="fas fa-user-lock" aria-hidden="true"></i> Privacidade do atendimento</strong>
                 <p>Evite enviar senhas, tokens, documentos desnecessários ou dados de terceiros. Para pedidos formais de privacidade, descreva a solicitação e informe um e-mail de retorno válido.</p>
               </article>
               <article class="kc-help-item">
-                <strong><i class="fas fa-scale-balanced"></i> LGPD e remoção de conta</strong>
-                <p>Pedidos de exclusão ou anonimização exigem confirmação de titularidade antes de qualquer eliminação irreversível. Quando aplicável, publicações podem ser ocultadas durante a análise.</p>
+                <strong><i class="fas fa-scale-balanced" aria-hidden="true"></i> LGPD e remoção de conta</strong>
+                <p>Com uma conta autenticada (não anônima), o formulário pode criar ou reutilizar o protocolo do titular e vinculá-lo ao atendimento. Sem acesso à conta, ele fornece primeiro uma referência de atendimento; o protocolo só é criado ou vinculado depois da verificação de titularidade. A exclusão exige confirmação adicional antes de qualquer eliminação irreversível. Quando aplicável, publicações podem ser ocultadas de forma reversível durante a análise.</p>
+                <div class="kc-settings-actions-row">
+                  <a class="kc-help-btn is-primary" href="?request=data_access_copy#helpRequestForm">Solicitar cópia</a>
+                  <a class="kc-help-btn" href="?request=account_erasure#helpRequestForm">Solicitar exclusão</a>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section id="dados-e-privacidade" class="kc-help-card">
+            <h2>Seus dados e privacidade</h2>
+            <div class="kc-help-list">
+              <article class="kc-help-item">
+                <strong><i class="fas fa-file-arrow-down" aria-hidden="true"></i> Cópia dos seus dados</strong>
+                <p>Se você consegue entrar na conta, use Configurações para baixar a parte automatizada da cópia quando ela estiver tecnicamente disponível; a ação cria ou reutiliza o protocolo. O manifesto avisará se alguma categoria precisa de complemento assistido. Quem não consegue acessar a conta, precisa de outro formato ou necessita de revisão humana deve usar o atendimento. Este formulário registra uma referência de atendimento primeiro; a identidade ainda será verificada, a referência será vinculada ao protocolo correto e o arquivo não é enviado imediatamente.</p>
+                <a class="kc-help-btn" href="settings.html#settingsPrivacyData">Baixar nas Configurações</a>
+                <a class="kc-help-btn is-primary" href="?request=data_access_copy#helpRequestForm">Preparar solicitação de cópia</a>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-arrow-right-arrow-left" aria-hidden="true"></i> Portabilidade</strong>
+                <p>Informe as categorias, o formato ou o serviço de destino pretendido. A viabilidade será analisada conforme os dados envolvidos e os padrões disponíveis.</p>
+                <a class="kc-help-btn is-primary" href="settings.html#settingsPrivacyData">Solicitar nas Configurações</a>
+                <a class="kc-help-btn" href="?request=data_portability#helpRequestForm">Usar o formulário alternativo</a>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-user-xmark" aria-hidden="true"></i> Exclusão da conta e dos dados</strong>
+                <p>O envio não apaga a conta imediatamente. Com uma conta autenticada (não anônima), ele pode devolver o protocolo do titular; sem acesso a uma conta autenticada, abre primeiro uma referência de atendimento. Depois da verificação necessária, o atendimento vincula a referência ao protocolo correto, informa eventuais retenções ou anonimizações e solicita a confirmação final antes da etapa irreversível.</p>
+                <a class="kc-help-btn is-primary" href="settings.html#settingsPrivacyData">Solicitar nas Configurações</a>
+                <a class="kc-help-btn" href="?request=account_erasure#helpRequestForm">Usar o formulário alternativo</a>
+              </article>
+              <article class="kc-help-item">
+                <strong><i class="fas fa-laptop" aria-hidden="true"></i> Preferências deste navegador</strong>
+                <p>A cópia automatizada gerada em Configurações acrescenta uma seção local com dados permitidos deste navegador, sem tokens ou credenciais. As preferências de busca também podem ser baixadas ou removidas separadamente; esse arquivo específico de busca, sozinho, não corresponde à cópia integral da conta.</p>
+                <a class="kc-help-btn" href="settings.html#settingsSearchPreferences">Gerenciar preferências de busca</a>
               </article>
             </div>
           </section>
@@ -146,7 +179,9 @@
 
           <section class="kc-help-card">
             <h2>Formulário</h2>
-            <form id="helpRequestForm" class="kc-help-form">
+            <p id="helpRequestGuidance" class="kc-settings-help">Escolha o tipo de pedido e forneça somente os dados necessários. Depois do envio, guarde o identificador exibido: uma conta autenticada (não anônima) pode receber o protocolo do titular; sem esse acesso, você recebe uma referência de atendimento até a verificação. Esta página não oferece consulta pública por referência, e protocolos são acompanhados somente pela conta autenticada ou pelo atendimento verificado.</p>
+            <div id="helpRequestPresetNotice" class="kc-help-disclaimer" hidden style="display:none;"></div>
+            <form id="helpRequestForm" class="kc-help-form" aria-describedby="helpRequestGuidance helpRequestPresetNotice" aria-busy="false">
               <div class="kc-help-form-grid">
                 <label class="kc-help-field">
                   <span>Categoria principal</span>
@@ -167,26 +202,37 @@
                 <div id="helpConditionalFields" class="kc-help-form-grid kc-help-form-grid--nested"></div>
                 <label class="kc-help-field kc-help-field--wide">
                   <span>Assunto</span>
-                  <input id="helpSubject" name="subject" type="text" maxlength="140" placeholder="Resumo curto do pedido" data-i18n-placeholder="placeholder.help-subject" required />
+                  <input id="helpSubject" name="subject" type="text" minlength="3" maxlength="140" placeholder="Resumo curto do pedido" data-i18n-placeholder="placeholder.help-subject" required />
                 </label>
                 <label class="kc-help-field kc-help-field--wide">
                   <span>Descrição</span>
-                  <textarea id="helpMessage" name="message" rows="7" maxlength="4000" placeholder="Explique o contexto e os detalhes que ajudam a entender ou reproduzir a situação." data-i18n-placeholder="placeholder.help-message" required></textarea>
+                  <textarea id="helpMessage" name="message" rows="7" minlength="10" maxlength="4000" placeholder="Explique o contexto e os detalhes que ajudam a entender ou reproduzir a situação." data-i18n-placeholder="placeholder.help-message" required></textarea>
                 </label>
                 <label class="kc-help-field">
                   <span>E-mail para retorno</span>
-                  <input id="helpContactEmail" name="contact_email" type="email" autocomplete="email" placeholder="voce@ufg.br" data-i18n-placeholder="placeholder.email-institutional" required />
+                  <input id="helpContactEmail" name="contact_email" type="email" autocomplete="email" maxlength="255" placeholder="voce@ufg.br" data-i18n-placeholder="placeholder.email-institutional" required />
                 </label>
                 <label class="kc-help-field kc-help-field--checkbox kc-help-field--wide">
                   <input id="helpAllowContact" name="allow_contact" type="checkbox" checked />
-                  <span>Autorizo que o KinoCampus entre em contato por e-mail para continuar este atendimento.</span>
+                  <span>Autorizo contatos adicionais por e-mail para continuar este atendimento. Comunicações operacionais necessárias para confirmar identidade e concluir o pedido fazem parte do próprio atendimento.</span>
                 </label>
               </div>
+              <div id="helpPrivacyVerification" class="kc-help-verification" role="group" aria-labelledby="helpPrivacyVerificationTitle" aria-describedby="helpPrivacyVerificationDescription helpPrivacyVerificationStatus" tabindex="-1" hidden>
+                <strong id="helpPrivacyVerificationTitle"><i class="fas fa-shield-halved" aria-hidden="true"></i> Verificação de segurança</strong>
+                <p id="helpPrivacyVerificationDescription">Para enviar um pedido de privacidade sem uma conta autenticada, conclua a verificação abaixo. A prova fica somente em memória até esta tentativa e não é gravada no armazenamento persistente.</p>
+                <div id="helpPrivacyTurnstileWidget" class="kc-help-turnstile-widget" aria-label="Desafio de verificação de segurança" data-i18n-aria-label="aria-label.help-privacy-security-challenge"></div>
+                <p id="helpPrivacyVerificationStatus" class="kc-help-verification-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                <a class="kc-help-btn" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket" aria-hidden="true"></i> Entrar na conta</a>
+              </div>
               <div class="kc-settings-actions-row">
-                <button id="helpSubmitButton" type="submit" class="kc-help-btn is-primary"><i class="fas fa-paper-plane"></i><span>Enviar pedido</span></button>
-                <button id="helpResetButton" type="button" class="kc-help-btn"><i class="fas fa-rotate-left"></i><span>Limpar formulário</span></button>
+                <button id="helpSubmitButton" type="submit" class="kc-help-btn is-primary" aria-busy="false"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Enviar pedido</span></button>
+                <button id="helpResetButton" type="button" class="kc-help-btn"><i class="fas fa-rotate-left" aria-hidden="true"></i><span>Limpar formulário</span></button>
               </div>
             </form>
+            <div id="helpProtocol" class="kc-help-disclaimer" role="group" aria-labelledby="helpProtocolTitle" hidden style="display:none;">
+              <strong id="helpProtocolTitle"><i class="fas fa-circle-check" aria-hidden="true"></i> Pedido recebido</strong>
+              <p><span id="helpProtocolLabel">Referência de atendimento</span>: <span id="helpProtocolValue" style="overflow-wrap:anywhere;"></span>. <span id="helpProtocolGuidance">Guarde-a para informar ao suporte no retorno por e-mail. Ela não permite consulta pública nesta página.</span></p>
+            </div>
           </section>
         </div>
 
@@ -232,6 +278,30 @@
                 <summary>Posso trocar a foto por upload, avatar sugerido ou emoji?</summary>
                 <p>Sim. No onboarding você pode enviar uma foto, carregar outros avatares do mesmo estilo ou montar uma imagem com emoji e cor.</p>
               </details>
+              <details>
+                <summary>Como peço uma cópia ou a portabilidade dos meus dados?</summary>
+                <p>Se estiver autenticado, use “Baixar meus dados (JSON)” em Configurações para criar ou reutilizar o protocolo, gerar a parte automatizada e conferir no manifesto se há complemento. Se não consegue entrar, precisa de outro formato ou quer portabilidade, use o formulário e informe o e-mail exato da conta, o escopo e o formato pretendido. Sem sessão, o envio cria uma referência de atendimento e a entrega depende da verificação de identidade.</p>
+              </details>
+              <details>
+                <summary>Como solicito a exclusão da minha conta?</summary>
+                <p>Use “Exclusão de conta e dados” no formulário. O pedido passa por verificação de titularidade e confirmação final por e-mail antes da etapa irreversível. Enviar o formulário, por si só, não apaga a conta.</p>
+              </details>
+              <details>
+                <summary>Posso pedir uma cópia antes da exclusão?</summary>
+                <p>Sim. Selecione essa opção no pedido de exclusão. A cópia deve ser tratada antes da etapa irreversível, respeitadas as limitações aplicáveis a dados de terceiros, segurança e retenções justificadas.</p>
+              </details>
+              <details>
+                <summary>O que acontece com publicações, conversas e dados que precisam ser mantidos?</summary>
+                <p>O atendimento informará as categorias eliminadas, anonimizadas ou temporariamente preservadas. Conteúdo compartilhado com outras pessoas e registros sujeitos a retenção precisam ser analisados sem expor dados de terceiros.</p>
+              </details>
+              <details>
+                <summary>Posso cancelar um pedido de exclusão?</summary>
+                <p>Enquanto estiver autenticado e o pedido permitir cancelamento, use “Cancelar pedido” em Configurações. Se não consegue entrar, responda ao e-mail do atendimento o quanto antes. O cancelamento só pode ser garantido antes do claim da etapa irreversível.</p>
+              </details>
+              <details>
+                <summary>Qual é o prazo para resposta?</summary>
+                <p>A confirmação de tratamento ou o acesso simplificado é fornecido imediatamente quando for tecnicamente possível. Uma declaração completa de acesso pode exigir análise e deve ser fornecida em até 15 dias do requerimento. Esse prazo não é uma promessa universal para exclusão ou portabilidade: nesses pedidos, o protocolo informa andamento, verificações, dependências e eventual impedimento de fato ou de direito.</p>
+              </details>
             </div>
           </section>
         </aside>
@@ -240,7 +310,7 @@
   </main>
 
   <script defer src="assets/js/boot/kc-constants.js?v=8.6.1"></script>
-<script defer src="assets/js/core/kc-i18n.js?v=8.6.12"></script>
+<script defer src="assets/js/core/kc-i18n.js?v=8.6.13"></script>
   <script defer src="assets/js/utils/kc-utils.string.js?v=8.6.3"></script>
   <script defer src="assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
     <script defer src="assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -250,7 +320,7 @@
     <script defer src="assets/js/utils/kc-utils.presentation.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-card-image-aspect.js?v=8.6.1"></script>
   <script defer src="assets/js/utils/kc-utils.js?v=8.6.1"></script>
-  <script defer src="assets/js/boot/kc-env.js?v=8.6.1"></script>
+  <script defer src="assets/js/boot/kc-env.js?v=8.6.13"></script>
   <script defer src="assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
   <script defer src="assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-consent.js?v=8.6.4"></script>
@@ -263,7 +333,7 @@
     <script defer src="assets/js/api/kc-supabase.ratings.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.notifications.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.saved.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.help.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.help.js?v=8.6.13"></script>
   <script defer src="assets/js/api/kc-api.posts-read.js?v=8.6.2"></script>
   <script defer src="assets/js/api/kc-api.comments-votes.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.ratings.js?v=8.6.1"></script>
@@ -277,16 +347,16 @@
   <script defer src="assets/js/api/kc-api.filters.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.authors.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.posts-normalize.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.client.js?v=8.6.2"></script>
+  <script defer src="assets/js/api/kc-api.client.js?v=8.6.13"></script>
   <script defer src="assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.saved.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/local/local.help.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.help.adapter.js?v=8.6.13"></script>
 <script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.13"></script>
   <script defer src="assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
     <script defer src="assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
@@ -295,22 +365,22 @@
   <script defer src="assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.1"></script>
-  <script defer src="assets/js/shared/help.shared.js?v=8.6.2"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.13"></script>
+  <script defer src="assets/js/shared/help.shared.js?v=8.6.13"></script>
   <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
   <script defer src="assets/js/components/voting.js?v=8.6.2"></script>
   <script defer src="assets/js/core/kc-core.js?v=8.6.4"></script>
   <script defer src="assets/js/core/kc-public-shell.js?v=8.6.2"></script>
-  <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.2"></script>
+  <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.13"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
   <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
-  <script defer src="assets/js/features/kc-search.js?v=8.6.8"></script>
+  <script defer src="assets/js/features/kc-search.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/help.controller.js?v=8.6.1"></script>
+  <script defer src="assets/js/controllers/public/help.controller.js?v=8.6.13"></script>
 </body>
 </html>

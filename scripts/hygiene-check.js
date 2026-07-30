@@ -514,10 +514,22 @@ function runDeployInvariantChecks() {
     if (!csp.includes("form-action 'self'")) {
       errors.push("vercel.json CSP must keep form-action 'self'");
     }
+    if (!csp.includes('https://challenges.cloudflare.com')) {
+      errors.push('vercel.json CSP must allow the exact Cloudflare Turnstile challenge origin');
+    }
+    if (csp.includes('https://*.cloudflare.com')) {
+      errors.push('vercel.json CSP must not broaden Turnstile to every Cloudflare subdomain');
+    }
   }
 
   const kcEnv = read('assets/js/boot/kc-env.js');
-  ['__KC_SUPABASE_URL__', '__KC_SUPABASE_ANON_KEY__', '__KC_DRIVER__', '__KC_APP_ENV__'].forEach((token) => {
+  [
+    '__KC_SUPABASE_URL__',
+    '__KC_SUPABASE_ANON_KEY__',
+    '__KC_TURNSTILE_SITE_KEY__',
+    '__KC_DRIVER__',
+    '__KC_APP_ENV__',
+  ].forEach((token) => {
     if (!kcEnv.includes(token)) {
       errors.push(`assets/js/boot/kc-env.js is missing placeholder ${token}`);
     }
