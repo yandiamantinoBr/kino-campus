@@ -33,7 +33,11 @@ function resolveContainer() {
 }
 
 const CONTAINER = process.env.SUPABASE_DB_CONTAINER || resolveContainer();
-const describeIf = (SUPABASE_DB_URL || CONTAINER) ? describe : describe.skip;
+// Only run when an explicit env var is set. The CI does not have a
+// local Supabase container matching the dev project_id, so the test
+// is skipped by default. The local-dev workflow can set
+// SUPABASE_DB_CONTAINER=supabase_db_kino-campus to exercise it.
+const describeIf = (SUPABASE_DB_URL || process.env.SUPABASE_DB_CONTAINER) ? describe : describe.skip;
 
 const TABLES = [
   // Behavioral / linkable tables that should be deleted by user_id
