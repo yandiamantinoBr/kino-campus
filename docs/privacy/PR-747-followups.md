@@ -4,13 +4,19 @@ Esta página lista itens identificados durante o trabalho da PR #747 mas que **n
 
 ## P0 (bloqueia deploy em prod)
 
-### 1. CI "Prove Phase-A upgrade from linked schema fingerprint" falhando
+### 1. CI "Prove Phase-A upgrade from linked schema fingerprint" falhando ✅ RESOLVIDO em [PR #756](https://github.com/yandiamantinoBr/kino-campus/pull/756)
+
+Issue: [#748](https://github.com/yandiamantinoBr/kino-campus/issues/748) (closed)
 
 - **Sintoma:** o check `Supabase reset, lint and pgTAP` falha no step "Prove Phase-A upgrade from linked schema fingerprint" com `CADU_METADATA_CONTRACT_NOT_READY_AFTER_RECONCILIATION`.
-- **Reprodução:** CI atual falha; localmente (Windows + Docker) o teste passa depois da fix `20260730120000`.
-- **Causa raiz:** a migration `20260728230000_reconcile_cadu_contract_with_privacy_guards.sql` (do Codex) altera o body do probe `kc_cadu_metadata_contract()` pra reconhecer os guards de privacidade (`kc_active_session_write_guard` trigger, `kc_active_session_restrictive` policy). O resultado: o body tem hash `f62be6380d7b0b663aa7901cc64bd017`, que não bate nem com o legacy `a74ae7c...` nem com o migrated `21d2a9c...` que o `20260714224000` espera.
-- **Tentativa de fix (commit `c05323be`):** migration `20260730120000_align_cadu_metadata_probe_with_phase_a_compat.sql` força o body do probe pro estado "migrated" (hash `21d2a9c...`). **Funciona localmente**, mas o CI continua falhando — provavelmente diferença sutil entre Linux (CI) e Windows (local).
-- **Próximo passo:** investigar por que o `git show` retorna o mesmo conteúdo nos dois ambientes mas o `psql` se comporta diferente. Possível causa: encoding do `psql` (UTF-8 vs UTF-16 LE) ou diferença de versão do `docker exec`.
+- **Causa raiz (NÃO era Windows vs Linux):** o fixture `tests/sql/cadu-phase-a-linked-schema-fixture.sql` foi escrito para um schema pré-privacy (FK sem `ON DELETE SET NULL`, 1 policy `kc_unit_meta_select_public`, sem `kc_active_session_write_guard` trigger, sem `kc_active_session_restrictive` policy). Mas o `supabase db reset` deixa o schema no estado PÓS-privacy (PR #747 adicionou `ON DELETE SET NULL` na FK, adicionou o trigger e a policy de active-session). O fixture dropava `revision` e o trigger `kc_unit_meta_touch`, mas **não** limpava os artefatos de privacy. Resultado: o probe `20260713184500` (escrito para o estado pré-privacy) avaliava o schema híbrido e retornava `ready: false`. Reproduzia idêntico no Windows + Docker Desktop e no Linux CI.
+- **Fix:** o fixture agora limpa o estado privacy antes de aplicar as 4 Cadu legacy:
+  - `drop trigger if exists kc_active_session_write_guard on public.kc_unit_meta`
+  - `drop policy if exists kc_active_session_restrictive on public.kc_unit_meta`
+  - `drop+recreate` da FK sem `ON DELETE SET NULL`
+  - remove as 3 policies admin temporárias (a `20260713183000` as dropa de qualquer forma)
+- **Por que o `20260730120000` (fix anterior) não resolvia:** ela assume que o probe tem `'7326c7...'` no body para fazer o replace. Quando o schema já está pós-privacy, o probe já tem `'0b786e3...'` (via `20260714224000` ou via `20260728230000`) e o replace vira no-op. A fix continua válida para o caminho `supabase db reset` → `20260714224000`, mas o test Phase-A precisa do fixture limpo para simular o upgrade legacy corretamente.
+- **Validação:** `npm run test:cadu:phase-a-upgrade` + `test:cadu:phase-a-postgrest` passam localmente. Doc: `docs/ops/cadu-phase-a-test-runbook-2026-07-30.md`.
 
 ## P1 (não-bloqueia, mas deveria ser feito)
 
