@@ -78,11 +78,22 @@ Issue: [#752](https://github.com/yandiamantinoBr/kino-campus/issues/752) (closed
   - **Privacy:** o form é re-aplicado mas NÃO auto-submetido. O user é solicitado a revisar e re-enviar. PII não é logada em console.
 - **Validação:** 199/199 tests OK. Todos os 5 checks de CI passaram.
 
-### 6. Cobertura do diagnóstico de erasure
+### 6. Cobertura do diagnóstico de erasure ✅ RESOLVIDO em [PR #759](https://github.com/yandiamantinoBr/kino-campus/pull/759)
 
-- **Sintoma:** algumas tabelas não estão 100% cobertas pela redação. Itens não tratados: curtidas de comentários, reações de chat, outbox, afinidade, bloqueios, avaliações, aceites legais, antifraude, views, consultas de busca, convites com e-mail bruto, logs de auditoria.
-- **Onde:** `20260729007000_atomic_erasure_dsr_and_auth_delete_recovery.sql`.
-- **Próximo passo:** auditar tabela por tabela e adicionar redação explícita em cada uma.
+Issue: [#753](https://github.com/yandiamantinoBr/kino-campus/issues/753) (closed)
+
+- **Sintoma:** algumas tabelas não estavam 100% cobertas pela redação segundo auditoria inicial (curtidas de comentários, reações de chat, outbox, afinidade, bloqueios, avaliações, aceites legais, antifraude, views, consultas de busca, convites com e-mail bruto, logs de auditoria).
+- **Investigação:** a cobertura JÁ EXISTIA — o que faltava era um artefato checkable. A doc runbook (`account-erasure-runbook.md` §9) listava o tratamento por tabela em prosa, e a migration `20260729007000_atomic_erasure_dsr_and_auth_delete_recovery.sql` + `20260728183022_data_subject_requests_and_export.sql` (PR #747) implementavam a redação real.
+- **Solução aplicada:**
+  - Nova doc `docs/privacy/erasure-coverage-matrix-2026-07-30.md` com matriz tabela-por-tabela (24 fontes de dados) e o tratamento de cada uma: `deleted`, `set null`, `redacted`, `preserved` ou `cascade`. Cada linha aponta para o runbook § ou a migration que implementa.
+  - Novo test `tests/integration/erasure-coverage-matrix.test.js` que valida contra o schema real:
+    - toda tabela da matriz existe
+    - toda tabela linkável tem `user_id` (ou `author_id` para `comments`)
+    - `user_blocks.blocked_id` FK é `ON DELETE SET NULL` + tem `blocked_subject_hash`
+    - `comments.author_id` FK action é permitido
+    - a doc menciona toda tabela da matriz (anti-drift)
+  - O test é SKIP por padrão no CI (não tem container local); roda quando `SUPABASE_DB_CONTAINER` ou `SUPABASE_DB_URL` está setada.
+- **Validação:** 8/8 com container, 7 skipped + 1 passa (sanity) sem container. Todos os 5 checks de CI passaram.
 
 ## P3 (informacional)
 
