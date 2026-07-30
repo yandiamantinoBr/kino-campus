@@ -722,6 +722,26 @@
     'tooltip.ods-11':                   'ODS 11: Cidades e Comunidades Sustentáveis',
     'tooltip.ods-12':                   'ODS 12: Consumo e Produção Responsáveis',
     'tooltip.ods-13':                   'ODS 13: Ação Contra a Mudança Global do Clima',
+    // ── Privacidade / LGPD / DSR (issue #750) ────────────────────────────
+    // settings.html#settingsPrivacyData
+    'privacy.privacy-title':             'Privacidade e seus dados',
+    'privacy.privacy-intro':             'Baixe a parte automatizada de uma cópia estruturada dos dados disponíveis da sua conta ou abra um pedido protocolado de exclusão. Se alguma fonte exigir revisão segura, o manifesto indicará a limitação e o mesmo protocolo continuará aberto para um complemento assistido. A exclusão não acontece imediatamente: a titularidade e a confirmação final são verificadas antes da etapa irreversível.',
+    'privacy.download-data':       'Baixar meus dados (JSON)',
+    'privacy.request-portability': 'Solicitar portabilidade',
+    'privacy.request-erasure':     'Solicitar exclusão da conta',
+    'privacy.download-intro':             'A parte automatizada é gerada sob demanda e não fica armazenada na página. Ela reúne os dados disponíveis da conta no servidor e, em uma seção separada, dados locais permitidos encontrados neste navegador. Preferências de busca, afinidade comportamental e rascunhos de chat são limitados ao identificador da conta conectada; configurações neutras do dispositivo, como tema, podem ser compartilhadas por quem usa este navegador. Tokens e credenciais nunca entram no arquivo. Arquivos de mídia aparecem em um manifesto seguro. O próprio arquivo informa categorias incompletas e eventual complemento assistido; não trate a primeira entrega como integral quando houver esse aviso. Precisa de outro formato ou transferir dados para um serviço específico? {helpLink}.',
+    'privacy.erasure-copy-notice':        'Quer guardar uma cópia antes da exclusão? {downloadLink}. O pedido direto ainda não registra essa decisão: se você prosseguir sem baixar, a equipe confirmará sua preferência antes da etapa irreversível.',
+    'privacy.erasure-guest-fallback':     'Se não puder usar a ação autenticada, abra o {copyFormLink} ou o {erasureFormLink}.',
+    'privacy.refresh':             'Atualizar protocolos',
+    'privacy.clear-local':         'Limpar dados deste navegador',
+    'privacy.help':                'Pedir ajuda com meus dados',
+    'privacy.list-loading':               'Carregando seus protocolos recentes...',
+    'privacy.search-preferences':  'Gerenciar dados da busca',
+    'privacy.read-policy':         'Ler privacidade',
+    'privacy.help-center':           'Detalhe o pedido na Central de Ajuda',
+    'privacy.download-first':        'Baixe seus dados primeiro',
+    'privacy.copy-form':             'formulário de cópia',
+    'privacy.erasure-form':          'formulário de exclusão',
   };
 
   /**
@@ -959,12 +979,64 @@
     return count;
   }
 
+  /**
+   * Aplica traducoes no conteudo de elementos com data-i18n-text.
+   * Aceita placeholder {name} no valor traduzido, e o atributo opcional
+   * data-i18n-params (JSON) com valores para interpolacao.
+   *
+   *   <p data-i18n-text="privacy.erasure-copy-notice"
+   *      data-i18n-params='{"downloadLink":"<a href=\"#\">Baixe seus dados primeiro</a>"}'>
+   *     Quer guardar uma copia antes da exclusao? <a href="#">Baixe seus dados primeiro</a>...
+   *   </p>
+   *
+   * Se a chave nao existir, mantem o conteudo original (nao sobrescreve).
+   * Se existir, SUBSTITUI o conteudo pelo valor traduzido + interpolado.
+   * Usa innerHTML para permitir links (e outros elementos inline) nos params;
+   * como os valores vem do proprio HTML (controlado pelo dev), o risco de XSS
+   * via params eh equivalente ao risco do autor do template.
+   *
+   * Elementos com data-i18n-text-escape="true" (ou sem nenhum HTML nos params)
+   * podem ser forçados a usar textContent para defesa em profundidade.
+   */
+  function applyTexts(root) {
+    var doc = getDocument(root);
+    var scope = root && typeof root.querySelectorAll === 'function' ? root : doc;
+    if (!scope || typeof scope.querySelectorAll !== 'function') {
+      return 0;
+    }
+
+    var count = 0;
+    var elements = scope.querySelectorAll('[data-i18n-text]');
+    Array.prototype.forEach.call(elements, function (el) {
+      if (typeof el.getAttribute !== 'function') return;
+      var key = el.getAttribute('data-i18n-text');
+      if (!key) return;
+      var str = _dict[key];
+      if (str === undefined) return; // chave inexistente: nao toca no conteudo
+      var paramsRaw = el.getAttribute('data-i18n-params');
+      var params = null;
+      if (paramsRaw) {
+        try { params = JSON.parse(paramsRaw); } catch (e) { params = null; }
+      }
+      var value = t(key, params || undefined);
+      var escape = el.getAttribute('data-i18n-text-escape') === 'true';
+      if (escape) {
+        el.textContent = value;
+      } else {
+        el.innerHTML = value;
+      }
+      count += 1;
+    });
+    return count;
+  }
+
   function applyRuntimeI18n() {
     applyDocumentMetadata();
     applyStaticAlts();
     applyAriaLabels();
     applyPlaceholders();
     applyTooltips();
+    applyTexts();
   }
 
   function onReady(callback) {
@@ -986,6 +1058,7 @@
     applyAriaLabels: applyAriaLabels,
     applyPlaceholders: applyPlaceholders,
     applyTooltips: applyTooltips,
+    applyTexts: applyTexts,
   };
 
   onReady(applyRuntimeI18n);

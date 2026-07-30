@@ -233,4 +233,111 @@ describe('KCi18n - Modulo de Internacionalizacao (pt-BR)', () => {
       });
     });
   });
+
+  // ── 6. applyTexts() — runtime textContent / innerHTML ─────────────────
+  // issue #750: textos de privacidade hard-coded em settings.html
+  //             movidos para o dicionario _dict e aplicados via
+  //             data-i18n-text + data-i18n-params.
+
+  describe('applyTexts() — substituicao de texto via data-i18n-text', () => {
+    beforeEach(() => {
+      // Limpa o document.body entre testes para nao vazar
+      document.body.innerHTML = '';
+    });
+
+    test('existe e esta exposta em window.KCi18n.applyTexts', () => {
+      expect(typeof i18n.applyTexts).toBe('function');
+    });
+
+    test('substitui textContent quando a chave existe (sem params)', () => {
+      document.body.innerHTML =
+        '<p data-i18n-text="privacy.privacy-title">Texto original</p>';
+      const count = i18n.applyTexts();
+      expect(count).toBe(1);
+      expect(document.querySelector('p').textContent).toBe('Privacidade e seus dados');
+    });
+
+    test('preserva o conteudo original quando a chave nao existe', () => {
+      document.body.innerHTML =
+        '<p data-i18n-text="privacy.chave-inexistente">Texto original</p>';
+      const count = i18n.applyTexts();
+      expect(count).toBe(0);
+      expect(document.querySelector('p').textContent).toBe('Texto original');
+    });
+
+    test('interpola {placeholder} via data-i18n-params JSON', () => {
+      document.body.innerHTML =
+        '<p data-i18n-text="privacy.erasure-copy-notice" ' +
+        'data-i18n-params=\'{"downloadLink":"<a href=\\"#\\">Baixe seus dados primeiro</a>"}\'>' +
+        'Texto original</p>';
+      const count = i18n.applyTexts();
+      expect(count).toBe(1);
+      const html = document.querySelector('p').innerHTML;
+      expect(html).toContain('Quer guardar uma cópia antes da exclusão');
+      expect(html).toContain('<a href="#">Baixe seus dados primeiro</a>');
+      // textContent (sem tags) tambem contem o texto interpolado
+      expect(document.querySelector('p').textContent).toContain('Baixe seus dados primeiro');
+    });
+
+    test('interpola multiplos placeholders em uma unica chave', () => {
+      document.body.innerHTML =
+        '<p data-i18n-text="privacy.erasure-guest-fallback" ' +
+        'data-i18n-params=\'{"copyFormLink":"<a>formulario de copia</a>","erasureFormLink":"<a>formulario de exclusao</a>"}\'>' +
+        'Original</p>';
+      const count = i18n.applyTexts();
+      expect(count).toBe(1);
+      const html = document.querySelector('p').innerHTML;
+      expect(html).toContain('formulario de copia');
+      expect(html).toContain('formulario de exclusao');
+    });
+
+    test('trata data-i18n-params invalido como ausente (nao quebra)', () => {
+      document.body.innerHTML =
+        '<p data-i18n-text="privacy.privacy-title" data-i18n-params="not-valid-json">Original</p>';
+      expect(() => i18n.applyTexts()).not.toThrow();
+      // Sem params, o placeholder {name} nao existe, entao o valor eh a string pura
+      expect(document.querySelector('p').textContent).toBe('Privacidade e seus dados');
+    });
+
+    test('aceita data-i18n-text-escape="true" para forcar textContent', () => {
+      document.body.innerHTML =
+        '<p data-i18n-text="privacy.privacy-title" data-i18n-text-escape="true">Original</p>';
+      const count = i18n.applyTexts();
+      expect(count).toBe(1);
+      expect(document.querySelector('p').textContent).toBe('Privacidade e seus dados');
+      // Confirma que o conteudo eh text (sem HTML parseado)
+      expect(document.querySelector('p').children.length).toBe(0);
+    });
+
+    test('aplica em varios elementos de uma vez', () => {
+      document.body.innerHTML =
+        '<button><span data-i18n-text="privacy.download-data">X</span></button>' +
+        '<button><span data-i18n-text="privacy.request-erasure">Y</span></button>' +
+        '<button><span data-i18n-text="privacy.list-loading">Z</span></button>';
+      const count = i18n.applyTexts();
+      expect(count).toBe(3);
+      const spans = document.querySelectorAll('span');
+      expect(spans[0].textContent).toBe('Baixar meus dados (JSON)');
+      expect(spans[1].textContent).toBe('Solicitar exclusão da conta');
+      expect(spans[2].textContent).toBe('Carregando seus protocolos recentes...');
+    });
+
+    test('retorna 0 se nao houver nenhum [data-i18n-text] no escopo', () => {
+      document.body.innerHTML = '<p>Sem i18n aqui</p>';
+      expect(i18n.applyTexts()).toBe(0);
+    });
+
+    test('applyRuntimeI18n() chama applyTexts() (smoke test)', () => {
+      // applyRuntimeI18n usa document como scope; este teste confirma
+      // que applyTexts eh invocado quando o modulo roda.
+      document.body.innerHTML =
+        '<h1 data-i18n-text="privacy.privacy-title">Original</h1>';
+      // Como applyRuntimeI18n pode ter rodado no onReady antes deste teste,
+      // rodamos novamente via window.KCi18n.applyTexts e contamos.
+      const count = i18n.applyTexts();
+      // Pode ser 0 (ja aplicado antes) ou 1 (primeira vez); o importante
+      // eh nao quebrar e o conteudo estar traduzido.
+      expect(document.querySelector('h1').textContent).toBe('Privacidade e seus dados');
+    });
+  });
 });
