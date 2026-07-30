@@ -20,11 +20,24 @@ Issue: [#748](https://github.com/yandiamantinoBr/kino-campus/issues/748) (closed
 
 ## P1 (não-bloqueia, mas deveria ser feito)
 
-### 2. FAQ de LGPD na Central de Ajuda
+### 2. FAQ de LGPD na Central de Ajuda ✅ RESOLVIDO em [PR #757](https://github.com/yandiamantinoBr/kino-campus/pull/757)
 
-- **Sintoma:** o caminho de LGPD na Central de Ajuda ainda exige 3 cliques aninhados. Não tem FAQ dedicado.
-- **Onde:** `ajuda.html` (categoria `Conta e acesso > Onboarding > Exclusão`).
-- **Próximo passo:** criar uma FAQ `category=account_access&topic=lgpd_basics` com perguntas como "Como pedir exclusão da conta?", "Posso cancelar o pedido?", "O que acontece com minhas mensagens de chat?".
+Issue: [#749](https://github.com/yandiamantinoBr/kino-campus/issues/749) (closed)
+
+- **Sintoma:** o caminho de LGPD na Central de Ajuda ainda exigia 3 cliques aninhados e não tinha FAQ dedicado.
+- **Solução aplicada:**
+  - Nova `<section id="faq-lgpd">` em `ajuda.html` logo após a seção de privacidade, com 6 Q&A dedicadas:
+    1. Como pedir exclusão da conta?
+    2. Posso cancelar o pedido depois de enviar?
+    3. O que acontece com minhas mensagens de chat?
+    4. Como exportar meus dados?
+    5. Quanto tempo leva o processo?
+    6. O que acontece com publicações e dados que precisam ser mantidos?
+  - Todos os textos usam `data-i18n-text` (pattern do #750).
+  - Deep link "FAQ LGPD na Central de Ajuda" no card de privacidade do `settings.html` aponta para `ajuda.html#faq-lgpd`.
+  - 15 novas chaves no namespace `lgpd.*` (`faq-title`, `faq-intro`, `faq-q1..q6`, `faq-a1..a6`, `faq-back`) + 1 chave `privacy.lgpd-faq` para o link do `settings.html`.
+  - 2 novos tests em `tests/unit/kc-i18n.test.js` (presence + uniqueness).
+- **Validação:** 47/47 unit + 133/133 a11y/cache-bust. Todos os 5 checks de CI passaram.
 
 ### 3. i18n dos textos de privacidade ✅ RESOLVIDO em [PR #755](https://github.com/yandiamantinoBr/kino-campus/pull/755)
 
