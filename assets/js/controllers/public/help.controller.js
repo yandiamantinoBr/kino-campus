@@ -43,6 +43,20 @@
     'data_portability',
     'account_erasure',
   ]);
+
+  // Privacy payload stash (issue #752): visitors can fill a LGPD/DSR form
+  // while unauthenticated. If they then sign in (or sign up), the form
+  // payload is restored from sessionStorage and re-submitted so the user
+  // does not lose what they typed.
+  // - Stored in sessionStorage (not localStorage): cleared when the tab
+  //   closes, which limits exposure of PII.
+  // - TTL: 15 minutes from stash. After that, the payload is treated as
+  //   expired and discarded.
+  // - Sensitive PII (contact_email, message) is kept intact because the
+  //   user just typed it themselves; we do not log it to console or to
+  //   any other side channel. sessionStorage is the only sink.
+  const PRIVACY_PENDING_STORAGE_KEY = 'kc-privacy-pending-payload-v1';
+  const PRIVACY_PENDING_TTL_MS = 15 * 60 * 1000;
   const TURNSTILE_SCRIPT_ID = 'kc-help-privacy-turnstile-script';
   const TURNSTILE_SCRIPT_URL =
     'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
@@ -342,6 +356,131 @@
       } catch (_) { }
     }
     syncPrivacyVerification().catch(function () {});
+  }
+
+  // ── Privacy payload stash (issue #752) ─────────────────────────────────
+  // The LGPD/DSR form can be filled by a visitor (no session). If the
+  // visitor then signs in or signs up, we want the typed payload to
+  // survive the navigation. The stash is the single point of contact with
+  // sessionStorage: everything else in the controller reads through here.
+
+  function safeSessionStorage() {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        return window.sessionStorage;
+      }
+    } catch (_) { /* sessionStorage can throw in privacy modes */ }
+    return null;
+  }
+
+  function isPrivacyRequestKind(kind) {
+    return PRIVACY_IDEMPOTENCY_KINDS.has(String(kind || ''));
+  }
+
+  function stashPrivacyPayloadForVisitor(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+    const requestKind = String(payload.request_kind || payload.type || '');
+    if (!isPrivacyRequestKind(requestKind)) return false;
+    const storage = safeSessionStorage();
+    if (!storage) return false;
+    const envelope = {
+      v: 1,
+      created_at_ms: Date.now(),
+      request_kind: requestKind,
+      payload: payload,
+    };
+    try {
+      storage.setItem(PRIVACY_PENDING_STORAGE_KEY, JSON.stringify(envelope));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function loadStashedPrivacyPayload() {
+    const storage = safeSessionStorage();
+    if (!storage) return null;
+    let raw;
+    try {
+      raw = storage.getItem(PRIVACY_PENDING_STORAGE_KEY);
+    } catch (_) {
+      return null;
+    }
+    if (!raw) return null;
+    let envelope;
+    try {
+      envelope = JSON.parse(raw);
+    } catch (_) {
+      // Corrupt stash: clear to avoid re-reading on every init.
+      try { storage.removeItem(PRIVACY_PENDING_STORAGE_KEY); } catch (__) {}
+      return null;
+    }
+    if (!envelope || envelope.v !== 1 || !envelope.payload) {
+      try { storage.removeItem(PRIVACY_PENDING_STORAGE_KEY); } catch (__) {}
+      return null;
+    }
+    const age = Date.now() - Number(envelope.created_at_ms || 0);
+    if (!Number.isFinite(age) || age < 0 || age > PRIVACY_PENDING_TTL_MS) {
+      try { storage.removeItem(PRIVACY_PENDING_STORAGE_KEY); } catch (__) {}
+      return null;
+    }
+    if (!isPrivacyRequestKind(envelope.request_kind)) {
+      try { storage.removeItem(PRIVACY_PENDING_STORAGE_KEY); } catch (__) {}
+      return null;
+    }
+    return envelope.payload;
+  }
+
+  function clearStashedPrivacyPayload() {
+    const storage = safeSessionStorage();
+    if (!storage) return;
+    try { storage.removeItem(PRIVACY_PENDING_STORAGE_KEY); } catch (_) { /* ignore */ }
+  }
+
+  // Apply a stashed visitor payload into the form fields so the user can
+  // see what was preserved and decide to re-submit. Returns true if the
+  // payload was applied.
+  function applyStashedPrivacyPayloadToForm(payload) {
+    if (!payload || typeof payload !== 'object') return false;
+    const setValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (typeof value !== 'string' || !value) return;
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    setValue('helpType', payload.type);
+    setValue('helpTopic', payload.topic);
+    setValue('helpSubject', payload.subject);
+    setValue('helpMessage', payload.message);
+    setValue('helpContactEmail', payload.contact_email);
+    if (payload.priority) setValue('helpPriority', payload.priority);
+    return true;
+  }
+
+  async function restoreAndSubmitStashedPrivacyPayload() {
+    if (state.submitting || state.privacyRecoveryInProgress) return;
+    if (!state.user || !getUserId(state.user)) return; // only after sign-in
+    const stashed = loadStashedPrivacyPayload();
+    if (!stashed) return;
+    // Only auto-restore if the form is empty (user has not started typing
+    // a new request). Otherwise the restore would clobber fresh input.
+    const formIsPristine = (function () {
+      const subject = document.getElementById('helpSubject');
+      const message = document.getElementById('helpMessage');
+      return (!subject || !subject.value) && (!message || !message.value);
+    })();
+    if (!formIsPristine) {
+      // The user is already typing a new request; leave the stash alone
+      // so they can decide whether to discard it.
+      return;
+    }
+    if (!applyStashedPrivacyPayloadToForm(stashed)) {
+      clearStashedPrivacyPayload();
+      return;
+    }
+    setStatus('Você voltou a uma tentativa de privacidade que ficou em aberto. Verifique os campos e reenvie quando estiver pronto.', 'info');
   }
 
   function getPrivacyVerificationForSubmission(payload) {
@@ -1421,6 +1560,17 @@
     setProtocol('');
     setStatus('Enviando seu pedido de ajuda...', 'info');
 
+    // Issue #752: if the visitor is unauthenticated and the request is a
+    // privacy form, stash the payload in sessionStorage BEFORE submit so
+    // the form survives an interruption (login redirect, refresh, etc).
+    if (!userId) {
+      stashPrivacyPayloadForVisitor(payload);
+    } else {
+      // Authenticated user: there is no risk of losing the form, and any
+      // leftover stash from a previous visit is now stale.
+      clearStashedPrivacyPayload();
+    }
+
     let privacyIdempotencyToken = null;
     const guestPrivacyAttempt = privacyVerification.required === true;
     try {
@@ -1487,6 +1637,9 @@
         return;
       }
       clearPrivacyIdempotencyToken(privacyIdempotencyToken);
+      // Issue #752: a successful submit clears the visitor stash so the
+      // sessionStorage does not keep a stale PII payload around.
+      clearStashedPrivacyPayload();
       setProtocol(
         protocol,
         dataSubjectProtocol ? 'data_subject_protocol' : 'help_reference'
@@ -1616,6 +1769,13 @@
     } finally {
       state.privacyRecoveryInProgress = false;
     }
+
+    // Issue #752: if the user just signed in / signed up while a
+    // visitor privacy payload was waiting in sessionStorage, restore it
+    // and try to submit it under the authenticated session.
+    await restoreAndSubmitStashedPrivacyPayload();
+
+    initPullToRefresh();
     initPullToRefresh();
     try {
       if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
