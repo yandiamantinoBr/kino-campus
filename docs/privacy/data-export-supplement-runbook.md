@@ -302,9 +302,10 @@ cópia/verificação → contract diferido**.
    `20260729006000_bind_data_export_admin_work_to_session.sql`,
    `20260729007000_atomic_erasure_dsr_and_auth_delete_recovery.sql` e
    `20260729008000_harden_data_export_delivery.sql`, seguidas pelas migrations de
-   vínculo/projeção de identidade, estado Auth esperado e ponte anônima de
-   exclusão até
-   `20260729012000_bridge_anonymous_help_to_erasure_dsr.sql`, com a UI
+   vínculo/projeção de identidade, estado Auth esperado, ponte anônima de
+   exclusão e idempotência do formulário Help até
+   `20260729190653_help_submission_idempotency.sql`, seguidas pelo gateway guest
+   EXPAND `20260729203000_help_privacy_guest_gateway_expand.sql`, com a UI
    administrativa fechada para novas gerações. Inventarie antes todos os artefatos
    `claimed`/`purging` e suas leases.
 2. **Compatibilidade:** confirme que as novas assinaturas recebem
@@ -320,8 +321,9 @@ cópia/verificação → contract diferido**.
    vincular a sessão única sob CAS do mesmo artefato, versão, token, status e
    lease. Não preencha `claimed_session_id` manualmente.
 4. **Edge:** publique `kc-data-export-admin`, `kc-data-subject-request`,
-   `kc-account-erasure` e `kc-data-export-retention` compatíveis com o schema
-   expand. Confirme versões e `verify_jwt` no projeto remoto.
+   `kc-account-erasure`, `kc-data-export-retention` e
+   `kc-create-privacy-help-guest` compatíveis com o schema expand. Confirme
+   versões, secrets e `verify_jwt` no projeto remoto.
 5. **Canários:** com conta descartável, cubra sessão ativa, logout/revogação após
    claim, outra sessão do mesmo administrador, lease expirada, recovery,
    cancelamento, conflito de versão, upload/finalize e purge. A sessão revogada

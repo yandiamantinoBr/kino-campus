@@ -604,6 +604,8 @@ Cria ticket de suporte.
   metadata?: object,
   expected_auth_state: 'anonymous' | 'authenticated',
   expected_user_id?: string | null,
+  idempotency_key?: string, // 64 hex; obrigatório e gerado pelo cliente nos 3 fluxos LGPD
+  turnstile_token?: string, // obrigatório e efêmero somente no envio visitante dos 3 fluxos LGPD
 }
 ```
 
@@ -618,6 +620,7 @@ Promise<{
     data_subject_request: DataSubjectRequest | null,
     protocol: string | null,
     reused_existing_data_subject_request: boolean,
+    idempotency_replayed: boolean,
   },
   notification?: object,
   error?: object,
@@ -630,9 +633,19 @@ Observações:
   `camelCase`;
 - pedidos de privacidade usam `metadata.request_kind` com um dos valores
   `data_access_copy`, `data_portability` ou `account_erasure`;
-- com sessão válida, ticket e protocolo são criados ou reutilizados atomicamente;
-  sem sessão, o formulário produz apenas uma referência de atendimento. O
-  protocolo só pode ser vinculado depois da verificação de identidade;
+- nesses três pedidos, o controller gera e conserva a chave opaca por caller e
+  finalidade. A chave não integra `metadata`, o objeto criado, logs ou analytics;
+- com uma conta autenticada real, ticket e protocolo são criados ou reutilizados
+  atomicamente pela RPC autenticada. O Supabase Anonymous Auth permanece
+  desabilitado;
+- como visitante, o adapter envia `{ turnstile_token, payload }` à Edge
+  `kc-create-privacy-help-guest`. A Edge valida o token no Siteverify e chama
+  somente o wrapper SQL de `service_role`; o navegador recebe uma referência de
+  atendimento e o protocolo só pode ser vinculado depois da verificação de
+  identidade;
+- `turnstile_token` fica apenas em memória/transporte, é removido antes do RPC,
+  não integra `metadata`, idempotência, armazenamento ou logs da aplicação e é
+  resetado após cada tentativa;
 - a sessão autenticada não autoriza o navegador a enviar `user_id`: a identidade
   é sempre derivada no servidor;
 - o controller preenche `expected_auth_state` e, quando autenticado,
@@ -644,6 +657,62 @@ Observações:
   expectativa. Clientes legados com `expected_user_id` continuam compatíveis;
   clientes sem qualquer expectativa só podem gravar enquanto permanecerem
   anônimos.
+
+---
+
+### `KCAPI.recoverPrivacyHelpRequest(payload)`
+
+Reconcilia uma tentativa pendente dos três pedidos LGPD da Central de Ajuda sem
+reenviar assunto, mensagem, e-mail ou metadata do formulário.
+
+```javascript
+{
+  idempotency_key: string, // 64 hex; chave opaca já preservada na sessão
+  request_kind: 'data_access_copy' | 'data_portability' | 'account_erasure',
+  expected_auth_state: 'anonymous' | 'authenticated', // estado atual
+  expected_user_id?: string | null, // obrigatório para conta real
+  source_auth_state?: 'anonymous' | 'authenticated', // estado do envio original
+}
+```
+
+**Retorno confirmado:**
+
+```javascript
+Promise<{
+  ok: true,
+  data: {
+    id: string,
+    created_at: string,
+    data_subject_request: DataSubjectRequest | null,
+    protocol: string | null,
+    reused_existing_data_subject_request: boolean,
+    idempotency_replayed: true,
+  },
+  recovery: {
+    state: 'recovered',
+    safe_to_replace: false,
+  },
+}>
+```
+
+Quando não há recibo confirmado, a fachada retorna `ok: false` e diferencia:
+
+- `HELP_IDEMPOTENCY_RECOVERY_RETIRED`: o servidor instalou ou confirmou uma
+  barreira durável contra um `create` atrasado; somente neste caso
+  `error.idempotency.safe_to_replace` e `response_confirmed` são `true`;
+- `HELP_IDEMPOTENCY_RECOVERY_AMBIGUOUS`: não existe prova suficiente para
+  aposentar a chave, portanto ela deve ser preservada e nenhum novo envio pode
+  substituí-la;
+- falha de transporte, envelope incompleto, conflito, troca de conta ou
+  integridade inconclusiva também preserva a chave.
+
+O runtime atual não cria usuários anônimos no Supabase. A compatibilidade
+defensiva para um caller técnico que preserve exatamente o mesmo UUID não
+autoriza ativar Anonymous Auth nem converter um guest sem UID em conta. Outra
+conta e sessão revogada não podem adotar a tentativa. A recuperação guest usa
+diretamente a RPC pública com a chave opaca, sem novo Turnstile porque não cria
+Help nem reenvia PII. Guest ausente permanece `ambiguous`: não cria bucket
+global compartilhado nem autoriza rotação automática.
 
 ---
 

@@ -5,8 +5,11 @@
 > **Estado documental:** 2026-07-29, incluindo o hardening de autorização
 > `20260728234000`, a reconciliação de workers privados `20260728235000`, o
 > arquivamento seguro de conversas `20260729000000`, a reconciliação global dos
-> guards de sessão `20260729001000` e o expand session-bound de exportação
-> administrativa `20260729006000`. As anotações `v9.x`/`v11.x` continuam como
+> guards de sessão `20260729001000`, o expand session-bound de exportação
+> administrativa `20260729006000`, a idempotência Help `20260729190653` e o
+> gateway guest EXPAND `20260729203000`. O CONTRACT do gateway permanece como
+> template fora da cadeia ativa em `supabase/contracts/pending/`. As anotações
+> `v9.x`/`v11.x` continuam como
 > marcadores históricos de introdução. Não se mantém contagem manual: a presença
 > local de uma migration não comprova aplicação no projeto remoto.
 
@@ -357,8 +360,88 @@ O rate limit por sessão reduz rajadas, mas pode ser contornado pela rotação d
 `kc_create_help_request_with_notification_claim_v2(jsonb)`. O wrapper compara
 `expected_auth_state` e `expected_user_id` ao contexto Auth atual antes de chamar
 o corpo legado. Rascunhos visitantes não podem adquirir uma conta que apareça
-durante o envio; usuários Auth anônimos também são persistidos com `user_id`
-nulo até verificação e vínculo auditados.
+durante o envio. O Supabase Anonymous Auth permanece desabilitado; visitante
+entra pelo gateway antiabuso e é persistido com `user_id` nulo até verificação
+e vínculo auditados.
+
+### `kc_private.help_privacy_submission_idempotency`
+
+Mapa privado introduzido por
+`20260729190653_help_submission_idempotency.sql` somente para os três pedidos
+LGPD estruturados da Central de Ajuda. Ele não guarda a chave opaca nem o
+payload em claro.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `key_hash` | TEXT PK | SHA-256 da chave aleatória do envio |
+| `payload_fingerprint` | TEXT NULL | SHA-256 server-side do payload canônico; obrigatório somente no estado confirmado |
+| `caller_scope_hash` | TEXT | SHA-256 do estado Auth e do caller, sem e-mail |
+| `caller_user_id` | UUID FK NULL | UUID Auth real para cascade exato no delete da conta; guest permanece nulo |
+| `auth_state` | TEXT | `anonymous` ou `authenticated` observado no envio |
+| `request_kind` | TEXT | `data_access_copy`, `data_portability` ou `account_erasure` |
+| `lifecycle_state` | TEXT | `committed` para recibo confirmado; `retired` para impedir que uma chamada atrasada use uma chave já aposentada |
+| `help_request_id` | UUID FK NULL | Help confirmado; `ON DELETE CASCADE` |
+| `response_created_at` | TIMESTAMPTZ NULL | Horário do Help confirmado, conferido novamente em cada replay |
+| `data_subject_request_id` | UUID FK NULL | DSR confirmado para conta real; `ON DELETE CASCADE`, sem bloquear o purge |
+| `response_protocol` | TEXT NULL | Protocolo confirmado; nulo para submissão anônima |
+| `response_reused_existing` | BOOLEAN | Indica se a criação original reutilizou um DSR canônico |
+| `retired_at` | TIMESTAMPTZ NULL | Início da retenção limitada do tombstone |
+| `created_at` | TIMESTAMPTZ | Criação técnica do mapa ou da barreira |
+
+`committed` exige Help e, quando autenticado, DSR/protocolo coerentes.
+`retired` não pode conter Help, DSR, protocolo ou fingerprint do payload. A
+tabela tem RLS como defesa adicional e nenhum papel da API possui acesso
+direto; somente as fachadas públicas validadas podem criar/reproduzir ou
+recuperar um recibo. Os hashes continuam sendo dados técnicos pseudonimizados,
+portanto entram no ciclo de retenção e não são tratados como dados anônimos.
+
+Tombstones `retired` são eliminados depois de 90 dias. O job diário já existente
+continua chamando `kc_private.kc_purge_expired_data_subject_requests(integer)`;
+essa assinatura é um wrapper que preserva o purge de DSR e também executa o
+cleanup limitado do mapa. Redação de Help por retenção ou exclusão aciona um
+trigger que remove imediatamente o replay correspondente. Os FKs com
+`ON DELETE CASCADE` eliminam o vínculo no purge de Help/DSR e no delete exato de
+`auth.users`, sem reter a conta apenas para sustentar idempotência.
+
+### `kc_private.help_privacy_recovery_rate_buckets`
+
+Contador privado de abuso usado somente quando um caller com UUID estável tenta
+recuperar uma chave sem recibo visível. Cada tentativa não resolvida consome o
+mesmo orçamento, inclusive quando a chave pertence a outro escopo; assim, o
+efeito lateral da quota não funciona como oráculo de existência.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `caller_scope_hash` | TEXT (PK composta) | Hash pseudonimizado do estado Auth e UUID |
+| `caller_user_id` | UUID FK | UUID Auth; `ON DELETE CASCADE` |
+| `window_started_at` | TIMESTAMPTZ (PK composta) | Início da janela horária |
+| `attempts` | INTEGER | Contagem limitada a 25 por janela |
+| `updated_at` | TIMESTAMPTZ | Última atualização técnica |
+
+A tabela tem RLS, nenhum grant para papéis da API e limpeza automática dos
+buckets com mais de dois dias pelo mesmo cleanup diário. Guest sem UUID não usa
+um bucket global: ausência continua `ambiguous` e a chave local é preservada.
+
+### `kc_private.help_privacy_guest_rate_buckets`
+
+Circuit breaker transacional para novas submissões LGPD de guest sem UUID.
+Mantém somente a janela horária, a contagem e o horário de atualização; não
+guarda IP, header, e-mail, chave ou conteúdo do pedido.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `window_started_at` | TIMESTAMPTZ PK | Início da janela horária global |
+| `attempts` | INTEGER | Novos Helps confirmados na janela, de 1 a 10.000 |
+| `updated_at` | TIMESTAMPTZ | Última atualização técnica |
+
+O contador é incrementado sob lock somente para um `create` guest novo; replay,
+recovery e callers com UUID não o consomem. A 10.001ª criação na mesma hora
+falha antes do Help e do mapa. É deliberadamente um circuit breaker emergencial
+alto e global, complementar ao limite primário de 10/h por e-mail, para conter
+uma explosão sem introduzir rastreamento por IP. Não identifica o ator nem
+substitui CAPTCHA/Turnstile ou WAF. Um atacante ainda pode esgotar
+temporariamente o orçamento; a operação deve monitorar a contagem e diferenciar
+abuso de tráfego legítimo. Buckets com mais de dois dias são removidos em lotes.
 
 ---
 

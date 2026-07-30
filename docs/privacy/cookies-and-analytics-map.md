@@ -16,6 +16,14 @@ administrativas. Esse carregamento é distinto do consentimento do GA4. A
 ativação, a retenção e as opções da propriedade Vercel são estado remoto e devem
 ser verificadas no projeto antes de qualquer afirmação de produção.
 
+O formulário visitante dos três direitos LGPD carrega o Cloudflare Turnstile
+somente quando necessário. O script externo pode tratar sinais técnicos e
+cookies estritamente necessários conforme o aviso do provedor; ele não pertence
+às categorias opcionais de analytics ou publicidade. O KinoCampus mantém o token
+do desafio somente em memória até uma tentativa, não envia `remoteip`
+explicitamente ao Siteverify e não persiste token, resposta bruta do provedor,
+IP, user-agent ou fingerprint TLS no Help, no mapa idempotente ou na telemetria.
+
 Métricas administrativas devem ser agregadas por padrão. A plataforma não deve coletar valor de cookie, token Supabase, e-mail, IP bruto, user-agent bruto, texto de mensagem, termo bruto de busca ou URL com query sensível em eventos opcionais. A coleta do GA4 fica desativada em páginas administrativas, `localhost` e ambientes de preview.
 
 ## Inventário
@@ -32,6 +40,8 @@ Métricas administrativas devem ser agregadas por padrão. A plataforma não dev
 | `kc_search_pending_queue` | `sessionStorage` | Fila local de buscas antes do envio ao Supabase. | Analytics | Sessão do navegador | Dashboard e Privacidade |
 | `kc_search_recent_terms` | `sessionStorage` | Dedupe local de buscas repetidas. | Analytics | Sessão do navegador | Não exibido diretamente |
 | `kc_privacy_action_keys_v1:{conta}` | `sessionStorage` | Conserva, em espaço isolado por conta e tipo de direito, a chave idempotente de um pedido de cópia, portabilidade ou exclusão cuja resposta ainda não foi confirmada. Evita protocolos duplicados após recarregamento ou perda de conexão sem permitir que troca ou limpeza de outra conta apague ou sobrescreva o retry pendente. O slot legado sem sufixo é migrado apenas quando pertence à conta autenticada. | Necessário | Até uma resposta definitiva, reconciliação sem protocolo aberto, limpeza explícita daquela conta ou fim da sessão da aba | Configurações; é marcador técnico excluído de qualquer cópia e somente o registro da conta atual é removido pela limpeza local |
+| `kc_help_privacy_idempotency_v1:{escopo}` | `sessionStorage` | Mantém somente chave aleatória, fingerprint, tipo de direito e horário técnico para recuperar um envio LGPD da Central de Ajuda após resposta perdida. O escopo é um hash do estado Auth/caller; assunto, mensagem, e-mail e metadados do formulário não são armazenados. | Necessário | Até resposta autoritativa ou fim da sessão da aba; falha de transporte ou integridade inconclusiva conserva o registro | Central de Ajuda; marcador técnico excluído da cópia e da telemetria, isolado entre visitante e cada conta |
+| Cloudflare Turnstile | Script/iframe externo e sinais técnicos processados pelo provedor | Protege exclusivamente a criação visitante de pedidos de acesso, portabilidade e exclusão contra automação. A Edge valida `success`, `action` e hostname; o token de até 2.048 caracteres é efêmero, de uso único e nunca é persistido pelo KinoCampus. | Segurança necessária; independente de analytics/publicidade | Token válido por até 5 minutos e descartado/resetado depois da tentativa; retenção de sinais/cookies é regida pelo provedor e pelo acordo aplicável | Apenas métricas operacionais agregadas de resultado/limite; nunca token, PII do formulário ou resposta bruta |
 | `kc:chat:draft:{conta}:{conversa}` | `localStorage` | Rascunho de mensagem, isolado pela conta autenticada e conversa. | Funcional | Até envio, remoção explícita ou limpeza local daquela conta | Somente os rascunhos da conta atual entram na seção local da cópia |
 | `kc_help_requests` | `localStorage`, somente no driver local/offline | Simula tickets comuns no desenvolvimento local. Pedidos de titular nunca são persistidos por esse adapter. | Desenvolvimento | Até limpeza do ambiente local | Não representa protocolo nem estado de produção |
 | `kc_home_category_affinity_v1` | `localStorage` | Afinidade comportamental compartilhada por este navegador, sem prova de titularidade exclusiva. | Analytics | Até revogação/limpeza local | Privacidade e Analytics; não entra na cópia autenticada |
@@ -203,3 +213,13 @@ Rotacionar credenciais técnicas conforme o processo de segurança. Rotacionar `
 - User-ID do GA4 deve existir somente com sessão autenticada e consentimento, sempre como HMAC pseudônimo calculado no servidor, nunca como identificador bruto.
 - Google Signals e personalização de anúncios devem permanecer desativados na tag.
 - Relatórios do Search Console devem exigir administrador, usar credencial separada de leitura, resposta `no-store` e exportação explícita.
+- Turnstile deve carregar somente no formulário visitante dos três direitos,
+  validar token no servidor e reiniciar depois de sucesso, erro ou expiração;
+  nenhuma chave oficial de teste pode aparecer no artefato de produção.
+
+Referências do controle antiabuso:
+
+- [Cloudflare — visão geral e aviso de privacidade do Turnstile](https://developers.cloudflare.com/turnstile/)
+- [Cloudflare — validação obrigatória no Siteverify](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
+- [Cloudflare — chaves e cenários oficiais de teste](https://developers.cloudflare.com/turnstile/troubleshooting/testing/)
+- [Cloudflare — aviso específico de privacidade do Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/)

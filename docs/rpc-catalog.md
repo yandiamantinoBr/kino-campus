@@ -536,19 +536,23 @@ Retorna métricas de uso da coluna `posts.legacy_id` (deprecated) para embasar d
 
 ---
 
-## Direitos do titular e exportação LGPD *(20260728183022 a 20260729012000)*
+## Direitos do titular e exportação LGPD *(20260728183022 a 20260729203000)*
 
-As RPCs abaixo são fachadas; o navegador não recebe `service_role`. A Edge
-Function valida o JWT, confirma a sessão em `auth.sessions` e só então usa as
-assinaturas privilegiadas. Protocolo público, referência de Help, artefato e
-claim são identificadores distintos.
+As RPCs abaixo são fachadas; o navegador não recebe `service_role`. As Edges
+autenticadas validam JWT e sessão antes das assinaturas privilegiadas. A única
+Edge pública desta seção valida Turnstile e só pode alcançar um wrapper guest
+de `service_role`. Protocolo público, referência de Help, artefato e claim são
+identificadores distintos.
 
 ### Entrada do titular
 
 | RPC | Papel | Contrato |
 |---|---|---|
 | `kc_create_data_subject_request_v2(p_request_kind text, p_idempotency_key text, p_requested_format text, p_request_source text)` | `authenticated` | Cria/reutiliza DSR e Help canônicos sob lock; identidade vem de `auth.uid()` |
-| `kc_create_help_request_with_notification_claim_v2(p_payload jsonb)` | `anon`, `authenticated`, `service_role` | Cria Help e, quando cabível, DSR sob o estado Auth esperado; rejeita troca visitante↔conta ou conta A↔B antes de qualquer gravação |
+| `kc_create_help_request_with_notification_claim_v2(p_payload jsonb)` | `anon`, `authenticated`, `service_role` | Cria Help genérico/externo sob o estado Auth esperado; os três direitos LGPD são recusados e usam as fachadas idempotentes |
+| `kc_create_privacy_help_request_v1(p_payload jsonb)` | `authenticated`, `service_role`; `anon` somente na janela EXPAND | Cria/reproduz atomicamente os três pedidos LGPD. O frontend autenticado chama direto; a permissão `anon` é compatibilidade transitória até o CONTRACT, não o caminho visitante |
+| `kc_create_privacy_help_guest_v1(p_payload jsonb)` | `service_role` | Wrapper exclusivo da Edge após Siteverify; força guest, remove expectativa de identidade e nunca retorna claim, DSR ou protocolo |
+| `kc_recover_privacy_help_request_v1(p_payload jsonb)` | `anon`, `authenticated`, `service_role` | Recupera o recibo confirmado sem reenviar o payload pessoal; pode aposentar uma chave vinculada a um caller estável para impedir create atrasado, ou responder `ambiguous` quando isso não pode ser provado com segurança |
 | `kc_cancel_data_subject_request(p_protocol text)` | `authenticated` | Cancela somente pedido próprio ainda reversível |
 | `kc_is_current_session_active()` | `authenticated` | Confirma existência da sessão corrente; não substitui autorização da operação |
 
@@ -561,8 +565,19 @@ O criador do formulário recebe `expected_auth_state` (`anonymous` ou
 ocorre no wrapper privado antes da chamada ao corpo legado. Sem estado explícito,
 somente o modo ainda anônimo é aceito; o formato legado com
 `expected_user_id` é interpretado como autenticado para permitir rollout
-backend-first. Usuários anônimos do Supabase que possuam `auth.uid()` continuam
-com `help_requests.user_id = null` até a vinculação de identidade auditada.
+backend-first. O Supabase Anonymous Auth está desabilitado no runtime e o guard
+global de sessão não tem exceção; guest não possui `auth.uid()` e nasce com
+`help_requests.user_id = null`.
+
+As duas RPCs específicas da Ajuda aceitam apenas os subtipos canônicos de cópia,
+portabilidade e exclusão. A recuperação retorna `out_recovery_state`:
+`recovered` contém o mesmo Help e uma projeção atual do DSR quando cabível;
+`retired` confirma uma barreira durável que impede a chave antiga de criar
+atendimento; `ambiguous` mantém a chave e proíbe rotação automática. Uma conta
+real só pode recuperar recibo vinculado ao mesmo UUID técnico estável; isso é
+compatibilidade defensiva, não um fluxo de conversão habilitado. Guest sem UID e
+outra conta não são promovidos. Recovery guest permanece RPC direta porque usa
+somente chave opaca e não cria Help nem reenvia PII.
 
 ### Vínculo verificado de exclusão anônima
 

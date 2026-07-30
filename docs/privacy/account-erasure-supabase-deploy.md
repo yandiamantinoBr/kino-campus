@@ -7,19 +7,31 @@ Este checklist é operacional. Ele não autoriza executar exclusão real durante
 1. fazer backup e validar a restauração em ambiente isolado;
 2. inventariar claims/leases já abertos e aplicar as migrations **expand** em
    ordem, incluindo DSR/barreira, redaction de auditoria, outbox criptografada,
-   recuperação de Auth, projeção segura, estado Auth esperado do Help e
-   `20260729012000_bridge_anonymous_help_to_erasure_dsr.sql`;
+   recuperação de Auth, projeção segura, estado Auth esperado do Help, ponte
+   anônima e
+   `20260729190653_help_submission_idempotency.sql`, seguidas por
+   `20260729203000_help_privacy_guest_gateway_expand.sql`;
 3. executar pgTAP, contract tests, advisors, capability e os canários de
    recovery/quiescência ainda com o frontend administrativo fechado;
-4. configurar a chave externa e os secrets da outbox;
+4. configurar a chave externa e os secrets da outbox; criar widgets Turnstile
+   separados por ambiente e registrar site key pública, secret, environment e
+   hostnames/origens exatos (`KC_PRIVACY_HELP_ALLOWED_ORIGINS`);
 5. publicar as versões compatíveis de `kc-data-export-admin`,
    `kc-data-subject-request`, `kc-account-erasure` e
-   `kc-data-export-retention`;
+   `kc-data-export-retention`, além de
+   `kc-create-privacy-help-guest`;
 6. testar somente com usuários descartáveis, incluindo sessão administrativa
-   ativa, revogada e substituída e retomada de claim preexistente;
-7. publicar o frontend, migrar/verificar cópias privadas e só então liberar o
-   painel administrativo;
-8. adiar toda revogação de assinatura pública antiga para uma migration
+   ativa, revogada e substituída, retomada de claim preexistente, replay da
+   Central de Ajuda, desafio guest válido/inválido/expirado, resposta
+   perdida/reload e expurgo de DSR com seu mapa idempotente;
+7. publicar o frontend compatível, confirmar que visitante usa a Edge e que
+   conta real usa a RPC autenticada, migrar/verificar cópias privadas e só então
+   liberar o painel administrativo;
+8. somente depois dos canários Edge/frontend e da janela de cache, promover o
+   template pendente com timestamp novo e aplicar a migration **contract** que
+   retira `anon` da RPC de criação privacy; comprovar que a chamada REST direta
+   falha e que a Edge continua criando/reproduzindo o mesmo Help;
+9. adiar toda outra revogação de assinatura pública antiga para uma migration
    **contract** posterior, após telemetria comprovar ausência de consumidores
    antigos.
 
@@ -60,9 +72,10 @@ Confirme:
 - `kc_accept_account_erasure_completion_delivery(uuid,uuid,uuid)`;
 - `kc_release_account_erasure_completion_delivery(uuid,uuid,uuid)`;
 - `kc_purge_expired_account_erasure_completion_outbox(integer)`;
-- `kc_account_erasure_capabilities()` versão 3 ou superior e todos os flags
-  `true`, inclusive `write_quiescence`, `audit_identifier_redaction` e
-  `encrypted_completion_outbox`;
+- `kc_account_erasure_capabilities()` versão 5 e todos os flags `true`,
+  inclusive outbox criptografada, fechamento durável do titular, lease
+  renovável, claims administrativos vinculados à sessão, transições atômicas e
+  checkpoint recuperável do delete Auth;
 - `pgrst.db_pre_request = public.kc_enforce_active_session_pre_request`;
 - trigger/guard em toda tabela gravável e policy RESTRICTIVE nas tabelas com RLS;
 - policy RESTRICTIVE global em `storage.objects`;
@@ -70,6 +83,13 @@ Confirme:
 - token opaco criado com `gen_random_bytes(32)`, não hash de UUID/e-mail;
 - buckets privados `kino-chat-media` e `kino-data-exports`;
 - `kc_private.data_export_artifacts.claimed_session_id`;
+- `kc_create_privacy_help_guest_v1(jsonb)` executável somente por
+  `service_role`, sem grant herdado de `PUBLIC`, `anon` ou `authenticated`;
+- após o contract guest, `anon` não executa
+  `kc_create_privacy_help_request_v1(jsonb)`; `authenticated` permanece e
+  recovery conserva seu contrato separado;
+- `kc_enforce_active_session_pre_request()` continua global e sem exceção por
+  path, método ou claim anônima;
 - novas assinaturas administrativas de exportação com
   `p_actor_id` + `p_actor_session_id` para leitura, evidência, vinculação de
   Help, recovery, claim e purge;
@@ -123,6 +143,7 @@ npx supabase test db supabase/tests/account_erasure_audit_identifier_redaction_t
 npx supabase test db supabase/tests/account_erasure_completion_outbox_test.sql
 npx supabase test db supabase/tests/account_erasure_identity_link_projection_test.sql
 npx supabase test db supabase/tests/account_erasure_anonymous_help_bridge_test.sql
+npx supabase test db supabase/tests/help_privacy_submission_idempotency_test.sql
 ```
 
 O reset destrói o banco local. Nunca aponte esse comando para produção.
@@ -149,7 +170,25 @@ O reset destrói o banco local. Nunca aponte esse comando para produção.
 - refresh tokens por user ID e session ID ficam zerados;
 - resposta da RPC de revogação tem o JSON exato;
 - capability é service-role-only;
-- capability versão 3 exige `encrypted_completion_outbox`;
+- capability versão 5 exige outbox criptografada, fechamento durável, lease
+  renovável, sessão administrativa exata, workflow atômico e checkpoint Auth;
+- Help LGPD cria/reproduz uma única linha para guest ou conta real; a RPC v2
+  legada rejeita os três direitos e não contorna a chave;
+- Supabase Anonymous Auth permanece desabilitado no runtime. A migration pode
+  conservar helpers de compatibilidade futura, mas o pre-request global não
+  ganha exceção e os testes não devem anunciar esse caminho como público;
+- create, replay e recovery da conta real bloqueiam a linha de usuário e a
+  sessão ativa com `FOR SHARE`, impedindo revogação/delete concorrente entre a
+  checagem e a resposta;
+- recovery retorna `recovered`, `retired` ou `ambiguous` sem revelar existência
+  para outro caller; guest ausente permanece ambíguo e caller com UUID instala
+  tombstone sob quota sem corrida com `create`;
+- conversão anônima→conta recupera somente quando preserva o mesmo UUID;
+  outra conta, sessão revogada ou expirada falha;
+- replay reprojeta o DSR atual; classificação com caixa/espaços e
+  `metadata.request_kind` divergente termina canônica;
+- redaction, purge de Help/DSR, delete Auth e cleanup após 90 dias removem mapa,
+  tombstone e bucket de rate limit sem bloquear retenção;
 - `write_quiescence` só é verdadeiro com cobertura integral;
 - access JWT capturado falha após revogação em INSERT/UPDATE/DELETE/RPC;
 - conteúdo de terceiros sobrevive ao Auth delete;
@@ -189,6 +228,37 @@ Cada função assim deve validar `kc_is_current_session_active` antes do cliente
 Como canário, capture um JWT de teste, revogue a sessão e tente todas as escritas. Todas devem falhar antes e depois do Auth delete.
 
 Uma função que devolve access/refresh token de serviço para chamador anônimo é incidente crítico: retire-a de tráfego, rotacione segredos, revise logs e só republique com autenticação/autorização adequada.
+
+### Gateway visitante dos direitos LGPD
+
+`kc-create-privacy-help-guest` é a única exceção que recebe uma chamada sem JWT
+porque autentica a operação pelo desafio antiabuso, não uma pessoa. Isso não
+autoriza outros usos do cliente privilegiado. Confirme:
+
+- `verify_jwt = false`, `POST`/`OPTIONS` somente e CORS refletido apenas para
+  origem HTTPS allowlisted;
+- tamanho do corpo e do token limitados antes de fazer parse/chamada externa;
+- Siteverify chamado exclusivamente no servidor, com timeout, secret do
+  ambiente, `success`, action `help_privacy_guest` e hostname exato;
+- ambiente `production` rejeita as chaves oficiais de teste; desenvolvimento e
+  CI usam widget/secret de teste separados;
+- resposta, log e telemetria nunca contêm token, secret, IP, header, payload
+  pessoal, resposta bruta do Siteverify ou erro bruto do banco;
+- somente após sucesso o cliente `service_role` chama o wrapper guest; ele não
+  chama a RPC pública como `anon`;
+- o wrapper aceita apenas os três subtipos canônicos, força estado visitante e
+  delega ao worker idempotente; `anon`/`authenticated` não têm `EXECUTE`;
+- replay não exige novo insert e continua sob a mesma chave opaca; token
+  Turnstile é sempre resetado após a tentativa;
+- falha de Siteverify, configuração, hostname/action, timeout ou envelope RPC
+  termina fail-closed e não remove a chave idempotente.
+- a função aplica backpressure sem fila, limitada a 24 Siteverify simultâneos
+  por isolate aquecido; saturação devolve `429` e `Retry-After: 10`, sem reter
+  body ou token;
+- esse contador é somente best-effort local. Antes do go-live, configure
+  rate-limit/WAF distribuído na borda da rota, sem persistir IP na aplicação, e
+  alerte por volume agregado de `403`, `429`, `503`, invocações e latência. CORS,
+  Origin e o contador por isolate não são autenticação nem quota global.
 
 ## Usuário descartável
 
@@ -250,6 +320,12 @@ Configure somente no ambiente:
   `kc-data-subject-request`, cujo handler declara esse fallback;
 - `SUPABASE_SERVICE_ROLE_KEY`;
 - `KC_ALLOWED_ORIGINS`;
+- `KC_PRIVACY_HELP_ALLOWED_ORIGINS`;
+- `KC_TURNSTILE_SECRET_KEY`;
+- `KC_TURNSTILE_EXPECTED_HOSTNAMES`;
+- `KC_TURNSTILE_ENVIRONMENT` (`production` ou `test`);
+- `KC_TURNSTILE_SITE_KEY` apenas no build do frontend; é pública, nunca deve ser
+  copiada para os secrets da Edge como substituta do secret;
 - `KC_STORAGE_BUCKET`;
 - `KC_CHAT_STORAGE_BUCKET`;
 - `KC_SMTP_USER`;
@@ -261,8 +337,9 @@ Configure somente no ambiente:
 - `KC_ERASURE_OUTBOX_TTL_SECONDS` entre `900` e `86400` (padrão `21600`);
 - flags dos operadores efetivamente usados.
 
-Não grave service role, senha SMTP, chave da outbox, destinatário,
-ciphertext/nonce, token de deploy ou evidência bruta no repositório/log.
+Não grave service role, senha SMTP, secret Turnstile, chave da outbox,
+destinatário, ciphertext/nonce, token de deploy ou evidência bruta no
+repositório/log.
 
 ## Governança organizacional antes do go-live
 
@@ -327,7 +404,7 @@ Ainda sem liberar o painel:
 5. execute `scripts/verify-privacy-schema.sql` e rejeite qualquer valor diferente
    de `true`;
 6. confirme `encrypted_completion_outbox = true`,
-   `export_artifact_erasure_purge = true` e capability versão 3;
+   `export_artifact_erasure_purge = true` e capability versão 5;
 7. confirme `completion_outbox.encryption_ready = true` no `diagnose`;
 8. verifique
    `kc_private.account_erasure_completion_outbox_schedule_state`: se
@@ -349,7 +426,11 @@ Publique apenas depois dos gates do banco:
 
 Confirme no projeto-alvo as versões e o `verify_jwt` efetivo; o repositório não
 prova o estado remoto. Execute canários de criação, retry idempotente, claim,
-heartbeat/recovery, cancelamento, expurgo e sessão administrativa revogada.
+heartbeat/recovery, cancelamento, expurgo e sessão administrativa revogada. Para
+o gateway visitante, faça o primeiro canário enquanto a RPC direta ainda está
+na janela expand: token válido deve criar/reproduzir, e token ausente, inválido,
+repetido, action divergente, hostname divergente e origem não allowlisted devem
+falhar sem linha nova.
 
 ### 3. Frontend, cópia e verificação
 
@@ -358,7 +439,43 @@ migre/verifique anexos de chat e confirme buckets, Vault e schedules. Observe
 erros por assinatura e uso da compatibilidade antiga sem registrar protocolo,
 e-mail, token, UUID bruto ou conteúdo do pacote na telemetria.
 
-### 4. Contract diferido
+No artefato Vercel de produção, confirme que `KC_TURNSTILE_SITE_KEY` não está
+vazia, não é uma chave oficial de teste e pertence ao widget dos hostnames de
+produção. Confirme também o rate-limit/WAF distribuído e os alertas do gateway.
+Faça um canário visitante e um autenticado antes do contract.
+
+### 4. Contract guest e demais contracts diferidos
+
+Depois dos dois canários e da janela de cache, consulte o maior timestamp do
+histórico remoto. Em um commit posterior, renomeie e mova
+`supabase/contracts/pending/help_privacy_guest_gateway_contract.template.sql`
+para
+`supabase/migrations/<timestamp-novo>_help_privacy_guest_gateway_contract.sql`,
+usando uma versão de 14 dígitos maior que todas as migrations já aplicadas.
+Não reutilize a data de criação do template, não o copie e não use
+`--include-all` para contornar uma migration fora de ordem.
+
+No mesmo commit de promoção:
+
+1. adicione o timestamp novo às listas obrigatórias de
+   `.github/workflows/edge-deploy.yml` e
+   `scripts/deploy-supabase-lgpd.ps1`;
+2. altere o contrato Jest de rollout para exigir template ausente e exatamente
+   uma migration CONTRACT ativa;
+3. mantenha o verificador de schema e os pgTAPs phase-aware: bridge somente
+   `service_role`, comentário `CONTRACT:` e `anon` sem `EXECUTE` na criação
+   direta;
+4. execute reset local, lint, todos os pgTAPs, Jest e o dry-run remoto antes de
+   aplicar.
+
+Depois, aplique o contract guest e valide imediatamente:
+
+1. chamada REST direta com papel `anon` a
+   `kc_create_privacy_help_request_v1` falha por ACL;
+2. Edge com token válido continua criando/reproduzindo;
+3. conta real continua usando a RPC autenticada;
+4. recovery guest por chave opaca mantém os estados esperados;
+5. Help genérico e `external_access` continuam nos wrappers legados guardados.
 
 Não há autorização para revogar as assinaturas públicas antigas no rollout
 expand. Prepare uma migration posterior somente quando:

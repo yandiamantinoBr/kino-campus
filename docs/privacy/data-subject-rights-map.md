@@ -87,10 +87,11 @@ Regras:
   revalida Help/DSR/workflow e só então sincroniza explicitamente o e-mail
   operacional. O fluxo não depende de salvar triagem ou de outra atualização
   incidental do Help;
-- o formulário registra o estado Auth observado antes do envio. Se uma conta
-  entrar, sair ou mudar até a gravação, adapter e RPC rejeitam a operação sem
-  criar Help ou DSR. Pedidos iniciados como visitante permanecem sem `user_id`
-  mesmo quando o provedor usa um usuário Auth anônimo;
+- o formulário registra se existe uma conta real autenticada antes do envio. Se
+  uma conta entrar, sair ou mudar até a gravação, adapter e RPC rejeitam a
+  operação sem criar Help ou DSR. O Supabase Anonymous Auth permanece
+  desabilitado e o guard global de sessão não é afrouxado; pedido visitante passa
+  pelo gateway antiabuso e nasce sem `user_id`;
 - a mesma chave idempotente não pode abrir pedidos duplicados para o mesmo titular
   e finalidade;
 - a interface conserva a chave ainda pendente em um namespace de
@@ -98,6 +99,41 @@ Regras:
   resposta definitiva. Assim, uma perda de resposta seguida de recarregamento
   repete a operação original, enquanto troca ou limpeza de outra conta não
   sobrescreve esse retry;
+- na Central de Ajuda, somente chave opaca, fingerprint e horário técnico ficam
+  na sessão. O conteúdo pessoal do formulário não é persistido para viabilizar
+  retry: o cliente recupera o recibo confirmado pela chave e pelo mesmo caller
+  Auth. Um resultado ainda ambíguo conserva a chave; uma rejeição comprovadamente
+  anterior ao commit pode substituí-la sem criar atendimento paralelo;
+- o mapa server-side dessa idempotência contém hashes pseudonimizados e vínculos
+  técnicos, nunca a chave ou o payload em claro. Redação ou purge de Help/DSR e
+  exclusão do UUID Auth removem o vínculo por trigger/FK; tombstones sem recibo
+  tornam-se elegíveis para expurgo após 90 dias e são removidos em lotes pelo
+  wrapper do job diário de DSR, sujeito à agenda e ao backlog;
+- uma nova submissão visitante dos três direitos passa primeiro pela Edge
+  `kc-create-privacy-help-guest`. Ela aceita somente origem allowlisted,
+  `POST`/`OPTIONS`, corpo limitado e token Turnstile validado server-side com
+  `success=true`, action fixa e hostname allowlisted. Só depois chama um wrapper
+  SQL exclusivo de `service_role`. Durante EXPAND, a RPC direta ainda conserva
+  `anon` apenas para assets antigos em cache; o frontend novo nunca usa esse
+  bypass e o CONTRACT pendente o revoga somente depois do canário. Token,
+  resposta bruta do provedor, IP e headers não são persistidos nem logados pela
+  aplicação;
+- o token Turnstile existe apenas em memória, é de uso único e expira em até
+  cinco minutos; erro, expiração ou tentativa de envio reinicia o widget sem
+  apagar a chave idempotente. Testes usam somente as chaves oficiais de teste e
+  o pipeline impede que elas sejam promovidas para produção;
+- no banco, novas submissões guest ainda passam pelo circuit breaker emergencial
+  global de 10.000 por hora e pelo limite primário de 10/h por e-mail. O bucket
+  não identifica ator, não participa do recovery e replay não consome outra
+  vaga; é apenas contenção/alerta posterior ao desafio, não defesa primária;
+- a Edge limita, sem fila, a 24 validações Siteverify simultâneas por isolate
+  aquecido e devolve `429`/`Retry-After` quando o slot local está saturado. Isso
+  não é quota distribuída: múltiplos isolates e cold starts multiplicam o teto.
+  Rate limit/WAF externo antes da função e alertas agregados para
+  `403`/`429`/`503` e latência são requisitos de produção, sem incluir token,
+  e-mail, protocolo ou payload pessoal na telemetria;
+- recovery guest continua pela RPC pública com a chave opaca, sem novo
+  Turnstile, pois não cria Help e não reenvia o conteúdo pessoal do formulário;
 - uma listagem vazia, paginada ou que mostre apenas pedidos terminais nunca é
   tratada como prova para apagar essa chave. A interface só a gira quando o
   backend devolve o pedido terminal da combinação exata
@@ -400,20 +436,24 @@ cópia/verificação → contract diferido**:
 
 1. inventarie DSRs, Helps, workflows, claims, leases e artefatos preexistentes;
 2. aplique as migrations em ordem até
-   `20260729012000_bridge_anonymous_help_to_erasure_dsr.sql`;
+   `20260729203000_help_privacy_guest_gateway_expand.sql`;
 3. valide guards, capabilities, a reconciliação inequívoca/falha retryable dos
    claims preexistentes e os oito wrappers actor-only necessários às Edges
    anteriores, que devem aceitar somente uma sessão ativa exata; valide também
    zero DSR materializado uma vez, um DSR reutilizado e múltiplos DSRs rejeitados
    sem gravação parcial;
-4. publique as Edge Functions compatíveis e execute canários de sessão ativa,
+4. configure os secrets/hostnames/origens exatas, site key pública,
+   rate-limit/WAF e alertas; publique as Edge Functions compatíveis e execute
+   canários de sessão ativa,
    revogada e substituída, rotação de e-mail com UUID constante, fonte pós-core
-   válida/forjada, resposta perdida depois de commit, idempotência, lease
-   vencida, recovery e purge;
+   válida/forjada, resposta perdida depois de commit, recuperação por chave
+   opaca, rejeição pré-commit, idempotência, lease vencida, recovery e purge;
 5. publique o frontend, reconcilie a cópia das páginas, migre/verifique anexos e
    confira buckets, Vault, schedules, limites e telemetria minimizada;
-6. remova assinaturas públicas antigas apenas em migration contract posterior,
-   depois que a telemetria demonstrar ausência de consumidores e claims antigos.
+6. após o canário visitante/autenticado/recovery e a janela de cache, promova o
+   template pendente com timestamp novo e prove que create direto `anon` falha
+   enquanto Edge e recovery continuam; remova outras assinaturas públicas
+   antigas apenas em contracts posteriores baseados em telemetria.
 
 Na fase expand, zero ou múltiplas sessões administrativas fazem o wrapper legado
 falhar fechado, e os workers privados permanecem fechados. Não produza uma
@@ -454,3 +494,6 @@ assinadas em lote por bucket.
 - [ANPD — Resolução CD/ANPD nº 2/2022, agentes de tratamento de pequeno porte](https://www.gov.br/anpd/pt-br/acesso-a-informacao/institucional/atos-normativos/regulamentacoes_anpd/resolucao-cd-anpd-no-2-de-27-de-janeiro-de-2022)
 - [Supabase — gerenciamento, exclusão e exportação de usuários](https://supabase.com/docs/guides/auth/managing-user-data)
 - [Supabase — sessões de usuário](https://supabase.com/docs/guides/auth/sessions)
+- [Supabase — usuários anônimos e seus limites operacionais](https://supabase.com/docs/guides/auth/auth-anonymous)
+- [Cloudflare — validação server-side obrigatória do Turnstile](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
+- [Cloudflare — aviso de privacidade do Turnstile](https://www.cloudflare.com/turnstile-privacy-policy/)

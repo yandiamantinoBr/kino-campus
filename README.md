@@ -140,7 +140,7 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 |---|---|
 | Notificações in-app | Realtime publication em `notifications` table; `kc-notifications.js` (29 KB); sino com `display:none` quando deslogado |
 | Chat 1-a-1 (DM) | Schema completo (`v9.3.5.10_chat_schema.sql` + 5 migrations de hardening); `chat-inbox.controller.js` (50 KB); rota `/mensagens` |
-| Help requests | Formulário em `/ajuda.html`; fila admin em `/admin/help-requests.html`; notificação via `kc-help-request-notify` |
+| Help requests | Formulário em `/ajuda.html`; pedidos LGPD visitantes usam Turnstile server-side, chave idempotente por sessão e recuperação sem reenviar PII; fila admin em `/admin/help-requests.html`; notificação via `kc-help-request-notify` para os fluxos que a exigem |
 | Banners admin | Carousel no header; CRUD em `/admin/banners.html`; `v8.3.2.0_hero_banners.sql` |
 
 ### LGPD e privacidade
@@ -149,7 +149,7 @@ O histórico detalhado de todas as releases está no [CHANGELOG.md](CHANGELOG.md
 |---|---|
 | Acesso, cópia e portabilidade | Solicitação direta autenticada em `/settings.html`, protocolo aleatório `KC-DSR-*` e histórico; exportação JSON `no-store`, com fluxo assistido no bucket privado `kino-data-exports` quando uma fonte excede os limites automáticos |
 | Exclusão de conta (Art. 18 VI) | Confirmação verificada, preferência de cópia, restrições reversíveis, claim idempotente, limpeza de Storage/banco/Auth, checagem pós-operação e comprovante; `kc-account-erasure` + runbooks em `docs/privacy/` |
-| Central de Ajuda | Formulário alternativo para quem perdeu acesso; gera referência de atendimento e só vincula o protocolo de titular depois da verificação de identidade |
+| Central de Ajuda | Formulário alternativo para quem perdeu acesso; visitante passa pelo gateway Turnstile, evita duplicidade mesmo após perda de resposta/reload, recebe referência de atendimento e só vincula o protocolo depois da verificação de identidade |
 | Retenção de DSR e artefatos | Registro mínimo do protocolo tem revisão de retenção separada da janela de download; objetos assistidos são expurgados primeiro no Storage e só depois têm metadados minimizados |
 | Administração vinculada à sessão | Claims de exclusão e novos claims de exportação assistida registram a sessão administrativa ativa; demissão, logout ou revogação impedem continuação privilegiada com a lease anterior |
 | Consentimento de acesso externo | `v9.3.5.0_lgpd_consent_external_access.sql` + `kc-external-access-decide` Edge Function |
@@ -323,6 +323,7 @@ produção.
 | `cadu-auth-proxy` | fail-closed | endpoint legado aposentado; não autentica nem mantém credenciais |
 | `kc-account-erasure` | `true` (default) | Exclusão em etapas, com confirmação, locks, limpeza, pós-condições e comprovante |
 | `kc-analytics-subject-id` | `true` (TOML) | Deriva identificador analítico pseudônimo somente para sessão ativa e consentida |
+| `kc-create-privacy-help-guest` | `false` (TOML) | Gateway público dos três pedidos LGPD visitantes; exige Turnstile válido e chama somente o wrapper SQL de `service_role` |
 | `kc-data-subject-request` | `true` (TOML) | Cria, lista, consulta, cancela e entrega solicitações/exportações do próprio titular |
 | `kc-data-export-admin` | `true` (TOML) | Monta e valida o suplemento integral assistido, com claims/CAS vinculados à sessão administrativa |
 | `kc-data-export-retention` | `false` (TOML) | Worker máquina-a-máquina para expurgo Storage-first; exige assinatura HMAC curta derivada de segredo dedicado |
@@ -360,18 +361,23 @@ funções, secrets, jobs ou versões estão ativos no projeto remoto. Confirme o
 `project-ref`, o histórico remoto e o schema antes de cada etapa.
 
 1. **Banco/expand:** aplique as migrations aditivas e de hardening em ordem,
-   até `20260729012000_bridge_anonymous_help_to_erasure_dsr.sql`.
+   até `20260729203000_help_privacy_guest_gateway_expand.sql`.
    Valide schema, grants, guards, recovery/quiescência e claims preexistentes. A
    `06000` adiciona as assinaturas vinculadas à sessão. Os cinco wrappers
    actor-only necessários à Edge anterior permanecem temporariamente executáveis
    apenas quando existe exatamente uma sessão administrativa ativa; zero ou
    múltiplas sessões falham fechado. Os workers privados continuam fechados.
-2. **Edge:** publique as versões compatíveis de `kc-data-export-admin`,
+2. **Edge:** configure origens/hostnames exatos, ambiente e secret Turnstile,
+   rate-limit/WAF distribuído e alertas; publique
+   `kc-create-privacy-help-guest` junto das versões compatíveis de
+   `kc-data-export-admin`,
    `kc-data-subject-request`, `kc-account-erasure` e
    `kc-data-export-retention`. Execute canários com sessão administrativa ativa,
    revogada e substituída, além de retomada/expiração de lease, antes de ampliar
    tráfego.
-3. **Frontend:** publique os clientes que preservam idempotência por conta,
+3. **Frontend:** configure uma site key Turnstile real no build de produção e
+   publique os clientes que preservam idempotência por conta,
+   recuperam uma resposta perdida sem persistir o conteúdo pessoal do formulário,
    apresentam protocolo/referência corretamente e usam as ações Edge atuais.
 4. **Cópia e verificação:** migre/verifique anexos privados, execute pgTAP,
    contract tests, preflights, advisors e smokes somente com contas
@@ -379,7 +385,9 @@ funções, secrets, jobs ou versões estão ativos no projeto remoto. Confirme o
    e a reconciliação de claims preexistentes: lease viva + uma sessão ativa é
    vinculada, enquanto os demais claims sem sessão viram falha retryable
    `EXPORT_SESSION_BINDING_MIGRATION_RETRY`.
-5. **Contract diferido:** somente uma migration posterior pode revogar as
+5. **Contract diferido:** após canário e janela de cache, mova e renomeie o
+   template pendente com um timestamp novo posterior ao histórico remoto.
+   Somente essa migration posterior pode revogar as
    assinaturas públicas antigas e remover os guardas transitórios, após a Edge
    nova estar estável e a telemetria demonstrar ausência de consumidores
    antigos. A retirada do `UPDATE` legado de arquivamento de conversa também

@@ -19,6 +19,7 @@ O KinoCampus usa três camadas de configuração:
 | `KC_APP_ENV` | alimenta `__KC_APP_ENV__` e normaliza `production` ou `development` |
 | `KC_DRIVER` | alimenta `__KC_DRIVER__`; em produção deve resultar em `supabase` |
 | `KC_BUILD_REVISION` | revisão estável usada para alinhar `?v=` dos assets, Service Worker e precache; em CI/deploy é obrigatória quando nenhuma revisão do provedor estiver disponível |
+| `KC_TURNSTILE_SITE_KEY` | site key pública do widget dos pedidos LGPD visitantes; obrigatória em produção e nunca pode ser uma chave oficial de teste |
 
 Aliases aceitos pelo `scripts/inject-env.js`:
 
@@ -29,6 +30,9 @@ Aliases aceitos pelo `scripts/inject-env.js`:
   `NEXT_PUBLIC_SUPABASE_PUBLIC_KEY`, `VITE_SUPABASE_ANON_KEY`,
   `REACT_APP_SUPABASE_ANON_KEY`, `VITE_SUPABASE_PUBLIC_KEY`,
   `REACT_APP_SUPABASE_PUBLIC_KEY`
+- site key pública do Turnstile: `KC_TURNSTILE_SITE_KEY`,
+  `TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`,
+  `VITE_TURNSTILE_SITE_KEY`
 - revisão de build: `KC_BUILD_REVISION`, `VERCEL_GIT_COMMIT_SHA`, `GITHUB_SHA`,
   `VERCEL_DEPLOYMENT_ID`, `BUILD_ID`, nessa ordem
 
@@ -36,6 +40,8 @@ Aliases aceitos pelo `scripts/inject-env.js`:
 
 - `vercel.json` deve manter `buildCommand = "node scripts/inject-env.js"`
 - produção deve compilar com `driver = "supabase"`
+- produção exige `KC_TURNSTILE_SITE_KEY` real; ausência e chaves oficiais de
+  teste encerram o build
 - placeholders `__KC_*__` não podem permanecer no artefato publicado
 - uma única revisão normalizada deve aparecer nos HTMLs, no precache e no
   namespace do Service Worker; não reutilize uma revisão para artefatos diferentes
@@ -55,11 +61,15 @@ window.KC_ENV = {
   debug: true,
   SUPABASE_URL: 'https://...supabase.co',
   SUPABASE_ANON_KEY: 'eyJ...',
+  TURNSTILE_SITE_KEY: '0x4AAAA...',
   supabase: {
     url: 'https://...supabase.co',
     anonKey: 'eyJ...',
     storageBucket: 'kino-media',
     chatStorageBucket: 'kino-chat-media',
+  },
+  privacyHelp: {
+    turnstileSiteKey: '0x4AAAA...',
   },
   AUTH_ALLOWED_DOMAINS: ['ufg.br', 'discente.ufg.br', 'egresso.ufg.br'],
   auth: {
@@ -94,6 +104,18 @@ Configuradas no dashboard do Supabase quando exigidas pelas Edge Functions e aut
 | `KC_APP_BASE_URL` | URL base HTTPS usada nos links de confirmação e retorno |
 | `KC_STORAGE_BUCKET` | bucket público de posts/avatares; padrão `kino-media` |
 | `KC_CHAT_STORAGE_BUCKET` | bucket privado de chat; padrão `kino-chat-media` |
+| `KC_TURNSTILE_SECRET_KEY` | segredo do Siteverify usado somente pela Edge de criação visitante; nunca expor no `KC_ENV`, Vercel público, logs ou respostas |
+| `KC_TURNSTILE_EXPECTED_HOSTNAMES` | allowlist explícita de hostnames aceitos do Siteverify, separada por vírgula; não inclui esquema, porta ou curingas |
+| `KC_PRIVACY_HELP_ALLOWED_ORIGINS` | origens exatas autorizadas a chamar o gateway visitante, separadas por vírgula; produção aceita somente HTTPS e nunca curinga/loopback |
+| `KC_TURNSTILE_ENVIRONMENT` | `production` ou `test`; produção rejeita secrets oficiais de teste, e teste rejeita credenciais reais |
+
+`KC_TURNSTILE_SITE_KEY` é deliberadamente pública e pertence ao build do
+frontend. Ela deve corresponder ao mesmo widget/ambiente do segredo server-side,
+mas não concede acesso ao Siteverify. Produção, preview e desenvolvimento devem
+usar widgets separados; as chaves oficiais de teste são permitidas apenas em
+testes locais/CI. Se a site key ou a configuração server-side estiver ausente, o
+envio visitante dos três direitos LGPD falha fechado; pedidos autenticados e
+ajuda genérica continuam em suas rotas próprias.
 
 As rotas autenticadas derivam o usuário e o `session_id` do JWT. O identificador
 da sessão não é variável de ambiente: desde `20260729006000`, as operações
@@ -167,6 +189,7 @@ Inventario versionado no repo. O estado remoto deve ser confirmado antes de qual
 - `kc-data-subject-request`
 - `kc-data-export-admin`
 - `kc-account-erasure`
+- `kc-create-privacy-help-guest`
 - `kc-data-export-retention`
 - `kc-ga4-reports`
 - `kc-search-console-reports`
@@ -212,6 +235,7 @@ supabase functions deploy kc-dispatch-notification-outbox
 supabase functions deploy kc-data-subject-request
 supabase functions deploy kc-data-export-admin
 supabase functions deploy kc-account-erasure
+supabase functions deploy kc-create-privacy-help-guest --no-verify-jwt
 supabase functions deploy kc-data-export-retention --no-verify-jwt
 supabase functions deploy kc-ga4-reports
 supabase functions deploy kc-search-console-reports
@@ -298,8 +322,12 @@ limites, tipos MIME ou policies estão configurados corretamente.
 
 - a fonte de verdade versionada é a ordem dos arquivos em `supabase/migrations/`;
   não mantenha uma contagem manual, pois ela fica obsoleta a cada migration;
-- os contratos LGPD atuais incluem a sequência até
-  `20260729006000_bind_data_export_admin_work_to_session.sql`;
+- a cadeia LGPD ativa inclui a sequência até
+  `20260729190653_help_submission_idempotency.sql` e o gateway guest EXPAND
+  `20260729203000_help_privacy_guest_gateway_expand.sql`;
+- o CONTRACT guest continua fora de `supabase/migrations/`, como template em
+  `supabase/contracts/pending/`, e só pode entrar na cadeia com timestamp novo
+  depois do canário e da janela de cache;
 - a `06000` é expand-only: assinaturas session-bound novas coexistem
   temporariamente com cinco wrappers públicos actor-only necessários à Edge
   anterior. Eles exigem exatamente uma sessão administrativa ativa; zero ou

@@ -16,6 +16,13 @@
 - Retenção e expurgo automatizados dos artefatos de exportação, redownload controlado dentro da validade e scripts de verificação, implantação e migração segura de mídias de chat.
 - Mapeamento público em Privacidade, Transparência e Ajuda, além de runbooks, catálogo de RPCs, contrato de API e inventário de schema atualizados.
 - A Central de Ajuda distingue no cartão persistente o protocolo do titular da referência de atendimento e orienta o acompanhamento autenticado sem sugerir consulta pública inexistente.
+- Pedidos de acesso, portabilidade e exclusão enviados pela Central de Ajuda
+  recebem idempotência transacional própria, replay vinculado ao mesmo estado
+  Auth e recuperação por chave opaca após perda de resposta, sem guardar o
+  conteúdo pessoal do formulário no navegador.
+- Visitantes desses três fluxos passam por Turnstile validado server-side; a
+  criação autenticada continua direta e o recovery guest usa apenas a chave
+  opaca, sem reenviar o formulário.
 
 ### Segurança
 
@@ -25,6 +32,16 @@
 - Exclusão usa locks determinísticos, transições atômicas, fechamento do titular, checkpoint recuperável antes da remoção no Auth e pós-condições para banco, Storage e integrações.
 - O painel administrativo apaga imediatamente dados pessoais do estado e do DOM em logout ou troca de conta e ignora respostas assíncronas da sessão anterior.
 - O formulário de Ajuda vincula a gravação ao estado Auth observado; login, logout ou troca de conta durante o envio falham antes de criar ticket ou protocolo, e pedidos visitantes permanecem sem proprietário até verificação auditada.
+- O mapa privado de idempotência da Ajuda guarda apenas hashes e vínculos
+  internos, nunca a chave ou o payload em claro; o estado visitante é validado
+  sem ativar Supabase Anonymous Auth, replays reprojetam o DSR atual e o mapa
+  acompanha o expurgo canônico em vez de bloquear a retenção.
+- O gateway visitante valida origem, limites, action e hostname, rejeita chaves
+  de teste em produção e aplica backpressure sem fila por isolate; WAF/rate
+  limit distribuído e alertas permanecem pré-requisitos do rollout.
+- Ações concorrentes sobre o mesmo protocolo em Configurações compartilham uma
+  única lease visual e lógica, preservam foco acessível após rerenderização e
+  ignoram respostas tardias de outra conta ou geração.
 - Marcadores técnicos, tokens, credenciais, caches e dados de outra conta são excluídos da portabilidade local; a limpeza do navegador permanece limitada à conta ativa.
 - Toda mutação administrativa de exclusão ou suplemento é reconciliada por leitura exata e pós-condição específica; resposta perdida ou diagnóstico inconclusivo bloqueia repetição até uma recarga autoritativa.
 
