@@ -303,6 +303,449 @@ describe('supabase.admin.adapter.js — vínculo da mutação à conta esperada'
   });
 });
 
+describe('supabase.admin.adapter.js — idempotência e recovery do Help LGPD', () => {
+  const ACCOUNT_ID = '11111111-aaaa-4111-8111-111111111111';
+  const HELP_ID = '33333333-cccc-4333-8333-333333333333';
+  const DSR_ID = '44444444-dddd-4444-8444-444444444444';
+  const PROTOCOL = 'KC-DSR-20260729-AAAAAAAAAAAAAAAA';
+  const KEY = 'a'.repeat(64);
+
+  function privacyPayload(overrides = {}) {
+    return {
+      expected_auth_state: 'anonymous',
+      expected_user_id: null,
+      idempotency_key: KEY,
+      turnstile_token: 'turnstile-test-token',
+      type: 'account_access',
+      topic: 'onboarding_settings',
+      subtopic: 'account_deletion',
+      subject: 'Excluir minha conta',
+      message: 'Solicito a exclusão da conta e dos meus dados.',
+      contact_email: 'privacy@example.invalid',
+      priority: 'normal',
+      metadata: { request_kind: 'account_erasure' },
+      ...overrides,
+    };
+  }
+
+  function anonymousReceipt(overrides = {}) {
+    return {
+      out_id: HELP_ID,
+      out_created_at: '2026-07-29T19:06:53.000Z',
+      out_notification_claim: null,
+      out_notification_claim_expires_at: null,
+      out_data_subject_request: null,
+      out_protocol: null,
+      out_reused_existing: false,
+      out_idempotency_replayed: false,
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    jest.resetModules();
+    window._KCSA = {};
+    window.KCHelpUtils = undefined;
+  });
+
+  test.each([
+    ['account_data_copy', 'data_access_copy'],
+    ['account_data_portability', 'data_portability'],
+    ['account_deletion', 'account_erasure'],
+  ])(
+    'roteia %s visitante somente à Edge e nunca transporta a prova no payload LGPD',
+    async (subtopic, requestKind) => {
+    const rpc = jest.fn();
+    const invoke = jest.fn().mockResolvedValue({
+      data: { ok: true, data: anonymousReceipt() },
+      error: null,
+    });
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.createHelpRequest(
+      privacyPayload({
+        subtopic,
+        metadata: { request_kind: requestKind },
+      })
+    );
+
+    expect(result.ok).toBe(true);
+    expect(invoke).toHaveBeenCalledWith(
+      'kc-create-privacy-help-guest',
+      {
+        body: {
+          turnstile_token: 'turnstile-test-token',
+          payload: expect.objectContaining({
+          idempotency_key: KEY,
+          expected_auth_state: 'anonymous',
+          }),
+        },
+      }
+    );
+    const edgeBody = invoke.mock.calls[0][1].body;
+    expect(edgeBody.payload).not.toHaveProperty('turnstile_token');
+    expect(edgeBody.payload.metadata).not.toHaveProperty('turnstile_token');
+    expect(rpc).not.toHaveBeenCalled();
+    expect(result.data).not.toHaveProperty('idempotency_key');
+    expect(result.data).not.toHaveProperty('turnstile_token');
+  });
+
+  test('valida a coerência DSR/protocolo no envelope autenticado', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [anonymousReceipt({
+        out_data_subject_request: {
+          id: DSR_ID,
+          protocol: PROTOCOL,
+          status: 'ready',
+        },
+        out_protocol: PROTOCOL,
+      })],
+      error: null,
+    });
+    const invoke = jest.fn();
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => ({
+      id: ACCOUNT_ID,
+      email: 'owner@example.invalid',
+    });
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    await expect(
+      window._KCSA.admin.createHelpRequest(
+        privacyPayload({
+          expected_auth_state: 'authenticated',
+          expected_user_id: ACCOUNT_ID,
+          subtopic: 'account_data_copy',
+          metadata: { request_kind: 'data_access_copy' },
+        })
+      )
+    ).resolves.toMatchObject({
+      ok: true,
+      data: {
+        id: HELP_ID,
+        protocol: PROTOCOL,
+        data_subject_request: { id: DSR_ID, protocol: PROTOCOL },
+      },
+    });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    { data: null, label: 'data null' },
+    {
+      data: [{ out_id: HELP_ID }],
+      label: 'envelope parcial',
+    },
+  ])('preserva a chave diante de $label sem erro explícito', async ({ data }) => {
+    const rpc = jest.fn();
+    const invoke = jest.fn().mockResolvedValue({
+      data: { ok: true, data },
+      error: null,
+    });
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    await expect(
+      window._KCSA.admin.createHelpRequest(privacyPayload())
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'HELP_IDEMPOTENCY_RESPONSE_AMBIGUOUS' },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test('propaga safe_to_replace apenas pelo detalhe autoritativo do servidor', async () => {
+    const rpc = jest.fn();
+    const invoke = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: {
+            json: async () => ({
+              error: {
+                code: 'HELP_REQUEST_VALIDATION_FAILED',
+                idempotency: { safe_to_replace: true },
+              },
+              ok: false,
+            }),
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: {
+            json: async () => ({
+              error: {
+                code: 'HELP_IDEMPOTENCY_PAYLOAD_CONFLICT',
+              },
+              ok: false,
+            }),
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: {
+            json: async () => ({
+              error: {
+                code: 'HELP_RATE_LIMIT_1H',
+                idempotency: { safe_to_replace: true },
+              },
+              ok: false,
+            }),
+          },
+        },
+      });
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+    const admin = window._KCSA.admin;
+
+    await expect(
+      admin.createHelpRequest(privacyPayload())
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { idempotency: { safe_to_replace: true } },
+    });
+    await expect(
+      admin.createHelpRequest(privacyPayload())
+    ).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: 'HELP_IDEMPOTENCY_PAYLOAD_CONFLICT',
+        idempotency: { safe_to_replace: false },
+      },
+    });
+    await expect(
+      admin.createHelpRequest(privacyPayload())
+    ).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: 'HELP_RATE_LIMIT_1H',
+        message: expect.stringMatching(/limite temporário.*aguarde/iu),
+        idempotency: { safe_to_replace: true },
+      },
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  test('ignora detail de rotação no gateway e mapeia TURNSTILE_INVALID sem código cru', async () => {
+    const rpc = jest.fn();
+    const invoke = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: {
+            json: async () => ({
+              ok: false,
+              error: {
+                code: 'HELP_REQUEST_VALIDATION_FAILED',
+                detail: 'HELP_IDEMPOTENCY_SAFE_TO_REPLACE',
+              },
+            }),
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          context: {
+            json: async () => ({
+              ok: false,
+              error: {
+                code: 'TURNSTILE_INVALID',
+                message: 'A verificação antiabuso não foi aceita.',
+              },
+            }),
+          },
+        },
+      });
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+    const admin = window._KCSA.admin;
+
+    await expect(
+      admin.createHelpRequest(privacyPayload())
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { idempotency: { safe_to_replace: false } },
+    });
+    const invalid = await admin.createHelpRequest(privacyPayload());
+    expect(invalid).toMatchObject({
+      ok: false,
+      error: {
+        code: 'TURNSTILE_INVALID',
+        message: expect.stringMatching(/nova verificação.*tente novamente/iu),
+      },
+    });
+    expect(invalid.error.message).not.toContain('TURNSTILE_INVALID');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test('mapeia backpressure visitante sem expor o código interno', async () => {
+    const rpc = jest.fn();
+    const invoke = jest.fn().mockResolvedValue({
+      data: null,
+      error: {
+        context: {
+          json: async () => ({
+            ok: false,
+            error: {
+              code: 'GUEST_PRIVACY_BUSY',
+              message: 'Guest privacy capacity exhausted.',
+            },
+          }),
+        },
+      },
+    });
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.createHelpRequest(
+      privacyPayload()
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: 'GUEST_PRIVACY_BUSY',
+        message: expect.stringMatching(
+          /aguarde.*tente novamente.*entre na sua conta/iu
+        ),
+        idempotency: { safe_to_replace: false },
+      },
+    });
+    expect(result.error.message).not.toContain('GUEST_PRIVACY_BUSY');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test('falha fechado sem prova efêmera e não toca Edge nem RPC', async () => {
+    const rpc = jest.fn();
+    const invoke = jest.fn();
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    await expect(
+      window._KCSA.admin.createHelpRequest(
+        privacyPayload({ turnstile_token: '' })
+      )
+    ).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: 'HELP_TURNSTILE_TOKEN_REQUIRED',
+        message: expect.stringMatching(/verificação.*entre/iu),
+      },
+    });
+    expect(invoke).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test('recovery recovered, retired e ambiguous têm shapes fechados', async () => {
+    const rpc = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: [anonymousReceipt({
+          out_idempotency_replayed: true,
+          out_recovery_state: 'recovered',
+        })],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [anonymousReceipt({
+          out_id: null,
+          out_created_at: null,
+          out_recovery_state: 'retired',
+        })],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [anonymousReceipt({
+          out_id: null,
+          out_created_at: null,
+          out_recovery_state: 'ambiguous',
+        })],
+        error: null,
+      });
+    window._KCSA.getClient = () => ({ rpc });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+    const admin = window._KCSA.admin;
+    const recovery = {
+      idempotency_key: KEY,
+      request_kind: 'account_erasure',
+      expected_auth_state: 'anonymous',
+      source_auth_state: 'anonymous',
+    };
+
+    await expect(
+      admin.recoverPrivacyHelpRequest(recovery)
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { id: HELP_ID, idempotency_replayed: true },
+    });
+    await expect(
+      admin.recoverPrivacyHelpRequest(recovery)
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { idempotency: { safe_to_replace: true } },
+    });
+    await expect(
+      admin.recoverPrivacyHelpRequest(recovery)
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { idempotency: { safe_to_replace: false } },
+    });
+  });
+
+  test('permite recovery anonymous→real somente para o mesmo UUID', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [anonymousReceipt({
+        out_idempotency_replayed: true,
+        out_recovery_state: 'recovered',
+      })],
+      error: null,
+    });
+    window._KCSA.getClient = () => ({ rpc });
+    window._KCSA.getCurrentUser = async () => ({
+      id: ACCOUNT_ID,
+      email: 'upgraded@example.invalid',
+      is_anonymous: false,
+    });
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    await expect(
+      window._KCSA.admin.recoverPrivacyHelpRequest({
+        idempotency_key: KEY,
+        request_kind: 'account_erasure',
+        expected_auth_state: 'authenticated',
+        expected_user_id: ACCOUNT_ID,
+        source_auth_state: 'anonymous',
+      })
+    ).resolves.toMatchObject({ ok: true, data: { id: HELP_ID } });
+    expect(rpc).toHaveBeenCalledWith(
+      'kc_recover_privacy_help_request_v1',
+      expect.objectContaining({
+        p_payload: expect.objectContaining({
+          source_auth_state: 'anonymous',
+          expected_user_id: ACCOUNT_ID,
+        }),
+      })
+    );
+  });
+});
+
 describe('supabase.admin.adapter.js - lookup administrativo exato por requestId', () => {
   const REQUEST_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 

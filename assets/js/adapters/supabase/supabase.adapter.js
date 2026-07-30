@@ -397,6 +397,8 @@ const { ENV } = window.KCAPI;
     getProfileHighlights: window._KCSA.saved.getProfileHighlights,
     getProfileHighlightsCount: window._KCSA.saved.getProfileHighlightsCount,
     createHelpRequest: window._KCSA.admin.createHelpRequest,
+    recoverPrivacyHelpRequest:
+      window._KCSA.admin.recoverPrivacyHelpRequest,
     listAdminHelpRequests: window._KCSA.admin.listAdminHelpRequests,
     updateAdminHelpRequest: window._KCSA.admin.updateAdminHelpRequest,
     processAccountErasure: window._KCSA.admin.processAccountErasure,

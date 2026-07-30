@@ -1166,6 +1166,7 @@
     }
     return { ok: false, error: { message: 'Pedidos de ajuda indisponíveis neste driver.' } };
   }
+  async function recoverPrivacyHelpRequest(payload = {}) { const helpModule = getHelpModule(); return helpModule && typeof helpModule.recoverPrivacyHelpRequest === 'function' ? helpModule.recoverPrivacyHelpRequest(payload, { getActiveDriver }) : { ok: false, error: { code: 'BACKEND_REQUIRED', message: 'Recuperação de pedidos indisponível neste driver.' } }; }
 
   async function listAdminHelpRequests(filters = {}) {
     const helpModule = getHelpModule();
@@ -1457,6 +1458,7 @@
     getProfileHighlights,
     getProfileHighlightsCount,
     createHelpRequest,
+    recoverPrivacyHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,
@@ -1513,7 +1515,6 @@
     clearLastCreatePostError,
     summarizeCreatePayloadForDiagnostics,
     rankRelatedPosts,
-
 
     // Users
     get MOCK_USERS() { return getMockUsers(); },

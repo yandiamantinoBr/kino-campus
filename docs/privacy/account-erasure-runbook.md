@@ -481,3 +481,78 @@ somente quando existe exatamente uma sessão administrativa ativa; zero ou
 múltiplas sessões falham fechado. Os workers privados permanecem fechados.
 Rollback da Edge pode usar essa compatibilidade protegida; não reverta colunas de
 claim, não afrouxe guards e não conceda execução direta a `kc_private`.
+
+## 16. Decisão LGPD: preservação de conteúdo de chat gerado por terceiros
+
+Quando o titular pede a exclusão da conta, a estratégia de `kc-account-erasure`
+**preserva o conteúdo das conversas de chat** das quais ele participou. Esta
+seção registra a base legal e operacional dessa decisão e como auditá-la.
+
+### Por que preservar (e não deletar)
+
+A LGPD (art. 18, VI) garante ao titular o direito de "eliminação dos dados
+pessoais tratados com o seu consentimento". Mas o mesmo artigo lista
+exceções — entre elas, o cumprimento de obrigação legal/regulatória e o
+exercício regular de direitos em processo (art. 16).
+
+Em uma conversa 1:1, cada mensagem é **co-autoria de dois titulares**. A
+mensagem "Oi Maria, vamos almoçar?" foi escrita por Pedro; o pedido de
+exclusão é de Maria. Apagar a mensagem unilateralmente atenderia Maria, mas
+**apagaria expressão de Pedro**, sem o consentimento dele.
+
+A solução adotada é preservar a estrutura da conversa e aplicar redação
+(redaction) apenas nos elementos que identificam o titular que pediu a
+exclusão. Isso atende:
+
+- O titular que pediu exclusão (seus identificadores sumiram do banco).
+- O outro participante (a conversa dele continua íntegra do ponto de vista
+  de conteúdo autoral).
+- A ANPD, que pode verificar que houve tratamento compatível com a LGPD.
+
+### O que é preservado e o que é redatado
+
+| Elemento | Tratamento | Onde |
+|---|---|---|
+| Estrutura da conversa | preservada | `public.chat_conversations` |
+| `participant_low` / `participant_high` | preservado (aponta para UUID que não existe mais) | idem |
+| Conteúdo de mensagens (`content`, `media_path`) | **preservado** — pertence a ambos | `public.chat_messages` |
+| Identificadores do titular no `profiles` | redatados | `public.profiles` |
+| Identificadores em `audit_log` | redatados | `public.audit_log` |
+| E-mail e nome de exibição | redatados | várias tabelas |
+
+A ausência de `FOREIGN KEY` explícita em `chat_conversations.participant_*`
+e em `chat_messages.sender_id` é intencional: torna a operação de erasure
+**fail-soft**. O titular some do `auth.users` e do `public.profiles`, mas
+as conversas onde ele aparece viram **referências históricas**, não órfãs
+que quebram queries em CASCADE.
+
+### Como auditar a aplicação dessa decisão
+
+1. Antes de aprovar o pedido, o painel admin consulta
+   `public.kc_account_erasure_capabilities()` e checa se
+   `chat_preserving_delete === true`. A recusa quebra o pipeline.
+2. Após a execução, o relatório de diagnóstico
+   (`buildDiagnostics` em `kc-account-erasure/index.ts`) deve listar:
+   - `counts.chat_conversations` — conversas onde o titular é participante
+   - `counts.chat_messages` — mensagens enviadas pelo titular
+   - `counts.chat_messages_third_party` — mensagens do outro participante
+3. A checklist de pós-condições
+   (`harden_account_erasure_privacy_postconditions.sql`) verifica que
+   `chat_preserving_delete` permaneceu `true` durante todo o pipeline.
+4. O time de privacidade pode rodar, em staging, um teste com duas contas
+   reais (A e B), A conversa com B, A pede exclusão. Após o pipeline, B
+   continua vendo a conversa sem avatar/nome do A (porque foram redatados
+   em `profiles`), mas com o conteúdo autoral de B intacto.
+
+### Quando reverter a decisão
+
+A decisão pode ser revista se:
+
+- A ANPD emitir orientação vinculante dizendo que o titular pode pedir
+  apagamento total mesmo de conteúdo coautorado.
+- O outro participante consentir explicitamente (em fluxo opcional).
+- O modelo de ameaça mudar (ex.: chat passa a ser E2E encrypted, e o
+  servidor não tem mais como preservar o conteúdo do outro).
+
+Qualquer reversão exige migration nova, atualização deste runbook e
+republicação do `kc-account-erasure` e do frontend.

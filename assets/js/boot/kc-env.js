@@ -69,11 +69,15 @@
     // Supabase (aliases + bloco)
     SUPABASE_URL: '__KC_SUPABASE_URL__',
     SUPABASE_ANON_KEY: '__KC_SUPABASE_ANON_KEY__',
+    TURNSTILE_SITE_KEY: '__KC_TURNSTILE_SITE_KEY__',
     supabase: {
       url: '__KC_SUPABASE_URL__',
       anonKey: '__KC_SUPABASE_ANON_KEY__',
       storageBucket: 'kino-media',
       chatStorageBucket: 'kino-chat-media',
+    },
+    privacyHelp: {
+      turnstileSiteKey: '__KC_TURNSTILE_SITE_KEY__',
     },
 
     // Auth (registro)
@@ -119,6 +123,10 @@
     supabase: {
       ...DEFAULT_ENV.supabase,
       ...(((current || {}).supabase) || {}),
+    },
+    privacyHelp: {
+      ...DEFAULT_ENV.privacyHelp,
+      ...(((current || {}).privacyHelp) || {}),
     },
     auth: {
       ...DEFAULT_ENV.auth,
@@ -172,6 +180,25 @@
 
   merged.SUPABASE_URL = merged.supabase.url;
   merged.SUPABASE_ANON_KEY = merged.supabase.anonKey;
+
+  // Chave pública do desafio antiabuso usado somente no envio visitante dos
+  // três direitos LGPD. O segredo correspondente existe apenas na Edge.
+  const turnstileSiteKey = String(
+    (current && current.TURNSTILE_SITE_KEY) ||
+    (
+      current &&
+      current.privacyHelp &&
+      current.privacyHelp.turnstileSiteKey
+    ) ||
+    merged.TURNSTILE_SITE_KEY ||
+    (merged.privacyHelp && merged.privacyHelp.turnstileSiteKey) ||
+    ''
+  ).trim();
+  if (!merged.privacyHelp || typeof merged.privacyHelp !== 'object') {
+    merged.privacyHelp = {};
+  }
+  merged.TURNSTILE_SITE_KEY = turnstileSiteKey;
+  merged.privacyHelp.turnstileSiteKey = turnstileSiteKey;
 
   // Normaliza allowlist de domínios
   const domains = Array.isArray(merged.AUTH_ALLOWED_DOMAINS)

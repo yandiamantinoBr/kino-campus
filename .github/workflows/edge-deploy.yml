@@ -137,6 +137,9 @@ jobs:
               "20260729009000",
               "20260729011000",
               "20260729012000",
+              "20260729172316",
+              "20260729190653",
+              "20260729203000",
           }
           payload = json.loads(os.environ["RESPONSE"])
 
@@ -290,10 +293,14 @@ jobs:
               "KC_GA4_PROPERTY_ID",
               "KC_GA4_SA_KEY",
               "KC_NOTIFY_HMAC_SECRET",
+              "KC_PRIVACY_HELP_ALLOWED_ORIGINS",
               "KC_SEARCH_CONSOLE_SA_KEY",
               "KC_SEARCH_CONSOLE_SITE_URL",
               "KC_SMTP_PASS",
               "KC_SMTP_USER",
+              "KC_TURNSTILE_ENVIRONMENT",
+              "KC_TURNSTILE_EXPECTED_HOSTNAMES",
+              "KC_TURNSTILE_SECRET_KEY",
           }
           rows = json.loads(os.environ["SECRET_JSON"])
           if not isinstance(rows, list):

@@ -4,6 +4,7 @@ param(
     "cadu-publish",
     "kc-account-erasure",
     "kc-analytics-subject-id",
+    "kc-create-privacy-help-guest",
     "kc-data-subject-request",
     "kc-data-export-admin",
     "kc-data-export-retention",
@@ -41,7 +42,10 @@ $RequiredMigrations = @(
   "20260729008000",
   "20260729009000",
   "20260729011000",
-  "20260729012000"
+  "20260729012000",
+  "20260729172316",
+  "20260729190653",
+  "20260729203000"
 )
 $RequiredSecretsByFunction = @{
   "kc-account-erasure" = @(
@@ -51,6 +55,12 @@ $RequiredSecretsByFunction = @{
   )
   "kc-analytics-subject-id" = @(
     "KC_ANALYTICS_ID_SECRET"
+  )
+  "kc-create-privacy-help-guest" = @(
+    "KC_PRIVACY_HELP_ALLOWED_ORIGINS",
+    "KC_TURNSTILE_ENVIRONMENT",
+    "KC_TURNSTILE_EXPECTED_HOSTNAMES",
+    "KC_TURNSTILE_SECRET_KEY"
   )
   "kc-data-export-retention" = @(
     "KC_DATA_EXPORT_RETENTION_SECRET"

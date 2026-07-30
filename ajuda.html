@@ -113,7 +113,7 @@
               </article>
               <article class="kc-help-item">
                 <strong><i class="fas fa-scale-balanced" aria-hidden="true"></i> LGPD e remoção de conta</strong>
-                <p>Com uma sessão válida, o formulário pode criar ou reutilizar o protocolo do titular e vinculá-lo ao atendimento. Sem acesso à conta, ele fornece primeiro uma referência de atendimento; o protocolo só é criado ou vinculado depois da verificação de titularidade. A exclusão exige confirmação adicional antes de qualquer eliminação irreversível. Quando aplicável, publicações podem ser ocultadas de forma reversível durante a análise.</p>
+                <p>Com uma conta autenticada (não anônima), o formulário pode criar ou reutilizar o protocolo do titular e vinculá-lo ao atendimento. Sem acesso à conta, ele fornece primeiro uma referência de atendimento; o protocolo só é criado ou vinculado depois da verificação de titularidade. A exclusão exige confirmação adicional antes de qualquer eliminação irreversível. Quando aplicável, publicações podem ser ocultadas de forma reversível durante a análise.</p>
                 <div class="kc-settings-actions-row">
                   <a class="kc-help-btn is-primary" href="?request=data_access_copy#helpRequestForm">Solicitar cópia</a>
                   <a class="kc-help-btn" href="?request=account_erasure#helpRequestForm">Solicitar exclusão</a>
@@ -139,7 +139,7 @@
               </article>
               <article class="kc-help-item">
                 <strong><i class="fas fa-user-xmark" aria-hidden="true"></i> Exclusão da conta e dos dados</strong>
-                <p>O envio não apaga a conta imediatamente. Com uma sessão válida, ele pode devolver o protocolo do titular; sem sessão, abre primeiro uma referência de atendimento. Depois da verificação necessária, o atendimento vincula a referência ao protocolo correto, informa eventuais retenções ou anonimizações e solicita a confirmação final antes da etapa irreversível.</p>
+                <p>O envio não apaga a conta imediatamente. Com uma conta autenticada (não anônima), ele pode devolver o protocolo do titular; sem acesso a uma conta autenticada, abre primeiro uma referência de atendimento. Depois da verificação necessária, o atendimento vincula a referência ao protocolo correto, informa eventuais retenções ou anonimizações e solicita a confirmação final antes da etapa irreversível.</p>
                 <a class="kc-help-btn is-primary" href="settings.html#settingsPrivacyData">Solicitar nas Configurações</a>
                 <a class="kc-help-btn" href="?request=account_erasure#helpRequestForm">Usar o formulário alternativo</a>
               </article>
@@ -179,7 +179,7 @@
 
           <section class="kc-help-card">
             <h2>Formulário</h2>
-            <p id="helpRequestGuidance" class="kc-settings-help">Escolha o tipo de pedido e forneça somente os dados necessários. Depois do envio, guarde o identificador exibido: uma sessão validada pode receber o protocolo do titular; sem sessão, você recebe uma referência de atendimento até a verificação. Esta página não oferece consulta pública por referência, e protocolos são acompanhados somente pela conta autenticada ou pelo atendimento verificado.</p>
+            <p id="helpRequestGuidance" class="kc-settings-help">Escolha o tipo de pedido e forneça somente os dados necessários. Depois do envio, guarde o identificador exibido: uma conta autenticada (não anônima) pode receber o protocolo do titular; sem esse acesso, você recebe uma referência de atendimento até a verificação. Esta página não oferece consulta pública por referência, e protocolos são acompanhados somente pela conta autenticada ou pelo atendimento verificado.</p>
             <div id="helpRequestPresetNotice" class="kc-help-disclaimer" hidden style="display:none;"></div>
             <form id="helpRequestForm" class="kc-help-form" aria-describedby="helpRequestGuidance helpRequestPresetNotice" aria-busy="false">
               <div class="kc-help-form-grid">
@@ -202,20 +202,27 @@
                 <div id="helpConditionalFields" class="kc-help-form-grid kc-help-form-grid--nested"></div>
                 <label class="kc-help-field kc-help-field--wide">
                   <span>Assunto</span>
-                  <input id="helpSubject" name="subject" type="text" maxlength="140" placeholder="Resumo curto do pedido" data-i18n-placeholder="placeholder.help-subject" required />
+                  <input id="helpSubject" name="subject" type="text" minlength="3" maxlength="140" placeholder="Resumo curto do pedido" data-i18n-placeholder="placeholder.help-subject" required />
                 </label>
                 <label class="kc-help-field kc-help-field--wide">
                   <span>Descrição</span>
-                  <textarea id="helpMessage" name="message" rows="7" maxlength="4000" placeholder="Explique o contexto e os detalhes que ajudam a entender ou reproduzir a situação." data-i18n-placeholder="placeholder.help-message" required></textarea>
+                  <textarea id="helpMessage" name="message" rows="7" minlength="10" maxlength="4000" placeholder="Explique o contexto e os detalhes que ajudam a entender ou reproduzir a situação." data-i18n-placeholder="placeholder.help-message" required></textarea>
                 </label>
                 <label class="kc-help-field">
                   <span>E-mail para retorno</span>
-                  <input id="helpContactEmail" name="contact_email" type="email" autocomplete="email" placeholder="voce@ufg.br" data-i18n-placeholder="placeholder.email-institutional" required />
+                  <input id="helpContactEmail" name="contact_email" type="email" autocomplete="email" maxlength="255" placeholder="voce@ufg.br" data-i18n-placeholder="placeholder.email-institutional" required />
                 </label>
                 <label class="kc-help-field kc-help-field--checkbox kc-help-field--wide">
                   <input id="helpAllowContact" name="allow_contact" type="checkbox" checked />
                   <span>Autorizo contatos adicionais por e-mail para continuar este atendimento. Comunicações operacionais necessárias para confirmar identidade e concluir o pedido fazem parte do próprio atendimento.</span>
                 </label>
+              </div>
+              <div id="helpPrivacyVerification" class="kc-help-verification" role="group" aria-labelledby="helpPrivacyVerificationTitle" aria-describedby="helpPrivacyVerificationDescription helpPrivacyVerificationStatus" tabindex="-1" hidden>
+                <strong id="helpPrivacyVerificationTitle"><i class="fas fa-shield-halved" aria-hidden="true"></i> Verificação de segurança</strong>
+                <p id="helpPrivacyVerificationDescription">Para enviar um pedido de privacidade sem uma conta autenticada, conclua a verificação abaixo. A prova fica somente em memória até esta tentativa e não é gravada no armazenamento persistente.</p>
+                <div id="helpPrivacyTurnstileWidget" class="kc-help-turnstile-widget" aria-label="Desafio de verificação de segurança" data-i18n-aria-label="aria-label.help-privacy-security-challenge"></div>
+                <p id="helpPrivacyVerificationStatus" class="kc-help-verification-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                <a class="kc-help-btn" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket" aria-hidden="true"></i> Entrar na conta</a>
               </div>
               <div class="kc-settings-actions-row">
                 <button id="helpSubmitButton" type="submit" class="kc-help-btn is-primary" aria-busy="false"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Enviar pedido</span></button>

@@ -82,6 +82,7 @@ const EXPECTED_KCAPI_MEMBERS = [
   'getProfileHighlights',
   'getProfileHighlightsCount',
   'createHelpRequest',
+  'recoverPrivacyHelpRequest',
   'listAdminHelpRequests',
   'updateAdminHelpRequest',
   'processAccountErasure',
@@ -195,9 +196,9 @@ describe('kc-api.client.js - source shape', () => {
     expect(source.trim().endsWith('})();')).toBe(true);
   });
 
-  test('mantem snapshot completo dos 116 membros publicos de window.KCAPI', () => {
+  test('mantem snapshot completo dos 117 membros publicos de window.KCAPI', () => {
     expect(extractFacadeMembers(facadeBlock)).toEqual(EXPECTED_KCAPI_MEMBERS);
-    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(116);
+    expect(EXPECTED_KCAPI_MEMBERS).toHaveLength(117);
   });
 
   test('mantem kc-api.client.js abaixo do limite de crescimento antes da proxima decomposicao', () => {
@@ -307,6 +308,7 @@ describe('kc-api.client.js - public domains frozen in the facade', () => {
       'getProfileHighlights,',
       'getProfileHighlightsCount,',
       'createHelpRequest,',
+      'recoverPrivacyHelpRequest,',
       'listAdminHelpRequests,',
       'updateAdminHelpRequest,',
       'processAccountErasure,',
@@ -382,6 +384,8 @@ describe('kc-api.client.js - driver fallback and unavailable guards', () => {
     expect(source).toContain('function getHelpModule() {');
     expect(source).toContain('const helpModule = getHelpModule();');
     expect(source).toContain('return helpModule.createHelpRequest(payload, { getActiveDriver });');
+    expect(source).toContain("typeof helpModule.recoverPrivacyHelpRequest === 'function'");
+    expect(source).toContain('helpModule.recoverPrivacyHelpRequest(payload, { getActiveDriver })');
     expect(source).toContain('return helpModule.listAdminHelpRequests(filters, { getActiveDriver });');
     expect(source).toContain('return helpModule.updateAdminHelpRequest(id, patch, { getActiveDriver });');
     expect(source).toContain('return helpModule.processAccountErasure(payload, { getActiveDriver });');

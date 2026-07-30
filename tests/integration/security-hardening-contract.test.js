@@ -72,6 +72,9 @@ describe('security hardening contract', () => {
     expect(injectEnv).not.toContain("'SUPABASE_KEY',");
     expect(injectEnv).toContain('function readLegacyJwtRole(key)');
     expect(injectEnv).toContain("legacyJwtRole !== 'anon'");
+    expect(injectEnv).toContain('TURNSTILE_TEST_SITE_KEYS');
+    expect(injectEnv).toContain('TURNSTILE_SITE_KEY_REQUIRED');
+    expect(injectEnv).toContain('TURNSTILE_TEST_SITE_KEY_FORBIDDEN');
   });
 
   test('vercel CSP keeps baseline hardening directives', () => {
@@ -81,5 +84,16 @@ describe('security hardening contract', () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
+  });
+
+  test('vercel CSP permits only the official Turnstile challenge origin', () => {
+    const config = JSON.parse(read(VERCEL_CONFIG));
+    const csp = getGlobalCsp(config);
+    expect(csp).toContain('script-src');
+    expect(csp).toContain('script-src-elem');
+    expect(csp).toContain('connect-src');
+    expect(csp).toContain('frame-src');
+    expect(csp).toContain('https://challenges.cloudflare.com');
+    expect(csp).not.toContain('https://*.cloudflare.com');
   });
 });

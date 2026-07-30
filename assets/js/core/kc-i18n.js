@@ -433,6 +433,7 @@
     'aria-label.profile-legacy-badge':  'Perfil de exemplo',
     'aria-label.profile-tabs':          'Seções do perfil',
     'aria-label.start-chat':            'Iniciar conversa',
+    'aria-label.help-privacy-security-challenge': 'Desafio de verificação de segurança',
 
     // Mensagens
     'aria-label.chat-list':             'Lista de conversas',

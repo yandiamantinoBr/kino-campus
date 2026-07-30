@@ -73,6 +73,13 @@ describe('Supabase Adapter - getFeedCursor', () => {
       .toBe(window._KCSA.admin.processDataExportSupplement);
   });
 
+  test('liga create e recovery idempotentes de Help ao sub-adapter administrativo', () => {
+    expect(driver.createHelpRequest)
+      .toBe(window._KCSA.admin.createHelpRequest);
+    expect(driver.recoverPrivacyHelpRequest)
+      .toBe(window._KCSA.admin.recoverPrivacyHelpRequest);
+  });
+
   test('normaliza posts do payload e preserva nextCursor/hasMore', async () => {
     window.KCSupabase.getFeedCursor.mockResolvedValue({
       posts: [

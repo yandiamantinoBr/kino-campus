@@ -70,6 +70,25 @@ const SUPABASE_PUBLIC_KEY = resolveEnv([
   'REACT_APP_SUPABASE_PUBLIC_KEY',
 ]);
 
+const TURNSTILE_SITE_KEY = resolveEnv([
+  'KC_TURNSTILE_SITE_KEY',
+  'TURNSTILE_SITE_KEY',
+  'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
+  'VITE_TURNSTILE_SITE_KEY',
+]);
+const TURNSTILE_TEST_SITE_KEYS = new Set([
+  '1x00000000000000000000AA',
+  '2x00000000000000000000AB',
+  '1x00000000000000000000BB',
+  '2x00000000000000000000BB',
+  '3x00000000000000000000FF',
+]);
+const isProductionDeployment = (
+  String(process.env.VERCEL_ENV || '').trim().toLowerCase() === 'production' ||
+  String(process.env.KC_APP_ENV || '').trim().toLowerCase() === 'production' ||
+  String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production'
+);
+
 function keyLogSummary(key, prefixLength = 6) {
   if (!key) return 'detected: no';
   const safePrefix = key.slice(0, prefixLength);
@@ -123,6 +142,29 @@ if ((!hasLegacyJwtPrefix && !hasPublishablePrefix) || (hasLegacyJwtPrefix && leg
   console.error('   Copie a chave em Supabase Dashboard → Project Settings → API (chave "anon" / "publishable").');
   process.exit(1);
 }
+if (
+  TURNSTILE_SITE_KEY &&
+  (
+    TURNSTILE_SITE_KEY.length > 128 ||
+    !/^[A-Za-z0-9_-]+$/.test(TURNSTILE_SITE_KEY)
+  )
+) {
+  console.error('❌ inject-env.js: KC_TURNSTILE_SITE_KEY tem formato inválido.');
+  process.exit(1);
+}
+if (isProductionDeployment && !TURNSTILE_SITE_KEY) {
+  console.error(
+    '❌ TURNSTILE_SITE_KEY_REQUIRED: configure uma site key real antes do build de produção.'
+  );
+  process.exit(1);
+}
+if (
+  isProductionDeployment &&
+  TURNSTILE_TEST_SITE_KEYS.has(TURNSTILE_SITE_KEY)
+) {
+  console.error('❌ TURNSTILE_TEST_SITE_KEY_FORBIDDEN: chaves de teste não podem entrar em produção.');
+  process.exit(1);
+}
 
 // ── Localização do kc-env.js ────────────────────────────────────────────────
 // Tenta vários caminhos possíveis dependendo da estrutura do repositório
@@ -161,6 +203,7 @@ const original = content;
 const REQUIRED_PLACEHOLDERS = [
   '__KC_SUPABASE_URL__',
   '__KC_SUPABASE_ANON_KEY__',
+  '__KC_TURNSTILE_SITE_KEY__',
   '__KC_DRIVER__',
 ];
 
@@ -175,6 +218,7 @@ if (missingPlaceholders.length > 0) {
 const REPLACEMENTS = {
   __KC_SUPABASE_URL__: SUPABASE_URL,
   __KC_SUPABASE_ANON_KEY__: SUPABASE_PUBLIC_KEY,
+  __KC_TURNSTILE_SITE_KEY__: TURNSTILE_SITE_KEY,
   __KC_DRIVER__: 'supabase',
 };
 
@@ -259,6 +303,7 @@ console.log('');
 console.log('✅ inject-env.js: kc-env.js atualizado com sucesso!');
 console.log('   SUPABASE_URL      →', SUPABASE_URL);
 console.log('   SUPABASE_PUBLIC_KEY (SUPABASE_ANON_KEY compat) →', keyLogSummary(SUPABASE_PUBLIC_KEY));
+console.log('   KC_TURNSTILE_SITE_KEY →', TURNSTILE_SITE_KEY ? 'detected: yes' : 'detected: no (guest privacy requests fail closed)');
 console.log('   driver            →', stillHasDriverPlaceholder ? '⚠️  placeholder __KC_DRIVER__ ainda presente' : '✅ supabase');
 console.log('   Arquivo           →', ENV_FILE);
 console.log('');

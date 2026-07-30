@@ -17,6 +17,9 @@ const supabaseConfig = read('supabase/config.toml');
 const dispatchFunction = read('supabase/functions/kc-dispatch-notification-outbox/index.ts');
 const inviteFunction = read('supabase/functions/kc-invite-user/index.ts');
 const retentionFunction = read('supabase/functions/kc-data-export-retention/index.ts');
+const privacyHelpGuestFunction = read(
+  'supabase/functions/kc-create-privacy-help-guest/index.ts'
+);
 const caduFunction = read('supabase/functions/cadu-publish/index.ts');
 const caduPublisher = read('services/cadu-ufg-publisher/src/publisher.js');
 const baseline = read('supabase/migrations/00000000000001_baseline_v76.sql');
@@ -91,7 +94,10 @@ describe('CI and deployment safety contracts', () => {
     expect(supabaseConfig).toMatch(
       /\[functions\.kc-data-export-retention\]\s*verify_jwt\s*=\s*false/
     );
-    expect(supabaseConfig.match(/verify_jwt\s*=\s*false/g)).toHaveLength(3);
+    expect(supabaseConfig).toMatch(
+      /\[functions\.kc-create-privacy-help-guest\]\s*verify_jwt\s*=\s*false/
+    );
+    expect(supabaseConfig.match(/verify_jwt\s*=\s*false/g)).toHaveLength(4);
 
     expect(baseline).toContain("'x-kc-dispatch-secret', v_dispatch_secret");
     expect(dispatchFunction).toContain('req.headers.get("x-kc-dispatch-secret")');
@@ -110,6 +116,12 @@ describe('CI and deployment safety contracts', () => {
     expect(inviteFunction).not.toContain(
       'error: `Falha ao gerar link de convite: ${linkError.message}`'
     );
+    expect(privacyHelpGuestFunction).toContain(
+      'KC_TURNSTILE_SECRET_KEY'
+    );
+    expect(privacyHelpGuestFunction).toContain(
+      '"kc_create_privacy_help_guest_v1"'
+    );
   });
 
   test('deploys the validated function configuration and rejects remote auth drift', () => {
@@ -126,6 +138,7 @@ describe('CI and deployment safety contracts', () => {
       'cadu-publish',
       'kc-account-erasure',
       'kc-analytics-subject-id',
+      'kc-create-privacy-help-guest',
       'kc-data-subject-request',
       'kc-data-export-admin',
       'kc-data-export-retention',
@@ -154,6 +167,9 @@ describe('CI and deployment safety contracts', () => {
       '20260729009000',
       '20260729011000',
       '20260729012000',
+      '20260729172316',
+      '20260729190653',
+      '20260729203000',
     ].forEach((migrationVersion) => {
       expect(edgeDeploy).toContain(`"${migrationVersion}"`);
       expect(privacyDeployScript).toContain(`"${migrationVersion}"`);
@@ -176,8 +192,26 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy.indexOf('"20260729011000"')).toBeLessThan(
       edgeDeploy.indexOf('"20260729012000"')
     );
+    expect(edgeDeploy.indexOf('"20260729012000"')).toBeLessThan(
+      edgeDeploy.indexOf('"20260729172316"')
+    );
+    expect(edgeDeploy.indexOf('"20260729172316"')).toBeLessThan(
+      edgeDeploy.indexOf('"20260729190653"')
+    );
+    expect(edgeDeploy.indexOf('"20260729190653"')).toBeLessThan(
+      edgeDeploy.indexOf('"20260729203000"')
+    );
     expect(privacyDeployScript.indexOf('"20260729011000"')).toBeLessThan(
       privacyDeployScript.indexOf('"20260729012000"')
+    );
+    expect(privacyDeployScript.indexOf('"20260729012000"')).toBeLessThan(
+      privacyDeployScript.indexOf('"20260729172316"')
+    );
+    expect(privacyDeployScript.indexOf('"20260729172316"')).toBeLessThan(
+      privacyDeployScript.indexOf('"20260729190653"')
+    );
+    expect(privacyDeployScript.indexOf('"20260729190653"')).toBeLessThan(
+      privacyDeployScript.indexOf('"20260729203000"')
     );
     expect(edgeDeploy).toContain('missing = sorted(required - present)');
     expect(edgeDeploy).toContain('str(row["version"])');
@@ -189,6 +223,10 @@ describe('CI and deployment safety contracts', () => {
       'account_erasure_completion_outbox',
       'account_erasure_ticket_identity_links',
       'help_request_notification_claims',
+      'help_privacy_submission_idempotency',
+      'help_privacy_recovery_rate_buckets',
+      'help_privacy_guest_rate_buckets',
+      'kc_privacy_help_metadata_v1',
       'kc_account_erasure_capabilities',
       'erasure_capabilities_v5',
       'durable_subject_closure',
@@ -211,7 +249,7 @@ describe('CI and deployment safety contracts', () => {
     );
     expect(privacySchemaContract).toContain('help_request_expected_auth_state_bound');
     expect(privacySchemaContract).toContain(
-      'kc_private.kc_help_request_v2_20260729_auth_base(jsonb)'
+      'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
     );
     expect(privacySchemaContract).toContain(
       'public.kc_link_verified_help_request_to_data_export(uuid,text,text,uuid,uuid,text,text,timestamptz,jsonb)'
@@ -233,6 +271,13 @@ describe('CI and deployment safety contracts', () => {
       'account_erasure_identity_binder_safe',
       'anonymous_erasure_help_bridge_safe',
       'terminal_dsr_idempotency_replay',
+      'privacy_help_idempotency_schema_safe',
+      'privacy_help_idempotency_fk_indexes',
+      'privacy_help_idempotency_rpc_safe',
+      'privacy_help_guest_gateway_bridge_safe',
+      'privacy_help_guest_gateway_acl_phase_safe',
+      'privacy_help_idempotency_retention_safe',
+      'postgrest_active_session_barrier_strict',
       'session_bound_data_export_admin_rpcs',
       'legacy_data_export_admin_compatibility_guarded',
       'private_data_export_workers_closed',
@@ -252,6 +297,41 @@ describe('CI and deployment safety contracts', () => {
     );
     expect(privacySchemaContract).toContain(
       'kc_private.kc_bind_or_assert_data_export_claim_session(text,bigint,text)'
+    );
+    expect(privacySchemaContract).toContain(
+      'public.kc_create_privacy_help_request_v1(jsonb)'
+    );
+    expect(privacySchemaContract).toContain(
+      'public.kc_create_privacy_help_guest_v1(jsonb)'
+    );
+    expect(privacySchemaContract).toContain(
+      'public.kc_recover_privacy_help_request_v1(jsonb)'
+    );
+    expect(privacySchemaContract).toContain(
+      'privacy_help_guest_gateway_acl_phase_safe below'
+    );
+    expect(privacySchemaContract).toContain(
+      'kc_private.kc_assert_current_authenticated_session_active()'
+    );
+    [
+      'from auth.users user_row',
+      'join auth.sessions session_row',
+      'coalesce(user_row.is_anonymous, false) is false',
+      'user_row.deleted_at is null',
+      'session_row.id = v_session_id::uuid',
+      'session_row.not_after > pg_catalog.clock_timestamp()',
+      'for share of user_row, session_row',
+    ].forEach((sessionGuard) => {
+      expect(privacySchemaContract).toContain(sessionGuard);
+    });
+    expect(privacySchemaContract).toContain(
+      'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
+    );
+    expect(privacySchemaContract).toContain(
+      'HELP_PRIVACY_IDEMPOTENT_RPC_REQUIRED'
+    );
+    expect(privacySchemaContract).toContain(
+      'kc_drop_privacy_help_replay_after_redaction'
     );
     expect(privacySchemaContract).toContain('CONTRACT DEFERRED:');
     expect(privacySchemaContract).toContain('abandonment-only');
@@ -280,6 +360,10 @@ describe('CI and deployment safety contracts', () => {
       'KC_NOTIFY_HMAC_SECRET',
       'KC_DATA_EXPORT_RETENTION_SECRET',
       'ADMIN_REPORTS_WEBHOOK_URL',
+      'KC_PRIVACY_HELP_ALLOWED_ORIGINS',
+      'KC_TURNSTILE_ENVIRONMENT',
+      'KC_TURNSTILE_EXPECTED_HOSTNAMES',
+      'KC_TURNSTILE_SECRET_KEY',
     ].forEach((secretName) => expect(edgeDeploy).toContain(secretName));
   });
 
@@ -314,6 +398,10 @@ describe('CI and deployment safety contracts', () => {
       'KC_GA4_PROPERTY_ID',
       'KC_SEARCH_CONSOLE_SA_KEY',
       'KC_SEARCH_CONSOLE_SITE_URL',
+      'KC_PRIVACY_HELP_ALLOWED_ORIGINS',
+      'KC_TURNSTILE_ENVIRONMENT',
+      'KC_TURNSTILE_EXPECTED_HOSTNAMES',
+      'KC_TURNSTILE_SECRET_KEY',
     ].forEach((secretName) => expect(privacyDeployScript).toContain(secretName));
     expect(privacyDeployScript).not.toContain('--output json 2>&1');
     expect(privacyDeployScript).toContain('if (-not $DeployFunctions)');

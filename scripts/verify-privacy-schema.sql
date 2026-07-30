@@ -1089,22 +1089,893 @@ select
       pg_catalog.to_regprocedure(
         'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
       )
+    ) like '%HELP_PRIVACY_IDEMPOTENT_RPC_REQUIRED%'
+    and pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure(
+        'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
+      )
     ) like '%expected_auth_state%'
     and pg_catalog.pg_get_functiondef(
       pg_catalog.to_regprocedure(
-        'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
+        'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
       )
     ) like '%AUTH_ACCOUNT_CHANGED%'
     and pg_catalog.pg_get_functiondef(
       pg_catalog.to_regprocedure(
-        'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
+        'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
       )
     ) like '%kc_is_current_session_active%'
     and pg_catalog.to_regprocedure(
-      'kc_private.kc_help_request_v2_20260729_auth_base(jsonb)'
+      'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
     ) is not null,
     false
   ) as help_request_expected_auth_state_bound,
+  coalesce(
+    (
+      pg_catalog.to_regclass(
+        'kc_private.help_privacy_submission_idempotency'
+      ) is not null
+      and pg_catalog.to_regclass(
+        'kc_private.help_privacy_recovery_rate_buckets'
+      ) is not null
+      and pg_catalog.to_regclass(
+        'kc_private.help_privacy_guest_rate_buckets'
+      ) is not null
+      and coalesce(
+        (
+          select replay_class.relrowsecurity
+          from pg_catalog.pg_class replay_class
+          where replay_class.oid = pg_catalog.to_regclass(
+            'kc_private.help_privacy_submission_idempotency'
+          )
+        ),
+        false
+      )
+      and coalesce(
+        (
+          select rate_class.relrowsecurity
+          from pg_catalog.pg_class rate_class
+          where rate_class.oid = pg_catalog.to_regclass(
+            'kc_private.help_privacy_recovery_rate_buckets'
+          )
+        ),
+        false
+      )
+      and coalesce(
+        (
+          select guest_rate_class.relrowsecurity
+          from pg_catalog.pg_class guest_rate_class
+          where guest_rate_class.oid = pg_catalog.to_regclass(
+            'kc_private.help_privacy_guest_rate_buckets'
+          )
+        ),
+        false
+      )
+      and not exists (
+        -- Direct privacy create is intentionally absent here: anon EXECUTE is
+        -- valid only during EXPAND. Its authenticated/service invariants and
+        -- phase-dependent anon ACL are enforced by
+        -- privacy_help_guest_gateway_acl_phase_safe below.
+        select 1
+        from (
+          values
+            ('key_hash'),
+            ('payload_fingerprint'),
+            ('caller_scope_hash'),
+            ('caller_user_id'),
+            ('auth_state'),
+            ('request_kind'),
+            ('lifecycle_state'),
+            ('help_request_id'),
+            ('response_created_at'),
+            ('data_subject_request_id'),
+            ('response_protocol'),
+            ('response_reused_existing'),
+            ('retired_at'),
+            ('created_at')
+        ) expected_column(column_name)
+        where not exists (
+          select 1
+          from information_schema.columns column_row
+          where column_row.table_schema = 'kc_private'
+            and column_row.table_name =
+              'help_privacy_submission_idempotency'
+            and column_row.column_name = expected_column.column_name
+        )
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('caller_scope_hash'),
+            ('caller_user_id'),
+            ('window_started_at'),
+            ('attempts'),
+            ('updated_at')
+        ) expected_column(column_name)
+        where not exists (
+          select 1
+          from information_schema.columns column_row
+          where column_row.table_schema = 'kc_private'
+            and column_row.table_name =
+              'help_privacy_recovery_rate_buckets'
+            and column_row.column_name = expected_column.column_name
+        )
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('window_started_at'),
+            ('attempts'),
+            ('updated_at')
+        ) expected_column(column_name)
+        where not exists (
+          select 1
+          from information_schema.columns column_row
+          where column_row.table_schema = 'kc_private'
+            and column_row.table_name =
+              'help_privacy_guest_rate_buckets'
+            and column_row.column_name = expected_column.column_name
+        )
+      )
+      and not exists (
+        select 1
+        from information_schema.columns column_row
+        where column_row.table_schema = 'kc_private'
+          and column_row.table_name in (
+            'help_privacy_submission_idempotency',
+            'help_privacy_recovery_rate_buckets',
+            'help_privacy_guest_rate_buckets'
+          )
+          and column_row.column_name in (
+            'idempotency_key',
+            'raw_key',
+            'payload',
+            'subject',
+            'message',
+            'contact_email',
+            'account_email'
+          )
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('anon'::name),
+            ('authenticated'::name),
+            ('service_role'::name)
+        ) role_row(role_name)
+        cross join (
+          values
+            (
+              pg_catalog.to_regclass(
+                'kc_private.help_privacy_submission_idempotency'
+              )
+            ),
+            (
+              pg_catalog.to_regclass(
+                'kc_private.help_privacy_recovery_rate_buckets'
+              )
+            ),
+            (
+              pg_catalog.to_regclass(
+                'kc_private.help_privacy_guest_rate_buckets'
+              )
+            )
+        ) table_row(table_oid)
+        where coalesce(
+          pg_catalog.has_table_privilege(
+            role_row.role_name,
+            table_row.table_oid,
+            'select'
+          ),
+          false
+        )
+          or coalesce(
+            pg_catalog.has_table_privilege(
+              role_row.role_name,
+              table_row.table_oid,
+              'insert'
+            ),
+            false
+          )
+          or coalesce(
+            pg_catalog.has_table_privilege(
+              role_row.role_name,
+              table_row.table_oid,
+              'update'
+            ),
+            false
+          )
+          or coalesce(
+            pg_catalog.has_table_privilege(
+              role_row.role_name,
+              table_row.table_oid,
+              'delete'
+            ),
+            false
+          )
+      )
+      and (
+        select pg_catalog.count(*) = 3
+        from pg_catalog.pg_constraint constraint_row
+        where constraint_row.conrelid = pg_catalog.to_regclass(
+          'kc_private.help_privacy_submission_idempotency'
+        )
+          and constraint_row.contype = 'f'
+          and constraint_row.confdeltype = 'c'
+          and constraint_row.confrelid in (
+            pg_catalog.to_regclass('auth.users'),
+            pg_catalog.to_regclass('public.help_requests'),
+            pg_catalog.to_regclass('public.data_subject_requests')
+          )
+      )
+      and (
+        select pg_catalog.count(*) = 1
+        from pg_catalog.pg_constraint constraint_row
+        where constraint_row.conrelid = pg_catalog.to_regclass(
+          'kc_private.help_privacy_recovery_rate_buckets'
+        )
+          and constraint_row.contype = 'f'
+          and constraint_row.confdeltype = 'c'
+          and constraint_row.confrelid =
+            pg_catalog.to_regclass('auth.users')
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('help_privacy_submission_response_shape_check'),
+            ('help_privacy_submission_response_protocol_check')
+        ) expected_constraint(constraint_name)
+        where not exists (
+          select 1
+          from pg_catalog.pg_constraint constraint_row
+          where constraint_row.conrelid = pg_catalog.to_regclass(
+            'kc_private.help_privacy_submission_idempotency'
+          )
+            and constraint_row.conname =
+              expected_constraint.constraint_name
+            and constraint_row.contype = 'c'
+            and constraint_row.convalidated
+        )
+      )
+      and exists (
+        select 1
+        from pg_catalog.pg_constraint constraint_row
+        where constraint_row.conrelid = pg_catalog.to_regclass(
+          'kc_private.help_privacy_recovery_rate_buckets'
+        )
+          and constraint_row.conname =
+            'help_privacy_recovery_rate_attempts_check'
+          and constraint_row.contype = 'c'
+          and constraint_row.convalidated
+          and pg_catalog.pg_get_constraintdef(
+            constraint_row.oid,
+            true
+          ) like '%attempts >= 1%'
+          and pg_catalog.pg_get_constraintdef(
+            constraint_row.oid,
+            true
+          ) like '%attempts <= 25%'
+      )
+      and exists (
+        select 1
+        from pg_catalog.pg_constraint constraint_row
+        where constraint_row.conrelid = pg_catalog.to_regclass(
+          'kc_private.help_privacy_guest_rate_buckets'
+        )
+          and constraint_row.conname =
+            'help_privacy_guest_rate_attempts_check'
+          and constraint_row.contype = 'c'
+          and constraint_row.convalidated
+          and pg_catalog.pg_get_constraintdef(
+            constraint_row.oid,
+            true
+          ) like '%attempts >= 1%'
+          and pg_catalog.pg_get_constraintdef(
+            constraint_row.oid,
+            true
+          ) like '%attempts <= 10000%'
+      )
+    ),
+    false
+  ) as privacy_help_idempotency_schema_safe,
+  coalesce(
+    (
+      select pg_catalog.bool_and(index_requirement.present)
+      from (
+        values
+          (
+            'kc_private.help_privacy_submission_idempotency',
+            'caller_user_id'
+          ),
+          (
+            'kc_private.help_privacy_submission_idempotency',
+            'data_subject_request_id'
+          ),
+          (
+            'kc_private.help_privacy_recovery_rate_buckets',
+            'caller_user_id'
+          ),
+          (
+            'kc_private.help_privacy_recovery_rate_buckets',
+            'window_started_at'
+          )
+      ) expected_index(table_name, column_name)
+      cross join lateral (
+        select exists (
+          select 1
+          from pg_catalog.pg_index index_row
+          join pg_catalog.pg_attribute attribute_row
+            on attribute_row.attrelid = index_row.indrelid
+           and attribute_row.attnum = index_row.indkey[0]
+          where index_row.indrelid =
+              pg_catalog.to_regclass(expected_index.table_name)
+            and index_row.indisvalid
+            and index_row.indisready
+            and attribute_row.attname = expected_index.column_name
+        ) as present
+      ) index_requirement
+    ),
+    false
+  ) as privacy_help_idempotency_fk_indexes,
+  coalesce(
+    (
+      pg_catalog.to_regprocedure(
+        'public.kc_create_privacy_help_request_v1(jsonb)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'public.kc_recover_privacy_help_request_v1(jsonb)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'public.kc_create_help_request(jsonb)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'public.kc_create_help_request_with_notification_claim(jsonb)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'kc_private.kc_assert_current_authenticated_session_active()'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+      ) is not null
+      and coalesce(
+        (
+          select pg_catalog.bool_and(
+            procedure_row.prosecdef
+            and procedure_row.proconfig = array['search_path=""']
+          )
+          from pg_catalog.pg_proc procedure_row
+          where procedure_row.oid in (
+            pg_catalog.to_regprocedure(
+              'public.kc_create_privacy_help_request_v1(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'public.kc_recover_privacy_help_request_v1(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'public.kc_create_help_request(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'public.kc_create_help_request_with_notification_claim(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_assert_current_authenticated_session_active()'
+            )
+          )
+        ),
+        false
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('anon'::name),
+            ('authenticated'::name),
+            ('service_role'::name)
+        ) role_row(role_name)
+        cross join (
+          values
+            (
+              pg_catalog.to_regprocedure(
+                'public.kc_recover_privacy_help_request_v1(jsonb)'
+              )
+            ),
+            (
+              pg_catalog.to_regprocedure(
+                'public.kc_create_help_request(jsonb)'
+              )
+            ),
+            (
+              pg_catalog.to_regprocedure(
+                'public.kc_create_help_request_with_notification_claim(jsonb)'
+              )
+            ),
+            (
+              pg_catalog.to_regprocedure(
+                'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
+              )
+            )
+        ) procedure_row(procedure_oid)
+        where not coalesce(
+          pg_catalog.has_function_privilege(
+            role_row.role_name,
+            procedure_row.procedure_oid,
+            'execute'
+          ),
+          false
+        )
+      )
+      and not exists (
+        select 1
+        from pg_catalog.pg_proc procedure_row
+        cross join lateral pg_catalog.aclexplode(
+          coalesce(
+            procedure_row.proacl,
+            pg_catalog.acldefault('f', procedure_row.proowner)
+          )
+        ) acl_row
+        where procedure_row.oid in (
+          pg_catalog.to_regprocedure(
+            'public.kc_create_privacy_help_request_v1(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'public.kc_recover_privacy_help_request_v1(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'public.kc_create_help_request(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'public.kc_create_help_request_with_notification_claim(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
+          )
+        )
+          and acl_row.grantee = 0
+          and acl_row.privilege_type = 'EXECUTE'
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('anon'::name),
+            ('authenticated'::name),
+            ('service_role'::name)
+        ) role_row(role_name)
+        cross join (
+          values
+            (
+              'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+            ),
+            (
+              'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+            ),
+            (
+              'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
+            ),
+            (
+              'kc_private.kc_create_help_request(jsonb)'
+            ),
+            (
+              'kc_private.kc_create_help_request_with_notification_claim(jsonb)'
+            ),
+            (
+              'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
+            ),
+            (
+              'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+            ),
+            (
+              'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+            ),
+            (
+              'kc_private.kc_privacy_help_payload_fingerprint(jsonb)'
+            ),
+            (
+              'kc_private.kc_assert_current_anonymous_session_active()'
+            ),
+            (
+              'kc_private.kc_assert_current_authenticated_session_active()'
+            ),
+            (
+              'kc_private.kc_cleanup_privacy_help_tombstones_v1(integer)'
+            ),
+            (
+              'kc_private.kc_drop_privacy_help_replay_after_redaction_v1()'
+            )
+        ) procedure_row(procedure_name)
+        where pg_catalog.to_regprocedure(
+          procedure_row.procedure_name
+        ) is null
+          or coalesce(
+            pg_catalog.has_function_privilege(
+              role_row.role_name,
+              pg_catalog.to_regprocedure(
+                procedure_row.procedure_name
+              ),
+              'execute'
+            ),
+            false
+          )
+      )
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%auth.uid()%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%auth.jwt() ->> ''session_id''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%from auth.users user_row%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%join auth.sessions session_row%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%session_row.user_id = user_row.id%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%user_row.id = v_uid%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%coalesce(user_row.is_anonymous, false) is false%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%user_row.deleted_at is null%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%session_row.id = v_session_id::uuid%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%session_row.not_after is null%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%session_row.not_after > pg_catalog.clock_timestamp()%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%for share of user_row, session_row%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_assert_current_authenticated_session_active()'
+        )
+      ) like '%AUTH_SESSION_NOT_ACTIVE%'
+      and coalesce(
+        (
+          select pg_catalog.bool_and(
+            pg_catalog.strpos(
+              procedure_row.prosrc,
+              'if v_expected_auth_state = ''authenticated'' then'
+            ) > 0
+            and pg_catalog.strpos(
+              procedure_row.prosrc,
+              'kc_assert_current_authenticated_session_active()'
+            ) > pg_catalog.strpos(
+              procedure_row.prosrc,
+              'if v_expected_auth_state = ''authenticated'' then'
+            )
+            and pg_catalog.strpos(
+              procedure_row.prosrc,
+              'kc_assert_current_authenticated_session_active()'
+            ) < pg_catalog.strpos(
+              procedure_row.prosrc,
+              'pg_advisory_xact_lock'
+            )
+          )
+          from pg_catalog.pg_proc procedure_row
+          where procedure_row.oid in (
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+            )
+          )
+        ),
+        false
+      )
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%privacy-help-idempotency:%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%kc_help_request_v2_20260729_idempotency_base%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%kc_privacy_help_metadata_v1%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_privacy_help_payload_fingerprint(jsonb)'
+        )
+      ) like '%kc_privacy_help_metadata_v1%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+        )
+      ) like '%''route''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+        )
+      ) like '%''source''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+        )
+      ) like '%''account_email''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+        )
+      ) not like '%''record_state''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
+        )
+      ) not like '%''lgpd_erasure''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%help_privacy_recovery_rate_buckets%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%out_recovery_state := ''recovered''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%out_recovery_state := ''retired''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+        )
+      ) like '%out_recovery_state := ''ambiguous''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
+        )
+      ) like '%HELP_PRIVACY_IDEMPOTENT_RPC_REQUIRED%'
+      and coalesce(
+        (
+          select pg_catalog.bool_and(
+            pg_catalog.pg_get_functiondef(procedure_row.oid)
+              like '%kc_is_privacy_help_route_v1%'
+            and pg_catalog.pg_get_functiondef(procedure_row.oid)
+              like '%HELP_PRIVACY_IDEMPOTENT_RPC_REQUIRED%'
+          )
+          from pg_catalog.pg_proc procedure_row
+          where procedure_row.oid in (
+            pg_catalog.to_regprocedure(
+              'public.kc_create_help_request(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'public.kc_create_help_request_with_notification_claim(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
+            )
+          )
+        ),
+        false
+      )
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+        )
+      ) like '%account_data_copy%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+        )
+      ) like '%account_data_portability%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+        )
+      ) like '%account_deletion%'
+    ),
+    false
+  ) as privacy_help_idempotency_rpc_safe,
+  coalesce(
+    (
+      pg_catalog.to_regprocedure(
+        'public.kc_create_privacy_help_guest_v1(jsonb)'
+      ) is not null
+      and (
+        select procedure_row.prosecdef
+          and procedure_row.proconfig @> array['search_path=""']
+        from pg_catalog.pg_proc procedure_row
+        where procedure_row.oid = pg_catalog.to_regprocedure(
+          'public.kc_create_privacy_help_guest_v1(jsonb)'
+        )
+      )
+      and not pg_catalog.has_function_privilege(
+        'anon',
+        'public.kc_create_privacy_help_guest_v1(jsonb)',
+        'execute'
+      )
+      and not pg_catalog.has_function_privilege(
+        'authenticated',
+        'public.kc_create_privacy_help_guest_v1(jsonb)',
+        'execute'
+      )
+      and pg_catalog.has_function_privilege(
+        'service_role',
+        'public.kc_create_privacy_help_guest_v1(jsonb)',
+        'execute'
+      )
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'public.kc_create_privacy_help_guest_v1(jsonb)'
+        )
+      ) like '%p_payload - ''expected_user_id''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'public.kc_create_privacy_help_guest_v1(jsonb)'
+        )
+      ) like '%''expected_auth_state'',%''anonymous''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'public.kc_create_privacy_help_guest_v1(jsonb)'
+        )
+      ) like '%''{"role":"anon"}''%'
+    ),
+    false
+  ) as privacy_help_guest_gateway_bridge_safe,
+  coalesce(
+    (
+      pg_catalog.to_regprocedure(
+        'public.kc_create_privacy_help_request_v1(jsonb)'
+      ) is not null
+      and pg_catalog.has_function_privilege(
+        'authenticated',
+        'public.kc_create_privacy_help_request_v1(jsonb)',
+        'execute'
+      )
+      and pg_catalog.has_function_privilege(
+        'service_role',
+        'public.kc_create_privacy_help_request_v1(jsonb)',
+        'execute'
+      )
+      and (
+        (
+          pg_catalog.has_function_privilege(
+            'anon',
+            'public.kc_create_privacy_help_request_v1(jsonb)',
+            'execute'
+          )
+          and coalesce(
+            pg_catalog.obj_description(
+              pg_catalog.to_regprocedure(
+                'public.kc_create_privacy_help_request_v1(jsonb)'
+              ),
+              'pg_proc'
+            ),
+            ''
+          ) not like 'CONTRACT:%'
+        )
+        or (
+          not pg_catalog.has_function_privilege(
+            'anon',
+            'public.kc_create_privacy_help_request_v1(jsonb)',
+            'execute'
+          )
+          and coalesce(
+            pg_catalog.obj_description(
+              pg_catalog.to_regprocedure(
+                'public.kc_create_privacy_help_request_v1(jsonb)'
+              ),
+              'pg_proc'
+            ),
+            ''
+          ) like 'CONTRACT:%'
+        )
+      )
+    ),
+    false
+  ) as privacy_help_guest_gateway_acl_phase_safe,
+  coalesce(
+    (
+      pg_catalog.to_regprocedure(
+        'kc_private.kc_cleanup_privacy_help_tombstones_v1(integer)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'kc_private.kc_purge_expired_data_subject_requests_privacy_base(integer)'
+      ) is not null
+      and pg_catalog.to_regprocedure(
+        'kc_private.kc_purge_expired_data_subject_requests(integer)'
+      ) is not null
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_cleanup_privacy_help_tombstones_v1(integer)'
+        )
+      ) like '%interval ''90 days''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_cleanup_privacy_help_tombstones_v1(integer)'
+        )
+      ) like '%interval ''2 days''%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_cleanup_privacy_help_tombstones_v1(integer)'
+        )
+      ) like '%help_privacy_guest_rate_buckets%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_cleanup_privacy_help_tombstones_v1(integer)'
+        )
+      ) like '%for update skip locked%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_purge_expired_data_subject_requests(integer)'
+        )
+      ) like
+        '%kc_purge_expired_data_subject_requests_privacy_base%'
+      and pg_catalog.pg_get_functiondef(
+        pg_catalog.to_regprocedure(
+          'kc_private.kc_purge_expired_data_subject_requests(integer)'
+        )
+      ) like '%kc_cleanup_privacy_help_tombstones_v1%'
+      and exists (
+        select 1
+        from pg_catalog.pg_trigger trigger_row
+        where trigger_row.tgrelid =
+            pg_catalog.to_regclass('public.help_requests')
+          and trigger_row.tgname =
+            'kc_drop_privacy_help_replay_after_redaction'
+          and trigger_row.tgfoid = pg_catalog.to_regprocedure(
+            'kc_private.kc_drop_privacy_help_replay_after_redaction_v1()'
+          )
+          and not trigger_row.tgisinternal
+          and trigger_row.tgenabled <> 'D'
+      )
+    ),
+    false
+  ) as privacy_help_idempotency_retention_safe,
   pg_catalog.to_regprocedure(
     'public.kc_link_verified_help_request_to_data_export(uuid,text,text,uuid,uuid,text,text,timestamptz,jsonb)'
   ) is not null as verified_help_request_data_export_link,
@@ -1747,6 +2618,32 @@ select
       and setting =
         'pgrst.db_pre_request=public.kc_enforce_active_session_pre_request'
   ) as postgrest_active_session_barrier,
+  coalesce(
+    pg_catalog.to_regprocedure(
+      'public.kc_enforce_active_session_pre_request()'
+    ) is not null
+    and pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure(
+        'public.kc_enforce_active_session_pre_request()'
+      )
+    ) like '%auth.jwt() ->> ''role''%'
+    and pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure(
+        'public.kc_enforce_active_session_pre_request()'
+      )
+    ) like '%kc_is_current_session_active()%'
+    and pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure(
+        'public.kc_enforce_active_session_pre_request()'
+      )
+    ) not like '%request.path%'
+    and pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure(
+        'public.kc_enforce_active_session_pre_request()'
+      )
+    ) not like '%is_anonymous%',
+    false
+  ) as postgrest_active_session_barrier_strict,
   exists (
     select 1
     from pg_catalog.pg_policy policy_row

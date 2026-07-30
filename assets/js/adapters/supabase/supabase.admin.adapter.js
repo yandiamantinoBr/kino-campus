@@ -84,6 +84,228 @@
     return Boolean(user && user.is_anonymous === true);
   }
 
+  function getPrivacyHelpRequestKind(row) {
+    const type = String((row && row.type) || '').trim().toLowerCase();
+    const topic = String((row && row.topic) || '').trim().toLowerCase();
+    const subtopic = String((row && row.subtopic) || '').trim().toLowerCase();
+    if (type !== 'account_access' || topic !== 'onboarding_settings') return '';
+    if (subtopic === 'account_data_copy') return 'data_access_copy';
+    if (subtopic === 'account_data_portability') return 'data_portability';
+    if (subtopic === 'account_deletion') return 'account_erasure';
+    return '';
+  }
+
+  function normalizeHelpRpcError(error) {
+    const rawMessage = String((error && error.message) || '').trim();
+    const rawDetails = String(
+      (error && (error.details || error.detail)) || ''
+    ).trim();
+    const applicationCode = /^[A-Z][A-Z0-9_]{2,80}$/.test(rawMessage)
+      ? rawMessage
+      : String((error && error.code) || '').trim();
+    const messages = {
+      HELP_IDEMPOTENCY_PAYLOAD_CONFLICT:
+        'O conteúdo difere de uma tentativa ainda protegida contra duplicidade. Restaure os mesmos dados da tentativa anterior ou confirme o atendimento antes de iniciar outro pedido.',
+      HELP_IDEMPOTENCY_KEY_INVALID:
+        'Não foi possível validar a proteção deste envio. Atualize a página e revise o pedido antes de tentar novamente.',
+      HELP_IDEMPOTENCY_REPLAY_INTEGRITY_ERROR:
+        'A referência protegida deste envio não pôde ser confirmada. Não reenvie; use a Central de Ajuda para verificar o atendimento.',
+      HELP_IDEMPOTENCY_PAYLOAD_TOO_LARGE:
+        'O pedido ultrapassa o tamanho seguro aceito. Reduza a descrição ou os campos adicionais e tente novamente.',
+      HELP_IDEMPOTENCY_KEY_RETIRED:
+        'A tentativa anterior foi encerrada com segurança. Revise os dados e envie novamente.',
+      HELP_RATE_LIMIT_1H:
+        'O limite temporário de pedidos foi atingido. Aguarde e tente novamente mais tarde.',
+      HELP_TURNSTILE_TOKEN_REQUIRED:
+        'Conclua a verificação de segurança antes de enviar o pedido ou entre na sua conta.',
+      HELP_TURNSTILE_VERIFICATION_FAILED:
+        'A verificação de segurança expirou ou não pôde ser confirmada. Faça uma nova verificação e tente novamente.',
+      HELP_TURNSTILE_UNAVAILABLE:
+        'A verificação de segurança está indisponível agora. Tente novamente mais tarde ou entre na sua conta.',
+      TURNSTILE_TOKEN_REQUIRED:
+        'Conclua a verificação de segurança antes de enviar o pedido ou entre na sua conta.',
+      TURNSTILE_VERIFICATION_FAILED:
+        'A verificação de segurança expirou ou não pôde ser confirmada. Faça uma nova verificação e tente novamente.',
+      TURNSTILE_INVALID:
+        'A verificação de segurança não foi aceita. Conclua uma nova verificação e tente novamente.',
+      TURNSTILE_UNAVAILABLE:
+        'A verificação de segurança está indisponível agora. Tente novamente mais tarde ou entre na sua conta.',
+      GUEST_PRIVACY_BUSY:
+        'Há muitos pedidos visitantes sendo processados agora. Aguarde um instante e tente novamente ou entre na sua conta.',
+    };
+    const safeToReplace =
+      rawDetails === 'HELP_IDEMPOTENCY_SAFE_TO_REPLACE';
+    return {
+      code: applicationCode || 'HELP_REQUEST_FAILED',
+      db_code: String((error && error.code) || '').trim() || null,
+      message: messages[applicationCode]
+        || rawMessage
+        || 'Não foi possível enviar o pedido de ajuda.',
+      idempotency: {
+        safe_to_replace: safeToReplace,
+        response_confirmed: false,
+      },
+    };
+  }
+
+  async function normalizePrivacyGuestEdgeError(error, responseData) {
+    let edgeBody =
+      responseData &&
+      typeof responseData === 'object' &&
+      !Array.isArray(responseData)
+        ? responseData
+        : null;
+    if (
+      !edgeBody &&
+      error &&
+      error.context &&
+      typeof error.context.json === 'function'
+    ) {
+      try {
+        const parsed = await error.context.json();
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          edgeBody = parsed;
+        }
+      } catch (_) {
+        edgeBody = null;
+      }
+    }
+
+    const nestedError =
+      edgeBody &&
+      edgeBody.error &&
+      typeof edgeBody.error === 'object' &&
+      !Array.isArray(edgeBody.error)
+        ? edgeBody.error
+        : null;
+    const structured = nestedError || edgeBody || {};
+    const stringError =
+      edgeBody && typeof edgeBody.error === 'string'
+        ? String(edgeBody.error).trim()
+        : '';
+    const applicationCode = String(
+      structured.code ||
+      (edgeBody && edgeBody.code) ||
+      (/^[A-Z][A-Z0-9_]{2,80}$/.test(stringError) ? stringError : '')
+    ).trim();
+    const publicMessage = String(
+      structured.message ||
+      (edgeBody && edgeBody.message) ||
+      stringError ||
+      (error && error.message) ||
+      ''
+    ).trim();
+    const details = String(
+      structured.details ||
+      structured.detail ||
+      (edgeBody && (edgeBody.details || edgeBody.detail)) ||
+      ''
+    ).trim();
+    const normalized = normalizeHelpRpcError({
+      message: applicationCode || publicMessage,
+      code: String(
+        structured.db_code ||
+        (edgeBody && edgeBody.db_code) ||
+        (error && error.code) ||
+        ''
+      ).trim(),
+      details,
+    });
+    normalized.idempotency.safe_to_replace = Boolean(
+      edgeBody &&
+      edgeBody.ok === false &&
+      nestedError &&
+      nestedError.idempotency &&
+      typeof nestedError.idempotency === 'object' &&
+      !Array.isArray(nestedError.idempotency) &&
+      nestedError.idempotency.safe_to_replace === true
+    );
+    if (
+      normalized.code === 'HELP_REQUEST_FAILED' ||
+      normalized.message === 'Edge Function returned a non-2xx status code'
+    ) {
+      normalized.message =
+        'Não foi possível validar e enviar o pedido visitante. Faça uma nova verificação ou entre na sua conta.';
+    }
+    return normalized;
+  }
+
+  function validatePrivacyHelpRpcEnvelope(row, expectedAuthState) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      return false;
+    }
+    const id = String(row.out_id || '').trim();
+    const createdAt = String(row.out_created_at || '').trim();
+    if (
+      !UUID_RE.test(id) ||
+      !createdAt ||
+      !Number.isFinite(Date.parse(createdAt)) ||
+      typeof row.out_idempotency_replayed !== 'boolean' ||
+      typeof row.out_reused_existing !== 'boolean' ||
+      row.out_notification_claim != null ||
+      row.out_notification_claim_expires_at != null
+    ) {
+      return false;
+    }
+    const protocol = String(row.out_protocol || '').trim();
+    const dsr = row.out_data_subject_request;
+    if (expectedAuthState === 'authenticated') {
+      return Boolean(
+        /^KC-DSR-[0-9]{8}-[A-F0-9]{16}$/.test(protocol) &&
+        dsr &&
+        typeof dsr === 'object' &&
+        !Array.isArray(dsr) &&
+        UUID_RE.test(String(dsr.id || '').trim()) &&
+        String(dsr.protocol || '').trim() === protocol
+      );
+    }
+    return !protocol && dsr == null;
+  }
+
+  function validatePrivacyHelpRecoveryEnvelope(row, sourceAuthState) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return false;
+    const recoveryState = String(row.out_recovery_state || '').trim();
+    if (recoveryState === 'recovered') {
+      return validatePrivacyHelpRpcEnvelope(row, sourceAuthState)
+        && row.out_idempotency_replayed === true;
+    }
+    if (recoveryState !== 'retired' && recoveryState !== 'ambiguous') {
+      return false;
+    }
+    return (
+      row.out_id == null &&
+      row.out_created_at == null &&
+      row.out_notification_claim == null &&
+      row.out_notification_claim_expires_at == null &&
+      row.out_data_subject_request == null &&
+      row.out_protocol == null &&
+      row.out_reused_existing === false &&
+      row.out_idempotency_replayed === false
+    );
+  }
+
+  function mapPrivacyHelpReceipt(row) {
+    return {
+      id: row && row.out_id ? String(row.out_id) : null,
+      created_at: row && row.out_created_at
+        ? String(row.out_created_at)
+        : null,
+      data_subject_request:
+        row &&
+        row.out_data_subject_request &&
+        typeof row.out_data_subject_request === 'object'
+          ? row.out_data_subject_request
+          : null,
+      protocol: row && row.out_protocol
+        ? String(row.out_protocol)
+        : null,
+      reused_existing_data_subject_request:
+        Boolean(row && row.out_reused_existing === true),
+      idempotency_replayed:
+        Boolean(row && row.out_idempotency_replayed === true),
+    };
+  }
+
   async function notifyExternalHelpRequest(client, row, notificationClaim) {
     if (!client || !row || !row.id || !isExternalAccessHelpRequest(row)) return { ok: true, skipped: true };
     if (!client.functions || typeof client.functions.invoke !== 'function') {
@@ -192,38 +414,142 @@
       expected_user_id: expectedUserId || null,
       expected_auth_state: expectedAuthState,
     };
+    const privacyRequestKind = getPrivacyHelpRequestKind(insertPayload);
+    const privacyIdempotencyKey = String(
+      (payload && payload.idempotency_key) || ''
+    ).trim().toLowerCase();
+    if (privacyRequestKind && !/^[a-f0-9]{64}$/.test(privacyIdempotencyKey)) {
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_KEY_REQUIRED',
+          message: 'Não foi possível preparar uma chave segura para este pedido. Atualize a página e tente novamente.',
+        },
+      };
+    }
+
+    const isGuestPrivacyRequest =
+      Boolean(privacyRequestKind) &&
+      currentAuthState === 'anonymous';
+    const turnstileToken = String(
+      (payload && payload.turnstile_token) || ''
+    ).trim();
+    if (isGuestPrivacyRequest && !turnstileToken) {
+      return {
+        ok: false,
+        error: normalizeHelpRpcError({
+          message: 'HELP_TURNSTILE_TOKEN_REQUIRED',
+        }),
+      };
+    }
 
     try {
-      const { data, error } = await client.rpc('kc_create_help_request_with_notification_claim_v2', {
-        p_payload: rpcPayload,
-      });
-
-      if (error) {
-        console.error('[KCAPI][help] createHelpRequest:', error);
-        return { ok: false, error: { message: error.message || 'Não foi possível enviar o pedido de ajuda.' } };
+      if (privacyRequestKind) {
+        rpcPayload.idempotency_key = privacyIdempotencyKey;
+      }
+      let data;
+      let error;
+      if (isGuestPrivacyRequest) {
+        if (
+          !client.functions ||
+          typeof client.functions.invoke !== 'function'
+        ) {
+          return {
+            ok: false,
+            error: {
+              code: 'BACKEND_REQUIRED',
+              message: 'O envio visitante de privacidade não está disponível neste ambiente. Entre na sua conta ou tente novamente mais tarde.',
+            },
+          };
+        }
+        try {
+          const edgeResponse = await client.functions.invoke(
+            'kc-create-privacy-help-guest',
+            {
+              body: {
+                turnstile_token: turnstileToken,
+                payload: rpcPayload,
+              },
+            }
+          );
+          data = edgeResponse && edgeResponse.data;
+          error = edgeResponse && edgeResponse.error;
+        } catch (edgeError) {
+          return {
+            ok: false,
+            error: await normalizePrivacyGuestEdgeError(edgeError, null),
+          };
+        }
+        if (error) {
+          return {
+            ok: false,
+            error: await normalizePrivacyGuestEdgeError(error, data),
+          };
+        }
+        if (!data || data.ok !== true) {
+          return {
+            ok: false,
+            error: await normalizePrivacyGuestEdgeError(null, data),
+          };
+        }
+        data = data.data;
+      } else {
+        const rpcName = privacyRequestKind
+          ? 'kc_create_privacy_help_request_v1'
+          : 'kc_create_help_request_with_notification_claim_v2';
+        const rpcResponse = await client.rpc(rpcName, {
+          p_payload: rpcPayload,
+        });
+        data = rpcResponse && rpcResponse.data;
+        error = rpcResponse && rpcResponse.error;
+        if (error) {
+          console.error('[KCAPI][help] createHelpRequest:', error);
+          return { ok: false, error: normalizeHelpRpcError(error) };
+        }
       }
 
-      // A prova de posse e efemera: passa direto para a Edge Function e nunca
-      // entra no objeto retornado, storage local, metadata ou logs.
       const row = Array.isArray(data) ? data[0] : data;
+      if (
+        privacyRequestKind &&
+        !validatePrivacyHelpRpcEnvelope(row, expectedAuthState)
+      ) {
+        return {
+          ok: false,
+          error: {
+            code: 'HELP_IDEMPOTENCY_RESPONSE_AMBIGUOUS',
+            message: 'O servidor não confirmou uma resposta completa. Para evitar duplicidade, mantenha esta página e tente recuperar a mesma tentativa mais tarde.',
+          },
+        };
+      }
       const notificationClaim = row && row.out_notification_claim
         ? String(row.out_notification_claim)
         : '';
-      const createdRow = Object.assign({}, insertPayload, {
-        id: row && row.out_id ? row.out_id : null,
-        created_at: row && row.out_created_at ? row.out_created_at : null,
-        data_subject_request: row && row.out_data_subject_request && typeof row.out_data_subject_request === 'object'
-          ? row.out_data_subject_request
-          : null,
-        protocol: row && row.out_protocol ? String(row.out_protocol) : null,
-        reused_existing_data_subject_request: row && row.out_reused_existing === true,
-      });
+      if (privacyRequestKind && notificationClaim) {
+        return {
+          ok: false,
+          error: {
+            code: 'HELP_IDEMPOTENCY_NOTIFICATION_CLAIM_UNEXPECTED',
+            message: 'O servidor recusou uma resposta incompatível com este pedido de privacidade.',
+          },
+        };
+      }
+      const createdRow = Object.assign(
+        {},
+        insertPayload,
+        mapPrivacyHelpReceipt(row)
+      );
 
       const notification = await notifyExternalHelpRequest(client, createdRow, notificationClaim);
       return { ok: true, data: createdRow, notification };
     } catch (e) {
+      if (isGuestPrivacyRequest) {
+        return {
+          ok: false,
+          error: await normalizePrivacyGuestEdgeError(e, null),
+        };
+      }
       console.error('[KCAPI][help] createHelpRequest exceção:', e);
-      return { ok: false, error: { message: 'Não foi possível enviar o pedido de ajuda.' } };
+      return { ok: false, error: normalizeHelpRpcError(e) };
     }
   }
 
@@ -507,6 +833,162 @@
     }
   }
 
+  async function recoverPrivacyHelpRequest(input = {}) {
+    const client = getClient();
+    if (!client) {
+      return {
+        ok: false,
+        error: {
+          code: 'BACKEND_REQUIRED',
+          message: 'Recuperação de pedidos indisponível neste ambiente.',
+        },
+      };
+    }
+    const idempotencyKey = String(
+      (input && input.idempotency_key) || ''
+    ).trim().toLowerCase();
+    const requestKind = String(
+      (input && input.request_kind) || ''
+    ).trim().toLowerCase();
+    const expectedUserId = String(
+      (input && input.expected_user_id) || ''
+    ).trim();
+    const expectedAuthState = String(
+      (input && input.expected_auth_state) ||
+      (expectedUserId ? 'authenticated' : 'anonymous')
+    ).trim().toLowerCase();
+    const sourceAuthState = String(
+      (input && input.source_auth_state) || expectedAuthState
+    ).trim().toLowerCase();
+    if (
+      !/^[a-f0-9]{64}$/.test(idempotencyKey) ||
+      ![
+        'data_access_copy',
+        'data_portability',
+        'account_erasure',
+      ].includes(requestKind) ||
+      !['anonymous', 'authenticated'].includes(expectedAuthState) ||
+      !['anonymous', 'authenticated'].includes(sourceAuthState)
+    ) {
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_RECOVERY_INVALID',
+          message: 'A tentativa salva não contém dados técnicos válidos para recuperação.',
+          idempotency: {
+            safe_to_replace: false,
+            response_confirmed: false,
+          },
+        },
+      };
+    }
+
+    const user = await getCurrentUser();
+    const currentUserId = String((user && user.id) || '').trim();
+    const currentAuthState = currentUserId && !isAnonymousAuthUser(user)
+      ? 'authenticated'
+      : 'anonymous';
+    const isSameUidAnonymousUpgrade = (
+      currentAuthState === 'authenticated' &&
+      sourceAuthState === 'anonymous' &&
+      Boolean(currentUserId) &&
+      currentUserId === expectedUserId
+    );
+    if (
+      currentAuthState !== expectedAuthState ||
+      (
+        expectedAuthState === 'authenticated' &&
+        (!expectedUserId || currentUserId !== expectedUserId)
+      ) ||
+      (expectedAuthState === 'anonymous' && expectedUserId) ||
+      (
+        sourceAuthState !== expectedAuthState &&
+        !isSameUidAnonymousUpgrade
+      )
+    ) {
+      return {
+        ok: false,
+        error: {
+          code: 'ACCOUNT_CHANGED',
+          message: 'A conta ativa não corresponde à tentativa salva.',
+          idempotency: {
+            safe_to_replace: false,
+            response_confirmed: false,
+          },
+        },
+      };
+    }
+
+    try {
+      const { data, error } = await client.rpc(
+        'kc_recover_privacy_help_request_v1',
+        {
+          p_payload: {
+            idempotency_key: idempotencyKey,
+            request_kind: requestKind,
+            expected_auth_state: expectedAuthState,
+            expected_user_id: expectedUserId || null,
+            source_auth_state: sourceAuthState,
+          },
+        }
+      );
+      if (error) {
+        return { ok: false, error: normalizeHelpRpcError(error) };
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!validatePrivacyHelpRecoveryEnvelope(row, sourceAuthState)) {
+        return {
+          ok: false,
+          error: {
+            code: 'HELP_IDEMPOTENCY_RESPONSE_AMBIGUOUS',
+            message: 'O servidor não confirmou o estado da tentativa salva. A chave foi mantida para evitar duplicidade.',
+            idempotency: {
+              safe_to_replace: false,
+              response_confirmed: false,
+            },
+          },
+        };
+      }
+      const recoveryState = String(row.out_recovery_state || '').trim();
+      if (recoveryState === 'recovered') {
+        return {
+          ok: true,
+          data: mapPrivacyHelpReceipt(row),
+          recovery: {
+            state: 'recovered',
+            safe_to_replace: false,
+          },
+        };
+      }
+      if (recoveryState === 'retired') {
+        return {
+          ok: false,
+          error: {
+            code: 'HELP_IDEMPOTENCY_RECOVERY_RETIRED',
+            message: 'A tentativa sem recibo foi encerrada com segurança. Revise o formulário antes de um novo envio.',
+            idempotency: {
+              safe_to_replace: true,
+              response_confirmed: true,
+            },
+          },
+        };
+      }
+      return {
+        ok: false,
+        error: {
+          code: 'HELP_IDEMPOTENCY_RECOVERY_AMBIGUOUS',
+          message: 'Ainda não foi possível confirmar se a tentativa visitante chegou ao servidor. A chave foi mantida; aguarde e tente recuperar novamente.',
+          idempotency: {
+            safe_to_replace: false,
+            response_confirmed: false,
+          },
+        },
+      };
+    } catch (error) {
+      return { ok: false, error: normalizeHelpRpcError(error) };
+    }
+  }
+
   async function processDataExportSupplement(payload = {}) {
     const client = getClient();
     if (!client || !client.functions || typeof client.functions.invoke !== 'function') {
@@ -730,6 +1212,7 @@
 
   window._KCSA.admin = {
     createHelpRequest,
+    recoverPrivacyHelpRequest,
     listAdminHelpRequests,
     updateAdminHelpRequest,
     processAccountErasure,
