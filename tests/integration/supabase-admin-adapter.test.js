@@ -630,6 +630,43 @@ describe('supabase.admin.adapter.js — idempotência e recovery do Help LGPD', 
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  test('mapeia canal visitante sem secrets Turnstile sem expor o código interno', async () => {
+    const rpc = jest.fn();
+    const invoke = jest.fn().mockResolvedValue({
+      data: null,
+      error: {
+        context: {
+          json: async () => ({
+            ok: false,
+            error: {
+              code: 'GUEST_PRIVACY_CONFIG_UNAVAILABLE',
+              message: 'O canal protegido de privacidade não está configurado.',
+            },
+          }),
+        },
+      },
+    });
+    window._KCSA.getClient = () => ({ rpc, functions: { invoke } });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.createHelpRequest(
+      privacyPayload()
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: 'GUEST_PRIVACY_CONFIG_UNAVAILABLE',
+        message: expect.stringMatching(
+          /visitantes.*n[aã]o est[aá] configurado|Entre na sua conta/iu
+        ),
+        idempotency: { safe_to_replace: false },
+      },
+    });
+    expect(result.error.message).not.toContain('GUEST_PRIVACY_CONFIG_UNAVAILABLE');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   test('falha fechado sem prova efêmera e não toca Edge nem RPC', async () => {
     const rpc = jest.fn();
     const invoke = jest.fn();
