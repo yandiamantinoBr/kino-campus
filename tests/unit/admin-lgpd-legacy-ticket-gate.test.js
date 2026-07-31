@@ -27,6 +27,19 @@ describe('admin LGPD legacy authenticated ticket gate', () => {
     );
   });
 
+  test('link_verified_identity action accepts authenticated legacy tickets', () => {
+    // Regression: Christian@UFG tickets have user_id set but no DSR. The old
+    // guard rejected any row with user_id before the RPC could materialize.
+    expect(CONTROLLER).not.toMatch(
+      /action === 'link_verified_identity'[\s\S]{0,120}String\(row\.user_id \|\| ''\)\.trim\(\)/
+    );
+    expect(CONTROLLER).toContain("action === 'link_verified_identity'");
+    expect(CONTROLLER).toContain('canOfferErasureIdentityLink(row)');
+    expect(CONTROLLER).toContain(
+      'Informe o e-mail exato da conta do titular para protocolar o pedido.'
+    );
+  });
+
   test('canonical deletion tuple is accepted without request_kind', () => {
     expect(CONTROLLER).toContain(
       "(!requestKind || requestKind === 'account_erasure')"
