@@ -2868,9 +2868,24 @@
     const status = String(request.status || '').trim();
     if (action === 'link_verified_identity') return hasCanonicalErasureLink(row);
     if (action === 'apply_reversible') {
+      const emailStatus = String(
+        metadata.confirmation_email_status
+        || (metadata.confirmation_delivery && metadata.confirmation_delivery.status)
+        || ''
+      ).trim();
+      // Accept either status machine progress or durable reversible timestamp.
+      // A lagging diagnose projection (or split workflows) must not trap the UI
+      // after the mutation already recorded reversible_applied_at / SMTP send.
       return Boolean(
-        hasValidTimestamp(request.reversible_applied_at)
-        && ['reversible_applied', 'pending_confirmation', 'confirmed', 'partial_failure', 'erased'].includes(status)
+        (
+          hasValidTimestamp(request.reversible_applied_at)
+          && ['reversible_applied', 'pending_confirmation', 'confirmed', 'partial_failure', 'erased'].includes(status)
+        )
+        || (
+          hasValidTimestamp(request.reversible_applied_at)
+          && (emailStatus === 'sent' || emailStatus === 'draft_only' || hasValidTimestamp(request.confirmation_requested_at))
+        )
+        || ['pending_confirmation', 'reversible_applied'].includes(status)
       );
     }
     if (action === 'record_confirmation_delivery') {
@@ -3111,6 +3126,27 @@
     );
     if (!isActiveAdminContext(adminContext)) return;
 
+    // Trust a complete successful mutation payload when diagnose lags or reads
+    // a split/orphan workflow (seen on apply_reversible for Christian@UFG).
+    if (
+      !reconciliation.committed
+      && result
+      && result.ok !== false
+      && result.request
+      && isErasureMutationPostconditionConfirmed(action, reconciliation.row, result)
+    ) {
+      reconciliation = {
+        known: true,
+        committed: true,
+        row: reconciliation.row,
+        result: result,
+      };
+      state.erasureResults[id] = {
+        ...(currentResult || {}),
+        ...result,
+      };
+    }
+
     // Help metadata update can lag one read after a successful link RPC.
     if (
       action === 'link_verified_identity'
@@ -3124,6 +3160,36 @@
         await sleepMs(180 * (attempt + 1));
         if (!isActiveAdminContext(adminContext)) return;
         reconciliation = await reconcileErasureMutation(id, action, adminContext);
+      }
+    }
+
+    // Retry diagnose once for reversible apply when the mutation claimed success.
+    if (
+      action === 'apply_reversible'
+      && !reconciliation.committed
+      && result
+      && result.ok !== false
+    ) {
+      for (let attempt = 0; attempt < 2 && !reconciliation.committed; attempt += 1) {
+        await sleepMs(250 * (attempt + 1));
+        if (!isActiveAdminContext(adminContext)) return;
+        reconciliation = await reconcileErasureMutation(id, action, adminContext);
+        if (
+          !reconciliation.committed
+          && result.request
+          && isErasureMutationPostconditionConfirmed(action, reconciliation.row, result)
+        ) {
+          reconciliation = {
+            known: true,
+            committed: true,
+            row: reconciliation.row,
+            result: result,
+          };
+          state.erasureResults[id] = {
+            ...(currentResult || {}),
+            ...result,
+          };
+        }
       }
     }
 
