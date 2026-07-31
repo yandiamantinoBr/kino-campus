@@ -61,8 +61,8 @@ describe('admin help-requests draft structure', () => {
     expect(loadSlice).toContain('Single paint path');
   });
 
-  test('cache-busts controller to 8.6.21 on admin page', () => {
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.21');
+  test('cache-busts controller to 8.6.22 on admin page', () => {
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.22');
   });
 
   test('soft reauth keeps queue painted on leave/return', () => {

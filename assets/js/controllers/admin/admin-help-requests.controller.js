@@ -852,11 +852,14 @@
     showError(message);
   }
 
-  function showToast(message, type) {
+  function showToast(message, type, durationMs) {
     const text = String(message || '').trim();
     if (!text) return;
+    const duration = Number.isFinite(Number(durationMs)) && Number(durationMs) > 0
+      ? Number(durationMs)
+      : 2600;
     if (typeof window.showToast === 'function') {
-      window.showToast(text, type || 'info', 2600);
+      window.showToast(text, type || 'info', duration);
       return;
     }
     window.alert(text);
@@ -2683,6 +2686,16 @@
     };
   }
 
+  function cardMatchesActiveTriageFilters(status, priority) {
+    const statusFilter = String(state.filters.status || 'all').trim() || 'all';
+    const priorityFilter = String(state.filters.priority || 'all').trim() || 'all';
+    const statusValue = String(status || '').trim();
+    const priorityValue = String(priority || '').trim();
+    if (statusFilter !== 'all' && statusFilter !== statusValue) return false;
+    if (priorityFilter !== 'all' && priorityFilter !== priorityValue) return false;
+    return true;
+  }
+
   function setCardTriageUi(card, status, priority, options = {}) {
     if (!card) return;
     const saving = options.saving === true;
@@ -2723,9 +2736,20 @@
 
     const hint = card.querySelector('[data-help-triage-status]');
     if (hint) {
-      hint.textContent = saving
-        ? 'Salvando triagem…'
-        : 'Clique em um chip para salvar a triagem automaticamente.';
+      let message = '';
+      if (typeof options.statusMessage === 'string' && options.statusMessage) {
+        message = options.statusMessage;
+      } else if (saving) {
+        message = 'Salvando triagem…';
+      } else {
+        message = triageSavedHintFor(card.getAttribute('data-help-id'))
+          || 'Clique em um chip para salvar a triagem automaticamente.';
+      }
+      hint.textContent = message;
+      hint.classList.toggle(
+        'is-success',
+        !saving && message.indexOf('Triagem salva') === 0
+      );
     }
     card.classList.toggle('is-triage-saving', saving);
   }
@@ -2827,20 +2851,16 @@
         });
       }
       state.triageJustSaved[id] = Date.now();
-      setCardTriageUi(card, status, priority, { saving: false });
-      const hint = card.querySelector('[data-help-triage-status]');
-      if (hint) hint.textContent = 'Triagem salva.';
-      const stillInFilter = (
-        (state.filters.status === 'all' || state.filters.status === status)
-        && (state.filters.priority === 'all' || state.filters.priority === priority)
-      );
-      showToast(
-        stillInFilter
-          ? 'Triagem atualizada.'
-          : 'Triagem atualizada. O pedido saiu do filtro atual.',
-        'success',
-        2600
-      );
+      const stillInFilter = cardMatchesActiveTriageFilters(status, priority);
+      // Chip auto-save is high-frequency: no success toast (inline hint only).
+      // Errors/warns still toast. Leaving the active filter is self-evident when
+      // the card disappears after the quiet local/server reconcile below.
+      setCardTriageUi(card, status, priority, {
+        saving: false,
+        statusMessage: stillInFilter
+          ? 'Triagem salva.'
+          : 'Triagem salva. Este pedido saiu do filtro atual…',
+      });
       // Drop triage draft keys so the next paint uses server status/priority;
       // keep LGPD/export identity drafts intact.
       try {
@@ -2857,7 +2877,30 @@
         }
       } catch (_) { /* ignore */ }
       try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
-      // Silent refresh keeps the queue painted after chip auto-save.
+
+      if (stillInFilter) {
+        // Stay in queue: local paint is enough; avoid list flicker + toast spam.
+        renderSummary(state.rows);
+        return true;
+      }
+
+      // Left filter: soft-remove optimistically, then silent reconcile.
+      if (card && card.isConnected) {
+        card.classList.add('is-triage-leaving');
+      }
+      state.rows = (Array.isArray(state.rows) ? state.rows : []).filter(
+        (item) => String(item && item.id || '').trim() !== id
+      );
+      if (state.pagination.totalCount > 0) {
+        state.pagination.totalCount = Math.max(0, state.pagination.totalCount - 1);
+      }
+      // Brief pause so the inline hint is readable before the card unmounts.
+      await new Promise(function (resolve) {
+        window.setTimeout(resolve, 420);
+      });
+      if (!isActiveAdminContext(adminContext)) return false;
+      renderRows(state.rows);
+      renderSummary(state.rows);
       await loadRows({
         silent: true,
         limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE),

@@ -155,6 +155,8 @@ describe('admin help auth-bound PII isolation', () => {
 
     expect(document.body.textContent).not.toContain('Assunto pessoal sigiloso');
     expect(document.querySelector('#admin-content').style.display).toBe('none');
+    // Chip triage is quiet on success; late update after logout must not toast either.
     expect(showToast).not.toHaveBeenCalledWith('Triagem atualizada.', 'success', 2600);
+    expect(showToast.mock.calls.some((args) => String(args[0] || '').indexOf('Triagem atualizada') === 0)).toBe(false);
   });
 });
