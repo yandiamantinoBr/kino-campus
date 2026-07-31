@@ -1,5 +1,5 @@
 /**
- * KinoCampus Service Worker - v12.14.0
+ * KinoCampus Service Worker - v12.15.0
  *
  * Estrategia:
  *   - Shell local versionado (CSS + JS core): stale-while-revalidate
@@ -17,7 +17,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'kc-shell-';
-var CACHE_VERSION = 'kc-shell-v12.14.0';
+var CACHE_VERSION = 'kc-shell-v12.15.0';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';
 
@@ -27,7 +27,7 @@ var PAGE_CACHE = CACHE_VERSION + ':pages';
 var SHELL_ASSETS = [
   '/assets/css/styles.css?v=8.6.12',
   '/assets/css/kc-chat-shortcut.css?v=8.6.1',
-  '/assets/css/kc-public-shell.css?v=8.6.14',
+  '/assets/css/kc-public-shell.css?v=8.6.15',
   '/assets/js/boot/kc-constants.js?v=8.6.1',
   '/assets/js/boot/kc-env.js?v=8.6.13',
   '/assets/js/boot/kc-feature-flags.js?v=8.6.1',

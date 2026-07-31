@@ -92,9 +92,14 @@ body.kc-help-page .kc-help-shell {
   padding: 28px 0 0;
 }
 
-body.kc-settings-page .kc-settings-shell,
-body.kc-help-page .kc-help-shell {
+body.kc-settings-page .kc-settings-shell {
   overflow-x: clip;
+}
+
+/* Help: avoid overflow clipping so the sticky rail can stick while scrolling.
+   Horizontal safety is handled by min-width: 0 on grid children/cards. */
+body.kc-help-page .kc-help-shell {
+  overflow: visible;
 }
 
 body.kc-profile-route .kc-profile-hero,
@@ -305,6 +310,13 @@ body.kc-settings-page .kc-settings-input {
   min-width: 0;
 }
 
+/* Help page: more balanced columns; main content + companion rail. */
+body.kc-help-page .kc-help-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+  gap: 20px;
+  align-items: start;
+}
+
 .kc-settings-layout > *,
 .kc-help-grid > * {
   min-width: 0;
@@ -316,6 +328,39 @@ body.kc-settings-page .kc-settings-input {
   min-width: 0;
   align-content: start;
   width: 100%;
+}
+
+/* Keep the help rail in view while the long main stack scrolls.
+   overflow must stay visible on ancestors (see .kc-help-shell override). */
+body.kc-help-page .kc-help-stack--aside {
+  position: sticky;
+  top: max(12px, calc(env(safe-area-inset-top, 0px) + 76px));
+  max-height: calc(100dvh - 96px);
+  max-height: calc(100vh - 96px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 4px;
+  scrollbar-gutter: stable;
+  align-self: start;
+}
+
+body.kc-help-page .kc-help-stack--aside::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.kc-help-page .kc-help-stack--aside::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--kc-border-dark) 80%, transparent);
+  border-radius: 999px;
+}
+
+/* Even item tiles inside help cards (avoids jagged last row heights). */
+body.kc-help-page .kc-help-list {
+  align-items: stretch;
+}
+
+body.kc-help-page .kc-help-item {
+  height: 100%;
 }
 
 .kc-settings-card,
@@ -1356,6 +1401,26 @@ body.kc-auth-callback-route .kc-callback-card {
 @media (max-width: 960px) {
   .kc-settings-layout,
   .kc-help-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.kc-help-page .kc-help-stack--aside {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  /* On stacked layout, companion cards stay useful after hero context, before the long form. */
+  body.kc-help-page .kc-help-grid {
+    gap: 16px;
+  }
+}
+
+/* Mid desktop: single-column item tiles when the main column is still two-col grid
+   but too narrow for comfortable 2×2 help tiles. */
+@media (max-width: 1100px) and (min-width: 961px) {
+  body.kc-help-page .kc-help-list {
     grid-template-columns: 1fr;
   }
 }
