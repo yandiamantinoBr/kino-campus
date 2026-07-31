@@ -1,15 +1,28 @@
 # Destravar produção Vercel após PR #747 (Turnstile)
 
-**Data:** 2026-07-31  
+**Data:** 2026-07-31 (atualizado após deploy das edges DSR/export/guest)  
 **Sintoma (histórico):** deploys `target=production` em `ERROR` com  
 `TURNSTILE_SITE_KEY_REQUIRED` enquanto o build **abortava** sem site key.  
 **Política atual do build (2026-07-31+):** produção **pode buildar sem site key**  
 (degraded). O build emite `TURNSTILE_SITE_KEY_REQUIRED` como **warning** e  
 continua. O formulário LGPD **visitante** permanece fail-closed em runtime até  
-existir `KC_TURNSTILE_SITE_KEY` real. Chaves oficiais de teste Cloudflare  
-continuam **proibidas** em produção (`TURNSTILE_TEST_SITE_KEY_FORBIDDEN`).  
-**Último production READY pré-privacidade:** ~2026-07-29  
-(`kino-campus-pxt5tnr1n-…`), **antes** do merge do pacote LGPD/DSR.
+existir `KC_TURNSTILE_SITE_KEY` real **e** secrets no Supabase Edge. Chaves  
+oficiais de teste Cloudflare continuam **proibidas** em produção  
+(`TURNSTILE_TEST_SITE_KEY_FORBIDDEN`).
+
+### Estado verificado 2026-07-31 (ops)
+
+| Camada | Status |
+|---|---|
+| Build produção (Vercel) | READY; UI privacy/FAQ/toast no `www` |
+| `KC_TURNSTILE_SITE_KEY` no Vercel | **ausente** (`kc-env.js` com site key vazia) |
+| Edge `kc-create-privacy-help-guest` | ACTIVE; sem body → `GUEST_PRIVACY_CONFIG_UNAVAILABLE` (503) |
+| Secrets Supabase `KC_TURNSTILE_*` | **ausentes** (lista de secrets do projeto) |
+| Edge `kc-data-subject-request` / export | ACTIVE (deploy 2026-07-31) — fluxo **autenticado** |
+| RPC privacy help autenticada | Presente no banco de produção |
+
+**Consequência:** visitante LGPD fail-closed (correto). Titular **logado** em  
+Configurações / Help autenticado **não** depende do Turnstile.
 
 ## O que NÃO é o problema
 

@@ -132,6 +132,9 @@
         'A verificação de segurança está indisponível agora. Tente novamente mais tarde ou entre na sua conta.',
       GUEST_PRIVACY_BUSY:
         'Há muitos pedidos visitantes sendo processados agora. Aguarde um instante e tente novamente ou entre na sua conta.',
+      // Edge deployed but Turnstile secret / hostnames not provisioned yet.
+      GUEST_PRIVACY_CONFIG_UNAVAILABLE:
+        'O canal protegido de privacidade para visitantes ainda não está configurado neste ambiente. Entre na sua conta para exercer seus direitos ou tente mais tarde.',
     };
     const safeToReplace =
       rawDetails === 'HELP_IDEMPOTENCY_SAFE_TO_REPLACE';
