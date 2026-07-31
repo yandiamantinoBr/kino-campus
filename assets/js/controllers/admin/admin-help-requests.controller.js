@@ -137,47 +137,34 @@
   }
 
   // ── Per-ticket draft (survives leave/return + renderRows wipe) ─────────
-  function adminDraftStorageRead() {
-    let raw = null;
-    try {
-      if (window.sessionStorage) raw = window.sessionStorage.getItem(ADMIN_HELP_DRAFT_KEY);
-    } catch (_) { /* ignore */ }
-    if (!raw) {
-      try {
-        if (window.localStorage) raw = window.localStorage.getItem(ADMIN_HELP_DRAFT_KEY);
-      } catch (_) { /* ignore */ }
-    }
-    if (!raw) return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
-    try {
-      const parsed = JSON.parse(raw);
-      if (!parsed || parsed.v !== 1 || typeof parsed.tickets !== 'object' || !parsed.tickets) {
-        return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
-      }
-      const age = Date.now() - Number(parsed.saved_at_ms || 0);
-      if (!Number.isFinite(age) || age < 0 || age > ADMIN_HELP_DRAFT_TTL_MS) {
-        adminDraftStorageClear();
-        return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
-      }
-      return parsed;
-    } catch (_) {
-      return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
-    }
-  }
+  // In-memory mirror is source of truth during the session; storage is backup.
+  // Only dirty / non-blank field values are written so empty DOM rebuilds
+  // (auth recheck, diagnose, leave/return) cannot wipe operator typing.
+  const adminDraftMemory = {
+    tickets: Object.create(null),
+    filters: null,
+  };
+  /** @type {Record<string, Record<string, true>>} */
+  const adminDraftDirty = Object.create(null);
+  let adminFiltersDirty = false;
+  let adminDraftRestoreTimer = null;
 
-  function adminDraftStorageWrite(store) {
-    const payload = JSON.stringify({
-      v: 1,
-      saved_at_ms: Date.now(),
-      tickets: store.tickets || {},
-      filters: store.filters || null,
-    });
-    try {
-      if (window.sessionStorage) window.sessionStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
-    } catch (_) { /* ignore */ }
-    try {
-      if (window.localStorage) window.localStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
-    } catch (_) { /* ignore */ }
-  }
+  const ADMIN_DRAFT_SKIP_ATTRS = {
+    'data-export-delivery-field': true,
+    'data-export-processor-row': true,
+    'data-export-identity-link': true,
+    'data-export-supplement-panel': true,
+    'data-lgpd-panel': true,
+    'data-lgpd-live': true,
+    'data-lgpd-identity-guidance': true,
+    'data-lgpd-action': true,
+    'data-lgpd-export': true,
+    'data-export-action': true,
+    'data-export-processor-save': true,
+    'data-help-save': true,
+    'data-help-load-more': true,
+    'data-help-id': true,
+  };
 
   function adminDraftStorageClear() {
     try {
@@ -188,52 +175,222 @@
     } catch (_) { /* ignore */ }
   }
 
+  function adminDraftStorageRead() {
+    let raw = null;
+    try {
+      if (window.sessionStorage) raw = window.sessionStorage.getItem(ADMIN_HELP_DRAFT_KEY);
+    } catch (_) { /* ignore */ }
+    if (!raw) {
+      try {
+        if (window.localStorage) raw = window.localStorage.getItem(ADMIN_HELP_DRAFT_KEY);
+      } catch (_) { /* ignore */ }
+    }
+    if (!raw) {
+      return {
+        v: 1,
+        saved_at_ms: Date.now(),
+        tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
+        filters: adminDraftMemory.filters,
+      };
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.v !== 1 || typeof parsed.tickets !== 'object' || !parsed.tickets) {
+        return {
+          v: 1,
+          saved_at_ms: Date.now(),
+          tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
+          filters: adminDraftMemory.filters,
+        };
+      }
+      const age = Date.now() - Number(parsed.saved_at_ms || 0);
+      if (!Number.isFinite(age) || age < 0 || age > ADMIN_HELP_DRAFT_TTL_MS) {
+        adminDraftStorageClear();
+        return {
+          v: 1,
+          saved_at_ms: Date.now(),
+          tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
+          filters: adminDraftMemory.filters,
+        };
+      }
+      // Memory wins for tickets already captured this session; storage fills gaps.
+      const mergedTickets = Object.assign(Object.create(null), parsed.tickets || {});
+      Object.keys(adminDraftMemory.tickets).forEach(function (id) {
+        mergedTickets[id] = mergeTicketDraft(mergedTickets[id], adminDraftMemory.tickets[id]);
+      });
+      return {
+        v: 1,
+        saved_at_ms: Number(parsed.saved_at_ms) || Date.now(),
+        tickets: mergedTickets,
+        filters: adminDraftMemory.filters || parsed.filters || null,
+      };
+    } catch (_) {
+      return {
+        v: 1,
+        saved_at_ms: Date.now(),
+        tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
+        filters: adminDraftMemory.filters,
+      };
+    }
+  }
+
+  function adminDraftStorageWrite(store) {
+    const tickets = store.tickets || Object.create(null);
+    adminDraftMemory.tickets = Object.assign(Object.create(null), tickets);
+    adminDraftMemory.filters = store.filters || null;
+    const payload = JSON.stringify({
+      v: 1,
+      saved_at_ms: Date.now(),
+      tickets: tickets,
+      filters: store.filters || null,
+    });
+    try {
+      if (window.sessionStorage) window.sessionStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
+    } catch (_) { /* ignore */ }
+    try {
+      if (window.localStorage) window.localStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
+    } catch (_) { /* ignore */ }
+  }
+
+  function isBlankDraftValue(value) {
+    if (typeof value === 'boolean') return value === false;
+    return String(value == null ? '' : value).trim() === '';
+  }
+
+  function isDefaultFilterSnapshot(filters) {
+    if (!filters || typeof filters !== 'object') return true;
+    return String(filters.status || 'all') === 'all'
+      && String(filters.type || 'all') === 'all'
+      && String(filters.priority || 'all') === 'all'
+      && String(filters.query || '').trim() === '';
+  }
+
+  // Never let empty re-captures wipe operator typing (the leave/return bug).
+  // newFields is a partial intentional patch (dirty/non-blank only).
+  function mergeDraftFields(oldFields, newFields) {
+    const out = Object.assign({}, oldFields || {});
+    Object.keys(newFields || {}).forEach(function (key) {
+      const next = newFields[key];
+      if (typeof next === 'boolean') {
+        out[key] = next;
+        return;
+      }
+      if (!isBlankDraftValue(next)) {
+        out[key] = String(next);
+        return;
+      }
+      // Explicit blank from a dirty field clears prior text (operator deleted it).
+      if (Object.prototype.hasOwnProperty.call(newFields, key)) {
+        out[key] = '';
+      }
+    });
+    return out;
+  }
+
+  function mergeTicketDraft(oldDraft, newDraft) {
+    if (!newDraft || !newDraft.fields) return oldDraft || null;
+    if (!oldDraft || !oldDraft.fields) {
+      return {
+        v: 1,
+        saved_at_ms: Date.now(),
+        fields: Object.assign({}, newDraft.fields),
+      };
+    }
+    return {
+      v: 1,
+      saved_at_ms: Date.now(),
+      fields: mergeDraftFields(oldDraft.fields, newDraft.fields),
+    };
+  }
+
+  function markAdminDraftFieldDirty(ticketId, fieldKey) {
+    const id = String(ticketId || '').trim();
+    const key = String(fieldKey || '').trim();
+    if (!id || !key) return;
+    if (!adminDraftDirty[id]) adminDraftDirty[id] = Object.create(null);
+    adminDraftDirty[id][key] = true;
+  }
+
+  function clearAdminTicketDraft(ticketId) {
+    const id = String(ticketId || '').trim();
+    if (!id) return;
+    delete adminDraftDirty[id];
+    const store = adminDraftStorageRead();
+    if (store.tickets && store.tickets[id]) {
+      delete store.tickets[id];
+      adminDraftStorageWrite(store);
+    }
+  }
+
   function adminDraftFieldKey(el) {
-    if (!el || !el.attributes) return '';
+    if (!el || !el.getAttribute) return '';
+    const preferred = [
+      'data-lgpd-account-email',
+      'data-lgpd-identity-channel',
+      'data-lgpd-identity-reference',
+      'data-lgpd-identity-at',
+      'data-lgpd-identity-attested',
+      'data-lgpd-delivery-reference',
+      'data-lgpd-delivery-at',
+      'data-lgpd-delivery-attested',
+      'data-lgpd-copy-decision',
+      'data-lgpd-copy-reference',
+      'data-lgpd-copy-at',
+      'data-lgpd-copy-attested',
+      'data-lgpd-evidence-reference',
+      'data-lgpd-evidence-at',
+      'data-lgpd-evidence-attested',
+      'data-lgpd-confirmation',
+      'data-lgpd-cancellation-reason',
+      'data-lgpd-provider-reference',
+      'data-lgpd-provider-at',
+      'data-lgpd-provider-attested',
+      'data-lgpd-provider-outcome',
+      'data-lgpd-provider-retention-basis',
+      'data-lgpd-provider-retention-at',
+      'data-lgpd-completion-reference',
+      'data-lgpd-completion-at',
+      'data-lgpd-completion-attested',
+      'data-help-status',
+      'data-help-priority',
+      'data-export-account-email',
+      'data-export-identity-channel',
+      'data-export-identity-reference',
+      'data-export-identity-at',
+      'data-export-identity-attested',
+      'data-export-outcome',
+      'data-export-evidence',
+      'data-export-delivery-channel',
+      'data-export-delivered-at',
+      'data-export-delivery-reference',
+      'data-export-delivery-at',
+      'data-export-delivery-attested',
+    ];
     let attrName = '';
-    for (let i = 0; i < el.attributes.length; i += 1) {
-      const name = el.attributes[i] && el.attributes[i].name;
-      if (!name) continue;
-      if (
-        name.indexOf('data-lgpd-') === 0
-        || name.indexOf('data-export-') === 0
-        || name === 'data-help-status'
-        || name === 'data-help-priority'
-      ) {
-        // Prefer the identifying field attr over generic ones like data-export-delivery-field
-        if (
-          name === 'data-export-delivery-field'
-          || name === 'data-export-processor-row'
-          || name === 'data-export-identity-link'
-          || name === 'data-export-supplement-panel'
-          || name === 'data-lgpd-panel'
-          || name === 'data-lgpd-live'
-          || name === 'data-lgpd-identity-guidance'
-          || name === 'data-lgpd-action'
-          || name === 'data-lgpd-export'
-          || name === 'data-export-action'
-          || name === 'data-export-processor-save'
-          || name === 'data-help-save'
-          || name === 'data-help-load-more'
-        ) {
-          continue;
-        }
-        attrName = name;
-        // Keep scanning for a more specific data-lgpd-* / data-export-* field name
-        // but stop if we already have a field-like attr.
+    for (let i = 0; i < preferred.length; i += 1) {
+      if (el.hasAttribute(preferred[i])) {
+        attrName = preferred[i];
+        break;
+      }
+    }
+    if (!attrName && el.attributes) {
+      for (let i = 0; i < el.attributes.length; i += 1) {
+        const name = el.attributes[i] && el.attributes[i].name;
+        if (!name || ADMIN_DRAFT_SKIP_ATTRS[name]) continue;
         if (
           name.indexOf('data-lgpd-') === 0
           || name.indexOf('data-export-') === 0
           || name === 'data-help-status'
           || name === 'data-help-priority'
         ) {
+          attrName = name;
           break;
         }
       }
     }
     if (!attrName) return '';
     const provider = String(el.getAttribute('data-provider') || '').trim();
-    return provider ? `${attrName}::${provider}` : attrName;
+    return provider ? (attrName + '::' + provider) : attrName;
   }
 
   function isAdminDraftableControl(el) {
@@ -245,21 +402,38 @@
     return Boolean(adminDraftFieldKey(el));
   }
 
-  function captureCardDraft(card) {
+  /**
+   * Capture operator fields from a card.
+   * By default only dirty keys and non-blank values are included so a full
+   * HTML rebuild (empty defaults) cannot overwrite stored drafts.
+   */
+  function captureCardDraft(card, options) {
     if (!card || !card.getAttribute) return null;
     const id = String(card.getAttribute('data-help-id') || '').trim();
-    if (!UUID_RE.test(id)) return null;
+    if (!id) return null;
+    const forceAll = options && options.forceAll === true;
+    const dirtyMap = adminDraftDirty[id] || Object.create(null);
     const fields = {};
     let count = 0;
     card.querySelectorAll('input, select, textarea').forEach(function (el) {
       if (!isAdminDraftableControl(el)) return;
       const key = adminDraftFieldKey(el);
       if (!key) return;
+      const dirty = forceAll || dirtyMap[key] === true;
       if (el.type === 'checkbox' || el.type === 'radio') {
-        fields[key] = !!el.checked;
-      } else {
-        fields[key] = String(el.value || '');
+        const checked = !!el.checked;
+        // Unchecked defaults after render must not clear a prior true.
+        if (!dirty && !checked) return;
+        fields[key] = checked;
+        count += 1;
+        return;
       }
+      const value = String(el.value || '');
+      if (!dirty && isBlankDraftValue(value)) return;
+      // Status/priority selects always have a value; only persist when dirty
+      // so server defaults do not stamp over operator triage changes.
+      if (!dirty && (key === 'data-help-status' || key === 'data-help-priority')) return;
+      fields[key] = value;
       count += 1;
     });
     if (!count) return null;
@@ -273,6 +447,7 @@
   function applyCardDraft(card, draft) {
     if (!card || !draft || !draft.fields || typeof draft.fields !== 'object') return false;
     adminDraftRestoring = true;
+    let applied = 0;
     try {
       Object.keys(draft.fields).forEach(function (key) {
         const parts = String(key).split('::');
@@ -289,15 +464,19 @@
         } catch (_) {
           el = null;
         }
-        if (!el || !isAdminDraftableControl(el)) return;
+        if (!el) return;
         const value = draft.fields[key];
         if (el.type === 'checkbox' || el.type === 'radio') {
           el.checked = !!value;
-        } else if (value != null) {
+          applied += 1;
+        } else if (value != null && String(value) !== '') {
           el.value = String(value);
+          applied += 1;
+        } else if (value != null && String(value) === '' && (el.tagName || '').toLowerCase() !== 'select') {
+          el.value = '';
+          applied += 1;
         }
       });
-      // Re-run export delivery enable/disable if outcome selects exist.
       card.querySelectorAll('[data-export-outcome]').forEach(function (outcome) {
         const processorRow = outcome.closest('[data-export-processor-row]');
         if (!processorRow) return;
@@ -306,7 +485,7 @@
           field.disabled = !externalDelivery;
         });
       });
-      return true;
+      return applied > 0;
     } catch (_) {
       return false;
     } finally {
@@ -314,33 +493,47 @@
     }
   }
 
-  function captureAllVisibleCardDrafts() {
-    const list = $('#helpRequestsList');
-    if (!list) return;
-    const store = adminDraftStorageRead();
-    list.querySelectorAll('[data-help-id]').forEach(function (card) {
-      const id = String(card.getAttribute('data-help-id') || '').trim();
-      const draft = captureCardDraft(card);
-      if (draft) store.tickets[id] = draft;
-    });
-    store.filters = {
+  function readCurrentFilterSnapshot() {
+    return {
       status: String($('#helpStatusFilter') && $('#helpStatusFilter').value || state.filters.status || 'all'),
       type: String($('#helpTypeFilter') && $('#helpTypeFilter').value || state.filters.type || 'all'),
       priority: String($('#helpPriorityFilter') && $('#helpPriorityFilter').value || state.filters.priority || 'all'),
       query: String($('#helpQueryFilter') && $('#helpQueryFilter').value || state.filters.query || ''),
     };
+  }
+
+  function captureAllVisibleCardDrafts() {
+    const list = $('#helpRequestsList');
+    const store = adminDraftStorageRead();
+    if (list) {
+      list.querySelectorAll('[data-help-id]').forEach(function (card) {
+        const id = String(card.getAttribute('data-help-id') || '').trim();
+        if (!id) return;
+        const snapshot = captureCardDraft(card);
+        if (!snapshot) return;
+        store.tickets[id] = mergeTicketDraft(store.tickets[id], snapshot);
+      });
+    }
+    const filterSnap = readCurrentFilterSnapshot();
+    // After clearSensitiveAdminState the UI is all/empty. Do not overwrite a
+    // previously saved non-default filter draft unless the operator edited filters.
+    if (adminFiltersDirty || !isDefaultFilterSnapshot(filterSnap) || isDefaultFilterSnapshot(store.filters)) {
+      store.filters = filterSnap;
+    }
     adminDraftStorageWrite(store);
   }
 
   function applyAllVisibleCardDrafts() {
     const list = $('#helpRequestsList');
-    if (!list) return;
+    if (!list) return 0;
     const store = adminDraftStorageRead();
+    let count = 0;
     list.querySelectorAll('[data-help-id]').forEach(function (card) {
       const id = String(card.getAttribute('data-help-id') || '').trim();
       const draft = store.tickets && store.tickets[id];
-      if (draft) applyCardDraft(card, draft);
+      if (draft && applyCardDraft(card, draft)) count += 1;
     });
+    return count;
   }
 
   function scheduleAdminDraftSave() {
@@ -362,6 +555,23 @@
     captureAllVisibleCardDrafts();
   }
 
+  // Re-apply after paint so late DOM (or double-render races) still restore.
+  function scheduleAdminDraftRestore() {
+    try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
+    if (adminDraftRestoreTimer) {
+      try { clearTimeout(adminDraftRestoreTimer); } catch (_) { /* ignore */ }
+    }
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(function () {
+        try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
+      });
+    }
+    adminDraftRestoreTimer = setTimeout(function () {
+      adminDraftRestoreTimer = null;
+      try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
+    }, 50);
+  }
+
   function restoreAdminFiltersFromDraft() {
     const store = adminDraftStorageRead();
     const filters = store.filters;
@@ -371,28 +581,26 @@
     const priorityEl = $('#helpPriorityFilter');
     const queryEl = $('#helpQueryFilter');
     let changed = false;
-    if (statusEl && filters.status && statusEl.value !== filters.status) {
-      statusEl.value = filters.status;
+    if (statusEl && filters.status != null && statusEl.value !== String(filters.status)) {
+      statusEl.value = String(filters.status);
       changed = true;
     }
-    if (typeEl && filters.type && typeEl.value !== filters.type) {
-      typeEl.value = filters.type;
+    if (typeEl && filters.type != null && typeEl.value !== String(filters.type)) {
+      typeEl.value = String(filters.type);
       changed = true;
     }
-    if (priorityEl && filters.priority && priorityEl.value !== filters.priority) {
-      priorityEl.value = filters.priority;
+    if (priorityEl && filters.priority != null && priorityEl.value !== String(filters.priority)) {
+      priorityEl.value = String(filters.priority);
       changed = true;
     }
-    if (queryEl && typeof filters.query === 'string' && queryEl.value !== filters.query) {
-      queryEl.value = filters.query;
+    if (queryEl && filters.query != null && queryEl.value !== String(filters.query)) {
+      queryEl.value = String(filters.query);
       changed = true;
     }
-    if (changed) {
-      state.filters.status = String(filters.status || 'all');
-      state.filters.type = String(filters.type || 'all');
-      state.filters.priority = String(filters.priority || 'all');
-      state.filters.query = String(filters.query || '');
-    }
+    state.filters.status = String(filters.status || 'all');
+    state.filters.type = String(filters.type || 'all');
+    state.filters.priority = String(filters.priority || 'all');
+    state.filters.query = String(filters.query || '');
     return changed;
   }
 
@@ -1992,7 +2200,7 @@
     cards.push(buildPaginationCard());
     list.innerHTML = cards.join('');
     // Re-apply drafts after full rebuild (diagnose, refresh, filters, leave/return).
-    try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
+    scheduleAdminDraftRestore();
   }
 
   function unwrapRowsResponse(result, requestedLimit, requestedOffset) {
@@ -2105,7 +2313,8 @@
       state.pagination.totalCount = payload.totalCount;
       state.pagination.hasMore = payload.hasMore && state.rows.length < payload.totalCount;
       renderSummary(state.rows);
-      renderRows(state.rows);
+      // Single paint path: finally also renders on success. Avoid double
+      // renderRows (capture/apply race that used to wipe drafts).
     } catch (error) {
       if (requestToken !== state.requestToken || !isActiveAdminContext(adminContext)) return;
       loadFailed = true;
@@ -2198,6 +2407,21 @@
         return;
       }
       showToast('Triagem atualizada.', 'success');
+      // Drop triage draft keys so the next paint uses server status/priority;
+      // keep LGPD/export identity drafts intact.
+      try {
+        const store = adminDraftStorageRead();
+        const ticketDraft = store.tickets && store.tickets[id];
+        if (ticketDraft && ticketDraft.fields) {
+          delete ticketDraft.fields['data-help-status'];
+          delete ticketDraft.fields['data-help-priority'];
+          if (adminDraftDirty[id]) {
+            delete adminDraftDirty[id]['data-help-status'];
+            delete adminDraftDirty[id]['data-help-priority'];
+          }
+          adminDraftStorageWrite(store);
+        }
+      } catch (_) { /* ignore */ }
       await loadRows({
         limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE),
       });
@@ -3512,6 +3736,8 @@
       const detail = event && event.detail && typeof event.detail === 'object'
         ? event.detail
         : null;
+      // Flush ticket drafts while the list is still mounted; filters stay in
+      // storage unless the operator actually changed them (adminFiltersDirty).
       try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
       reauthorizeAdminView(
         detail && Object.prototype.hasOwnProperty.call(detail, 'user')
@@ -3524,6 +3750,7 @@
       const field = $(selector);
       if (field) {
         field.addEventListener('change', function () {
+          adminFiltersDirty = true;
           try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
           loadRows();
         });
@@ -3533,6 +3760,7 @@
     const queryField = $('#helpQueryFilter');
     if (queryField) {
       queryField.addEventListener('input', function () {
+        adminFiltersDirty = true;
         scheduleAdminDraftSave();
         window.clearTimeout(queryField._kcTimer);
         queryField._kcTimer = window.setTimeout(function () {
@@ -3555,12 +3783,19 @@
       const target = event && event.target;
       if (!target || adminDraftRestoring) return;
       const card = target.closest && target.closest('[data-help-id]');
-      if (card || (target.closest && (
+      if (card) {
+        const key = adminDraftFieldKey(target);
+        if (key) markAdminDraftFieldDirty(card.getAttribute('data-help-id'), key);
+        scheduleAdminDraftSave();
+        return;
+      }
+      if (target.closest && (
         target.closest('#helpStatusFilter')
         || target.closest('#helpTypeFilter')
         || target.closest('#helpPriorityFilter')
         || target.closest('#helpQueryFilter')
-      ))) {
+      )) {
+        adminFiltersDirty = true;
         scheduleAdminDraftSave();
       }
     });
@@ -3568,7 +3803,10 @@
       const target = event && event.target;
       if (!target || adminDraftRestoring) return;
       const card = target.closest && target.closest('[data-help-id]');
-      if (card) scheduleAdminDraftSave();
+      if (!card) return;
+      const key = adminDraftFieldKey(target);
+      if (key) markAdminDraftFieldDirty(card.getAttribute('data-help-id'), key);
+      scheduleAdminDraftSave();
     });
     window.addEventListener('pagehide', function () {
       try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
@@ -3576,11 +3814,16 @@
     window.addEventListener('beforeunload', function () {
       try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
     });
+    window.addEventListener('pageshow', function () {
+      // Back/forward cache or soft return: restore filters + fields.
+      try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
+      scheduleAdminDraftRestore();
+    });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') {
         try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
       } else if (document.visibilityState === 'visible') {
-        try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
+        scheduleAdminDraftRestore();
       }
     });
 
@@ -3674,6 +3917,9 @@
 
   async function reauthorizeAdminView(options = {}) {
     clearSensitiveAdminState();
+    // clearSensitiveAdminState resets filter controls to all/empty. Re-apply
+    // the saved queue view immediately so loadRows uses the operator's filters.
+    try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
     const generation = state.authGeneration;
     let access = null;
     try {
@@ -3699,6 +3945,8 @@
     state.isAuthorized = true;
     const adminContext = captureAdminContext();
     if (!isActiveAdminContext(adminContext)) return;
+    // Auth recheck may have raced with another clear; restore filters again.
+    try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
     showLoadingSkeletons();
     await loadRows();
   }
@@ -3706,8 +3954,7 @@
   async function init() {
     populateTypeFilter();
     bindEvents();
-    // Restore filter draft before first load so leave/return keeps the queue view.
-    try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
+    // Filters are restored inside reauthorizeAdminView after the auth wipe.
     await reauthorizeAdminView();
   }
 
