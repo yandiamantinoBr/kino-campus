@@ -81,6 +81,10 @@
   const ADMIN_HELP_DRAFT_KEY = 'kc_admin_help_draft_v1';
   const ADMIN_HELP_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADMIN_HELP_DRAFT_DEBOUNCE_MS = 200;
+  // Session snapshot of the last authorized queue so leave/return does not blank
+  // #admin-content while the same admin revalidates. Cleared on logout/deny.
+  const ADMIN_HELP_VIEW_KEY = 'kc_admin_help_view_v1';
+  const ADMIN_HELP_VIEW_TTL_MS = 30 * 60 * 1000;
 
   const state = {
     rows: [],
@@ -643,11 +647,23 @@
     error.style.display = 'none';
   }
 
-  function showLoading(active) {
+  function showLoading(active, options = {}) {
+    const silent = options.silent === true;
     const loading = $('#admin-loading');
     const content = $('#admin-content');
+    if (silent) {
+      // Keep the queue visible during soft revalidation / background refresh.
+      if (loading) loading.style.display = 'none';
+      if (content && state.isAuthorized) content.style.display = 'block';
+      if (content) {
+        if (active) content.setAttribute('aria-busy', 'true');
+        else content.removeAttribute('aria-busy');
+      }
+      return;
+    }
     if (loading) loading.style.display = active ? 'flex' : 'none';
     if (content) content.style.display = !active && state.isAuthorized ? 'block' : 'none';
+    if (content && !active) content.removeAttribute('aria-busy');
   }
 
   function captureAdminContext() {
@@ -665,6 +681,101 @@
       && context.generation === state.authGeneration
       && context.userId === state.authorizedAdminUserId
     );
+  }
+
+  function clearAdminViewSnapshot() {
+    try {
+      if (window.sessionStorage) window.sessionStorage.removeItem(ADMIN_HELP_VIEW_KEY);
+    } catch (_) { /* ignore */ }
+  }
+
+  function saveAdminViewSnapshot() {
+    if (!state.isAuthorized || !state.authorizedAdminUserId) return;
+    if (!Array.isArray(state.rows) || !state.rows.length) return;
+    const payload = {
+      v: 1,
+      saved_at_ms: Date.now(),
+      admin_user_id: String(state.authorizedAdminUserId || ''),
+      filters: {
+        status: String(state.filters.status || 'all'),
+        type: String(state.filters.type || 'all'),
+        priority: String(state.filters.priority || 'all'),
+        query: String(state.filters.query || ''),
+      },
+      pagination: {
+        limit: state.pagination.limit,
+        totalCount: state.pagination.totalCount,
+        hasMore: state.pagination.hasMore,
+      },
+      rows: state.rows,
+    };
+    try {
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem(ADMIN_HELP_VIEW_KEY, JSON.stringify(payload));
+      }
+    } catch (_) { /* quota / private mode */ }
+  }
+
+  function readAdminViewSnapshot() {
+    let raw = null;
+    try {
+      if (window.sessionStorage) raw = window.sessionStorage.getItem(ADMIN_HELP_VIEW_KEY);
+    } catch (_) { /* ignore */ }
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.rows)) return null;
+      const age = Date.now() - Number(parsed.saved_at_ms || 0);
+      if (!Number.isFinite(age) || age < 0 || age > ADMIN_HELP_VIEW_TTL_MS) {
+        clearAdminViewSnapshot();
+        return null;
+      }
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Paint last queue immediately on leave/return so #kc-main does not flash empty.
+  // Does not grant authorization by itself — reauthorizeAdminView still validates.
+  function restoreAdminViewSnapshotPaint() {
+    const snap = readAdminViewSnapshot();
+    if (!snap || !snap.rows || !snap.rows.length) return false;
+    if (snap.filters && typeof snap.filters === 'object') {
+      state.filters.status = String(snap.filters.status || 'all');
+      state.filters.type = String(snap.filters.type || 'all');
+      state.filters.priority = String(snap.filters.priority || 'all');
+      state.filters.query = String(snap.filters.query || '');
+      const statusEl = $('#helpStatusFilter');
+      const typeEl = $('#helpTypeFilter');
+      const priorityEl = $('#helpPriorityFilter');
+      const queryEl = $('#helpQueryFilter');
+      if (statusEl) statusEl.value = state.filters.status;
+      if (typeEl) typeEl.value = state.filters.type;
+      if (priorityEl) priorityEl.value = state.filters.priority;
+      if (queryEl) queryEl.value = state.filters.query;
+    }
+    if (snap.pagination && typeof snap.pagination === 'object') {
+      state.pagination.limit = Math.max(1, toFiniteNumber(snap.pagination.limit, HELP_PAGE_SIZE));
+      state.pagination.totalCount = Math.max(0, toFiniteNumber(snap.pagination.totalCount, snap.rows.length));
+      state.pagination.hasMore = snap.pagination.hasMore === true;
+    }
+    state.rows = snap.rows.slice();
+    // Temporarily authorized only for paint; reauth confirms or clears.
+    state.authorizedAdminUserId = String(snap.admin_user_id || state.authorizedAdminUserId || '');
+    state.isAuthorized = Boolean(state.authorizedAdminUserId);
+    try {
+      renderSummary(state.rows);
+      renderRows(state.rows);
+    } catch (_) { /* ignore */ }
+    const loading = $('#admin-loading');
+    const content = $('#admin-content');
+    if (loading) loading.style.display = 'none';
+    if (content) {
+      content.style.display = 'block';
+      content.setAttribute('aria-busy', 'true');
+    }
+    return true;
   }
 
   function clearSensitiveAdminState(options = {}) {
@@ -687,6 +798,7 @@
     state.exportSupplementResults = Object.create(null);
     state.exportSupplementBusy = Object.create(null);
     state.exportSupplementUncertain = Object.create(null);
+    clearAdminViewSnapshot();
 
     const queryField = $('#helpQueryFilter');
     if (queryField) {
@@ -714,7 +826,10 @@
     if (loadingText) loadingText.textContent = 'Verificando acesso...';
     if (loading) loading.style.display = options.showChecking === false ? 'none' : 'flex';
     const content = $('#admin-content');
-    if (content) content.style.display = 'none';
+    if (content) {
+      content.style.display = 'none';
+      content.removeAttribute('aria-busy');
+    }
   }
 
   function denyAdminAccess(message, generation) {
@@ -2315,6 +2430,7 @@
     const adminContext = captureAdminContext();
     if (!isActiveAdminContext(adminContext)) return;
     const append = options.append === true;
+    const silent = options.silent === true;
     let loadFailed = false;
     const requestedLimit = Math.max(1, Math.min(100, toFiniteNumber(options.limit, state.pagination.limit || HELP_PAGE_SIZE)));
     const requestedOffset = append ? state.rows.length : Math.max(0, toFiniteNumber(options.offset, 0));
@@ -2323,7 +2439,8 @@
 
     if (!append) {
       hideError();
-      showLoading(true);
+      // Silent refresh keeps #admin-content painted (leave/return soft reauth).
+      showLoading(true, { silent: silent && state.rows.length > 0 });
       readFilters();
     } else {
       state.pagination.isLoadingMore = true;
@@ -2361,6 +2478,7 @@
       renderSummary(state.rows);
       // Single paint path: finally also renders on success. Avoid double
       // renderRows (capture/apply race that used to wipe drafts).
+      try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
     } catch (error) {
       if (requestToken !== state.requestToken || !isActiveAdminContext(adminContext)) return;
       loadFailed = true;
@@ -2376,8 +2494,11 @@
     } finally {
       if (requestToken !== state.requestToken || !isActiveAdminContext(adminContext)) return;
       state.pagination.isLoadingMore = false;
-      if (!append) showLoading(false);
+      if (!append) showLoading(false, { silent: silent && state.rows.length > 0 });
       if (!loadFailed) renderRows(state.rows);
+      if (!loadFailed) {
+        try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
+      }
     }
   }
 
@@ -4057,10 +4178,32 @@
       // Flush ticket drafts while the list is still mounted; filters stay in
       // storage unless the operator actually changed them (adminFiltersDirty).
       try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+      try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
+      const sessionUser = detail && Object.prototype.hasOwnProperty.call(detail, 'user')
+        ? detail.user
+        : undefined;
+      const nextUserId = sessionUser && sessionUser.id
+        ? String(sessionUser.id || '').trim()
+        : '';
+      // Soft reauth when the same admin remains signed in (token refresh).
+      // Hard wipe only on logout or account switch.
+      const soft = Boolean(
+        nextUserId
+        && state.authorizedAdminUserId
+        && nextUserId === String(state.authorizedAdminUserId)
+      );
+      if (!nextUserId && Object.prototype.hasOwnProperty.call(detail || {}, 'user')) {
+        clearSensitiveAdminState({ showChecking: false });
+        showError('Você precisa estar autenticado para acessar este painel.');
+        return;
+      }
       reauthorizeAdminView(
-        detail && Object.prototype.hasOwnProperty.call(detail, 'user')
-          ? { sessionUser: detail.user }
-          : {}
+        Object.assign(
+          { soft: soft },
+          Object.prototype.hasOwnProperty.call(detail || {}, 'user')
+            ? { sessionUser: sessionUser }
+            : {}
+        )
       );
     });
 
@@ -4128,18 +4271,25 @@
     });
     window.addEventListener('pagehide', function () {
       try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+      try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
     });
     window.addEventListener('beforeunload', function () {
       try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+      try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
     });
-    window.addEventListener('pageshow', function () {
+    window.addEventListener('pageshow', function (event) {
       // Back/forward cache or soft return: restore filters + fields.
       try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
       scheduleAdminDraftRestore();
+      // bfcache restore: revalidate quietly without blanking main content.
+      if (event && event.persisted) {
+        reauthorizeAdminView({ soft: true }).catch(function () { /* ignore */ });
+      }
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') {
         try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+        try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
       } else if (document.visibilityState === 'visible') {
         scheduleAdminDraftRestore();
       }
@@ -4234,10 +4384,22 @@
   }
 
   async function reauthorizeAdminView(options = {}) {
-    clearSensitiveAdminState();
-    // clearSensitiveAdminState resets filter controls to all/empty. Re-apply
-    // the saved queue view immediately so loadRows uses the operator's filters.
-    try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
+    const soft = options.soft === true;
+    const previousUserId = String(state.authorizedAdminUserId || '');
+    const hadPaintedRows = Array.isArray(state.rows) && state.rows.length > 0;
+
+    if (!soft) {
+      clearSensitiveAdminState();
+      // clearSensitiveAdminState resets filter controls to all/empty. Re-apply
+      // the saved queue view immediately so loadRows uses the operator's filters.
+      try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
+      try { restoreAdminViewSnapshotPaint(); } catch (_) { /* ignore */ }
+    } else {
+      // Soft path: keep queue painted; only revalidate access + refresh data.
+      try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
+      showLoading(true, { silent: hadPaintedRows });
+    }
+
     const generation = state.authGeneration;
     let access = null;
     try {
@@ -4255,8 +4417,14 @@
       return;
     }
     if (!access || generation !== state.authGeneration) {
-      if (generation === state.authGeneration) showLoading(false);
+      if (generation === state.authGeneration) showLoading(false, { silent: soft && hadPaintedRows });
       return;
+    }
+
+    // Account switch must hard-reset (PII isolation).
+    if (previousUserId && previousUserId !== String(access.userId || '')) {
+      clearSensitiveAdminState();
+      try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
     }
 
     state.authorizedAdminUserId = access.userId;
@@ -4265,15 +4433,22 @@
     if (!isActiveAdminContext(adminContext)) return;
     // Auth recheck may have raced with another clear; restore filters again.
     try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
-    showLoadingSkeletons();
-    await loadRows();
+
+    const keepPaint = soft || (Array.isArray(state.rows) && state.rows.length > 0);
+    if (!keepPaint) showLoadingSkeletons();
+    await loadRows({
+      silent: keepPaint,
+      limit: Math.max(state.pagination.limit || HELP_PAGE_SIZE, state.rows.length || HELP_PAGE_SIZE),
+    });
   }
 
   async function init() {
     populateTypeFilter();
     bindEvents();
-    // Filters are restored inside reauthorizeAdminView after the auth wipe.
-    await reauthorizeAdminView();
+    // Paint last queue ASAP so leave/return does not flash empty main content.
+    try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
+    try { restoreAdminViewSnapshotPaint(); } catch (_) { /* ignore */ }
+    await reauthorizeAdminView({ soft: true });
   }
 
   if (document.readyState === 'loading') {
