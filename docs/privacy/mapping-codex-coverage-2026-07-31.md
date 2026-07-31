@@ -42,13 +42,33 @@ O mapeamento descrevia o estado **antes** da onda de privacidade (DSR, exportaç
 
 ## Produção (checado 2026-07-31)
 
+### Banco
+
 - RPC `public.kc_create_privacy_help_request_v1(jsonb)` presente.
 - Tabela `public.data_subject_requests` presente.
 - 25 migrations `>= 20260728` registradas no histórico remoto.
 
+### Edge Functions (deployadas 2026-07-31)
+
+| Function | Status | verify_jwt | Notas |
+|---|---|---|---|
+| `kc-account-erasure` | ACTIVE v19 | true | já existia |
+| `kc-help-request-notify` | ACTIVE v18 | true | já existia |
+| `kc-data-subject-request` | ACTIVE v1 | true | **deployado** (Settings download / DSR) |
+| `kc-data-export-admin` | ACTIVE v1 | true | **deployado** |
+| `kc-data-export-retention` | ACTIVE v1 | false | **deployado** (cron/secret) |
+| `kc-create-privacy-help-guest` | ACTIVE v1 | false | **deployado** (exige Turnstile secret) |
+
+Antes deste deploy, o repositório tinha o código de exportação/DSR, mas o projeto remoto **não** listava as quatro functions novas — o card “Baixar meus dados” e o gateway guest falhavam em produção mesmo com o front correto.
+
+### Secrets operacionais ainda a confirmar
+
+- `TURNSTILE_SECRET_KEY` (ou equivalente) no edge guest.
+- Secrets de retention/cron se a automação de expurgo estiver ligada.
+
 ## Próximos passos seguros (não bloqueantes de produto)
 
-1. Deploy/redeploy de edge functions de privacidade se o projeto remoto estiver desatualizado em relação ao repo.
+1. Confirmar secrets Turnstile/retention no projeto Supabase.
 2. Após fila limpa, considerar desligar o fallback textual do classificador admin.
 3. Exercício operacional de `partial_failure` + `retry_finalize`.
 4. Decisão formal de encarregado/DPO e alinhamento de textos legais.
