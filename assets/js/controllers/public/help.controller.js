@@ -57,6 +57,13 @@
   //   any other side channel. sessionStorage is the only sink.
   const PRIVACY_PENDING_STORAGE_KEY = 'kc-privacy-pending-payload-v1';
   const PRIVACY_PENDING_TTL_MS = 15 * 60 * 1000;
+  // General form draft (leave page / reload / auth refresh). sessionStorage
+  // only — same tab, not forever; still better than losing typed text.
+  const HELP_FORM_DRAFT_KEY = 'kc_help_form_draft_v1';
+  const HELP_FORM_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+  const HELP_FORM_DRAFT_SAVE_DEBOUNCE_MS = 350;
+  let helpFormDraftTimer = null;
+  let helpFormDraftRestoring = false;
   const TURNSTILE_SCRIPT_ID = 'kc-help-privacy-turnstile-script';
   const TURNSTILE_SCRIPT_URL =
     'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
@@ -494,6 +501,195 @@
     const storage = safeSessionStorage();
     if (!storage) return;
     try { storage.removeItem(PRIVACY_PENDING_STORAGE_KEY); } catch (_) { /* ignore */ }
+  }
+
+  // ── Help form draft (leave / reload / soft auth refresh) ───────────────
+  function clearHelpFormDraft() {
+    const storage = safeSessionStorage();
+    if (!storage) return;
+    try { storage.removeItem(HELP_FORM_DRAFT_KEY); } catch (_) { /* ignore */ }
+  }
+
+  function collectHelpFormDraft() {
+    const typeEl = $('#helpType');
+    const topicEl = $('#helpTopic');
+    const subtopicEl = $('#helpSubtopic');
+    const priorityEl = $('#helpPriority');
+    const subjectEl = $('#helpSubject');
+    const messageEl = $('#helpMessage');
+    const emailEl = $('#helpContactEmail');
+    const allowEl = $('#helpAllowContact');
+    const conditional = {};
+    try {
+      document.querySelectorAll('[data-help-conditional]').forEach(function (el) {
+        const key = el && el.getAttribute ? el.getAttribute('data-help-conditional') : '';
+        if (!key) return;
+        if (el.type === 'checkbox') conditional[key] = !!el.checked;
+        else conditional[key] = String(el.value || '');
+      });
+    } catch (_) { /* ignore */ }
+    return {
+      v: 1,
+      saved_at_ms: Date.now(),
+      user_id: getUserId(state.user),
+      type: typeEl ? String(typeEl.value || '') : '',
+      topic: topicEl ? String(topicEl.value || '') : '',
+      subtopic: subtopicEl ? String(subtopicEl.value || '') : '',
+      priority: priorityEl ? String(priorityEl.value || '') : '',
+      subject: subjectEl ? String(subjectEl.value || '') : '',
+      message: messageEl ? String(messageEl.value || '') : '',
+      contact_email: emailEl ? String(emailEl.value || '') : '',
+      allow_contact: allowEl ? allowEl.checked !== false : true,
+      conditional: conditional,
+    };
+  }
+
+  function isHelpFormDraftEmpty(draft) {
+    if (!draft || typeof draft !== 'object') return true;
+    const subject = String(draft.subject || '').trim();
+    const message = String(draft.message || '').trim();
+    const type = String(draft.type || '').trim();
+    const topic = String(draft.topic || '').trim();
+    return !subject && !message && !type && !topic;
+  }
+
+  function saveHelpFormDraft() {
+    if (helpFormDraftRestoring || state.submitting) return false;
+    const storage = safeSessionStorage();
+    if (!storage) return false;
+    const draft = collectHelpFormDraft();
+    if (isHelpFormDraftEmpty(draft)) {
+      clearHelpFormDraft();
+      return false;
+    }
+    try {
+      storage.setItem(HELP_FORM_DRAFT_KEY, JSON.stringify(draft));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function scheduleHelpFormDraftSave() {
+    if (helpFormDraftRestoring) return;
+    if (helpFormDraftTimer) {
+      try { clearTimeout(helpFormDraftTimer); } catch (_) { /* ignore */ }
+    }
+    helpFormDraftTimer = setTimeout(function () {
+      helpFormDraftTimer = null;
+      saveHelpFormDraft();
+    }, HELP_FORM_DRAFT_SAVE_DEBOUNCE_MS);
+  }
+
+  function loadHelpFormDraft() {
+    const storage = safeSessionStorage();
+    if (!storage) return null;
+    let raw;
+    try {
+      raw = storage.getItem(HELP_FORM_DRAFT_KEY);
+    } catch (_) {
+      return null;
+    }
+    if (!raw) return null;
+    let draft;
+    try {
+      draft = JSON.parse(raw);
+    } catch (_) {
+      clearHelpFormDraft();
+      return null;
+    }
+    if (!draft || draft.v !== 1) {
+      clearHelpFormDraft();
+      return null;
+    }
+    const age = Date.now() - Number(draft.saved_at_ms || 0);
+    if (!Number.isFinite(age) || age < 0 || age > HELP_FORM_DRAFT_TTL_MS) {
+      clearHelpFormDraft();
+      return null;
+    }
+    // Reject only when a draft clearly belongs to a different signed-in user.
+    // Guest drafts (user_id '') may be restored after login in the same tab.
+    const draftUserId = String(draft.user_id || '');
+    const currentUserId = getUserId(state.user);
+    if (draftUserId && currentUserId && draftUserId !== currentUserId) {
+      return null;
+    }
+    if (isHelpFormDraftEmpty(draft)) {
+      clearHelpFormDraft();
+      return null;
+    }
+    return draft;
+  }
+
+  function applyHelpFormDraft(draft) {
+    if (!draft || typeof draft !== 'object') return false;
+    helpFormDraftRestoring = true;
+    try {
+      const typeEl = $('#helpType');
+      const topicEl = $('#helpTopic');
+      const subtopicEl = $('#helpSubtopic');
+      const priorityEl = $('#helpPriority');
+      const subjectEl = $('#helpSubject');
+      const messageEl = $('#helpMessage');
+      const emailEl = $('#helpContactEmail');
+      const allowEl = $('#helpAllowContact');
+
+      if (typeEl && draft.type) {
+        typeEl.value = draft.type;
+        populateTopics();
+      }
+      if (topicEl && draft.topic) {
+        topicEl.value = draft.topic;
+        populateSubtopics();
+      }
+      if (subtopicEl && draft.subtopic) {
+        subtopicEl.value = draft.subtopic;
+        renderConditionalFields();
+      } else {
+        renderConditionalFields();
+      }
+      if (priorityEl && draft.priority) priorityEl.value = draft.priority;
+      if (subjectEl && draft.subject) subjectEl.value = draft.subject;
+      if (messageEl && draft.message) messageEl.value = draft.message;
+      if (emailEl && draft.contact_email) {
+        emailEl.value = draft.contact_email;
+        delete emailEl.dataset.kcAccountPrefillUserId;
+      }
+      if (allowEl) allowEl.checked = draft.allow_contact !== false;
+
+      const conditional = draft.conditional && typeof draft.conditional === 'object'
+        ? draft.conditional
+        : {};
+      Object.keys(conditional).forEach(function (key) {
+        const el = document.querySelector(
+          '[data-help-conditional="' + String(key).replace(/"/g, '') + '"]'
+        );
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = !!conditional[key];
+        else el.value = String(conditional[key] == null ? '' : conditional[key]);
+        if (el.dataset) delete el.dataset.kcAccountPrefillUserId;
+      });
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      helpFormDraftRestoring = false;
+    }
+  }
+
+  function restoreHelpFormDraft(options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const draft = loadHelpFormDraft();
+    if (!draft) return false;
+    const applied = applyHelpFormDraft(draft);
+    if (applied && opts.announce === true) {
+      setStatus(
+        'Restauramos o rascunho do formulário desta sessão. Revise e envie quando quiser.',
+        'info',
+        { toast: true }
+      );
+    }
+    return applied;
   }
 
   // Apply a stashed visitor payload into the form fields so the user can
@@ -1508,7 +1704,19 @@
     state.authResolved = true;
     if (previousUserId !== userId) {
       state.profile = null;
-      resetAccountBoundForm();
+      // Persist draft before any wipe so leave/return and soft auth transitions
+      // do not throw away typed text. Only hard-reset when switching between
+      // two different signed-in accounts (or logging out).
+      try { saveHelpFormDraft(); } catch (_) { /* ignore */ }
+      if (previousUserId && userId && previousUserId !== userId) {
+        // Account A → account B: never leak A's draft into B's form.
+        resetAccountBoundForm();
+      } else if (previousUserId && !userId) {
+        // Logout: clear account-bound emails; draft stays under user_id '' after
+        // re-save if the guest continues typing.
+        resetAccountBoundForm();
+      }
+      // Login ('' → uuid): keep fields; prefillContext only fills empty emails.
     }
 
     if (window.KCAPI && userId) {
@@ -1546,6 +1754,8 @@
       );
       if (accountLoad && accountLoad.stale) return;
       prefillContext();
+      // Re-apply draft after any soft wipe during hydrate (same user / login).
+      restoreHelpFormDraft({ announce: false });
       // Never toast success on background refresh — only silent status mirror.
       // Even pull-to-refresh skips success toast to avoid noise; errors may toast.
       setStatus('Central de ajuda atualizada.', 'success');
@@ -1807,6 +2017,7 @@
       } catch (_) { }
       const form = $('#helpRequestForm');
       if (form) form.reset();
+      clearHelpFormDraft();
       renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
       renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
       populateTopics();
@@ -1826,6 +2037,7 @@
   function handleReset() {
     const form = $('#helpRequestForm');
     if (form) form.reset();
+    clearHelpFormDraft();
     renderOptions($('#helpType'), Help.HELP_TYPE_OPTIONS || [], 'Selecione a categoria principal');
     renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
     populateTopics();
@@ -1844,28 +2056,57 @@
 
     const typeField = $('#helpType');
     if (typeField) {
-      typeField.addEventListener('change', populateTopics);
+      typeField.addEventListener('change', function () {
+        populateTopics();
+        scheduleHelpFormDraftSave();
+      });
     }
 
     const topicField = $('#helpTopic');
     if (topicField) {
-      topicField.addEventListener('change', populateSubtopics);
+      topicField.addEventListener('change', function () {
+        populateSubtopics();
+        scheduleHelpFormDraftSave();
+      });
     }
 
     const subtopicField = $('#helpSubtopic');
     if (subtopicField) {
-      subtopicField.addEventListener('change', renderConditionalFields);
+      subtopicField.addEventListener('change', function () {
+        renderConditionalFields();
+        scheduleHelpFormDraftSave();
+      });
     }
 
     document.addEventListener('input', function (event) {
       const target = event && event.target;
-      if (!target || !target.dataset) return;
+      if (!target) return;
       if (
         target.id === 'helpContactEmail' ||
-        target.getAttribute('data-help-conditional') === 'account_email'
+        (target.getAttribute && target.getAttribute('data-help-conditional') === 'account_email')
       ) {
-        delete target.dataset.kcAccountPrefillUserId;
+        if (target.dataset) delete target.dataset.kcAccountPrefillUserId;
       }
+      const formEl = $('#helpRequestForm');
+      if (formEl && formEl.contains(target)) {
+        scheduleHelpFormDraftSave();
+      }
+    });
+
+    document.addEventListener('change', function (event) {
+      const target = event && event.target;
+      const formEl = $('#helpRequestForm');
+      if (target && formEl && formEl.contains(target)) {
+        scheduleHelpFormDraftSave();
+      }
+    });
+
+    // Persist before navigating away (same tab reload / link out).
+    window.addEventListener('pagehide', function () {
+      try { saveHelpFormDraft(); } catch (_) { /* ignore */ }
+    });
+    window.addEventListener('beforeunload', function () {
+      try { saveHelpFormDraft(); } catch (_) { /* ignore */ }
     });
 
     document.addEventListener('kc:authchange', function (event) {
@@ -1873,6 +2114,7 @@
         ? event.detail
         : {};
       const sessionUser = detail.user || (detail.session && detail.session.user) || null;
+      try { saveHelpFormDraft(); } catch (_) { /* ignore */ }
       // Quiet: session events fire often; never toast "Central de ajuda atualizada."
       refreshHelpPage({ sessionUser, notify: false });
     });
@@ -1916,6 +2158,10 @@
     // visitor privacy payload was waiting in sessionStorage, restore it
     // and try to submit it under the authenticated session.
     await restoreAndSubmitStashedPrivacyPayload();
+
+    // General draft: after privacy stash/deep-link so user typing wins when
+    // they had already started a form in this tab session.
+    restoreHelpFormDraft({ announce: true });
 
     initPullToRefresh();
     try {
