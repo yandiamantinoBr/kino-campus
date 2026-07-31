@@ -64,4 +64,13 @@ describe('admin help-requests draft structure', () => {
   test('cache-busts controller to 8.6.19 on admin page', () => {
     expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.19');
   });
+
+  test('soft reauth keeps queue painted on leave/return', () => {
+    expect(CONTROLLER).toContain('ADMIN_HELP_VIEW_KEY');
+    expect(CONTROLLER).toContain('saveAdminViewSnapshot');
+    expect(CONTROLLER).toContain('restoreAdminViewSnapshotPaint');
+    expect(CONTROLLER).toContain('reauthorizeAdminView({ soft: true })');
+    expect(CONTROLLER).toMatch(/showLoading\(true,\s*\{\s*silent:/);
+    expect(CONTROLLER).toContain('silent: keepPaint');
+  });
 });
