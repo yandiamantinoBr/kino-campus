@@ -13,10 +13,17 @@ describe('help.controller form draft structure', () => {
     expect(code).toContain('restoreHelpFormDraft');
     expect(code).toContain('clearHelpFormDraft');
     expect(code).toContain('scheduleHelpFormDraftSave');
+    expect(code).toContain('flushHelpFormDraftSave');
+    expect(code).toContain('draftStorageWrite');
+    expect(code).toContain('localStorage');
   });
   test('hard-resets form only when switching between two signed-in accounts', () => {
     expect(code).toMatch(/previousUserId && userId && previousUserId !== userId/);
     expect(code).toContain('restoreHelpFormDraft({ announce: true })');
+  });
+  test('empty auto-save does not wipe stored drafts', () => {
+    expect(code).toContain('forceClearEmpty');
+    expect(code).toMatch(/forceClearEmpty === true[\s\S]{0,40}clearHelpFormDraft/);
   });
   test('clears draft on successful submit and explicit reset', () => {
     const submitIdx = code.indexOf('Pedido enviado com sucesso');
