@@ -705,12 +705,16 @@
     const canonicalTuple = type === 'account_access'
       && topic === 'onboarding_settings'
       && subtopic === 'account_deletion';
+    // Never open destructive panel for copy/portability kinds.
     if (requestKind === 'data_access_copy' || requestKind === 'data_portability') return false;
-    if (requestKind) return requestKind === 'account_erasure' && canonicalTuple;
-    if (canonicalTuple) return true;
+    // Canonical privacy tuple wins even without request_kind (pre-DSR form).
+    if (canonicalTuple && (!requestKind || requestKind === 'account_erasure')) return true;
+    // Non-empty other request_kind never becomes erasure via free text.
+    if (requestKind && requestKind !== 'account_erasure') return false;
+    if (requestKind === 'account_erasure' && type === 'account_access') return true;
 
-    // Fallback exclusivo para tickets legados sem discriminador estruturado.
-    // A simples menção a "LGPD" nunca deve abrir controles destrutivos.
+    // Fallback for free-text / very old tickets without structured subtopic.
+    // A bare "LGPD" mention never opens destructive controls.
     const text = normalizeSearchText([
       row.type,
       row.topic,
@@ -720,10 +724,29 @@
       row.contact_email,
       metadata.account_email,
     ].join(' '));
-    const isAccountRequest = type === 'account_access' && topic === 'onboarding_settings';
-    const hasErasureVerb = /\b(exclusao|excluir|eliminacao|eliminar|remocao|remover|apagar|deletar|encerrar)\b/.test(text);
-    const hasAccountTarget = /\b(minha conta|conta do usuario|conta e dados|perfil|dados pessoais|dados cadastrais)\b/.test(text);
-    return isAccountRequest && hasErasureVerb && hasAccountTarget;
+    const isAccountFamily = type === 'account_access'
+      || type === 'conta_e_acesso'
+      || /\b(conta|acesso|account)\b/.test(normalizeSearchText(type));
+    const hasErasureVerb = /\b(exclusao|excluir|eliminacao|eliminar|remocao|remover|apagar|deletar|encerrar|delete|erasure)\b/.test(text);
+    const hasAccountTarget = /\b(minha conta|sua conta|conta do usuario|conta e dados|exclusao de conta|excluir conta|apagar conta|remover conta|perfil|dados pessoais|dados cadastrais|conta e dados)\b/.test(text)
+      || (/\bconta\b/.test(text) && hasErasureVerb);
+    return isAccountFamily && hasErasureVerb && hasAccountTarget;
+  }
+
+  /**
+   * Tickets that need protocol materialization before diagnose/hide/erase:
+   * - anonymous (no user_id), or
+   * - authenticated legacy (user_id set, no DSR / identity_source yet).
+   */
+  function needsErasureProtocolLink(row) {
+    if (!isLgpdErasureRequest(row)) return false;
+    if (isRedactedPostCoreErasure(row)) return false;
+    const metadata = getHelpMetadata(row);
+    if (UUID_RE.test(String(metadata.data_subject_request_id || '').trim())) {
+      return false;
+    }
+    if (hasCanonicalErasureLink(row)) return false;
+    return true;
   }
 
   function getHelpMetadata(row) {
@@ -862,13 +885,7 @@
   }
 
   function canOfferErasureIdentityLink(row) {
-    if (!isLgpdErasureRequest(row)) return false;
-    const metadata = getHelpMetadata(row);
-    return Boolean(
-      !String(row && row.user_id || '').trim()
-      && !String(metadata.data_subject_request_id || '').trim()
-      && !isRedactedPostCoreErasure(row)
-    );
+    return needsErasureProtocolLink(row);
   }
 
   function canProbeErasureWorkflow(row) {
@@ -1438,7 +1455,11 @@
           : identityStateInconsistent
             ? 'O ticket possui uma relação incompleta entre titular e protocolo. O fluxo está bloqueado; investigue o DSR e o workflow sem tentar vincular ou alterar dados.'
             : identityLinkRequired
-              ? 'Ticket sem titular vinculado: valide a identidade e crie o vínculo auditado antes de qualquer diagnóstico ou ocultação.'
+              ? (
+                  UUID_RE.test(String(row && row.user_id || '').trim())
+                    ? 'Pedido legado autenticado: o titular já está no ticket, mas falta o protocolo DSR. Informe o e-mail da conta, canal de validação e use “Criar protocolo e destravar fluxo LGPD” antes de diagnosticar ou ocultar.'
+                    : 'Ticket sem titular vinculado: valide a identidade e crie o vínculo auditado antes de qualquer diagnóstico ou ocultação.'
+                )
               : identityNeedsManualEvidence
                 ? 'Ticket legado/anônimo: valide a titularidade antes de ocultar qualquer dado.'
                 : 'O vínculo canônico foi confirmado pelo ticket e pelo protocolo.';
@@ -1530,7 +1551,11 @@
         ? `    <label><span><input type="checkbox" data-lgpd-identity-attested style="width:auto" required aria-required="true"${busy ? ' disabled' : ''} /> Confirmo que a identidade do titular foi validada antes de qualquer ocultação</span></label>`
         : '',
       identityLinkRequired
-        ? `    <button type="button" data-lgpd-action="link_verified_identity" aria-describedby="lgpd-guidance-${esc(id)}"${busy || uncertain ? ' disabled' : ''}><i class="fas fa-link" aria-hidden="true"></i> Vincular identidade ao protocolo</button>`
+        ? `    <button type="button" data-lgpd-action="link_verified_identity" aria-describedby="lgpd-guidance-${esc(id)}"${busy || uncertain ? ' disabled' : ''}><i class="fas fa-link" aria-hidden="true"></i> ${
+            UUID_RE.test(String(row && row.user_id || '').trim())
+              ? 'Criar protocolo e destravar fluxo LGPD'
+              : 'Vincular identidade ao protocolo'
+          }</button>`
         : '',
       '  </div>',
       canonicalIdentityLinked || postCoreSurface
