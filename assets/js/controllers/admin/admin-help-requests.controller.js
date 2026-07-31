@@ -76,6 +76,11 @@
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const SHA256_RE = /^[a-f0-9]{64}$/i;
   const EXPORT_ARTIFACT_REF_RE = /^KEA-[A-F0-9]{32}$/;
+  // Moderator field drafts: renderRows() rebuilds innerHTML and would wipe
+  // identity/evidence/triage inputs without this store.
+  const ADMIN_HELP_DRAFT_KEY = 'kc_admin_help_draft_v1';
+  const ADMIN_HELP_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const ADMIN_HELP_DRAFT_DEBOUNCE_MS = 200;
 
   const state = {
     rows: [],
@@ -104,6 +109,8 @@
   };
 
   let eventsBound = false;
+  let adminDraftTimer = null;
+  let adminDraftRestoring = false;
 
   function $(selector, root) {
     return (root || document).querySelector(selector);
@@ -127,6 +134,266 @@
   function toFiniteNumber(value, fallback) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  // ── Per-ticket draft (survives leave/return + renderRows wipe) ─────────
+  function adminDraftStorageRead() {
+    let raw = null;
+    try {
+      if (window.sessionStorage) raw = window.sessionStorage.getItem(ADMIN_HELP_DRAFT_KEY);
+    } catch (_) { /* ignore */ }
+    if (!raw) {
+      try {
+        if (window.localStorage) raw = window.localStorage.getItem(ADMIN_HELP_DRAFT_KEY);
+      } catch (_) { /* ignore */ }
+    }
+    if (!raw) return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.v !== 1 || typeof parsed.tickets !== 'object' || !parsed.tickets) {
+        return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
+      }
+      const age = Date.now() - Number(parsed.saved_at_ms || 0);
+      if (!Number.isFinite(age) || age < 0 || age > ADMIN_HELP_DRAFT_TTL_MS) {
+        adminDraftStorageClear();
+        return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
+      }
+      return parsed;
+    } catch (_) {
+      return { v: 1, saved_at_ms: Date.now(), tickets: {}, filters: null };
+    }
+  }
+
+  function adminDraftStorageWrite(store) {
+    const payload = JSON.stringify({
+      v: 1,
+      saved_at_ms: Date.now(),
+      tickets: store.tickets || {},
+      filters: store.filters || null,
+    });
+    try {
+      if (window.sessionStorage) window.sessionStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
+    } catch (_) { /* ignore */ }
+    try {
+      if (window.localStorage) window.localStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
+    } catch (_) { /* ignore */ }
+  }
+
+  function adminDraftStorageClear() {
+    try {
+      if (window.sessionStorage) window.sessionStorage.removeItem(ADMIN_HELP_DRAFT_KEY);
+    } catch (_) { /* ignore */ }
+    try {
+      if (window.localStorage) window.localStorage.removeItem(ADMIN_HELP_DRAFT_KEY);
+    } catch (_) { /* ignore */ }
+  }
+
+  function adminDraftFieldKey(el) {
+    if (!el || !el.attributes) return '';
+    let attrName = '';
+    for (let i = 0; i < el.attributes.length; i += 1) {
+      const name = el.attributes[i] && el.attributes[i].name;
+      if (!name) continue;
+      if (
+        name.indexOf('data-lgpd-') === 0
+        || name.indexOf('data-export-') === 0
+        || name === 'data-help-status'
+        || name === 'data-help-priority'
+      ) {
+        // Prefer the identifying field attr over generic ones like data-export-delivery-field
+        if (
+          name === 'data-export-delivery-field'
+          || name === 'data-export-processor-row'
+          || name === 'data-export-identity-link'
+          || name === 'data-export-supplement-panel'
+          || name === 'data-lgpd-panel'
+          || name === 'data-lgpd-live'
+          || name === 'data-lgpd-identity-guidance'
+          || name === 'data-lgpd-action'
+          || name === 'data-lgpd-export'
+          || name === 'data-export-action'
+          || name === 'data-export-processor-save'
+          || name === 'data-help-save'
+          || name === 'data-help-load-more'
+        ) {
+          continue;
+        }
+        attrName = name;
+        // Keep scanning for a more specific data-lgpd-* / data-export-* field name
+        // but stop if we already have a field-like attr.
+        if (
+          name.indexOf('data-lgpd-') === 0
+          || name.indexOf('data-export-') === 0
+          || name === 'data-help-status'
+          || name === 'data-help-priority'
+        ) {
+          break;
+        }
+      }
+    }
+    if (!attrName) return '';
+    const provider = String(el.getAttribute('data-provider') || '').trim();
+    return provider ? `${attrName}::${provider}` : attrName;
+  }
+
+  function isAdminDraftableControl(el) {
+    if (!el || !el.tagName) return false;
+    const tag = String(el.tagName || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'select' && tag !== 'textarea') return false;
+    const type = String(el.type || '').toLowerCase();
+    if (type === 'button' || type === 'submit' || type === 'hidden') return false;
+    return Boolean(adminDraftFieldKey(el));
+  }
+
+  function captureCardDraft(card) {
+    if (!card || !card.getAttribute) return null;
+    const id = String(card.getAttribute('data-help-id') || '').trim();
+    if (!UUID_RE.test(id)) return null;
+    const fields = {};
+    let count = 0;
+    card.querySelectorAll('input, select, textarea').forEach(function (el) {
+      if (!isAdminDraftableControl(el)) return;
+      const key = adminDraftFieldKey(el);
+      if (!key) return;
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        fields[key] = !!el.checked;
+      } else {
+        fields[key] = String(el.value || '');
+      }
+      count += 1;
+    });
+    if (!count) return null;
+    return {
+      v: 1,
+      saved_at_ms: Date.now(),
+      fields: fields,
+    };
+  }
+
+  function applyCardDraft(card, draft) {
+    if (!card || !draft || !draft.fields || typeof draft.fields !== 'object') return false;
+    adminDraftRestoring = true;
+    try {
+      Object.keys(draft.fields).forEach(function (key) {
+        const parts = String(key).split('::');
+        const attr = parts[0];
+        const provider = parts[1] || '';
+        if (!attr || attr.indexOf('data-') !== 0) return;
+        let el = null;
+        try {
+          if (provider) {
+            el = card.querySelector('[' + attr + '][data-provider="' + provider.replace(/"/g, '') + '"]');
+          } else {
+            el = card.querySelector('[' + attr + ']');
+          }
+        } catch (_) {
+          el = null;
+        }
+        if (!el || !isAdminDraftableControl(el)) return;
+        const value = draft.fields[key];
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          el.checked = !!value;
+        } else if (value != null) {
+          el.value = String(value);
+        }
+      });
+      // Re-run export delivery enable/disable if outcome selects exist.
+      card.querySelectorAll('[data-export-outcome]').forEach(function (outcome) {
+        const processorRow = outcome.closest('[data-export-processor-row]');
+        if (!processorRow) return;
+        const externalDelivery = outcome.value === 'supplied_out_of_band';
+        processorRow.querySelectorAll('[data-export-delivery-field] input, [data-export-delivery-field] select').forEach(function (field) {
+          field.disabled = !externalDelivery;
+        });
+      });
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      adminDraftRestoring = false;
+    }
+  }
+
+  function captureAllVisibleCardDrafts() {
+    const list = $('#helpRequestsList');
+    if (!list) return;
+    const store = adminDraftStorageRead();
+    list.querySelectorAll('[data-help-id]').forEach(function (card) {
+      const id = String(card.getAttribute('data-help-id') || '').trim();
+      const draft = captureCardDraft(card);
+      if (draft) store.tickets[id] = draft;
+    });
+    store.filters = {
+      status: String($('#helpStatusFilter') && $('#helpStatusFilter').value || state.filters.status || 'all'),
+      type: String($('#helpTypeFilter') && $('#helpTypeFilter').value || state.filters.type || 'all'),
+      priority: String($('#helpPriorityFilter') && $('#helpPriorityFilter').value || state.filters.priority || 'all'),
+      query: String($('#helpQueryFilter') && $('#helpQueryFilter').value || state.filters.query || ''),
+    };
+    adminDraftStorageWrite(store);
+  }
+
+  function applyAllVisibleCardDrafts() {
+    const list = $('#helpRequestsList');
+    if (!list) return;
+    const store = adminDraftStorageRead();
+    list.querySelectorAll('[data-help-id]').forEach(function (card) {
+      const id = String(card.getAttribute('data-help-id') || '').trim();
+      const draft = store.tickets && store.tickets[id];
+      if (draft) applyCardDraft(card, draft);
+    });
+  }
+
+  function scheduleAdminDraftSave() {
+    if (adminDraftRestoring) return;
+    if (adminDraftTimer) {
+      try { clearTimeout(adminDraftTimer); } catch (_) { /* ignore */ }
+    }
+    adminDraftTimer = setTimeout(function () {
+      adminDraftTimer = null;
+      captureAllVisibleCardDrafts();
+    }, ADMIN_HELP_DRAFT_DEBOUNCE_MS);
+  }
+
+  function flushAdminDraftSave() {
+    if (adminDraftTimer) {
+      try { clearTimeout(adminDraftTimer); } catch (_) { /* ignore */ }
+      adminDraftTimer = null;
+    }
+    captureAllVisibleCardDrafts();
+  }
+
+  function restoreAdminFiltersFromDraft() {
+    const store = adminDraftStorageRead();
+    const filters = store.filters;
+    if (!filters || typeof filters !== 'object') return false;
+    const statusEl = $('#helpStatusFilter');
+    const typeEl = $('#helpTypeFilter');
+    const priorityEl = $('#helpPriorityFilter');
+    const queryEl = $('#helpQueryFilter');
+    let changed = false;
+    if (statusEl && filters.status && statusEl.value !== filters.status) {
+      statusEl.value = filters.status;
+      changed = true;
+    }
+    if (typeEl && filters.type && typeEl.value !== filters.type) {
+      typeEl.value = filters.type;
+      changed = true;
+    }
+    if (priorityEl && filters.priority && priorityEl.value !== filters.priority) {
+      priorityEl.value = filters.priority;
+      changed = true;
+    }
+    if (queryEl && typeof filters.query === 'string' && queryEl.value !== filters.query) {
+      queryEl.value = filters.query;
+      changed = true;
+    }
+    if (changed) {
+      state.filters.status = String(filters.status || 'all');
+      state.filters.type = String(filters.type || 'all');
+      state.filters.priority = String(filters.priority || 'all');
+      state.filters.query = String(filters.query || '');
+    }
+    return changed;
   }
 
   function getHelpTypeOptions() {
@@ -1666,6 +1933,8 @@
   function renderRows(rows) {
     const list = $('#helpRequestsList');
     if (!list) return;
+    // Snapshot operator-typed fields before innerHTML wipe.
+    try { captureAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
     if (!state.isAuthorized) {
       list.replaceChildren();
       return;
@@ -1722,6 +1991,8 @@
 
     cards.push(buildPaginationCard());
     list.innerHTML = cards.join('');
+    // Re-apply drafts after full rebuild (diagnose, refresh, filters, leave/return).
+    try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
   }
 
   function unwrapRowsResponse(result, requestedLimit, requestedOffset) {
@@ -3241,6 +3512,7 @@
       const detail = event && event.detail && typeof event.detail === 'object'
         ? event.detail
         : null;
+      try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
       reauthorizeAdminView(
         detail && Object.prototype.hasOwnProperty.call(detail, 'user')
           ? { sessionUser: detail.user }
@@ -3250,14 +3522,21 @@
 
     ['#helpStatusFilter', '#helpTypeFilter', '#helpPriorityFilter'].forEach((selector) => {
       const field = $(selector);
-      if (field) field.addEventListener('change', function () { loadRows(); });
+      if (field) {
+        field.addEventListener('change', function () {
+          try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+          loadRows();
+        });
+      }
     });
 
     const queryField = $('#helpQueryFilter');
     if (queryField) {
       queryField.addEventListener('input', function () {
+        scheduleAdminDraftSave();
         window.clearTimeout(queryField._kcTimer);
         queryField._kcTimer = window.setTimeout(function () {
+          try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
           loadRows();
         }, QUERY_DEBOUNCE_MS);
       });
@@ -3266,9 +3545,44 @@
     const refreshButton = $('#helpRefreshButton');
     if (refreshButton) {
       refreshButton.addEventListener('click', function () {
+        try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
         loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
       });
     }
+
+    // Persist operator typing (identity evidence, phrases, triage) as drafts.
+    document.addEventListener('input', function (event) {
+      const target = event && event.target;
+      if (!target || adminDraftRestoring) return;
+      const card = target.closest && target.closest('[data-help-id]');
+      if (card || (target.closest && (
+        target.closest('#helpStatusFilter')
+        || target.closest('#helpTypeFilter')
+        || target.closest('#helpPriorityFilter')
+        || target.closest('#helpQueryFilter')
+      ))) {
+        scheduleAdminDraftSave();
+      }
+    });
+    document.addEventListener('change', function (event) {
+      const target = event && event.target;
+      if (!target || adminDraftRestoring) return;
+      const card = target.closest && target.closest('[data-help-id]');
+      if (card) scheduleAdminDraftSave();
+    });
+    window.addEventListener('pagehide', function () {
+      try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+    });
+    window.addEventListener('beforeunload', function () {
+      try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') {
+        try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+      } else if (document.visibilityState === 'visible') {
+        try { applyAllVisibleCardDrafts(); } catch (_) { /* ignore */ }
+      }
+    });
 
     const exportXlsx = $('#helpExportXlsx');
     if (exportXlsx) exportXlsx.addEventListener('click', () => handleHelpExport('xlsx').catch(() => console.error('[AdminHelp] export_xlsx_failed')));
@@ -3392,6 +3706,8 @@
   async function init() {
     populateTypeFilter();
     bindEvents();
+    // Restore filter draft before first load so leave/return keeps the queue view.
+    try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
     await reauthorizeAdminView();
   }
 
