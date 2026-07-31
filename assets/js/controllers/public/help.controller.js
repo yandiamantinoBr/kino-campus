@@ -1081,16 +1081,55 @@
     }
   }
 
+  function mapHelpStatusTone(tone) {
+    const normalized = String(tone || '').trim().toLowerCase();
+    if (normalized === 'success' || normalized === 'error' || normalized === 'warn' || normalized === 'info') {
+      return normalized;
+    }
+    return 'info';
+  }
+
+  function helpStatusToastDuration(tone, message) {
+    const text = String(message || '');
+    const kind = mapHelpStatusTone(tone);
+    // Long protocol/reference receipts need more reading time near the form.
+    if (kind === 'success') return text.length > 120 ? 7000 : 4200;
+    if (kind === 'error') return text.length > 120 ? 6500 : 3600;
+    if (kind === 'warn') return 3200;
+    // Progress / prep messages (Enviando..., formulário preparado...)
+    return text.length > 90 ? 3200 : 2200;
+  }
+
+  function announceHelpStatusToast(message, tone) {
+    const text = String(message || '').trim();
+    if (!text) return;
+    const toastType = mapHelpStatusTone(tone);
+    const duration = helpStatusToastDuration(toastType, text);
+    try {
+      if (typeof window.showToast === 'function') {
+        window.showToast(text, toastType, duration);
+        return;
+      }
+    } catch (_) { /* ignore toast failures */ }
+    try {
+      if (typeof showToast === 'function') {
+        showToast(text, toastType, duration);
+      }
+    } catch (_) { /* ignore toast failures */ }
+  }
+
   function setStatus(message, tone) {
     const status = $('#helpStatus');
-    if (!status) return;
-    if (!message) {
-      status.textContent = '';
-      status.className = 'kc-settings-status';
-      return;
+    const text = String(message || '');
+    // Keep #helpStatus text for e2e assertions; do not paint a top-of-page banner.
+    // Sighted + SR feedback uses the same kc-toast pattern as publish on index.
+    if (status) {
+      status.textContent = text;
+      status.className = 'kc-settings-status kc-help-status-live';
+      status.setAttribute('aria-hidden', 'true');
     }
-    status.textContent = String(message || '');
-    status.className = `kc-settings-status is-visible${tone ? ` is-${tone}` : ''}`;
+    if (!text) return;
+    announceHelpStatusToast(text, tone);
   }
 
   function renderSubmitState(active, operationKind) {

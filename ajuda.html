@@ -33,6 +33,35 @@
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.14" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* Live region mirror for e2e/tests stays in the tree, but is not a top-of-page banner.
+       Sighted feedback uses the shared .kc-toast pattern (publish / index). */
+    .kc-help-page #helpStatus.kc-help-status-live {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+      display: block !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    /* Long protocol receipts remain readable without stretching the viewport. */
+    .kc-help-page .kc-toast {
+      max-width: min(92vw, 28rem);
+      text-align: center;
+      line-height: 1.45;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .kc-help-page .kc-toast.warn {
+      border-left-color: #f59e0b;
+    }
+  </style>
 </head>
 <body class="kc-shell-page kc-help-page" data-kc-mobile-active="menu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -79,7 +108,8 @@
         <h1 class="kc-help-title">Ajuda, conta e suporte em um lugar só.</h1>
       </div>
 
-      <div id="helpStatus" class="kc-settings-status" role="status" aria-live="polite"></div>
+      <!-- Text mirror for e2e + fallback; visual feedback is .kc-toast (same pattern as publish on index). -->
+      <div id="helpStatus" class="kc-settings-status kc-help-status-live" aria-hidden="true"></div>
 
       <div class="kc-help-grid">
         <div class="kc-settings-stack">
@@ -401,7 +431,7 @@
   <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.13"></script>
-  <script defer src="assets/js/shared/help.shared.js?v=8.6.13"></script>
+  <script defer src="assets/js/shared/help.shared.js?v=8.6.14"></script>
   <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
   <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
@@ -416,6 +446,7 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/help.controller.js?v=8.6.13"></script>
+  <script defer src="assets/js/components/toast.js?v=8.6.2"></script>
+  <script defer src="assets/js/controllers/public/help.controller.js?v=8.6.14"></script>
 </body>
 </html>
