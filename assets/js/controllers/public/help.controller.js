@@ -80,6 +80,7 @@
     turnstileWidgetId: null,
     turnstileSiteKey: '',
     turnstileRenderGeneration: 0,
+    guestLoginGateToastShown: false,
   };
 
   function $(selector) {
@@ -232,6 +233,47 @@
     );
   }
 
+  function setPrivacyLoginGateVisible(visible) {
+    const gate = $('#helpPrivacyLoginGate');
+    const secondary = $('#helpPrivacyLoginSecondary');
+    const title = $('#helpPrivacyVerificationTitle');
+    const description = $('#helpPrivacyVerificationDescription');
+    const widget = $('#helpPrivacyTurnstileWidget');
+    const submit = $('#helpSubmitButton');
+    if (gate) gate.hidden = !visible;
+    if (secondary) secondary.hidden = !!visible;
+    if (widget) widget.hidden = !!visible;
+    if (visible) {
+      if (title) {
+        title.innerHTML =
+          '<i class="fas fa-user-lock" aria-hidden="true"></i> Entre na conta para exercer seus direitos';
+      }
+      if (description) {
+        description.textContent =
+          'Pedidos de cópia, portabilidade e exclusão com protocolo estão liberados para quem está logado. Use o botão abaixo — leva menos de um minuto com o e-mail institucional.';
+      }
+      if (submit && isGuestPrivacyRoute()) {
+        submit.disabled = true;
+        submit.setAttribute('aria-disabled', 'true');
+        submit.title = 'Entre na conta para enviar pedidos de privacidade';
+      }
+    } else {
+      if (title) {
+        title.innerHTML =
+          '<i class="fas fa-shield-halved" aria-hidden="true"></i> Verificação de segurança';
+      }
+      if (description) {
+        description.textContent =
+          'Para enviar um pedido de privacidade sem uma conta autenticada, conclua a verificação abaixo. A prova fica somente em memória até esta tentativa e não é gravada no armazenamento persistente.';
+      }
+      if (submit && !state.submitting) {
+        submit.disabled = false;
+        submit.removeAttribute('aria-disabled');
+        submit.removeAttribute('title');
+      }
+    }
+  }
+
   async function syncPrivacyVerification() {
     const container = $('#helpPrivacyVerification');
     const target = $('#helpPrivacyTurnstileWidget');
@@ -241,20 +283,37 @@
     if (!shouldRender) {
       state.turnstileRenderGeneration += 1;
       removePrivacyTurnstileWidget();
+      setPrivacyLoginGateVisible(false);
       setPrivacyVerificationStatus('', '');
       return;
     }
 
     const siteKey = getTurnstileSiteKey();
     if (!siteKey) {
+      // No Turnstile provisioned: fail-closed for guests, but guide to login
+      // (authenticated privacy path works without CAPTCHA).
       state.turnstileRenderGeneration += 1;
       removePrivacyTurnstileWidget();
+      setPrivacyLoginGateVisible(true);
       setPrivacyVerificationStatus(
-        'A verificação de segurança não está configurada neste ambiente. Entre na sua conta ou tente novamente mais tarde.',
-        'error'
+        'Visitante sem CAPTCHA: use Entrar ou cadastrar. Depois do login, o envio e as Configurações → Privacidade funcionam normalmente.',
+        'warn'
       );
+      if (!state.guestLoginGateToastShown) {
+        state.guestLoginGateToastShown = true;
+        try {
+          if (typeof window.showToast === 'function') {
+            window.showToast(
+              'Para copiar, portar ou excluir dados, entre na conta (botão no formulário).',
+              'warn',
+              5200
+            );
+          }
+        } catch (_) { /* ignore */ }
+      }
       return;
     }
+    setPrivacyLoginGateVisible(false);
     if (
       state.turnstileWidgetId !== null &&
       state.turnstileSiteKey === siteKey
@@ -505,7 +564,8 @@
         required: true,
         ok: false,
         token: '',
-        message: 'A verificação de segurança não está configurada neste ambiente. Entre na sua conta ou tente novamente mais tarde.',
+        message:
+          'Para pedidos de privacidade, entre ou cadastre-se (botão “Entrar ou cadastrar” acima). Com a conta aberta, o envio e as Configurações → Privacidade já funcionam.',
       };
     }
     const token = String(state.turnstileToken || '').trim();

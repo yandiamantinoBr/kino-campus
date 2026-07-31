@@ -61,6 +61,21 @@
     .kc-help-page .kc-toast.warn {
       border-left-color: #f59e0b;
     }
+    .kc-help-login-gate {
+      display: grid;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      background: color-mix(in srgb, rgba(245, 158, 11, 0.12) 70%, var(--kc-surface-dark));
+    }
+    .kc-help-login-gate[hidden] { display: none !important; }
+    .kc-help-login-gate__lead {
+      margin: 0;
+      line-height: 1.45;
+      color: var(--kc-text-dark-primary);
+    }
   </style>
 </head>
 <body class="kc-shell-page kc-help-page" data-kc-mobile-active="menu">
@@ -285,9 +300,16 @@
               <div id="helpPrivacyVerification" class="kc-help-verification" role="group" aria-labelledby="helpPrivacyVerificationTitle" aria-describedby="helpPrivacyVerificationDescription helpPrivacyVerificationStatus" tabindex="-1" hidden>
                 <strong id="helpPrivacyVerificationTitle"><i class="fas fa-shield-halved" aria-hidden="true"></i> Verificação de segurança</strong>
                 <p id="helpPrivacyVerificationDescription">Para enviar um pedido de privacidade sem uma conta autenticada, conclua a verificação abaixo. A prova fica somente em memória até esta tentativa e não é gravada no armazenamento persistente.</p>
+                <div id="helpPrivacyLoginGate" class="kc-help-login-gate" hidden>
+                  <p class="kc-help-login-gate__lead"><strong>Caminho recomendado (funciona agora):</strong> entre ou cadastre-se com o e-mail da UFG. Depois do login, este formulário e as Configurações liberam cópia, portabilidade e exclusão com protocolo — sem CAPTCHA extra.</p>
+                  <div class="kc-settings-actions-row">
+                    <a id="helpPrivacyLoginButton" class="kc-help-btn is-primary" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket" aria-hidden="true"></i><span>Entrar ou cadastrar</span></a>
+                    <a class="kc-help-btn" href="settings.html#settingsPrivacyData"><i class="fas fa-user-shield" aria-hidden="true"></i><span>Ir para Privacidade (após login)</span></a>
+                  </div>
+                </div>
                 <div id="helpPrivacyTurnstileWidget" class="kc-help-turnstile-widget" aria-label="Desafio de verificação de segurança" data-i18n-aria-label="aria-label.help-privacy-security-challenge"></div>
                 <p id="helpPrivacyVerificationStatus" class="kc-help-verification-status" role="status" aria-live="polite" aria-atomic="true"></p>
-                <a class="kc-help-btn" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket" aria-hidden="true"></i> Entrar na conta</a>
+                <a id="helpPrivacyLoginSecondary" class="kc-help-btn" href="#login" data-kc-login="true" hidden><i class="fas fa-right-to-bracket" aria-hidden="true"></i> Entrar na conta</a>
               </div>
               <div class="kc-settings-actions-row">
                 <button id="helpSubmitButton" type="submit" class="kc-help-btn is-primary" aria-busy="false"><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Enviar pedido</span></button>
@@ -447,6 +469,6 @@
   <script defer src="assets/js/features/kc-search.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
   <script defer src="assets/js/components/toast.js?v=8.6.2"></script>
-  <script defer src="assets/js/controllers/public/help.controller.js?v=8.6.14"></script>
+  <script defer src="assets/js/controllers/public/help.controller.js?v=8.6.15"></script>
 </body>
 </html>
