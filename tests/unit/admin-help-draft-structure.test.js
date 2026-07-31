@@ -61,7 +61,7 @@ describe('admin help-requests draft structure', () => {
     expect(loadSlice).toContain('Single paint path');
   });
 
-  test('cache-busts controller to 8.6.18 on admin page', () => {
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.18');
+  test('cache-busts controller to 8.6.19 on admin page', () => {
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.19');
   });
 });
