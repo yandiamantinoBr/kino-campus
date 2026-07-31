@@ -1804,7 +1804,6 @@
     const request = result && result.request ? result.request : null;
     const id = String(row && row.id || '');
     const busy = state.erasureBusy[id] === true;
-    const uncertain = Boolean(state.erasureUncertain[id]);
     // Before core erasure, only a canonical owner + DSR link unlocks mutations.
     // Once Auth/profile removal starts, Help.user_id is intentionally cleared,
     // so only the narrow post-core recovery/read-only surface may remain.
@@ -1813,6 +1812,11 @@
     const postCoreProbeCandidate = isPostCoreProbeCandidate(row);
     const confirmedPostCore = hasConfirmedPostCoreWorkflow(result);
     const identityLinkRequired = canOfferErasureIdentityLink(row);
+    // Drop stale Passo-1 traps so the banner never blocks protocol creation.
+    if (identityLinkRequired && state.erasureUncertain[id]) {
+      delete state.erasureUncertain[id];
+    }
+    const uncertain = Boolean(state.erasureUncertain[id]);
     const identityStateInconsistent = !canonicalIdentityLinked
       && !identityLinkRequired
       && !redactedPostCore
@@ -1895,7 +1899,13 @@
       .concat(diagnostics && Array.isArray(diagnostics.blockers) ? diagnostics.blockers : [])
       .concat(failureStage ? [`Etapa pendente: ${failureStage}`] : [])
       .concat(exportRetryLabel ? [`Nova tentativa segura após: ${exportRetryLabel}`] : [])
-      .concat(uncertain ? ['Resultado anterior indeterminado: não repita mutações até concluir um novo diagnóstico seguro.'] : [])
+      // Passo 1 (criar protocolo) never shows the indeterminate trap: there is no
+      // diagnose path yet, and protocol creation must remain the recovery action.
+      .concat(
+        uncertain && !identityLinkRequired
+          ? ['Resultado anterior indeterminado: não repita mutações até concluir um novo diagnóstico seguro.']
+          : []
+      )
       .filter(Boolean);
     const warning = warningItems.length
       ? `<p class="kc-admin-lgpd-warning">${esc(warningItems.join(' | '))}</p>`
@@ -3063,6 +3073,9 @@
   }
 
   function markErasureOutcomeUncertain(id, action) {
+    // Never trap Passo 1 (protocol creation). Unlinked tickets cannot diagnose
+    // their way out of an uncertain lock.
+    if (String(action || '') === 'link_verified_identity') return;
     state.erasureUncertain[id] = {
       action,
       recordedAt: new Date().toISOString(),
@@ -3171,35 +3184,26 @@
       return;
     }
 
-    // Definitive server rejection for protocol link: nothing ambiguous.
-    // Keep "Criar protocolo" usable and surface the real error (e.g. migration
-    // missing for authenticated legacy → ERASURE_IDENTITY_DSR_NOT_UNIQUE).
-    if (
-      action === 'link_verified_identity'
-      && !transportFailed
-      && result
-      && result.ok === false
-    ) {
+    // Protocol link (Passo 1): never mark uncertain and always keep the action
+    // available. Surface the real server/network error instead of the trap copy.
+    if (action === 'link_verified_identity') {
       delete state.erasureUncertain[id];
       renderRows(state.rows);
-      showToast(friendlyLgpdErrorMessage(result.error || result), 'error');
-      return;
-    }
-
-    // Ticket still needs a protocol: do not trap the moderator behind
-    // "indeterminado" without a diagnose path. Link stays available.
-    if (
-      action === 'link_verified_identity'
-      && reconciliation.row
-      && canOfferErasureIdentityLink(reconciliation.row)
-      && !transportFailed
-    ) {
-      delete state.erasureUncertain[id];
-      renderRows(state.rows);
+      if (result && result.ok === false) {
+        showToast(friendlyLgpdErrorMessage(result.error || result), 'error');
+        return;
+      }
+      if (transportFailed) {
+        showToast(
+          'A rede ou o servidor interrompeu a criação do protocolo. Atualize a fila e tente “Criar protocolo” de novo (a operação é segura para repetir).',
+          'error'
+        );
+        return;
+      }
       showToast(
-        result && result.ok !== false && result.linked === true
+        result && result.linked === true
           ? 'O protocolo ainda não aparece no ticket recarregado. Atualize a fila e tente “Criar protocolo” de novo (a operação é idempotente).'
-          : 'Não foi possível confirmar o protocolo neste ticket. Corrija o e-mail/evidência e tente “Criar protocolo” novamente.',
+          : 'Não foi possível criar/confirmar o protocolo neste ticket. Confira e-mail, evidência e tente novamente.',
         'error'
       );
       return;
@@ -3216,11 +3220,9 @@
     markErasureOutcomeUncertain(id, action);
     renderRows(state.rows);
     showToast(
-      action === 'link_verified_identity'
-        ? 'O servidor e a leitura autoritativa não confirmaram o vínculo canônico. Atualize a fila antes de repetir a ação.'
-        : reconciliation.known
-          ? 'A leitura segura não confirmou a pós-condição desta operação. As mutações ficaram bloqueadas; não repita a ação antes de executar Preparar diagnóstico.'
-          : 'O resultado da operação é indeterminado. As mutações ficaram bloqueadas; não repita a ação até recarregar e executar Preparar diagnóstico.',
+      reconciliation.known
+        ? 'A leitura segura não confirmou a pós-condição desta operação. As mutações ficaram bloqueadas; não repita a ação antes de executar Preparar diagnóstico.'
+        : 'O resultado da operação é indeterminado. As mutações ficaram bloqueadas; não repita a ação até recarregar e executar Preparar diagnóstico.',
       'error'
     );
   }
@@ -3377,6 +3379,8 @@
     // materialization (needsErasureProtocolLink). Only reject when the email
     // is invalid or the panel no longer offers the protocol-link action.
     if (action === 'link_verified_identity') {
+      // Clear any stale Passo-1 trap from earlier attempts before validating.
+      delete state.erasureUncertain[id];
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(verifiedAccountEmail)) {
         setFieldInvalid(card, '[data-lgpd-account-email]', true);
         showToast('Informe o e-mail exato da conta do titular para protocolar o pedido.', 'error');
