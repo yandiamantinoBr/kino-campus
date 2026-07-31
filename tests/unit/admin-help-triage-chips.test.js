@@ -54,9 +54,11 @@ describe('admin help-requests chip triage UX', () => {
   test('page styles interactive triage chips and cache-busts assets', () => {
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.22');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.23');
     expect(PAGE).toContain('admin-shell.css?v=8.6.13');
     expect(PAGE).toContain('is-triage-leaving');
+    expect(PAGE).toContain('kc-admin-help-identity');
+    expect(PAGE).toContain('kc-admin-help-ticket-ref');
   });
 
   test('supports summary filter shortcuts and clear-filters control', () => {
@@ -81,5 +83,18 @@ describe('admin help-requests chip triage UX', () => {
     // Errors and LGPD warn still toast.
     expect(slice).toContain("showToast('Não foi possível salvar a triagem.', 'error')");
     expect(slice).toContain("showToast('Triagem não salva.");
+  });
+
+  test('exposes ticket identity and blocks archive on open data-export DSR', () => {
+    expect(CONTROLLER).toContain('function getHelpTicketIdentity');
+    expect(CONTROLLER).toContain('function buildHelpIdentityBlock');
+    expect(CONTROLLER).toContain('function isOpenDataExportHelpRequest');
+    expect(CONTROLLER).toContain('function friendlyTriageErrorMessage');
+    expect(CONTROLLER).toContain('DSR_HELP_MUST_REMAIN_OPEN');
+    expect(CONTROLLER).toContain('ID do ticket');
+    expect(CONTROLLER).toContain('data-help-copy');
+    expect(CONTROLLER).toContain('data-help-status-locked');
+    expect(CONTROLLER).toContain('isOpenDataExportHelpRequest(row)');
+    expect(CONTROLLER).toMatch(/buildStatusTriageChips\(statusValue,\s*\{/);
   });
 });
