@@ -490,9 +490,16 @@ describe('account erasure - autenticacao, identidade e classificacao', () => {
       expect(source).toContain('requestKind');
     }
     expect(EDGE).toContain('requestKind === CANONICAL_ERASURE_KIND && canonicalTuple');
+    // Admin panel: canonical privacy tuple + fail-closed on non-erasure kinds;
+    // bare "LGPD" text never opens destructive controls.
+    expect(HELP_CONTROLLER).toContain("subtopic === 'account_deletion'");
     expect(HELP_CONTROLLER).toContain(
-      "if (requestKind) return requestKind === 'account_erasure' && canonicalTuple"
+      "if (canonicalTuple && (!requestKind || requestKind === 'account_erasure')) return true"
     );
+    expect(HELP_CONTROLLER).toContain(
+      "if (requestKind && requestKind !== 'account_erasure') return false"
+    );
+    expect(HELP_CONTROLLER).toContain('A bare "LGPD" mention never opens destructive controls');
   });
 
   test('usa token opaco aleatorio e estavel, nunca hash de e-mail/UUID', () => {

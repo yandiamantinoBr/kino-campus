@@ -8,6 +8,10 @@ const CONTROLLER = fs.readFileSync(
   path.join(ROOT, 'assets/js/controllers/admin/admin-help-requests.controller.js'),
   'utf8'
 );
+const PAGE = fs.readFileSync(
+  path.join(ROOT, 'admin/help-requests.html'),
+  'utf8'
+);
 
 describe('admin help-requests draft structure', () => {
   test('persists drafts across renderRows wipe and leave/return', () => {
@@ -16,6 +20,9 @@ describe('admin help-requests draft structure', () => {
     expect(CONTROLLER).toContain('applyAllVisibleCardDrafts');
     expect(CONTROLLER).toContain('flushAdminDraftSave');
     expect(CONTROLLER).toContain('restoreAdminFiltersFromDraft');
+    expect(CONTROLLER).toContain('scheduleAdminDraftRestore');
+    expect(CONTROLLER).toContain('markAdminDraftFieldDirty');
+    expect(CONTROLLER).toContain('mergeTicketDraft');
   });
 
   test('renderRows snapshots then restores operator fields', () => {
@@ -24,13 +31,37 @@ describe('admin help-requests draft structure', () => {
     const end = CONTROLLER.indexOf('function unwrapRowsResponse', idx);
     const slice = CONTROLLER.slice(idx, end > idx ? end : idx + 8000);
     expect(slice).toContain('captureAllVisibleCardDrafts');
-    expect(slice).toContain('applyAllVisibleCardDrafts');
+    expect(slice).toContain('scheduleAdminDraftRestore');
     expect(slice).toContain('list.innerHTML = cards.join');
   });
 
-  test('uses dual storage and TTL', () => {
+  test('uses dual storage, dirty capture and TTL', () => {
     expect(CONTROLLER).toContain('sessionStorage');
     expect(CONTROLLER).toContain('localStorage');
     expect(CONTROLLER).toContain('ADMIN_HELP_DRAFT_TTL_MS');
+    expect(CONTROLLER).toContain('adminDraftDirty');
+    expect(CONTROLLER).toContain('adminFiltersDirty');
+    expect(CONTROLLER).toMatch(/empty DOM rebuilds[\s\S]{0,80}cannot wipe|cannot wipe operator typing/);
+  });
+
+  test('restores filters after auth wipe and does not double-paint loadRows success', () => {
+    const reauthIdx = CONTROLLER.indexOf('async function reauthorizeAdminView');
+    expect(reauthIdx).toBeGreaterThan(0);
+    const reauthSlice = CONTROLLER.slice(reauthIdx, reauthIdx + 1200);
+    expect(reauthSlice).toContain('clearSensitiveAdminState');
+    expect(reauthSlice).toContain('restoreAdminFiltersFromDraft');
+
+    const loadIdx = CONTROLLER.indexOf('async function loadRows');
+    expect(loadIdx).toBeGreaterThan(0);
+    const loadEnd = CONTROLLER.indexOf('async function saveRow', loadIdx);
+    const loadSlice = CONTROLLER.slice(loadIdx, loadEnd > loadIdx ? loadEnd : loadIdx + 4000);
+    // Success path must render once (in finally), not try+finally.
+    const successRenders = (loadSlice.match(/if \(!loadFailed\) renderRows/g) || []).length;
+    expect(successRenders).toBe(1);
+    expect(loadSlice).toContain('Single paint path');
+  });
+
+  test('cache-busts controller to 8.6.17 on admin page', () => {
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.17');
   });
 });
