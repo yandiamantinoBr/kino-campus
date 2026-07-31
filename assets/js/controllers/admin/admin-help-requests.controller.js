@@ -1171,6 +1171,133 @@
       .filter(Boolean);
   }
 
+  /**
+   * Human checklist for moderators (joins Help ticket + DSR protocol + Edge workflow).
+   * Matches the operational path reflected in historical LGPD PDF reports.
+   */
+  function getLgpdModeratorGuide(ctx) {
+    const steps = [
+      {
+        key: 'identity',
+        label: '1. Vincular identidade (se o ticket for anônimo/legado)',
+        done: Boolean(ctx.canonicalIdentityLinked || ctx.postCoreSurface),
+        current: Boolean(ctx.identityLinkRequired),
+      },
+      {
+        key: 'diagnose',
+        label: '2. Preparar diagnóstico de dados',
+        done: Boolean(ctx.hasDiagnostics || ctx.postCoreSurface),
+        current: Boolean(ctx.canonicalIdentityLinked && !ctx.hasDiagnostics && !ctx.postCoreSurface),
+      },
+      {
+        key: 'hide',
+        label: '3. Ocultar conta e pedir confirmação por e-mail',
+        done: Boolean(
+          ctx.status === 'pending_confirmation'
+          || ctx.status === 'reversible_applied'
+          || ctx.status === 'confirmed'
+          || ctx.status === 'partial_failure'
+          || ctx.status === 'erased'
+          || ctx.postCoreSurface
+        ),
+        current: Boolean(
+          ctx.canonicalIdentityLinked
+          && ctx.hasDiagnostics
+          && (ctx.status === 'diagnosed' || ctx.status === 'não iniciado' || !ctx.status)
+          && !ctx.postCoreSurface
+        ),
+      },
+      {
+        key: 'wait',
+        label: '4. Aguardar resposta do titular (frase de confirmação)',
+        done: Boolean(
+          ctx.status === 'confirmed'
+          || ctx.status === 'partial_failure'
+          || ctx.status === 'erased'
+          || ctx.postCoreSurface
+        ),
+        current: Boolean(
+          ctx.status === 'pending_confirmation' || ctx.status === 'reversible_applied'
+        ),
+      },
+      {
+        key: 'erase',
+        label: '5. Executar exclusão confirmada (frase EXCLUIR e-mail)',
+        done: Boolean(ctx.status === 'erased' || ctx.postCoreSurface || ctx.coreErasedAt),
+        current: Boolean(
+          ctx.status === 'pending_confirmation'
+          || ctx.status === 'confirmed'
+          || (ctx.status === 'reversible_applied' && ctx.hasDiagnostics)
+        ),
+      },
+      {
+        key: 'close',
+        label: '6. Exportar relatório LGPD e só então marcar Resolvido',
+        done: Boolean(ctx.status === 'erased' && ctx.helpStatus === 'resolved'),
+        current: Boolean(ctx.status === 'erased' || (ctx.postCoreSurface && ctx.coreErasedAt)),
+      },
+    ];
+    // Ensure only one "current" step: first incomplete current wins.
+    let foundCurrent = false;
+    const normalized = steps.map((step) => {
+      if (step.done) {
+        return Object.assign({}, step, { current: false });
+      }
+      if (!foundCurrent && step.current) {
+        foundCurrent = true;
+        return step;
+      }
+      if (!foundCurrent && !step.current) {
+        // Fall through — keep as pending unless nothing marked current yet
+        return step;
+      }
+      return Object.assign({}, step, { current: false });
+    });
+    if (!foundCurrent) {
+      const firstOpen = normalized.find((step) => !step.done);
+      if (firstOpen) firstOpen.current = true;
+    }
+    const current = normalized.find((step) => step.current) || normalized[normalized.length - 1];
+    return { steps: normalized, current };
+  }
+
+  function buildLgpdModeratorGuideHtml(guide, protocol) {
+    if (!guide || !Array.isArray(guide.steps)) return '';
+    const items = guide.steps.map((step) => {
+      const stateClass = step.done
+        ? 'is-done'
+        : step.current
+          ? 'is-current'
+          : 'is-pending';
+      const icon = step.done
+        ? 'fa-circle-check'
+        : step.current
+          ? 'fa-circle-right'
+          : 'fa-circle';
+      return [
+        `<li class="kc-admin-lgpd-checklist__item ${stateClass}">`,
+        `<i class="fas ${icon}" aria-hidden="true"></i>`,
+        `<span>${esc(step.label)}</span>`,
+        '</li>',
+      ].join('');
+    }).join('');
+    const next = guide.current
+      ? `<p class="kc-admin-lgpd-next"><strong>Próximo passo:</strong> ${esc(guide.current.label)}</p>`
+      : '';
+    const protocolLine = protocol
+      ? `<p class="kc-admin-lgpd-protocol"><strong>Protocolo do titular (DSR):</strong> <code>${esc(protocol)}</code> — o mesmo protocolo que o usuário vê em Configurações.</p>`
+      : '<p class="kc-admin-lgpd-protocol"><strong>Protocolo do titular (DSR):</strong> ainda não vinculado. Complete a etapa 1 se o pedido for anônimo.</p>';
+    return [
+      '<div class="kc-admin-lgpd-guide" role="region" aria-label="Roteiro do moderador para exclusão LGPD">',
+      '  <strong><i class="fas fa-list-ol" aria-hidden="true"></i> Roteiro unificado (pedido de ajuda + protocolo)</strong>',
+      `  ${protocolLine}`,
+      next,
+      `  <ol class="kc-admin-lgpd-checklist">${items}</ol>`,
+      '  <p class="kc-admin-lgpd-guide-note">Dica: use <em>Exportar relatório LGPD</em> a qualquer momento para o PDF de evidência (como os relatórios “Em andamento” / “Resolvido”). Não marque o ticket como Resolvido antes da etapa 5.</p>',
+      '</div>',
+    ].join('');
+  }
+
   function buildLgpdPanel(row) {
     if (!isLgpdErasureRequest(row)) return '';
     const targetEmail = getLgpdTargetEmail(row);
@@ -1336,6 +1463,25 @@
     const providerSummary = manualProviders.length
       ? manualProviders.join(', ')
       : 'Execute o diagnóstico para carregar a matriz de operadores.';
+    const protocol = String(
+      helpMetadata.protocol
+      || helpMetadata.data_subject_protocol
+      || requestMetadata.protocol
+      || (result && result.protocol)
+      || (result && result.data_subject_request && result.data_subject_request.protocol)
+      || ''
+    ).trim();
+    const hasDiagnostics = Boolean(diagnostics && diagnostics.counts);
+    const moderatorGuide = getLgpdModeratorGuide({
+      canonicalIdentityLinked,
+      identityLinkRequired,
+      postCoreSurface,
+      hasDiagnostics,
+      status,
+      coreErasedAt,
+      helpStatus: String(row && row.status || ''),
+    });
+    const moderatorGuideHtml = buildLgpdModeratorGuideHtml(moderatorGuide, protocol);
 
     return [
       `<section class="kc-admin-lgpd-panel" data-lgpd-panel aria-labelledby="lgpd-title-${esc(id)}" aria-describedby="lgpd-guidance-${esc(id)}"${busy ? ' aria-busy="true"' : ''}>`,
@@ -1343,11 +1489,15 @@
       '  <div class="kc-admin-lgpd-panel__head">',
       '    <div>',
       `      <strong id="lgpd-title-${esc(id)}"><i class="fas fa-shield-heart" aria-hidden="true"></i> Solicitação LGPD</strong>`,
-      '      <p>Fluxo seguro: diagnosticar, ocultar de forma reversível, pedir confirmação e só então executar a eliminação irreversível.</p>',
+      '      <p>Fluxo unificado: o pedido de ajuda e o protocolo do titular (Configurações) são o mesmo caso. Siga o roteiro numerado abaixo — é o mesmo caminho dos relatórios PDF de andamento/resolvido.</p>',
       '    </div>',
       `    <span class="kc-admin-help-chip"><i class="fas fa-circle-info" aria-hidden="true"></i>${esc(statusLabel)}</span>`,
       '  </div>',
+      moderatorGuideHtml,
       '  <div class="kc-admin-help-meta">',
+      protocol
+        ? `    <div><strong>Protocolo DSR</strong><span>${esc(protocol)}</span></div>`
+        : '',
       `    <div><strong>E-mail alvo</strong><span>${esc(targetEmail || 'Não informado')}</span></div>`,
       `    <div><strong>Confirmação irreversível</strong><span>${esc(confirmationSummary)}</span></div>`,
       `    <div><strong>Núcleo excluído</strong><span>${coreErasedAt ? 'Sim' : 'Não'}</span></div>`,
@@ -1698,6 +1848,43 @@
       showToast('Urgência inválida para triagem.', 'error');
       return;
     }
+
+    // Soft guard: LGPD erasure tickets should not be marked resolved before
+    // the Edge workflow finishes (matches "Pode fechar?" on LGPD PDF reports).
+    if (status === 'resolved' || status === 'archived') {
+      const row = (Array.isArray(state.rows) ? state.rows : []).find(
+        (item) => String(item && item.id || '').trim() === id
+      );
+      if (row && isLgpdErasureRequest(row)) {
+        const erasure = state.erasureResults[id] || null;
+        const erasureStatus = String(
+          erasure && erasure.request && erasure.request.status
+            ? erasure.request.status
+            : ''
+        ).trim();
+        const redacted = isRedactedPostCoreErasure(row);
+        const safeToClose = erasureStatus === 'erased'
+          || erasureStatus === 'cancelled'
+          || redacted;
+        if (!safeToClose) {
+          const label = erasureStatus
+            ? (LGPD_STATUS_LABELS[erasureStatus] || erasureStatus)
+            : 'fluxo LGPD ainda não finalizado';
+          const proceed = typeof window.confirm === 'function'
+            ? window.confirm(
+              `Atenção: este pedido ainda não está pronto para fechamento LGPD (situação: ${label}).\n\n`
+              + 'Só marque Resolvido/Arquivado se o titular cancelou formalmente ou se a exclusão já foi executada e revisada no relatório.\n\n'
+              + 'Deseja continuar mesmo assim?'
+            )
+            : true;
+          if (!proceed) {
+            showToast('Triagem não salva. Conclua o roteiro LGPD ou cancele com o titular antes de fechar.', 'warn', 4200);
+            return;
+          }
+        }
+      }
+    }
+
     const access = await checkAdminAccess(adminContext);
     if (!access || !isActiveAdminContext(adminContext)) return;
 
@@ -1902,9 +2089,9 @@
     }));
     const steps = [
       {
-        etapa: '1. Validação da solicitação',
-        status: result.ok === false ? 'Falhou' : 'Disponível',
-        detalhe: 'Confere se há e-mail alvo e se a solicitação está vinculada ao pedido de ajuda.',
+        etapa: '1. Vínculo de identidade (Help + protocolo DSR)',
+        status: hasCanonicalErasureLink(row) ? 'Confirmado' : 'Pendente / anônimo',
+        detalhe: 'Confere titular UUID, protocolo KC-DSR e, se anônimo, o vínculo administrativo auditado.',
       },
       {
         etapa: '2. Diagnóstico de dados',
@@ -1919,12 +2106,17 @@
       {
         etapa: '4. Confirmação do titular',
         status: request.confirmed_at ? 'Confirmada' : 'Aguardando resposta',
-        detalhe: 'Exige resposta por e-mail antes da eliminação irreversível.',
+        detalhe: 'Exige resposta por e-mail (frase de confirmação) antes da eliminação irreversível.',
       },
       {
         etapa: '5. Exclusão/anonimização final',
         status: request.erased_at || receipt.erased_at ? 'Executada' : 'Pendente',
         detalhe: 'Executa limpeza de Auth, dados cadastrais, mídias e vínculos pessoais quando confirmado.',
+      },
+      {
+        etapa: '6. Fechamento do pedido de ajuda',
+        status: String(row && row.status || '') === 'resolved' ? 'Resolvido' : 'Aberto',
+        detalhe: 'Só marque Resolvido após exclusão executada (ou cancelamento formal) e revisão do relatório LGPD.',
       },
     ];
     return {
