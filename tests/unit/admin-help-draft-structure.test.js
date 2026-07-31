@@ -61,8 +61,8 @@ describe('admin help-requests draft structure', () => {
     expect(loadSlice).toContain('Single paint path');
   });
 
-  test('cache-busts controller to 8.6.19 on admin page', () => {
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.19');
+  test('cache-busts controller to 8.6.20 on admin page', () => {
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.20');
   });
 
   test('soft reauth keeps queue painted on leave/return', () => {
@@ -72,5 +72,19 @@ describe('admin help-requests draft structure', () => {
     expect(CONTROLLER).toContain('reauthorizeAdminView({ soft: true })');
     expect(CONTROLLER).toMatch(/showLoading\(true,\s*\{\s*silent:/);
     expect(CONTROLLER).toContain('silent: keepPaint');
+  });
+
+  test('chip triage auto-saves without Salvar triagem button', () => {
+    expect(CONTROLLER).toContain('buildStatusTriageChips');
+    expect(CONTROLLER).toContain('buildPriorityTriageChips');
+    expect(CONTROLLER).toContain('data-help-status-set');
+    expect(CONTROLLER).toContain('data-help-priority-set');
+    expect(CONTROLLER).toContain('setCardTriageUi');
+    expect(CONTROLLER).toContain('async function saveRow(card, overrides = {})');
+    expect(CONTROLLER).toContain('kc-admin-help-triage');
+    expect(CONTROLLER).not.toMatch(/data-help-save><i class="fas fa-floppy-disk"/);
+    expect(CONTROLLER).toMatch(/attr === 'data-help-status' \|\| attr === 'data-help-priority'\) return/);
+    expect(PAGE).toContain('kc-admin-help-chip--interactive');
+    expect(PAGE).toContain('kc-admin-help-triage');
   });
 });

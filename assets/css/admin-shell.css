@@ -1034,6 +1034,15 @@ body.kc-admin-page--dashboard .kc-admin-chart-modal__body .kc-admin-chart-shell 
   body.kc-admin-page--help-requests .kc-admin-help-actions {
     grid-template-columns: 1fr;
   }
+
+  body.kc-admin-page--help-requests .kc-admin-help-triage-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.kc-admin-page--help-requests .kc-admin-help-triage-label {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 768.98px) {
@@ -1456,6 +1465,15 @@ body.kc-admin-page--dashboard .kc-admin-chart-modal__body .kc-admin-chart-shell 
 
   body.kc-admin-page--help-requests .kc-admin-help-actions {
     grid-template-columns: 1fr;
+  }
+
+  body.kc-admin-page--help-requests .kc-admin-help-triage-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.kc-admin-page--help-requests .kc-admin-help-triage-label {
+    min-width: 0;
   }
 }
 
