@@ -32,6 +32,28 @@
     .kc-admin-help-metric { padding:16px; border-radius:18px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); }
     .kc-admin-help-metric strong { display:block; font-size:.82rem; color:var(--kc-text-dark-secondary); text-transform:uppercase; letter-spacing:.08em; }
     .kc-admin-help-metric span { display:block; margin-top:10px; font-size:1.8rem; font-weight:800; }
+    button.kc-admin-help-metric--action {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    button.kc-admin-help-metric--action:hover {
+      border-color: color-mix(in srgb, var(--kc-primary-brand) 55%, var(--kc-border-dark));
+      background: color-mix(in srgb, var(--kc-primary-brand) 10%, var(--kc-surface-dark));
+    }
+    button.kc-admin-help-metric--action:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--kc-primary-brand) 80%, white);
+      outline-offset: 2px;
+    }
+    button.kc-admin-help-metric--action.is-active {
+      border-color: color-mix(in srgb, var(--kc-primary-brand) 70%, var(--kc-border-dark));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--kc-primary-brand) 30%, transparent);
+    }
     .kc-admin-help-list { display:grid; gap:14px; }
     .kc-admin-help-card { padding:18px; border-radius:18px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); display:grid; gap:14px; }
     .kc-admin-help-card-top { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
@@ -234,10 +256,10 @@
         <div class="kc-admin-header-bar">
           <div>
             <h1><i class="fas fa-life-ring" style="color:var(--kc-primary-brand);margin-right:8px;"></i>Pedidos de ajuda</h1>
-            <p>Triagem centralizada de dúvidas, reclamações, elogios, denúncias e problemas de conta enviados pela central de ajuda.</p>
+            <p>Triagem centralizada de dúvidas, reclamações, elogios, denúncias e problemas de conta. Clique nos chips de status/urgência de cada pedido para salvar automaticamente.</p>
           </div>
           <div class="kc-admin-toolbar">
-            <select id="helpStatusFilter" title="Filtrar por status" data-i18n-tooltip="tooltip.filter-status">
+            <select id="helpStatusFilter" title="Filtrar por status" data-i18n-tooltip="tooltip.filter-status" aria-label="Filtrar por status">
               <option value="all">Todos os status</option>
               <option value="new">Novo</option>
               <option value="triaged">Triado</option>
@@ -245,20 +267,21 @@
               <option value="resolved">Resolvido</option>
               <option value="archived">Arquivado</option>
             </select>
-            <select id="helpTypeFilter" title="Filtrar por categoria" data-i18n-tooltip="tooltip.filter-category">
+            <select id="helpTypeFilter" title="Filtrar por categoria" data-i18n-tooltip="tooltip.filter-category" aria-label="Filtrar por categoria">
               <option value="all">Todas as categorias</option>
             </select>
-            <select id="helpPriorityFilter" title="Filtrar por urgência" data-i18n-tooltip="tooltip.filter-urgency">
+            <select id="helpPriorityFilter" title="Filtrar por urgência" data-i18n-tooltip="tooltip.filter-urgency" aria-label="Filtrar por urgência">
               <option value="all">Todas as urgências</option>
               <option value="low">Baixa</option>
               <option value="normal">Normal</option>
               <option value="high">Alta</option>
               <option value="urgent">Urgente</option>
             </select>
-            <input id="helpQueryFilter" type="search" placeholder="Buscar por assunto, e-mail ou página" data-i18n-placeholder="placeholder.admin-help-search" />
-            <button id="helpRefreshButton" type="button"><i class="fas fa-rotate"></i> Atualizar</button>
-            <button id="helpExportXlsx" type="button"><i class="fas fa-file-excel"></i> XLSX</button>
-            <button id="helpExportPdf" type="button"><i class="fas fa-file-pdf"></i> PDF</button>
+            <input id="helpQueryFilter" type="search" placeholder="Buscar por assunto, e-mail ou página" data-i18n-placeholder="placeholder.admin-help-search" aria-label="Buscar pedidos de ajuda" />
+            <button id="helpRefreshButton" type="button"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar</button>
+            <button id="helpClearFiltersButton" type="button" hidden disabled title="Limpar filtros da fila"><i class="fas fa-filter-circle-xmark" aria-hidden="true"></i> Limpar filtros</button>
+            <button id="helpExportXlsx" type="button"><i class="fas fa-file-excel" aria-hidden="true"></i> XLSX</button>
+            <button id="helpExportPdf" type="button"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</button>
           </div>
         </div>
 
@@ -343,6 +366,6 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.20"></script>
+  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.21"></script>
 </body>
 </html>

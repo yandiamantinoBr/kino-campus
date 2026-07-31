@@ -54,7 +54,17 @@ describe('admin help-requests chip triage UX', () => {
   test('page styles interactive triage chips and cache-busts assets', () => {
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.20');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.21');
     expect(PAGE).toContain('admin-shell.css?v=8.6.13');
+  });
+
+  test('supports summary filter shortcuts and clear-filters control', () => {
+    expect(CONTROLLER).toContain('function applyQueueFilters');
+    expect(CONTROLLER).toContain('function clearQueueFilters');
+    expect(CONTROLLER).toContain('data-help-filter-shortcut');
+    expect(CONTROLLER).toContain('state.triageJustSaved');
+    expect(CONTROLLER).toContain('saiu do filtro atual');
+    expect(PAGE).toContain('helpClearFiltersButton');
+    expect(PAGE).toContain('Limpar filtros');
   });
 });

@@ -107,11 +107,15 @@
     exportSupplementBusy: {},
     exportSupplementUncertain: {},
     triageBusy: {},
+    /** @type {Record<string, number>} id -> saved_at_ms for post-save hint after re-render */
+    triageJustSaved: {},
     requestToken: 0,
     authGeneration: 0,
     authorizedAdminUserId: '',
     isAuthorized: false,
   };
+
+  const TRIAGE_SAVED_HINT_MS = 5000;
 
   let eventsBound = false;
   let adminDraftTimer = null;
@@ -807,6 +811,7 @@
     state.exportSupplementBusy = Object.create(null);
     state.exportSupplementUncertain = Object.create(null);
     state.triageBusy = Object.create(null);
+    state.triageJustSaved = Object.create(null);
     clearAdminViewSnapshot();
 
     const queryField = $('#helpQueryFilter');
@@ -1160,6 +1165,63 @@
     state.filters.query = String($('#helpQueryFilter')?.value || '').trim();
   }
 
+  function applyQueueFilters(nextFilters, options = {}) {
+    const filters = nextFilters && typeof nextFilters === 'object' ? nextFilters : {};
+    const statusEl = $('#helpStatusFilter');
+    const typeEl = $('#helpTypeFilter');
+    const priorityEl = $('#helpPriorityFilter');
+    const queryEl = $('#helpQueryFilter');
+    if (Object.prototype.hasOwnProperty.call(filters, 'status') && statusEl) {
+      statusEl.value = String(filters.status || 'all');
+    }
+    if (Object.prototype.hasOwnProperty.call(filters, 'type') && typeEl) {
+      typeEl.value = String(filters.type || 'all');
+    }
+    if (Object.prototype.hasOwnProperty.call(filters, 'priority') && priorityEl) {
+      priorityEl.value = String(filters.priority || 'all');
+    }
+    if (Object.prototype.hasOwnProperty.call(filters, 'query') && queryEl) {
+      queryEl.value = String(filters.query || '');
+    }
+    adminFiltersDirty = true;
+    readFilters();
+    try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
+    if (options.reload === false) return;
+    loadRows({
+      limit: Math.max(state.pagination.limit || HELP_PAGE_SIZE, HELP_PAGE_SIZE),
+    });
+  }
+
+  function clearQueueFilters() {
+    applyQueueFilters({
+      status: 'all',
+      type: 'all',
+      priority: 'all',
+      query: '',
+    });
+  }
+
+  function updateClearFiltersButton() {
+    const button = $('#helpClearFiltersButton');
+    if (!button) return;
+    const snap = readCurrentFilterSnapshot();
+    const active = !isDefaultFilterSnapshot(snap);
+    button.hidden = !active;
+    button.disabled = !active;
+  }
+
+  function triageSavedHintFor(id) {
+    const key = String(id || '').trim();
+    if (!key) return '';
+    const savedAt = Number(state.triageJustSaved[key] || 0);
+    if (!savedAt) return '';
+    if ((Date.now() - savedAt) > TRIAGE_SAVED_HINT_MS) {
+      delete state.triageJustSaved[key];
+      return '';
+    }
+    return 'Triagem salva.';
+  }
+
   function formatDateTime(value) {
     if (!value) return '-';
     try {
@@ -1185,16 +1247,54 @@
 
     const list = Array.isArray(rows) ? rows : [];
     const totalCount = Math.max(list.length, toFiniteNumber(state.pagination.totalCount, list.length));
+    const currentStatus = String(state.filters.status || 'all');
+    const currentPriority = String(state.filters.priority || 'all');
     const metrics = [
-      { label: 'Total filtrado', value: totalCount },
-      { label: 'Exibindo', value: list.length },
-      { label: 'Urgentes na tela', value: list.filter((row) => row && row.priority === 'urgent').length },
-      { label: 'Em andamento', value: list.filter((row) => row && row.status === 'in_progress').length },
+      {
+        label: 'Total filtrado',
+        value: totalCount,
+        action: 'clear',
+        title: 'Limpar filtros e ver a fila completa',
+        active: !isDefaultFilterSnapshot(readCurrentFilterSnapshot()),
+      },
+      {
+        label: 'Exibindo',
+        value: list.length,
+        action: '',
+        title: 'Pedidos carregados nesta página',
+        active: false,
+      },
+      {
+        label: 'Urgentes na tela',
+        value: list.filter((row) => row && row.priority === 'urgent').length,
+        action: 'priority:urgent',
+        title: 'Filtrar fila por urgência Urgente',
+        active: currentPriority === 'urgent',
+      },
+      {
+        label: 'Em andamento',
+        value: list.filter((row) => row && row.status === 'in_progress').length,
+        action: 'status:in_progress',
+        title: 'Filtrar fila por status Em andamento',
+        active: currentStatus === 'in_progress',
+      },
     ];
 
     target.innerHTML = metrics.map((item) => {
-      return `<div class="kc-admin-help-metric"><strong>${esc(item.label)}</strong><span>${esc(item.value)}</span></div>`;
+      const interactive = Boolean(item.action);
+      const activeClass = item.active ? ' is-active' : '';
+      if (!interactive) {
+        return `<div class="kc-admin-help-metric"><strong>${esc(item.label)}</strong><span>${esc(item.value)}</span></div>`;
+      }
+      return [
+        `<button type="button" class="kc-admin-help-metric kc-admin-help-metric--action${activeClass}"`,
+        ` data-help-filter-shortcut="${esc(item.action)}"`,
+        ` title="${esc(item.title)}">`,
+        `<strong>${esc(item.label)}</strong><span>${esc(item.value)}</span>`,
+        `</button>`,
+      ].join('');
     }).join('');
+    updateClearFiltersButton();
   }
 
   function renderEmpty() {
@@ -2413,7 +2513,7 @@
         '      <span class="kc-admin-help-triage-label"><i class="fas fa-bolt" aria-hidden="true"></i> Urgência</span>',
         `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildPriorityTriageChips(priorityValue)}</div>`,
         '    </div>',
-        '    <p class="kc-admin-help-triage-hint" data-help-triage-status aria-live="polite">Clique em um chip para salvar a triagem automaticamente.</p>',
+        `    <p class="kc-admin-help-triage-hint" data-help-triage-status aria-live="polite">${esc(triageSavedHintFor(row.id) || 'Clique em um chip para salvar a triagem automaticamente.')}</p>`,
         '  </div>',
         // Hidden fields keep draft restore / legacy selectors working.
         `  <input type="hidden" data-help-status value="${esc(statusValue)}" />`,
@@ -2726,10 +2826,21 @@
           priority: priority,
         });
       }
+      state.triageJustSaved[id] = Date.now();
       setCardTriageUi(card, status, priority, { saving: false });
       const hint = card.querySelector('[data-help-triage-status]');
       if (hint) hint.textContent = 'Triagem salva.';
-      showToast('Triagem atualizada.', 'success', 2200);
+      const stillInFilter = (
+        (state.filters.status === 'all' || state.filters.status === status)
+        && (state.filters.priority === 'all' || state.filters.priority === priority)
+      );
+      showToast(
+        stillInFilter
+          ? 'Triagem atualizada.'
+          : 'Triagem atualizada. O pedido saiu do filtro atual.',
+        'success',
+        2600
+      );
       // Drop triage draft keys so the next paint uses server status/priority;
       // keep LGPD/export identity drafts intact.
       try {
@@ -4402,6 +4513,36 @@
       refreshButton.addEventListener('click', function () {
         try { flushAdminDraftSave(); } catch (_) { /* ignore */ }
         loadRows({ limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE) });
+      });
+    }
+
+    const clearFiltersButton = $('#helpClearFiltersButton');
+    if (clearFiltersButton) {
+      clearFiltersButton.addEventListener('click', function () {
+        clearQueueFilters();
+      });
+    }
+
+    const summary = $('#helpSummary');
+    if (summary) {
+      summary.addEventListener('click', function (event) {
+        const shortcut = event.target && event.target.closest
+          ? event.target.closest('[data-help-filter-shortcut]')
+          : null;
+        if (!shortcut) return;
+        event.preventDefault();
+        const action = String(shortcut.getAttribute('data-help-filter-shortcut') || '').trim();
+        if (action === 'clear') {
+          clearQueueFilters();
+          return;
+        }
+        if (action.indexOf('status:') === 0) {
+          applyQueueFilters({ status: action.slice('status:'.length) || 'all' });
+          return;
+        }
+        if (action.indexOf('priority:') === 0) {
+          applyQueueFilters({ priority: action.slice('priority:'.length) || 'all' });
+        }
       });
     }
 
