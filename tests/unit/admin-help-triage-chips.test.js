@@ -54,8 +54,9 @@ describe('admin help-requests chip triage UX', () => {
   test('page styles interactive triage chips and cache-busts assets', () => {
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.21');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.22');
     expect(PAGE).toContain('admin-shell.css?v=8.6.13');
+    expect(PAGE).toContain('is-triage-leaving');
   });
 
   test('supports summary filter shortcuts and clear-filters control', () => {
@@ -63,8 +64,22 @@ describe('admin help-requests chip triage UX', () => {
     expect(CONTROLLER).toContain('function clearQueueFilters');
     expect(CONTROLLER).toContain('data-help-filter-shortcut');
     expect(CONTROLLER).toContain('state.triageJustSaved');
-    expect(CONTROLLER).toContain('saiu do filtro atual');
     expect(PAGE).toContain('helpClearFiltersButton');
     expect(PAGE).toContain('Limpar filtros');
+  });
+
+  test('chip auto-save stays quiet (no success toast spam)', () => {
+    const idx = CONTROLLER.indexOf('async function saveRow');
+    expect(idx).toBeGreaterThan(0);
+    const slice = CONTROLLER.slice(idx, idx + 8000);
+    expect(slice).not.toContain('Triagem atualizada.');
+    expect(slice).not.toContain('O pedido saiu do filtro atual');
+    expect(CONTROLLER).toContain('function cardMatchesActiveTriageFilters');
+    expect(slice).toContain('is-triage-leaving');
+    expect(slice).toContain('statusMessage:');
+    expect(slice).toContain('Chip auto-save is high-frequency: no success toast');
+    // Errors and LGPD warn still toast.
+    expect(slice).toContain("showToast('Não foi possível salvar a triagem.', 'error')");
+    expect(slice).toContain("showToast('Triagem não salva.");
   });
 });
