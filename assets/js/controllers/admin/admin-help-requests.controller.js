@@ -1829,16 +1829,22 @@
     );
     const diagnostics = result && result.diagnostics ? result.diagnostics : null;
     const countsHtml = diagnostics && diagnostics.counts ? summarizeCounts(diagnostics.counts) : '';
-    const redactedMarker = redactedPostCore
-      ? getHelpMetadata(row).lgpd_erasure
+    const helpMetadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+    const helpErasure = helpMetadata.lgpd_erasure && typeof helpMetadata.lgpd_erasure === 'object'
+      ? helpMetadata.lgpd_erasure
       : {};
+    const redactedMarker = redactedPostCore ? helpErasure : {};
+    const helpStage = String(helpErasure.stage || '').trim();
+    // Prefer live workflow status; fall back to durable Help stage so a missing
+    // in-memory diagnose result does not send the checklist back to Passo 1/2.
     const status = request && request.status
       ? String(request.status)
-      : redactedPostCore
-        ? 'post_core_redacted'
-        : 'não iniciado';
+      : helpStage
+        ? helpStage
+        : redactedPostCore
+          ? 'post_core_redacted'
+          : 'não iniciado';
     const requestMetadata = request && request.metadata && typeof request.metadata === 'object' ? request.metadata : {};
-    const helpMetadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
     const copyPreference = String(helpMetadata.export_before_erasure || '').trim();
     const copyGate = requestMetadata.pre_erasure_copy_gate && typeof requestMetadata.pre_erasure_copy_gate === 'object'
       ? requestMetadata.pre_erasure_copy_gate
@@ -1984,7 +1990,11 @@
       || (result && result.data_subject_request && result.data_subject_request.protocol)
       || ''
     ).trim();
-    const hasDiagnostics = Boolean(diagnostics && diagnostics.counts);
+    const hasDiagnostics = Boolean(
+      (diagnostics && diagnostics.counts)
+      || ['pending_confirmation', 'reversible_applied', 'confirmed', 'partial_failure', 'erased', 'diagnosed'].includes(status)
+      || Boolean(helpStage)
+    );
     const moderatorGuide = getLgpdModeratorGuide({
       canonicalIdentityLinked,
       identityLinkRequired,
@@ -3088,9 +3098,10 @@
   }
 
   function markErasureOutcomeUncertain(id, action) {
-    // Never trap Passo 1 (protocol creation). Unlinked tickets cannot diagnose
-    // their way out of an uncertain lock.
-    if (String(action || '') === 'link_verified_identity') return;
+    // Never trap early LGPD steps that have no safe "diagnose-only" recovery when
+    // the mutation already ran (or partially ran) on a split workflow.
+    const act = String(action || '');
+    if (act === 'link_verified_identity' || act === 'apply_reversible') return;
     state.erasureUncertain[id] = {
       action,
       recordedAt: new Date().toISOString(),
@@ -3270,6 +3281,47 @@
         result && result.linked === true
           ? 'O protocolo ainda não aparece no ticket recarregado. Atualize a fila e tente “Criar protocolo” de novo (a operação é idempotente).'
           : 'Não foi possível criar/confirmar o protocolo neste ticket. Confira e-mail, evidência e tente novamente.',
+        'error'
+      );
+      return;
+    }
+
+    // Phase 3 (hide + confirmation email): if the edge returned a workflow body,
+    // trust it as committed even when a subsequent diagnose reads a split row.
+    if (action === 'apply_reversible') {
+      delete state.erasureUncertain[id];
+      if (result && result.ok !== false && result.request) {
+        state.erasureResults[id] = {
+          ...(currentResult || {}),
+          ...result,
+          ok: true,
+        };
+        renderRows(state.rows);
+        const st = String(result.request.status || '').trim();
+        const emailStatus = String(
+          result.email && result.email.status
+          || result.request.metadata && result.request.metadata.confirmation_email_status
+          || ''
+        ).trim();
+        showToast(
+          st === 'pending_confirmation' || emailStatus === 'sent'
+            ? 'Ocultação aplicada e pedido de confirmação enviado. Execute Preparar diagnóstico para atualizar o roteiro (fase 4).'
+            : emailStatus === 'draft_only' || st === 'reversible_applied'
+              ? 'Ocultação aplicada, mas o e-mail automático não foi confirmado. Registre o envio manual ou execute Preparar diagnóstico.'
+              : 'Ocultação registrada. Execute Preparar diagnóstico para sincronizar o estado do fluxo.',
+          'success'
+        );
+        return;
+      }
+      renderRows(state.rows);
+      if (result && result.ok === false) {
+        showToast(friendlyLgpdErrorMessage(result.error || result), 'error');
+        return;
+      }
+      showToast(
+        transportFailed
+          ? 'A rede interrompeu a resposta da ocultação. Execute Preparar diagnóstico antes de repetir a fase 3.'
+          : 'Não foi possível confirmar a ocultação. Execute Preparar diagnóstico e confira o estado antes de repetir.',
         'error'
       );
       return;
