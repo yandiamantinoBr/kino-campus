@@ -3302,16 +3302,25 @@
     );
     const completionNotificationPending = currentRequest.status === 'erased'
       && currentMetadata.notification_pending === true;
-    if (
-      action === 'link_verified_identity'
-      && (
-        String(row.user_id || '').trim()
-        || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(verifiedAccountEmail)
-      )
-    ) {
-      setFieldInvalid(card, '[data-lgpd-account-email]', true);
-      showToast('Informe o e-mail exato da conta ainda não vinculada e atualize a fila se o ticket já mudou.', 'error');
-      return;
+    // Authenticated legacy tickets already have user_id but still need DSR
+    // materialization (needsErasureProtocolLink). Only reject when the email
+    // is invalid or the panel no longer offers the protocol-link action.
+    if (action === 'link_verified_identity') {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(verifiedAccountEmail)) {
+        setFieldInvalid(card, '[data-lgpd-account-email]', true);
+        showToast('Informe o e-mail exato da conta do titular para protocolar o pedido.', 'error');
+        return;
+      }
+      if (!canOfferErasureIdentityLink(row)) {
+        setFieldInvalid(card, '[data-lgpd-account-email]', true);
+        showToast(
+          hasCanonicalErasureLink(row)
+            ? 'Este ticket já possui protocolo e vínculo canônico. Atualize a fila e continue pelo diagnóstico.'
+            : 'Este ticket não está elegível para criar o protocolo de identidade. Atualize a fila e confira o estado do pedido.',
+          'error'
+        );
+        return;
+      }
     }
     if (
       action === 'link_verified_identity'
