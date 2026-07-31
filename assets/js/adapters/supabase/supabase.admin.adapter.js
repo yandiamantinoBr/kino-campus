@@ -793,12 +793,34 @@
 
       if (error) {
         console.error('[KCAPI][help] updateAdminHelpRequest:', error);
+        const raw = String(
+          (error && (error.message || error.details || error.hint || error.code)) || ''
+        ).trim();
+        if (raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0) {
+          return {
+            ok: false,
+            error: {
+              message: 'DSR_HELP_MUST_REMAIN_OPEN',
+              code: 'DSR_HELP_MUST_REMAIN_OPEN',
+            },
+          };
+        }
         return { ok: false, error: { message: error.message || 'Não foi possível atualizar o pedido.' } };
       }
 
       return { ok: true, data: data || null };
     } catch (e) {
       console.error('[KCAPI][help] updateAdminHelpRequest exceção:', e);
+      const raw = String((e && e.message) || '').trim();
+      if (raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0) {
+        return {
+          ok: false,
+          error: {
+            message: 'DSR_HELP_MUST_REMAIN_OPEN',
+            code: 'DSR_HELP_MUST_REMAIN_OPEN',
+          },
+        };
+      }
       return { ok: false, error: { message: 'Não foi possível atualizar o pedido.' } };
     }
   }

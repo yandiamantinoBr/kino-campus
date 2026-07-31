@@ -175,8 +175,10 @@
     'data-help-priority-set': true,
     'data-help-load-more': true,
     'data-help-id': true,
+    'data-help-copy': true,
     'data-help-triage': true,
     'data-help-triage-status': true,
+    'data-help-identity': true,
   };
 
   function adminDraftStorageClear() {
@@ -1661,6 +1663,85 @@
     return Boolean(getDataExportRequestKind(row));
   }
 
+  /**
+   * Open DSR for copy/portability must keep the help ticket open
+   * (DB trigger DSR_HELP_MUST_REMAIN_OPEN). Prefer local signals; when unsure
+   * and a DSR id is linked, treat as open (fail closed on close).
+   */
+  function getLinkedDataExportDsrStatus(row) {
+    if (!isDataExportSupplementRequest(row)) return '';
+    const id = String(row && row.id || '').trim();
+    const metadata = getHelpMetadata(row);
+    const fromMeta = String(
+      metadata.data_subject_request_status
+      || metadata.dsr_status
+      || ''
+    ).trim().toLowerCase();
+    if (fromMeta) return fromMeta;
+    const result = state.exportSupplementResults[id] || {};
+    const request = result.request && typeof result.request === 'object'
+      ? result.request
+      : (result.data_subject_request && typeof result.data_subject_request === 'object'
+        ? result.data_subject_request
+        : null);
+    return String(request && request.status || '').trim().toLowerCase();
+  }
+
+  function isOpenDataExportHelpRequest(row) {
+    if (!isDataExportSupplementRequest(row)) return false;
+    const metadata = getHelpMetadata(row);
+    const dsrId = String(metadata.data_subject_request_id || '').trim();
+    if (!UUID_RE.test(dsrId)) return false;
+    const status = getLinkedDataExportDsrStatus(row);
+    if (status && ['completed', 'cancelled', 'expired'].includes(status)) {
+      return false;
+    }
+    // Linked DSR without a proven terminal status stays open for close guards.
+    return true;
+  }
+
+  function getHelpTicketIdentity(row) {
+    const id = String(row && row.id || '').trim();
+    const metadata = getHelpMetadata(row);
+    const dsrId = String(metadata.data_subject_request_id || '').trim();
+    const protocol = String(metadata.protocol || metadata.dsr_protocol || '').trim();
+    const artifactRef = String(metadata.export_artifact_ref || '').trim().toUpperCase();
+    const shortId = id && UUID_RE.test(id)
+      ? id.slice(0, 8)
+      : (id ? id.slice(0, 12) : '');
+    return {
+      id: id,
+      shortId: shortId,
+      dsrId: UUID_RE.test(dsrId) ? dsrId : '',
+      protocol: protocol,
+      artifactRef: EXPORT_ARTIFACT_REF_RE.test(artifactRef) ? artifactRef : '',
+      userId: UUID_RE.test(String(row && row.user_id || '').trim())
+        ? String(row.user_id).trim()
+        : '',
+    };
+  }
+
+  function friendlyTriageErrorMessage(error) {
+    const raw = String(
+      error && typeof error === 'object'
+        ? (error.message || error.error || error.details || error.detail || error.code || '')
+        : (error || '')
+    ).trim();
+    const upper = raw.toUpperCase();
+    if (
+      upper.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0
+      || raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0
+    ) {
+      return 'Este ticket está vinculado a um protocolo aberto de cópia/portabilidade (LGPD). '
+        + 'Não é possível marcar Resolvido ou Arquivado até o DSR ser concluído, cancelado ou expirar. '
+        + 'Use o painel “Complemento integral da cópia” para diagnosticar, entregar ou cancelar o protocolo; depois arquive o ticket.';
+    }
+    if (/^[A-Z][A-Z0-9_]{2,80}$/.test(raw)) {
+      return 'Não foi possível salvar a triagem (' + raw + ').';
+    }
+    return raw || 'Não foi possível salvar a triagem.';
+  }
+
   function hasCanonicalDataExportLink(row) {
     if (!isDataExportSupplementRequest(row)) return false;
     const metadata = row && row.metadata && typeof row.metadata === 'object'
@@ -1824,7 +1905,7 @@
     return [
       `<section class="kc-admin-lgpd-panel" data-export-supplement-panel${busy ? ' aria-busy="true"' : ''}>`,
       '  <div class="kc-admin-lgpd-panel__head">',
-      '    <div><strong><i class="fas fa-file-shield" aria-hidden="true"></i> Complemento integral da cópia</strong><p>O atendimento não pode ser fechado enquanto houver operador pendente ou até a entrega integral ser comprovada.</p></div>',
+      '    <div><strong><i class="fas fa-file-shield" aria-hidden="true"></i> Complemento integral da cópia</strong><p>Enquanto o protocolo DSR de cópia/portabilidade estiver aberto, o ticket <strong>não pode</strong> ser Resolvido nem Arquivado (regra <code>DSR_HELP_MUST_REMAIN_OPEN</code>). Conclua entrega, cancele o protocolo ou aguarde expiração antes de fechar a triagem.</p></div>',
       `    <span class="kc-admin-help-chip">${esc(status)}</span>`,
       '  </div>',
       uncertain
@@ -2411,26 +2492,112 @@
     ].join('');
   }
 
-  function buildStatusTriageChips(currentStatus) {
-    const options = [
+  function buildStatusTriageChips(currentStatus, options = {}) {
+    const closeLocked = options.closeLocked === true;
+    const closeLockReason = String(options.closeLockReason || '').trim()
+      || 'Resolvido/Arquivado bloqueado enquanto o protocolo LGPD de cópia/portabilidade estiver aberto.';
+    const statusOptions = [
       { value: 'new', label: 'Novo', icon: 'fa-inbox' },
       { value: 'triaged', label: 'Triado', icon: 'fa-filter' },
       { value: 'in_progress', label: 'Em andamento', icon: 'fa-spinner' },
       { value: 'resolved', label: 'Resolvido', icon: 'fa-circle-check' },
       { value: 'archived', label: 'Arquivado', icon: 'fa-box-archive' },
     ];
-    return options.map((option) => {
+    return statusOptions.map((option) => {
       const active = option.value === currentStatus;
+      const isCloseStatus = option.value === 'resolved' || option.value === 'archived';
+      const locked = closeLocked && isCloseStatus && !active;
       return [
         `<button type="button"`,
-        ` class="kc-admin-help-chip kc-admin-help-chip--interactive kc-admin-help-chip--status-${esc(option.value)}${active ? ' is-active' : ''}"`,
+        ` class="kc-admin-help-chip kc-admin-help-chip--interactive kc-admin-help-chip--status-${esc(option.value)}${active ? ' is-active' : ''}${locked ? ' is-locked' : ''}"`,
         ` data-help-status-set="${esc(option.value)}"`,
+        locked ? ' data-help-status-locked="1"' : '',
         ` aria-pressed="${active ? 'true' : 'false'}"`,
-        ` title="Definir status: ${esc(option.label)}">`,
+        locked ? ' aria-disabled="true" disabled' : '',
+        ` title="${esc(locked ? closeLockReason : ('Definir status: ' + option.label))}">`,
         `<i class="fas ${option.icon}" aria-hidden="true"></i>${esc(option.label)}`,
         `</button>`,
       ].join('');
     }).join('');
+  }
+
+  function buildHelpIdentityBlock(row) {
+    const identity = getHelpTicketIdentity(row);
+    if (!identity.id) return '';
+    const lines = [
+      `<div class="kc-admin-help-identity" data-help-identity>`,
+      '  <div class="kc-admin-help-identity__row">',
+      '    <strong>ID do ticket</strong>',
+      '    <span class="kc-admin-help-identity__value">',
+      `      <code title="Identificador único do pedido de ajuda">${esc(identity.id)}</code>`,
+      `      <button type="button" class="kc-admin-help-copy" data-help-copy="${esc(identity.id)}" title="Copiar ID do ticket" aria-label="Copiar ID do ticket">`,
+      '        <i class="fas fa-copy" aria-hidden="true"></i> Copiar',
+      '      </button>',
+      '    </span>',
+      '  </div>',
+    ];
+    if (identity.shortId) {
+      lines.push(
+        '  <div class="kc-admin-help-identity__row">',
+        '    <strong>ID curto</strong>',
+        `    <span class="kc-admin-help-identity__value"><code>${esc(identity.shortId)}</code></span>`,
+        '  </div>'
+      );
+    }
+    if (identity.userId) {
+      lines.push(
+        '  <div class="kc-admin-help-identity__row">',
+        '    <strong>User ID (titular)</strong>',
+        '    <span class="kc-admin-help-identity__value">',
+        `      <code title="UUID da conta vinculada">${esc(identity.userId)}</code>`,
+        `      <button type="button" class="kc-admin-help-copy" data-help-copy="${esc(identity.userId)}" title="Copiar user id" aria-label="Copiar user id do titular">`,
+        '        <i class="fas fa-copy" aria-hidden="true"></i> Copiar',
+        '      </button>',
+        '    </span>',
+        '  </div>'
+      );
+    }
+    if (identity.dsrId) {
+      lines.push(
+        '  <div class="kc-admin-help-identity__row">',
+        '    <strong>ID do protocolo DSR</strong>',
+        '    <span class="kc-admin-help-identity__value">',
+        `      <code title="data_subject_request_id">${esc(identity.dsrId)}</code>`,
+        `      <button type="button" class="kc-admin-help-copy" data-help-copy="${esc(identity.dsrId)}" title="Copiar ID do DSR" aria-label="Copiar ID do protocolo DSR">`,
+        '        <i class="fas fa-copy" aria-hidden="true"></i> Copiar',
+        '      </button>',
+        '    </span>',
+        '  </div>'
+      );
+    }
+    if (identity.protocol) {
+      lines.push(
+        '  <div class="kc-admin-help-identity__row">',
+        '    <strong>Protocolo (código)</strong>',
+        '    <span class="kc-admin-help-identity__value">',
+        `      <code>${esc(identity.protocol)}</code>`,
+        `      <button type="button" class="kc-admin-help-copy" data-help-copy="${esc(identity.protocol)}" title="Copiar protocolo" aria-label="Copiar código do protocolo">`,
+        '        <i class="fas fa-copy" aria-hidden="true"></i> Copiar',
+        '      </button>',
+        '    </span>',
+        '  </div>'
+      );
+    }
+    if (identity.artifactRef) {
+      lines.push(
+        '  <div class="kc-admin-help-identity__row">',
+        '    <strong>Artefato de exportação</strong>',
+        '    <span class="kc-admin-help-identity__value">',
+        `      <code>${esc(identity.artifactRef)}</code>`,
+        `      <button type="button" class="kc-admin-help-copy" data-help-copy="${esc(identity.artifactRef)}" title="Copiar referência do artefato" aria-label="Copiar referência do artefato">`,
+        '        <i class="fas fa-copy" aria-hidden="true"></i> Copiar',
+        '      </button>',
+        '    </span>',
+        '  </div>'
+      );
+    }
+    lines.push('</div>');
+    return lines.join('');
   }
 
   function buildPriorityTriageChips(currentPriority) {
@@ -2483,11 +2650,23 @@
       const metadataSummary = buildMetadataSummary(row);
       const statusValue = String(row.status || 'new').trim() || 'new';
       const priorityValue = String(row.priority || 'normal').trim() || 'normal';
+      const identity = getHelpTicketIdentity(row);
+      const exportCloseLocked = isOpenDataExportHelpRequest(row);
+      const closeLockReason = exportCloseLocked
+        ? 'Bloqueado: protocolo DSR de cópia/portabilidade ainda aberto (DSR_HELP_MUST_REMAIN_OPEN). Conclua, cancele ou aguarde expirar o protocolo no painel de complemento integral.'
+        : '';
+      const triageHintDefault = exportCloseLocked
+        ? 'Cópia/portabilidade com DSR aberto: use Novo/Triado/Em andamento. Resolvido e Arquivado só liberam após o protocolo DSR fechar.'
+        : (triageSavedHintFor(row.id) || 'Clique em um chip para salvar a triagem automaticamente.');
 
       return [
-        `<article class="kc-admin-help-card" data-help-id="${esc(row.id)}" data-help-current-status="${esc(statusValue)}" data-help-current-priority="${esc(priorityValue)}">`,
+        `<article class="kc-admin-help-card" data-help-id="${esc(row.id)}" data-help-current-status="${esc(statusValue)}" data-help-current-priority="${esc(priorityValue)}"${exportCloseLocked ? ' data-help-export-open="1"' : ''}>`,
         '  <div class="kc-admin-help-card-top">',
-        `    <div><h2>${esc(subject)}</h2><p>${esc(message)}</p></div>`,
+        '    <div>',
+        `      <p class="kc-admin-help-ticket-ref" title="ID do ticket"><i class="fas fa-fingerprint" aria-hidden="true"></i> Ticket <code>${esc(identity.shortId || identity.id || '—')}</code>${identity.id ? ` <span class="kc-admin-help-ticket-ref__full">· ${esc(identity.id)}</span>` : ''}</p>`,
+        `      <h2>${esc(subject)}</h2>`,
+        `      <p>${esc(message)}</p>`,
+        '    </div>',
         '    <div class="kc-admin-help-chips kc-admin-help-chips--readonly" aria-label="Classificação">',
         `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(statusValue)}" data-help-status-badge><i class="fas fa-circle" aria-hidden="true"></i><span data-help-status-label>${esc(statusLabel)}</span></span>`,
         `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(priorityValue)}" data-help-priority-badge><i class="fas fa-bolt" aria-hidden="true"></i><span data-help-priority-label>${esc(priorityLabel)}</span></span>`,
@@ -2495,6 +2674,7 @@
         metadataChips,
         '    </div>',
         '  </div>',
+        buildHelpIdentityBlock(row),
         '  <div class="kc-admin-help-meta">',
         `    <div><strong>Tema</strong><span>${esc(topicLabel)}</span></div>`,
         `    <div><strong>Subtipo</strong><span>${esc(subtopicLabel)}</span></div>`,
@@ -2504,19 +2684,32 @@
         `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Não' : 'Sim'}</span></div>`,
         '  </div>',
         metadataSummary,
+        exportCloseLocked
+          ? [
+            '<p class="kc-admin-lgpd-warning" data-help-export-close-guard role="status">',
+            '<strong>Fechamento bloqueado.</strong> ',
+            'Este pedido tem protocolo DSR de cópia/portabilidade ainda aberto. ',
+            'O banco recusa Resolvido/Arquivado (código <code>DSR_HELP_MUST_REMAIN_OPEN</code>) até o protocolo ser concluído, cancelado ou expirar. ',
+            'Trabalhe no painel de complemento integral abaixo; depois feche o ticket.',
+            '</p>',
+          ].join('')
+          : '',
         buildDataExportSupplementPanel(row),
         buildLgpdPanel(row),
         // Chip triage: click status/priority chips to auto-save (no separate save button).
         '  <div class="kc-admin-help-triage" data-help-triage>',
         '    <div class="kc-admin-help-triage-row" role="group" aria-label="Status do pedido">',
         '      <span class="kc-admin-help-triage-label"><i class="fas fa-flag" aria-hidden="true"></i> Status</span>',
-        `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildStatusTriageChips(statusValue)}</div>`,
+        `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildStatusTriageChips(statusValue, {
+          closeLocked: exportCloseLocked,
+          closeLockReason: closeLockReason,
+        })}</div>`,
         '    </div>',
         '    <div class="kc-admin-help-triage-row" role="group" aria-label="Urgência do pedido">',
         '      <span class="kc-admin-help-triage-label"><i class="fas fa-bolt" aria-hidden="true"></i> Urgência</span>',
         `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildPriorityTriageChips(priorityValue)}</div>`,
         '    </div>',
-        `    <p class="kc-admin-help-triage-hint" data-help-triage-status aria-live="polite">${esc(triageSavedHintFor(row.id) || 'Clique em um chip para salvar a triagem automaticamente.')}</p>`,
+        `    <p class="kc-admin-help-triage-hint" data-help-triage-status aria-live="polite">${esc(triageHintDefault)}</p>`,
         '  </div>',
         // Hidden fields keep draft restore / legacy selectors working.
         `  <input type="hidden" data-help-status value="${esc(statusValue)}" />`,
@@ -2785,12 +2978,19 @@
       return true;
     }
 
-    // Soft guard: LGPD erasure tickets should not be marked resolved before
-    // the Edge workflow finishes (matches "Pode fechar?" on LGPD PDF reports).
+    // Soft/hard guards before API: open data-export DSR cannot close (DB enforce).
+    // Erasure tickets get a confirm when the workflow is still mid-flight.
     if (status === 'resolved' || status === 'archived') {
       const row = (Array.isArray(state.rows) ? state.rows : []).find(
         (item) => String(item && item.id || '').trim() === id
       );
+      if (row && isOpenDataExportHelpRequest(row)) {
+        setCardTriageUi(card, previous.status, previous.priority, {
+          statusMessage: 'Fechamento bloqueado: DSR de cópia/portabilidade ainda aberto.',
+        });
+        showToast(friendlyTriageErrorMessage({ message: 'DSR_HELP_MUST_REMAIN_OPEN' }), 'warn', 5600);
+        return false;
+      }
       if (row && isLgpdErasureRequest(row)) {
         const erasure = state.erasureResults[id] || null;
         const erasureStatus = String(
@@ -2837,7 +3037,11 @@
       if (!isActiveAdminContext(adminContext)) return false;
       if (!result || result.ok === false) {
         setCardTriageUi(card, previous.status, previous.priority);
-        showToast((result && result.error && result.error.message) || 'Não foi possível salvar a triagem.', 'error');
+        showToast(
+          friendlyTriageErrorMessage(result && result.error) || 'Não foi possível salvar a triagem.',
+          'error',
+          5200
+        );
         return false;
       }
 
@@ -4670,10 +4874,38 @@
     document.addEventListener('click', function (event) {
       const target = event.target && event.target.closest
         ? event.target.closest(
-          '[data-help-status-set],[data-help-priority-set],[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]'
+          '[data-help-copy],[data-help-status-set],[data-help-priority-set],[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]'
         )
         : null;
       if (!target) return;
+
+      if (target.hasAttribute('data-help-copy')) {
+        event.preventDefault();
+        const value = String(target.getAttribute('data-help-copy') || '').trim();
+        if (!value) return;
+        const done = function (ok) {
+          showToast(ok ? 'Identificador copiado.' : 'Não foi possível copiar. Selecione o código manualmente.', ok ? 'success' : 'warn', 2200);
+        };
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(value).then(function () { done(true); }).catch(function () { done(false); });
+        } else {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = value;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            done(ok);
+          } catch (_) {
+            done(false);
+          }
+        }
+        return;
+      }
 
       if (target.hasAttribute('data-help-load-more')) {
         event.preventDefault();

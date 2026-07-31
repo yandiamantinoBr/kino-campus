@@ -142,6 +142,89 @@
     .kc-admin-help-triage-hint.is-success {
       color: #8ce7a2;
     }
+    .kc-admin-help-ticket-ref {
+      margin: 0 0 8px;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--kc-text-dark-secondary);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .kc-admin-help-ticket-ref code,
+    .kc-admin-help-identity code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .85em;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+      word-break: break-all;
+    }
+    .kc-admin-help-ticket-ref__full {
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
+      opacity: .9;
+      word-break: break-all;
+    }
+    .kc-admin-help-identity {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px dashed color-mix(in srgb, var(--kc-primary-brand) 40%, var(--kc-border-dark));
+      background: color-mix(in srgb, var(--kc-primary-brand) 8%, var(--kc-surface-dark));
+    }
+    .kc-admin-help-identity__row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      justify-content: space-between;
+    }
+    .kc-admin-help-identity__row strong {
+      font-size: .78rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--kc-text-dark-secondary);
+      min-width: 9rem;
+    }
+    .kc-admin-help-identity__value {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1 1 220px;
+      justify-content: flex-end;
+    }
+    .kc-admin-help-copy {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      font: inherit;
+      font-size: .78rem;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--kc-border-dark);
+      background: var(--kc-background-dark);
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-admin-help-copy:hover {
+      border-color: color-mix(in srgb, var(--kc-primary-brand) 55%, var(--kc-border-dark));
+    }
+    .kc-admin-help-chip--interactive.is-locked,
+    .kc-admin-help-chip--interactive[data-help-status-locked="1"] {
+      opacity: .48;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
     .kc-admin-help-empty { padding:22px; border-radius:18px; border:1px dashed var(--kc-border-dark); color:var(--kc-text-dark-secondary); text-align:center; }
     .kc-admin-lgpd-panel { border:1px solid rgba(255,107,0,.36); background:rgba(255,107,0,.08); border-radius:16px; padding:14px; display:grid; gap:12px; }
     .kc-admin-lgpd-panel__head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
@@ -375,6 +458,6 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.22"></script>
+  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.23"></script>
 </body>
 </html>
