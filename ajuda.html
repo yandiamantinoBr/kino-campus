@@ -31,7 +31,7 @@
   <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
 <link rel="stylesheet" href="assets/css/styles.css?v=8.6.12" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
-  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.14" />
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.15" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     /* Live region mirror for e2e/tests stays in the tree, but is not a top-of-page banner.
@@ -127,7 +127,7 @@
       <div id="helpStatus" class="kc-settings-status kc-help-status-live" aria-hidden="true"></div>
 
       <div class="kc-help-grid">
-        <div class="kc-settings-stack">
+        <div class="kc-settings-stack kc-help-stack--main">
           <section class="kc-help-card">
             <h2>Precisa de ajuda agora?</h2>
             <div class="kc-help-inline-chips">
@@ -323,7 +323,7 @@
           </section>
         </div>
 
-        <aside class="kc-settings-stack">
+        <aside class="kc-settings-stack kc-help-stack--aside" aria-label="Orientação e perguntas frequentes">
           <section class="kc-help-card">
             <h2>Fluxo recomendado</h2>
             <div class="kc-help-list kc-help-list--single">
