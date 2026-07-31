@@ -777,9 +777,11 @@
     ) {
       return 'O servidor não comprovou o vínculo entre ticket, titular, protocolo e workflow. Recarregue a fila e revise o estado antes de tentar novamente.';
     }
+    if (value.indexOf('erasure_identity_dsr_not_unique') >= 0) {
+      return 'Este pedido autenticado legado ainda não consegue materializar o protocolo DSR no servidor (função de materialização desatualizada ou DSR inconsistente). Aplique a migration de Help legado autenticado e tente “Criar protocolo” novamente.';
+    }
     if (
       value.indexOf('erasure_identity_account_not_unique') >= 0
-      || value.indexOf('erasure_identity_dsr_not_unique') >= 0
       || value.indexOf('erasure_identity_workflow_not_unique') >= 0
       || value.indexOf('erasure_identity_subject_conflict') >= 0
       || value.indexOf('erasure_identity_link_conflict') >= 0
@@ -1372,11 +1374,16 @@
   function canRunErasureAction(row, action) {
     if (!LGPD_ACTIONS.has(action) || !isLgpdErasureRequest(row)) return false;
     const id = String(row && row.id || '').trim();
+    // Protocol creation is the only recovery path for unlinked tickets. A prior
+    // indeterminate outcome must not permanently block "Criar protocolo" when the
+    // ticket still needs a DSR — the RPC is fail-closed/idempotent.
+    if (action === 'link_verified_identity') {
+      return canOfferErasureIdentityLink(row);
+    }
     if (
       state.erasureUncertain[id]
       && LGPD_MUTATING_ACTIONS.has(action)
     ) return false;
-    if (action === 'link_verified_identity') return canOfferErasureIdentityLink(row);
     if (hasCanonicalErasureLink(row)) return true;
     if (!LGPD_POST_CORE_ACTIONS.has(action)) return false;
     if (action === 'diagnose' || action === 'generate_receipt') {
@@ -2026,7 +2033,9 @@
         ? `    <label><span><input type="checkbox" data-lgpd-identity-attested style="width:auto" required aria-required="true"${busy ? ' disabled' : ''} /> Confirmo que a identidade do titular foi validada antes de qualquer ocultação</span></label>`
         : '',
       identityLinkRequired
-        ? `    <button type="button" data-lgpd-action="link_verified_identity" aria-describedby="lgpd-guidance-${esc(id)}"${busy || uncertain ? ' disabled' : ''}><i class="fas fa-link" aria-hidden="true"></i> ${
+        // Keep protocol creation clickable even after a prior uncertain outcome —
+        // unlinked tickets have no diagnose path to clear the lock.
+        ? `    <button type="button" data-lgpd-action="link_verified_identity" aria-describedby="lgpd-guidance-${esc(id)}"${busy ? ' disabled' : ''}><i class="fas fa-link" aria-hidden="true"></i> ${
             UUID_RE.test(String(row && row.user_id || '').trim())
               ? 'Criar protocolo e destravar fluxo LGPD'
               : 'Vincular identidade ao protocolo'
@@ -3067,6 +3076,12 @@
     };
   }
 
+  function sleepMs(ms) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+  }
+
   async function settleErasureMutationResult(options) {
     const {
       id,
@@ -3076,15 +3091,37 @@
       adminContext,
       transportFailed,
     } = options;
-    const reconciliation = await reconcileErasureMutation(
+    let reconciliation = await reconcileErasureMutation(
       id,
       action,
       adminContext
     );
     if (!isActiveAdminContext(adminContext)) return;
+
+    // Help metadata update can lag one read after a successful link RPC.
+    if (
+      action === 'link_verified_identity'
+      && !reconciliation.committed
+      && result
+      && result.ok !== false
+      && result.linked === true
+      && /^KC-DSR-[0-9]{8}-[A-F0-9]{16}$/.test(String(result.protocol || '').trim())
+    ) {
+      for (let attempt = 0; attempt < 3 && !reconciliation.committed; attempt += 1) {
+        await sleepMs(180 * (attempt + 1));
+        if (!isActiveAdminContext(adminContext)) return;
+        reconciliation = await reconcileErasureMutation(id, action, adminContext);
+      }
+    }
+
     if (reconciliation.committed) {
       delete state.erasureUncertain[id];
       if (action === 'link_verified_identity' && result && result.request) {
+        state.erasureResults[id] = {
+          ...(currentResult || {}),
+          ...result,
+        };
+      } else if (action === 'link_verified_identity' && result) {
         state.erasureResults[id] = {
           ...(currentResult || {}),
           ...result,
@@ -3134,6 +3171,40 @@
       return;
     }
 
+    // Definitive server rejection for protocol link: nothing ambiguous.
+    // Keep "Criar protocolo" usable and surface the real error (e.g. migration
+    // missing for authenticated legacy → ERASURE_IDENTITY_DSR_NOT_UNIQUE).
+    if (
+      action === 'link_verified_identity'
+      && !transportFailed
+      && result
+      && result.ok === false
+    ) {
+      delete state.erasureUncertain[id];
+      renderRows(state.rows);
+      showToast(friendlyLgpdErrorMessage(result.error || result), 'error');
+      return;
+    }
+
+    // Ticket still needs a protocol: do not trap the moderator behind
+    // "indeterminado" without a diagnose path. Link stays available.
+    if (
+      action === 'link_verified_identity'
+      && reconciliation.row
+      && canOfferErasureIdentityLink(reconciliation.row)
+      && !transportFailed
+    ) {
+      delete state.erasureUncertain[id];
+      renderRows(state.rows);
+      showToast(
+        result && result.ok !== false && result.linked === true
+          ? 'O protocolo ainda não aparece no ticket recarregado. Atualize a fila e tente “Criar protocolo” de novo (a operação é idempotente).'
+          : 'Não foi possível confirmar o protocolo neste ticket. Corrija o e-mail/evidência e tente “Criar protocolo” novamente.',
+        'error'
+      );
+      return;
+    }
+
     if (result && result.request && !reconciliation.result) {
       state.erasureResults[id] = {
         ...(currentResult || {}),
@@ -3146,7 +3217,7 @@
     renderRows(state.rows);
     showToast(
       action === 'link_verified_identity'
-        ? 'O servidor e a leitura autoritativa não confirmaram o vínculo canônico. O resultado é indeterminado; não repita a ação antes de recarregar o ticket.'
+        ? 'O servidor e a leitura autoritativa não confirmaram o vínculo canônico. Atualize a fila antes de repetir a ação.'
         : reconciliation.known
           ? 'A leitura segura não confirmou a pós-condição desta operação. As mutações ficaram bloqueadas; não repita a ação antes de executar Preparar diagnóstico.'
           : 'O resultado da operação é indeterminado. As mutações ficaram bloqueadas; não repita a ação até recarregar e executar Preparar diagnóstico.',

@@ -288,7 +288,7 @@ describe('admin Help runtime - verified identity link for anonymous erasure tick
     }
   });
 
-  test('keeps the ticket locked when the server response does not prove a valid link', async () => {
+  test('keeps destructive actions locked when the server response does not prove a valid link', async () => {
     const page = await createPage({
       processAccountErasure: async () => ({
         ok: true,
@@ -303,13 +303,14 @@ describe('admin Help runtime - verified identity link for anonymous erasure tick
       await waitFor(() => page.processAccountErasure.mock.calls.length === 1);
       await waitFor(() => page.showToast.mock.calls.some(
         ([message, type]) => type === 'error'
-          && /servidor/i.test(String(message)),
+          && /protocolo/i.test(String(message)),
       ));
 
       expect(page.listAdminHelpRequests).toHaveBeenCalledTimes(2);
       const rerendered = identityControls(page.window);
+      // Protocol creation remains retryable; diagnose stays unavailable.
       expect(rerendered.link).not.toBeNull();
-      expect(rerendered.link.disabled).toBe(true);
+      expect(rerendered.link.disabled).toBe(false);
       expect(rerendered.card.querySelector('[data-lgpd-action="diagnose"]')).toBeNull();
       expect(page.showToast.mock.calls.some(([, type]) => type === 'success')).toBe(false);
     } finally {
@@ -317,7 +318,7 @@ describe('admin Help runtime - verified identity link for anonymous erasure tick
     }
   });
 
-  test('keeps the ticket locked until the authoritative list confirms its owner', async () => {
+  test('allows protocol retry when the authoritative list has not confirmed the owner yet', async () => {
     const page = await createPage({
       processAccountErasure: async () => ({
         ok: true,
@@ -328,18 +329,46 @@ describe('admin Help runtime - verified identity link for anonymous erasure tick
     });
     try {
       fillIdentityEvidence(page.window).link.click();
-      await waitFor(() => page.listAdminHelpRequests.mock.calls.length === 2);
-      await waitFor(() => page.showToast.mock.calls.some(
-        ([message, type]) => type === 'error'
-          && /leitura autoritativa/i.test(String(message)),
-      ));
+      await waitFor(
+        () => page.showToast.mock.calls.some(
+          ([message, type]) => type === 'error'
+            && /protocolo/i.test(String(message)),
+        ),
+        5000,
+      );
 
       const rerendered = identityControls(page.window);
       expect(rerendered.link).not.toBeNull();
-      expect(rerendered.link.disabled).toBe(true);
+      // Do not trap the moderator: link stays available; diagnose stays closed.
+      expect(rerendered.link.disabled).toBe(false);
       expect(rerendered.card.querySelector('[data-lgpd-action="diagnose"]')).toBeNull();
       expect(rerendered.card.querySelector('[data-lgpd-export]')).toBeNull();
       expect(page.showToast.mock.calls.some(([, type]) => type === 'success')).toBe(false);
+    } finally {
+      page.dom.window.close();
+    }
+  });
+
+  test('shows the real server error without trapping protocol creation', async () => {
+    const page = await createPage({
+      processAccountErasure: async () => ({
+        ok: false,
+        error: { message: 'ERASURE_IDENTITY_DSR_NOT_UNIQUE' },
+      }),
+    });
+    try {
+      fillIdentityEvidence(page.window).link.click();
+      await waitFor(() => page.processAccountErasure.mock.calls.length === 1);
+      await waitFor(() => page.showToast.mock.calls.some(
+        ([message, type]) => type === 'error'
+          && /legado autenticado|protocolo DSR|materializ/i.test(String(message)),
+      ));
+      const rerendered = identityControls(page.window);
+      expect(rerendered.link).not.toBeNull();
+      expect(rerendered.link.disabled).toBe(false);
+      expect(String(page.window.document.body.textContent || '')).not.toMatch(
+        /Resultado anterior indeterminado/
+      );
     } finally {
       page.dom.window.close();
     }
