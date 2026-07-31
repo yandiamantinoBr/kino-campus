@@ -374,6 +374,29 @@ describe('admin Help runtime - verified identity link for anonymous erasure tick
     }
   });
 
+  test('transport failure on protocol link does not show indeterminate banner', async () => {
+    const page = await createPage({
+      processAccountErasure: async () => {
+        throw new Error('network_down');
+      },
+    });
+    try {
+      fillIdentityEvidence(page.window).link.click();
+      await waitFor(() => page.processAccountErasure.mock.calls.length === 1);
+      await waitFor(() => page.showToast.mock.calls.some(
+        ([message, type]) => type === 'error'
+          && /rede|servidor|protocolo/i.test(String(message)),
+      ));
+      const bodyText = String(page.window.document.body.textContent || '');
+      expect(bodyText).not.toMatch(/Resultado anterior indeterminado/);
+      const rerendered = identityControls(page.window);
+      expect(rerendered.link).not.toBeNull();
+      expect(rerendered.link.disabled).toBe(false);
+    } finally {
+      page.dom.window.close();
+    }
+  });
+
   test('accepts a valid proof, reloads the authoritative ticket and unlocks later actions', async () => {
     let listAttempt = 0;
     const page = await createPage({
