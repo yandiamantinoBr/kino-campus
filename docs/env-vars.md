@@ -19,7 +19,7 @@ O KinoCampus usa três camadas de configuração:
 | `KC_APP_ENV` | alimenta `__KC_APP_ENV__` e normaliza `production` ou `development` |
 | `KC_DRIVER` | alimenta `__KC_DRIVER__`; em produção deve resultar em `supabase` |
 | `KC_BUILD_REVISION` | revisão estável usada para alinhar `?v=` dos assets, Service Worker e precache; em CI/deploy é obrigatória quando nenhuma revisão do provedor estiver disponível |
-| `KC_TURNSTILE_SITE_KEY` | site key pública do widget dos pedidos LGPD visitantes; obrigatória em produção e nunca pode ser uma chave oficial de teste |
+| `KC_TURNSTILE_SITE_KEY` | site key pública do widget dos pedidos LGPD visitantes; recomendada em produção (sem ela o build sobe degraded e o guest form fica fail-closed); nunca pode ser uma chave oficial de teste em produção |
 
 Aliases aceitos pelo `scripts/inject-env.js`:
 
@@ -40,8 +40,9 @@ Aliases aceitos pelo `scripts/inject-env.js`:
 
 - `vercel.json` deve manter `buildCommand = "node scripts/inject-env.js"`
 - produção deve compilar com `driver = "supabase"`
-- produção exige `KC_TURNSTILE_SITE_KEY` real; ausência e chaves oficiais de
-  teste encerram o build
+- produção recomenda `KC_TURNSTILE_SITE_KEY` real; ausência emite warning e
+  sobe degraded (guest LGPD fail-closed em runtime). Chaves oficiais de teste
+  em produção ainda encerram o build
 - placeholders `__KC_*__` não podem permanecer no artefato publicado
 - uma única revisão normalizada deve aparecer nos HTMLs, no precache e no
   namespace do Service Worker; não reutilize uma revisão para artefatos diferentes
