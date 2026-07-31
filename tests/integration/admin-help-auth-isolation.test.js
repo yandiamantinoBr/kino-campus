@@ -137,10 +137,14 @@ describe('admin help auth-bound PII isolation', () => {
     await settle();
     expect(document.body.textContent).toContain('Assunto pessoal sigiloso');
 
-    const saveButton = document.querySelector('[data-help-save]');
-    expect(saveButton).not.toBeNull();
-    saveButton.click();
+    const statusChip = document.querySelector('[data-help-status-set="triaged"]');
+    expect(statusChip).not.toBeNull();
+    statusChip.click();
     await waitForCall(updateAdminHelpRequest, 1);
+    expect(updateAdminHelpRequest).toHaveBeenCalledWith(
+      sensitiveRow.id,
+      expect.objectContaining({ status: 'triaged', priority: 'normal' })
+    );
     const nonAdminUser = { id: '22222222-2222-4222-8222-222222222222' };
     document.dispatchEvent(new CustomEvent('kc:authchange', { detail: { user: nonAdminUser } }));
 

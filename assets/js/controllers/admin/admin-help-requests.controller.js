@@ -106,6 +106,7 @@
     exportSupplementResults: {},
     exportSupplementBusy: {},
     exportSupplementUncertain: {},
+    triageBusy: {},
     requestToken: 0,
     authGeneration: 0,
     authorizedAdminUserId: '',
@@ -166,8 +167,12 @@
     'data-export-action': true,
     'data-export-processor-save': true,
     'data-help-save': true,
+    'data-help-status-set': true,
+    'data-help-priority-set': true,
     'data-help-load-more': true,
     'data-help-id': true,
+    'data-help-triage': true,
+    'data-help-triage-status': true,
   };
 
   function adminDraftStorageClear() {
@@ -469,6 +474,9 @@
           el = null;
         }
         if (!el) return;
+        // Chip triage auto-saves; never rehydrate status/priority from drafts
+        // (would desync chips vs server and reintroduce the old select flow).
+        if (attr === 'data-help-status' || attr === 'data-help-priority') return;
         const value = draft.fields[key];
         if (el.type === 'checkbox' || el.type === 'radio') {
           el.checked = !!value;
@@ -798,6 +806,7 @@
     state.exportSupplementResults = Object.create(null);
     state.exportSupplementBusy = Object.create(null);
     state.exportSupplementUncertain = Object.create(null);
+    state.triageBusy = Object.create(null);
     clearAdminViewSnapshot();
 
     const queryField = $('#helpQueryFilter');
@@ -2299,6 +2308,49 @@
     ].join('');
   }
 
+  function buildStatusTriageChips(currentStatus) {
+    const options = [
+      { value: 'new', label: 'Novo', icon: 'fa-inbox' },
+      { value: 'triaged', label: 'Triado', icon: 'fa-filter' },
+      { value: 'in_progress', label: 'Em andamento', icon: 'fa-spinner' },
+      { value: 'resolved', label: 'Resolvido', icon: 'fa-circle-check' },
+      { value: 'archived', label: 'Arquivado', icon: 'fa-box-archive' },
+    ];
+    return options.map((option) => {
+      const active = option.value === currentStatus;
+      return [
+        `<button type="button"`,
+        ` class="kc-admin-help-chip kc-admin-help-chip--interactive kc-admin-help-chip--status-${esc(option.value)}${active ? ' is-active' : ''}"`,
+        ` data-help-status-set="${esc(option.value)}"`,
+        ` aria-pressed="${active ? 'true' : 'false'}"`,
+        ` title="Definir status: ${esc(option.label)}">`,
+        `<i class="fas ${option.icon}" aria-hidden="true"></i>${esc(option.label)}`,
+        `</button>`,
+      ].join('');
+    }).join('');
+  }
+
+  function buildPriorityTriageChips(currentPriority) {
+    const options = [
+      { value: 'low', label: 'Baixa', icon: 'fa-battery-quarter' },
+      { value: 'normal', label: 'Normal', icon: 'fa-battery-half' },
+      { value: 'high', label: 'Alta', icon: 'fa-battery-three-quarters' },
+      { value: 'urgent', label: 'Urgente', icon: 'fa-bolt' },
+    ];
+    return options.map((option) => {
+      const active = option.value === currentPriority;
+      return [
+        `<button type="button"`,
+        ` class="kc-admin-help-chip kc-admin-help-chip--interactive kc-admin-help-chip--priority-${esc(option.value)}${active ? ' is-active' : ''}"`,
+        ` data-help-priority-set="${esc(option.value)}"`,
+        ` aria-pressed="${active ? 'true' : 'false'}"`,
+        ` title="Definir urgência: ${esc(option.label)}">`,
+        `<i class="fas ${option.icon}" aria-hidden="true"></i>${esc(option.label)}`,
+        `</button>`,
+      ].join('');
+    }).join('');
+  }
+
   function renderRows(rows) {
     const list = $('#helpRequestsList');
     if (!list) return;
@@ -2326,14 +2378,16 @@
       const contactEmail = String(row.contact_email || '').trim() || 'Sem e-mail';
       const metadataChips = buildMetadataChips(row);
       const metadataSummary = buildMetadataSummary(row);
+      const statusValue = String(row.status || 'new').trim() || 'new';
+      const priorityValue = String(row.priority || 'normal').trim() || 'normal';
 
       return [
-        `<article class="kc-admin-help-card" data-help-id="${esc(row.id)}">`,
+        `<article class="kc-admin-help-card" data-help-id="${esc(row.id)}" data-help-current-status="${esc(statusValue)}" data-help-current-priority="${esc(priorityValue)}">`,
         '  <div class="kc-admin-help-card-top">',
         `    <div><h2>${esc(subject)}</h2><p>${esc(message)}</p></div>`,
-        '    <div class="kc-admin-help-chips">',
-        `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(row.status)}"><i class="fas fa-circle" aria-hidden="true"></i>${esc(statusLabel)}</span>`,
-        `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(row.priority)}"><i class="fas fa-bolt" aria-hidden="true"></i>${esc(priorityLabel)}</span>`,
+        '    <div class="kc-admin-help-chips kc-admin-help-chips--readonly" aria-label="Classificação">',
+        `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(statusValue)}" data-help-status-badge><i class="fas fa-circle" aria-hidden="true"></i><span data-help-status-label>${esc(statusLabel)}</span></span>`,
+        `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(priorityValue)}" data-help-priority-badge><i class="fas fa-bolt" aria-hidden="true"></i><span data-help-priority-label>${esc(priorityLabel)}</span></span>`,
         `      <span class="kc-admin-help-chip"><i class="fas fa-layer-group" aria-hidden="true"></i>${esc(typeLabel)}</span>`,
         metadataChips,
         '    </div>',
@@ -2349,11 +2403,21 @@
         metadataSummary,
         buildDataExportSupplementPanel(row),
         buildLgpdPanel(row),
-        '  <div class="kc-admin-help-actions">',
-        `    <label><span class="sr-only">Status</span><select data-help-status><option value="new"${row.status === 'new' ? ' selected' : ''}>Novo</option><option value="triaged"${row.status === 'triaged' ? ' selected' : ''}>Triado</option><option value="in_progress"${row.status === 'in_progress' ? ' selected' : ''}>Em andamento</option><option value="resolved"${row.status === 'resolved' ? ' selected' : ''}>Resolvido</option><option value="archived"${row.status === 'archived' ? ' selected' : ''}>Arquivado</option></select></label>`,
-        `    <label><span class="sr-only">Urgência</span><select data-help-priority><option value="low"${row.priority === 'low' ? ' selected' : ''}>Baixa</option><option value="normal"${row.priority === 'normal' ? ' selected' : ''}>Normal</option><option value="high"${row.priority === 'high' ? ' selected' : ''}>Alta</option><option value="urgent"${row.priority === 'urgent' ? ' selected' : ''}>Urgente</option></select></label>`,
-        '    <button type="button" data-help-save><i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem</button>',
+        // Chip triage: click status/priority chips to auto-save (no separate save button).
+        '  <div class="kc-admin-help-triage" data-help-triage>',
+        '    <div class="kc-admin-help-triage-row" role="group" aria-label="Status do pedido">',
+        '      <span class="kc-admin-help-triage-label"><i class="fas fa-flag" aria-hidden="true"></i> Status</span>',
+        `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildStatusTriageChips(statusValue)}</div>`,
+        '    </div>',
+        '    <div class="kc-admin-help-triage-row" role="group" aria-label="Urgência do pedido">',
+        '      <span class="kc-admin-help-triage-label"><i class="fas fa-bolt" aria-hidden="true"></i> Urgência</span>',
+        `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildPriorityTriageChips(priorityValue)}</div>`,
+        '    </div>',
+        '    <p class="kc-admin-help-triage-hint" data-help-triage-status aria-live="polite">Clique em um chip para salvar a triagem automaticamente.</p>',
         '  </div>',
+        // Hidden fields keep draft restore / legacy selectors working.
+        `  <input type="hidden" data-help-status value="${esc(statusValue)}" />`,
+        `  <input type="hidden" data-help-priority value="${esc(priorityValue)}" />`,
         '</article>',
       ].join('');
     });
@@ -2502,23 +2566,99 @@
     }
   }
 
-  async function saveRow(card) {
-    const adminContext = captureAdminContext();
-    if (!isActiveAdminContext(adminContext)) return;
-    const id = String(card && card.getAttribute('data-help-id') || '').trim();
-    if (!id) return;
+  function readCardTriageValues(card) {
+    const statusHidden = card && card.querySelector('[data-help-status]');
+    const priorityHidden = card && card.querySelector('[data-help-priority]');
+    return {
+      status: String(
+        (statusHidden && statusHidden.value)
+        || (card && card.getAttribute('data-help-current-status'))
+        || ''
+      ).trim(),
+      priority: String(
+        (priorityHidden && priorityHidden.value)
+        || (card && card.getAttribute('data-help-current-priority'))
+        || ''
+      ).trim(),
+    };
+  }
 
-    const status = String(card.querySelector('[data-help-status]')?.value || '').trim();
-    const priority = String(card.querySelector('[data-help-priority]')?.value || '').trim();
+  function setCardTriageUi(card, status, priority, options = {}) {
+    if (!card) return;
+    const saving = options.saving === true;
+    const statusValue = String(status || '').trim();
+    const priorityValue = String(priority || '').trim();
+    card.setAttribute('data-help-current-status', statusValue);
+    card.setAttribute('data-help-current-priority', priorityValue);
+    const statusHidden = card.querySelector('[data-help-status]');
+    const priorityHidden = card.querySelector('[data-help-priority]');
+    if (statusHidden) statusHidden.value = statusValue;
+    if (priorityHidden) priorityHidden.value = priorityValue;
+
+    card.querySelectorAll('[data-help-status-set]').forEach((button) => {
+      const active = button.getAttribute('data-help-status-set') === statusValue;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      button.disabled = saving;
+    });
+    card.querySelectorAll('[data-help-priority-set]').forEach((button) => {
+      const active = button.getAttribute('data-help-priority-set') === priorityValue;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      button.disabled = saving;
+    });
+
+    const statusBadge = card.querySelector('[data-help-status-badge]');
+    const priorityBadge = card.querySelector('[data-help-priority-badge]');
+    if (statusBadge) {
+      statusBadge.className = `kc-admin-help-chip kc-admin-help-chip--status-${statusValue}`;
+      const label = statusBadge.querySelector('[data-help-status-label]');
+      if (label) label.textContent = buildLabel(Help.HELP_STATUS_LABELS, statusValue, statusValue);
+    }
+    if (priorityBadge) {
+      priorityBadge.className = `kc-admin-help-chip kc-admin-help-chip--priority-${priorityValue}`;
+      const label = priorityBadge.querySelector('[data-help-priority-label]');
+      if (label) label.textContent = buildLabel(Help.HELP_PRIORITY_LABELS, priorityValue, priorityValue);
+    }
+
+    const hint = card.querySelector('[data-help-triage-status]');
+    if (hint) {
+      hint.textContent = saving
+        ? 'Salvando triagem…'
+        : 'Clique em um chip para salvar a triagem automaticamente.';
+    }
+    card.classList.toggle('is-triage-saving', saving);
+  }
+
+  async function saveRow(card, overrides = {}) {
+    const adminContext = captureAdminContext();
+    if (!isActiveAdminContext(adminContext)) return false;
+    const id = String(card && card.getAttribute('data-help-id') || '').trim();
+    if (!id) return false;
+    // Serialize chip clicks per card so rapid changes do not race the API.
+    if (card.classList.contains('is-triage-saving') || state.triageBusy[id] === true) {
+      return false;
+    }
+
+    const current = readCardTriageValues(card);
+    const status = String(overrides.status != null ? overrides.status : current.status).trim();
+    const priority = String(overrides.priority != null ? overrides.priority : current.priority).trim();
+    const previous = {
+      status: current.status,
+      priority: current.priority,
+    };
     const validStatuses = getValidStatuses();
     const validPriorities = getValidPriorities();
     if (validStatuses.indexOf(status) < 0) {
       showToast('Status inválido para triagem.', 'error');
-      return;
+      return false;
     }
     if (validPriorities.indexOf(priority) < 0) {
       showToast('Urgência inválida para triagem.', 'error');
-      return;
+      return false;
+    }
+    if (status === previous.status && priority === previous.priority) {
+      return true;
     }
 
     // Soft guard: LGPD erasure tickets should not be marked resolved before
@@ -2550,30 +2690,46 @@
             )
             : true;
           if (!proceed) {
+            setCardTriageUi(card, previous.status, previous.priority);
             showToast('Triagem não salva. Conclua o roteiro LGPD ou cancele com o titular antes de fechar.', 'warn', 4200);
-            return;
+            return false;
           }
         }
       }
     }
 
-    const access = await checkAdminAccess(adminContext);
-    if (!access || !isActiveAdminContext(adminContext)) return;
-
-    const button = card.querySelector('[data-help-save]');
-    if (button) {
-      button.disabled = true;
-      button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Salvando...';
-    }
+    state.triageBusy[id] = true;
+    // Optimistic chip feedback before await; revert on failure / deny.
+    setCardTriageUi(card, status, priority, { saving: true });
 
     try {
-      const result = await window.KCAPI.updateAdminHelpRequest(id, { status, priority });
-      if (!isActiveAdminContext(adminContext)) return;
-      if (!result || result.ok === false) {
-        showToast((result && result.error && result.error.message) || 'Não foi possível salvar a triagem.', 'error');
-        return;
+      const access = await checkAdminAccess(adminContext);
+      if (!access || !isActiveAdminContext(adminContext)) {
+        setCardTriageUi(card, previous.status, previous.priority);
+        return false;
       }
-      showToast('Triagem atualizada.', 'success');
+
+      const result = await window.KCAPI.updateAdminHelpRequest(id, { status, priority });
+      if (!isActiveAdminContext(adminContext)) return false;
+      if (!result || result.ok === false) {
+        setCardTriageUi(card, previous.status, previous.priority);
+        showToast((result && result.error && result.error.message) || 'Não foi possível salvar a triagem.', 'error');
+        return false;
+      }
+
+      const rowIndex = state.rows.findIndex(
+        (item) => String(item && item.id || '').trim() === id
+      );
+      if (rowIndex >= 0) {
+        state.rows[rowIndex] = Object.assign({}, state.rows[rowIndex], {
+          status: status,
+          priority: priority,
+        });
+      }
+      setCardTriageUi(card, status, priority, { saving: false });
+      const hint = card.querySelector('[data-help-triage-status]');
+      if (hint) hint.textContent = 'Triagem salva.';
+      showToast('Triagem atualizada.', 'success', 2200);
       // Drop triage draft keys so the next paint uses server status/priority;
       // keep LGPD/export identity drafts intact.
       try {
@@ -2589,17 +2745,26 @@
           adminDraftStorageWrite(store);
         }
       } catch (_) { /* ignore */ }
+      try { saveAdminViewSnapshot(); } catch (_) { /* ignore */ }
+      // Silent refresh keeps the queue painted after chip auto-save.
       await loadRows({
+        silent: true,
         limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE),
       });
+      return true;
     } catch (error) {
-      if (!isActiveAdminContext(adminContext)) return;
+      if (!isActiveAdminContext(adminContext)) return false;
       console.error('[AdminHelp] save_failed');
+      setCardTriageUi(card, previous.status, previous.priority);
       showToast('Não foi possível salvar a triagem.', 'error');
+      return false;
     } finally {
-      if (button && isActiveAdminContext(adminContext)) {
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-floppy-disk" aria-hidden="true"></i> Salvar triagem';
+      delete state.triageBusy[id];
+      if (card && card.isConnected && isActiveAdminContext(adminContext)) {
+        card.classList.remove('is-triage-saving');
+        card.querySelectorAll('[data-help-status-set],[data-help-priority-set]').forEach((button) => {
+          button.disabled = false;
+        });
       }
     }
   }
@@ -3996,7 +4161,8 @@
           refreshedCard.querySelector(`[data-lgpd-action="${focusAction}"]`)
           || refreshedCard.querySelector('[data-lgpd-action="diagnose"]')
           || refreshedCard.querySelector('[data-lgpd-export]')
-          || refreshedCard.querySelector('[data-help-save]')
+          || refreshedCard.querySelector('[data-help-status-set].is-active')
+          || refreshedCard.querySelector('[data-help-status-set]')
         );
         if (nextFocus && typeof nextFocus.focus === 'function') nextFocus.focus();
       }
@@ -4318,7 +4484,11 @@
     });
 
     document.addEventListener('click', function (event) {
-      const target = event.target && event.target.closest ? event.target.closest('[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]') : null;
+      const target = event.target && event.target.closest
+        ? event.target.closest(
+          '[data-help-status-set],[data-help-priority-set],[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]'
+        )
+        : null;
       if (!target) return;
 
       if (target.hasAttribute('data-help-load-more')) {
@@ -4330,6 +4500,27 @@
       }
 
       const card = target.closest('[data-help-id]');
+      if (target.hasAttribute('data-help-status-set') || target.hasAttribute('data-help-priority-set')) {
+        event.preventDefault();
+        if (!card || card.classList.contains('is-triage-saving')) return;
+        const overrides = {};
+        if (target.hasAttribute('data-help-status-set')) {
+          overrides.status = String(target.getAttribute('data-help-status-set') || '').trim();
+        }
+        if (target.hasAttribute('data-help-priority-set')) {
+          overrides.priority = String(target.getAttribute('data-help-priority-set') || '').trim();
+        }
+        saveRow(card, overrides).catch(() => console.error('[AdminHelp] triage_chip_save_unhandled'));
+        return;
+      }
+
+      // Legacy: keep data-help-save working if any residual markup remains.
+      if (target.hasAttribute('data-help-save')) {
+        event.preventDefault();
+        if (card) saveRow(card).catch(() => console.error('[AdminHelp] triage_save_unhandled'));
+        return;
+      }
+
       if (target.hasAttribute('data-export-action')) {
         event.preventDefault();
         if (card) {
@@ -4365,10 +4556,7 @@
         const id = String(card && card.getAttribute('data-help-id') || '').trim();
         const row = state.rows.find((item) => String(item && item.id || '') === id);
         if (row) exportLgpdReport(row).catch(() => console.error('[AdminHelp] lgpd_export_failed'));
-        return;
       }
-
-      if (card) saveRow(card);
     });
   }
 
