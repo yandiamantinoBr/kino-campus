@@ -153,9 +153,33 @@ if (
   process.exit(1);
 }
 if (isProductionDeployment && !TURNSTILE_SITE_KEY) {
+  console.error('');
   console.error(
     '❌ TURNSTILE_SITE_KEY_REQUIRED: configure uma site key real antes do build de produção.'
   );
+  console.error('');
+  console.error('   O PR #747 (LGPD/DSR visitante) tornou KC_TURNSTILE_SITE_KEY obrigatória em');
+  console.error('   produção. Sem ela o Vercel aborta o build e o site fica preso no deploy');
+  console.error('   anterior (pré-privacidade). Previews continuam ok porque VERCEL_ENV!=production.');
+  console.error('');
+  console.error('   Variáveis aceitas (todas vazias neste build):');
+  console.error('   - KC_TURNSTILE_SITE_KEY');
+  console.error('   - TURNSTILE_SITE_KEY');
+  console.error('   - NEXT_PUBLIC_TURNSTILE_SITE_KEY');
+  console.error('   - VITE_TURNSTILE_SITE_KEY');
+  console.error('');
+  console.error('   Destravar (site key pública do Cloudflare Turnstile, formato 0x4AAAA...):');
+  console.error('   1) Cloudflare Dashboard → Turnstile → widget de www.kinocampus.com.br → Site Key');
+  console.error('   2) vercel env add KC_TURNSTILE_SITE_KEY production');
+  console.error('      (repita para preview/development se quiser o widget nesses ambientes)');
+  console.error('   3) No Supabase (edge de guest): KC_TURNSTILE_SECRET_KEY +');
+  console.error('      KC_TURNSTILE_ENVIRONMENT=production + KC_TURNSTILE_EXPECTED_HOSTNAMES');
+  console.error('   4) Redeploy: vercel --prod  (ou push vazio na branch de produção)');
+  console.error('');
+  console.error('   NÃO use chaves oficiais de teste (1x0000.../2x0000...) em produção —');
+  console.error('   o build também recusa TURNSTILE_TEST_SITE_KEY_FORBIDDEN.');
+  console.error('   Detalhes: docs/ops/production-turnstile-unblock.md e docs/env-vars.md');
+  console.error('');
   process.exit(1);
 }
 if (
@@ -163,6 +187,7 @@ if (
   TURNSTILE_TEST_SITE_KEYS.has(TURNSTILE_SITE_KEY)
 ) {
   console.error('❌ TURNSTILE_TEST_SITE_KEY_FORBIDDEN: chaves de teste não podem entrar em produção.');
+  console.error('   Use a Site Key real do widget Turnstile do domínio de produção.');
   process.exit(1);
 }
 
