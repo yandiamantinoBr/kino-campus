@@ -539,7 +539,11 @@
       clearStashedPrivacyPayload();
       return;
     }
-    setStatus('Você voltou a uma tentativa de privacidade que ficou em aberto. Verifique os campos e reenvie quando estiver pronto.', 'info');
+    setStatus(
+      'Você voltou a uma tentativa de privacidade que ficou em aberto. Verifique os campos e reenvie quando estiver pronto.',
+      'info',
+      { toast: true }
+    );
   }
 
   function getPrivacyVerificationForSubmission(payload) {
@@ -995,7 +999,8 @@
       receipt.dataSubjectProtocol
         ? `Recuperamos a tentativa anterior sem reenviar seus dados. Protocolo do titular: ${receipt.dataSubjectProtocol}.`
         : `Recuperamos a tentativa anterior sem reenviar seus dados. Referência de atendimento: ${receipt.reference}.`,
-      'success'
+      'success',
+      { toast: true }
     );
     return true;
   }
@@ -1015,7 +1020,8 @@
       state.privacyRecoveryBlocked = true;
       setStatus(
         'A proteção de uma tentativa anterior está corrompida nesta sessão. Para evitar duplicidade, nenhum novo pedido de privacidade será enviado nesta aba; o registro bruto foi preservado para recuperação segura.',
-        'error'
+        'error',
+        { toast: true }
       );
       return;
     }
@@ -1039,13 +1045,15 @@
     ) {
       setStatus(
         'Há uma tentativa anterior protegida contra duplicidade, mas a recuperação não está disponível neste ambiente. A chave foi mantida.',
-        'warn'
+        'warn',
+        { toast: true }
       );
       return;
     }
 
     const operationOwner = acquireSubmitOperation('recovery');
     if (!operationOwner) return;
+    // Progress only — no toast (avoids noise while recovery runs after login).
     setStatus('Verificando uma tentativa anterior sem reenviar seus dados...', 'info');
     const currentCaller = getPrivacyCallerScope();
     let recoveredData = null;
@@ -1097,7 +1105,8 @@
       if (ambiguousCount > 0) {
         setStatus(
           'Recuperamos uma referência anterior, mas outra tentativa ainda está sendo verificada. Nenhuma chave ambígua foi removida.',
-          'warn'
+          'warn',
+          { toast: true }
         );
       }
       return;
@@ -1108,14 +1117,16 @@
           currentCaller.callerId === 'guest'
           ? 'Ainda não foi possível confirmar se a tentativa visitante chegou ao servidor. A chave foi mantida; aguarde e use esta mesma aba para tentar recuperar novamente.'
           : 'Ainda não foi possível confirmar uma tentativa anterior. A chave foi mantida para evitar duplicidade.',
-        'warn'
+        'warn',
+        { toast: true }
       );
       return;
     }
     if (retiredCount > 0) {
       setStatus(
         'Uma tentativa anterior sem recibo foi encerrada com segurança. Revise o formulário antes de enviar um novo pedido.',
-        'info'
+        'info',
+        { toast: true }
       );
     }
   }
@@ -1178,18 +1189,31 @@
     } catch (_) { /* ignore toast failures */ }
   }
 
-  function setStatus(message, tone) {
+  /**
+   * Mirror status into #helpStatus (e2e / fallback). Toast is opt-in only.
+   * Background refresh/auth must NOT toast — that was spamming
+   * "Central de ajuda atualizada." on every kc:authchange.
+   *
+   * @param {string} message
+   * @param {string} [tone]
+   * @param {{ toast?: boolean }} [options] pass { toast: true } for form/user-action feedback
+   */
+  function setStatus(message, tone, options) {
+    const opts = options && typeof options === 'object' && !Array.isArray(options)
+      ? options
+      : {};
     const status = $('#helpStatus');
     const text = String(message || '');
     // Keep #helpStatus text for e2e assertions; do not paint a top-of-page banner.
-    // Sighted + SR feedback uses the same kc-toast pattern as publish on index.
     if (status) {
       status.textContent = text;
       status.className = 'kc-settings-status kc-help-status-live';
       status.setAttribute('aria-hidden', 'true');
     }
     if (!text) return;
-    announceHelpStatusToast(text, tone);
+    if (opts.toast === true) {
+      announceHelpStatusToast(text, tone);
+    }
   }
 
   function renderSubmitState(active, operationKind) {
@@ -1509,6 +1533,8 @@
 
   async function refreshHelpPage(options) {
     const opts = options || {};
+    // Pull-to-refresh may set notify:true; authchange/session must stay quiet.
+    const notify = opts.notify === true;
     const generation = state.accountLoadGeneration + 1;
     state.privacyRecoveryInProgress = true;
     setStatus('Atualizando a central de ajuda...', 'info');
@@ -1520,12 +1546,18 @@
       );
       if (accountLoad && accountLoad.stale) return;
       prefillContext();
+      // Never toast success on background refresh — only silent status mirror.
+      // Even pull-to-refresh skips success toast to avoid noise; errors may toast.
       setStatus('Central de ajuda atualizada.', 'success');
       await recoverPendingPrivacySubmissions();
     } catch (error) {
       if (state.accountLoadGeneration !== generation) return;
       console.warn('[Help] refresh failed.');
-      setStatus('Não foi possível atualizar a central de ajuda agora.', 'error');
+      setStatus(
+        'Não foi possível atualizar a central de ajuda agora.',
+        'error',
+        notify ? { toast: true } : undefined
+      );
     } finally {
       if (state.accountLoadGeneration === generation) {
         state.privacyRecoveryInProgress = false;
@@ -1617,7 +1649,7 @@
     if (state.submitting || state.privacyRecoveryInProgress) return;
 
     if (!window.KCAPI || typeof window.KCAPI.createHelpRequest !== 'function') {
-      setStatus('O envio de pedidos de ajuda não está disponível neste ambiente.', 'error');
+      setStatus('O envio de pedidos de ajuda não está disponível neste ambiente.', 'error', { toast: true });
       return;
     }
 
@@ -1625,18 +1657,18 @@
     const userId = getUserId(state.user);
     let payload = buildPayload();
     if (!payload.subject || !payload.message || !payload.contact_email || !payload.type || !payload.topic || !payload.priority) {
-      setStatus('Preencha categoria, tema, assunto, descrição, urgência e e-mail para retorno.', 'warn');
+      setStatus('Preencha categoria, tema, assunto, descrição, urgência e e-mail para retorno.', 'warn', { toast: true });
       return;
     }
     const normalizedValidationError =
       validateNormalizedHelpPayload(payload);
     if (normalizedValidationError) {
-      setStatus(normalizedValidationError, 'warn');
+      setStatus(normalizedValidationError, 'warn', { toast: true });
       return;
     }
     const firstInvalidConditional = document.querySelector('#helpConditionalFields [required]:invalid');
     if (firstInvalidConditional) {
-      setStatus('Preencha os campos obrigatórios específicos deste pedido.', 'warn');
+      setStatus('Preencha os campos obrigatórios específicos deste pedido.', 'warn', { toast: true });
       if (typeof firstInvalidConditional.reportValidity === 'function') firstInvalidConditional.reportValidity();
       firstInvalidConditional.focus();
       return;
@@ -1644,7 +1676,7 @@
     const privacyVerification =
       getPrivacyVerificationForSubmission(payload);
     if (!privacyVerification.ok) {
-      setStatus(privacyVerification.message, 'error');
+      setStatus(privacyVerification.message, 'error', { toast: true });
       setPrivacyVerificationStatus(privacyVerification.message, 'error');
       const verification = $('#helpPrivacyVerification');
       if (verification && typeof verification.focus === 'function') {
@@ -1657,7 +1689,7 @@
     const operationOwner = acquireSubmitOperation('submit');
     if (!operationOwner) return;
     setProtocol('');
-    setStatus('Enviando seu pedido de ajuda...', 'info');
+    setStatus('Enviando seu pedido de ajuda...', 'info', { toast: true });
 
     // Issue #752: if the visitor is unauthenticated and the request is a
     // privacy form, stash the payload in sessionStorage BEFORE submit so
@@ -1679,7 +1711,8 @@
         setStatus(
           (prepared && prepared.error && prepared.error.message)
             || 'Não foi possível preparar a proteção contra envios duplicados.',
-          'error'
+          'error',
+          { toast: true }
         );
         return;
       }
@@ -1713,7 +1746,11 @@
         ) {
           clearPrivacyIdempotencyToken(privacyIdempotencyToken);
         }
-        setStatus((result && result.error && result.error.message) || 'Não foi possível enviar seu pedido agora.', 'error');
+        setStatus(
+          (result && result.error && result.error.message) || 'Não foi possível enviar seu pedido agora.',
+          'error',
+          { toast: true }
+        );
         return;
       }
 
@@ -1731,7 +1768,8 @@
       if (!protocol) {
         setStatus(
           'O servidor não confirmou uma referência para o pedido. Para evitar duplicidade, não reenvie agora; tente recuperar esta mesma tentativa mais tarde.',
-          'error'
+          'error',
+          { toast: true }
         );
         return;
       }
@@ -1749,7 +1787,8 @@
           : protocol
           ? `Pedido enviado com sucesso. Referência de atendimento: ${protocol}. Guarde-a para informar quando o suporte entrar em contato.`
           : 'Pedido enviado com sucesso. A referência será informada no retorno do atendimento.',
-        'success'
+        'success',
+        { toast: true }
       );
       try {
         if (
@@ -1775,7 +1814,7 @@
     } catch (_) {
       if (!isActiveAccountLoad(generation, userId)) return;
       console.error('[Help] submit failed.');
-      setStatus('Não foi possível enviar seu pedido agora.', 'error');
+      setStatus('Não foi possível enviar seu pedido agora.', 'error', { toast: true });
     } finally {
       if (payload && Object.prototype.hasOwnProperty.call(payload, 'turnstile_token')) {
         delete payload.turnstile_token;
@@ -1792,7 +1831,7 @@
     populateTopics();
     setProtocol('');
     setStatus('', '');
-    if (!applyPrivacyDeepLinkPreset()) prefillContext();
+    if (!applyPrivacyDeepLinkPreset({ announce: false })) prefillContext();
     resetPrivacyTurnstile();
   }
 
@@ -1834,7 +1873,8 @@
         ? event.detail
         : {};
       const sessionUser = detail.user || (detail.session && detail.session.user) || null;
-      refreshHelpPage({ sessionUser });
+      // Quiet: session events fire often; never toast "Central de ajuda atualizada."
+      refreshHelpPage({ sessionUser, notify: false });
     });
   }
 
@@ -1843,7 +1883,9 @@
     document.body.dataset.kcHelpPtrReady = '1';
     window.KCPullToRefresh.init({
       container: document.body,
-      onRefresh: refreshHelpPage,
+      onRefresh: function () {
+        return refreshHelpPage({ notify: true });
+      },
     });
   }
 
@@ -1854,7 +1896,8 @@
     renderOptions($('#helpPriority'), Help.HELP_PRIORITY_OPTIONS || [], 'Selecione a urgência');
     populateTopics();
     bindEvents();
-    applyPrivacyDeepLinkPreset();
+    // Deep-link prep stays silent (no toast); form fields still prefill.
+    applyPrivacyDeepLinkPreset({ announce: false });
 
     try {
       await hydrateUser();
@@ -1874,7 +1917,6 @@
     // and try to submit it under the authenticated session.
     await restoreAndSubmitStashedPrivacyPayload();
 
-    initPullToRefresh();
     initPullToRefresh();
     try {
       if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
