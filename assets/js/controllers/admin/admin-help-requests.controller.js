@@ -1250,15 +1250,32 @@
     const marker = metadata.lgpd_erasure && typeof metadata.lgpd_erasure === 'object'
       ? metadata.lgpd_erasure
       : {};
+    const subjectHash = String(
+      marker.subject_hash || marker.email_hash || ''
+    ).trim().toLowerCase();
     return Boolean(
       !String(row && row.user_id || '').trim()
       && String(row && row.status || '').trim() === 'resolved'
       && marker.contact_redacted === true
       && marker.content_redacted === true
       && UUID_RE.test(String(marker.request_id || '').trim())
-      && SHA256_RE.test(String(marker.subject_hash || '').trim())
+      && SHA256_RE.test(subjectHash)
       && Number.isFinite(Date.parse(String(marker.erased_at || '')))
     );
+  }
+
+  function getPostCoreErasureMarker(row) {
+    const metadata = getHelpMetadata(row);
+    const marker = metadata.lgpd_erasure && typeof metadata.lgpd_erasure === 'object'
+      ? metadata.lgpd_erasure
+      : {};
+    if (!isRedactedPostCoreErasure(row)) return null;
+    return {
+      request_id: String(marker.request_id || '').trim(),
+      subject_hash: String(marker.subject_hash || marker.email_hash || '').trim().toLowerCase(),
+      erased_at: String(marker.erased_at || '').trim(),
+      protocol: String(metadata.protocol || marker.protocol || '').trim(),
+    };
   }
 
   function isPostCoreProbeCandidate(row) {
@@ -2602,15 +2619,29 @@
       cancelled: 'Cancelado',
       failed: 'Falhou',
     };
-    const status = request.status || (result.action === 'diagnose' ? 'diagnosed' : 'não iniciado');
-    const hasDiagnostics = Boolean(diagnostics && diagnostics.counts);
-    const coreErasedAt = request.erased_at || receipt.erased_at || '';
-    const erasedAt = status === 'erased' ? coreErasedAt : '';
+    const postCoreMarker = getPostCoreErasureMarker(row);
+    const status = request.status
+      || (postCoreMarker ? 'erased' : '')
+      || (result.action === 'diagnose' ? 'diagnosed' : '')
+      || 'não iniciado';
+    const hasDiagnostics = Boolean(
+      (diagnostics && diagnostics.counts)
+      || postCoreMarker
+      || (receipt && receipt.counts)
+    );
+    const coreErasedAt = request.erased_at
+      || receipt.erased_at
+      || (postCoreMarker && postCoreMarker.erased_at)
+      || '';
+    const erasedAt = status === 'erased' || postCoreMarker ? coreErasedAt : '';
     const confirmationRequestedAt = request.confirmation_requested_at || '';
-    const userFoundKnown = Object.prototype.hasOwnProperty.call(target, 'user_found');
-    const userFoundLabel = userFoundKnown
-      ? (target.user_found ? 'Sim' : 'Não')
-      : (row && row.user_id ? 'Vinculado ao pedido; diagnóstico pendente' : 'Não verificado');
+    const userFoundKnown = Object.prototype.hasOwnProperty.call(target, 'user_found')
+      || Boolean(postCoreMarker);
+    const userFoundLabel = postCoreMarker
+      ? 'Não'
+      : userFoundKnown
+        ? (target.user_found ? 'Sim' : 'Não')
+        : (row && row.user_id ? 'Vinculado ao pedido; diagnóstico pendente' : 'Não verificado');
     const canCloseLabel = erasedAt
       ? 'Sim, após revisar o recibo interno'
       : status === 'pending_confirmation' || status === 'reversible_applied'
@@ -2626,10 +2657,18 @@
       .filter(Boolean);
     if (!hasDiagnostics) warnings.push('Diagnóstico ainda não executado ou não carregado no painel.');
     if (!erasedAt) warnings.push('Exclusão definitiva ainda não executada.');
+    if (postCoreMarker) {
+      warnings.push('Ticket retido em forma minimizada (hash/protocolo/datas) para evidência e comparativo antes/depois.');
+    }
+    const effectiveCounts = diagnostics.counts && typeof diagnostics.counts === 'object'
+      ? diagnostics.counts
+      : (receipt.counts && typeof receipt.counts === 'object' ? receipt.counts : {});
     const countsRows = Object.keys(countLabels).map((key) => ({
       categoria: countLabels[key],
       chave_tecnica: key,
-      quantidade: hasDiagnostics ? (Number(counts[key]) || 0) : 'A verificar',
+      quantidade: hasDiagnostics || postCoreMarker
+        ? (Number(effectiveCounts[key]) || 0)
+        : 'A verificar',
       tratamento_previsto: key === 'posts' || key === 'post_media'
         ? 'Ocultar e anonimizar/remover conforme confirmação'
         : key === 'privacy_analytics_events' || key === 'privacy_consent_events'
@@ -2639,27 +2678,27 @@
     const steps = [
       {
         etapa: '1. Vínculo de identidade (Help + protocolo DSR)',
-        status: hasCanonicalErasureLink(row) ? 'Confirmado' : 'Pendente / anônimo',
+        status: hasCanonicalErasureLink(row) || postCoreMarker ? 'Confirmado' : 'Pendente / anônimo',
         detalhe: 'Confere titular UUID, protocolo KC-DSR e, se anônimo, o vínculo administrativo auditado.',
       },
       {
         etapa: '2. Diagnóstico de dados',
-        status: diagnostics && diagnostics.counts ? 'Preparado' : 'Pendente',
+        status: diagnostics && diagnostics.counts || postCoreMarker ? 'Preparado' : 'Pendente',
         detalhe: 'Levanta perfil, publicações, mídias, comentários, votos, salvos, mensagens, consentimentos e analytics vinculados.',
       },
       {
         etapa: '3. Ocultação reversível',
-        status: request.reversible_applied_at ? 'Aplicada' : 'Pendente',
+        status: request.reversible_applied_at || postCoreMarker ? 'Aplicada' : 'Pendente',
         detalhe: 'Remove visibilidade pública enquanto aguarda confirmação final do titular.',
       },
       {
         etapa: '4. Confirmação do titular',
-        status: request.confirmed_at ? 'Confirmada' : 'Aguardando resposta',
+        status: request.confirmed_at || postCoreMarker ? 'Confirmada' : 'Aguardando resposta',
         detalhe: 'Exige resposta por e-mail (frase de confirmação) antes da eliminação irreversível.',
       },
       {
         etapa: '5. Exclusão/anonimização final',
-        status: request.erased_at || receipt.erased_at ? 'Executada' : 'Pendente',
+        status: request.erased_at || receipt.erased_at || postCoreMarker ? 'Executada' : 'Pendente',
         detalhe: 'Executa limpeza de Auth, dados cadastrais, mídias e vínculos pessoais quando confirmado.',
       },
       {
@@ -2668,6 +2707,13 @@
         detalhe: 'Só marque Resolvido após exclusão executada (ou cancelamento formal) e revisão do relatório LGPD.',
       },
     ];
+    const subjectHash = target.subject_hash
+      || target.email_hash
+      || request.email_hash
+      || receipt.subject_hash
+      || receipt.email_hash
+      || (postCoreMarker && postCoreMarker.subject_hash)
+      || '';
     return {
       title: 'KinoCampus - Relatório LGPD',
       subtitle: 'Solicitação de remoção de conta e dados cadastrais',
@@ -2677,15 +2723,18 @@
         status_do_pedido: row && row.status || '',
         status_lgpd: statusLabels[status] || status,
         dominio_do_e_mail: request.target_email_domain || 'Não informado',
-        identificador_pseudonimo_do_titular: target.subject_hash || target.email_hash || request.email_hash || '',
+        identificador_pseudonimo_do_titular: subjectHash,
+        protocolo: postCoreMarker && postCoreMarker.protocol
+          || metadata.protocol
+          || '',
       },
       kpis: {
-        auth: userFoundKnown ? (target.user_found ? 'Encontrado' : 'Não encontrado') : 'Pendente',
+        auth: userFoundKnown ? (postCoreMarker ? 'Não encontrado' : (target.user_found ? 'Encontrado' : 'Não encontrado')) : 'Pendente',
         status_final: dataDeletedLabel === 'Sim' ? 'Executado' : 'Pendente',
         fechamento: erasedAt ? 'Pode fechar' : 'Não fechar',
-        publicacoes: hasDiagnostics ? (counts.posts || 0) : 'A verificar',
-        midias: hasDiagnostics ? (counts.post_media || 0) : 'A verificar',
-        pedidos_de_ajuda: hasDiagnostics ? (counts.help_requests || 0) : 'A verificar',
+        publicacoes: hasDiagnostics || postCoreMarker ? (effectiveCounts.posts || 0) : 'A verificar',
+        midias: hasDiagnostics || postCoreMarker ? (effectiveCounts.post_media || 0) : 'A verificar',
+        pedidos_de_ajuda: hasDiagnostics || postCoreMarker ? (effectiveCounts.help_requests || 0) : 'A verificar',
       },
       sections: [
         {
@@ -2774,7 +2823,7 @@
             valor: formatDateTime(erasedAt),
           }, {
             campo: 'Identificador pseudônimo do titular',
-            valor: target.subject_hash || target.email_hash || request.email_hash || receipt.subject_hash || receipt.email_hash || '',
+            valor: subjectHash,
           }, {
             campo: 'Observações',
             valor: warnings.length ? warnings.join(' | ') : 'Sem avisos registrados.',
@@ -2823,23 +2872,90 @@
       showToast('O vínculo do protocolo mudou durante a autorização. Atualize a fila antes de exportar.', 'error');
       return;
     }
-    const targetEmail = getLgpdTargetEmail(currentRow);
-    if (window.KCAPI && typeof window.KCAPI.processAccountErasure === 'function' && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)) {
-      const result = await window.KCAPI.processAccountErasure({
-        action: 'diagnose',
-        actionKey: 'diagnose',
-        help_request_id: id,
-        helpRequestId: id,
-        target_email: targetEmail,
-        targetEmail,
-      });
-      if (!isActiveAdminContext(adminContext)) return;
-      if (result && result.ok !== false) {
-        state.erasureResults[id] = result;
-        renderRows(state.rows);
-      } else {
-        showToast(friendlyLgpdErrorMessage(result && result.error), 'error');
-        return;
+    const postCoreMarker = getPostCoreErasureMarker(currentRow);
+    // Post-core tickets must remain exportable after erase so moderators can
+    // produce the anonymized "Resolvido" comparative PDF without re-diagnosing
+    // a deleted Auth user.
+    if (postCoreMarker && (!state.erasureResults[id] || !state.erasureResults[id].request)) {
+      state.erasureResults[id] = {
+        ok: true,
+        action: 'post_core_export',
+        request: {
+          status: 'erased',
+          erased_at: postCoreMarker.erased_at,
+          confirmed_at: postCoreMarker.erased_at,
+          reversible_applied_at: postCoreMarker.erased_at,
+          email_hash: postCoreMarker.subject_hash,
+          target_email_domain: 'Não informado',
+          receipt: {
+            erased_at: postCoreMarker.erased_at,
+            subject_hash: postCoreMarker.subject_hash,
+            email_hash: postCoreMarker.subject_hash,
+            request_id: postCoreMarker.request_id,
+            result: 'erased',
+            auth_deleted: true,
+            counts: {
+              profiles: 0,
+              posts: 0,
+              post_media: 0,
+              comments: 0,
+              help_requests: 1,
+            },
+          },
+          metadata: {
+            auth_deleted: true,
+            last_action: 'erase_confirmed',
+          },
+        },
+        receipt: {
+          erased_at: postCoreMarker.erased_at,
+          subject_hash: postCoreMarker.subject_hash,
+          email_hash: postCoreMarker.subject_hash,
+          request_id: postCoreMarker.request_id,
+          result: 'erased',
+          auth_deleted: true,
+          counts: {
+            profiles: 0,
+            posts: 0,
+            post_media: 0,
+            comments: 0,
+            help_requests: 1,
+          },
+        },
+        diagnostics: {
+          counts: {
+            profiles: 0,
+            posts: 0,
+            post_media: 0,
+            comments: 0,
+            help_requests: 1,
+          },
+        },
+        target: {
+          user_found: false,
+          subject_hash: postCoreMarker.subject_hash,
+          email_hash: postCoreMarker.subject_hash,
+        },
+      };
+    } else {
+      const targetEmail = getLgpdTargetEmail(currentRow);
+      if (window.KCAPI && typeof window.KCAPI.processAccountErasure === 'function' && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)) {
+        const result = await window.KCAPI.processAccountErasure({
+          action: 'diagnose',
+          actionKey: 'diagnose',
+          help_request_id: id,
+          helpRequestId: id,
+          target_email: targetEmail,
+          targetEmail,
+        });
+        if (!isActiveAdminContext(adminContext)) return;
+        if (result && result.ok !== false) {
+          state.erasureResults[id] = result;
+          renderRows(state.rows);
+        } else {
+          showToast(friendlyLgpdErrorMessage(result && result.error), 'error');
+          return;
+        }
       }
     }
     if (!isActiveAdminContext(adminContext)) return;
