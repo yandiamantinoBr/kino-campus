@@ -380,8 +380,16 @@
 
   function normalizeChoice(value, options, fallback) {
     const normalized = normalizeKey(value);
-    const allowed = new Set((Array.isArray(options) ? options : []).map((item) => String(item && item.value || '')));
+    const list = Array.isArray(options) ? options : [];
+    const allowed = new Set(list.map((item) => String(item && item.value || '')));
     if (allowed.has(normalized)) return normalized;
+    // Accept free-text / pasted Portuguese labels (e.g. "Urgente" → urgent).
+    for (let i = 0; i < list.length; i += 1) {
+      const item = list[i];
+      const optionValue = String(item && item.value || '').trim();
+      if (!optionValue) continue;
+      if (normalizeKey(item && item.label) === normalized) return optionValue;
+    }
     return String(fallback || '').trim();
   }
 

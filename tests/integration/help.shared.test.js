@@ -160,6 +160,14 @@ describe('KCHelpUtils', () => {
     expect(payload.contact_email).toBe('contato@kinocampus.com.br');
   });
 
+  test('normalizeHelpRequestInput maps Portuguese priority labels without silent demotion', () => {
+    expect(Help.normalizeHelpRequestInput({ priority: 'Urgente' }).priority).toBe('urgent');
+    expect(Help.normalizeHelpRequestInput({ priority: 'urgente' }).priority).toBe('urgent');
+    expect(Help.normalizeHelpRequestInput({ priority: 'Alta' }).priority).toBe('high');
+    expect(Help.normalizeHelpRequestInput({ priority: 'Baixa' }).priority).toBe('low');
+    expect(Help.normalizeHelpRequestInput({ priority: 'Normal' }).priority).toBe('normal');
+  });
+
   test('normalizeHelpRequestInput preserves external access metadata safely', () => {
     const payload = Help.normalizeHelpRequestInput({
       type: 'external_access',
