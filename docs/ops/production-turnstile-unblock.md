@@ -1,10 +1,15 @@
 # Destravar produção Vercel após PR #747 (Turnstile)
 
 **Data:** 2026-07-31  
-**Sintoma:** deploys `target=production` em `ERROR` com  
-`TURNSTILE_SITE_KEY_REQUIRED: configure uma site key real antes do build de produção.`  
-**Último production READY observado:** ~2026-07-29 (`dpl_8SmgwpKo6zUN1Svs6fyjgzio6hUf` /  
-`kino-campus-pxt5tnr1n-…`), **antes** do merge do pacote LGPD/DSR.
+**Sintoma (histórico):** deploys `target=production` em `ERROR` com  
+`TURNSTILE_SITE_KEY_REQUIRED` enquanto o build **abortava** sem site key.  
+**Política atual do build (2026-07-31+):** produção **pode buildar sem site key**  
+(degraded). O build emite `TURNSTILE_SITE_KEY_REQUIRED` como **warning** e  
+continua. O formulário LGPD **visitante** permanece fail-closed em runtime até  
+existir `KC_TURNSTILE_SITE_KEY` real. Chaves oficiais de teste Cloudflare  
+continuam **proibidas** em produção (`TURNSTILE_TEST_SITE_KEY_FORBIDDEN`).  
+**Último production READY pré-privacidade:** ~2026-07-29  
+(`kino-campus-pxt5tnr1n-…`), **antes** do merge do pacote LGPD/DSR.
 
 ## O que NÃO é o problema
 
