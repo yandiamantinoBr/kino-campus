@@ -11,7 +11,7 @@
   <title>KinoCampus - Pedidos de ajuda</title>
   <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.12" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
-  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.13" />
+  <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     .kc-admin-page .kc-main-content { padding-top: 24px; }
@@ -302,6 +302,31 @@
       font-weight: 700;
     }
     .kc-admin-lgpd-checklist__item.is-pending { opacity: 0.78; }
+    @media (max-width: 640px) {
+      .kc-admin-page .kc-main-content { padding-top: 16px; }
+      .kc-admin-wrapper { padding-inline: 10px; }
+      .kc-admin-header-bar { align-items: stretch; }
+      .kc-admin-header-bar p { font-size: .92rem; }
+      .kc-admin-toolbar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+      .kc-admin-toolbar input { grid-column: 1 / -1; min-width: 0; }
+      .kc-admin-toolbar select,
+      .kc-admin-toolbar button { width: 100%; min-width: 0; min-height: 44px; }
+      .kc-admin-help-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .kc-admin-help-metric,
+      .kc-admin-help-card { padding: 12px; border-radius: 14px; }
+      .kc-admin-help-card { gap: 12px; }
+      .kc-admin-help-meta { grid-template-columns: 1fr; }
+      .kc-admin-help-identity__row { align-items: flex-start; }
+      .kc-admin-help-identity__value { flex-basis: 100%; justify-content: flex-start; }
+      .kc-admin-lgpd-panel { padding: 12px; }
+      .kc-admin-lgpd-actions,
+      .kc-admin-lgpd-danger { grid-template-columns: 1fr; }
+      .kc-admin-lgpd-panel button { min-height: 44px; }
+    }
   </style>
 </head>
 <body class="kc-admin-page kc-admin-page--help-requests">
@@ -351,7 +376,7 @@
             <p>Triagem centralizada de dúvidas, reclamações, elogios, denúncias e problemas de conta. Clique nos chips de status/urgência de cada pedido para salvar automaticamente.</p>
           </div>
           <div class="kc-admin-toolbar">
-            <select id="helpStatusFilter" title="Filtrar por status" data-i18n-tooltip="tooltip.filter-status" aria-label="Filtrar por status">
+            <select id="helpStatusFilter" title="Filtrar por status" data-i18n-tooltip="tooltip.filter-status" aria-label="Filtrar por status" data-i18n-aria-label="aria-label.admin-help-status-filter">
               <option value="all">Todos os status</option>
               <option value="new">Novo</option>
               <option value="triaged">Triado</option>
@@ -359,19 +384,19 @@
               <option value="resolved">Resolvido</option>
               <option value="archived">Arquivado</option>
             </select>
-            <select id="helpTypeFilter" title="Filtrar por categoria" data-i18n-tooltip="tooltip.filter-category" aria-label="Filtrar por categoria">
+            <select id="helpTypeFilter" title="Filtrar por categoria" data-i18n-tooltip="tooltip.filter-category" aria-label="Filtrar por categoria" data-i18n-aria-label="aria-label.admin-help-type-filter">
               <option value="all">Todas as categorias</option>
             </select>
-            <select id="helpPriorityFilter" title="Filtrar por urgência" data-i18n-tooltip="tooltip.filter-urgency" aria-label="Filtrar por urgência">
+            <select id="helpPriorityFilter" title="Filtrar por urgência" data-i18n-tooltip="tooltip.filter-urgency" aria-label="Filtrar por urgência" data-i18n-aria-label="aria-label.admin-help-priority-filter">
               <option value="all">Todas as urgências</option>
               <option value="low">Baixa</option>
               <option value="normal">Normal</option>
               <option value="high">Alta</option>
               <option value="urgent">Urgente</option>
             </select>
-            <input id="helpQueryFilter" type="search" placeholder="Buscar por assunto, e-mail ou página" data-i18n-placeholder="placeholder.admin-help-search" aria-label="Buscar pedidos de ajuda" />
+            <input id="helpQueryFilter" type="search" placeholder="Buscar por assunto, e-mail ou página" data-i18n-placeholder="placeholder.admin-help-search" aria-label="Buscar pedidos de ajuda" data-i18n-aria-label="aria-label.admin-help-search" />
             <button id="helpRefreshButton" type="button"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar</button>
-            <button id="helpClearFiltersButton" type="button" hidden disabled title="Limpar filtros da fila"><i class="fas fa-filter-circle-xmark" aria-hidden="true"></i> Limpar filtros</button>
+            <button id="helpClearFiltersButton" type="button" hidden disabled title="Limpar filtros da fila" data-i18n-tooltip="tooltip.admin-help-clear-filters"><i class="fas fa-filter-circle-xmark" aria-hidden="true"></i> Limpar filtros</button>
             <button id="helpExportXlsx" type="button"><i class="fas fa-file-excel" aria-hidden="true"></i> XLSX</button>
             <button id="helpExportPdf" type="button"><i class="fas fa-file-pdf" aria-hidden="true"></i> PDF</button>
           </div>
@@ -441,7 +466,7 @@
   <script defer src="../assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.help.adapter.js?v=8.6.13"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
-  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.14"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.15"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
     <script defer src="../assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
@@ -458,6 +483,6 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.23"></script>
+  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.24"></script>
 </body>
 </html>

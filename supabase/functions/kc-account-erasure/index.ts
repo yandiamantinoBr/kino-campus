@@ -56,6 +56,7 @@ const DEFAULT_FROM_NAME = "KinoCampus";
 const DEFAULT_FROM_EMAIL = "contato@kinocampus.com.br";
 const DEFAULT_SMTP_HOST = "smtp.hostinger.com";
 const DEFAULT_SMTP_PORT = 465;
+const ACCOUNT_ERASURE_CONTRACT_VERSION = "kc-account-erasure-2026-08-01-v1";
 const ACTION_CLAIM_TTL_SECONDS = 15 * 60;
 const DEFAULT_COMPLETION_OUTBOX_TTL_SECONDS = 6 * 60 * 60;
 const CANONICAL_ERASURE_KIND = "account_erasure";
@@ -80,6 +81,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
 ];
 const SUPPORTED_ACTIONS = new Set([
+  "capabilities",
   "link_verified_identity",
   "diagnose",
   "apply_reversible",
@@ -273,7 +275,9 @@ function sanitizeResponseValue(value: unknown, key = ""): unknown {
 }
 
 function projectEdgeResponse(body: Record<string, unknown>) {
-  return sanitizeResponseValue(body) as Record<string, unknown>;
+  const projected = sanitizeResponseValue(body) as Record<string, unknown>;
+  projected.contract_version = ACCOUNT_ERASURE_CONTRACT_VERSION;
+  return projected;
 }
 
 function json(request: Request, status: number, body: Record<string, unknown>) {
@@ -1717,7 +1721,7 @@ function buildConfirmationEmail(email: string) {
   return { subject, text, html, phrase };
 }
 
-function buildCompletionEmail(requestId: string, receipt: JsonObject) {
+function buildCompletionEmail(_requestId: string, receipt: JsonObject) {
   const subject = "Conclusão da solicitação de exclusão - KinoCampus";
   const baseUrl = getEnv("KC_APP_BASE_URL", DEFAULT_APP_BASE_URL).replace(
     /\/+$/,
@@ -1726,7 +1730,10 @@ function buildCompletionEmail(requestId: string, receipt: JsonObject) {
   const completedAt =
     safeString(receipt.erased_at || receipt.completed_at, 80) ||
     new Date().toISOString();
-  const protocol = safeString(receipt.protocol, 120) || requestId;
+  const protocolCandidate = safeString(receipt.protocol, 120).toUpperCase();
+  const protocol = /^KC-DSR-[0-9]{8}-[A-F0-9]{16}$/.test(protocolCandidate)
+    ? protocolCandidate
+    : "";
   const providerEvidence = asObject(receipt.provider_evidence);
   const outcomes = asObject(providerEvidence.outcomes);
   const retentions = asObject(providerEvidence.retentions);
@@ -1751,7 +1758,9 @@ function buildCompletionEmail(requestId: string, receipt: JsonObject) {
     "Olá.",
     "",
     "Concluímos o processamento da sua solicitação de exclusão de conta no KinoCampus.",
-    `Protocolo: ${protocol}`,
+    protocol
+      ? `Protocolo: ${protocol}`
+      : "Referência pública: indisponível neste comprovante legado.",
     `Conclusão: ${completedAt}`,
     "",
     "O cadastro e os dados elegíveis foram eliminados; conteúdos compartilhados e registros de segurança foram desidentificados quando a preservação era necessária.",
@@ -1778,8 +1787,10 @@ function buildCompletionEmail(requestId: string, receipt: JsonObject) {
     <h1 style="font-size:26px;line-height:1.2;color:#111827;">Solicitação concluída</h1>
     <p style="font-size:15px;line-height:1.7;color:#4b5563;">Concluímos o processamento da sua solicitação de exclusão de conta no KinoCampus.</p>
     <div style="padding:16px;border-radius:14px;background:#f9fafb;border:1px solid #e5e7eb;">
-      <p style="margin:0 0 8px;"><strong>Protocolo:</strong> ${
-    escapeHtml(protocol)
+      <p style="margin:0 0 8px;"><strong>${
+    protocol ? "Protocolo" : "Referência pública"
+  }:</strong> ${
+    protocol ? escapeHtml(protocol) : "indisponível neste comprovante legado"
   }</p>
       <p style="margin:0;"><strong>Conclusão:</strong> ${
     escapeHtml(completedAt)
@@ -6694,6 +6705,10 @@ Deno.serve(async (req) => {
   }
 
   const action = safeString(body.action || body.actionKey, 40);
+  const expectedContractVersion = safeString(
+    body.expected_contract_version || body.expectedContractVersion,
+    120,
+  );
   const rawHelpRequestId = firstString(
     body.help_request_id,
     body.helpRequestId,
@@ -6709,6 +6724,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (action === "capabilities") {
+      const capabilities = await readErasureCapabilities(adminClient);
+      const ready = capabilities.ok === true;
+      return json(req, ready ? 200 : 503, {
+        ok: ready,
+        action,
+        error: ready ? null : "schema_capabilities_incomplete",
+        capabilities: {
+          schema_version: capabilities.version,
+          safe_erasure_schema: ready,
+          write_quiescence: capabilities.write_quiescence,
+          encrypted_completion_outbox: capabilities.encrypted_completion_outbox,
+          admin_session_bound_claims: capabilities.admin_session_bound_claims,
+          durable_auth_delete_checkpoint:
+            capabilities.durable_auth_delete_checkpoint,
+        },
+      });
+    }
+    if (expectedContractVersion !== ACCOUNT_ERASURE_CONTRACT_VERSION) {
+      return json(req, 409, {
+        ok: false,
+        error: "account_erasure_contract_mismatch",
+      });
+    }
     if (!helpRequestId) {
       return json(req, 400, {
         ok: false,

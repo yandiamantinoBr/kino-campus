@@ -42,10 +42,12 @@ sincronização mantém todas as mutações bloqueadas.
 Um Help legado/anônimo não pode ser diagnosticado nem sofrer qualquer mutação do
 workflow antes do vínculo administrativo dedicado. O operador informa o e-mail
 exato da conta verificada, canal, referência, data e atestado. Se o Help ainda não
-tiver DSR, a migration 12000 materializa exatamente um protocolo de exclusão na
-mesma transação; um DSR existente é validado e reutilizado, e múltiplos DSRs
-falham fechado. O painel mantém todas as demais ações bloqueadas até uma recarga
-canônica confirmar `help_requests.user_id`.
+tiver DSR, a migration 12000 cobre o Help anônimo e a migration
+`20260731193000_materialize_dsr_for_authenticated_legacy_help.sql` cobre o Help
+legado que já possui `user_id`; ambas materializam exatamente um protocolo de
+exclusão na mesma transação. Um DSR existente é validado e reutilizado, e
+múltiplos DSRs falham fechado. O painel mantém todas as demais ações bloqueadas
+até uma recarga canônica confirmar `help_requests.user_id` e o DSR projetado.
 
 Os canais permitidos são desafio respondido no e-mail da conta, resposta validada
 na caixa de suporte, revisão documental por canal seguro ou verificação
@@ -378,6 +380,11 @@ uma recarga permite nova tentativa usando o mesmo destinatário cifrado, sem
 exibi-lo ao administrador. Claims simultâneos são recusados. Se o SMTP aceitou
 e o banco registrou o aceite, retries observam `accepted` e não reenviam.
 
+Consequentemente, `status = erased` isolado comprova somente o núcleo. O painel
+só considera o fluxo integral concluído e permite fechar o Help quando a leitura
+autoritativa também comprova `notification_pending = false`, ausência de falha
+retryable e `completion_email_status` igual a `sent` ou `sent_manual`.
+
 Se essa nova tentativa falhar de forma recuperável, a resposta inclui
 `retryable: true` e `next_action: "retry_finalize"`. A ação continua bloqueada
 quando o diagnóstico não confirma exatamente a mesma pendência; uma indicação
@@ -474,6 +481,17 @@ canários/frontend → cópia/verificação → **contract** posterior.
    quando a telemetria mostrar ausência de clientes antigos e os claims
    preexistentes tiverem concluído ou sido reconciliados para vínculo
    inequívoco/falha retryable.
+
+Antes de cada operação administrativa, o adapter consulta `action=capabilities`
+e exige o contrato `kc-account-erasure-2026-08-01-v1`, schema capability v5 e os
+gates críticos. Toda mutação envia `expected_contract_version`. O workflow de
+deploy deve baixar novamente a fonte publicada e localizar esse marcador; status
+`ACTIVE` e número de versão, sozinhos, não provam paridade com o repositório.
+
+O frontend pode restaurar antes da reautorização apenas preferências não
+sensíveis de visualização. Linhas da fila, e-mail, assunto, descrição, UUIDs e
+texto de busca não devem ser gravados em `localStorage` nem `sessionStorage` e
+só podem ser renderizados depois de revalidar a sessão administrativa atual.
 
 Na fase expand, as assinaturas session-bound novas coexistem temporariamente com
 cinco wrappers públicos actor-only necessários à Edge anterior. Eles funcionam

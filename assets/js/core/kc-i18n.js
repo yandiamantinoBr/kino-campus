@@ -434,6 +434,7 @@
     'aria-label.profile-tabs':          'Seções do perfil',
     'aria-label.start-chat':            'Iniciar conversa',
     'aria-label.help-privacy-security-challenge': 'Desafio de verificação de segurança',
+    'aria-label.help-guidance-faq':    'Orientação e perguntas frequentes',
 
     // Mensagens
     'aria-label.chat-list':             'Lista de conversas',
@@ -566,6 +567,10 @@
     'aria-label.admin-mod-search':          'Buscar publicações por título, ID ou autor',
     'aria-label.admin-user-limit-search':   'Buscar usuário para configurar limites',
     'aria-label.admin-user-search-results': 'Resultados da busca de usuários',
+    'aria-label.admin-help-status-filter':   'Filtrar pedidos de ajuda por status',
+    'aria-label.admin-help-type-filter':     'Filtrar pedidos de ajuda por categoria',
+    'aria-label.admin-help-priority-filter': 'Filtrar pedidos de ajuda por urgência',
+    'aria-label.admin-help-search':          'Buscar pedidos de ajuda',
     'aria-label.admin-limit-global-value':  'Máximo de publicações no limite global',
     'aria-label.admin-limit-user-value':    'Máximo de publicações para o usuário selecionado',
     'aria-label.admin-audit-actor-filter':  'Filtrar auditoria por identificador ou nome do ator',
@@ -696,6 +701,7 @@
     'tooltip.filter-status':            'Filtrar por status',
     'tooltip.filter-category':          'Filtrar por categoria',
     'tooltip.filter-urgency':           'Filtrar por urgência',
+    'tooltip.admin-help-clear-filters': 'Limpar filtros da fila',
     'tooltip.filter-report-status':     'Filtrar por status da denúncia',
     'tooltip.filter-reason':            'Filtrar por motivo',
     'tooltip.filter-module':            'Filtrar por módulo',

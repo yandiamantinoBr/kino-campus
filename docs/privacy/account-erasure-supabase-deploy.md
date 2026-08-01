@@ -8,7 +8,8 @@ Este checklist é operacional. Ele não autoriza executar exclusão real durante
 2. inventariar claims/leases já abertos e aplicar as migrations **expand** em
    ordem, incluindo DSR/barreira, redaction de auditoria, outbox criptografada,
    recuperação de Auth, projeção segura, estado Auth esperado do Help, ponte
-   anônima e
+   anônima, a materialização de DSR para Help legado autenticado em
+   `20260731193000_materialize_dsr_for_authenticated_legacy_help.sql` e
    `20260729190653_help_submission_idempotency.sql`, seguidas por
    `20260729203000_help_privacy_guest_gateway_expand.sql`;
 3. executar pgTAP, contract tests, advisors, capability e os canários de
@@ -159,6 +160,8 @@ O reset destrói o banco local. Nunca aponte esse comando para produção.
 - claim sem status/versão corretos falha;
 - Help anônimo com zero DSR materializa exatamente um pedido opaco e seu evento,
   e o retry idêntico não duplica DSR, evento, workflow ou ledger;
+- Help legado autenticado com zero DSR também materializa exatamente um pedido
+  opaco pela migration 31193000, sem trocar o titular já vinculado;
 - Help com um DSR reutiliza a linha existente; com mais de um falha sem escolher
   o primeiro;
 - referência de DSR apenas em metadata, outro pedido aberto e workflow avançado
@@ -302,7 +305,9 @@ Valide:
 17. resultado explícito e retenção documentada de cada operador;
 18. revisão registrada do encadeamento Cadu/OpenClaw/Hostinger VPS para UUIDs
     administrativos e referências `requested_by`/`resolved_by`;
-19. DSR/Help/workflow finalizados antes do e-mail;
+19. DSR concluído, Help redigido e workflow marcado
+    `erased/notification_pending` antes do e-mail; o fluxo administrativo só
+    termina depois do aceite SMTP/manual e da remoção de `notification_pending`;
 20. falha SMTP, recarga e retry automático pelo endereço cifrado;
 21. concorrência/aceite CAS e ausência de e-mail, ciphertext e nonce em
     painel, logs e recibo;
@@ -425,7 +430,12 @@ Publique apenas depois dos gates do banco:
 ```
 
 Confirme no projeto-alvo as versões e o `verify_jwt` efetivo; o repositório não
-prova o estado remoto. Execute canários de criação, retry idempotente, claim,
+prova o estado remoto. Para `kc-account-erasure`, baixe a fonte publicada e
+confirme literalmente o marcador `kc-account-erasure-2026-08-01-v1`; uma função
+`ACTIVE` com versão maior ainda pode conter código antigo. O frontend deve chamar
+`action=capabilities` antes de cada operação, exigir schema v5 e enviar
+`expected_contract_version` nas chamadas seguintes. Execute canários de criação,
+retry idempotente, claim,
 heartbeat/recovery, cancelamento, expurgo e sessão administrativa revogada. Para
 o gateway visitante, faça o primeiro canário enquanto a RPC direta ainda está
 na janela expand: token válido deve criar/reproduzir, e token ausente, inválido,

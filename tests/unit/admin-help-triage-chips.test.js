@@ -42,7 +42,10 @@ describe('admin help-requests chip triage UX', () => {
     const slice = CONTROLLER.slice(idx, idx + 4500);
     expect(slice).toContain("status === 'resolved' || status === 'archived'");
     expect(slice).toContain('isLgpdErasureRequest');
-    expect(slice).toContain('Deseja continuar mesmo assim?');
+    expect(slice).toContain('getErasureCompletionState');
+    expect(slice).toContain('completionState.flowComplete');
+    expect(slice).toContain('Fechamento bloqueado');
+    expect(slice).not.toContain('Deseja continuar mesmo assim?');
   });
 
   test('does not rehydrate triage from drafts (server/chips are source of truth)', () => {
@@ -54,8 +57,8 @@ describe('admin help-requests chip triage UX', () => {
   test('page styles interactive triage chips and cache-busts assets', () => {
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.23');
-    expect(PAGE).toContain('admin-shell.css?v=8.6.13');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.24');
+    expect(PAGE).toContain('admin-shell.css?v=8.6.12');
     expect(PAGE).toContain('is-triage-leaving');
     expect(PAGE).toContain('kc-admin-help-identity');
     expect(PAGE).toContain('kc-admin-help-ticket-ref');
@@ -82,7 +85,7 @@ describe('admin help-requests chip triage UX', () => {
     expect(slice).toContain('Chip auto-save is high-frequency: no success toast');
     // Errors and LGPD warn still toast.
     expect(slice).toContain("showToast('Não foi possível salvar a triagem.', 'error')");
-    expect(slice).toContain("showToast('Triagem não salva.");
+    expect(slice).toContain('Fechamento bloqueado');
   });
 
   test('exposes ticket identity and blocks archive on open data-export DSR', () => {

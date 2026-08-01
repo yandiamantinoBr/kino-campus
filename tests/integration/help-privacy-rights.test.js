@@ -247,6 +247,8 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(completionEmail).toContain('Concluímos o processamento');
     expect(completionEmail).toContain('Retenções mínimas');
     expect(completionEmail).toContain('Este comprovante não contém');
+    expect(completionEmail).toContain('^KC-DSR-[0-9]{8}-[A-F0-9]{16}$');
+    expect(completionEmail).not.toContain('|| requestId');
     expect(completionEmail).not.toContain('Conclusao');
   });
 });

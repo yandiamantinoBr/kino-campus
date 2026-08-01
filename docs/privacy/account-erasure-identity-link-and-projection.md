@@ -27,9 +27,10 @@ mesma transação:
 - o Help tem a classificação canônica
   `account_access/onboarding_settings/account_deletion`;
 - o `contact_email` do Help é exatamente o e-mail verificado;
-- existem zero ou um DSR ligado ao Help; zero só é aceito para Help ainda
-  anônimo e materializa um DSR de `account_erasure` com protocolo,
-  `subject_hash` e chave idempotente aleatórios gerados no banco;
+- existem zero ou um DSR ligado ao Help; zero é aceito para Help anônimo pela
+  migration 12000 e para Help legado já autenticado pela migration 31193000,
+  materializando um DSR de `account_erasure` com protocolo, `subject_hash` e
+  chave idempotente aleatórios gerados no banco;
 - quando já existe um DSR, ele é do tipo `account_erasure` e é reutilizado;
 - Help e DSR ainda estão sem titular ou já apontam para o mesmo titular;
 - o DSR está em `received` ou `failed`;
@@ -88,8 +89,9 @@ protocolo e evento são definidos exclusivamente pelo materializador privado.
 
 ## Ordem de bloqueio e atomicidade
 
-As migrations `20260729009000_harden_erasure_identity_link_and_projection.sql`
-e `20260729012000_bridge_anonymous_help_to_erasure_dsr.sql` usam a mesma
+As migrations `20260729009000_harden_erasure_identity_link_and_projection.sql`,
+`20260729012000_bridge_anonymous_help_to_erasure_dsr.sql` e
+`20260731193000_materialize_dsr_for_authenticated_legacy_help.sql` usam a mesma
 barreira global dos fluxos 04000/07000:
 
 1. lock de titular (`kc_lock_privacy_subject`);
@@ -294,8 +296,8 @@ Erros esperados e sua interpretação:
   divergente;
 - `erasure_identity_help_mismatch`: classificação, e-mail ou titular do Help
   divergente;
-- `erasure_identity_dsr_not_unique`: múltiplos DSRs no Help ou tentativa de
-  usar a ponte zero DSR em um Help já autenticado;
+- `erasure_identity_dsr_not_unique`: múltiplos DSRs no Help; a ponte não escolhe
+  arbitrariamente um registro nem prossegue em estado ambíguo;
 - `erasure_identity_dsr_mismatch`: o Help declara uma referência de DSR que não
   existe ou diverge da relação canônica;
 - `erasure_identity_subject_conflict`: já existe outro DSR/workflow de exclusão
@@ -313,7 +315,7 @@ Erros esperados e sua interpretação:
   Auth ausente; recarregue/diagnostique e prossiga somente com
   `retry_finalize`;
 - `identity_link_capability_missing`: a Edge Function foi publicada antes das
-  migrations 09000/12000.
+  migrations 09000/12000/31193000 exigidas pelo caminho correspondente.
 
 Não corrija esses casos com `UPDATE` manual. Resolva a inconsistência de origem,
 gere um novo ticket quando aplicável ou encaminhe para revisão técnica.
@@ -326,18 +328,21 @@ A ordem mínima é:
 2. migration 08000 de entrega/retensão de exportação;
 3. migrations 09000 e 11000;
 4. migration 12000;
-5. preflight de schema;
-6. publicação da Edge Function;
-7. teste com contas sintéticas.
+5. migration 31193000;
+6. preflight de schema;
+7. publicação da Edge Function;
+8. teste com contas sintéticas.
 
 Verificações obrigatórias:
 
-- reset local completo até 12000;
+- reset local completo incluindo 31193000;
 - `supabase db lint --level error`;
 - pgTAP `account_erasure_identity_link_projection_test.sql` e
   `account_erasure_anonymous_help_bridge_test.sql`;
 - Jest `account-erasure-admin.test.js` e gates de deployment;
-- `deno fmt --check`, `deno lint` e `deno check` da Edge Function;
+- `deno fmt --check` e o mesmo `deno check --no-lock --node-modules-dir=none`
+  usado pelo CI; o lint irrestrito possui dívida legada registrada na auditoria
+  de 2026-08-01 e não deve ser “corrigido” por remoção ampla de código;
 - retry idêntico, retry divergente, sessão inválida, DSR terminal e closure
   ativa;
 - rotação de e-mail mantendo o mesmo UUID, comprovando uso imediato do endereço

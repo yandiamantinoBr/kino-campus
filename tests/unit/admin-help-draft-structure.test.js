@@ -14,7 +14,7 @@ const PAGE = fs.readFileSync(
 );
 
 describe('admin help-requests draft structure', () => {
-  test('persists drafts across renderRows wipe and leave/return', () => {
+  test('keeps sensitive drafts in memory across renderRows wipe', () => {
     expect(CONTROLLER).toContain('ADMIN_HELP_DRAFT_KEY');
     expect(CONTROLLER).toContain('captureAllVisibleCardDrafts');
     expect(CONTROLLER).toContain('applyAllVisibleCardDrafts');
@@ -35,13 +35,20 @@ describe('admin help-requests draft structure', () => {
     expect(slice).toContain('list.innerHTML = cards.join');
   });
 
-  test('uses dual storage, dirty capture and TTL', () => {
+  test('persists only safe preferences and purges legacy PII storage', () => {
     expect(CONTROLLER).toContain('sessionStorage');
-    expect(CONTROLLER).toContain('localStorage');
+    expect(CONTROLLER).toContain("ADMIN_HELP_DRAFT_KEY = 'kc_admin_help_preferences_v2'");
+    expect(CONTROLLER).toContain("'kc_admin_help_draft_v1'");
     expect(CONTROLLER).toContain('ADMIN_HELP_DRAFT_TTL_MS');
     expect(CONTROLLER).toContain('adminDraftDirty');
     expect(CONTROLLER).toContain('adminFiltersDirty');
-    expect(CONTROLLER).toMatch(/empty DOM rebuilds[\s\S]{0,80}cannot wipe|cannot wipe operator typing/);
+    expect(CONTROLLER).not.toContain('localStorage.setItem');
+    expect(CONTROLLER).not.toContain('localStorage.getItem');
+    const writeStart = CONTROLLER.indexOf('function adminDraftStorageWrite');
+    const writeEnd = CONTROLLER.indexOf('function isBlankDraftValue', writeStart);
+    const writeSlice = CONTROLLER.slice(writeStart, writeEnd);
+    expect(writeSlice).not.toContain('tickets: tickets');
+    expect(writeSlice).not.toContain('query:');
   });
 
   test('restores filters after auth wipe and does not double-paint loadRows success', () => {
@@ -61,17 +68,29 @@ describe('admin help-requests draft structure', () => {
     expect(loadSlice).toContain('Single paint path');
   });
 
-  test('cache-busts controller to 8.6.23 on admin page', () => {
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.23');
+  test('cache-busts hardened controller and adapter on admin page', () => {
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.24');
+    expect(PAGE).toContain('supabase.admin.adapter.js?v=8.6.15');
   });
 
-  test('soft reauth keeps queue painted on leave/return', () => {
+  test('soft reauth restores preferences without caching or prepainting queue PII', () => {
     expect(CONTROLLER).toContain('ADMIN_HELP_VIEW_KEY');
     expect(CONTROLLER).toContain('saveAdminViewSnapshot');
     expect(CONTROLLER).toContain('restoreAdminViewSnapshotPaint');
     expect(CONTROLLER).toContain('reauthorizeAdminView({ soft: true })');
     expect(CONTROLLER).toMatch(/showLoading\(true,\s*\{\s*silent:/);
     expect(CONTROLLER).toContain('silent: keepPaint');
+    const saveStart = CONTROLLER.indexOf('function saveAdminViewSnapshot');
+    const saveEnd = CONTROLLER.indexOf('function readAdminViewSnapshot', saveStart);
+    const saveSlice = CONTROLLER.slice(saveStart, saveEnd);
+    expect(saveSlice).not.toContain('rows: state.rows');
+    expect(saveSlice).not.toContain('admin_user_id');
+    expect(saveSlice).not.toContain('query:');
+    const restoreStart = CONTROLLER.indexOf('function restoreAdminViewSnapshotPaint');
+    const restoreEnd = CONTROLLER.indexOf('function clearSensitiveAdminState', restoreStart);
+    const restoreSlice = CONTROLLER.slice(restoreStart, restoreEnd);
+    expect(restoreSlice).not.toContain('renderRows(');
+    expect(restoreSlice).not.toContain('state.isAuthorized =');
   });
 
   test('chip triage auto-saves without Salvar triagem button', () => {
@@ -86,5 +105,18 @@ describe('admin help-requests draft structure', () => {
     expect(CONTROLLER).toMatch(/attr === 'data-help-status' \|\| attr === 'data-help-priority'\) return/);
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
+  });
+
+  test('keeps the seven-step closure guidance and a usable narrow layout', () => {
+    expect(CONTROLLER).toContain('Conclua a entrega do comprovante na etapa 6');
+    expect(CONTROLLER).toContain('marcar o ticket como Resolvido na etapa 7');
+    expect(CONTROLLER).not.toContain('Não marque o ticket como Resolvido antes da etapa 5');
+    expect(CONTROLLER).toContain(
+      'Ainda não aplicável — o comprovante é enviado após a exclusão'
+    );
+    expect(PAGE).toContain('@media (max-width: 640px)');
+    expect(PAGE).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
+    expect(PAGE).toContain('.kc-admin-lgpd-danger { grid-template-columns: 1fr; }');
+    expect(PAGE).toContain('.kc-admin-lgpd-panel button { min-height: 44px; }');
   });
 });
