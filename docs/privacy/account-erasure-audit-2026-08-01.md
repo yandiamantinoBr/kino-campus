@@ -61,8 +61,10 @@ essa fonte não implementava.
 `capabilities`, `expected_contract_version` obrigatório e readback da fonte no
 workflow `.github/workflows/edge-deploy.yml`.
 
-**Estado:** corrigido no repositório. Continua bloqueante até o workflow publicar
-e o readback remoto comprovar o marcador exato.
+**Estado no momento do achado:** corrigido no repositório, mas ainda bloqueante
+até o workflow publicar e o readback remoto comprovar o marcador exato. A
+verificação pós-merge que encerrou esse bloqueio está registrada no adendo final
+deste documento.
 
 ### P1 — resposta de mutação ambígua podia ser tratada como rejeição conhecida
 
@@ -289,3 +291,31 @@ reportada por função, sem ativar o recurso: sem
 `KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64`, a exclusão continua bloqueada pela Edge.
 O desenho, as evidências e o rollback estão documentados em
 `docs/ops/edge-deploy-source-drift-and-readiness-2026-08-01.md`.
+
+## Verificação pós-merge final — 2026-08-01
+
+O PR `#789` foi integrado no commit
+`56aa62f03f916daddf2ba2f363dda7183bbfa937`. A Essential Validation
+`30711115214` e o Edge Deploy `30711238944` terminaram com sucesso. A seleção
+comparou as 15 Edge Functions locais com as fontes remotas: nove divergentes
+foram publicadas e seis já sincronizadas não foram republicadas.
+
+`kc-account-erasure` ficou `ACTIVE` na versão 20, com `verify_jwt=true`. O job
+baixou novamente a fonte implantada, comparou o arquivo e suas dependências
+alcançáveis com o commit validado e confirmou o marcador
+`kc-account-erasure-2026-08-01-v1`. Os assets críticos de
+`/admin/help-requests.html` servidos pela Vercel também correspondem ao merge; o
+HTML recebe apenas a substituição esperada dos sufixos de cache pela SHA.
+
+Permanecem três bloqueios operacionais explícitos e fail-closed:
+
+- `KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64` ausente: nenhuma exclusão irreversível
+  pode avançar até a chave ser provisionada pelo procedimento operacional;
+- `ADMIN_REPORTS_WEBHOOK_URL`, `KC_APP_BASE_URL` e `KC_NOTIFY_HMAC_SECRET`
+  ausentes: o alerta de limiar não envia webhook;
+- `data_export_retention_schedule_configured=false`: o agendamento automático
+  de retenção ainda precisa ser configurado e validado.
+
+Esses avisos não representam falha de deploy e não foram contornados. Nenhum
+secret foi lido ou alterado, nenhuma migration foi aplicada e nenhum canário
+destrutivo foi executado nesta verificação.
