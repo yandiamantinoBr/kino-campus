@@ -331,3 +331,35 @@ Permanecem três bloqueios operacionais explícitos e fail-closed:
 Esses avisos não representam falha de deploy e não foram contornados. Nenhum
 secret foi lido ou alterado, nenhuma migration foi aplicada e nenhum canário
 destrutivo foi executado nesta verificação.
+
+## Adendo pós-rollout: autoridade de fechamento no banco
+
+O PR `#791` foi integrado no commit
+`a6525840eb22670b955e4a3aa840c614b22f5db4`. A Essential Validation
+`30713795319` e o Edge Deploy `30713931028` terminaram com sucesso. Como as 15
+fontes Edge continuavam idênticas à produção, o segundo workflow comprovou zero
+divergência e não republicou funções.
+
+Depois do merge, um `db push --dry-run` executado em diretório isolado, contendo
+somente as migrations já reconhecidas pelo ledger remoto e a nova migration,
+listou exclusivamente
+`20260801183000_guard_erasure_help_closure.sql`. Essa única migration aditiva foi
+então aplicada; o ledger remoto registra a versão exata `20260801183000` com o
+nome `guard_erasure_help_closure`.
+
+A verificação somente leitura confirmou 89 capacidades booleanas: 88 verdadeiras
+e apenas `data_export_retention_schedule_configured=false`. Em particular,
+`account_erasure_help_closure_guarded=true`; o trigger está ativo, a função é
+`SECURITY DEFINER` com `search_path` fechado, não concede `EXECUTE` ao
+`service_role` e aceita o cancelamento transitório somente pelo vínculo relacional
+`data_subject_requests.help_request_id`.
+
+A Vercel promoveu o mesmo commit no deployment de produção
+`dpl_G2FHMWaQHJUrpZau1Y4QwQr7iqxq`. O HTML canônico, normalizado apenas pela
+substituição esperada dos sufixos `?v=` pelo SHA, e os arquivos do controlador e
+do adaptador correspondem ao merge. Os advisors pós-DDL não produziram achado
+referente ao novo guard.
+
+Nenhum secret foi lido ou alterado e nenhum canário destrutivo foi executado.
+Os três bloqueios operacionais listados na seção anterior permanecem válidos e
+não devem ser contornados por código.
