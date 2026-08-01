@@ -263,6 +263,41 @@ select
           ]::oid[]
         )
     ) as account_erasure_browser_acl_revoked,
+  coalesce(
+    (
+      select
+        procedure_row.prosecdef
+        and procedure_row.proconfig @> array['search_path=""']
+        and not pg_catalog.has_function_privilege(
+          'service_role',
+          procedure_row.oid,
+          'execute'
+        )
+        and exists (
+          select 1
+          from pg_catalog.pg_trigger trigger_row
+          where trigger_row.tgrelid = 'public.help_requests'::regclass
+            and trigger_row.tgname =
+              'trg_guard_account_erasure_help_status'
+            and trigger_row.tgfoid = procedure_row.oid
+            and not trigger_row.tgisinternal
+            and trigger_row.tgenabled <> 'D'
+        )
+        and pg_catalog.pg_get_functiondef(procedure_row.oid) like
+          '%ERASURE_HELP_MUST_REMAIN_OPEN%'
+        and pg_catalog.pg_get_functiondef(procedure_row.oid) like
+          '%completion_email_status%'
+        and pg_catalog.pg_get_functiondef(procedure_row.oid) like
+          '%sent_manual%'
+        and pg_catalog.pg_get_functiondef(procedure_row.oid) like
+          '%retention_purged%'
+      from pg_catalog.pg_proc procedure_row
+      where procedure_row.oid = pg_catalog.to_regprocedure(
+        'kc_private.kc_guard_account_erasure_help_status()'
+      )
+    ),
+    false
+  ) as account_erasure_help_closure_guarded,
   pg_catalog.to_regprocedure(
     'public.kc_link_verified_help_request_to_account_erasure(uuid,text,uuid,uuid,text,text,timestamptz)'
   ) is not null

@@ -8,6 +8,10 @@ const CONTROLLER = fs.readFileSync(
   path.join(ROOT, 'assets/js/controllers/admin/admin-help-requests.controller.js'),
   'utf8'
 );
+const ADAPTER = fs.readFileSync(
+  path.join(ROOT, 'assets/js/adapters/supabase/supabase.admin.adapter.js'),
+  'utf8'
+);
 const PAGE = fs.readFileSync(
   path.join(ROOT, 'admin/help-requests.html'),
   'utf8'
@@ -69,8 +73,17 @@ describe('admin help-requests draft structure', () => {
   });
 
   test('cache-busts hardened controller and adapter on admin page', () => {
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.25');
-    expect(PAGE).toContain('supabase.admin.adapter.js?v=8.6.15');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.26');
+    expect(PAGE).toContain('supabase.admin.adapter.js?v=8.6.16');
+  });
+
+  test('normalizes authoritative Help closure errors from every Supabase field', () => {
+    expect(ADAPTER).toContain('function getHelpStatusGuardErrorCode');
+    ['error.message', 'error.details', 'error.hint', 'error.code'].forEach((field) => {
+      expect(ADAPTER).toContain(field);
+    });
+    expect(ADAPTER).toContain('ERASURE_HELP_MUST_REMAIN_OPEN');
+    expect(ADAPTER).toContain('DSR_HELP_MUST_REMAIN_OPEN');
   });
 
   test('soft reauth restores preferences without caching or prepainting queue PII', () => {

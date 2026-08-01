@@ -46,7 +46,8 @@ $RequiredMigrations = @(
   "20260729172316",
   "20260729190653",
   "20260729203000",
-  "20260731193000"
+  "20260731193000",
+  "20260801183000"
 )
 $RequiredSecretsByFunction = @{
   "kc-account-erasure" = @(

@@ -767,6 +767,27 @@
 
   // ── API: Atualizar pedido (admin) ──────────────────────────────────────────
 
+  function getHelpStatusGuardErrorCode(error) {
+    const raw = [
+      error && error.message,
+      error && error.details,
+      error && error.hint,
+      error && error.code,
+      typeof error === 'string' ? error : '',
+    ]
+      .filter(Boolean)
+      .map((value) => String(value))
+      .join('\n');
+
+    if (raw.indexOf('ERASURE_HELP_MUST_REMAIN_OPEN') >= 0) {
+      return 'ERASURE_HELP_MUST_REMAIN_OPEN';
+    }
+    if (raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0) {
+      return 'DSR_HELP_MUST_REMAIN_OPEN';
+    }
+    return '';
+  }
+
   async function updateAdminHelpRequest(id, patch = {}) {
     const client = getClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
@@ -802,15 +823,13 @@
 
       if (error) {
         console.error('[KCAPI][help] updateAdminHelpRequest:', error);
-        const raw = String(
-          (error && (error.message || error.details || error.hint || error.code)) || ''
-        ).trim();
-        if (raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0) {
+        const code = getHelpStatusGuardErrorCode(error);
+        if (code) {
           return {
             ok: false,
             error: {
-              message: 'DSR_HELP_MUST_REMAIN_OPEN',
-              code: 'DSR_HELP_MUST_REMAIN_OPEN',
+              message: code,
+              code,
             },
           };
         }
@@ -820,13 +839,13 @@
       return { ok: true, data: data || null };
     } catch (e) {
       console.error('[KCAPI][help] updateAdminHelpRequest exceção:', e);
-      const raw = String((e && e.message) || '').trim();
-      if (raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0) {
+      const code = getHelpStatusGuardErrorCode(e);
+      if (code) {
         return {
           ok: false,
           error: {
-            message: 'DSR_HELP_MUST_REMAIN_OPEN',
-            code: 'DSR_HELP_MUST_REMAIN_OPEN',
+            message: code,
+            code,
           },
         };
       }
