@@ -9,6 +9,7 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'u
 const packageJson = JSON.parse(read('package.json'));
 const essential = read('.github/workflows/essential-validation.yml');
 const edgeDeploy = read('.github/workflows/edge-deploy.yml');
+const edgeSourceComparator = read('scripts/compare-edge-function-source.js');
 const privacyDeployScript = read('scripts/deploy-supabase-lgpd.ps1');
 const privacySchemaContract = read('scripts/verify-privacy-schema.sql');
 const emailCheck = read('.github/workflows/email-check.yml');
@@ -19,6 +20,10 @@ const inviteFunction = read('supabase/functions/kc-invite-user/index.ts');
 const retentionFunction = read('supabase/functions/kc-data-export-retention/index.ts');
 const privacyHelpGuestFunction = read(
   'supabase/functions/kc-create-privacy-help-guest/index.ts'
+);
+const accountErasureFunction = read('supabase/functions/kc-account-erasure/index.ts');
+const reportsThresholdFunction = read(
+  'supabase/functions/notify-admin-reports-threshold/index.ts'
 );
 const caduFunction = read('supabase/functions/cadu-publish/index.ts');
 const caduPublisher = read('services/cadu-ufg-publisher/src/publisher.js');
@@ -74,10 +79,21 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).not.toContain('workflow_dispatch:');
   });
 
-  test('rebuilds the complete function set and serializes production rollouts', () => {
-    expect(edgeDeploy).toContain('CHANGED=$(list_all_functions | paste -sd, -)');
-    expect(edgeDeploy).toContain('cannot strand older function changes undeployed');
+  test('selects remote source drift and serializes production rollouts', () => {
+    expect(edgeDeploy).toContain('source-drift:');
+    expect(edgeDeploy).toContain('supabase functions download');
+    expect(edgeDeploy).toContain('scripts/compare-edge-function-source.js');
+    expect(edgeDeploy).toContain('needs.source-drift.outputs.matrix');
+    expect(edgeDeploy).toContain('No production deployment is necessary.');
+    expect(edgeDeploy).toContain('Remote-only functions require explicit review and are not deleted');
+    expect(edgeDeploy.match(/node-version: '24'/g)).toHaveLength(2);
     expect(edgeDeploy).not.toContain('git diff --name-only "${HEAD_SHA}^" "$HEAD_SHA"');
+    expect(edgeDeploy).not.toContain('needs.detect-changes.outputs.matrix');
+    expect(edgeSourceComparator).toContain('collectReachableRemoteFiles');
+    expect(edgeSourceComparator).toContain("reason: 'remote_function_missing'");
+    expect(edgeSourceComparator).toContain("kind: 'content_mismatch'");
+    expect(edgeSourceComparator).not.toContain('localContent.toString');
+    expect(edgeSourceComparator).not.toContain('remoteContent.toString');
     expect(edgeDeploy).toContain('group: kino-campus-production-edge-deploy');
     expect(edgeDeploy).toContain('cancel-in-progress: false');
     expect(edgeDeploy).toContain('environment: production');
@@ -132,11 +148,14 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).toContain('EXPECTED_VERIFY_JWT');
     expect(edgeDeploy).toContain('ACTUAL_VERIFY_JWT');
     expect(edgeDeploy).toContain('JWT verification drift');
+    expect(edgeDeploy).toContain('Remote source does not match the validated source after deploy.');
+    expect(edgeDeploy).toContain('Verified deployed source and reachable shared dependencies.');
+    expect(edgeDeploy).toContain('--check');
     expect(edgeDeploy).toContain('curl --fail-with-body --retry 3 --retry-all-errors');
     expect(edgeDeploy).not.toContain('|| echo "?"');
   });
 
-  test('gates every Edge deploy once on the canonical privacy schema and secrets', () => {
+  test('gates every Edge deploy on structural schema and reports operational readiness', () => {
     const guardedFunctions = [
       'cadu-publish',
       'kc-account-erasure',
@@ -157,7 +176,7 @@ describe('CI and deployment safety contracts', () => {
     });
 
     expect(edgeDeploy).toContain('preflight:');
-    expect(edgeDeploy).toContain('needs: [detect-changes, preflight]');
+    expect(edgeDeploy).toContain('needs: [source-drift, preflight]');
     expect(edgeDeploy).toContain('test -s scripts/verify-privacy-schema.sql');
     expect(edgeDeploy).toContain('Required migration history is present.');
     expect(edgeDeploy).toContain('"20260729003000"');
@@ -230,7 +249,15 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).not.toContain('QUERY=$(python3');
     expect(edgeDeploy).not.toContain('REQUEST_BODY=$(QUERY=');
     expect(edgeDeploy).toContain('if: ${{ !cancelled() }}');
-    expect(edgeDeploy).toContain('Required secret names are present; values were not read.');
+    expect(edgeDeploy).toContain('operational_capabilities = {');
+    expect(edgeDeploy).toContain('"data_export_retention_schedule_configured"');
+    expect(edgeDeploy).toContain('structural_missing = sorted(');
+    expect(edgeDeploy).toContain('Edge code remains deployable');
+    expect(edgeDeploy).toContain('required_by_function = {');
+    expect(edgeDeploy).toContain('needs.source-drift.outputs.names');
+    expect(edgeDeploy).toContain('will remain fail-closed until these secret names exist');
+    expect(edgeDeploy).toContain('Runtime secret names were inventoried; values were not read.');
+    expect(edgeDeploy).not.toContain('Required Edge Function secret names are absent');
     [
       'account_erasure_completion_outbox',
       'account_erasure_ticket_identity_links',
@@ -377,6 +404,19 @@ describe('CI and deployment safety contracts', () => {
       'KC_TURNSTILE_EXPECTED_HOSTNAMES',
       'KC_TURNSTILE_SECRET_KEY',
     ].forEach((secretName) => expect(edgeDeploy).toContain(secretName));
+  });
+
+  test('keeps inactive Edge integrations fail-closed when readiness is only a warning', () => {
+    expect(accountErasureFunction).toContain('KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64');
+    expect(accountErasureFunction).toContain('completion_outbox_encryption_unavailable');
+    expect(retentionFunction).toContain('KC_DATA_EXPORT_RETENTION_SECRET');
+    expect(retentionFunction).toContain('RETENTION_SECRET_NOT_CONFIGURED');
+    expect(retentionFunction).toContain('code: "RETENTION_UNAVAILABLE"');
+    expect(privacyHelpGuestFunction).toContain('KC_TURNSTILE_SECRET_KEY');
+    expect(privacyHelpGuestFunction).toContain('GUEST_PRIVACY_CONFIG_UNAVAILABLE');
+    expect(reportsThresholdFunction).toContain('getRequiredEnv("KC_NOTIFY_HMAC_SECRET")');
+    expect(reportsThresholdFunction).toContain('getRequiredEnv("ADMIN_REPORTS_WEBHOOK_URL")');
+    expect(reportsThresholdFunction).toContain('error: "missing_server_configuration"');
   });
 
   test('keeps the manual privacy rollout validator non-mutating by default', () => {

@@ -275,3 +275,17 @@ Interrompa o rollout se ocorrer qualquer um destes casos:
 - decisão formal de governança/DPO e prazos de atendimento;
 - monitoramento periódico de workflows parados em
   `pending_confirmation`, `partial_failure` ou `notification_pending`.
+
+## Adendo operacional posterior: deploy por divergência de fonte
+
+A afirmação histórica acima de que qualquer secret operacional ausente deveria
+bloquear todo o Edge Deploy foi substituída depois que o comportamento global
+do workflow foi auditado. Esse gate impedia a atualização do próprio código
+fail-closed e deixava a Edge remota de exclusão em contrato anterior.
+
+O contrato atualizado continua bloqueando migrations, schema, ACLs,
+`verify_jwt` e fonte remota inconsistentes. Prontidão de runtime passa a ser
+reportada por função, sem ativar o recurso: sem
+`KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64`, a exclusão continua bloqueada pela Edge.
+O desenho, as evidências e o rollback estão documentados em
+`docs/ops/edge-deploy-source-drift-and-readiness-2026-08-01.md`.
