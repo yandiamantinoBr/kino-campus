@@ -375,6 +375,47 @@ describe('Cadu institutional review — durable database and admin proxy', () =>
     expect(readinessMigration).not.toMatch(/insert\s+into|update\s+public[.]|delete\s+from/i);
   });
 
+  test('privacy follow-up keeps the review probe fail-closed on the expanded contract', () => {
+    const erasureMigration = r(
+      'supabase/migrations/20260728183022_data_subject_requests_and_export.sql',
+    );
+    const authorizationMigration = r(
+      'supabase/migrations/20260728234000_internal_rpc_authorization_hardening.sql',
+    );
+    const reconciliationMigration = r(
+      'supabase/migrations/20260801100000_reconcile_cadu_review_probe_with_privacy_guards.sql',
+    );
+
+    expect(erasureMigration).toContain('alter column requested_by drop not null');
+    expect(erasureMigration).toContain(
+      'foreign key (requested_by) references public.profiles(id) on delete set null',
+    );
+    expect(erasureMigration).toContain('kc_active_session_write_guard');
+    expect(erasureMigration).toContain('kc_active_session_restrictive');
+    expect(authorizationMigration).toContain(
+      'create or replace function public.kc_is_admin(p_user_id uuid)',
+    );
+    expect(authorizationMigration).toMatch(
+      /function public[.]kc_is_admin[\s\S]*security definer/,
+    );
+
+    expect(reconciliationMigration).toContain(
+      'create or replace function public.kc_cadu_review_contract()',
+    );
+    expect(reconciliationMigration).toContain(
+      "('requested_by'::name, 'pg_catalog.uuid'::regtype, false, null::text)",
+    );
+    expect(reconciliationMigration).toContain("policy_row.polname = 'kc_active_session_restrictive'");
+    expect(reconciliationMigration).toContain("trigger_row.tgname = 'kc_active_session_write_guard'");
+    expect(reconciliationMigration).toContain("'public.kc_is_operator(uuid)'");
+    expect(reconciliationMigration).toContain("'public.kc_is_current_session_active()'");
+    expect(reconciliationMigration).toContain('select pg_catalog.count(*) = 2');
+    expect(reconciliationMigration).not.toContain("'kc_private.kc_is_admin(uuid)'");
+    expect(reconciliationMigration).not.toMatch(
+      /insert\s+into|update\s+public[.]|delete\s+from/i,
+    );
+  });
+
   test('resolution uses a source-scoped metadata CAS and removes the unsafe v1 overload', () => {
     const expandMigration = r(
       'supabase/migrations/20260722184500_cadu_review_resolution_cas_v2.sql',
