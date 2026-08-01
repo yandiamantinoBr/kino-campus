@@ -210,7 +210,11 @@ jobs:
           PY
 
           test -s scripts/verify-privacy-schema.sql
-          QUERY=$(python3 - <<'PY'
+          REQUEST_BODY="$(mktemp)"
+          RESPONSE_BODY="$(mktemp)"
+          trap 'rm -f "$REQUEST_BODY" "$RESPONSE_BODY"' EXIT
+          PROJECT_REF="$PROJECT_REF" REQUEST_BODY="$REQUEST_BODY" python3 - <<'PY'
+          import json
           import os
           from pathlib import Path
 
@@ -222,29 +226,35 @@ jobs:
               raise SystemExit(
                   "Privacy schema gate must contain one project-ref placeholder"
               )
-          print(query.replace(placeholder, os.environ["PROJECT_REF"]))
-          PY
-          )
-          REQUEST_BODY=$(QUERY="$QUERY" python3 - <<'PY'
-          import json
-          import os
-
-          print(json.dumps({
-              "query": os.environ["QUERY"],
+          query = query.replace(placeholder, os.environ["PROJECT_REF"])
+          payload = json.dumps({
+              "query": query,
               "parameters": [],
-          }))
-          PY
+          })
+          Path(os.environ["REQUEST_BODY"]).write_text(payload, encoding="utf-8")
+          print(
+              "Prepared read-only privacy schema query "
+              f"({len(query.encode('utf-8'))} bytes)."
           )
-          RESPONSE=$(curl --fail-with-body --retry 3 --retry-all-errors -sS \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data "$REQUEST_BODY" \
-            'https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/database/query/read-only')
-          RESPONSE="$RESPONSE" python3 - <<'PY'
+          PY
+
+          if ! curl --fail-with-body --retry 3 --retry-all-errors -sS \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary "@$REQUEST_BODY" \
+              --output "$RESPONSE_BODY" \
+              'https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/database/query/read-only'; then
+            cat "$RESPONSE_BODY" >&2
+            exit 1
+          fi
+          RESPONSE_BODY="$RESPONSE_BODY" python3 - <<'PY'
           import json
           import os
+          from pathlib import Path
 
-          payload = json.loads(os.environ["RESPONSE"])
+          payload = json.loads(
+              Path(os.environ["RESPONSE_BODY"]).read_text(encoding="utf-8")
+          )
           if isinstance(payload, dict):
               rows = payload.get("result") or payload.get("data") or payload.get("rows") or []
           elif isinstance(payload, list):
@@ -275,6 +285,7 @@ jobs:
           PY
 
       - name: Verify required secret names without reading values
+        if: ${{ !cancelled() }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |

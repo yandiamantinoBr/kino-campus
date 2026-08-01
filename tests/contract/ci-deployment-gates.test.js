@@ -40,6 +40,9 @@ describe('CI and deployment safety contracts', () => {
     expect(essential).toContain('supabase db reset --local --no-seed');
     expect(essential).toContain('supabase db lint --local --level error --fail-on error');
     expect(essential).toContain('supabase test db --local supabase/tests');
+    expect(essential).toContain('supabase db query --local');
+    expect(essential).toContain('--file scripts/verify-privacy-schema.sql');
+    expect(essential).toContain('Privacy schema query parsed locally with');
     expect(essential).toContain('supabase stop --no-backup');
   });
 
@@ -217,6 +220,12 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).toContain('str(row["version"])');
     expect(edgeDeploy).not.toContain('serialized = json.dumps');
     expect(edgeDeploy).not.toContain('version not in serialized');
+    expect(edgeDeploy).toContain('REQUEST_BODY="$(mktemp)"');
+    expect(edgeDeploy).toContain('--data-binary "@$REQUEST_BODY"');
+    expect(edgeDeploy).not.toContain('--data "$REQUEST_BODY"');
+    expect(edgeDeploy).not.toContain('QUERY=$(python3');
+    expect(edgeDeploy).not.toContain('REQUEST_BODY=$(QUERY=');
+    expect(edgeDeploy).toContain('if: ${{ !cancelled() }}');
     expect(edgeDeploy).toContain('Required secret names are present; values were not read.');
     expect(edgeDeploy.match(/database\/query\/read-only/g)).toHaveLength(1);
     [

@@ -106,6 +106,44 @@ jobs:
       - name: Run pgTAP contracts
         run: supabase test db --local supabase/tests
 
+      - name: Execute privacy schema preflight query locally
+        run: |
+          RESPONSE_BODY="$(mktemp)"
+          trap 'rm -f "$RESPONSE_BODY"' EXIT
+          supabase db query --local \
+            --file scripts/verify-privacy-schema.sql \
+            --output json > "$RESPONSE_BODY"
+          RESPONSE_BODY="$RESPONSE_BODY" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(
+              Path(os.environ["RESPONSE_BODY"]).read_text(encoding="utf-8")
+          )
+          if isinstance(payload, dict):
+              rows = payload.get("result") or payload.get("data") or payload.get("rows") or []
+          elif isinstance(payload, list):
+              rows = payload
+          else:
+              rows = []
+          if len(rows) != 1 or not isinstance(rows[0], dict):
+              raise SystemExit("Privacy schema query returned an unexpected response")
+          non_boolean = sorted(
+              name for name, available in rows[0].items()
+              if not isinstance(available, bool)
+          )
+          if non_boolean:
+              raise SystemExit(
+                  "Privacy schema query returned non-boolean capabilities: "
+                  + ", ".join(non_boolean)
+              )
+          print(
+              "Privacy schema query parsed locally with "
+              f"{len(rows[0])} boolean capabilities."
+          )
+          PY
+
       - name: Prove Phase-A upgrade from linked schema fingerprint
         run: npm run test:cadu:phase-a-upgrade
 
