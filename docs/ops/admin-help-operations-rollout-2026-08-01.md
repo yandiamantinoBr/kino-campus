@@ -182,8 +182,37 @@ disponíveis.
   usados permanecem fora do escopo;
 - `git diff --check` limpo.
 
-O resultado de `npm run check:all`, CI, advisors e smoke pós-deploy deve ser
-acrescentado ao registro após o merge.
+## Verificação pós-deploy concluída
+
+- PR #793 integrado em `kinocampus-V75.0-foundations`; todos os checks de
+  validação, pgTAP, Edge type-check, Lighthouse e Vercel passaram.
+- Deploy de produção `READY` no alias canônico, contendo o adapter v2 e a
+  projeção de resumo.
+- Migration `20260801194025` aplicada isoladamente e registrada no ledger
+  remoto. Não foi usado `db push --include-all`, pois o ledger conserva lacunas
+  históricas anteriores e não relacionadas a este rollout.
+- ACLs confirmadas: `anon` não executa as RPCs de resumo/listagem; a triagem
+  permanece disponível apenas ao papel autenticado e valida administrador no
+  corpo da função.
+- O backfill reconciliou 56 tickets. Entregas `sent` ficaram `resolved` ou
+  preservaram `archived`; nenhum estado ativo de entrega permaneceu rotulado
+  como fila nova.
+- Advisors não apontaram achado novo relacionado a
+  `kc_admin_help_queue_summary`, `kc_admin_list_help_requests_v2` ou
+  `kc_admin_triage_help_request`. Os avisos gerais preexistentes continuam fora
+  deste rollout e devem ser tratados em auditoria própria.
+- Smoke autenticado: 25 cards iniciais e 50 após paginação, todos com IDs
+  únicos; filtro sem resultados preservou contadores globais; nenhum overflow
+  horizontal foi observado.
+- Handoff para Cadu preencheu o editor com contexto operacional sem e-mail ou
+  UUID e sem envio automático. Handoff para Moderação abriu a aba correta,
+  focou um único card e não tomou decisão.
+- QA mobile em 390 px, com dados sintéticos, confirmou duas colunas de métricas,
+  ações operacionais em uma coluna, alvos visíveis de no mínimo 44 px e zero
+  overflow horizontal. Foi corrigido o `flex-basis` herdado que ampliava
+  verticalmente os chips de triagem.
+- `npm run check:all`: 287 suites aprovadas, 4.988 testes aprovados, 7 ignorados.
+  pgTAP integral: 29 arquivos e 1.315 testes aprovados.
 
 ## Pendências deliberadas
 

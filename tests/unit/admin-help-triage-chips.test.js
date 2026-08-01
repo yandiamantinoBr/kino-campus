@@ -64,6 +64,15 @@ describe('admin help-requests chip triage UX', () => {
     expect(PAGE).toContain('kc-admin-help-ticket-ref');
   });
 
+  test('neutralizes the desktop triage flex basis on mobile', () => {
+    expect(PAGE).toMatch(
+      /@media \(max-width: 640px\)[\s\S]*\.kc-admin-help-chips--triage\s*\{[\s\S]*flex:\s*0 1 auto;[\s\S]*width:\s*100%;/
+    );
+    expect(PAGE).toMatch(
+      /@media \(max-width: 640px\)[\s\S]*\.kc-admin-help-chip--interactive\s*\{\s*min-height:\s*44px;/
+    );
+  });
+
   test('supports summary filter shortcuts and clear-filters control', () => {
     expect(CONTROLLER).toContain('function applyQueueFilters');
     expect(CONTROLLER).toContain('function clearQueueFilters');
