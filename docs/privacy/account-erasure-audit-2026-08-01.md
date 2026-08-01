@@ -163,6 +163,26 @@ response em arquivos temporários restritos e a enviar o corpo com
 `--data-binary`. A Essential Validation agora executa o mesmo arquivo SQL contra
 o Supabase local e valida uma linha composta somente por booleanos.
 
+O Edge Deploy seguinte, `30708599790`, confirmou que o transporte passou a
+entregar os 95.886 bytes completos. Ele revelou uma segunda incompatibilidade:
+o papel interno do endpoint Management API `/database/query/read-only` não tem
+`EXECUTE` na função privada
+`kc_data_export_retention_configuration_status(text)`, cuja ACL está
+corretamente limitada a `service_role`. Não se ampliou essa ACL. O workflow e o
+script manual passaram a usar o CLI vinculado dentro de `BEGIN TRANSACTION READ
+ONLY`, mantendo a consulta sem escrita e permitindo que o diagnóstico seguro
+retorne somente booleanos. A mesma chamada foi comprovada contra produção e
+retornou `data_export_retention_schedule_configured=false`, sem mutação.
+
+O script manual também tinha um bloqueio anterior ao contrato: `db push
+--dry-run` tentava reconciliar migrations históricas preservadas no repositório,
+mas anteriores ao ledger remoto. As 27 migrations LGPD a partir de
+`20260728183022` foram comparadas e estão presentes nos dois lados. O deploy de
+Edge deixou de usar o dry-run genérico e continua fechado pelos gates específicos
+de histórico obrigatório, schema canônico e secrets. Nenhum `migration repair`,
+`db push` ou `--include-all` foi executado; uma eventual reconciliação do
+histórico legado deve ser tratada em operação separada e auditada.
+
 A consulta remota somente leitura retornou 88 capacidades: 87 verdadeiras e
 `data_export_retention_schedule_configured=false`. O status seguro da automação
 confirmou Cron, pg_net, Vault, ACL do Vault e job de monitor presentes, mas

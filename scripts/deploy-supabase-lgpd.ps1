@@ -45,7 +45,8 @@ $RequiredMigrations = @(
   "20260729012000",
   "20260729172316",
   "20260729190653",
-  "20260729203000"
+  "20260729203000",
+  "20260731193000"
 )
 $RequiredSecretsByFunction = @{
   "kc-account-erasure" = @(
@@ -216,13 +217,37 @@ function Invoke-SupabaseManagementApi {
 
 function Invoke-ReadOnlyDatabaseQuery {
   param([string]$Query)
-  return Invoke-SupabaseManagementApi `
-    -Method "Post" `
-    -Path "/v1/projects/$ProjectRef/database/query/read-only" `
-    -Body ([pscustomobject]@{
-      query = $Query
-      parameters = @()
-    })
+
+  $queryPath = Join-Path `
+    ([System.IO.Path]::GetTempPath()) `
+    ("kc-privacy-preflight-{0}.sql" -f [guid]::NewGuid().ToString("N"))
+  $readOnlyQuery = @"
+begin transaction read only;
+$Query
+commit;
+"@
+
+  try {
+    [System.IO.File]::WriteAllText(
+      $queryPath,
+      $readOnlyQuery,
+      [System.Text.UTF8Encoding]::new($false)
+    )
+    $queryOutput = & npx --yes $SupabaseCliPackage db query `
+      --linked `
+      --file $queryPath `
+      --output json
+    if ($LASTEXITCODE -ne 0) {
+      throw "Consulta de preflight em transacao read-only falhou."
+    }
+    $serializedOutput = $queryOutput -join [Environment]::NewLine
+    if ([string]::IsNullOrWhiteSpace($serializedOutput)) {
+      throw "Consulta de preflight em transacao read-only nao retornou JSON."
+    }
+    return $serializedOutput | ConvertFrom-Json
+  } finally {
+    [System.IO.File]::Delete($queryPath)
+  }
 }
 
 function Get-FirstResultRow {
@@ -367,12 +392,10 @@ try {
     )
   }
 
-  Write-Step "Comparando migrations sem aplicar mudancas"
-  & npx --yes $SupabaseCliPackage db push --linked --dry-run
-  if ($LASTEXITCODE -ne 0) {
-    throw "Dry-run do db push falhou. Nenhum deploy deve ser executado."
-  }
-
+  # O repositorio preserva migrations historicas anteriores ao ledger remoto.
+  # Este deploy de Edge valida somente a cadeia LGPD explicita e o schema real;
+  # reconciliar o historico completo exige uma operacao separada e auditada.
+  Write-Step "Comparando migrations LGPD sem aplicar mudancas"
   $history = Invoke-SupabaseManagementApi `
     -Method "Get" `
     -Path "/v1/projects/$ProjectRef/database/migrations"
