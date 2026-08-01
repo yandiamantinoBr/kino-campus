@@ -210,11 +210,10 @@ jobs:
           PY
 
           test -s scripts/verify-privacy-schema.sql
-          REQUEST_BODY="$(mktemp)"
+          QUERY_FILE="$(mktemp)"
           RESPONSE_BODY="$(mktemp)"
-          trap 'rm -f "$REQUEST_BODY" "$RESPONSE_BODY"' EXIT
-          PROJECT_REF="$PROJECT_REF" REQUEST_BODY="$REQUEST_BODY" python3 - <<'PY'
-          import json
+          trap 'rm -f "$QUERY_FILE" "$RESPONSE_BODY"' EXIT
+          PROJECT_REF="$PROJECT_REF" QUERY_FILE="$QUERY_FILE" python3 - <<'PY'
           import os
           from pathlib import Path
 
@@ -227,26 +226,17 @@ jobs:
                   "Privacy schema gate must contain one project-ref placeholder"
               )
           query = query.replace(placeholder, os.environ["PROJECT_REF"])
-          payload = json.dumps({
-              "query": query,
-              "parameters": [],
-          })
-          Path(os.environ["REQUEST_BODY"]).write_text(payload, encoding="utf-8")
+          query = "begin transaction read only;\n" + query + "\ncommit;\n"
+          Path(os.environ["QUERY_FILE"]).write_text(query, encoding="utf-8")
           print(
-              "Prepared read-only privacy schema query "
+              "Prepared explicit read-only privacy schema transaction "
               f"({len(query.encode('utf-8'))} bytes)."
           )
           PY
 
-          if ! curl --fail-with-body --retry 3 --retry-all-errors -sS \
-              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-              -H 'Content-Type: application/json' \
-              --data-binary "@$REQUEST_BODY" \
-              --output "$RESPONSE_BODY" \
-              'https://api.supabase.com/v1/projects/wacyrkwhkvzwkqpolrbg/database/query/read-only'; then
-            cat "$RESPONSE_BODY" >&2
-            exit 1
-          fi
+          supabase db query --linked \
+            --file "$QUERY_FILE" \
+            --output json > "$RESPONSE_BODY"
           RESPONSE_BODY="$RESPONSE_BODY" python3 - <<'PY'
           import json
           import os

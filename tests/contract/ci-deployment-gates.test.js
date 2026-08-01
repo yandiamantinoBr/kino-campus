@@ -173,6 +173,7 @@ describe('CI and deployment safety contracts', () => {
       '20260729172316',
       '20260729190653',
       '20260729203000',
+      '20260731193000',
     ].forEach((migrationVersion) => {
       expect(edgeDeploy).toContain(`"${migrationVersion}"`);
       expect(privacyDeployScript).toContain(`"${migrationVersion}"`);
@@ -220,14 +221,16 @@ describe('CI and deployment safety contracts', () => {
     expect(edgeDeploy).toContain('str(row["version"])');
     expect(edgeDeploy).not.toContain('serialized = json.dumps');
     expect(edgeDeploy).not.toContain('version not in serialized');
-    expect(edgeDeploy).toContain('REQUEST_BODY="$(mktemp)"');
-    expect(edgeDeploy).toContain('--data-binary "@$REQUEST_BODY"');
+    expect(edgeDeploy).toContain('QUERY_FILE="$(mktemp)"');
+    expect(edgeDeploy).toContain('begin transaction read only;');
+    expect(edgeDeploy).toContain('supabase db query --linked');
+    expect(edgeDeploy).toContain('--file "$QUERY_FILE"');
+    expect(edgeDeploy).not.toContain('database/query/read-only');
     expect(edgeDeploy).not.toContain('--data "$REQUEST_BODY"');
     expect(edgeDeploy).not.toContain('QUERY=$(python3');
     expect(edgeDeploy).not.toContain('REQUEST_BODY=$(QUERY=');
     expect(edgeDeploy).toContain('if: ${{ !cancelled() }}');
     expect(edgeDeploy).toContain('Required secret names are present; values were not read.');
-    expect(edgeDeploy.match(/database\/query\/read-only/g)).toHaveLength(1);
     [
       'account_erasure_completion_outbox',
       'account_erasure_ticket_identity_links',
@@ -379,9 +382,9 @@ describe('CI and deployment safety contracts', () => {
   test('keeps the manual privacy rollout validator non-mutating by default', () => {
     expect(privacyDeployScript).toContain('[switch]$DeployFunctions');
     expect(privacyDeployScript).toContain('$SupabaseCliPackage = "supabase@2.105.0"');
-    expect(privacyDeployScript).toContain(
-      '& npx --yes $SupabaseCliPackage db push --linked --dry-run'
-    );
+    expect(privacyDeployScript).not.toContain('$SupabaseCliPackage db push');
+    expect(privacyDeployScript).not.toContain('migration repair');
+    expect(privacyDeployScript).not.toContain('--include-all');
     expect(privacyDeployScript).toContain('supabase/.temp/project-ref');
     expect(privacyDeployScript).toContain('$linkedProjectRef -ne $ProjectRef');
     expect(privacyDeployScript).toContain('--config $denoConfig');
@@ -394,6 +397,11 @@ describe('CI and deployment safety contracts', () => {
     expect(privacyDeployScript).toContain(
       '$schemaQuery.Replace($projectRefPlaceholder, $ProjectRef)'
     );
+    expect(privacyDeployScript).toContain('begin transaction read only;');
+    expect(privacyDeployScript).toContain('$SupabaseCliPackage db query');
+    expect(privacyDeployScript).toContain('--file $queryPath');
+    expect(privacyDeployScript).toContain('[System.IO.File]::Delete($queryPath)');
+    expect(privacyDeployScript).not.toContain('database/query/read-only');
     expect(privacyDeployScript).toContain(
       '-Path "/v1/projects/$ProjectRef/postgrest"'
     );
@@ -416,9 +424,6 @@ describe('CI and deployment safety contracts', () => {
     expect(privacyDeployScript).toContain('if (-not $DeployFunctions)');
     expect(privacyDeployScript).toContain(
       'Nenhuma funcao foi publicada. Use -DeployFunctions somente depois'
-    );
-    expect(privacyDeployScript).not.toMatch(
-      /&\s+npx[^\r\n]*\sdb\s+push\s+--linked(?!\s+--dry-run)/
     );
     expect(privacyDeployScript).not.toContain('_archive-v75');
     expect(privacyDeployScript).not.toMatch(
