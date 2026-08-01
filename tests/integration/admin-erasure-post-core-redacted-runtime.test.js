@@ -569,6 +569,10 @@ describe('admin account erasure post-core redacted runtime gate', () => {
 
     const exportButton = card.querySelector('[data-lgpd-export]');
     expect(exportButton.disabled).toBe(false);
+    const archive = card.querySelector('[data-help-status-set="archived"]');
+    expect(archive).not.toBeNull();
+    expect(archive.disabled).toBe(false);
+    expect(archive.hasAttribute('data-help-status-locked')).toBe(false);
     exportButton.click();
     await waitForAtLeastCalls(harness.exportReportPDF, 1);
     await settle(4);
@@ -638,15 +642,13 @@ describe('admin account erasure post-core redacted runtime gate', () => {
     await settle(8);
     const archive = getCard(harness).querySelector('[data-help-status-set="archived"]');
     expect(archive).not.toBeNull();
+    expect(archive.disabled).toBe(true);
+    expect(archive.getAttribute('data-help-status-locked')).toBe('1');
+    expect(archive.getAttribute('title')).toMatch(/comprovante final/i);
     archive.click();
     await settle(8);
 
     expect(harness.updateAdminHelpRequest).not.toHaveBeenCalled();
-    expect(harness.showToast).toHaveBeenCalledWith(
-      expect.stringMatching(/Fechamento bloqueado|entrega do comprovante/i),
-      'warn',
-      6200,
-    );
   });
 
   test('final_workflow_failed with auth_deleted keeps retry available without relinking', async () => {

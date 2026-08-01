@@ -2039,6 +2039,26 @@
     };
   }
 
+  function getErasureCloseGuard(row) {
+    if (!isLgpdErasureRequest(row)) return { locked: false, reason: '' };
+    const id = String(row && row.id || '').trim();
+    const result = state.erasureResults[id] || null;
+    const completionState = getErasureCompletionState(row, result);
+    if (completionState.flowComplete || completionState.cancelled) {
+      return { locked: false, reason: '' };
+    }
+
+    let reason = 'Fechamento bloqueado: carregue o estado seguro e conclua o fluxo LGPD antes de resolver ou arquivar.';
+    if (needsErasureProtocolLink(row)) {
+      reason = 'Fechamento bloqueado: vincule a identidade e crie o protocolo DSR antes de concluir este pedido de exclusão.';
+    } else if (completionState.coreErased) {
+      reason = 'Fechamento bloqueado: o núcleo foi excluído, mas a entrega do comprovante final ainda não foi comprovada.';
+    } else if (result) {
+      reason = 'Fechamento bloqueado: a exclusão ainda não foi concluída ou formalmente cancelada.';
+    }
+    return { locked: true, reason };
+  }
+
   /**
    * Human checklist for moderators (joins Help ticket + DSR protocol + Edge workflow).
    * Matches the operational path reflected in historical LGPD PDF reports.
@@ -2717,11 +2737,13 @@
       const priorityValue = String(row.priority || 'normal').trim() || 'normal';
       const identity = getHelpTicketIdentity(row);
       const exportCloseLocked = isOpenDataExportHelpRequest(row);
+      const erasureCloseGuard = getErasureCloseGuard(row);
+      const closeLocked = exportCloseLocked || erasureCloseGuard.locked;
       const closeLockReason = exportCloseLocked
         ? 'Bloqueado: protocolo DSR de cópia/portabilidade ainda aberto (DSR_HELP_MUST_REMAIN_OPEN). Conclua, cancele ou aguarde expirar o protocolo no painel de complemento integral.'
-        : '';
-      const triageHintDefault = exportCloseLocked
-        ? 'Cópia/portabilidade com DSR aberto: use Novo/Triado/Em andamento. Resolvido e Arquivado só liberam após o protocolo DSR fechar.'
+        : erasureCloseGuard.reason;
+      const triageHintDefault = closeLocked
+        ? closeLockReason
         : (triageSavedHintFor(row.id) || 'Clique em um chip para salvar a triagem automaticamente.');
 
       return [
@@ -2766,7 +2788,7 @@
         '    <div class="kc-admin-help-triage-row" role="group" aria-label="Status do pedido">',
         '      <span class="kc-admin-help-triage-label"><i class="fas fa-flag" aria-hidden="true"></i> Status</span>',
         `      <div class="kc-admin-help-chips kc-admin-help-chips--triage">${buildStatusTriageChips(statusValue, {
-          closeLocked: exportCloseLocked,
+          closeLocked: closeLocked,
           closeLockReason: closeLockReason,
         })}</div>`,
         '    </div>',
