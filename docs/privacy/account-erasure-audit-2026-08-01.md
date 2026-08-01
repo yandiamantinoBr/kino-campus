@@ -92,6 +92,19 @@ sensíveis antes da reautorização.
 não sensíveis e limite de paginação. Linhas, e-mail, assunto, descrição, UUIDs e
 busca ficam apenas em memória e só são pintados após revalidar a sessão admin.
 
+### P1 — rascunho público podia perder isolamento e persistir PII além da aba
+
+**Evidência:** a Central de Ajuda salvava assunto, mensagem, e-mail e metadados em
+`sessionStorage` e `localStorage`. Na hidratação, o rascunho também podia ser
+carimbado depois da troca de `state.user`, atribuindo dados da conta anterior ao
+novo escopo. Um snapshot precoce com `account_email` vazio ainda apagava o e-mail
+preenchido pela sessão autenticada.
+
+**Correção:** o snapshot ocorre antes de trocar o titular ativo; campo vazio do
+snapshot precoce não substitui o e-mail autenticado; rascunhos ficam somente no
+`sessionStorage`, e a chave legada em `localStorage` é expurgada sem restauração.
+Reload e navegação na mesma aba continuam suportados.
+
 ### P1 — materialização de DSR para Help legado autenticado
 
 **Evidência:** documentação/teste antigo afirmavam que zero DSR era aceito apenas
