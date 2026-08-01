@@ -52,7 +52,7 @@ O mapeamento descrevia o estado **antes** da onda de privacidade (DSR, exportaç
 
 | Function | Status | verify_jwt | Notas |
 |---|---|---|---|
-| `kc-account-erasure` | ACTIVE v19 | true | já existia |
+| `kc-account-erasure` | ACTIVE v19 | true | já existia; a auditoria não comparou a fonte remota com o repositório |
 | `kc-help-request-notify` | ACTIVE v18 | true | já existia |
 | `kc-data-subject-request` | ACTIVE v1 | true | **deployado** (Settings download / DSR) |
 | `kc-data-export-admin` | ACTIVE v1 | true | **deployado** |
@@ -60,6 +60,13 @@ O mapeamento descrevia o estado **antes** da onda de privacidade (DSR, exportaç
 | `kc-create-privacy-help-guest` | ACTIVE v1 | false | **deployado** (exige Turnstile secret) |
 
 Antes deste deploy, o repositório tinha o código de exportação/DSR, mas o projeto remoto **não** listava as quatro functions novas — o card “Baixar meus dados” e o gateway guest falhavam em produção mesmo com o front correto.
+
+> Retificação em 2026-08-01: o download da fonte remota comprovou que a v19 de
+> `kc-account-erasure` ainda continha a implementação de 2026-07-08 e não as
+> ações/contratos presentes no frontend atual. Portanto, `ACTIVE v19` era apenas
+> evidência de disponibilidade, não de paridade. A correção exige o handshake de
+> runtime e a verificação pós-deploy da fonte descritos no relatório de
+> 2026-08-01; até isso estar publicado, nenhuma exclusão real deve ser iniciada.
 
 ### Secrets operacionais ainda a confirmar
 

@@ -72,7 +72,13 @@ describe('admin data-export supplement controls', () => {
     expect(controller).toContain('committed: hasCanonicalDataExportLink(row)');
     expect(controller).toContain('async function settleExportMutationResult(');
     expect(controller).toContain('async function loadHelpRequestById(');
-    expect(controller).not.toMatch(/result\.linked\s*===\s*true/);
+    const settleStart = controller.indexOf('async function settleExportMutationResult(');
+    const settleEnd = controller.indexOf(
+      'async function handleDataExportSupplementAction(',
+      settleStart,
+    );
+    const exportSettlement = controller.slice(settleStart, settleEnd);
+    expect(exportSettlement).not.toMatch(/result\.linked\s*===\s*true/);
     expect(controller).toContain("return String(value == null ? '' : value).replace(/[&<>\"']/g");
     expect(controller).toContain('exportSupplementUncertain: {}');
     expect(controller).toContain('markExportOutcomeUncertain(id, action)');

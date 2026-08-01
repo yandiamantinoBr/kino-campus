@@ -58,8 +58,8 @@
   const PRIVACY_PENDING_STORAGE_KEY = 'kc-privacy-pending-payload-v1';
   const PRIVACY_PENDING_TTL_MS = 15 * 60 * 1000;
   // General form draft (leave page / reload / auth refresh).
-  // Dual-write sessionStorage + localStorage so drafts survive reloads and
-  // new tabs on the same origin; TTL keeps PII from lingering forever.
+  // Keep PII tab-scoped in sessionStorage. Legacy localStorage copies are
+  // purged whenever this controller touches the draft key.
   const HELP_FORM_DRAFT_KEY = 'kc_help_form_draft_v1';
   const HELP_FORM_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const HELP_FORM_DRAFT_SAVE_DEBOUNCE_MS = 200;
@@ -525,33 +525,22 @@
   function draftStorageWrite(key, value) {
     const session = safeSessionStorage();
     const local = safeLocalStorage();
-    let wrote = false;
+    try { if (local) local.removeItem(key); } catch (_) { /* ignore */ }
     try {
       if (session) {
         session.setItem(key, value);
-        wrote = true;
+        return true;
       }
     } catch (_) { /* ignore */ }
-    try {
-      if (local) {
-        local.setItem(key, value);
-        wrote = true;
-      }
-    } catch (_) { /* ignore */ }
-    return wrote;
+    return false;
   }
 
   function draftStorageRead(key) {
     const session = safeSessionStorage();
     const local = safeLocalStorage();
+    try { if (local) local.removeItem(key); } catch (_) { /* ignore */ }
     try {
-      if (session) {
-        const fromSession = session.getItem(key);
-        if (fromSession) return fromSession;
-      }
-    } catch (_) { /* ignore */ }
-    try {
-      if (local) return local.getItem(key);
+      if (session) return session.getItem(key);
     } catch (_) { /* ignore */ }
     return null;
   }
@@ -753,8 +742,15 @@
           '[data-help-conditional="' + safeKey + '"]'
         );
         if (!el) return;
-        if (el.type === 'checkbox') el.checked = !!conditional[key];
-        else el.value = String(conditional[key] == null ? '' : conditional[key]);
+        if (el.type === 'checkbox') {
+          el.checked = !!conditional[key];
+        } else {
+          const restoredValue = String(conditional[key] == null ? '' : conditional[key]);
+          // A deep-link preset can be snapshotted before authentication resolves.
+          // Its empty account email must not erase the trusted session prefill.
+          if (key === 'account_email' && !restoredValue.trim()) return;
+          el.value = restoredValue;
+        }
         if (el.dataset) delete el.dataset.kcAccountPrefillUserId;
       });
       return true;
@@ -1793,14 +1789,17 @@
 
     const previousUserId = getUserId(state.user);
     const userId = getUserId(nextUser);
+    if (previousUserId !== userId) {
+      // Snapshot while the previous owner is still active. Updating state.user
+      // first could stamp account A's draft with account B's identifier.
+      try { flushHelpFormDraftSave(); } catch (_) { /* ignore */ }
+    }
     state.user = nextUser || null;
     state.authResolved = true;
     if (previousUserId !== userId) {
       state.profile = null;
-      // Persist draft before any wipe so leave/return and soft auth transitions
-      // do not throw away typed text. Only hard-reset when switching between
-      // two different signed-in accounts (or logging out).
-      try { flushHelpFormDraftSave(); } catch (_) { /* ignore */ }
+      // Only hard-reset when switching between two different signed-in
+      // accounts (or logging out). Guest drafts can follow a successful login.
       if (previousUserId && userId && previousUserId !== userId) {
         // Account A → account B: never leak A's draft into B's form.
         resetAccountBoundForm();

@@ -300,7 +300,7 @@ values
     'Excluir conta autenticada sem DSR',
     'Linha autenticada nao usa a ponte anonima.',
     'new',
-    'third-party@example.test',
+    'anonymous-bridge-authenticated@example.test',
     '{"request_kind":"account_erasure"}'::jsonb
   ),
   (
@@ -703,8 +703,10 @@ select extensions.throws_ok(
   'an existing open erasure for the subject blocks materialization'
 );
 
-select extensions.throws_ok(
-  $$select public.kc_link_verified_help_request_to_account_erasure(
+insert into kc_anonymous_bridge_test_state (key, value)
+values (
+  'authenticated_zero_dsr_link',
+  public.kc_link_verified_help_request_to_account_erasure(
     '9a200000-0000-4000-8000-000000000007',
     'anonymous-bridge-authenticated@example.test',
     '9a000000-0000-4000-8000-000000000001',
@@ -712,12 +714,64 @@ select extensions.throws_ok(
     'support_mailbox_reply',
     repeat('f', 64),
     now() - interval '1 minute'
-  )$$,
-  '23514',
-  'ERASURE_IDENTITY_DSR_NOT_UNIQUE',
-  'zero-DSR materialization is limited to anonymous Help'
+  )
 );
 
+select extensions.ok(
+  (
+    select
+      (value ->> 'ok')::boolean
+      and (value ->> 'linked')::boolean
+      and not (value ->> 'idempotent')::boolean
+      and value ->> 'data_subject_request_status' = 'received'
+      and value ->> 'workflow_status' = 'diagnosed'
+      and value ->> 'protocol' ~
+        '^KC-DSR-[0-9]{8}-[A-F0-9]{16}$'
+      and value::text !~*
+        '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+      and value::text not like
+        '%anonymous-bridge-authenticated@example.test%'
+    from kc_anonymous_bridge_test_state
+    where key = 'authenticated_zero_dsr_link'
+  ),
+  'authenticated legacy zero-DSR Help returns only the safe binder projection'
+);
+
+reset role;
+select extensions.ok(
+  exists (
+    select 1
+    from public.data_subject_requests request_row
+    where request_row.help_request_id =
+        '9a200000-0000-4000-8000-000000000007'
+      and request_row.user_id =
+        '9a000000-0000-4000-8000-000000000007'
+      and request_row.request_kind = 'account_erasure'
+      and request_row.status = 'received'
+      and request_row.protocol ~
+        '^KC-DSR-[0-9]{8}-[A-F0-9]{16}$'
+  )
+  and exists (
+    select 1
+    from public.account_erasure_requests workflow_row
+    join public.data_subject_requests request_row
+      on request_row.id = workflow_row.data_subject_request_id
+    where request_row.help_request_id =
+        '9a200000-0000-4000-8000-000000000007'
+      and workflow_row.user_id =
+        '9a000000-0000-4000-8000-000000000007'
+      and workflow_row.status = 'diagnosed'
+  )
+  and exists (
+    select 1
+    from kc_private.account_erasure_ticket_identity_links link_row
+    where link_row.help_request_id =
+      '9a200000-0000-4000-8000-000000000007'
+  ),
+  'authenticated legacy Help materializes one DSR, workflow and identity ledger'
+);
+
+set local role service_role;
 select extensions.throws_ok(
   $$select public.kc_link_verified_help_request_to_account_erasure(
     '9a200000-0000-4000-8000-000000000008',
@@ -756,7 +810,6 @@ select extensions.ok(
     where request_row.help_request_id in (
       '9a200000-0000-4000-8000-000000000005',
       '9a200000-0000-4000-8000-000000000006',
-      '9a200000-0000-4000-8000-000000000007',
       '9a200000-0000-4000-8000-000000000008',
       '9a200000-0000-4000-8000-000000000009'
     )
@@ -774,7 +827,6 @@ select extensions.ok(
     where link_row.help_request_id in (
       '9a200000-0000-4000-8000-000000000005',
       '9a200000-0000-4000-8000-000000000006',
-      '9a200000-0000-4000-8000-000000000007',
       '9a200000-0000-4000-8000-000000000008',
       '9a200000-0000-4000-8000-000000000009'
     )

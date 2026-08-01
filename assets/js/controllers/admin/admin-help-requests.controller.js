@@ -76,14 +76,15 @@
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   const SHA256_RE = /^[a-f0-9]{64}$/i;
   const EXPORT_ARTIFACT_REF_RE = /^KEA-[A-F0-9]{32}$/;
-  // Moderator field drafts: renderRows() rebuilds innerHTML and would wipe
-  // identity/evidence/triage inputs without this store.
-  const ADMIN_HELP_DRAFT_KEY = 'kc_admin_help_draft_v1';
+  // Sensitive moderator fields survive renderRows() only in this page's
+  // memory. Browser storage persists safe queue preferences, never ticket PII.
+  const ADMIN_HELP_DRAFT_KEY = 'kc_admin_help_preferences_v2';
+  const ADMIN_HELP_DRAFT_LEGACY_KEYS = Object.freeze(['kc_admin_help_draft_v1']);
   const ADMIN_HELP_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const ADMIN_HELP_DRAFT_DEBOUNCE_MS = 200;
-  // Session snapshot of the last authorized queue so leave/return does not blank
-  // #admin-content while the same admin revalidates. Cleared on logout/deny.
-  const ADMIN_HELP_VIEW_KEY = 'kc_admin_help_view_v1';
+  // Safe view preferences only. Queue rows are reloaded after authorization.
+  const ADMIN_HELP_VIEW_KEY = 'kc_admin_help_view_v2';
+  const ADMIN_HELP_VIEW_LEGACY_KEYS = Object.freeze(['kc_admin_help_view_v1']);
   const ADMIN_HELP_VIEW_TTL_MS = 30 * 60 * 1000;
 
   const state = {
@@ -145,10 +146,7 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
-  // ── Per-ticket draft (survives leave/return + renderRows wipe) ─────────
-  // In-memory mirror is source of truth during the session; storage is backup.
-  // Only dirty / non-blank field values are written so empty DOM rebuilds
-  // (auth recheck, diagnose, leave/return) cannot wipe operator typing.
+  // ── Per-ticket draft (survives renderRows wipe in this document) ───────
   const adminDraftMemory = {
     tickets: Object.create(null),
     filters: null,
@@ -182,12 +180,14 @@
   };
 
   function adminDraftStorageClear() {
-    try {
-      if (window.sessionStorage) window.sessionStorage.removeItem(ADMIN_HELP_DRAFT_KEY);
-    } catch (_) { /* ignore */ }
-    try {
-      if (window.localStorage) window.localStorage.removeItem(ADMIN_HELP_DRAFT_KEY);
-    } catch (_) { /* ignore */ }
+    [ADMIN_HELP_DRAFT_KEY].concat(ADMIN_HELP_DRAFT_LEGACY_KEYS).forEach(function (key) {
+      try {
+        if (window.sessionStorage) window.sessionStorage.removeItem(key);
+      } catch (_) { /* ignore */ }
+      try {
+        if (window.localStorage) window.localStorage.removeItem(key);
+      } catch (_) { /* purge legacy PII cache */ }
+    });
   }
 
   function adminDraftStorageRead() {
@@ -195,14 +195,17 @@
     try {
       if (window.sessionStorage) raw = window.sessionStorage.getItem(ADMIN_HELP_DRAFT_KEY);
     } catch (_) { /* ignore */ }
-    if (!raw) {
+    ADMIN_HELP_DRAFT_LEGACY_KEYS.forEach(function (key) {
       try {
-        if (window.localStorage) raw = window.localStorage.getItem(ADMIN_HELP_DRAFT_KEY);
+        if (window.sessionStorage) window.sessionStorage.removeItem(key);
       } catch (_) { /* ignore */ }
-    }
+      try {
+        if (window.localStorage) window.localStorage.removeItem(key);
+      } catch (_) { /* ignore */ }
+    });
     if (!raw) {
       return {
-        v: 1,
+        v: 2,
         saved_at_ms: Date.now(),
         tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
         filters: adminDraftMemory.filters,
@@ -210,9 +213,9 @@
     }
     try {
       const parsed = JSON.parse(raw);
-      if (!parsed || parsed.v !== 1 || typeof parsed.tickets !== 'object' || !parsed.tickets) {
+      if (!parsed || parsed.v !== 2 || typeof parsed.filters !== 'object' || !parsed.filters) {
         return {
-          v: 1,
+          v: 2,
           saved_at_ms: Date.now(),
           tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
           filters: adminDraftMemory.filters,
@@ -222,26 +225,21 @@
       if (!Number.isFinite(age) || age < 0 || age > ADMIN_HELP_DRAFT_TTL_MS) {
         adminDraftStorageClear();
         return {
-          v: 1,
+          v: 2,
           saved_at_ms: Date.now(),
           tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
           filters: adminDraftMemory.filters,
         };
       }
-      // Memory wins for tickets already captured this session; storage fills gaps.
-      const mergedTickets = Object.assign(Object.create(null), parsed.tickets || {});
-      Object.keys(adminDraftMemory.tickets).forEach(function (id) {
-        mergedTickets[id] = mergeTicketDraft(mergedTickets[id], adminDraftMemory.tickets[id]);
-      });
       return {
-        v: 1,
+        v: 2,
         saved_at_ms: Number(parsed.saved_at_ms) || Date.now(),
-        tickets: mergedTickets,
+        tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
         filters: adminDraftMemory.filters || parsed.filters || null,
       };
     } catch (_) {
       return {
-        v: 1,
+        v: 2,
         saved_at_ms: Date.now(),
         tickets: Object.assign(Object.create(null), adminDraftMemory.tickets),
         filters: adminDraftMemory.filters,
@@ -253,18 +251,34 @@
     const tickets = store.tickets || Object.create(null);
     adminDraftMemory.tickets = Object.assign(Object.create(null), tickets);
     adminDraftMemory.filters = store.filters || null;
+    const filters = store.filters && typeof store.filters === 'object'
+      ? {
+          status: String(store.filters.status || 'all'),
+          type: String(store.filters.type || 'all'),
+          priority: String(store.filters.priority || 'all'),
+        }
+      : null;
     const payload = JSON.stringify({
-      v: 1,
+      v: 2,
       saved_at_ms: Date.now(),
-      tickets: tickets,
-      filters: store.filters || null,
+      filters: filters,
     });
     try {
       if (window.sessionStorage) window.sessionStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
     } catch (_) { /* ignore */ }
-    try {
-      if (window.localStorage) window.localStorage.setItem(ADMIN_HELP_DRAFT_KEY, payload);
-    } catch (_) { /* ignore */ }
+    ADMIN_HELP_DRAFT_LEGACY_KEYS.concat([ADMIN_HELP_DRAFT_KEY]).forEach(function (key) {
+      try {
+        if (window.localStorage) window.localStorage.removeItem(key);
+      } catch (_) { /* purge legacy PII cache */ }
+    });
+  }
+
+  function clearAdminDraftMemory() {
+    adminDraftMemory.tickets = Object.create(null);
+    adminDraftMemory.filters = null;
+    Object.keys(adminDraftDirty).forEach(function (id) { delete adminDraftDirty[id]; });
+    adminFiltersDirty = false;
+    adminDraftStorageClear();
   }
 
   function isBlankDraftValue(value) {
@@ -698,30 +712,26 @@
   }
 
   function clearAdminViewSnapshot() {
-    try {
-      if (window.sessionStorage) window.sessionStorage.removeItem(ADMIN_HELP_VIEW_KEY);
-    } catch (_) { /* ignore */ }
+    [ADMIN_HELP_VIEW_KEY].concat(ADMIN_HELP_VIEW_LEGACY_KEYS).forEach(function (key) {
+      try {
+        if (window.sessionStorage) window.sessionStorage.removeItem(key);
+      } catch (_) { /* ignore */ }
+    });
   }
 
   function saveAdminViewSnapshot() {
     if (!state.isAuthorized || !state.authorizedAdminUserId) return;
-    if (!Array.isArray(state.rows) || !state.rows.length) return;
     const payload = {
-      v: 1,
+      v: 2,
       saved_at_ms: Date.now(),
-      admin_user_id: String(state.authorizedAdminUserId || ''),
       filters: {
         status: String(state.filters.status || 'all'),
         type: String(state.filters.type || 'all'),
         priority: String(state.filters.priority || 'all'),
-        query: String(state.filters.query || ''),
       },
       pagination: {
         limit: state.pagination.limit,
-        totalCount: state.pagination.totalCount,
-        hasMore: state.pagination.hasMore,
       },
-      rows: state.rows,
     };
     try {
       if (window.sessionStorage) {
@@ -735,10 +745,15 @@
     try {
       if (window.sessionStorage) raw = window.sessionStorage.getItem(ADMIN_HELP_VIEW_KEY);
     } catch (_) { /* ignore */ }
+    ADMIN_HELP_VIEW_LEGACY_KEYS.forEach(function (key) {
+      try {
+        if (window.sessionStorage) window.sessionStorage.removeItem(key);
+      } catch (_) { /* purge legacy queue cache */ }
+    });
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
-      if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.rows)) return null;
+      if (!parsed || parsed.v !== 2 || !parsed.filters || typeof parsed.filters !== 'object') return null;
       const age = Date.now() - Number(parsed.saved_at_ms || 0);
       if (!Number.isFinite(age) || age < 0 || age > ADMIN_HELP_VIEW_TTL_MS) {
         clearAdminViewSnapshot();
@@ -750,16 +765,16 @@
     }
   }
 
-  // Paint last queue immediately on leave/return so #kc-main does not flash empty.
-  // Does not grant authorization by itself — reauthorizeAdminView still validates.
+  // Restore non-sensitive preferences only. Queue PII is never painted before
+  // reauthorizeAdminView validates the active administrator.
   function restoreAdminViewSnapshotPaint() {
     const snap = readAdminViewSnapshot();
-    if (!snap || !snap.rows || !snap.rows.length) return false;
+    if (!snap) return false;
     if (snap.filters && typeof snap.filters === 'object') {
       state.filters.status = String(snap.filters.status || 'all');
       state.filters.type = String(snap.filters.type || 'all');
       state.filters.priority = String(snap.filters.priority || 'all');
-      state.filters.query = String(snap.filters.query || '');
+      state.filters.query = '';
       const statusEl = $('#helpStatusFilter');
       const typeEl = $('#helpTypeFilter');
       const priorityEl = $('#helpPriorityFilter');
@@ -767,27 +782,10 @@
       if (statusEl) statusEl.value = state.filters.status;
       if (typeEl) typeEl.value = state.filters.type;
       if (priorityEl) priorityEl.value = state.filters.priority;
-      if (queryEl) queryEl.value = state.filters.query;
+      if (queryEl) queryEl.value = '';
     }
     if (snap.pagination && typeof snap.pagination === 'object') {
       state.pagination.limit = Math.max(1, toFiniteNumber(snap.pagination.limit, HELP_PAGE_SIZE));
-      state.pagination.totalCount = Math.max(0, toFiniteNumber(snap.pagination.totalCount, snap.rows.length));
-      state.pagination.hasMore = snap.pagination.hasMore === true;
-    }
-    state.rows = snap.rows.slice();
-    // Temporarily authorized only for paint; reauth confirms or clears.
-    state.authorizedAdminUserId = String(snap.admin_user_id || state.authorizedAdminUserId || '');
-    state.isAuthorized = Boolean(state.authorizedAdminUserId);
-    try {
-      renderSummary(state.rows);
-      renderRows(state.rows);
-    } catch (_) { /* ignore */ }
-    const loading = $('#admin-loading');
-    const content = $('#admin-content');
-    if (loading) loading.style.display = 'none';
-    if (content) {
-      content.style.display = 'block';
-      content.setAttribute('aria-busy', 'true');
     }
     return true;
   }
@@ -814,7 +812,10 @@
     state.exportSupplementUncertain = Object.create(null);
     state.triageBusy = Object.create(null);
     state.triageJustSaved = Object.create(null);
-    clearAdminViewSnapshot();
+    if (options.clearBrowserState === true) {
+      clearAdminViewSnapshot();
+      clearAdminDraftMemory();
+    }
 
     const queryField = $('#helpQueryFilter');
     if (queryField) {
@@ -850,7 +851,7 @@
 
   function denyAdminAccess(message, generation) {
     if (generation !== state.authGeneration) return;
-    clearSensitiveAdminState({ showChecking: false });
+    clearSensitiveAdminState({ showChecking: false, clearBrowserState: true });
     showError(message);
   }
 
@@ -878,6 +879,15 @@
       ? String(error.body.error || error.body.message || '').toLowerCase()
       : '';
     const value = [code, body].filter(Boolean).join(' ');
+    if (
+      value.indexOf('erasure_contract_mismatch') >= 0
+      || value.indexOf('account_erasure_contract_mismatch') >= 0
+    ) {
+      return 'O backend de exclusão não está na versão segura exigida por este painel. Nenhuma ação foi enviada; aguarde o deploy validado e atualize a página.';
+    }
+    if (value.indexOf('erasure_contract_changed_after_probe') >= 0) {
+      return 'O backend mudou durante a operação. O resultado é indeterminado: não repita a ação antes de atualizar a fila e executar Preparar diagnóstico.';
+    }
     if (value.indexOf('invalid_session') >= 0 || value.indexOf('session_not_active') >= 0 || value.indexOf('missing authorization') >= 0 || value.indexOf('unauthorized') >= 0) {
       return 'Sua sessão administrativa expirou ou foi trocada. Entre novamente com uma conta administradora e recarregue esta página.';
     }
@@ -1995,6 +2005,40 @@
       .filter(Boolean);
   }
 
+  function getErasureCompletionState(row, result) {
+    const request = result && result.request && typeof result.request === 'object'
+      ? result.request
+      : {};
+    const metadata = request.metadata && typeof request.metadata === 'object'
+      ? request.metadata
+      : {};
+    const status = String(request.status || '').trim();
+    const failureStage = String(metadata.failure_stage || '').trim();
+    const completionEmailStatus = String(metadata.completion_email_status || '').trim();
+    const postCoreMarker = getPostCoreErasureMarker(row);
+    const coreErased = Boolean(
+      status === 'erased'
+      || metadata.auth_deleted === true
+      || postCoreMarker
+    );
+    const flowComplete = Boolean(
+      status === 'erased'
+      && metadata.notification_pending === false
+      && metadata.retryable === false
+      && !failureStage
+      && ['sent', 'sent_manual'].includes(completionEmailStatus)
+    );
+    return {
+      status,
+      cancelled: status === 'cancelled',
+      coreErased,
+      flowComplete,
+      failureStage,
+      completionEmailStatus,
+      notificationPending: metadata.notification_pending === true,
+    };
+  }
+
   /**
    * Human checklist for moderators (joins Help ticket + DSR protocol + Edge workflow).
    * Matches the operational path reflected in historical LGPD PDF reports.
@@ -2055,10 +2099,19 @@
         ),
       },
       {
+        key: 'notify',
+        label: '6. Confirmar a entrega do comprovante final ao titular',
+        done: Boolean(ctx.flowComplete || ctx.cancelled),
+        current: Boolean(ctx.coreErasedAt && !ctx.flowComplete),
+      },
+      {
         key: 'close',
-        label: '6. Exportar relatório LGPD e só então marcar Resolvido',
-        done: Boolean(ctx.status === 'erased' && ctx.helpStatus === 'resolved'),
-        current: Boolean(ctx.status === 'erased' || (ctx.postCoreSurface && ctx.coreErasedAt)),
+        label: '7. Exportar relatório LGPD e só então fechar o ticket',
+        done: Boolean(
+          (ctx.flowComplete || ctx.cancelled)
+          && ['resolved', 'archived'].includes(ctx.helpStatus)
+        ),
+        current: Boolean(ctx.flowComplete || ctx.cancelled),
       },
     ];
     // Ensure only one "current" step: first incomplete current wins.
@@ -2117,7 +2170,7 @@
       `  ${protocolLine}`,
       next,
       `  <ol class="kc-admin-lgpd-checklist">${items}</ol>`,
-      '  <p class="kc-admin-lgpd-guide-note">Dica: use <em>Exportar relatório LGPD</em> a qualquer momento para o PDF de evidência (como os relatórios “Em andamento” / “Resolvido”). Não marque o ticket como Resolvido antes da etapa 5.</p>',
+      '  <p class="kc-admin-lgpd-guide-note">Dica: use <em>Exportar relatório LGPD</em> a qualquer momento para o PDF de evidência (como os relatórios “Em andamento” / “Resolvido”). Conclua a entrega do comprovante na etapa 6 antes de marcar o ticket como Resolvido na etapa 7.</p>',
       '</div>',
     ].join('');
   }
@@ -2138,7 +2191,11 @@
     const confirmedPostCore = hasConfirmedPostCoreWorkflow(result);
     const identityLinkRequired = canOfferErasureIdentityLink(row);
     // Drop stale Passo-1 traps so the banner never blocks protocol creation.
-    if (identityLinkRequired && state.erasureUncertain[id]) {
+    if (
+      identityLinkRequired
+      && state.erasureUncertain[id]
+      && state.erasureUncertain[id].action === 'link_verified_identity'
+    ) {
       delete state.erasureUncertain[id];
     }
     const uncertain = Boolean(state.erasureUncertain[id]);
@@ -2201,9 +2258,14 @@
       || result && result.receipt && result.receipt.erased_at
       || redactedMarker.erased_at
       || '';
-    const erasedAt = status === 'erased' ? coreErasedAt : '';
-    const canClose = erasedAt
-      ? 'Sim, após revisar o recibo interno.'
+    const completionState = getErasureCompletionState(row, result);
+    const erasedAt = completionState.flowComplete ? coreErasedAt : '';
+    const canClose = completionState.cancelled
+      ? 'Sim, após revisar o cancelamento formal.'
+      : completionState.flowComplete
+        ? 'Sim, após revisar e exportar o recibo interno.'
+        : completionState.coreErased
+          ? 'Não. O núcleo foi excluído, mas a entrega final ainda não foi comprovada.'
       : status === 'pending_confirmation' || status === 'reversible_applied'
         ? 'Não. Aguardar confirmação final do titular.'
         : diagnostics && diagnostics.counts
@@ -2218,12 +2280,7 @@
     const postCoreSurface = redactedPostCore
       || confirmedPostCore
       || postCoreProbeCandidate;
-    const finalReadOnly = Boolean(
-      request
-      && request.status === 'erased'
-      && requestMetadata.notification_pending !== true
-      && !failureStage
-    );
+    const finalReadOnly = completionState.flowComplete;
     const warningItems = []
       .concat(result && Array.isArray(result.warnings) ? result.warnings : [])
       .concat(diagnostics && Array.isArray(diagnostics.errors) ? diagnostics.errors : [])
@@ -2252,10 +2309,16 @@
     const notificationStateKnown = Boolean(request);
     const notificationPending = requestMetadata.notification_pending === true;
     const notificationLabel = notificationStateKnown
-      ? (notificationPending ? 'Envio manual pendente' : 'Sem pendência registrada')
+      ? completionState.flowComplete
+        ? 'Comprovante entregue'
+        : notificationPending
+          ? 'Entrega final pendente'
+          : completionState.failureStage
+            ? `Falha em ${completionState.failureStage}`
+            : 'Entrega final não comprovada'
       : redactedPostCore || postCoreProbeCandidate
         ? 'Desconhecida — carregue o estado seguro'
-        : 'Sem pendência registrada';
+        : 'Ainda não aplicável — o comprovante é enviado após a exclusão';
     const identityStateLabel = redactedPostCore
       ? 'Dados do ticket redigidos; fluxo pós-exclusão'
       : confirmedPostCore
@@ -2327,6 +2390,8 @@
       hasDiagnostics,
       status,
       coreErasedAt,
+      flowComplete: completionState.flowComplete,
+      cancelled: completionState.cancelled,
       helpStatus: String(row && row.status || ''),
     });
     const moderatorGuideHtml = buildLgpdModeratorGuideHtml(moderatorGuide, protocol);
@@ -2979,7 +3044,7 @@
     }
 
     // Soft/hard guards before API: open data-export DSR cannot close (DB enforce).
-    // Erasure tickets get a confirm when the workflow is still mid-flight.
+    // Erasure tickets remain open until authoritative state also proves delivery.
     if (status === 'resolved' || status === 'archived') {
       const row = (Array.isArray(state.rows) ? state.rows : []).find(
         (item) => String(item && item.id || '').trim() === id
@@ -2993,31 +3058,25 @@
       }
       if (row && isLgpdErasureRequest(row)) {
         const erasure = state.erasureResults[id] || null;
-        const erasureStatus = String(
-          erasure && erasure.request && erasure.request.status
-            ? erasure.request.status
-            : ''
-        ).trim();
-        const redacted = isRedactedPostCoreErasure(row);
-        const safeToClose = erasureStatus === 'erased'
-          || erasureStatus === 'cancelled'
-          || redacted;
+        const completionState = getErasureCompletionState(row, erasure);
+        const erasureStatus = completionState.status;
+        const safeToClose = completionState.flowComplete
+          || completionState.cancelled;
         if (!safeToClose) {
           const label = erasureStatus
             ? (LGPD_STATUS_LABELS[erasureStatus] || erasureStatus)
-            : 'fluxo LGPD ainda não finalizado';
-          const proceed = typeof window.confirm === 'function'
-            ? window.confirm(
-              `Atenção: este pedido ainda não está pronto para fechamento LGPD (situação: ${label}).\n\n`
-              + 'Só marque Resolvido/Arquivado se o titular cancelou formalmente ou se a exclusão já foi executada e revisada no relatório.\n\n'
-              + 'Deseja continuar mesmo assim?'
-            )
-            : true;
-          if (!proceed) {
-            setCardTriageUi(card, previous.status, previous.priority);
-            showToast('Triagem não salva. Conclua o roteiro LGPD ou cancele com o titular antes de fechar.', 'warn', 4200);
-            return false;
-          }
+            : completionState.coreErased
+              ? 'núcleo excluído, entrega final pendente'
+              : 'fluxo LGPD ainda não finalizado';
+          setCardTriageUi(card, previous.status, previous.priority, {
+            statusMessage: 'Fechamento bloqueado: conclua o fluxo LGPD e a entrega final.',
+          });
+          showToast(
+            `Fechamento bloqueado (${label}). Carregue o estado seguro e confirme a entrega do comprovante final, ou registre o cancelamento formal.`,
+            'warn',
+            6200
+          );
+          return false;
         }
       }
     }
@@ -3221,6 +3280,7 @@
     const metadata = row && row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
     const requestMetadata = request && request.metadata && typeof request.metadata === 'object' ? request.metadata : {};
     const target = result.target || {};
+    const completionState = getErasureCompletionState(row, result);
     const countLabels = {
       profiles: 'Perfil cadastral',
       posts: 'Publicações',
@@ -3277,7 +3337,7 @@
       || receipt.erased_at
       || (postCoreMarker && postCoreMarker.erased_at)
       || '';
-    const erasedAt = status === 'erased' || postCoreMarker ? coreErasedAt : '';
+    const erasedAt = completionState.coreErased ? coreErasedAt : '';
     const confirmationRequestedAt = request.confirmation_requested_at || '';
     const userFoundKnown = Object.prototype.hasOwnProperty.call(target, 'user_found')
       || Boolean(postCoreMarker);
@@ -3286,8 +3346,12 @@
       : userFoundKnown
         ? (target.user_found ? 'Sim' : 'Não')
         : (row && row.user_id ? 'Vinculado ao pedido; diagnóstico pendente' : 'Não verificado');
-    const canCloseLabel = erasedAt
-      ? 'Sim, após revisar o recibo interno'
+    const canCloseLabel = completionState.cancelled
+      ? 'Sim, após revisar o cancelamento formal'
+      : completionState.flowComplete
+        ? 'Sim, após revisar e exportar o recibo interno'
+        : completionState.coreErased
+          ? 'Não. Núcleo excluído, mas entrega do comprovante final ainda não comprovada.'
       : status === 'pending_confirmation' || status === 'reversible_applied'
         ? 'Não. Aguardar confirmação final do titular por e-mail.'
         : hasDiagnostics
@@ -3301,6 +3365,9 @@
       .filter(Boolean);
     if (!hasDiagnostics) warnings.push('Diagnóstico ainda não executado ou não carregado no painel.');
     if (!erasedAt) warnings.push('Exclusão definitiva ainda não executada.');
+    if (completionState.coreErased && !completionState.flowComplete) {
+      warnings.push('O núcleo foi excluído, mas o caso permanece aberto até a entrega final ser comprovada.');
+    }
     if (postCoreMarker) {
       warnings.push('Ticket retido em forma minimizada (hash/protocolo/datas) para evidência e comparativo antes/depois.');
     }
@@ -3346,9 +3413,20 @@
         detalhe: 'Executa limpeza de Auth, dados cadastrais, mídias e vínculos pessoais quando confirmado.',
       },
       {
-        etapa: '6. Fechamento do pedido de ajuda',
-        status: String(row && row.status || '') === 'resolved' ? 'Resolvido' : 'Aberto',
-        detalhe: 'Só marque Resolvido após exclusão executada (ou cancelamento formal) e revisão do relatório LGPD.',
+        etapa: '6. Entrega do comprovante final',
+        status: completionState.flowComplete
+          ? 'Comprovada'
+          : completionState.notificationPending
+            ? 'Pendente'
+            : 'Não comprovada',
+        detalhe: 'Exige aceite SMTP consolidado ou evidência manual por canal verificado.',
+      },
+      {
+        etapa: '7. Fechamento do pedido de ajuda',
+        status: ['resolved', 'archived'].includes(String(row && row.status || ''))
+          ? 'Fechado'
+          : 'Aberto',
+        detalhe: 'Só feche após fluxo integral concluído (ou cancelamento formal) e revisão do relatório LGPD.',
       },
     ];
     const subjectHash = target.subject_hash
@@ -3368,14 +3446,18 @@
         status_lgpd: statusLabels[status] || status,
         dominio_do_e_mail: request.target_email_domain || 'Não informado',
         identificador_pseudonimo_do_titular: subjectHash,
-        protocolo: postCoreMarker && postCoreMarker.protocol
+        protocolo: receipt.protocol
           || metadata.protocol
+          || (postCoreMarker && postCoreMarker.protocol)
+          || result.protocol
           || '',
       },
       kpis: {
         auth: userFoundKnown ? (postCoreMarker ? 'Não encontrado' : (target.user_found ? 'Encontrado' : 'Não encontrado')) : 'Pendente',
         status_final: dataDeletedLabel === 'Sim' ? 'Executado' : 'Pendente',
-        fechamento: erasedAt ? 'Pode fechar' : 'Não fechar',
+        fechamento: completionState.flowComplete || completionState.cancelled
+          ? 'Pode fechar'
+          : 'Não fechar',
         publicacoes: hasDiagnostics || postCoreMarker ? (effectiveCounts.posts || 0) : 'A verificar',
         midias: hasDiagnostics || postCoreMarker ? (effectiveCounts.post_media || 0) : 'A verificar',
         pedidos_de_ajuda: hasDiagnostics || postCoreMarker ? (effectiveCounts.help_requests || 0) : 'A verificar',
@@ -3404,7 +3486,7 @@
         },
         {
           title: 'Status administrativo atual',
-          note: 'Esta seção evita conclusão indevida: solicitação LGPD só deve ser fechada como resolvida após confirmação final e execução do fluxo irreversível, ou se o titular cancelar formalmente o pedido.',
+          note: 'Esta seção evita conclusão indevida: o núcleo excluído não encerra sozinho o caso. A entrega do comprovante final também deve estar confirmada, salvo cancelamento formal.',
           pdfColumns: [{ key: 'campo', width: 1 }, { key: 'valor', width: 2.2 }],
           xlsxColumns: ['campo', 'valor'],
           rows: [{
@@ -3414,12 +3496,17 @@
             campo: 'Dados definitivamente excluídos',
             valor: dataDeletedLabel,
           }, {
+            campo: 'Comprovante final entregue',
+            valor: completionState.flowComplete ? 'Sim' : 'Não',
+          }, {
             campo: 'Pode fechar a solicitação agora?',
             valor: canCloseLabel,
           }, {
             campo: 'Próxima ação recomendada',
-            valor: erasedAt
-              ? 'Revisar recibo, registrar fechamento e responder ao titular.'
+            valor: completionState.flowComplete
+              ? 'Revisar e exportar o recibo antes de fechar o ticket.'
+              : completionState.coreErased
+                ? 'Concluir ou comprovar a entrega do e-mail final; não repetir a exclusão do núcleo.'
               : confirmationRequestedAt
                 ? 'Aguardar resposta do titular com a frase de confirmação antes da exclusão definitiva.'
                 : 'Executar “Ocultar conta e pedir confirmação” após validar o diagnóstico.',
@@ -3466,6 +3553,13 @@
             campo: 'Eliminado/anonimizado em',
             valor: formatDateTime(erasedAt),
           }, {
+            campo: 'Entrega do comprovante final',
+            valor: completionState.flowComplete
+              ? `Comprovada (${completionState.completionEmailStatus})`
+              : completionState.notificationPending
+                ? 'Pendente'
+                : 'Não comprovada',
+          }, {
             campo: 'Identificador pseudônimo do titular',
             valor: subjectHash,
           }, {
@@ -3485,7 +3579,7 @@
             descricao: 'A exclusão irreversível exige confirmação enviada pelo e-mail titular antes da execução final.',
           }, {
             item: 'Retenção mínima',
-            descricao: 'Podem ser mantidos registros mínimos de auditoria, identificador derivado de UUID de alta entropia, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
+            descricao: 'Podem ser mantidos registros mínimos de auditoria, token opaco aleatório sem vínculo reversível com UUID/e-mail, datas, contagens e recibo interno para segurança e exercício regular de direitos.',
           }, {
             item: 'Publicações e conteúdo',
             descricao: 'Conteúdos vinculados ao titular devem ficar ocultos da comunidade e ser anonimizados ou removidos após confirmação final.',
@@ -3516,90 +3610,32 @@
       showToast('O vínculo do protocolo mudou durante a autorização. Atualize a fila antes de exportar.', 'error');
       return;
     }
-    const postCoreMarker = getPostCoreErasureMarker(currentRow);
-    // Post-core tickets must remain exportable after erase so moderators can
-    // produce the anonymized "Resolvido" comparative PDF without re-diagnosing
-    // a deleted Auth user.
-    if (postCoreMarker && (!state.erasureResults[id] || !state.erasureResults[id].request)) {
-      state.erasureResults[id] = {
-        ok: true,
-        action: 'post_core_export',
-        request: {
-          status: 'erased',
-          erased_at: postCoreMarker.erased_at,
-          confirmed_at: postCoreMarker.erased_at,
-          reversible_applied_at: postCoreMarker.erased_at,
-          email_hash: postCoreMarker.subject_hash,
-          target_email_domain: 'Não informado',
-          receipt: {
-            erased_at: postCoreMarker.erased_at,
-            subject_hash: postCoreMarker.subject_hash,
-            email_hash: postCoreMarker.subject_hash,
-            request_id: postCoreMarker.request_id,
-            result: 'erased',
-            auth_deleted: true,
-            counts: {
-              profiles: 0,
-              posts: 0,
-              post_media: 0,
-              comments: 0,
-              help_requests: 1,
-            },
-          },
-          metadata: {
-            auth_deleted: true,
-            last_action: 'erase_confirmed',
-          },
-        },
-        receipt: {
-          erased_at: postCoreMarker.erased_at,
-          subject_hash: postCoreMarker.subject_hash,
-          email_hash: postCoreMarker.subject_hash,
-          request_id: postCoreMarker.request_id,
-          result: 'erased',
-          auth_deleted: true,
-          counts: {
-            profiles: 0,
-            posts: 0,
-            post_media: 0,
-            comments: 0,
-            help_requests: 1,
-          },
-        },
-        diagnostics: {
-          counts: {
-            profiles: 0,
-            posts: 0,
-            post_media: 0,
-            comments: 0,
-            help_requests: 1,
-          },
-        },
-        target: {
-          user_found: false,
-          subject_hash: postCoreMarker.subject_hash,
-          email_hash: postCoreMarker.subject_hash,
-        },
-      };
-    } else {
-      const targetEmail = getLgpdTargetEmail(currentRow);
-      if (window.KCAPI && typeof window.KCAPI.processAccountErasure === 'function' && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)) {
-        const result = await window.KCAPI.processAccountErasure({
-          action: 'diagnose',
-          actionKey: 'diagnose',
-          help_request_id: id,
-          helpRequestId: id,
-          target_email: targetEmail,
-          targetEmail,
-        });
-        if (!isActiveAdminContext(adminContext)) return;
-        if (result && result.ok !== false) {
-          state.erasureResults[id] = result;
-          renderRows(state.rows);
-        } else {
-          showToast(friendlyLgpdErrorMessage(result && result.error), 'error');
-          return;
-        }
+    const targetEmail = getLgpdTargetEmail(currentRow);
+    if (
+      window.KCAPI
+      && typeof window.KCAPI.processAccountErasure === 'function'
+      && (!state.erasureResults[id] || !state.erasureResults[id].diagnostics)
+    ) {
+      const result = await window.KCAPI.processAccountErasure({
+        action: 'diagnose',
+        actionKey: 'diagnose',
+        help_request_id: id,
+        helpRequestId: id,
+        target_email: targetEmail,
+        targetEmail,
+      });
+      if (!isActiveAdminContext(adminContext)) return;
+      if (result && result.ok !== false && result.diagnostics) {
+        state.erasureResults[id] = result;
+        renderRows(state.rows);
+      } else {
+        showToast(
+          result && result.ok !== false
+            ? 'O backend não retornou um diagnóstico autoritativo. Nenhum relatório foi gerado.'
+            : friendlyLgpdErrorMessage(result && result.error),
+          'error'
+        );
+        return;
       }
     }
     if (!isActiveAdminContext(adminContext)) return;
@@ -3858,10 +3894,11 @@
   }
 
   function markErasureOutcomeUncertain(id, action) {
-    // Never trap early LGPD steps that have no safe "diagnose-only" recovery when
-    // the mutation already ran (or partially ran) on a split workflow.
+    // Protocol creation is idempotent and remains the only safe recovery for an
+    // unlinked ticket. Every other mutation, including reversible hiding, must
+    // fail closed when its postcondition cannot be proven.
     const act = String(action || '');
-    if (act === 'link_verified_identity' || act === 'apply_reversible') return;
+    if (act === 'link_verified_identity') return;
     state.erasureUncertain[id] = {
       action,
       recordedAt: new Date().toISOString(),
@@ -3879,6 +3916,19 @@
     return new Promise(function (resolve) {
       window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
+  }
+
+  function isAmbiguousErasureTransportFailure(result, transportFailed) {
+    if (transportFailed) return true;
+    const error = result && result.error;
+    const value = [
+      typeof error === 'string' ? error : '',
+      error && error.code,
+      error && error.message,
+      error && error.body && error.body.error,
+      error && error.body && error.body.message,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return /timeout|timed out|network|transport|failed to fetch|load failed|possible_commit|contract_changed_after_probe|conex[aã]o interrompida/.test(value);
   }
 
   async function settleErasureMutationResult(options) {
@@ -4049,8 +4099,8 @@
     // Phase 3 (hide + confirmation email): if the edge returned a workflow body,
     // trust it as committed even when a subsequent diagnose reads a split row.
     if (action === 'apply_reversible') {
-      delete state.erasureUncertain[id];
       if (result && result.ok !== false && result.request) {
+        delete state.erasureUncertain[id];
         state.erasureResults[id] = {
           ...(currentResult || {}),
           ...result,
@@ -4073,18 +4123,18 @@
         );
         return;
       }
-      renderRows(state.rows);
-      if (result && result.ok === false) {
+      if (
+        result
+        && result.ok === false
+        && !isAmbiguousErasureTransportFailure(result, transportFailed)
+      ) {
+        delete state.erasureUncertain[id];
+        renderRows(state.rows);
         showToast(friendlyLgpdErrorMessage(result.error || result), 'error');
         return;
       }
-      showToast(
-        transportFailed
-          ? 'A rede interrompeu a resposta da ocultação. Execute Preparar diagnóstico antes de repetir a fase 3.'
-          : 'Não foi possível confirmar a ocultação. Execute Preparar diagnóstico e confira o estado antes de repetir.',
-        'error'
-      );
-      return;
+      // A falha pode ter ocorrido depois do commit. Sem uma leitura
+      // autoritativa, caia no bloqueio indeterminado comum abaixo.
     }
 
     if (result && result.request && !reconciliation.result) {
@@ -4717,7 +4767,7 @@
         && nextUserId === String(state.authorizedAdminUserId)
       );
       if (!nextUserId && Object.prototype.hasOwnProperty.call(detail || {}, 'user')) {
-        clearSensitiveAdminState({ showChecking: false });
+        clearSensitiveAdminState({ showChecking: false, clearBrowserState: true });
         showError('Você precisa estar autenticado para acessar este painel.');
         return;
       }
@@ -5027,7 +5077,7 @@
 
     // Account switch must hard-reset (PII isolation).
     if (previousUserId && previousUserId !== String(access.userId || '')) {
-      clearSensitiveAdminState();
+      clearSensitiveAdminState({ clearBrowserState: true });
       try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
     }
 
@@ -5049,7 +5099,8 @@
   async function init() {
     populateTypeFilter();
     bindEvents();
-    // Paint last queue ASAP so leave/return does not flash empty main content.
+    // Restore only safe preferences before authorization. Ticket rows and PII
+    // are fetched and painted only after the current admin session is rechecked.
     try { restoreAdminFiltersFromDraft(); } catch (_) { /* ignore */ }
     try { restoreAdminViewSnapshotPaint(); } catch (_) { /* ignore */ }
     await reauthorizeAdminView({ soft: true });

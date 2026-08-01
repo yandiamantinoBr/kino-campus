@@ -235,6 +235,9 @@ function sanitizedErasedResponse(action = 'retry_finalize') {
       metadata: {
         auth_deleted: true,
         notification_pending: false,
+        retryable: false,
+        failure_stage: null,
+        completion_email_status: 'sent',
       },
       receipt,
     },
@@ -326,6 +329,7 @@ function createHarness(initialRows, processImplementation) {
     document: window.document,
     listAdminHelpRequests,
     processAccountErasure,
+    updateAdminHelpRequest: window.KCAPI.updateAdminHelpRequest,
     exportReportPDF,
     showToast,
     setRows(nextRows) {
@@ -591,6 +595,58 @@ describe('admin account erasure post-core redacted runtime gate', () => {
     expect(serializedReport).not.toContain('auth_delete_checkpoint');
     expect(serializedReport).not.toContain('target_user_id');
     expect(serializedReport).not.toContain('accountEmail');
+  });
+
+  test('direct post-core export obtains authoritative diagnostics instead of fabricating zeros', async () => {
+    const response = sanitizedErasedResponse('diagnose');
+    response.diagnostics.counts.posts = 7;
+    response.diagnostics.counts.post_media = 11;
+    const harness = createHarness(
+      [makeCanonicalRedactedRow()],
+      async ({ action }) => {
+        if (action !== 'diagnose') throw new Error(`unexpected action: ${action}`);
+        return response;
+      },
+    );
+    await harness.ready();
+
+    getCard(harness).querySelector('[data-lgpd-export]').click();
+    await waitForAtLeastCalls(harness.processAccountErasure, 1);
+    await waitForAtLeastCalls(harness.exportReportPDF, 1);
+    await settle(4);
+
+    expect(harness.processAccountErasure.mock.calls.map(([payload]) => payload.action))
+      .toEqual(['diagnose']);
+    const report = harness.exportReportPDF.mock.calls[0][1];
+    expect(report.kpis.publicacoes).toBe(7);
+    expect(report.kpis.midias).toBe(11);
+    expect(JSON.stringify(report)).not.toContain('post_core_export');
+  });
+
+  test('notification pending blocks manual Help closure after core erasure', async () => {
+    const harness = createHarness(
+      [makeCanonicalRedactedRow()],
+      async ({ action }) => {
+        if (action === 'diagnose') return postCoreNotificationDiagnosticResponse();
+        throw new Error(`unexpected action: ${action}`);
+      },
+    );
+    await harness.ready();
+
+    getAction(getCard(harness), 'diagnose').click();
+    await waitForAtLeastCalls(harness.processAccountErasure, 1);
+    await settle(8);
+    const archive = getCard(harness).querySelector('[data-help-status-set="archived"]');
+    expect(archive).not.toBeNull();
+    archive.click();
+    await settle(8);
+
+    expect(harness.updateAdminHelpRequest).not.toHaveBeenCalled();
+    expect(harness.showToast).toHaveBeenCalledWith(
+      expect.stringMatching(/Fechamento bloqueado|entrega do comprovante/i),
+      'warn',
+      6200,
+    );
   });
 
   test('final_workflow_failed with auth_deleted keeps retry available without relinking', async () => {

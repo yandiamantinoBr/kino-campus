@@ -67,8 +67,16 @@ const DEPLOY = fs.readFileSync(
   path.join(ROOT, 'docs/privacy/account-erasure-supabase-deploy.md'),
   'utf8'
 );
+const EDGE_DEPLOY_WORKFLOW = fs.readFileSync(
+  path.join(ROOT, '.github/workflows/edge-deploy.yml'),
+  'utf8'
+);
 const IDENTITY_LINK_DOC = fs.readFileSync(
   path.join(ROOT, 'docs/privacy/account-erasure-identity-link-and-projection.md'),
+  'utf8'
+);
+const ACCOUNT_ERASURE_AUDIT = fs.readFileSync(
+  path.join(ROOT, 'docs/privacy/account-erasure-audit-2026-08-01.md'),
   'utf8'
 );
 
@@ -99,6 +107,7 @@ function loadEdgeResponseProjector() {
     'WORKFLOW_RESPONSE_FIELDS',
     'asObject',
     'safeString',
+    'ACCOUNT_ERASURE_CONTRACT_VERSION',
     `${source}\nreturn projectEdgeResponse;`
   )(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -112,7 +121,8 @@ function loadEdgeResponseProjector() {
       'target_email_domain',
     ]),
     (value) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {}),
-    (value, maxLength = 200) => String(value || '').slice(0, maxLength)
+    (value, maxLength = 200) => String(value || '').slice(0, maxLength),
+    'kc-account-erasure-2026-08-01-v1'
   );
 }
 
@@ -194,6 +204,26 @@ describe('account erasure - schema e contratos atomicos', () => {
     expect(EDGE).toContain('capabilities.version >= 5');
     expect(EDGE).toContain('capabilities.atomic_irreversible_dsr_transition');
     expect(EDGE).toContain('capabilities.durable_auth_delete_checkpoint');
+  });
+
+  test('publica e exige contrato runtime antes de receber o Help alvo', () => {
+    expect(EDGE).toContain(
+      '"kc-account-erasure-2026-08-01-v1"'
+    );
+    expect(EDGE).toContain('"capabilities",');
+    expect(EDGE).toContain('expected_contract_version');
+    const handler = EDGE.slice(EDGE.indexOf('Deno.serve'));
+    expect(handler.indexOf('if (action === "capabilities")')).toBeGreaterThan(-1);
+    expect(handler.indexOf('if (action === "capabilities")')).toBeLessThan(
+      handler.indexOf('if (!helpRequestId)')
+    );
+    expect(handler).toContain('account_erasure_contract_mismatch');
+    expect(EDGE_DEPLOY_WORKFLOW).toContain('kc-account-erasure-2026-08-01-v1');
+    expect(EDGE_DEPLOY_WORKFLOW).toContain('supabase functions download kc-account-erasure');
+    expect(DEPLOY).toContain('expected_contract_version');
+    expect(DEPLOY).toContain('uma função\n`ACTIVE` com versão maior ainda pode conter código antigo');
+    expect(ACCOUNT_ERASURE_AUDIT).toContain('runtime remoto divergente');
+    expect(ACCOUNT_ERASURE_AUDIT).toContain('Nenhuma exclusão real');
   });
 
   test('fecha o titular atomicamente e bloqueia DSR/export depois do claim irreversivel', () => {
@@ -716,6 +746,7 @@ describe('account erasure - autenticacao, identidade e classificacao', () => {
 
     expect(projected).toEqual({
       ok: true,
+      contract_version: 'kc-account-erasure-2026-08-01-v1',
       identity_assurance: {
         verified: true,
         source: 'admin_verified_anonymous_erasure',
@@ -1125,6 +1156,7 @@ describe('account erasure - painel, provedores e documentacao', () => {
       'repair_target_user_id',
       '20260729009000_harden_erasure_identity_link_and_projection.sql',
       '20260729012000_bridge_anonymous_help_to_erasure_dsr.sql',
+      '20260731193000_materialize_dsr_for_authenticated_legacy_help.sql',
       'kc_materialize_anonymous_erasure_dsr',
     ].forEach((text) => expect(IDENTITY_LINK_DOC).toContain(text));
     expect(IDENTITY_LINK_DOC).toMatch(/somente esse hash/i);

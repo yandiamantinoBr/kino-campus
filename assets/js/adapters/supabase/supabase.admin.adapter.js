@@ -5,6 +5,15 @@
   // Dependências resolvidas lazily via window._KCSA.getClient / getCurrentUser
   window._KCSA = window._KCSA || {};
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const ACCOUNT_ERASURE_CONTRACT_VERSION = 'kc-account-erasure-2026-08-01-v1';
+  const ACCOUNT_ERASURE_REQUIRED_CAPABILITIES = Object.freeze([
+    'safe_erasure_schema',
+    'write_quiescence',
+    'encrypted_completion_outbox',
+    'admin_session_bound_claims',
+    'durable_auth_delete_checkpoint',
+  ]);
+  let accountErasureContractProbe = null;
 
   function getClient() {
     return (window._KCSA && typeof window._KCSA.getClient === 'function')
@@ -825,15 +834,7 @@
     }
   }
 
-  async function processAccountErasure(payload = {}) {
-    const client = getClient();
-    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
-    if (!client.functions || typeof client.functions.invoke !== 'function') {
-      return { ok: false, error: { message: 'Edge Functions indisponíveis.' } };
-    }
-    const input = payload && typeof payload === 'object' ? payload : {};
-    const action = String(input.action || '').trim();
-    if (!action) return { ok: false, error: { message: 'Ação LGPD inválida.' } };
+  async function invokeAccountErasureEdge(client, input) {
     try {
       const { data, error } = await client.functions.invoke('kc-account-erasure', {
         body: input,
@@ -849,13 +850,93 @@
         const message = edgeBody && (edgeBody.detail || edgeBody.message || edgeBody.error)
           ? String(edgeBody.detail || edgeBody.message || edgeBody.error)
           : String(error.message || 'Falha no fluxo LGPD.');
-        return { ok: false, error: { message, body: edgeBody || null } };
+        const code = String(
+          (edgeBody && (edgeBody.code || edgeBody.error))
+          || error.code
+          || 'ACCOUNT_ERASURE_EDGE_FAILED'
+        ).trim();
+        return { ok: false, error: { code, message, body: edgeBody || null } };
       }
       return data || { ok: true };
     } catch (e) {
       console.error('[KCAPI][lgpd] kc-account-erasure exceção:', e);
-      return { ok: false, error: { message: 'Falha no fluxo LGPD.' } };
+      return {
+        ok: false,
+        error: {
+          code: 'ACCOUNT_ERASURE_TRANSPORT_FAILED',
+          message: 'Falha no fluxo LGPD.',
+        },
+      };
     }
+  }
+
+  function accountErasureContractFailure(code, body) {
+    return {
+      ok: false,
+      error: {
+        code,
+        message: code === 'ERASURE_CONTRACT_CHANGED_AFTER_PROBE'
+          ? 'O serviço de exclusão mudou durante a operação. Não repita a ação antes de atualizar o diagnóstico.'
+          : 'O serviço de exclusão implantado não corresponde ao contrato seguro exigido pelo painel.',
+        body: body || null,
+      },
+    };
+  }
+
+  async function verifyAccountErasureContract(client) {
+    if (!accountErasureContractProbe) {
+      accountErasureContractProbe = (async function () {
+        const result = await invokeAccountErasureEdge(client, {
+          action: 'capabilities',
+        });
+        const capabilities = result && result.capabilities && typeof result.capabilities === 'object'
+          ? result.capabilities
+          : {};
+        const valid = Boolean(
+          result
+          && result.ok !== false
+          && result.contract_version === ACCOUNT_ERASURE_CONTRACT_VERSION
+          && Number(capabilities.schema_version) >= 5
+          && ACCOUNT_ERASURE_REQUIRED_CAPABILITIES.every(function (key) {
+            return capabilities[key] === true;
+          })
+        );
+        return valid
+          ? { ok: true }
+          : accountErasureContractFailure('ERASURE_CONTRACT_MISMATCH', result);
+      })();
+    }
+    try {
+      return await accountErasureContractProbe;
+    } finally {
+      // Keep only concurrent calls coalesced. Every admin operation gets a fresh
+      // deploy/schema probe so a rollback cannot silently reuse stale approval.
+      accountErasureContractProbe = null;
+    }
+  }
+
+  async function processAccountErasure(payload = {}) {
+    const client = getClient();
+    if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
+    if (!client.functions || typeof client.functions.invoke !== 'function') {
+      return { ok: false, error: { message: 'Edge Functions indisponíveis.' } };
+    }
+    const input = payload && typeof payload === 'object' ? payload : {};
+    const action = String(input.action || '').trim();
+    if (!action) return { ok: false, error: { message: 'Ação LGPD inválida.' } };
+    const contract = await verifyAccountErasureContract(client);
+    if (!contract.ok) return contract;
+    const result = await invokeAccountErasureEdge(client, {
+      ...input,
+      expected_contract_version: ACCOUNT_ERASURE_CONTRACT_VERSION,
+    });
+    if (result && result.contract_version !== ACCOUNT_ERASURE_CONTRACT_VERSION) {
+      return accountErasureContractFailure(
+        'ERASURE_CONTRACT_CHANGED_AFTER_PROBE',
+        result
+      );
+    }
+    return result;
   }
 
   async function recoverPrivacyHelpRequest(input = {}) {

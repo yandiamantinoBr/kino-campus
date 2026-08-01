@@ -25,6 +25,14 @@ describe('supabase.admin.adapter.js - fluxo LGPD account erasure', () => {
     expect(source).toContain("client.functions.invoke('kc-account-erasure'");
   });
 
+  test('exige handshake de contrato e capacidades antes da operação', () => {
+    expect(source).toContain("const ACCOUNT_ERASURE_CONTRACT_VERSION = 'kc-account-erasure-2026-08-01-v1'");
+    expect(source).toContain("action: 'capabilities'");
+    expect(source).toContain('ACCOUNT_ERASURE_REQUIRED_CAPABILITIES.every');
+    expect(source).toContain('expected_contract_version: ACCOUNT_ERASURE_CONTRACT_VERSION');
+    expect(source).toContain('ERASURE_CONTRACT_CHANGED_AFTER_PROBE');
+  });
+
   test('extrai mensagem estruturada de erro da Edge Function', () => {
     expect(source).toContain('error.context');
     expect(source).toContain('edgeBody.detail');
@@ -35,6 +43,76 @@ describe('supabase.admin.adapter.js - fluxo LGPD account erasure', () => {
   test('faz merge de metadata antes de atualizar help_requests', () => {
     expect(source).toContain(".select('metadata')");
     expect(source).toContain('updates.metadata = { ...currentMetadata, ...patch.metadata };');
+  });
+});
+
+describe('supabase.admin.adapter.js - handshake runtime de exclusão', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    window._KCSA = {};
+    window.KCHelpUtils = undefined;
+  });
+
+  test('bloqueia a mutação quando a Edge implantada não publica capabilities', async () => {
+    const invoke = jest.fn().mockResolvedValue({
+      data: { ok: false, error: 'invalid_action' },
+      error: null,
+    });
+    window._KCSA.getClient = () => ({ functions: { invoke } });
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.processAccountErasure({
+      action: 'diagnose',
+      help_request_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'ERASURE_CONTRACT_MISMATCH' },
+    });
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke.mock.calls[0][1].body).toEqual({ action: 'capabilities' });
+  });
+
+  test('envia a ação somente depois do contrato seguro e valida a resposta', async () => {
+    const invoke = jest.fn()
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          contract_version: 'kc-account-erasure-2026-08-01-v1',
+          capabilities: {
+            schema_version: 5,
+            safe_erasure_schema: true,
+            write_quiescence: true,
+            encrypted_completion_outbox: true,
+            admin_session_bound_claims: true,
+            durable_auth_delete_checkpoint: true,
+          },
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          contract_version: 'kc-account-erasure-2026-08-01-v1',
+          request: { status: 'diagnosed' },
+        },
+        error: null,
+      });
+    window._KCSA.getClient = () => ({ functions: { invoke } });
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.processAccountErasure({
+      action: 'diagnose',
+      help_request_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    });
+
+    expect(result).toMatchObject({ ok: true, request: { status: 'diagnosed' } });
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(invoke.mock.calls[1][1].body).toMatchObject({
+      action: 'diagnose',
+      expected_contract_version: 'kc-account-erasure-2026-08-01-v1',
+    });
   });
 });
 

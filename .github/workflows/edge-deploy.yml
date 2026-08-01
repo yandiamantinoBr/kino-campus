@@ -140,6 +140,7 @@ jobs:
               "20260729172316",
               "20260729190653",
               "20260729203000",
+              "20260731193000",
           }
           payload = json.loads(os.environ["RESPONSE"])
 
@@ -395,3 +396,23 @@ jobs:
           fi
 
           echo "Deployed ${{ matrix.function }} version=$VERSION status=$STATUS verify_jwt=$ACTUAL_VERIFY_JWT"
+
+          if [ "${{ matrix.function }}" = 'kc-account-erasure' ]; then
+            VERIFY_DIR="$RUNNER_TEMP/kc-account-erasure-deployed-source"
+            rm -rf "$VERIFY_DIR"
+            mkdir -p "$VERIFY_DIR/supabase/functions"
+            supabase functions download kc-account-erasure \
+              --project-ref wacyrkwhkvzwkqpolrbg \
+              --use-api \
+              --workdir "$VERIFY_DIR"
+            DEPLOYED_SOURCE=$(find "$VERIFY_DIR" -type f \
+              -path '*/kc-account-erasure/index.ts' -print -quit)
+            if [ -z "$DEPLOYED_SOURCE" ] || [ ! -s "$DEPLOYED_SOURCE" ]; then
+              echo 'Could not read back deployed kc-account-erasure source.' >&2
+              exit 1
+            fi
+            grep -F \
+              '"kc-account-erasure-2026-08-01-v1"' \
+              "$DEPLOYED_SOURCE" >/dev/null
+            echo 'Verified deployed account-erasure contract marker from remote source.'
+          fi
