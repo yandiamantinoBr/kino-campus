@@ -291,6 +291,18 @@ alterar ACLs gerenciadas do Supabase.
 Configuração, rotação, smoke e rollback estão documentados em
 `docs/privacy/data-export-supplement-runbook.md`.
 
+Para inicialização idempotente da chave da outbox e do schedule de retenção,
+use `scripts/configure-supabase-privacy-runtime.ps1`. O script nunca imprime os
+valores, recusa configuração parcial e não rotaciona uma chave já existente.
+
+O Turnstile visitante pode ser provisionado por
+`scripts/ops/apply-turnstile-keys.ps1`. O utilitário configura a site key apenas
+em Vercel Production e grava na Edge secret, environment, hostnames e
+`KC_PRIVACY_HELP_ALLOWED_ORIGINS`. Preview exige widget/hostname próprio; não
+reutilize a chave limitada aos hostnames de produção. Para bundles efêmeros,
+use `-DeleteCredentialBundle` para remover o arquivo imediatamente após a
+leitura.
+
 ### Schedules de privacidade versionados
 
 As migrations declaram os jobs esperados abaixo. A presença e a próxima execução

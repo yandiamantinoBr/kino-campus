@@ -15,6 +15,7 @@ const PENDING_CONTRACT_PATH =
   'supabase/contracts/pending/help_privacy_guest_gateway_contract.template.sql';
 const EDGE_PATH =
   'supabase/functions/kc-create-privacy-help-guest/index.ts';
+const TURNSTILE_OPS_PATH = 'scripts/ops/apply-turnstile-keys.ps1';
 
 describe('guest privacy Help Turnstile rollout contract', () => {
   test('keeps CONTRACT outside the active migration chain until a later promotion', () => {
@@ -127,5 +128,27 @@ describe('guest privacy Help Turnstile rollout contract', () => {
     expect(edge).toContain('turnstileEnvironment === "test"');
     expect(edge).toContain('productionUsesLoopback');
     expect(edge).toContain('TURNSTILE_TEST_SECRET_KEYS.has(turnstileSecretKey)');
+  });
+
+  test('operations configure the complete production-only Turnstile surface', () => {
+    const operations = read(TURNSTILE_OPS_PATH);
+    expect(operations).toContain('KC_TURNSTILE_SITE_KEY');
+    expect(operations).toContain('KC_TURNSTILE_SECRET_KEY');
+    expect(operations).toContain('KC_TURNSTILE_ENVIRONMENT');
+    expect(operations).toContain('KC_TURNSTILE_EXPECTED_HOSTNAMES');
+    expect(operations).toContain('KC_PRIVACY_HELP_ALLOWED_ORIGINS');
+    expect(operations).toContain("'production', '--force', '--yes'");
+    expect(operations).not.toContain(
+      "'preview', '--force', '--yes'",
+    );
+    expect(operations).toContain('[switch]$SkipDeploy');
+    expect(operations).toContain('[string]$CredentialBundlePath');
+    expect(operations).toContain('[switch]$DeleteCredentialBundle');
+    expect(operations).toContain(
+      'Remove-Item -LiteralPath $resolvedBundlePath -Force',
+    );
+    expect(operations).toContain(
+      "-replace [regex]::Escape($InputValue), '[redacted]'",
+    );
   });
 });

@@ -1,4 +1,11 @@
 #Requires -Version 5.1
+param(
+  [string]$CredentialBundlePath = "",
+  [switch]$DeleteCredentialBundle,
+  [string]$VercelProjectDirectory = "",
+  [switch]$SkipDeploy
+)
+
 <#
 .SYNOPSIS
   Aplica Site Key + Secret Key do Cloudflare Turnstile no Vercel e no Supabase.
@@ -8,7 +15,7 @@
   Você só precisa colar as duas chaves quando o script pedir.
 
   O que o script faz (sem você abrir painéis técnicos):
-  1) Grava KC_TURNSTILE_SITE_KEY no Vercel (production + preview)
+  1) Grava KC_TURNSTILE_SITE_KEY no Vercel Production
   2) Grava secrets no Supabase Edge (secret, environment, hostnames)
   3) Dispara redeploy de produção no Vercel
 
@@ -20,12 +27,54 @@
 $ErrorActionPreference = 'Stop'
 $ProjectRef = 'wacyrkwhkvzwkqpolrbg'
 $Hostnames = 'www.kinocampus.com.br,kinocampus.com.br'
+$AllowedOrigins = 'https://www.kinocampus.com.br,https://kinocampus.com.br'
 
 function Read-Secret([string]$Prompt) {
   $secure = Read-Host -Prompt $Prompt -AsSecureString
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
   try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+}
+
+function Invoke-VercelWithInput {
+  param(
+    [string]$InputValue,
+    [string[]]$Arguments
+  )
+
+  $previousErrorAction = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    $output = $InputValue | vercel @Arguments 2>&1
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
+  if ($exitCode -ne 0) {
+    $safeDetail = (($output -join ' ') -replace [regex]::Escape($InputValue), '[redacted]')
+    if ($safeDetail.Length -gt 500) {
+      $safeDetail = $safeDetail.Substring(0, 500)
+    }
+    throw "Vercel CLI falhou sem expor a credencial: $safeDetail"
+  }
+  return @($output)
+}
+
+function Invoke-Vercel {
+  param([string[]]$Arguments)
+
+  $previousErrorAction = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'Continue'
+    $output = vercel @Arguments 2>&1
+    $exitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
+  if ($exitCode -ne 0) {
+    throw "Vercel CLI falhou."
+  }
+  return @($output)
 }
 
 Write-Host ""
@@ -35,8 +84,23 @@ Write-Host "2) Add Widget → domínios: kinocampus.com.br e www.kinocampus.com.
 Write-Host "3) Copie Site Key e Secret Key"
 Write-Host ""
 
-$siteKey = Read-Host "Cole a SITE KEY (começa com 0x4AAAA...)"
-$secretKey = Read-Secret "Cole a SECRET KEY (fica oculta)"
+if ($CredentialBundlePath) {
+  $resolvedBundlePath = (Resolve-Path -LiteralPath $CredentialBundlePath).Path
+  try {
+    $bundle = Get-Content -LiteralPath $resolvedBundlePath -Raw -Encoding UTF8 |
+      ConvertFrom-Json
+    $siteKey = [string]$bundle.site_key
+    $secretKey = [string]$bundle.secret_key
+  } finally {
+    $bundle = $null
+    if ($DeleteCredentialBundle -and (Test-Path -LiteralPath $resolvedBundlePath)) {
+      Remove-Item -LiteralPath $resolvedBundlePath -Force
+    }
+  }
+} else {
+  $siteKey = Read-Host "Cole a SITE KEY (começa com 0x4AAAA...)"
+  $secretKey = Read-Secret "Cole a SECRET KEY (fica oculta)"
+}
 
 $siteKey = ($siteKey -replace '\s', '').Trim()
 $secretKey = ($secretKey -replace '\s', '').Trim()
@@ -96,19 +160,39 @@ $headers = @{
 $secretBody = @(
   @{ name = 'KC_TURNSTILE_SECRET_KEY'; value = $secretKey },
   @{ name = 'KC_TURNSTILE_ENVIRONMENT'; value = 'production' },
-  @{ name = 'KC_TURNSTILE_EXPECTED_HOSTNAMES'; value = $Hostnames }
+  @{ name = 'KC_TURNSTILE_EXPECTED_HOSTNAMES'; value = $Hostnames },
+  @{ name = 'KC_PRIVACY_HELP_ALLOWED_ORIGINS'; value = $AllowedOrigins }
 ) | ConvertTo-Json -Depth 4
 Invoke-RestMethod -Method POST -Uri "https://api.supabase.com/v1/projects/$ProjectRef/secrets" -Headers $headers -Body $secretBody | Out-Null
 Write-Host "  OK secrets Edge" -ForegroundColor Green
 
-Write-Host "[2/3] Site key no Vercel (production + preview)..." -ForegroundColor Yellow
+Write-Host "[2/3] Site key no Vercel Production..." -ForegroundColor Yellow
 # vercel env add is interactive; use API via vercel CLI pull/add with stdin when possible
-$siteKey | npx vercel env add KC_TURNSTILE_SITE_KEY production --force 2>&1 | Out-Host
-$siteKey | npx vercel env add KC_TURNSTILE_SITE_KEY preview --force 2>&1 | Out-Host
-Write-Host "  OK env Vercel (confira se o CLI pediu confirmação)" -ForegroundColor Green
+$vercelCwdArgs = @()
+if ($VercelProjectDirectory) {
+  $resolvedVercelDirectory = (Resolve-Path -LiteralPath $VercelProjectDirectory).Path
+  $projectLinkPath = Join-Path $resolvedVercelDirectory '.vercel\project.json'
+  if (-not (Test-Path -LiteralPath $projectLinkPath)) {
+    throw "Diretorio Vercel informado nao possui .vercel/project.json."
+  }
+  $vercelCwdArgs = @('--cwd', $resolvedVercelDirectory)
+}
+$productionArgs = @(
+  'env', 'add', 'KC_TURNSTILE_SITE_KEY', 'production', '--force', '--yes'
+) + $vercelCwdArgs
+[void](Invoke-VercelWithInput -InputValue $siteKey -Arguments $productionArgs)
+Write-Host "  OK env Vercel Production" -ForegroundColor Green
 
-Write-Host "[3/3] Redeploy produção..." -ForegroundColor Yellow
-npx vercel --prod --yes 2>&1 | Select-Object -Last 20
+if ($SkipDeploy) {
+  Write-Host "[3/3] Redeploy adiado para o proximo merge." -ForegroundColor Yellow
+} else {
+  Write-Host "[3/3] Redeploy produção..." -ForegroundColor Yellow
+  Invoke-Vercel -Arguments (@('--prod', '--yes') + $vercelCwdArgs) |
+    Select-Object -Last 20
+}
+
+$siteKey = $null
+$secretKey = $null
 
 Write-Host "`nPronto. Teste:" -ForegroundColor Cyan
 Write-Host "  1) https://www.kinocampus.com.br/ajuda.html?request=account_erasure (sem login) → widget CAPTCHA"
