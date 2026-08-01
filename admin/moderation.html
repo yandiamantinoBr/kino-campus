@@ -79,6 +79,11 @@
     .kc-admin-invite-feedback--info    { background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);color:#90caf9; }
     #invite-list-empty { color:var(--kc-text-dark-secondary);font-size:.88em;margin:8px 0 0; }
     .kc-admin-loading-state { display:inline-flex;align-items:center;justify-content:center;gap:8px; }
+    .kc-ext-card.is-focused {
+      outline:3px solid color-mix(in srgb, var(--kc-primary-brand) 78%, white);
+      outline-offset:3px;
+      box-shadow:0 0 0 6px color-mix(in srgb, var(--kc-primary-brand) 18%, transparent);
+    }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
 </head>
@@ -592,7 +597,7 @@
   <script defer src="../assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.help.adapter.js?v=8.6.13"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
-  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.13"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.17"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
     <script defer src="../assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
@@ -610,6 +615,6 @@
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-moderation.controller.js?v=8.6.12"></script>
   <script defer src="../assets/js/controllers/admin/admin-invite.controller.js?v=8.6.12"></script>
-  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.12"></script>
+  <script defer src="../assets/js/controllers/admin/admin-external-access.controller.js?v=8.6.13"></script>
 </body>
 </html>

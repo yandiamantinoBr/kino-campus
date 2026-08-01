@@ -263,7 +263,7 @@ const { ENV } = window.KCAPI;
   // supabaseUpdateMyProfile (updateMyProfile), supabaseUploadProfileAvatar (uploadProfileAvatar)
   // → window._KCSA.profiles.*
 
-  // ── Admin / Help Requests — extraídas para supabase.admin.adapter.js (v11.30.2) ──
+  // ── Admin / Help Requests — extraídas para supabase.admin.adapter.js (v11.30.3) ──
 
   // ── Grupo posts-read (parte 2) extraído para supabase.posts-read.adapter.js (v11.30.7) ──
   // supabaseGetMyPosts, supabaseGetPostsByAuthorId, supabaseGetRelatedPosts
@@ -435,4 +435,3 @@ window.KCAPI.registerAdapter('supabase', driverSupabase);
 // window.KCCompressImage exposto em supabase.media.adapter.js (v11.30.5)
 
 })();
-

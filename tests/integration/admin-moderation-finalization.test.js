@@ -129,4 +129,22 @@ describe('moderação — acabamento funcional e acessível', () => {
     expect(external).toContain('if (copied)');
     expect(external).toContain('Copie manualmente');
   });
+
+  test('handoff da fila abre e destaca o pedido sem disparar decisão', () => {
+    expect(external).toContain('function consumeExternalAccessFocus()');
+    expect(external).toContain("window.sessionStorage.removeItem(EXTERNAL_ACCESS_FOCUS_KEY)");
+    expect(external).toContain('expiresAt >= Date.now() && UUID_RE.test(storedId)');
+    expect(external).toContain("window.history.replaceState(null, '', url.pathname + url.search + url.hash)");
+    expect(external).toContain("card.classList.add('is-focused')");
+    expect(external).toContain("card.scrollIntoView({ behavior: 'smooth', block: 'center' })");
+    expect(external).toMatch(
+      /if \(!items\.length\) \{[\s\S]*?focusRequestedItem\(\);[\s\S]*?return;/,
+    );
+    const handoff = external.slice(
+      external.indexOf('function consumeExternalAccessFocus'),
+      external.indexOf('async function init()', external.indexOf('function consumeExternalAccessFocus'))
+    );
+    expect(handoff).not.toContain('openModal(');
+    expect(handoff).not.toContain('decideExternalAccess');
+  });
 });

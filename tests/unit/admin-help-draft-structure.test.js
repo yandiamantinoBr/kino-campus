@@ -73,8 +73,8 @@ describe('admin help-requests draft structure', () => {
   });
 
   test('cache-busts hardened controller and adapter on admin page', () => {
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.26');
-    expect(PAGE).toContain('supabase.admin.adapter.js?v=8.6.16');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.28');
+    expect(PAGE).toContain('supabase.admin.adapter.js?v=8.6.17');
   });
 
   test('normalizes authoritative Help closure errors from every Supabase field', () => {

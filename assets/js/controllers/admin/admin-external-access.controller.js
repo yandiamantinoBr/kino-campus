@@ -1,5 +1,5 @@
 /*
- * KinoCampus -- admin-external-access.controller.js (v8.6.11)
+ * KinoCampus -- admin-external-access.controller.js (v8.6.13)
  *
  * Gerencia a seção "Solicitações de Acesso Externo" em /admin/moderation.html.
  * - Lista pendentes / aprovadas / recusadas via KCAPI.listExternalAccessRequests
@@ -17,6 +17,8 @@
   const PANEL_SELECTOR = '#external-access-panel';
   const LIST_PAGE_SIZE = 200;
   const MAX_LIST_ITEMS_PER_STATUS = 2000;
+  const EXTERNAL_ACCESS_FOCUS_KEY = 'kc_admin_external_access_focus_v1';
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   let modalTokenSeq = 0;
   let refreshRequestSeq = 0;
   const STATE = {
@@ -27,6 +29,8 @@
     hasLoaded: false,
     snapshotIncomplete: true,
     lastUpdatedAt: null,
+    focusRequestId: '',
+    sectionRequested: false,
     modal: {
       id: null,
       decision: null,
@@ -146,6 +150,52 @@
     });
   }
 
+  function activateExternalAccessTab(status, focusTab) {
+    const newTab = String(status || '').toLowerCase();
+    if (!['pending', 'approved', 'rejected'].includes(newTab)) return false;
+    const tabsRoot = $('#ext-access-tabs');
+    STATE.activeTab = newTab;
+    $$('[data-ext-tab]', tabsRoot || document).forEach((tab) => {
+      const isActive = tab.getAttribute('data-ext-tab') === newTab;
+      tab.classList.toggle('is-active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.setAttribute('tabindex', isActive ? '0' : '-1');
+      if (isActive && focusTab) tab.focus();
+      const list = $('#ext-access-list');
+      if (isActive && list && tab.id) list.setAttribute('aria-labelledby', tab.id);
+    });
+    renderList();
+    return true;
+  }
+
+  function focusRequestedItem() {
+    const requestId = String(STATE.focusRequestId || '').trim();
+    if (!requestId) return;
+    const item = STATE.items.find((entry) => String(entry && entry.id || '') === requestId);
+    if (!item) {
+      if (STATE.hasLoaded && !STATE.snapshotIncomplete) {
+        setFeedback('O pedido indicado não foi encontrado no histórico de acesso externo.', 'warn');
+        STATE.focusRequestId = '';
+      }
+      return;
+    }
+    if (item.admin_status !== STATE.activeTab) {
+      activateExternalAccessTab(item.admin_status, false);
+      return;
+    }
+    const card = document.querySelector(`.kc-ext-card[data-id="${requestId}"]`);
+    if (!card) return;
+    card.classList.add('is-focused');
+    window.requestAnimationFrame(() => {
+      try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+      try { card.focus({ preventScroll: true }); } catch (_) {}
+    });
+    window.setTimeout(() => {
+      card.classList.remove('is-focused');
+      if (STATE.focusRequestId === requestId) STATE.focusRequestId = '';
+    }, 6000);
+  }
+
   function renderProcessingBadge(delivery, label) {
     const claimedAt = delivery && delivery.claimed_at ? new Date(delivery.claimed_at).getTime() : NaN;
     const isStale = Number.isFinite(claimedAt) && (Date.now() - claimedAt) > (15 * 60 * 1000);
@@ -199,7 +249,7 @@
     }
 
     return `
-      <article class="kc-ext-card ${statusClass}" data-id="${escapeHtml(item.id)}">
+      <article class="kc-ext-card ${statusClass}" data-id="${escapeHtml(item.id)}" tabindex="-1">
         <header class="kc-ext-card-head">
           <div class="kc-ext-card-title">
             <strong>${escapeHtml(item.requester_name || 'Solicitante')}</strong>
@@ -226,10 +276,12 @@
     if (!items.length) {
       root.innerHTML = '';
       setEmpty(true);
+      focusRequestedItem();
       return;
     }
     setEmpty(false);
     root.innerHTML = items.map(renderItem).join('');
+    focusRequestedItem();
   }
 
   function isSupabaseAdminApiReady() {
@@ -403,27 +455,10 @@
     const tabsRoot = $('#ext-access-tabs');
     if (!tabsRoot) return;
 
-    function activateTab(tab, focusTab) {
-      if (!tab) return;
-      const newTab = String(tab.getAttribute('data-ext-tab') || '').toLowerCase();
-      if (!['pending', 'approved', 'rejected'].includes(newTab)) return;
-      STATE.activeTab = newTab;
-      $$('[data-ext-tab]', tabsRoot).forEach((t) => {
-        const isActive = t === tab;
-        t.classList.toggle('is-active', isActive);
-        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        t.setAttribute('tabindex', isActive ? '0' : '-1');
-      });
-      const list = $('#ext-access-list');
-      if (list && tab.id) list.setAttribute('aria-labelledby', tab.id);
-      renderList();
-      if (focusTab) tab.focus();
-    }
-
     tabsRoot.addEventListener('click', (ev) => {
       const tab = ev.target.closest && ev.target.closest('[data-ext-tab]');
       if (!tab || !tabsRoot.contains(tab)) return;
-      activateTab(tab, false);
+      activateExternalAccessTab(tab.getAttribute('data-ext-tab'), false);
     });
 
     tabsRoot.addEventListener('keydown', (ev) => {
@@ -447,7 +482,7 @@
       }
 
       ev.preventDefault();
-      activateTab(tabs[nextIndex], true);
+      activateExternalAccessTab(tabs[nextIndex].getAttribute('data-ext-tab'), true);
     });
 
     const refreshBtn = $('#ext-access-refresh');
@@ -817,14 +852,46 @@
     });
   }
 
+  function consumeExternalAccessFocus() {
+    try {
+      const url = new URL(window.location.href);
+      STATE.sectionRequested = String(url.searchParams.get('section') || '').toLowerCase() === 'external-access';
+      let requestId = String(url.searchParams.get('request_id') || '').trim().toLowerCase();
+      const raw = window.sessionStorage.getItem(EXTERNAL_ACCESS_FOCUS_KEY);
+      window.sessionStorage.removeItem(EXTERNAL_ACCESS_FOCUS_KEY);
+      if (raw) {
+        const handoff = JSON.parse(raw);
+        const expiresAt = Number(handoff && handoff.expiresAt) || 0;
+        const storedId = String(handoff && handoff.requestId || '').trim().toLowerCase();
+        if (expiresAt >= Date.now() && UUID_RE.test(storedId)) requestId = storedId;
+      }
+      STATE.focusRequestId = UUID_RE.test(requestId) ? requestId : '';
+      if (url.searchParams.has('section') || url.searchParams.has('request_id')) {
+        url.searchParams.delete('section');
+        url.searchParams.delete('request_id');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+    } catch (_) {
+      STATE.focusRequestId = '';
+      try { window.sessionStorage.removeItem(EXTERNAL_ACCESS_FOCUS_KEY); } catch (e) {}
+    }
+  }
+
   async function init() {
     if (!$(PANEL_SELECTOR)) return; // Panel não está nesta página
+    consumeExternalAccessFocus();
     bindTabs();
     bindActionButtons();
     bindModal();
     bindInviteLinkActions();
     // Atraso curto para garantir que KCAPI esteja pronta
-    setTimeout(() => { refreshAll(); }, 400);
+    setTimeout(async () => {
+      await refreshAll();
+      if (STATE.sectionRequested && !STATE.focusRequestId) {
+        const panel = $(PANEL_SELECTOR);
+        try { panel && panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+      }
+    }, 400);
   }
 
   if (document.readyState === 'loading') {

@@ -86,6 +86,9 @@
   const ADMIN_HELP_VIEW_KEY = 'kc_admin_help_view_v2';
   const ADMIN_HELP_VIEW_LEGACY_KEYS = Object.freeze(['kc_admin_help_view_v1']);
   const ADMIN_HELP_VIEW_TTL_MS = 30 * 60 * 1000;
+  const CADU_HANDOFF_KEY = 'kc_admin_cadu_handoff_v1';
+  const EXTERNAL_ACCESS_FOCUS_KEY = 'kc_admin_external_access_focus_v1';
+  const ADMIN_HANDOFF_TTL_MS = 5 * 60 * 1000;
 
   const state = {
     rows: [],
@@ -100,6 +103,7 @@
       totalCount: 0,
       hasMore: false,
       isLoadingMore: false,
+      summary: null,
     },
     erasureResults: {},
     erasureBusy: {},
@@ -804,6 +808,7 @@
     state.pagination.totalCount = 0;
     state.pagination.hasMore = false;
     state.pagination.isLoadingMore = false;
+    state.pagination.summary = null;
     state.erasureResults = Object.create(null);
     state.erasureBusy = Object.create(null);
     state.erasureUncertain = Object.create(null);
@@ -1252,6 +1257,149 @@
     }
   }
 
+  function getQueueAge(row) {
+    const createdAt = new Date(String(row && row.created_at || '')).getTime();
+    const status = String(row && row.status || '').trim();
+    if (!Number.isFinite(createdAt) || ['resolved', 'archived'].includes(status)) return null;
+    const hours = Math.max(0, Math.floor((Date.now() - createdAt) / 3600000));
+    let label = 'Aguardando há menos de 1 h';
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      label = `Aguardando há ${days} dia${days === 1 ? '' : 's'}`;
+    } else if (hours >= 1) {
+      label = `Aguardando há ${hours} h`;
+    }
+    return {
+      hours,
+      label,
+      level: hours >= 168 ? 'critical' : (hours >= 24 ? 'warn' : 'normal'),
+    };
+  }
+
+  function isExternalAccessRequest(row) {
+    const metadata = row && row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {};
+    return String(row && row.type || '').trim() === 'external_access'
+      || String(metadata.request_kind || '').trim() === 'external_access';
+  }
+
+  function getExternalAccessState(row) {
+    if (!isExternalAccessRequest(row)) return null;
+    const metadata = row && row.metadata && typeof row.metadata === 'object'
+      ? row.metadata
+      : {};
+    const adminStatus = String(row && row.admin_status || 'pending').trim().toLowerCase();
+    const delivery = adminStatus === 'approved'
+      ? (metadata.invite_email || {})
+      : (adminStatus === 'rejected' ? (metadata.rejection_email || {}) : {});
+    const deliveryStatus = String(delivery && delivery.status || '').trim().toLowerCase();
+    const statusLabels = {
+      pending: 'Aguardando decisão',
+      approved: 'Aprovado',
+      rejected: 'Recusado',
+      na: 'Não se aplica',
+    };
+    const deliveryLabels = {
+      sent: 'E-mail entregue',
+      processing: 'Entrega em processamento',
+      link_generated: 'Link manual gerado',
+      failed: 'Falha de entrega',
+      pending_provider_setup: 'SMTP pendente',
+    };
+    return {
+      adminStatus,
+      adminLabel: statusLabels[adminStatus] || adminStatus || 'Estado desconhecido',
+      deliveryStatus,
+      deliveryLabel: deliveryLabels[deliveryStatus] || (deliveryStatus ? deliveryStatus : 'Entrega ainda não registrada'),
+      decidedAt: String(row && row.admin_decided_at || '').trim(),
+      note: String(row && row.admin_note || '').trim(),
+      needsAttention: adminStatus === 'pending'
+        || ['processing', 'link_generated', 'failed', 'pending_provider_setup'].includes(deliveryStatus)
+        || (['approved', 'rejected'].includes(adminStatus) && !deliveryStatus),
+    };
+  }
+
+  function buildExternalAccessPanel(row) {
+    const external = getExternalAccessState(row);
+    if (!external) return '';
+    const stateClass = external.needsAttention ? ' is-attention' : ' is-complete';
+    const decisionTime = external.decidedAt
+      ? `<span><i class="fas fa-clock" aria-hidden="true"></i> ${esc(formatDateTime(external.decidedAt))}</span>`
+      : '';
+    const note = external.note
+      ? `<p><strong>Nota administrativa:</strong> ${esc(external.note)}</p>`
+      : '';
+    return [
+      `<section class="kc-admin-help-workflow${stateClass}" aria-label="Fluxo de acesso externo">`,
+      '  <div class="kc-admin-help-workflow__head">',
+      '    <strong><i class="fas fa-user-shield" aria-hidden="true"></i> Fluxo de acesso externo</strong>',
+      `    <span>${esc(external.adminLabel)}</span>`,
+      '  </div>',
+      '  <div class="kc-admin-help-workflow__facts">',
+      `    <span><i class="fas fa-envelope" aria-hidden="true"></i> ${esc(external.deliveryLabel)}</span>`,
+      decisionTime,
+      '  </div>',
+      note,
+      '</section>',
+    ].join('');
+  }
+
+  function buildOperationalActions(row) {
+    const externalAction = isExternalAccessRequest(row)
+      ? '<button type="button" data-help-open-external><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir decisões de acesso</button>'
+      : '';
+    return [
+      '<div class="kc-admin-help-operations" aria-label="Ações operacionais">',
+      externalAction,
+      '<button type="button" data-help-open-cadu title="Prepara somente contexto operacional, sem e-mail, mensagem ou identificadores"><i class="fas fa-robot" aria-hidden="true"></i> Preparar análise no Cadu</button>',
+      '</div>',
+    ].join('');
+  }
+
+  function writeShortLivedHandoff(key, value) {
+    try {
+      window.sessionStorage.setItem(key, JSON.stringify({
+        ...value,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + ADMIN_HANDOFF_TTL_MS,
+      }));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function openExternalAccessWorkflow(row) {
+    const id = String(row && row.id || '').trim();
+    if (UUID_RE.test(id)) writeShortLivedHandoff(EXTERNAL_ACCESS_FOCUS_KEY, { requestId: id });
+    window.location.assign('moderation.html?section=external-access');
+  }
+
+  function prepareCaduHelpAnalysis(row) {
+    const typeLabel = buildLabel(Help.HELP_TYPE_LABELS, row && row.type, row && row.type);
+    const topicLabel = buildLabel(Help.HELP_TOPIC_LABELS, row && row.topic, row && row.topic);
+    const statusLabel = buildLabel(Help.HELP_STATUS_LABELS, row && row.status, row && row.status);
+    const priorityLabel = buildLabel(Help.HELP_PRIORITY_LABELS, row && row.priority, row && row.priority);
+    const age = getQueueAge(row);
+    const external = getExternalAccessState(row);
+    const prompt = [
+      'Analise operacionalmente um pedido da fila administrativa do KinoCampus, sem dados pessoais.',
+      `Categoria: ${typeLabel || 'não informada'}.`,
+      `Tema: ${topicLabel || 'não informado'}.`,
+      `Status da triagem: ${statusLabel || 'não informado'}.`,
+      `Urgência: ${priorityLabel || 'não informada'}.`,
+      age ? `Tempo na fila: ${age.label.replace(/^Aguardando /, '')}.` : 'O pedido já está em estado terminal.',
+      external ? `Fluxo de acesso externo: ${external.adminLabel}; ${external.deliveryLabel}.` : '',
+      'Indique verificações, riscos e o próximo passo para o administrador. Não execute ações e não solicite dados pessoais.',
+    ].filter(Boolean).join(' ');
+    writeShortLivedHandoff(CADU_HANDOFF_KEY, {
+      source: 'help-requests',
+      prompt: prompt.slice(0, 1200),
+    });
+    window.location.assign('cadu.html?tab=openclaw&source=help-requests');
+  }
+
   function renderSummary(rows) {
     const target = $('#helpSummary');
     if (!target) return;
@@ -1264,6 +1412,9 @@
     const totalCount = Math.max(list.length, toFiniteNumber(state.pagination.totalCount, list.length));
     const currentStatus = String(state.filters.status || 'all');
     const currentPriority = String(state.filters.priority || 'all');
+    const serverSummary = state.pagination.summary && typeof state.pagination.summary === 'object'
+      ? state.pagination.summary
+      : null;
     const metrics = [
       {
         label: 'Total filtrado',
@@ -1280,18 +1431,46 @@
         active: false,
       },
       {
-        label: 'Urgentes na tela',
-        value: list.filter((row) => row && row.priority === 'urgent').length,
+        label: serverSummary ? 'Urgentes' : 'Urgentes na tela',
+        value: serverSummary
+          ? toFiniteNumber(serverSummary.urgentCount, 0)
+          : list.filter((row) => row && row.priority === 'urgent').length,
         action: 'priority:urgent',
         title: 'Filtrar fila por urgência Urgente',
         active: currentPriority === 'urgent',
       },
       {
         label: 'Em andamento',
-        value: list.filter((row) => row && row.status === 'in_progress').length,
+        value: serverSummary
+          ? toFiniteNumber(serverSummary.inProgressCount, 0)
+          : list.filter((row) => row && row.status === 'in_progress').length,
         action: 'status:in_progress',
         title: 'Filtrar fila por status Em andamento',
         active: currentStatus === 'in_progress',
+      },
+      {
+        label: 'Aguardando +24 h',
+        value: serverSummary
+          ? toFiniteNumber(serverSummary.waitingOver24hCount, 0)
+          : list.filter((row) => {
+            const age = getQueueAge(row);
+            return age && age.hours >= 24;
+          }).length,
+        action: '',
+        title: 'Pedidos não concluídos criados há mais de 24 horas',
+        active: false,
+      },
+      {
+        label: 'Acesso pendente',
+        value: serverSummary
+          ? toFiniteNumber(serverSummary.externalPendingCount, 0)
+          : list.filter((row) => {
+            const external = getExternalAccessState(row);
+            return external && external.adminStatus === 'pending';
+          }).length,
+        action: 'external-access',
+        title: 'Abrir a fila de decisões de acesso externo',
+        active: false,
       },
     ];
 
@@ -1750,6 +1929,12 @@
       return 'Este ticket está vinculado a um protocolo aberto de cópia/portabilidade (LGPD). '
         + 'Não é possível marcar Resolvido ou Arquivado até o DSR ser concluído, cancelado ou expirar. '
         + 'Use o painel “Complemento integral da cópia” para diagnosticar, entregar ou cancelar o protocolo; depois arquive o ticket.';
+    }
+    if (upper.indexOf('HELP_REQUEST_STALE') >= 0) {
+      return 'Este ticket foi alterado em outra sessão administrativa. A fila será atualizada para evitar sobrescrever a triagem mais recente.';
+    }
+    if (upper.indexOf('HELP_REQUEST_NOT_FOUND') >= 0) {
+      return 'Este ticket não está mais disponível. Atualize a fila antes de continuar.';
     }
     if (/^[A-Z][A-Z0-9_]{2,80}$/.test(raw)) {
       return 'Não foi possível salvar a triagem (' + raw + ').';
@@ -2738,6 +2923,10 @@
       const contactEmail = String(row.contact_email || '').trim() || 'Sem e-mail';
       const metadataChips = buildMetadataChips(row);
       const metadataSummary = buildMetadataSummary(row);
+      const queueAge = getQueueAge(row);
+      const queueAgeChip = queueAge
+        ? `<span class="kc-admin-help-chip kc-admin-help-chip--age-${esc(queueAge.level)}"><i class="fas fa-hourglass-half" aria-hidden="true"></i>${esc(queueAge.label)}</span>`
+        : '';
       const statusValue = String(row.status || 'new').trim() || 'new';
       const priorityValue = String(row.priority || 'normal').trim() || 'normal';
       const identity = getHelpTicketIdentity(row);
@@ -2763,6 +2952,7 @@
         `      <span class="kc-admin-help-chip kc-admin-help-chip--status-${esc(statusValue)}" data-help-status-badge><i class="fas fa-circle" aria-hidden="true"></i><span data-help-status-label>${esc(statusLabel)}</span></span>`,
         `      <span class="kc-admin-help-chip kc-admin-help-chip--priority-${esc(priorityValue)}" data-help-priority-badge><i class="fas fa-bolt" aria-hidden="true"></i><span data-help-priority-label>${esc(priorityLabel)}</span></span>`,
         `      <span class="kc-admin-help-chip"><i class="fas fa-layer-group" aria-hidden="true"></i>${esc(typeLabel)}</span>`,
+        queueAgeChip,
         metadataChips,
         '    </div>',
         '  </div>',
@@ -2776,6 +2966,8 @@
         `    <div><strong>Contato autorizado</strong><span>${row.allow_contact === false ? 'Não' : 'Sim'}</span></div>`,
         '  </div>',
         metadataSummary,
+        buildExternalAccessPanel(row),
+        buildOperationalActions(row),
         exportCloseLocked
           ? [
             '<p class="kc-admin-lgpd-warning" data-help-export-close-guard role="status">',
@@ -2828,6 +3020,7 @@
     const limitSource = Array.isArray(result) ? result.limit : result && result.limit;
     const offsetSource = Array.isArray(result) ? result.offset : result && result.offset;
     const hasMoreSource = Array.isArray(result) ? result.hasMore : result && result.hasMore;
+    const summarySource = Array.isArray(result) ? result.summary : result && result.summary;
     const totalCount = Math.max(rows.length, toFiniteNumber(totalCountSource, rows.length));
     const limit = Math.max(1, toFiniteNumber(limitSource, requestedLimit));
     const offset = Math.max(0, toFiniteNumber(offsetSource, requestedOffset));
@@ -2835,7 +3028,16 @@
       ? hasMoreSource
       : (offset + rows.length) < totalCount;
 
-    return { rows, totalCount, limit, offset, hasMore };
+    return {
+      rows,
+      totalCount,
+      limit,
+      offset,
+      hasMore,
+      summary: summarySource && typeof summarySource === 'object'
+        ? { ...summarySource }
+        : null,
+    };
   }
 
   function mergeRows(currentRows, nextRows) {
@@ -2927,6 +3129,8 @@
       state.pagination.limit = payload.limit;
       state.pagination.totalCount = payload.totalCount;
       state.pagination.hasMore = payload.hasMore && state.rows.length < payload.totalCount;
+      if (payload.summary) state.pagination.summary = payload.summary;
+      else if (!append) state.pagination.summary = null;
       renderSummary(state.rows);
       // Single paint path: finally also renders on success. Avoid double
       // renderRows (capture/apply race that used to wipe drafts).
@@ -2995,15 +3199,19 @@
 
     card.querySelectorAll('[data-help-status-set]').forEach((button) => {
       const active = button.getAttribute('data-help-status-set') === statusValue;
+      const locked = button.getAttribute('data-help-status-locked') === '1';
+      const disabled = saving || locked;
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
-      button.disabled = saving;
+      button.disabled = disabled;
+      button.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     });
     card.querySelectorAll('[data-help-priority-set]').forEach((button) => {
       const active = button.getAttribute('data-help-priority-set') === priorityValue;
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
       button.disabled = saving;
+      button.setAttribute('aria-disabled', saving ? 'true' : 'false');
     });
 
     const statusBadge = card.querySelector('[data-help-status-badge]');
@@ -3119,15 +3327,33 @@
         return false;
       }
 
-      const result = await window.KCAPI.updateAdminHelpRequest(id, { status, priority });
+      const currentRow = state.rows.find(
+        (item) => String(item && item.id || '').trim() === id
+      );
+      const result = await window.KCAPI.updateAdminHelpRequest(id, {
+        status,
+        priority,
+        expected_updated_at: currentRow && currentRow.updated_at
+          ? String(currentRow.updated_at)
+          : null,
+      });
       if (!isActiveAdminContext(adminContext)) return false;
       if (!result || result.ok === false) {
         setCardTriageUi(card, previous.status, previous.priority);
+        const resultCode = String(
+          result && result.error && (result.error.code || result.error.message) || ''
+        ).toUpperCase();
         showToast(
           friendlyTriageErrorMessage(result && result.error) || 'Não foi possível salvar a triagem.',
           'error',
           5200
         );
+        if (resultCode.indexOf('HELP_REQUEST_STALE') >= 0) {
+          await loadRows({
+            silent: true,
+            limit: Math.max(state.pagination.limit, state.rows.length || HELP_PAGE_SIZE),
+          });
+        }
         return false;
       }
 
@@ -3135,7 +3361,7 @@
         (item) => String(item && item.id || '').trim() === id
       );
       if (rowIndex >= 0) {
-        state.rows[rowIndex] = Object.assign({}, state.rows[rowIndex], {
+        state.rows[rowIndex] = Object.assign({}, state.rows[rowIndex], result.data || {}, {
           status: status,
           priority: priority,
         });
@@ -3207,7 +3433,9 @@
       if (card && card.isConnected && isActiveAdminContext(adminContext)) {
         card.classList.remove('is-triage-saving');
         card.querySelectorAll('[data-help-status-set],[data-help-priority-set]').forEach((button) => {
-          button.disabled = false;
+          const disabled = button.getAttribute('data-help-status-locked') === '1';
+          button.disabled = disabled;
+          button.setAttribute('aria-disabled', disabled ? 'true' : 'false');
         });
       }
     }
@@ -4866,6 +5094,10 @@
         }
         if (action.indexOf('priority:') === 0) {
           applyQueueFilters({ priority: action.slice('priority:'.length) || 'all' });
+          return;
+        }
+        if (action === 'external-access') {
+          openExternalAccessWorkflow(null);
         }
       });
     }
@@ -4951,7 +5183,7 @@
     document.addEventListener('click', function (event) {
       const target = event.target && event.target.closest
         ? event.target.closest(
-          '[data-help-copy],[data-help-status-set],[data-help-priority-set],[data-help-save],[data-help-load-more],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]'
+          '[data-help-copy],[data-help-status-set],[data-help-priority-set],[data-help-save],[data-help-load-more],[data-help-open-external],[data-help-open-cadu],[data-lgpd-action],[data-lgpd-export],[data-export-action],[data-export-processor-save]'
         )
         : null;
       if (!target) return;
@@ -4993,6 +5225,19 @@
       }
 
       const card = target.closest('[data-help-id]');
+      if (target.hasAttribute('data-help-open-external') || target.hasAttribute('data-help-open-cadu')) {
+        event.preventDefault();
+        const id = String(card && card.getAttribute('data-help-id') || '').trim();
+        const row = state.rows.find((item) => String(item && item.id || '').trim() === id) || null;
+        if (!row) {
+          showToast('Não foi possível localizar este pedido na fila atual.', 'warn');
+          return;
+        }
+        if (target.hasAttribute('data-help-open-external')) openExternalAccessWorkflow(row);
+        else prepareCaduHelpAnalysis(row);
+        return;
+      }
+
       if (target.hasAttribute('data-help-status-set') || target.hasAttribute('data-help-priority-set')) {
         event.preventDefault();
         if (!card || card.classList.contains('is-triage-saving')) return;

@@ -917,12 +917,24 @@ Promise<Array<{
   limit: number,
   offset: number,
   hasMore: boolean,
+  summary: {
+    urgentCount: number,
+    inProgressCount: number,
+    externalPendingCount: number,
+    waitingOver24hCount: number,
+  },
 }
 ```
 
-**Notas v10:**
-- o caminho preferencial usa a RPC `kc_admin_list_help_requests_paged(...)`
-- filtros por `priority` e busca textual ainda podem usar fallback controlado via query direta
+**Notas v11.30.3:**
+- o caminho preferencial usa `kc_admin_list_help_requests_v2(...)` para todos os
+  filtros e contadores operacionais globais; `totalCount` continua representando
+  somente o conjunto filtrado;
+- quando um filtro retorna zero cards, `kc_admin_help_queue_summary()` preserva
+  os indicadores sem buscar o conteúdo de outro ticket;
+- a RPC v1 e a query direta existem somente como fallback transitório quando a
+  RPC v2 ainda não foi implantada;
+- erro de autorização/runtime da v2 falha fechado e não aciona fallback.
 
 ---
 
@@ -935,10 +947,16 @@ Atualiza um ticket de ajuda no admin.
   status?: string,
   priority?: string,
   metadata?: object,
+  expected_updated_at?: string,
 }
 ```
 
-**Retorno:** `Promise<{ ok: boolean, error?: object }>`
+**Retorno:** `Promise<{ ok: boolean, data?: object, error?: object }>`
+
+Quando o patch contém apenas status/prioridade, o adapter usa
+`kc_admin_triage_help_request(...)`, grava auditoria e aplica concorrência
+otimista. `HELP_REQUEST_STALE` exige recarregar a fila; o cliente não deve
+sobrescrever silenciosamente a triagem de outra sessão.
 
 ---
 

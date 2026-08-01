@@ -1,7 +1,7 @@
 
 (function () {
   'use strict';
-  // Sub-adapter de admin/help-requests — registrado em window._KCSA.admin (v11.30.2)
+  // Sub-adapter de admin/help-requests — registrado em window._KCSA.admin (v11.30.3)
   // Dependências resolvidas lazily via window._KCSA.getClient / getCurrentUser
   window._KCSA = window._KCSA || {};
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -63,7 +63,31 @@
       limit: Number.isFinite(limit) ? limit : list.length,
       offset: Number.isFinite(offset) ? offset : 0,
       hasMore: Boolean(meta.hasMore),
+      summary: meta.summary && typeof meta.summary === 'object'
+        ? { ...meta.summary }
+        : null,
     });
+  }
+
+  function isMissingAdminHelpRpcError(error) {
+    const code = String((error && error.code) || '').trim().toUpperCase();
+    const message = String((error && error.message) || '').toLowerCase();
+    return code === '42883'
+      || code === 'PGRST202'
+      || (message.includes('function') && (
+        message.includes('does not exist')
+        || message.includes('could not find')
+      ));
+  }
+
+  function normalizeAdminHelpSummary(row) {
+    if (!row || typeof row !== 'object') return null;
+    return {
+      urgentCount: Number(row.urgent_count) || 0,
+      inProgressCount: Number(row.in_progress_count) || 0,
+      externalPendingCount: Number(row.external_pending_count) || 0,
+      waitingOver24hCount: Number(row.waiting_over_24h_count) || 0,
+    };
   }
 
   function buildAdminHelpSearchQuery(rawValue) {
@@ -693,6 +717,61 @@
           hasMore: false,
         });
       }
+      const v2Result = await client.rpc('kc_admin_list_help_requests_v2', {
+        p_status: status || null,
+        p_type: type || null,
+        p_priority: priority || null,
+        p_query: String(filters.query || '').trim().slice(0, 200) || null,
+        p_limit: limit,
+        p_offset: offset,
+      });
+
+      if (!v2Result.error) {
+        const rows = Array.isArray(v2Result.data) ? v2Result.data : [];
+        const firstRow = rows.length ? rows[0] : null;
+        const totalCount = firstRow ? Number(firstRow.total_count) || rows.length : 0;
+        let summary = normalizeAdminHelpSummary(firstRow);
+        if (!firstRow && (status || type || priority || String(filters.query || '').trim())) {
+          const summaryResult = await client.rpc('kc_admin_help_queue_summary');
+          if (!summaryResult.error) {
+            const summaryRows = Array.isArray(summaryResult.data) ? summaryResult.data : [];
+            summary = normalizeAdminHelpSummary(summaryRows[0] || null);
+          } else {
+            console.warn('[KCAPI][help] resumo global indisponível:', summaryResult.error);
+          }
+        }
+        const normalizedRows = rows.map((row) => {
+          const nextRow = { ...(row || {}) };
+          delete nextRow.total_count;
+          delete nextRow.urgent_count;
+          delete nextRow.in_progress_count;
+          delete nextRow.external_pending_count;
+          delete nextRow.waiting_over_24h_count;
+          return nextRow;
+        });
+        return attachAdminHelpListMeta(normalizedRows, {
+          totalCount,
+          limit,
+          offset,
+          hasMore: (offset + normalizedRows.length) < totalCount,
+          summary,
+        });
+      }
+
+      if (!isMissingAdminHelpRpcError(v2Result.error)) {
+        console.error('[KCAPI][help] kc_admin_list_help_requests_v2:', v2Result.error);
+        return attachAdminHelpListMeta([], {
+          ok: false,
+          error: { message: 'Não foi possível consultar a fila de solicitações.' },
+          totalCount: 0,
+          limit,
+          offset,
+          hasMore: false,
+        });
+      }
+
+      console.warn('[KCAPI][help] kc_admin_list_help_requests_v2 fallback:', v2Result.error);
+
       if (!priority && !searchQuery) {
         const rpcResult = await client.rpc('kc_admin_list_help_requests_paged', {
           p_status: status || null,
@@ -785,14 +864,20 @@
     if (raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0) {
       return 'DSR_HELP_MUST_REMAIN_OPEN';
     }
+    if (raw.indexOf('HELP_REQUEST_STALE') >= 0) {
+      return 'HELP_REQUEST_STALE';
+    }
+    if (raw.indexOf('HELP_REQUEST_NOT_FOUND') >= 0) {
+      return 'HELP_REQUEST_NOT_FOUND';
+    }
     return '';
   }
 
   async function updateAdminHelpRequest(id, patch = {}) {
     const client = getClient();
     if (!client) return { ok: false, error: { message: 'Supabase não inicializado.' } };
-    const targetId = String(id || '').trim();
-    if (!targetId) return { ok: false, error: { message: 'Pedido inválido.' } };
+    const targetId = String(id || '').trim().toLowerCase();
+    if (!UUID_RE.test(targetId)) return { ok: false, error: { message: 'Pedido inválido.' } };
 
     const updates = {};
     if (Object.prototype.hasOwnProperty.call(patch, 'status')) updates.status = String(patch.status || '').trim() || 'new';
@@ -814,12 +899,56 @@
     }
 
     try {
-      const { data, error } = await client
+      const expectedUpdatedAt = String(
+        patch.expected_updated_at || patch.expectedUpdatedAt || ''
+      ).trim();
+      const isTriageOnly = Object.prototype.hasOwnProperty.call(updates, 'status')
+        && Object.prototype.hasOwnProperty.call(updates, 'priority')
+        && !Object.prototype.hasOwnProperty.call(updates, 'metadata');
+
+      if (isTriageOnly) {
+        const triageResult = await client.rpc('kc_admin_triage_help_request', {
+          p_id: targetId,
+          p_status: updates.status,
+          p_priority: updates.priority,
+          p_expected_updated_at: expectedUpdatedAt || null,
+        });
+        if (!triageResult.error) {
+          const rpcRow = Array.isArray(triageResult.data)
+            ? (triageResult.data[0] || null)
+            : (triageResult.data || null);
+          return {
+            ok: true,
+            data: rpcRow
+              ? {
+                id: rpcRow.out_id || targetId,
+                status: rpcRow.out_status || updates.status,
+                priority: rpcRow.out_priority || updates.priority,
+                updated_at: rpcRow.out_updated_at || null,
+              }
+              : null,
+          };
+        }
+        if (!isMissingAdminHelpRpcError(triageResult.error)) {
+          console.error('[KCAPI][help] kc_admin_triage_help_request:', triageResult.error);
+          const triageCode = getHelpStatusGuardErrorCode(triageResult.error);
+          return {
+            ok: false,
+            error: {
+              message: triageCode || triageResult.error.message || 'Não foi possível atualizar o pedido.',
+              code: triageCode || triageResult.error.code || '',
+            },
+          };
+        }
+        console.warn('[KCAPI][help] kc_admin_triage_help_request fallback:', triageResult.error);
+      }
+
+      let updateQuery = client
         .from('help_requests')
         .update(updates)
-        .eq('id', targetId)
-        .select('*')
-        .maybeSingle();
+        .eq('id', targetId);
+      if (expectedUpdatedAt) updateQuery = updateQuery.eq('updated_at', expectedUpdatedAt);
+      const { data, error } = await updateQuery.select('*').maybeSingle();
 
       if (error) {
         console.error('[KCAPI][help] updateAdminHelpRequest:', error);
@@ -834,6 +963,16 @@
           };
         }
         return { ok: false, error: { message: error.message || 'Não foi possível atualizar o pedido.' } };
+      }
+
+      if (!data && expectedUpdatedAt) {
+        return {
+          ok: false,
+          error: {
+            message: 'HELP_REQUEST_STALE',
+            code: 'HELP_REQUEST_STALE',
+          },
+        };
       }
 
       return { ok: true, data: data || null };
