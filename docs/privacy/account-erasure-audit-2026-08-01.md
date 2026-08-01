@@ -152,6 +152,51 @@ ainda é válida, se houve resposta do titular e se o prazo/processo interno exi
 cancelamento ou retomada. Não corrigir com UPDATE manual e não executar exclusão
 sem nova verificação de identidade e diagnóstico.
 
+### Verificação pós-merge e bloqueadores de rollout
+
+O merge do contrato iniciou o Edge Deploy `30707467650`, mas o preflight o
+interrompeu antes de qualquer publicação. A primeira resposta HTTP 400 parecia
+apontar para `cron.job`; a reprodução completa provou que o SQL é válido no
+PostgreSQL local e no projeto remoto. A causa era o transporte de aproximadamente
+96 KB por variáveis/argumentos do shell. O workflow passou a gerar request e
+response em arquivos temporários restritos e a enviar o corpo com
+`--data-binary`. A Essential Validation agora executa o mesmo arquivo SQL contra
+o Supabase local e valida uma linha composta somente por booleanos.
+
+A consulta remota somente leitura retornou 88 capacidades: 87 verdadeiras e
+`data_export_retention_schedule_configured=false`. O status seguro da automação
+confirmou Cron, pg_net, Vault, ACL do Vault e job de monitor presentes, mas
+project-ref, endpoint e segredo ausentes; por isso o job de expurgo não existe,
+`scheduled=false` e o alerta `EXPORT_RETENTION_SCHEDULE_UNHEALTHY` permanece
+ativo. Isso é configuração operacional real, não erro do SQL de preflight.
+
+O inventário de nomes, sem leitura de valores, também encontrou nove secrets de
+Edge ausentes:
+
+- `ADMIN_REPORTS_WEBHOOK_URL`;
+- `KC_APP_BASE_URL`;
+- `KC_DATA_EXPORT_RETENTION_SECRET`;
+- `KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64`;
+- `KC_NOTIFY_HMAC_SECRET`;
+- `KC_PRIVACY_HELP_ALLOWED_ORIGINS`;
+- `KC_TURNSTILE_ENVIRONMENT`;
+- `KC_TURNSTILE_EXPECTED_HOSTNAMES`;
+- `KC_TURNSTILE_SECRET_KEY`.
+
+O preflight continuará falhando fechado e, a partir da correção, executará a
+checagem de nomes mesmo quando o contrato de schema falhar. Nenhum secret foi
+criado, lido, rotacionado ou alterado durante esta auditoria. A Edge remota de
+exclusão continua na versão anterior até que um operador provisione os valores
+conforme os runbooks e uma nova execução valide todos os gates.
+
+O snapshot agregado adicional encontrou outbox de conclusão e claims de
+notificação vazios, nenhum Help encerrado com exclusão não terminal, nenhum claim
+de operação vencido e nenhum outbox vencido. Há três workflows ativos sem DSR
+vinculado, um deles aguardando confirmação desde 2026-05-26, e um registro
+`erased` legado sem DSR concluído. Esses registros antecedem ou não passaram pelo
+fluxo canônico novo e exigem diagnóstico individual; não devem ser corrigidos por
+escrita manual no banco.
+
 ## Validação realizada
 
 - suite de privacidade: 7 suites, 153 testes;
