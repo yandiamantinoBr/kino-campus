@@ -11,9 +11,10 @@ O bloqueio descrito abaixo foi provisionado sem registrar valores:
 - preflight CORS remoto 204 para a origem canônica;
 - bundle temporário removido depois da transferência.
 
-O próximo deploy de produção deve injetar a site key no frontend e ser seguido
-por smoke visual do widget. Preview permanece deliberadamente sem a chave,
-porque seus hostnames não pertencem à allowlist do widget de produção.
+O deploy de produção posterior injetou a site key no frontend. O arquivo
+`kc-env.js` publicado não contém placeholder e a chave pública foi detectada
+sem registrar seu valor. Preview permanece deliberadamente sem a chave, porque
+seus hostnames não pertencem à allowlist do widget de produção.
 
 `scripts/ops/apply-turnstile-keys.ps1` foi corrigido para incluir
 `KC_PRIVACY_HELP_ALLOWED_ORIGINS`, aceitar bundle temporário e adiar o deploy
@@ -143,8 +144,9 @@ o usuário ver o trabalho em `www` é **só** provisionar Turnstile + redeploy.
 
 ## Checklist rápido
 
-- [ ] Site Key real no Vercel Production (`KC_TURNSTILE_SITE_KEY`)
-- [ ] Secret + environment + hostnames no Supabase Edge
-- [ ] Production deploy Ready
-- [ ] Smoke FAQ LGPD + card Privacidade em Configurações
-- [ ] Smoke guest form (Turnstile) + authenticated erasure
+- [x] Site Key real no Vercel Production (`KC_TURNSTILE_SITE_KEY`)
+- [x] Secret + environment + hostnames e origens no Supabase Edge
+- [x] Production deploy Ready e `kc-env.js` sem placeholder
+- [x] Preflight CORS canônico 204 com `no-store`
+- [x] Widget visitante renderizado sem submeter pedido real
+- [ ] Ciclo integral de exclusão apenas com conta e dados descartáveis
