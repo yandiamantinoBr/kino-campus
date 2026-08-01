@@ -79,6 +79,7 @@
 | [ops/vercel-supabase-invariants.md](./ops/vercel-supabase-invariants.md) | invariantes operacionais entre Vercel, Supabase, build e deploy |
 | [ops/cadu-openclaw-operational-handoff-2026-06-27.md](./ops/cadu-openclaw-operational-handoff-2026-06-27.md) | mapa operacional Cadu/OpenClaw: conexões, rotas, envs, pendências e runbook sem segredos |
 | [ops/adsense-search-console-readiness-runbook.md](./ops/adsense-search-console-readiness-runbook.md) | gate operacional para deploy, inspeção de URLs e revisão AdSense sem ativação automática |
+| [ops/edge-deploy-source-drift-and-readiness-2026-08-01.md](./ops/edge-deploy-source-drift-and-readiness-2026-08-01.md) | separa divergência real de fonte, gates estruturais e prontidão operacional no deploy automático de Edge Functions |
 | [audits/README.md](./audits/README.md) | indice de auditorias tecnicas pontuais (read-only + validacao contra producao) |
 | [audits/audit-v3-actual-state-2026-06-11.md](./audits/audit-v3-actual-state-2026-06-11.md) | V3 - comparacao entre V1/V2 e o estado real apos 9 PRs mergeados em 72h (2026-06-11) |
 | [ops/v28-unaccent-fts-dependency-audit.md](./ops/v28-unaccent-fts-dependency-audit.md) | auditoria estatica de dependencias `unaccent`/FTS antes de migration |

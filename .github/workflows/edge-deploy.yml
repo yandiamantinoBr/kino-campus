@@ -23,22 +23,21 @@ concurrency:
 
 jobs:
   detect-changes:
-    name: Prepare complete function matrix
+    name: Validate local function inventory
     if: >-
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      matrix: ${{ steps.detect.outputs.matrix }}
-      has_changes: ${{ steps.detect.outputs.has_changes }}
+      has_candidates: ${{ steps.detect.outputs.has_candidates }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 50
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Select all edge functions from the validated SHA
+      - name: Validate all Edge Functions from the approved SHA
         id: detect
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -54,8 +53,8 @@ jobs:
           fi
 
           # workflow_run does not expose the complete before..after range of the
-          # original push. Rebuild every function so multi-commit pushes and a
-          # later CI-fix commit cannot strand older function changes undeployed.
+          # original push. Keep the complete local inventory as candidates; the
+          # next job compares each candidate with the source running remotely.
           CHANGED=$(list_all_functions | paste -sd, -)
           if [ -z "$CHANGED" ]; then
             echo 'No Edge Function directories found.' >&2
@@ -63,7 +62,6 @@ jobs:
           fi
 
           echo "Functions selected from validated SHA $HEAD_SHA: $CHANGED"
-          MATRIX=""
           for fn in $(echo "$CHANGED" | tr ',' ' '); do
             if ! [[ "$fn" =~ ^[a-z0-9_-]+$ ]]; then
               echo "Invalid Edge Function directory name: $fn" >&2
@@ -73,16 +71,143 @@ jobs:
               echo "Edge Function '$fn' was removed. Remote deletion requires an explicit manual operation." >&2
               exit 1
             fi
-            MATRIX="${MATRIX}{\"function\":\"$fn\"},"
+            if [ ! -s "supabase/functions/$fn/index.ts" ]; then
+              echo "Edge Function '$fn' has no non-empty index.ts entrypoint." >&2
+              exit 1
+            fi
           done
-          MATRIX="${MATRIX%,}"
-          echo "matrix={\"include\":[${MATRIX}]}" >> "$GITHUB_OUTPUT"
-          echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+          echo 'has_candidates=true' >> "$GITHUB_OUTPUT"
+
+  source-drift:
+    name: Compare validated source with production
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_candidates == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    outputs:
+      matrix: ${{ steps.compare.outputs.matrix }}
+      has_changes: ${{ steps.compare.outputs.has_changes }}
+      names: ${{ steps.compare.outputs.names }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.105.0
+
+      - name: Download the current production sources
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          REMOTE_DIR="$RUNNER_TEMP/kc-edge-remote"
+          mkdir -p "$REMOTE_DIR/supabase/functions"
+          supabase functions download \
+            --project-ref wacyrkwhkvzwkqpolrbg \
+            --use-api \
+            --workdir "$REMOTE_DIR"
+
+      - name: Select only functions with source drift
+        id: compare
+        run: |
+          REMOTE_DIR="$RUNNER_TEMP/kc-edge-remote"
+          DRIFT_FILE="$RUNNER_TEMP/kc-edge-drifted.txt"
+          SYNCED_FILE="$RUNNER_TEMP/kc-edge-synced.txt"
+          REMOTE_ONLY_FILE="$RUNNER_TEMP/kc-edge-remote-only.txt"
+          : > "$DRIFT_FILE"
+          : > "$SYNCED_FILE"
+          : > "$REMOTE_ONLY_FILE"
+
+          while IFS= read -r fn; do
+            RESULT=$(node scripts/compare-edge-function-source.js \
+              --local-root "$GITHUB_WORKSPACE" \
+              --remote-root "$REMOTE_DIR" \
+              --function "$fn")
+            echo "$RESULT"
+            DRIFT=$(RESULT="$RESULT" node -e '
+              const result = JSON.parse(process.env.RESULT);
+              process.stdout.write(result.drift === true ? "true" : "false");
+            ')
+            if [ "$DRIFT" = 'true' ]; then
+              echo "$fn" >> "$DRIFT_FILE"
+            else
+              echo "$fn" >> "$SYNCED_FILE"
+            fi
+          done < <(
+            find supabase/functions -mindepth 1 -maxdepth 1 -type d ! -name _shared \
+              -printf '%f\n' | sort
+          )
+
+          while IFS= read -r fn; do
+            if [ ! -d "supabase/functions/$fn" ]; then
+              echo "$fn" >> "$REMOTE_ONLY_FILE"
+            fi
+          done < <(
+            find "$REMOTE_DIR/supabase/functions" \
+              -mindepth 1 -maxdepth 1 -type d ! -name _shared \
+              -printf '%f\n' | sort
+          )
+
+          DRIFT_FILE="$DRIFT_FILE" \
+            SYNCED_FILE="$SYNCED_FILE" \
+            REMOTE_ONLY_FILE="$REMOTE_ONLY_FILE" \
+            python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          def read_names(env_name):
+              return [
+                  name.strip()
+                  for name in Path(os.environ[env_name]).read_text(
+                      encoding="utf-8"
+                  ).splitlines()
+                  if name.strip()
+              ]
+
+          drifted = read_names("DRIFT_FILE")
+          synced = read_names("SYNCED_FILE")
+          remote_only = read_names("REMOTE_ONLY_FILE")
+          matrix = {"include": [{"function": name} for name in drifted]}
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(
+                  "matrix="
+                  + json.dumps(matrix, separators=(",", ":"))
+                  + "\n"
+              )
+              output.write(f"has_changes={'true' if drifted else 'false'}\n")
+              output.write("names=" + ",".join(drifted) + "\n")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("### Edge Function source drift\n\n")
+              summary.write(f"- Divergent or not yet deployed: {len(drifted)}\n")
+              summary.write(f"- Already synchronized: {len(synced)}\n")
+              summary.write(f"- Present only in production: {len(remote_only)}\n")
+              if drifted:
+                  summary.write("- Selected: `" + "`, `".join(drifted) + "`\n")
+              else:
+                  summary.write("- No production deployment is necessary.\n")
+              if remote_only:
+                  message = (
+                      "Remote-only functions require explicit review and are not deleted: "
+                      + ", ".join(remote_only)
+                  )
+                  print("::warning title=Remote-only Edge Functions::" + message)
+                  summary.write("- Remote-only: `" + "`, `".join(remote_only) + "`\n")
+          PY
 
   preflight:
     name: Verify production prerequisites
-    needs: detect-changes
-    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: source-drift
+    if: needs.source-drift.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -262,22 +387,40 @@ jobs:
                   "Privacy schema gate returned non-boolean capabilities: "
                   + ", ".join(non_boolean)
               )
-          missing = sorted(
+          operational_capabilities = {
+              "data_export_retention_schedule_configured",
+          }
+          structural_missing = sorted(
               name for name, available in rows[0].items()
-              if available is not True
+              if available is not True and name not in operational_capabilities
           )
-          if missing:
+          if structural_missing:
               raise SystemExit(
                   "Privacy schema prerequisites are incomplete: "
-                  + ", ".join(missing)
+                  + ", ".join(structural_missing)
               )
-          print("Canonical privacy schema prerequisites are present.")
+          operational_missing = sorted(
+              name for name in operational_capabilities
+              if rows[0].get(name) is not True
+          )
+          if operational_missing:
+              message = (
+                  "Edge code remains deployable, but these runtime automations "
+                  "remain fail-closed: " + ", ".join(operational_missing)
+              )
+              print("::warning title=Operational privacy readiness::" + message)
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+                  summary.write("### Operational privacy readiness\n\n")
+                  summary.write("- Warning: " + message + "\n")
+          else:
+              print("Canonical privacy schema and operational prerequisites are present.")
           PY
 
-      - name: Verify required secret names without reading values
+      - name: Report runtime secret readiness without reading values
         if: ${{ !cancelled() }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRIFTED_FUNCTIONS: ${{ needs.source-drift.outputs.names }}
         run: |
           SECRET_JSON=$(supabase secrets list \
             --project-ref wacyrkwhkvzwkqpolrbg \
@@ -286,23 +429,33 @@ jobs:
           import json
           import os
 
-          required = {
-              "ADMIN_REPORTS_WEBHOOK_URL",
-              "KC_ANALYTICS_ID_SECRET",
-              "KC_APP_BASE_URL",
-              "KC_DATA_EXPORT_RETENTION_SECRET",
-              "KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64",
-              "KC_GA4_PROPERTY_ID",
-              "KC_GA4_SA_KEY",
-              "KC_NOTIFY_HMAC_SECRET",
-              "KC_PRIVACY_HELP_ALLOWED_ORIGINS",
-              "KC_SEARCH_CONSOLE_SA_KEY",
-              "KC_SEARCH_CONSOLE_SITE_URL",
-              "KC_SMTP_PASS",
-              "KC_SMTP_USER",
-              "KC_TURNSTILE_ENVIRONMENT",
-              "KC_TURNSTILE_EXPECTED_HOSTNAMES",
-              "KC_TURNSTILE_SECRET_KEY",
+          required_by_function = {
+              "kc-account-erasure": {
+                  "KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64",
+                  "KC_SMTP_PASS",
+                  "KC_SMTP_USER",
+              },
+              "kc-analytics-subject-id": {"KC_ANALYTICS_ID_SECRET"},
+              "kc-create-privacy-help-guest": {
+                  "KC_PRIVACY_HELP_ALLOWED_ORIGINS",
+                  "KC_TURNSTILE_ENVIRONMENT",
+                  "KC_TURNSTILE_EXPECTED_HOSTNAMES",
+                  "KC_TURNSTILE_SECRET_KEY",
+              },
+              "kc-data-export-retention": {"KC_DATA_EXPORT_RETENTION_SECRET"},
+              "kc-dispatch-notification-outbox": {"KC_NOTIFICATION_DISPATCH_SECRET"},
+              "kc-external-access-decide": {"KC_SMTP_PASS", "KC_SMTP_USER"},
+              "kc-ga4-reports": {"KC_GA4_PROPERTY_ID", "KC_GA4_SA_KEY"},
+              "kc-help-request-notify": {"KC_SMTP_PASS", "KC_SMTP_USER"},
+              "kc-search-console-reports": {
+                  "KC_SEARCH_CONSOLE_SA_KEY",
+                  "KC_SEARCH_CONSOLE_SITE_URL",
+              },
+              "notify-admin-reports-threshold": {
+                  "ADMIN_REPORTS_WEBHOOK_URL",
+                  "KC_APP_BASE_URL",
+                  "KC_NOTIFY_HMAC_SECRET",
+              },
           }
           rows = json.loads(os.environ["SECRET_JSON"])
           if not isinstance(rows, list):
@@ -312,30 +465,56 @@ jobs:
               for row in rows
               if isinstance(row, dict)
           }
-          missing = sorted(required - present)
-          if missing:
-              raise SystemExit(
-                  "Required Edge Function secret names are absent: "
-                  + ", ".join(missing)
-              )
-          print("Required secret names are present; values were not read.")
+          selected = {
+              name.strip()
+              for name in os.environ.get("DRIFTED_FUNCTIONS", "").split(",")
+              if name.strip()
+          }
+          missing_by_function = {
+              function_name: sorted(required_by_function.get(function_name, set()) - present)
+              for function_name in sorted(selected)
+          }
+          missing_by_function = {
+              function_name: missing
+              for function_name, missing in missing_by_function.items()
+              if missing
+          }
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("### Edge runtime secret readiness\n\n")
+              if not missing_by_function:
+                  summary.write("- Selected functions have all declared runtime secret names.\n")
+              for function_name, missing in missing_by_function.items():
+                  message = (
+                      function_name
+                      + " will remain fail-closed until these secret names exist: "
+                      + ", ".join(missing)
+                  )
+                  print("::warning title=Edge runtime degraded::" + message)
+                  summary.write("- `" + function_name + "`: missing `" + "`, `".join(missing) + "`\n")
+          print("Runtime secret names were inventoried; values were not read.")
           PY
 
   deploy:
     name: Deploy ${{ matrix.function }}
-    needs: [detect-changes, preflight]
-    if: needs.detect-changes.outputs.has_changes == 'true'
+    needs: [source-drift, preflight]
+    if: needs.source-drift.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
     strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.source-drift.outputs.matrix) }}
       fail-fast: false
       max-parallel: 3
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
@@ -398,16 +577,34 @@ jobs:
 
           echo "Deployed ${{ matrix.function }} version=$VERSION status=$STATUS verify_jwt=$ACTUAL_VERIFY_JWT"
 
-          if [ "${{ matrix.function }}" = 'kc-account-erasure' ]; then
-            VERIFY_DIR="$RUNNER_TEMP/kc-account-erasure-deployed-source"
+          VERIFY_DIR="$RUNNER_TEMP/kc-edge-deployed-${{ matrix.function }}"
+          SOURCE_MATCHED=false
+          for ATTEMPT in 1 2 3; do
             rm -rf "$VERIFY_DIR"
             mkdir -p "$VERIFY_DIR/supabase/functions"
-            supabase functions download kc-account-erasure \
+            if supabase functions download '${{ matrix.function }}' \
               --project-ref wacyrkwhkvzwkqpolrbg \
               --use-api \
-              --workdir "$VERIFY_DIR"
-            DEPLOYED_SOURCE=$(find "$VERIFY_DIR" -type f \
-              -path '*/kc-account-erasure/index.ts' -print -quit)
+              --workdir "$VERIFY_DIR" && \
+              node scripts/compare-edge-function-source.js \
+                --local-root "$GITHUB_WORKSPACE" \
+                --remote-root "$VERIFY_DIR" \
+                --function '${{ matrix.function }}' \
+                --check; then
+              SOURCE_MATCHED=true
+              break
+            fi
+            echo "Remote source has not converged (attempt $ATTEMPT/3)." >&2
+            sleep $((ATTEMPT * 5))
+          done
+          if [ "$SOURCE_MATCHED" != 'true' ]; then
+            echo 'Remote source does not match the validated source after deploy.' >&2
+            exit 1
+          fi
+          echo 'Verified deployed source and reachable shared dependencies.'
+
+          if [ "${{ matrix.function }}" = 'kc-account-erasure' ]; then
+            DEPLOYED_SOURCE="$VERIFY_DIR/supabase/functions/kc-account-erasure/index.ts"
             if [ -z "$DEPLOYED_SOURCE" ] || [ ! -s "$DEPLOYED_SOURCE" ]; then
               echo 'Could not read back deployed kc-account-erasure source.' >&2
               exit 1

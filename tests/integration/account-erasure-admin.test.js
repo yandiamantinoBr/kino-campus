@@ -219,7 +219,13 @@ describe('account erasure - schema e contratos atomicos', () => {
     );
     expect(handler).toContain('account_erasure_contract_mismatch');
     expect(EDGE_DEPLOY_WORKFLOW).toContain('kc-account-erasure-2026-08-01-v1');
-    expect(EDGE_DEPLOY_WORKFLOW).toContain('supabase functions download kc-account-erasure');
+    expect(EDGE_DEPLOY_WORKFLOW).toContain(
+      "supabase functions download '${{ matrix.function }}'"
+    );
+    expect(EDGE_DEPLOY_WORKFLOW).toContain('scripts/compare-edge-function-source.js');
+    expect(EDGE_DEPLOY_WORKFLOW).toContain(
+      'DEPLOYED_SOURCE="$VERIFY_DIR/supabase/functions/kc-account-erasure/index.ts"'
+    );
     expect(DEPLOY).toContain('expected_contract_version');
     expect(DEPLOY).toContain('uma função\n`ACTIVE` com versão maior ainda pode conter código antigo');
     expect(ACCOUNT_ERASURE_AUDIT).toContain('runtime remoto divergente');
