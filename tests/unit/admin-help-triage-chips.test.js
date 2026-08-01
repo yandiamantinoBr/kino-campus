@@ -57,7 +57,7 @@ describe('admin help-requests chip triage UX', () => {
   test('page styles interactive triage chips and cache-busts assets', () => {
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.26');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.28');
     expect(PAGE).toContain('admin-shell.css?v=8.6.12');
     expect(PAGE).toContain('is-triage-leaving');
     expect(PAGE).toContain('kc-admin-help-identity');
@@ -109,5 +109,39 @@ describe('admin help-requests chip triage UX', () => {
     expect(CONTROLLER).toContain('closeLocked: closeLocked');
     expect(CONTROLLER).toContain('ERASURE_HELP_MUST_REMAIN_OPEN');
     expect(CONTROLLER).toContain('até o cancelamento formal ou até o servidor comprovar a entrega do recibo final');
+  });
+
+  test('preserva chips bloqueados depois de salvar outra dimensão da triagem', () => {
+    expect(CONTROLLER).toContain("const locked = button.getAttribute('data-help-status-locked') === '1'");
+    expect(CONTROLLER).toContain('const disabled = saving || locked');
+    expect(CONTROLLER).toContain("button.setAttribute('aria-disabled', disabled ? 'true' : 'false')");
+    expect(CONTROLLER).toContain("const disabled = button.getAttribute('data-help-status-locked') === '1'");
+  });
+
+  test('exibe estado operacional de acesso externo e navega sem decidir automaticamente', () => {
+    expect(CONTROLLER).toContain('function buildExternalAccessPanel');
+    expect(CONTROLLER).toContain('Fluxo de acesso externo');
+    expect(CONTROLLER).toContain('Abrir decisões de acesso');
+    expect(CONTROLLER).toContain("window.location.assign('moderation.html?section=external-access')");
+    expect(CONTROLLER).not.toMatch(/openExternalAccessWorkflow[\s\S]{0,500}(approve|reject|decideExternalAccess)/i);
+  });
+
+  test('prepara para o Cadu somente contexto operacional efêmero e sem PII', () => {
+    const start = CONTROLLER.indexOf('function prepareCaduHelpAnalysis');
+    const end = CONTROLLER.indexOf('function renderSummary', start);
+    const handoff = CONTROLLER.slice(start, end);
+    expect(handoff).toContain('sem dados pessoais');
+    expect(handoff).toContain('Não execute ações');
+    expect(handoff).toContain("window.location.assign('cadu.html?tab=openclaw&source=help-requests')");
+    expect(handoff).not.toContain('contact_email');
+    expect(handoff).not.toContain('message');
+    expect(handoff).not.toContain('row.id');
+    expect(CONTROLLER).toContain('expiresAt: Date.now() + ADMIN_HANDOFF_TTL_MS');
+  });
+
+  test('envia versão observada para impedir sobrescrita por outra sessão administrativa', () => {
+    expect(CONTROLLER).toContain('expected_updated_at: currentRow && currentRow.updated_at');
+    expect(CONTROLLER).toContain("resultCode.indexOf('HELP_REQUEST_STALE') >= 0");
+    expect(CONTROLLER).toContain('await loadRows({');
   });
 });

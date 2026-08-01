@@ -174,12 +174,12 @@ describe('indicadores de carregamento globais', () => {
     });
 
     const moderation = read('admin/moderation.html');
-    [
-      'admin-moderation.controller.js',
-      'admin-invite.controller.js',
-      'admin-external-access.controller.js',
-    ].forEach((assetName) => {
-      expect(moderation).toContain(`${assetName}?v=8.6.12`);
+    Object.entries({
+      'admin-moderation.controller.js': '8.6.12',
+      'admin-invite.controller.js': '8.6.12',
+      'admin-external-access.controller.js': '8.6.13',
+    }).forEach(([assetName, version]) => {
+      expect(moderation).toContain(`${assetName}?v=${version}`);
     });
     expect(read('mensagens.html')).toContain('kc-chat.css?v=8.7.7');
     expect(read('apresentacao-institucional.html')).toContain('kc-pitch-host.css?v=1.2.1');

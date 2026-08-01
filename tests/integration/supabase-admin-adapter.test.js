@@ -1,6 +1,6 @@
 /**
  * @file supabase-admin-adapter.test.js
- * @description Static contract tests for supabase.admin.adapter.js (v11.30.2)
+ * @description Static contract tests for supabase.admin.adapter.js (v11.30.3)
  * Verifica estrutura IIFE, namespace _KCSA.admin, helpers internos
  * e todos os métodos da API de help requests.
  */
@@ -198,8 +198,24 @@ describe('supabase.admin.adapter.js — método listAdminHelpRequests', () => {
     expect(source).toContain('listAdminHelpRequests,');
   });
 
-  test('tenta RPC kc_admin_list_help_requests_paged primeiro', () => {
+  test('tenta a projeção v2 antes do fallback paginado legado', () => {
+    expect(source).toContain("'kc_admin_list_help_requests_v2'");
     expect(source).toContain("'kc_admin_list_help_requests_paged'");
+    expect(source.indexOf("'kc_admin_list_help_requests_v2'"))
+      .toBeLessThan(source.indexOf("'kc_admin_list_help_requests_paged'"));
+  });
+
+  test('transporta filtros e contadores globais pela projeção v2', () => {
+    expect(source).toContain('p_priority: priority || null');
+    expect(source).toContain("p_query: String(filters.query || '').trim().slice(0, 200) || null");
+    expect(source).toContain('externalPendingCount: Number(row.external_pending_count) || 0');
+    expect(source).toContain('waitingOver24hCount: Number(row.waiting_over_24h_count) || 0');
+    expect(source).toContain("client.rpc('kc_admin_help_queue_summary')");
+  });
+
+  test('só permite fallback quando a RPC ainda não existe', () => {
+    expect(source).toContain('function isMissingAdminHelpRpcError');
+    expect(source).toContain('if (!isMissingAdminHelpRpcError(v2Result.error))');
   });
 
   test('faz fallback para query direta na tabela help_requests', () => {
@@ -233,6 +249,153 @@ describe('supabase.admin.adapter.js — método updateAdminHelpRequest', () => {
     expect(source).toContain('hasOwnProperty.call(patch');
     expect(source).toContain("'status'");
     expect(source).toContain("'priority'");
+  });
+
+  test('usa triagem auditável com controle otimista antes do fallback direto', () => {
+    expect(source).toContain("client.rpc('kc_admin_triage_help_request'");
+    expect(source).toContain('p_expected_updated_at: expectedUpdatedAt || null');
+    expect(source).toContain("if (expectedUpdatedAt) updateQuery = updateQuery.eq('updated_at', expectedUpdatedAt)");
+    expect(source).toContain("message: 'HELP_REQUEST_STALE'");
+  });
+});
+
+describe('supabase.admin.adapter.js — runtime da fila administrativa v2', () => {
+  const REQUEST_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+  beforeEach(() => {
+    jest.resetModules();
+    window._KCSA = {};
+    window.KCHelpUtils = undefined;
+  });
+
+  test('expõe contadores do servidor e remove colunas auxiliares das linhas', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: [{
+        id: REQUEST_ID,
+        status: 'new',
+        priority: 'urgent',
+        total_count: 7,
+        urgent_count: 3,
+        in_progress_count: 2,
+        external_pending_count: 1,
+        waiting_over_24h_count: 4,
+      }],
+      error: null,
+    });
+    window._KCSA.getClient = () => ({ rpc });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.listAdminHelpRequests({
+      status: 'new',
+      priority: 'urgent',
+      query: 'fila',
+      limit: 25,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('kc_admin_list_help_requests_v2', {
+      p_status: 'new',
+      p_type: null,
+      p_priority: 'urgent',
+      p_query: 'fila',
+      p_limit: 25,
+      p_offset: 0,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      totalCount: 7,
+      hasMore: true,
+      summary: {
+        urgentCount: 3,
+        inProgressCount: 2,
+        externalPendingCount: 1,
+        waitingOver24hCount: 4,
+      },
+    });
+    expect(result[0]).toEqual({ id: REQUEST_ID, status: 'new', priority: 'urgent' });
+  });
+
+  test('mantém os contadores globais quando o filtro não encontra tickets', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({
+        data: [{
+          id: REQUEST_ID,
+          total_count: 98,
+          urgent_count: 2,
+          in_progress_count: 4,
+          external_pending_count: 1,
+          waiting_over_24h_count: 8,
+        }],
+        error: null,
+      });
+    window._KCSA.getClient = () => ({ rpc });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.listAdminHelpRequests({
+      query: 'sem resultados',
+      limit: 25,
+    });
+
+    expect(result).toHaveLength(0);
+    expect(result.totalCount).toBe(0);
+    expect(result.summary).toEqual({
+      urgentCount: 2,
+      inProgressCount: 4,
+      externalPendingCount: 1,
+      waitingOver24hCount: 8,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'kc_admin_help_queue_summary');
+  });
+
+  test('não mascara erro de autorização com consulta direta', async () => {
+    const from = jest.fn(() => {
+      throw new Error('não deve consultar a tabela após falha autoritativa');
+    });
+    const rpc = jest.fn().mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'NOT_AUTHORIZED' },
+    });
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    window._KCSA.getClient = () => ({ rpc, from });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.listAdminHelpRequests({ limit: 25 });
+
+    expect(result).toMatchObject({ ok: false, totalCount: 0 });
+    expect(from).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  test('envia o timestamp esperado e devolve conflito de concorrência', async () => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: null,
+      error: { code: '40001', message: 'HELP_REQUEST_STALE' },
+    });
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    window._KCSA.getClient = () => ({ rpc });
+    window._KCSA.getCurrentUser = async () => null;
+    require('../../assets/js/adapters/supabase/supabase.admin.adapter.js');
+
+    const result = await window._KCSA.admin.updateAdminHelpRequest(REQUEST_ID, {
+      status: 'in_progress',
+      priority: 'high',
+      expected_updated_at: '2026-08-01T12:00:00.000Z',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('kc_admin_triage_help_request', {
+      p_id: REQUEST_ID,
+      p_status: 'in_progress',
+      p_priority: 'high',
+      p_expected_updated_at: '2026-08-01T12:00:00.000Z',
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: { message: 'HELP_REQUEST_STALE', code: 'HELP_REQUEST_STALE' },
+    });
+    consoleError.mockRestore();
   });
 });
 

@@ -1,5 +1,25 @@
 # Destravar produção Vercel após PR #747 (Turnstile)
 
+## Adendo operacional - 2026-08-01
+
+O bloqueio descrito abaixo foi provisionado sem registrar valores:
+
+- widget Cloudflare `KinoCampus - Pedidos LGPD`, modo gerenciado, com
+  `www.kinocampus.com.br` e `kinocampus.com.br`;
+- `KC_TURNSTILE_SITE_KEY` em Vercel Production;
+- secret, environment, hostnames e origens exatas na Edge Function;
+- preflight CORS remoto 204 para a origem canônica;
+- bundle temporário removido depois da transferência.
+
+O próximo deploy de produção deve injetar a site key no frontend e ser seguido
+por smoke visual do widget. Preview permanece deliberadamente sem a chave,
+porque seus hostnames não pertencem à allowlist do widget de produção.
+
+`scripts/ops/apply-turnstile-keys.ps1` foi corrigido para incluir
+`KC_PRIVACY_HELP_ALLOWED_ORIGINS`, aceitar bundle temporário e adiar o deploy
+até o merge normal. O switch `-DeleteCredentialBundle` remove o bundle após a
+leitura quando a operação automatizada usa um arquivo efêmero.
+
 **Data:** 2026-07-31 (atualizado após deploy das edges DSR/export/guest)  
 **Sintoma (histórico):** deploys `target=production` em `ERROR` com  
 `TURNSTILE_SITE_KEY_REQUIRED` enquanto o build **abortava** sem site key.  

@@ -13,6 +13,9 @@ const preflight = read('scripts/verify-privacy-schema.sql');
 const runtimePreflight = read(
   'scripts/verify-data-export-retention-runtime.sql',
 );
+const runtimeConfiguration = read(
+  'scripts/configure-supabase-privacy-runtime.ps1',
+);
 
 describe('data export retention worker', () => {
   test('uses a dedicated constant-time machine secret without exposing service role', () => {
@@ -105,5 +108,35 @@ describe('data export retention worker', () => {
     expect(runtimePreflight).toContain('recent_success_recorded');
     expect(runtimePreflight).toContain('__KC_EXPECTED_PROJECT_REF__');
     expect(runtimePreflight).toContain('no_active_retention_alert');
+  });
+
+  test('initializes privacy runtime idempotently without logging secret values', () => {
+    expect(runtimeConfiguration).toContain(
+      '[Collections.Generic.HashSet[string]]::new(',
+    );
+    expect(runtimeConfiguration).toContain(
+      'Outbox encryption already configured; key rotation skipped.',
+    );
+    expect(runtimeConfiguration).toContain(
+      'throw "outbox_edge_configuration_is_partial"',
+    );
+    expect(runtimeConfiguration).toContain(
+      'Retention secret already configured; rotation skipped.',
+    );
+    expect(runtimeConfiguration).toContain(
+      "raise exception 'retention_vault_configuration_is_partial'",
+    );
+    expect(runtimeConfiguration).toContain(
+      'KC_ERASURE_OUTBOX_ENCRYPTION_KEY_B64',
+    );
+    expect(runtimeConfiguration).toContain(
+      'KC_DATA_EXPORT_RETENTION_SECRET',
+    );
+    expect(runtimeConfiguration).toContain(
+      'https://api.supabase.com/v1/projects/$ProjectRef/database/query',
+    );
+    expect(runtimeConfiguration).not.toMatch(
+      /Write-(?:Host|Output)[^\n]*(?:\$outboxKey|\$retentionSecret)/,
+    );
   });
 });

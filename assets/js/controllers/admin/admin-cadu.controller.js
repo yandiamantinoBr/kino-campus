@@ -7318,6 +7318,53 @@
   // Init
   // ============================================================
 
+  function consumeAdminCaduHandoff() {
+    var result = { tab: '', prompt: '' };
+    try {
+      var url = new URL(window.location.href);
+      var requestedTab = String(url.searchParams.get('tab') || '').trim().toLowerCase();
+      var source = String(url.searchParams.get('source') || '').trim().toLowerCase();
+      if (requestedTab === 'openclaw') result.tab = 'openclaw';
+      if (source === 'help-requests') {
+        var raw = window.sessionStorage.getItem('kc_admin_cadu_handoff_v1');
+        window.sessionStorage.removeItem('kc_admin_cadu_handoff_v1');
+        if (raw) {
+          var handoff = JSON.parse(raw);
+          var now = Date.now();
+          var expiresAt = Number(handoff && handoff.expiresAt) || 0;
+          var prompt = String(handoff && handoff.prompt || '').trim();
+          if (expiresAt >= now && prompt && prompt.length <= 1200) {
+            result.prompt = prompt;
+            result.tab = 'openclaw';
+          }
+        }
+      }
+      if (url.searchParams.has('tab') || url.searchParams.has('source')) {
+        url.searchParams.delete('tab');
+        url.searchParams.delete('source');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
+    } catch (_) {
+      try { window.sessionStorage.removeItem('kc_admin_cadu_handoff_v1'); } catch (e) {}
+    }
+    return result;
+  }
+
+  function applyAdminCaduHandoff(handoff) {
+    if (!handoff || !handoff.prompt) return;
+    var input = $('#openclaw-chat-input');
+    if (!input) return;
+    input.value = handoff.prompt;
+    try { input.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+    setOpenclawActionStatus(
+      'Contexto operacional da fila de ajuda preparado sem dados pessoais. Revise a mensagem antes de enviar ao Cadu.',
+      'success'
+    );
+    window.setTimeout(function () {
+      try { input.focus(); } catch (_) {}
+    }, 80);
+  }
+
   async function init() {
     if (!document.body || !document.body.classList.contains('kc-admin-page--cadu')) return;
     var loading = $('#cadu-loading');
@@ -7333,9 +7380,11 @@
       return;
     }
 
+    var adminHandoff = consumeAdminCaduHandoff();
     try {
       state.currentTab = localStorage.getItem(STORAGE_TAB) || 'sites';
     } catch (e) {}
+    if (adminHandoff.tab) state.currentTab = adminHandoff.tab;
     if (window.KCCaduReviews && typeof window.KCCaduReviews.init === 'function') {
       window.KCCaduReviews.init({
         apiFetchResponse: apiFetchResponse,
@@ -7356,6 +7405,7 @@
       });
     }
     if (loading) loading.style.display = 'none';
+    applyAdminCaduHandoff(adminHandoff);
     refreshAll();
   }
 

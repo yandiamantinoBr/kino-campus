@@ -363,3 +363,32 @@ referente ao novo guard.
 Nenhum secret foi lido ou alterado e nenhum canário destrutivo foi executado.
 Os três bloqueios operacionais listados na seção anterior permanecem válidos e
 não devem ser contornados por código.
+
+## Adendo operacional: secrets, retenção e canal visitante
+
+Em 2026-08-01, uma nova verificação confirmou outbox de conclusão vazia e zero
+artefatos de exportação vencidos. Nesse estado seguro foram provisionados, sem
+registrar valores, a chave de 32 bytes da outbox, versão `v1`, TTL e
+`KC_APP_BASE_URL`. Uma segunda execução do utilitário confirmou comportamento
+idempotente e não rotacionou a chave existente.
+
+O segredo do worker de retenção e seus três valores correspondentes no Vault
+foram configurados. O status
+`kc_data_export_retention_configuration_status(...)` passou a retornar todos os
+gates verdadeiros; purge e monitor ficaram ativos e únicos; o alerta operacional
+foi resolvido. Um canário manual sem backlog terminou `succeeded`, com zero
+itens reivindicados, expurgados ou falhos.
+
+O canal LGPD visitante também deixou o estado degradado: foi criado widget
+Turnstile gerenciado para os dois hostnames canônicos, a site key foi registrada
+em Vercel Production e a Edge recebeu secret, environment, hostnames e origens
+exatas. O preflight remoto respondeu 204 para a origem canônica. A injeção da
+site key no frontend e o smoke visual dependem do próximo deploy de produção.
+Preview permanece fora do widget de produção por não estar na allowlist.
+
+Assim, as afirmações históricas acima sobre ausência da chave da outbox,
+`KC_APP_BASE_URL`, Turnstile e schedule de retenção estão superadas por este
+adendo. Continua fail-closed somente a integração de alertas de denúncias:
+`ADMIN_REPORTS_WEBHOOK_URL` e `KC_NOTIFY_HMAC_SECRET` não serão configurados até
+existir endpoint autenticado e minimizado no VPS. Nenhum canário destrutivo de
+exclusão foi executado.

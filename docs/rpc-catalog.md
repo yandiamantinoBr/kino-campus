@@ -188,7 +188,52 @@ Pagina os tickets de ajuda do admin sobre a tabela canônica `public.help_reques
 **Observações:**
 - Implementada com `SECURITY DEFINER` e `SET search_path = ''`.
 - Bloqueia caller não-admin com `FORBIDDEN`.
-- O frontend usa esse caminho preferencial quando não há filtro textual ou por prioridade; nos demais casos, mantém fallback controlado.
+- Mantida como fallback de rollback enquanto a RPC v2 é implantada.
+
+---
+
+### `kc_admin_help_queue_summary() → TABLE` *(v11.30.3)*
+
+Retorna somente os quatro contadores operacionais globais da fila de ajuda:
+urgentes abertas, em andamento, decisões externas pendentes e itens abertos há
+mais de 24 horas. Não projeta mensagem, e-mail, metadata ou identificador de
+ticket. É usada quando um filtro válido retorna zero cards.
+
+**Segurança:** wrapper público `SECURITY INVOKER`; implementação privada
+`SECURITY DEFINER`, `search_path` vazio, checagem de administrador e sem
+`EXECUTE` para `anon`.
+
+---
+
+### `kc_admin_list_help_requests_v2(p_status text, p_type text, p_priority text, p_query text, p_limit int, p_offset int) → TABLE` *(v11.30.3)*
+
+Projeção autoritativa da fila administrativa, com todos os filtros no servidor,
+estado de decisão de acesso externo e contadores operacionais globais. O
+`total_count` permanece relativo ao filtro atual.
+
+**Chamado em:** `KCAPI.listAdminHelpRequests()` / `admin-help-requests.controller.js`
+
+Além dos campos da v1, retorna `admin_status`, `admin_decided_at`,
+`admin_decided_by`, `admin_note`, `urgent_count`, `in_progress_count`,
+`external_pending_count` e `waiting_over_24h_count`.
+
+**Observações:**
+- wrapper público `SECURITY INVOKER`; implementação `SECURITY DEFINER` no schema
+  `kc_private`, com `search_path` vazio e verificação de administrador;
+- busca limitada a 200 caracteres, paginação limitada a 100 itens;
+- falhas reais não fazem fallback para leitura direta.
+
+---
+
+### `kc_admin_triage_help_request(p_id uuid, p_status text, p_priority text, p_expected_updated_at timestamptz) → TABLE` *(v11.30.3)*
+
+Atualiza a triagem de um ticket com lock de linha, validação, concorrência
+otimista e evento `help_request_triaged` no `audit_log`.
+
+**Chamado em:** `KCAPI.updateAdminHelpRequest()` para patches somente de triagem.
+
+**Erros de contrato:** `HELP_REQUEST_INVALID`, `HELP_REQUEST_NOT_FOUND`,
+`HELP_STATUS_INVALID`, `HELP_PRIORITY_INVALID` e `HELP_REQUEST_STALE`.
 
 ---
 

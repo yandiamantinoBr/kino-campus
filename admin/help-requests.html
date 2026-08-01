@@ -28,7 +28,7 @@
     #admin-loading { display:flex; align-items:center; justify-content:center; gap:12px; padding:64px 0; color:var(--kc-text-dark-secondary); }
     #admin-error { display:none; padding:14px 16px; border-radius:14px; border:1px solid rgba(255,98,98,.4); background:rgba(255,98,98,.12); color:#ffb0b0; margin-bottom:16px; }
     #admin-content { display:none; }
-    .kc-admin-help-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:18px; }
+    .kc-admin-help-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; margin-bottom:18px; }
     .kc-admin-help-metric { padding:16px; border-radius:18px; border:1px solid var(--kc-border-dark); background:var(--kc-surface-dark); }
     .kc-admin-help-metric strong { display:block; font-size:.82rem; color:var(--kc-text-dark-secondary); text-transform:uppercase; letter-spacing:.08em; }
     .kc-admin-help-metric span { display:block; margin-top:10px; font-size:1.8rem; font-weight:800; }
@@ -68,11 +68,52 @@
     .kc-admin-help-chip--status-archived { color:#c5c7d0; }
     .kc-admin-help-chip--priority-urgent { color:#ff8c8c; }
     .kc-admin-help-chip--priority-high { color:#ffb366; }
+    .kc-admin-help-chip--age-normal { color:var(--kc-text-dark-secondary); }
+    .kc-admin-help-chip--age-warn { color:#ffd27a; border-color:rgba(245,158,11,.42); }
+    .kc-admin-help-chip--age-critical { color:#ff9a9a; border-color:rgba(239,68,68,.46); }
     .kc-admin-help-meta { display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
     .kc-admin-help-meta div { min-width:0; }
     .kc-admin-help-meta strong { display:block; font-size:.78rem; color:var(--kc-text-dark-secondary); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
     .kc-admin-help-actions { display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr)); }
     .kc-admin-help-actions select { width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--kc-border-dark); background:var(--kc-background-dark); color:var(--kc-text-dark-primary); font:inherit; }
+    .kc-admin-help-workflow {
+      display:grid;
+      gap:8px;
+      padding:12px 14px;
+      border-left:4px solid #22c55e;
+      border-radius:8px;
+      background:color-mix(in srgb, #22c55e 7%, var(--kc-background-dark));
+    }
+    .kc-admin-help-workflow.is-attention {
+      border-left-color:#f59e0b;
+      background:color-mix(in srgb, #f59e0b 8%, var(--kc-background-dark));
+    }
+    .kc-admin-help-workflow__head,
+    .kc-admin-help-workflow__facts {
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px 14px;
+    }
+    .kc-admin-help-workflow__head strong,
+    .kc-admin-help-workflow__facts span { display:inline-flex; align-items:center; gap:7px; }
+    .kc-admin-help-workflow__head > span,
+    .kc-admin-help-workflow__facts { color:var(--kc-text-dark-secondary); font-size:.86rem; }
+    .kc-admin-help-operations { display:flex; flex-wrap:wrap; gap:8px; }
+    .kc-admin-help-operations button {
+      min-height:40px;
+      padding:9px 12px;
+      border-radius:10px;
+      border:1px solid var(--kc-border-dark);
+      background:var(--kc-background-dark);
+      color:var(--kc-text-dark-primary);
+      font:inherit;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .kc-admin-help-operations button:hover { border-color:var(--kc-primary-brand); }
+    .kc-admin-help-operations button:focus-visible { outline:2px solid var(--kc-primary-brand); outline-offset:2px; }
     .kc-admin-help-triage {
       display: grid;
       gap: 10px;
@@ -323,6 +364,10 @@
       .kc-admin-help-identity__row { align-items: flex-start; }
       .kc-admin-help-identity__value { flex-basis: 100%; justify-content: flex-start; }
       .kc-admin-lgpd-panel { padding: 12px; }
+      .kc-admin-help-workflow__head,
+      .kc-admin-help-workflow__facts { align-items:flex-start; flex-direction:column; }
+      .kc-admin-help-operations { display:grid; grid-template-columns:1fr; }
+      .kc-admin-help-operations button { width:100%; min-height:44px; }
       .kc-admin-lgpd-actions,
       .kc-admin-lgpd-danger { grid-template-columns: 1fr; }
       .kc-admin-lgpd-panel button { min-height: 44px; }
@@ -466,7 +511,7 @@
   <script defer src="../assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/local/local.help.adapter.js?v=8.6.13"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
-  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.16"></script>
+  <script defer src="../assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.17"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="../assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
     <script defer src="../assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
@@ -483,6 +528,6 @@
   <script defer src="../assets/js/core/kc-theme.js?v=8.6.1"></script>
   <script defer src="../assets/js/api/admin-shell.js?v=8.6.10"></script>
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
-  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.26"></script>
+  <script defer src="../assets/js/controllers/admin/admin-help-requests.controller.js?v=8.6.28"></script>
 </body>
 </html>

@@ -374,4 +374,16 @@ describe('admin Cadu UX contracts', () => {
     expect(model).not.toContain('\u0000');
     expect(model).toContain('/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/');
   });
+
+  test('consumes the Help handoff once, validates expiry and never sends it automatically', () => {
+    const start = controller.indexOf('function consumeAdminCaduHandoff');
+    const end = controller.indexOf('async function init()', start);
+    const handoff = controller.slice(start, end);
+    expect(handoff).toContain("window.sessionStorage.removeItem('kc_admin_cadu_handoff_v1')");
+    expect(handoff).toContain('expiresAt >= now && prompt && prompt.length <= 1200');
+    expect(handoff).toContain("url.searchParams.delete('source')");
+    expect(handoff).toContain('Revise a mensagem antes de enviar ao Cadu.');
+    expect(handoff).not.toContain('sendOpenclawChat(');
+    expect(handoff).not.toContain('.click()');
+  });
 });
