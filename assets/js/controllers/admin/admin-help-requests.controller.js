@@ -1738,6 +1738,11 @@
         : (error || '')
     ).trim();
     const upper = raw.toUpperCase();
+    if (upper.indexOf('ERASURE_HELP_MUST_REMAIN_OPEN') >= 0) {
+      return 'Este ticket pertence a um fluxo de exclusão de conta ainda aberto. '
+        + 'Não é possível marcar Resolvido ou Arquivado até o cancelamento formal ou até o servidor comprovar a entrega do recibo final. '
+        + 'Use o painel “Solicitação LGPD” para carregar o estado seguro e concluir a etapa indicada.';
+    }
     if (
       upper.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0
       || raw.indexOf('DSR_HELP_MUST_REMAIN_OPEN') >= 0

@@ -7,11 +7,11 @@ Este checklist é operacional. Ele não autoriza executar exclusão real durante
 1. fazer backup e validar a restauração em ambiente isolado;
 2. inventariar claims/leases já abertos e aplicar as migrations **expand** em
    ordem, incluindo DSR/barreira, redaction de auditoria, outbox criptografada,
-   recuperação de Auth, projeção segura, estado Auth esperado do Help, ponte
-   anônima, a materialização de DSR para Help legado autenticado em
+   recuperação de Auth, projeção segura, estado Auth esperado do Help e ponte
+   anônima; aplicar, em seguida, `20260729190653_help_submission_idempotency.sql`,
+   `20260729203000_help_privacy_guest_gateway_expand.sql`,
    `20260731193000_materialize_dsr_for_authenticated_legacy_help.sql` e
-   `20260729190653_help_submission_idempotency.sql`, seguidas por
-   `20260729203000_help_privacy_guest_gateway_expand.sql`;
+   `20260801183000_guard_erasure_help_closure.sql`;
 3. executar pgTAP, contract tests, advisors, capability e os canários de
    recovery/quiescência ainda com o frontend administrativo fechado;
 4. configurar a chave externa e os secrets da outbox; criar widgets Turnstile
@@ -77,6 +77,9 @@ Confirme:
   inclusive outbox criptografada, fechamento durável do titular, lease
   renovável, claims administrativos vinculados à sessão, transições atômicas e
   checkpoint recuperável do delete Auth;
+- `trg_guard_account_erasure_help_status` ativo em `help_requests`, com o
+  fechamento administrativo bloqueado até cancelamento formal ou comprovante
+  final entregue;
 - `pgrst.db_pre_request = public.kc_enforce_active_session_pre_request`;
 - trigger/guard em toda tabela gravável e policy RESTRICTIVE nas tabelas com RLS;
 - policy RESTRICTIVE global em `storage.objects`;

@@ -193,6 +193,7 @@ describe('CI and deployment safety contracts', () => {
       '20260729190653',
       '20260729203000',
       '20260731193000',
+      '20260801183000',
     ].forEach((migrationVersion) => {
       expect(edgeDeploy).toContain(`"${migrationVersion}"`);
       expect(privacyDeployScript).toContain(`"${migrationVersion}"`);
@@ -283,6 +284,12 @@ describe('CI and deployment safety contracts', () => {
       'kino-data-exports',
     ].forEach((prerequisite) => expect(privacySchemaContract).toContain(prerequisite));
     expect(privacySchemaContract).toContain('pg_catalog.pg_get_functiondef');
+    expect(privacySchemaContract).toContain(
+      'account_erasure_help_closure_guarded'
+    );
+    expect(privacySchemaContract).toContain(
+      'trg_guard_account_erasure_help_status'
+    );
     expect(privacySchemaContract).toContain(
       'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
     );

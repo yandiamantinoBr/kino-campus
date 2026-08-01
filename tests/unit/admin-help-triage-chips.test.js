@@ -57,7 +57,7 @@ describe('admin help-requests chip triage UX', () => {
   test('page styles interactive triage chips and cache-busts assets', () => {
     expect(PAGE).toContain('kc-admin-help-chip--interactive');
     expect(PAGE).toContain('kc-admin-help-triage');
-    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.25');
+    expect(PAGE).toContain('admin-help-requests.controller.js?v=8.6.26');
     expect(PAGE).toContain('admin-shell.css?v=8.6.12');
     expect(PAGE).toContain('is-triage-leaving');
     expect(PAGE).toContain('kc-admin-help-identity');
@@ -107,5 +107,7 @@ describe('admin help-requests chip triage UX', () => {
     expect(CONTROLLER).toContain('const closeLocked = exportCloseLocked || erasureCloseGuard.locked');
     expect(CONTROLLER).toContain('o núcleo foi excluído, mas a entrega do comprovante final ainda não foi comprovada');
     expect(CONTROLLER).toContain('closeLocked: closeLocked');
+    expect(CONTROLLER).toContain('ERASURE_HELP_MUST_REMAIN_OPEN');
+    expect(CONTROLLER).toContain('até o cancelamento formal ou até o servidor comprovar a entrega do recibo final');
   });
 });

@@ -85,6 +85,18 @@ comprovante. A entrega pode continuar pendente ou retryable.
 leitura confirmar, em conjunto: núcleo apagado, ausência de erro retryable,
 `notification_pending=false` e e-mail `sent`/`sent_manual`.
 
+**Endurecimento posterior:** o primeiro bloqueio existia somente no controlador
+do painel e podia ser contornado por uma atualização PostgREST direta usando uma
+sessão admin. A migration
+`20260801183000_guard_erasure_help_closure.sql` tornou a regra autoritativa no
+banco (`ERASURE_HELP_MUST_REMAIN_OPEN`). A exceção estreita para `service_role`
+aceita somente a forma estrutural da redação LGPD, porque a PII do ticket precisa
+ser removida antes da entrega; ela não libera um fechamento administrativo.
+O cancelamento transitório aceita somente o vínculo relacional
+`data_subject_requests.help_request_id`; um UUID inserido no metadata do Help não
+é autoridade e possui teste de regressão dedicado. O preflight de schema e os
+dois caminhos de deploy agora exigem o trigger e a migration correspondente.
+
 ### P1 — dados de tickets no storage do navegador
 
 **Evidência:** o snapshot anterior podia persistir linhas da fila e rascunhos
