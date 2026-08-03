@@ -1,5 +1,7 @@
 # Prompt de continuidade tecnica do KinoCampus
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus caminhos e nomes neste registro são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Data de consolidacao:** 2026-07-11, America/Sao_Paulo
 
 **Repositorio principal:** `C:\Users\yan1n\Documents\GitHub\kino-campus`

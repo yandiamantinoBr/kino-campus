@@ -1,5 +1,7 @@
 # Codex Handoff — Cadu Admin (KinoCampus)
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus nomes neste handoff são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Data:** 2026-06-29
 **Autor:** Mavis (MiniMax Agent)
 **Para:** Codex (OpenAI CLI) ou outra IA autônoma iterando em `/admin/cadu.html`

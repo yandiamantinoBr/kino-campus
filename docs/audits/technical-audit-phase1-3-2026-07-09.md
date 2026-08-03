@@ -1,5 +1,7 @@
 # Auditoria técnica KinoCampus — Fases 1 a 3
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus caminhos e nomes nesta auditoria são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Data:** 2026-07-09  
 **Branch de trabalho:** `codex/audit-phase2-phase3-2026-07-09`  
 **Base observada após pull/rebase:** `kinocampus-V75.0-foundations` em `6755ec1a`  
@@ -187,4 +189,3 @@ Nenhum P0 confirmado nesta rodada sem acesso destrutivo ao banco/produção. Nã
 3. Auditar e decidir destino de `api/cadu/pipeline.js` versus `api/cadu/pipeline-router.js`.
 4. Rodar inventário CSS atualizado e corrigir contagens antigas em `docs/architecture/css-architecture.md`.
 5. Transformar o risco de `kc_admin_token` em query em plano técnico: token efêmero específico para SSE/download ou alternativa compatível com EventSource.
-

@@ -1,5 +1,7 @@
 # V76.54 — consolidação Admin Cadu/OpenClaw + inventário cross‑AI
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus nomes neste relatório são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Data:** 2026-06-27  
 **Branch-base:** `kinocampus-V75.0-foundations`  
 **Escopo:** consolidar alterações feitas por Codex, Z.ai Code/GLM 5.2 e MiniMax Code/Minimax 3.0; registrar funcionamento real do painel `/admin/cadu.html`, integrações com VPS/OpenClaw/cadu-api e melhorias recentes de chat/mensagens; aplicar hardening mínimo para não deixar controle administrativo exposto.

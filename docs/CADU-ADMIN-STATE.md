@@ -2,7 +2,9 @@
 
 > **Aviso de leitura (2026-06-29):** este documento preserva auditorias v1/v2 com achados históricos. Vários pontos antigos sobre `cadu-api v0.4.2`, token obsoleto, endpoints 404 e restart pendente foram corrigidos ou reclassificados na seção **v3 — Verificação Codex pós-devolutiva OpenClaw (2026-06-29)** no fim do arquivo. Para estado vivo atual, leia a v3 primeiro e use v1/v2 como contexto histórico.
 
-**Última atualização:** 2026-06-29 (revisão pós-feedback — 3 correções factuais)
+> **Nota de migração de modelos (2026-08-02):** os provedores anteriores foram removidos do runtime; suas menções abaixo são registros históricos. O runtime atual usa DeepSeek V4 Flash, com DeepSeek V4 Pro como única alternativa.
+
+**Última atualização:** 2026-08-03 (contrato DeepSeek-only; narrativa histórica preservada)
 **Branch kino-campus:** `kinocampus-V75.0-foundations`
 **Commits relevantes:**
 - `218e7a6` — feat(admin/cadu): cross-tab "Perguntar Cadu" buttons + status indicators
@@ -304,7 +306,7 @@ appendLogLine(text)             // adiciona linha ao log com cor
 
 ### Funcionalidades
 - **4 stat cards**:
-  - AGENT: status (online/offline) + main + deepseek-v4-pro + ctx 1M tokens
+  - AGENT: status (online/offline) + main + deepseek-v4-flash + ctx 1M tokens
   - TELEGRAM: ON/OFF + bot ID truncado + 1/1 account
   - HEARTBEAT: timestamp + cadence
   - TASKS: total/0/0 ratio
@@ -779,7 +781,7 @@ O sistema tem **3 camadas de autenticação** validando coisas distintas:
 ### 4.4 OpenClaw (Cadu agent)
 
 **4 stat cards** (`refreshOpenclaw` linha 621-719):
-- AGENT: `main + deepseek-v4-pro + ctx 1M` (hardcoded hint linha 652)
+- AGENT: `main + deepseek-v4-flash + ctx 1M` (hardcoded hint linha 652)
 - TELEGRAM: `Bot: 8746…f8DM · 1/1 account` (hardcoded, vaza início do bot token — aceitável)
 - HEARTBEAT: regex em `healthText` (`/Telegram:\s*configured/i`, `/Heartbeat/i`)
 - TASKS: `active/total` + `succeeded OK · failures falhas`
@@ -1141,7 +1143,7 @@ docker compose up -d --no-deps --force-recreate cadu-api
 - `curator`: existe no repo e VPS; gera artefatos e le cache Supabase.
 - `ig`: existe no repo e VPS; depende do Chrome/CDP dentro do OpenClaw.
 - `duplicates`: existe; altera posts existentes no Supabase quando rodado sem `--dry-run`.
-- `format`: existe; consome chave DeepSeek/Z.ai e gera `_formatted_*.json`.
+- `format`: existe; consome chave DeepSeek e gera `_formatted_*.json`.
 - `publish`: existe; chama Edge Function `cadu-publish` e pode publicar/mesclar posts reais.
 - `enrich`: existe; atualiza metadata/post_media de posts publicados.
 - `dedup`: existe; no comando catalogado fica em dry-run por padrao porque `dedup-kino.js` so altera com `--apply`.

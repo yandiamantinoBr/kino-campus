@@ -1,5 +1,7 @@
 # Hostinger Painel — Investigação DKIM (2026-07-07)
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus caminhos e nomes neste registro são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Contexto:** Investigação profunda do painel Hostinger do Yan para descobrir
 onde adicionar DKIM TXT record ao `kinocampus.com.br`.
 

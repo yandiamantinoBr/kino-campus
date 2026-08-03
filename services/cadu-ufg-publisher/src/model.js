@@ -2,23 +2,39 @@
 
 const { clamp, safeJsonParse } = require('./utils');
 
-function resolveDeepSeekEndpoint(config) {
-  const raw = String(config.deepseekEndpoint || config.deepseekBaseUrl || 'https://api.deepseek.com').trim();
+function resolveDeepSeekEndpoint(config = {}) {
+  const raw = String(
+    config.deepseekEndpoint || config.deepseekBaseUrl || 'https://api.deepseek.com/v1/chat/completions',
+  ).trim();
+  let url;
   try {
-    const url = new URL(raw);
-    if (/\/chat\/completions\/?$/i.test(url.pathname)) return url.toString();
-    url.pathname = `${url.pathname.replace(/\/+$/, '')}/chat/completions`;
-    return url.toString();
+    url = new URL(raw);
   } catch (_) {
-    return 'https://api.deepseek.com/chat/completions';
+    throw new Error('DeepSeek endpoint must be a valid URL');
   }
+  if (url.protocol !== 'https:'
+      || url.hostname !== 'api.deepseek.com'
+      || url.port
+      || url.username
+      || url.password) {
+    throw new Error('DeepSeek endpoint must use https://api.deepseek.com');
+  }
+  const path = url.pathname.replace(/\/+$/, '') || '/';
+  if (!['/', '/v1', '/chat/completions', '/v1/chat/completions'].includes(path)) {
+    throw new Error('DeepSeek endpoint must target /v1/chat/completions');
+  }
+  url.pathname = '/v1/chat/completions';
+  url.search = '';
+  url.hash = '';
+  return url.toString();
 }
 
-function resolveDeepSeekModel(config) {
-  const raw = String(config.deepseekModel || '').trim();
-  if (!raw) return 'deepseek-v4-flash';
-  if (raw === 'deepseek-chat' || raw === 'deepseek-reasoner') return 'deepseek-v4-flash';
-  return raw;
+function resolveDeepSeekModel(config = {}) {
+  const model = String(config.deepseekModel || 'deepseek-v4-flash').trim();
+  if (!['deepseek-v4-flash', 'deepseek-v4-pro'].includes(model)) {
+    throw new Error('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+  }
+  return model;
 }
 
 async function summarizeWithDeepSeek(config, item, classification) {

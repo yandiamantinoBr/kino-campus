@@ -2,7 +2,7 @@
 /**
  * formatador-ia.js — Gera descrições ricas para posts do Kino Campus
  * 
- * Recebe itens do curador (JSON) e usa o provedor IA configurado para formatar
+ * Recebe itens do curador (JSON) e usa DeepSeek para formatar
  * cada item com: emojis de lead, negrito markdown, datas, público-alvo,
  * requisitos, CTAs, contato.
  *
@@ -41,7 +41,7 @@ function loadEnvFile(filePath) {
     if (!fs.existsSync(filePath)) return;
     const content = fs.readFileSync(filePath, 'utf8');
     content.split(/\r?\n/).forEach((line) => {
-      // Never load commented-out credentials (e.g. disabled MiniMax keys).
+      // Never load commented-out credentials.
       if (/^\s*#/.test(line)) return;
       const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
       if (!match || process.env[match[1]]) return;
@@ -55,12 +55,13 @@ function loadEnvFile(filePath) {
   '/data/.openclaw/workspace/kino-campus/services/cadu-ufg-publisher/.env.local',
 ].forEach(loadEnvFile);
 
-// ---- API de texto configurável (DeepSeek first; Z.ai/MiniMax only via explicit env) ----
-// 2026-07-20: hardcoded MiniMax defaults caused billing/provider noise when keys
-// were missing or disabled. Prefer DeepSeek (production standard) and keep
-// alternate providers as opt-in via env vars only.
-const DEFAULT_DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/chat/completions';
-const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-pro';
+// ---- API de texto DeepSeek-only ----
+const DEFAULT_DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/v1/chat/completions';
+const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash';
+const ALLOWED_DEEPSEEK_MODELS = new Set([
+  'deepseek-v4-flash',
+  'deepseek-v4-pro',
+]);
 
 function firstNonEmpty(...values) {
   for (const value of values) {
@@ -70,48 +71,62 @@ function firstNonEmpty(...values) {
   return '';
 }
 
+function resolveDeepSeekEndpoint(value = DEFAULT_DEEPSEEK_ENDPOINT) {
+  let endpoint;
+  try {
+    endpoint = new URL(String(value || '').trim());
+  } catch (_) {
+    throw new Error('DeepSeek endpoint must be a valid URL');
+  }
+  if (endpoint.protocol !== 'https:'
+      || endpoint.hostname !== 'api.deepseek.com'
+      || endpoint.port
+      || endpoint.username
+      || endpoint.password) {
+    throw new Error('DeepSeek endpoint must use https://api.deepseek.com');
+  }
+  if (!['/chat/completions', '/v1/chat/completions'].includes(endpoint.pathname.replace(/\/+$/, ''))) {
+    throw new Error('DeepSeek endpoint must target /v1/chat/completions');
+  }
+  endpoint.pathname = '/v1/chat/completions';
+  endpoint.search = '';
+  endpoint.hash = '';
+  return endpoint.toString();
+}
+
+function resolveDeepSeekModel(value = DEFAULT_DEEPSEEK_MODEL) {
+  const model = String(value || '').trim() || DEFAULT_DEEPSEEK_MODEL;
+  if (!ALLOWED_DEEPSEEK_MODELS.has(model)) {
+    throw new Error('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+  }
+  return model;
+}
+
 function resolveTextProviderConfig(env = process.env) {
   const apiKey = firstNonEmpty(
-    env.CADU_AI_API_KEY,
     env.CADU_DEEPSEEK_API_KEY,
-    env.CADU_ZAI_API_KEY,
-    env.CADU_MINIMAX_API_KEY,
     env.DEEPSEEK_API_KEY,
-    env.MINIMAX_API_KEY,
   );
-  const apiUrl = firstNonEmpty(
-    env.CADU_AI_ENDPOINT,
+  const apiUrl = resolveDeepSeekEndpoint(firstNonEmpty(
     env.CADU_DEEPSEEK_ENDPOINT,
-    env.CADU_ZAI_ENDPOINT,
-    env.CADU_MINIMAX_ENDPOINT,
-    env.MINIMAX_ENDPOINT,
+    env.CADU_AI_ENDPOINT,
     DEFAULT_DEEPSEEK_ENDPOINT,
-  );
-  const model = firstNonEmpty(
-    env.CADU_AI_MODEL,
+  ));
+  const model = resolveDeepSeekModel(firstNonEmpty(
     env.CADU_DEEPSEEK_MODEL,
-    env.CADU_ZAI_MODEL,
-    env.CADU_MINIMAX_MODEL,
-    env.MINIMAX_MODEL,
     env.DEEPSEEK_MODEL,
+    env.CADU_AI_MODEL,
     DEFAULT_DEEPSEEK_MODEL,
-  );
+  ));
   return { apiKey, apiUrl, model };
 }
 
 const { apiKey: API_KEY, apiUrl: API_URL, model: MODEL } = resolveTextProviderConfig();
 
 function providerMetadata(apiUrl = API_URL, model = MODEL) {
-  let host = 'unknown';
+  let host = 'invalid';
   try { host = new URL(apiUrl).hostname.toLowerCase(); } catch (_) {}
-  const provider = host.includes('minimax')
-    ? 'minimax'
-    : host.includes('deepseek')
-      ? 'deepseek'
-      : host.includes('z.ai') || host.includes('bigmodel')
-        ? 'zai'
-        : host === 'unknown' ? 'unknown' : host;
-  return { provider, providerHost: host, model: String(model || 'unknown').slice(0, 160) };
+  return { provider: 'deepseek', providerHost: host, model: String(model || 'unknown').slice(0, 160) };
 }
 
 const PROVIDER = providerMetadata();
@@ -134,25 +149,15 @@ function providerRuntimeConfig(env = process.env) {
 
 const PROVIDER_RUNTIME = providerRuntimeConfig();
 
-function buildProviderPayload(messages, model = MODEL, provider = PROVIDER.provider) {
+function buildProviderPayload(messages, model = MODEL) {
   const payload = {
-    model,
+    model: resolveDeepSeekModel(model),
     messages,
     temperature: 0.4,
     max_tokens: 4000,
+    thinking: { type: 'disabled' },
+    response_format: { type: 'json_object' },
   };
-  if (provider === 'deepseek') {
-    // Formatting is a constrained transformation, not an agentic reasoning
-    // task. DeepSeek V4 non-thinking mode produced the required structured
-    // JSON in production without spending the formatter's wall-clock budget.
-    payload.thinking = { type: 'disabled' };
-    // DeepSeek's JSON mode is provider-specific. Keep alternate OpenAI-like
-    // providers on their established payload contract.
-    payload.response_format = { type: 'json_object' };
-  } else {
-    // Preserve the existing OpenAI-compatible hint for alternate providers.
-    payload.reasoning_effort = 'high';
-  }
   return payload;
 }
 
@@ -162,7 +167,7 @@ function buildProviderPayload(messages, model = MODEL, provider = PROVIDER.provi
 
 function stripReasoning(content) {
   if (!content) return '';
-  // Remove MiniMax M3 reasoning blocks from content
+  // Remove reasoning blocks if the response contains them.
   return content
     .replace(/<think>[\s\S]*?<\/think>/gi, '')
     .replace(/^[\s\n]+/, '')
@@ -458,10 +463,9 @@ async function callDeepSeek(messages, dependencies = {}) {
   if (!apiKey) {
     throw formatterFailure('credentials_missing', { phase: 'credentials' });
   }
-  const provider = dependencies.provider || PROVIDER.provider;
-  const model = dependencies.model || MODEL;
-  const endpoint = new URL(dependencies.apiUrl || API_URL);
-  const data = JSON.stringify(buildProviderPayload(messages, model, provider));
+  const model = resolveDeepSeekModel(dependencies.model || MODEL);
+  const endpoint = new URL(resolveDeepSeekEndpoint(dependencies.apiUrl || API_URL));
+  const data = JSON.stringify(buildProviderPayload(messages, model));
   const requestAttempt = dependencies.requestProviderAttempt || requestProviderAttempt;
   const wait = dependencies.sleep || sleep;
   const warn = dependencies.warn || console.warn;
@@ -935,7 +939,7 @@ async function formatItem(item, dependencies = {}) {
       images: media.images,
       galleryImages: media.galleryImages,
     };
-    // P1-D (2026-06-12): quality gate. Se faltar elementos, enriquece via M3.
+    // P1-D (2026-06-12): quality gate. Se faltar elementos, enriquece via DeepSeek.
     const qualityResult = await ensureQuality(record, { maxEnrichAttempts: 1 });
     if (qualityResult.ok) {
       return qualityResult.record;
@@ -955,10 +959,6 @@ async function formatItem(item, dependencies = {}) {
       dependencies.apiUrl || API_URL,
       dependencies.model || MODEL,
     );
-    if (typeof dependencies.provider === 'string'
-        && /^[a-z][a-z0-9._-]{1,79}$/.test(dependencies.provider)) {
-      effectiveProvider.provider = dependencies.provider;
-    }
     const formatFailure = normalizeFormatFailure(e, effectiveProvider);
     console.warn(`   ⚠️ Fallback AI: usando descricao crua (${rawDesc.length}ch) — ${formatFailure.provider}:${formatFailure.code}`);
     return {
@@ -1165,6 +1165,8 @@ module.exports = {
   providerMetadata,
   providerRuntimeConfig,
   requestProviderAttempt,
+  resolveDeepSeekEndpoint,
+  resolveDeepSeekModel,
   resolveTextProviderConfig,
   sanitizeFormattedDescriptionLinks,
 };

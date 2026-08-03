@@ -537,8 +537,8 @@ function buildImageList(item: CaduItem): string[] {
 
 // Heuristic cover scorer — ranqueia candidatos a imagem de capa por relevância
 // ao título/categoria, penalizando logos/ícones/imagens genéricas. Zero risco
-// (sem chamada de API externa). Futura melhoria: VLM (Z.ai GLM-4.6V) pode
-// refinar este ranking com visão real, mas este já resolve a maioria dos casos.
+// (sem chamada de API externa). VLM permanece desabilitado; esta heurística
+// determinística resolve a maioria dos casos sem ativar visão.
 const COVER_PENALTY_PATTERNS = /(?:logo|banner|favicon|icon|placeholder|default|spinner|loading|avatar|sprite|btn_|button|nav_|header_|footer_|sidebar|background|bg\.|wallpaper|stamp|seal|assinatura)/i;
 const COVER_TINY_DIM = /[_\-/](\d{1,2})x(\d{1,2})(?![0-9])(?:\.|$|_)/;  // e.g. 16x16, 32x32
 const COVER_GOOD_EXT = /\.(jpe?g|png|webp)(?:$|[?#])/i;
