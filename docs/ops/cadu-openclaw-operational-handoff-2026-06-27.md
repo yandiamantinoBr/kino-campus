@@ -1,5 +1,7 @@
 # Cadu/OpenClaw — mapa operacional de continuidade
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus caminhos e nomes neste handoff são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Data:** 2026-06-27  
 **Escopo:** registrar conexões, rotas, variáveis e pontos de controle necessários para continuar o desenvolvimento do painel `/admin/cadu.html`, da cadu-api na VPS Hostinger, do OpenClaw e da publicação via Supabase sem depender de contexto de chat.
 

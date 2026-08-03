@@ -1,5 +1,7 @@
 # Auditorias Técnicas do KinoCampus
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus caminhos e nomes nas auditorias históricas são evidências preservadas. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 Este diretório concentra **auditorias pontuais** de cima para baixo (read-only + validação contra
 produção) para reduzir drift entre código, documentação e estado remoto. Diferem dos relatórios de
 QA em `../qa/reports/` (que cobrem um patch especifico) e dos relatorios de release na raiz

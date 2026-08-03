@@ -5,7 +5,7 @@
  * Pipeline em 3 estágios (do mais barato ao mais caro):
  *   STAGE 1 (texto): Jaccard shingles + Levenshtein + match por URL canônica
  *   STAGE 2 (imagem): pHash perceptual 8x8 + detecção de logo inadequada
- *   STAGE 3 (semântico): M3 em batch classifica se é mesmo evento / repost / distintos
+ *   STAGE 3 (semântico): DeepSeek em batch classifica se é mesmo evento / repost / distintos
  *
  * Ações:
  *   - Duplicata exata confirmada (Stage 1+3): hide do mais recente via Supabase
@@ -17,7 +17,7 @@
  *   node scripts/dedup-kino.js --apply                    # aplica ações automaticamente (CLI manual)
  *   node scripts/dedup-kino.js --auto-apply               # idem --apply, usado pelo pipeline
  *   node scripts/dedup-kino.js --days 30                  # lookback custom (padrão 90)
- *   node scripts/dedup-kino.js --limit 5                  # max pares a enviar pro M3
+ *   node scripts/dedup-kino.js --limit 5                  # max pares a enviar ao DeepSeek
  *   node scripts/dedup-kino.js --no-llm                   # só stages 1+2
  *   node scripts/dedup-kino.js --report                   # apenas gera relatório
  *
@@ -178,12 +178,47 @@ const ANON_KEY = runtimeEnv.CADU_SUPABASE_ANON_KEY
   || runtimeEnv.KINOCAMPUS_SUPABASE_ANON_KEY;
 const KINO_EMAIL = runtimeEnv.CADU_KINO_EMAIL || runtimeEnv.CADU_EMAIL;
 const KINO_PASSWORD = runtimeEnv.CADU_KINO_PASSWORD || runtimeEnv.CADU_PASSWORD;
-const AI_API_KEY = runtimeEnv.CADU_DEEPSEEK_API_KEY || runtimeEnv.CADU_AI_API_KEY
-  || runtimeEnv.CADU_ZAI_API_KEY || runtimeEnv.DEEPSEEK_API_KEY;
-const AI_BASE = runtimeEnv.CADU_DEEPSEEK_ENDPOINT || runtimeEnv.CADU_ZAI_ENDPOINT
-  || runtimeEnv.CADU_MINIMAX_ENDPOINT || 'https://api.deepseek.com/v1/chat/completions';
-const AI_MODEL = runtimeEnv.CADU_DEEPSEEK_MODEL || runtimeEnv.CADU_AI_MODEL
-  || runtimeEnv.CADU_ZAI_MODEL || 'deepseek-v4-pro';
+const ALLOWED_DEEPSEEK_MODELS = new Set(['deepseek-v4-flash', 'deepseek-v4-pro']);
+
+function resolveDeepSeekEndpoint(value) {
+  let endpoint;
+  try {
+    endpoint = new URL(String(value || 'https://api.deepseek.com/v1/chat/completions').trim());
+  } catch (_) {
+    throw new Error('DeepSeek endpoint must be a valid URL');
+  }
+  if (endpoint.protocol !== 'https:'
+      || endpoint.hostname !== 'api.deepseek.com'
+      || endpoint.port
+      || endpoint.username
+      || endpoint.password) {
+    throw new Error('DeepSeek endpoint must use https://api.deepseek.com');
+  }
+  if (!['/chat/completions', '/v1/chat/completions'].includes(endpoint.pathname.replace(/\/+$/, ''))) {
+    throw new Error('DeepSeek endpoint must target /v1/chat/completions');
+  }
+  endpoint.pathname = '/v1/chat/completions';
+  endpoint.search = '';
+  endpoint.hash = '';
+  return endpoint.toString();
+}
+
+function resolveDeepSeekModel(value) {
+  const model = String(value || 'deepseek-v4-flash').trim();
+  if (!ALLOWED_DEEPSEEK_MODELS.has(model)) {
+    throw new Error('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+  }
+  return model;
+}
+
+const DEEPSEEK_API_KEY = runtimeEnv.CADU_DEEPSEEK_API_KEY
+  || runtimeEnv.DEEPSEEK_API_KEY;
+const DEEPSEEK_ENDPOINT = resolveDeepSeekEndpoint(
+  runtimeEnv.CADU_DEEPSEEK_ENDPOINT || runtimeEnv.CADU_AI_ENDPOINT,
+);
+const DEEPSEEK_MODEL = resolveDeepSeekModel(
+  runtimeEnv.CADU_DEEPSEEK_MODEL || runtimeEnv.DEEPSEEK_MODEL || runtimeEnv.CADU_AI_MODEL,
+);
 
 // === Stage 1: Texto ===
 
@@ -301,23 +336,23 @@ async function computeContentHash(imageUrl) {
   }
 }
 
-// === Stage 3: Semântica (M3) ===
+// === Stage 3: Semântica (DeepSeek) ===
 
 async function callAI(prompt, retries = 3) {
-  if (!AI_API_KEY) {
-    throw new Error('AI_API_KEY ausente');
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('Chave DeepSeek ausente');
   }
   const delays = [10000, 20000, 40000];
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const res = await fetch(AI_BASE, {
+      const res = await fetch(DEEPSEEK_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AI_API_KEY}`,
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         },
         body: JSON.stringify({
-          model: AI_MODEL,
+          model: DEEPSEEK_MODEL,
           messages: [
             {
               role: 'system',
@@ -325,9 +360,10 @@ async function callAI(prompt, retries = 3) {
             },
             { role: 'user', content: prompt },
           ],
-          max_completion_tokens: 2000,
+          max_tokens: 2000,
           temperature: 0.1,
-          reasoning_effort: 'max',
+          thinking: { type: 'disabled' },
+          response_format: { type: 'json_object' },
         }),
         signal: AbortSignal.timeout(60000),
       });
@@ -343,7 +379,7 @@ async function callAI(prompt, retries = 3) {
       }
       const json = await res.json();
       const content = json.choices?.[0]?.message?.content || '';
-      // IA com thinking pode retornar <think>...</think>; strip
+      // Remove blocos de raciocínio defensivamente, caso o upstream os envie.
       return content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
     } catch (e) {
       if (attempt === retries - 1) throw e;
@@ -375,7 +411,7 @@ Responda SOMENTE este JSON (sem markdown, sem \`\`\`):
 }`;
 
 async function classifySemantica(pairs) {
-  console.log(`\n🧠 STAGE 3: Classificação semântica (M3) para ${pairs.length} pares...`);
+  console.log(`\n🧠 STAGE 3: Classificação semântica (DeepSeek) para ${pairs.length} pares...`);
   const results = [];
   for (let i = 0; i < pairs.length; i++) {
     const { a, b } = pairs[i];
@@ -685,8 +721,8 @@ async function main() {
     console.error('❌ Credenciais técnicas do KinoCampus ausentes no ambiente');
     process.exit(1);
   }
-  if (!NO_LLM && !AI_API_KEY) {
-    console.error('⚠️ AI_API_KEY ausente; forçando --no-llm');
+  if (!NO_LLM && !DEEPSEEK_API_KEY) {
+    console.error('⚠️ Chave DeepSeek ausente; forçando --no-llm');
   }
 
   const supabase = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
@@ -919,11 +955,11 @@ async function main() {
   }
   console.log(`   Pares com imagem similar (Hamming ≤ ${PHASH_HAMMING_MAX}): ${imageConfirmedPairs.length}`);
 
-  // === STAGE 3: Semântica (M3) ===
+  // === STAGE 3: Semântica (DeepSeek) ===
   let semanticaResults = [];
   let pairsForLLM = [];
 
-  if (!NO_LLM && AI_API_KEY) {
+  if (!NO_LLM && DEEPSEEK_API_KEY) {
     // v1.3: Stage 3 só para casos AMBÍGUOS. Duplicatas exatas (URL canônica)
     // são 100% seguras e vão direto pro hide — IA só atrasaria.
     // Candidatos à IA:
@@ -952,7 +988,7 @@ async function main() {
     if (pairsForLLM.length > 0) {
       semanticaResults = await classifySemantica(pairsForLLM);
     } else {
-      console.log(`\n🧠 STAGE 3: Nenhum par candidato para M3.`);
+      console.log(`\n🧠 STAGE 3: Nenhum par candidato para DeepSeek.`);
     }
   }
 

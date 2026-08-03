@@ -1,5 +1,7 @@
 # Auditoria V3 - Estado Real Verificado do Kino Campus
 
+> **Nota de migração (2026-08-02):** as ferramentas e os provedores anteriores foram removidos do runtime; seus caminhos e nomes nesta auditoria são históricos. O runtime atual é DeepSeek-only, com V4 Flash padrão e V4 Pro como única alternativa.
+
 **Data:** 2026-06-11 America/Sao_Paulo
 **Escopo:** comparacao entre `RELATORIO-AUDITORIA-KINOCAMPUS.md` (V1, 2026-06-08),
 `ADENDO-AUDITORIA-APROFUNDADA-V2.md` (V2, 2026-06-09) e o estado real do repositorio,

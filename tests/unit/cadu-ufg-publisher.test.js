@@ -734,19 +734,23 @@ describe('cadu-ufg-publisher', () => {
     ]);
   });
 
-  test('DeepSeek endpoint accepts official base URL or explicit v1 base URL', () => {
-    expect(resolveDeepSeekEndpoint({})).toBe('https://api.deepseek.com/chat/completions');
+  test('DeepSeek endpoint accepts only the official API host', () => {
+    expect(resolveDeepSeekEndpoint({})).toBe('https://api.deepseek.com/v1/chat/completions');
     expect(resolveDeepSeekEndpoint({ deepseekBaseUrl: 'https://api.deepseek.com/v1' }))
       .toBe('https://api.deepseek.com/v1/chat/completions');
-    expect(resolveDeepSeekEndpoint({ deepseekEndpoint: 'https://proxy.local/chat/completions' }))
-      .toBe('https://proxy.local/chat/completions');
+    expect(resolveDeepSeekEndpoint({ deepseekEndpoint: 'https://api.deepseek.com/chat/completions' }))
+      .toBe('https://api.deepseek.com/v1/chat/completions');
+    expect(() => resolveDeepSeekEndpoint({ deepseekEndpoint: 'https://example.invalid/chat/completions' }))
+      .toThrow('DeepSeek endpoint must use https://api.deepseek.com');
+    expect(() => resolveDeepSeekEndpoint({ deepseekEndpoint: 'not-a-url' }))
+      .toThrow('DeepSeek endpoint must be a valid URL');
   });
 
-  test('DeepSeek model resolves deprecated aliases to the current flash model', () => {
+  test('DeepSeek model permits Flash by default and Pro as the only alternative', () => {
     expect(resolveDeepSeekModel({})).toBe('deepseek-v4-flash');
-    expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-chat' })).toBe('deepseek-v4-flash');
-    expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-reasoner' })).toBe('deepseek-v4-flash');
     expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-v4-pro' })).toBe('deepseek-v4-pro');
+    expect(() => resolveDeepSeekModel({ deepseekModel: 'other-model' }))
+      .toThrow('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
   });
 
   test('publisher uploads remote cover images to Supabase Storage before post_media', async () => {

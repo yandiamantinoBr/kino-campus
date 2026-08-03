@@ -298,7 +298,7 @@ PIPELINE_STAGES: dict[str, PipelineStage] = {
         description="Gera descrições canônicas a partir do _truly_new do dia",
         script="scripts/pipeline-kino.js",
         args=("--stage=format",),
-        # 2026-07-10 (Mavis): 120s -> 300s. DeepSeek V4 Pro com rate limit
+        # 2026-07-10: 120s -> 300s. DeepSeek requests with bounded retries
         # + retry 5x (10s/20s/40s/80s/160s) pode demorar bastante.
         estimated_sec=300,
         category="process",
@@ -519,7 +519,7 @@ PIPELINE_STAGE_NODE_ENTRYPOINTS: dict[str, tuple[str, ...]] = {
 REQUIREMENT_LABELS = {
     "supabase_key": "Chave Supabase/KinoCampus",
     "kino_credentials": "Login técnico KinoCampus",
-    "deepseek_key": "Chave DeepSeek/Z.ai",
+    "deepseek_key": "Chave DeepSeek",
     "browser_cdp": "Navegador CDP do OpenClaw",
     "google_calendar": "OAuth do Google Agenda",
     "sigaa_credentials": "Credenciais SIGAA",
@@ -533,7 +533,7 @@ REQUIREMENT_ENV_ALIASES = {
         "KINOCAMPUS_SUPABASE_ANON_KEY",
     ),
     "kino_credentials": ("CADU_KINO_EMAIL", "CADU_EMAIL", "CADU_KINO_PASSWORD", "CADU_PASSWORD"),
-    "deepseek_key": ("CADU_DEEPSEEK_API_KEY", "CADU_ZAI_API_KEY", "CADU_MINIMAX_API_KEY", "DEEPSEEK_API_KEY"),
+    "deepseek_key": ("CADU_DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY"),
     "browser_cdp": ("OPENCLAW_CDP_HOST", "CDP_HOST", "BROWSER_CDP_HOST"),
     "google_calendar": (
         "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_CLIENT_ID",

@@ -3,3 +3,8 @@ services/cadu-ufg-publisher/scripts/lib/candidate-source-registry.js text eol=lf
 services/cadu-ufg-publisher/scripts/sync-candidate-source-registry.js text eol=lf
 tests/unit/cadu-candidate-source-registry.test.js text eol=lf
 supabase/migrations/*.sql text eol=lf
+
+# Historical runtime copies intentionally retain CRLF/mixed line endings.
+data/.openclaw/workspace/scripts/dedup-kino.js whitespace=cr-at-eol
+data/.openclaw/workspace/scripts/formatador-ia.js whitespace=cr-at-eol
+data/.openclaw/workspace/skills/cadu-api/pipeline.py whitespace=cr-at-eol
