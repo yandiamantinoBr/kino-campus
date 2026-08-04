@@ -15,13 +15,17 @@ test.describe('V76.25 - Sobre o KinoCampus compacto no mobile', () => {
     await page.goto('/index.html');
 
     const section = page.locator('[data-kc-context-section="home"]');
+    // The home context opener is now a single <button data-kc-context-open="home">
+    // (was an <h3 role="button"> + a nested <button> arrow). The arrow
+    // is rendered as a <span aria-hidden="true"> inside the button so
+    // the keyboard/screen-reader experience stays one trigger.
     const triggers = section.locator('[data-kc-context-open="home"]');
     const trigger = triggers.first();
-    const arrowButton = section.locator('.kc-context-info-btn--context-arrow');
+    const arrowIcon = section.locator('.kc-context-info-btn--context-arrow');
     await expect(section).toBeVisible();
-    await expect(triggers).toHaveCount(2);
+    await expect(triggers).toHaveCount(1);
     await expect(trigger).toBeVisible();
-    await expect(arrowButton).toBeVisible();
+    await expect(arrowIcon).toBeVisible();
     await expect(section.locator('.kc-sidebar-help')).toBeHidden();
     await expect(section.locator('details')).toBeHidden();
 
