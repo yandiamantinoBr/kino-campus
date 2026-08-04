@@ -212,6 +212,11 @@ html:not(.kc-loading) .kc-hero-carousel {
   50% { opacity: 1; }
 }
 
+/* Sem mock: se nao houver banner ativo, some o bloco em vez de slides antigos */
+.kc-hero-carousel.kc-hero-empty {
+  display: none;
+}
+
 /* Fade-in suave quando o skeleton é removido */
 .kc-hero-carousel {
   transition: opacity 0.28s ease;
