@@ -152,55 +152,65 @@
         </div>
       </div>
 
-      <div class="kc-feed-tabs" id="kc-home-feed-tabs" role="tablist" aria-label="Visualização do feed" data-i18n-aria-label="aria-label.feed-view">
-        <!-- Abas de visualização do feed principal -->
-        <button id="tab-destaques" class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
-          <i class="fas fa-fire"></i>
-          <span>Destaques</span>
-        </button>
-        <button id="tab-recentes" type="button" role="tab" data-feed-tab="recentes" aria-selected="false" aria-controls="kc-feed-recentes">
-          <i class="fas fa-clock"></i>
-          <span>Recentes</span>
-        </button>
-        <button id="tab-comentados" type="button" role="tab" data-feed-tab="comentados" aria-selected="false" aria-controls="kc-feed-comentados">
-          <i class="fas fa-comments"></i>
-          <span>Comentados</span>
-        </button>
+      <div class="kc-feed-tabs" id="kc-home-feed-tabs">
+        <!--
+          Two semantic groups so the tablist is not contaminated with
+          navigation links (which used to fail aria-required-children on
+          LHCI a11y because <a> children of role="tablist" are not
+          allowed). 1) view-switcher tabs (real tabs), 2) section nav
+          links (real nav).
+        -->
+        <div class="kc-feed-tabs__view" role="tablist" aria-label="Visualização do feed" data-i18n-aria-label="aria-label.feed-view">
+          <button id="tab-destaques" class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true" aria-controls="kc-feed-destaques">
+            <i class="fas fa-fire"></i>
+            <span>Destaques</span>
+          </button>
+          <button id="tab-recentes" type="button" role="tab" data-feed-tab="recentes" aria-selected="false" aria-controls="kc-feed-recentes">
+            <i class="fas fa-clock"></i>
+            <span>Recentes</span>
+          </button>
+          <button id="tab-comentados" type="button" role="tab" data-feed-tab="comentados" aria-selected="false" aria-controls="kc-feed-comentados">
+            <i class="fas fa-comments"></i>
+            <span>Comentados</span>
+          </button>
+        </div>
         <!-- Divisor visual -->
         <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-        <!-- Links de navegação para outras seções -->
-        <a href="compra-venda-feed.html">
-          <i class="fas fa-shopping-bag"></i>
-          <span>Compra e Venda</span>
-        </a>
-        <a href="caronas-feed.html">
-          <i class="fas fa-car"></i>
-          <span>Caronas</span>
-        </a>
-        <a href="compra-venda-feed.html?filter=livros">
-          <i class="fas fa-book"></i>
-          <span>Livros</span>
-        </a>
-        <a href="compra-venda-feed.html?filter=eletronicos">
-          <i class="fas fa-laptop"></i>
-          <span>Eletrônicos</span>
-        </a>
-        <a href="compra-venda-feed.html?filter=vestuario">
-          <i class="fas fa-shirt"></i>
-          <span>Roupas</span>
-        </a>
-        <a href="moradia.html">
-          <i class="fas fa-home"></i>
-          <span>Moradia</span>
-        </a>
-        <a href="eventos.html">
-          <i class="fas fa-calendar"></i>
-          <span>Eventos</span>
-        </a>
-        <a href="eventos.html?filter=sustentabilidade">
-          <i class="fas fa-leaf"></i>
-          <span>Sustentabilidade</span>
-        </a>
+        <!-- Links de navegação para outras seções (nav separado das tabs) -->
+        <nav class="kc-feed-tabs__nav" aria-label="Categorias do feed" data-i18n-aria-label="aria-label.feed-categories">
+          <a href="compra-venda-feed.html">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Compra e Venda</span>
+          </a>
+          <a href="caronas-feed.html">
+            <i class="fas fa-car"></i>
+            <span>Caronas</span>
+          </a>
+          <a href="compra-venda-feed.html?filter=livros">
+            <i class="fas fa-book"></i>
+            <span>Livros</span>
+          </a>
+          <a href="compra-venda-feed.html?filter=eletronicos">
+            <i class="fas fa-laptop"></i>
+            <span>Eletrônicos</span>
+          </a>
+          <a href="compra-venda-feed.html?filter=vestuario">
+            <i class="fas fa-shirt"></i>
+            <span>Roupas</span>
+          </a>
+          <a href="moradia.html">
+            <i class="fas fa-home"></i>
+            <span>Moradia</span>
+          </a>
+          <a href="eventos.html">
+            <i class="fas fa-calendar"></i>
+            <span>Eventos</span>
+          </a>
+          <a href="eventos.html?filter=sustentabilidade">
+            <i class="fas fa-leaf"></i>
+            <span>Sustentabilidade</span>
+          </a>
+        </nav>
       </div>
 
       <!-- Feed Destaques: wrapper isola pager/banner deste tab -->
@@ -243,10 +253,10 @@
 
     <aside class="kc-sidebar kc-sidebar--contextual kc-sidebar--home-context">
       <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="home">
-        <h3 class="kc-home-context-heading" data-kc-context-open="home" role="button" tabindex="0" aria-label="Abrir informações sobre o KinoCampus" data-i18n-aria-label="aria-label.context-home" aria-haspopup="dialog">
+        <button type="button" class="kc-home-context-heading" data-kc-context-open="home" aria-label="Abrir informações sobre o KinoCampus" data-i18n-aria-label="aria-label.context-home" aria-haspopup="dialog">
           <span class="kc-home-context-heading__label"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="kc-home-context-heading__text">Sobre o KinoCampus</span></span>
-          <button class="kc-context-info-btn kc-context-info-btn--context-arrow" type="button" data-kc-context-open="home" aria-label="Informações sobre o KinoCampus" data-i18n-aria-label="aria-label.context-home" aria-haspopup="dialog"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-        </h3>
+          <span class="kc-context-info-btn kc-context-info-btn--context-arrow" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+        </button>
         <p class="kc-sidebar-help">A comunidade UFG em um só lugar: eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos.</p>
         <details class="kc-sidebar-context">
           <summary>Ver contexto da plataforma</summary>

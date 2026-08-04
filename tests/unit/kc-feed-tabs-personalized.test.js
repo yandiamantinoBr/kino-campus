@@ -7,14 +7,18 @@ const HomeCategories = require('../../assets/js/shared/home-categories.shared.js
 
 function setupTabsDom() {
   document.body.innerHTML = `
-    <nav id="kc-home-feed-tabs" class="kc-feed-tabs">
-      <button type="button" data-feed-tab="destaques">Destaques</button>
-      <button type="button" data-feed-tab="recentes">Recentes</button>
-      <button type="button" data-feed-tab="comentados">Comentados</button>
+    <div id="kc-home-feed-tabs" class="kc-feed-tabs">
+      <div class="kc-feed-tabs__view" role="tablist" aria-label="Visualização do feed">
+        <button type="button" data-feed-tab="destaques">Destaques</button>
+        <button type="button" data-feed-tab="recentes">Recentes</button>
+        <button type="button" data-feed-tab="comentados">Comentados</button>
+      </div>
       <span class="kc-feed-tabs__divider"></span>
-      <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
-      <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
-    </nav>
+      <nav class="kc-feed-tabs__nav" aria-label="Categorias do feed">
+        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+      </nav>
+    </div>
   `;
 }
 
