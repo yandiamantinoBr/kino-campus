@@ -1,6 +1,8 @@
 /**
- * KinoCampus contextual module help (V76.24).
+ * KinoCampus contextual module help (V76.27).
  * Reuses each module's sidebar content in an accessible mobile dialog.
+ * Home "Sobre o KinoCampus" uses the same .kc-module-heading contract as
+ * module pages (single <button> opener for a11y — PR #801).
  */
 (function initKcSidebarContext(global) {
   'use strict';
@@ -70,17 +72,51 @@
     lastTrigger = null;
   }
 
+  function resolveSectionHeading(section) {
+    // Prefer the visual module/home heading; fall back to sidebar h3 used by
+    // module context rails (Eventos, etc.). Legacy .kc-home-context-heading
+    // kept for any residual markup/tests.
+    return section.querySelector(
+      'button.kc-module-heading, .kc-module-heading, .kc-home-context-heading, h3'
+    );
+  }
+
+  function resolveSectionTitle(section, heading) {
+    if (!heading) return 'Sobre este módulo';
+    var labelText = heading.querySelector(
+      '.kc-module-heading__label > span, .kc-home-context-heading__text'
+    );
+    if (labelText && labelText.textContent) {
+      return labelText.textContent.replace(/\s+/g, ' ').trim() || 'Sobre este módulo';
+    }
+    var clone = heading.cloneNode(true);
+    Array.prototype.forEach.call(
+      clone.querySelectorAll('button, .kc-context-info-btn, i'),
+      function (el) { el.remove(); }
+    );
+    return clone.textContent.replace(/\s+/g, ' ').trim() || 'Sobre este módulo';
+  }
+
+  function isHeadingChrome(child, heading) {
+    if (!child) return false;
+    if (heading && (child === heading || child.contains(heading))) return true;
+    if (!child.matches) return false;
+    return child.matches(
+      '.kc-module-heading, button.kc-module-heading, .kc-home-context-heading, .kc-sidebar-section-head'
+    );
+  }
+
   function populateModal(modal, section) {
-    var heading = section.querySelector('h3');
+    var heading = resolveSectionHeading(section);
     var contentRoot = section.querySelector('.kc-sidebar-section__body') || section;
-    var title = heading ? heading.textContent.trim() : 'Sobre este módulo';
+    var title = resolveSectionTitle(section, heading);
     var titleSlot = modal.querySelector('#kcSidebarContextTitle span');
     var body = modal.querySelector('[data-kc-context-modal-body]');
     titleSlot.textContent = title;
     body.innerHTML = '';
 
     Array.prototype.forEach.call(contentRoot.children, function (child) {
-      if (child === heading || (heading && child.contains(heading))) return;
+      if (isHeadingChrome(child, heading)) return;
       var clone = child.cloneNode(true);
       if (clone.tagName === 'DETAILS') clone.removeAttribute('open');
       body.appendChild(clone);

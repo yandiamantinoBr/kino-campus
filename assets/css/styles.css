@@ -882,34 +882,12 @@ main {
         var(--kc-card-bg);
 }
 
+/* Home "Sobre o KinoCampus" reuses .kc-module-heading (same contract as
+ * Eventos). Button chrome reset lives in kc-sidebar-context.css
+ * (.kc-module-heading--home-context). Keep sidebar title spacing tight. */
 .kc-sidebar-section--context h3,
-.kc-sidebar-section--context .kc-home-context-heading {
+.kc-sidebar-section--context .kc-module-heading {
     margin-bottom: 8px;
-}
-
-/* The home-context heading is a <button> acting as a disclosure opener
- * (was previously an <h3 role="button"> which axe rejects as
- * aria-allowed-role). Reset the default <button> chrome so the
- * existing visual style keeps working. */
-.kc-home-context-heading {
-    appearance: none;
-    background: none;
-    border: 0;
-    padding: 0;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-}
-.kc-home-context-heading:focus-visible {
-    outline: 2px solid var(--kc-primary-brand);
-    outline-offset: 2px;
-    border-radius: 6px;
 }
 
 .kc-sidebar-section--context .kc-sidebar-help {
