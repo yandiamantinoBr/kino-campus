@@ -424,7 +424,7 @@
         container.innerHTML = [
           '<div class="kc-no-results" data-kc-feed-error="renderer-unavailable" role="status">',
           '<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>',
-          '<h3>Não foi possível carregar as publicações</h3>',
+          '<p class="kc-no-results__title">Não foi possível carregar as publicações</p>',
           '<p>Atualize a página. Se o problema continuar, tente novamente em alguns instantes.</p>',
           '</div>'
         ].join('');
@@ -493,7 +493,8 @@
       icon.className = 'fas fa-layer-group';
       icon.setAttribute('aria-hidden', 'true');
 
-      const title = document.createElement('h3');
+      const title = document.createElement('p');
+      title.className = 'kc-no-results__title';
       title.textContent = 'Nenhuma publicação disponível agora';
 
       const description = document.createElement('p');

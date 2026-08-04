@@ -220,21 +220,22 @@
     } catch (_) { /* quota; ignore */ }
   }
 
-  /* Renderiza os <a> após o divider, removendo os existentes. */
+  /* Renderiza os <a> dentro do <nav class="kc-feed-tabs__nav">, removendo os
+   * existentes. Antes o código appendava diretamente no container
+   * kc-home-feed-tabs (que passou a ter role="tablist"), o que violava
+   * aria-required-children no LHCI a11y. */
   function renderTabs(container, tabs) {
     if (!container || !Array.isArray(tabs) || tabs.length === 0) return;
     const divider = container.querySelector('.kc-feed-tabs__divider');
     if (!divider) return;
+    // Find the nav that lives after the divider; fall back to the divider's
+    // parent if the markup predates the a11y refactor.
+    const target = container.querySelector('.kc-feed-tabs__nav')
+      || divider.nextElementSibling
+      || container;
 
-    // Remove todos os <a> após o divider (preserva botões data-feed-tab e o divider)
-    let node = divider.nextSibling;
-    while (node) {
-      const next = node.nextSibling;
-      if (node.nodeType === 1 && node.tagName === 'A') {
-        container.removeChild(node);
-      }
-      node = next;
-    }
+    // Remove todos os <a> filhos do target (preserva divider e botões de tab).
+    Array.from(target.querySelectorAll('a')).forEach((a) => a.remove());
 
     // Insere os novos <a> personalizados
     tabs.forEach((tab) => {
@@ -245,7 +246,7 @@
       if (tab.category) a.setAttribute('data-kc-tab-category', tab.category);
       a.setAttribute('aria-label', tab.label);
       a.innerHTML = `<i class="${tab.icon}"></i><span>${tab.label}</span>`;
-      container.appendChild(a);
+      target.appendChild(a);
     });
   }
 

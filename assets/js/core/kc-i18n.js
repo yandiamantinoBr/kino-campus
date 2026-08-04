@@ -400,6 +400,7 @@
     // Feed / module rails
     'aria-label.feed-sort':             'Ordenação do feed',
     'aria-label.feed-view':             'Visualização do feed',
+    'aria-label.feed-categories':       'Categorias do feed',
     'aria-label.categories-help':       'Como a relevância funciona',
     'aria-label.close-explanation':     'Fechar explicação',
     'aria-label.market-rail':           'Seções rápidas de compra e venda',

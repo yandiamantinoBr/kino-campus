@@ -105,35 +105,39 @@
 <button class="kc-context-info-btn" type="button" data-kc-context-open="compra-venda" aria-label="Informações sobre Compra e Venda" data-i18n-aria-label="aria-label.context-compra-venda" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
 <!-- Feed Tabs -->
-<div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
-<button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
-<button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
-<button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
-<span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-<a data-category="eletronicos" href="#eletronicos">
-<i class="fas fa-laptop"></i>
-<span>Eletrônicos</span>
-</a>
-<a data-category="livros" href="#livros">
-<i class="fas fa-book"></i>
-<span>Livros</span>
-</a>
-<a data-category="ingressos" href="#ingressos">
-<i class="fas fa-ticket-alt"></i>
-<span>Ingressos</span>
-</a>
-<a data-category="moveis" href="#moveis">
-<i class="fas fa-couch"></i>
-<span>Móveis</span>
-</a>
-<a data-category="vestuario" href="#vestuario">
-<i class="fas fa-tshirt"></i>
-<span>Vestuário</span>
-</a>
-<a data-category="outros" href="#outros">
-<i class="fas fa-box"></i>
-<span>Outros</span>
-</a>
+<div class="kc-feed-tabs">
+  <div class="kc-feed-tabs__view" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
+    <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
+    <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
+    <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
+  </div>
+  <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
+  <nav class="kc-feed-tabs__nav" aria-label="Categorias de compra e venda" data-i18n-aria-label="aria-label.feed-categories">
+    <a data-category="eletronicos" href="#eletronicos">
+      <i class="fas fa-laptop"></i>
+      <span>Eletrônicos</span>
+    </a>
+    <a data-category="livros" href="#livros">
+      <i class="fas fa-book"></i>
+      <span>Livros</span>
+    </a>
+    <a data-category="ingressos" href="#ingressos">
+      <i class="fas fa-ticket-alt"></i>
+      <span>Ingressos</span>
+    </a>
+    <a data-category="moveis" href="#moveis">
+      <i class="fas fa-couch"></i>
+      <span>Móveis</span>
+    </a>
+    <a data-category="vestuario" href="#vestuario">
+      <i class="fas fa-tshirt"></i>
+      <span>Vestuário</span>
+    </a>
+    <a data-category="outros" href="#outros">
+      <i class="fas fa-box"></i>
+      <span>Outros</span>
+    </a>
+  </nav>
 </div>
 <div class="kc-marketplace-mobile-rail" data-kc-market-mobile-rail="true" aria-label="Seções rápidas de compra e venda" data-i18n-aria-label="aria-label.market-rail">
 <button class="kc-marketplace-mobile-rail__button is-loading" type="button" disabled>
@@ -148,7 +152,7 @@
 <!-- No Results Message -->
 <div class="kc-no-results" id="noResults" style="display: none; text-align: center; padding: 40px; color: var(--kc-text-dark-secondary);">
 <i class="fas fa-search" style="font-size: 3em; margin-bottom: 15px; opacity: 0.5;"></i>
-<h3>Nenhum item corresponde aos filtros</h3>
+<p class="kc-no-results__title">Nenhum item corresponde aos filtros</p>
 <p>Limpe os filtros para ver todos os itens publicados.</p>
 <button class="kc-btn-primary" data-kc-market-empty-clear="true" style="margin-top: 15px;" type="button">Limpar Filtros</button>
 </div>
