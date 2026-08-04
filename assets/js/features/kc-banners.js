@@ -1,9 +1,12 @@
 /*
-  KinoCampus - kc-banners.js (v9.2.4.0)
-  Carrega os banners ativos do Supabase e substitui o
-  carrossel estatico da index.html.
-  Fallback: mantem os banners hardcoded se o Supabase falhar
-  ou se o driver for 'local'.
+  KinoCampus - kc-banners.js (v9.2.5.0)
+  Carrega SOMENTE banners ativos (is_active=true) do Supabase e
+  popula o carrossel da home. Visitantes e usuarios autenticados
+  veem a mesma lista publica ativa.
+
+  Nao ha mais mock hardcoded na index: se o driver for supabase e
+  a carga falhar, o carrossel fica vazio (sem slides antigos).
+  Cache de sessao/localStorage e publico (nao depende de login).
 */
 (function (root, factory) {
   const api = factory(root);
@@ -63,10 +66,12 @@
   };
 
   const BANNER_CACHE_SCOPE = 'home';
-  const BANNER_CACHE_KEY = 'hero-banners:v1';
-  const BANNER_CACHE_VERSION = 1;
+  const BANNER_CACHE_KEY = 'hero-banners:v2';
+  const BANNER_CACHE_VERSION = 2;
   const BANNER_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
   const BANNER_CACHE_STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+  const BANNER_PUBLIC_STORAGE_KEY = 'kc:hero-banners:v2:public';
+  const CLIENT_RETRY_DELAYS_MS = [0, 200, 500, 1000, 2000];
 
   function esc(str) {
     return String(str || '')
@@ -196,6 +201,59 @@
       : null;
   }
 
+  function getLocalStorage() {
+    try {
+      return root.localStorage || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readPublicBannerCache() {
+    const storage = getLocalStorage();
+    if (!storage) return null;
+    try {
+      const raw = storage.getItem(BANNER_PUBLIC_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (Number(parsed.version) !== BANNER_CACHE_VERSION) return null;
+      const banners = normalizeBannerRows(parsed.banners);
+      if (!banners.length) return null;
+      const timestamp = Number(parsed.timestamp) || 0;
+      const age = Date.now() - timestamp;
+      if (!Number.isFinite(age) || age < 0 || age > BANNER_CACHE_STALE_MAX_AGE_MS) {
+        storage.removeItem(BANNER_PUBLIC_STORAGE_KEY);
+        return null;
+      }
+      return {
+        banners,
+        signature: String(parsed.signature || buildBannerSignature(banners)),
+        age,
+        isFresh: age <= BANNER_CACHE_MAX_AGE_MS,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writePublicBannerCache(rows, signature) {
+    const storage = getLocalStorage();
+    const banners = normalizeBannerRows(rows);
+    if (!storage || !banners.length) return false;
+    try {
+      storage.setItem(BANNER_PUBLIC_STORAGE_KEY, JSON.stringify({
+        version: BANNER_CACHE_VERSION,
+        timestamp: Date.now(),
+        banners,
+        signature: String(signature || buildBannerSignature(banners)),
+      }));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function normalizeBannerRow(row) {
     const source = row && typeof row === 'object' ? row : {};
     return {
@@ -234,38 +292,69 @@
 
   function getCachedBanners() {
     const store = getSessionStore();
-    if (!store || typeof store.get !== 'function') return null;
+    if (store && typeof store.get === 'function') {
+      const cached = store.get(BANNER_CACHE_SCOPE, BANNER_CACHE_KEY, {
+        maxAge: BANNER_CACHE_STALE_MAX_AGE_MS,
+        removeExpired: true,
+      });
+      const value = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
+      if (value && Number(value.version) === BANNER_CACHE_VERSION) {
+        const banners = normalizeBannerRows(value.banners);
+        if (banners.length) {
+          const signature = String(value.signature || buildBannerSignature(banners));
+          const age = Number(cached.age) || 0;
+          return {
+            banners,
+            signature,
+            age,
+            isFresh: age <= BANNER_CACHE_MAX_AGE_MS,
+          };
+        }
+      }
+    }
 
-    const cached = store.get(BANNER_CACHE_SCOPE, BANNER_CACHE_KEY, {
-      maxAge: BANNER_CACHE_STALE_MAX_AGE_MS,
-      removeExpired: true,
-    });
-    const value = cached && cached.value && typeof cached.value === 'object' ? cached.value : null;
-    if (!value || Number(value.version) !== BANNER_CACHE_VERSION) return null;
-
-    const banners = normalizeBannerRows(value.banners);
-    if (!banners.length) return null;
-
-    const signature = String(value.signature || buildBannerSignature(banners));
-    const age = Number(cached.age) || 0;
-    return {
-      banners,
-      signature,
-      age,
-      isFresh: age <= BANNER_CACHE_MAX_AGE_MS,
-    };
+    // Public cache works for visitors (no login) and for private browsing
+    // where session APIs are restricted.
+    return readPublicBannerCache();
   }
 
   function persistBanners(rows, signature) {
-    const store = getSessionStore();
     const banners = normalizeBannerRows(rows);
-    if (!store || typeof store.set !== 'function' || !banners.length) return false;
-
-    return store.set(BANNER_CACHE_SCOPE, BANNER_CACHE_KEY, {
+    if (!banners.length) return false;
+    const nextSignature = String(signature || buildBannerSignature(banners));
+    const payload = {
       version: BANNER_CACHE_VERSION,
       banners,
-      signature: String(signature || buildBannerSignature(banners)),
-    });
+      signature: nextSignature,
+    };
+
+    let ok = false;
+    const store = getSessionStore();
+    if (store && typeof store.set === 'function') {
+      ok = !!store.set(BANNER_CACHE_SCOPE, BANNER_CACHE_KEY, payload) || ok;
+    }
+    ok = writePublicBannerCache(banners, nextSignature) || ok;
+    return ok;
+  }
+
+  function clearCarousel(doc) {
+    const targetDoc = doc || (typeof document !== 'undefined' ? document : null);
+    if (!targetDoc) return false;
+    const slidesEl = targetDoc.getElementById('kc-hero-slides');
+    const dotsEl = targetDoc.getElementById('kc-carousel-dots');
+    const carousel = getCarouselEl(targetDoc);
+    if (slidesEl) {
+      slidesEl.innerHTML = '';
+      slidesEl.dataset.kcBannersSignature = '';
+      slidesEl.dataset.kcBannersSource = 'empty';
+    }
+    if (dotsEl) dotsEl.innerHTML = '';
+    if (carousel) {
+      carousel.setAttribute('aria-busy', 'false');
+      carousel.classList.add('kc-hero-empty');
+    }
+    removeSkeletonClass();
+    return true;
   }
 
   function renderBannerRows(rows, signature, doc) {
@@ -275,13 +364,24 @@
     const banners = normalizeBannerRows(rows);
     const slidesEl = targetDoc.getElementById('kc-hero-slides');
     const dotsEl = targetDoc.getElementById('kc-carousel-dots');
-    if (!banners.length || !slidesEl || !dotsEl) return false;
+    const carousel = getCarouselEl(targetDoc);
+    if (!slidesEl || !dotsEl) return false;
+
+    if (!banners.length) {
+      return clearCarousel(targetDoc);
+    }
 
     const nextSignature = String(signature || buildBannerSignature(banners));
     if (slidesEl.dataset.kcBannersSignature !== nextSignature) {
       slidesEl.innerHTML = banners.map((banner, index) => buildBannerHTML(banner, index === 0)).join('');
       dotsEl.innerHTML = buildDotsHTML(banners.length);
       slidesEl.dataset.kcBannersSignature = nextSignature;
+      slidesEl.dataset.kcBannersSource = 'active';
+    }
+
+    if (carousel) {
+      carousel.classList.remove('kc-hero-empty');
+      carousel.setAttribute('aria-busy', 'false');
     }
 
     bindHeroCTAInteractions(targetDoc);
@@ -294,10 +394,39 @@
     return true;
   }
 
-  async function loadBanners() {
+  function resolveDriver() {
     const env = root.KC_ENV || {};
-    const driver = String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
+    return String(env.DATA_DRIVER || env.driver || 'local').toLowerCase();
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+  }
+
+  async function resolveSupabaseClient() {
+    if (!root.KCSupabase || typeof root.KCSupabase.getClient !== 'function') {
+      return null;
+    }
+    for (let i = 0; i < CLIENT_RETRY_DELAYS_MS.length; i += 1) {
+      if (CLIENT_RETRY_DELAYS_MS[i] > 0) {
+        await wait(CLIENT_RETRY_DELAYS_MS[i]);
+      }
+      try {
+        const client = root.KCSupabase.getClient();
+        if (client) return client;
+      } catch (_) {
+        // keep retrying
+      }
+    }
+    return null;
+  }
+
+  async function loadBanners() {
+    const driver = resolveDriver();
     if (driver !== 'supabase') {
+      // Local/dev only: keep any authoring markup if present, no mock injection.
       hydrateExistingBanners();
       bindHeroCTAInteractions();
       removeSkeletonClass();
@@ -308,19 +437,16 @@
     const renderedCached = !!(cached && renderBannerRows(cached.banners, cached.signature));
     if (cached && cached.isFresh) return;
 
-    const client = root.KCSupabase && typeof root.KCSupabase.getClient === 'function'
-      ? root.KCSupabase.getClient()
-      : null;
+    const client = await resolveSupabaseClient();
     if (!client) {
-      if (!renderedCached) {
-        hydrateExistingBanners();
-        bindHeroCTAInteractions();
-        removeSkeletonClass();
-      }
+      // Never reintroduce hardcoded mock slides for visitors.
+      if (!renderedCached) clearCarousel();
+      console.warn('[KC Banners] Supabase client indisponivel; carrossel sem mock.');
       return;
     }
 
     try {
+      // Public active banners only — same query for anon and authenticated.
       const { data, error } = await client
         .from('hero_banners')
         .select('id, pill_text, title, subtitle, button_text, button_url, icon_class, gradient_from, gradient_to, sort_order')
@@ -330,58 +456,46 @@
 
       if (error) {
         console.warn('[KC Banners] Erro ao carregar banners do Supabase:', error.message || error);
-        if (!renderedCached) {
-          hydrateExistingBanners();
-          removeSkeletonClass();
-        }
+        if (!renderedCached) clearCarousel();
         return;
       }
       if (!Array.isArray(data) || !data.length) {
-        if (!renderedCached) {
-          hydrateExistingBanners();
-          removeSkeletonClass();
-        }
+        // Active list is intentionally empty: clear UI (no mock).
+        clearCarousel();
         return;
       }
 
       const rows = normalizeBannerRows(data);
       const signature = buildBannerSignature(rows);
       if (!renderBannerRows(rows, signature)) {
-        removeSkeletonClass();
+        clearCarousel();
         return;
       }
       persistBanners(rows, signature);
     } catch (e) {
       console.warn('[KC Banners] Excecao ao carregar banners:', e && e.message || e);
-      if (!renderedCached) {
-        hydrateExistingBanners();
-        removeSkeletonClass();
-      }
+      if (!renderedCached) clearCarousel();
     }
   }
 
   if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', function () {
-      hydrateExistingBanners();
+      // Do not hydrate mock slides: index ships empty until active banners load.
       bindHeroCTAInteractions(document);
 
-      let loaded = false;
+      let started = false;
       const tryLoad = () => {
-        if (loaded) return;
-        loaded = true;
+        if (started) return;
+        started = true;
         loadBanners();
       };
 
-      if (root.KCSupabase && typeof root.KCSupabase.getClient === 'function'
-          && root.KCSupabase.getClient()) {
-        tryLoad();
-      } else {
-        document.addEventListener('kc:authchange', function onFirst() {
-          document.removeEventListener('kc:authchange', onFirst);
-          tryLoad();
-        });
-        setTimeout(tryLoad, 300);
-      }
+      // Load for visitors immediately (anon key). Auth is not required.
+      tryLoad();
+      // Also refresh after auth settles so login/logout never leaves a stale shell.
+      document.addEventListener('kc:authchange', function onAuth() {
+        loadBanners();
+      });
     });
   }
 
@@ -395,7 +509,9 @@
     getCachedBanners,
     persistBanners,
     renderBannerRows,
+    clearCarousel,
     hydrateExistingBanners,
     bindHeroCTAInteractions,
+    loadBanners,
   };
 }));

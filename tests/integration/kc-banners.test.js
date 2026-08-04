@@ -116,4 +116,34 @@ describe('KCBanners', () => {
     const cta = document.querySelector('.kc-btn-primary');
     expect(cta.dataset.kcHeroCtaBound).toBe('true');
   });
+
+  test('clearCarousel removes any leftover slides and marks empty state', () => {
+    document.body.innerHTML = [
+      '<div class="kc-hero-carousel kc-hero-loading" aria-busy="true">',
+      '<div id="kc-hero-slides"><div class="kc-hero-banner active">mock</div></div>',
+      '<div id="kc-carousel-dots"><span class="kc-dot active"></span></div>',
+      '</div>',
+    ].join('');
+
+    expect(Banners.clearCarousel(document)).toBe(true);
+    expect(document.getElementById('kc-hero-slides').innerHTML).toBe('');
+    expect(document.getElementById('kc-carousel-dots').innerHTML).toBe('');
+    expect(document.querySelector('.kc-hero-carousel').classList.contains('kc-hero-empty')).toBe(true);
+    expect(document.querySelector('.kc-hero-carousel').classList.contains('kc-hero-loading')).toBe(false);
+    expect(document.querySelector('.kc-hero-carousel').getAttribute('aria-busy')).toBe('false');
+  });
+
+  test('renderBannerRows with empty list clears the carousel instead of keeping mock markup', () => {
+    document.body.innerHTML = [
+      '<div class="kc-hero-carousel kc-hero-loading">',
+      '<div id="kc-hero-slides"><div class="kc-hero-banner">old mock</div></div>',
+      '<div id="kc-carousel-dots"><span class="kc-dot"></span></div>',
+      '</div>',
+    ].join('');
+
+    expect(Banners.renderBannerRows([], 'empty', document)).toBe(true);
+    expect(document.getElementById('kc-hero-slides').innerHTML).toBe('');
+    expect(document.getElementById('kc-carousel-dots').innerHTML).toBe('');
+    expect(document.querySelector('.kc-hero-banner')).toBeNull();
+  });
 });
