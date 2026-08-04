@@ -1,0 +1,3 @@
+PR #801 (Lighthouse a11y fix) collapsed the home context disclosure opener from `<h3 role=button>` + `<button>` arrow into a single `<button>` with the arrow as a decorative `<span>` child. Both elements carried `data-kc-context-open="home"`, so the Playwright E2E `context-404-responsive.spec.js` was looking for two triggers and got one.
+
+Updated the spec to expect 1 trigger (the button), kept the same `[data-kc-context-open="home"]` selector (still the click target the sidebar-context handler uses), and renamed the inner `.kc-context-info-btn--context-arrow` query from `arrowButton` to `arrowIcon` to match the new semantic (decorative child of the button, not a separate clickable button).
