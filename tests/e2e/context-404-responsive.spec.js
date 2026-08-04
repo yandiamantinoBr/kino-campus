@@ -15,32 +15,40 @@ test.describe('V76.25 - Sobre o KinoCampus compacto no mobile', () => {
     await page.goto('/index.html');
 
     const section = page.locator('[data-kc-context-section="home"]');
-    // The home context opener is now a single <button data-kc-context-open="home">
-    // (was an <h3 role="button"> + a nested <button> arrow). The arrow
-    // is rendered as a <span aria-hidden="true"> inside the button so
-    // the keyboard/screen-reader experience stays one trigger.
+    // Home reuses the same kc-module-heading contract as Eventos, but stays a
+    // single <button> opener for a11y (PR #801). Decorative trailing glyph is
+    // a span.kc-context-info-btn (same icon language as modules).
     const triggers = section.locator('[data-kc-context-open="home"]');
     const trigger = triggers.first();
-    const arrowIcon = section.locator('.kc-context-info-btn--context-arrow');
+    const moduleHeading = section.locator('.kc-module-heading');
+    const infoGlyph = section.locator('.kc-context-info-btn');
     await expect(section).toBeVisible();
     await expect(triggers).toHaveCount(1);
     await expect(trigger).toBeVisible();
-    await expect(arrowIcon).toBeVisible();
+    await expect(moduleHeading).toBeVisible();
+    await expect(infoGlyph).toBeVisible();
     await expect(section.locator('.kc-sidebar-help')).toBeHidden();
     await expect(section.locator('details')).toBeHidden();
 
     const compactMetrics = await page.evaluate(() => {
       const context = document.querySelector('[data-kc-context-section="home"]');
-      const button = context.querySelector('.kc-context-info-btn--context-arrow');
+      const heading = context.querySelector('.kc-module-heading');
+      const glyph = context.querySelector('.kc-context-info-btn');
+      const headingStyle = getComputedStyle(heading);
       return {
         sectionHeight: context.getBoundingClientRect().height,
-        buttonHeight: button.getBoundingClientRect().height,
+        headingHeight: heading.getBoundingClientRect().height,
+        headingFontSize: parseFloat(headingStyle.fontSize),
+        glyphHeight: glyph.getBoundingClientRect().height,
         scroll: document.documentElement.scrollWidth,
         client: document.documentElement.clientWidth,
       };
     });
-    expect(compactMetrics.sectionHeight).toBeLessThanOrEqual(52);
-    expect(compactMetrics.buttonHeight).toBeLessThanOrEqual(38);
+    // Same compact bounds as module pages (eventos etc.).
+    expect(compactMetrics.sectionHeight).toBeLessThanOrEqual(56);
+    expect(compactMetrics.headingHeight).toBeLessThanOrEqual(52);
+    expect(compactMetrics.headingFontSize).toBeGreaterThanOrEqual(16);
+    expect(compactMetrics.glyphHeight).toBeLessThanOrEqual(42);
     expect(compactMetrics.scroll).toBeLessThanOrEqual(compactMetrics.client + 1);
 
     await trigger.click();

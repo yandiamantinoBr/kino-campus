@@ -30,8 +30,8 @@
   <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.1"></script>
   <title>KinoCampus - Comunidade UFG</title>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
-<link href="assets/css/styles.css?v=8.6.12" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.2" />
+<link href="assets/css/styles.css?v=8.6.16" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.16" />
   <link rel="stylesheet" href="assets/css/kc-pitch-links.css?v=1.0.0" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
@@ -253,9 +253,12 @@
 
     <aside class="kc-sidebar kc-sidebar--contextual kc-sidebar--home-context">
       <div class="kc-sidebar-section kc-sidebar-section--context" data-kc-context-section="home">
-        <button type="button" class="kc-home-context-heading" data-kc-context-open="home" aria-label="Abrir informações sobre o KinoCampus" data-i18n-aria-label="aria-label.context-home" aria-haspopup="dialog">
-          <span class="kc-home-context-heading__label"><i class="fas fa-circle-info" aria-hidden="true"></i><span class="kc-home-context-heading__text">Sobre o KinoCampus</span></span>
-          <span class="kc-context-info-btn kc-context-info-btn--context-arrow" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+        <!-- Same visual contract as module pages (eventos, oportunidades, …):
+             kc-module-heading + label + context-info control. Home keeps a
+             single <button> opener for a11y (PR #801) instead of h2+button. -->
+        <button type="button" class="kc-module-heading kc-module-heading--home-context" data-kc-context-open="home" aria-label="Abrir informações sobre o KinoCampus" data-i18n-aria-label="aria-label.context-home" aria-haspopup="dialog">
+          <span class="kc-module-heading__label"><i class="fas fa-circle-info" aria-hidden="true"></i><span>Sobre o KinoCampus</span></span>
+          <span class="kc-context-info-btn" aria-hidden="true"><i class="fas fa-circle-info" aria-hidden="true"></i></span>
         </button>
         <p class="kc-sidebar-help">A comunidade UFG em um só lugar: eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos.</p>
         <details class="kc-sidebar-context">
@@ -525,7 +528,7 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
-  <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.16"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>
   <script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.12"></script>
   <script defer src="assets/js/features/kc-feed-tabs-personalized.js?v=8.6.13"></script>

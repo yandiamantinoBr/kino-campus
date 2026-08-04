@@ -1,4 +1,7 @@
-/* KinoCampus contextual module and home help (V76.25). */
+/* KinoCampus contextual module and home help (V76.27).
+   Home "Sobre o KinoCampus" uses the same .kc-module-heading contract as
+   Eventos / Oportunidades / etc. A dedicated --home-context modifier only
+   resets native <button> chrome (a11y opener from PR #801). */
 
 .kc-module-heading {
   display: flex;
@@ -9,6 +12,39 @@
   color: var(--kc-text-dark-primary);
   font-size: clamp(1.35rem, 2vw, 1.7rem);
   line-height: 1.2;
+  font-weight: 700;
+}
+
+/* Home keeps a single <button class="kc-module-heading"> opener so keyboard
+   and screen readers see one control. Only strip native button chrome that
+   would fight the shared module-heading look.
+   IMPORTANT: do NOT use the `font` shorthand here — it would override
+   .kc-module-heading font-size/line-height (specificity of button.modifier
+   beats the shared class and made "Sobre o KinoCampus" look smaller than
+   Eventos). Do not override mobile card padding/border either — those live
+   on .kc-module-heading at max-width 768. */
+button.kc-module-heading--home-context {
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+@media (min-width: 769px) {
+  button.kc-module-heading--home-context {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+}
+
+button.kc-module-heading--home-context:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 45%, transparent);
+  outline-offset: 4px;
+  border-radius: 12px;
 }
 
 .kc-module-heading__label {
@@ -21,6 +57,10 @@
 .kc-module-heading__label > i {
   color: var(--kc-primary-brand);
   font-size: 0.9em;
+}
+
+.kc-module-heading__label > span {
+  min-width: 0;
 }
 
 .kc-context-info-btn {
@@ -37,6 +77,13 @@
   cursor: pointer;
   font-size: 1rem;
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+/* Home nests a decorative span.kc-context-info-btn inside the opener <button>.
+   Keep pointer-events off ONLY on spans so real <button class="kc-context-info-btn">
+   controls on module pages (Eventos, etc.) keep receiving clicks. */
+span.kc-context-info-btn {
+  pointer-events: none;
 }
 
 .kc-context-info-btn:hover {
@@ -57,29 +104,10 @@
   scroll-margin-top: 96px;
 }
 
+/* Legacy alias kept so older tests/snapshots do not 404 visually if any
+   residual markup still uses the old class name. Prefer .kc-module-heading. */
 .kc-home-context-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.kc-home-context-heading__label {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-}
-
-.kc-home-context-heading__text {
-  min-width: 0;
-}
-
-.kc-home-context-heading:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 40%, transparent);
-  outline-offset: 4px;
-  border-radius: 10px;
+  /* no-op alias — visual source of truth is .kc-module-heading */
 }
 
 .kc-sidebar-context-modal {
@@ -271,69 +299,26 @@
     margin-bottom: 6px;
   }
 
+  /* Home no mobile: o proprio .kc-module-heading carrega o chrome compacto
+     (mesmo contrato de Eventos). A secao so empacota o botao, sem 2o card. */
   aside.kc-sidebar.kc-sidebar--home-context .kc-sidebar-section--context {
-    min-height: 50px;
+    min-height: 0;
+    margin: 0 0 10px;
+    padding: 0 !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .kc-sidebar--home-context .kc-module-heading--home-context {
     margin: 0;
-    padding: 5px 6px 5px 9px !important;
-    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 24%, var(--kc-border-dark));
-    border-radius: 14px;
-    background: linear-gradient(135deg,
-      color-mix(in srgb, var(--kc-primary-brand) 8%, var(--kc-surface-dark)),
-      color-mix(in srgb, var(--kc-secondary-brand) 5%, var(--kc-surface-dark)));
-    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
   }
 
-  .kc-sidebar--home-context .kc-home-context-heading {
-    display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) 30px;
-    gap: 8px;
-    min-height: 38px;
-    margin: 0;
-    font-size: clamp(1rem, 4.8vw, 1.16rem);
-    line-height: 1.2;
-  }
-
-  .kc-sidebar--home-context .kc-home-context-heading__label {
-    display: contents;
-  }
-
-  .kc-sidebar--home-context .kc-home-context-heading__text {
-    grid-column: 2;
-    min-width: 0;
-    justify-self: center;
-    overflow: hidden;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .kc-sidebar--home-context .kc-home-context-heading__label > i,
-  .kc-sidebar--home-context .kc-context-info-btn {
+  /* Decorative info glyph stays visible on the home opener (modules hide the
+     real button until hover/mobile; home's span is always the trailing icon). */
+  .kc-sidebar--home-context .kc-module-heading--home-context > .kc-context-info-btn {
     display: inline-flex;
-    flex: 0 0 auto;
-    width: 30px;
-    height: 30px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 26%, transparent);
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--kc-primary-brand) 12%, transparent);
-    color: var(--kc-primary-brand);
-    font-size: 0.78em;
-  }
-
-  .kc-sidebar--home-context .kc-home-context-heading__label > i {
-    grid-column: 1;
-    justify-self: start;
-  }
-
-  .kc-sidebar--home-context .kc-context-info-btn {
-    grid-column: 3;
-    justify-self: end;
-  }
-
-  .kc-sidebar--home-context .kc-context-info-btn--context-arrow {
-    font-size: 0.72rem;
   }
 
   .kc-sidebar--home-context .kc-sidebar-help,
