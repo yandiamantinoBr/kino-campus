@@ -104,6 +104,12 @@ span.kc-context-info-btn {
   scroll-margin-top: 96px;
 }
 
+/* Sidebar titles stay tighter than feed module headings (20px). */
+.kc-sidebar-section--context .kc-module-heading,
+.kc-sidebar-section--context h3 {
+  margin-bottom: 8px;
+}
+
 /* Legacy alias kept so older tests/snapshots do not 404 visually if any
    residual markup still uses the old class name. Prefer .kc-module-heading. */
 .kc-home-context-heading {
