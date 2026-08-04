@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+const ASSET_VERSION = '8.6.17';
 const PAGES = {
   'achados-perdidos.html': 'achados-perdidos',
   'eventos.html': 'eventos',
@@ -15,8 +16,8 @@ describe('V76.23 - contexto dos módulos', () => {
   test.each(Object.entries(PAGES))('%s usa o trigger e os assets compartilhados', (file, moduleKey) => {
     const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
 
-    expect(html).toContain('assets/css/kc-sidebar-context.css?v=8.6.2');
-    expect(html).toContain('assets/js/features/kc-sidebar-context.js?v=8.6.1');
+    expect(html).toContain(`assets/css/kc-sidebar-context.css?v=${ASSET_VERSION}`);
+    expect(html).toContain(`assets/js/features/kc-sidebar-context.js?v=${ASSET_VERSION}`);
     expect(html).toContain('class="kc-module-heading"');
     expect(html).toContain(`data-kc-context-open="${moduleKey}"`);
     expect(html).toMatch(new RegExp(`data-kc-context-open="${moduleKey}"[^>]+aria-haspopup="dialog"`));
@@ -30,5 +31,20 @@ describe('V76.23 - contexto dos módulos', () => {
 
     expect(rankingPosition).toBeGreaterThan(-1);
     expect(contextPosition).toBeGreaterThan(rankingPosition);
+  });
+});
+
+describe('V76.27 - home reusa kc-module-heading', () => {
+  test('index.html usa o mesmo contrato visual dos módulos', () => {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+    expect(html).toContain(`assets/css/kc-sidebar-context.css?v=${ASSET_VERSION}`);
+    expect(html).toContain(`assets/js/features/kc-sidebar-context.js?v=${ASSET_VERSION}`);
+    expect(html).toContain('kc-module-heading kc-module-heading--home-context');
+    expect(html).toContain('data-kc-context-open="home"');
+    expect(html).toContain('data-kc-context-section="home"');
+    expect(html).toContain('Sobre o KinoCampus');
+    expect(html).not.toContain('kc-home-context-heading');
+    expect(html).not.toContain('kc-context-info-btn--context-arrow');
   });
 });
