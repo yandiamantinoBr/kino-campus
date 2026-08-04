@@ -56,6 +56,13 @@ async function summarizeWithDeepSeek(config, item, classification) {
     `Conteudo: ${clamp(`${item.summary}\n${item.text}`, 5000)}`,
   ].join('\n');
 
+  // 2026-08-04 (cost controls): a system message e o preamble do user sao
+  // estaveis em todas as chamadas. Marcar a system com cache_control.ephemeral
+  // faz o DeepSeek cobrar $0.0028/M (1/50 do cache-miss) para esse prefixo
+  // em todas as chamadas depois da primeira. max_tokens 1000 mantem o orcamento
+  // de output apertado (o sumario raramente passa de 800 chars); o modelo pode
+  // parar antes com finish_reason=length, mas o publisher ja trata conteudo
+  // truncado como revisao.
   const response = await fetch(resolveDeepSeekEndpoint(config), {
     method: 'POST',
     headers: {
@@ -65,9 +72,14 @@ async function summarizeWithDeepSeek(config, item, classification) {
     body: JSON.stringify({
       model: resolveDeepSeekModel(config),
       temperature: 0.2,
+      max_tokens: 1000,
       thinking: { type: 'disabled' },
       messages: [
-        { role: 'system', content: 'Voce e um editor de utilidade publica universitaria.' },
+        {
+          role: 'system',
+          content: 'Voce e um editor de utilidade publica universitaria.',
+          cache_control: { type: 'ephemeral' },
+        },
         { role: 'user', content: prompt },
       ],
     }),

@@ -67,6 +67,21 @@ describe('Cadu DeepSeek-only contract', () => {
     expect(model).toContain("url.hostname !== 'api.deepseek.com'");
   });
 
+  // 2026-08-04 (cost controls — mirror of openclaw-cadu PR #148): the
+  // publisher summarizer must request the DeepSeek V4 ephemeral cache
+  // and cap max_tokens so a single run cannot burst a 4K output. The
+  // system prompt is byte-identical across the same publish run, so
+  // the cache_hit rate (1/50 of cache_miss) is the cheapest possible
+  // input cost on V4-Flash.
+  test('publisher summarizer pins the V4 cost control contract', () => {
+    const model = read('services/cadu-ufg-publisher/src/model.js');
+
+    expect(model).toContain("cache_control: { type: 'ephemeral' }");
+    expect(model).toMatch(/max_tokens:\s*1000\b/);
+    expect(model).toContain("thinking: { type: 'disabled' }");
+    expect(model).not.toMatch(/max_tokens:\s*[2-9]\d{3,}\b/);
+  });
+
   test('local Supabase Studio has no external text-model credential configured', () => {
     const config = read('supabase/config.toml').toLowerCase();
     const removedCredential = ['open', 'ai_api_key'].join('');
