@@ -138,37 +138,37 @@ select extensions.ok(
   'create ACL matches its declared rollout phase and recovery stays public'
 );
 select extensions.ok(
-  not pg_catalog.has_function_privilege(
+  pg_catalog.has_function_privilege(
     'anon',
     'kc_private.kc_create_privacy_help_request_v1(jsonb)',
     'execute'
   )
-  and not pg_catalog.has_function_privilege(
+  and pg_catalog.has_function_privilege(
     'authenticated',
     'kc_private.kc_create_privacy_help_request_v1(jsonb)',
     'execute'
   )
-  and not pg_catalog.has_function_privilege(
+  and pg_catalog.has_function_privilege(
     'service_role',
     'kc_private.kc_create_privacy_help_request_v1(jsonb)',
     'execute'
   )
-  and not pg_catalog.has_function_privilege(
+  and pg_catalog.has_function_privilege(
     'anon',
     'kc_private.kc_recover_privacy_help_request_v1(jsonb)',
     'execute'
   )
-  and not pg_catalog.has_function_privilege(
+  and pg_catalog.has_function_privilege(
     'authenticated',
     'kc_private.kc_recover_privacy_help_request_v1(jsonb)',
     'execute'
   )
-  and not pg_catalog.has_function_privilege(
+  and pg_catalog.has_function_privilege(
     'service_role',
     'kc_private.kc_recover_privacy_help_request_v1(jsonb)',
     'execute'
   ),
-  'private create and recovery workers stay closed to every API role'
+  'private create/recovery workers are executable by API roles only via INVOKER public facades (not exposed REST schemas)'
 );
 select extensions.ok(
   not exists (
@@ -178,25 +178,37 @@ select extensions.ok(
     ) as role_row(role_name)
     cross join (
       values
-        ('kc_private.kc_create_help_request(jsonb)'),
-        (
-          'kc_private.kc_create_help_request_with_notification_claim(jsonb)'
-        ),
-        (
-          'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
-        ),
         (
           'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
-        ),
-        ('kc_private.kc_is_privacy_help_route_v1(jsonb)')
+        )
     ) as function_row(signature)
     where pg_catalog.has_function_privilege(
       role_row.role_name,
       function_row.signature,
       'execute'
     )
+  )
+  and pg_catalog.has_function_privilege(
+    'anon',
+    'kc_private.kc_create_help_request(jsonb)',
+    'execute'
+  )
+  and pg_catalog.has_function_privilege(
+    'authenticated',
+    'kc_private.kc_create_help_request_with_notification_claim(jsonb)',
+    'execute'
+  )
+  and pg_catalog.has_function_privilege(
+    'service_role',
+    'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)',
+    'execute'
+  )
+  and pg_catalog.has_function_privilege(
+    'anon',
+    'kc_private.kc_is_privacy_help_route_v1(jsonb)',
+    'execute'
   ),
-  'all legacy Help workers and trusted helpers are private to database code'
+  'legacy Help private workers open to INVOKER facades; internal idempotency base stays closed'
 );
 select extensions.has_function(
   'kc_private',
@@ -270,7 +282,7 @@ select extensions.ok(
 );
 select extensions.ok(
   (
-    select pg_catalog.bool_and(procedure_row.prosecdef)
+    select pg_catalog.bool_and(not procedure_row.prosecdef)
       and pg_catalog.bool_and(
         procedure_row.proconfig @> array['search_path=""']
       )
@@ -284,12 +296,12 @@ select extensions.ok(
       )
     )
   ),
-  'public RPC wrappers are SECURITY DEFINER with an empty search_path'
+  'public privacy RPC wrappers are SECURITY INVOKER with an empty search_path'
 );
 select extensions.ok(
   (
     select
-      pg_catalog.bool_and(procedure_row.prosecdef)
+      pg_catalog.bool_and(not procedure_row.prosecdef)
       and pg_catalog.bool_and(
         procedure_row.proconfig @> array['search_path=""']
       )
@@ -304,7 +316,7 @@ select extensions.ok(
       )::regprocedure
     )
   ),
-  'legacy public Help entrypoints are hardened SECURITY DEFINER facades'
+  'legacy public Help entrypoints are SECURITY INVOKER facades over private DEFINER workers'
 );
 select extensions.ok(
   (

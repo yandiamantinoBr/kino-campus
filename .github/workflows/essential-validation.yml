@@ -7,9 +7,11 @@ name: Essential Validation
 on:
   pull_request:
     branches:
+      - main
       - kinocampus-V75.0-foundations
   push:
     branches:
+      - main
       - kinocampus-V75.0-foundations
 
 permissions:
