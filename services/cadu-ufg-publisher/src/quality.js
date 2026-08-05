@@ -1,5 +1,6 @@
 'use strict';
 
+const { isValidCategoryForModule } = require('./classifier');
 const { normalizeText } = require('./utils');
 
 function countDates(text) {
@@ -106,9 +107,19 @@ function evaluatePayloadQuality(item, classification, payload) {
     warnings.push('missing_area_metadata');
   }
 
-  if (!String(metadata.categoria || metadata.categoryLabel || payload.categoriaLabel || payload.categoria || '').trim()
-    || !String(metadata.categoriaKey || metadata.categoryKey || payload.categoriaKey || payload.category || '').trim()) {
+  const categoryLabelValue = String(
+    metadata.categoria || metadata.categoryLabel || payload.categoriaLabel || payload.categoria || '',
+  ).trim();
+  const categoryKeyValue = String(
+    metadata.categoriaKey || metadata.categoryKey || payload.categoriaKey || payload.category || '',
+  ).trim();
+
+  if (!categoryLabelValue || !categoryKeyValue) {
     warnings.push('missing_category_metadata');
+  } else if (moduleKey && !isValidCategoryForModule(moduleKey, categoryKeyValue)) {
+    // Fail closed: legacy keys (eventos:academico, curso-capacitacao, emprego singular, etc.)
+    // must not ship to production posts.
+    warnings.push('invalid_category_key');
   }
 
   if (!Array.isArray(metadata.tags) || !metadata.tags.length || !Array.isArray(metadata.tagKeys) || !metadata.tagKeys.length) {
