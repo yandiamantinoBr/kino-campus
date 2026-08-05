@@ -1074,11 +1074,13 @@ Total: ~65min de leitura focada. Depois, ler commit `5891525` (20 arquivos versi
 ## Alerta persistente implementado
 
 - `openclaw-cadu/data/.openclaw/skills/cadu-api/server.py`: novo loop `_pipeline_alert_loop()` roda dentro do cadu-api.
-- O loop consulta `cadu_pipeline.get_pipeline_health()` a cada `CADU_PIPELINE_ALERT_INTERVAL_SEC` (default 1800s).
+- O loop consulta `cadu_pipeline.get_pipeline_health()` a cada `CADU_PIPELINE_ALERT_INTERVAL_SEC` (default 3600s).
 - Envia Telegram somente se `level` for `warning` ou `critical`.
 - Dedupe/cooldown:
   - estado persistente em `/data/cadu-pipeline-alert-state.json`
-  - cooldown default `CADU_PIPELINE_ALERT_COOLDOWN_SEC=21600` (6h)
+  - cooldown default `CADU_PIPELINE_ALERT_COOLDOWN_SEC=28800` (8h)
+  - o cooldown rege qualquer warning/critical independente da chave: mudança de chave em runs parciais não reabre a janela (anti-spam)
+  - escalonamento `warning -> critical` envia imediatamente
   - envia recuperação quando volta para `ok` após alerta ativo.
 - Novo endpoint autenticado: `GET /api/pipeline/alert-status`.
 - `/health` público agora expõe apenas flags não sensíveis em `pipeline_alerts`: `enabled`, `configured`, `interval_sec`, `cooldown_sec`.
