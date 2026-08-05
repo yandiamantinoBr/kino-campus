@@ -1,14 +1,14 @@
 /* KinoCampus styles.css (merged from styles.v554.css + styles.v556.css) */
 
 :root {
-    /* Primary brand orange. Used for large brand surfaces (gradients,
-     * hero, icons over dark backgrounds) where it always sits on a
-     * dark surface and the contrast is enforced by that surface. */
+    /* Primary brand orange. Default for brand fills (active tabs, primary
+     * buttons, ranking chips, login) and large brand surfaces. */
     --kc-primary-brand: #FF6B00;
-    /* WCAG-friendly darker variant for text and small UI on light
-     * backgrounds. Reaches 5.36:1 on white and 7.4:1 on #FFF; on the
-     * dark surface it is too dim (2.6:1), so it must not be used as a
-     * foreground against kc-background-dark / kc-surface-dark. */
+    /* Slightly lighter orange for orange-on-dark text (logo / nav / consent
+     * links on dark surfaces). ~4.83:1 on #333 — better AA than #FF6B00. */
+    --kc-primary-brand-bright: #FF8000;
+    /* Darker orange reserved for orange-on-light text only (never as a
+     * brand fill). ~5.36:1 on white. Too dim (2.6:1) on dark surfaces. */
     --kc-primary-brand-strong: #C44A00;
     --kc-secondary-brand: #41B5D3;
     --kc-tertiary-color: #70E291;
@@ -174,14 +174,14 @@ header {
 }
 
 .kc-logo-name > span {
-    /* Lighter on dark mode (4.83:1 vs #333), darker on light mode
-     * (5.36:1 vs #FFF). The brand #FF6B00 sits at 4.42:1 on dark and
-     * 3.16:1 on light, both below AA. */
-    color: var(--kc-primary-brand-bright);
+    /* Brand orange by default. On dark surfaces, bright is close to brand
+     * and slightly more readable; on light, brand matches the product mark. */
+    color: var(--kc-primary-brand);
 }
 
-[data-theme="light"] .kc-logo-name > span {
-    color: var(--kc-primary-brand-strong);
+[data-theme="dark"] .kc-logo-name > span,
+:root:not([data-theme="light"]) .kc-logo-name > span {
+    color: var(--kc-primary-brand-bright);
 }
 
 .kc-logo-sub {
@@ -751,7 +751,7 @@ body.kc-modal-open .kc-search-dropdown {
 
 .kc-user-actions a.btn-login {
     font-size: 0.9em;
-    background-color: var(--kc-primary-brand-strong);
+    background-color: var(--kc-primary-brand);
     color: white;
     padding: 8px 15px;
     border-radius: 18px;
@@ -1365,9 +1365,9 @@ main {
     color: var(--kc-primary-brand);
 }
 .kc-ranking-filter.active {
-    background: var(--kc-primary-brand-strong);
+    background: var(--kc-primary-brand);
     color: #fff;
-    border-color: var(--kc-primary-brand-strong);
+    border-color: var(--kc-primary-brand);
 }
 .kc-ranking-info-btn {
     background: none;
@@ -1673,7 +1673,7 @@ main {
 
 .kc-feed-tabs a.active,
 .kc-feed-tabs button[data-feed-tab].active {
-    background-color: var(--kc-primary-brand-strong);
+    background-color: var(--kc-primary-brand);
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(255, 107, 0, 0.2);
@@ -1689,7 +1689,7 @@ main {
 
 .kc-feed-tabs a.active:hover,
 .kc-feed-tabs button[data-feed-tab].active:hover {
-    background-color: var(--kc-primary-brand-strong);
+    background-color: var(--kc-primary-brand);
 }
 
 /* Divisor visual entre abas de feed e links de navegação */
@@ -11922,8 +11922,8 @@ a.kc-home-metric-card:hover {
 }
 
 .kc-consent-btn--primary {
-  border-color: var(--kc-primary-brand-strong);
-  background: var(--kc-primary-brand-strong);
+  border-color: var(--kc-primary-brand);
+  background: var(--kc-primary-brand);
   color: #fff;
   box-shadow: 0 10px 24px rgba(255, 107, 0, 0.22);
 }
@@ -12575,9 +12575,9 @@ body.kc-admin-page .kc-consent-btn {
   transition: all var(--transition-speed) ease;
 }
 .kc-btn-primary {
-  background: var(--kc-primary-brand-strong);
+  background: var(--kc-primary-brand);
   color: #fff;
-  border-color: var(--kc-primary-brand-strong);
+  border-color: var(--kc-primary-brand);
 }
 .kc-btn-primary:hover { filter: brightness(1.08); }
 .kc-btn-secondary {
