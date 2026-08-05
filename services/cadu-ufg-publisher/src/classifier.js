@@ -283,14 +283,79 @@ function analyzeTemporalRelevance(item, options = {}) {
   };
 }
 
+/**
+ * Create-post schema keys (assets/js/features/create-post/kc-create-post.schema.js).
+ * Cadu must only emit these keys so feed chips and filters stay consistent.
+ */
+const EVENT_CATEGORIES = Object.freeze([
+  'academicos',
+  'palestras',
+  'congressos',
+  'cursos',
+  'culturais',
+  'esportivos',
+  'workshops',
+  'festas',
+  'sustentabilidade',
+]);
+
+const OPPORTUNITY_CATEGORIES = Object.freeze([
+  'editais',
+  'concursos',
+  'bolsas',
+  'estagios',
+  'empregos',
+  'monitoria',
+  'pesquisa',
+  'cursos-capacitacoes',
+  'voluntariado',
+  'freelancer',
+]);
+
+const EVENT_CATEGORY_SET = new Set(EVENT_CATEGORIES);
+const OPPORTUNITY_CATEGORY_SET = new Set(OPPORTUNITY_CATEGORIES);
+
+function isValidCategoryForModule(moduleKey, categoryKey) {
+  const module = String(moduleKey || '').trim();
+  const category = String(categoryKey || '').trim();
+  if (!module || !category) return false;
+  if (module === 'eventos') return EVENT_CATEGORY_SET.has(category);
+  if (module === 'oportunidades') return OPPORTUNITY_CATEGORY_SET.has(category);
+  return false;
+}
+
+function normalizeCategoryForModule(moduleKey, categoryKey) {
+  const module = String(moduleKey || '').trim();
+  const category = String(categoryKey || '').trim();
+  if (isValidCategoryForModule(module, category)) return category;
+  if (module === 'eventos') return 'academicos';
+  if (module === 'oportunidades') return 'editais';
+  return category || '';
+}
+
 function detectOpportunityCategory(text) {
-  if (has(text, 'estagio')) return 'estagios';
+  // Specific opportunity types first — avoid dumping everything into monitoria/pesquisa.
+  if (has(text, 'monitoria')) return 'monitoria';
+  if (has(text, 'estagio') || has(text, 'estagios')) return 'estagios';
+  if (has(text, 'freelancer') || has(text, 'free lancer')) return 'freelancer';
+  if (has(text, 'voluntariado') || has(text, 'voluntario')) return 'voluntariado';
+
   if (
-    has(text, 'pesquisa') ||
+    has(text, 'concurso publico') ||
+    has(text, 'concurso') ||
+    has(text, 'professor substituto') ||
+    has(text, 'professor efetivo') ||
+    has(text, 'premio') ||
+    has(text, 'premiacao') ||
+    has(text, 'nomeacao') ||
+    has(text, 'convocacao')
+  ) return 'concursos';
+
+  const researchSignal = (
     has(text, 'iniciacao cientifica') ||
     has(text, 'pibic') ||
     has(text, 'pivic') ||
-    has(text, 'prpi') ||
+    has(text, 'probec') ||
     has(text, 'fapeg') ||
     has(text, 'mobilidade internacional') ||
     has(text, 'mestrado') ||
@@ -298,22 +363,173 @@ function detectOpportunityCategory(text) {
     has(text, 'pos-graduacao') ||
     has(text, 'pos graduacao') ||
     has(text, 'aluno especial') ||
-    has(text, 'residencia')
-  ) return 'pesquisa';
-  if (has(text, 'monitoria')) return 'monitoria';
-  if (has(text, 'voluntariado') || has(text, 'voluntario')) return 'voluntariado';
-  if (has(text, 'emprego') || has(text, 'trabalho') || has(text, 'contratacao')) return 'empregos';
-  if (has(text, 'freelancer')) return 'freelancer';
-  return 'monitoria';
+    has(text, 'residencia multiprofissional') ||
+    has(text, 'residencia medica') ||
+    has(text, 'residencia') ||
+    has(text, 'prpi') ||
+    has(text, 'pesquisa')
+  );
+
+  // Research-linked bolsas (PIBIC etc.) stay in pesquisa; pure aid/scholarship → bolsas
+  if (
+    has(text, 'bolsa') ||
+    has(text, 'bolsas') ||
+    has(text, 'auxilio financeiro') ||
+    has(text, 'auxilio estudantil')
+  ) {
+    if (researchSignal) return 'pesquisa';
+    return 'bolsas';
+  }
+
+  if (researchSignal) return 'pesquisa';
+
+  if (
+    has(text, 'capacitacao') ||
+    has(text, 'curso de verao') ||
+    has(text, 'curso de extensao') ||
+    has(text, 'treinamento') ||
+    has(text, 'formacao continuada') ||
+    (has(text, 'curso') && (
+      has(text, 'inscric') ||
+      has(text, 'vagas') ||
+      has(text, 'edital') ||
+      has(text, 'selecao') ||
+      has(text, 'matricula')
+    )) ||
+    (has(text, 'oficina') && (has(text, 'inscric') || has(text, 'vagas') || has(text, 'edital')))
+  ) return 'cursos-capacitacoes';
+
+  if (
+    has(text, 'emprego') ||
+    has(text, 'vaga de emprego') ||
+    has(text, 'contratacao') ||
+    has(text, 'clt') ||
+    has(text, 'regime celetista') ||
+    (has(text, 'trabalho') && (has(text, 'vaga') || has(text, 'vagas') || has(text, 'selecao')))
+  ) return 'empregos';
+
+  if (
+    has(text, 'edital') ||
+    has(text, 'editais') ||
+    has(text, 'chamada') ||
+    has(text, 'processo seletivo') ||
+    has(text, 'matricula') ||
+    has(text, 'selecao')
+  ) return 'editais';
+
+  // Fail-closed default for UFG opportunity feed: generic admin call → editais
+  return 'editais';
 }
 
 function detectEventCategory(text) {
-  if (has(text, 'sustentabilidade') || has(text, 'meio ambiente')) return 'sustentabilidade';
-  if (has(text, 'oficina') || has(text, 'workshop') || has(text, 'curso')) return 'workshops';
-  if (has(text, 'cultura') || has(text, 'cinema') || has(text, 'musica') || has(text, 'arte')) return 'culturais';
-  if (has(text, 'esporte') || has(text, 'jogos') || has(text, 'danca')) return 'esportivos';
-  if (has(text, 'festa')) return 'festas';
+  // Order: specific formats before broad academicos default.
+  if (has(text, 'sustentabilidade') || has(text, 'meio ambiente') || has(text, 'ambiental')) {
+    return 'sustentabilidade';
+  }
+
+  if (
+    has(text, 'palestra') ||
+    has(text, 'palestras') ||
+    has(text, 'webinario') ||
+    has(text, 'webinar') ||
+    has(text, 'webnario') ||
+    has(text, 'live ') ||
+    has(text, 'dialogos') ||
+    has(text, 'circuito de palestras')
+  ) return 'palestras';
+
+  if (
+    has(text, 'congresso') ||
+    has(text, 'congressos') ||
+    has(text, 'simposio') ||
+    has(text, 'simposios') ||
+    has(text, 'jornada') ||
+    has(text, 'jornadas') ||
+    has(text, 'semana academica') ||
+    has(text, 'semana pedagogica') ||
+    has(text, 'encontro cientifico') ||
+    has(text, 'coloquio')
+  ) return 'congressos';
+
+  if (
+    has(text, 'oficina') ||
+    has(text, 'oficinas') ||
+    has(text, 'workshop') ||
+    has(text, 'workshops') ||
+    has(text, 'minicurso') ||
+    has(text, 'minicursos') ||
+    has(text, 'hands-on') ||
+    has(text, 'hands on')
+  ) return 'workshops';
+
+  if (
+    has(text, 'curso de extensao') ||
+    has(text, 'curso de verao') ||
+    has(text, 'curso') ||
+    has(text, 'cursos') ||
+    has(text, 'capacitacao')
+  ) return 'cursos';
+
+  if (
+    has(text, 'festival') ||
+    has(text, 'mostra') ||
+    has(text, 'cultura') ||
+    has(text, 'cultural') ||
+    has(text, 'cinema') ||
+    has(text, 'musica') ||
+    has(text, 'concerto') ||
+    has(text, 'teatro') ||
+    has(text, 'arte') ||
+    has(text, 'exposicao')
+  ) return 'culturais';
+
+  if (
+    has(text, 'esporte') ||
+    has(text, 'esportivo') ||
+    has(text, 'campeonato') ||
+    has(text, 'tornero') ||
+    has(text, 'torneio') ||
+    has(text, 'jogos') ||
+    has(text, 'danca') ||
+    has(text, 'atletismo')
+  ) return 'esportivos';
+
+  if (has(text, 'festa') || has(text, 'festas') || has(text, 'baile') || has(text, 'celebracao')) {
+    return 'festas';
+  }
+
+  // seminario / academico / default
   return 'academicos';
+}
+
+function detectModule(text, isEventItem) {
+  if (isEventItem) return 'eventos';
+
+  const opportunitySignals = [
+    'edital', 'editais', 'chamada', 'processo seletivo', 'bolsa', 'bolsas',
+    'monitoria', 'estagio', 'estagios', 'vagas', 'selecao', 'pibic', 'pivic',
+    'probec', 'pesquisa', 'fapeg', 'mobilidade', 'mestrado', 'doutorado',
+    'residencia', 'professor substituto', 'concurso', 'concurso publico',
+    'premio', 'capacitacao', 'freelancer', 'voluntariado', 'matricula',
+  ];
+  const eventSignals = [
+    'evento', 'eventos', 'curso', 'oficina', 'palestra', 'palestras',
+    'seminario', 'congresso', 'congressos', 'simposio', 'jornada',
+    'semana academica', 'mostra', 'festival', 'programacao', 'profissoes',
+    'espaco das profissoes', 'webinario', 'webinar', 'webnario', 'live',
+    'workshop', 'minicurso', 'concerto', 'campeonato', 'dialogos',
+  ];
+
+  // Strong event formats should stay on eventos even if text mentions pesquisa/estagio.
+  const strongEventFormat = /\b(palestra|palestras|congresso|congressos|simposio|jornada|semana academica|webinario|webinar|webnario|festival|mostra|concerto|campeonato|oficina|workshop|minicurso|circuito de palestras|dialogos)\b/.test(text);
+  const strongOpportunityFormat = /\b(edital|editais|processo seletivo|chamada|concurso publico|bolsa|bolsas|monitoria|vagas? de (estagio|emprego)|inscricoes abertas para)\b/.test(text);
+
+  if (strongEventFormat && !strongOpportunityFormat) return 'eventos';
+  if (strongOpportunityFormat && !strongEventFormat) return 'oportunidades';
+
+  const opportunityScore = opportunitySignals.filter((term) => has(text, term)).length;
+  const eventScore = eventSignals.filter((term) => has(text, term)).length;
+  return opportunityScore > eventScore ? 'oportunidades' : 'eventos';
 }
 
 function classifyItem(item, source = {}, options = {}) {
@@ -341,13 +557,11 @@ function classifyItem(item, source = {}, options = {}) {
   if (institutionalRelease) score = Math.min(score, 0.39);
   score = Math.max(0, Math.min(1, Number(score.toFixed(2))));
 
-  const opportunitySignals = ['edital', 'chamada', 'processo seletivo', 'bolsa', 'monitoria', 'estagio', 'vagas', 'selecao', 'pibic', 'pivic', 'probec', 'pesquisa', 'fapeg', 'mobilidade', 'mestrado', 'doutorado', 'residencia', 'professor substituto'];
-  const eventSignals = ['evento', 'curso', 'oficina', 'palestra', 'seminario', 'congresso', 'mostra', 'festival', 'programacao', 'profissoes', 'espaco das profissoes'];
-  const opportunityScore = opportunitySignals.filter((term) => has(text, term)).length;
-  const eventScore = eventSignals.filter((term) => has(text, term)).length;
-
-  const module = isEventItem ? 'eventos' : (opportunityScore > eventScore ? 'oportunidades' : 'eventos');
-  const category = module === 'oportunidades' ? detectOpportunityCategory(text) : detectEventCategory(text);
+  const module = detectModule(text, isEventItem);
+  const rawCategory = module === 'oportunidades'
+    ? detectOpportunityCategory(text)
+    : detectEventCategory(text);
+  const category = normalizeCategoryForModule(module, rawCategory);
   const decision = score >= 0.78 ? 'publish' : (score >= 0.55 ? 'review' : 'discard');
 
   return {
@@ -367,8 +581,13 @@ function classifyItem(item, source = {}, options = {}) {
 }
 
 module.exports = {
+  EVENT_CATEGORIES,
+  OPPORTUNITY_CATEGORIES,
   analyzeTemporalRelevance,
   classifyItem,
   detectEventCategory,
+  detectModule,
   detectOpportunityCategory,
+  isValidCategoryForModule,
+  normalizeCategoryForModule,
 };

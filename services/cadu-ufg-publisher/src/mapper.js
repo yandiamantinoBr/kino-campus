@@ -1,5 +1,6 @@
 'use strict';
 
+const { normalizeCategoryForModule } = require('./classifier');
 const {
   clamp,
   extractEmails,
@@ -85,19 +86,30 @@ function markdownUrlLink(url) {
   return cleanUrl ? `[${cleanUrl}](${cleanUrl})` : '';
 }
 
+// Labels aligned to create-post schema keys (kc-create-post.schema.js).
+// Keep ASCII-friendly labels consistent with existing Cadu payload style.
 const CATEGORY_LABELS = {
+  // eventos
   academicos: 'Academicos',
+  palestras: 'Palestras',
+  congressos: 'Congressos',
+  cursos: 'Cursos',
   culturais: 'Culturais',
-  empregos: 'Empregos',
   esportivos: 'Esportivos',
-  estagios: 'Estagios',
+  workshops: 'Workshops',
   festas: 'Festas',
-  freelancer: 'Freelancer',
+  sustentabilidade: 'Sustentabilidade',
+  // oportunidades
+  editais: 'Editais',
+  concursos: 'Concursos',
+  bolsas: 'Bolsas',
+  estagios: 'Estagios',
+  empregos: 'Empregos',
   monitoria: 'Monitoria',
   pesquisa: 'Pesquisa',
-  sustentabilidade: 'Sustentabilidade',
+  'cursos-capacitacoes': 'Cursos e capacitacoes',
   voluntariado: 'Voluntariado',
-  workshops: 'Workshops',
+  freelancer: 'Freelancer',
 };
 
 function categoryLabel(category) {
@@ -380,7 +392,12 @@ function mapToKinoPayload(item, classification, options = {}) {
   const images = buildImageList(item);
   const documentLinks = normalizeDocumentLinks(item);
   const action = buildActionMetadata(item, classification, documentLinks);
-  const category = classification.category || (classification.module === 'eventos' ? 'academicos' : 'monitoria');
+  const moduleKey = classification.module === 'oportunidades' ? 'oportunidades' : 'eventos';
+  const fallbackCategory = moduleKey === 'eventos' ? 'academicos' : 'editais';
+  const category = normalizeCategoryForModule(
+    moduleKey,
+    classification.category || fallbackCategory,
+  );
   const categoryText = categoryLabel(category);
   const tags = uniq([
     'UFG',

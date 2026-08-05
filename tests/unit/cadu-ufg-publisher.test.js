@@ -268,6 +268,80 @@ describe('cadu-ufg-publisher', () => {
     expect(result.category).toBe('academicos');
   });
 
+  test('classifier maps palestras and congressos to schema event keys', () => {
+    const palestra = classifyItem({
+      title: 'Palestra com Dra. Camila Oliveira: Nutricao e Metabolismo',
+      summary: 'Ultima palestra do ciclo Dialogos com inscricoes abertas.',
+      text: 'Evento gratuito da UFG em 05/08/2026.',
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+
+    expect(palestra.module).toBe('eventos');
+    expect(palestra.category).toBe('palestras');
+
+    const congresso = classifyItem({
+      title: 'IX EGOEEP discute Engenharia de Producao na era da IA',
+      summary: 'Simposio e jornada academica com programacao em setembro.',
+      text: 'Congresso da UFG com submissao de trabalhos ate 15/09/2026.',
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+
+    expect(congresso.module).toBe('eventos');
+    expect(congresso.category).toBe('congressos');
+  });
+
+  test('classifier maps opportunity types to create-post schema keys', () => {
+    const edital = classifyItem({
+      title: 'Edital de matriculas para estudantes veteranos',
+      summary: 'Chamada com prazo de inscricao ate 20/08/2026.',
+      text: 'Processo de matricula da PROGRAD/UFG. PDF oficial disponivel.',
+      pdfLinks: ['https://prograd.ufg.br/edital.pdf'],
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+    expect(edital.module).toBe('oportunidades');
+    expect(edital.category).toBe('editais');
+
+    const concurso = classifyItem({
+      title: 'Concurso publico para professor substituto da UFG',
+      summary: 'Inscricoes abertas ate 30/08/2026.',
+      text: 'Edital de concurso publico com vagas e prova objetiva.',
+      pdfLinks: ['https://ufg.br/concurso.pdf'],
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+    expect(concurso.module).toBe('oportunidades');
+    expect(concurso.category).toBe('concursos');
+
+    const bolsa = classifyItem({
+      title: 'Bolsa de estudos DAAD para intercambio na Alemanha',
+      summary: 'Auxilio financeiro com inscricoes ate 12/09/2026.',
+      text: 'Programa de bolsas para estudantes da UFG.',
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+    expect(bolsa.module).toBe('oportunidades');
+    expect(bolsa.category).toBe('bolsas');
+
+    const curso = classifyItem({
+      title: 'Curso de Verao PPGCB com vagas abertas',
+      summary: 'Capacitacao com inscricao ate 10/09/2026.',
+      text: 'Curso de capacitacao e treinamento para estudantes e comunidade.',
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+    expect(curso.module).toBe('oportunidades');
+    expect(curso.category).toBe('cursos-capacitacoes');
+  });
+
+  test('classifier does not put palestra about science talks into pesquisa opportunity', () => {
+    const result = classifyItem({
+      title: 'Ultima palestra do Dialogos debate apresentacao de trabalhos cientificos',
+      summary: 'Ciclo de palestras com programacao em agosto.',
+      text: 'Palestra gratuita na UFG sobre metodologia de pesquisa cientifica.',
+      updatedAt: '2026-08-01',
+    }, { tier: 1 }, { now: '2026-08-01T12:00:00-03:00' });
+
+    expect(result.module).toBe('eventos');
+    expect(result.category).toBe('palestras');
+  });
+
   test('classifier sends pos-graduacao and aluno especial opportunities to pesquisa', () => {
     const item = {
       title: 'Processo seletivo para aluno especial de mestrado',
@@ -628,6 +702,49 @@ describe('cadu-ufg-publisher', () => {
 
     expect(quality.ok).toBe(true);
     expect(quality.warnings).toEqual([]);
+  });
+
+  test('quality guard blocks legacy or out-of-schema category keys', () => {
+    const item = {
+      sourceUrl: 'https://prograd.ufg.br/n/legacy',
+      title: 'Edital legado',
+      summary: 'Inscricoes abertas.',
+      text: 'Prazo ate 20/08/2026.',
+      pdfLinks: ['https://prograd.ufg.br/edital.pdf'],
+    };
+    const classification = {
+      hasPdf: true,
+      hasDeadline: true,
+      module: 'oportunidades',
+      category: 'curso-capacitacao',
+    };
+    const payload = {
+      modulo: 'oportunidades',
+      descricao: 'Inscricoes abertas com prazo ate 20/08/2026.\n\nFonte: [https://prograd.ufg.br/n/legacy](https://prograd.ufg.br/n/legacy)',
+      imagens: ['https://prograd.ufg.br/cover.jpg'],
+      metadata: {
+        source_url: item.sourceUrl,
+        contato: 'prograd@ufg.br',
+        link: item.sourceUrl,
+        link_as_cta: true,
+        actionLabel: 'Acessar edital',
+        actionKey: 'acessar-edital',
+        area: 'Academica',
+        areaKey: 'academica',
+        categoria: 'Curso capacitacao',
+        categoriaKey: 'curso-capacitacao',
+        categoryKey: 'curso-capacitacao',
+        tags: ['UFG', 'Edital'],
+        tagKeys: ['ufg', 'edital'],
+        gratuito: true,
+        modalidadeTrabalho: 'Presencial',
+      },
+    };
+
+    const quality = evaluatePayloadQuality(item, classification, payload);
+    expect(quality.ok).toBe(false);
+    expect(quality.warnings).toContain('invalid_category_key');
+    expect(quality.blockingWarnings).toContain('invalid_category_key');
   });
 
   test('quality guard treats missing event time as non-blocking when date exists', () => {
