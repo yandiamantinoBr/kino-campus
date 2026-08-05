@@ -45,8 +45,8 @@ describe('VERSION.json — integridade', function () {
     expect(VERSION.frontendRuntimeVersion).toBe('8.6.1');
   });
 
-  test('campo "branch" é "kinocampus-V75.0-foundations"', function () {
-    expect(VERSION.branch).toBe('kinocampus-V75.0-foundations');
+  test('campo "branch" é "main"', function () {
+    expect(VERSION.branch).toBe('main');
   });
 
   test('campo "status" é string não-vazia', function () {
@@ -113,7 +113,7 @@ describe('validate-version-map.js — integridade do script', function () {
 
   test('valida branch permanente', function () {
     expect(SCRIPT).toContain('CANONICAL_BRANCH');
-    expect(SCRIPT).toContain('kinocampus-V75.0-foundations');
+    expect(SCRIPT).toContain('main');
   });
 
   test('sai com código 0 em sucesso, 1 em falha', function () {

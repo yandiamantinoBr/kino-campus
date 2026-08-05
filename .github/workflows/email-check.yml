@@ -7,7 +7,7 @@ name: Email deliverability
 
 on:
   pull_request:
-    branches: [kinocampus-V75.0-foundations]
+    branches: [main]
     paths:
       - 'supabase/functions/**'
       - 'services/cadu-ufg-publisher/**'
