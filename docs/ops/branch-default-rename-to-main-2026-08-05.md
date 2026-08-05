@@ -60,31 +60,57 @@ preservar clones, dependabot branches históricas e referências externas.
 
 - `npm run check:version` — OK (`VERSION.json.branch=main`).
 - `npm run check:hygiene` — OK.
+- `npm run check:all` — **OK** (5013 tests pass, 7 skipped, 0 failed).
 - `GET /v9/projects/prj_PTFmR4f3A1aAHV5mgXa24svL8umB?teamId=...` →
   `link.productionBranch = "main"`.
 - `GET /repos/yandiamantinoBr/kino-campus` → `default_branch = "main"`.
+- **PR #809 mergeado em `main` (commit `813c2de9`).**
+- **Vercel criou o primeiro deploy de produção pós-migração
+  automaticamente: `kino-campus-8oc5hw0qy-…vercel.app`, target=production,
+  Ready em 16s.** Confirma que push em `main` agora dispara deploy de
+  produção sem ação manual.
 
 ## Próximos passos
 
-1. Aguardar primeiro push em `main` para confirmar que o deploy de produção
-   do Vercel dispara automaticamente.
-2. Fechar as 2 dependabot PRs legadas contra a branch antiga (PR #730 e
+1. Fechar as 2 dependabot PRs legadas contra a branch antiga (PR #730 e
    PR #796) — são PRs contra `main`, mas o `headRefName` ainda referencia
    `kinocampus-V75.0-foundations`. Devem ser mergeadas ou fechadas conforme
    aplicabilidade dos bumps.
-3. Após 1 semana de validação sem incidente, considerar deletar
+2. Após 1 semana de validação sem incidente, considerar deletar
    `kinocampus-V75.0-foundations` (e suas dependabot branches) via
    `gh api -X DELETE repos/.../git/refs/heads/kinocampus-V75.0-foundations`.
    Manter como archive por ora é mais seguro.
+3. Atualizar `origin/HEAD` que ainda aponta para
+   `kinocampus-V75.0-foundations` (apenas cosmético, não afeta nada
+   funcional; a config do GitHub default branch já é `main`).
 4. Atualizar docs históricas que ainda mencionam
    `kinocampus-V75.0-foundations` apenas se a leitura ficar confusa — a
    maioria é datada e o nome antigo faz sentido no contexto.
 
 ## Risco
 
-**Baixo.** Nenhuma das mudanças é destrutiva: o Vercel não re-deploya, o
-GitHub não invalida webhooks, e o Supabase não toca em nada. O usuário
-Yan confirmou `default_branch=main` antes da alteração, e a única ação
-com efeito externo é o `productionBranch` do Vercel, que afeta apenas o
-próximo deploy (que será feito a partir de um push em `main` revisado por
-PR + CI).
+**Baixo.** Nenhuma das mudanças é destrutiva: o Vercel não re-deployou
+na troca de `productionBranch` (o deploy só veio com o push do merge
+do PR #809, que é exatamente o comportamento esperado), o GitHub não
+invalidou webhooks, e o Supabase não tocou em nada. A branch antiga foi
+preservada congelada (0 PRs abertas, 0 protections) e pode ser deletada
+em segurança após 1 semana.
+
+## Adicional (PR #808 + #809 timeline)
+
+- 2026-08-05 10:17 BRT: commit `680bd1cd` (merge do PR #808) já adiciona
+  `main` como trigger de Essential Validation e Lighthouse, mantendo
+  `kinocampus-V75.0-foundations` para PRs legados. **A migração começou
+  aqui, não no PR #809**.
+- 2026-08-05 10:14 BRT: `PATCH /v9/projects/{id}/branch` muda
+  `link.productionBranch` para `main` (Vercel).
+- 2026-08-05 10:21 BRT: commit `691ac1cd` (PR #809) consolida a migração
+  em todos os 4 workflows + dependabot + VERSION + scripts + tests + docs.
+- 2026-08-05 10:41 BRT: commit `fa303b62` (PR #809 amend) corrige o
+  test `cadu-candidate-source-registry.test.js` que dependia do nome
+  antigo da branch para diferenciar o fetch do OpenClaw do fetch do
+  kino no test offline (substituído por heurística de tempdir
+  `kc-cadu-{upstream,kino-publisher}-`).
+- 2026-08-05 10:42 BRT: PR #809 mergeado em `main` (commit `813c2de9`).
+- 2026-08-05 10:43 BRT: Vercel dispara produção automaticamente para
+  o commit `813c2de9`. Deploy pronto em 16s.
