@@ -213,6 +213,14 @@
     var thumbs = document.getElementById('thumbnails');
     var galleryMain = document.querySelector('.kc-gallery-main');
     var images = Array.isArray(post.imagens) ? post.imagens : (Array.isArray(post.images) ? post.images : []);
+    // A imagem principal (imagens[0]) tambem era escrita como primeiro item
+    // da galeria por versoes antigas do Cadu, fazendo a mesma imagem aparecer
+    // duas vezes (principal + miniatura). As miniaturas mostram apenas as
+    // imagens ADICIONAIS; a capa continua sendo a imagem principal.
+    var mainImageSrc = images.length ? String(images[0] || '').trim() : '';
+    var thumbImages = images.filter(function (src) {
+      return String(src || '').trim() !== mainImageSrc;
+    });
     var isLegacy = isLegacyExamplePost(post);
     syncLegacyExampleMarker(galleryMain, isLegacy, 'Exemplo', 'kc-product-example-ribbon--gallery');
     var emoji = post.emoji || '✨';
@@ -223,7 +231,7 @@
       if (emojiCover) emojiCover.style.display = 'none';
       if (thumbs) {
         thumbs.innerHTML = '';
-        images.forEach(function (src, idx) {
+        thumbImages.forEach(function (src, idx) {
           var img = document.createElement('img');
           img.src = src;
           img.alt = 'Miniatura ' + (idx + 1) + ' de ' + title;
