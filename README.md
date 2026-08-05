@@ -5,7 +5,7 @@
 Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda, Caronas, Moradia, Eventos, Oportunidades e Achados e Perdidos. O acesso é restrito a e-mails institucionais (`@ufg.br`, `@discente.ufg.br`, `@egresso.ufg.br`).
 
 **Produção:** [kinocampus.com.br](https://www.kinocampus.com.br)  
-**Branch principal:** `kinocampus-V75.0-foundations`
+**Branch principal:** `main`
 
 **Status atual:** v75.1 performance phase 1 em producao, com runtime frontend 8.6.1.
 
@@ -516,7 +516,7 @@ Artefatos de QA: `docs/qa/` — checklist E2E, smoke RLS, payloads XSS e invaria
 
 ## CI/CD (GitHub Actions)
 
-Dois workflows rodam em todo PR contra `kinocampus-V75.0-foundations`:
+Dois workflows rodam em todo PR contra `main`:
 
 | Workflow | Arquivo | Função |
 |---|---|---|

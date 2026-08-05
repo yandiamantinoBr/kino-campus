@@ -28,7 +28,9 @@ var REQUIRED_FIELDS = [
 ];
 
 var CANONICAL_RUNTIME_VERSION = '8.6.1';
-var CANONICAL_BRANCH          = 'kinocampus-V75.0-foundations';
+// 2026-08-05: branch permanente migrada de "kinocampus-V75.0-foundations" para "main"
+// para alinhar com o default branch do GitHub e o productionBranch do Vercel.
+var CANONICAL_BRANCH          = 'main';
 
 var errors = [];
 

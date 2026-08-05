@@ -1746,18 +1746,29 @@ describe('Cadu candidate source registry mirror', () => {
       runGit(upstreamRepo, ['remote', 'add', 'origin', declaredRemote]);
       runGit(upstreamRepo, ['update-ref', 'refs/remotes/origin/main', commit]);
       const kinoOfflineGit = kinoFixture.runGit;
+      // 2026-08-05: a decisao original baseada em `refs/heads/${EXPECTED_KINO_BRANCH}:`
+      // deixou de funcionar apos a migracao da branch permanente para "main", porque
+      // o refspec do fetch do OpenClaw (`+refs/heads/main:refs/remotes/origin/main`)
+      // passou a colidir com o do kino. Agora diferenciamos pelo prefixo do tempdir
+      // do repoDir: `kc-cadu-upstream-` indica isolated OpenClaw (importRegistry)
+      // e `kc-cadu-kino-publisher-` indica isolated Kino (validateKinoPublisherProvenance).
+      // Isso sobrevive a multiplas chamadas de importRegistry e independe do nome
+      // da branch.
       const offlineGit = (repoDir, args, encoding = 'utf8') => {
         if (args.includes('fetch')) {
-          if (String(args[args.length - 1]).includes(`refs/heads/${EXPECTED_KINO_BRANCH}:`)) {
+          if (pathToFileURL(repoDir).href.includes('kc-cadu-kino-publisher-')) {
             return kinoOfflineGit(repoDir, args, encoding);
           }
-          return runGit(repoDir, [
-            'fetch',
-            '--quiet',
-            '--no-tags',
-            pathToFileURL(upstreamRepo).href,
-            '+refs/remotes/origin/main:refs/remotes/origin/main',
-          ], encoding);
+          if (pathToFileURL(repoDir).href.includes('kc-cadu-upstream-')) {
+            return runGit(repoDir, [
+              'fetch',
+              '--quiet',
+              '--no-tags',
+              pathToFileURL(upstreamRepo).href,
+              '+refs/remotes/origin/main:refs/remotes/origin/main',
+            ], encoding);
+          }
+          return runGit(repoDir, args, encoding);
         }
         return runGit(repoDir, args, encoding);
       };

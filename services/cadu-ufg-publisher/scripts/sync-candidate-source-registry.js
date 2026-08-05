@@ -37,7 +37,8 @@ const SPECS = Object.freeze([
 
 const EXPECTED_OPENCLAW_REMOTE = 'https://github.com/yandiamantinoBr/openclaw-cadu';
 const EXPECTED_KINO_REMOTE = 'https://github.com/yandiamantinoBr/kino-campus';
-const EXPECTED_KINO_BRANCH = 'kinocampus-V75.0-foundations';
+// 2026-08-05: branch permanente migrada de "kinocampus-V75.0-foundations" para "main".
+const EXPECTED_KINO_BRANCH = 'main';
 const GITHUB_HTTP_SCOPE = 'https://github.com/';
 const IMPORT_LOCK_FILE = '.cadu-source-registry-import.lock';
 const INVALID_LOCK_GRACE_MS = 30_000;

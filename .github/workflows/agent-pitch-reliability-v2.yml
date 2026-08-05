@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      BASE_BRANCH: kinocampus-V75.0-foundations
+      BASE_BRANCH: main
       FIX_BRANCH: fix/pitch-navigation-reliability-2026-07-21
     steps:
       - name: Check out the guarded fix branch

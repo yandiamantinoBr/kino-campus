@@ -11,7 +11,7 @@ name: Deploy Edge Functions
 on:
   workflow_run:
     workflows: [Essential Validation]
-    branches: [kinocampus-V75.0-foundations]
+    branches: [main]
     types: [completed]
 
 permissions:
