@@ -13,6 +13,17 @@ const IMAGE_EXTENSIONS = {
   'image/gif': 'gif',
 };
 
+const TEMPORARY_IMAGE_HOST_RE = /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$|(^|\.)instagram\.com$|(^|\.)cdn-telegram\.org$|(^|\.)telegram\.org$/i;
+
+function isTemporaryImageUrl(value) {
+  const text = String(value || '').trim();
+  if (!text || !/^https?:\/\//i.test(text)) return false;
+  try {
+    return TEMPORARY_IMAGE_HOST_RE.test(new URL(text).hostname.toLowerCase());
+  } catch (_) {
+    return false;
+  }
+}
 function required(name, value) {
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
   return value;
@@ -298,6 +309,14 @@ class SupabasePublisher {
       await this.updatePostCoverImage(post.id, row, prepared.images[0]);
       post.image_url = prepared.images[0];
       post.metadata = withCoverImage(row, prepared.images[0]).metadata;
+    } else if (post && post.id && isTemporaryImageUrl(row.image_url)) {
+      // O upload da capa falhou e a URL candidata e temporaria (Instagram/Facebook/
+      // Telegram CDN): ela expiraria e quebraria o og:image e o feed. Em vez de
+      // publicar com URL temporaria, limpa a capa - o SSR usa o fallback generico
+      // ate a reconciliacao persistir uma imagem real no storage.
+      await this.updatePostCoverImage(post.id, row, '');
+      post.image_url = '';
+      post.metadata = withCoverImage(row, '').metadata;
     }
     const media = post && post.id ? await this.insertPostMedia(post.id, prepared.images) : { ok: true, count: 0 };
     return {
@@ -367,7 +386,11 @@ class SupabasePublisher {
       } catch (error) {
         const fallbackUrl = imageUrlFromCandidate(originalUrl);
         uploads.push({ ok: false, source: originalUrl, source_url: fallbackUrl, error: error.message });
-        if (allowExternalFallback && fallbackUrl) out.push(fallbackUrl);
+        // Fallback externo e aceitavel para URLs permanentes (ex.: cercomp UFG),
+        // mas nunca para CDNs temporarias de redes sociais (expira e quebra o
+        // og:image/feed). Se o upload falhou e a candidata e temporaria, o post
+        // fica sem capa ate a reconciliacao persistir uma imagem real.
+        if (allowExternalFallback && fallbackUrl && !isTemporaryImageUrl(fallbackUrl)) out.push(fallbackUrl);
       }
     }
     return { images: out, uploads };

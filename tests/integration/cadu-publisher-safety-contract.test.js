@@ -43,7 +43,8 @@ describe('Cadu publisher safety contract', () => {
   test('publisher normalizes object image candidates before storage or fallback', () => {
     expect(publisher).toContain('function imageUrlFromCandidate(value)');
     expect(publisher).toContain("value.url");
-    expect(publisher).toContain("if (allowExternalFallback && fallbackUrl) out.push(fallbackUrl)");
+    expect(publisher).toContain("if (allowExternalFallback && fallbackUrl && !isTemporaryImageUrl(fallbackUrl)) out.push(fallbackUrl)");
+    expect(publisher).toContain('function isTemporaryImageUrl(value)');
     expect(publisher).toContain('allowExternalImageFallback');
   });
 

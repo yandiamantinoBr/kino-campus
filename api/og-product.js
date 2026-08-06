@@ -174,6 +174,20 @@ function flattenImageCandidates(value) {
   return [];
 }
 
+function isTemporaryImageUrl(value) {
+  const text = String(value || '').trim();
+  if (!text || !/^https?:\/\//i.test(text)) return false;
+  try {
+    const host = new URL(text).hostname.toLowerCase();
+    return /(^|\.)cdninstagram\.com$/.test(host)
+      || /(^|\.)fbcdn\.net$/.test(host)
+      || /(^|\.)instagram\.com$/.test(host)
+      || /(^|\.)cdn-telegram\.org$/.test(host)
+      || /(^|\.)telegram\.org$/.test(host);
+  } catch (_) {
+    return false;
+  }
+}
 function getPostImage(post) {
   const metadata = metadataOf(post);
   const media = post && post.post_media;
@@ -183,11 +197,18 @@ function getPostImage(post) {
         media,
       ])
     : [];
+  // post_media e a fonte canonica da galeria (URLs persistidas no storage).
+  // A coluna posts.image_url pode estar stale (URL temporaria/social) - ela
+  // entra apenas como candidata de baixa prioridade e e filtrada se temporaria.
   const candidates = flattenImageCandidates([
-    post && post.image_url,
-    post && post.imageUrl,
-    post && post.cover_url,
-    post && post.coverUrl,
+    mediaCandidates,
+    post && post.imagens,
+    post && post.images,
+    metadata.gallery_image_urls,
+    metadata.galleryImageUrls,
+    metadata.image_urls,
+    metadata.imagens,
+    metadata.images,
     metadata.cover_url,
     metadata.coverUrl,
     metadata.image_url,
@@ -196,18 +217,17 @@ function getPostImage(post) {
     metadata.ogImage,
     metadata.thumbnail_url,
     metadata.thumbnailUrl,
-    post && post.images,
-    post && post.imagens,
-    post && post.image_urls,
     post && post.gallery_image_urls,
-    metadata.images,
-    metadata.imagens,
-    metadata.image_urls,
-    metadata.gallery_image_urls,
-    metadata.galleryImageUrls,
-    mediaCandidates,
+    post && post.image_urls,
+    post && post.image_url,
+    post && post.imageUrl,
+    post && post.cover_url,
+    post && post.coverUrl,
   ]);
-  return candidates.map((item) => String(item || '').trim()).find(isHttpUrl) || '';
+  return candidates
+    .map((item) => String(item || '').trim())
+    .filter(isHttpUrl)
+    .find((url) => !isTemporaryImageUrl(url)) || '';
 }
 
 function isRemoteImageUrl(value) {

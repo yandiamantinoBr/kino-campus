@@ -993,6 +993,78 @@ describe('cadu-ufg-publisher', () => {
     expect(prepared.uploads[0].source_url).toBe('https://api.telegram.org/file/bot-token/photos/photo.jpg');
   });
 
+  test('publisher skips temporary CDN fallback by default when upload fails', async () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    publisher.uploadImageToStorage = jest.fn(async () => {
+      throw new Error('storage_upload_http_403');
+    });
+
+    const prepared = await publisher.prepareImagesForPost(
+      'post-1',
+      [{ url: 'https://scontent.cdninstagram.com/v/t51.2885-15/photo.jpg' }],
+    );
+
+    expect(prepared.images).toEqual([]);
+    expect(prepared.uploads[0].source_url)
+      .toBe('https://scontent.cdninstagram.com/v/t51.2885-15/photo.jpg');
+  });
+
+  test('createPost clears a temporary CDN cover when the storage upload fails', async () => {
+    const originalFetch = global.fetch;
+    const createdRow = {
+      id: 'post-1',
+      module: 'eventos',
+      title: 'Teste',
+      status: 'published',
+      image_url: 'https://scontent.cdninstagram.com/v/t51.2885-15/photo.jpg',
+      metadata: {},
+    };
+    global.fetch = jest.fn(async (url, options = {}) => {
+      if (String(url).endsWith('/rest/v1/posts') && (options.method || 'GET') === 'POST') {
+        return { ok: true, status: 201, text: async () => JSON.stringify([createdRow]) };
+      }
+      return { ok: true, status: 200, text: async () => '{}' };
+    });
+    try {
+      const publisher = new SupabasePublisher({
+        supabaseUrl: 'https://project.supabase.co',
+        supabaseAnonKey: 'anon',
+        kinoEmail: 'cadu@example.com',
+        kinoPassword: 'secret',
+      });
+      publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+      publisher.checkPostFloodLimit = jest.fn(async () => null);
+      publisher.checkPostLimit = jest.fn(async () => null);
+      publisher.uploadImageToStorage = jest.fn(async () => {
+        throw new Error('storage_upload_http_403');
+      });
+      publisher.updatePostCoverImage = jest.fn(async () => ({ ok: true }));
+
+      const result = await publisher.createPost({
+        title: 'Teste',
+        module: 'eventos',
+        images: ['https://scontent.cdninstagram.com/v/t51.2885-15/photo.jpg'],
+        metadata: { categoria: 'Academicos', categoriaKey: 'academicos' },
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.post.image_url).toBe('');
+      expect(publisher.updatePostCoverImage).toHaveBeenCalledWith(
+        'post-1',
+        expect.anything(),
+        '',
+      );
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
   test('patchPost fetches the post when return=representation returns an empty array', async () => {
     const originalFetch = global.fetch;
     global.fetch = jest.fn(async () => ({ ok: true, status: 200, text: async () => '[]' }));
