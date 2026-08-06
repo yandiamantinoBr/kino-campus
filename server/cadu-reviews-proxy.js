@@ -23,6 +23,7 @@ const RESOLVED_STATES = new Set([
 ]);
 const DECISIONS = new Set(RESOLVED_STATES);
 const KINDS = new Set(['pipeline_quality', 'pipeline_incident', 'feed_item']);
+const REPASS_HINTS = new Set(['publish_ready', 'review', 'reject', 'unknown']);
 const LIST_QUERY_KEYS = new Set(['origin', 'state', 'search', 'limit', 'offset']);
 const AUDIT_QUERY_KEYS = new Set(['origin', 'decision', 'limit', 'offset']);
 const UNSAFE_TEXT_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
@@ -164,6 +165,19 @@ export function serializeCentralReviewResolution(body, pathReviewId) {
   };
 }
 
+export function serializeCentralReviewRepass(body) {
+  if (!isPlainObject(body)) return null;
+  const allowed = new Set(['intent', 'run_id']);
+  if (Object.keys(body).some((key) => !allowed.has(key))) return null;
+  if (body.intent !== undefined && body.intent !== 'repass') return null;
+  let runId = null;
+  if (body.run_id !== undefined && body.run_id !== null) {
+    if (typeof body.run_id !== 'string' || !UUID.test(body.run_id)) return null;
+    runId = body.run_id;
+  }
+  return { intent: 'repass', run_id: runId };
+}
+
 function caduApiBase(apiUrl) {
   const parsed = new URL(String(apiUrl || '').trim());
   if (parsed.protocol !== 'https:' || parsed.username || parsed.password
@@ -195,6 +209,9 @@ export function buildCentralReviewTargetUrl(apiUrl, route) {
   }
   if (route?.kind === 'resolve' && UUID.test(route.reviewId || '')) {
     return `${base}/api/reviews/${encodeURIComponent(route.reviewId)}/resolve`;
+  }
+  if (route?.kind === 'repass') {
+    return `${base}/api/reviews/repass`;
   }
   throw new TypeError('invalid Cadu review route');
 }
@@ -239,10 +256,39 @@ function validReviewItem(item) {
         || item.artifact.length > MAX_ITEM_ARTIFACT
         || UNSAFE_TEXT_CONTROL.test(item.artifact))) return false;
   if (item.state === 'pending') return item.resolution === null;
-  return isPlainObject(item.resolution)
-    && item.resolution.decision === item.state
-    && UUID.test(item.resolution.resolved_by || '')
-    && Number.isSafeInteger(item.resolution.resolved_at);
+  if (!isPlainObject(item.resolution)
+    || item.resolution.decision !== item.state
+    || !UUID.test(item.resolution.resolved_by || '')
+    || !Number.isSafeInteger(item.resolution.resolved_at)) {
+    return false;
+  }
+  return validRepass(item.repass);
+}
+
+function validRepass(value) {
+  if (value === null || value === undefined) return true;
+  if (!isPlainObject(value)
+      || !UUID.test(value.run_id || '')
+      || !SHA256.test(value.item_version || '')
+      || !Number.isSafeInteger(value.created_at) || value.created_at <= 0
+      || typeof value.score !== 'number' || !Number.isFinite(value.score)
+      || value.score < 0 || value.score > 1
+      || (value.previous_score !== null
+        && (typeof value.previous_score !== 'number'
+          || !Number.isFinite(value.previous_score)
+          || value.previous_score < 0
+          || value.previous_score > 1))
+      || (value.delta !== null
+        && (typeof value.delta !== 'number' || !Number.isFinite(value.delta)))
+      || !REPASS_HINTS.has(value.decision_hint)
+      || !Array.isArray(value.reasons)
+      || !value.reasons.every((reason) => (
+        typeof reason === 'string' && reason.length <= 180
+      ))
+      || !isPlainObject(value.evidence)) {
+    return false;
+  }
+  return true;
 }
 
 function validProvider(provider) {
@@ -331,6 +377,28 @@ function validateResolutionResponse(body, resolution, adminId) {
     : null;
 }
 
+function validateRepassResponse(body, adminId) {
+  return isPlainObject(body)
+    && UUID.test(body.run_id || '')
+    && Number.isSafeInteger(body.evaluated) && body.evaluated >= 0
+    && Number.isSafeInteger(body.entries) && body.entries >= 0
+    && Number.isSafeInteger(body.errors) && body.errors >= 0
+    && Number.isSafeInteger(body.with_previous_score) && body.with_previous_score >= 0
+    && Number.isSafeInteger(body.increased) && body.increased >= 0
+    && Number.isSafeInteger(body.decreased) && body.decreased >= 0
+    && Number.isSafeInteger(body.stable) && body.stable >= 0
+    && Number.isSafeInteger(body.publish_ready) && body.publish_ready >= 0
+    && Number.isSafeInteger(body.review) && body.review >= 0
+    && Number.isSafeInteger(body.rejected) && body.rejected >= 0
+    && Number.isSafeInteger(body.started_at) && body.started_at > 0
+    && Number.isSafeInteger(body.finished_at) && body.finished_at > 0
+    && ['manual', 'pipeline_post_run'].includes(body.trigger)
+    && UUID.test(body.requested_by || '')
+    && body.requested_by === adminId
+    ? body
+    : null;
+}
+
 function configureResponse(res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -380,6 +448,10 @@ function reviewRoute(method, path, query, body) {
   if (method === 'GET' && path === 'reviews/audit') {
     const parsed = parseCentralReviewAuditQuery(query);
     return parsed ? { kind: 'audit', query: parsed } : null;
+  }
+  if (method === 'POST' && path === 'reviews/repass') {
+    const payload = serializeCentralReviewRepass(body);
+    return payload ? { kind: 'repass', payload } : null;
   }
   const match = method === 'POST'
     ? /^reviews\/([0-9a-f-]{36})\/resolve$/u.exec(path)
@@ -439,13 +511,15 @@ export async function handleCaduReviews(req, res, options = {}) {
 
   const upstreamBody = route.kind === 'resolve'
     ? JSON.stringify(route.resolution.payload)
-    : undefined;
+    : route.kind === 'repass'
+      ? JSON.stringify(route.payload)
+      : undefined;
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: 'application/json',
     'User-Agent': 'KinoCampus-Admin/2.0',
   };
-  if (route.kind === 'resolve') {
+  if (route.kind === 'resolve' || route.kind === 'repass') {
     headers['Content-Type'] = 'application/json';
     try {
       Object.assign(headers, buildCaduReviewSignatureHeaders({
@@ -468,7 +542,7 @@ export async function handleCaduReviews(req, res, options = {}) {
       body: upstreamBody,
       cache: 'no-store',
       redirect: 'error',
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(route.kind === 'repass' ? 420000 : 12000),
     });
     const text = await readLimitedSourceReviewResponse(
       upstream,
@@ -493,7 +567,9 @@ export async function handleCaduReviews(req, res, options = {}) {
       ? validateListResponse(body, route.query)
       : route.kind === 'audit'
         ? validateAuditResponse(body, route.query)
-        : validateResolutionResponse(body, route.resolution, admin.id);
+        : route.kind === 'resolve'
+          ? validateResolutionResponse(body, route.resolution, admin.id)
+          : validateRepassResponse(body, admin.id);
     if (!validated) return sendError(res, 502, 'invalid_cadu_api_response');
     return res.status(200).json(validated);
   } catch {

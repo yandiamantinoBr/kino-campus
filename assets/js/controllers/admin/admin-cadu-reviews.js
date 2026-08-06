@@ -28,7 +28,9 @@
     error: '',
     decisionDraft: null,
     resolvingId: '',
-    auditLoaded: false
+    auditLoaded: false,
+    repassFilter: 'all',
+    repassRunning: false
   };
 
   var ORIGINS = ['pipeline', 'feed', 'sites', 'openclaw'];
@@ -123,6 +125,57 @@
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  function formatScore(value) {
+    var number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(2) : '';
+  }
+
+  function repassHintLabel(hint) {
+    return ({
+      publish_ready: 'pronto para publicação',
+      review: 'manter em revisão',
+      reject: 'abaixo do limite',
+      unknown: 'indefinido'
+    })[hint] || String(hint || '');
+  }
+
+  function scoreBadge(item) {
+    var repass = item.repass;
+    var base = item.metadata && typeof item.metadata === 'object'
+      && typeof item.metadata.score === 'number'
+      ? item.metadata.score
+      : null;
+    if (repass) {
+      var deltaClass = '';
+      var deltaText = '';
+      if (repass.delta !== null) {
+        if (repass.delta > 0.005) {
+          deltaClass = ' is-up';
+          deltaText = ' ▲ ' + Number(repass.delta).toFixed(2);
+        } else if (repass.delta < -0.005) {
+          deltaClass = ' is-down';
+          deltaText = ' ▼ ' + Math.abs(Number(repass.delta)).toFixed(2);
+        } else {
+          deltaClass = ' is-flat';
+          deltaText = ' =';
+        }
+      }
+      return '<span class="kc-cadu-review-score' + deltaClass + '" title="Reanálise automática: ' + escapeHtml(repassHintLabel(repass.decision_hint)) + '">' +
+        escapeHtml(formatScore(repass.score)) + escapeHtml(deltaText) + '</span>';
+    }
+    if (base !== null) {
+      return '<span class="kc-cadu-review-score is-base" title="Nota original do Curador">' +
+        escapeHtml(formatScore(base)) + '</span>';
+    }
+    return '';
+  }
+
+  function repassFilterPasses(item) {
+    if (state.repassFilter === 'done') return Boolean(item.repass);
+    if (state.repassFilter === 'pending') return !item.repass;
+    return true;
   }
 
   function setStatus(message, error) {
@@ -279,11 +332,18 @@
     if (!state.items.length) {
       var emptyCopy = state.origin === 'sites'
         ? 'As revisões do Mapa UFG usam a fila institucional exibida abaixo.'
-        : 'Nenhum item corresponde aos filtros atuais.';
+        : state.repassFilter === 'all'
+          ? 'Nenhum item corresponde aos filtros atuais.'
+          : 'Nenhum item corresponde ao recorte de reanálise selecionado.';
       target.innerHTML = '<div class="kc-cadu-review-empty"><i class="fas fa-circle-check" aria-hidden="true"></i> ' + escapeHtml(emptyCopy) + '</div>';
       return;
     }
-    target.innerHTML = state.items.map(function (item) {
+    var visibleItems = state.items.filter(repassFilterPasses);
+    if (!visibleItems.length) {
+      target.innerHTML = '<div class="kc-cadu-review-empty"><i class="fas fa-circle-check" aria-hidden="true"></i> Nenhum item corresponde ao recorte de reanálise selecionado.</div>';
+      return;
+    }
+    target.innerHTML = visibleItems.map(function (item) {
       var imageUrl = safeHttpsUrl(item.image_url);
       var image = imageUrl
         ? '<img class="kc-cadu-review-item__image" src="' + escapeHtml(imageUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
@@ -291,16 +351,25 @@
       var issues = (item.issues || []).slice(0, 8).map(function (issue) {
         return '<span class="kc-cadu-review-item__issue">' + escapeHtml(issueLabel(issue)) + '</span>';
       }).join('');
+      var repassInfo = item.repass
+        ? '<p class="kc-cadu-review-item__repass">Reanálise em ' + escapeHtml(fmtDate(item.repass.created_at)) +
+          ': ' + escapeHtml(repassHintLabel(item.repass.decision_hint)) +
+          (item.repass.reasons && item.repass.reasons.length
+            ? ' — ' + escapeHtml(item.repass.reasons.slice(0, 3).join(', '))
+            : '') + '</p>'
+        : '';
       return '<article class="kc-cadu-review-item' + (item.state === 'pending' ? '' : ' is-resolved') + '" data-review-item="' + escapeHtml(item.id) + '" role="listitem">' +
         '<div class="kc-cadu-review-item__content">' + image +
         '<div class="kc-cadu-review-item__body">' +
         '<div class="kc-cadu-review-item__eyebrow">' +
         '<span class="kc-cadu-review-item__origin"><i class="fas ' + escapeHtml(ORIGIN_ICONS[item.origin] || 'fa-clipboard-check') + '" aria-hidden="true"></i> ' + escapeHtml(ORIGIN_LABELS[item.origin] || item.origin) + '</span>' +
         '<span class="kc-cadu-review-item__state">' + escapeHtml(STATE_LABELS[item.state] || item.state) + '</span>' +
+        scoreBadge(item) +
         '<span>' + escapeHtml(fmtDate(item.created_at)) + '</span>' +
         '</div>' +
         '<h3>' + escapeHtml(item.title) + '</h3>' +
         (item.summary ? '<p class="kc-cadu-review-item__summary">' + escapeHtml(item.summary) + '</p>' : '') +
+        repassInfo +
         '<div class="kc-cadu-review-item__issues">' + issues + '</div>' +
         '<div class="kc-cadu-review-item__links">' + reviewLinks(item) + '</div>' +
         '</div></div>' +
@@ -376,10 +445,34 @@
     if (next) next.disabled = state.loading || state.offset + state.items.length >= state.total;
   }
 
+  function renderRepassSummary() {
+    var target = $('#reviews-repass-summary');
+    if (!target) return;
+    if (state.repassRunning) {
+      target.textContent = 'Reanálise automática em andamento…';
+      target.classList.add('is-running');
+      return;
+    }
+    target.classList.remove('is-running');
+    var withRepass = state.items.filter(function (item) {
+      return Boolean(item.repass);
+    }).length;
+    var latest = null;
+    state.items.forEach(function (item) {
+      if (item.repass && (!latest || item.repass.created_at > latest)) {
+        latest = item.repass;
+      }
+    });
+    target.textContent = latest
+      ? withRepass + ' item(ns) deste recorte com reanálise; última em ' + fmtDate(latest.created_at) + '.'
+      : 'Nenhuma reanálise registrada neste recorte.';
+  }
+
   function render() {
     renderProviders();
     renderItems();
     renderPager();
+    renderRepassSummary();
   }
 
   function reviewListPath() {
@@ -518,6 +611,35 @@
     }
     setStatus((DECISION_LABELS[decision] || 'Decisão') + ' registrada. Nenhum conteúdo foi publicado.');
     state.auditLoaded = false;
+    await refresh();
+    if ($('#reviews-audit') && $('#reviews-audit').open) loadAudit();
+  }
+
+  async function runRepass() {
+    if (!bridge || typeof bridge.apiFetchResponse !== 'function') return;
+    if (state.repassRunning) return;
+    state.repassRunning = true;
+    renderRepassSummary();
+    setStatus('Reanalisando eventos e oportunidades pendentes com o classificador do Curador…');
+    var envelope = await bridge.apiFetchResponse('/api/cadu/reviews/repass', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ intent: 'repass', run_id: null }),
+      timeoutMs: 420000
+    });
+    state.repassRunning = false;
+    if (!envelope.ok || !envelope.data) {
+      setStatus(responseError(envelope), true);
+      renderRepassSummary();
+      return;
+    }
+    var data = envelope.data;
+    setStatus(
+      'Reanálise concluída: ' + data.evaluated + ' item(ns) avaliado(s); '
+      + data.increased + ' subiram, ' + data.decreased + ' caíram; '
+      + data.publish_ready + ' prontos para publicação. A decisão final permanece manual.'
+    );
+    renderRepassSummary();
     await refresh();
     if ($('#reviews-audit') && $('#reviews-audit').open) loadAudit();
   }
@@ -717,6 +839,10 @@
     state.search = ($('#reviews-search') && $('#reviews-search').value.trim()) || '';
     state.limit = Number(($('#reviews-limit') && $('#reviews-limit').value) || DEFAULT_PAGE_LIMIT);
     state.offset = 0;
+    var repassFilter = $('#reviews-repass-filter');
+    state.repassFilter = repassFilter && ['all', 'done', 'pending'].indexOf(repassFilter.value) !== -1
+      ? repassFilter.value
+      : 'all';
     state.decisionDraft = null;
     if (previousOrigin !== state.origin) invalidateAudit('O recorte mudou. Atualizando o histórico correspondente…');
     refresh();
@@ -729,6 +855,8 @@
     state.search = '';
     state.limit = DEFAULT_PAGE_LIMIT;
     state.offset = 0;
+    state.repassFilter = 'all';
+    if ($('#reviews-repass-filter')) $('#reviews-repass-filter').value = 'all';
     ['#reviews-origin', '#reviews-search'].forEach(function (selector) {
       var field = $(selector);
       if (field) field.value = '';
@@ -766,6 +894,13 @@
     });
     var exportButton = $('#reviews-export-json');
     if (exportButton) exportButton.addEventListener('click', exportAudit);
+    var repassButton = $('#reviews-repass-run');
+    if (repassButton) repassButton.addEventListener('click', runRepass);
+    var repassFilter = $('#reviews-repass-filter');
+    if (repassFilter) repassFilter.addEventListener('change', function () {
+      state.offset = 0;
+      refresh();
+    });
   }
 
   function init(options) {

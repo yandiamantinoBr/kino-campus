@@ -13,6 +13,7 @@ const {
   default: handler,
   parseCentralReviewAuditQuery,
   parseCentralReviewListQuery,
+  serializeCentralReviewRepass,
   serializeCentralReviewResolution,
 } = require('../../server/cadu-reviews-proxy.js');
 
@@ -78,6 +79,7 @@ function pendingItem() {
     metadata: { decision_effect: 'editorial_record_only' },
     state: 'pending',
     resolution: null,
+    repass: null,
   };
 }
 
@@ -128,6 +130,27 @@ function auditResponse(query) {
     offset: query.offset,
     has_more: false,
     generated_at: 1785200300,
+  };
+}
+
+function repassResponse() {
+  return {
+    run_id: RUN_ID,
+    evaluated: 2,
+    entries: 2,
+    errors: 0,
+    with_previous_score: 2,
+    increased: 1,
+    decreased: 1,
+    stable: 0,
+    publish_ready: 1,
+    review: 0,
+    rejected: 1,
+    started_at: 1785200500,
+    finished_at: 1785200600,
+    trigger: 'manual',
+    requested_by: ADMIN_ID,
+    diagnostics: { pipeline: { artifacts_loaded: 1 } },
   };
 }
 
@@ -241,6 +264,29 @@ describe('Cadu central review proxy', () => {
     }, REVIEW_ID)).toBeNull();
   });
 
+  test('serializes a strict repass trigger', () => {
+    expect(serializeCentralReviewRepass({
+      intent: 'repass',
+      run_id: RUN_ID,
+    })).toEqual({ intent: 'repass', run_id: RUN_ID });
+    expect(serializeCentralReviewRepass({})).toEqual({
+      intent: 'repass',
+      run_id: null,
+    });
+    expect(serializeCentralReviewRepass({
+      intent: 'publish',
+      run_id: RUN_ID,
+    })).toBeNull();
+    expect(serializeCentralReviewRepass({
+      intent: 'repass',
+      run_id: 'not-a-uuid',
+    })).toBeNull();
+    expect(serializeCentralReviewRepass({
+      intent: 'repass',
+      unexpected: true,
+    })).toBeNull();
+  });
+
   test('rebuilds upstream URLs from validated values only', () => {
     const list = parseCentralReviewListQuery({ origin: 'pipeline', state: 'pending' });
     const audit = parseCentralReviewAuditQuery({ decision: 'approved' });
@@ -253,6 +299,9 @@ describe('Cadu central review proxy', () => {
     expect(buildCentralReviewTargetUrl(
       'https://cadu.example/', { kind: 'resolve', reviewId: REVIEW_ID },
     )).toBe(`https://cadu.example/api/reviews/${REVIEW_ID}/resolve`);
+    expect(buildCentralReviewTargetUrl(
+      'https://cadu.example/', { kind: 'repass' },
+    )).toBe('https://cadu.example/api/reviews/repass');
     expect(() => buildCentralReviewTargetUrl(
       'http://cadu.example/', { kind: 'list', query: list },
     )).toThrow('invalid Cadu API base URL');
@@ -345,6 +394,46 @@ describe('Cadu central review proxy', () => {
       resolution_note: 'Conferido.',
     });
     expect(options.body).not.toContain('resolved_by');
+  });
+
+  test('POST repass signs the trigger and validates the summary contract', async () => {
+    global.fetch.mockResolvedValue(upstreamResponse(200, repassResponse()));
+    const res = createResponse();
+
+    await handler({
+      method: 'POST',
+      headers: {},
+      query: {},
+      body: { intent: 'repass', run_id: null },
+    }, res, {
+      path: 'reviews/repass',
+      query: {},
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.run_id).toBe(RUN_ID);
+    expect(res.body.requested_by).toBe(ADMIN_ID);
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('https://cadu.example/api/reviews/repass');
+    expect(options.headers['X-Kino-Admin-Id']).toBe(ADMIN_ID);
+    expect(options.headers['X-Kino-Review-Signature']).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.parse(options.body)).toEqual({ intent: 'repass', run_id: null });
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test('repass fails closed for invalid trigger bodies', async () => {
+    const invalid = createResponse();
+    await handler({
+      method: 'POST',
+      headers: {},
+      query: {},
+      body: { intent: 'publish' },
+    }, invalid, {
+      path: 'reviews/repass',
+      query: {},
+    });
+    expect(invalid.statusCode).toBe(422);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test('fails closed for invalid body, stale response and missing signing config', async () => {
