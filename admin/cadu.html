@@ -791,7 +791,7 @@
     }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
-  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=368518d1ae15b932" />
+  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=a32292f06e83ff0c" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -1171,6 +1171,24 @@
           <div><strong>Aprovação editorial não é publicação.</strong> Itens aprovados ficam registrados para auditoria e futuras melhorias. Qualquer publicação continua exigindo um fluxo separado e suas validações próprias.</div>
         </div>
 
+        <div class="kc-cadu-review-repass" id="reviews-repass-toolbar">
+          <div class="kc-cadu-review-repass__copy">
+            <strong><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Reanálise automática</strong>
+            <p>A cada Pipeline Completa, os eventos e oportunidades pendentes são reavaliados com o mesmo classificador do Curador; a nota pode subir ou cair. Isso não publica nem rejeita: a decisão final continua com você.</p>
+          </div>
+          <div class="kc-cadu-review-repass__controls">
+            <label for="reviews-repass-filter">Reanálise
+              <select id="reviews-repass-filter">
+                <option value="all" selected>Todas</option>
+                <option value="done">Com reanálise</option>
+                <option value="pending">Sem reanálise</option>
+              </select>
+            </label>
+            <button type="button" id="reviews-repass-run" class="kc-btn-secondary"><i class="fas fa-rotate" aria-hidden="true"></i> Reanalisar agora</button>
+          </div>
+        </div>
+        <div id="reviews-repass-summary" class="kc-cadu-review-repass__summary" role="status" aria-live="polite">Nenhuma reanálise registrada neste recorte.</div>
+
         <div class="kc-cadu-review-providers" id="reviews-providers">
           <div class="kc-cadu-review-provider is-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando origens…</div>
         </div>
@@ -1428,7 +1446,7 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=11c3443c498520ee"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=9cfe4bc584921309"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=4a75c90082d2db43"></script>
 </body>
 </html>
