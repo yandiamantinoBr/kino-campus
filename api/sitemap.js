@@ -51,9 +51,26 @@ function escapeXml(value) {
 }
 
 function getPostImage(post) {
+  // URLs temporarias de CDNs de redes sociais expiram (HTTP 403 para crawlers)
+  // e nao devem aparecer no sitemap. O SSR/og:image usa o mesmo filtro.
+  function isTemporaryImageUrl(value) {
+    const text = String(value || '').trim();
+    if (!text || !/^https?:\/\//i.test(text)) return false;
+    try {
+      const host = new URL(text).hostname.toLowerCase();
+      return /(^|\.)cdninstagram\.com$/.test(host)
+        || /(^|\.)fbcdn\.net$/.test(host)
+        || /(^|\.)instagram\.com$/.test(host)
+        || /(^|\.)cdn-telegram\.org$/.test(host)
+        || /(^|\.)telegram\.org$/.test(host);
+    } catch (_) {
+      return false;
+    }
+  }
   const metadata = metadataOf(post);
   const image = post.image_url || metadata.cover_url || metadata.coverUrl || metadata.image_url || metadata.imageUrl || '';
   return /^https?:\/\/[^\s"'<>]+\.(?:png|jpe?g|webp|gif|avif)(?:[?#][^\s"'<>]*)?$/i.test(String(image))
+    && !isTemporaryImageUrl(image)
     ? String(image)
     : '';
 }
