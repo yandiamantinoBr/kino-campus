@@ -37,7 +37,7 @@
   }
 </style>
 <title>Moradia - KinoCampus</title>
-<link href="assets/css/styles.css?v=8.6.12" rel="stylesheet"/>
+<link href="assets/css/styles.css?v=8.6.13" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
 <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.17" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
@@ -111,26 +111,12 @@
 <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
 <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
 <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-<a href="#republicas">
-<i class="fas fa-users"></i>
-<span>Repúblicas</span>
-</a>
-<a href="#quartos">
-<i class="fas fa-bed"></i>
-<span>Quartos</span>
-</a>
-<a href="#apartamentos">
-<i class="fas fa-building"></i>
-<span>Apartamentos</span>
-</a>
-<a href="#casas">
-<i class="fas fa-house"></i>
-<span>Casas</span>
-</a>
-<a href="#procurando">
-<i class="fas fa-search"></i>
-<span>Procurando</span>
-</a>
+<a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
+<a data-category="republicas" href="#republicas"><i class="fas fa-users"></i><span>Repúblicas</span></a>
+<a data-category="quartos" href="#quartos"><i class="fas fa-bed"></i><span>Quartos</span></a>
+<a data-category="apartamentos" href="#apartamentos"><i class="fas fa-building"></i><span>Apartamentos</span></a>
+<a data-category="casas" href="#casas"><i class="fas fa-house"></i><span>Casas</span></a>
+<a data-category="procurando" href="#procurando"><i class="fas fa-search"></i><span>Procurando</span></a>
 </div>
 <div class="kc-housing-mobile-rail" data-kc-housing-mobile-rail="true" aria-label="Seções rápidas de moradia" data-i18n-aria-label="aria-label.housing-rail">
 <button class="kc-housing-mobile-rail__button is-loading" type="button" disabled>
@@ -388,8 +374,8 @@
 <script defer src="assets/js/components/voting.js?v=8.6.2"></script>
 <script defer src="assets/js/core/kc-post-model.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-user-posts.js?v=8.6.1"></script>
-    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.2"></script>
-    <script defer src="assets/js/core/kc-core.js?v=8.6.4"></script>
+    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.3"></script>
+    <script defer src="assets/js/core/kc-core.js?v=8.6.5"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.media.js?v=8.6.1"></script>
@@ -401,10 +387,10 @@
 <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.13"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
-    <script defer src="assets/js/features/kc-filters.js?v=8.6.2"></script>
+    <script defer src="assets/js/features/kc-filters.js?v=8.6.3"></script>
     <script defer src="assets/js/features/kc-feed-filters.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
-<script defer src="assets/js/shared/home-categories.shared.js?v=8.6.1"></script>
+<script defer src="assets/js/shared/home-categories.shared.js?v=8.6.2"></script>
 <script defer src="assets/js/features/kc-home-categories.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
 <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
