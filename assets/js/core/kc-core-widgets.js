@@ -199,14 +199,38 @@
         .filter(function (btn) { return VALID_TABS.has(btn.dataset.feedTab); });
     }
 
+    function readSortFromUrl() {
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        var sort = String(params.get('sort') || '').trim().toLowerCase();
+        if (VALID_TABS.has(sort)) return sort;
+      } catch (_) {}
+      // Legacy hash bookmarks (#recentes) still work once; sort no longer owns the hash
+      // so category filters (#academicos) stay intact.
+      try {
+        var hash = String(window.location.hash || '').replace(/^#/, '').toLowerCase();
+        if (VALID_TABS.has(hash)) return hash;
+      } catch (_) {}
+      return 'destaques';
+    }
+
+    function writeSortToUrl(key) {
+      try {
+        var url = new URL(window.location.href);
+        if (!key || key === 'destaques') url.searchParams.delete('sort');
+        else url.searchParams.set('sort', key);
+        // Preserve category hash (#palestras) — never steal it for sort.
+        history.replaceState(null, '', url.pathname + url.search + (url.hash || ''));
+      } catch (_) {}
+    }
+
     function setActiveTab(key) {
       getSortButtons().forEach(function (btn) {
         var active = btn.dataset.feedTab === key;
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-selected', active ? 'true' : 'false');
       });
-      var hash = key === 'destaques' ? '' : '#' + key;
-      try { history.replaceState(null, '', hash || window.location.pathname + window.location.search); } catch (_) {}
+      writeSortToUrl(key);
     }
 
     function loadFeed(sortBy) {
@@ -218,14 +242,9 @@
       initialized = true;
     }
 
-    // Lê hash para tab inicial
-    var initHash = (window.location.hash || '').replace('#', '').toLowerCase();
-    if (initHash && VALID_TABS.has(initHash)) {
-      currentSortBy = SORT_MAP[initHash];
-      setActiveTab(initHash);
-    } else {
-      setActiveTab('destaques');
-    }
+    var initKey = readSortFromUrl();
+    currentSortBy = SORT_MAP[initKey] || 'votos';
+    setActiveTab(initKey);
 
     // Carrega feed inicial
     loadFeed(currentSortBy);
