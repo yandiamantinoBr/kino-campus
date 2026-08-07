@@ -32,7 +32,7 @@
 
 
 <title>Caronas - KinoCampus</title>
-<link href="assets/css/styles.css?v=8.6.12" rel="stylesheet"/>
+<link href="assets/css/styles.css?v=8.6.13" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
 <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.17" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
@@ -110,23 +110,24 @@
 <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
 <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
 <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-<a href="#ofereco">
+<a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
+<a data-category="ofereco" href="#ofereco">
 <i class="fas fa-car-side"></i>
 <span>Ofereço Carona</span>
 </a>
-<a href="#procuro">
+<a data-category="procuro" href="#procuro">
 <i class="fas fa-hand-paper"></i>
 <span>Procuro Carona</span>
 </a>
-<a href="#campus">
+<a data-category="campus" href="#campus">
 <i class="fas fa-university"></i>
 <span>Campus</span>
 </a>
-<a href="#centro">
+<a data-category="centro" href="#centro">
 <i class="fas fa-city"></i>
 <span>Centro</span>
 </a>
-<a href="#bairros">
+<a data-category="bairros" href="#bairros">
 <i class="fas fa-map-marked-alt"></i>
 <span>Bairros</span>
 </a>
@@ -461,8 +462,8 @@
 <script defer src="assets/js/components/voting.js?v=8.6.2"></script>
 <script defer src="assets/js/core/kc-post-model.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-user-posts.js?v=8.6.1"></script>
-    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.2"></script>
-    <script defer src="assets/js/core/kc-core.js?v=8.6.4"></script>
+    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.3"></script>
+    <script defer src="assets/js/core/kc-core.js?v=8.6.5"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.media.js?v=8.6.1"></script>
@@ -477,10 +478,10 @@
 <script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.12"></script>
 <script defer src="assets/js/controllers/public/caronas-feed.controller.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
-    <script defer src="assets/js/features/kc-filters.js?v=8.6.2"></script>
+    <script defer src="assets/js/features/kc-filters.js?v=8.6.3"></script>
     <script defer src="assets/js/features/kc-feed-filters.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
-<script defer src="assets/js/shared/home-categories.shared.js?v=8.6.1"></script>
+<script defer src="assets/js/shared/home-categories.shared.js?v=8.6.2"></script>
 <script defer src="assets/js/features/kc-home-categories.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
 <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>

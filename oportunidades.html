@@ -38,7 +38,7 @@
         }
     </style>
     <title>Oportunidades - KinoCampus</title>
-<link href="assets/css/styles.css?v=8.6.12" rel="stylesheet" />
+<link href="assets/css/styles.css?v=8.6.13" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
     <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.17" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
@@ -117,46 +117,17 @@
                 <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
                 <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
                 <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-                <a href="#editais">
-                    <i class="fas fa-file-signature"></i>
-                    <span>Editais</span>
-                </a>
-                <a href="#concursos">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>Concursos</span>
-                </a>
-                <a href="#bolsas">
-                    <i class="fas fa-award"></i>
-                    <span>Bolsas</span>
-                </a>
-                <a href="#estagios">
-                    <i class="fas fa-user-graduate"></i>
-                    <span>Estágios</span>
-                </a>
-                <a href="#empregos">
-                    <i class="fas fa-briefcase"></i>
-                    <span>Empregos</span>
-                </a>
-                <a href="#freelancer">
-                    <i class="fas fa-laptop-code"></i>
-                    <span>Freelancer</span>
-                </a>
-                <a href="#monitoria">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                    <span>Monitoria</span>
-                </a>
-                <a href="#pesquisa">
-                    <i class="fas fa-microscope"></i>
-                    <span>Pesquisa</span>
-                </a>
-                <a href="#cursos-capacitacoes">
-                    <i class="fas fa-book-open-reader"></i>
-                    <span>Cursos</span>
-                </a>
-                <a href="#voluntariado">
-                    <i class="fas fa-hands-helping"></i>
-                    <span>Voluntariado</span>
-                </a>
+                <a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
+                <a data-category="editais" href="#editais"><i class="fas fa-file-signature"></i><span>Editais</span></a>
+                <a data-category="concursos" href="#concursos"><i class="fas fa-clipboard-check"></i><span>Concursos</span></a>
+                <a data-category="bolsas" href="#bolsas"><i class="fas fa-award"></i><span>Bolsas</span></a>
+                <a data-category="estagios" href="#estagios"><i class="fas fa-user-graduate"></i><span>Estágios</span></a>
+                <a data-category="empregos" href="#empregos"><i class="fas fa-briefcase"></i><span>Empregos</span></a>
+                <a data-category="freelancer" href="#freelancer"><i class="fas fa-laptop-code"></i><span>Freelancer</span></a>
+                <a data-category="monitoria" href="#monitoria"><i class="fas fa-chalkboard-teacher"></i><span>Monitoria</span></a>
+                <a data-category="pesquisa" href="#pesquisa"><i class="fas fa-microscope"></i><span>Pesquisa</span></a>
+                <a data-category="cursos-capacitacoes" href="#cursos-capacitacoes"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
+                <a data-category="voluntariado" href="#voluntariado"><i class="fas fa-hands-helping"></i><span>Voluntariado</span></a>
             </div>
             <div class="kc-opportunity-mobile-rail" data-kc-opp-mobile-rail="true" aria-label="Seções rápidas de oportunidades" data-i18n-aria-label="aria-label.opportunity-rail">
                 <button class="kc-opportunity-mobile-rail__button is-loading" type="button" disabled>
@@ -469,8 +440,8 @@
     <script defer src="assets/js/components/voting.js?v=8.6.2"></script>
     <script defer src="assets/js/core/kc-post-model.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-user-posts.js?v=8.6.1"></script>
-    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.2"></script>
-    <script defer src="assets/js/core/kc-core.js?v=8.6.4"></script>
+    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.3"></script>
+    <script defer src="assets/js/core/kc-core.js?v=8.6.5"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.media.js?v=8.6.1"></script>
@@ -482,10 +453,10 @@
     <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.13"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
-    <script defer src="assets/js/features/kc-filters.js?v=8.6.2"></script>
+    <script defer src="assets/js/features/kc-filters.js?v=8.6.3"></script>
     <script defer src="assets/js/features/kc-feed-filters.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
-    <script defer src="assets/js/shared/home-categories.shared.js?v=8.6.1"></script>
+    <script defer src="assets/js/shared/home-categories.shared.js?v=8.6.2"></script>
     <script defer src="assets/js/features/kc-home-categories.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
     <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>

@@ -2919,6 +2919,14 @@ main {
     text-decoration: none;
 }
 
+.kc-category-item.active,
+.kc-category-item[aria-current="true"] {
+    background-color: color-mix(in srgb, var(--kc-primary-brand) 14%, var(--kc-background-dark));
+    color: var(--kc-text-dark-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kc-primary-brand) 40%, transparent);
+}
+
+
 .kc-category-item i {
     color: var(--kc-primary-brand);
     font-size: 1.2em;
