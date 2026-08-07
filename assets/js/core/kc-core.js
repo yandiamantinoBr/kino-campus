@@ -287,8 +287,9 @@ function kcAttachScrollIndicators(rail) {
   rail.__kcScrollRailAttached = true;
 
   const update = () => {
+    void scrollEl.offsetWidth; // accurate width after tab/font changes
     const sl = scrollEl.scrollLeft;
-    const max = scrollEl.scrollWidth - scrollEl.clientWidth;
+    const max = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
     const hasOverflow = max > 4;
     const visibleLabels = scrollEl.classList.contains('kc-admin-nav')
       ? Array.from(scrollEl.querySelectorAll(':scope > a:not(.is-icon-only)')).length
@@ -296,19 +297,14 @@ function kcAttachScrollIndicators(rail) {
     if (hasOverflow && visibleLabels && !rail.__kcScrollRailCollapsing
       && typeof kcApplyProgressiveNavCollapse === 'function') {
       rail.__kcScrollRailCollapsing = true;
-      try {
-        kcApplyProgressiveNavCollapse();
-      } finally {
-        rail.__kcScrollRailCollapsing = false;
-      }
+      try { kcApplyProgressiveNavCollapse(); }
+      finally { rail.__kcScrollRailCollapsing = false; }
       return;
     }
     const atStart = sl <= 4;
     const atEnd = sl >= max - 4;
-
     rail.classList.toggle('is-overflow-start', hasOverflow && !atStart);
     rail.classList.toggle('is-overflow-end', hasOverflow && !atEnd);
-
     if (btnPrev) btnPrev.hidden = !hasOverflow || atStart;
     if (btnNext) btnNext.hidden = !hasOverflow || atEnd;
   };

@@ -110,26 +110,78 @@
     if (noResults) noResults.style.display = visible === 0 ? "" : "none";
   }
 
-  function setActiveTab(category) {
-    const tabs = document.querySelectorAll(state.opts.tabsSelector);
-    tabs.forEach((t) => t.classList.remove("active"));
+  function categoryKeyFromLink(el) {
+    if (!el || !el.getAttribute) return '';
+    const dataCat = String(el.getAttribute('data-category') || '').trim();
+    if (dataCat) return dataCat;
+    return String(el.getAttribute('href') || '').replace(/^#/, '').trim();
+  }
 
-    // tenta achar pelo href (#categoria) ou data-category
-    tabs.forEach((t) => {
-      const hrefCat = (t.getAttribute("href") || "").replace("#", "");
-      const dataCat = t.getAttribute("data-category") || "";
-      const tabCat = dataCat || hrefCat || "";
-      if (canonicalCategory(tabCat) === canonicalCategory(category)) {
-        t.classList.add("active");
+  function setActiveTab(category) {
+    const selected = canonicalCategory(category);
+    document.querySelectorAll(state.opts.tabsSelector).forEach((t) => {
+      // Keep sort buttons (Destaques/Recentes/Comentados) independent.
+      if (t.matches && t.matches('[data-feed-tab]')) return;
+      const tabCat = categoryKeyFromLink(t);
+      const isActive = selected && selected !== 'toda' && selected !== 'todas'
+        && canonicalCategory(tabCat) === selected;
+      t.classList.toggle('active', !!isActive);
+    });
+    document.querySelectorAll('.kc-category-item, [data-kc-category-filter]').forEach((item) => {
+      const tabCat = categoryKeyFromLink(item);
+      const isActive = selected && selected !== 'toda' && selected !== 'todas'
+        && canonicalCategory(tabCat) === selected;
+      item.classList.toggle('active', !!isActive);
+      item.setAttribute('aria-current', isActive ? 'true' : 'false');
+    });
+    try {
+      const tabs = document.querySelectorAll(state.opts.tabsSelector);
+      const activeTab = Array.from(tabs).find((t) => t.classList.contains('active') && categoryKeyFromLink(t));
+      if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+        activeTab.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
       }
+      const rail = activeTab && activeTab.closest && activeTab.closest('[data-kc-scroll-rail]');
+      if (rail && typeof rail.__kcScrollRailUpdate === 'function') {
+        requestAnimationFrame(function () { rail.__kcScrollRailUpdate(); });
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  function selectCategory(category, options) {
+    const opts = options || {};
+    const next = String(category || 'todas').trim() || 'todas';
+    state.category = next;
+    setActiveTab(state.category);
+    if (opts.updateHash !== false) {
+      try {
+        const clean = canonicalCategory(next);
+        if (!clean || clean === 'toda' || clean === 'todas') {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        } else {
+          history.replaceState(null, '', '#' + next.replace(/^#/, ''));
+        }
+      } catch (_) { /* ignore */ }
+    }
+    syncCoreUrlState();
+    apply();
+  }
+
+  function bindCategoryLink(el) {
+    if (!el || el.__kcCategoryBound) return;
+    el.__kcCategoryBound = true;
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      selectCategory(categoryKeyFromLink(el) || 'todas');
     });
   }
 
   // API pública precisa ser configurada em setActiveTab, logo faremos o bind no init.
 
   async function renderDynamicTabs() {
-    const tabsContainer = document.querySelector(state.opts.tabsSelector)?.parentElement;
-    if (!tabsContainer || !tabsContainer.classList.contains('kc-feed-tabs')) return;
+    const tabsContainer = document.querySelector('.kc-feed-tabs');
+    if (!tabsContainer) return;
+    // Module feeds keep fixed sort buttons + static category chips.
+    if (tabsContainer.querySelector('[data-feed-tab]')) return;
 
     if (!window.KCHomeCategories || typeof window.KCHomeCategories.getSidebarRows !== 'function') return;
     if (typeof window.KCHomeCategories.inferModuleFromHref !== 'function') return;
@@ -157,7 +209,6 @@
 
       if (moduleRows.length === 0) return;
 
-      // Ensure "todas" is always the first tab and keep layout format
       const tabsHTML = [
         `<a data-category="todas" href="#todas" class="${state.category === 'todas' || !state.category ? 'active' : ''}">
           <i class="fas fa-fire" aria-hidden="true"></i>
@@ -166,8 +217,8 @@
       ];
 
       moduleRows.forEach(row => {
-        const catValue = canonicalCategory(row.categoryKey);
-        const isActive = canonicalCategory(state.category) === catValue ? 'active' : '';
+        const catValue = String(row.categoryKey || '').trim() || canonicalCategory(row.categoryKey);
+        const isActive = canonicalCategory(state.category) === canonicalCategory(catValue) ? 'active' : '';
         tabsHTML.push(`
           <a data-category="${catValue}" href="#${catValue}" class="${isActive}">
             <i class="${row.icon}"></i>
@@ -177,21 +228,11 @@
       });
 
       tabsContainer.innerHTML = tabsHTML.join('');
-      
-      // Re-bind listeners to the newly created tabs
-      const newTabs = document.querySelectorAll(state.opts.tabsSelector);
-      newTabs.forEach((tab) => {
-        tab.addEventListener("click", (e) => {
-          e.preventDefault();
-          const hrefCat = (tab.getAttribute("href") || "").replace("#", "");
-          const dataCat = tab.getAttribute("data-category") || "";
-          state.category = dataCat || hrefCat || "todas";
-          setActiveTab(state.category);
-          syncCoreUrlState();
-          apply();
-        });
-      });
-      
+      document.querySelectorAll(state.opts.tabsSelector).forEach(bindCategoryLink);
+      const rail = tabsContainer.closest && tabsContainer.closest('[data-kc-scroll-rail]');
+      if (rail && typeof rail.__kcScrollRailUpdate === 'function') {
+        requestAnimationFrame(function () { rail.__kcScrollRailUpdate(); });
+      }
     } catch (e) {
       console.error('Falha ao instanciar categorias dinâmicas pro feed: ', e);
     }
@@ -208,18 +249,10 @@
     // Sem tabs, não é esse modo
     if (!originalTabs || originalTabs.length === 0) return;
 
-    // Clique nas tabs iniciais
-    originalTabs.forEach((tab) => {
-      tab.addEventListener("click", (e) => {
-        e.preventDefault();
-        const hrefCat = (tab.getAttribute("href") || "").replace("#", "");
-        const dataCat = tab.getAttribute("data-category") || "";
-        state.category = dataCat || hrefCat || "todas";
-        setActiveTab(state.category);
-        syncCoreUrlState();
-        apply();
-      });
-    });
+    // Category chips (never sort buttons).
+    originalTabs.forEach(bindCategoryLink);
+    // Sidebar Categorias must apply the same filter as top chips.
+    document.querySelectorAll('.kc-category-item, [data-kc-category-filter]').forEach(bindCategoryLink);
 
     // Input
     if (searchInput) {
@@ -242,11 +275,12 @@
       try { urlTag = new URLSearchParams(window.location.search).get('tag') || ''; } catch (_) {}
     }
 
-    const tabCats = Array.from(originalTabs).map(t => {
-      const hrefCat = (t.getAttribute('href') || '').replace('#', '');
-      const dataCat = t.getAttribute('data-category') || '';
-      return dataCat || hrefCat || '';
-    }).filter(Boolean);
+    const reservedHashes = new Set(['destaques', 'recentes', 'comentados', 'todas', 'toda']);
+    const tabCats = Array.from(originalTabs).map((t) => categoryKeyFromLink(t)).filter(Boolean);
+    document.querySelectorAll('.kc-category-item, [data-kc-category-filter]').forEach((item) => {
+      const key = categoryKeyFromLink(item);
+      if (key) tabCats.push(key);
+    });
 
     if (urlQuery) {
       state.query = urlQuery;
@@ -260,24 +294,29 @@
     }
 
     const hashCat = (window.location.hash || '').replace('#', '');
-    if (!urlTag && hashCat) {
+    if (!urlTag && hashCat && !reservedHashes.has(String(hashCat).toLowerCase())) {
       const match = tabCats.find(c => canonicalCategory(c) === canonicalCategory(hashCat));
-      if (match) {
-        state.category = match;
-        setActiveTab(state.category);
-      }
+      state.category = match || hashCat;
+      setActiveTab(state.category);
     }
 
-    if (!urlTag && !hashCat) {
-      const active = document.querySelector(`${state.opts.tabsSelector}.active`);
-      if (active) {
-        const hrefCat = (active.getAttribute("href") || "").replace("#", "");
-        const dataCat = active.getAttribute("data-category") || "";
-        state.category = dataCat || hrefCat || "todas";
-      }
+    if (!urlTag && (!hashCat || reservedHashes.has(String(hashCat).toLowerCase()))) {
+      const active = document.querySelector(`${state.opts.tabsSelector}.active:not([data-feed-tab])`);
+      if (active) state.category = categoryKeyFromLink(active) || "todas";
     }
 
-    // Inicia a re-renderização assíncrona para deixar as tags dinâmicas
+    window.addEventListener('hashchange', function () {
+      const next = (window.location.hash || '').replace('#', '');
+      if (!next || reservedHashes.has(String(next).toLowerCase())) {
+        if (!next || next === 'todas' || next === 'toda' || next === 'destaques') {
+          selectCategory('todas', { updateHash: false });
+        }
+        return;
+      }
+      selectCategory(next, { updateHash: false });
+    });
+
+    // Dynamic tabs only on pages without sort buttons.
     renderDynamicTabs();
 
     state.ready = true;
@@ -298,10 +337,7 @@
     },
 
     setCategory: function (categoryKey) {
-      state.category = categoryKey || 'todas';
-      setActiveTab(state.category);
-      syncCoreUrlState();
-      apply();
+      selectCategory(categoryKey || 'todas');
     },
 
     setQuery: function (q) {

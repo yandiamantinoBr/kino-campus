@@ -138,7 +138,7 @@ const CATEGORY_GROUP_MAP = {
 
 | GroupId | Label | Obrigatorio | Multipla selecao | Opcoes |
 |---|---|---|---|---|
-| `topico` | Subtopico | Sim | Nao | Sustentabilidade, Academicos, Culturais, Esportivos, Workshops, Festas |
+| `topico` | Subtopico | Sim | Nao | Academicos, Palestras, Congressos, Cursos, Culturais, Esportivos, Workshops, Festas, Sustentabilidade |
 
 ### Campos adicionais
 

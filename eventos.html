@@ -112,7 +112,7 @@
         <button class="kc-context-info-btn" type="button" data-kc-context-open="eventos" aria-label="Informações sobre Eventos" data-i18n-aria-label="aria-label.context-eventos" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
       </h2>
       <!-- Feed Tabs -->
-      <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
+      <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação e categorias do feed" data-i18n-aria-label="aria-label.feed-sort">
         <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true">
           <i class="fas fa-fire"></i>
           <span>Destaques</span>
@@ -126,15 +126,16 @@
           <span>Comentados</span>
         </button>
         <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-        <a href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
-        <a href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
-        <a href="#palestras"><i class="fas fa-microphone-lines"></i><span>Palestras</span></a>
-        <a href="#congressos"><i class="fas fa-users-rectangle"></i><span>Congressos</span></a>
-        <a href="#cursos"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
-        <a href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
-        <a href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
-        <a href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
-        <a href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
+        <a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
+        <a data-category="academicos" href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
+        <a data-category="palestras" href="#palestras"><i class="fas fa-microphone-lines"></i><span>Palestras</span></a>
+        <a data-category="congressos" href="#congressos"><i class="fas fa-users-rectangle"></i><span>Congressos</span></a>
+        <a data-category="cursos" href="#cursos"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
+        <a data-category="culturais" href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
+        <a data-category="esportivos" href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
+        <a data-category="workshops" href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
+        <a data-category="festas" href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
+        <a data-category="sustentabilidade" href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
       </div>
       <!-- Rail mobile — abre seções do painel lateral como modal -->
       <div class="kc-eventos-mobile-rail" data-kc-eventos-mobile-rail="true" aria-label="Seções do painel lateral" data-i18n-aria-label="aria-label.eventos-rail">
@@ -216,15 +217,16 @@
         <h3><i class="fas fa-th-large"></i> Categorias</h3>
         <p class="kc-sidebar-help">Filtre eventos por tipo.</p>
         <div class="kc-category-list">
-          <a class="kc-category-item" href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
-          <a class="kc-category-item" href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
-          <a class="kc-category-item" href="#palestras"><i class="fas fa-microphone-lines"></i><span>Palestras</span></a>
-          <a class="kc-category-item" href="#congressos"><i class="fas fa-users-rectangle"></i><span>Congressos</span></a>
-          <a class="kc-category-item" href="#cursos"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
-          <a class="kc-category-item" href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
-          <a class="kc-category-item" href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
-          <a class="kc-category-item" href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
-          <a class="kc-category-item" href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
+          <a class="kc-category-item" data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
+          <a class="kc-category-item" data-category="academicos" href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
+          <a class="kc-category-item" data-category="palestras" href="#palestras"><i class="fas fa-microphone-lines"></i><span>Palestras</span></a>
+          <a class="kc-category-item" data-category="congressos" href="#congressos"><i class="fas fa-users-rectangle"></i><span>Congressos</span></a>
+          <a class="kc-category-item" data-category="cursos" href="#cursos"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
+          <a class="kc-category-item" data-category="culturais" href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
+          <a class="kc-category-item" data-category="esportivos" href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
+          <a class="kc-category-item" data-category="workshops" href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
+          <a class="kc-category-item" data-category="festas" href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
+          <a class="kc-category-item" data-category="sustentabilidade" href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
         </div>
       </div>
 
@@ -383,8 +385,8 @@
   <script defer src="assets/js/components/voting.js?v=8.6.2"></script>
   <script defer src="assets/js/core/kc-post-model.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-user-posts.js?v=8.6.1"></script>
-    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.2"></script>
-    <script defer src="assets/js/core/kc-core.js?v=8.6.4"></script>
+    <script defer src="assets/js/core/kc-core-widgets.js?v=8.6.3"></script>
+    <script defer src="assets/js/core/kc-core.js?v=8.6.5"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.schema.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.js?v=8.6.1"></script>
 <script defer src="assets/js/features/create-post/kc-create-post.media.js?v=8.6.1"></script>
@@ -396,10 +398,10 @@
   <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.13"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
     <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
-    <script defer src="assets/js/features/kc-filters.js?v=8.6.2"></script>
+    <script defer src="assets/js/features/kc-filters.js?v=8.6.3"></script>
     <script defer src="assets/js/features/kc-feed-filters.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
-  <script defer src="assets/js/shared/home-categories.shared.js?v=8.6.1"></script>
+  <script defer src="assets/js/shared/home-categories.shared.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-home-categories.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
@@ -407,7 +409,7 @@
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
   <script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.12"></script>
   <script defer src="assets/js/features/kc-events-calendar.js?v=8.6.12"></script>
-  <script defer src="assets/js/controllers/public/eventos.controller.js?v=8.6.1"></script>
+  <script defer src="assets/js/controllers/public/eventos.controller.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>
