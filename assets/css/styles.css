@@ -2868,6 +2868,44 @@ main {
     transform: scale(1.1);
 }
 
+/* No mobile, o badge de canto passa a ocupar uma linha real do grid.
+ * Assim textos variáveis (por exemplo, "Evento Sustentável") nunca ficam
+ * sobre a categoria/título, mesmo em telas estreitas ou com fonte ampliada. */
+@media (max-width: 576px) {
+    .kc-card--has-corner-badge .kc-card__main {
+        grid-template-areas:
+            "media corner-badge"
+            "media content";
+        gap: 4px 12px !important;
+    }
+
+    .kc-card--has-corner-badge .kc-cashback-badge {
+        position: static;
+        grid-area: corner-badge;
+        justify-self: end;
+        align-self: start;
+        width: fit-content;
+        max-width: 100%;
+        margin: 0;
+        line-height: 1.2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        transform: none;
+    }
+
+    .kc-card--has-corner-badge .kc-card__image-wrapper {
+        grid-area: media;
+    }
+
+    .kc-card--has-corner-badge .kc-card__content {
+        grid-area: content;
+    }
+
+    .kc-card--has-corner-badge:hover .kc-cashback-badge {
+        transform: none;
+    }
+}
+
 /* Sidebar */
 .kc-sidebar {
     display: none;
