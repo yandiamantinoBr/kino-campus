@@ -1,6 +1,71 @@
 -- Read-only production preflight for privacy, account erasure and data export.
 -- Every returned column is a required boolean capability. Callers must reject
 -- an empty response, a non-boolean value or any value other than true.
+-- Scope: exactly the five Help facades claimed by
+-- privacy_help_idempotency_rpc_safe. The wider advisor INVOKER inventory stays
+-- covered by its dedicated migration pgTAP contract.
+with help_invoker_contract(
+  public_signature,
+  private_signature,
+  wrapper_language,
+  identity_arguments,
+  result_type,
+  volatility,
+  wrapper_source_md5,
+  required_roles
+) as (
+  values
+    (
+      'public.kc_create_help_request(jsonb)'::text,
+      'kc_private.kc_create_help_request(jsonb)'::text,
+      'plpgsql'::name,
+      'p_payload jsonb'::text,
+      'TABLE(out_id uuid, out_created_at timestamp with time zone)'::text,
+      'v'::"char",
+      '30d75cc85ec49d2dd323fc7f6943441f'::text,
+      array['anon', 'authenticated', 'service_role']::name[]
+    ),
+    (
+      'public.kc_create_help_request_with_notification_claim(jsonb)',
+      'kc_private.kc_create_help_request_with_notification_claim(jsonb)',
+      'plpgsql',
+      'p_payload jsonb',
+      'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone)',
+      'v',
+      '90ab2787cbba2ab8b5425c69e741997d',
+      array['anon', 'authenticated', 'service_role']::name[]
+    ),
+    (
+      'public.kc_create_help_request_with_notification_claim_v2(jsonb)',
+      'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)',
+      'plpgsql',
+      'p_payload jsonb',
+      'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone, out_data_subject_request jsonb, out_protocol text, out_reused_existing boolean)',
+      'v',
+      '6c40621ea1a50b1fc16499aad622fc3c',
+      array['anon', 'authenticated', 'service_role']::name[]
+    ),
+    (
+      'public.kc_create_privacy_help_request_v1(jsonb)',
+      'kc_private.kc_create_privacy_help_request_v1(jsonb)',
+      'sql',
+      'p_payload jsonb',
+      'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone, out_data_subject_request jsonb, out_protocol text, out_reused_existing boolean, out_idempotency_replayed boolean)',
+      'v',
+      '60d4cbd0945c7e25e0565f9392adc80b',
+      array['authenticated', 'service_role']::name[]
+    ),
+    (
+      'public.kc_recover_privacy_help_request_v1(jsonb)',
+      'kc_private.kc_recover_privacy_help_request_v1(jsonb)',
+      'sql',
+      'p_payload jsonb',
+      'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone, out_data_subject_request jsonb, out_protocol text, out_reused_existing boolean, out_idempotency_replayed boolean, out_recovery_state text)',
+      'v',
+      'f5c911da0382ae081e55fec0dad7cdb4',
+      array['anon', 'authenticated', 'service_role']::name[]
+    )
+)
 select
   pg_catalog.to_regclass(
     'public.account_erasure_requests'
@@ -1458,7 +1523,111 @@ select
   ) as privacy_help_idempotency_fk_indexes,
   coalesce(
     (
-      pg_catalog.to_regprocedure(
+      coalesce(
+        (
+          select
+            pg_catalog.count(*) = 5
+            and pg_catalog.bool_and(
+              coalesce(
+                not wrapper_row.prosecdef
+                and wrapper_row.proconfig = array['search_path=""']
+                and wrapper_row.provolatile = contract_row.volatility
+                and wrapper_row.proretset
+                and wrapper_row.prokind = 'f'
+                and not wrapper_row.proisstrict
+                and not wrapper_row.proleakproof
+                and wrapper_row.proparallel = 'u'
+                and wrapper_language.lanname = contract_row.wrapper_language
+                and pg_catalog.pg_get_function_identity_arguments(
+                  wrapper_row.oid
+                ) = contract_row.identity_arguments
+                and pg_catalog.pg_get_function_result(wrapper_row.oid) =
+                  contract_row.result_type
+                and pg_catalog.md5(wrapper_row.prosrc) =
+                  contract_row.wrapper_source_md5
+                and private_row.prosecdef
+                and private_row.proconfig = array['search_path=""']
+                and private_row.provolatile = contract_row.volatility
+                and private_row.proretset
+                and private_row.prokind = 'f'
+                and not private_row.proisstrict
+                and not private_row.proleakproof
+                and private_row.proparallel = 'u'
+                and private_language.lanname = 'plpgsql'
+                and pg_catalog.pg_get_function_identity_arguments(
+                  private_row.oid
+                ) = contract_row.identity_arguments
+                and pg_catalog.pg_get_function_result(private_row.oid) =
+                  contract_row.result_type
+                and not exists (
+                  select 1
+                  from pg_catalog.unnest(
+                    contract_row.required_roles
+                  ) role_name
+                  where not coalesce(
+                    pg_catalog.has_function_privilege(
+                      role_name,
+                      wrapper_row.oid,
+                      'execute'
+                    ),
+                    false
+                  )
+                    or not coalesce(
+                      pg_catalog.has_function_privilege(
+                        role_name,
+                        private_row.oid,
+                        'execute'
+                      ),
+                      false
+                    )
+                    or not coalesce(
+                      pg_catalog.has_schema_privilege(
+                        role_name,
+                        'kc_private',
+                        'usage'
+                      ),
+                      false
+                    )
+                )
+                and not exists (
+                  select 1
+                  from pg_catalog.pg_proc acl_procedure_row
+                  cross join lateral pg_catalog.aclexplode(
+                    coalesce(
+                      acl_procedure_row.proacl,
+                      pg_catalog.acldefault(
+                        'f',
+                        acl_procedure_row.proowner
+                      )
+                    )
+                  ) acl_row
+                  where acl_procedure_row.oid in (
+                      wrapper_row.oid,
+                      private_row.oid
+                    )
+                    and acl_row.grantee = 0
+                    and acl_row.privilege_type = 'EXECUTE'
+                ),
+                false
+              )
+            )
+          from help_invoker_contract contract_row
+          left join pg_catalog.pg_proc wrapper_row
+            on wrapper_row.oid = pg_catalog.to_regprocedure(
+              contract_row.public_signature
+            )
+          left join pg_catalog.pg_language wrapper_language
+            on wrapper_language.oid = wrapper_row.prolang
+          left join pg_catalog.pg_proc private_row
+            on private_row.oid = pg_catalog.to_regprocedure(
+              contract_row.private_signature
+            )
+          left join pg_catalog.pg_language private_language
+            on private_language.oid = private_row.prolang
+        ),
+        false
+      )
+      and pg_catalog.to_regprocedure(
         'public.kc_create_privacy_help_request_v1(jsonb)'
       ) is not null
       and pg_catalog.to_regprocedure(
@@ -1482,10 +1651,11 @@ select
       and pg_catalog.to_regprocedure(
         'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
       ) is not null
+      -- Public Help RPCs are INVOKER facades; privileged bodies remain private.
       and coalesce(
         (
           select pg_catalog.bool_and(
-            procedure_row.prosecdef
+            not procedure_row.prosecdef
             and procedure_row.proconfig = array['search_path=""']
           )
           from pg_catalog.pg_proc procedure_row
@@ -1504,6 +1674,33 @@ select
             ),
             pg_catalog.to_regprocedure(
               'public.kc_create_help_request_with_notification_claim_v2(jsonb)'
+            )
+          )
+        ),
+        false
+      )
+      and coalesce(
+        (
+          select pg_catalog.bool_and(
+            procedure_row.prosecdef
+            and procedure_row.proconfig = array['search_path=""']
+          )
+          from pg_catalog.pg_proc procedure_row
+          where procedure_row.oid in (
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_create_help_request(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_create_help_request_with_notification_claim(jsonb)'
+            ),
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
             ),
             pg_catalog.to_regprocedure(
               'kc_private.kc_assert_current_authenticated_session_active()'
@@ -1592,13 +1789,7 @@ select
         cross join (
           values
             (
-              'kc_private.kc_create_privacy_help_request_v1(jsonb)'
-            ),
-            (
               'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
-            ),
-            (
-              'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
             ),
             (
               'kc_private.kc_create_help_request(jsonb)'
@@ -1611,6 +1802,125 @@ select
             ),
             (
               'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+            )
+        ) procedure_row(procedure_name)
+        where pg_catalog.to_regprocedure(
+          procedure_row.procedure_name
+        ) is null
+          or not coalesce(
+            pg_catalog.has_function_privilege(
+              role_row.role_name,
+              pg_catalog.to_regprocedure(
+                procedure_row.procedure_name
+              ),
+              'execute'
+            ),
+            false
+          )
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('authenticated'::name),
+            ('service_role'::name)
+        ) role_row(role_name)
+        where not coalesce(
+          pg_catalog.has_function_privilege(
+            role_row.role_name,
+            pg_catalog.to_regprocedure(
+              'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+            ),
+            'execute'
+          ),
+          false
+        )
+      )
+      -- Anonymous access to the private create worker must track the facade's
+      -- documented guest-gateway ACL phase instead of remaining broader.
+      and coalesce(
+        pg_catalog.has_function_privilege(
+          'anon',
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+          ),
+          'execute'
+        ),
+        false
+      ) = coalesce(
+        pg_catalog.has_function_privilege(
+          'anon',
+          pg_catalog.to_regprocedure(
+            'public.kc_create_privacy_help_request_v1(jsonb)'
+          ),
+          'execute'
+        ),
+        false
+      )
+      and (
+        not coalesce(
+          pg_catalog.has_function_privilege(
+            'anon',
+            pg_catalog.to_regprocedure(
+              'public.kc_create_privacy_help_request_v1(jsonb)'
+            ),
+            'execute'
+          ),
+          false
+        )
+        or coalesce(
+          pg_catalog.has_schema_privilege(
+            'anon',
+            'kc_private',
+            'usage'
+          ),
+          false
+        )
+      )
+      and not exists (
+        select 1
+        from pg_catalog.pg_proc procedure_row
+        cross join lateral pg_catalog.aclexplode(
+          coalesce(
+            procedure_row.proacl,
+            pg_catalog.acldefault('f', procedure_row.proowner)
+          )
+        ) acl_row
+        where procedure_row.oid in (
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_create_privacy_help_request_v1(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_recover_privacy_help_request_v1(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_create_help_request(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_create_help_request_with_notification_claim(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)'
+          ),
+          pg_catalog.to_regprocedure(
+            'kc_private.kc_is_privacy_help_route_v1(jsonb)'
+          )
+        )
+          and acl_row.grantee = 0
+          and acl_row.privilege_type = 'EXECUTE'
+      )
+      and not exists (
+        select 1
+        from (
+          values
+            ('anon'::name),
+            ('authenticated'::name),
+            ('service_role'::name)
+        ) role_row(role_name)
+        cross join (
+          values
+            (
+              'kc_private.kc_help_request_v2_20260729_idempotency_base(jsonb)'
             ),
             (
               'kc_private.kc_privacy_help_metadata_v1(jsonb,text)'
@@ -2653,30 +2963,116 @@ select
       and setting =
         'pgrst.db_pre_request=public.kc_enforce_active_session_pre_request'
   ) as postgrest_active_session_barrier,
+  -- The public pre-request hook is a minimal INVOKER facade. Validate the
+  -- session policy in its private DEFINER implementation and both ACL layers.
   coalesce(
-    pg_catalog.to_regprocedure(
-      'public.kc_enforce_active_session_pre_request()'
-    ) is not null
-    and pg_catalog.pg_get_functiondef(
-      pg_catalog.to_regprocedure(
-        'public.kc_enforce_active_session_pre_request()'
-      )
-    ) like '%auth.jwt() ->> ''role''%'
-    and pg_catalog.pg_get_functiondef(
-      pg_catalog.to_regprocedure(
-        'public.kc_enforce_active_session_pre_request()'
-      )
-    ) like '%kc_is_current_session_active()%'
-    and pg_catalog.pg_get_functiondef(
-      pg_catalog.to_regprocedure(
-        'public.kc_enforce_active_session_pre_request()'
-      )
-    ) not like '%request.path%'
-    and pg_catalog.pg_get_functiondef(
-      pg_catalog.to_regprocedure(
-        'public.kc_enforce_active_session_pre_request()'
-      )
-    ) not like '%is_anonymous%',
+    (
+      select
+        not wrapper_row.prosecdef
+        and wrapper_row.proconfig = array['search_path=""']
+        and wrapper_row.provolatile = 's'
+        and not wrapper_row.proretset
+        and wrapper_row.prokind = 'f'
+        and not wrapper_row.proisstrict
+        and not wrapper_row.proleakproof
+        and wrapper_row.proparallel = 'u'
+        and coalesce(
+          (
+            select language_row.lanname
+            from pg_catalog.pg_language language_row
+            where language_row.oid = wrapper_row.prolang
+          ),
+          ''
+        ) = 'plpgsql'
+        and pg_catalog.pg_get_function_identity_arguments(wrapper_row.oid) = ''
+        and pg_catalog.pg_get_function_result(wrapper_row.oid) = 'void'
+        and pg_catalog.md5(wrapper_row.prosrc) =
+          'c3cb7706f615835cf90053a30b2700bc'
+        and private_row.prosecdef
+        and private_row.proconfig = array['search_path=""']
+        and private_row.provolatile = 's'
+        and not private_row.proretset
+        and private_row.prokind = 'f'
+        and not private_row.proisstrict
+        and not private_row.proleakproof
+        and private_row.proparallel = 'u'
+        and coalesce(
+          (
+            select language_row.lanname
+            from pg_catalog.pg_language language_row
+            where language_row.oid = private_row.prolang
+          ),
+          ''
+        ) = 'plpgsql'
+        and pg_catalog.pg_get_function_identity_arguments(private_row.oid) = ''
+        and pg_catalog.pg_get_function_result(private_row.oid) = 'void'
+        and pg_catalog.md5(private_row.prosrc) =
+          '935cbbe9291a31e21f764817783fa21c'
+        and not exists (
+          select 1
+          from (
+            values
+              ('anon'::name),
+              ('authenticated'::name),
+              ('service_role'::name)
+          ) role_row(role_name)
+          cross join (
+            values
+              (wrapper_row.oid),
+              (private_row.oid)
+          ) callable_row(procedure_oid)
+          where not coalesce(
+            pg_catalog.has_function_privilege(
+              role_row.role_name,
+              callable_row.procedure_oid,
+              'execute'
+            ),
+            false
+          )
+            or not coalesce(
+              pg_catalog.has_schema_privilege(
+                role_row.role_name,
+                'kc_private',
+                'usage'
+              ),
+              false
+            )
+        )
+        -- PostgREST invokes db-pre-request after SET LOCAL ROLE. The
+        -- authenticator owns the setting and keeps EXECUTE, but API roles are
+        -- the callers that require kc_private USAGE.
+        and pg_catalog.has_function_privilege(
+          'authenticator',
+          wrapper_row.oid,
+          'execute'
+        )
+        and pg_catalog.has_function_privilege(
+          'authenticator',
+          private_row.oid,
+          'execute'
+        )
+        and not exists (
+          select 1
+          from pg_catalog.pg_proc procedure_row
+          cross join lateral pg_catalog.aclexplode(
+            coalesce(
+              procedure_row.proacl,
+              pg_catalog.acldefault('f', procedure_row.proowner)
+            )
+          ) acl_row
+          where procedure_row.oid in (wrapper_row.oid, private_row.oid)
+            and acl_row.grantee = 0
+            and acl_row.privilege_type = 'EXECUTE'
+        )
+      from pg_catalog.pg_proc wrapper_row
+      cross join pg_catalog.pg_proc private_row
+      where wrapper_row.oid = pg_catalog.to_regprocedure(
+          'public.kc_enforce_active_session_pre_request()'
+        )
+        and private_row.oid = pg_catalog.to_regprocedure(
+          'kc_private.kc_enforce_active_session_pre_request_impl()'
+        )
+    ),
     false
   ) as postgrest_active_session_barrier_strict,
   exists (
