@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Feed Ads (v9.3.7.0)
+  KinoCampus - Feed Ads (v9.3.8.0)
   Renderiza anuncios contextuais proprios e slots AdSense controlados em paginas de feed.
   Nao usa perfil individual por padrao.
 */
@@ -10,15 +10,13 @@
 }(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null), function (root) {
   'use strict';
 
-  const VERSION = '9.3.7.0';
+  const VERSION = '9.3.8.0';
   const CACHE_SCOPE = 'ads';
   const CACHE_VERSION = 1;
   const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
   const CACHE_STALE_MAX_AGE_MS = 30 * 60 * 1000;
   const FREQUENCY_STORAGE_KEY = 'kc_ad_frequency_v1';
-  const INLINE_AFTER_FIRST = 6;
-  const INLINE_INTERVAL = 6;
-  const INLINE_MAX_PER_LIST = 8;
+  const INLINE_REAL_POSTS_PER_AD = 5;
   const INITIAL_LOAD_RETRY_DELAYS_MS = Object.freeze([250, 900, 2500, 8000]);
   let frequencyMemory = {};
   let initialLoadStarted = false;
@@ -426,8 +424,7 @@
   }
 
   function getInlineSlotCount(cardsLength) {
-    const count = Math.floor(Math.max(0, Number(cardsLength) || 0) / INLINE_INTERVAL);
-    return Math.max(0, Math.min(INLINE_MAX_PER_LIST, count));
+    return Math.floor(Math.max(0, Number(cardsLength) || 0) / INLINE_REAL_POSTS_PER_AD);
   }
 
   function buildAdHTML(ad, placement, slotPlacement) {
@@ -533,46 +530,72 @@
     container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').forEach((node) => node.remove());
   }
 
+  function isVisibleFeedCard(card) {
+    if (!card || !card.classList || !card.classList.contains('kc-card')) return false;
+    if (card.hidden || card.getAttribute('aria-hidden') === 'true') return false;
+    if (card.style && (card.style.display === 'none' || card.style.visibility === 'hidden')) return false;
+    try {
+      const view = card.ownerDocument && card.ownerDocument.defaultView;
+      const style = view && typeof view.getComputedStyle === 'function' ? view.getComputedStyle(card) : null;
+      if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    } catch (_) { /* visibility fallback: inline attributes above */ }
+    return true;
+  }
+
+  function clearInlineAds(container) {
+    removeManagedInlineAds(container);
+    if (container && container.dataset) delete container.dataset.kcAdsSignature;
+  }
+
   function renderInlineAds(container, ads, context, config) {
     const cfg = normalizeAdConfig(config || defaultAdConfig());
     if (!container) return false;
-    const cards = Array.from(container.children).filter((node) => node.classList && node.classList.contains('kc-card'));
-    if (cards.length < INLINE_AFTER_FIRST) {
-      removeManagedInlineAds(container);
-      delete container.dataset.kcAdsSignature;
+    const allCards = Array.from(container.children).filter((node) => node.classList && node.classList.contains('kc-card'));
+    const visibleCards = allCards.filter(isVisibleFeedCard);
+    if (visibleCards.length < INLINE_REAL_POSTS_PER_AD) {
+      clearInlineAds(container);
       return false;
     }
-    const slotCount = getInlineSlotCount(cards.length);
+    const slotCount = getInlineSlotCount(visibleCards.length);
     const selected = selectAdsForPlacement(ads, 'feed_inline', context, slotCount || 1);
-    if (!selected.length && !canRenderAdsense(cfg, 'feed_inline')) return false;
-    const slotAds = buildInlineSlotAds(selected, slotCount);
-    const slotRenders = slotAds.map((ad) => {
-      return resolveSlotRender(ad, 'feed_inline', 'feed_inline', cfg);
-    }).filter((item) => item && item.html);
-    if (!slotRenders.length) {
-      removeManagedInlineAds(container);
-      delete container.dataset.kcAdsSignature;
+    if (!selected.length && !canRenderAdsense(cfg, 'feed_inline')) {
+      clearInlineAds(container);
       return false;
     }
-    if (slotRenders.some((item) => item.provider === 'adsense')) {
+    const slotAds = buildInlineSlotAds(selected, slotCount);
+    const slotPlans = slotAds.map((ad, slotIndex) => ({
+      ad,
+      slotIndex,
+      rendered: resolveSlotRender(ad, 'feed_inline', 'feed_inline', cfg),
+    })).filter((plan) => plan.rendered && plan.rendered.html);
+    if (!slotPlans.length) {
+      clearInlineAds(container);
+      return false;
+    }
+    if (slotPlans.some((plan) => plan.rendered.provider === 'adsense')) {
       loadAdsenseScriptOnce(cfg);
     }
+    const visibleSignature = visibleCards.map((card) => {
+      const domIndex = allCards.indexOf(card);
+      const stableId = card.getAttribute('data-post-id') || card.getAttribute('data-id') || card.id || '';
+      return domIndex + '@' + stableId;
+    }).join(',');
     const signature = [
-      cards.length,
-      slotRenders.map((item, index) => item.provider + ':' + (slotAds[index] ? slotAds[index].id : 'adsense')).join('|'),
+      visibleSignature,
+      slotPlans.map((plan) => plan.slotIndex + ':' + plan.rendered.provider + ':' + (plan.ad ? plan.ad.id : 'adsense')).join('|'),
     ].join(':');
     if (container.dataset.kcAdsSignature === signature
-      && container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').length === slotRenders.length) {
+      && container.querySelectorAll('.kc-ad-card--inline[data-kc-managed-ad="true"]').length === slotPlans.length) {
       bindTracking(container);
       pushAdsenseSlots(container);
       return true;
     }
     removeManagedInlineAds(container);
 
-    slotRenders.forEach((item, index) => {
-      const targetIndex = Math.min((INLINE_INTERVAL * (index + 1)) - 1, cards.length - 1);
-      const anchor = cards[targetIndex];
-      if (anchor) anchor.insertAdjacentHTML('afterend', item.html);
+    slotPlans.forEach((plan) => {
+      const targetIndex = Math.min((INLINE_REAL_POSTS_PER_AD * (plan.slotIndex + 1)) - 1, visibleCards.length - 1);
+      const anchor = visibleCards[targetIndex];
+      if (anchor) anchor.insertAdjacentHTML('afterend', plan.rendered.html);
     });
     container.dataset.kcAdsSignature = signature;
     bindTracking(container);
@@ -777,16 +800,23 @@
     if (!root.document || !root.MutationObserver) return;
     const lists = Array.from(root.document.querySelectorAll('.kc-feed-list'));
     lists.forEach((list) => {
+      list.__kcAdsObserverState = { ads, context, config };
       if (list.__kcAdsObserved) return;
       list.__kcAdsObserved = true;
       let timer = null;
       const observer = new root.MutationObserver(function () {
         safeClearTimeout(timer);
         timer = safeSetTimeout(function () {
-          renderInlineAds(list, ads, context, config);
+          const latest = list.__kcAdsObserverState || {};
+          renderInlineAds(list, latest.ads || [], latest.context || {}, latest.config);
         }, 120);
       });
-      observer.observe(list, { childList: true });
+      observer.observe(list, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'hidden', 'aria-hidden'],
+      });
     });
   }
 
@@ -912,6 +942,7 @@
     slugForUtm,
     buildTrackedTargetUrl,
     getInlineSlotCount,
+    isVisibleFeedCard,
     buildAdHTML,
     renderInlineAds,
     renderAsideAds,
@@ -925,5 +956,6 @@
     incrementFrequencyCount,
     clearFrequencyCaps,
     loadAndRender,
+    observeFeeds,
   });
 }));

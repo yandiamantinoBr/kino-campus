@@ -54,10 +54,10 @@ describe('KCAds feed monetization', () => {
     expect(html).toContain('Bolsa para estudantes');
   });
 
-  test('insere anúncios inline a cada 6 publicações', () => {
+  test('insere um anúncio depois de cada 5 publicações visíveis', () => {
     document.body.innerHTML = [
       '<div class="kc-feed-list">',
-      Array.from({ length: 12 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
+      Array.from({ length: 12 }, (_, index) => '<article class="kc-card" data-post-id="post-' + (index + 1) + '">' + (index + 1) + '</article>').join(''),
       '</div>',
     ].join('');
 
@@ -70,15 +70,91 @@ describe('KCAds feed monetization', () => {
 
     expect(ok).toBe(true);
     expect(document.querySelectorAll('.kc-ad-card--inline')).toHaveLength(2);
-    expect(document.querySelector('.kc-feed-list').children[6].className).toContain('kc-ad-card');
-    expect(document.querySelector('.kc-feed-list').children[13].className).toContain('kc-ad-card');
+    expect(document.querySelector('.kc-feed-list').children[5].className).toContain('kc-ad-card');
+    expect(document.querySelector('.kc-feed-list').children[11].className).toContain('kc-ad-card');
+    expect(KCAds.getInlineSlotCount(4)).toBe(0);
+    expect(KCAds.getInlineSlotCount(5)).toBe(1);
     expect(KCAds.getInlineSlotCount(18)).toBe(3);
+    expect(KCAds.getInlineSlotCount(45)).toBe(9);
+  });
+
+  test('ignora cards ocultos e nunca agrupa anúncios consecutivos', () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 24 }, (_, index) => {
+        const visible = [0, 1, 4, 8, 12, 16, 20, 23].includes(index);
+        return '<article class="kc-card" data-post-id="post-' + (index + 1) + '" style="' + (visible ? '' : 'display:none') + '">' + (index + 1) + '</article>';
+      }).join(''),
+      '</div>',
+    ].join('');
+
+    expect(KCAds.renderInlineAds(document.querySelector('.kc-feed-list'), [{
+      id: 'ad-1', title: 'Anúncio', target_url: 'https://example.com', placements: ['feed_inline'],
+    }], { module_key: 'eventos' })).toBe(true);
+
+    const visibleOrder = Array.from(document.querySelector('.kc-feed-list').children)
+      .filter((node) => node.classList.contains('kc-ad-card') || KCAds.isVisibleFeedCard(node))
+      .map((node) => node.classList.contains('kc-ad-card') ? 'AD' : node.getAttribute('data-post-id'));
+    expect(visibleOrder).toEqual(['post-1', 'post-2', 'post-5', 'post-9', 'post-13', 'AD', 'post-17', 'post-21', 'post-24']);
+    expect(visibleOrder.join(',')).not.toContain('AD,AD');
+  });
+
+  test('remove anúncios obsoletos quando o filtro deixa menos de 5 cards visíveis', () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 10 }, (_, index) => '<article class="kc-card" data-post-id="post-' + index + '">' + index + '</article>').join(''),
+      '</div>',
+    ].join('');
+    const list = document.querySelector('.kc-feed-list');
+    const ads = [{ id: 'ad-1', title: 'Anúncio', target_url: 'https://example.com', placements: ['feed_inline'] }];
+    expect(KCAds.renderInlineAds(list, ads, { module_key: 'eventos' })).toBe(true);
+    expect(list.querySelectorAll('.kc-ad-card--inline')).toHaveLength(2);
+
+    Array.from(list.querySelectorAll('.kc-card')).slice(3).forEach((card) => { card.style.display = 'none'; });
+    expect(KCAds.renderInlineAds(list, ads, { module_key: 'eventos' })).toBe(false);
+    expect(list.querySelectorAll('.kc-ad-card--inline')).toHaveLength(0);
+    expect(list.dataset.kcAdsSignature).toBeUndefined();
+  });
+
+  test('reposiciona anúncios quando muda o subconjunto visível com a mesma contagem', () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 10 }, (_, index) => '<article class="kc-card" data-post-id="post-' + index + '" style="' + (index >= 5 ? 'display:none' : '') + '">' + index + '</article>').join(''),
+      '</div>',
+    ].join('');
+    const list = document.querySelector('.kc-feed-list');
+    const cards = Array.from(list.querySelectorAll('.kc-card'));
+    const ads = [{ id: 'ad-1', title: 'Anúncio', target_url: 'https://example.com', placements: ['feed_inline'] }];
+    KCAds.renderInlineAds(list, ads, { module_key: 'eventos' });
+    expect(list.querySelector('.kc-ad-card').previousElementSibling).toBe(cards[4]);
+
+    cards.forEach((card, index) => { card.style.display = index < 5 ? 'none' : ''; });
+    KCAds.renderInlineAds(list, ads, { module_key: 'eventos' });
+    expect(list.querySelector('.kc-ad-card').previousElementSibling).toBe(cards[9]);
+  });
+
+  test('observador reordena anúncios quando o filtro altera a visibilidade', async () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 10 }, (_, index) => '<article class="kc-card" data-post-id="post-' + index + '">' + index + '</article>').join(''),
+      '</div>',
+    ].join('');
+    const list = document.querySelector('.kc-feed-list');
+    const cards = Array.from(list.querySelectorAll('.kc-card'));
+    const ads = [{ id: 'ad-1', title: 'Anúncio', target_url: 'https://example.com', placements: ['feed_inline'] }];
+    KCAds.renderInlineAds(list, ads, { module_key: 'eventos' });
+    KCAds.observeFeeds(ads, { module_key: 'eventos' });
+
+    cards.slice(0, 5).forEach((card) => { card.style.display = 'none'; });
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    expect(list.querySelectorAll('.kc-ad-card--inline')).toHaveLength(1);
+    expect(list.querySelector('.kc-ad-card').previousElementSibling).toBe(cards[9]);
   });
 
   test('renderiza slot AdSense apenas quando publicidade foi aceita', () => {
     document.body.innerHTML = [
       '<div class="kc-feed-list">',
-      Array.from({ length: 6 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
+      Array.from({ length: 5 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
       '</div>',
     ].join('');
 
