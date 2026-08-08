@@ -28,7 +28,7 @@ jobs:
       FIX_BRANCH: fix/pitch-navigation-reliability-2026-07-21
     steps:
       - name: Check out the guarded fix branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.FIX_BRANCH }}
           fetch-depth: 0
