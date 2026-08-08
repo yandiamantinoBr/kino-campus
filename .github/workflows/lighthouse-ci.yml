@@ -1,45 +1,8 @@
-# Lighthouse CI — KinoCampus v12.10.0
+# Lighthouse CI - KinoCampus
 #
-# Executa em todo PR para a branch base do projeto.
-# Audita 4 páginas representativas e bloqueia (error) se a11y < 0.90.
-# Performance, Best Practices e SEO são reportados como warn.
-
-name: Lighthouse CI
-
-on:
-  pull_request:
-    branches:
-      - main
-      - kinocampus-V75.0-foundations
-
-jobs:
-  lighthouse:
-    name: Lighthouse audit (4 páginas)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Setup Node.js 24
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: '24'
-          cache: 'npm'
-
-      - name: Instalar dependências
-        run: npm ci
-
-      - name: Executar Lighthouse CI
-        run: npx lhci autorun
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-=======
-# Lighthouse CI — KinoCampus v12.10.0
-#
-# Executa em todo PR para a branch base do projeto.
-# Audita 4 páginas representativas e bloqueia (error) se a11y < 0.90.
-# Performance, Best Practices e SEO são reportados como warn.
+# Runs on pull requests targeting the production branch. Accessibility is the
+# blocking metric; performance, best practices and SEO remain advisory in the
+# Lighthouse configuration.
 
 name: Lighthouse CI
 
@@ -50,7 +13,7 @@ on:
 
 jobs:
   lighthouse:
-    name: Lighthouse audit (4 páginas)
+    name: Lighthouse audit (4 pages)
     runs-on: ubuntu-latest
 
     steps:
@@ -61,13 +24,12 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
-          cache: 'npm'
+          cache: npm
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: npm ci
 
-      - name: Executar Lighthouse CI
+      - name: Run Lighthouse CI
         run: npx lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
->>>>>>> 691ac1cd (chore(ci): switch production/default branch from kinocampus-V75.0-foundations to main)
