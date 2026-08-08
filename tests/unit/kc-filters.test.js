@@ -58,8 +58,17 @@ describe('kcFilters - Filtros unificados (tabs + busca)', () => {
     });
 
     test('normaliza acentos', () => {
-      expect(filters.canonicalCategory('Moveis')).toBe('movei');
+      expect(filters.canonicalCategory('Moveis')).toBe('movel');
       expect(filters.canonicalCategory('Eletronicos')).toBe('eletronico');
+    });
+
+    test('normaliza plurais irregulares e aliases legados do feed', () => {
+      expect(filters.canonicalCategory('Acadêmicos')).toBe('academico');
+      expect(filters.canonicalCategory('Editais')).toBe('edital');
+      expect(filters.canonicalCategory('Cursos-Capacitações')).toBe('curso-capacitacao');
+      expect(filters.canonicalCategory('Ofereço carona')).toBe('ofereco');
+      expect(filters.canonicalCategory('Achados')).toBe('encontrado');
+      expect(filters.canonicalCategory('Campus')).toBe('campus');
     });
 
     test('Todas retorna toda', () => {

@@ -17,7 +17,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'kc-shell-';
-var CACHE_VERSION = 'kc-shell-v12.15.0';
+var CACHE_VERSION = 'kc-shell-v12.16.0';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';
 
@@ -25,19 +25,19 @@ var PAGE_CACHE = CACHE_VERSION + ':pages';
 // Cache Storage keys include the query string, so one global version would
 // pre-cache URLs that the pages never request when assets evolve separately.
 var SHELL_ASSETS = [
-  '/assets/css/styles.css?v=8.6.12',
+  '/assets/css/styles.css?v=8.6.14',
   '/assets/css/kc-chat-shortcut.css?v=8.6.1',
   '/assets/css/kc-public-shell.css?v=8.6.15',
-  '/assets/js/boot/kc-constants.js?v=8.6.1',
+  '/assets/js/boot/kc-constants.js?v=8.6.2',
   '/assets/js/boot/kc-env.js?v=8.6.13',
   '/assets/js/boot/kc-feature-flags.js?v=8.6.1',
   '/assets/js/boot/kc-sw-register.js?v=8.6.1',
   '/assets/js/core/kc-i18n.js?v=8.6.13',
-  '/assets/js/utils/kc-utils.string.js?v=8.6.3',
+  '/assets/js/utils/kc-utils.string.js?v=8.6.4',
   '/assets/js/utils/kc-utils.format.js?v=8.6.1',
   '/assets/js/utils/kc-utils.dom.js?v=8.6.1',
   '/assets/js/utils/kc-utils.js?v=8.6.1',
-  '/assets/js/core/kc-core.js?v=8.6.4',
+  '/assets/js/core/kc-core.js?v=8.6.6',
 ];
 
 /** Padroes que nunca devem ser cacheados (Supabase, CDNs, Fonts). */

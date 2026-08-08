@@ -38,6 +38,27 @@
     });
   }
 
+  function getSearchInput() {
+    return document.getElementById(state.opts.searchInputId) || document.getElementById('searchInput');
+  }
+
+  function notifyCoreFilterChange(reason) {
+    const detail = {
+      category: state.category,
+      query: state.query,
+      reason: String(reason || 'apply'),
+    };
+    try {
+      document.dispatchEvent(new CustomEvent('kc:feed-core-filter-change', { detail }));
+    } catch (_) {
+      try {
+        const event = document.createEvent('CustomEvent');
+        event.initCustomEvent('kc:feed-core-filter-change', false, false, detail);
+        document.dispatchEvent(event);
+      } catch (_ignored) { /* unsupported legacy DOM */ }
+    }
+  }
+
   function normalizeText(str) {
     if (KCUtils && typeof KCUtils.normalizeText === 'function') return KCUtils.normalizeText(str);
     return (str || "")
@@ -52,6 +73,21 @@
     if (KCUtils && typeof KCUtils.canonicalCategory === 'function') return KCUtils.canonicalCategory(str);
     let s = normalizeText(str);
     s = s.replace(/^#/, "");
+    const key = s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const aliases = {
+      todas: 'toda', todos: 'toda', toda: 'toda', todo: 'toda',
+      academicos: 'academico', academicas: 'academico', academica: 'academico',
+      palestras: 'palestra', congressos: 'congresso', cursos: 'curso',
+      culturais: 'cultural', esportivos: 'esportivo', workshops: 'workshop', festas: 'festa',
+      editais: 'edital', concursos: 'concurso', bolsas: 'bolsa', estagios: 'estagio', empregos: 'emprego',
+      'cursos-capacitacoes': 'curso-capacitacao', 'curso-capacitacao': 'curso-capacitacao',
+      republicas: 'republica', quartos: 'quarto', apartamentos: 'apartamento', casas: 'casa',
+      eletronicos: 'eletronico', livros: 'livro', ingressos: 'ingresso', moveis: 'movel',
+      documentos: 'documento', outros: 'outro', perdidos: 'perdido',
+      achado: 'encontrado', achados: 'encontrado', encontrados: 'encontrado',
+      'ofereco-carona': 'ofereco', 'procuro-carona': 'procuro', campus: 'campus',
+    };
+    if (aliases[key]) return aliases[key];
     // plural básico (pt-BR) para reduzir falsos "sumiços" ao clicar em tabs
     if (s.length > 3 && s.endsWith("s")) s = s.slice(0, -1);
     return s;
@@ -119,18 +155,21 @@
 
   function setActiveTab(category) {
     const selected = canonicalCategory(category);
+    const selectedAll = !selected || selected === 'toda' || selected === 'todas';
     document.querySelectorAll(state.opts.tabsSelector).forEach((t) => {
       // Keep sort buttons (Destaques/Recentes/Comentados) independent.
       if (t.matches && t.matches('[data-feed-tab]')) return;
       const tabCat = categoryKeyFromLink(t);
-      const isActive = selected && selected !== 'toda' && selected !== 'todas'
-        && canonicalCategory(tabCat) === selected;
+      const tabCanonical = canonicalCategory(tabCat);
+      const tabIsAll = tabCanonical === 'toda' || tabCanonical === 'todas';
+      const isActive = selectedAll ? tabIsAll : tabCanonical === selected;
       t.classList.toggle('active', !!isActive);
     });
     document.querySelectorAll('.kc-category-item, [data-kc-category-filter]').forEach((item) => {
       const tabCat = categoryKeyFromLink(item);
-      const isActive = selected && selected !== 'toda' && selected !== 'todas'
-        && canonicalCategory(tabCat) === selected;
+      const tabCanonical = canonicalCategory(tabCat);
+      const tabIsAll = tabCanonical === 'toda' || tabCanonical === 'todas';
+      const isActive = selectedAll ? tabIsAll : tabCanonical === selected;
       item.classList.toggle('active', !!isActive);
       item.setAttribute('aria-current', isActive ? 'true' : 'false');
     });
@@ -139,6 +178,10 @@
       const activeTab = Array.from(tabs).find((t) => t.classList.contains('active') && categoryKeyFromLink(t));
       if (activeTab && typeof activeTab.scrollIntoView === 'function') {
         activeTab.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+      }
+      const tabsScroller = activeTab && activeTab.closest && activeTab.closest('.kc-feed-tabs');
+      if (selectedAll && tabsScroller && typeof tabsScroller.scrollTo === 'function') {
+        tabsScroller.scrollTo({ left: 0, behavior: 'smooth' });
       }
       const rail = activeTab && activeTab.closest && activeTab.closest('[data-kc-scroll-rail]');
       if (rail && typeof rail.__kcScrollRailUpdate === 'function') {
@@ -164,6 +207,7 @@
     }
     syncCoreUrlState();
     apply();
+    notifyCoreFilterChange('category');
   }
 
   function bindCategoryLink(el) {
@@ -243,7 +287,7 @@
 
     state.opts = { ...DEFAULTS, ...(options || {}) };
 
-    const searchInput = document.getElementById(state.opts.searchInputId);
+    const searchInput = getSearchInput();
     let originalTabs = document.querySelectorAll(state.opts.tabsSelector);
 
     // Sem tabs, não é esse modo
@@ -260,6 +304,7 @@
         state.query = e.target.value || "";
         syncCoreUrlState();
         apply();
+        notifyCoreFilterChange('query');
       });
     }
 
@@ -321,6 +366,7 @@
 
     state.ready = true;
     apply();
+    notifyCoreFilterChange('init');
   }
 
   // API pública
@@ -342,10 +388,11 @@
 
     setQuery: function (q) {
       state.query = q || '';
-      const input = document.getElementById(state.opts.searchInputId);
+      const input = getSearchInput();
       if (input && input.value !== (q || '')) input.value = q || '';
       syncCoreUrlState();
       apply();
+      notifyCoreFilterChange('query');
     },
 
     getState: function () {
@@ -357,14 +404,15 @@
   window.filterPosts = function (queryOverride) {
     if (typeof queryOverride === "string") {
       state.query = queryOverride;
-      const input = document.getElementById(state.opts.searchInputId);
+      const input = getSearchInput();
       if (input && input.value !== queryOverride) input.value = queryOverride;
     } else {
-      const input = document.getElementById(state.opts.searchInputId);
+      const input = getSearchInput();
       if (input) state.query = input.value || "";
     }
     syncCoreUrlState();
     apply();
+    notifyCoreFilterChange('query');
   };
 
   // Auto-init por atributo no body

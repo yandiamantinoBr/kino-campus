@@ -268,7 +268,9 @@
     const posts = payload && Array.isArray(payload.posts) ? payload.posts : [];
     if (!container || !posts.length) return;
     upsert(posts);
-    Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length).forEach((card, index) => {
+    const allCards = Array.from(container.querySelectorAll('.kc-card'));
+    const freshCards = payload.mode === 'prepend' ? allCards.slice(0, posts.length) : allCards.slice(-posts.length);
+    freshCards.forEach((card, index) => {
       const summary = summarize(posts[index]);
       if (!summary) return;
       card.setAttribute('data-category', summary.categoryData || '');

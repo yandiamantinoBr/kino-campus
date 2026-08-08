@@ -126,11 +126,34 @@
     { key: 'som-musica',       label: 'Som/Música',       emoji: '🎵' },
     { key: 'sem-fumar',        label: 'Sem fumar',        emoji: '🚭' },
     { key: 'somente-mulheres', label: 'Somente mulheres', emoji: '👩' },
-    { key: '4-mais-lugares',   label: '4+ lugares',       emoji: '💺' },
+    { key: 'quatro-mais-lugares', label: '4+ lugares',    emoji: '💺' },
     { key: 'ida-e-volta',      label: 'Ida e volta',      emoji: '🔄' },
     { key: 'pontualidade',     label: 'Pontualidade',     emoji: '⏰' },
     { key: 'preco-fixo',       label: 'Preço fixo',       emoji: '🏷️' },
   ];
+
+  function normalizeRideFeatureKey(value) {
+    var key = String(value || '').trim().toLowerCase();
+    if (key === '4-mais-lugares' || key === 'quatro-ou-mais-lugares') return 'quatro-mais-lugares';
+    if (key === 'nao-fumantes' || key === 'nao-fumar') return 'sem-fumar';
+    if (key === 'apenas-mulheres') return 'somente-mulheres';
+    return key;
+  }
+
+  function normalizeRideCampusKey(value) {
+    var key = norm(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    var aliases = {
+      colemar: 'campus-colemar',
+      'campus-i': 'campus-colemar',
+      samambaia: 'campus-samambaia',
+      'campus-ii': 'campus-samambaia',
+      aparecida: 'campus-aparecida',
+      'aparecida-fct': 'campus-aparecida',
+      goias: 'campus-goias',
+      'cidade-ocidental': 'campus-cidade-ocidental',
+    };
+    return aliases[key] || key;
+  }
 
   /* ── Estado dos filtros ─────────────────────────────── */
   var state = {
@@ -241,7 +264,7 @@
       }
       // Características
       if (state.features.size > 0) {
-        var cardFeatures = (card.getAttribute('data-kc-carona-features') || '').split(' ').filter(Boolean);
+        var cardFeatures = (card.getAttribute('data-kc-carona-features') || '').split(' ').filter(Boolean).map(normalizeRideFeatureKey);
         var allMatch = Array.from(state.features).every(function (f) { return cardFeatures.indexOf(f) !== -1; });
         if (!allMatch) return false;
       }
@@ -300,7 +323,7 @@
 
     if (params && typeof params.has === 'function' && params.has('rideCampus')) {
       hasState = true;
-      var campusSet = new Set(utils.readListParam(params, 'rideCampus').map(function (value) { return String(value || '').trim(); }).filter(Boolean));
+      var campusSet = new Set(utils.readListParam(params, 'rideCampus').map(normalizeRideCampusKey).filter(Boolean));
       document.querySelectorAll('[data-kc-carona-campus]').forEach(function (input) {
         input.checked = campusSet.has(input.getAttribute('data-kc-carona-campus'));
       });
@@ -316,7 +339,7 @@
 
     if (params && typeof params.has === 'function' && params.has('rideFeatures')) {
       hasState = true;
-      var featureSet = new Set(utils.readListParam(params, 'rideFeatures').map(function (value) { return String(value || '').trim(); }).filter(Boolean));
+      var featureSet = new Set(utils.readListParam(params, 'rideFeatures').map(normalizeRideFeatureKey).filter(Boolean));
       document.querySelectorAll('[data-kc-carona-feature]').forEach(function (input) {
         input.checked = featureSet.has(input.getAttribute('data-kc-carona-feature'));
       });
@@ -729,7 +752,8 @@
         var container = payload && payload.container;
         var posts = payload && Array.isArray(payload.posts) ? payload.posts : [];
         if (!container || !posts.length) return;
-        var cards = Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length);
+        var allCards = Array.from(container.querySelectorAll('.kc-card'));
+        var cards = payload.mode === 'prepend' ? allCards.slice(0, posts.length) : allCards.slice(-posts.length);
         cards.forEach(function (card, index) {
           var post = posts[index] || {};
           var createdAt = post.created_at || post.createdAt || post.timestamp || '';

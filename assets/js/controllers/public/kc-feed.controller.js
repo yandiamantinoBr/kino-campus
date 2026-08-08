@@ -66,6 +66,84 @@
     return next;
   }
 
+  function getCoreFilterState() {
+    try {
+      if (!window.kcFilters || typeof window.kcFilters.getState !== 'function') return { category: '', query: '' };
+      const core = window.kcFilters.getState() || {};
+      const rawCategory = String(core.category || '').trim();
+      const canonical = typeof window.kcFilters.canonicalCategory === 'function'
+        ? window.kcFilters.canonicalCategory(rawCategory)
+        : rawCategory.toLowerCase();
+      return {
+        category: (!canonical || canonical === 'toda' || canonical === 'todas') ? '' : rawCategory,
+        query: String(core.query || '').trim(),
+      };
+    } catch (_) {
+      return { category: '', query: '' };
+    }
+  }
+
+  const CORE_CATEGORY_KEYS = Object.freeze({
+    eventos: new Set(['academicos', 'palestras', 'congressos', 'cursos', 'culturais', 'esportivos', 'workshops', 'festas', 'sustentabilidade']),
+    oportunidades: new Set(['editais', 'concursos', 'bolsas', 'estagios', 'empregos', 'monitoria', 'pesquisa', 'cursos-capacitacoes', 'voluntariado', 'freelancer']),
+    moradia: new Set(['republicas', 'quartos', 'apartamentos', 'casas', 'procurando']),
+    'compra-venda': new Set(['eletronicos', 'livros', 'ingressos', 'moveis', 'vestuario', 'outros']),
+    caronas: new Set(['ofereco', 'procuro']),
+    'achados-perdidos': new Set(['perdidos', 'encontrados']),
+  });
+
+  const CORE_CATEGORY_ALIASES = Object.freeze({
+    academica: 'academicos',
+    academico: 'academicos',
+    palestra: 'palestras',
+    congresso: 'congressos',
+    curso: 'cursos',
+    cultural: 'culturais',
+    esportivo: 'esportivos',
+    workshop: 'workshops',
+    festa: 'festas',
+    edital: 'editais',
+    concurso: 'concursos',
+    bolsa: 'bolsas',
+    estagio: 'estagios',
+    emprego: 'empregos',
+    'curso-capacitacao': 'cursos-capacitacoes',
+    republica: 'republicas',
+    quarto: 'quartos',
+    apartamento: 'apartamentos',
+    casa: 'casas',
+    eletronico: 'eletronicos',
+    livro: 'livros',
+    ingresso: 'ingressos',
+    movel: 'moveis',
+    outro: 'outros',
+    'ofereco-carona': 'ofereco',
+    'procuro-carona': 'procuro',
+    perdido: 'perdidos',
+    achado: 'encontrados',
+    encontrado: 'encontrados',
+  });
+
+  function normalizeCoreCategory(moduleKey, value) {
+    const raw = String(value || '').trim();
+    const canonical = raw.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    if (!canonical || canonical === 'toda' || canonical === 'todas') return '';
+    const normalized = CORE_CATEGORY_ALIASES[canonical] || canonical;
+    const allowed = CORE_CATEGORY_KEYS[String(moduleKey || '').trim().toLowerCase()];
+    return allowed && allowed.has(normalized) ? normalized : '';
+  }
+
+  function withCoreCategory(params, category) {
+    const next = sanitizeRequestParams(params);
+    const rawCategory = String(category || '').trim();
+    if (rawCategory) next.category = rawCategory;
+    return sanitizeRequestParams(next);
+  }
+
   function getRequestParamsKey(params) {
     const normalized = sanitizeRequestParams(params);
     return Object.keys(normalized).length ? JSON.stringify(normalized) : '';
@@ -348,11 +426,6 @@
     const nextCursor = response && response.nextCursor ? String(response.nextCursor) : null;
     const hasMore = !!(response && response.hasMore === true);
 
-    // Cache successful fetch if no filters
-    if (!q && !tag && (posts.length > 0 || hasMore)) {
-      setCachedPosts(moduleKeys, cursor, { posts, nextCursor, hasMore }, q, tag, limit, pathname, sortBy, requestParams);
-    }
-
     return {
       posts,
       nextCursor,
@@ -398,12 +471,14 @@
     const pageModule = opt.pageModule || (moduleKeys.length === 1 ? moduleKeys[0] : '') || '';
     const limit = (opt.limit != null) ? Math.max(1, parseInt(String(opt.limit), 10) || POSTS_LIMIT) : POSTS_LIMIT;
     const useRealtime = opt.realtime !== false;
-    const searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : '';
+    const initialCoreFilter = getCoreFilterState();
+    let searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : initialCoreFilter.query;
     const tagFilter = (opt.tag && String(opt.tag).trim()) ? String(opt.tag).trim() : '';
     const sortBy = String(opt.sortBy || 'recentes');
     const initialRequestParams = sanitizeRequestParams(
       typeof opt.getRequestParams === 'function' ? opt.getRequestParams() : opt.requestParams
     );
+    const initialCoreCategory = normalizeCoreCategory(pageModule, initialCoreFilter.category);
 
     // keepExisting: true permite múltiplos pagers na mesma página (ex: abas Destaques/Recentes)
     if (!opt.keepExisting && activePager && typeof activePager.destroy === 'function') {
@@ -460,8 +535,19 @@
       freshnessTimer: null,
       freshnessUnsub: null,
       requestParams: initialRequestParams,
+      coreCategory: initialCoreCategory,
+      requestGeneration: 0,
+      paginationRevision: 0,
+      contentRevision: 0,
+      realtimeRevision: 0,
+      revalidating: false,
+      firstPageCount: 0,
     };
     const pagePath = String(window.location.pathname || '').trim() || '/';
+
+    function getEffectiveRequestParams() {
+      return withCoreCategory(state.requestParams, state.coreCategory);
+    }
 
     function getPageEmptyState() {
       const section = typeof container.closest === 'function' ? container.closest('section') : null;
@@ -507,7 +593,7 @@
     }
 
     function getSnapshotKey() {
-      return buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
+      return buildFeedSnapshotKey(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, getEffectiveRequestParams());
     }
 
     function persistSnapshot() {
@@ -521,6 +607,7 @@
         nextCursor: state.nextCursor,
         hasMore: state.hasMore === true,
         done: !!state.done,
+        firstPageCount: state.firstPageCount,
         posts: state.renderedPosts.slice(),
       });
     }
@@ -564,21 +651,9 @@
       return !status || status === 'published' || status === 'closed';
     }
 
-    function appendRenderedPosts(posts, mode) {
-      const batch = Array.isArray(posts) ? posts.filter(Boolean) : [];
-      if (!batch.length || state.destroyed) return;
-      removeGeneratedEmptyState();
-      const html = batch.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join('');
-      if (mode === 'prepend') {
-        container.insertAdjacentHTML('afterbegin', html);
-        state.renderedPosts = batch.concat(state.renderedPosts);
-      } else {
-        container.insertAdjacentHTML('beforeend', html);
-        state.renderedPosts = state.renderedPosts.concat(batch);
-      }
-
+    function runPostRenderHooks(batch, mode) {
       if (typeof opt.onAfterAppend === 'function') {
-        try { opt.onAfterAppend({ container, posts: batch, state: { ...state } }); } catch (_) { }
+        try { opt.onAfterAppend({ container, posts: batch, state: { ...state }, mode: mode || 'append' }); } catch (_) { }
       }
 
       if (typeof kcInitVoteStates === 'function') {
@@ -588,8 +663,25 @@
           try { kcInitVoteStates(); } catch (_) { }
         }, 50);
       }
+    }
 
-      persistSnapshot();
+    function appendRenderedPosts(posts, mode) {
+      const batch = Array.isArray(posts) ? posts.filter(Boolean) : [];
+      if (!batch.length || state.destroyed) return;
+      removeGeneratedEmptyState();
+      const html = batch.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join('');
+      if (mode === 'prepend') {
+        container.insertAdjacentHTML('afterbegin', html);
+        state.renderedPosts = batch.concat(state.renderedPosts);
+        state.firstPageCount += batch.length;
+      } else {
+        container.insertAdjacentHTML('beforeend', html);
+        state.renderedPosts = state.renderedPosts.concat(batch);
+      }
+      state.contentRevision += 1;
+      runPostRenderHooks(batch, mode);
+
+      if (mode !== 'restore') persistSnapshot();
       reapplyFiltersAndSearch();
     }
 
@@ -597,7 +689,6 @@
       const batch = Array.isArray(posts) ? posts.filter(isRenderableFeedPost) : [];
       state.renderedPosts = [];
       state.seenIds.clear();
-      state.pendingIds.clear();
       container.innerHTML = '';
       batch.forEach((post, idx) => {
         markSeenIdentity(state, post, post, idx);
@@ -606,6 +697,8 @@
         container.insertAdjacentHTML('beforeend', batch.map((post) => window.KCUtils.renderPostCard(post, { pageModule })).join(''));
         state.renderedPosts = batch.slice();
       }
+      state.contentRevision += 1;
+      if (batch.length) runPostRenderHooks(batch, 'replace');
       if (nextMeta && typeof nextMeta === 'object') {
         state.nextCursor = nextMeta.nextCursor || null;
         state.hasMore = nextMeta.hasMore === true;
@@ -615,7 +708,7 @@
       syncFeedEmptyState();
       if (state.done) setStatus('done', 'Fim da lista');
       else setStatus('idle', '');
-      clearPendingRealtime();
+      reconcilePendingRealtimeAgainstRendered();
       if (batch.length) persistSnapshot();
       else clearSnapshot();
       reapplyFiltersAndSearch();
@@ -626,7 +719,16 @@
         const id = String(post && (post.uuid || post.id || post.legacyId || post.legacy_id) || '');
         const status = String(post && (post.status || post.estado) || '');
         const updated = String(post && (post.updated_at || post.updatedAt || post.bumped_at || post.bumpedAt || '') || '');
-        return [id, status, updated].join(':');
+        const title = String(post && (post.title || post.titulo) || '');
+        const description = String(post && (post.description || post.descricao) || '');
+        const category = String(post && (post.category || post.categoria) || '');
+        const location = String(post && (post.location || post.localizacao || post.local) || '');
+        const rawPrice = post ? (post.price ?? post.preco) : '';
+        const price = String(rawPrice ?? '');
+        const image = String(post && (post.image_url || post.imageUrl || post.imagem || post.image) || '');
+        let metadata = '';
+        try { metadata = JSON.stringify(post && (post.metadata || post.meta || post._meta) || {}); } catch (_) { }
+        return [id, status, updated, title, description, category, location, price, image, metadata].join(':');
       }).join('|');
     }
 
@@ -634,6 +736,18 @@
       state.pendingRealtimePosts = [];
       state.pendingIds.clear();
       realtimeUI.update(0);
+    }
+
+    function reconcilePendingRealtimeAgainstRendered() {
+      const remaining = state.pendingRealtimePosts.filter((entry, idx) => {
+        return entry && entry.post && !hasSeenIdentity(state, entry.post, entry.raw, idx);
+      });
+      state.pendingRealtimePosts = remaining;
+      state.pendingIds.clear();
+      remaining.forEach((entry, idx) => {
+        getIdentityAliases(entry.post, entry.raw, idx).forEach((key) => state.pendingIds.add(key));
+      });
+      realtimeUI.update(remaining.length);
     }
 
     function renderPendingRealtimePosts() {
@@ -683,6 +797,23 @@
       } catch (_) { }
     }
 
+    function realtimePostMatchesContext(post) {
+      try {
+        if (!window.KCAPI || typeof window.KCAPI.filterPosts !== 'function') return true;
+        const params = {
+          ...getEffectiveRequestParams(),
+          module: moduleKeys.length === 1 ? moduleKeys[0] : moduleKeys,
+          q: searchQuery,
+          tag: tagFilter,
+        };
+        const matches = window.KCAPI.filterPosts([post], params);
+        return Array.isArray(matches) && matches.length > 0;
+      } catch (_) {
+        // Não bloqueia o realtime se o módulo de filtros ainda não carregou.
+        return true;
+      }
+    }
+
     function restoreFromSnapshot() {
       const store = getSessionStore();
       if (!store || typeof store.get !== 'function') return false;
@@ -704,6 +835,9 @@
       state.hydrated = true;
       state.snapshotAge = Number(cached.age) || 0;
       state.lastSnapshotAt = Number(cached.timestamp) || 0;
+      state.firstPageCount = Number.isFinite(Number(snapshot.firstPageCount))
+        ? Math.max(0, Math.min(posts.length, Number(snapshot.firstPageCount)))
+        : Math.min(posts.length, limit);
       state.renderedPosts = [];
       state.seenIds.clear();
       container.innerHTML = '';
@@ -715,7 +849,7 @@
         fresh.push(post);
       });
 
-      appendRenderedPosts(fresh, 'append');
+      appendRenderedPosts(fresh, 'restore');
       if (state.done) {
         setStatus('done', 'Fim da lista');
       } else {
@@ -725,17 +859,37 @@
     }
 
     async function revalidateSnapshot() {
-      if (state.destroyed || state.loading) return;
+      if (state.destroyed || state.loading || state.revalidating) return;
       const age = state.snapshotAge || (Date.now() - (state.lastSnapshotAt || 0));
       if (age < FEED_REVALIDATE_COOLDOWN_MS) return;
+      const requestGeneration = state.requestGeneration;
+      const paginationRevision = state.paginationRevision;
+      const contentRevision = state.contentRevision;
+      const realtimeRevision = state.realtimeRevision;
+      const requestQuery = searchQuery;
+      const requestParams = getEffectiveRequestParams();
+      state.revalidating = true;
 
       try {
-        const response = await fetchPostsByModule(moduleKeys, null, limit, searchQuery, tagFilter, {
+        const response = await fetchPostsByModule(moduleKeys, null, limit, requestQuery, tagFilter, {
           forceNetwork: true,
           pathname: pagePath,
           sortBy,
-          requestParams: state.requestParams,
+          requestParams,
         });
+        if (
+          state.destroyed ||
+          requestGeneration !== state.requestGeneration ||
+          paginationRevision !== state.paginationRevision ||
+          contentRevision !== state.contentRevision ||
+          realtimeRevision !== state.realtimeRevision
+        ) return;
+        if (response && response.source === 'network' && !requestQuery && !tagFilter) {
+          const cachePosts = Array.isArray(response.posts) ? response.posts : [];
+          if (cachePosts.length || response.hasMore === true) {
+            setCachedPosts(moduleKeys, null, response, requestQuery, tagFilter, limit, pagePath, sortBy, requestParams);
+          }
+        }
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
 
         let userRaw = [];
@@ -765,20 +919,40 @@
           return;
         }
 
-        if (buildRenderedSignature(normalized) !== buildRenderedSignature(state.renderedPosts)) {
-          replaceRenderedPosts(normalized, nextMeta);
+        const hasAdditionalPages = state.cursor != null;
+        const comparablePosts = hasAdditionalPages
+          ? state.renderedPosts.slice(0, state.firstPageCount || Math.min(limit, state.renderedPosts.length))
+          : state.renderedPosts;
+        if (buildRenderedSignature(normalized) !== buildRenderedSignature(comparablePosts)) {
+          if (hasAdditionalPages) {
+            const tail = state.renderedPosts.slice(state.firstPageCount || Math.min(limit, state.renderedPosts.length));
+            const firstPageIds = new Set(normalized.map((post, idx) => getPostIdentity(post, idx)));
+            const preservedTail = tail.filter((post, idx) => !firstPageIds.has(getPostIdentity(post, idx)));
+            const currentMeta = { nextCursor: state.nextCursor, hasMore: state.hasMore };
+            state.firstPageCount = normalized.length;
+            replaceRenderedPosts(normalized.concat(preservedTail), currentMeta);
+          } else {
+            state.firstPageCount = normalized.length;
+            replaceRenderedPosts(normalized, nextMeta);
+          }
         } else {
-          state.nextCursor = nextMeta.nextCursor;
-          state.hasMore = nextMeta.hasMore;
-          state.done = !state.hasMore;
+          if (!hasAdditionalPages) {
+            state.nextCursor = nextMeta.nextCursor;
+            state.hasMore = nextMeta.hasMore;
+            state.done = !state.hasMore;
+          }
           persistSnapshot();
         }
       } catch (_) { }
+      finally {
+        state.revalidating = false;
+      }
     }
 
     async function handleRealtimePost(event) {
       if (!event || !event.row || state.destroyed) return;
       const row = event.row;
+      const requestGeneration = state.requestGeneration;
 
       const rowId = String(row.id || '').trim();
       if (!rowId) return;
@@ -792,15 +966,24 @@
 
       if (idKeys.some((k) => state.seenIds.has(k) || state.pendingIds.has(k))) return;
       idKeys.forEach((k) => state.pendingIds.add(k));
+      let accepted = false;
 
-      const raw = await resolveRealtimeRaw(row);
-      if (state.destroyed || !raw) return;
-      const normalized = normalizePost(raw);
-      if (!normalized) return;
+      try {
+        const raw = await resolveRealtimeRaw(row);
+        if (state.destroyed || requestGeneration !== state.requestGeneration || !raw) return;
+        const normalized = normalizePost(raw);
+        if (!normalized || !realtimePostMatchesContext(normalized)) return;
 
-      if (hasSeenIdentity(state, normalized, raw, state.pendingRealtimePosts.length)) return;
-      state.pendingRealtimePosts.push({ post: normalized, raw });
-      realtimeUI.update(state.pendingRealtimePosts.length);
+        if (hasSeenIdentity(state, normalized, raw, state.pendingRealtimePosts.length)) return;
+        state.pendingRealtimePosts.push({ post: normalized, raw });
+        state.realtimeRevision += 1;
+        realtimeUI.update(state.pendingRealtimePosts.length);
+        accepted = true;
+      } catch (error) {
+        warn('[KCControllers] Falha ao resolver post novo do realtime.', error);
+      } finally {
+        if (!accepted) idKeys.forEach((key) => state.pendingIds.delete(key));
+      }
     }
 
     function scheduleFreshnessRefresh(reason) {
@@ -906,6 +1089,9 @@
 
     async function loadNextPage() {
       if (state.loading || state.done || state.destroyed || (!state.hasMore && state.hydrated)) return;
+      const requestGeneration = state.requestGeneration;
+      const requestQuery = searchQuery;
+      const requestParams = getEffectiveRequestParams();
       state.loading = true;
       state.lastError = null;
       /* Limpa placeholder estático do HTML na primeira carga */
@@ -917,11 +1103,18 @@
       const requestCursor = state.nextCursor || null;
 
       try {
-        const response = await fetchPostsByModule(moduleKeys, requestCursor, limit, searchQuery, tagFilter, {
+        const response = await fetchPostsByModule(moduleKeys, requestCursor, limit, requestQuery, tagFilter, {
           pathname: pagePath,
           sortBy,
-          requestParams: state.requestParams,
+          requestParams,
         });
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
+        if (response && response.source === 'network' && !requestQuery && !tagFilter) {
+          const cachePosts = Array.isArray(response.posts) ? response.posts : [];
+          if (cachePosts.length || response.hasMore === true) {
+            setCachedPosts(moduleKeys, requestCursor, response, requestQuery, tagFilter, limit, pagePath, sortBy, requestParams);
+          }
+        }
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
         const nextCursor = response && response.nextCursor ? String(response.nextCursor) : null;
         const hasMore = !!(response && response.hasMore === true);
@@ -960,6 +1153,8 @@
         state.nextCursor = nextCursor;
         state.hasMore = hasMore;
         state.done = !hasMore;
+        state.paginationRevision += 1;
+        if (!requestCursor) state.firstPageCount = fresh.length;
 
         if (fresh.length) {
           appendRenderedPosts(fresh, 'append');
@@ -974,6 +1169,7 @@
         }
         persistSnapshot();
       } catch (err) {
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
         state.lastError = err;
         console.error('[KCControllers] Falha ao carregar posts do feed.', {
           cursor: requestCursor,
@@ -983,6 +1179,7 @@
         });
         setStatus('error', 'Não foi possível carregar os posts. Tente novamente.');
       } finally {
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
         state.loading = false;
         if (state.status !== 'error' && !state.done) setStatus('idle', '');
       }
@@ -1025,6 +1222,25 @@
       state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
     };
     let api = null;
+    let coreFilterTimer = null;
+
+    function onCoreFilterChange(event) {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : getCoreFilterState();
+      const nextCategory = normalizeCoreCategory(pageModule, detail.category);
+      const nextQuery = String(detail.query || '').trim();
+      if (nextCategory === state.coreCategory && nextQuery === searchQuery) return;
+
+      if (coreFilterTimer) window.clearTimeout(coreFilterTimer);
+      const delay = detail.reason === 'query' ? 220 : 0;
+      coreFilterTimer = window.setTimeout(function () {
+        coreFilterTimer = null;
+        if (!api || state.destroyed) return;
+        api.refresh({
+          q: nextQuery,
+          coreCategory: nextCategory,
+        });
+      }, delay);
+    }
 
     function pauseForBfcache() {
       if (state.revalidateTimer) {
@@ -1048,6 +1264,7 @@
     function destroy() {
       if (state.destroyed) return;
       state.destroyed = true;
+      state.requestGeneration += 1;
       if (state.revalidateTimer) {
         clearTimeout(state.revalidateTimer);
         state.revalidateTimer = null;
@@ -1055,6 +1272,10 @@
       if (state.freshnessTimer) {
         clearTimeout(state.freshnessTimer);
         state.freshnessTimer = null;
+      }
+      if (coreFilterTimer) {
+        window.clearTimeout(coreFilterTimer);
+        coreFilterTimer = null;
       }
 
       try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) { }
@@ -1064,6 +1285,7 @@
       try { window.removeEventListener('pageshow', onPageShow); } catch (_) { }
       try { window.removeEventListener('focus', onFocus); } catch (_) { }
       try { document.removeEventListener('visibilitychange', onVisibility); } catch (_) { }
+      try { document.removeEventListener('kc:feed-core-filter-change', onCoreFilterChange); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
@@ -1102,6 +1324,7 @@
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('kc:feed-core-filter-change', onCoreFilterChange);
     if (window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
       state.freshnessUnsub = window.KCPostFreshness.subscribe(handlePostChange);
     }
@@ -1112,18 +1335,10 @@
         window.KCPullToRefresh.init({
           container: document.body,
           onRefresh: () => {
-            // Invalidate cache and reload first page
-            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
-            state.cursor = null;
-            state.nextCursor = null;
-            state.hasMore = true;
-            state.done = false;
-            state.renderedPosts = [];
-            state.seenIds.clear();
-            container.innerHTML = '';
-            clearSnapshot();
-            clearPendingRealtime();
-            loadNextPage();
+            if (api && typeof api.refresh === 'function') {
+              return api.refresh({ requestParams: state.requestParams, reason: 'pull-to-refresh' });
+            }
+            return Promise.resolve();
           }
         });
       } catch (e) {
@@ -1144,8 +1359,15 @@
       retry: loadNextPage,
       refresh: function (nextOptions) {
         const cfg = (nextOptions && typeof nextOptions === 'object' && !Array.isArray(nextOptions)) ? nextOptions : {};
+        state.requestGeneration += 1;
         const previousKey = getSnapshotKey();
-        invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
+        invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, getEffectiveRequestParams());
+        if (Object.prototype.hasOwnProperty.call(cfg, 'q')) {
+          searchQuery = String(cfg.q || '').trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(cfg, 'coreCategory')) {
+          state.coreCategory = normalizeCoreCategory(pageModule, cfg.coreCategory);
+        }
         if (Object.prototype.hasOwnProperty.call(cfg, 'requestParams')) {
           state.requestParams = sanitizeRequestParams(cfg.requestParams);
         }
@@ -1154,6 +1376,9 @@
         state.hasMore = true;
         state.done = false;
         state.loading = false;
+        state.paginationRevision += 1;
+        state.contentRevision += 1;
+        state.firstPageCount = 0;
         state.lastError = null;
         state.renderedPosts = [];
         state.seenIds.clear();
@@ -1166,9 +1391,14 @@
         clearSnapshot();
         clearPendingRealtime();
         setStatus('idle', '');
-        loadNextPage();
+        return loadNextPage();
       },
-      getState: () => ({ ...state, requestParams: { ...state.requestParams } }),
+      getState: () => ({
+        ...state,
+        query: searchQuery,
+        baseRequestParams: { ...state.requestParams },
+        requestParams: getEffectiveRequestParams(),
+      }),
       destroy,
     };
     activePager = api;

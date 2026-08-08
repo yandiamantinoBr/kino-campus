@@ -89,6 +89,33 @@ describe('caronas-feed.controller — source contracts', () => {
     expect(source).toContain("'somente-mulheres'");
   });
 
+  test('normaliza aliases legados de campus em URLs salvas', () => {
+    expect(source).toContain('function normalizeRideCampusKey');
+    expect(source).toContain("colemar: 'campus-colemar'");
+    expect(source).toContain("'aparecida-fct': 'campus-aparecida'");
+    expect(source).toContain("'cidade-ocidental': 'campus-cidade-ocidental'");
+    expect(source).toContain("readListParam(params, 'rideCampus').map(normalizeRideCampusKey)");
+
+    const start = source.indexOf('function normalizeRideCampusKey');
+    const end = source.indexOf('/*', start);
+    const normalizeCampus = new Function('norm', source.slice(start, end) + '\nreturn normalizeRideCampusKey;')(
+      (value) => String(value || '').toLowerCase().trim()
+    );
+    expect([
+      'colemar',
+      'samambaia',
+      'aparecida-fct',
+      'goias',
+      'cidade-ocidental',
+    ].map(normalizeCampus)).toEqual([
+      'campus-colemar',
+      'campus-samambaia',
+      'campus-aparecida',
+      'campus-goias',
+      'campus-cidade-ocidental',
+    ]);
+  });
+
   test('usa dataset attr data-kc-carona-origem', () => {
     expect(source).toContain('data-kc-carona-origem');
   });
@@ -165,4 +192,5 @@ describe('caronas-feed.controller — runtime: carregamento sem lançar', () => 
     delete window.KCFeedFilters;
     expect(() => loadController()).not.toThrow();
   });
+
 });

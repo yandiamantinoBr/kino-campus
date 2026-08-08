@@ -204,8 +204,18 @@ describe('kc-create-post.submit.js — uso de resolvers', () => {
     expect(source).toContain('kcNormalizeOpportunityTypeKey(');
   });
 
+  test('persiste a option key plural de oportunidades', () => {
+    expect(source).toContain('? kcGetOpportunityTypeOptionKey(rawCatKey)');
+    expect(source).toContain('? kcGetOpportunityTypeOptionKey(key)');
+  });
+
   test('usa kcNormalizeHousingTypeKey', () => {
     expect(source).toContain('kcNormalizeHousingTypeKey(');
+  });
+
+  test('persiste a option key plural de moradia e mantém o tipo de domínio separado', () => {
+    expect(source).toContain('kcGetHousingTypeOptionKey(rawCatKey)');
+    expect(source).toContain('housingTypeKey: isMoradia ? (housingTypeKey || \'\')');
   });
 
   test('usa kcResolveOpportunityAreaValue', () => {
@@ -234,6 +244,13 @@ describe('kc-create-post.submit.js — uso de resolvers', () => {
 
   test('usa kcResolveCaronasLocationValue para audit log', () => {
     expect(source).toContain('kcResolveCaronasLocationValue(');
+  });
+
+  test('usa resolver próprio de características e espelha contribuição no preço', () => {
+    expect(source).toContain('kcResolveCaronasFeatureValues(activeCaronasFeatures)');
+    expect(source).toContain("feature.key !== 'quatro-mais-lugares'");
+    expect(source).toContain('const contributionValue = kcParseBRLNumber(caronasContribuicao)');
+    expect(source).toContain('preco = contributionValue;');
   });
 
   test('usa kcParseBRLNumber para campos monetários', () => {

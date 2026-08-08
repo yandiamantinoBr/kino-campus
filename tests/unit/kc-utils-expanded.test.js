@@ -116,6 +116,13 @@ describe('KCUtils - Testes Expandidos', () => {
       expect(utils.canonicalCategory('livros')).toBe('livro');
     });
 
+    test('normaliza plurais irregulares do domínio', () => {
+      expect(utils.canonicalCategory('Editais')).toBe('edital');
+      expect(utils.canonicalCategory('Cursos-Capacitações')).toBe('curso-capacitacao');
+      expect(utils.canonicalCategory('Móveis')).toBe('movel');
+      expect(utils.canonicalCategory('Campus')).toBe('campus');
+    });
+
     test('nao remove s de palavras curtas (3 letras ou menos)', () => {
       expect(utils.canonicalCategory('gas')).toBe('gas');
     });

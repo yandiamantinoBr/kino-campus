@@ -19,14 +19,25 @@
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
-  /* ── Data do evento de um post (usado para anotar cards do feed) ── */
-  function getEventDate(post) {
-    // Usa data_evento da metadata (campo do formulário) ou data/hora, fallback para created_at
-    var m = post.metadata || {};
-    var d = m.data_evento || m.data || null;
-    if (d && /^\d{4}-\d{2}-\d{2}/.test(String(d))) return String(d).slice(0, 10);
-    if (post.created_at) return String(post.created_at).slice(0, 10);
-    return null;
+  /* ── Intervalo do evento de um post (usado para anotar cards do feed) ── */
+  function getEventDateRange(post) {
+    var utils = getFeedFilterUtils();
+    if (utils && typeof utils.getEventDateRange === 'function') return utils.getEventDateRange(post);
+    var m = post && post.metadata || {};
+    var start = String(m.data_evento || m.data || '').slice(0, 10);
+    var end = String(m.data_fim_evento || m.data_fim || start).slice(0, 10);
+    var isCivilDate = function (value) {
+      var match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return false;
+      var year = Number(match[1]);
+      var month = Number(match[2]);
+      var day = Number(match[3]);
+      if (year < 1000 || month < 1 || month > 12 || day < 1) return false;
+      return day <= new Date(Date.UTC(year, month, 0)).getUTCDate();
+    };
+    if (!isCivilDate(start)) return null;
+    if (!isCivilDate(end) || end < start) end = start;
+    return { startKey: start, endKey: end };
   }
 
   /* ── Estado do feed ───────────────────────────────────── */
@@ -56,7 +67,9 @@
     }
     var normalized = String(value || '').trim().toLowerCase();
     var allowed = getAllowedDatePresets();
-    return allowed.indexOf(normalized) !== -1 ? normalized : '';
+    return allowed.find(function (entry) {
+      return String(entry || '').toLowerCase() === normalized;
+    }) || '';
   }
 
   function readSelectedDatePreset() {
@@ -93,7 +106,7 @@
         moduleKey: 'eventos',
         preset: feedState.datePreset,
         eventKey: card.getAttribute('data-kc-event-date') || '',
-        createdAt: card.getAttribute('data-kc-created-at') || ''
+        eventEndKey: card.getAttribute('data-kc-event-end-date') || ''
       });
     };
   }
@@ -144,12 +157,14 @@
         var container = payload && payload.container;
         var posts = payload && Array.isArray(payload.posts) ? payload.posts : [];
         if (!container || !posts.length) return;
-        var cards = Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length);
+        var allCards = Array.from(container.querySelectorAll('.kc-card'));
+        var cards = payload.mode === 'prepend' ? allCards.slice(0, posts.length) : allCards.slice(-posts.length);
         cards.forEach(function (card, index) {
           var post = posts[index] || {};
-          var eventDate = getEventDate(post);
+          var eventRange = getEventDateRange(post);
           var createdAt = post.created_at || post.createdAt || post.timestamp || '';
-          if (eventDate && !card.getAttribute('data-kc-event-date')) card.setAttribute('data-kc-event-date', eventDate);
+          if (eventRange && !card.getAttribute('data-kc-event-date')) card.setAttribute('data-kc-event-date', eventRange.startKey);
+          if (eventRange && !card.getAttribute('data-kc-event-end-date')) card.setAttribute('data-kc-event-end-date', eventRange.endKey);
           if (createdAt && !card.getAttribute('data-kc-created-at')) card.setAttribute('data-kc-created-at', String(createdAt));
         });
       }

@@ -225,6 +225,65 @@
         'acadêmica', 'bolsa pesquisa'
       ]),
     }),
+    Object.freeze({
+      key: 'linguagens-artes',
+      label: 'Linguagens e Artes',
+      icon: 'fas fa-language',
+      emoji: '🎭',
+      aliases: Object.freeze([
+        'linguagens', 'linguas', 'línguas', 'idiomas', 'linguistica', 'linguística',
+        'letras', 'literatura', 'traducao', 'tradução', 'artes', 'artes visuais'
+      ]),
+    }),
+    Object.freeze({
+      key: 'ciencias-humanas-sociais',
+      label: 'Ciências Humanas e Sociais',
+      icon: 'fas fa-users',
+      emoji: '🧠',
+      aliases: Object.freeze([
+        'ciencias humanas', 'ciências humanas', 'humanas', 'ciencias sociais', 'ciências sociais',
+        'filosofia', 'historia', 'história', 'sociologia', 'antropologia', 'servico social', 'serviço social'
+      ]),
+    }),
+    Object.freeze({
+      key: 'direito',
+      label: 'Direito',
+      icon: 'fas fa-balance-scale',
+      emoji: '⚖️',
+      aliases: Object.freeze([
+        'direito', 'juridico', 'jurídico', 'juridica', 'jurídica', 'legislacao', 'legislação',
+        'advocacia', 'justica', 'justiça'
+      ]),
+    }),
+    Object.freeze({
+      key: 'gestao-negocios',
+      label: 'Gestão e Negócios',
+      icon: 'fas fa-chart-line',
+      emoji: '📊',
+      aliases: Object.freeze([
+        'gestao', 'gestão', 'negocios', 'negócios', 'economia', 'economicas', 'econômicas',
+        'contabilidade', 'ciencias contabeis', 'ciências contábeis', 'empreendedorismo', 'comercio exterior', 'comércio exterior'
+      ]),
+    }),
+    Object.freeze({
+      key: 'ciencias-agrarias-ambientais',
+      label: 'Ciências Agrárias e Ambientais',
+      icon: 'fas fa-seedling',
+      emoji: '🌱',
+      aliases: Object.freeze([
+        'ciencias agrarias', 'ciências agrárias', 'agronomia', 'agricultura', 'veterinaria', 'veterinária',
+        'zootecnia', 'meio ambiente', 'ambiental', 'ecologia', 'sustentabilidade', 'recursos naturais'
+      ]),
+    }),
+    Object.freeze({
+      key: 'outras-areas',
+      label: 'Outras áreas',
+      icon: 'fas fa-layer-group',
+      emoji: '🧩',
+      aliases: Object.freeze([
+        'outras areas', 'outras áreas', 'outra area', 'outra área', 'multidisciplinar', 'interdisciplinar'
+      ]),
+    }),
   ]);
 
   const HOUSING_REGION_DEFINITIONS = Object.freeze([

@@ -207,6 +207,11 @@ describe('oportunidades.controller.js residual — funções extraídas não exi
   test('chama getAreaCatalog com state', () => {
     expect(code).toContain('getAreaCatalog(countMap, state)');
   });
+
+  test('nao desabilita areas ausentes no lote paginado', () => {
+    expect(code).not.toContain('const isDisabled = !isActive && count === 0');
+    expect(code).toContain('o filtro consulta todo o feed');
+  });
 });
 
 // ── 3. HTML consumidor — ordem de carregamento ────────────────────────────────
@@ -273,11 +278,12 @@ describe('normalizeOpportunityType — funcional', () => {
     // As funções ficam no global por serem declarações de função de nível global
     const code = readFile(NORMALIZE);
     // eslint-disable-next-line no-new-func
-    const fn = new Function('window', code + '\nreturn { normalizeOpportunityType, resolveWorkMode, summarizePost };');
+    const fn = new Function('window', code + '\nreturn { normalizeOpportunityType, resolveWorkMode, summarizePost, getAreaCatalog };');
     const exports = fn(global.window);
     global._testNormalizeOp = exports.normalizeOpportunityType;
     global._testResolveWorkMode = exports.resolveWorkMode;
     global._testSummarizePost = exports.summarizePost;
+    global._testGetAreaCatalog = exports.getAreaCatalog;
   });
 
   test('classifica estagio corretamente', () => {
@@ -298,6 +304,19 @@ describe('normalizeOpportunityType — funcional', () => {
   test('classifica via sourceText quando value vazio', () => {
     const result = global._testNormalizeOp('', 'vaga de estágio remoto');
     expect(result).toBe('estagio');
+  });
+
+  test('mantem ordem canonica das areas independentemente do lote carregado', () => {
+    const previousUtils = global.window.KCUtils;
+    global.window.KCUtils = {
+      getOpportunityAreaDefinitions: () => [
+        { key: 'primeira', label: 'Primeira', icon: 'a' },
+        { key: 'segunda', label: 'Segunda', icon: 'b' },
+      ],
+    };
+    const areas = global._testGetAreaCatalog(new Map([['segunda', 99], ['primeira', 1]]), { posts: new Map() });
+    expect(areas.map((area) => area.key)).toEqual(['primeira', 'segunda']);
+    global.window.KCUtils = previousUtils;
   });
 });
 

@@ -178,9 +178,11 @@
       const isMoradia = kcCreateState.moduleKey === 'moradia';
       const isAchados = kcCreateState.moduleKey === 'achados-perdidos';
       const isCaronas = kcCreateState.moduleKey === 'caronas';
+      const opportunityTypeKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : '';
+      const housingTypeKey = isMoradia ? kcNormalizeHousingTypeKey(rawCatKey) : '';
       const catKey = isOpportunity
-        ? kcNormalizeOpportunityTypeKey(rawCatKey)
-        : (isMoradia ? kcNormalizeHousingTypeKey(rawCatKey) : rawCatKey);
+        ? kcGetOpportunityTypeOptionKey(rawCatKey)
+        : (isMoradia ? kcGetHousingTypeOptionKey(rawCatKey) : rawCatKey);
       const catLabel = rawCatKey ? kcTagLabel(schema, categoryGroupId, rawCatKey) : '';
 
       // subcategoria: tenta usar 2º grupo (quando existir)
@@ -288,21 +290,31 @@
       const persistedLocation = isAchados ? (lostFoundLocation.label || activeLocation) : activeLocation;
 
       // Caronas: origem, destino, features
-      const caronasOrigem = isCaronas ? activeOrigem : '';
-      const caronasDestino = isCaronas ? activeDestino : '';
+      const caronasOrigemResolved = isCaronas ? kcResolveCaronasLocationValue(activeOrigem) : null;
+      const caronasDestinoResolved = isCaronas ? kcResolveCaronasLocationValue(activeDestino) : null;
+      const caronasOrigem = isCaronas ? ((caronasOrigemResolved && caronasOrigemResolved.label) || activeOrigem) : '';
+      const caronasDestino = isCaronas ? ((caronasDestinoResolved && caronasDestinoResolved.label) || activeDestino) : '';
       const caronasHorario = isCaronas ? activeHorario : '';
       const caronasContribuicao = isCaronas ? activeContribuicao : '';
       const caronasVagas = isCaronas ? activeVagas : '';
-      const caronasFeatures = isCaronas
-        ? kcResolveHousingFeatureValues(activeCaronasFeatures)
+      let caronasFeatures = isCaronas
+        ? kcResolveCaronasFeatureValues(activeCaronasFeatures)
         : [];
+      const caronasVagasNumber = Number.parseInt(String(caronasVagas || ''), 10);
+      if (isCaronas && Number.isFinite(caronasVagasNumber)) {
+        caronasFeatures = caronasFeatures.filter((feature) => feature.key !== 'quatro-mais-lugares');
+        if (caronasVagasNumber >= 4) {
+          const fourPlus = kcGetCaronasFeatureOptions().find((feature) => feature.key === 'quatro-mais-lugares');
+          if (fourPlus) caronasFeatures.push({ ...fourPlus, isKnown: true });
+        }
+      }
 
       const tagMap = new Map();
       Object.entries(kcCreateState.selections).forEach(([gid, key]) => {
         if (!key) return;
         const normalizedKey = (isOpportunity && gid === categoryGroupId)
-          ? kcNormalizeOpportunityTypeKey(key)
-          : ((isMoradia && gid === categoryGroupId) ? kcNormalizeHousingTypeKey(key) : key);
+          ? kcGetOpportunityTypeOptionKey(key)
+          : ((isMoradia && gid === categoryGroupId) ? kcGetHousingTypeOptionKey(key) : key);
         const labelForTag = kcTagLabel(schema, gid, key);
         if (normalizedKey && !tagMap.has(normalizedKey)) tagMap.set(normalizedKey, labelForTag || normalizedKey);
       });
@@ -322,14 +334,13 @@
         if (r) precoTexto = 'Recompensa: R$ ' + r;
       }
 
-      if (isMoradia && kcNormalizeHousingTypeKey(rawCatKey) === 'procurando') {
+      if (isMoradia && housingTypeKey === 'procurando') {
         const budgetValue = kcParseBRLNumber(activeOrcamento);
         if (budgetValue != null) preco = budgetValue;
         const budgetText = activeOrcamento;
         if (budgetText) precoTexto = 'Até R$ ' + budgetText + '/mês';
       }
 
-      const opportunityTypeKey = isOpportunity ? kcNormalizeOpportunityTypeKey(rawCatKey) : '';
       const opportunityUsesRegime = opportunityTypeKey === 'emprego';
       const opportunityWorkMode = isOpportunity
         ? kcResolveOpportunityWorkMode(activeModalidadeTrabalho || '')
@@ -363,6 +374,14 @@
         }
       }
 
+      if (isCaronas) {
+        const contributionValue = kcParseBRLNumber(caronasContribuicao);
+        if (contributionValue != null) {
+          preco = contributionValue;
+          precoTexto = 'R$ ' + caronasContribuicao;
+        }
+      }
+
       if (isMoradia) {
         if (housingRegion.key && !tagMap.has(housingRegion.key)) {
           tagMap.set(housingRegion.key, housingRegion.label || housingRegion.key);
@@ -379,11 +398,17 @@
         if (!tagMap.has(lostFoundLocation.key)) tagMap.set(lostFoundLocation.key, lostFoundLocation.label || lostFoundLocation.key);
       }
       if (isCaronas) {
-        if (caronasOrigem && !tagMap.has(caronasOrigem.toLowerCase().replace(/\s+/g, '-'))) {
-          tagMap.set(caronasOrigem.toLowerCase().replace(/\s+/g, '-'), caronasOrigem);
+        if (caronasOrigemResolved && caronasOrigemResolved.key && !tagMap.has(caronasOrigemResolved.key)) {
+          tagMap.set(caronasOrigemResolved.key, caronasOrigem);
         }
-        if (caronasDestino && !tagMap.has(caronasDestino.toLowerCase().replace(/\s+/g, '-'))) {
-          tagMap.set(caronasDestino.toLowerCase().replace(/\s+/g, '-'), caronasDestino);
+        if (caronasOrigemResolved && caronasOrigemResolved.zoneKey && !tagMap.has(caronasOrigemResolved.zoneKey)) {
+          tagMap.set(caronasOrigemResolved.zoneKey, caronasOrigemResolved.zoneLabel || caronasOrigemResolved.zoneKey);
+        }
+        if (caronasDestinoResolved && caronasDestinoResolved.key && !tagMap.has(caronasDestinoResolved.key)) {
+          tagMap.set(caronasDestinoResolved.key, caronasDestino);
+        }
+        if (caronasDestinoResolved && caronasDestinoResolved.zoneKey && !tagMap.has(caronasDestinoResolved.zoneKey)) {
+          tagMap.set(caronasDestinoResolved.zoneKey, caronasDestinoResolved.zoneLabel || caronasDestinoResolved.zoneKey);
         }
         caronasFeatures.forEach((feature) => {
           if (feature && feature.key && !tagMap.has(feature.key)) tagMap.set(feature.key, feature.label || feature.key);
@@ -504,7 +529,7 @@
           regionZoneLabel: isMoradia ? (housingRegion.zoneLabel || '') : '',
           regiao: isMoradia ? (housingRegion.label || '') : '',
           regiaoLabel: isMoradia ? (housingRegion.label || '') : '',
-          housingTypeKey: isMoradia ? (catKey || '') : '',
+          housingTypeKey: isMoradia ? (housingTypeKey || '') : '',
           housingTypeLabel: isMoradia ? (catLabel || '') : '',
           housingFeatureKeys: isMoradia ? housingFeatures.map((feature) => feature.key) : [],
           housingFeatureLabels: isMoradia ? housingFeatures.map((feature) => feature.label) : [],
@@ -520,6 +545,7 @@
           area: isOpportunity ? (opportunityArea.label || '') : '',
           areaLabel: isOpportunity ? (opportunityArea.label || '') : '',
           areaKey: isOpportunity ? (opportunityArea.key || '') : '',
+          opportunityTypeKey: isOpportunity ? (opportunityTypeKey || '') : '',
           workMode: isOpportunity ? (opportunityWorkMode.key || '') : '',
           workModeLabel: isOpportunity ? (opportunityWorkMode.label || '') : '',
           employmentType: (isOpportunity && opportunityUsesRegime) ? (opportunityRegime.key || '') : '',
@@ -540,6 +566,10 @@
           // caronas
           origem: isCaronas ? caronasOrigem : '',
           destino: isCaronas ? caronasDestino : '',
+          origemKey: isCaronas && caronasOrigemResolved ? (caronasOrigemResolved.key || '') : '',
+          destinoKey: isCaronas && caronasDestinoResolved ? (caronasDestinoResolved.key || '') : '',
+          origemZoneKey: isCaronas && caronasOrigemResolved ? (caronasOrigemResolved.zoneKey || '') : '',
+          destinoZoneKey: isCaronas && caronasDestinoResolved ? (caronasDestinoResolved.zoneKey || '') : '',
           horario: isCaronas ? caronasHorario : '',
           contribuicao: isCaronas ? caronasContribuicao : '',
           vagas: isCaronas ? caronasVagas : '',

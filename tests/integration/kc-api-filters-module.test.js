@@ -20,6 +20,7 @@ let clientSource;
 function loadFreshFiltersModule() {
   jest.resetModules();
   delete window._KCAPI;
+  delete window.KCFeedFilters;
   require('../../assets/js/api/kc-api.filters.js');
   require('../../assets/js/api/kc-api.authors.js');
   require('../../assets/js/api/kc-api.posts-normalize.js');
@@ -72,6 +73,7 @@ describe('kc-api.filters.js - module contract', () => {
       'getCurrentDateKey',
       'getDateKeyInZone',
       'getEventDateKey',
+      'getEventDateRange',
       'matchesAdvancedRequestParams',
       'matchesDatePresetFilter',
       'normalizeDatePreset',
@@ -100,6 +102,40 @@ describe('kc-api.filters.js - module contract', () => {
     expect(result.map((post) => post.id)).toEqual(['ok']);
   });
 
+  test.each([
+    ['eventos', 'academicos', 'academico'],
+    ['oportunidades', 'empregos', 'emprego'],
+    ['moradia', 'quartos', 'quarto'],
+    ['caronas', 'ofereco', 'ofereco carona'],
+    ['achados-perdidos', 'encontrados', 'achado'],
+    ['compra-venda', 'ingressos', 'ingresso'],
+  ])('aceita alias legado de categoria em %s', (moduleKey, requested, stored) => {
+    const posts = [{ id: 'legacy', module: moduleKey, category: stored }];
+    expect(filters.filterPosts(posts, { module: moduleKey, category: requested }).map((post) => post.id)).toEqual(['legacy']);
+  });
+
+  test('busca também em categoria, tags e localização com normalização de acentos', () => {
+    const posts = [
+      { id: 'category', module: 'compra-venda', title: 'Item', category: 'Eletrônicos' },
+      { id: 'location', module: 'caronas', title: 'Viagem', metadata: { origem: 'Câmpus Samambaia' } },
+      { id: 'tag', module: 'oportunidades', title: 'Vaga', tagKeys: ['linguistica-aplicada'] },
+    ];
+
+    expect(filters.filterPosts(posts, { q: 'eletronicos' }).map((post) => post.id)).toEqual(['category']);
+    expect(filters.filterPosts(posts, { q: 'campus samambaia' }).map((post) => post.id)).toEqual(['location']);
+    expect(filters.filterPosts(posts, { q: 'linguística' }).map((post) => post.id)).toEqual(['tag']);
+  });
+
+  test('trata hífens e pontuação como separadores equivalentes na busca', () => {
+    const posts = [
+      { id: 'course', module: 'oportunidades', category: 'cursos-capacitacoes', title: 'Formação' },
+      { id: 'campus', module: 'caronas', title: 'Trajeto', metadata: { origem: 'Câmpus Samambaia' } },
+    ];
+
+    expect(filters.filterPosts(posts, { q: 'cursos capacitações' }).map((post) => post.id)).toEqual(['course']);
+    expect(filters.filterPosts(posts, { q: 'campus-samambaia' }).map((post) => post.id)).toEqual(['campus']);
+  });
+
   test('filtra recencia por datePreset usando created_at em America/Sao_Paulo', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
@@ -118,22 +154,39 @@ describe('kc-api.filters.js - module contract', () => {
     }
   });
 
-  test('filtra eventos por data_evento e usa created_at como fallback', () => {
+  test('filtra eventos pelo intervalo e não usa created_at como data do evento', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
 
     try {
       const posts = [
         { id: 'event-next', module: 'eventos', metadata: { data_evento: '2026-04-10' }, created_at: '2026-04-01T09:00:00-03:00' },
-        { id: 'event-fallback-today', module: 'eventos', metadata: {}, created_at: '2026-04-06T08:30:00-03:00' },
+        { id: 'event-ongoing', module: 'eventos', metadata: { data_evento: '2026-04-01', data_fim_evento: '2026-04-10' }, created_at: '2026-04-01T08:30:00-03:00' },
+        { id: 'event-no-date', module: 'eventos', metadata: {}, created_at: '2026-04-06T08:30:00-03:00' },
         { id: 'event-past', module: 'eventos', metadata: { data: '2026-04-02' }, created_at: '2026-04-02T08:30:00-03:00' },
       ];
 
       const next7d = filters.filterPosts(posts, { module: 'eventos', datePreset: 'next7d' });
       const today = filters.filterPosts(posts, { module: 'eventos', datePreset: 'today' });
 
-      expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-fallback-today']);
-      expect(today.map((post) => post.id)).toEqual(['event-fallback-today']);
+      expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-ongoing']);
+      expect(today.map((post) => post.id)).toEqual(['event-ongoing']);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('normaliza thisMonth no fallback isolado e exclui evento fora do mês', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
+
+    try {
+      expect(filters.normalizeDatePreset('eventos', 'thisMonth')).toBe('thisMonth');
+      const posts = [
+        { id: 'april', module: 'eventos', metadata: { data_evento: '2026-04-30' } },
+        { id: 'may', module: 'eventos', metadata: { data_evento: '2026-05-01' } },
+      ];
+      expect(filters.filterPosts(posts, { module: 'eventos', datePreset: 'thisMonth' }).map((post) => post.id)).toEqual(['april']);
     } finally {
       jest.useRealTimers();
     }
