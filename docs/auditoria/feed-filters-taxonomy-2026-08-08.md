@@ -1,10 +1,10 @@
 # Auditoria de feed, filtros e taxonomia — 2026-08-08
 
-> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 está em produção. As migrations mecânicas `20260808152842`, `20260808152843` e `20260808152845` foram aplicadas e verificadas no banco de produção em 2026-08-08; elas preservaram 790 registros e a distribuição de status. A migration semântica `20260808152900`, com 49 alterações editoriais, permanece deliberadamente sem execução até a correção upstream do Cadu. A reconciliação explícita de dois conflitos residuais entre `posts.category` e seus metadados está codificada em `20260808152850`.
+> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 e o gate upstream Cadu/Edge estão em produção. As migrations mecânicas `20260808152842`, `20260808152843` e `20260808152845` foram aplicadas e verificadas no banco de produção em 2026-08-08; elas preservaram 790 registros e a distribuição de status daquele snapshot. A migration semântica `20260808152900`, com 49 alterações editoriais, permanece deliberadamente sem execução até o preflight final sob freeze. A reconciliação explícita de dois conflitos residuais entre `posts.category` e seus metadados está codificada em `20260808152850`.
 
 ## Resumo executivo
 
-O snapshot administrativo somente leitura, reconfirmado em **2026-08-08 às 14:34:18.462341 UTC** (11:34:18 em `America/Sao_Paulo`) com o papel de banco `postgres`, encontrou 790 registros em `public.posts`: 137 `published`, 298 `hidden`, 340 `closed` e 15 `deleted`.
+O snapshot administrativo somente leitura, reconfirmado em **2026-08-08 às 14:34:18.462341 UTC** (11:34:18 em `America/Sao_Paulo`) com o papel de banco `postgres`, encontrou 790 registros em `public.posts`: 137 `published`, 298 `hidden`, 340 `closed` e 15 `deleted`. Uma recaptura posterior, imediatamente antes do hardening final da migration semântica, encontrou **791** registros: **138 `published`, 298 `hidden`, 340 `closed` e 15 `deleted`**. As tabelas editoriais abaixo preservam o snapshot original de 790 linhas; o preflight de rollout usa as contagens atuais e deltas, não uma soma histórica congelada.
 
 O número **435** usado como universo desta auditoria é a soma de `published + hidden` (`137 + 298`). Ele representa o conjunto interno de publicações potencialmente relevante para revisão de feed e moderação, não 435 cards públicos simultaneamente visíveis. Para evitar confusão com outra métrica administrativa, `published + closed` era **477** (`137 + 340`) no mesmo snapshot. No instante da consulta:
 
@@ -17,14 +17,15 @@ A revisão semântica item a item do conjunto `published` identificou 49 correç
 
 - 44 correções que permanecem no mesmo módulo e 5 movimentos entre `eventos` e `oportunidades`;
 - 45 registros permanecem `published`, 1 passa a `closed` e 3 passam a `hidden`;
-- sincronização de `module`, `category`, `status`, `metadata.module`, `metadata.category`, `metadata.categoryKey` e aliases existentes;
+- sincronização de `module`, `category`, `status` e das seis superfícies de categoria em metadata: `category`, `categoryKey`, `categoriaKey`, `categoryLabel`, `categoria` e `categoriaLabel`;
+- substituição determinística da identidade antiga em `tags`/`tagKeys`, preservando ordem, duplicatas e tags editoriais não relacionadas;
 - normalização ou limpeza explícita de datas somente nos UUIDs indicados;
 - limpeza de campos incompatíveis nos 5 movimentos de módulo;
 - nenhuma classificação fuzzy ou atualização em massa por texto.
 
-Além dessas 49 mudanças editoriais, a auditoria pós-rollout encontrou dois registros cuja coluna `category` já estava correta, mas `metadata.categoryKey`, `metadata.categoriaKey` e labels ainda apontavam para outra categoria válida. Eles não exigem reclassificação: exigem somente reconciliação fail-closed dos campos lidos pelo cliente. Essa correção separada está em [20260808152850_audited_category_metadata_reconciliation.sql](../../supabase/migrations/20260808152850_audited_category_metadata_reconciliation.sql).
+Além dessas 49 mudanças editoriais, a auditoria pós-rollout encontrou dois registros cuja coluna `category` já estava correta, mas `metadata.categoryKey`, `metadata.categoriaKey` e labels ainda apontavam para outra categoria válida. Eles não exigem reclassificação: exigem somente reconciliação fail-closed dos campos lidos pelo cliente. Essa correção separada está em [20260808152850_audited_category_metadata_reconciliation.sql](../../supabase/migrations/20260808152850_audited_category_metadata_reconciliation.sql). O preflight somente leitura fixa também `visibility = 'public'`, `price = 0`, cardinalidade exata e os dois triggers de atualização; a migration semântica `20260808152900` continua fora desse rollout.
 
-Se aplicada sem novo drift, a migration projeta 133 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`, preservando os 790 registros totais.
+Se aplicada sem novo drift sobre a recaptura atual, a migration projeta **134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`**, preservando os **791** registros totais. O delta invariável provado em SQL é `published -4`, `hidden +3`, `closed +1`, `deleted` inalterado.
 
 ## Escopo e definição de visibilidade
 
@@ -99,7 +100,7 @@ Essas consultas descrevem o estado interno da tabela; elas não substituem um te
 
 Não havia, no snapshot, registros `published` em `moradia`, `compra-venda`, `caronas` ou `achados-perdidos`. Isso não prova defeito nesses módulos: apenas registra que não existia publicação interna ativa para validar a classificação item a item. Seus controles, trilhos e filtros ainda precisam de smoke test com fixtures representativas.
 
-### Distribuição projetada após a migration
+### Distribuição projetada após a migration no snapshot original
 
 | Módulo | Categoria | `published` projetados |
 | --- | --- | ---: |
@@ -120,7 +121,7 @@ Não havia, no snapshot, registros `published` em `moradia`, `compra-venda`, `ca
 | oportunidades | voluntariado | 1 |
 | **Total** |  | **133** |
 
-Além dos 133 publicados, o conjunto corrigido termina com 1 registro `oportunidades/editais/closed`, 1 `oportunidades/monitoria/hidden`, 1 `eventos/workshops/hidden` e 1 `eventos/academicos/hidden`.
+Além dos 133 publicados desse snapshot original, o conjunto corrigido termina com 1 registro `oportunidades/editais/closed`, 1 `oportunidades/monitoria/hidden`, 1 `eventos/workshops/hidden` e 1 `eventos/academicos/hidden`. A linha publicada acrescentada depois do snapshot leva a projeção operacional atual a 134; ela não foi retroativamente inserida nesta distribuição histórica por categoria.
 
 ## Metodologia
 
@@ -131,8 +132,8 @@ Além dos 133 publicados, o conjunto corrigido termina com 1 registro `oportunid
    - **alta confiança**, quando o tipo editorial é inequívoco e há origem/alvo explícitos;
    - **ambíguo**, quando módulo, categoria, janela de inscrição ou natureza do card dependem da fonte oficial ou de decisão de produto.
 5. Codificação das 49 correções de alta confiança por UUID em [20260808152900_semantic_post_reclassification.sql](../../supabase/migrations/20260808152900_semantic_post_reclassification.sql), sem regras heurísticas.
-6. Captura de fingerprint apenas dos campos que a migration poderá sobrescrever. Um registro existente só é aceito se ainda estiver no estado de origem auditado ou no estado-alvo completo e idempotente.
-7. Validação local por contrato Jest, prova SQL de produção e prova de replay em banco vazio/subconjunto. As três migrations mecânicas foram então aplicadas e revalidadas em produção; a migration semântica permaneceu retida.
+6. Recaptura read-only dos 49 fingerprints depois de `20260808152843`, incluindo labels, `tags`, `tagKeys`, aliases temporais e todos os campos removidos em movimentos de módulo. Um registro só é aceito se ainda estiver na origem auditada ou no alvo completo e idempotente.
+7. Validação por contrato Jest, proof transacional de produção e matriz PostgreSQL local real: vazio, cardinalidade parcial, 48/49, 49 fontes, primeiro run, replay integral, status/audit e drift de label/array/`NULL` SQL.
 
 ### Limitações
 
@@ -221,9 +222,9 @@ Convenções da tabela:
 
 ### Efeito especial dos 5 movimentos de módulo
 
-Nos UUIDs 28–30 (`eventos` → `oportunidades`), a migration remove aliases de data/hora/evento, `gratuito`, `eventType`, `eventMode` e localização específica de evento antes de gravar o prazo de oportunidade.
+Nos UUIDs 28–30 (`eventos` → `oportunidades`), a migration remove aliases exclusivos de data/hora/evento, `eventType`, `eventMode` e localização específica de evento antes de gravar o prazo de oportunidade. `gratuito` é preservado porque também faz parte do contrato canônico de oportunidades.
 
-Nos UUIDs 31–32 (`oportunidades` → `eventos`), remove `area`, `areaKey`, `workMode`, `employmentType`, remuneração, salário, benefícios e aliases de tipo de oportunidade, e então grava o intervalo do evento. A prova SQL exige ausência desses resíduos no estado final.
+Nos UUIDs 31–32 (`oportunidades` → `eventos`), remove `area`, `areaKey`, `workMode`, `employmentType`, remuneração, salário, benefícios, aliases de tipo de oportunidade e `subcategory`/`subcategoria`, e então grava o intervalo do evento. A prova SQL exige ausência desses resíduos e das respectivas identidades de área/modalidade em `tags`/`tagKeys` no estado final.
 
 ## Itens ambíguos: não autocorrigir
 
@@ -436,48 +437,203 @@ Avisos institucionais, chamadas encerradas e matérias sobre processo podem fica
 A migration foi desenhada para ser explícita, transacional, idempotente e replay-safe:
 
 - contém exatamente 49 UUIDs completos e nenhum classificador;
-- para um UUID existente, aceita somente o fingerprint de origem auditado ou o estado-alvo completo;
-- qualquer terceiro estado ou drift em campo que será tocado aborta antes da primeira escrita;
-- UUID ausente é `skip/no-op`, permitindo `supabase db reset`, preview e ambientes novos;
-- o preflight de produção, separado, exige que os 49 UUIDs existam no banco-alvo;
-- a segunda execução não deve produzir update;
-- as pós-condições validam colunas, metadata, datas e ausência de resíduos nos 5 movimentos de módulo.
+- em banco totalmente vazio, faz `no-op` para permitir `supabase db reset`, preview e ambientes novos;
+- em qualquer banco não vazio, exige os 49 UUIDs; 1–48 presentes ou qualquer ausência abortam antes da escrita;
+- aceita somente o fingerprint de origem auditado ou um `target_touched_fingerprint` único, calculado exclusivamente do source embutido por UUID e nunca do metadata live do alvo, com guards `IS NOT TRUE` para que `NULL` SQL nunca seja aprovado;
+- sincroniza as seis chaves/labels de categoria e reescreve `tags`/`tagKeys` sem deduplicar conteúdo alheio;
+- qualquer terceiro estado, label/array inválido ou drift em campo tocado aborta antes da primeira escrita;
+- exige habilitados `kc_posts_set_updated_at`, `trg_audit_posts_status` e `trg_posts_canonicalize_feed_fields` antes do preflight e na pós-condição;
+- o replay local injeta ausência e `null` JSON em `deadline_date` e `dates.applicationDeadline`, além de desabilitar isoladamente cada trigger obrigatório; exige `KC001`/`KC003` e comprova restauração exata por subtransação e pelo estado before/after do runner;
+- a segunda execução não produz update, mudança de `updated_at` nem nova linha de audit;
+- as pós-condições validam exatamente 49 alvos, 5 movimentos, 4 mudanças de status, datas e ausência de resíduos incompatíveis;
+- o proof de produção projeta dinamicamente apenas as transições ainda em source, portanto é válido para 49 sources, 49 targets ou mistura dos dois.
 
 Artefatos de prova:
 
 - [contrato Jest](../../tests/contract/semantic-post-reclassification-migration.test.js);
 - [proof SQL de produção](../../tests/sql/semantic-post-reclassification-proof.sql);
-- [proof SQL de replay](../../tests/sql/semantic-post-reclassification-replay-proof.sql).
+- [proof SQL de replay](../../tests/sql/semantic-post-reclassification-replay-proof.sql);
+- [runner local seguro](../../scripts/test-semantic-post-reclassification.js), executável com `npm run test:db:semantic-post-reclassification`.
+
+## Reconciliação residual `20260808152850`
+
+O estado real dos dois UUIDs foi reconfirmado somente leitura em produção em
+2026-08-08: ambos existem uma única vez, estão `published/public`, têm `price =
+0` e ainda correspondem ao fingerprint de origem auditado. A reconciliação:
+
+- exige exatamente duas especificações e exatamente os dois UUIDs em qualquer
+  banco não vazio;
+- aceita somente a origem completa ou o alvo completo, usando guards
+  `IS NOT TRUE` para que `NULL` não seja tratado como aprovação;
+- inclui `module`, `category`, `status`, `visibility`, `price` e metadata no
+  fingerprint;
+- exige `kc_posts_set_updated_at` e
+  `trg_posts_canonicalize_feed_fields` habilitados antes da escrita;
+- confere a cardinalidade real do `UPDATE` contra a quantidade de linhas ainda
+  na origem e valida duas linhas completas no alvo;
+- usa SQLSTATEs dedicados, permitindo que a prova de drift capture somente o
+  erro esperado, sem `catch` genérico.
+
+O [preflight de produção](../../tests/sql/audited-category-metadata-reconciliation-production-preflight.sql)
+abre uma transação `READ ONLY`, retorna somente capacidades booleanas e nunca
+inclui/aplica a migration. O executor deve rejeitar resposta vazia, campo não
+booleano ou qualquer valor diferente de `true`.
+
+O [proof de replay](../../tests/sql/audited-category-metadata-reconciliation-replay-proof.sql)
+usa `SET LOCAL session_replication_role`, nunca desabilita triggers globalmente,
+prova preservação de `price/visibility`, avanço de `updated_at` apenas na
+primeira escrita, idempotência, rejeição específica de drift e termina em
+`ROLLBACK`. O runner
+[`test-audited-category-metadata-reconciliation.js`](../../scripts/test-audited-category-metadata-reconciliation.js)
+resolve exclusivamente o container Docker do projeto Supabase local, recusa uma
+tabela `posts` não vazia e compara estado de linhas/triggers antes e depois do
+rollback:
+
+```powershell
+npm run test:db:audited-category-metadata
+```
+
+### Auditoria histórica de `20260806090000`
+
+A migration
+`20260806090000_cadu_published_cache_index.sql` entrou no Git no commit
+`add9409f`, mas, na inspeção somente leitura de 2026-08-08 às 19:57:40 UTC, **não
+consta no ledger remoto** e os dois índices também não existem em produção. O
+planner atual percorre o índice parcial `posts_highlight_score_idx` e ainda faz
+`Sort` para os dois padrões do cache (`id ASC` e `created_at DESC, id DESC`). A
+tabela tinha 791 linhas, 138 `published` e cerca de 8 MB; portanto os índices
+dedicados continuam coerentes com o incidente `3cd1deef`, embora a aplicação
+deva ser validada de novo à medida que a tabela crescer.
+
+Os dois `CREATE INDEX` não usam `CONCURRENTLY` e podem bloquear writers. A
+migration agora fixa `lock_timeout = '5s'` e `statement_timeout = '2min'`: uma
+espera anormal aborta em vez de manter um writer indefinidamente na fila. Esses
+limites valem por aquisição de lock e por statement, respectivamente; não são um
+timeout da migration nem da janela inteira. Mesmo com a tabela pequena, deve
+haver um operador único, freeze de outros executores de migrations e coordenação
+do Cadu durante a janela inteira, do preflight às pós-condições.
+
+`IF NOT EXISTS` não valida a definição de um índice homônimo e ainda decide
+somente pelo nome, mas já não é aceito como prova de sucesso. Na mesma
+transação, uma pós-condição resolve tabela, colunas e operator
+classes pelo catálogo ativo e exige, para cada nome, exatamente `public.posts`,
+`btree`, nenhum `INCLUDE` ou expressão extra, `indisvalid`, `indisready` e
+`indislive`, predicate `status = 'published'`, e as chaves/opções completas:
+
+- `id ASC NULLS LAST`, com `uuid_ops`;
+- `created_at DESC NULLS FIRST, id DESC NULLS FIRST`, com
+  `timestamptz_ops, uuid_ops`.
+
+Os comentários também têm pós-condição. Um índice homônimo ausente, inválido ou
+com qualquer definição divergente produz SQLSTATE dedicado e aborta a transação
+inteira, inclusive qualquer índice recém-criado e a entrada no ledger. A prova
+local muta cada homônimo separadamente, confirma a rejeição e compara o estado
+antes/depois do `ROLLBACK`; também prova criação e replay idempotente. Uma prova
+adicional executa o arquivo sem reescrita pelo Supabase CLI `2.105.0` em bancos
+locais descartáveis: o caminho de sucesso confirma DDL e ledger, e uma falha
+forçada depois do DDL confirma ausência tanto dos índices quanto da versão no
+ledger. Essa versão do CLI é parte do contrato do rollout e não deve ser trocada
+dentro da janela.
+
+Não usar `migration repair --status applied`: isso afirmaria que um SQL ausente
+foi executado. A solução correta é aplicar o SQL real da migration e deixar o
+Supabase registrar a versão exata. O dry-run do clone completo confirmou que o
+ledger remoto possui também lacunas históricas anteriores; nesse clone, usar
+`--include-all` ofereceria migrations fora do escopo e é proibido.
+
+O projeto autorizado para este rollout é exclusivamente
+`wacyrkwhkvzwkqpolrbg`. O operador deve conferir esse valor no vínculo do
+diretório isolado e na saída do CLI antes de cada comando. Não usar `--db-url`,
+`SUPABASE_DB_URL` ou `DATABASE_URL`; qualquer project ref diferente, vínculo
+ausente ou saída ambígua cancela a janela.
+
+O procedimento seguro foi reproduzido sem escrita remota em um projeto Supabase
+temporário. Para `06090000`, usar uma única etapa descartável e sem concorrência:
+
+1. executar `supabase --version` e exigir exatamente `2.105.0`; qualquer outra
+   versão cancela a janela até uma nova prova descartável do comportamento
+   transacional de arquivo e ledger;
+2. criar um diretório temporário, copiar somente a configuração/metadados de
+   link necessários e executar `supabase migration fetch --linked` para
+   materializar exatamente o histórico reconhecido pelo remoto. Confirmar o
+   project ref `wacyrkwhkvzwkqpolrbg` e congelar qualquer outro operador;
+3. acrescentar somente
+   `20260806090000_cadu_published_cache_index.sql` e, já na janela autorizada,
+   executar exatamente
+   `supabase db push --linked --dry-run --include-all`. O `--include-all` é
+   necessário porque `06090000` antecede a última versão remota, mas é permitido
+   **somente nesse diretório isolado**. A saída deve listar somente
+   `20260806090000_cadu_published_cache_index.sql`, sem outra migration, aviso de
+   identidade ou erro;
+4. sem copiar mais arquivos, sem refazer o fetch e imediatamente após esse gate,
+   o mesmo operador deve executar, no mesmo diretório isolado, exatamente
+   `supabase db push --linked --include-all --yes`. Se o dry-run mudar, ficar
+   obsoleto ou não tiver listado um único arquivo, voltar ao passo 1 em novo
+   diretório; nunca aplicar por inferência;
+5. confirmar `06090000` uma vez no ledger e os dois índices na `public.posts`.
+   Validar `indisvalid/indisready/indislive = true`, `btree`, ausência de INCLUDE
+   e expressões, predicate, operator classes, sort/nulls, comentários e as
+   definições exatas:
+   `(id) WHERE status = 'published'` e
+   `(created_at DESC, id DESC) WHERE status = 'published'`;
+6. descartar o diretório. Para `152850`, criar outro a partir de novo
+   `migration fetch --linked` e acrescentar somente
+   `20260808152850_audited_category_metadata_reconciliation.sql`; o novo
+   `db push --linked --dry-run` deve listar exclusivamente `152850`;
+7. executar o preflight booleano, aplicar somente depois de autorização e
+   confirmar alvo/ledger;
+8. nunca copiar `20260808152900` para esses diretórios e abortar diante de
+   qualquer migration adicional em qualquer dry-run.
+
+O dry-run isolado de `06090000` já retornou exatamente o arquivo esperado; ele
+não aplicou SQL nem alterou o ledger remoto.
+
+Esse procedimento não altera nem “conserta” retroativamente o histórico: cada
+versão só passa a constar depois que seu SQL real foi aplicado.
 
 ## Ordem de rollout e checklist
 
 ### Antes da janela
 
 - [ ] Confirmar que os diffs de taxonomia, filtros, modal, busca e publisher são compatíveis com as chaves finais.
-- [ ] Fazer backup/snapshot dos campos tocados nos 49 UUIDs, incluindo aliases de datas e módulo.
+- [ ] Fazer backup/snapshot integral dos 49 UUIDs, incluindo as seis superfícies de categoria, `tags`, `tagKeys`, status, aliases de datas e campos removidos por módulo.
 - [ ] Registrar contagens por `status/module/category/visibility` com timestamp e papel da consulta.
 - [ ] Interromper ou coordenar writers do Cadu durante o preflight e a migration para eliminar corrida.
-- [ ] Executar o proof/preflight de produção em transação e exigir os 49 UUIDs.
+- [ ] Executar o proof/preflight de produção em transação, sob freeze de writers, e exigir os 49 UUIDs/fingerprints atuais.
+- [ ] Usar uma sessão PostgreSQL que comece em `session_replication_role=origin`; o proof mantém os três triggers reais habilitados, adquire lock e reverte migration, mutantes e efeitos de trigger no `ROLLBACK` final. O modo `replica` fica restrito ao runner local isolado.
 - [ ] Se houver terceiro estado, **parar**; não ajustar fingerprint nem forçar update sem nova auditoria.
 
 ### Aplicação
 
-1. Entregar primeiro o código compatível de taxonomia/resolver e as validações do publisher.
-2. Aplicar as migrations na ordem temporal:
-   1. `20260808152842_feed_event_interval_filters_20260808.sql`;
-   2. `20260808152843_feed_taxonomy_canonicalization_20260808.sql`;
-   3. `20260808152845_align_feed_cursor_remote_search_20260808.sql`;
-   4. `20260808152850_audited_category_metadata_reconciliation.sql`;
-   5. `20260808152900_semantic_post_reclassification.sql`.
-
-   As três primeiras já estão em produção. As duas últimas permanecem pendentes e devem ser aplicadas juntas somente depois do gate upstream do Cadu; o `supabase db push` atual não oferece limite por versão e não deve ser usado para tentar liberar apenas `152850`.
-3. Reexecutar a prova de produção; todos os UUIDs devem estar no alvo e a migration deve ser idempotente.
-4. Invalidar ou renovar caches de feed sem reintroduzir snapshots anteriores.
-5. Liberar writers somente depois das pós-condições.
+1. Confirmar que o código compatível de taxonomia/resolver e as validações do publisher já estão ativos antes da janela semântica.
+2. As migrations `20260808152842`, `20260808152843` e `20260808152845` já estão
+   registradas em produção. Antes da reconciliação residual, aplicar e registrar
+   a migration histórica realmente pendente `20260806090000` pelo procedimento
+   isolado acima.
+3. Em uma segunda etapa isolada, aplicar somente
+   `20260808152850_audited_category_metadata_reconciliation.sql`, depois que o
+   preflight retornar todas as capacidades `true`.
+4. Manter `20260808152900_semantic_post_reclassification.sql` fora de ambos os
+   diretórios. O gate upstream do Cadu/Edge já foi entregue, mas a migration
+   continua sem execução até seu proof final sob freeze. O `supabase db push`
+   deste clone completo não oferece limite por versão e continua proibido para
+   esse rollout.
+5. Reexecutar a prova de produção da reconciliação; os dois UUIDs residuais
+   devem estar no alvo e `152850` deve ser idempotente.
+6. Para a etapa semântica, criar um terceiro diretório a partir de novo
+   `migration fetch --linked`, acrescentar somente `20260808152900`, congelar
+   writers, salvar o snapshot integral dos 49, executar antes o runner local
+   `npm run test:db:semantic-post-reclassification` e então o proof transacional.
+   O dry-run deve listar exclusivamente `152900`; qualquer drift ou versão extra
+   cancela a janela.
+7. Aplicar `152900` somente depois desse gate, confirmar 49 alvos/5 movimentos/4
+   status, replay sem update/audit e as contagens projetadas atuais.
+8. Invalidar ou renovar caches de feed sem reintroduzir snapshots anteriores.
+9. Liberar writers somente depois das pós-condições e do smoke RLS/feed/busca.
 
 ### Smoke test pós-deploy
 
-- [ ] Conferir as contagens projetadas de 133 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`.
+- [ ] Conferir as contagens atuais projetadas de 134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted` (791 totais) e os deltas `-4/+3/+1/0`.
 - [x] Verificar trilho superior, estado `is-overflow-end`, setas e rolagem por mouse/touch em eventos e oportunidades; desktop e mobile foram validados no deploy `dfa34f97`.
 - [x] Validar filtros laterais de data e categoria, inclusive combinação com o trilho superior; `Palestras` e `Este mês` passaram, incluindo evento que atravessa a virada do mês.
 - [ ] Abrir amostras dos 5 movimentos de módulo e confirmar ausência de campos incompatíveis.
@@ -491,7 +647,7 @@ Artefatos de prova:
 
 1. Se o preflight ou a migration abortar, a transação não deve deixar escrita parcial. Investigar o UUID divergente e gerar novo fingerprint somente após revisão.
 2. Se a migration já tiver sido aplicada e houver erro semântico, não editar a migration aplicada. Criar uma migration posterior de correção.
-3. A reversão deve ser UUID a UUID, usando o snapshot pré-deploy, e só pode restaurar a origem quando o registro ainda corresponder ao fingerprint-alvo. Não fazer reversão fuzzy ou por categoria inteira.
+3. A reversão deve ser UUID a UUID, usando o snapshot integral pré-deploy, e só pode restaurar a origem quando o registro ainda corresponder ao fingerprint-alvo. Restaurar também labels e arrays na ordem original; não fazer reversão fuzzy ou por categoria inteira.
 4. Nos 5 movimentos de módulo, restaurar também os campos compatíveis da origem; uma simples troca de `module/category` perde dados removidos.
 5. Rollback de código e rollback de dados são independentes. Manter compatibilidade entre versão do frontend, RPCs e schema durante toda a janela.
 6. Se for necessário reverter canonicalização ou busca, criar migration forward que restaure função/índice anterior e planejar a janela de lock/rebuild.
@@ -506,10 +662,13 @@ Artefatos de prova:
 - [Alinhamento de cursor e busca remota](../../supabase/migrations/20260808152845_align_feed_cursor_remote_search_20260808.sql)
 - [Reconciliação auditada de dois metadados residuais](../../supabase/migrations/20260808152850_audited_category_metadata_reconciliation.sql)
 - [Contrato da reconciliação residual](../../tests/contract/audited-category-metadata-reconciliation-migration.test.js)
+- [Preflight real somente leitura da reconciliação residual](../../tests/sql/audited-category-metadata-reconciliation-production-preflight.sql)
 - [Proof SQL de replay da reconciliação residual](../../tests/sql/audited-category-metadata-reconciliation-replay-proof.sql)
+- [Runner local seguro da reconciliação residual](../../scripts/test-audited-category-metadata-reconciliation.js)
 - [Contrato da migration semântica](../../tests/contract/semantic-post-reclassification-migration.test.js)
 - [Proof SQL de produção](../../tests/sql/semantic-post-reclassification-proof.sql)
 - [Proof SQL de replay](../../tests/sql/semantic-post-reclassification-replay-proof.sql)
+- [Runner local seguro da migration semântica](../../scripts/test-semantic-post-reclassification.js)
 - [Schema canônico do modal de criação](../../assets/js/features/create-post/kc-create-post.schema.js)
 - [Resolver compartilhado de taxonomia](../../assets/js/utils/kc-utils.taxonomy.js)
 - [Testes do resolver](../../tests/unit/kc-utils-taxonomy.test.js)
@@ -520,4 +679,4 @@ Artefatos de prova:
 
 ## Conclusão
 
-As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. A migration protege contra drift, replay e estado parcial, mas a estabilidade depende de alinhar o publisher e todos os consumidores da taxonomia. O frontend e as três migrations mecânicas já foram entregues e validados; elas canonicalizaram o contrato técnico sem mudar a distribuição dos 790 estados. As 49 reclassificações editoriais e a reconciliação dos dois metadados residuais permanecem sem execução até o gate upstream do Cadu e o preflight final de produção.
+As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. A migration protege contra drift, replay e estado parcial, mas a estabilidade depende de alinhar o publisher e todos os consumidores da taxonomia. O frontend, Cadu/Edge e as três migrations mecânicas já foram entregues e validados; as mecânicas preservaram a distribuição do snapshot original de 790 linhas, e a recaptura atual tem 791. As 49 reclassificações editoriais e a reconciliação dos dois metadados residuais permanecem sem execução até seus preflights finais de produção.
