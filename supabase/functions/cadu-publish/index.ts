@@ -61,25 +61,34 @@ import {
   validRemoteImageUrl,
 } from "./util.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SITE_URL = (Deno.env.get("KC_APP_BASE_URL") || "https://www.kinocampus.com.br").replace(/\/$/, "");
+function optionalEnv(name: string): string | undefined {
+  try {
+    return Deno.env.get(name);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotCapable) return undefined;
+    throw error;
+  }
+}
+
+const SUPABASE_URL = optionalEnv("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = optionalEnv("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE_KEY = optionalEnv("SUPABASE_SERVICE_ROLE_KEY")!;
+const SITE_URL = (optionalEnv("KC_APP_BASE_URL") || "https://www.kinocampus.com.br").replace(/\/$/, "");
 
 const STORAGE_BUCKET = "kino-media";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 const IMAGE_DOWNLOAD_TIMEOUT_MS = Math.max(
   1_000,
-  Math.min(Number(Deno.env.get("CADU_IMAGE_DOWNLOAD_TIMEOUT_MS")) || 8_000, 30_000),
+  Math.min(Number(optionalEnv("CADU_IMAGE_DOWNLOAD_TIMEOUT_MS")) || 8_000, 30_000),
 );
 const IMAGE_UPLOAD_CONCURRENCY = Math.max(
   1,
-  Math.min(Math.trunc(Number(Deno.env.get("CADU_IMAGE_UPLOAD_CONCURRENCY")) || 2), 4),
+  Math.min(Math.trunc(Number(optionalEnv("CADU_IMAGE_UPLOAD_CONCURRENCY")) || 2), 4),
 );
 const USER_AGENT = "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)";
-const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"));
+const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(optionalEnv("AUTO_PUBLISH_SCORE_MIN"));
 const INSTITUTIONAL_REVIEW_ENABLED =
-  Deno.env.get("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1";
+  optionalEnv("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1";
 const CAPABILITY_VERSION = "cadu-publish-capabilities-v1";
 
 const CORS_HEADERS = {
@@ -133,7 +142,7 @@ const MONTHS_PT: Record<string, string> = {
 };
 
 function serverTodayIso(): string {
-  const forced = Deno.env.get("CADU_NOW_ISO") || "";
+  const forced = optionalEnv("CADU_NOW_ISO") || "";
   const date = forced ? new Date(forced) : new Date();
   if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
   return date.toISOString().slice(0, 10);

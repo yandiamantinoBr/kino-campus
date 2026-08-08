@@ -118,10 +118,30 @@ describe('Cadu publish — Edge Function', () => {
     expect(util).toContain('export const DEFAULT_AUTO_PUBLISH_SCORE_MIN = 0.7');
     expect(util).toContain('export function resolveAutoPublishScoreMin');
     expect(util).toContain('parsed >= 0 && parsed <= 1');
-    expect(index).toContain('resolveAutoPublishScoreMin(Deno.env.get("AUTO_PUBLISH_SCORE_MIN"))');
+    expect(index).toContain('resolveAutoPublishScoreMin(optionalEnv("AUTO_PUBLISH_SCORE_MIN"))');
     expect(index).toContain('block("score_below_auto_publish_threshold")');
     expect(index).toContain('autoPublishScoreMin: AUTO_PUBLISH_SCORE_MIN');
     expect(index).not.toContain('block(`score_below_${');
+  });
+
+  test('importa sem permissao de env sem esconder falhas inesperadas', () => {
+    expect(index).toContain('function optionalEnv(name: string): string | undefined');
+    expect(index).toContain('if (error instanceof Deno.errors.NotCapable) return undefined');
+    expect(index).toContain('throw error');
+    expect(index.match(/Deno\.env\.get\(/g)).toHaveLength(1);
+    for (const name of [
+      'SUPABASE_URL',
+      'SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'KC_APP_BASE_URL',
+      'CADU_IMAGE_DOWNLOAD_TIMEOUT_MS',
+      'CADU_IMAGE_UPLOAD_CONCURRENCY',
+      'AUTO_PUBLISH_SCORE_MIN',
+      'CADU_INSTITUTIONAL_REVIEW_ENABLED',
+      'CADU_NOW_ISO',
+    ]) {
+      expect(index).toContain(`optionalEnv("${name}")`);
+    }
   });
 
   test('publica com dedup e upload de imagem com fallback', () => {
@@ -264,7 +284,7 @@ describe('Cadu publish — Edge Function', () => {
   });
 
   test('fila institucional permanece desabilitada por padrão até migração e rollout explícito', () => {
-    expect(index).toContain('Deno.env.get("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1"');
+    expect(index).toContain('optionalEnv("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1"');
     expect(index).toContain('if (!INSTITUTIONAL_REVIEW_ENABLED)');
     expect(index).toContain('code: "REVIEW_DISABLED"');
     expect(index).toContain('return await handleReview(admin, user.id, body)');
