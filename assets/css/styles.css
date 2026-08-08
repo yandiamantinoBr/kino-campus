@@ -1780,6 +1780,10 @@ main {
     margin-bottom: 10px;
 }
 
+.kc-scroll-rail.is-mobile .kc-scroll-rail__btn {
+    display: none !important;
+}
+
 /* Esconder chevrons em mobile (drag-to-scroll touch já é natural). */
 @media (max-width: 768px) {
     .kc-scroll-rail__btn { display: none !important; }
@@ -6057,6 +6061,30 @@ header,
   touch-action: pan-x pan-y;
 }
 
+/* O wrapper precisa ser o sticky owner; sticky no filho fica limitado pela
+ * altura do próprio rail e deixa de acompanhar a rolagem da página. */
+.kc-scroll-rail--tabs {
+  position: sticky;
+  top: calc(var(--kc-safe-top) + var(--kc-header-height) + var(--kc-sticky-gap));
+  z-index: 110;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 16px 0;
+  background-color: var(--kc-background-dark);
+  border-bottom: 1px solid var(--kc-border-dark);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+}
+
+.kc-scroll-rail--tabs > .kc-feed-tabs {
+  position: static;
+  top: auto;
+  z-index: auto;
+  margin: 0;
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
 .kc-feed-tabs a {
   scroll-snap-align: start;
   min-height: 40px;
@@ -7012,6 +7040,17 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
     box-shadow: none !important;
     overscroll-behavior-x: contain;
     touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  .kc-scroll-rail--tabs {
+    top: calc(var(--kc-safe-top) + var(--kc-header-height));
+    margin: 0 0 14px 0 !important;
+    box-shadow: none !important;
+  }
+
+  .kc-scroll-rail--tabs > .kc-feed-tabs {
+    margin: 0 !important;
+    box-shadow: none !important;
   }
 
   .kc-feed-tabs::-webkit-scrollbar { height: 0; display: none; }

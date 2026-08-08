@@ -73,6 +73,21 @@
     if (KCUtils && typeof KCUtils.canonicalCategory === 'function') return KCUtils.canonicalCategory(str);
     let s = normalizeText(str);
     s = s.replace(/^#/, "");
+    const key = s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const aliases = {
+      todas: 'toda', todos: 'toda', toda: 'toda', todo: 'toda',
+      academicos: 'academico', academicas: 'academico', academica: 'academico',
+      palestras: 'palestra', congressos: 'congresso', cursos: 'curso',
+      culturais: 'cultural', esportivos: 'esportivo', workshops: 'workshop', festas: 'festa',
+      editais: 'edital', concursos: 'concurso', bolsas: 'bolsa', estagios: 'estagio', empregos: 'emprego',
+      'cursos-capacitacoes': 'curso-capacitacao', 'curso-capacitacao': 'curso-capacitacao',
+      republicas: 'republica', quartos: 'quarto', apartamentos: 'apartamento', casas: 'casa',
+      eletronicos: 'eletronico', livros: 'livro', ingressos: 'ingresso', moveis: 'movel',
+      documentos: 'documento', outros: 'outro', perdidos: 'perdido',
+      achado: 'encontrado', achados: 'encontrado', encontrados: 'encontrado',
+      'ofereco-carona': 'ofereco', 'procuro-carona': 'procuro', campus: 'campus',
+    };
+    if (aliases[key]) return aliases[key];
     // plural básico (pt-BR) para reduzir falsos "sumiços" ao clicar em tabs
     if (s.length > 3 && s.endsWith("s")) s = s.slice(0, -1);
     return s;
@@ -140,18 +155,21 @@
 
   function setActiveTab(category) {
     const selected = canonicalCategory(category);
+    const selectedAll = !selected || selected === 'toda' || selected === 'todas';
     document.querySelectorAll(state.opts.tabsSelector).forEach((t) => {
       // Keep sort buttons (Destaques/Recentes/Comentados) independent.
       if (t.matches && t.matches('[data-feed-tab]')) return;
       const tabCat = categoryKeyFromLink(t);
-      const isActive = selected && selected !== 'toda' && selected !== 'todas'
-        && canonicalCategory(tabCat) === selected;
+      const tabCanonical = canonicalCategory(tabCat);
+      const tabIsAll = tabCanonical === 'toda' || tabCanonical === 'todas';
+      const isActive = selectedAll ? tabIsAll : tabCanonical === selected;
       t.classList.toggle('active', !!isActive);
     });
     document.querySelectorAll('.kc-category-item, [data-kc-category-filter]').forEach((item) => {
       const tabCat = categoryKeyFromLink(item);
-      const isActive = selected && selected !== 'toda' && selected !== 'todas'
-        && canonicalCategory(tabCat) === selected;
+      const tabCanonical = canonicalCategory(tabCat);
+      const tabIsAll = tabCanonical === 'toda' || tabCanonical === 'todas';
+      const isActive = selectedAll ? tabIsAll : tabCanonical === selected;
       item.classList.toggle('active', !!isActive);
       item.setAttribute('aria-current', isActive ? 'true' : 'false');
     });
@@ -160,6 +178,10 @@
       const activeTab = Array.from(tabs).find((t) => t.classList.contains('active') && categoryKeyFromLink(t));
       if (activeTab && typeof activeTab.scrollIntoView === 'function') {
         activeTab.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+      }
+      const tabsScroller = activeTab && activeTab.closest && activeTab.closest('.kc-feed-tabs');
+      if (selectedAll && tabsScroller && typeof tabsScroller.scrollTo === 'function') {
+        tabsScroller.scrollTo({ left: 0, behavior: 'smooth' });
       }
       const rail = activeTab && activeTab.closest && activeTab.closest('[data-kc-scroll-rail]');
       if (rail && typeof rail.__kcScrollRailUpdate === 'function') {

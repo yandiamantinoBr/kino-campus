@@ -288,6 +288,38 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
     delete window.KCUtils;
   });
 
+  test.each([
+    ['eventos', 'acadêmico', 'academicos'],
+    ['eventos', 'cultural', 'culturais'],
+    ['oportunidades', 'edital', 'editais'],
+    ['moradia', 'apartamento', 'apartamentos'],
+    ['compra-venda', 'móvel', 'moveis'],
+    ['caronas', 'ofereço carona', 'ofereco'],
+    ['achados-perdidos', 'achado', 'encontrados'],
+  ])('normaliza alias legado do chip em %s (%s)', async (moduleKey, legacyCategory, expectedCategory) => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ category: legacyCategory, query: '' })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: moduleKey,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: moduleKey,
+      category: expectedCategory,
+    }));
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
   test('descarta resposta antiga quando o filtro muda durante uma requisição', async () => {
     document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
     window.KCUtils = {
@@ -331,6 +363,464 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
 
     expect(document.getElementById('feed-container').textContent).not.toContain('Resultado antigo');
     expect(pager.getState().requestGeneration).toBe(1);
+
+    pager.destroy();
+
+    const callsBeforeRetry = window.KCAPI.getFeedCursor.mock.calls.length;
+    coreState.category = 'palestras';
+    window.KCAPI.getFeedCursor.mockResolvedValueOnce({
+      posts: [{ id: 'fresh-post', titulo: 'Resultado fresco da rede', status: 'published' }],
+      nextCursor: null,
+      hasMore: false,
+    });
+    const retryPager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenCalledTimes(callsBeforeRetry + 1);
+    expect(document.getElementById('feed-container').textContent).toContain('Resultado fresco da rede');
+    expect(document.getElementById('feed-container').textContent).not.toContain('Resultado antigo');
+
+    retryPager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('revalidação tardia não apaga uma página carregada enquanto a requisição estava em voo', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo}</article>`),
+    };
+
+    const snapshotKey = JSON.stringify({
+      pathname: '/',
+      modules: ['eventos'],
+      q: '',
+      tag: '',
+      limit: 12,
+      sortBy: 'recentes',
+      request: '',
+    });
+    window.KCSessionStore = {
+      get: jest.fn((namespace, key) => (namespace === 'feeds' && key === snapshotKey ? {
+        value: {
+          version: 4,
+          cursor: null,
+          nextCursor: 'cursor-page-2',
+          hasMore: true,
+          done: false,
+          posts: [{ id: 'snapshot-post', titulo: 'Página restaurada', status: 'published' }],
+        },
+        age: 4 * 60 * 1000,
+        timestamp: Date.now() - (4 * 60 * 1000),
+      } : null)),
+      set: jest.fn(),
+      remove: jest.fn(),
+    };
+
+    let resolveRevalidation;
+    const revalidation = new Promise((resolve) => { resolveRevalidation = resolve; });
+    window.KCAPI.getFeedCursor
+      .mockImplementationOnce(() => revalidation)
+      .mockResolvedValueOnce({
+        posts: [{ id: 'page-2-post', titulo: 'Página dois preservada', status: 'published' }],
+        nextCursor: null,
+        hasMore: false,
+      });
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 55));
+    expect(window.KCAPI.getFeedCursor).toHaveBeenCalledTimes(1);
+
+    await pager.loadNextPage();
+    expect(document.getElementById('feed-container').textContent).toContain('Página dois preservada');
+
+    resolveRevalidation({
+      posts: [{ id: 'snapshot-post', titulo: 'Página um revalidada', status: 'published' }],
+      nextCursor: 'cursor-page-2',
+      hasMore: true,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const feedText = document.getElementById('feed-container').textContent;
+    expect(feedText).toContain('Página restaurada');
+    expect(feedText).toContain('Página dois preservada');
+    expect(feedText).not.toContain('Página um revalidada');
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('revalidação que substitui cards reaplica o hook de anotações do módulo', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo}</article>`),
+    };
+    window.kcInitVoteStates = jest.fn();
+    const onAfterAppend = jest.fn();
+    const snapshotKey = JSON.stringify({
+      pathname: '/',
+      modules: ['eventos'],
+      q: '',
+      tag: '',
+      limit: 12,
+      sortBy: 'recentes',
+      request: '',
+    });
+    window.KCSessionStore = {
+      get: jest.fn((namespace, key) => (namespace === 'feeds' && key === snapshotKey ? {
+        value: {
+          version: 4,
+          cursor: 'cursor-page-2',
+          nextCursor: 'cursor-page-3',
+          hasMore: true,
+          done: false,
+          firstPageCount: 1,
+          posts: [
+            { id: 'shared-card', titulo: 'Card antigo', status: 'published' },
+            { id: 'tail-card', titulo: 'Card da segunda pagina', status: 'published' },
+          ],
+        },
+        age: 4 * 60 * 1000,
+        timestamp: Date.now() - (4 * 60 * 1000),
+      } : null)),
+      set: jest.fn(),
+      remove: jest.fn(),
+    };
+    window.KCAPI.getFeedCursor.mockResolvedValueOnce({
+      posts: [{ id: 'shared-card', titulo: 'Card revalidado', status: 'published' }],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+      onAfterAppend,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 110));
+
+    expect(document.getElementById('feed-container').textContent).toContain('Card revalidado');
+    expect(document.getElementById('feed-container').textContent).toContain('Card da segunda pagina');
+    expect(onAfterAppend).toHaveBeenCalledWith(expect.objectContaining({ mode: 'replace' }));
+    expect(window.kcInitVoteStates).toHaveBeenCalled();
+    expect(pager.getState()).toEqual(expect.objectContaining({
+      nextCursor: 'cursor-page-3',
+      hasMore: true,
+      firstPageCount: 1,
+    }));
+
+    pager.destroy();
+    delete window.kcInitVoteStates;
+    delete window.KCUtils;
+  });
+
+  test('revalidação em voo não apaga um post novo ainda pendente no banner de realtime', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo}</article>`),
+    };
+    const snapshotKey = JSON.stringify({
+      pathname: '/',
+      modules: ['eventos'],
+      q: '',
+      tag: '',
+      limit: 12,
+      sortBy: 'recentes',
+      request: '',
+    });
+    window.KCSessionStore = {
+      get: jest.fn((namespace, key) => (namespace === 'feeds' && key === snapshotKey ? {
+        value: {
+          version: 4,
+          cursor: null,
+          nextCursor: null,
+          hasMore: false,
+          done: true,
+          firstPageCount: 1,
+          posts: [{ id: 'snapshot-post', titulo: 'Página restaurada', status: 'published' }],
+        },
+        age: 4 * 60 * 1000,
+        timestamp: Date.now() - (4 * 60 * 1000),
+      } : null)),
+      set: jest.fn(),
+      remove: jest.fn(),
+    };
+
+    let onRealtimePost;
+    window.KCRealtime = {
+      subscribeNewPosts: jest.fn((options) => {
+        onRealtimePost = options.onPost;
+        return { unsubscribe: jest.fn() };
+      }),
+    };
+    window.KCAPI.getPostById.mockImplementation(async (id) => ({
+      id,
+      titulo: 'Post novo pendente',
+      status: 'published',
+    }));
+    let resolveRevalidation;
+    window.KCAPI.getFeedCursor.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRevalidation = resolve;
+    }));
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 55));
+    await onRealtimePost({ row: { id: 'new-post' } });
+
+    expect(pager.getState().pendingRealtimePosts).toHaveLength(1);
+    expect(document.querySelector('.kc-feed-realtime-banner__count').textContent).toBe('1');
+
+    resolveRevalidation({
+      posts: [{ id: 'snapshot-post', titulo: 'Página revalidada', status: 'published' }],
+      nextCursor: null,
+      hasMore: false,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(pager.getState().pendingRealtimePosts).toHaveLength(1);
+    expect(document.querySelector('.kc-feed-realtime-banner__count').textContent).toBe('1');
+    expect(document.getElementById('feed-container').textContent).toContain('Página restaurada');
+    expect(document.getElementById('feed-container').textContent).not.toContain('Página revalidada');
+
+    pager.destroy();
+    delete window.KCRealtime;
+    delete window.KCUtils;
+  });
+
+  test('resposta realtime tardia é descartada após troca de filtro e libera os aliases pendentes', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo || ''}</article>`) };
+    let onRealtimePost;
+    window.KCRealtime = {
+      subscribeNewPosts: jest.fn((options) => {
+        onRealtimePost = options.onPost;
+        return { unsubscribe: jest.fn() };
+      }),
+    };
+    let resolveRealtime;
+    window.KCAPI.getPostById.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRealtime = resolve;
+    }));
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const pendingRealtime = onRealtimePost({ row: { id: 'late-realtime-post' } });
+    window.KCAPI.getFeedCursor.mockResolvedValueOnce({ posts: [], nextCursor: null, hasMore: false });
+    await pager.refresh({ coreCategory: 'culturais' });
+    resolveRealtime({
+      id: 'late-realtime-post',
+      titulo: 'Resultado do filtro anterior',
+      modulo: 'eventos',
+      category: 'palestras',
+      status: 'published',
+    });
+    await pendingRealtime;
+
+    expect(pager.getState().pendingRealtimePosts).toHaveLength(0);
+    expect(pager.getState().pendingIds.size).toBe(0);
+    expect(document.querySelector('.kc-feed-realtime-banner').style.display).toBe('none');
+
+    pager.destroy();
+    delete window.KCRealtime;
+    delete window.KCUtils;
+  });
+
+  test('realtime só anuncia publicação que corresponde à busca e aos filtros ativos', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo || ''}</article>`) };
+    window.KCAPI.filterPosts = jest.fn(() => []);
+    window.KCAPI.getPostById.mockResolvedValueOnce({
+      id: 'filtered-realtime-post',
+      titulo: 'Palestra fora do contexto',
+      modulo: 'eventos',
+      category: 'palestras',
+      status: 'published',
+    });
+    let onRealtimePost;
+    window.KCRealtime = {
+      subscribeNewPosts: jest.fn((options) => {
+        onRealtimePost = options.onPost;
+        return { unsubscribe: jest.fn() };
+      }),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+      q: 'congresso',
+      requestParams: { category: 'congressos' },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await onRealtimePost({ row: { id: 'filtered-realtime-post' } });
+
+    expect(window.KCAPI.filterPosts).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'filtered-realtime-post' })],
+      expect.objectContaining({ module: 'eventos', q: 'congresso', category: 'congressos' }),
+    );
+    expect(pager.getState().pendingRealtimePosts).toHaveLength(0);
+    expect(pager.getState().pendingIds.size).toBe(0);
+    expect(document.querySelector('.kc-feed-realtime-banner').style.display).toBe('none');
+
+    pager.destroy();
+    delete window.KCRealtime;
+    delete window.KCUtils;
+  });
+
+  test('pull-to-refresh mantém a promise pendente até a nova página concluir', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo || ''}</article>`) };
+    let onRefresh;
+    window.KCPullToRefresh = {
+      init: jest.fn((options) => { onRefresh = options.onRefresh; }),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    let resolveRefresh;
+    window.KCAPI.getFeedCursor.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRefresh = resolve;
+    }));
+    const refreshPromise = onRefresh();
+    let settled = false;
+    refreshPromise.finally(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    resolveRefresh({
+      posts: [{ id: 'refreshed', titulo: 'Feed atualizado', status: 'published' }],
+      nextCursor: null,
+      hasMore: false,
+    });
+    await refreshPromise;
+
+    expect(settled).toBe(true);
+    expect(document.getElementById('feed-container').textContent).toContain('Feed atualizado');
+
+    pager.destroy();
+    delete window.KCPullToRefresh;
+    delete window.KCUtils;
+  });
+
+  test.each([
+    ['caronas', 'campus'],
+    ['achados-perdidos', 'documentos'],
+  ])('não envia chip polimórfico de %s como category (%s)', async (moduleKey, category) => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ category, query: '' })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: moduleKey,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const request = window.KCAPI.getFeedCursor.mock.calls.at(-1)[0];
+    expect(request).not.toHaveProperty('category');
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test.each([
+    ['eventos', 'academicos'],
+    ['oportunidades', 'editais'],
+    ['moradia', 'apartamentos'],
+    ['compra-venda', 'eletronicos'],
+    ['caronas', 'ofereco'],
+  ])('preserva a key plural canônica de %s sem usar a singularização visual', async (moduleKey, category) => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ category, query: '' })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase().replace(/s$/, '')),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: moduleKey,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({ category }));
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('canonicaliza alias legado de carona antes de consultar o servidor', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ category: 'ofereco-carona', query: '' })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'caronas',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: 'caronas',
+      category: 'ofereco',
+    }));
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('preserva category explícita do chamador quando o trilho está em Todas', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ category: 'todas', query: '' })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+      requestParams: { category: 'culturais' },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: 'eventos',
+      category: 'culturais',
+    }));
+
+    pager.refresh({ requestParams: { category: 'congressos' } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      category: 'congressos',
+    }));
 
     pager.destroy();
     delete window.KCUtils;

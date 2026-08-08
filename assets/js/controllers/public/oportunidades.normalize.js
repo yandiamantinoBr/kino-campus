@@ -551,9 +551,8 @@ function getAreaCatalog(countMap, stateRef) {
   });
 
   return Array.from(catalog.values()).sort((left, right) => {
-    const countDiff = (countMap.get(right.key) || 0) - (countMap.get(left.key) || 0);
-    if (countDiff !== 0) return countDiff;
     if (left.isKnown !== right.isKnown) return left.isKnown ? -1 : 1;
+    if (left.isKnown && right.isKnown && left.order !== right.order) return left.order - right.order;
     return String(left.label || '').localeCompare(String(right.label || ''), 'pt-BR');
   });
 }

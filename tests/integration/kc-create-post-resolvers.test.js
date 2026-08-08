@@ -327,7 +327,8 @@ describe('kc-create-post.resolvers — kcSyncHousingFeatureField', () => {
 
   test('usa _getState() para atualizar state.values', () => {
     const fnStart = source.indexOf('function kcSyncHousingFeatureField');
-    const fnBody = source.slice(fnStart, fnStart + 800);
+    const fnEnd = source.indexOf('\n  function kcAppendHousingFeatureFromInput', fnStart);
+    const fnBody = source.slice(fnStart, fnEnd);
     expect(fnBody).toContain('_getState()');
     expect(fnBody).toContain('state.values[');
   });
@@ -384,6 +385,12 @@ describe('kc-create-post.resolvers — caronas', () => {
     expect(source).toContain('sem-fumar');
   });
 
+  test('normaliza aliases legados sem passar características por moradia', () => {
+    expect(source).toContain('function kcResolveCaronasFeatureValues(values)');
+    expect(source).toContain("'4-mais-lugares': 'quatro-mais-lugares'");
+    expect(source).toContain("featureKind === 'caronas'");
+  });
+
   test('exporta resolveCaronasLocationValue no namespace', () => {
     expect(source).toContain('resolveCaronasLocationValue: kcResolveCaronasLocationValue,');
   });
@@ -394,6 +401,10 @@ describe('kc-create-post.resolvers — caronas', () => {
 
   test('exporta getCaronasFeatureOptions no namespace', () => {
     expect(source).toContain('getCaronasFeatureOptions: kcGetCaronasFeatureOptions,');
+  });
+
+  test('exporta resolveCaronasFeatureValues no namespace', () => {
+    expect(source).toContain('resolveCaronasFeatureValues: kcResolveCaronasFeatureValues,');
   });
 });
 

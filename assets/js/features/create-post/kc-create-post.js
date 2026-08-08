@@ -318,6 +318,11 @@ function kcGetCaronasFeatureOptions() {
   return (r && typeof r.getCaronasFeatureOptions === 'function') ? r.getCaronasFeatureOptions() : [];
 }
 
+function kcResolveCaronasFeatureValues(values) {
+  var r = _kcResolversModule();
+  return (r && typeof r.resolveCaronasFeatureValues === 'function') ? r.resolveCaronasFeatureValues(values) : [];
+}
+
 function kcSyncHousingRegionInput(input) {
   var r = _kcResolversModule();
   return (r && typeof r.syncHousingRegionInput === 'function') ? r.syncHousingRegionInput(input) : null;

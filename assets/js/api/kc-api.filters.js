@@ -32,6 +32,13 @@
       .replace(/^-+|-+$/g, '');
   }
 
+  function normalizeSearchText(value) {
+    return normalizeFilterText(value)
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function toFilterList(value) {
     if (Array.isArray(value)) {
       return value.map((item) => String(item || '').trim()).filter(Boolean);
@@ -119,14 +126,15 @@
   }
 
   function getPostSearchHaystack(post) {
-    return normalizeFilterText(collectPostTextParts(post).join(' '));
+    return normalizeSearchText(collectPostTextParts(post).join(' '));
   }
 
   function normalizeMarketCategoryKey(value) {
     const key = normalizeFilterText(value).replace(/^#/, '');
     if (!key) return '';
-    if (['eletronicos', 'livros', 'moveis', 'vestuario', 'outros'].includes(key)) return key;
-    if (!key.endsWith('s') && ['eletronicos', 'livros', 'moveis', 'vestuario', 'outros'].includes(key + 's')) return key + 's';
+    if (['eletronicos', 'livros', 'ingressos', 'moveis', 'vestuario', 'outros'].includes(key)) return key;
+    if (key === 'ingresso') return 'ingressos';
+    if (!key.endsWith('s') && ['eletronicos', 'livros', 'ingressos', 'moveis', 'vestuario', 'outros'].includes(key + 's')) return key + 's';
     if (key.includes('eletron')) return 'eletronicos';
     if (key.includes('livr')) return 'livros';
     if (key.includes('mov') || key.includes('mobil')) return 'moveis';
@@ -451,7 +459,7 @@
     const allowed = FEED_DATE_PRESETS[key] ? FEED_DATE_PRESETS[key].slice() : [];
     const normalized = normalizeFilterText(value);
     if (!normalized || !allowed.length) return '';
-    return allowed.includes(normalized) ? normalized : '';
+    return allowed.find((entry) => normalizeFilterText(entry) === normalized) || '';
   }
 
   function getIsoEventDateKey(value) {
@@ -689,9 +697,9 @@
     const moduleFilters = Array.isArray(rawModuleFilter)
       ? rawModuleFilter.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean)
       : [String(rawModuleFilter || '').trim().toLowerCase()].filter(Boolean);
-    const categoryFilter = (p.category || p.categoria || '').toString().trim().toLowerCase() || null;
-    const subcategoryFilter = (p.subcategory || p.subcategoria || '').toString().trim().toLowerCase() || null;
-    const q = (p.q || p.query || '').toString().trim().toLowerCase();
+    const categoryFilter = (p.category || p.categoria || '').toString().trim() || null;
+    const subcategoryFilter = (p.subcategory || p.subcategoria || '').toString().trim() || null;
+    const q = normalizeSearchText(p.q || p.query || '');
     const tagFilter = (p.tag || p.tagKey || p.tag_key || '').toString().trim().toLowerCase();
 
     const normalizeTag = (value) => {
@@ -708,6 +716,26 @@
       }
     };
 
+    const normalizeCategory = (moduleKey, value) => {
+      const key = normalizeTag(value);
+      const aliases = {
+        eventos: {
+          academico: 'academicos', palestra: 'palestras', congresso: 'congressos', curso: 'cursos',
+          cultural: 'culturais', esportivo: 'esportivos', workshop: 'workshops', festa: 'festas',
+        },
+        oportunidades: {
+          edital: 'editais', concurso: 'concursos', bolsa: 'bolsas', estagio: 'estagios', emprego: 'empregos',
+          'curso-capacitacao': 'cursos-capacitacoes',
+        },
+        moradia: { republica: 'republicas', quarto: 'quartos', apartamento: 'apartamentos', casa: 'casas' },
+        'compra-venda': { eletronico: 'eletronicos', livro: 'livros', ingresso: 'ingressos', movel: 'moveis', outro: 'outros' },
+        caronas: { 'ofereco-carona': 'ofereco', 'procuro-carona': 'procuro' },
+        'achados-perdidos': { perdido: 'perdidos', encontrado: 'encontrados', achado: 'encontrados' },
+      };
+      const moduleAliases = aliases[String(moduleKey || '').trim().toLowerCase()] || {};
+      return moduleAliases[key] || key;
+    };
+
     const getMetaSub = (post) => {
       try {
         const m = post && (post.metadata || post.meta || post._meta);
@@ -722,12 +750,12 @@
       if (!post) return false;
 
       const mod = String(post.modulo ?? post.module ?? '').toLowerCase();
-      const cat = String(post.categoria ?? post.category ?? '').toLowerCase();
-      const sub = String(post.subcategoria ?? post.subcategory ?? post.subcategoriaKey ?? post.subcategoryKey ?? '').toLowerCase() || getMetaSub(post);
+      const cat = String(post.categoria ?? post.category ?? '');
+      const sub = String(post.subcategoria ?? post.subcategory ?? post.subcategoriaKey ?? post.subcategoryKey ?? '') || getMetaSub(post);
 
       if (moduleFilters.length && !moduleFilters.includes(mod)) return false;
-      if (categoryFilter && cat !== categoryFilter) return false;
-      if (subcategoryFilter && sub !== subcategoryFilter) return false;
+      if (categoryFilter && normalizeCategory(mod, cat) !== normalizeCategory(mod, categoryFilter)) return false;
+      if (subcategoryFilter && normalizeTag(sub) !== normalizeTag(subcategoryFilter)) return false;
 
       if (tagFilter) {
         const tagPool = [];
@@ -743,7 +771,7 @@
       }
 
       if (q) {
-        const hay = `${post.titulo || post.title || ''} ${post.descricao || post.description || ''}`.toLowerCase();
+        const hay = getPostSearchHaystack(post);
         if (!hay.includes(q)) return false;
       }
 

@@ -37,10 +37,83 @@
       .trim();
   }
 
+  const CATEGORY_ALIASES = Object.freeze({
+    toda: 'toda',
+    todas: 'toda',
+    todo: 'toda',
+    todos: 'toda',
+    academica: 'academico',
+    academicas: 'academico',
+    academico: 'academico',
+    academicos: 'academico',
+    palestra: 'palestra',
+    palestras: 'palestra',
+    congresso: 'congresso',
+    congressos: 'congresso',
+    curso: 'curso',
+    cursos: 'curso',
+    cultural: 'cultural',
+    culturais: 'cultural',
+    esportivo: 'esportivo',
+    esportivos: 'esportivo',
+    workshop: 'workshop',
+    workshops: 'workshop',
+    festa: 'festa',
+    festas: 'festa',
+    edital: 'edital',
+    editais: 'edital',
+    concurso: 'concurso',
+    concursos: 'concurso',
+    bolsa: 'bolsa',
+    bolsas: 'bolsa',
+    estagio: 'estagio',
+    estagios: 'estagio',
+    emprego: 'emprego',
+    empregos: 'emprego',
+    freelancer: 'freelancer',
+    freelancers: 'freelancer',
+    'curso-capacitacao': 'curso-capacitacao',
+    'cursos-capacitacoes': 'curso-capacitacao',
+    republica: 'republica',
+    republicas: 'republica',
+    quarto: 'quarto',
+    quartos: 'quarto',
+    apartamento: 'apartamento',
+    apartamentos: 'apartamento',
+    casa: 'casa',
+    casas: 'casa',
+    eletronico: 'eletronico',
+    eletronicos: 'eletronico',
+    livro: 'livro',
+    livros: 'livro',
+    ingresso: 'ingresso',
+    ingressos: 'ingresso',
+    movel: 'movel',
+    moveis: 'movel',
+    documento: 'documento',
+    documentos: 'documento',
+    outro: 'outro',
+    outros: 'outro',
+    perdido: 'perdido',
+    perdidos: 'perdido',
+    achado: 'encontrado',
+    achados: 'encontrado',
+    encontrado: 'encontrado',
+    encontrados: 'encontrado',
+    ofereco: 'ofereco',
+    'ofereco-carona': 'ofereco',
+    procuro: 'procuro',
+    'procuro-carona': 'procuro',
+    campus: 'campus',
+  });
+
   function canonicalCategory(str) {
-    let s = normalizeText(str);
-    s = s.replace(/^#/, '');
-    // plural básico (pt-BR)
+    let s = normalizeText(str).replace(/^#/, '');
+    const key = s
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    if (CATEGORY_ALIASES[key]) return CATEGORY_ALIASES[key];
+    // Compatibilidade com categorias antigas fora do catálogo conhecido.
     if (s.length > 3 && s.endsWith('s')) s = s.slice(0, -1);
     return s;
   }

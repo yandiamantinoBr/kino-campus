@@ -276,7 +276,11 @@ function kcInitHorizontalDragAreas() {
  *   </div>
  */
 function kcAttachScrollIndicators(rail) {
-  if (!rail || rail.__kcScrollRailAttached) return;
+  if (!rail) return;
+  if (rail.__kcScrollRailAttached) {
+    if (typeof rail.__kcScrollRailUpdate === 'function') rail.__kcScrollRailUpdate();
+    return;
+  }
   const scrollEl = rail.querySelector('.kc-nav-links, .kc-feed-tabs, .kc-admin-nav');
   if (!scrollEl) return;
 
@@ -285,31 +289,30 @@ function kcAttachScrollIndicators(rail) {
   if (!btnPrev && !btnNext) return;
 
   rail.__kcScrollRailAttached = true;
-
-  const update = () => {
+  let updatePending = false;
+  const measure = () => {
+    updatePending = false;
     void scrollEl.offsetWidth; // accurate width after tab/font changes
-    const sl = scrollEl.scrollLeft;
+    const isMobile = window.innerWidth <= 768;
+    const availableWidth = Math.max(rail.clientWidth || 0, scrollEl.clientWidth || 0);
+    const hasOverflow = !isMobile && availableWidth > 0
+      && scrollEl.scrollWidth > availableWidth + 4;
     const max = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
-    const hasOverflow = max > 4;
-    const visibleLabels = scrollEl.classList.contains('kc-admin-nav')
-      ? Array.from(scrollEl.querySelectorAll(':scope > a:not(.is-icon-only)')).length
-      : 0;
-    if (hasOverflow && visibleLabels && !rail.__kcScrollRailCollapsing
-      && typeof kcApplyProgressiveNavCollapse === 'function') {
-      rail.__kcScrollRailCollapsing = true;
-      try { kcApplyProgressiveNavCollapse(); }
-      finally { rail.__kcScrollRailCollapsing = false; }
-      return;
-    }
+    const sl = Math.max(0, Math.min(scrollEl.scrollLeft || 0, max));
     const atStart = sl <= 4;
     const atEnd = sl >= max - 4;
+    rail.classList.toggle('is-mobile', isMobile);
     rail.classList.toggle('is-overflow-start', hasOverflow && !atStart);
     rail.classList.toggle('is-overflow-end', hasOverflow && !atEnd);
     if (btnPrev) btnPrev.hidden = !hasOverflow || atStart;
     if (btnNext) btnNext.hidden = !hasOverflow || atEnd;
   };
+  const update = () => {
+    if (updatePending) return;
+    updatePending = true;
+    requestAnimationFrame(measure);
+  };
   rail.__kcScrollRailUpdate = update;
-
   const scrollByAmount = (dir) => {
     const amount = Math.max(160, Math.floor(scrollEl.clientWidth * 0.7));
     try {
@@ -323,20 +326,21 @@ function kcAttachScrollIndicators(rail) {
   if (btnNext) btnNext.addEventListener('click', () => scrollByAmount(+1));
 
   scrollEl.addEventListener('scroll', update, { passive: true });
-  window.addEventListener('resize', update);
+  window.addEventListener('resize', update, { passive: true });
 
   // ResizeObserver: muda quando filhos são inseridos/removidos (ex.: hidratação personalizada)
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(update);
+    ro.observe(rail);
     ro.observe(scrollEl);
   }
   if (typeof MutationObserver !== 'undefined') {
     const mo = new MutationObserver(update);
-    mo.observe(scrollEl, { childList: true, subtree: false });
+    mo.observe(scrollEl, { attributes: true, attributeFilter: ['class', 'hidden', 'style'], childList: true, subtree: true, characterData: true });
   }
 
   // Primeira medição (após paint p/ pegar layout final)
-  requestAnimationFrame(update);
+  update();
   setTimeout(update, 250);
 }
 
@@ -466,9 +470,7 @@ function kcApplyProgressiveNavCollapse() {
       // (acessar offsetWidth força reflow síncrono)
       void nav.offsetWidth;
     }
-    if (isAdminNav && rail && typeof rail.__kcScrollRailUpdate === 'function') {
-      requestAnimationFrame(rail.__kcScrollRailUpdate);
-    }
+    if (rail && typeof rail.__kcScrollRailUpdate === 'function') rail.__kcScrollRailUpdate();
   });
 }
 

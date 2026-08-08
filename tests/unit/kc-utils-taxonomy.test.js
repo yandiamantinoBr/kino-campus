@@ -556,6 +556,11 @@ describe('_KCU.taxonomy.findBestOfficialOpportunityArea', () => {
   test('retorna null para candidato muito distante', () => {
     expect(fn('xyzxyzxyzxyzxyz', officialMap)).toBeNull();
   });
+
+  test('não trata alias curto embutido em outra palavra como área oficial', () => {
+    expect(fn('Instituto Confúcio', officialMap)).toBeNull();
+    expect(fn('Passe Livre Estudantil', officialMap)).toBeNull();
+  });
 });
 
 // ─── 20. findBestFuzzyOpportunityArea ────────────────────────────────────────
@@ -601,6 +606,10 @@ describe('_KCU.taxonomy.findBestOfficialContextArea', () => {
   test('retorna null para texto sem nenhum alias', () => {
     // String com caracteres que não formam nenhum alias das definições oficiais
     expect(fn('aaaabbb cccddd eeefffggg 99999')).toBeNull();
+  });
+
+  test('exige limites de palavra e ignora data como sinal contextual isolado', () => {
+    expect(fn('instituto estudantil com nova data de inscrição')).toBeNull();
   });
 });
 
@@ -656,6 +665,57 @@ describe('_KCU.taxonomy.resolveOpportunityArea', () => {
     } else {
       // se não houver aliases, passa direto
       expect(true).toBe(true);
+    }
+  });
+
+  test.each([
+    ['Passe Livre Estudantil', 'Benefício para estudantes da UFG.'],
+    ['Instituto Confúcio abre inscrições', 'Curso de idioma com vagas abertas.'],
+    ['Inscrições abertas', 'Confira a data e o prazo no edital.'],
+  ])('não infere Tecnologia por substring ou pela palavra data: %s', (titulo, descricao) => {
+    const result = fn({ titulo, descricao });
+    expect(result.key).not.toBe('tecnologia');
+  });
+
+  test('aliases oficiais curtos e genéricos continuam válidos quando explícitos', () => {
+    expect(fn({ areaLabel: 'TI' })).toMatchObject({ key: 'tecnologia', isKnown: true });
+    expect(fn({ areaLabel: 'data' })).toMatchObject({ key: 'tecnologia', isKnown: true });
+    expect(fn({ areaLabel: 'UI' })).toMatchObject({ key: 'design', isKnown: true });
+  });
+
+  test('mesma publicação resolve igual sem histórico, com histórico e em ordens diferentes', () => {
+    const source = {
+      areaLabel: 'Astronomia Observacional',
+      titulo: 'Seleção para observatório universitário',
+      descricao: 'Atividades abertas à comunidade.',
+    };
+    const history = [
+      { key: 'fisica-espacial', label: 'Astronomia Observacional' },
+      { key: 'observatorio', label: 'Observatório Universitário' },
+    ];
+
+    const withoutHistory = fn(source, { history: [] });
+    const withHistory = fn(source, { history });
+    const withReversedHistory = fn(source, { history: history.slice().reverse() });
+
+    expect(withHistory).toEqual(withoutHistory);
+    expect(withReversedHistory).toEqual(withoutHistory);
+  });
+
+  test('histórico global não altera a classificação da mesma publicação', () => {
+    const previousHistory = window.__KC_OPPORTUNITY_AREA_HISTORY;
+    const source = { areaLabel: 'Astronomia Observacional' };
+
+    try {
+      delete window.__KC_OPPORTUNITY_AREA_HISTORY;
+      const baseline = fn(source);
+      window.__KC_OPPORTUNITY_AREA_HISTORY = [
+        { key: 'fisica-espacial', label: 'Astronomia Observacional' },
+      ];
+      expect(fn(source)).toEqual(baseline);
+    } finally {
+      if (previousHistory === undefined) delete window.__KC_OPPORTUNITY_AREA_HISTORY;
+      else window.__KC_OPPORTUNITY_AREA_HISTORY = previousHistory;
     }
   });
 });

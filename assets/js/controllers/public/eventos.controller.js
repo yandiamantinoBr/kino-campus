@@ -26,8 +26,17 @@
     var m = post && post.metadata || {};
     var start = String(m.data_evento || m.data || '').slice(0, 10);
     var end = String(m.data_fim_evento || m.data_fim || start).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return null;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(end) || end < start) end = start;
+    var isCivilDate = function (value) {
+      var match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return false;
+      var year = Number(match[1]);
+      var month = Number(match[2]);
+      var day = Number(match[3]);
+      if (year < 1000 || month < 1 || month > 12 || day < 1) return false;
+      return day <= new Date(Date.UTC(year, month, 0)).getUTCDate();
+    };
+    if (!isCivilDate(start)) return null;
+    if (!isCivilDate(end) || end < start) end = start;
     return { startKey: start, endKey: end };
   }
 
@@ -58,7 +67,9 @@
     }
     var normalized = String(value || '').trim().toLowerCase();
     var allowed = getAllowedDatePresets();
-    return allowed.indexOf(normalized) !== -1 ? normalized : '';
+    return allowed.find(function (entry) {
+      return String(entry || '').toLowerCase() === normalized;
+    }) || '';
   }
 
   function readSelectedDatePreset() {
@@ -146,7 +157,8 @@
         var container = payload && payload.container;
         var posts = payload && Array.isArray(payload.posts) ? payload.posts : [];
         if (!container || !posts.length) return;
-        var cards = Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length);
+        var allCards = Array.from(container.querySelectorAll('.kc-card'));
+        var cards = payload.mode === 'prepend' ? allCards.slice(0, posts.length) : allCards.slice(-posts.length);
         cards.forEach(function (card, index) {
           var post = posts[index] || {};
           var eventRange = getEventDateRange(post);

@@ -22,7 +22,7 @@ const PAGES = {
 describe('module feeds taxonomy + filter contracts', () => {
   test('all module pages load fixed filters and sort widgets', () => {
     Object.entries(PAGES).forEach(([name, html]) => {
-      expect(html).toContain('kc-filters.js?v=8.6.3');
+      expect(html).toContain('kc-filters.js?v=8.6.4');
       expect(html).toContain('kc-core-widgets.js?v=8.6.3');
       expect(html).toContain('data-kc-filters="tab-search"');
     });

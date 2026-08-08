@@ -65,6 +65,12 @@ describe('eventos.controller — source contracts', () => {
 
   test('usa dataset attr data-kc-event-date', () => {
     expect(source).toContain('data-kc-event-date');
+    expect(source).toContain('data-kc-event-end-date');
+  });
+
+  test('fallback preserva thisMonth e valida datas civis', () => {
+    expect(source).toContain("String(entry || '').toLowerCase() === normalized");
+    expect(source).toContain('new Date(Date.UTC(year, month, 0)).getUTCDate()');
   });
 
   test('referencia modal kcEventosSectionOverlay', () => {

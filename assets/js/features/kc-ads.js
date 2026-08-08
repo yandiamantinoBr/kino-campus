@@ -10,7 +10,7 @@
 }(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null), function (root) {
   'use strict';
 
-  const VERSION = '9.3.8.0';
+  const VERSION = '9.3.9.0';
   const CACHE_SCOPE = 'ads';
   const CACHE_VERSION = 1;
   const CACHE_MAX_AGE_MS = 5 * 60 * 1000;
@@ -673,7 +673,10 @@
     const sidebar = targetDoc.querySelector('main .kc-sidebar');
     if (!sidebar) return false;
     const selected = selectAdsForPlacement(ads, 'feed_aside', context, 2);
-    if (!selected.length && !canRenderAdsense(cfg, 'feed_aside_top') && !canRenderAdsense(cfg, 'feed_aside_sticky')) return false;
+    if (!selected.length && !canRenderAdsense(cfg, 'feed_aside_top') && !canRenderAdsense(cfg, 'feed_aside_sticky')) {
+      removeManagedAsideAds(targetDoc);
+      return false;
+    }
     sidebar.querySelectorAll('[data-kc-ad-aside="true"]').forEach((node) => node.remove());
     const topAd = selected[0] || null;
     const stickyAd = selected[1] || (selected.length === 1 ? selected[0] : null);

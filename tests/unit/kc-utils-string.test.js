@@ -134,6 +134,16 @@ describe('_KCU.string.canonicalCategory', () => {
     expect(fn('Habitações')).toBe('habitacoe');
     expect(fn('Moradias')).toBe('moradia');
   });
+
+  test('normaliza aliases irregulares do catálogo sem corromper palavras terminadas em s', () => {
+    expect(fn('Acadêmicos')).toBe('academico');
+    expect(fn('Editais')).toBe('edital');
+    expect(fn('Cursos-Capacitações')).toBe('curso-capacitacao');
+    expect(fn('Móveis')).toBe('movel');
+    expect(fn('Ofereço carona')).toBe('ofereco');
+    expect(fn('Achados')).toBe('encontrado');
+    expect(fn('Campus')).toBe('campus');
+  });
 });
 
 // ─── 6. slugifyText ──────────────────────────────────────────────────────────

@@ -337,6 +337,31 @@ describe('KCAds feed monetization', () => {
     expect(document.querySelectorAll('.kc-ad-card--aside[data-kc-ad-id="ad-1"]')).toHaveLength(2);
   });
 
+  test('remove anúncios laterais antigos quando nenhuma campanha ou fallback segue elegível', () => {
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Resumo</section>',
+      '</aside></main>',
+    ].join('');
+
+    expect(KCAds.renderAsideAds([
+      { id: 'ad-1', title: 'Campanha', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+    ], { module_key: 'eventos' }, document)).toBe(true);
+    expect(document.querySelectorAll('[data-kc-ad-aside]')).toHaveLength(2);
+
+    const rendered = KCAds.renderAsideAds([], { module_key: 'eventos' }, document, {
+      status: 'disabled',
+      placement_modes: {
+        feed_aside_top: 'off',
+        feed_aside_sticky: 'off',
+      },
+    });
+
+    expect(rendered).toBe(false);
+    expect(document.querySelectorAll('[data-kc-ad-aside]')).toHaveLength(0);
+    expect(document.querySelector('#one')).toBeTruthy();
+  });
+
   // v9.3.7.1 (2026-07-16): ads-top deve ser inserido APÓS o kc-create-post-btn
   // (não após o primeiro section). Caso real: index.html tem
   // [Context, Criar Publicação, ...] e o ad estava sendo inserido entre

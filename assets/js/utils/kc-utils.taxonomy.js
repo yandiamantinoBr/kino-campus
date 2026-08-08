@@ -287,14 +287,8 @@
       return officialAliasMap.get(normalized);
     }
 
-    if (normalized.length >= 5 && officialAliasMap) {
-      for (var _i = 0, _entries = officialAliasMap.entries(), _step; !(_step = _entries.next()).done;) {
-        var pair = _step.value;
-        var alias = pair[0];
-        var entry = pair[1];
-        if (normalized.includes(alias) || alias.includes(normalized)) return entry;
-      }
-    }
+    var contextMatch = findBestOfficialContextArea(normalized);
+    if (contextMatch) return contextMatch;
 
     var DEFS = (_const().OPPORTUNITY_AREA_DEFINITIONS) || [];
     return findBestFuzzyOpportunityArea(candidate, DEFS);
@@ -381,23 +375,74 @@
     return { catalog: catalog, aliasMap: aliasMap };
   }
 
+  function normalizeOpportunityAreaContextText(value) {
+    var normalized = _normalizeText(value)
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return normalized ? (' ' + normalized + ' ') : '';
+  }
+
+  function getOpportunityAreaContextAliasScore(contextText, aliasValue) {
+    var alias = normalizeOpportunityAreaContextText(aliasValue).trim();
+    if (!contextText || !alias) return 0;
+
+    // Short aliases still work when explicitly supplied (for example,
+    // areaKey="ti"), but are unsafe in prose: "ti" occurs in both
+    // "instituto" and "estudantil". "data" is also ordinary scheduling
+    // vocabulary and must not infer Tecnologia on its own.
+    if (alias.length <= 3 || alias === 'data') return 0;
+    if (!contextText.includes(' ' + alias + ' ')) return 0;
+
+    var wordCount = alias.split(' ').filter(Boolean).length;
+    return wordCount > 1 ? (5 + wordCount) : 3;
+  }
+
   function findBestOfficialContextArea(combinedText) {
     var DEFS = (_const().OPPORTUNITY_AREA_DEFINITIONS) || [];
-    if (!combinedText) return null;
+    var contextText = normalizeOpportunityAreaContextText(combinedText);
+    if (!contextText) return null;
 
     var ranked = DEFS
       .map(function (entry) {
-        var score = [entry.label, entry.key].concat(Array.isArray(entry.aliases) ? entry.aliases : [])
-          .map(function (value) { return _normalizeText(value); })
-          .filter(Boolean)
-          .reduce(function (acc, alias) {
-            if (!combinedText.includes(alias)) return acc;
-            return acc + (alias.includes(' ') ? 3 : 2);
-          }, 0);
-        return { entry: entry, score: score };
+        var seenAliases = Object.create(null);
+        var score = 0;
+        var matchCount = 0;
+        var strongestAliasLength = 0;
+
+        [entry.label, entry.key].concat(Array.isArray(entry.aliases) ? entry.aliases : [])
+          .forEach(function (value) {
+            var alias = normalizeOpportunityAreaContextText(value).trim();
+            if (!alias || seenAliases[alias]) return;
+            seenAliases[alias] = true;
+
+            var aliasScore = getOpportunityAreaContextAliasScore(contextText, alias);
+            if (!aliasScore) return;
+            score += aliasScore;
+            matchCount += 1;
+            strongestAliasLength = Math.max(strongestAliasLength, alias.length);
+          });
+
+        return {
+          entry: entry,
+          score: score,
+          matchCount: matchCount,
+          strongestAliasLength: strongestAliasLength,
+        };
       })
       .filter(function (item) { return item.score > 0; })
-      .sort(function (a, b) { return b.score - a.score; });
+      .sort(function (a, b) {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.strongestAliasLength !== a.strongestAliasLength) {
+          return b.strongestAliasLength - a.strongestAliasLength;
+        }
+        if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
+        var leftKey = String(a.entry.key || '');
+        var rightKey = String(b.entry.key || '');
+        if (leftKey < rightKey) return -1;
+        if (leftKey > rightKey) return 1;
+        return 0;
+      });
 
     return ranked.length ? ranked[0].entry : null;
   }
@@ -416,15 +461,6 @@
       .join(' ');
 
     var officialAliasMap = buildOfficialOpportunityAreaMaps();
-    var historySource = Array.isArray(options.history)
-      ? options.history
-      : ((typeof window !== 'undefined' && Array.isArray(window.__KC_OPPORTUNITY_AREA_HISTORY))
-        ? window.__KC_OPPORTUNITY_AREA_HISTORY
-        : []);
-    var historyMaps = buildHistoryOpportunityAreaMaps(historySource, officialAliasMap);
-    var historyEntries = Array.from(historyMaps.catalog.values()).map(function (entry) {
-      return Object.assign({}, entry, { aliases: [entry.label, entry.key] });
-    });
 
     var i, candidate, normalized, match;
 
@@ -437,11 +473,6 @@
         match = officialAliasMap.get(normalized);
         return { key: match.key, label: match.label, icon: match.icon, isKnown: true, source: 'official-exact' };
       }
-
-      if (historyMaps.aliasMap.has(normalized)) {
-        match = historyMaps.aliasMap.get(normalized);
-        return { key: match.key, label: match.label, icon: match.icon, isKnown: false, source: 'history-exact' };
-      }
     }
 
     for (i = 0; i < explicitCandidates.length; i++) {
@@ -449,13 +480,9 @@
       normalized = _normalizeText(candidate);
       if (!normalized || normalized.length < 5) continue;
 
-      for (var _j = 0, _mapEntries = officialAliasMap.entries(), _s; !(_s = _mapEntries.next()).done;) {
-        var pair = _s.value;
-        var alias = pair[0];
-        var entry = pair[1];
-        if (normalized.includes(alias) || alias.includes(normalized)) {
-          return { key: entry.key, label: entry.label, icon: entry.icon, isKnown: true, source: 'official-partial' };
-        }
+      match = findBestOfficialContextArea(normalized);
+      if (match) {
+        return { key: match.key, label: match.label, icon: match.icon, isKnown: true, source: 'official-partial' };
       }
     }
 
@@ -471,11 +498,6 @@
       var officialFuzzy = findBestFuzzyOpportunityArea(candidate, DEFS);
       if (officialFuzzy) {
         return { key: officialFuzzy.key, label: officialFuzzy.label, icon: officialFuzzy.icon, isKnown: true, source: 'official-fuzzy' };
-      }
-
-      var historyFuzzy = findBestFuzzyOpportunityArea(candidate, historyEntries);
-      if (historyFuzzy) {
-        return { key: historyFuzzy.key, label: historyFuzzy.label, icon: historyFuzzy.icon, isKnown: false, source: 'history-fuzzy' };
       }
     }
 

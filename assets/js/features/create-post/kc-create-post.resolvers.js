@@ -269,8 +269,11 @@
     return element && element.closest ? element.closest('[data-kc-housing-features-field="true"]') : null;
   }
 
-  function kcResolveHousingFeatureEntries(values) {
-    return kcResolveHousingFeatureValues(values).map((entry) => ({
+  function kcResolveHousingFeatureEntries(values, featureKind) {
+    const entries = featureKind === 'caronas'
+      ? kcResolveCaronasFeatureValues(values)
+      : kcResolveHousingFeatureValues(values);
+    return entries.map((entry) => ({
       key: String(entry && entry.key || '').trim(),
       label: String(entry && entry.label || '').trim(),
       emoji: String(entry && entry.emoji || '').trim(),
@@ -285,7 +288,8 @@
     const hidden = root.querySelector('[data-kc-housing-features-value]');
     const list = root.querySelector('[data-kc-housing-features-selected]');
     const pills = Array.from(root.querySelectorAll('[data-kc-housing-feature-suggestion]'));
-    const entries = kcResolveHousingFeatureEntries(values);
+    const featureKind = hidden && hidden.name === 'marcadoresCarona' ? 'caronas' : 'moradia';
+    const entries = kcResolveHousingFeatureEntries(values, featureKind);
     const labels = entries.map((entry) => entry.label);
     const keys = new Set(entries.map((entry) => entry.key));
 
@@ -355,6 +359,39 @@
       { key: 'pontualidade', label: 'Pontualidade', emoji: '\u23F0' },
       { key: 'preco-fixo', label: 'Pre\u00e7o fixo', emoji: '\uD83C\uDFF7\uFE0F' },
     ];
+  }
+
+  function kcResolveCaronasFeatureValues(values) {
+    const options = kcGetCaronasFeatureOptions();
+    const aliases = {
+      '4-mais-lugares': 'quatro-mais-lugares',
+      'quatro-ou-mais-lugares': 'quatro-mais-lugares',
+      'nao-fumantes': 'sem-fumar',
+      'nao-fumar': 'sem-fumar',
+      'apenas-mulheres': 'somente-mulheres',
+    };
+    const normalizeKey = function (value) {
+      const normalized = KCUtils && typeof KCUtils.normalizeText === 'function'
+        ? KCUtils.normalizeText(value)
+        : String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const key = String(normalized || '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      return aliases[key] || key;
+    };
+    const byKey = new Map();
+    options.forEach(function (entry) {
+      byKey.set(normalizeKey(entry.key), entry);
+      byKey.set(normalizeKey(entry.label), entry);
+    });
+
+    const seen = new Set();
+    return kcParseStringArrayValue(values).map(function (value) {
+      const key = normalizeKey(value);
+      if (!key || seen.has(key)) return null;
+      seen.add(key);
+      const known = byKey.get(key);
+      if (known) return { key: known.key, label: known.label, emoji: known.emoji || '', isKnown: true };
+      return { key, label: String(value || '').trim(), emoji: '\uD83C\uDFF7\uFE0F', isKnown: false };
+    }).filter(function (entry) { return entry && entry.key && entry.label; });
   }
 
   function kcSyncHousingRegionInput(input) {
@@ -451,6 +488,7 @@
     resolveCaronasLocationValue: kcResolveCaronasLocationValue,
     getCaronasCampusOptions: kcGetCaronasCampusOptions,
     getCaronasFeatureOptions: kcGetCaronasFeatureOptions,
+    resolveCaronasFeatureValues: kcResolveCaronasFeatureValues,
     syncHousingRegionInput: kcSyncHousingRegionInput,
     resolveLostFoundLocationValue: kcResolveLostFoundLocationValue,
     getLostFoundLocationOptions: kcGetLostFoundLocationOptions,

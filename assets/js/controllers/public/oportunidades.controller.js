@@ -65,7 +65,7 @@
     upsertPosts(posts);
 
     const cards = Array.from(container.querySelectorAll('.kc-card'));
-    const freshCards = cards.slice(-posts.length);
+    const freshCards = payload.mode === 'prepend' ? cards.slice(0, posts.length) : cards.slice(-posts.length);
     freshCards.forEach((card, index) => {
       const summary = summarizePost(posts[index]);
       if (!summary) return;
@@ -165,9 +165,8 @@
     areas.forEach((area) => {
       const count = countMap.get(area.key) || 0;
       const isActive = renderedArea === area.key;
-      const isDisabled = !isActive && count === 0;
       items.push(
-        '<button class="kc-category-item ' + (isActive ? 'is-active ' : '') + (isDisabled ? 'is-disabled' : '') + '" type="button" data-kc-opp-area="' + escapeHtml(area.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '"' + (isDisabled ? ' disabled' : '') + '>' +
+        '<button class="kc-category-item ' + (isActive ? 'is-active' : '') + '" type="button" data-kc-opp-area="' + escapeHtml(area.key) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '" title="' + count + ' publicacoes no lote carregado; o filtro consulta todo o feed">' +
           '<i class="' + escapeHtml(area.icon || 'fas fa-briefcase') + '"></i>' +
           '<span>' + escapeHtml(area.label || area.key) + '</span>' +
           '<span class="kc-category-count">' + count + '</span>' +

@@ -533,7 +533,7 @@ describe('KCAPI - API Client', () => {
       }
     });
 
-    test('filtra eventos por data_evento e usa created_at como fallback quando metadata esta vazia', () => {
+    test('filtra eventos por data_evento e não inventa data a partir de created_at', () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
 
@@ -546,7 +546,7 @@ describe('KCAPI - API Client', () => {
             created_at: '2026-04-01T09:00:00-03:00',
           },
           {
-            id: 'event-fallback-today',
+            id: 'event-no-date',
             module: 'eventos',
             metadata: {},
             created_at: '2026-04-06T08:30:00-03:00',
@@ -568,8 +568,8 @@ describe('KCAPI - API Client', () => {
           datePreset: 'today',
         });
 
-        expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-fallback-today']);
-        expect(today.map((post) => post.id)).toEqual(['event-fallback-today']);
+        expect(next7d.map((post) => post.id)).toEqual(['event-next']);
+        expect(today.map((post) => post.id)).toEqual([]);
       } finally {
         jest.useRealTimers();
       }
