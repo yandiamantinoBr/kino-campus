@@ -22,39 +22,223 @@ export function isValidModule(m: unknown): m is ModuleKey {
   return typeof m === "string" && (MODULE_KEYS as readonly string[]).includes(m);
 }
 
-// Rotulos canonicos de categoria (label de exibicao).
-export const CATEGORY_LABELS: Record<string, string> = {
-  academicos: "Academicos",
-  culturais: "Culturais",
-  empregos: "Empregos",
-  esportivos: "Esportivos",
-  estagios: "Estagios",
-  festas: "Festas",
-  freelancer: "Freelancer",
-  monitoria: "Monitoria",
-  pesquisa: "Pesquisa",
-  sustentabilidade: "Sustentabilidade",
-  voluntariado: "Voluntariado",
-  workshops: "Workshops",
-};
-
-export function categoryLabel(categoryKey: string): string {
-  const key = slugify(categoryKey);
-  if (CATEGORY_LABELS[key]) return CATEGORY_LABELS[key];
-  const raw = String(categoryKey || "").trim();
-  if (!raw) return "";
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
+interface CategoryDefinition {
+  key: string;
+  label: string;
+  aliases?: readonly string[];
 }
 
-// Categoria padrao por modulo quando o curador nao informa uma.
-export const DEFAULT_CATEGORY: Record<ModuleKey, string> = {
-  eventos: "academicos",
-  oportunidades: "monitoria",
-  moradia: "aluguel",
-  "compra-venda": "outros",
-  caronas: "ofereco",
-  "achados-perdidos": "achados",
-};
+interface SecondaryDefinition {
+  key: string;
+  label: string;
+  aliases?: readonly string[];
+}
+
+// Espelha exatamente os grupos obrigatorios de
+// assets/js/features/create-post/kc-create-post.schema.js. Aliases sao
+// deliberadamente explicitos: valores desconhecidos nunca escolhem uma
+// categoria padrao nem atravessam para outro modulo.
+export const CATEGORY_DEFINITIONS = {
+  eventos: [
+    { key: "academicos", label: "Acad\u00eamicos", aliases: ["academico", "academica", "academicas"] },
+    { key: "palestras", label: "Palestras", aliases: ["palestra"] },
+    { key: "congressos", label: "Congressos", aliases: ["congresso"] },
+    { key: "cursos", label: "Cursos", aliases: ["curso"] },
+    { key: "culturais", label: "Culturais", aliases: ["cultural"] },
+    { key: "esportivos", label: "Esportivos", aliases: ["esportivo"] },
+    { key: "workshops", label: "Workshops", aliases: ["workshop"] },
+    { key: "festas", label: "Festas", aliases: ["festa"] },
+    { key: "sustentabilidade", label: "Sustentabilidade" },
+  ],
+  oportunidades: [
+    { key: "editais", label: "Editais", aliases: ["edital"] },
+    { key: "concursos", label: "Concursos", aliases: ["concurso"] },
+    { key: "bolsas", label: "Bolsas", aliases: ["bolsa"] },
+    { key: "estagios", label: "Est\u00e1gio", aliases: ["estagio"] },
+    { key: "empregos", label: "Emprego", aliases: ["emprego"] },
+    { key: "monitoria", label: "Monitoria", aliases: ["monitorias"] },
+    { key: "pesquisa", label: "Pesquisa" },
+    {
+      key: "cursos-capacitacoes",
+      label: "Cursos e capacita\u00e7\u00f5es",
+      aliases: [
+        "curso-capacitacao",
+        "curso-capacitacoes",
+        "cursos-capacitacao",
+        "curso e capacitacao",
+        "cursos e capacitacoes",
+      ],
+    },
+    { key: "voluntariado", label: "Voluntariado", aliases: ["voluntariados"] },
+    { key: "freelancer", label: "Freelancer", aliases: ["freelancers"] },
+  ],
+  moradia: [
+    { key: "republicas", label: "Rep\u00fablicas", aliases: ["republica"] },
+    { key: "quartos", label: "Quartos", aliases: ["quarto"] },
+    { key: "apartamentos", label: "Apartamentos", aliases: ["apartamento"] },
+    { key: "casas", label: "Casas", aliases: ["casa"] },
+    { key: "procurando", label: "Procurando", aliases: ["procuro", "procurando-moradia"] },
+  ],
+  "compra-venda": [
+    { key: "eletronicos", label: "Eletr\u00f4nicos", aliases: ["eletronico"] },
+    { key: "livros", label: "Livros", aliases: ["livro"] },
+    { key: "ingressos", label: "Ingressos", aliases: ["ingresso"] },
+    { key: "moveis", label: "M\u00f3veis", aliases: ["movel"] },
+    { key: "vestuario", label: "Vestu\u00e1rio" },
+    { key: "outros", label: "Outros", aliases: ["outro"] },
+  ],
+  caronas: [
+    { key: "ofereco", label: "Ofere\u00e7o carona", aliases: ["ofereco-carona"] },
+    { key: "procuro", label: "Procuro carona", aliases: ["procuro-carona"] },
+  ],
+  "achados-perdidos": [
+    { key: "perdidos", label: "Perdidos", aliases: ["perdido"] },
+    {
+      key: "encontrados",
+      label: "Encontrados",
+      aliases: ["encontrado", "achado", "achados"],
+    },
+  ],
+} as const satisfies Record<ModuleKey, readonly CategoryDefinition[]>;
+
+export const CATEGORIES_BY_MODULE: Readonly<Record<ModuleKey, readonly string[]>> =
+  Object.freeze(Object.fromEntries(
+    MODULE_KEYS.map((module) => [
+      module,
+      Object.freeze(CATEGORY_DEFINITIONS[module].map(({ key }) => key)),
+    ]),
+  ) as Record<ModuleKey, readonly string[]>);
+
+export const CATEGORY_LABELS: Readonly<Record<string, string>> = Object.freeze(
+  Object.fromEntries(
+    MODULE_KEYS.flatMap((module) =>
+      CATEGORY_DEFINITIONS[module].map(({ key, label }) => [key, label])
+    ),
+  ),
+);
+
+const CATEGORY_ALIASES_BY_MODULE: Readonly<Record<ModuleKey, Readonly<Record<string, string>>>> =
+  Object.freeze(Object.fromEntries(
+    MODULE_KEYS.map((module) => [
+      module,
+      Object.freeze(Object.fromEntries(
+        (CATEGORY_DEFINITIONS[module] as readonly CategoryDefinition[]).flatMap(({ key, label, aliases }) =>
+          [key, label, ...(aliases || [])].map((alias) => [slugify(alias), key])
+        ),
+      )),
+    ]),
+  ) as Record<ModuleKey, Readonly<Record<string, string>>>);
+
+export function normalizeCategoryForModule(moduleKey: unknown, categoryKey: unknown): string {
+  if (!isValidModule(moduleKey)) return "";
+  if (typeof categoryKey !== "string") return "";
+  const alias = slugify(categoryKey);
+  return alias ? CATEGORY_ALIASES_BY_MODULE[moduleKey][alias] || "" : "";
+}
+
+export function isValidCategoryForModule(moduleKey: unknown, categoryKey: unknown): boolean {
+  return !!normalizeCategoryForModule(moduleKey, categoryKey);
+}
+
+export function categoriesForModule(moduleKey: unknown): readonly string[] {
+  return isValidModule(moduleKey) ? CATEGORIES_BY_MODULE[moduleKey] : [];
+}
+
+export function categoryLabel(categoryKey: unknown): string {
+  if (typeof categoryKey !== "string") return "";
+  return CATEGORY_LABELS[slugify(categoryKey)] || "";
+}
+
+// Grupos secundarios obrigatorios do modal. Eles nao sao categorias: compra e
+// venda usa a acao (vendo/compro), enquanto achados e perdidos usa o tipo do
+// item. O escopo por modulo evita aceitar uma chave valida no grupo errado.
+export const SECONDARY_DEFINITIONS = {
+  "compra-venda": [
+    { key: "vendo", label: "Vendo" },
+    { key: "compro", label: "Compro" },
+  ],
+  "achados-perdidos": [
+    { key: "documentos", label: "Documentos", aliases: ["documento"] },
+    { key: "eletronicos", label: "Eletr\u00f4nicos", aliases: ["eletronico"] },
+    { key: "outros", label: "Outros", aliases: ["outro"] },
+  ],
+} as const satisfies Partial<Record<ModuleKey, readonly SecondaryDefinition[]>>;
+
+export type SecondaryModuleKey = keyof typeof SECONDARY_DEFINITIONS;
+
+function isSecondaryModule(moduleKey: unknown): moduleKey is SecondaryModuleKey {
+  return moduleKey === "compra-venda" || moduleKey === "achados-perdidos";
+}
+
+const SECONDARY_ALIASES_BY_MODULE: Readonly<
+  Record<SecondaryModuleKey, Readonly<Record<string, string>>>
+> = Object.freeze(Object.fromEntries(
+  (Object.keys(SECONDARY_DEFINITIONS) as SecondaryModuleKey[]).map((module) => [
+    module,
+    Object.freeze(Object.fromEntries(
+      (SECONDARY_DEFINITIONS[module] as readonly SecondaryDefinition[]).flatMap(
+        ({ key, label, aliases }) =>
+          [key, label, ...(aliases || [])].map((alias) => [slugify(alias), key]),
+      ),
+    )),
+  ]),
+) as Record<SecondaryModuleKey, Readonly<Record<string, string>>>);
+
+export function secondaryValuesForModule(moduleKey: unknown): readonly string[] {
+  return isSecondaryModule(moduleKey)
+    ? SECONDARY_DEFINITIONS[moduleKey].map(({ key }) => key)
+    : [];
+}
+
+export function normalizeSecondaryForModule(moduleKey: unknown, value: unknown): string {
+  if (!isSecondaryModule(moduleKey) || typeof value !== "string") return "";
+  const alias = slugify(value);
+  return alias ? SECONDARY_ALIASES_BY_MODULE[moduleKey][alias] || "" : "";
+}
+
+export function secondaryLabelForModule(moduleKey: unknown, value: unknown): string {
+  if (!isSecondaryModule(moduleKey)) return "";
+  const key = normalizeSecondaryForModule(moduleKey, value);
+  return key
+    ? SECONDARY_DEFINITIONS[moduleKey].find((definition) => definition.key === key)?.label || ""
+    : "";
+}
+
+// Todo alias secundario explicitamente enviado participa do contrato. Aceitamos
+// aliases equivalentes, mas nunca escolhemos silenciosamente entre chaves
+// conflitantes nem ignoramos um valor invalido porque outro alias e valido.
+// actionKey so participa em compra-venda; nos demais modulos continua reservado
+// ao CTA.
+export function secondaryInputForItem(item: CaduItem): unknown {
+  const module = item.module;
+  if (!isSecondaryModule(module)) return "";
+
+  const aliases = module === "compra-venda"
+    ? ["acao", "action", "subcategoriaKey", "subcategoria", "type", "actionKey"] as const
+    : ["subcategoriaKey", "subcategoryKey", "subcategoria", "subcategory", "type"] as const;
+  const provided = aliases.filter((alias) =>
+    Object.prototype.hasOwnProperty.call(item, alias)
+  );
+  if (!provided.length) return "";
+
+  const keys = new Set<string>();
+  for (const alias of provided) {
+    const raw = item[alias];
+    const key = normalizeSecondaryForModule(module, raw);
+    if (typeof raw !== "string" || !raw.trim() || !key) {
+      throw new TypeError(
+        `grupo secundario invalido para module "${module}" em item.${alias}.`,
+      );
+    }
+    keys.add(key);
+  }
+  if (keys.size > 1) {
+    throw new TypeError(
+      `grupo secundario conflitante para module "${module}" nos aliases do item.`,
+    );
+  }
+  return keys.values().next().value || "";
+}
 
 // ── Modalidade de trabalho (oportunidades) ────────────────────────────────────
 interface KeyLabel {
@@ -124,6 +308,8 @@ export interface ValidationResult {
 export interface CaduItem {
   module?: string;
   type?: string;
+  acao?: string;
+  action?: string;
   title?: string;
   formattedTitle?: string;
   formatted_title?: string;
@@ -140,6 +326,10 @@ export interface CaduItem {
   eventEndsAt?: string;
   resultPublishedAt?: string;
   category?: string;
+  subcategory?: string;
+  subcategoryKey?: string;
+  subcategoria?: string;
+  subcategoriaKey?: string;
   location?: string;
   price?: number | string;
   contato?: string;
@@ -163,6 +353,7 @@ export interface CaduItem {
   imageSource?: string;
   allowExternalImageFallback?: boolean;
   tags?: string[];
+  tagKeys?: string[];
   sourceUrl?: string;
   sourceId?: string;
   sourceTitle?: string;
@@ -210,6 +401,37 @@ export function validateItem(item: CaduItem): ValidationResult {
     errors.push("description (ou summary/text) obrigatorio.");
   }
 
+  const allowedCategories = categoriesForModule(module);
+  if (!hasText(item.category)) {
+    errors.push(
+      `${module}: 'category' obrigatoria. Use uma de: ${allowedCategories.join(", ")}.`,
+    );
+  } else if (!normalizeCategoryForModule(module, item.category)) {
+    errors.push(
+      `category invalida para module "${module}": "${String(item.category)}". ` +
+        `Use uma de: ${allowedCategories.join(", ")}.`,
+    );
+  }
+
+  const secondaryValues = secondaryValuesForModule(module);
+  if (secondaryValues.length) {
+    try {
+      const secondaryInput = secondaryInputForItem(item);
+      if (!hasText(secondaryInput)) {
+        errors.push(
+          `${module}: grupo secundario obrigatorio. Use uma de: ${secondaryValues.join(", ")}.`,
+        );
+      } else if (!normalizeSecondaryForModule(module, secondaryInput)) {
+        errors.push(
+          `grupo secundario invalido para module "${module}": "${String(secondaryInput)}". ` +
+            `Use uma de: ${secondaryValues.join(", ")}.`,
+        );
+      }
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   const type = normalizeOpportunityType(item.type);
 
   switch (module) {
@@ -237,8 +459,8 @@ export function validateItem(item: CaduItem): ValidationResult {
       break;
     case "achados-perdidos":
       if (!hasText(item.location)) errors.push("achados-perdidos: 'location' obrigatorio.");
-      if (normalizeText(item.type) === "encontrados" && !hasText(item.entrega)) {
-        warnings.push("achados-perdidos (encontrados): 'entrega' recomendada.");
+      if (normalizeCategoryForModule(module, item.category) === "encontrados" && !hasText(item.entrega)) {
+        errors.push("achados-perdidos (encontrados): 'entrega' obrigatoria.");
       }
       break;
   }

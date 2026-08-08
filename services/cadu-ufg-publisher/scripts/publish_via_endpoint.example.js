@@ -147,6 +147,7 @@ async function _demo() {
   // 3) Publicar uma OPORTUNIDADE (modalidade detectada do texto, com varios links)
   const vaga = await caduPublish({
     module: 'oportunidades',
+    category: 'empregos',
     type: 'emprego',
     title: 'Vaga: Pessoa Desenvolvedora (CLT, hibrido em Goiania)',
     description: 'Atuacao hibrida. Regime CLT. Envie curriculo pelo link oficial.',

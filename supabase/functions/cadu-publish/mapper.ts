@@ -11,11 +11,15 @@
 import {
   CaduItem,
   categoryLabel,
-  DEFAULT_CATEGORY,
   ModuleKey,
+  normalizeCategoryForModule,
   normalizeOpportunityType,
+  normalizeSecondaryForModule,
   resolveRegime,
   resolveWorkMode,
+  secondaryInputForItem,
+  secondaryLabelForModule,
+  secondaryValuesForModule,
 } from "./schema.ts";
 import {
   adaptTitleForPlatform,
@@ -485,16 +489,87 @@ function buildDescription(item: CaduItem): string {
   return clampMarkdown(chunks.filter(Boolean).join("\n\n"), 2000);
 }
 
-function buildTags(item: CaduItem, categoryText: string, area: string): { tags: string[]; tagKeys: string[] } {
-  const base = uniq([
-    ...(Array.isArray(item.tags) ? item.tags.map((t) => normalizeWhitespace(t)) : []),
-    "UFG",
-    normalizeWhitespace(item.sourceName),
-    categoryText,
-    area,
-  ]).slice(0, 8);
-  const tagKeys = uniq(base.map((t) => slugify(t)).filter(Boolean));
-  return { tags: base, tagKeys };
+interface TagPair {
+  key: string;
+  label: string;
+}
+
+function appendTagPair(target: Map<string, string>, key: unknown, label: unknown): void {
+  const normalizedLabel = normalizeWhitespace(label);
+  const normalizedKey = slugify(key || normalizedLabel);
+  if (!normalizedKey || target.has(normalizedKey)) return;
+  target.set(normalizedKey, normalizedLabel || normalizedKey);
+}
+
+function isModuleTaxonomyTag(module: ModuleKey, value: unknown): boolean {
+  return !!(
+    normalizeCategoryForModule(module, value) ||
+    normalizeSecondaryForModule(module, value)
+  );
+}
+
+function appendIndependentTagPair(
+  target: Map<string, string>,
+  module: ModuleKey,
+  key: unknown,
+  label: unknown,
+): void {
+  const keyText = normalizeWhitespace(key);
+  const labelText = normalizeWhitespace(label);
+  if (!keyText && !labelText) return;
+
+  const keyIsTaxonomy = !!keyText && isModuleTaxonomyTag(module, keyText);
+  const labelIsTaxonomy = !!labelText && isModuleTaxonomyTag(module, labelText);
+  if (keyIsTaxonomy && labelIsTaxonomy) return;
+  if (keyIsTaxonomy) {
+    if (labelText) appendTagPair(target, labelText, labelText);
+    return;
+  }
+  if (labelIsTaxonomy) {
+    if (keyText) appendTagPair(target, keyText, keyText);
+    return;
+  }
+  appendTagPair(target, keyText || labelText, labelText || keyText);
+}
+
+function buildTags(
+  item: CaduItem,
+  module: ModuleKey,
+  required: TagPair[],
+): { tags: string[]; tagKeys: string[] } {
+  const pairs = new Map<string, string>();
+  required.forEach(({ key, label }) => appendTagPair(pairs, key, label));
+  appendTagPair(pairs, "ufg", "UFG");
+  appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
+  const inputLabels = Array.isArray(item.tags) ? item.tags : [];
+  const inputKeys = Array.isArray(item.tagKeys) ? item.tagKeys : [];
+  for (let index = 0; index < Math.max(inputLabels.length, inputKeys.length); index += 1) {
+    appendIndependentTagPair(pairs, module, inputKeys[index], inputLabels[index]);
+  }
+  const entries = Array.from(pairs.entries()).slice(0, 10);
+  return {
+    tagKeys: entries.map(([key]) => key),
+    tags: entries.map(([, label]) => label),
+  };
+}
+
+function appendMetadataTagPairs(
+  tags: unknown,
+  tagKeys: unknown,
+  additions: TagPair[],
+): { tags: string[]; tagKeys: string[] } {
+  const pairs = new Map<string, string>();
+  const labels = Array.isArray(tags) ? tags : [];
+  const keys = Array.isArray(tagKeys) ? tagKeys : [];
+  for (let index = 0; index < Math.max(labels.length, keys.length); index += 1) {
+    appendTagPair(pairs, keys[index] || labels[index], labels[index] || keys[index]);
+  }
+  additions.forEach(({ key, label }) => appendTagPair(pairs, key, label));
+  const entries = Array.from(pairs.entries()).slice(0, 10);
+  return {
+    tagKeys: entries.map(([key]) => key),
+    tags: entries.map(([, label]) => label),
+  };
 }
 
 function inferActionLabel(item: CaduItem, module: string, documentLinks: Array<{ url: string }>): string {
@@ -611,6 +686,21 @@ function pickCoverImage(candidates: string[], title: string, category: string, s
 export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}): MappedPost {
   const warnings: string[] = [];
   const module = item.module as ModuleKey;
+  const categoryKey = normalizeCategoryForModule(module, item.category);
+  if (!categoryKey) {
+    throw new TypeError(
+      `category invalida ou ausente para module "${String(item.module || "")}".`,
+    );
+  }
+  const categoryText = categoryLabel(categoryKey);
+  const secondaryInput = secondaryInputForItem(item);
+  const secondaryKey = normalizeSecondaryForModule(module, secondaryInput);
+  if (secondaryValuesForModule(module).length && !secondaryKey) {
+    throw new TypeError(
+      `grupo secundario invalido ou ausente para module "${String(item.module || "")}".`,
+    );
+  }
+  const secondaryText = secondaryLabelForModule(module, secondaryKey);
   const fullText = `${item.title || ""}\n${item.summary || ""}\n${item.text || ""}\n${item.description || ""}`;
 
   // Título: prefere formattedTitle da IA (já otimizado), clamp só em fallback
@@ -647,23 +737,22 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const actionEvidence = Array.isArray(item.actionEvidence) ? item.actionEvidence.slice(0, 20) : [];
   const images = buildImageList(item);
   const sourceHost = hostOf(sourceUrl);
-  const categoryKeyForCover = slugify(item.category) || DEFAULT_CATEGORY[module] || "";
   // Cover: escolhe o melhor candidato por scoring heurístico (não apenas o primeiro)
-  const safeExternalImage = pickCoverImage(images, title, categoryKeyForCover, sourceHost);
+  const safeExternalImage = pickCoverImage(images, title, categoryKey, sourceHost);
   const safeGalleryImages = images.filter(canPersistExternalImageUrl);
   const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
   const enrichmentSources = normalizeEnrichmentSources(item);
   const actionLink = pickActionLink(item, module, documentLinks);
-  const actionLabel = inferActionLabel(item, module, documentLinks);
-  const actionKey = slugify(item.actionKey || actionLabel);
-
-  const categoryKey = slugify(item.category) || DEFAULT_CATEGORY[module] || "";
-  const categoryText = categoryLabel(categoryKey);
+  const inferredActionLabel = inferActionLabel(item, module, documentLinks);
+  const inferredActionKey = slugify(item.actionKey || inferredActionLabel);
+  const actionLabel = module === "compra-venda" ? secondaryText : inferredActionLabel;
+  const actionKey = module === "compra-venda" ? secondaryKey : inferredActionKey;
 
   const emails = extractEmails(`${fullText}\n${item.contato || ""}`);
   const contato = normalizeWhitespace(item.contato) || emails[0] || "Ver link oficial da UFG";
 
-  const linkAsCta = item.linkAsCta !== undefined ? !!item.linkAsCta : !!actionLink;
+  const supportsLinkCta = module === "eventos" || module === "oportunidades";
+  const linkAsCta = supportsLinkCta && (item.linkAsCta !== undefined ? !!item.linkAsCta : !!actionLink);
   const visibility = item.visibility === "community" ? "community" : "public";
 
   // Metadata comum a todos os modulos (fonte, capa, identidade, tags).
@@ -701,14 +790,18 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     commonMeta.dates = semanticDates;
   }
 
-  const { tags, tagKeys } = buildTags(
-    item,
-    categoryText,
-    module === "oportunidades" ? (normalizeWhitespace(item.area) || detectArea(fullText)) : "",
-  );
+  const initialArea = module === "oportunidades"
+    ? (normalizeWhitespace(item.area) || detectArea(fullText))
+    : "";
+  const { tags, tagKeys } = buildTags(item, module, [
+    { key: categoryKey, label: categoryText },
+    ...(secondaryKey ? [{ key: secondaryKey, label: secondaryText }] : []),
+    ...(initialArea ? [{ key: slugify(initialArea), label: initialArea }] : []),
+  ]);
   commonMeta.tags = tags;
   commonMeta.tagKeys = tagKeys;
   commonMeta.categoria = categoryText;
+  commonMeta.categoriaLabel = categoryText;
   commonMeta.categoriaKey = categoryKey;
   commonMeta.categoryKey = categoryKey;
   commonMeta.categoryLabel = categoryText;
@@ -786,19 +879,24 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       deadline_date: deadlineDate,
     });
     if (wm.label) {
-      const extra = uniq([...(tags as string[]), wm.label, regime.label]).slice(0, 10);
-      metadata.tags = extra;
-      metadata.tagKeys = uniq(extra.map((t) => slugify(t)).filter(Boolean));
+      const extra = appendMetadataTagPairs(tags, tagKeys, [
+        { key: wm.key, label: wm.label },
+        { key: regime.key, label: regime.label },
+      ]);
+      metadata.tags = extra.tags;
+      metadata.tagKeys = extra.tagKeys;
     }
   } else {
     // Modulos prontos por schema (moradia, compra-venda, caronas, achados-perdidos):
     // preenche as chaves de metadata conhecidas a partir do que o curador enviar.
-    const type = normalizeText(item.type);
+    const isCompraVenda = module === "compra-venda";
+    const isAchados = module === "achados-perdidos";
+    const isMoradia = module === "moradia";
     Object.assign(metadata, {
-      subcategory: slugify(item.category) || "",
-      subcategoryLabel: categoryText,
-      subcategoria: categoryText,
-      subcategoriaKey: categoryKey,
+      subcategory: isCompraVenda ? categoryKey : (isAchados ? secondaryKey : ""),
+      subcategoryLabel: isCompraVenda ? categoryText : (isAchados ? secondaryText : ""),
+      subcategoria: (isCompraVenda || isAchados) ? secondaryText : "",
+      subcategoriaKey: (isCompraVenda || isAchados) ? secondaryKey : "",
       detalhes: normalizeWhitespace(item.detalhes),
       condicao: normalizeWhitespace(item.condicao),
       entrega: normalizeWhitespace(item.entrega),
@@ -807,8 +905,8 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       regiaoLabel: normalizeWhitespace(item.regiao),
       regionKey: slugify(item.regiao),
       regionLabel: normalizeWhitespace(item.regiao),
-      housingTypeKey: module === "moradia" ? categoryKey : "",
-      housingTypeLabel: module === "moradia" ? categoryText : "",
+      housingTypeKey: isMoradia ? categoryKey : "",
+      housingTypeLabel: isMoradia ? categoryText : "",
       origem: normalizeWhitespace(item.origem),
       destino: normalizeWhitespace(item.destino),
       horario: normalizeWhitespace(item.horario),
@@ -816,8 +914,12 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       vagas: item.vagas != null ? String(item.vagas) : "",
       marcadores: Array.isArray(item.features) ? item.features : [],
     });
+    if (isCompraVenda) {
+      metadata.subcategoryKey = categoryKey;
+      metadata.actionKey = secondaryKey;
+      metadata.actionLabel = secondaryText;
+    }
     if (module === "moradia" && !location) location = normalizeWhitespace(item.regiao);
-    void type;
   }
 
   const row: MappedPost["row"] = {
@@ -868,4 +970,188 @@ export function deepMergeMetadata(
     }
   }
   return result;
+}
+
+function metadataSecondaryKey(
+  module: ModuleKey,
+  metadata: Record<string, unknown>,
+  patch: Record<string, unknown> | null | undefined,
+): string {
+  if (!secondaryValuesForModule(module).length) return "";
+  const aliases = module === "compra-venda"
+    ? ["subcategoriaKey", "subcategoria", "actionKey", "actionLabel"]
+    : ["subcategoriaKey", "subcategoria", "subcategoryKey", "subcategory"];
+
+  const patchedKeys = new Set<string>();
+  for (const alias of aliases) {
+    if (!Object.prototype.hasOwnProperty.call(patch || {}, alias)) continue;
+    const raw = patch?.[alias];
+    const key = normalizeSecondaryForModule(module, raw);
+    if (typeof raw !== "string" || !raw.trim() || !key) {
+      throw new TypeError(`grupo secundario invalido para module "${module}" em metadata.${alias}.`);
+    }
+    patchedKeys.add(key);
+  }
+  if (patchedKeys.size > 1) {
+    throw new TypeError(`grupo secundario conflitante para module "${module}" no patch de metadata.`);
+  }
+  if (patchedKeys.size === 1) {
+    return patchedKeys.values().next().value as string;
+  }
+
+  for (const alias of aliases) {
+    const key = normalizeSecondaryForModule(module, metadata[alias]);
+    if (key) return key;
+  }
+  throw new TypeError(`grupo secundario invalido ou ausente para module "${module}".`);
+}
+
+function editTagPairs(
+  module: ModuleKey,
+  _previousCategory: string,
+  nextCategory: TagPair,
+  metadata: Record<string, unknown>,
+  secondary: TagPair | null,
+): { tags: string[]; tagKeys: string[] } {
+  const pairs = new Map<string, string>();
+  appendTagPair(pairs, nextCategory.key, nextCategory.label);
+  if (secondary) appendTagPair(pairs, secondary.key, secondary.label);
+  if (module === "oportunidades") {
+    const areaLabel = normalizeWhitespace(
+      metadata.areaLabel || metadata.area || metadata.subcategoryLabel || metadata.subcategoria,
+    );
+    const areaKey = slugify(metadata.areaKey || metadata.subcategory || metadata.subcategoriaKey || areaLabel);
+    appendTagPair(pairs, areaKey, areaLabel || areaKey);
+  }
+
+  const labels = Array.isArray(metadata.tags) ? metadata.tags : [];
+  const keys = Array.isArray(metadata.tagKeys) ? metadata.tagKeys : [];
+  for (let index = 0; index < Math.max(labels.length, keys.length); index += 1) {
+    appendIndependentTagPair(pairs, module, keys[index], labels[index]);
+  }
+  const entries = Array.from(pairs.entries()).slice(0, 10);
+  return {
+    tagKeys: entries.map(([key]) => key),
+    tags: entries.map(([, label]) => label),
+  };
+}
+
+export interface TaxonomyEditPatch {
+  categoryKey: string;
+  categoryLabel: string;
+  metadata: Record<string, unknown>;
+}
+
+function validateCompraVendaPrimaryMetadataAliases(
+  categoryKey: string,
+  metadataPatch: Record<string, unknown> | null | undefined,
+): void {
+  if (!metadataPatch) return;
+  const aliases = [
+    "categoryKey",
+    "categoryLabel",
+    "categoriaKey",
+    "categoriaLabel",
+    "categoria",
+    "subcategoryKey",
+    "subcategoryLabel",
+    "subcategory",
+  ] as const;
+  for (const alias of aliases) {
+    if (!Object.prototype.hasOwnProperty.call(metadataPatch, alias)) continue;
+    const raw = metadataPatch[alias];
+    const normalized = normalizeCategoryForModule("compra-venda", raw);
+    if (typeof raw !== "string" || !raw.trim() || !normalized) {
+      throw new TypeError(`category alias invalido em metadata.${alias}.`);
+    }
+    if (normalized !== categoryKey) {
+      throw new TypeError(
+        `category conflitante em metadata.${alias}: esperado "${categoryKey}", recebido "${normalized}".`,
+      );
+    }
+  }
+}
+
+// Unico ponto de reconciliacao usado pelo handler de edit. A categoria muda
+// seus aliases derivados; area (oportunidades), acao (compra-venda) e tipo do
+// item (achados-perdidos) permanecem independentes.
+export function buildTaxonomyEditPatch(
+  moduleValue: unknown,
+  previousCategoryValue: unknown,
+  requestedCategoryValue: unknown,
+  currentMetadata: Record<string, unknown> | null | undefined,
+  metadataPatch?: Record<string, unknown> | null,
+): TaxonomyEditPatch {
+  const module = moduleValue as ModuleKey;
+  const categoryKey = normalizeCategoryForModule(module, requestedCategoryValue);
+  if (!categoryKey) {
+    throw new TypeError(`category invalida ou ausente para module "${String(moduleValue || "")}".`);
+  }
+  const categoryText = categoryLabel(categoryKey);
+  const previousCategory = normalizeCategoryForModule(module, previousCategoryValue);
+  if (module === "compra-venda") {
+    validateCompraVendaPrimaryMetadataAliases(categoryKey, metadataPatch);
+  }
+  const metadata = deepMergeMetadata(currentMetadata, metadataPatch);
+  const secondaryKey = metadataSecondaryKey(module, metadata, metadataPatch);
+  const secondaryText = secondaryLabelForModule(module, secondaryKey);
+
+  Object.assign(metadata, {
+    categoria: categoryText,
+    categoriaLabel: categoryText,
+    categoriaKey: categoryKey,
+    categoryKey,
+    categoryLabel: categoryText,
+  });
+
+  if (module === "eventos" || module === "caronas") {
+    Object.assign(metadata, {
+      subcategory: "",
+      subcategoryLabel: "",
+      subcategoria: "",
+      subcategoriaKey: "",
+    });
+  } else if (module === "moradia") {
+    Object.assign(metadata, {
+      subcategory: "",
+      subcategoryLabel: "",
+      subcategoria: "",
+      subcategoriaKey: "",
+      housingTypeKey: categoryKey,
+      housingTypeLabel: categoryText,
+    });
+  } else if (module === "compra-venda") {
+    Object.assign(metadata, {
+      subcategory: categoryKey,
+      subcategoryKey: categoryKey,
+      subcategoryLabel: categoryText,
+      subcategoria: secondaryText,
+      subcategoriaKey: secondaryKey,
+      actionKey: secondaryKey,
+      actionLabel: secondaryText,
+    });
+  } else if (module === "achados-perdidos") {
+    Object.assign(metadata, {
+      subcategory: secondaryKey,
+      subcategoryLabel: secondaryText,
+      subcategoria: secondaryText,
+      subcategoriaKey: secondaryKey,
+    });
+  }
+
+  if (module !== "moradia") {
+    delete metadata.housingTypeKey;
+    delete metadata.housingTypeLabel;
+  }
+
+  const tagPairs = editTagPairs(
+    module,
+    previousCategory,
+    { key: categoryKey, label: categoryText },
+    metadata,
+    secondaryKey ? { key: secondaryKey, label: secondaryText } : null,
+  );
+  metadata.tags = tagPairs.tags;
+  metadata.tagKeys = tagPairs.tagKeys;
+  return { categoryKey, categoryLabel: categoryText, metadata };
 }
