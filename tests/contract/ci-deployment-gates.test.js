@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -49,6 +50,212 @@ describe('CI and deployment safety contracts', () => {
     expect(essential).toContain('--file scripts/verify-privacy-schema.sql');
     expect(essential).toContain('Privacy schema query parsed locally with');
     expect(essential).toContain('supabase stop --no-backup');
+  });
+
+  test('verifies the current INVOKER facade architecture in production', () => {
+    const allApiRoles =
+      "array['anon', 'authenticated', 'service_role']::name[]";
+    const helpFacades = [
+      {
+        publicSignature: 'public.kc_create_help_request(jsonb)',
+        privateSignature: 'kc_private.kc_create_help_request(jsonb)',
+        language: 'plpgsql',
+        result:
+          'TABLE(out_id uuid, out_created_at timestamp with time zone)',
+        sourceMd5: '30d75cc85ec49d2dd323fc7f6943441f',
+        roles: allApiRoles,
+      },
+      {
+        publicSignature:
+          'public.kc_create_help_request_with_notification_claim(jsonb)',
+        privateSignature:
+          'kc_private.kc_create_help_request_with_notification_claim(jsonb)',
+        language: 'plpgsql',
+        result:
+          'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone)',
+        sourceMd5: '90ab2787cbba2ab8b5425c69e741997d',
+        roles: allApiRoles,
+      },
+      {
+        publicSignature:
+          'public.kc_create_help_request_with_notification_claim_v2(jsonb)',
+        privateSignature:
+          'kc_private.kc_create_help_request_with_notification_claim_v2(jsonb)',
+        language: 'plpgsql',
+        result:
+          'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone, out_data_subject_request jsonb, out_protocol text, out_reused_existing boolean)',
+        sourceMd5: '6c40621ea1a50b1fc16499aad622fc3c',
+        roles: allApiRoles,
+      },
+      {
+        publicSignature: 'public.kc_create_privacy_help_request_v1(jsonb)',
+        privateSignature:
+          'kc_private.kc_create_privacy_help_request_v1(jsonb)',
+        language: 'sql',
+        result:
+          'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone, out_data_subject_request jsonb, out_protocol text, out_reused_existing boolean, out_idempotency_replayed boolean)',
+        sourceMd5: '60d4cbd0945c7e25e0565f9392adc80b',
+        roles: "array['authenticated', 'service_role']::name[]",
+      },
+      {
+        publicSignature: 'public.kc_recover_privacy_help_request_v1(jsonb)',
+        privateSignature:
+          'kc_private.kc_recover_privacy_help_request_v1(jsonb)',
+        language: 'sql',
+        result:
+          'TABLE(out_id uuid, out_created_at timestamp with time zone, out_notification_claim text, out_notification_claim_expires_at timestamp with time zone, out_data_subject_request jsonb, out_protocol text, out_reused_existing boolean, out_idempotency_replayed boolean, out_recovery_state text)',
+        sourceMd5: 'f5c911da0382ae081e55fec0dad7cdb4',
+        roles: allApiRoles,
+      },
+    ];
+    const matrixStart = privacySchemaContract.indexOf(
+      'with help_invoker_contract('
+    );
+    const matrixTail = privacySchemaContract.slice(matrixStart);
+    const selectAfterMatrix = /\r?\nselect\r?\n/.exec(matrixTail);
+    const matrixEnd = selectAfterMatrix
+      ? matrixStart + selectAfterMatrix.index
+      : -1;
+    const matrix = privacySchemaContract.slice(matrixStart, matrixEnd);
+
+    expect(matrixStart).toBeGreaterThan(-1);
+    expect(matrixEnd).toBeGreaterThan(matrixStart);
+    expect(
+      matrix.match(/'public\.kc_[^']+\(jsonb\)'/g)
+    ).toHaveLength(helpFacades.length);
+
+    helpFacades.forEach((facade, index) => {
+      const rowStart = matrix.indexOf(`'${facade.publicSignature}'`);
+      const rowEnd = index + 1 < helpFacades.length
+        ? matrix.indexOf(`'${helpFacades[index + 1].publicSignature}'`)
+        : matrix.length;
+      const row = matrix.slice(rowStart, rowEnd);
+
+      expect(rowStart).toBeGreaterThan(-1);
+      expect(rowEnd).toBeGreaterThan(rowStart);
+      expect(row).toContain(`'${facade.privateSignature}'`);
+      expect(row).toContain(`'${facade.language}'`);
+      expect(row).toContain(`'${facade.result}'`);
+      expect(row).toContain(`'${facade.sourceMd5}'`);
+      expect(row).toContain(facade.roles);
+    });
+
+    const privacyHelpStart = privacySchemaContract.indexOf(
+      'pg_catalog.count(*) = 5'
+    );
+    const privacyHelpEnd = privacySchemaContract.indexOf(
+      'as privacy_help_idempotency_rpc_safe',
+      privacyHelpStart
+    );
+    const privacyHelpGate = privacySchemaContract.slice(
+      privacyHelpStart,
+      privacyHelpEnd
+    );
+    [
+      'contract_row.public_signature',
+      'contract_row.private_signature',
+      'contract_row.wrapper_source_md5',
+      'contract_row.required_roles',
+      'pg_get_function_identity_arguments',
+      'pg_get_function_result',
+      'pg_catalog.md5(wrapper_row.prosrc)',
+      'wrapper_row.provolatile',
+      'wrapper_row.proretset',
+      'wrapper_row.prokind',
+      'wrapper_row.proisstrict',
+      'wrapper_row.proleakproof',
+      'wrapper_row.proparallel',
+      'private_row.prosecdef',
+      'has_function_privilege',
+      'has_schema_privilege',
+      'acl_row.grantee = 0',
+    ].forEach((invariant) => expect(privacyHelpGate).toContain(invariant));
+    expect(privacyHelpGate).not.toContain(
+      'pg_catalog.lower(wrapper_row.prosrc)'
+    );
+
+    const barrierStart = privacySchemaContract.indexOf(
+      ') as postgrest_active_session_barrier,'
+    );
+    const barrierEnd = privacySchemaContract.indexOf(
+      'as postgrest_active_session_barrier_strict',
+      barrierStart
+    );
+    const barrierGate = privacySchemaContract.slice(barrierStart, barrierEnd);
+    const preRequestContract = {
+      publicSignature: 'public.kc_enforce_active_session_pre_request()',
+      privateSignature:
+        'kc_private.kc_enforce_active_session_pre_request_impl()',
+      workerRoles: ['anon', 'authenticated', 'service_role'],
+      configurationRole: 'authenticator',
+    };
+
+    expect(barrierStart).toBeGreaterThan(-1);
+    expect(barrierEnd).toBeGreaterThan(barrierStart);
+    expect(barrierGate).toContain(`'${preRequestContract.publicSignature}'`);
+    expect(barrierGate).toContain(`'${preRequestContract.privateSignature}'`);
+    preRequestContract.workerRoles.forEach((role) => {
+      expect(barrierGate).toContain(`('${role}'::name)`);
+    });
+    expect(barrierGate).toContain(`'${preRequestContract.configurationRole}'`);
+    [
+      'not wrapper_row.prosecdef',
+      'private_row.prosecdef',
+      "wrapper_row.provolatile = 's'",
+      "private_row.provolatile = 's'",
+      'not wrapper_row.proretset',
+      'not private_row.proretset',
+      "wrapper_row.prokind = 'f'",
+      "private_row.prokind = 'f'",
+      'not wrapper_row.proisstrict',
+      'not private_row.proisstrict',
+      'not wrapper_row.proleakproof',
+      'not private_row.proleakproof',
+      "wrapper_row.proparallel = 'u'",
+      "private_row.proparallel = 'u'",
+      "= 'plpgsql'",
+      "pg_catalog.pg_get_function_result(wrapper_row.oid) = 'void'",
+      "pg_catalog.pg_get_function_result(private_row.oid) = 'void'",
+      'pg_catalog.md5(wrapper_row.prosrc)',
+      'c3cb7706f615835cf90053a30b2700bc',
+      'pg_catalog.md5(private_row.prosrc)',
+      '935cbbe9291a31e21f764817783fa21c',
+      'has_function_privilege',
+      'has_schema_privilege',
+      'acl_row.grantee = 0',
+    ].forEach((invariant) => expect(barrierGate).toContain(invariant));
+    expect(barrierGate).not.toMatch(/\blike\b/i);
+  });
+
+  test('source pins reject the legacy false-positive mutations', () => {
+    const md5 = (value) => crypto.createHash('md5').update(value).digest('hex');
+    const legacyNormalize = (value) => value.toLowerCase().replace(/\s+/g, '');
+    const validErrcode = "errcode = '22023'";
+    const whitespaceMutatedErrcode = "errcode = '22 023'";
+
+    expect(legacyNormalize(validErrcode)).toBe(
+      legacyNormalize(whitespaceMutatedErrcode)
+    );
+    expect(md5(validErrcode)).not.toBe(md5(whitespaceMutatedErrcode));
+
+    const tokenOnlyNoop = [
+      'begin',
+      "/* auth.jwt() ->> 'role'; kc_is_current_session_active() */",
+      'null;',
+      'end;',
+    ].join(' ');
+    const legacyPreRequestGate = (source) => (
+      source.includes("auth.jwt() ->> 'role'")
+      && source.includes('kc_is_current_session_active()')
+      && !source.includes('request.path')
+      && !source.includes('is_anonymous')
+    );
+
+    expect(legacyPreRequestGate(tokenOnlyNoop)).toBe(true);
+    expect(md5(tokenOnlyNoop)).not.toBe('935cbbe9291a31e21f764817783fa21c');
+    expect(privacySchemaContract).toMatch(
+      /pg_catalog\.md5\(private_row\.prosrc\)\s*=\s*'935cbbe9291a31e21f764817783fa21c'/
+    );
   });
 
   test('type-checks every Edge Function with its deployment-specific Deno config', () => {
