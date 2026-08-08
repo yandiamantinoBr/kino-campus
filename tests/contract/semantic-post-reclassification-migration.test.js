@@ -4,14 +4,14 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MIGRATION_NAME = '20260808140000_semantic_post_reclassification.sql';
+const MIGRATION_NAME = '20260808152900_semantic_post_reclassification.sql';
 const migration = fs.readFileSync(path.join(ROOT, 'supabase/migrations', MIGRATION_NAME), 'utf8');
 const proof = fs.readFileSync(path.join(ROOT, 'tests/sql/semantic-post-reclassification-proof.sql'), 'utf8');
 const replayProof = fs.readFileSync(path.join(ROOT, 'tests/sql/semantic-post-reclassification-replay-proof.sql'), 'utf8');
 
 describe('semantic post reclassification migration', () => {
   test('executa depois das migrations de taxonomia e busca', () => {
-    expect(MIGRATION_NAME > '20260808134510_align_feed_cursor_remote_search.sql').toBe(true);
+    expect(MIGRATION_NAME > '20260808152845_align_feed_cursor_remote_search_20260808.sql').toBe(true);
   });
 
   test('declara exatamente 49 UUIDs completos e únicos', () => {
@@ -100,7 +100,7 @@ describe('semantic post reclassification migration', () => {
   });
 
   test('inclui proof SQL transacional com dois reruns e exemplos críticos', () => {
-    const includes = proof.match(/\\ir \.\.\/\.\.\/supabase\/migrations\/20260808140000_semantic_post_reclassification\.sql/g) || [];
+    const includes = proof.match(/\\ir \.\.\/\.\.\/supabase\/migrations\/20260808152900_semantic_post_reclassification\.sql/g) || [];
 
     expect(proof).toMatch(/\bbegin;\s/i);
     expect(proof).toMatch(/\brollback;\s*$/i);
@@ -111,7 +111,7 @@ describe('semantic post reclassification migration', () => {
   });
 
   test('inclui proof isolado de replay vazio, subset, idempotência e drift', () => {
-    const includes = replayProof.match(/\\ir \.\.\/\.\.\/supabase\/migrations\/20260808140000_semantic_post_reclassification\.sql/g) || [];
+    const includes = replayProof.match(/\\ir \.\.\/\.\.\/supabase\/migrations\/20260808152900_semantic_post_reclassification\.sql/g) || [];
 
     expect(replayProof).toMatch(/\bbegin;\s/i);
     expect(replayProof).toMatch(/\brollback;\s*$/i);

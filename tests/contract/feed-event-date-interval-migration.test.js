@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const migration = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260808120000_feed_event_interval_filters.sql'), 'utf8');
+const migration = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260808152842_feed_event_interval_filters_20260808.sql'), 'utf8');
 const proof = fs.readFileSync(path.join(ROOT, 'tests/sql/feed-event-date-interval-proof.sql'), 'utf8');
 
 describe('feed event interval migration', () => {

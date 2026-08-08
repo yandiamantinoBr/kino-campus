@@ -70,7 +70,7 @@ end;
 $empty_guard$;
 
 -- All 49 UUIDs are absent: migration must be a no-op, not a deployment error.
-\ir ../../supabase/migrations/20260808140000_semantic_post_reclassification.sql
+\ir ../../supabase/migrations/20260808152900_semantic_post_reclassification.sql
 
 do $empty_assertion$
 begin
@@ -98,7 +98,7 @@ values (
 alter table public.posts enable trigger user;
 
 -- One source row exists and 48 are absent: only the subset row is repaired.
-\ir ../../supabase/migrations/20260808140000_semantic_post_reclassification.sql
+\ir ../../supabase/migrations/20260808152900_semantic_post_reclassification.sql
 
 do $subset_assertion$
 begin
@@ -125,7 +125,7 @@ from public.posts
 where id = 'fbfaeb0f-a7f5-4ba0-a410-ca1f9b1dccbb'::uuid;
 
 -- Complete target plus 48 absent rows: rerun must be a fixed point.
-\ir ../../supabase/migrations/20260808140000_semantic_post_reclassification.sql
+\ir ../../supabase/migrations/20260808152900_semantic_post_reclassification.sql
 
 do $idempotency_assertion$
 begin

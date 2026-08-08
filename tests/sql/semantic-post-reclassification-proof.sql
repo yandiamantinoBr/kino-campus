@@ -80,8 +80,8 @@ begin
 end;
 $production_preflight$;
 
-\ir ../../supabase/migrations/20260808140000_semantic_post_reclassification.sql
-\ir ../../supabase/migrations/20260808140000_semantic_post_reclassification.sql
+\ir ../../supabase/migrations/20260808152900_semantic_post_reclassification.sql
+\ir ../../supabase/migrations/20260808152900_semantic_post_reclassification.sql
 
 do $proof$
 declare
