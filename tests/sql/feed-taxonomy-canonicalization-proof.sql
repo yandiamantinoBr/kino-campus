@@ -1,4 +1,4 @@
--- Run after 20260808123000_feed_taxonomy_canonicalization.sql.
+-- Run after 20260808152843_feed_taxonomy_canonicalization_20260808.sql.
 do $$
 begin
   if public.kc_feed_category_key('oportunidades', 'emprego') <> 'empregos' then

@@ -1,4 +1,4 @@
--- Run after 20260808120000_feed_event_interval_filters.sql.
+-- Run after 20260808152842_feed_event_interval_filters_20260808.sql.
 do $$
 declare
   v_now timestamptz := '2026-08-08 12:00:00-03'::timestamptz;

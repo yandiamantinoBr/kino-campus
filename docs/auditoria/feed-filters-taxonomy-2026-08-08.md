@@ -1,6 +1,6 @@
 # Auditoria de feed, filtros e taxonomia — 2026-08-08
 
-> **Estado deste documento:** auditoria e plano de correção. Nenhuma das 49 alterações semânticas descritas abaixo foi aplicada à produção nesta rodada. A migration `20260808140000` foi preparada e validada localmente, mas permanece sem execução no banco de produção.
+> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 está em produção. As migrations mecânicas `20260808152842`, `20260808152843` e `20260808152845` foram aplicadas e verificadas no banco de produção em 2026-08-08; elas preservaram 790 registros e a distribuição de status. A migration semântica `20260808152900`, com 49 alterações editoriais, permanece deliberadamente sem execução até a correção upstream do Cadu. A reconciliação explícita de dois conflitos residuais entre `posts.category` e seus metadados está codificada em `20260808152850`.
 
 ## Resumo executivo
 
@@ -21,6 +21,8 @@ A revisão semântica item a item do conjunto `published` identificou 49 correç
 - normalização ou limpeza explícita de datas somente nos UUIDs indicados;
 - limpeza de campos incompatíveis nos 5 movimentos de módulo;
 - nenhuma classificação fuzzy ou atualização em massa por texto.
+
+Além dessas 49 mudanças editoriais, a auditoria pós-rollout encontrou dois registros cuja coluna `category` já estava correta, mas `metadata.categoryKey`, `metadata.categoriaKey` e labels ainda apontavam para outra categoria válida. Eles não exigem reclassificação: exigem somente reconciliação fail-closed dos campos lidos pelo cliente. Essa correção separada está em [20260808152850_audited_category_metadata_reconciliation.sql](../../supabase/migrations/20260808152850_audited_category_metadata_reconciliation.sql).
 
 Se aplicada sem novo drift, a migration projeta 133 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`, preservando os 790 registros totais.
 
@@ -72,7 +74,7 @@ where status = 'published'
 group by module, category, visibility;
 ```
 
-Essas consultas descrevem o estado interno da tabela; elas não substituem um teste anônimo da RLS. O RPC de feed atualmente alinhado também possui regras próprias para `legacy_id`, `status` e `visibility`, documentadas em [20260808134510_align_feed_cursor_remote_search.sql](../../supabase/migrations/20260808134510_align_feed_cursor_remote_search.sql).
+Essas consultas descrevem o estado interno da tabela; elas não substituem um teste anônimo da RLS. O RPC de feed atualmente alinhado também possui regras próprias para `legacy_id`, `status` e `visibility`, documentadas em [20260808152845_align_feed_cursor_remote_search_20260808.sql](../../supabase/migrations/20260808152845_align_feed_cursor_remote_search_20260808.sql).
 
 ### Distribuição atual dos 137 `published`
 
@@ -128,16 +130,16 @@ Além dos 133 publicados, o conjunto corrigido termina com 1 registro `oportunid
 4. Separação entre:
    - **alta confiança**, quando o tipo editorial é inequívoco e há origem/alvo explícitos;
    - **ambíguo**, quando módulo, categoria, janela de inscrição ou natureza do card dependem da fonte oficial ou de decisão de produto.
-5. Codificação das 49 correções de alta confiança por UUID em [20260808140000_semantic_post_reclassification.sql](../../supabase/migrations/20260808140000_semantic_post_reclassification.sql), sem regras heurísticas.
+5. Codificação das 49 correções de alta confiança por UUID em [20260808152900_semantic_post_reclassification.sql](../../supabase/migrations/20260808152900_semantic_post_reclassification.sql), sem regras heurísticas.
 6. Captura de fingerprint apenas dos campos que a migration poderá sobrescrever. Um registro existente só é aceito se ainda estiver no estado de origem auditado ou no estado-alvo completo e idempotente.
-7. Validação local por contrato Jest, prova SQL de produção e prova de replay em banco vazio/subconjunto, sem executar a migration no projeto de produção.
+7. Validação local por contrato Jest, prova SQL de produção e prova de replay em banco vazio/subconjunto. As três migrations mecânicas foram então aplicadas e revalidadas em produção; a migration semântica permaneceu retida.
 
 ### Limitações
 
 - O snapshot é temporal. Uma edição posterior pode invalidar a precondição de um ou mais UUIDs; por isso o preflight deve ser repetido imediatamente antes do rollout.
 - A revisão item a item concentrou-se nos 137 `published`. Os 298 `hidden` foram usados como coorte interna e contagem de integridade, não como candidatos automáticos a republicação.
 - Títulos e descrições podem não conter toda a informação da página oficial. Datas ou natureza editorial incertas permanecem na fila manual.
-- Não houve escrita de produção, teste de cache pós-deploy nem smoke test contra a versão de produção já migrada, pois esse estado ainda não existe.
+- Houve escrita controlada de schema/dados mecânicos pelas três migrations já registradas, seguida de smoke test pós-deploy. A reclassificação semântica dos 49 UUIDs e a reconciliação dos dois conflitos residuais continuam separadas e protegidas por precondições explícitas.
 - A migration corrige dados já publicados; ela não elimina, sozinha, a causa upstream que pode recriar classificações erradas em novos lotes.
 
 ## Relação entre taxonomia e filtros
@@ -153,7 +155,7 @@ As invariantes funcionais são:
 - mudar de filtro deve reiniciar paginação/cursor e recompor anúncios sem alterar a ordem dos posts;
 - estados `hidden` e `deleted` nunca devem reaparecer por filtro, busca, cache ou “Carregar mais”.
 
-Os intervalos de eventos, a canonicalização estrutural e a busca remota são tratados, em ordem, por [20260808120000_feed_event_interval_filters.sql](../../supabase/migrations/20260808120000_feed_event_interval_filters.sql), [20260808123000_feed_taxonomy_canonicalization.sql](../../supabase/migrations/20260808123000_feed_taxonomy_canonicalization.sql) e [20260808134510_align_feed_cursor_remote_search.sql](../../supabase/migrations/20260808134510_align_feed_cursor_remote_search.sql). A migration das 49 correções vem depois delas.
+Os intervalos de eventos, a canonicalização estrutural e a busca remota são tratados, em ordem, por [20260808152842_feed_event_interval_filters_20260808.sql](../../supabase/migrations/20260808152842_feed_event_interval_filters_20260808.sql), [20260808152843_feed_taxonomy_canonicalization_20260808.sql](../../supabase/migrations/20260808152843_feed_taxonomy_canonicalization_20260808.sql) e [20260808152845_align_feed_cursor_remote_search_20260808.sql](../../supabase/migrations/20260808152845_align_feed_cursor_remote_search_20260808.sql). A migration das 49 correções vem depois delas.
 
 ## Ledger das 49 correções de alta confiança
 
@@ -255,7 +257,7 @@ Critério para liberar qualquer item dessa fila: abrir a fonte oficial, registra
 
 Para demonstrar a revisão uma a uma, a lista abaixo cobre os **137 UUIDs** do snapshot. Os campos mínimos foram reextraídos somente leitura em **2026-08-08 14:56:24.635215 UTC**. A quantidade e as distribuições agregadas por módulo, categoria e visibilidade coincidiram com o snapshot-base de 14:34:18.462341 UTC; adicionalmente, nenhum dos 137 registros apresentava `updated_at` posterior ao horário-base. Assim, o ledger é consistente com o snapshot sob o contrato normal de manutenção de `updated_at`. A reextração não muda o timestamp-base e não detectaria um writer que alterasse dados burlando esse campo. Qualquer edição posterior exige nova conferência.
 
-Disposição editorial: **49 `corrigir`**, **19 `revisão manual`** e **69 `sem alteração`**. “Sem alteração” significa que a revisão não encontrou correção de alta confiança no snapshot; não é garantia eterna nem dispensa revalidação de datas. “Corrigir” remete ao ledger detalhado e à migration explícita; “revisão manual” remete à seção de ambiguidades.
+Disposição editorial: **49 `corrigir`**, **2 `sincronizar metadados`**, **19 `revisão manual`** e **67 `sem alteração`**. “Sem alteração” significa que a revisão não encontrou correção de alta confiança no snapshot; não é garantia eterna nem dispensa revalidação de datas. “Corrigir” remete ao ledger semântico; “sincronizar metadados” preserva módulo/categoria/status e corrige apenas as superfícies divergentes lidas pelo cliente; “revisão manual” remete à seção de ambiguidades.
 
 | UUID | Título público | Módulo/categoria no snapshot | Visibilidade | Disposição |
 | --- | --- | --- | --- | --- |
@@ -294,7 +296,7 @@ Disposição editorial: **49 `corrigir`**, **19 `revisão manual`** e **69 `sem 
 | `68a0bbbc-e2ac-4792-b160-b7577a750d1b` | 3º ENFACO — Encontro de Fundações de Apoio do Centro-Oeste | `eventos/congressos` | `public` | **sem alteração** |
 | `6a43f20c-0b8b-472d-b43c-daa8c6b8cb38` | IX EGOEEP discute Engenharia de Produção na era da Inteligência Artificial | `eventos/congressos` | `public` | **sem alteração** |
 | `4150a6ca-9d5e-4522-98a9-973952893cc7` | IX Simpósio de Educação Inclusiva do CEPAE/UFG acontece em setembro | `eventos/congressos` | `public` | **sem alteração** |
-| `ce24a542-294c-4048-b0ea-2f2b4a435fe2` | XXX Semana de Filosofia da FAFIL/UFG: submissão de resumos prorrogada até 15/07 | `eventos/congressos` | `public` | **sem alteração** |
+| `ce24a542-294c-4048-b0ea-2f2b4a435fe2` | XXX Semana de Filosofia da FAFIL/UFG: submissão de resumos prorrogada até 15/07 | `eventos/congressos` | `public` | **sincronizar metadados** |
 | `e3c9c66f-85f5-4dac-aff2-ab91e70c564b` | 2ª edição do Conexões do Patrimônio celebra o Dia Nacional do Patrimônio Cultural | `eventos/culturais` | `public` | **sem alteração** |
 | `5485a5ae-ca68-4e31-bfbe-7908045faf42` | 80° Recital em Homenagem à Nhanhá do Couto acontece no Centro Cultural UFG | `eventos/culturais` | `public` | **sem alteração** |
 | `7bebc99a-8f12-4b55-b928-40c6c44bae24` | Café com Ciência: A Arte da Dinâmica Molecular | `eventos/culturais` | `public` | **revisão manual** |
@@ -332,7 +334,7 @@ Disposição editorial: **49 `corrigir`**, **19 `revisão manual`** e **69 `sem 
 | `b9b214e9-30a2-4a83-8037-e17ca2b8c5d1` | Seleção de Mestrado e Doutorado em Direito Agrário – Ingresso 2027 | `eventos/workshops` | `public` | **corrigir** |
 | `d8715365-d49c-4bb7-b331-5faa4f1cc458` | VII ENGOPE abre inscrições e submissões de trabalhos para edição de 2026 | `eventos/workshops` | `public` | **corrigir** |
 | `e02fc2b9-12b4-458d-a8dc-95b9c0510b49` | XXV Semana de História da UFG: Comunidades Tradicionais e Colonialidade | `eventos/workshops` | `public` | **corrigir** |
-| `2c139f6c-8d05-43f6-b242-85980428e0d7` | Bolsas AUIP para Dupla Titulação de Pós-Graduação | `oportunidades/bolsas` | `public` | **sem alteração** |
+| `2c139f6c-8d05-43f6-b242-85980428e0d7` | Bolsas AUIP para Dupla Titulação de Pós-Graduação | `oportunidades/bolsas` | `public` | **sincronizar metadados** |
 | `17d7d6ec-a70d-4ab1-ae04-847d9b0a43dd` | Bolsas do PPGMEC 2026/2: inscrições abrem em 08/08 | `oportunidades/bolsas` | `public` | **sem alteração** |
 | `7a3e040a-72cb-443f-803c-aa1749b0d738` | DAAD Brasil lança bolsas para graduação, mestrado e doutorado na Alemanha | `oportunidades/bolsas` | `public` | **sem alteração** |
 | `4f83362b-1af6-4b24-a521-0f242421b64e` | Mediação Pedagógica Inclusiva: inscrições para bolsistas e voluntários | `oportunidades/bolsas` | `public` | **sem alteração** |
@@ -429,7 +431,7 @@ O histórico contém combinações divergentes entre `posts.category`, `metadata
 
 Avisos institucionais, chamadas encerradas e matérias sobre processo podem ficar `published` quando não existe regra semântica de fechamento/ocultação. Fechamento por data não deve ser aplicado cegamente: oportunidade, evento e notícia usam datas diferentes, e alguns cards continuam úteis depois do prazo.
 
-## Garantias da migration `20260808140000`
+## Garantias da migration `20260808152900`
 
 A migration foi desenhada para ser explícita, transacional, idempotente e replay-safe:
 
@@ -462,10 +464,13 @@ Artefatos de prova:
 
 1. Entregar primeiro o código compatível de taxonomia/resolver e as validações do publisher.
 2. Aplicar as migrations na ordem temporal:
-   1. `20260808120000_feed_event_interval_filters.sql`;
-   2. `20260808123000_feed_taxonomy_canonicalization.sql`;
-   3. `20260808134510_align_feed_cursor_remote_search.sql`;
-   4. `20260808140000_semantic_post_reclassification.sql`.
+   1. `20260808152842_feed_event_interval_filters_20260808.sql`;
+   2. `20260808152843_feed_taxonomy_canonicalization_20260808.sql`;
+   3. `20260808152845_align_feed_cursor_remote_search_20260808.sql`;
+   4. `20260808152850_audited_category_metadata_reconciliation.sql`;
+   5. `20260808152900_semantic_post_reclassification.sql`.
+
+   As três primeiras já estão em produção. As duas últimas permanecem pendentes e devem ser aplicadas juntas somente depois do gate upstream do Cadu; o `supabase db push` atual não oferece limite por versão e não deve ser usado para tentar liberar apenas `152850`.
 3. Reexecutar a prova de produção; todos os UUIDs devem estar no alvo e a migration deve ser idempotente.
 4. Invalidar ou renovar caches de feed sem reintroduzir snapshots anteriores.
 5. Liberar writers somente depois das pós-condições.
@@ -473,11 +478,11 @@ Artefatos de prova:
 ### Smoke test pós-deploy
 
 - [ ] Conferir as contagens projetadas de 133 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`.
-- [ ] Verificar trilho superior, estado `is-overflow-end`, setas e rolagem por teclado/mouse/touch em eventos e oportunidades.
-- [ ] Validar filtros laterais de data e categoria, inclusive combinação com o trilho superior.
+- [x] Verificar trilho superior, estado `is-overflow-end`, setas e rolagem por mouse/touch em eventos e oportunidades; desktop e mobile foram validados no deploy `dfa34f97`.
+- [x] Validar filtros laterais de data e categoria, inclusive combinação com o trilho superior; `Palestras` e `Este mês` passaram, incluindo evento que atravessa a virada do mês.
 - [ ] Abrir amostras dos 5 movimentos de módulo e confirmar ausência de campos incompatíveis.
-- [ ] Validar singular/plural/acentos na busca e nas preferências.
-- [ ] Confirmar que troca de filtro reinicia cursor/paginação e que “Carregar mais” não duplica cards.
+- [x] Validar singular/plural/acentos na busca; `Tendencias` encontrou `Tendências em Agentes de IA` e não restaram raízes singulares conhecidas após a canonicalização mecânica.
+- [x] Confirmar que troca de filtro reinicia cursor/paginação e que “Carregar mais” não duplica cards; Eventos passou em 12/23/35 publicações com 2/4/7 anúncios, sempre um anúncio a cada cinco publicações e nunca anúncios consecutivos.
 - [ ] Testar moradia, compra-venda, caronas e achados-perdidos com fixtures, pois não havia `published` no snapshot.
 - [ ] Confirmar que `hidden`/`deleted` não aparecem para usuário anônimo nem autenticado sem permissão.
 - [ ] Observar logs de RPC, erros de schema, cache e publisher durante ao menos um lote completo do Cadu.
@@ -494,11 +499,14 @@ Artefatos de prova:
 
 ## Evidências versionáveis
 
-- [Migration das 49 correções](../../supabase/migrations/20260808140000_semantic_post_reclassification.sql)
-- [Filtro de data por intervalo de eventos](../../supabase/migrations/20260808120000_feed_event_interval_filters.sql)
+- [Migration das 49 correções](../../supabase/migrations/20260808152900_semantic_post_reclassification.sql)
+- [Filtro de data por intervalo de eventos](../../supabase/migrations/20260808152842_feed_event_interval_filters_20260808.sql)
 - [Proof SQL do intervalo de eventos](../../tests/sql/feed-event-date-interval-proof.sql)
-- [Canonicalização de taxonomia do feed](../../supabase/migrations/20260808123000_feed_taxonomy_canonicalization.sql)
-- [Alinhamento de cursor e busca remota](../../supabase/migrations/20260808134510_align_feed_cursor_remote_search.sql)
+- [Canonicalização de taxonomia do feed](../../supabase/migrations/20260808152843_feed_taxonomy_canonicalization_20260808.sql)
+- [Alinhamento de cursor e busca remota](../../supabase/migrations/20260808152845_align_feed_cursor_remote_search_20260808.sql)
+- [Reconciliação auditada de dois metadados residuais](../../supabase/migrations/20260808152850_audited_category_metadata_reconciliation.sql)
+- [Contrato da reconciliação residual](../../tests/contract/audited-category-metadata-reconciliation-migration.test.js)
+- [Proof SQL de replay da reconciliação residual](../../tests/sql/audited-category-metadata-reconciliation-replay-proof.sql)
 - [Contrato da migration semântica](../../tests/contract/semantic-post-reclassification-migration.test.js)
 - [Proof SQL de produção](../../tests/sql/semantic-post-reclassification-proof.sql)
 - [Proof SQL de replay](../../tests/sql/semantic-post-reclassification-replay-proof.sql)
@@ -512,4 +520,4 @@ Artefatos de prova:
 
 ## Conclusão
 
-As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. A migration protege contra drift, replay e estado parcial, mas a estabilidade depende de alinhar o publisher e todos os consumidores da taxonomia. Até a execução controlada do preflight e da migration no fluxo normal de deploy, **a produção continua no estado do snapshot e nenhuma publicação foi alterada por este trabalho**.
+As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. A migration protege contra drift, replay e estado parcial, mas a estabilidade depende de alinhar o publisher e todos os consumidores da taxonomia. O frontend e as três migrations mecânicas já foram entregues e validados; elas canonicalizaram o contrato técnico sem mudar a distribuição dos 790 estados. As 49 reclassificações editoriais e a reconciliação dos dois metadados residuais permanecem sem execução até o gate upstream do Cadu e o preflight final de produção.

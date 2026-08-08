@@ -25,7 +25,7 @@ begin;
 set local statement_timeout = '60s';
 set local lock_timeout = '5s';
 
-\ir ../../supabase/migrations/20260808134510_align_feed_cursor_remote_search.sql
+\ir ../../supabase/migrations/20260808152845_align_feed_cursor_remote_search_20260808.sql
 
 -- Fixtures exercise the read RPC, not write-side anti-spam policy. Disabling
 -- this one trigger is transactional and the final ROLLBACK restores its state.

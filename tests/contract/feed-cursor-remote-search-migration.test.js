@@ -10,7 +10,7 @@ const PREVIOUS = path.join(
 );
 const MIGRATION = path.join(
   ROOT,
-  'supabase/migrations/20260808134510_align_feed_cursor_remote_search.sql'
+  'supabase/migrations/20260808152845_align_feed_cursor_remote_search_20260808.sql'
 );
 const PROOF = path.join(ROOT, 'tests/sql/feed-cursor-remote-search-proof.sql');
 const LOCAL_FILTERS = path.join(ROOT, 'assets/js/api/kc-api.filters.js');
@@ -30,7 +30,7 @@ function cursorSignature(source) {
 
 describe('feed cursor remote search migration', () => {
   test('runs after taxonomy work and preserves the full RPC signature', () => {
-    expect(BigInt(path.basename(MIGRATION).slice(0, 14))).toBeGreaterThan(20260808123000n);
+    expect(BigInt(path.basename(MIGRATION).slice(0, 14))).toBeGreaterThan(20260808152843n);
     expect(cursorSignature(migration)).toBe(cursorSignature(previous));
     expect(migration).toContain(') returns jsonb');
     expect(migration).toContain('language plpgsql');
@@ -120,7 +120,7 @@ describe('feed cursor remote search migration', () => {
   test('ships a rollback-only SQL proof for positive and adversarial search cases', () => {
     expect(proof).toContain('begin;');
     expect(proof).toContain('rollback;');
-    expect(proof).toContain('20260808134510_align_feed_cursor_remote_search.sql');
+    expect(proof).toContain('20260808152845_align_feed_cursor_remote_search_20260808.sql');
     expect(proof).toContain('category-only feed search failed');
     expect(proof).toContain('cursos capacitações');
     expect(proof).toContain('cursos-capacitacoes');

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const migration = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260808123000_feed_taxonomy_canonicalization.sql'), 'utf8');
+const migration = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260808152843_feed_taxonomy_canonicalization_20260808.sql'), 'utf8');
 const proof = fs.readFileSync(path.join(ROOT, 'tests/sql/feed-taxonomy-canonicalization-proof.sql'), 'utf8');
 
 describe('feed taxonomy canonicalization migration', () => {
