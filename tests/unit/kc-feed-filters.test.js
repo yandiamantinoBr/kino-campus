@@ -87,7 +87,7 @@ describe('KCFeedFilters', () => {
     expect(utils.readPresetParam(params, 'datePreset', utils.getAllowedDatePresets('eventos'))).toBe('thisMonth');
   });
 
-  test('matchesDatePreset respeita recencia generica e datas de eventos com fallback', () => {
+  test('matchesDatePreset respeita recência genérica e intervalos de eventos', () => {
     require('../../assets/js/features/kc-feed-filters.js');
 
     const utils = window.KCFeedFilters;
@@ -107,6 +107,22 @@ describe('KCFeedFilters', () => {
       now,
     })).toBe(false);
 
+    expect(utils.getEventDateRange({
+      metadata: { data_fim_evento: '2026-04-10' },
+      created_at: '2026-04-06T08:00:00-03:00',
+    })).toBeNull();
+
+    expect(utils.getEventDateRange({
+      metadata: { data_evento: '2026-99-99' },
+    })).toBeNull();
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'eventos',
+      preset: 'thisMonth',
+      post: { metadata: { data_evento: '2026-03-28', data_fim_evento: '2026-04-03' } },
+      now,
+    })).toBe(true);
+
     expect(utils.matchesDatePreset({
       moduleKey: 'eventos',
       preset: 'next7d',
@@ -121,11 +137,27 @@ describe('KCFeedFilters', () => {
       moduleKey: 'eventos',
       preset: 'today',
       post: {
-        metadata: {},
+        metadata: { data_evento: '2026-04-01', data_fim_evento: '2026-04-10' },
         created_at: '2026-04-06T08:00:00-03:00',
       },
       now,
     })).toBe(true);
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'eventos',
+      preset: 'past',
+      post: {
+        metadata: { data_evento: '2026-04-01', data_fim_evento: '2026-04-10' },
+      },
+      now,
+    })).toBe(false);
+
+    expect(utils.matchesDatePreset({
+      moduleKey: 'eventos',
+      preset: 'today',
+      post: { metadata: {}, created_at: '2026-04-06T08:00:00-03:00' },
+      now,
+    })).toBe(false);
 
     expect(utils.matchesDatePreset({
       moduleKey: 'eventos',

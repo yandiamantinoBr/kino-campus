@@ -454,13 +454,25 @@
     return allowed.includes(normalized) ? normalized : '';
   }
 
-  function getEventDateKey(post) {
+  function getIsoEventDateKey(value) {
+    const text = String(value || '').trim();
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return '';
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    if (year < 1000 || month < 1 || month > 12 || day < 1) return '';
+    const maxDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return day <= maxDay ? match[0] : '';
+  }
+
+  function getEventDateRange(post) {
     const shared = getFeedFilterDateUtils();
-    if (shared && typeof shared.getEventDateKey === 'function') return shared.getEventDateKey(post);
+    if (shared && typeof shared.getEventDateRange === 'function') return shared.getEventDateRange(post);
 
     const source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
     const meta = getPostMeta(source);
-    const raw = [
+    const rawStart = [
       meta.data_evento,
       meta.dataEvento,
       meta.data,
@@ -468,9 +480,29 @@
       source.dataEvento,
       source.data,
     ].find((entry) => String(entry || '').trim());
-    const text = String(raw || '').trim();
-    if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
-    return getDateKeyInZone(source.created_at || source.createdAt || source.timestamp || null);
+    const rawEnd = [
+      meta.data_fim_evento,
+      meta.dataFimEvento,
+      meta.data_fim,
+      meta.dataFim,
+      source.data_fim_evento,
+      source.dataFimEvento,
+      source.data_fim,
+      source.dataFim,
+    ].find((entry) => String(entry || '').trim());
+    const parsedStart = getIsoEventDateKey(rawStart);
+    const parsedEnd = getIsoEventDateKey(rawEnd);
+    if (!parsedStart) return null;
+    const startKey = parsedStart;
+    const endKey = parsedEnd && parsedEnd >= startKey ? parsedEnd : startKey;
+    return { startKey, endKey };
+  }
+
+  function getEventDateKey(post) {
+    const shared = getFeedFilterDateUtils();
+    if (shared && typeof shared.getEventDateKey === 'function') return shared.getEventDateKey(post);
+    const range = getEventDateRange(post);
+    return range ? range.startKey : '';
   }
 
   function matchesDatePresetFilter(options) {
@@ -485,18 +517,35 @@
     const todayKey = getCurrentDateKey(opt.now || new Date());
     if (!todayKey) return true;
 
-    const createdKey = opt.createdKey || getDateKeyInZone(opt.createdAt || opt.created_at || null);
-    const eventKey = opt.eventKey || getEventDateKey(opt.post || opt);
-    const candidateKey = moduleKey === 'eventos' ? eventKey : createdKey;
+    if (moduleKey === 'eventos') {
+      const detectedRange = opt.eventRange || getEventDateRange(opt.post || opt);
+      const startKey = opt.eventKey || (detectedRange && detectedRange.startKey) || '';
+      const requestedEndKey = opt.eventEndKey || (detectedRange && detectedRange.endKey) || startKey;
+      const endKey = requestedEndKey >= startKey ? requestedEndKey : startKey;
+      if (!startKey) return false;
+
+      if (preset === 'today') return startKey <= todayKey && endKey >= todayKey;
+      if (preset === 'next7d') return startKey <= shiftDateKey(todayKey, 6) && endKey >= todayKey;
+      if (preset === 'thisMonth') {
+        const monthStart = String(todayKey).slice(0, 7) + '-01';
+        const parts = monthStart.split('-').map(Number);
+        const nextMonthStart = parts[1] === 12
+          ? (parts[0] + 1) + '-01-01'
+          : parts[0] + '-' + String(parts[1] + 1).padStart(2, '0') + '-01';
+        const monthEnd = shiftDateKey(nextMonthStart, -1);
+        return startKey <= monthEnd && endKey >= monthStart;
+      }
+      if (preset === 'past') return endKey < todayKey;
+      return true;
+    }
+
+    const candidateKey = opt.createdKey || getDateKeyInZone(opt.createdAt || opt.created_at || null);
     if (!candidateKey) return false;
 
     if (preset === 'today') return candidateKey === todayKey;
     if (preset === 'last3d') return candidateKey >= shiftDateKey(todayKey, -2) && candidateKey <= todayKey;
     if (preset === 'last7d') return candidateKey >= shiftDateKey(todayKey, -6) && candidateKey <= todayKey;
     if (preset === 'last30d') return candidateKey >= shiftDateKey(todayKey, -29) && candidateKey <= todayKey;
-    if (preset === 'next7d') return candidateKey >= todayKey && candidateKey <= shiftDateKey(todayKey, 6);
-    if (preset === 'thisMonth') return String(candidateKey).slice(0, 7) === String(todayKey).slice(0, 7);
-    if (preset === 'past') return candidateKey < todayKey;
     return true;
   }
 
@@ -508,12 +557,12 @@
 
     if (datePreset) {
       const createdAt = post && (post.created_at || post.createdAt || post.timestamp || null);
-      const eventDate = getEventDateKey(post);
+      const eventRange = getEventDateRange(post);
       if (!matchesDatePresetFilter({
         moduleKey,
         preset: datePreset,
         createdAt,
-        eventKey: eventDate,
+        eventRange,
         post,
       })) {
         return false;
@@ -709,6 +758,7 @@
     matchesDatePresetFilter,
     normalizeDatePreset,
     getEventDateKey,
+    getEventDateRange,
     getDateKeyInZone,
     getCurrentDateKey,
     normalizeFilterText,

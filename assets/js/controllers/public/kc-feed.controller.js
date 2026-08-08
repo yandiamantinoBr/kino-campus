@@ -66,6 +66,31 @@
     return next;
   }
 
+  function getCoreFilterState() {
+    try {
+      if (!window.kcFilters || typeof window.kcFilters.getState !== 'function') return { category: '', query: '' };
+      const core = window.kcFilters.getState() || {};
+      const rawCategory = String(core.category || '').trim();
+      const canonical = typeof window.kcFilters.canonicalCategory === 'function'
+        ? window.kcFilters.canonicalCategory(rawCategory)
+        : rawCategory.toLowerCase();
+      return {
+        category: (!canonical || canonical === 'toda' || canonical === 'todas') ? '' : rawCategory,
+        query: String(core.query || '').trim(),
+      };
+    } catch (_) {
+      return { category: '', query: '' };
+    }
+  }
+
+  function withCoreCategory(params, category) {
+    const next = sanitizeRequestParams(params);
+    const rawCategory = String(category || '').trim();
+    if (rawCategory) next.category = rawCategory;
+    else delete next.category;
+    return sanitizeRequestParams(next);
+  }
+
   function getRequestParamsKey(params) {
     const normalized = sanitizeRequestParams(params);
     return Object.keys(normalized).length ? JSON.stringify(normalized) : '';
@@ -398,11 +423,13 @@
     const pageModule = opt.pageModule || (moduleKeys.length === 1 ? moduleKeys[0] : '') || '';
     const limit = (opt.limit != null) ? Math.max(1, parseInt(String(opt.limit), 10) || POSTS_LIMIT) : POSTS_LIMIT;
     const useRealtime = opt.realtime !== false;
-    const searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : '';
+    const initialCoreFilter = getCoreFilterState();
+    let searchQuery = (opt.q && String(opt.q).trim()) ? String(opt.q).trim() : initialCoreFilter.query;
     const tagFilter = (opt.tag && String(opt.tag).trim()) ? String(opt.tag).trim() : '';
     const sortBy = String(opt.sortBy || 'recentes');
-    const initialRequestParams = sanitizeRequestParams(
-      typeof opt.getRequestParams === 'function' ? opt.getRequestParams() : opt.requestParams
+    const initialRequestParams = withCoreCategory(
+      typeof opt.getRequestParams === 'function' ? opt.getRequestParams() : opt.requestParams,
+      initialCoreFilter.category
     );
 
     // keepExisting: true permite múltiplos pagers na mesma página (ex: abas Destaques/Recentes)
@@ -460,6 +487,7 @@
       freshnessTimer: null,
       freshnessUnsub: null,
       requestParams: initialRequestParams,
+      requestGeneration: 0,
     };
     const pagePath = String(window.location.pathname || '').trim() || '/';
 
@@ -728,14 +756,18 @@
       if (state.destroyed || state.loading) return;
       const age = state.snapshotAge || (Date.now() - (state.lastSnapshotAt || 0));
       if (age < FEED_REVALIDATE_COOLDOWN_MS) return;
+      const requestGeneration = state.requestGeneration;
+      const requestQuery = searchQuery;
+      const requestParams = { ...state.requestParams };
 
       try {
-        const response = await fetchPostsByModule(moduleKeys, null, limit, searchQuery, tagFilter, {
+        const response = await fetchPostsByModule(moduleKeys, null, limit, requestQuery, tagFilter, {
           forceNetwork: true,
           pathname: pagePath,
           sortBy,
-          requestParams: state.requestParams,
+          requestParams,
         });
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
 
         let userRaw = [];
@@ -906,6 +938,9 @@
 
     async function loadNextPage() {
       if (state.loading || state.done || state.destroyed || (!state.hasMore && state.hydrated)) return;
+      const requestGeneration = state.requestGeneration;
+      const requestQuery = searchQuery;
+      const requestParams = { ...state.requestParams };
       state.loading = true;
       state.lastError = null;
       /* Limpa placeholder estático do HTML na primeira carga */
@@ -917,11 +952,12 @@
       const requestCursor = state.nextCursor || null;
 
       try {
-        const response = await fetchPostsByModule(moduleKeys, requestCursor, limit, searchQuery, tagFilter, {
+        const response = await fetchPostsByModule(moduleKeys, requestCursor, limit, requestQuery, tagFilter, {
           pathname: pagePath,
           sortBy,
-          requestParams: state.requestParams,
+          requestParams,
         });
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
         const dbPosts = Array.isArray(response && response.posts) ? response.posts : [];
         const nextCursor = response && response.nextCursor ? String(response.nextCursor) : null;
         const hasMore = !!(response && response.hasMore === true);
@@ -974,6 +1010,7 @@
         }
         persistSnapshot();
       } catch (err) {
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
         state.lastError = err;
         console.error('[KCControllers] Falha ao carregar posts do feed.', {
           cursor: requestCursor,
@@ -983,6 +1020,7 @@
         });
         setStatus('error', 'Não foi possível carregar os posts. Tente novamente.');
       } finally {
+        if (state.destroyed || requestGeneration !== state.requestGeneration) return;
         state.loading = false;
         if (state.status !== 'error' && !state.done) setStatus('idle', '');
       }
@@ -1025,6 +1063,30 @@
       state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
     };
     let api = null;
+    let coreFilterTimer = null;
+
+    function onCoreFilterChange(event) {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : getCoreFilterState();
+      const rawCategory = String(detail.category || '').trim();
+      const canonicalCategory = window.kcFilters && typeof window.kcFilters.canonicalCategory === 'function'
+        ? window.kcFilters.canonicalCategory(rawCategory)
+        : rawCategory.toLowerCase();
+      const nextCategory = (!canonicalCategory || canonicalCategory === 'toda' || canonicalCategory === 'todas') ? '' : rawCategory;
+      const nextQuery = String(detail.query || '').trim();
+      const currentCategory = String(state.requestParams.category || '').trim();
+      if (nextCategory === currentCategory && nextQuery === searchQuery) return;
+
+      if (coreFilterTimer) window.clearTimeout(coreFilterTimer);
+      const delay = detail.reason === 'query' ? 220 : 0;
+      coreFilterTimer = window.setTimeout(function () {
+        coreFilterTimer = null;
+        if (!api || state.destroyed) return;
+        api.refresh({
+          q: nextQuery,
+          requestParams: withCoreCategory(state.requestParams, nextCategory),
+        });
+      }, delay);
+    }
 
     function pauseForBfcache() {
       if (state.revalidateTimer) {
@@ -1048,6 +1110,7 @@
     function destroy() {
       if (state.destroyed) return;
       state.destroyed = true;
+      state.requestGeneration += 1;
       if (state.revalidateTimer) {
         clearTimeout(state.revalidateTimer);
         state.revalidateTimer = null;
@@ -1055,6 +1118,10 @@
       if (state.freshnessTimer) {
         clearTimeout(state.freshnessTimer);
         state.freshnessTimer = null;
+      }
+      if (coreFilterTimer) {
+        window.clearTimeout(coreFilterTimer);
+        coreFilterTimer = null;
       }
 
       try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) { }
@@ -1064,6 +1131,7 @@
       try { window.removeEventListener('pageshow', onPageShow); } catch (_) { }
       try { window.removeEventListener('focus', onFocus); } catch (_) { }
       try { document.removeEventListener('visibilitychange', onVisibility); } catch (_) { }
+      try { document.removeEventListener('kc:feed-core-filter-change', onCoreFilterChange); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
@@ -1102,6 +1170,7 @@
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('kc:feed-core-filter-change', onCoreFilterChange);
     if (window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
       state.freshnessUnsub = window.KCPostFreshness.subscribe(handlePostChange);
     }
@@ -1112,18 +1181,9 @@
         window.KCPullToRefresh.init({
           container: document.body,
           onRefresh: () => {
-            // Invalidate cache and reload first page
-            invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
-            state.cursor = null;
-            state.nextCursor = null;
-            state.hasMore = true;
-            state.done = false;
-            state.renderedPosts = [];
-            state.seenIds.clear();
-            container.innerHTML = '';
-            clearSnapshot();
-            clearPendingRealtime();
-            loadNextPage();
+            if (api && typeof api.refresh === 'function') {
+              api.refresh({ requestParams: state.requestParams, reason: 'pull-to-refresh' });
+            }
           }
         });
       } catch (e) {
@@ -1144,10 +1204,15 @@
       retry: loadNextPage,
       refresh: function (nextOptions) {
         const cfg = (nextOptions && typeof nextOptions === 'object' && !Array.isArray(nextOptions)) ? nextOptions : {};
+        state.requestGeneration += 1;
         const previousKey = getSnapshotKey();
         invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, state.requestParams);
+        if (Object.prototype.hasOwnProperty.call(cfg, 'q')) {
+          searchQuery = String(cfg.q || '').trim();
+        }
         if (Object.prototype.hasOwnProperty.call(cfg, 'requestParams')) {
-          state.requestParams = sanitizeRequestParams(cfg.requestParams);
+          const activeCore = getCoreFilterState();
+          state.requestParams = withCoreCategory(cfg.requestParams, activeCore.category);
         }
         state.cursor = null;
         state.nextCursor = null;
@@ -1168,7 +1233,7 @@
         setStatus('idle', '');
         loadNextPage();
       },
-      getState: () => ({ ...state, requestParams: { ...state.requestParams } }),
+      getState: () => ({ ...state, query: searchQuery, requestParams: { ...state.requestParams } }),
       destroy,
     };
     activePager = api;

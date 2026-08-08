@@ -19,14 +19,16 @@
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $all(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
 
-  /* ── Data do evento de um post (usado para anotar cards do feed) ── */
-  function getEventDate(post) {
-    // Usa data_evento da metadata (campo do formulário) ou data/hora, fallback para created_at
-    var m = post.metadata || {};
-    var d = m.data_evento || m.data || null;
-    if (d && /^\d{4}-\d{2}-\d{2}/.test(String(d))) return String(d).slice(0, 10);
-    if (post.created_at) return String(post.created_at).slice(0, 10);
-    return null;
+  /* ── Intervalo do evento de um post (usado para anotar cards do feed) ── */
+  function getEventDateRange(post) {
+    var utils = getFeedFilterUtils();
+    if (utils && typeof utils.getEventDateRange === 'function') return utils.getEventDateRange(post);
+    var m = post && post.metadata || {};
+    var start = String(m.data_evento || m.data || '').slice(0, 10);
+    var end = String(m.data_fim_evento || m.data_fim || start).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(end) || end < start) end = start;
+    return { startKey: start, endKey: end };
   }
 
   /* ── Estado do feed ───────────────────────────────────── */
@@ -93,7 +95,7 @@
         moduleKey: 'eventos',
         preset: feedState.datePreset,
         eventKey: card.getAttribute('data-kc-event-date') || '',
-        createdAt: card.getAttribute('data-kc-created-at') || ''
+        eventEndKey: card.getAttribute('data-kc-event-end-date') || ''
       });
     };
   }
@@ -147,9 +149,10 @@
         var cards = Array.from(container.querySelectorAll('.kc-card')).slice(-posts.length);
         cards.forEach(function (card, index) {
           var post = posts[index] || {};
-          var eventDate = getEventDate(post);
+          var eventRange = getEventDateRange(post);
           var createdAt = post.created_at || post.createdAt || post.timestamp || '';
-          if (eventDate && !card.getAttribute('data-kc-event-date')) card.setAttribute('data-kc-event-date', eventDate);
+          if (eventRange && !card.getAttribute('data-kc-event-date')) card.setAttribute('data-kc-event-date', eventRange.startKey);
+          if (eventRange && !card.getAttribute('data-kc-event-end-date')) card.setAttribute('data-kc-event-end-date', eventRange.endKey);
           if (createdAt && !card.getAttribute('data-kc-created-at')) card.setAttribute('data-kc-created-at', String(createdAt));
         });
       }

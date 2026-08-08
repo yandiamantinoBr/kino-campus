@@ -38,6 +38,27 @@
     });
   }
 
+  function getSearchInput() {
+    return document.getElementById(state.opts.searchInputId) || document.getElementById('searchInput');
+  }
+
+  function notifyCoreFilterChange(reason) {
+    const detail = {
+      category: state.category,
+      query: state.query,
+      reason: String(reason || 'apply'),
+    };
+    try {
+      document.dispatchEvent(new CustomEvent('kc:feed-core-filter-change', { detail }));
+    } catch (_) {
+      try {
+        const event = document.createEvent('CustomEvent');
+        event.initCustomEvent('kc:feed-core-filter-change', false, false, detail);
+        document.dispatchEvent(event);
+      } catch (_ignored) { /* unsupported legacy DOM */ }
+    }
+  }
+
   function normalizeText(str) {
     if (KCUtils && typeof KCUtils.normalizeText === 'function') return KCUtils.normalizeText(str);
     return (str || "")
@@ -164,6 +185,7 @@
     }
     syncCoreUrlState();
     apply();
+    notifyCoreFilterChange('category');
   }
 
   function bindCategoryLink(el) {
@@ -243,7 +265,7 @@
 
     state.opts = { ...DEFAULTS, ...(options || {}) };
 
-    const searchInput = document.getElementById(state.opts.searchInputId);
+    const searchInput = getSearchInput();
     let originalTabs = document.querySelectorAll(state.opts.tabsSelector);
 
     // Sem tabs, não é esse modo
@@ -260,6 +282,7 @@
         state.query = e.target.value || "";
         syncCoreUrlState();
         apply();
+        notifyCoreFilterChange('query');
       });
     }
 
@@ -321,6 +344,7 @@
 
     state.ready = true;
     apply();
+    notifyCoreFilterChange('init');
   }
 
   // API pública
@@ -342,10 +366,11 @@
 
     setQuery: function (q) {
       state.query = q || '';
-      const input = document.getElementById(state.opts.searchInputId);
+      const input = getSearchInput();
       if (input && input.value !== (q || '')) input.value = q || '';
       syncCoreUrlState();
       apply();
+      notifyCoreFilterChange('query');
     },
 
     getState: function () {
@@ -357,14 +382,15 @@
   window.filterPosts = function (queryOverride) {
     if (typeof queryOverride === "string") {
       state.query = queryOverride;
-      const input = document.getElementById(state.opts.searchInputId);
+      const input = getSearchInput();
       if (input && input.value !== queryOverride) input.value = queryOverride;
     } else {
-      const input = document.getElementById(state.opts.searchInputId);
+      const input = getSearchInput();
       if (input) state.query = input.value || "";
     }
     syncCoreUrlState();
     apply();
+    notifyCoreFilterChange('query');
   };
 
   // Auto-init por atributo no body

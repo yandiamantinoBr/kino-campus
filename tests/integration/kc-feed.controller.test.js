@@ -251,6 +251,123 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
     expect(container.querySelector('[data-kc-feed-error="renderer-unavailable"]')).not.toBeNull();
     expect(container.textContent).toContain('Não foi possível carregar as publicações');
   });
+
+  test('inclui categoria superior na primeira página e atualiza a consulta ao trocar o chip', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    const coreState = { category: 'palestras', query: '' };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ ...coreState })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: 'eventos',
+      category: 'palestras',
+    }));
+
+    coreState.category = 'culturais';
+    document.dispatchEvent(new CustomEvent('kc:feed-core-filter-change', {
+      detail: { category: 'culturais', query: '', reason: 'category' },
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: 'eventos',
+      category: 'culturais',
+    }));
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('descarta resposta antiga quando o filtro muda durante uma requisição', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo}</article>`),
+    };
+    const coreState = { category: 'palestras', query: '' };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ ...coreState })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    let resolveOldRequest;
+    const oldRequest = new Promise((resolve) => { resolveOldRequest = resolve; });
+    window.KCAPI.getFeedCursor
+      .mockImplementationOnce(() => oldRequest)
+      .mockResolvedValueOnce({
+        posts: [{ id: 'new-post', titulo: 'Resultado cultural', status: 'published' }],
+        nextCursor: null,
+        hasMore: false,
+      });
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    coreState.category = 'culturais';
+    document.dispatchEvent(new CustomEvent('kc:feed-core-filter-change', {
+      detail: { category: 'culturais', query: '', reason: 'category' },
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(document.getElementById('feed-container').textContent).toContain('Resultado cultural');
+    resolveOldRequest({
+      posts: [{ id: 'old-post', titulo: 'Resultado antigo', status: 'published' }],
+      nextCursor: null,
+      hasMore: false,
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.getElementById('feed-container').textContent).not.toContain('Resultado antigo');
+    expect(pager.getState().requestGeneration).toBe(1);
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('propaga busca local ao pager com debounce', async () => {
+    jest.useFakeTimers();
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    const coreState = { category: 'todas', query: '' };
+    window.kcFilters = {
+      getState: jest.fn(() => ({ ...coreState })),
+      canonicalCategory: jest.fn((value) => String(value || '').toLowerCase()),
+      apply: jest.fn(),
+    };
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await Promise.resolve();
+    coreState.query = 'agentes de ia';
+    document.dispatchEvent(new CustomEvent('kc:feed-core-filter-change', {
+      detail: { category: 'todas', query: coreState.query, reason: 'query' },
+    }));
+    jest.advanceTimersByTime(220);
+    await Promise.resolve();
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: 'eventos',
+      q: 'agentes de ia',
+    }));
+
+    pager.destroy();
+    delete window.KCUtils;
+    jest.useRealTimers();
+  });
 });
 
 describe('kc-feed.controller — anti-duplication Set behavior', () => {

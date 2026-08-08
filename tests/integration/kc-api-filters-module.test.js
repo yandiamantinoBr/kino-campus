@@ -72,6 +72,7 @@ describe('kc-api.filters.js - module contract', () => {
       'getCurrentDateKey',
       'getDateKeyInZone',
       'getEventDateKey',
+      'getEventDateRange',
       'matchesAdvancedRequestParams',
       'matchesDatePresetFilter',
       'normalizeDatePreset',
@@ -118,22 +119,23 @@ describe('kc-api.filters.js - module contract', () => {
     }
   });
 
-  test('filtra eventos por data_evento e usa created_at como fallback', () => {
+  test('filtra eventos pelo intervalo e não usa created_at como data do evento', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-06T12:00:00-03:00'));
 
     try {
       const posts = [
         { id: 'event-next', module: 'eventos', metadata: { data_evento: '2026-04-10' }, created_at: '2026-04-01T09:00:00-03:00' },
-        { id: 'event-fallback-today', module: 'eventos', metadata: {}, created_at: '2026-04-06T08:30:00-03:00' },
+        { id: 'event-ongoing', module: 'eventos', metadata: { data_evento: '2026-04-01', data_fim_evento: '2026-04-10' }, created_at: '2026-04-01T08:30:00-03:00' },
+        { id: 'event-no-date', module: 'eventos', metadata: {}, created_at: '2026-04-06T08:30:00-03:00' },
         { id: 'event-past', module: 'eventos', metadata: { data: '2026-04-02' }, created_at: '2026-04-02T08:30:00-03:00' },
       ];
 
       const next7d = filters.filterPosts(posts, { module: 'eventos', datePreset: 'next7d' });
       const today = filters.filterPosts(posts, { module: 'eventos', datePreset: 'today' });
 
-      expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-fallback-today']);
-      expect(today.map((post) => post.id)).toEqual(['event-fallback-today']);
+      expect(next7d.map((post) => post.id)).toEqual(['event-next', 'event-ongoing']);
+      expect(today.map((post) => post.id)).toEqual(['event-ongoing']);
     } finally {
       jest.useRealTimers();
     }
