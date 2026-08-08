@@ -120,6 +120,40 @@ Deno.test("Cadu mapper prioritizes typed semantic date roles over noisy text and
   assert.equal(event.row.expires_at, "2099-08-01T02:59:59.999Z");
 });
 
+Deno.test("Cadu mapper never completes a partial semantic event role from unrelated text", () => {
+  const startOnly = mapItemToPost({
+    module: "eventos",
+    title: "Palestra com papel semantico parcial",
+    description:
+      "Inscricoes de 10 a 14 de junho de 2099. A palestra acontece em 20 de junho.",
+    dates: {
+      semanticDateContractVersion: 0,
+      eventStartsAt: "2099-06-20",
+      eventEndsAt: null,
+    },
+    sourceUrl: "https://eventos.ufg.br/e/palestra-semantica",
+    sourceId: "eventos:palestra-semantica",
+  });
+  assert.equal(startOnly.row.metadata.data_evento, "2099-06-20");
+  assert.equal(startOnly.row.metadata.data_fim_evento, "");
+  assert.equal(startOnly.row.expires_at, "2099-06-21T02:59:59.999Z");
+
+  const explicitClear = mapItemToPost({
+    module: "eventos",
+    title: "Evento aguardando revisao temporal",
+    description: "Agenda secundaria de 10 a 14 de junho de 2099.",
+    dates: {
+      eventStartsAt: null,
+      eventEndsAt: null,
+    },
+    sourceUrl: "https://eventos.ufg.br/e/revisao-temporal",
+    sourceId: "eventos:revisao-temporal",
+  });
+  assert.equal(explicitClear.row.metadata.data_evento, "");
+  assert.equal(explicitClear.row.metadata.data_fim_evento, "");
+  assert.equal(explicitClear.row.expires_at, undefined);
+});
+
 Deno.test("Cadu mapper normalizes snake-case and top-level semantic date aliases", () => {
   const opportunity = mapItemToPost({
     module: "oportunidades",

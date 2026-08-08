@@ -172,6 +172,24 @@ function normalizeSemanticDates(item: CaduItem): Record<string, string> {
   return normalized;
 }
 
+function hasExplicitSemanticEventRole(item: CaduItem): boolean {
+  const itemRecord = item as Record<string, unknown>;
+  const dates = item.dates && typeof item.dates === "object" && !Array.isArray(item.dates)
+    ? item.dates as Record<string, unknown>
+    : {};
+  const aliases: Array<[Record<string, unknown>, string]> = [
+    [dates, "eventStartsAt"],
+    [dates, "event_starts_at"],
+    [dates, "eventEndsAt"],
+    [dates, "event_ends_at"],
+    [itemRecord, "eventStartsAt"],
+    [itemRecord, "event_starts_at"],
+    [itemRecord, "eventEndsAt"],
+    [itemRecord, "event_ends_at"],
+  ];
+  return aliases.some(([source, key]) => Object.prototype.hasOwnProperty.call(source, key));
+}
+
 function localDateContext(text: string, index: number, length: number): string {
   const minStart = Math.max(0, index - 120);
   const maxEnd = Math.min(text.length, index + length + 120);
@@ -703,19 +721,21 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     const gratuito = item.gratuito !== undefined ? !!item.gratuito : true;
     if (gratuito) price = 0;
 
-    // Datas: explicitas tem prioridade; senao tenta intervalo e data unica do texto.
-    let dataEvento = semanticDates.eventStartsAt
-      || isoDateFromAny(item.dateStart)
-      || parseBrazilianDate(item.dateStart);
-    let dataFim = semanticDates.eventEndsAt
-      || isoDateFromAny(item.dateEnd)
-      || parseBrazilianDate(item.dateEnd);
-    if (!dataEvento || !dataFim) {
+    // A presença de qualquer papel semântico torna o contrato autoritativo.
+    // Nunca complete a outra ponta com um intervalo textual secundário: ele
+    // pode ser prazo, resultado ou uma atividade diferente. O fallback legado
+    // só é permitido quando nenhum papel semântico foi fornecido.
+    const hasSemanticEventRole = hasExplicitSemanticEventRole(item);
+    let dataEvento = semanticDates.eventStartsAt || "";
+    let dataFim = semanticDates.eventEndsAt || "";
+    if (!hasSemanticEventRole) {
+      dataEvento = isoDateFromAny(item.dateStart) || parseBrazilianDate(item.dateStart);
+      dataFim = isoDateFromAny(item.dateEnd) || parseBrazilianDate(item.dateEnd);
       const range = parseDateRange(fullText);
       if (!dataEvento && range.start) dataEvento = range.start;
       if (!dataFim && range.end) dataFim = range.end;
+      if (!dataEvento) dataEvento = parseBrazilianDate(fullText);
     }
-    if (!dataEvento) dataEvento = parseBrazilianDate(fullText);
     if (dataFim && dataEvento && dataFim < dataEvento) dataFim = ""; // termino nunca antes do inicio
     const horaEvento = timeFromAny(item.time) || timeFromAny(fullText);
 
