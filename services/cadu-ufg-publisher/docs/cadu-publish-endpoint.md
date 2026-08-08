@@ -56,7 +56,8 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `summary`/`text` | string        | fallback de descricao |
 | `score`        | number\|string | score do curador; se informado e menor que `0.70`, o endpoint bloqueia auto-publicacao |
 | `dates`        | object          | datas detectadas pelo curador; usadas como sinal auxiliar, mas o endpoint recalcula os checks basicos |
-| `category`     | string (key)    | ex.: `academicos`, `empregos`, `estagios`. Default por modulo |
+| `category`     | string (obrig.) | chave canonica do modulo; rotulos e aliases explicitos (ex.: `academico`, `estagio`, `república`) sao normalizados. Ausencia, valor desconhecido ou categoria de outro modulo retorna `422`; nao ha default |
+| `type`/`subcategoriaKey` | string | grupo secundario obrigatorio em `compra-venda` (`vendo`/`compro`) e `achados-perdidos` (`documentos`/`eletronicos`/`outros`); aliases explicitos devem ser validos e equivalentes, ou o publish retorna `422` |
 | `location`     | string          | Local (eventos) / Cidade-Campus (oportunidades) |
 | `price`        | number\|string  | aceita `"1.234,56"` ou `1234.56` |
 | `contato`      | string          | oportunidades; senao tenta extrair e-mail do texto |
@@ -71,7 +72,7 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `link`         | URL             | CTA / inscricao |
 | `linkAsCta`    | boolean         | usar o link como botao principal (default: true se houver link) |
 | `actionLabel`  | string          | texto do botao principal; se faltar, o endpoint infere `Acessar edital`, `Realizar inscricao`, `Acessar evento` etc. |
-| `actionKey`    | string          | slug do botao; se faltar, e derivado de `actionLabel` |
+| `actionKey`    | string          | slug do botao em eventos/oportunidades; em `compra-venda`, alias explicito da acao obrigatoria `vendo`/`compro` |
 | `image`        | URL             | capa preferida (sera baixada e re-hospedada em `kino-media`) |
 | `images`       | URL[]           | galeria, até 6 imagens; a primeira vira capa |
 | `allowExternalImageFallback` | boolean | quando `false`, nunca grava URL externa se o upload para Storage falhar |
@@ -136,7 +137,26 @@ Bloqueios atuais: evento passado, prazo vencido, release institucional/biografic
 }
 ```
 
-- `metadata` faz **merge profundo** (nao apaga `cover_url`, `tags`, `data_evento`, etc.).
+- `metadata` faz **merge profundo** e preserva chaves independentes. Quando a
+  taxonomia e editada, `tags`/`tagKeys` sao reconciliados para remover somente
+  categorias ou grupos secundarios antigos e manter os pares canonicos atuais.
+- No publish, pares recebidos em `tags`/`tagKeys` que representem outra categoria
+  ou outro grupo secundario do modulo sao descartados; a categoria e o secundario
+  validados sao reinseridos com chave/label canonicos, sem remover tags independentes.
+- `fields.category` aceita a chave canonica ou um alias explicito do modulo. A
+  edicao sincroniza `category`, `categoriaKey`, `categoriaLabel`,
+  `categoryKey`, `categoryLabel` e os campos derivados do modulo; em
+  oportunidades, a area independente e preservada, e em moradia
+  `housingTypeKey`/`housingTypeLabel` acompanham a categoria.
+- Em `compra-venda`, a acao pode ser alterada por `metadata.subcategoriaKey`,
+  `metadata.subcategoria`, `metadata.actionKey` ou `metadata.actionLabel`. Em
+  `achados-perdidos`, o tipo aceita `metadata.subcategoriaKey`,
+  `metadata.subcategoria`, `metadata.subcategoryKey` ou `metadata.subcategory`.
+  Um alias presente no patch e autoritativo; varios aliases equivalentes sao
+  aceitos, mas valores que normalizem para chaves diferentes retornam `422`.
+  Em `compra-venda`, `metadata.subcategory`, `subcategoryKey` e
+  `subcategoryLabel` representam a categoria primaria e devem concordar com
+  `fields.category`; a resposta persiste os tres aliases em forma canonica.
 - `fields.status = "published"` publica um pendente e limpa `moderation_reason`.
 - Edita apenas posts cujo `author_id` e o do Cadu.
 - Quando `image` for URL temporaria (Telegram, Instagram CDN, token assinado),

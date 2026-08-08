@@ -26,8 +26,18 @@
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { isCurrentSessionActive } from "../_shared/active-session.ts";
-import { CaduItem, validateItem } from "./schema.ts";
-import { deepMergeMetadata, mapItemToPost, MAX_IMAGE_COUNT } from "./mapper.ts";
+import {
+  categoriesForModule,
+  CaduItem,
+  normalizeCategoryForModule,
+  validateItem,
+} from "./schema.ts";
+import {
+  buildTaxonomyEditPatch,
+  deepMergeMetadata,
+  mapItemToPost,
+  MAX_IMAGE_COUNT,
+} from "./mapper.ts";
 import {
   INSTITUTIONAL_REVIEW_POLICY_CODE,
   institutionalReviewRpcArguments,
@@ -631,7 +641,7 @@ function audit(admin: SupabaseClient, action: string, entityId: string, actorId:
 }
 
 // ── publish ───────────────────────────────────────────────────────────────────
-async function handlePublish(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
+export async function handlePublish(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const item = (body.item || {}) as CaduItem;
   const options = (body.options || {}) as { dryRun?: boolean; runId?: string };
 
@@ -909,13 +919,13 @@ async function handleReview(admin: SupabaseClient, userId: string, body: Record<
 // ── edit ────────────────────────────────────────────────────────────────────
 const EDITABLE_FIELDS = ["title", "description", "price", "location", "category", "visibility", "status"] as const;
 
-async function handleEdit(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
+export async function handleEdit(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const postId = String(body.postId || "");
   if (!postId) return json(400, { ok: false, code: "MISSING_POST_ID", message: "Informe postId." });
 
   const { data: current, error: getErr } = await admin
     .from("posts")
-    .select("id,author_id,module,status,metadata,image_url")
+    .select("id,author_id,module,category,status,metadata,image_url")
     .eq("id", postId)
     .maybeSingle();
   if (getErr || !current) return json(404, { ok: false, code: "POST_NOT_FOUND", message: "Post nao encontrado." });
@@ -926,11 +936,44 @@ async function handleEdit(admin: SupabaseClient, userId: string, body: Record<st
   const update: Record<string, unknown> = {};
   const fields = (body.fields || {}) as Record<string, unknown>;
   for (const f of EDITABLE_FIELDS) {
+    if (f === "category") continue;
     if (fields[f] !== undefined) update[f] = fields[f];
   }
 
-  if (body.metadata && typeof body.metadata === "object") {
-    update.metadata = deepMergeMetadata(current.metadata || {}, body.metadata as Record<string, unknown>);
+  const requestedCategory = fields.category !== undefined ? fields.category : current.category;
+  const categoryKey = normalizeCategoryForModule(current.module, requestedCategory);
+  if (!categoryKey) {
+    return json(422, {
+      ok: false,
+      code: "VALIDATION_FAILED",
+      message:
+        `category invalida ou ausente para module "${String(current.module || "")}". ` +
+        `Use uma de: ${categoriesForModule(current.module).join(", ")}.`,
+    });
+  }
+  if (fields.category !== undefined || current.category !== categoryKey) {
+    update.category = categoryKey;
+  }
+
+  const hasMetadataPatch = !!body.metadata && typeof body.metadata === "object" &&
+    !Array.isArray(body.metadata);
+  if (hasMetadataPatch || update.category !== undefined) {
+    try {
+      const taxonomy = buildTaxonomyEditPatch(
+        current.module,
+        current.category,
+        categoryKey,
+        current.metadata || {},
+        hasMetadataPatch ? body.metadata as Record<string, unknown> : null,
+      );
+      update.metadata = taxonomy.metadata;
+    } catch (error) {
+      return json(422, {
+        ok: false,
+        code: "VALIDATION_FAILED",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
   // Publicar pendente: limpa o motivo de moderacao.
   if (update.status === "published") update.moderation_reason = null;
@@ -1046,7 +1089,7 @@ async function handleCheck(admin: SupabaseClient, userId: string, body: Record<s
 }
 
 // ── HTTP entrypoint ─────────────────────────────────────────────────────────────
-Deno.serve(async (req) => {
+export async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return json(405, { ok: false, code: "METHOD_NOT_ALLOWED", message: "Use POST." });
 
@@ -1130,4 +1173,6 @@ Deno.serve(async (req) => {
     const stack = e instanceof Error ? e.stack || "" : "";
     return json(500, { ok: false, code: "INTERNAL_ERROR", message: e instanceof Error ? e.message : String(e), stack: stack.slice(0, 800) });
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleRequest);

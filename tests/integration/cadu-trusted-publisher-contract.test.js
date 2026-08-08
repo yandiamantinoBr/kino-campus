@@ -184,7 +184,7 @@ describe('Cadu publish — Edge Function', () => {
 
   test('limita a galeria canonica do endpoint a seis imagens', () => {
     expect(mapper).toContain('export const MAX_IMAGE_COUNT = 6');
-    expect(index).toContain('import { deepMergeMetadata, mapItemToPost, MAX_IMAGE_COUNT } from "./mapper.ts"');
+    expect(index).toMatch(/import\s*\{[^}]*MAX_IMAGE_COUNT[^}]*\}\s*from "\.\/mapper\.ts"/s);
     expect(index).toContain('.slice(0, MAX_IMAGE_COUNT)');
     expect(mapper).toContain('.slice(0, MAX_IMAGE_COUNT)');
   });
@@ -193,6 +193,38 @@ describe('Cadu publish — Edge Function', () => {
     ['eventos', 'oportunidades', 'moradia', 'compra-venda', 'caronas', 'achados-perdidos'].forEach((m) => {
       expect(schema).toContain(`"${m}"`);
     });
+  });
+
+  test('taxonomia do Edge publisher e fail-closed e mantem aliases por modulo', () => {
+    expect(schema).toContain('export const CATEGORY_DEFINITIONS');
+    expect(schema).toContain('export const SECONDARY_DEFINITIONS');
+    expect(schema).toContain('normalizeCategoryForModule');
+    expect(schema).toContain('normalizeSecondaryForModule');
+    expect(schema).toContain("'category' obrigatoria");
+    expect(schema).toContain('category invalida para module');
+    expect(schema).toContain('grupo secundario obrigatorio');
+    expect(schema).toContain('grupo secundario conflitante para module');
+    expect(schema).toContain('Object.prototype.hasOwnProperty.call(item, alias)');
+    expect(schema).not.toContain('DEFAULT_CATEGORY');
+    expect(mapper).not.toContain('DEFAULT_CATEGORY');
+    expect(mapper).toContain('category invalida ou ausente para module');
+    expect(mapper).toContain('grupo secundario invalido ou ausente para module');
+    expect(mapper).toContain('isModuleTaxonomyTag');
+    expect(mapper).toContain('buildTaxonomyEditPatch');
+    expect(mapper).toContain('validateCompraVendaPrimaryMetadataAliases');
+    expect(mapper).toContain('subcategoryKey: categoryKey');
+    expect(index).toContain('export async function handlePublish');
+
+    const edit = index.slice(index.indexOf('function handleEdit'), index.indexOf('// Troca de imagens'));
+    expect(edit).toContain('normalizeCategoryForModule(current.module, requestedCategory)');
+    expect(edit).toContain('categoriesForModule(current.module)');
+    expect(edit).toContain('buildTaxonomyEditPatch(');
+    expect(edit).toContain('update.metadata = taxonomy.metadata');
+    expect(mapper).toContain('categoriaKey: categoryKey');
+    expect(mapper).toContain('categoriaLabel: categoryText');
+    expect(mapper).toContain('categoryLabel: categoryText');
+    expect(mapper).toContain('actionKey: secondaryKey');
+    expect(mapper).toContain('housingTypeKey: categoryKey');
   });
 
   test('review usa exclusivamente a fila transacional dedicada e nunca toca publicações', () => {
@@ -463,6 +495,23 @@ describe('Cadu publish — cliente de referencia', () => {
   test('NAO referencia a service_role no cliente', () => {
     expect(client).not.toMatch(/SERVICE_ROLE_KEY/);
     expect(client).not.toMatch(/service_role['"]\s*\)/);
+  });
+
+  test('todo publish literal do demo informa uma categoria obrigatoria valida', () => {
+    const payloads = Array.from(
+      client.matchAll(/const\s+(\w+)\s*=\s*await\s+caduPublish\(\{([\s\S]*?)\n\s*\}\);/g),
+      match => ({ name: match[1], body: match[2] }),
+    );
+    expect(payloads.map(payload => payload.name)).toEqual(['evento', 'vaga']);
+    for (const payload of payloads) {
+      expect(payload.body).toMatch(/\bmodule:\s*'[^']+'/);
+      expect(payload.body).toMatch(/\bcategory:\s*'[^']+'/);
+    }
+    expect(payloads[0].body).toMatch(/\bmodule:\s*'eventos'/);
+    expect(payloads[0].body).toMatch(/\bcategory:\s*'academicos'/);
+    expect(payloads[1].body).toMatch(/\bmodule:\s*'oportunidades'/);
+    expect(payloads[1].body).toMatch(/\bcategory:\s*'empregos'/);
+    expect(payloads[1].body).toMatch(/\btype:\s*'emprego'/);
   });
 });
 
