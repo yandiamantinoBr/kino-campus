@@ -37,7 +37,7 @@ insert into public.posts (
   'Conteudo comunitario preservado',
   'Descricao que deve sobreviver sem identificar a conta apagada.',
   'eventos',
-  'comunidade',
+  'academicos',
   'published',
   'community'
 );

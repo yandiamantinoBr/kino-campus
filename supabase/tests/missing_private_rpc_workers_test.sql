@@ -246,7 +246,7 @@ values
     '00000000-0000-4000-8000-000000000601',
     'Global public tab',
     'eventos',
-    'global',
+    'academicos',
     'published',
     'public',
     100,
@@ -257,7 +257,7 @@ values
     '00000000-0000-4000-8000-000000000601',
     'Preferred public tab',
     'eventos',
-    'preferred',
+    'palestras',
     'published',
     'public',
     1,
@@ -268,7 +268,7 @@ values
     '00000000-0000-4000-8000-000000000602',
     'Community-only tab',
     'eventos',
-    'community-secret',
+    'congressos',
     'published',
     'community',
     0.5,
@@ -279,7 +279,7 @@ values
     '00000000-0000-4000-8000-000000000601',
     'Closed owner post',
     'eventos',
-    'global',
+    'academicos',
     'closed',
     'community',
     0,
@@ -290,7 +290,7 @@ values
     '00000000-0000-4000-8000-000000000603',
     'Closed erased-owner post',
     'eventos',
-    'global',
+    'academicos',
     'closed',
     'public',
     0,
@@ -335,7 +335,7 @@ values (
   '00000000-0000-4000-8000-000000000601',
   null,
   'eventos',
-  'preferred',
+  'palestras',
   1000,
   20
 );
@@ -391,7 +391,7 @@ select extensions.is(
       'attacker-controlled-session',
       10
     ) as tab_row
-    where tab_row.out_category_key = 'community-secret'
+    where tab_row.out_category_key = 'congressos'
   ),
   0,
   'anon fallback excludes community-only posts'
@@ -406,7 +406,7 @@ select extensions.is(
     ) as tab_row
     limit 1
   ),
-  'global',
+  'academicos',
   'anon cannot activate stored affinity by presenting a session id'
 );
 
@@ -427,7 +427,7 @@ select extensions.is(
     ) as tab_row
     limit 1
   ),
-  'preferred',
+  'palestras',
   'a consented owner receives owner affinity'
 );
 
@@ -438,7 +438,7 @@ select extensions.is(
       'worker-owner-browser-session',
       10
     ) as tab_row
-    where tab_row.out_category_key = 'community-secret'
+    where tab_row.out_category_key = 'congressos'
   ),
   1,
   'an authenticated caller can receive community-visible fallback signals'
@@ -461,7 +461,7 @@ select extensions.is(
     ) as tab_row
     limit 1
   ),
-  'global',
+  'academicos',
   'an authenticated caller without consent receives aggregate fallback only'
 );
 
