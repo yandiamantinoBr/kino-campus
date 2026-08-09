@@ -23,6 +23,171 @@
       .replace(/^-+|-+$/g, '');
   }
 
+  const ALL_CATEGORY_ALIASES = Object.freeze(['toda', 'todas', 'todo', 'todos']);
+  const FEED_MODULE_ALIASES = Object.freeze({
+    evento: 'eventos',
+    eventos: 'eventos',
+    oportunidade: 'oportunidades',
+    oportunidades: 'oportunidades',
+    moradia: 'moradia',
+    marketplace: 'compra-venda',
+    compra: 'compra-venda',
+    venda: 'compra-venda',
+    'compra-e-venda': 'compra-venda',
+    'compra-venda': 'compra-venda',
+    achados: 'achados-perdidos',
+    perdidos: 'achados-perdidos',
+    'achado-perdido': 'achados-perdidos',
+    'achados-e-perdidos': 'achados-perdidos',
+    'achados-perdidos': 'achados-perdidos',
+    carona: 'caronas',
+    caronas: 'caronas',
+  });
+
+  // Canonical category authority is intentionally scoped by feed. The same
+  // word may be a valid category in one module and only an unrelated tag in
+  // another, so matching must never depend on substring overlap.
+  const FEED_CATEGORY_CATALOG = Object.freeze({
+    eventos: Object.freeze({
+      academicos: Object.freeze(['academico', 'academicos', 'academica', 'academicas']),
+      palestras: Object.freeze(['palestra', 'palestras']),
+      congressos: Object.freeze(['congresso', 'congressos']),
+      cursos: Object.freeze(['curso', 'cursos']),
+      culturais: Object.freeze(['cultural', 'culturais']),
+      esportivos: Object.freeze(['esportivo', 'esportivos', 'esportiva', 'esportivas']),
+      workshops: Object.freeze(['workshop', 'workshops']),
+      festas: Object.freeze(['festa', 'festas']),
+      sustentabilidade: Object.freeze(['sustentabilidade', 'sustentabilidades', 'sustentavel']),
+    }),
+    oportunidades: Object.freeze({
+      editais: Object.freeze(['edital', 'editais']),
+      concursos: Object.freeze(['concurso', 'concursos']),
+      bolsas: Object.freeze(['bolsa', 'bolsas']),
+      estagios: Object.freeze(['estagio', 'estagios']),
+      empregos: Object.freeze(['emprego', 'empregos']),
+      freelancer: Object.freeze(['freelancer', 'freelancers']),
+      monitoria: Object.freeze(['monitoria', 'monitorias']),
+      pesquisa: Object.freeze(['pesquisa', 'pesquisas']),
+      'cursos-capacitacoes': Object.freeze([
+        'curso-capacitacao',
+        'curso-capacitacoes',
+        'cursos-capacitacao',
+        'cursos-capacitacoes',
+        'curso',
+        'cursos',
+        'capacitacao',
+        'capacitacoes',
+        'curso-e-capacitacao',
+        'cursos-e-capacitacoes',
+      ]),
+      voluntariado: Object.freeze(['voluntariado', 'voluntariados', 'voluntaria', 'voluntarias', 'voluntario', 'voluntarios']),
+    }),
+    moradia: Object.freeze({
+      republicas: Object.freeze(['republica', 'republicas']),
+      quartos: Object.freeze(['quarto', 'quartos']),
+      apartamentos: Object.freeze(['apartamento', 'apartamentos']),
+      casas: Object.freeze(['casa', 'casas']),
+      procurando: Object.freeze(['procurando', 'procuro', 'procurando-moradia']),
+    }),
+    'compra-venda': Object.freeze({
+      eletronicos: Object.freeze(['eletronico', 'eletronicos']),
+      livros: Object.freeze(['livro', 'livros']),
+      ingressos: Object.freeze(['ingresso', 'ingressos']),
+      moveis: Object.freeze(['movel', 'moveis']),
+      vestuario: Object.freeze(['vestuario', 'vestuarios', 'roupa', 'roupas']),
+      outros: Object.freeze(['outro', 'outros']),
+    }),
+    'achados-perdidos': Object.freeze({
+      perdidos: Object.freeze(['perdido', 'perdidos', 'perdida', 'perdidas']),
+      encontrados: Object.freeze(['encontrado', 'encontrados', 'encontrada', 'encontradas', 'achado', 'achados', 'achada', 'achadas']),
+      documentos: Object.freeze(['documento', 'documentos']),
+      eletronicos: Object.freeze(['eletronico', 'eletronicos']),
+      outros: Object.freeze(['outro', 'outros']),
+    }),
+    caronas: Object.freeze({
+      ofereco: Object.freeze(['ofereco', 'ofereco-carona', 'oferecendo', 'oferta']),
+      procuro: Object.freeze(['procuro', 'procuro-carona', 'procurando']),
+    }),
+  });
+
+  const FEED_PATH_MODULES = Object.freeze({
+    eventos: 'eventos',
+    oportunidades: 'oportunidades',
+    moradia: 'moradia',
+    'compra-venda': 'compra-venda',
+    'compra-venda-feed': 'compra-venda',
+    'achados-perdidos': 'achados-perdidos',
+    caronas: 'caronas',
+    'caronas-feed': 'caronas',
+  });
+
+  function normalizeFeedModuleKey(value) {
+    const key = slugifyText(value);
+    return FEED_MODULE_ALIASES[key] || '';
+  }
+
+  function inferFeedModuleFromPath(pathname) {
+    const path = String(pathname || '').split(/[?#]/)[0];
+    const leaf = path.split('/').filter(Boolean).pop() || '';
+    const routeKey = slugifyText(leaf.replace(/\.html?$/i, ''));
+    return FEED_PATH_MODULES[routeKey] || '';
+  }
+
+  function getFeedModuleKey(value) {
+    const explicit = normalizeFeedModuleKey(value);
+    if (explicit) return explicit;
+    const pathname = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '';
+    return inferFeedModuleFromPath(pathname);
+  }
+
+  function canonicalCategoryKey(moduleKey, value) {
+    const key = slugifyText(value);
+    if (!key) return '';
+    if (ALL_CATEGORY_ALIASES.includes(key)) return 'todas';
+
+    const catalog = FEED_CATEGORY_CATALOG[getFeedModuleKey(moduleKey)];
+    if (!catalog) return key;
+
+    const canonicalKeys = Object.keys(catalog);
+    for (let index = 0; index < canonicalKeys.length; index += 1) {
+      const canonical = canonicalKeys[index];
+      if (key === canonical || catalog[canonical].includes(key)) return canonical;
+    }
+    return key;
+  }
+
+  function categoryValueKeys(moduleKey, value) {
+    const values = Array.isArray(value) ? value : [value];
+    const keys = new Set();
+    values.forEach((entry) => {
+      const raw = String(entry || '').trim();
+      if (!raw) return;
+      const candidates = [raw].concat(raw.split(/[\s,;|\u2022]+/));
+      candidates.forEach((candidate) => {
+        const canonical = canonicalCategoryKey(moduleKey, candidate);
+        if (canonical) keys.add(canonical);
+      });
+    });
+    return Array.from(keys);
+  }
+
+  function categoryMatches(options) {
+    const opt = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const moduleKey = getFeedModuleKey(opt.moduleKey);
+    const selected = canonicalCategoryKey(moduleKey, opt.selectedCategory);
+    if (!selected || selected === 'todas') return true;
+
+    // data-category is the authoritative field. Tags and visible text are
+    // legacy fallbacks only when that field is absent.
+    const primary = categoryValueKeys(moduleKey, opt.primaryCategory);
+    if (primary.length) return primary.includes(selected);
+
+    const tags = categoryValueKeys(moduleKey, opt.tagCategories);
+    if (tags.length) return tags.includes(selected);
+
+    return categoryValueKeys(moduleKey, opt.fallbackCategory).includes(selected);
+  }
+
   function getUrlObject() {
     try {
       return new URL(window.location.href);
@@ -539,6 +704,11 @@
   window.KCFeedFilters = Object.freeze({
     normalizeText,
     slugifyText,
+    normalizeFeedModuleKey,
+    inferFeedModuleFromPath,
+    canonicalCategoryKey,
+    categoryValueKeys,
+    categoryMatches,
     getSearchParams,
     updateSearchParams,
     readTextParam,

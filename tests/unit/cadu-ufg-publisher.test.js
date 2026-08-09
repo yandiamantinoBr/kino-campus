@@ -553,6 +553,186 @@ describe('cadu-ufg-publisher', () => {
     expect(row.metadata.tagKeys).toEqual(expect.arrayContaining(['monitoria']));
   });
 
+  test('direct publisher persists all canonical category aliases for every supported feed category', () => {
+    const categories = {
+      eventos: {
+        academicos: 'Acadêmicos',
+        palestras: 'Palestras',
+        congressos: 'Congressos',
+        cursos: 'Cursos',
+        culturais: 'Culturais',
+        esportivos: 'Esportivos',
+        workshops: 'Workshops',
+        festas: 'Festas',
+        sustentabilidade: 'Sustentabilidade',
+      },
+      oportunidades: {
+        editais: 'Editais',
+        concursos: 'Concursos',
+        bolsas: 'Bolsas',
+        estagios: 'Estágio',
+        empregos: 'Emprego',
+        monitoria: 'Monitoria',
+        pesquisa: 'Pesquisa',
+        'cursos-capacitacoes': 'Cursos e capacitações',
+        voluntariado: 'Voluntariado',
+        freelancer: 'Freelancer',
+      },
+    };
+    const edgeSchema = fs.readFileSync(path.resolve(
+      __dirname,
+      '../../supabase/functions/cadu-publish/schema.ts',
+    ), 'utf8');
+    const edgeLabels = new Map(Array.from(
+      edgeSchema.matchAll(/\{\s*key:\s*"([^"]+)",\s*label:\s*"((?:\\.|[^"])*)"/g),
+      (match) => [match[1], JSON.parse(`"${match[2]}"`)],
+    ));
+
+    Object.entries(categories).forEach(([moduleKey, entries]) => {
+      Object.entries(entries).forEach(([categoryKey, categoryText]) => {
+        expect(edgeLabels.get(categoryKey)).toBe(categoryText);
+        const row = toPostgrestInsert({
+          modulo: moduleKey,
+          categoriaKey: categoryKey,
+          categoriaLabel: 'Rótulo legado',
+          titulo: `Teste ${categoryKey}`,
+          descricao: 'Descrição de teste',
+          metadata: {
+            category: 'legacy',
+            categoryKey: 'legacy',
+            categoriaKey: 'legacy',
+            categoryLabel: 'Legacy',
+            categoria: 'Legacy',
+            categoriaLabel: 'Legacy',
+          },
+        }, 'user-1');
+
+        expect(row.category).toBe(categoryKey);
+        expect(row.metadata).toEqual(expect.objectContaining({
+          category: categoryKey,
+          categoryKey,
+          categoriaKey: categoryKey,
+          categoryLabel: categoryText,
+          categoria: categoryText,
+          categoriaLabel: categoryText,
+        }));
+      });
+    });
+
+    expect(() => toPostgrestInsert({
+      modulo: 'eventos',
+      categoriaKey: 'empregos',
+      titulo: 'Categoria cruzada',
+      descricao: 'Não deve ser persistida',
+    }, 'user-1')).toThrow('invalid category for module: eventos/empregos');
+
+    const legacyAlias = toPostgrestInsert({
+      modulo: 'Oportunidades',
+      categoriaKey: 'curso-capacitacao',
+      titulo: 'Alias legado',
+      descricao: 'Deve usar a chave canônica sem fallback editorial',
+    }, 'user-1');
+    expect(legacyAlias.category).toBe('cursos-capacitacoes');
+    expect(legacyAlias.metadata.categoryLabel).toBe('Cursos e capacitações');
+  });
+
+  test('direct publisher edit keeps root category and all metadata aliases atomic', () => {
+    const publisher = new SupabasePublisher({
+      supabaseUrl: 'https://project.supabase.co',
+      supabaseAnonKey: 'anon',
+      kinoEmail: 'cadu@example.com',
+      kinoPassword: 'secret',
+    });
+    const current = {
+      module: 'eventos',
+      category: 'academicos',
+      metadata: {
+        category: 'academicos',
+        categoryKey: 'academicos',
+        categoriaKey: 'academicos',
+        categoryLabel: 'Academicos',
+        categoria: 'Academicos',
+        categoriaLabel: 'Academicos',
+        kept: true,
+      },
+    };
+
+    const patch = publisher.buildSafePatch(current, {
+      category: 'palestra',
+      categoryLabel: 'Rótulo fornecido incorreto',
+    });
+    expect(patch.category).toBe('palestras');
+    expect(patch.metadata).toEqual(expect.objectContaining({
+      category: 'palestras',
+      categoryKey: 'palestras',
+      categoriaKey: 'palestras',
+      categoryLabel: 'Palestras',
+      categoria: 'Palestras',
+      categoriaLabel: 'Palestras',
+      kept: true,
+    }));
+
+    expect(() => publisher.buildSafePatch(current, {
+      category: 'empregos',
+    })).toThrow('invalid category for module: eventos/empregos');
+
+    const legacyCurrent = {
+      module: 'eventos',
+      category: 'academico',
+      metadata: { categoryKey: 'academico', categoryLabel: 'Academico' },
+    };
+    const repairedLegacy = publisher.buildSafePatch(legacyCurrent, {
+      metadata: {
+        category: 'empregos',
+        categoryKey: 'empregos',
+        categoriaKey: 'empregos',
+        categoryLabel: 'Emprego',
+        categoria: 'Emprego',
+        categoriaLabel: 'Emprego',
+      },
+    });
+    expect(repairedLegacy.category).toBe('academicos');
+    expect(repairedLegacy.metadata).toEqual(expect.objectContaining({
+      category: 'academicos',
+      categoryKey: 'academicos',
+      categoriaKey: 'academicos',
+      categoryLabel: 'Acadêmicos',
+      categoria: 'Acadêmicos',
+      categoriaLabel: 'Acadêmicos',
+    }));
+
+    const unknownLegacy = {
+      module: 'eventos',
+      category: 'seminarios',
+      metadata: { categoryKey: 'seminarios', categoryLabel: 'Seminarios' },
+    };
+    expect(() => publisher.buildSafePatch(unknownLegacy, {
+      metadata: { categoryLabel: 'Palestras' },
+    })).toThrow('invalid category for module: eventos/seminarios');
+    expect(() => publisher.buildSafePatch(unknownLegacy, {
+      categoryLabel: 'Palestras',
+    })).toThrow('invalid category for module: eventos/seminarios');
+    expect(() => publisher.buildSafePatch(unknownLegacy, {
+      category: 'empregos',
+    })).toThrow('invalid category for module: eventos/empregos');
+
+    const promotedLegacy = publisher.buildSafePatch(unknownLegacy, {
+      category: 'palestra',
+    });
+    expect(promotedLegacy.category).toBe('palestras');
+    expect(promotedLegacy.metadata).toEqual(expect.objectContaining({
+      category: 'palestras',
+      categoryKey: 'palestras',
+      categoriaKey: 'palestras',
+      categoryLabel: 'Palestras',
+      categoria: 'Palestras',
+      categoriaLabel: 'Palestras',
+    }));
+    expect(() => publisher.buildSafePatch(unknownLegacy, {
+      title: 'Edição não taxonômica permitida',
+    })).not.toThrow();
+  });
+
   test('mapper preserves Weby event begin_at as event date and time metadata', () => {
     const item = normalizeWebyItem({ id: 'ufg', name: 'UFG', baseUrl: 'https://ufg.br' }, {
       id: 39107,
