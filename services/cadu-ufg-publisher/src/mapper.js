@@ -1,6 +1,6 @@
 'use strict';
 
-const { normalizeCategoryForModule } = require('./classifier');
+const { isValidCategoryForModule, normalizeCategoryForModule } = require('./classifier');
 const {
   clamp,
   extractEmails,
@@ -86,34 +86,94 @@ function markdownUrlLink(url) {
   return cleanUrl ? `[${cleanUrl}](${cleanUrl})` : '';
 }
 
-// Labels aligned to create-post schema keys (kc-create-post.schema.js).
-// Keep ASCII-friendly labels consistent with existing Cadu payload style.
+// Labels aligned to the canonical Edge/create-post taxonomy.
+// These values are persisted metadata, so accents and singular/plural forms
+// must remain byte-consistent with CATEGORY_DEFINITIONS.
 const CATEGORY_LABELS = {
-  // eventos
-  academicos: 'Academicos',
-  palestras: 'Palestras',
-  congressos: 'Congressos',
-  cursos: 'Cursos',
-  culturais: 'Culturais',
-  esportivos: 'Esportivos',
-  workshops: 'Workshops',
-  festas: 'Festas',
-  sustentabilidade: 'Sustentabilidade',
-  // oportunidades
-  editais: 'Editais',
-  concursos: 'Concursos',
-  bolsas: 'Bolsas',
-  estagios: 'Estagios',
-  empregos: 'Empregos',
-  monitoria: 'Monitoria',
-  pesquisa: 'Pesquisa',
-  'cursos-capacitacoes': 'Cursos e capacitacoes',
-  voluntariado: 'Voluntariado',
-  freelancer: 'Freelancer',
+  eventos: {
+    academicos: 'Acadêmicos',
+    palestras: 'Palestras',
+    congressos: 'Congressos',
+    cursos: 'Cursos',
+    culturais: 'Culturais',
+    esportivos: 'Esportivos',
+    workshops: 'Workshops',
+    festas: 'Festas',
+    sustentabilidade: 'Sustentabilidade',
+  },
+  oportunidades: {
+    editais: 'Editais',
+    concursos: 'Concursos',
+    bolsas: 'Bolsas',
+    estagios: 'Estágio',
+    empregos: 'Emprego',
+    monitoria: 'Monitoria',
+    pesquisa: 'Pesquisa',
+    'cursos-capacitacoes': 'Cursos e capacitações',
+    voluntariado: 'Voluntariado',
+    freelancer: 'Freelancer',
+  },
 };
 
-function categoryLabel(category) {
-  return CATEGORY_LABELS[category] || normalizeWhitespace(category || '');
+const CATEGORY_ALIASES = {
+  eventos: {
+    academico: 'academicos',
+    academica: 'academicos',
+    academicas: 'academicos',
+    palestra: 'palestras',
+    congresso: 'congressos',
+    curso: 'cursos',
+    cultural: 'culturais',
+    esportivo: 'esportivos',
+    workshop: 'workshops',
+    festa: 'festas',
+  },
+  oportunidades: {
+    edital: 'editais',
+    concurso: 'concursos',
+    bolsa: 'bolsas',
+    estagio: 'estagios',
+    emprego: 'empregos',
+    monitorias: 'monitoria',
+    'curso-capacitacao': 'cursos-capacitacoes',
+    'curso-capacitacoes': 'cursos-capacitacoes',
+    'cursos-capacitacao': 'cursos-capacitacoes',
+    'curso-e-capacitacao': 'cursos-capacitacoes',
+    'cursos-e-capacitacoes': 'cursos-capacitacoes',
+    voluntariados: 'voluntariado',
+    freelancers: 'freelancer',
+  },
+};
+
+function categoryLabel(moduleKey, category) {
+  const labels = CATEGORY_LABELS[moduleKey];
+  return (labels && labels[category]) || '';
+}
+
+function canonicalCategoryIdentity(moduleKey, categoryKey) {
+  const module = slugify(moduleKey || '');
+  const rawCategory = slugify(categoryKey || '');
+  const labels = CATEGORY_LABELS[module] || {};
+  const aliases = CATEGORY_ALIASES[module] || {};
+  const categoryFromLabel = Object.keys(labels).find((key) => slugify(labels[key]) === rawCategory);
+  const category = aliases[rawCategory] || categoryFromLabel || rawCategory;
+  if (!isValidCategoryForModule(module, category)) {
+    throw new Error(`invalid category for module: ${module || '(missing)'}/${category || '(missing)'}`);
+  }
+  const label = categoryLabel(module, category);
+  return {
+    module,
+    category,
+    label,
+    metadata: {
+      category,
+      categoryKey: category,
+      categoriaKey: category,
+      categoryLabel: label,
+      categoria: label,
+      categoriaLabel: label,
+    },
+  };
 }
 
 function buildSourceLabel(item) {
@@ -398,7 +458,7 @@ function mapToKinoPayload(item, classification, options = {}) {
     moduleKey,
     classification.category || fallbackCategory,
   );
-  const categoryText = categoryLabel(category);
+  const categoryText = categoryLabel(moduleKey, category);
   const tags = uniq([
     'UFG',
     item.sourceName,
@@ -443,7 +503,9 @@ function mapToKinoPayload(item, classification, options = {}) {
     tags,
     tagKeys,
     categoria: categoryText,
+    categoriaLabel: categoryText,
     categoriaKey: category,
+    category: category,
     categoryKey: category,
     categoryLabel: categoryText,
     visibility: 'public',
@@ -514,12 +576,17 @@ function mapToKinoPayload(item, classification, options = {}) {
 function toPostgrestInsert(payload, userId) {
   const metadata = payload.metadata || {};
   const moduleDB = payload.modulo || payload.module;
-  const categoryDB = payload.categoriaKey || payload.category || payload.categoria;
+  const categoryDB = payload.categoriaKey
+    || payload.category
+    || payload.categoria
+    || metadata.category
+    || metadata.categoryKey
+    || metadata.categoriaKey;
+  const categoryIdentity = canonicalCategoryIdentity(moduleDB, categoryDB);
   const images = Array.isArray(payload.imagens) ? payload.imagens : (Array.isArray(payload.images) ? payload.images : []);
   const imageUrl = metadata.cover_url || metadata.image_url || payload.cover_url || payload.image_url || images[0] || null;
   const tags = Array.isArray(payload.tags) ? payload.tags : (Array.isArray(metadata.tags) ? metadata.tags : []);
   const tagKeys = Array.isArray(payload.tagKeys) ? payload.tagKeys : (Array.isArray(metadata.tagKeys) ? metadata.tagKeys : tags.map((tag) => slugify(tag)).filter(Boolean));
-  const categoryLabelValue = payload.categoriaLabel || payload.categoryLabel || metadata.categoryLabel || metadata.categoria || payload.categoria || categoryDB;
   const subcategoryKey = payload.subcategoriaKey || metadata.subcategoryKey || metadata.subcategoriaKey || metadata.subcategory || '';
   const subcategoryLabel = payload.subcategoriaLabel || metadata.subcategoryLabel || metadata.subcategoria || payload.subcategoria || '';
   return {
@@ -528,8 +595,8 @@ function toPostgrestInsert(payload, userId) {
     description: payload.descricao || payload.description,
     price: payload.preco == null ? null : payload.preco,
     location: payload.localizacao || '',
-    module: moduleDB,
-    category: categoryDB,
+    module: categoryIdentity.module,
+    category: categoryIdentity.category,
     image_url: imageUrl || null,
     visibility: payload.visibility || metadata.visibility || 'public',
     metadata: {
@@ -549,10 +616,7 @@ function toPostgrestInsert(payload, userId) {
       areaKey: metadata.areaKey || payload.areaKey || '',
       modalidadeTrabalho: metadata.modalidadeTrabalho || payload.modalidadeTrabalho || '',
       remuneracao: metadata.remuneracao || payload.remuneracao || '',
-      categoria: metadata.categoria || categoryLabelValue,
-      categoriaKey: metadata.categoriaKey || categoryDB,
-      categoryKey: categoryDB,
-      categoryLabel: categoryLabelValue,
+      ...categoryIdentity.metadata,
       subcategoryKey,
       subcategoryLabel,
     },
@@ -561,6 +625,7 @@ function toPostgrestInsert(payload, userId) {
 
 module.exports = {
   buildDescription,
+  canonicalCategoryIdentity,
   mapToKinoPayload,
   toPostgrestInsert,
 };

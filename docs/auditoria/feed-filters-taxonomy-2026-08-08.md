@@ -1,6 +1,6 @@
 # Auditoria de feed, filtros e taxonomia — 2026-08-08
 
-> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 e o gate upstream Cadu/Edge estão em produção. As migrations mecânicas `20260808152842`, `20260808152843` e `20260808152845` foram aplicadas e verificadas no banco de produção em 2026-08-08; elas preservaram 790 registros e a distribuição de status daquele snapshot. A migration semântica `20260808152900`, com 49 alterações editoriais, permanece deliberadamente sem execução até o preflight final sob freeze. A reconciliação explícita de dois conflitos residuais entre `posts.category` e seus metadados está codificada em `20260808152850`.
+> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 e o gate upstream Cadu/Edge estão em produção. As migrations `20260806090000`, `20260808152842`, `20260808152843`, `20260808152845`, `20260808152850` e `20260808152900` foram aplicadas e verificadas em produção em 2026-08-08. A verificação pós-rollout registra **791** linhas: **134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`**. A reconciliação estrutural posterior das seis superfícies de categoria está codificada em `20260808225424`, com escopo exato de 87 UUIDs, mas **ainda não foi aplicada**. O hotfix dos filtros segue em trilha paralela e não é evidência de rollout dessa nova migration.
 
 ## Resumo executivo
 
@@ -493,7 +493,104 @@ rollback:
 npm run test:db:audited-category-metadata
 ```
 
+## Reconciliação estrutural das seis superfícies — `20260808225424`
+
+Uma auditoria global somente leitura, fechada em **2026-08-08 por volta de
+20:46 BRT**, comparou todos os `published` com o registry canônico de **34 pares
+`module/category`**. O denominador pós-rollout é de **134 published**: 131
+`public` e 3 `community`. O resultado foi:
+
+- **87 UUIDs** em estado estrutural de origem e nenhum já no alvo completo;
+- 84 alvos `public` e 3 alvos `community`;
+- 27 linhas com label divergente, 56 linhas `public` com aliases incompletos,
+  a exceção estrutural `4b39baaf-996b-49ca-a603-b122066946dd` e 3 linhas
+  `community` com aliases incompletos ou divergentes;
+- 47 controles já canônicos fora da especificação;
+- zero `published` fora do registry e zero drift fora dos 87 UUIDs;
+- preços congelados por UUID: 76 valores `0`, 9 `NULL`, um `300` e um
+  `13671.34`.
+
+A linha `4b39baaf-996b-49ca-a603-b122066946dd` (Passe Livre Estudantil)
+permanece uma **revisão editorial aberta**. A reconciliação apenas espelha o root
+já publicado `oportunidades/bolsas` nas seis superfícies; não decide se o item
+deveria pertencer a uma categoria futura de assistência/benefícios.
+
+A migration
+[20260808225424_canonical_category_label_reconciliation.sql](../../supabase/migrations/20260808225424_canonical_category_label_reconciliation.sql)
+é UUID-bound e aceita, para cada uma das 87 linhas, somente o fingerprint exato
+de origem ou o alvo exato. Ela:
+
+- configura timeouts de sessão e adquire `SHARE ROW EXCLUSIVE` antes de
+  substituir funções públicas; o routine principal reacquire o lock antes de
+  qualquer leitura/escrita em `posts`, e os timeouts são resetados no fim;
+- exige 87 especificações disjuntas, 134 `published`, 134 roots no registry e
+  47 controles já canônicos antes da primeira escrita;
+- valida metadata objeto, `module/category/status/visibility`, preço por UUID,
+  três triggers em modo `O` e a definição completa do trigger canônico;
+- altera somente `metadata.category`, `categoryKey`, `categoriaKey`,
+  `categoryLabel`, `categoria` e `categoriaLabel`; `tags`, `tagKeys`, `price` e
+  todo metadata independente são congelados e comparados depois do `UPDATE`;
+- mantém `updated_at` inalterado no replay-alvo e o avança apenas nas fontes;
+- exige 87 alvos, 47 controles byte-a-byte e as 134 superfícies globais exatas
+  ao final da transação.
+
+A barreira preventiva é module-scoped: pares conhecidos canonicalizam `module`,
+`category` e as seis superfícies; insert ou troca efetiva para par desconhecido
+falha com `22023`. Updates independentes em 56 linhas legadas `hidden/closed/deleted`
+fora do registry continuam permitidos se o par e as seis superfícies não forem
+tocados. Alterar qualquer uma dessas superfícies num par legado desconhecido é
+rejeitado, evitando legitimar labels arbitrários sem bloquear manutenção não
+taxonômica.
+
+Artefatos versionados:
+
+- [preflight de produção READ ONLY](../../tests/sql/canonical-category-label-reconciliation-production-preflight.sql),
+  cujo modo pré-deploy exige exatamente 87 sources e zero targets;
+- [proof de produção transacional](../../tests/sql/canonical-category-label-reconciliation-production-proof.sql),
+  com modo padrão `source` antes do rollout e `-v kc_expected_state=target`
+  depois dele; ambos terminam em `ROLLBACK`;
+- [proof local de replay](../../tests/sql/canonical-category-label-reconciliation-replay-proof.sql),
+  cobrindo 87 sources, mistura 44/43, ponto fixo, mutantes de dados, denominador
+  134 e definição de triggers;
+- [contrato Jest](../../tests/contract/canonical-category-label-reconciliation-migration.test.js)
+  e [runner Docker local](../../scripts/test-canonical-category-label-reconciliation.js).
+
+Execução local segura:
+
+```powershell
+npm run test:db:canonical-category-labels
+```
+
+O gate abaixo primeiro confirma que `posts` está vazio e então executa
+`supabase db reset --local --no-seed`, aplicando o arquivo de migration verbatim
+pelo executor do CLI antes do mesmo replay/rollback. Ele é deliberadamente
+separado porque recria o banco Supabase local:
+
+```powershell
+npm run test:db:canonical-category-labels:reset-local
+```
+
+O gate de atomicidade do executor cria dois bancos locais descartáveis a partir
+do schema resetado. O primeiro exige `db push --db-url` verbatim com ledger 1 e
+funções canônicas; o segundo acrescenta uma falha `PZ901` após o arquivo e exige
+ledger 0 mais funções/trigger sentinela byte-a-byte. Ambos são removidos ao fim:
+
+```powershell
+npm run test:db:canonical-category-labels:cli-push
+```
+
+Este registro é evidência de auditoria e implementação local. Ele **não afirma
+rollout** de `20260808225424`; antes de aplicar, o preflight deve voltar todo
+`true` sob freeze/lock, e o proof `source` deve confirmar 87/0. Depois da
+aplicação autorizada, o proof `target` deve confirmar 0/87, 134 superfícies
+globais exatas e a permanência da revisão editorial do Passe Livre.
+
 ### Auditoria histórica de `20260806090000`
+
+Atualização posterior: `20260806090000`, `20260808152850` e `20260808152900`
+foram efetivamente aplicadas e verificadas. O texto abaixo preserva a evidência
+e o raciocínio **anteriores** à janela, inclusive o snapshot em que `06090000`
+ainda aparecia ausente; não deve ser lido como estado remoto atual.
 
 A migration
 `20260806090000_cadu_published_cache_index.sql` entrou no Git no commit
@@ -679,4 +776,4 @@ versão só passa a constar depois que seu SQL real foi aplicado.
 
 ## Conclusão
 
-As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. A migration protege contra drift, replay e estado parcial, mas a estabilidade depende de alinhar o publisher e todos os consumidores da taxonomia. O frontend, Cadu/Edge e as três migrations mecânicas já foram entregues e validados; as mecânicas preservaram a distribuição do snapshot original de 790 linhas, e a recaptura atual tem 791. As 49 reclassificações editoriais e a reconciliação dos dois metadados residuais permanecem sem execução até seus preflights finais de produção.
+As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. O frontend, Cadu/Edge, `06090000`, `152850` e `152900` já foram entregues e verificados; o estado pós-rollout é 791 linhas, distribuídas em 134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`. A nova reconciliação estrutural `20260808225424` está implementada e provada localmente, mas permanece sem execução remota até seus gates explícitos `source`/`target`; o Passe Livre continua em revisão editorial separada.

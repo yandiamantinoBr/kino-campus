@@ -93,15 +93,50 @@
     return s;
   }
 
-  function categoryMatches(cardCategory, selectedCategory) {
+  function getCurrentFeedModuleKey() {
+    const utils = getFeedFilterUtils();
+    const explicit = (document.body && document.body.getAttribute('data-module')) || '';
+    if (utils && typeof utils.normalizeFeedModuleKey === 'function') {
+      const moduleKey = utils.normalizeFeedModuleKey(explicit);
+      if (moduleKey) return moduleKey;
+    }
+    if (utils && typeof utils.inferFeedModuleFromPath === 'function') {
+      return utils.inferFeedModuleFromPath((window.location && window.location.pathname) || '');
+    }
+    return explicit;
+  }
+
+  function canonicalFeedCategory(value, moduleKey) {
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.canonicalCategoryKey === 'function') {
+      return utils.canonicalCategoryKey(moduleKey || getCurrentFeedModuleKey(), value);
+    }
+    return canonicalCategory(value);
+  }
+
+  function categoryMatches(cardCategories, selectedCategory, moduleKey) {
+    const sources = (cardCategories && typeof cardCategories === 'object' && !Array.isArray(cardCategories))
+      ? cardCategories
+      : { primaryCategory: cardCategories };
+    const utils = getFeedFilterUtils();
+    if (utils && typeof utils.categoryMatches === 'function') {
+      return utils.categoryMatches({
+        moduleKey,
+        selectedCategory,
+        primaryCategory: sources.primaryCategory,
+        tagCategories: sources.tagCategories,
+        fallbackCategory: sources.fallbackCategory,
+      });
+    }
+
     const sel = canonicalCategory(selectedCategory);
     if (!sel || sel === "toda" || sel === "todas") return true;
 
-    const card = canonicalCategory(cardCategory);
-    if (!card) return false;
-
-    // cobre casos como: "ofereco" vs "ofereco carona" e "perdidos" vs "perdido"
-    return card.includes(sel) || sel.includes(card);
+    const primary = String(sources.primaryCategory || '').trim();
+    const fallbackSource = primary || String(sources.tagCategories || '').trim() || String(sources.fallbackCategory || '').trim();
+    if (!fallbackSource) return false;
+    const candidates = [fallbackSource].concat(fallbackSource.split(/[\s,;|\u2022]+/));
+    return candidates.some((candidate) => canonicalCategory(candidate) === sel);
   }
 
   function queryMatches(text, query) {
@@ -111,6 +146,12 @@
     if (shared && typeof shared.matchesQueryText === 'function') return shared.matchesQueryText(text, q);
     const t = normalizeText(text);
     return t.includes(q);
+  }
+
+  function decodeCategoryValue(value) {
+    const raw = String(value || '').replace(/^#/, '').trim();
+    if (!raw) return '';
+    try { return decodeURIComponent(raw); } catch (_) { return raw; }
   }
 
   function apply() {
@@ -127,10 +168,13 @@
       const title = titleEl ? titleEl.textContent : "";
       const desc = descEl ? descEl.textContent : "";
       // Prefer data-* (mais confiável / sem ruído) e cai para o texto do card
-      const catData = card.getAttribute('data-kc-tags') || card.getAttribute('data-tags') || card.getAttribute('data-category') || '';
-      const cat = catData || (catEl ? catEl.textContent : "");
+      const primaryCategory = card.getAttribute('data-category') || '';
+      const tagCategories = card.getAttribute('data-kc-tags') || card.getAttribute('data-tags') || '';
+      const fallbackCategory = catEl ? catEl.textContent : "";
+      const cat = tagCategories || primaryCategory || fallbackCategory;
+      const moduleKey = card.getAttribute('data-module') || (document.body && document.body.getAttribute('data-module')) || '';
 
-      const matchesCategory = categoryMatches(cat, state.category);
+      const matchesCategory = categoryMatches({ primaryCategory, tagCategories, fallbackCategory }, state.category, moduleKey);
       const matchesQuery =
         queryMatches(title, state.query) ||
         queryMatches(desc, state.query) ||
@@ -148,26 +192,27 @@
 
   function categoryKeyFromLink(el) {
     if (!el || !el.getAttribute) return '';
-    const dataCat = String(el.getAttribute('data-category') || '').trim();
+    const dataCat = decodeCategoryValue(el.getAttribute('data-category'));
     if (dataCat) return dataCat;
-    return String(el.getAttribute('href') || '').replace(/^#/, '').trim();
+    return decodeCategoryValue(el.getAttribute('href'));
   }
 
   function setActiveTab(category) {
-    const selected = canonicalCategory(category);
+    const moduleKey = getCurrentFeedModuleKey();
+    const selected = canonicalFeedCategory(category, moduleKey);
     const selectedAll = !selected || selected === 'toda' || selected === 'todas';
     document.querySelectorAll(state.opts.tabsSelector).forEach((t) => {
       // Keep sort buttons (Destaques/Recentes/Comentados) independent.
       if (t.matches && t.matches('[data-feed-tab]')) return;
       const tabCat = categoryKeyFromLink(t);
-      const tabCanonical = canonicalCategory(tabCat);
+      const tabCanonical = canonicalFeedCategory(tabCat, moduleKey);
       const tabIsAll = tabCanonical === 'toda' || tabCanonical === 'todas';
       const isActive = selectedAll ? tabIsAll : tabCanonical === selected;
       t.classList.toggle('active', !!isActive);
     });
     document.querySelectorAll('.kc-category-item, [data-kc-category-filter]').forEach((item) => {
       const tabCat = categoryKeyFromLink(item);
-      const tabCanonical = canonicalCategory(tabCat);
+      const tabCanonical = canonicalFeedCategory(tabCat, moduleKey);
       const tabIsAll = tabCanonical === 'toda' || tabCanonical === 'todas';
       const isActive = selectedAll ? tabIsAll : tabCanonical === selected;
       item.classList.toggle('active', !!isActive);
@@ -192,12 +237,13 @@
 
   function selectCategory(category, options) {
     const opts = options || {};
-    const next = String(category || 'todas').trim() || 'todas';
+    const requested = decodeCategoryValue(category || 'todas') || 'todas';
+    const next = canonicalFeedCategory(requested, getCurrentFeedModuleKey()) || requested;
     state.category = next;
     setActiveTab(state.category);
     if (opts.updateHash !== false) {
       try {
-        const clean = canonicalCategory(next);
+        const clean = canonicalFeedCategory(next, getCurrentFeedModuleKey());
         if (!clean || clean === 'toda' || clean === 'todas') {
           history.replaceState(null, '', window.location.pathname + window.location.search);
         } else {
@@ -262,7 +308,7 @@
 
       moduleRows.forEach(row => {
         const catValue = String(row.categoryKey || '').trim() || canonicalCategory(row.categoryKey);
-        const isActive = canonicalCategory(state.category) === canonicalCategory(catValue) ? 'active' : '';
+        const isActive = canonicalFeedCategory(state.category, moduleKey) === canonicalFeedCategory(catValue, moduleKey) ? 'active' : '';
         tabsHTML.push(`
           <a data-category="${catValue}" href="#${catValue}" class="${isActive}">
             <i class="${row.icon}"></i>
@@ -333,15 +379,19 @@
     }
 
     if (urlTag) {
-      const match = tabCats.find(c => canonicalCategory(c) === canonicalCategory(urlTag));
-      state.category = match || urlTag;
+      const moduleKey = getCurrentFeedModuleKey();
+      const requested = canonicalFeedCategory(urlTag, moduleKey);
+      const match = tabCats.find(c => canonicalFeedCategory(c, moduleKey) === requested);
+      state.category = match || requested || urlTag;
       setActiveTab(state.category);
     }
 
-    const hashCat = (window.location.hash || '').replace('#', '');
+    const hashCat = decodeCategoryValue(window.location.hash);
     if (!urlTag && hashCat && !reservedHashes.has(String(hashCat).toLowerCase())) {
-      const match = tabCats.find(c => canonicalCategory(c) === canonicalCategory(hashCat));
-      state.category = match || hashCat;
+      const moduleKey = getCurrentFeedModuleKey();
+      const requested = canonicalFeedCategory(hashCat, moduleKey);
+      const match = tabCats.find(c => canonicalFeedCategory(c, moduleKey) === requested);
+      state.category = match || requested || hashCat;
       setActiveTab(state.category);
     }
 
@@ -351,7 +401,7 @@
     }
 
     window.addEventListener('hashchange', function () {
-      const next = (window.location.hash || '').replace('#', '');
+      const next = decodeCategoryValue(window.location.hash);
       if (!next || reservedHashes.has(String(next).toLowerCase())) {
         if (!next || next === 'todas' || next === 'toda' || next === 'destaques') {
           selectCategory('todas', { updateHash: false });
@@ -373,6 +423,7 @@
   window.kcFilters = {
     normalizeText,
     canonicalCategory,
+    canonicalFeedCategory,
     apply,
     initTabSearchFilter: init,
 

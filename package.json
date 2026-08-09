@@ -44,6 +44,9 @@
     "test:cadu:phase-a-upgrade": "node scripts/test-cadu-phase-a-legacy-upgrade.js",
     "test:cadu:phase-a-postgrest": "node scripts/test-cadu-phase-a-postgrest.js",
     "test:db:audited-category-metadata": "node scripts/test-audited-category-metadata-reconciliation.js",
+    "test:db:canonical-category-labels": "node scripts/test-canonical-category-label-reconciliation.js",
+    "test:db:canonical-category-labels:cli-push": "node scripts/test-canonical-category-label-reconciliation-cli-push.js",
+    "test:db:canonical-category-labels:reset-local": "node scripts/test-canonical-category-label-reconciliation.js --supabase-reset",
     "test:db:semantic-post-reclassification": "node scripts/test-semantic-post-reclassification.js",
     "cadu:audit": "node tests/manual/cadu-site-health-probe.js"
   },

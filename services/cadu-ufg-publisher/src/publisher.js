@@ -2,7 +2,7 @@
 
 const MAX_IMAGE_COUNT = 6;
 
-const { toPostgrestInsert } = require('./mapper');
+const { canonicalCategoryIdentity, toPostgrestInsert } = require('./mapper');
 const { sha256, slugify } = require('./utils');
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -536,6 +536,17 @@ class SupabasePublisher {
     const status = pick('status');
     const expiresAt = pick('expires_at', 'expiresAt');
     const moderationReason = pick('moderation_reason', 'moderationReason');
+    const taxonomySurfaceKeys = [
+      'category',
+      'categoryKey',
+      'categoriaKey',
+      'categoryLabel',
+      'categoria',
+      'categoriaLabel',
+    ];
+    const nestedTaxonomyTouched = isPlainObject(input.metadata)
+      && taxonomySurfaceKeys.some((key) => Object.prototype.hasOwnProperty.call(input.metadata, key));
+    const topLevelTaxonomyTouched = taxonomySurfaceKeys.some((key) => has(key));
 
     if (title !== undefined) patch.title = String(title || '').trim();
     if (description !== undefined) patch.description = String(description || '').trim();
@@ -567,10 +578,12 @@ class SupabasePublisher {
       'remuneracao',
       'tags',
       'tagKeys',
+      'category',
       'categoria',
       'categoriaKey',
       'categoryKey',
       'categoryLabel',
+      'categoriaLabel',
       'subcategory',
       'subcategoryKey',
       'subcategoryLabel',
@@ -593,6 +606,30 @@ class SupabasePublisher {
       metadataPatch.cover_url = candidateImages[0];
     }
     patch.metadata = mergeMetadata(current && current.metadata, metadataPatch);
+
+    const effectiveModule = patch.module !== undefined ? patch.module : (current && current.module);
+    const effectiveCategory = patch.category !== undefined ? patch.category : (current && current.category);
+    const taxonomyChanged = moduleName !== undefined
+      || category !== undefined
+      || nestedTaxonomyTouched
+      || topLevelTaxonomyTouched;
+    let categoryIdentity = null;
+    try {
+      categoryIdentity = canonicalCategoryIdentity(effectiveModule, effectiveCategory);
+    } catch (error) {
+      // Preserve unrelated edits to historical legacy rows, but never allow an
+      // edit to introduce or move to an invalid module/category pair.
+      if (taxonomyChanged) throw error;
+    }
+    if (categoryIdentity) {
+      if (moduleName !== undefined || (current && current.module) !== categoryIdentity.module) {
+        patch.module = categoryIdentity.module;
+      }
+      if (category !== undefined || (current && current.category) !== categoryIdentity.category) {
+        patch.category = categoryIdentity.category;
+      }
+      Object.assign(patch.metadata, categoryIdentity.metadata);
+    }
     return stripUndefined(patch);
   }
 
