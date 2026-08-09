@@ -1,6 +1,6 @@
 # Auditoria de feed, filtros e taxonomia — 2026-08-08
 
-> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 e o gate upstream Cadu/Edge estão em produção. As migrations `20260806090000`, `20260808152842`, `20260808152843`, `20260808152845`, `20260808152850` e `20260808152900` foram aplicadas e verificadas em produção em 2026-08-08. A verificação pós-rollout registra **791** linhas: **134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`**. A reconciliação estrutural posterior das seis superfícies de categoria está codificada em `20260808225424`, com escopo exato de 87 UUIDs, mas **ainda não foi aplicada**. O hotfix dos filtros segue em trilha paralela e não é evidência de rollout dessa nova migration.
+> **Estado deste documento:** auditoria, implementação e registro de rollout. O frontend do PR #818 e o gate upstream Cadu/Edge estão em produção. As migrations `20260806090000`, `20260808152842`, `20260808152843`, `20260808152845`, `20260808152850`, `20260808152900` e `20260808225424` foram aplicadas e verificadas em produção. A reconciliação estrutural das seis superfícies e o hotfix dos filtros foram entregues pelo PR #824, merge commit `5e449dfc13eeade77e309d155f03d847b0a98e48`. A verificação pós-rollout registra **791** linhas: **134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`**; os 134 publicados estão no registry e têm as seis superfícies exatas.
 
 ## Resumo executivo
 
@@ -579,11 +579,39 @@ ledger 0 mais funções/trigger sentinela byte-a-byte. Ambos são removidos ao f
 npm run test:db:canonical-category-labels:cli-push
 ```
 
-Este registro é evidência de auditoria e implementação local. Ele **não afirma
-rollout** de `20260808225424`; antes de aplicar, o preflight deve voltar todo
-`true` sob freeze/lock, e o proof `source` deve confirmar 87/0. Depois da
-aplicação autorizada, o proof `target` deve confirmar 0/87, 134 superfícies
-globais exatas e a permanência da revisão editorial do Passe Livre.
+O rollout de `20260808225424` foi executado em produção em **2026-08-09 entre
+01:07 e 01:09 UTC** (2026-08-08 entre 22:07 e 22:09 BRT), depois do merge do PR
+#824. O gate operacional registrou:
+
+- Vercel em produção no merge commit `5e449dfc`, Edge `cadu-publish` ACTIVE v48
+  e 15/15 funções Edge sem drift de fonte;
+- `runtime.lock` no mesmo inode `2049:5542503` no host e nos dois containers,
+  zero runs ativos e zero `pg_cron` em execução durante a janela;
+- preflight versionado com 10/10 capacidades verdadeiras, 87 fontes, zero
+  alvos, 47 controles e 134 publicados;
+- proof oficial `source` em uma única transação com a migration real e
+  `ROLLBACK` bem-sucedido;
+- Supabase CLI 2.105.0 em diretório isolado, histórico remoto terminando em
+  `20260808152900`, arquivo único de 50.108 bytes e SHA-256
+  `0acd4b89f59bd74030ecf65cdfecf3f55bc944d2a23748b48dd6018b5495ca08`;
+- dry-run listando exclusivamente
+  `20260808225424_canonical_category_label_reconciliation.sql`, seguido pelo
+  `db push` no mesmo diretório, sem `--include-all` e sem `migration repair`;
+- ledger local/remoto alinhado em `20260808225424`, proof oficial `target`
+  bem-sucedido e leitura final com 87 alvos, 47 controles, 134 superfícies
+  globais exatas, zero drift de labels, preços/contagens preservados e os três
+  triggers em modo origin.
+- QA read-only em produção com seis cenários HTTP 200: 11 cards em Cursos,
+  6/6 UUIDs reconciliados visíveis e canônicos, aliases de query/tag/hash com o
+  chip correto, duas publicidades inline e duas laterais no desktop, duas
+  inline no mobile, zero overflow horizontal e busca `Tendencias` retornando
+  exatamente o evento esperado; foram observados zero erros de console,
+  página, request ou HTTP e zero tentativa de mutação do aplicativo.
+
+A revisão editorial do Passe Livre permanece aberta; o rollout corrigiu apenas
+a coerência estrutural com o root já publicado `oportunidades/bolsas`.
+O modal de consentimento alto demais no viewport mobile permanece como débito
+visual preexistente e não afeta a integridade do feed ou da reconciliação.
 
 ### Auditoria histórica de `20260806090000`
 
@@ -776,4 +804,4 @@ versão só passa a constar depois que seu SQL real foi aplicado.
 
 ## Conclusão
 
-As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. O frontend, Cadu/Edge, `06090000`, `152850` e `152900` já foram entregues e verificados; o estado pós-rollout é 791 linhas, distribuídas em 134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`. A nova reconciliação estrutural `20260808225424` está implementada e provada localmente, mas permanece sem execução remota até seus gates explícitos `source`/`target`; o Passe Livre continua em revisão editorial separada.
+As 49 mudanças são uma correção semântica fechada, verificável e de alta confiança; não são uma tentativa de “adivinhar” todo caso limítrofe. O frontend, Cadu/Edge, `06090000`, `152850`, `152900` e a reconciliação estrutural `225424` foram entregues e verificados. O estado final é 791 linhas, distribuídas em 134 `published`, 301 `hidden`, 341 `closed` e 15 `deleted`; os 134 publicados têm root canônico, seis superfícies exatas e zero label divergente. O Passe Livre continua em revisão editorial separada.

@@ -515,8 +515,12 @@ describe('canonical category label reconciliation migration', () => {
     expect(auditDoc).toContain('47 controles já canônicos');
     expect(auditDoc).toContain('4b39baaf-996b-49ca-a603-b122066946dd');
     expect(auditDoc).toContain('permanece uma **revisão editorial aberta**');
-    expect(auditDoc).toContain('ainda não foi aplicada');
-    expect(auditDoc).toContain('O hotfix dos filtros segue em trilha paralela');
+    expect(auditDoc).toContain('foram aplicadas e verificadas em produção');
+    expect(auditDoc).toContain('merge commit `5e449dfc13eeade77e309d155f03d847b0a98e48`');
+    expect(auditDoc).toContain('preflight versionado com 10/10 capacidades verdadeiras');
+    expect(auditDoc).toContain('proof oficial `target`');
+    expect(auditDoc).toContain('134 superfícies globais exatas');
+    expect(auditDoc).toContain('zero tentativa de mutação do aplicativo');
     expect(auditDoc).toContain('npm run test:db:canonical-category-labels');
   });
 
