@@ -426,6 +426,63 @@ describe('Cadu central review proxy', () => {
     expect(options.redirect).toBe('error');
   });
 
+  test('keeps the legacy v1 incident limit without weakening the v2 contract', async () => {
+    const query = parseCentralReviewListQuery({ origin: 'pipeline', state: 'pending' });
+    const legacy = listResponse(query);
+    legacy.items[0].kind = 'pipeline_incident';
+    legacy.items[0].issues = [
+      'curator_coverage_partial:global_events_collection_failed,'
+      + 'source_budget_exhausted:65,source_news_unavailable:1,global_bud',
+    ];
+    global.fetch.mockResolvedValueOnce(upstreamResponse(200, legacy));
+
+    const accepted = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, accepted, {
+      path: 'reviews',
+      query: { origin: 'pipeline', state: 'pending' },
+    });
+    expect(legacy.items[0].issues[0].length).toBeGreaterThan(100);
+    expect(legacy.items[0].issues[0].length).toBeLessThanOrEqual(180);
+    expect(accepted.statusCode).toBe(200);
+
+    const oversizedLegacy = listResponse(query);
+    oversizedLegacy.items[0].kind = 'pipeline_incident';
+    oversizedLegacy.items[0].issues = ['x'.repeat(181)];
+    global.fetch.mockResolvedValueOnce(upstreamResponse(200, oversizedLegacy));
+
+    const rejectedLegacy = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, rejectedLegacy, {
+      path: 'reviews',
+      query: { origin: 'pipeline', state: 'pending' },
+    });
+    expect(rejectedLegacy.statusCode).toBe(502);
+    expect(rejectedLegacy.body).toEqual({ error: 'invalid_cadu_api_response' });
+
+    const oversizedLegacyQuality = listResponse(query);
+    oversizedLegacyQuality.items[0].issues = ['x'.repeat(101)];
+    global.fetch.mockResolvedValueOnce(upstreamResponse(200, oversizedLegacyQuality));
+
+    const rejectedLegacyQuality = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, rejectedLegacyQuality, {
+      path: 'reviews',
+      query: { origin: 'pipeline', state: 'pending' },
+    });
+    expect(rejectedLegacyQuality.statusCode).toBe(502);
+    expect(rejectedLegacyQuality.body).toEqual({ error: 'invalid_cadu_api_response' });
+
+    const current = v2ListResponse(query);
+    current.items[0].issues = ['x'.repeat(101)];
+    global.fetch.mockResolvedValueOnce(upstreamResponse(200, current));
+
+    const rejected = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, rejected, {
+      path: 'reviews',
+      query: { origin: 'pipeline', state: 'pending' },
+    });
+    expect(rejected.statusCode).toBe(502);
+    expect(rejected.body).toEqual({ error: 'invalid_cadu_api_response' });
+  });
+
   test('dual-decodes v1 and v2 while validating v2 identity and provenance fail-closed', async () => {
     const query = parseCentralReviewListQuery({ origin: 'pipeline', state: 'pending' });
     global.fetch.mockResolvedValueOnce(upstreamResponse(200, v2ListResponse(query)));
