@@ -1751,6 +1751,28 @@ main {
     line-height: 1;
 }
 
+/* Fallback local: os controles continuam legíveis mesmo se a fonte de ícones
+ * externa falhar. O <i> permanece no DOM apenas por compatibilidade. */
+.kc-scroll-rail__btn > i {
+    display: none;
+}
+
+.kc-scroll-rail__btn::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border: solid currentColor;
+    border-width: 2px 2px 0 0;
+}
+
+.kc-scroll-rail__btn--prev::before {
+    transform: rotate(-135deg);
+}
+
+.kc-scroll-rail__btn--next::before {
+    transform: rotate(45deg);
+}
+
 .kc-scroll-rail__btn[hidden] {
     display: none !important;
 }
@@ -12750,16 +12772,16 @@ body.kc-admin-page .kc-consent-btn {
   top: calc(var(--kc-safe-top, 0px) + var(--kc-header-height, 64px) + var(--kc-sticky-gap, 0px));
   z-index: 110;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 0;
   width: 100%;
   max-width: 100%;
-  margin: 0 0 16px;
-  padding: 0 6px;
+  margin: 0 0 14px;
+  padding: 0;
   background: var(--kc-background-dark);
   border-bottom: 1px solid var(--kc-border-dark);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 /* Funciona antes e depois do auto-wrap de kc-core.js:
@@ -12767,11 +12789,13 @@ body.kc-admin-page .kc-consent-btn {
  *   depois: toolbar > .kc-scroll-rail--tabs > .kc-feed-tabs */
 .kc-feed-toolbar > .kc-feed-tabs,
 .kc-feed-toolbar > .kc-scroll-rail--tabs {
+  grid-row: 1;
+  grid-column: 1;
   position: static !important;
   top: auto !important;
   z-index: auto;
   min-width: 0;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   margin: 0 !important;
   background: transparent;
@@ -12789,18 +12813,167 @@ body.kc-admin-page .kc-consent-btn {
   box-shadow: none !important;
 }
 
-.kc-feed-toolbar__actions {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+/* Reserva uma zona óptica entre chips parcialmente visíveis e os botões do
+ * rail. A máscara afeta só a borda que ainda possui conteúdo rolável; itens
+ * completos permanecem legíveis e reaparecem integralmente após a rolagem. */
+.kc-feed-toolbar > .kc-scroll-rail--tabs .kc-scroll-rail__btn--prev {
+  margin-right: 14px;
 }
 
-/* A navegação completa já existe no header desktop. O seletor compacto é uma
- * affordance exclusiva do mobile, onde esses links ficam fora da viewport. */
+.kc-feed-toolbar > .kc-scroll-rail--tabs .kc-scroll-rail__btn--next {
+  margin-left: 14px;
+}
+
+.kc-feed-toolbar > .kc-scroll-rail--tabs.is-overflow-end:not(.is-overflow-start) > .kc-feed-tabs {
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent calc(100% - 24px), transparent 100%);
+}
+
+.kc-feed-toolbar > .kc-scroll-rail--tabs.is-overflow-start:not(.is-overflow-end) > .kc-feed-tabs {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, transparent 24px, #000 24px, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0, transparent 24px, #000 24px, #000 100%);
+}
+
+.kc-feed-toolbar > .kc-scroll-rail--tabs.is-overflow-start.is-overflow-end > .kc-feed-tabs {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, transparent 24px, #000 24px, #000 calc(100% - 24px), transparent calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, transparent 24px, #000 24px, #000 calc(100% - 24px), transparent calc(100% - 24px), transparent 100%);
+}
+
+.kc-feed-toolbar > .kc-feed-toolbar__actions {
+  grid-row: 2;
+  grid-column: 1;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--kc-border-dark);
+}
+
+/* O mesmo seletor compacto complementa o rail em todos os viewports. O
+ * atributo hidden continua sendo a autoridade enquanto o schema não estiver
+ * disponível. */
 .kc-module-picker-trigger {
   display: none;
+}
+
+.kc-module-picker-trigger:not([hidden]) {
+  display: inline-flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 52%;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kc-module-picker-trigger > i:first-child {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  color: var(--kc-primary-brand);
+}
+
+.kc-module-picker-trigger > i:first-child::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: currentColor;
+  box-shadow: 7px 0 0 currentColor,
+              0 7px 0 currentColor,
+              7px 7px 0 currentColor;
+}
+
+.kc-module-picker-trigger__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kc-module-picker-trigger__chevron {
+  display: inline-block;
+  flex: 0 0 10px;
+  width: 10px;
+  height: 10px;
+  color: var(--kc-text-dark-secondary);
+  font-size: 0;
+}
+
+.kc-module-picker-trigger__chevron::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 0.18s ease;
+}
+
+.kc-module-picker-trigger[aria-expanded="true"] .kc-module-picker-trigger__chevron::before {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+
+.kc-module-picker-trigger:hover {
+  color: var(--kc-primary-brand);
+}
+
+.kc-module-picker-trigger:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 42%, transparent);
+  outline-offset: 0;
+  border-radius: 9px;
+}
+
+.kc-feed-toolbar__actions > .kc-hide-closed-control {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.kc-feed-toolbar .kc-hide-closed-toggle {
+  width: auto;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.kc-feed-toolbar .kc-hide-closed-toggle__label {
+  font-size: 0.76rem;
+}
+
+.kc-feed-toolbar .kc-hide-closed-toggle__track {
+  flex-basis: 40px;
+  width: 40px;
+  height: 22px;
+}
+
+.kc-feed-toolbar .kc-hide-closed-toggle__track::after {
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.kc-feed-toolbar .kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track::after {
+  transform: translateX(18px);
 }
 
 .kc-hide-closed-control {
@@ -13081,116 +13254,34 @@ body.kc-admin-page .kc-consent-btn {
   text-align: center;
 }
 
+/* Na transição tablet/desktop a coluna do feed divide espaço com sidebars.
+ * A densidade horizontal evita que o primeiro filtro de categoria seja
+ * recortado pelo controle do rail, preservando os alvos verticais de 40px. */
+@media (min-width: 769px) and (max-width: 900px) {
+  .kc-feed-toolbar .kc-feed-tabs,
+  .kc-feed-toolbar .kc-feed-tabs__view,
+  .kc-feed-toolbar .kc-feed-tabs__nav {
+    gap: 6px;
+  }
+
+  .kc-feed-toolbar .kc-feed-tabs a,
+  .kc-feed-toolbar .kc-feed-tabs button[data-feed-tab] {
+    padding-inline: 8px;
+  }
+
+  .kc-feed-toolbar .kc-feed-tabs__divider {
+    margin-inline: 2px;
+  }
+
+  .kc-feed-toolbar .kc-feed-tabs a > i,
+  .kc-feed-toolbar .kc-feed-tabs button[data-feed-tab] > i {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .kc-feed-toolbar {
     top: calc(var(--kc-safe-top, 0px) + var(--kc-header-height, 64px));
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    margin-bottom: 14px;
-    padding: 0;
-    box-shadow: none;
-  }
-
-  .kc-feed-toolbar > .kc-feed-tabs,
-  .kc-feed-toolbar > .kc-scroll-rail--tabs {
-    grid-row: 1;
-    grid-column: 1;
-    width: 100%;
-  }
-
-  .kc-feed-toolbar > .kc-feed-toolbar__actions {
-    grid-row: 2;
-    grid-column: 1;
-    width: 100%;
-    min-width: 0;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 44px;
-    padding: 0 4px;
-    border-bottom: 1px solid var(--kc-border-dark);
-  }
-
-  .kc-module-picker-trigger:not([hidden]) {
-    display: inline-flex;
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 52%;
-    min-height: 44px;
-    align-items: center;
-    gap: 7px;
-    padding: 4px 2px;
-    border: 0;
-    background: transparent;
-    color: var(--kc-text-dark-primary);
-    font: inherit;
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-align: left;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .kc-module-picker-trigger > i:first-child {
-    color: var(--kc-primary-brand);
-  }
-
-  .kc-module-picker-trigger__label {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .kc-module-picker-trigger__chevron {
-    color: var(--kc-text-dark-secondary);
-    font-size: 0.68rem;
-    transition: transform 0.18s ease;
-  }
-
-  .kc-module-picker-trigger[aria-expanded="true"] .kc-module-picker-trigger__chevron {
-    transform: rotate(180deg);
-  }
-
-  .kc-module-picker-trigger:hover {
-    color: var(--kc-primary-brand);
-  }
-
-  .kc-module-picker-trigger:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 42%, transparent);
-    outline-offset: 0;
-    border-radius: 9px;
-  }
-
-  .kc-feed-toolbar__actions > .kc-hide-closed-control {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  .kc-feed-toolbar .kc-hide-closed-toggle {
-    width: auto;
-    gap: 6px;
-    padding: 4px 2px;
-  }
-
-  .kc-feed-toolbar .kc-hide-closed-toggle__label {
-    font-size: 0.76rem;
-  }
-
-  .kc-feed-toolbar .kc-hide-closed-toggle__track {
-    flex-basis: 40px;
-    width: 40px;
-    height: 22px;
-  }
-
-  .kc-feed-toolbar .kc-hide-closed-toggle__track::after {
-    top: 2px;
-    left: 2px;
-    width: 16px;
-    height: 16px;
-  }
-
-  .kc-feed-toolbar .kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track::after {
-    transform: translateX(18px);
   }
 
   .kc-sidebar-context-modal.kc-module-picker-modal {

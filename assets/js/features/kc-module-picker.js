@@ -3,8 +3,8 @@
  *
  * The catalog comes from the publishing schema already loaded by every feed,
  * so adding a module there (with label, emoji and redirect) automatically
- * exposes it here. The picker is intentionally mobile-only in CSS because the
- * desktop header already provides the same module navigation.
+ * exposes it here. The compact toolbar affordance is shared by mobile and
+ * desktop so module switching remains consistent at every viewport.
  */
 (function initKcModulePicker(global) {
   'use strict';
@@ -396,13 +396,6 @@
     return available;
   }
 
-  function onViewportModeChange(event) {
-    var modal = getModal();
-    if (!event.matches && modal && modal.getAttribute('aria-hidden') === 'false') {
-      closeModal();
-    }
-  }
-
   function init() {
     if (initialized) return;
     initialized = true;
@@ -412,14 +405,6 @@
     document.addEventListener('click', onClick);
     document.addEventListener('input', onInput);
     document.addEventListener('keydown', onKeydown, true);
-    if (typeof global.matchMedia === 'function') {
-      var mobileViewport = global.matchMedia('(max-width: 768px)');
-      if (typeof mobileViewport.addEventListener === 'function') {
-        mobileViewport.addEventListener('change', onViewportModeChange);
-      } else if (typeof mobileViewport.addListener === 'function') {
-        mobileViewport.addListener(onViewportModeChange);
-      }
-    }
     global.addEventListener('pagehide', function () {
       closeModal({ restoreFocus: false });
     });

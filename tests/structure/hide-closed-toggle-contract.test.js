@@ -140,12 +140,12 @@ describe('contrato visual e acessivel de Ocultar encerrados', () => {
   test('CSS preserva hit target, foco, estados, sticky e composicao responsiva', () => {
     const css = read('assets/css/styles.css');
 
-    expect(css).toMatch(/\.kc-feed-toolbar\s*\{[^}]*position:\s*sticky;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;/s);
+    expect(css).toMatch(/\.kc-feed-toolbar\s*\{[^}]*position:\s*sticky;[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
     expect(css).toMatch(/\.kc-feed-toolbar\s*>\s*\.kc-scroll-rail--tabs\s*\{[^}]*position:\s*static\s*!important;/s);
     expect(css).toMatch(/\.kc-hide-closed-toggle\s*\{[^}]*min-height:\s*44px;/s);
     expect(css).toMatch(/\.kc-hide-closed-toggle__input:checked\s*\+\s*\.kc-hide-closed-toggle__track\s*\{[^}]*var\(--kc-primary-brand\)/s);
     expect(css).toMatch(/\.kc-hide-closed-toggle__input:focus-visible\s*\+\s*\.kc-hide-closed-toggle__track\s*\{[^}]*outline:/s);
-    expect(css).toMatch(/@media\s*\(max-width:\s*768px\)[\s\S]*?\.kc-feed-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
+    expect(css).toMatch(/\.kc-feed-toolbar\s*>\s*\.kc-feed-toolbar__actions\s*\{[^}]*justify-content:\s*space-between;/s);
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.kc-hide-closed-toggle__track[\s\S]*?transition:\s*none;/s);
   });
 });

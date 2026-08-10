@@ -10,6 +10,14 @@ const FEED_PAGES = [
   'achados-perdidos.html',
 ];
 
+const TOOLBAR_VIEWPORTS = [
+  { label: 'mobile 390', width: 390, height: 844 },
+  { label: 'desktop 769', width: 769, height: 900 },
+  { label: 'desktop 1024', width: 1024, height: 900 },
+  { label: 'desktop 1280', width: 1280, height: 900 },
+  { label: 'desktop 1920', width: 1920, height: 1080 },
+];
+
 async function prepareReadOnlyPage(page) {
   await page.addInitScript(() => {
     localStorage.setItem('kc_consent_v1', JSON.stringify({
@@ -34,51 +42,135 @@ async function prepareReadOnlyPage(page) {
 
 test.describe('Seletor responsivo de módulos', () => {
   for (const pagePath of FEED_PAGES) {
-    test(`${pagePath} mantém rail acima das ações no mobile`, async ({ page }) => {
-      await prepareReadOnlyPage(page);
-      await page.setViewportSize({ width: 390, height: 844 });
-      await page.goto(`/${pagePath}`, { waitUntil: 'domcontentloaded' });
+    for (const viewport of TOOLBAR_VIEWPORTS) {
+      test(`${pagePath} mantém rail acima das ações em ${viewport.label} px`, async ({ page }) => {
+        await prepareReadOnlyPage(page);
+        await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.goto(`/${pagePath}`, { waitUntil: 'domcontentloaded' });
 
-      const toolbar = page.locator('.kc-feed-toolbar').first();
-      const rail = toolbar.locator(':scope > .kc-scroll-rail--tabs');
-      const actions = toolbar.locator(':scope > .kc-feed-toolbar__actions');
-      const picker = actions.locator('[data-kc-module-picker-open]');
-      const hideClosed = actions.locator('[data-kc-hide-closed-toggle]');
+        const toolbar = page.locator('.kc-feed-toolbar').first();
+        const rail = toolbar.locator(':scope > .kc-scroll-rail--tabs');
+        const actions = toolbar.locator(':scope > .kc-feed-toolbar__actions');
+        const picker = actions.locator('[data-kc-module-picker-open]');
+        const hideClosed = actions.locator('[data-kc-hide-closed-toggle]');
 
-      await expect(rail).toBeVisible();
-      await expect(actions).toBeVisible();
-      await expect(picker).toBeVisible();
-      await expect(hideClosed).toBeVisible();
+        await expect(rail).toBeVisible();
+        await expect(actions).toBeVisible();
+        await expect(picker).toBeVisible();
+        await expect(hideClosed).toBeVisible();
 
-      const metrics = await toolbar.evaluate((element) => {
-        const railRect = element.querySelector(':scope > .kc-scroll-rail--tabs').getBoundingClientRect();
-        const actionsRect = element.querySelector(':scope > .kc-feed-toolbar__actions').getBoundingClientRect();
-        const pickerRect = element.querySelector('[data-kc-module-picker-open]').getBoundingClientRect();
-        const hideRect = element.querySelector('[data-kc-hide-closed-toggle]').getBoundingClientRect();
-        const trackRect = element.querySelector('.kc-hide-closed-toggle__track').getBoundingClientRect();
-        return {
-          railBottom: railRect.bottom,
-          actionsTop: actionsRect.top,
-          pickerLeft: pickerRect.left,
-          hideLeft: hideRect.left,
-          pickerHeight: pickerRect.height,
-          hideHeight: hideRect.height,
-          trackWidth: trackRect.width,
-          trackHeight: trackRect.height,
-          scrollWidth: document.documentElement.scrollWidth,
-          clientWidth: document.documentElement.clientWidth,
-        };
+        const metrics = await toolbar.evaluate((element) => {
+          const toolbarRect = element.getBoundingClientRect();
+          const railRect = element.querySelector(':scope > .kc-scroll-rail--tabs').getBoundingClientRect();
+          const tabsRect = element.querySelector(':scope > .kc-scroll-rail--tabs > .kc-feed-tabs').getBoundingClientRect();
+          const actionsRect = element.querySelector(':scope > .kc-feed-toolbar__actions').getBoundingClientRect();
+          const pickerRect = element.querySelector('[data-kc-module-picker-open]').getBoundingClientRect();
+          const hideRect = element.querySelector('[data-kc-hide-closed-toggle]').getBoundingClientRect();
+          const trackRect = element.querySelector('.kc-hide-closed-toggle__track').getBoundingClientRect();
+          const nextButton = element.querySelector('.kc-scroll-rail__btn--next');
+          const nextRect = nextButton.getBoundingClientRect();
+          const nextVisible = !nextButton.hidden && getComputedStyle(nextButton).display !== 'none';
+          return {
+            toolbarLeft: toolbarRect.left,
+            toolbarRight: toolbarRect.right,
+            railBottom: railRect.bottom,
+            actionsTop: actionsRect.top,
+            actionsLeft: actionsRect.left,
+            actionsRight: actionsRect.right,
+            pickerLeft: pickerRect.left,
+            hideLeft: hideRect.left,
+            pickerHeight: pickerRect.height,
+            hideHeight: hideRect.height,
+            trackWidth: trackRect.width,
+            trackHeight: trackRect.height,
+            scrollAreaRight: tabsRect.right,
+            nextLeft: nextRect.left,
+            nextVisible,
+            scrollWidth: document.documentElement.scrollWidth,
+            clientWidth: document.documentElement.clientWidth,
+          };
+        });
+
+        expect(metrics.actionsTop).toBeGreaterThanOrEqual(metrics.railBottom - 1);
+        expect(metrics.actionsLeft).toBeGreaterThanOrEqual(metrics.toolbarLeft - 1);
+        expect(metrics.actionsRight).toBeLessThanOrEqual(metrics.toolbarRight + 1);
+        expect(metrics.pickerLeft).toBeLessThan(metrics.hideLeft);
+        expect(metrics.pickerHeight).toBeGreaterThanOrEqual(44);
+        expect(metrics.hideHeight).toBeGreaterThanOrEqual(44);
+        expect(metrics.trackWidth).toBeCloseTo(40, 0);
+        expect(metrics.trackHeight).toBeCloseTo(22, 0);
+        if (metrics.nextVisible) {
+          expect(metrics.scrollAreaRight).toBeLessThanOrEqual(metrics.nextLeft + 1);
+        }
+        expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
       });
-
-      expect(metrics.actionsTop).toBeGreaterThanOrEqual(metrics.railBottom - 1);
-      expect(metrics.pickerLeft).toBeLessThan(metrics.hideLeft);
-      expect(metrics.pickerHeight).toBeGreaterThanOrEqual(44);
-      expect(metrics.hideHeight).toBeGreaterThanOrEqual(44);
-      expect(metrics.trackWidth).toBeCloseTo(40, 0);
-      expect(metrics.trackHeight).toBeCloseTo(22, 0);
-      expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-    });
+    }
   }
+
+  test('em 769 px o controle do rail não recorta o chip Todas', async ({ page }) => {
+    await prepareReadOnlyPage(page);
+    await page.setViewportSize({ width: 769, height: 900 });
+    await page.goto('/eventos.html', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.kc-feed-toolbar .kc-scroll-rail__btn--next')).toBeVisible();
+
+    const geometry = await page.locator('.kc-feed-toolbar').first().evaluate((toolbar) => {
+      const tabs = toolbar.querySelector('.kc-scroll-rail--tabs > .kc-feed-tabs');
+      const allCategories = tabs.querySelector('[data-category="todas"]');
+      const next = toolbar.querySelector('.kc-scroll-rail__btn--next');
+      const tabsRect = tabs.getBoundingClientRect();
+      const allRect = allCategories.getBoundingClientRect();
+      const nextRect = next.getBoundingClientRect();
+      return {
+        allLabel: allCategories.textContent.trim(),
+        allLeft: allRect.left,
+        allRight: allRect.right,
+        tabsLeft: tabsRect.left,
+        tabsRight: tabsRect.right,
+        nextLeft: nextRect.left,
+        nextVisible: !next.hidden && getComputedStyle(next).display !== 'none',
+        railMask: getComputedStyle(tabs).maskImage || getComputedStyle(tabs).webkitMaskImage,
+      };
+    });
+
+    expect(geometry.nextVisible).toBe(true);
+    expect(geometry.allLabel).toBe('Todas');
+    expect(geometry.allLeft).toBeGreaterThanOrEqual(geometry.tabsLeft - 1);
+    expect(geometry.allRight).toBeLessThanOrEqual(geometry.tabsRight - 1);
+    expect(geometry.tabsRight).toBeLessThanOrEqual(geometry.nextLeft - 12);
+    expect(geometry.railMask).toContain('linear-gradient');
+  });
+
+  test('renderiza ícone e chevron locais do seletor com recursos externos bloqueados', async ({ page }) => {
+    await prepareReadOnlyPage(page);
+    await page.setViewportSize({ width: 769, height: 900 });
+    await page.goto('/eventos.html', { waitUntil: 'domcontentloaded' });
+
+    const glyphs = await page.locator('[data-kc-module-picker-open]').evaluate((trigger) => {
+      const icon = trigger.querySelector(':scope > i:first-child');
+      const chevron = trigger.querySelector('.kc-module-picker-trigger__chevron');
+      const iconBefore = getComputedStyle(icon, '::before');
+      const chevronBefore = getComputedStyle(chevron, '::before');
+      return {
+        iconWidth: icon.getBoundingClientRect().width,
+        iconHeight: icon.getBoundingClientRect().height,
+        iconFill: iconBefore.backgroundColor,
+        iconBoxShadow: iconBefore.boxShadow,
+        chevronWidth: chevron.getBoundingClientRect().width,
+        chevronHeight: chevron.getBoundingClientRect().height,
+        chevronBorderRight: chevronBefore.borderRightWidth,
+        chevronBorderBottom: chevronBefore.borderBottomWidth,
+      };
+    });
+
+    expect(glyphs.iconWidth).toBeGreaterThanOrEqual(14);
+    expect(glyphs.iconHeight).toBeGreaterThanOrEqual(14);
+    expect(glyphs.iconFill).not.toBe('rgba(0, 0, 0, 0)');
+    expect(glyphs.iconBoxShadow).not.toBe('none');
+    expect(glyphs.chevronWidth).toBeGreaterThanOrEqual(8);
+    expect(glyphs.chevronHeight).toBeGreaterThanOrEqual(8);
+    expect(glyphs.chevronBorderRight).toBe('2px');
+    expect(glyphs.chevronBorderBottom).toBe('2px');
+  });
 
   test('abre bottom sheet acessível, preserva closed=1 e restaura foco', async ({ page }) => {
     await prepareReadOnlyPage(page);
@@ -150,7 +242,7 @@ test.describe('Seletor responsivo de módulos', () => {
     });
   });
 
-  test('respeita a fronteira mobile e não duplica a navegação no desktop', async ({ page }) => {
+  test('mantém seletor e modal funcionais ao atravessar 768/769 px', async ({ page }) => {
     await prepareReadOnlyPage(page);
     await page.setViewportSize({ width: 768, height: 900 });
     await page.goto('/eventos.html', { waitUntil: 'domcontentloaded' });
@@ -160,9 +252,10 @@ test.describe('Seletor responsivo de módulos', () => {
     await expect(page.locator('#kcModulePickerModal')).toHaveAttribute('aria-hidden', 'false');
 
     await page.setViewportSize({ width: 769, height: 900 });
-    await expect(trigger).toBeHidden();
-    await expect(page.locator('#kcModulePickerModal')).toHaveAttribute('aria-hidden', 'true');
-    await expect(page.locator('.kc-nav-links a[href="eventos.html"]')).toBeFocused();
+    await expect(trigger).toBeVisible();
+    await expect(page.locator('#kcModulePickerModal')).toHaveAttribute('aria-hidden', 'false');
+    await expect(page.locator('#kcModulePickerModal [role="dialog"]')).toBeVisible();
+    await expect(page.locator('#kcModulePickerModal .kc-sidebar-context-modal__close')).toBeFocused();
     await expect(page.locator('.kc-feed-toolbar__actions [data-kc-hide-closed-toggle]')).toBeVisible();
 
     const widths = await page.evaluate(() => ({
