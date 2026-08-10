@@ -13,6 +13,8 @@
   const state = {
     preferences: null,
     modalOpen: false,
+    returnFocus: null,
+    inertSnapshot: [],
   };
 
   function $(selector, root) {
@@ -90,6 +92,76 @@
       }
       document.body.classList.toggle('kc-modal-open', !!active);
     } catch (_) { }
+  }
+
+  function setElementInert(element) {
+    state.inertSnapshot.push({
+      element,
+      hadAttribute: element.hasAttribute('inert'),
+      propertyValue: element.inert === true,
+    });
+    element.setAttribute('inert', '');
+    element.inert = true;
+  }
+
+  function setBackgroundInert(modal) {
+    state.inertSnapshot = [];
+    const consentRoot = modal.parentElement;
+    Array.prototype.forEach.call(document.body.children, function (element) {
+      if (element !== consentRoot) setElementInert(element);
+    });
+    Array.prototype.forEach.call(consentRoot.children, function (element) {
+      if (element !== modal) setElementInert(element);
+    });
+  }
+
+  function restoreBackgroundInert() {
+    state.inertSnapshot.forEach(function (entry) {
+      if (!entry.element || !entry.element.isConnected) return;
+      if (!entry.hadAttribute) entry.element.removeAttribute('inert');
+      entry.element.inert = entry.propertyValue;
+    });
+    state.inertSnapshot = [];
+  }
+
+  function isFocusable(element) {
+    if (!element || element.disabled || element.hidden) return false;
+    if (element.getAttribute('tabindex') === '-1') return false;
+    if (element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    if (!window.getComputedStyle) return true;
+    let current = element;
+    while (current && current.nodeType === 1) {
+      const style = window.getComputedStyle(current);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      current = current.parentElement;
+    }
+    return true;
+  }
+
+  function restoreFocusAfterConsent(candidate) {
+    if (candidate && candidate.isConnected && isFocusable(candidate)) {
+      candidate.focus();
+      return;
+    }
+
+    const fallback = document.querySelector('main:not([hidden]), [role="main"]:not([hidden])') || document.body;
+    if (!fallback || !fallback.isConnected || typeof fallback.focus !== 'function') return;
+    const previousTabIndex = fallback.getAttribute('tabindex');
+    if (previousTabIndex === null) fallback.setAttribute('tabindex', '-1');
+    fallback.focus({ preventScroll: true });
+    if (previousTabIndex === null) {
+      fallback.addEventListener('blur', function cleanupFallbackTabIndex() {
+        fallback.removeAttribute('tabindex');
+      }, { once: true });
+    }
+  }
+
+  function getModalFocusable(modal) {
+    const dialog = modal.querySelector('.kc-consent-modal__card');
+    if (!dialog) return [];
+    return Array.prototype.slice.call(dialog.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(isFocusable);
   }
 
   function getLegalHref(file) {
@@ -196,7 +268,7 @@
       '  <section class="kc-consent-modal__card" role="dialog" aria-modal="true" aria-labelledby="kcConsentTitle">',
       '    <header class="kc-consent-modal__header">',
       '      <div><span class="kc-consent-kicker">LGPD</span><h2 id="kcConsentTitle">Preferências de cookies</h2></div>',
-      '      <button type="button" class="kc-consent-modal__close" aria-label="Fechar preferências" data-i18n-aria-label="aria-label.close-cookie-preferences" data-consent-close><i class="fas fa-times" aria-hidden="true"></i></button>',
+      '      <button type="button" class="kc-consent-modal__close" aria-label="Fechar preferências" data-i18n-aria-label="aria-label.close-cookie-preferences" data-consent-close><span class="kc-consent-modal__close-glyph" aria-hidden="true">×</span></button>',
       '    </header>',
       '    <div class="kc-consent-modal__body">',
       '      <p>Você controla os usos opcionais. Cookies e dados necessários continuam ativos para autenticação, segurança e funcionamento básico.</p>',
@@ -238,12 +310,14 @@
   function setModalVisible(active) {
     const modal = $('#kcConsentModal');
     if (!modal) return;
+    const wasOpen = state.modalOpen;
     state.modalOpen = !!active;
     modal.hidden = !active;
     modal.classList.toggle('is-visible', !!active);
     modal.setAttribute('aria-hidden', active ? 'false' : 'true');
-    lockScroll(!!active);
     if (active) {
+      if (!wasOpen) setBackgroundInert(modal);
+      lockScroll(true);
       const prefs = readPreferences() || DEFAULT_PREFERENCES;
       const preferencesInput = $('#kcConsentPreferences');
       const analyticsInput = $('#kcConsentAnalytics');
@@ -255,19 +329,34 @@
         const target = $('#kcConsentPreferences') || $('[data-consent-save]');
         if (target && typeof target.focus === 'function') target.focus();
       }, 20);
+    } else if (wasOpen) {
+      lockScroll(false);
+      restoreBackgroundInert();
+      const returnFocus = state.returnFocus;
+      state.returnFocus = null;
+      restoreFocusAfterConsent(returnFocus);
+    }
+  }
+
+  function dismissConsentUi() {
+    const root = $('#kcConsentRoot');
+    const activeElement = document.activeElement;
+    const wasModalOpen = state.modalOpen;
+    setBannerVisible(false);
+    setModalVisible(false);
+    if (!wasModalOpen && root && root.contains(activeElement)) {
+      restoreFocusAfterConsent(null);
     }
   }
 
   function acceptAll(source) {
     writePreferences({ preferences: true, analytics: true, advertising: true }, source || 'accept_all');
-    setBannerVisible(false);
-    setModalVisible(false);
+    dismissConsentUi();
   }
 
   function rejectOptional(source) {
     writePreferences({ preferences: false, analytics: false, advertising: false }, source || 'reject_optional');
-    setBannerVisible(false);
-    setModalVisible(false);
+    dismissConsentUi();
   }
 
   function saveFromModal() {
@@ -276,12 +365,14 @@
       analytics: $('#kcConsentAnalytics')?.checked === true,
       advertising: $('#kcConsentAdvertising')?.checked === true,
     }, 'custom');
-    setBannerVisible(false);
-    setModalVisible(false);
+    dismissConsentUi();
   }
 
-  function openPreferences() {
+  function openPreferences(trigger) {
     buildMarkup();
+    if (!state.modalOpen) {
+      state.returnFocus = trigger && trigger.isConnected ? trigger : document.activeElement;
+    }
     setModalVisible(true);
   }
 
@@ -291,7 +382,7 @@
       if (!target) return;
       if (target.hasAttribute('data-kc-cookie-preferences')) {
         event.preventDefault();
-        openPreferences();
+        openPreferences(target);
         return;
       }
       if (target.hasAttribute('data-consent-accept')) {
@@ -306,7 +397,7 @@
       }
       if (target.hasAttribute('data-consent-config')) {
         event.preventDefault();
-        openPreferences();
+        openPreferences(target);
         return;
       }
       if (target.hasAttribute('data-consent-save')) {
@@ -321,7 +412,36 @@
     });
 
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && state.modalOpen) setModalVisible(false);
+      if (!state.modalOpen) return;
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.preventDefault();
+        event.stopPropagation();
+        setModalVisible(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const modal = $('#kcConsentModal');
+      const dialog = modal && modal.querySelector('.kc-consent-modal__card');
+      if (!dialog) return;
+      const focusable = getModalFocusable(modal);
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.setAttribute('tabindex', '-1');
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     });
   }
 

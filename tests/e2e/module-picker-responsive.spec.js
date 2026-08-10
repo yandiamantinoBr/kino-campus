@@ -271,6 +271,25 @@ test.describe('Seletor responsivo de módulos', () => {
     await expect(modal).toHaveAttribute('aria-hidden', 'true');
     await expect(consent).toBeVisible();
     expect(await consent.evaluate((element) => element.closest('[inert]') !== null)).toBe(false);
+
+    await consent.locator('[data-consent-config]').click();
+    const consentModal = page.locator('#kcConsentModal');
+    const consentClose = consentModal.locator('.kc-consent-modal__close');
+    await expect(consentModal).toHaveAttribute('aria-hidden', 'false');
+    await expect(consentClose.locator('.kc-consent-modal__close-glyph')).toHaveText('×');
+    const consentCloseBox = await consentClose.boundingBox();
+    expect(consentCloseBox?.width || 0).toBeGreaterThanOrEqual(42);
+    expect(consentCloseBox?.height || 0).toBeGreaterThanOrEqual(42);
+    await expect(consentModal.locator('#kcConsentPreferences')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(consentClose).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(consentModal.locator('[data-consent-save]')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(consentModal).toHaveAttribute('aria-hidden', 'true');
+    await expect(consent).toBeVisible();
+    await expect(consent.locator('[data-consent-config]')).toBeFocused();
+    expect(await consent.evaluate((element) => element.closest('[inert]') !== null)).toBe(false);
   });
 
   test('nomes de módulos permanecem dentro dos cards em 320 px', async ({ page }) => {

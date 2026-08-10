@@ -21,7 +21,7 @@ describe('V76.23 - página 404', () => {
 
   test('evita o rodapé duplicado e mantém seis destinos úteis', () => {
     expect(HTML).not.toContain('<footer class="kc-footer"');
-    expect(HTML).toContain('assets/js/core/kc-consent.js?v=8.6.4');
+    expect(HTML).toContain('assets/js/core/kc-consent.js?v=8.6.5');
     expect((HTML.match(/class="kc-error-module"/g) || [])).toHaveLength(6);
     expect(HTML).toContain('data-kc-error-back');
   });

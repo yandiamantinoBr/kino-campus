@@ -252,6 +252,7 @@ describe('SEO e indexacao publica', () => {
     expect(audit).toContain('auditSitemap');
     expect(audit).toContain('auditRssFeed');
     expect(audit).toContain('auditGoogleTag');
+    expect(audit).toContain('kc-consent\\.js\\?v=[0-9A-Za-z._-]+');
     expect(audit).toContain('auditPublicEncoding');
     expect(audit).toContain('auditPublicImageAlt');
     expect(audit).toContain('auditPublicContentDepth');

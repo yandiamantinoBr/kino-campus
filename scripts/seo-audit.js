@@ -230,9 +230,17 @@ function auditGoogleTag(errors) {
     if (!googleTagMatch) {
       errors.push(`${file}: tag GA4 consent-aware ausente.`);
     }
-    const consentIndex = html.indexOf('assets/js/core/kc-consent.js?v=8.6.4');
+    const consentMatch = html.match(/assets\/js\/core\/kc-consent\.js\?v=[0-9A-Za-z._-]+/);
+    if (!consentMatch) {
+      errors.push(`${file}: gerenciador de consentimento ausente.`);
+    }
     const googleIndex = googleTagMatch ? googleTagMatch.index : -1;
-    const telemetryIndex = html.indexOf('assets/js/boot/kc-telemetry.js?v=8.6.1');
+    const telemetryMatch = html.match(/assets\/js\/boot\/kc-telemetry\.js\?v=[0-9A-Za-z._-]+/);
+    if (!telemetryMatch) {
+      errors.push(`${file}: telemetria consent-aware ausente.`);
+    }
+    const consentIndex = consentMatch ? consentMatch.index : -1;
+    const telemetryIndex = telemetryMatch ? telemetryMatch.index : -1;
     if (consentIndex !== -1 && googleIndex !== -1 && telemetryIndex !== -1 && !(consentIndex < googleIndex && googleIndex < telemetryIndex)) {
       errors.push(`${file}: ordem de scripts consent -> google-tag -> telemetry incorreta.`);
     }
