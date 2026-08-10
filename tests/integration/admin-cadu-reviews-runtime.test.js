@@ -14,6 +14,7 @@ const SOURCE = fs.readFileSync(
 );
 const REVIEW_ID = '123e4567-e89b-52d3-a456-426614174000';
 const ITEM_VERSION = 'a'.repeat(64);
+const REVIEW_KEY = 'b'.repeat(64);
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function waitFor(predicate, timeoutMs = 2000) {
@@ -54,6 +55,38 @@ function centralItem() {
     state: 'pending',
     resolution: null
   };
+}
+
+function centralV2Item() {
+  const item = centralItem();
+  item.review_identity_version = 'cadu-review-identity-v2';
+  item.review_key = REVIEW_KEY;
+  item.occurrence_count = 4;
+  item.first_seen_at = 1785100000;
+  item.last_seen_at = item.created_at;
+  item.metadata = {
+    decision_effect: 'editorial_record_only',
+    identity_scope: 'aggregate_subject',
+    carry_policy: 'no_automatic_carry',
+    review_cluster: {
+      occurrence_count: 4,
+      version_count: 1,
+      item_versions: [ITEM_VERSION],
+      first_seen_at: 1785100000,
+      last_seen_at: item.created_at,
+      run_ids: [item.run_id],
+      artifacts: [item.artifact],
+      provenance_truncated: false
+    },
+    review_links: {
+      evidence_count: 2,
+      item_ids: [REVIEW_ID, '123e4567-e89b-52d3-a456-426614174005'],
+      origins: ['pipeline', 'feed'],
+      kinds: ['pipeline_quality', 'feed_item'],
+      decision_policy: 'independent_version_bound'
+    }
+  };
+  return item;
 }
 
 function createPage(apiFetchResponse) {
@@ -170,6 +203,34 @@ describe('Admin Cadu review center runtime', () => {
     page.dom.window.close();
   });
 
+  test('surfaces v2 grouped provenance and linked evidence without exposing identity digests', async () => {
+    const apiFetchResponse = jest.fn(async () => ({
+      ok: true,
+      data: {
+        schema_version: 2,
+        contract_version: 'cadu-review-center-v2',
+        items: [centralV2Item()],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    }));
+    const page = createPage(apiFetchResponse);
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('.kc-cadu-review-item__provenance'));
+    const provenance = page.window.document.querySelector('.kc-cadu-review-item__provenance');
+    expect(provenance.textContent).toContain('Assunto em fonte agregadora');
+    expect(provenance.textContent).toContain('sem reaproveitamento automático');
+    expect(provenance.textContent).toContain('4 ocorrências agrupadas');
+    expect(provenance.textContent).toContain('2 evidências relacionadas em Pipeline e Feed Coletado');
+    expect(provenance.textContent).toContain('decisões independentes por versão');
+    expect(page.window.document.getElementById('reviews-list').textContent).not.toContain(REVIEW_KEY);
+    page.dom.window.close();
+  });
+
   test('requires a rejection note and records an editorial-only versioned decision', async () => {
     const calls = [];
     const apiFetchResponse = jest.fn(async (url, options = {}) => {
@@ -242,7 +303,9 @@ describe('Admin Cadu review center runtime', () => {
               origin: 'pipeline',
               decision: 'approved',
               title: 'Decisão central antiga',
-              resolved_at: 1785200000
+              resolved_at: 1785200000,
+              review_identity_version: 'legacy-v1',
+              review_key: null
             }],
             total: 1,
             limit: 50,
@@ -285,6 +348,8 @@ describe('Admin Cadu review center runtime', () => {
     audit.open = true;
     audit.dispatchEvent(new page.window.Event('toggle'));
     await waitFor(() => page.window.document.getElementById('reviews-audit-list').textContent.includes('Decisão central antiga'));
+    expect(page.window.document.getElementById('reviews-audit-list').textContent)
+      .toContain('Identidade legada: somente auditoria, sem reaproveitamento automático.');
 
     page.window.document.querySelector('[data-review-provider="sites"]').click();
     await waitFor(() => page.window.document.getElementById('reviews-audit-list').textContent.includes('Portal UFG'));

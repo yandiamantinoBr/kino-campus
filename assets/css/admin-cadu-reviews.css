@@ -395,6 +395,33 @@ button.kc-cadu-review-provider:focus-visible {
   line-height: 1.45;
 }
 
+.kc-cadu-review-item__provenance {
+  display: grid;
+  gap: 4px;
+  margin: 7px 0;
+  padding: 7px 9px;
+  border-left: 3px solid var(--kc-primary-brand);
+  background: color-mix(in srgb, var(--kc-primary-brand) 7%, transparent);
+  color: var(--kc-text-dark-secondary);
+  font-size: .75rem;
+  line-height: 1.4;
+}
+
+.kc-cadu-review-item__provenance span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kc-cadu-review-item__provenance > strong {
+  color: var(--kc-text-dark-primary);
+  font-size: .7rem;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
 .kc-cadu-review-item__issues,
 .kc-cadu-review-item__links {
   display: flex;
@@ -574,6 +601,21 @@ button.kc-cadu-review-provider:focus-visible {
 .kc-cadu-review-audit__item span {
   color: var(--kc-text-dark-secondary);
   font-size: .74rem;
+}
+
+.kc-cadu-review-audit__item .kc-cadu-review-audit__legacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  grid-column: 1 / -1;
+  color: #f59e0b;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.kc-cadu-review-audit__legacy i {
+  flex: 0 0 auto;
+  margin-top: .1em;
 }
 
 .kc-cadu-reviews .kc-cadu-review-queue {
