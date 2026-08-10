@@ -1,4 +1,5 @@
 import { requireCaduAdmin } from './cadu-auth.mjs';
+import { fetchCaduUpstream } from './cadu-upstream-fetch.js';
 
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/u;
 const ENCODED_PATH_SYNTAX = /%(?:2e|2f|3f|23|5c)/iu;
@@ -410,7 +411,7 @@ function stableProxyFailure(res, error) {
 
 async function proxyNonStream(req, res, route, targetUrl, token) {
   const body = serializeRequestBody(req);
-  const upstream = await fetch(targetUrl, {
+  const upstream = await fetchCaduUpstream(targetUrl, {
     method: req.method,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -422,6 +423,8 @@ async function proxyNonStream(req, res, route, targetUrl, token) {
     body,
     redirect: 'error',
     signal: AbortSignal.timeout(route.kind === 'agent-send' ? AGENT_SEND_TIMEOUT_MS : NON_STREAM_TIMEOUT_MS),
+  }, {
+    operation: `control.${route.namespace}.${route.kind}`,
   });
   if (!upstream.ok) {
     const failure = await sanitizedUpstreamFailure(upstream);
@@ -441,7 +444,7 @@ async function proxyPipelineSse(req, res, route, targetUrl, token) {
   let reader = null;
   let streamStarted = false;
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await fetchCaduUpstream(targetUrl, {
       method: 'GET',
       signal: upstreamController.signal,
       redirect: 'error',
@@ -450,6 +453,8 @@ async function proxyPipelineSse(req, res, route, targetUrl, token) {
         Accept: 'text/event-stream',
         'Cache-Control': 'no-cache',
       },
+    }, {
+      operation: `control.${route.namespace}.${route.kind}`,
     });
     const contentType = upstream.headers?.get?.('content-type') || '';
     if (!upstream.ok || !contentType.toLowerCase().startsWith('text/event-stream')

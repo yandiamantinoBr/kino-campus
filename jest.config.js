@@ -1,5 +1,6 @@
 module.exports = {
   testEnvironment: 'jsdom',
+  setupFiles: ['<rootDir>/tests/setup-node-web-globals.js'],
   verbose: true,
   testMatch: [
     '**/tests/unit/**/*.test.js',

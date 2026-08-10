@@ -5,6 +5,8 @@
 //
 // ES module (api/package.json contém "type": "module").
 
+import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -21,11 +23,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const upstream = await fetch(`${apiUrl.replace(/\/$/, '')}/health`, {
+    const upstream = await fetchCaduUpstream(`${apiUrl.replace(/\/$/, '')}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json', 'User-Agent': 'KinoCampus-Admin/1.0' },
       cache: 'no-store',
       signal: AbortSignal.timeout(15000)
+    }, {
+      operation: 'health',
     });
 
     const text = await upstream.text();

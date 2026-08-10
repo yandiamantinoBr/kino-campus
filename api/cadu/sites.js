@@ -5,6 +5,7 @@
 // into the upstream URL: every accepted route is rebuilt from known segments.
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
+import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
 import { getCaduSourceRegistryMirror } from '../../server/cadu-source-registry-mirror.js';
 import {
   buildCaduReviewSignatureHeaders,
@@ -456,13 +457,15 @@ export default async function handler(req, res) {
   if (route.kind === 'registry_override') upstreamHeaders['If-Match'] = ifMatch;
 
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await fetchCaduUpstream(targetUrl, {
       method: req.method,
       headers: upstreamHeaders,
       body: requestBody,
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(route.kind === 'registry_readiness' ? 12000 : 25000),
+    }, {
+      operation: `sites.${route.kind}`,
     });
 
     const text = await upstream.text();

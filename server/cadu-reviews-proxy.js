@@ -6,6 +6,7 @@
 // server-side secret to the browser. Editorial approval never publishes.
 
 import { requireCaduAdmin } from './cadu-auth.mjs';
+import { fetchCaduUpstream } from './cadu-upstream-fetch.js';
 import {
   buildCaduReviewSignatureHeaders,
   readLimitedSourceReviewResponse,
@@ -751,13 +752,15 @@ export async function handleCaduReviews(req, res, options = {}) {
   }
 
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await fetchCaduUpstream(targetUrl, {
       method: req.method,
       headers,
       body: upstreamBody,
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(route.kind === 'repass' ? 420000 : 12000),
+    }, {
+      operation: `reviews.${route.kind}`,
     });
     const text = await readLimitedSourceReviewResponse(
       upstream,
