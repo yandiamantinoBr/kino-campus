@@ -111,6 +111,47 @@ describe('kc-api.posts-normalize.js - module contract', () => {
     expect(postsNormalize.pickFirstNonEmpty(['', null, '  valor  '])).toBe('valor');
     expect(postsNormalize.pickFirstNonEmpty('valor')).toBe('');
   });
+
+  test('preserva expires_at tipado nos dois aliases usados pelo lifecycle', () => {
+    const post = postsNormalize.normalizePost({
+      id: 'typed-expiry',
+      module: 'moradia',
+      title: 'Quarto temporario',
+      expires_at: '2026-08-20T18:00:00Z',
+    });
+
+    expect(post.expires_at).toBe('2026-08-20T18:00:00Z');
+    expect(post.expiresAt).toBe('2026-08-20T18:00:00Z');
+  });
+
+  test('prioriza expires_at tipado quando payload hibrido traz aliases conflitantes', () => {
+    const post = postsNormalize.normalizePost({
+      id: 'typed-expiry-conflict',
+      module: 'eventos',
+      title: 'Evento com aliases conflitantes',
+      expires_at: '2026-08-01T18:00:00Z',
+      expiresAt: '2026-09-01T18:00:00Z',
+    });
+
+    expect(post.expires_at).toBe('2026-08-01T18:00:00Z');
+    expect(post.expiresAt).toBe('2026-08-01T18:00:00Z');
+  });
+
+  test.each([
+    [{ isClosed: true }, 'alias direto'],
+    [{ metadata: { isClosed: true } }, 'alias em metadata'],
+    [{ isClosed: false, metadata: { is_closed: true } }, 'true posterior nao sombreado por false'],
+  ])('preserva fechamento booleano estrito de %s (%s)', (signals) => {
+    const post = postsNormalize.normalizePost({
+      id: 'closed-signal',
+      module: 'moradia',
+      title: 'Anuncio encerrado',
+      status: 'published',
+      ...signals,
+    });
+
+    expect(post.isClosed).toBe(true);
+  });
 });
 
 describe('kc-api.posts-normalize.js - html loading order', () => {

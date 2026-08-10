@@ -281,8 +281,17 @@ function applyPresentationRules(post, context = {}) {
   // UI: comentários compactos (ícone + número)
   if (p._kcCompactComments == null) p._kcCompactComments = true;
 
-  const isClosed = String(p.status || p.estado || '').trim().toLowerCase() === 'closed' || p.isClosed === true;
+  let lifecycle = null;
+  try {
+    if (typeof window !== 'undefined' && window.KCPostLifecycle && typeof window.KCPostLifecycle.resolve === 'function') {
+      lifecycle = window.KCPostLifecycle.resolve(p);
+    }
+  } catch (_) { }
+  const isClosed = (lifecycle && lifecycle.closed === true)
+    || String(p.status || p.estado || '').trim().toLowerCase() === 'closed'
+    || p.isClosed === true;
   p.isClosed = isClosed;
+  p._kcLifecycle = lifecycle;
 
   // Tempo Relativo (timeAgo)
   const effectiveTime = p.effective_at || p.effectiveAt || p.bumped_at || p.bumpedAt || p.created_at || p.createdAt || p.timestamp;
@@ -784,6 +793,10 @@ function renderPostCard(post, options) {
   attrs.push(`class="kc-card${badgeHtml ? " kc-card--has-corner-badge" : ""}${isLegacyExample ? " kc-card--example" : ""}${isClosed ? " kc-card--closed" : ""}"`);
   if (id) attrs.push(`data-post-id="${_escapeHtml(id)}"`);
   attrs.push(`data-status="${_escapeHtml(isClosed ? 'closed' : String(p.status || p.estado || 'published'))}"`);
+  attrs.push(`data-kc-closed-or-ended="${isClosed ? 'true' : 'false'}"`);
+  if (p._kcLifecycle && p._kcLifecycle.endAt) {
+    attrs.push(`data-kc-lifecycle-end="${_escapeHtml(String(p._kcLifecycle.endAt))}"`);
+  }
   attrs.push(`data-verified="${_escapeHtml(String(!!p.verificado))}"`);
   if (moduleKey) attrs.push(`data-module="${_escapeHtml(String(moduleKey))}"`);
   const numericPrice = Number(p.preco != null ? p.preco : p.price);

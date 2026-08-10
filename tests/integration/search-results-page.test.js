@@ -32,8 +32,8 @@ describe('search-results.html', () => {
   test('loads the updated shared search assets', () => {
     const html = read('search-results.html');
 
-    expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.2');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.13');
+    expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.3');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.14');
   });
 });
 
@@ -50,6 +50,11 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('function formatVisibleResultsLabel');
     expect(source).toContain('moduleOverride: filters.module');
     expect(source).toContain('SEARCH_RESULTS_LIMIT = 120');
+    expect(source).toContain('function scheduleSearchResultsLifecycleBoundary');
+    expect(source).toContain('renderResultsToPage(searchInput ? searchInput.value : query)');
+    expect(source).toContain("window.addEventListener('pageshow', onSearchResultsPageShow)");
+    expect(source).toContain('function shouldRevalidateSearchResults');
+    expect(source).toContain('startSearchResultsFreshness()');
     // Visible summary must track the rendered feed list, not a pre-filter pool.
     expect(source).toContain('formatVisibleResultsLabel(visible)');
   });

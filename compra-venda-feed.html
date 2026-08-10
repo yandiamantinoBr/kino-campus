@@ -32,7 +32,7 @@
 
 
 <title>Compra e Venda - KinoCampus</title>
-<link href="assets/css/styles.css?v=8.6.15" rel="stylesheet"/>
+<link href="assets/css/styles.css?v=8.6.16" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
 <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.17" />
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
@@ -105,6 +105,7 @@
 <button class="kc-context-info-btn" type="button" data-kc-context-open="compra-venda" aria-label="Informações sobre Compra e Venda" data-i18n-aria-label="aria-label.context-compra-venda" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
 <!-- Feed Tabs -->
+<div class="kc-feed-toolbar">
 <div class="kc-feed-tabs">
   <div class="kc-feed-tabs__view" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
     <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
@@ -140,6 +141,17 @@
     </a>
   </nav>
 </div>
+<div class="kc-hide-closed-control" data-kc-hide-closed-toggle>
+  <label class="kc-hide-closed-toggle kc-switch" for="kcHideClosedCompraVenda">
+    <span class="kc-hide-closed-toggle__label kc-hide-closed__label">Ocultar encerrados</span>
+    <input class="kc-hide-closed-toggle__input" id="kcHideClosedCompraVenda" type="checkbox" role="switch"
+      aria-describedby="kcHideClosedCompraVendaStatus" data-kc-hide-closed-input />
+    <span class="kc-hide-closed-toggle__track kc-switch__track" aria-hidden="true"></span>
+  </label>
+  <span class="kc-hide-closed-toggle__status" id="kcHideClosedCompraVendaStatus" role="status"
+    aria-live="polite" aria-atomic="true" data-kc-hide-closed-status>Encerrados visíveis</span>
+</div>
+</div>
 <div class="kc-marketplace-mobile-rail" data-kc-market-mobile-rail="true" aria-label="Seções rápidas de compra e venda" data-i18n-aria-label="aria-label.market-rail">
 <button class="kc-marketplace-mobile-rail__button is-loading" type="button" disabled>
 <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
@@ -156,6 +168,7 @@
 <p class="kc-no-results__title">Nenhum item corresponde aos filtros</p>
 <p>Limpe os filtros para ver todos os itens publicados.</p>
 <button class="kc-btn-primary" data-kc-market-empty-clear="true" style="margin-top: 15px;" type="button">Limpar Filtros</button>
+<button class="kc-btn-secondary" type="button" data-kc-hide-closed-reveal hidden>Mostrar encerrados</button>
 </div>
 <section class="kc-feed-guide">
 <span class="kc-feed-guide__eyebrow">Como negociar melhor</span>
@@ -437,7 +450,7 @@
     <script defer src="assets/js/utils/kc-utils.identity.js?v=8.6.1"></script>
     <script defer src="assets/js/utils/kc-utils.taxonomy.js?v=8.6.2"></script>
     <script defer src="assets/js/utils/kc-utils.location.js?v=8.6.1"></script>
-    <script defer src="assets/js/utils/kc-utils.presentation.js?v=8.6.1"></script>
+    <script defer src="assets/js/utils/kc-utils.presentation.js?v=8.6.2"></script>
   <script defer src="assets/js/features/kc-card-image-aspect.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-ads.js?v=9.3.9"></script>
   <script defer src="assets/js/utils/kc-utils.js?v=8.6.1"></script>
@@ -451,7 +464,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script defer src="assets/js/api/kc-supabase.client.js?v=8.6.9"></script>
-    <script defer src="assets/js/api/kc-supabase.posts.js?v=8.6.7"></script>
+    <script defer src="assets/js/api/kc-supabase.posts.js?v=8.6.8"></script>
     <script defer src="assets/js/api/kc-supabase.ratings.js?v=8.6.1"></script>
 <script defer src="assets/js/api/kc-api.notifications.js?v=8.6.1"></script>
 <script defer src="assets/js/api/kc-api.saved.js?v=8.6.1"></script>
@@ -466,9 +479,11 @@
   <script defer src="assets/js/api/kc-api.auth.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.diagnostics.js?v=8.6.1"></script>
   <script defer src="assets/js/api/kc-api.session.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.filters.js?v=8.6.2"></script>
+  <script defer src="assets/js/shared/kc-post-lifecycle.shared.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-hide-closed.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.filters.js?v=8.6.3"></script>
   <script defer src="assets/js/api/kc-api.authors.js?v=8.6.1"></script>
-  <script defer src="assets/js/api/kc-api.posts-normalize.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.posts-normalize.js?v=8.6.2"></script>
   <script defer src="assets/js/api/kc-api.client.js?v=8.6.13"></script>
   <script defer src="assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
@@ -482,7 +497,7 @@
   <script defer src="assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
     <script defer src="assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
-    <script defer src="assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.1"></script>
+    <script defer src="assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.2"></script>
     <script defer src="assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
   <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
@@ -507,17 +522,17 @@
 <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.13"></script>
   <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
-<script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.13"></script>
+<script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.14"></script>
 <script defer src="assets/js/controllers/public/compra-venda-feed.controller.js?v=8.6.8"></script>
     <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
-    <script defer src="assets/js/features/kc-filters.js?v=8.6.5"></script>
+    <script defer src="assets/js/features/kc-filters.js?v=8.6.6"></script>
     <script defer src="assets/js/features/kc-feed-filters.js?v=8.6.3"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
 <script defer src="assets/js/shared/home-categories.shared.js?v=8.6.2"></script>
 <script defer src="assets/js/features/kc-home-categories.js?v=8.6.13"></script>
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
-<script defer src="assets/js/shared/kc-search.shared.js?v=8.6.2"></script>
-  <script defer src="assets/js/features/kc-search.js?v=8.6.13"></script>
+<script defer src="assets/js/shared/kc-search.shared.js?v=8.6.3"></script>
+  <script defer src="assets/js/features/kc-search.js?v=8.6.14"></script>
 <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
 <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>

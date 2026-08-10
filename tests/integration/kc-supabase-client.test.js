@@ -94,6 +94,28 @@ describe('KCSupabase.searchPosts', () => {
     expect(result).toEqual([]);
   });
 
+  test('envia hideClosed ao RPC, aceita até 120 e preserva compatibilidade com a assinatura antiga', async () => {
+    rpcMock
+      .mockResolvedValueOnce({ data: null, error: { message: 'Could not find the function public.kc_search_posts_fts with p_hide_closed' } })
+      .mockResolvedValueOnce({ data: [{ id: 'active' }], error: null });
+
+    const result = await window.KCSupabase.searchPosts({
+      q: 'evento',
+      limit: 8,
+      hideClosed: true,
+    });
+
+    expect(result).toEqual([{ id: 'active' }]);
+    expect(rpcMock).toHaveBeenNthCalledWith(1, 'kc_search_posts_fts', expect.objectContaining({
+      p_hide_closed: true,
+      p_limit: 8,
+    }));
+    expect(rpcMock).toHaveBeenNthCalledWith(2, 'kc_search_posts_fts', expect.objectContaining({
+      p_limit: 120,
+    }));
+    expect(rpcMock.mock.calls[1][1]).not.toHaveProperty('p_hide_closed');
+  });
+
   test('propaga AbortSignal para o builder PostgREST do RPC', async () => {
     const controller = new AbortController();
     const abortSignal = jest.fn().mockResolvedValue({ data: [], error: null });

@@ -31,7 +31,7 @@ Todos os itens da tabela acima têm `REVOKE ALL ... FROM public, anon, authentic
 
 ## RPCs Públicas (chamadas via API)
 
-### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em v9.2.1.1, v9.2.1.2 e v9.2.1.3)*
+### `kc_get_feed_cursor(p_module text, p_modules text[], p_category text, p_subcategory text, p_tag text, p_q text, p_sort_by text, p_limit int, p_cursor text, p_request_params jsonb default null) → JSONB` *(v9.2.2, estendido em 20260810124931)*
 
 Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de cada rail.
 
@@ -48,6 +48,7 @@ Pagina o feed com cursor opaco, sem `OFFSET`, preservando a ordenação real de 
 - `p_module` cobre feed de módulo único; `p_modules` cobre feeds híbridos como `['compra-venda', 'livros']`.
 - O cursor é token opaco em base64 com os campos mínimos de desempate; callers não montam esse valor manualmente.
 - `p_request_params` aplica no banco os filtros avançados já existentes dos módulos de marketplace, caronas, moradia, oportunidades e achados-perdidos.
+- `p_request_params.hideClosed=true` (aliases `hide_closed`/`closed`) remove posts encerrados antes do cursor e do `LIMIT`.
 - A extensão de `v9.2.1.1` preserva a semântica de ordenação e cursor de `v9.2.2`; apenas amplia o envelope de filtros aceito pelo RPC.
 - `v9.2.1.2` adiciona `priceMin` / `priceMax` no envelope cursor-based, filtrando por `posts.price` no banco e normalizando faixas invertidas antes da consulta.
 - `v9.2.1.3` adiciona `datePreset` no mesmo envelope, com interpretação fixa em `America/Sao_Paulo` e semântica por módulo:
@@ -108,7 +109,7 @@ As três RPCs são `authenticated`-only. Linhas legadas `owner_kind='session'` s
 
 ---
 
-### `kc_search_posts_fts(p_q text, p_terms text[], p_module text, p_category text, p_subcategory text, p_limit int) → SETOF JSONB` *(v9.2.0)*
+### `kc_search_posts_fts(p_q text, p_terms text[], p_module text, p_category text, p_subcategory text, p_limit int, p_hide_closed boolean default false) → SETOF JSONB` *(v9.2.0, estendido em 20260810124931)*
 
 Busca server-side dedicada para a página `search-results.html` e o dropdown global do header.
 
@@ -125,8 +126,18 @@ Busca server-side dedicada para a página `search-results.html` e o dropdown glo
 
 **Observações:**
 - `p_terms` já chega expandido pelo client com sinônimos deduplicados.
+- `p_hide_closed=true` filtra FTS e fallback fuzzy antes dos respectivos `LIMIT`; chamadas antigas com seis argumentos continuam válidas pelo default.
 - A função roda com `SET search_path = public` e respeita RLS por manter semântica de `SECURITY INVOKER`.
 - O retorno já inclui `profiles`, `post_media` e `comments(count)` para compatibilidade com `normalizeSupabasePost`.
+- O payload preserva `expires_at` para a defesa temporal do navegador.
+
+**Helpers temporais relacionados (20260810124931):**
+- `kc_feed_parse_lifecycle_timestamp(text, text) → timestamptz`
+- `kc_feed_first_lifecycle_timestamp(jsonb, text) → timestamptz`
+- `kc_feed_post_is_closed_or_ended(text, text, jsonb, timestamptz, timestamptz) → boolean`
+
+Os helpers são `SECURITY INVOKER`, fail-open para datas inválidas e usam
+`America/Sao_Paulo` para datas civis.
 
 ---
 

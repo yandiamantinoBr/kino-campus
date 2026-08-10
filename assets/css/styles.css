@@ -12737,3 +12737,274 @@ body.kc-admin-page .kc-consent-btn {
 }
 .kc-modal-body { overflow-y: auto; }
 .kc-modal-footer { border-top: 1px solid var(--kc-border-dark); }
+
+/* ===========================================================================
+   FEED TOOLBAR + "OCULTAR ENCERRADOS"
+   Mantem o filtro de ciclo de vida fora dos tablists e compartilha o mesmo
+   componente visual entre os feeds e a busca. O toolbar assume o sticky que
+   antes pertencia diretamente a .kc-feed-tabs / .kc-scroll-rail--tabs.
+   ========================================================================== */
+
+.kc-feed-toolbar {
+  position: sticky;
+  top: calc(var(--kc-safe-top, 0px) + var(--kc-header-height, 64px) + var(--kc-sticky-gap, 0px));
+  z-index: 110;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 16px;
+  padding: 0 6px;
+  background: var(--kc-background-dark);
+  border-bottom: 1px solid var(--kc-border-dark);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+}
+
+/* Funciona antes e depois do auto-wrap de kc-core.js:
+ *   antes: toolbar > .kc-feed-tabs
+ *   depois: toolbar > .kc-scroll-rail--tabs > .kc-feed-tabs */
+.kc-feed-toolbar > .kc-feed-tabs,
+.kc-feed-toolbar > .kc-scroll-rail--tabs {
+  position: static !important;
+  top: auto !important;
+  z-index: auto;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  margin: 0 !important;
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none !important;
+}
+
+.kc-feed-toolbar > .kc-scroll-rail--tabs > .kc-feed-tabs {
+  position: static;
+  top: auto;
+  z-index: auto;
+  margin: 0 !important;
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none !important;
+}
+
+.kc-hide-closed-control {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  min-width: max-content;
+  color: var(--kc-text-dark-primary);
+}
+
+.kc-hide-closed-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-height: 44px;
+  padding: 5px 2px;
+  color: var(--kc-text-dark-primary);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kc-hide-closed-toggle__label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* O checkbox continua nativo e acessivel; apenas a aparencia e delegada ao
+ * trilho. Nao usar display:none/visibility:hidden para preservar teclado e AT. */
+.kc-hide-closed-toggle__input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.kc-hide-closed-toggle__track {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 26px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: var(--kc-surface-dark-hover);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.16);
+  transition: background-color var(--transition-speed) ease,
+              border-color var(--transition-speed) ease,
+              box-shadow var(--transition-speed) ease;
+}
+
+.kc-hide-closed-toggle__track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--kc-text-dark-secondary);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.24);
+  transition: transform var(--transition-speed) ease,
+              background-color var(--transition-speed) ease;
+}
+
+.kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track {
+  border-color: var(--kc-primary-brand);
+  background: var(--kc-primary-brand);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12),
+              0 0 0 1px rgba(255, 107, 0, 0.08);
+}
+
+.kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track::after {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+.kc-hide-closed-toggle__input:focus-visible + .kc-hide-closed-toggle__track {
+  outline: 3px solid rgba(255, 107, 0, 0.42);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .kc-hide-closed-toggle:hover .kc-hide-closed-toggle__track {
+    border-color: var(--kc-primary-brand);
+  }
+}
+
+.kc-hide-closed-toggle__input:disabled + .kc-hide-closed-toggle__track,
+.kc-hide-closed-toggle:has(.kc-hide-closed-toggle__input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.kc-hide-closed-toggle__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.kc-no-results [data-kc-hide-closed-reveal] {
+  min-height: 44px;
+  margin: 15px 0 0 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kc-search-results-empty-actions [data-kc-hide-closed-reveal] {
+  margin: 0;
+}
+
+/* Na busca o componente continua sendo o mesmo atomo, acomodado no grid de
+ * filtros sem depender do antigo CSS inline kc-search-results-toggle. */
+.kc-search-results-controls .kc-hide-closed-control {
+  align-self: end;
+  min-height: 44px;
+  padding-inline: 2px;
+}
+
+@media (max-width: 768px) {
+  .kc-feed-toolbar {
+    top: calc(var(--kc-safe-top, 0px) + var(--kc-header-height, 64px));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin-bottom: 14px;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .kc-feed-toolbar > .kc-feed-tabs,
+  .kc-feed-toolbar > .kc-scroll-rail--tabs {
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .kc-feed-toolbar > .kc-hide-closed-control {
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    justify-items: stretch;
+    padding: 4px var(--kc-page-gutter, 12px) 2px;
+    border-bottom: 1px solid var(--kc-border-dark);
+  }
+
+  .kc-feed-toolbar .kc-hide-closed-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+}
+
+@media (max-width: 520px) {
+  .kc-search-results-controls .kc-hide-closed-control {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    justify-items: stretch;
+  }
+
+  .kc-search-results-controls #searchResultsClearFilters {
+    grid-column: 1 / -1;
+  }
+
+  .kc-search-results-controls .kc-hide-closed-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kc-hide-closed-toggle__track,
+  .kc-hide-closed-toggle__track::after {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .kc-hide-closed-toggle__track {
+    border: 2px solid ButtonText;
+    background: Canvas;
+    forced-color-adjust: none;
+  }
+
+  .kc-hide-closed-toggle__track::after {
+    background: ButtonText;
+  }
+
+  .kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track {
+    border-color: Highlight;
+    background: Highlight;
+  }
+
+  .kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track::after {
+    background: HighlightText;
+  }
+
+  .kc-hide-closed-toggle__input:focus-visible + .kc-hide-closed-toggle__track {
+    outline-color: Highlight;
+  }
+}

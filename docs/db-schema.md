@@ -20,6 +20,11 @@
 > O residual ativo de seguranca continua sendo `auth_leaked_password_protection`; nao aplicar
 > migration para `unaccent` no estado atual.
 
+> **Atualização 2026-08-10:** a migration
+> `20260810124931_feed_hide_closed_cursor_filter.sql` adiciona uma política temporal
+> canônica para feeds/busca e aplica `hideClosed` antes de cursor/`LIMIT`, sem alterar
+> colunas de `posts` e mantendo `false` como default compatível.
+
 ## Tabelas Principais
 
 ### `profiles` — Perfis de Usuário
@@ -932,6 +937,12 @@ data_export_retention_alerts_active_idx ON kc_private.data_export_retention_aler
 **Faixas numéricas v9.2.1.2:** `kc_get_feed_cursor()` passou a aceitar `priceMin` e `priceMax` dentro de `p_request_params`, aplicando o intervalo diretamente sobre `posts.price` e normalizando limites invertidos no banco.
 
 **Presets de data v9.2.1.3:** `kc_get_feed_cursor()` passou a aceitar `datePreset` dentro de `p_request_params`, aplicando server-side a mesma semântica do client em `America/Sao_Paulo`. `eventos` usa `metadata.data_evento` / `metadata.data` com fallback para `created_at`; os demais módulos usam recência por `created_at`.
+
+**Ocultar encerrados 20260810124931:** `kc_get_feed_cursor()` aceita `hideClosed` no
+`p_request_params` e `kc_search_posts_fts()` recebe `p_hide_closed boolean default false`.
+Eventos usam fim/início civil, oportunidades usam prazo, caronas usam partida e os demais
+módulos usam expiração genérica; flags/status explícitos encerram imediatamente. O filtro
+ocorre antes do cursor e do `LIMIT`, e `expires_at` segue no payload para defesa do client.
 
 **Busca v9.2.0:** a busca server-side usa `kc_search_posts_fts()` com `unaccent + portuguese`, expansão de sinônimos no client e documento ponderado por `title`, `tags`, `description`, `category` e `subcategory`.
 

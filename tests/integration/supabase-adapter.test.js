@@ -95,6 +95,7 @@ describe('Supabase Adapter - getFeedCursor', () => {
           category: 'academicos',
           status: 'published',
           visibility: 'public',
+          expires_at: '2026-08-20T23:59:59-03:00',
           metadata: {},
           created_at: '2026-04-05T10:00:00Z',
           votos: 7,
@@ -121,6 +122,8 @@ describe('Supabase Adapter - getFeedCursor', () => {
     expect(result.posts).toHaveLength(1);
     expect(result.posts[0].title).toBe('Evento de teste');
     expect(result.posts[0].comentarios).toBe(3);
+    expect(result.posts[0].expires_at).toBe('2026-08-20T23:59:59-03:00');
+    expect(result.posts[0].expiresAt).toBe('2026-08-20T23:59:59-03:00');
   });
 
   test('repassa filtros avancados para o client Supabase', async () => {
@@ -182,6 +185,35 @@ describe('Supabase Adapter - getFeedCursor', () => {
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe('Notebook Dell');
     expect(result[0].comentarios).toBe(1);
+  });
+
+  test('filtra o lote legado superamostrado antes de reaplicar o limite solicitado', async () => {
+    window.KCPostLifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
+    const base = {
+      legacy_id: null,
+      title: 'Resultado',
+      description: 'Busca',
+      module: 'eventos',
+      category: 'academicos',
+      visibility: 'public',
+      metadata: {},
+      created_at: '2026-04-05T10:00:00Z',
+      profiles: null,
+      post_media: [],
+      comments: [{ count: 0 }],
+    };
+    window.KCSupabase.searchPosts.mockResolvedValue([
+      { ...base, id: 'closed-1', status: 'closed' },
+      { ...base, id: 'closed-2', status: 'closed' },
+      { ...base, id: 'active-1', status: 'published', metadata: { eventStartsAt: '2099-08-20' } },
+      { ...base, id: 'active-2', status: 'published', metadata: { eventStartsAt: '2099-08-21' } },
+    ]);
+
+    const result = await driver.searchPosts({ q: 'resultado', limit: 1, hideClosed: true });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('active-1');
+    delete window.KCPostLifecycle;
   });
 
   test('delegates user rating calls to KCSupabase', async () => {

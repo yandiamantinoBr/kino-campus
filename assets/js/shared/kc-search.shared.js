@@ -4,11 +4,11 @@
 */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = factory();
+    module.exports = factory(require('./kc-post-lifecycle.shared.js'));
   } else {
-    root.KCSearchShared = factory();
+    root.KCSearchShared = factory(root.KCPostLifecycle);
   }
-}(typeof window !== 'undefined' ? window : this, function () {
+}(typeof window !== 'undefined' ? window : this, function (postLifecycle) {
   'use strict';
 
   var SYNONYMS = {
@@ -391,12 +391,6 @@
     return a < b ? 1 : -1;
   }
 
-  function getMetadata(post) {
-    return (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata))
-      ? post.metadata
-      : {};
-  }
-
   function getPostStatus(post) {
     var meta = getMetadata(post);
     return normalizeText(getFirstText(post, ['status', 'situacao']) || meta.status || '');
@@ -431,18 +425,26 @@
 
   function getPostEndTime(post) {
     if (!post) return 0;
+    if (postLifecycle && typeof postLifecycle.getEndTime === 'function') {
+      return postLifecycle.getEndTime(post);
+    }
     var meta = getMetadata(post);
     return parsePostDate(
-      post.expires_at || post.expiresAt || post.date_end_at || post.dateEndAt ||
-      post.deadline_date || post.deadlineDate || post.event_date || post.eventDate ||
-      meta.expires_at || meta.expiresAt || meta.date_end_at || meta.dateEndAt ||
-      meta.deadline_date || meta.deadlineDate || meta.event_date_detected ||
-      meta.event_date || meta.data_evento || meta.data_fim || meta.end_at,
+      post.date_end_at || post.dateEndAt || post.eventEndsAt || post.event_ends_at ||
+      post.deadline_date || post.deadlineDate || post.applicationDeadline || post.application_deadline ||
+      post.departure_at || post.departureAt || post.expires_at || post.expiresAt ||
+      meta.data_fim_evento || meta.eventEndsAt || meta.date_end_at || meta.dateEndAt ||
+      meta.applicationDeadline || meta.application_deadline || meta.deadline_date || meta.deadlineDate ||
+      meta.departure_at || meta.departureAt || meta.expires_at || meta.expiresAt ||
+      meta.event_date_detected || meta.event_date || meta.data_evento || meta.data_fim || meta.end_at,
       true
     );
   }
 
   function isPostClosedOrEnded(post, nowValue) {
+    if (postLifecycle && typeof postLifecycle.isClosedOrEnded === 'function') {
+      return postLifecycle.isClosedOrEnded(post, { now: nowValue });
+    }
     var status = getPostStatus(post);
     if (['closed', 'expired', 'deleted', 'hidden', 'archived'].indexOf(status) !== -1) return true;
     var endTime = getPostEndTime(post);

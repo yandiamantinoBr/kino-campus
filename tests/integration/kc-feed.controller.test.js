@@ -48,6 +48,8 @@ describe('kc-feed.controller — public API surface', () => {
     delete window.KCPullToRefresh;
     delete window.kcFilters;
     delete window.KCFeedFilters;
+    delete window.KCHideClosed;
+    delete window.KCPostLifecycle;
     document.body.innerHTML = '';
 
     window.KCAPI = buildMinimalKCAPI();
@@ -183,6 +185,8 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
     delete window.KCPullToRefresh;
     delete window.kcFilters;
     delete window.KCFeedFilters;
+    delete window.KCHideClosed;
+    delete window.KCPostLifecycle;
     document.body.innerHTML = '<div id="feed-container"></div>';
 
     window.KCAPI = buildMinimalKCAPI();
@@ -283,6 +287,142 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
       module: 'eventos',
       category: 'culturais',
     }));
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('reinicia a paginação e envia hideClosed antes do LIMIT ao alternar o switch', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo || ''}</article>`),
+    };
+    window.KCHideClosed = { getState: jest.fn(() => false) };
+    window.KCPostLifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
+    window.KCAPI.getFeedCursor
+      .mockResolvedValueOnce({
+        posts: [{ id: 'closed-post', titulo: 'Encerrado', status: 'closed' }],
+        nextCursor: 'cursor-closed',
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        posts: [
+          { id: 'closed-fallback-post', titulo: 'Encerrado no fallback', status: 'closed' },
+          { id: 'active-post', titulo: 'Ativo', status: 'published', metadata: { eventEndsAt: '2099-08-20' } },
+        ],
+        nextCursor: null,
+        hasMore: false,
+      });
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenNthCalledWith(1, expect.not.objectContaining({
+      requestParams: expect.objectContaining({ hideClosed: true }),
+    }));
+
+    document.dispatchEvent(new CustomEvent('kc:hide-closed-change', {
+      detail: { hideClosed: true, reason: 'toggle' },
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      hideClosed: true,
+    }));
+    expect(window.KCAPI.getFeedCursor.mock.calls.at(-1)[0]).not.toHaveProperty('cursor');
+    expect(pager.getState()).toEqual(expect.objectContaining({
+      hideClosed: true,
+      done: true,
+      firstPageCount: 1,
+    }));
+    expect(document.getElementById('feed-container').textContent).toContain('Ativo');
+    expect(document.getElementById('feed-container').textContent).not.toContain('Encerrado');
+    expect(document.getElementById('feed-container').textContent).not.toContain('Encerrado no fallback');
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('combina categoria e switch sem perder a ultima mudanca concorrente', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+    window.KCHideClosed = { getState: jest.fn(() => false) };
+    window.KCAPI.getFeedCursor.mockResolvedValue({ posts: [], nextCursor: null, hasMore: false });
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    window.KCAPI.getFeedCursor.mockClear();
+
+    document.dispatchEvent(new CustomEvent('kc:feed-core-filter-change', {
+      detail: { category: 'culturais', query: 'cinema', reason: 'query' },
+    }));
+    document.dispatchEvent(new CustomEvent('kc:hide-closed-change', {
+      detail: { hideClosed: true, reason: 'toggle' },
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenCalledTimes(1);
+    expect(window.KCAPI.getFeedCursor).toHaveBeenLastCalledWith(expect.objectContaining({
+      module: 'eventos',
+      category: 'culturais',
+      q: 'cinema',
+      hideClosed: true,
+    }));
+
+    window.KCAPI.getFeedCursor.mockClear();
+    document.dispatchEvent(new CustomEvent('kc:hide-closed-change', {
+      detail: { hideClosed: false, reason: 'toggle' },
+    }));
+    document.dispatchEvent(new CustomEvent('kc:hide-closed-change', {
+      detail: { hideClosed: true, reason: 'toggle' },
+    }));
+    document.dispatchEvent(new CustomEvent('kc:hide-closed-change', {
+      detail: { hideClosed: false, reason: 'toggle' },
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(window.KCAPI.getFeedCursor).toHaveBeenCalledTimes(1);
+    expect(window.KCAPI.getFeedCursor.mock.calls[0][0]).not.toHaveProperty('hideClosed');
+    expect(pager.getState().hideClosed).toBe(false);
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('remove e revalida um card quando o prazo vence com a pagina aberta', async () => {
+    document.body.innerHTML = '<div id="feed-container" class="kc-feed-list"></div>';
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo || ''}</article>`),
+    };
+    window.KCHideClosed = { getState: jest.fn(() => true) };
+    window.KCPostLifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
+    const eventEndsAt = new Date(Date.now() + 80).toISOString();
+    window.KCAPI.getFeedCursor
+      .mockResolvedValueOnce({
+        posts: [{ id: 'ending-post', module: 'eventos', titulo: 'Termina agora', status: 'published', metadata: { eventEndsAt } }],
+        nextCursor: null,
+        hasMore: false,
+      })
+      .mockResolvedValue({ posts: [], nextCursor: null, hasMore: false });
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'eventos',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(document.getElementById('feed-container').textContent).toContain('Termina agora');
+
+    await new Promise((resolve) => setTimeout(resolve, 180));
+
+    expect(window.KCAPI.getFeedCursor.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(document.getElementById('feed-container').textContent).not.toContain('Termina agora');
+    expect(pager.getState().firstPageCount).toBe(0);
 
     pager.destroy();
     delete window.KCUtils;

@@ -209,6 +209,8 @@
       price: (row.price != null ? row.price : null),
       status: String(row.status || 'published').toLowerCase(),
       visibility: String(row.visibility || (metadata && metadata.visibility) || 'public').toLowerCase(),
+      expiresAt: row.expires_at || row.expiresAt || null,
+      expires_at: row.expires_at || row.expiresAt || null,
 
       location: row.location || '',
 
@@ -499,7 +501,23 @@
     try {
       if (window.KCSupabase && typeof window.KCSupabase.searchPosts === 'function') {
         const rows = await window.KCSupabase.searchPosts(filters);
-        return (Array.isArray(rows) ? rows : []).map(normalizeSupabasePost).filter(Boolean);
+        let out = (Array.isArray(rows) ? rows : []).map(normalizeSupabasePost).filter(Boolean);
+        if (filters && (filters.hideClosed === true || filters.hideEnded === true)) {
+          const lifecycle = window.KCPostLifecycle;
+          const searchShared = window.KCSearchShared;
+          out = out.filter((post) => {
+            if (lifecycle && typeof lifecycle.isClosedOrEnded === 'function') {
+              return !lifecycle.isClosedOrEnded(post);
+            }
+            if (searchShared && typeof searchShared.isPostClosedOrEnded === 'function') {
+              return !searchShared.isPostClosedOrEnded(post);
+            }
+            return String(post && (post.status || post.estado) || '').toLowerCase() !== 'closed';
+          });
+        }
+        const limitRaw = parseInt(String(filters && filters.limit != null ? filters.limit : out.length), 10);
+        const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : out.length;
+        return out.slice(0, limit);
       }
     } catch (e) {
       if ((filters && filters.signal && filters.signal.aborted) || (e && e.name === 'AbortError')) throw e;

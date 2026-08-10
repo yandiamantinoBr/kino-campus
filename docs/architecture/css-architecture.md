@@ -1,7 +1,7 @@
 # Arquitetura CSS - KinoCampus
 
-**Versão:** v76.28.0
-**Atualizado em:** 2026-06-19
+**Versão:** v76.28.1
+**Atualizado em:** 2026-08-10
 
 > Baseline dos CSS de producao, mapa de carga por rota, ownership de `styles.css`,
 > baseline visual CSS-B.1/C, micro-splits CSS-C até C.5, contexto responsivo da
@@ -62,19 +62,19 @@ Fonte: `npm run audit:css`, que varre os HTMLs da raiz e de `admin/`.
 
 | CSS | Versao nos links | Paginas |
 |---|---|---:|
-| `styles.css` | `8.6.4 x30` | 30 |
-| `kc-theme-boot.css` | `8.6.1 x30` | 30 |
-| `kc-chat-shortcut.css` | `8.6.1 x30` | 30 |
-| `admin-shell.css` | `8.6.1 x6` | 6 |
-| `kc-public-shell.css` | `8.6.1 x13` | 12 |
-| `kc-sidebar-context.css` | `8.6.1 x7` | 7 |
+| `styles.css` | `8.6.16 x33` | 33 |
+| `kc-theme-boot.css` | `8.6.12 x33` | 33 |
+| `kc-chat-shortcut.css` | `8.6.1 x31`, `8.6.2 x1` | 32 |
+| `admin-shell.css` | `8.6.12 x8` | 8 |
+| `kc-public-shell.css` | `8.6.15 x13` | 12 |
+| `kc-sidebar-context.css` | `8.6.17 x7` | 7 |
 | `kc-error-page.css` | `8.6.1 x1` | 1 |
-| `product.css` | `8.6.1 x1` | 1 |
+| `product.css` | `8.6.3 x1` | 1 |
 | `product-lightbox.css` | `8.6.1 x1` | 1 |
-| `kc-chat.css` | `8.6.2 x1` | 1 |
+| `kc-chat.css` | `8.7.7 x1` | 1 |
 
-Observacao operacional: `account-setup.html` contem dois links para `kc-public-shell.css?v=8.6.1`.
-Esta arquitetura apenas registra o estado; nao houve alteracao de HTML nesta etapa.
+Observacao operacional: `account-setup.html` contem dois links para `kc-public-shell.css?v=8.6.15`.
+A tabela foi recontada nos 33 HTMLs durante a entrega de "Ocultar encerrados".
 
 ---
 
@@ -82,6 +82,11 @@ Esta arquitetura apenas registra o estado; nao houve alteracao de HTML nesta eta
 
 O inventario canonico da etapa CSS-A esta em
 [`docs/planning/v76-css-ownership-inventory.md`](../planning/v76-css-ownership-inventory.md).
+
+**Componente compartilhado 2026-08-10:** `.kc-feed-toolbar`, `.kc-hide-closed` e
+`.kc-switch` permanecem em `styles.css` porque são usados por home, seis feeds e busca.
+O switch nativo fica fora dos `tablist`, tem alvo mínimo de 44 px e estados específicos para
+foco visível, tema escuro, `forced-colors` e `prefers-reduced-motion`.
 
 Resumo do parse:
 

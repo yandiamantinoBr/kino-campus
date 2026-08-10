@@ -33,6 +33,9 @@
   let kcDbPosts = null;
   let dropdownDebounceTimer = null;
   let searchFlushTimer = null;
+  let searchResultsLifecycleTimer = null;
+  let searchResultsFreshnessTimer = null;
+  let searchResultsFreshnessUnsub = null;
   let searchResultsRequestSeq = 0;
   let dropdownRequestSeq = 0;
   let searchResultsRequest = null;
@@ -937,8 +940,13 @@
       personalizationToggle: document.getElementById('searchResultsPersonalizationToggle'),
       noResultsMessage: document.getElementById('noResultsMessage'),
       noResultsRelax: document.getElementById('searchResultsRelaxStructured'),
-      noResultsRestore: document.getElementById('searchResultsRestoreStructured')
+      noResultsRestore: document.getElementById('searchResultsRestoreStructured'),
+      noResultsRevealClosed: document.querySelector('#noResults [data-kc-hide-closed-reveal]')
     };
+  }
+
+  function isEnabledFilterParam(value) {
+    return ['1', 'true'].includes(String(value || '').trim().toLowerCase());
   }
 
   function readResultFilters() {
@@ -947,7 +955,7 @@
     const urlSort = getQueryParam('sort') || '';
     const urlClosed = getQueryParam('closed');
     const urlHideClosed = getQueryParam('hideClosed');
-    const hideClosedFromUrl = urlClosed === '1' || urlHideClosed === '1' || urlHideClosed === 'true';
+    const hideClosedFromUrl = isEnabledFilterParam(urlClosed) || isEnabledFilterParam(urlHideClosed);
 
     return {
       module: normalizeModuleKey(controls.module ? controls.module.value : urlModule),
@@ -966,7 +974,7 @@
     if (controls.module) controls.module.value = normalizeModuleKey(moduleParam);
     if (controls.sort) controls.sort.value = ['relevance', 'recent', 'engagement'].includes(sortParam) ? sortParam : 'relevance';
     if (controls.hideClosed) {
-      controls.hideClosed.checked = closedParam === '1' || hideClosedParam === '1' || hideClosedParam === 'true';
+      controls.hideClosed.checked = isEnabledFilterParam(closedParam) || isEnabledFilterParam(hideClosedParam);
     }
   }
 
@@ -1139,14 +1147,23 @@
     if (options.keepExpanded !== true) setPersonalizationPanelExpanded(false);
   }
 
-  function updateNoResultsState(noElement, results, state) {
+  function updateNoResultsState(noElement, results, state, context = {}) {
     const controls = getResultControls();
     const hasResults = Array.isArray(results) && results.length > 0;
     if (noElement) noElement.style.display = hasResults ? 'none' : 'block';
     if (hasResults) return;
 
+    const hiddenClosedCount = Math.max(0, Number(context.hiddenClosedCount) || 0);
     let message = 'Nenhuma publicação corresponde à busca. Revise os termos ou consulte os módulos do KinoCampus.';
-    if (state && state.available && state.active) {
+    if (context.hideClosed === true) {
+      if (hiddenClosedCount > 0) {
+        message = hiddenClosedCount === 1
+          ? 'Há 1 publicação encerrada correspondente. Mostre os encerrados para consultá-la.'
+          : `Há ${hiddenClosedCount} publicações encerradas correspondentes. Mostre os encerrados para consultá-las.`;
+      } else {
+        message = 'Nenhuma publicação ativa corresponde à busca. Mostre os encerrados ou revise os termos.';
+      }
+    } else if (state && state.available && state.active) {
       message = state.legacyCount > 0
         ? 'Há publicações para o texto, mas nenhuma atende a todos os critérios entendidos. Remova um chip para ampliar a busca.'
         : 'Nenhuma publicação atende aos critérios entendidos. Remova um chip ou simplifique a busca.';
@@ -1156,6 +1173,9 @@
     if (controls.noResultsMessage) controls.noResultsMessage.textContent = message;
     if (controls.noResultsRelax) controls.noResultsRelax.hidden = !(state && state.active);
     if (controls.noResultsRestore) controls.noResultsRestore.hidden = !(state && state.dismissedCount > 0);
+    if (controls.noResultsRevealClosed) {
+      controls.noResultsRevealClosed.hidden = context.hideClosed !== true;
+    }
   }
 
   function scoreResultsForQuery(results, query) {
@@ -1208,6 +1228,17 @@
     return Object.keys(moduleCounts || {}).reduce((total, key) => total + (Number(moduleCounts[key]) || 0), 0);
   }
 
+  function countHiddenClosedResults(results, filters) {
+    if (!filters || filters.hideClosed !== true) return 0;
+    const shared = getSearchShared();
+    if (!shared || typeof shared.isPostClosedOrEnded !== 'function') return 0;
+    return (Array.isArray(results) ? results : []).filter((post) => {
+      if (!post) return false;
+      if (filters.module && getPostModuleKey(post) !== filters.module) return false;
+      return shared.isPostClosedOrEnded(post);
+    }).length;
+  }
+
   function formatVisibleResultsLabel(count) {
     const n = Math.max(0, Number(count) || 0);
     return n === 1 ? '1 resultado' : `${n} resultados`;
@@ -1217,6 +1248,9 @@
     const controls = getResultControls();
     const visibleList = Array.isArray(filteredResults) ? filteredResults : [];
     const visible = visibleList.length;
+    const hiddenClosedCount = Number.isFinite(Number(options.hiddenClosedCount))
+      ? Math.max(0, Number(options.hiddenClosedCount))
+      : countHiddenClosedResults(rawResults, filters);
     // Prefer a pre-UI-module pool for dropdown facets (matches what switching modules would show).
     const facetSource = Array.isArray(options.facetSource) ? options.facetSource : (Array.isArray(rawResults) ? rawResults : []);
     const fallbackModuleCounts = countResultsByModule(facetSource);
@@ -1256,6 +1290,9 @@
       if (!filters.module) parts.unshift('Todos os módulos');
       controls.active.textContent = parts.join(' · ');
     }
+    if (window.KCHideClosed && typeof window.KCHideClosed.setHiddenCount === 'function') {
+      window.KCHideClosed.setHiddenCount(hiddenClosedCount);
+    }
   }
 
   function bindResultsControls() {
@@ -1263,18 +1300,31 @@
     const searchInput = document.getElementById('searchInput');
     const rerender = () => renderResultsToPage(searchInput ? searchInput.value : getQueryParam('q'));
 
-    ['module', 'hideClosed', 'sort'].forEach((key) => {
+    ['module', 'sort'].forEach((key) => {
       const el = controls[key];
       if (!el || el.dataset.kcSearchBound === '1') return;
       el.dataset.kcSearchBound = '1';
       el.addEventListener('change', rerender);
     });
 
+    if (controls.hideClosed && (!window.KCHideClosed || typeof window.KCHideClosed.getState !== 'function') && controls.hideClosed.dataset.kcSearchBound !== '1') {
+      controls.hideClosed.dataset.kcSearchBound = '1';
+      controls.hideClosed.addEventListener('change', rerender);
+    }
+    if (document.documentElement.dataset.kcSearchHideClosedBound !== '1') {
+      document.documentElement.dataset.kcSearchHideClosedBound = '1';
+      document.addEventListener('kc:hide-closed-change', rerender);
+    }
+
     if (controls.clear && controls.clear.dataset.kcSearchBound !== '1') {
       controls.clear.dataset.kcSearchBound = '1';
       controls.clear.addEventListener('click', () => {
         if (controls.module) controls.module.value = '';
-        if (controls.hideClosed) controls.hideClosed.checked = false;
+        if (window.KCHideClosed && typeof window.KCHideClosed.setState === 'function') {
+          window.KCHideClosed.setState(false, { reason: 'clear', source: controls.clear, emit: false });
+        } else if (controls.hideClosed) {
+          controls.hideClosed.checked = false;
+        }
         if (controls.sort) controls.sort.value = 'relevance';
         rerender();
       });
@@ -1340,6 +1390,97 @@
         if (post) recordSearchResultInteraction(post, 'results-click');
       });
     }
+  }
+
+  function clearSearchResultsLifecycleTimer() {
+    if (!searchResultsLifecycleTimer) return;
+    window.clearTimeout(searchResultsLifecycleTimer);
+    searchResultsLifecycleTimer = null;
+  }
+
+  function scheduleSearchResultsLifecycleBoundary(results, filters, query) {
+    clearSearchResultsLifecycleTimer();
+    const source = Array.isArray(results) ? results : [];
+    if (!filters || filters.hideClosed !== true || !source.length) return;
+    if (!window.KCPostLifecycle || typeof window.KCPostLifecycle.getEndTime !== 'function') return;
+
+    const now = Date.now();
+    let nearest = Number.POSITIVE_INFINITY;
+    source.forEach((post) => {
+      let endTime = 0;
+      try { endTime = Number(window.KCPostLifecycle.getEndTime(post)); } catch (_) { endTime = 0; }
+      if (Number.isFinite(endTime) && endTime > 0 && endTime < nearest) nearest = endTime;
+    });
+    if (!Number.isFinite(nearest)) return;
+
+    const delay = Math.min(2147480000, Math.max(25, (nearest - now) + 25));
+    searchResultsLifecycleTimer = window.setTimeout(() => {
+      searchResultsLifecycleTimer = null;
+      const currentFilters = readResultFilters();
+      if (!isResultsPage() || currentFilters.hideClosed !== true) return;
+      const searchInput = document.getElementById('searchInput');
+      renderResultsToPage(searchInput ? searchInput.value : query);
+    }, delay);
+  }
+
+  function onSearchResultsPageShow(event) {
+    if (!event || !event.persisted || !isResultsPage()) return;
+    startSearchResultsFreshness();
+    const filters = readResultFilters();
+    if (filters.hideClosed !== true) return;
+    const searchInput = document.getElementById('searchInput');
+    renderResultsToPage(searchInput ? searchInput.value : getQueryParam('q'));
+  }
+
+  function shouldRevalidateSearchResults(change) {
+    const type = String(change && change.type || '').trim().toLowerCase();
+    const status = String(change && change.status || '').trim().toLowerCase();
+    const source = String(change && change.source || '').trim().toLowerCase();
+    if (['closed', 'hidden', 'deleted', 'pending'].includes(status)) return true;
+    if (['status_changed', 'soft_deleted', 'purged', 'edited'].includes(type)) return true;
+    if (type !== 'updated') return false;
+    return !!source && !source.includes('realtime') && !['broadcast', 'remote'].includes(source);
+  }
+
+  function scheduleSearchResultsRevalidation(delay = 50) {
+    if (!isResultsPage() || readResultFilters().hideClosed !== true) return;
+    if (searchResultsFreshnessTimer) window.clearTimeout(searchResultsFreshnessTimer);
+    searchResultsFreshnessTimer = window.setTimeout(() => {
+      searchResultsFreshnessTimer = null;
+      const searchInput = document.getElementById('searchInput');
+      renderResultsToPage(searchInput ? searchInput.value : getQueryParam('q'));
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  function startSearchResultsFreshness() {
+    if (searchResultsFreshnessUnsub || !window.KCPostFreshness || typeof window.KCPostFreshness.subscribe !== 'function') return;
+    searchResultsFreshnessUnsub = window.KCPostFreshness.subscribe((change) => {
+      if (shouldRevalidateSearchResults(change)) scheduleSearchResultsRevalidation(30);
+    });
+  }
+
+  function stopSearchResultsFreshness() {
+    if (searchResultsFreshnessTimer) {
+      window.clearTimeout(searchResultsFreshnessTimer);
+      searchResultsFreshnessTimer = null;
+    }
+    if (typeof searchResultsFreshnessUnsub === 'function') {
+      try { searchResultsFreshnessUnsub(); } catch (_) { }
+    }
+    searchResultsFreshnessUnsub = null;
+  }
+
+  function onSearchResultsPageHide() {
+    clearSearchResultsLifecycleTimer();
+    stopSearchResultsFreshness();
+  }
+
+  function onSearchResultsFocus() {
+    scheduleSearchResultsRevalidation(50);
+  }
+
+  function onSearchResultsVisibility() {
+    if (document.visibilityState === 'visible') scheduleSearchResultsRevalidation(50);
   }
 
   /** Corner/dropdown chip: only module or topic name — never "…escolhido por você". */
@@ -1441,6 +1582,7 @@
   }
 
   async function renderResultsToPage(query) {
+    clearSearchResultsLifecycleTimer();
     const request = startSearchRequest('results');
     const listEl = document.getElementById('searchResultsList');
     if (!listEl) {
@@ -1468,16 +1610,22 @@
 
     const categoryParam = getQueryParam('category') || getQueryParam('categoria');
     const subcategoryParam = getQueryParam('subcategory') || getQueryParam('subcategoria');
+    const filters = readResultFilters();
 
     let results = [];
     try {
       if (KCAPI && typeof KCAPI.searchPosts === 'function') {
-        const params = { q, limit: SEARCH_RESULTS_LIMIT, signal: request.signal };
+        const params = { q, limit: SEARCH_RESULTS_LIMIT, hideClosed: filters.hideClosed, signal: request.signal };
         if (categoryParam) params.category = categoryParam;
         if (subcategoryParam) params.subcategory = subcategoryParam;
         results = await KCAPI.searchPosts(params);
       } else {
-        results = await searchPosts(q, { limit: SEARCH_RESULTS_LIMIT, minScore: 0.2, signal: request.signal });
+        results = await searchPosts(q, {
+          limit: SEARCH_RESULTS_LIMIT,
+          minScore: 0.2,
+          hideClosed: filters.hideClosed,
+          signal: request.signal
+        });
       }
     } catch (error) {
       if (isAbortError(error, request)) {
@@ -1495,7 +1643,7 @@
     }
 
     const safeResults = Array.isArray(results) ? results : [];
-    const filters = readResultFilters();
+    const hiddenClosedCount = countHiddenClosedResults(safeResults, filters);
     const ignoredSignals = getStructuredIgnoredSignals(q);
     let structuredState = null;
     // Keep UI module on the pilot for correct candidate restriction AND chip suppression,
@@ -1534,12 +1682,17 @@
       sortBy: 'relevance'
     });
     updateResultsControlsState(pilotResults, filteredResults, filters, structuredState, {
-      facetSource: facetSource
+      facetSource: facetSource,
+      hiddenClosedCount
     });
     lastRenderedSearchResults = new Map(filteredResults.map((post) => [getStructuredPostId(post), post]));
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
+    scheduleSearchResultsLifecycleBoundary(filteredResults, filters, q);
 
-    updateNoResultsState(noEl, filteredResults, structuredState);
+    updateNoResultsState(noEl, filteredResults, structuredState, {
+      hideClosed: filters.hideClosed,
+      hiddenClosedCount
+    });
     recordSearchPerformance(request, 'ok', filteredResults.length);
   }
 
@@ -1949,9 +2102,9 @@
     try {
       let results = [];
       if (KCAPI && typeof KCAPI.searchPosts === 'function') {
-        results = await KCAPI.searchPosts({ q, limit: 8, signal: request.signal });
+        results = await KCAPI.searchPosts({ q, limit: 8, hideClosed: true, signal: request.signal });
       } else {
-        results = await searchPosts(q, { limit: 8, minScore: 0.2, signal: request.signal });
+        results = await searchPosts(q, { limit: 8, minScore: 0.2, hideClosed: true, signal: request.signal });
       }
       if (!isCurrentSearchRequest(request)) {
         recordSearchPerformance(request, 'stale', 0);
@@ -2012,6 +2165,14 @@
     bindSearchFlushLifecycle();
 
     if (resultsPage) {
+      if (document.documentElement.dataset.kcSearchLifecycleBound !== '1') {
+        document.documentElement.dataset.kcSearchLifecycleBound = '1';
+        window.addEventListener('pagehide', onSearchResultsPageHide);
+        window.addEventListener('pageshow', onSearchResultsPageShow);
+        window.addEventListener('focus', onSearchResultsFocus);
+        document.addEventListener('visibilitychange', onSearchResultsVisibility);
+      }
+      startSearchResultsFreshness();
       loadStructuredSearchRuntime();
       const qParam = getQueryParam('q');
       if (searchInput && qParam) searchInput.value = qParam;
