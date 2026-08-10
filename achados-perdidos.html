@@ -32,7 +32,7 @@
   <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.1"></script>
 
     <title>Achados e Perdidos - KinoCampus</title>
-<link href="assets/css/styles.css?v=8.6.16" rel="stylesheet" />
+<link href="assets/css/styles.css?v=8.6.17" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
     <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.17" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
@@ -131,6 +131,13 @@
                     <span>Outros</span>
                 </a>
             </div>
+            <div class="kc-feed-toolbar__actions">
+                <button class="kc-module-picker-trigger" type="button" data-kc-module-picker-open
+                    aria-haspopup="dialog" aria-controls="kcModulePickerModal" aria-expanded="false" hidden>
+                    <i class="fas fa-layer-group" aria-hidden="true"></i>
+                    <span class="kc-module-picker-trigger__label">Escolher Módulo</span>
+                    <i class="fas fa-chevron-down kc-module-picker-trigger__chevron" aria-hidden="true"></i>
+                </button>
             <div class="kc-hide-closed-control" data-kc-hide-closed-toggle>
                 <label class="kc-hide-closed-toggle kc-switch" for="kcHideClosedAchadosPerdidos">
                     <span class="kc-hide-closed-toggle__label kc-hide-closed__label">Ocultar encerrados</span>
@@ -140,6 +147,7 @@
                 </label>
                 <span class="kc-hide-closed-toggle__status" id="kcHideClosedAchadosPerdidosStatus" role="status"
                     aria-live="polite" aria-atomic="true" data-kc-hide-closed-status>Encerrados visíveis</span>
+            </div>
             </div>
             </div>
             <div class="kc-lostfound-mobile-rail" data-kc-achados-mobile-rail="true" aria-label="Seções rápidas de achados e perdidos" data-i18n-aria-label="aria-label.lostfound-rail">
@@ -447,6 +455,7 @@
     <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
     <script defer src="assets/js/features/kc-lazy-loader.js?v=8.6.1"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>
+    <script defer src="assets/js/features/kc-module-picker.js?v=8.6.1"></script>
     <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.17"></script>
 </body>
 

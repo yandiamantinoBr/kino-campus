@@ -62,7 +62,7 @@ Fonte: `npm run audit:css`, que varre os HTMLs da raiz e de `admin/`.
 
 | CSS | Versao nos links | Paginas |
 |---|---|---:|
-| `styles.css` | `8.6.16 x33` | 33 |
+| `styles.css` | `8.6.17 x33` | 33 |
 | `kc-theme-boot.css` | `8.6.12 x33` | 33 |
 | `kc-chat-shortcut.css` | `8.6.1 x31`, `8.6.2 x1` | 32 |
 | `admin-shell.css` | `8.6.12 x8` | 8 |
@@ -83,8 +83,11 @@ A tabela foi recontada nos 33 HTMLs durante a entrega de "Ocultar encerrados".
 O inventario canonico da etapa CSS-A esta em
 [`docs/planning/v76-css-ownership-inventory.md`](../planning/v76-css-ownership-inventory.md).
 
-**Componente compartilhado 2026-08-10:** `.kc-feed-toolbar`, `.kc-hide-closed` e
-`.kc-switch` permanecem em `styles.css` porque são usados por home, seis feeds e busca.
+**Componentes compartilhados 2026-08-10:** `.kc-feed-toolbar`, `.kc-hide-closed`,
+`.kc-switch`, `.kc-feed-toolbar__actions` e `.kc-module-picker-*` permanecem em `styles.css`.
+No mobile, a rail de abas ocupa a primeira linha e as ações "Escolher Módulo" / "Ocultar
+encerrados" a segunda; no desktop, o picker fica oculto e a navegação global continua canônica.
+O estado de encerrados também é usado por home, seis feeds e busca.
 O switch nativo fica fora dos `tablist`, tem alvo mínimo de 44 px e estados específicos para
 foco visível, tema escuro, `forced-colors` e `prefers-reduced-motion`.
 

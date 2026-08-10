@@ -16,6 +16,12 @@ sincroniza o switch, `closed=1`, estados ARIA e a acao "Mostrar encerrados". A o
 e a fonte de verdade continuam sendo os HTMLs e `npm run check:scripts`; as listas historicas
 abaixo registram o snapshot em que foram geradas.
 
+**Atualizacao mobile 2026-08-10:** home e os seis feeds carregam
+`features/kc-module-picker.js?v=8.6.1` depois de
+`features/create-post/kc-create-post.schema.js`. O seletor usa dinamicamente `schema.modules`
+para renderizar o bottom sheet "Escolher Modulo"; `search-results.html` conserva seu filtro de
+modulo proprio e nao carrega esse componente.
+
 ---
 
 ## 1. Escopo

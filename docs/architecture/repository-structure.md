@@ -65,7 +65,7 @@ kino-campus/
 |   |   |-- core/                  12 arquivos
 |   |   |-- api/                   22 arquivos
 |   |   |-- utils/                 8 arquivos
-|   |   |-- features/              18 arquivos + create-post/
+|   |   |-- features/              21 arquivos + create-post/
 |   |   |   `-- create-post/       7 arquivos
 |   |   |-- shared/                11 arquivos
 |   |   |-- legacy-shims/          1 arquivo
@@ -149,7 +149,7 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 | `assets/js/core/` | 12 | Runtime central: i18n, auth UI, consentimento, perfil, tema, notificacoes, widgets e shell publico |
 | `assets/js/api/` | 22 | Cliente Supabase, submodulos KCAPI, diagnostics, chat e facade `window.KCAPI` |
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
-| `assets/js/features/` | 20 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto de módulos, página 404 e estado de "Ocultar encerrados" |
+| `assets/js/features/` | 21 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto/seletor de módulos, página 404 e estado de "Ocultar encerrados" |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
 | `assets/js/shared/` | 15 | Dados e contratos compartilhados, incluindo registry, snapshot gerado, parser, pipeline shadow e política temporal canônica de posts |
 | `assets/js/legacy-shims/` | 1 | Shim transitorio de migracao de posts do usuario |

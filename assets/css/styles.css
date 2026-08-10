@@ -12789,6 +12789,20 @@ body.kc-admin-page .kc-consent-btn {
   box-shadow: none !important;
 }
 
+.kc-feed-toolbar__actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* A navegação completa já existe no header desktop. O seletor compacto é uma
+ * affordance exclusiva do mobile, onde esses links ficam fora da viewport. */
+.kc-module-picker-trigger {
+  display: none;
+}
+
 .kc-hide-closed-control {
   display: grid;
   justify-items: end;
@@ -12926,6 +12940,147 @@ body.kc-admin-page .kc-consent-btn {
   padding-inline: 2px;
 }
 
+/* Module picker: o shell visual deriva do modal contextual já usado nos sete
+ * feeds, mas mantém lifecycle, IDs e seletores próprios. */
+.kc-module-picker-modal .kc-module-picker-modal__dialog {
+  width: min(100%, 540px);
+}
+
+.kc-module-picker-modal .kc-module-picker-modal__body {
+  display: grid;
+  gap: 18px;
+}
+
+.kc-module-picker-close__glyph {
+  font-size: 1.65rem;
+  font-weight: 300;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.kc-module-picker-search {
+  position: relative;
+  display: block;
+}
+
+.kc-module-picker-search input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 44px 10px 15px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 999px;
+  background: var(--kc-surface-dark-hover);
+  color: var(--kc-text-dark-primary);
+  font: inherit;
+  outline: none;
+}
+
+.kc-module-picker-search input::placeholder {
+  color: var(--kc-text-dark-secondary);
+  opacity: 0.88;
+}
+
+.kc-module-picker-search input:focus-visible {
+  border-color: var(--kc-primary-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--kc-primary-brand) 22%, transparent);
+}
+
+.kc-module-picker-search > i {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  color: var(--kc-text-dark-secondary);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.kc-module-picker-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kc-module-picker-list__item[hidden] {
+  display: none;
+}
+
+.kc-module-picker-option {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: minmax(22px, auto) auto;
+  align-items: center;
+  gap: 0 10px;
+  height: 100%;
+  min-height: 64px;
+  padding: 9px 11px;
+  border: 1px solid var(--kc-border-dark);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--kc-surface-dark-hover) 72%, transparent);
+  color: var(--kc-text-dark-primary);
+  line-height: 1.25;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.kc-module-picker-option__emoji {
+  display: inline-flex;
+  grid-row: 1 / span 2;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--kc-primary-brand) 11%, var(--kc-surface-dark));
+  font-size: 1.25rem;
+}
+
+.kc-module-picker-option__label {
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.kc-module-picker-option__current {
+  /* The card border/background already carry the brand accent. Keeping the
+   * small status in the primary text color preserves AA contrast in both
+   * themes (orange text on the blended dark card was below 4.5:1). */
+  color: var(--kc-text-dark-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.kc-module-picker-option.is-current {
+  border-color: color-mix(in srgb, var(--kc-primary-brand) 65%, var(--kc-border-dark));
+  background: color-mix(in srgb, var(--kc-primary-brand) 12%, var(--kc-surface-dark));
+}
+
+.kc-module-picker-option:hover {
+  border-color: var(--kc-primary-brand);
+  background: color-mix(in srgb, var(--kc-primary-brand) 9%, var(--kc-surface-dark-hover));
+  transform: translateY(-1px);
+}
+
+.kc-module-picker-option:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.kc-module-picker-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--kc-border-dark);
+  border-radius: 12px;
+  color: var(--kc-text-dark-secondary);
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .kc-feed-toolbar {
     top: calc(var(--kc-safe-top, 0px) + var(--kc-header-height, 64px));
@@ -12938,24 +13093,162 @@ body.kc-admin-page .kc-consent-btn {
 
   .kc-feed-toolbar > .kc-feed-tabs,
   .kc-feed-toolbar > .kc-scroll-rail--tabs {
-    grid-row: 2;
+    grid-row: 1;
+    grid-column: 1;
     width: 100%;
   }
 
-  .kc-feed-toolbar > .kc-hide-closed-control {
-    grid-row: 1;
+  .kc-feed-toolbar > .kc-feed-toolbar__actions {
+    grid-row: 2;
+    grid-column: 1;
     width: 100%;
     min-width: 0;
-    justify-items: stretch;
-    padding: 4px var(--kc-page-gutter, 12px) 2px;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 4px;
     border-bottom: 1px solid var(--kc-border-dark);
   }
 
-  .kc-feed-toolbar .kc-hide-closed-toggle {
-    width: 100%;
-    justify-content: space-between;
+  .kc-module-picker-trigger:not([hidden]) {
+    display: inline-flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 52%;
+    min-height: 44px;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 2px;
+    border: 0;
+    background: transparent;
+    color: var(--kc-text-dark-primary);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
+  .kc-module-picker-trigger > i:first-child {
+    color: var(--kc-primary-brand);
+  }
+
+  .kc-module-picker-trigger__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kc-module-picker-trigger__chevron {
+    color: var(--kc-text-dark-secondary);
+    font-size: 0.68rem;
+    transition: transform 0.18s ease;
+  }
+
+  .kc-module-picker-trigger[aria-expanded="true"] .kc-module-picker-trigger__chevron {
+    transform: rotate(180deg);
+  }
+
+  .kc-module-picker-trigger:hover {
+    color: var(--kc-primary-brand);
+  }
+
+  .kc-module-picker-trigger:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 42%, transparent);
+    outline-offset: 0;
+    border-radius: 9px;
+  }
+
+  .kc-feed-toolbar__actions > .kc-hide-closed-control {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .kc-feed-toolbar .kc-hide-closed-toggle {
+    width: auto;
+    gap: 6px;
+    padding: 4px 2px;
+  }
+
+  .kc-feed-toolbar .kc-hide-closed-toggle__label {
+    font-size: 0.76rem;
+  }
+
+  .kc-feed-toolbar .kc-hide-closed-toggle__track {
+    flex-basis: 40px;
+    width: 40px;
+    height: 22px;
+  }
+
+  .kc-feed-toolbar .kc-hide-closed-toggle__track::after {
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .kc-feed-toolbar .kc-hide-closed-toggle__input:checked + .kc-hide-closed-toggle__track::after {
+    transform: translateX(18px);
+  }
+
+  .kc-sidebar-context-modal.kc-module-picker-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .kc-module-picker-modal .kc-module-picker-modal__dialog {
+    width: 100%;
+    max-height: min(82vh, 720px);
+    max-height: min(82dvh, 720px);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .kc-module-picker-modal .kc-module-picker-modal__body {
+    max-height: calc(min(82vh, 720px) - 65px);
+    max-height: calc(min(82dvh, 720px) - 65px);
+    gap: 14px;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .kc-module-picker-option {
+    min-height: 58px;
+    padding: 7px 9px;
+  }
+
+  .kc-module-picker-option__label {
+    font-size: 0.84rem;
+  }
+
+}
+
+@media (max-width: 360px) {
+  .kc-feed-toolbar > .kc-feed-toolbar__actions {
+    gap: 4px;
+    padding-inline: 2px;
+  }
+
+  .kc-module-picker-trigger:not([hidden]),
+  .kc-feed-toolbar .kc-hide-closed-toggle__label {
+    font-size: 0.72rem;
+  }
+
+  .kc-module-picker-trigger:not([hidden]) {
+    max-width: 48%;
+    gap: 5px;
+  }
+
+  .kc-module-picker-trigger__chevron {
+    display: none;
+  }
+
+  .kc-module-picker-list {
+    gap: 8px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -12979,7 +13272,9 @@ body.kc-admin-page .kc-consent-btn {
 
 @media (prefers-reduced-motion: reduce) {
   .kc-hide-closed-toggle__track,
-  .kc-hide-closed-toggle__track::after {
+  .kc-hide-closed-toggle__track::after,
+  .kc-module-picker-trigger__chevron,
+  .kc-module-picker-option {
     transition: none;
   }
 }
@@ -13006,5 +13301,15 @@ body.kc-admin-page .kc-consent-btn {
 
   .kc-hide-closed-toggle__input:focus-visible + .kc-hide-closed-toggle__track {
     outline-color: Highlight;
+  }
+
+  .kc-module-picker-trigger,
+  .kc-module-picker-option,
+  .kc-module-picker-search input {
+    border: 2px solid ButtonText;
+  }
+
+  .kc-module-picker-option.is-current {
+    border-color: Highlight;
   }
 }

@@ -30,7 +30,7 @@
   <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.1"></script>
   <title>KinoCampus - Comunidade UFG</title>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
-<link href="assets/css/styles.css?v=8.6.16" rel="stylesheet" />
+<link href="assets/css/styles.css?v=8.6.17" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/kc-sidebar-context.css?v=8.6.17" />
   <link rel="stylesheet" href="assets/css/kc-pitch-links.css?v=1.0.0" />
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
@@ -213,6 +213,13 @@
           </a>
         </nav>
       </div>
+      <div class="kc-feed-toolbar__actions">
+        <button class="kc-module-picker-trigger" type="button" data-kc-module-picker-open
+          aria-haspopup="dialog" aria-controls="kcModulePickerModal" aria-expanded="false" hidden>
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
+          <span class="kc-module-picker-trigger__label">Escolher Módulo</span>
+          <i class="fas fa-chevron-down kc-module-picker-trigger__chevron" aria-hidden="true"></i>
+        </button>
       <div class="kc-hide-closed-control" data-kc-hide-closed-toggle>
         <label class="kc-hide-closed-toggle kc-switch" for="kcHideClosedHome">
           <span class="kc-hide-closed-toggle__label kc-hide-closed__label">Ocultar encerrados</span>
@@ -222,8 +229,9 @@
         </label>
         <span class="kc-hide-closed-toggle__status" id="kcHideClosedHomeStatus" role="status"
           aria-live="polite" aria-atomic="true" data-kc-hide-closed-status>Encerrados visíveis</span>
+       </div>
       </div>
-      </div>
+       </div>
 
       <!-- Feed Destaques: wrapper isola pager/banner deste tab -->
       <div class="kc-feed-tab-wrap kc-feed-tab-wrap--active" data-feed-wrap="destaques">
@@ -542,6 +550,7 @@
   <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.3"></script>
   <script defer src="assets/js/features/kc-search.js?v=8.6.14"></script>
   <script defer src="assets/js/features/kc-pull-to-refresh.js?v=8.6.1"></script>
+  <script defer src="assets/js/features/kc-module-picker.js?v=8.6.1"></script>
   <script defer src="assets/js/features/kc-sidebar-context.js?v=8.6.17"></script>
 <script defer src="assets/js/features/kc-ranking.js?v=8.6.11"></script>
   <script defer src="assets/js/controllers/public/kc-feed.controller.js?v=8.6.14"></script>

@@ -18,7 +18,7 @@
 - [Grupo core/](#grupo-core) — 11 módulos
 - [Grupo api/](#grupo-api) — 22 módulos
 - [Grupo utils/](#grupo-utils) — 8 módulos
-- [Grupo features/](#grupo-features) — 11 módulos catalogados *(atualizado em 2026-08-10)*
+- [Grupo features/](#grupo-features) — 12 módulos catalogados *(atualizado em 2026-08-10)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
 - [Grupo shared/](#grupo-shared) — 12 módulos catalogados *(atualizado em 2026-08-10)*
 - [Grupo legacy-shims/](#grupo-legacy-shims) — 1 módulo *(v16.4.0)*
@@ -1453,6 +1453,32 @@ sessionStorage.
 
 ---
 
+### `features/kc-module-picker.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCModulePicker` |
+| Padrão | IIFE + API pública pequena |
+| Páginas | `index.html` e seis feeds temáticos |
+
+**Responsabilidade:** Abre no mobile o bottom sheet acessível "Escolher Módulo", construindo a
+lista a cada abertura a partir de `window._KCCreatePost.schema.modules`. Filtra redirects
+externos/inválidos, segue a ordem da navegação principal, anexa novos módulos do schema,
+preserva `closed=1` e marca a página atual com `aria-current="page"`.
+
+**Exports públicos:** `init()`, `open()`, `close()`, `getModules()` e `sync()`.
+
+**Dependências em runtime:** `features/create-post/kc-create-post.schema.js`, DOM e,
+opcionalmente, `window.KCOverlayLock` e `window.KCHideClosed`.
+
+**Consumido por:** gatilho `[data-kc-module-picker-open]` da faixa de ações dos sete feeds.
+
+**Testes:** `tests/unit/kc-module-picker.test.js` e
+`tests/structure/module-picker-contract.test.js`.
+
+---
+
 ### `features/kc-banners.js`
 
 | Campo | Valor |
@@ -2473,6 +2499,7 @@ contagem de votos de um post e voto atual do usuário.
 | features/kc-filters.js | features | `window.KCFilters` | feeds | unit/kc-filters |
 | features/kc-feed-filters.js | features | `window.KCFeedFilters` | feeds | unit/kc-feed-filters |
 | features/kc-hide-closed.js | features | `window.KCHideClosed` | home+feeds+busca | unit/kc-hide-closed |
+| features/kc-module-picker.js | features | `window.KCModulePicker` | home+feeds | unit/kc-module-picker |
 | features/kc-banners.js | features | `window.KCBanners` | feeds | integration/kc-banners |
 | features/kc-home-categories.js | features | `window.KCHomeCategories` | index.html | integration/home-categories.shared |
 | features/kc-lazy-loader.js | features | `window.KCLazyLoader` | feeds | unit/lazy-loader |
