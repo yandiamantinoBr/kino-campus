@@ -103,6 +103,7 @@ describe('contrato estrutural do seletor responsivo de módulos', () => {
     expect(css).toMatch(/\.kc-module-picker-trigger__chevron::before\s*\{[^}]*border-width:\s*0\s+2px\s+2px\s+0;/s);
     expect(css).toMatch(/\.kc-feed-toolbar\s+\.kc-hide-closed-toggle__track\s*\{[^}]*width:\s*40px;[^}]*height:\s*22px;/s);
     expect(css).toMatch(/\.kc-sidebar-context-modal\.kc-module-picker-modal\s*\{[^}]*align-items:\s*flex-end;/s);
+    expect(css).toMatch(/\.kc-sidebar-context-modal\.kc-module-picker-modal\s*\{[^}]*z-index:\s*10040;/s);
     expect(css).toMatch(/\.kc-module-picker-list\s*\{[^}]*grid-auto-rows:\s*1fr;/s);
   });
 });

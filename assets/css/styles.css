@@ -13119,6 +13119,18 @@ body.kc-admin-page .kc-consent-btn {
   width: min(100%, 540px);
 }
 
+/* O seletor é aberto por ação explícita e torna os demais filhos do body
+ * inertes. Ele precisa ficar acima do aviso de consentimento ainda pendente;
+ * ao fechar, o aviso volta intacto e continua exigindo uma escolha. */
+.kc-sidebar-context-modal.kc-module-picker-modal {
+  z-index: 10040;
+}
+
+.kc-module-picker-modal .kc-sidebar-context-modal__close {
+  width: 44px;
+  height: 44px;
+}
+
 .kc-module-picker-modal .kc-module-picker-modal__body {
   display: grid;
   gap: 18px;
