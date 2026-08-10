@@ -80,7 +80,10 @@
     const verificado = (Boolean(r.verificado ?? r.verified ?? false) || authorVerified);
 
     const status = String(r.status || '').trim().toLowerCase() || 'published';
-    const isClosed = status === 'closed';
+    const isClosed = status === 'closed' || [
+      r.isClosed, r.is_closed, r.isExpired, r.is_expired, r.expired,
+      meta.isClosed, meta.is_closed, meta.isExpired, meta.is_expired, meta.expired,
+    ].some((value) => value === true);
     const visibility = String(r.visibility || meta.visibility || '').trim().toLowerCase() || 'public';
     const tagLabels = Array.isArray(r.tags) ? r.tags : [];
     const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
@@ -134,6 +137,7 @@
         return true;
       });
     })();
+    const expiresAt = r.expires_at != null ? r.expires_at : (r.expiresAt != null ? r.expiresAt : null);
 
     if (authorProfile) {
       authorProfile.rating_avg = Number.isFinite(rating) ? rating : null;
@@ -158,6 +162,8 @@
       bumped_at,
       effectiveAt,
       effective_at,
+      expiresAt,
+      expires_at: expiresAt,
       emoji,
       verificado,
       status,

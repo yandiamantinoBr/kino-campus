@@ -41,6 +41,7 @@ Todo post normalizado via `KCPostModel.from()` tem a seguinte forma:
   subcategoria: string,    // Subcategoria (ex: topico, tipo, status)
   tags: string[],
   expiresAt: string | null,  // ISO8601
+  expires_at: string | null, // alias tipado preservado para paridade temporal
   bumpedAt: string | null,   // ISO8601
 }
 ```
@@ -80,6 +81,7 @@ Busca server-side dedicada para a UI de busca (`search-results.html` e dropdown 
   category: string,
   subcategory: string,
   limit: number,
+  hideClosed?: boolean, // filtra encerrados no banco antes do LIMIT
 }
 ```
 
@@ -128,6 +130,7 @@ Busca lotes incrementais do feed via cursor opaco. É o contrato usado pelos pag
     lfStatus?: string[],
     lfType?: string[],
     lfLocation?: string,
+    hideClosed?: boolean,
   },
 }
 ```
@@ -145,6 +148,7 @@ Promise<{
 - `cursor` é opaco e pode ter representações diferentes entre `local` e `supabase`.
 - Feeds híbridos podem passar `module` como array, por exemplo `['compra-venda', 'livros']`.
 - `requestParams` carrega o envelope dos filtros avançados já existentes nos módulos (`compra-venda`, `caronas`, `moradia`, `oportunidades` e `achados-perdidos`) para o caminho incremental cursor-based.
+- `hideClosed: true` aplica a política temporal canônica no banco antes do cursor e do `LIMIT`; o default é `false` para compatibilidade.
 - `datePreset` foi fechado em `v9.2.1.3` e hoje cobre os 6 módulos do feed incremental. Semântica: `today/last7d/last30d` para `compra-venda`, `livros`, `moradia`, `oportunidades` e `achados-perdidos`; `today/last3d/last7d` para `caronas`; `today/next7d/thisMonth/past` para `eventos`, usando `metadata.data_evento`/`metadata.data` com fallback para `created_at`.
 - `priceMin` e `priceMax` foram adicionados ao contrato cursor-based em `v9.2.1.2`; hoje eles alimentam as faixas de preço/remuneração de `compra-venda`, `caronas`, `moradia` e `oportunidades`.
 - `KCAPI.getPosts()` permanece estável para consumo legado; a aplicação cursor-based dos filtros avançados foi adicionada em `v9.2.1.1`, expandida em `v9.2.1.2` e concluída em `v9.2.1.3` sem reinterpretar o contrato antigo.

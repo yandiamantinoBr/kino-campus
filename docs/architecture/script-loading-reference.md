@@ -1,20 +1,28 @@
 # Referencia de Carregamento de Scripts - KinoCampus
 
-**Versao:** v76.6.0
-**Data:** 2026-06-12
+**Versao:** v76.6.1
+**Data:** 2026-08-10
 **Criado em:** v16.6.0; regenerado em v76.6.0
 **Gerado a partir de:** `scripts/admin-pages.manifest.js` + leitura real dos HTMLs canonicos
 
 > Esta referencia lista os scripts em ordem apos normalizar o prefixo `../` das paginas admin.
-> O gate executavel continua sendo `npm run check:scripts`, que valida a cadeia de boot em 26 HTMLs.
+> O gate executavel continua sendo `npm run check:scripts`, que valida a cadeia de boot em 33 HTMLs.
+
+**Atualizacao 2026-08-10:** as superficies de busca carregam
+`shared/kc-post-lifecycle.shared.js?v=8.6.1` antes de `shared/kc-search.shared.js`; home,
+feeds de modulo e `search-results.html` carregam tambem
+`features/kc-hide-closed.js?v=8.6.1`. O primeiro centraliza a classificacao temporal e o segundo
+sincroniza o switch, `closed=1`, estados ARIA e a acao "Mostrar encerrados". A ordem executavel
+e a fonte de verdade continuam sendo os HTMLs e `npm run check:scripts`; as listas historicas
+abaixo registram o snapshot em que foram geradas.
 
 ---
 
 ## 1. Escopo
 
-- HTMLs canonicos validados: 26
-- Publicos no manifest: 20
-- Admin no manifest: 6
+- HTMLs canonicos validados: 33
+- Publicos no manifest: 25
+- Admin no manifest: 8
 - Cadeia de boot validada: 5 scripts em ordem relativa
 - Runtime canonico atual: `8.6.1` (`VERSION.json`); alguns scripts mantem cache-busters especificos conforme o HTML real.
 
@@ -22,7 +30,7 @@
 
 ## 2. Cadeia de Boot Validada
 
-A cadeia abaixo deve aparecer em todos os 26 HTMLs canonicos, nesta ordem relativa. Outros scripts podem existir antes, depois ou entre grupos, desde que esta sequencia seja preservada.
+A cadeia abaixo deve aparecer em todos os 33 HTMLs canonicos, nesta ordem relativa. Outros scripts podem existir antes, depois ou entre grupos, desde que esta sequencia seja preservada.
 
 | Ordem | Script |
 |---:|---|

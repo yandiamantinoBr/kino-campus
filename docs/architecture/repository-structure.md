@@ -149,9 +149,9 @@ Todo modulo deve permanecer em um dos grupos canonicos abaixo.
 | `assets/js/core/` | 12 | Runtime central: i18n, auth UI, consentimento, perfil, tema, notificacoes, widgets e shell publico |
 | `assets/js/api/` | 22 | Cliente Supabase, submodulos KCAPI, diagnostics, chat e facade `window.KCAPI` |
 | `assets/js/utils/` | 8 | Helpers de string, formatacao, DOM, identidade, taxonomia, localizacao e apresentacao |
-| `assets/js/features/` | 18 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto de módulos e página 404 |
+| `assets/js/features/` | 20 | Comentarios, busca, filtros, banners, ranking, ads, analytics, calendario, lazy loading, pull-to-refresh, contexto de módulos, página 404 e estado de "Ocultar encerrados" |
 | `assets/js/features/create-post/` | 7 | Orquestracao, schema, campos, render, midia, resolvers e submit de criacao |
-| `assets/js/shared/` | 11 | Dados e contratos compartilhados, incluindo registry, snapshot gerado, parser e pipeline shadow carregáveis somente sob flag |
+| `assets/js/shared/` | 15 | Dados e contratos compartilhados, incluindo registry, snapshot gerado, parser, pipeline shadow e política temporal canônica de posts |
 | `assets/js/legacy-shims/` | 1 | Shim transitorio de migracao de posts do usuario |
 | `assets/js/components/` | 3 | Componentes reutilizaveis: carousel, toast e voting |
 | `assets/js/adapters/local/` | 9 | Persistencia localStorage por dominio |
@@ -179,7 +179,10 @@ Essa ordem e validada por `npm run check:scripts`.
 -> utils/kc-utils.*.js
 -> utils/kc-utils.js
 -> api/kc-supabase.*.js
--> api/kc-api.*.js
+-> api/kc-api.*.js (módulos anteriores a filters)
+-> shared/kc-post-lifecycle.shared.js
+-> features/kc-hide-closed.js
+-> api/kc-api.filters/authors/posts-normalize.js
 -> api/kc-api.client.js
 -> adapters/local/*.js
 -> adapters/supabase/*.js

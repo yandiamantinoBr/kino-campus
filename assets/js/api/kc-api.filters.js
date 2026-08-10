@@ -64,6 +64,19 @@
     return (meta && typeof meta === 'object' && !Array.isArray(meta)) ? meta : {};
   }
 
+  function isPostClosedOrEnded(post) {
+    try {
+      if (window.KCPostLifecycle && typeof window.KCPostLifecycle.isClosedOrEnded === 'function') {
+        return window.KCPostLifecycle.isClosedOrEnded(post);
+      }
+      if (window.KCSearchShared && typeof window.KCSearchShared.isPostClosedOrEnded === 'function') {
+        return window.KCSearchShared.isPostClosedOrEnded(post);
+      }
+    } catch (_) { }
+    const status = normalizeFilterText(post && (post.status || post.estado || post.situacao));
+    return ['closed', 'expired', 'ended', 'encerrado', 'encerrada', 'cancelled', 'cancelado'].includes(status);
+  }
+
   function collectPostTextParts(post) {
     const meta = getPostMeta(post);
     const values = [
@@ -563,6 +576,10 @@
     const meta = getPostMeta(post);
     const datePreset = normalizeDatePreset(moduleKey, p.datePreset);
 
+    if ((toBooleanFlag(p.hideClosed) || toBooleanFlag(p.hideEnded)) && isPostClosedOrEnded(post)) {
+      return false;
+    }
+
     if (datePreset) {
       const createdAt = post && (post.created_at || post.createdAt || post.timestamp || null);
       const eventRange = getEventDateRange(post);
@@ -639,7 +656,11 @@
     if (oppTypes.size || oppModes.size || oppArea) {
       if (moduleKey !== 'oportunidades') return false;
       const aggregateText = collectPostTextParts(post).join(' ');
-      const type = normalizeOpportunityTypeKey(post && (post.categoriaKey || post.categoria) || meta.categoryKey || meta.category, aggregateText);
+      const type = normalizeOpportunityTypeKey(
+        post && (post.categoriaKey || post.categoryKey || post.categoria || post.category)
+          || meta.categoriaKey || meta.categoryKey || meta.categoria || meta.category,
+        aggregateText
+      );
       const regimeKey = resolveOpportunityRegime(post);
       const workMode = resolveOpportunityWorkMode(post);
       const areaKey = normalizeFilterText(getOpportunityAreaKey(post));

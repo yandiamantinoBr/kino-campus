@@ -159,6 +159,7 @@
 
     const cards = document.querySelectorAll(state.opts.cardSelector);
     let visible = 0;
+    const hideClosed = !!(window.KCHideClosed && typeof window.KCHideClosed.getState === 'function' && window.KCHideClosed.getState());
 
     cards.forEach((card) => {
       const titleEl = card.querySelector(state.opts.titleSelector);
@@ -181,13 +182,20 @@
         queryMatches(cat, state.query);
 
       const matchesExtra = (typeof state.extraPredicate === 'function') ? !!state.extraPredicate(card, state) : true;
-      const show = matchesCategory && matchesQuery && matchesExtra;
+      const closedOrEnded = card.getAttribute('data-kc-closed-or-ended') === 'true'
+        || ['closed', 'expired', 'ended', 'encerrado'].includes(String(card.getAttribute('data-status') || '').toLowerCase());
+      const matchesLifecycle = !hideClosed || !closedOrEnded;
+      const show = matchesCategory && matchesQuery && matchesExtra && matchesLifecycle;
       card.style.display = show ? "" : "none";
       if (show) visible += 1;
     });
 
     const noResults = document.getElementById(state.opts.noResultsId);
-    if (noResults) noResults.style.display = visible === 0 ? "" : "none";
+    if (noResults) {
+      noResults.style.display = visible === 0 ? "" : "none";
+      const reveal = noResults.querySelector('[data-kc-hide-closed-reveal]');
+      if (reveal) reveal.hidden = !(visible === 0 && hideClosed);
+    }
   }
 
   function categoryKeyFromLink(el) {
@@ -473,4 +481,5 @@
       init();
     }
   });
+  document.addEventListener('kc:hide-closed-change', () => apply());
 })();

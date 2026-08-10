@@ -133,6 +133,11 @@ describe('supabase.posts-read.adapter.js — mapSupabasePost', () => {
     expect(source).toContain('timestamp:');
   });
 
+  test('preserva expires_at tipado para a politica temporal do feed', () => {
+    expect(source).toContain('expiresAt: row.expires_at || row.expiresAt || null');
+    expect(source).toContain('expires_at: row.expires_at || row.expiresAt || null');
+  });
+
   test('chama logAuthorDiagnosticsDev quando perfil do autor está incompleto', () => {
     expect(source).toContain('logAuthorDiagnosticsDev(');
   });

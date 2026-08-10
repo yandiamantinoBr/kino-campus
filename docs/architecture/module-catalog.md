@@ -1,7 +1,7 @@
 # Catálogo de Módulos JS — KinoCampus
 
-**Versão:** v16.0.0  
-**Data:** 2026-04-26  
+**Versão:** v16.0.1
+**Data:** 2026-08-10
 **Criado em:** v16.3.0 (Parte 1) + v16.4.0 (Parte 2)
 
 > **Como ler este catálogo (para IA):**  
@@ -18,9 +18,9 @@
 - [Grupo core/](#grupo-core) — 11 módulos
 - [Grupo api/](#grupo-api) — 22 módulos
 - [Grupo utils/](#grupo-utils) — 8 módulos
-- [Grupo features/](#grupo-features) — 10 módulos *(v16.4.0)*
+- [Grupo features/](#grupo-features) — 11 módulos catalogados *(atualizado em 2026-08-10)*
 - [Grupo features/create-post/](#grupo-featurescreate-post) — 7 módulos *(v16.4.0)*
-- [Grupo shared/](#grupo-shared) — 11 módulos *(v76.38)*
+- [Grupo shared/](#grupo-shared) — 12 módulos catalogados *(atualizado em 2026-08-10)*
 - [Grupo legacy-shims/](#grupo-legacy-shims) — 1 módulo *(v16.4.0)*
 - [Grupo components/](#grupo-components) — 3 módulos *(v16.4.0)*
 - [Grupo adapters/local/](#grupo-adapterslocal) — 8 módulos *(v16.4.0)*
@@ -1428,6 +1428,31 @@ sessionStorage.
 
 ---
 
+### `features/kc-hide-closed.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | features |
+| Namespace | `window.KCHideClosed` |
+| Padrão | IIFE + `Object.freeze` |
+| Páginas | `index.html`, seis feeds temáticos e `search-results.html` |
+
+**Responsabilidade:** Mantém o estado compartilhado do switch "Ocultar encerrados", migra
+`hideClosed=1|true` para `closed=1`, sincroniza checkbox/ARIA/status, publica
+`kc:hide-closed-change` e controla a ação "Mostrar encerrados".
+
+**Exports públicos:** `init()`, `getState()`, `setState()`, `setBusy()`,
+`setHiddenCount()`, `setRevealVisible()` e `sync()`.
+
+**Dependências em runtime:** DOM, History API e `URL`.
+
+**Consumido por:** `kc-feed.controller.js`, `kc-search.js` e UI dos oito feeds/busca.
+
+**Testes:** `tests/unit/kc-hide-closed.test.js`,
+`tests/structure/hide-closed-toggle-contract.test.js`.
+
+---
+
 ### `features/kc-banners.js`
 
 | Campo | Valor |
@@ -1873,6 +1898,29 @@ legado com candidato estruturado. V76.38 ainda não o executa em resultados púb
 
 **Testes:** `tests/integration/kc-search-shadow-pipeline.test.js`,
 `tests/integration/kc-search-shadow-benchmark.test.js`
+
+---
+
+### `shared/kc-post-lifecycle.shared.js`
+
+| Campo | Valor |
+|-------|-------|
+| Grupo | shared |
+| Namespace | `window.KCPostLifecycle` / CommonJS |
+| Padrão | UMD + `Object.freeze` |
+| Páginas | Todas as superfícies que carregam busca; home, feeds e resultados |
+
+**Responsabilidade:** Fonte canônica client-side para decidir se um post está encerrado.
+Resolve status/flags estritos, datas civis em `America/Sao_Paulo`, fim de evento, prazo de
+oportunidade, partida de carona e expiração genérica com fallback fail-open.
+
+**Exports públicos:** `parseDateMs()`, `canonicalModule()`, `canonicalStatus()`,
+`getEndTime()`, `isClosedOrEnded()` e `resolve()`.
+
+**Consumido por:** `kc-search.shared.js`, `kc-search.js`, `kc-feed.controller.js`, adapters e
+apresentação de cards.
+
+**Testes:** `tests/unit/kc-post-lifecycle.test.js` e contratos de feed/busca.
 
 ---
 
@@ -2424,6 +2472,7 @@ contagem de votos de um post e voto atual do usuário.
 | features/kc-ranking.js | features | `window.KCRanking` | feeds | unit/kc-ranking, integration/kc-ranking-session |
 | features/kc-filters.js | features | `window.KCFilters` | feeds | unit/kc-filters |
 | features/kc-feed-filters.js | features | `window.KCFeedFilters` | feeds | unit/kc-feed-filters |
+| features/kc-hide-closed.js | features | `window.KCHideClosed` | home+feeds+busca | unit/kc-hide-closed |
 | features/kc-banners.js | features | `window.KCBanners` | feeds | integration/kc-banners |
 | features/kc-home-categories.js | features | `window.KCHomeCategories` | index.html | integration/home-categories.shared |
 | features/kc-lazy-loader.js | features | `window.KCLazyLoader` | feeds | unit/lazy-loader |
@@ -2443,6 +2492,7 @@ contagem de votos de um post e voto atual do usuário.
 | shared/kc-search-query-parser.shared.js | shared | `window.KCSearchQueryParser` | lazy/flag | integration/kc-search-query-parser |
 | shared/kc-search-registry.generated.js | shared | `window.KCSearchFieldRegistrySnapshot` | lazy/flag | contract/kc-search-registry-snapshot |
 | shared/kc-search-shadow-pipeline.shared.js | shared | `window.KCSearchShadowPipeline` | lazy/flag | integration/kc-search-shadow-pipeline |
+| shared/kc-post-lifecycle.shared.js | shared | `window.KCPostLifecycle` | feeds+busca | unit/kc-post-lifecycle |
 | shared/kc-search.shared.js | shared | `window.KCSearchShared` | search+modal | integration/kc-search.shared |
 | shared/ods.shared.js | shared | `window.KCODSShared` | ods.html | integration/ods.shared |
 | shared/search-analytics.shared.js | shared | `window.KCSearchAnalytics` | search-results | integration/search-analytics.shared |

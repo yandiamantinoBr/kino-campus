@@ -63,7 +63,22 @@ describe('kc-api.filters.js - module contract', () => {
   let filters;
 
   beforeEach(() => {
+    window.KCPostLifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
     filters = loadFreshFiltersModule();
+  });
+
+  test('combina hideClosed com filtros avançados sem sobrescrever o predicado do módulo', () => {
+    const posts = [
+      { id: 'active', module: 'oportunidades', category: 'bolsas', metadata: { applicationDeadline: '2099-08-20' } },
+      { id: 'ended', module: 'oportunidades', category: 'bolsas', metadata: { applicationDeadline: '2000-08-01' } },
+      { id: 'closed', module: 'oportunidades', category: 'bolsas', status: 'closed' },
+    ];
+    const result = filters.filterPosts(posts, {
+      module: 'oportunidades',
+      oppType: ['bolsa'],
+      hideClosed: true,
+    });
+    expect(result.map((post) => post.id)).toEqual(['active']);
   });
 
   test('exporta os helpers internos esperados', () => {

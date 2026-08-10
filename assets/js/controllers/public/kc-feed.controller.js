@@ -83,6 +83,20 @@
     }
   }
 
+  function getHideClosedState() {
+    try {
+      if (window.KCHideClosed && typeof window.KCHideClosed.getState === 'function') {
+        return window.KCHideClosed.getState() === true;
+      }
+      const params = new URL(window.location.href).searchParams;
+      const canonical = String(params.get('closed') || '').toLowerCase();
+      const legacy = String(params.get('hideClosed') || '').toLowerCase();
+      return canonical === '1' || canonical === 'true' || legacy === '1' || legacy === 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
   const CORE_CATEGORY_KEYS = Object.freeze({
     eventos: new Set(['academicos', 'palestras', 'congressos', 'cursos', 'culturais', 'esportivos', 'workshops', 'festas', 'sustentabilidade']),
     oportunidades: new Set(['editais', 'concursos', 'bolsas', 'estagios', 'empregos', 'monitoria', 'pesquisa', 'cursos-capacitacoes', 'voluntariado', 'freelancer']),
@@ -532,10 +546,12 @@
       snapshotAge: 0,
       lastSnapshotAt: 0,
       revalidateTimer: null,
+      lifecycleTimer: null,
       freshnessTimer: null,
       freshnessUnsub: null,
       requestParams: initialRequestParams,
       coreCategory: initialCoreCategory,
+      hideClosed: getHideClosedState(),
       requestGeneration: 0,
       paginationRevision: 0,
       contentRevision: 0,
@@ -546,7 +562,10 @@
     const pagePath = String(window.location.pathname || '').trim() || '/';
 
     function getEffectiveRequestParams() {
-      return withCoreCategory(state.requestParams, state.coreCategory);
+      const next = withCoreCategory(state.requestParams, state.coreCategory);
+      if (state.hideClosed) next.hideClosed = true;
+      else delete next.hideClosed;
+      return next;
     }
 
     function getPageEmptyState() {
@@ -564,6 +583,8 @@
       const pageEmpty = getPageEmptyState();
       if (pageEmpty) {
         if (isEmpty) pageEmpty.style.display = '';
+        const reveal = pageEmpty.querySelector('[data-kc-hide-closed-reveal]');
+        if (reveal) reveal.hidden = !(isEmpty && state.hideClosed);
         removeGeneratedEmptyState();
         return;
       }
@@ -586,9 +607,26 @@
       const description = document.createElement('p');
       description.textContent = 'Consulte os módulos da comunidade UFG ou volte mais tarde para ver novas publicações.';
 
+      let reveal = null;
+      if (state.hideClosed) {
+        title.textContent = 'Nenhuma publicação ativa encontrada';
+        description.textContent = 'Os filtros atuais podem corresponder apenas a publicações encerradas.';
+        reveal = document.createElement('button');
+        reveal.type = 'button';
+        reveal.className = 'kc-btn-secondary kc-no-results__reveal';
+        reveal.setAttribute('data-kc-hide-closed-reveal', '');
+        reveal.textContent = 'Mostrar encerrados';
+        reveal.addEventListener('click', function () {
+          if (window.KCHideClosed && typeof window.KCHideClosed.setState === 'function') {
+            window.KCHideClosed.setState(false, { reason: 'reveal', source: reveal });
+          }
+        });
+      }
+
       empty.appendChild(icon);
       empty.appendChild(title);
       empty.appendChild(description);
+      if (reveal) empty.appendChild(reveal);
       container.appendChild(empty);
     }
 
@@ -648,7 +686,62 @@
 
     function isRenderableFeedPost(post) {
       const status = String(post && (post.status || post.estado) || 'published').trim().toLowerCase();
-      return !status || status === 'published' || status === 'closed';
+      if (status && status !== 'published' && status !== 'closed') return false;
+      if (!state.hideClosed) return true;
+      try {
+        if (window.KCPostLifecycle && typeof window.KCPostLifecycle.isClosedOrEnded === 'function') {
+          return !window.KCPostLifecycle.isClosedOrEnded(post);
+        }
+        if (window.KCSearchShared && typeof window.KCSearchShared.isPostClosedOrEnded === 'function') {
+          return !window.KCSearchShared.isPostClosedOrEnded(post);
+        }
+      } catch (_) { }
+      return status !== 'closed';
+    }
+
+    function clearLifecycleTimer() {
+      if (!state.lifecycleTimer) return;
+      window.clearTimeout(state.lifecycleTimer);
+      state.lifecycleTimer = null;
+    }
+
+    function pruneClosedRenderedPosts(emptyMeta) {
+      if (!state.hideClosed || !state.renderedPosts.length) return false;
+      const previous = state.renderedPosts.slice();
+      const previousFirstPage = previous.slice(0, Math.max(0, state.firstPageCount || 0));
+      const survivors = previous.filter(isRenderableFeedPost);
+      if (survivors.length === previous.length) return false;
+
+      state.firstPageCount = previousFirstPage.filter(isRenderableFeedPost).length;
+      const nextMeta = survivors.length
+        ? { nextCursor: state.nextCursor, hasMore: state.hasMore }
+        : (emptyMeta || { nextCursor: state.nextCursor, hasMore: state.hasMore });
+      replaceRenderedPosts(survivors, nextMeta);
+      return true;
+    }
+
+    function scheduleLifecycleBoundary() {
+      clearLifecycleTimer();
+      if (state.destroyed || !state.hideClosed || !state.renderedPosts.length) return;
+      if (!window.KCPostLifecycle || typeof window.KCPostLifecycle.getEndTime !== 'function') return;
+
+      const now = Date.now();
+      let nearest = Number.POSITIVE_INFINITY;
+      state.renderedPosts.forEach((post) => {
+        let endTime = 0;
+        try { endTime = Number(window.KCPostLifecycle.getEndTime(post)); } catch (_) { endTime = 0; }
+        if (Number.isFinite(endTime) && endTime > 0 && endTime < nearest) nearest = endTime;
+      });
+      if (!Number.isFinite(nearest)) return;
+
+      const delay = Math.min(2147480000, Math.max(25, (nearest - now) + 25));
+      state.lifecycleTimer = window.setTimeout(() => {
+        state.lifecycleTimer = null;
+        if (state.destroyed || !state.hideClosed) return;
+        pruneClosedRenderedPosts();
+        if (!state.destroyed) revalidateSnapshot({ force: true });
+        scheduleLifecycleBoundary();
+      }, delay);
     }
 
     function runPostRenderHooks(batch, mode) {
@@ -683,6 +776,7 @@
 
       if (mode !== 'restore') persistSnapshot();
       reapplyFiltersAndSearch();
+      scheduleLifecycleBoundary();
     }
 
     function replaceRenderedPosts(posts, nextMeta) {
@@ -712,6 +806,7 @@
       if (batch.length) persistSnapshot();
       else clearSnapshot();
       reapplyFiltersAndSearch();
+      scheduleLifecycleBoundary();
     }
 
     function buildRenderedSignature(posts) {
@@ -760,6 +855,7 @@
       const fresh = [];
       pending.forEach((entry, idx) => {
         if (!entry || !entry.post) return;
+        if (!isRenderableFeedPost(entry.post)) return;
         if (hasSeenIdentity(state, entry.post, entry.raw, idx)) return;
         markSeenIdentity(state, entry.post, entry.raw, idx);
         fresh.push(entry.post);
@@ -858,10 +954,11 @@
       return true;
     }
 
-    async function revalidateSnapshot() {
+    async function revalidateSnapshot(options) {
       if (state.destroyed || state.loading || state.revalidating) return;
+      const force = !!(options && options.force === true);
       const age = state.snapshotAge || (Date.now() - (state.lastSnapshotAt || 0));
-      if (age < FEED_REVALIDATE_COOLDOWN_MS) return;
+      if (!force && age < FEED_REVALIDATE_COOLDOWN_MS) return;
       const requestGeneration = state.requestGeneration;
       const paginationRevision = state.paginationRevision;
       const contentRevision = state.contentRevision;
@@ -916,6 +1013,7 @@
         // isso causava o feed "sumir / não carregar". Um feed genuinamente vazio
         // é confirmado por refresh explícito (ex.: pull-to-refresh) ou reload.
         if (!normalized.length && state.renderedPosts.length) {
+          if (state.hideClosed && pruneClosedRenderedPosts(nextMeta)) return;
           return;
         }
 
@@ -1138,6 +1236,7 @@
         const normalized = rawPosts.map(normalizePost).map((post) => isRenderableFeedPost(post) ? post : null);
         const fresh = [];
         normalized.forEach((post, idx) => {
+          if (!post) return;
           const raw = rawPosts[idx];
           if (hasSeenIdentity(state, post, raw, idx)) return;
           markSeenIdentity(state, post, raw, idx);
@@ -1201,6 +1300,7 @@
       startRealtime();
       if (state.revalidateTimer) clearTimeout(state.revalidateTimer);
       state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
+      scheduleLifecycleBoundary();
       try {
         if (typeof kcInitVoteStates === 'function') kcInitVoteStates();
       } catch (_) { }
@@ -1222,27 +1322,55 @@
       state.revalidateTimer = window.setTimeout(revalidateSnapshot, 80);
     };
     let api = null;
-    let coreFilterTimer = null;
+    let filterRefreshTimer = null;
+    let pendingRefreshOptions = null;
+
+    function scheduleFilterRefresh(patch, delay) {
+      pendingRefreshOptions = Object.assign({}, pendingRefreshOptions || {}, patch || {});
+      if (filterRefreshTimer) window.clearTimeout(filterRefreshTimer);
+      const wait = Object.prototype.hasOwnProperty.call(pendingRefreshOptions, 'hideClosed')
+        ? 0
+        : Math.max(0, Number(delay) || 0);
+      filterRefreshTimer = window.setTimeout(function () {
+        filterRefreshTimer = null;
+        const nextOptions = pendingRefreshOptions || {};
+        pendingRefreshOptions = null;
+        if (!api || state.destroyed) return;
+        api.refresh(nextOptions);
+      }, wait);
+    }
 
     function onCoreFilterChange(event) {
       const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : getCoreFilterState();
       const nextCategory = normalizeCoreCategory(pageModule, detail.category);
       const nextQuery = String(detail.query || '').trim();
-      if (nextCategory === state.coreCategory && nextQuery === searchQuery) return;
+      const effectiveCategory = pendingRefreshOptions && Object.prototype.hasOwnProperty.call(pendingRefreshOptions, 'coreCategory')
+        ? pendingRefreshOptions.coreCategory
+        : state.coreCategory;
+      const effectiveQuery = pendingRefreshOptions && Object.prototype.hasOwnProperty.call(pendingRefreshOptions, 'q')
+        ? pendingRefreshOptions.q
+        : searchQuery;
+      if (nextCategory === effectiveCategory && nextQuery === effectiveQuery) return;
 
-      if (coreFilterTimer) window.clearTimeout(coreFilterTimer);
       const delay = detail.reason === 'query' ? 220 : 0;
-      coreFilterTimer = window.setTimeout(function () {
-        coreFilterTimer = null;
-        if (!api || state.destroyed) return;
-        api.refresh({
-          q: nextQuery,
-          coreCategory: nextCategory,
-        });
+      scheduleFilterRefresh({
+        q: nextQuery,
+        coreCategory: nextCategory,
       }, delay);
     }
 
+    function onHideClosedChange(event) {
+      const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+      const nextHideClosed = detail.hideClosed === true;
+      const effectiveHideClosed = pendingRefreshOptions && Object.prototype.hasOwnProperty.call(pendingRefreshOptions, 'hideClosed')
+        ? pendingRefreshOptions.hideClosed === true
+        : state.hideClosed;
+      if (nextHideClosed === effectiveHideClosed) return;
+      scheduleFilterRefresh({ hideClosed: nextHideClosed }, 0);
+    }
+
     function pauseForBfcache() {
+      clearLifecycleTimer();
       if (state.revalidateTimer) {
         clearTimeout(state.revalidateTimer);
         state.revalidateTimer = null;
@@ -1269,14 +1397,16 @@
         clearTimeout(state.revalidateTimer);
         state.revalidateTimer = null;
       }
+      clearLifecycleTimer();
       if (state.freshnessTimer) {
         clearTimeout(state.freshnessTimer);
         state.freshnessTimer = null;
       }
-      if (coreFilterTimer) {
-        window.clearTimeout(coreFilterTimer);
-        coreFilterTimer = null;
+      if (filterRefreshTimer) {
+        window.clearTimeout(filterRefreshTimer);
+        filterRefreshTimer = null;
       }
+      pendingRefreshOptions = null;
 
       try { pagerUI.loadMoreBtn.removeEventListener('click', onLoadMoreClick); } catch (_) { }
       try { pagerUI.retryBtn.removeEventListener('click', onRetryClick); } catch (_) { }
@@ -1286,6 +1416,7 @@
       try { window.removeEventListener('focus', onFocus); } catch (_) { }
       try { document.removeEventListener('visibilitychange', onVisibility); } catch (_) { }
       try { document.removeEventListener('kc:feed-core-filter-change', onCoreFilterChange); } catch (_) { }
+      try { document.removeEventListener('kc:hide-closed-change', onHideClosedChange); } catch (_) { }
       try {
         if (state.realtimeSub && typeof state.realtimeSub.unsubscribe === 'function') {
           state.realtimeSub.unsubscribe();
@@ -1325,6 +1456,7 @@
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
     document.addEventListener('kc:feed-core-filter-change', onCoreFilterChange);
+    document.addEventListener('kc:hide-closed-change', onHideClosedChange);
     if (window.KCPostFreshness && typeof window.KCPostFreshness.subscribe === 'function') {
       state.freshnessUnsub = window.KCPostFreshness.subscribe(handlePostChange);
     }
@@ -1360,6 +1492,7 @@
       refresh: function (nextOptions) {
         const cfg = (nextOptions && typeof nextOptions === 'object' && !Array.isArray(nextOptions)) ? nextOptions : {};
         state.requestGeneration += 1;
+        clearLifecycleTimer();
         const previousKey = getSnapshotKey();
         invalidateCache(moduleKeys, searchQuery, tagFilter, limit, pagePath, sortBy, getEffectiveRequestParams());
         if (Object.prototype.hasOwnProperty.call(cfg, 'q')) {
@@ -1370,6 +1503,9 @@
         }
         if (Object.prototype.hasOwnProperty.call(cfg, 'requestParams')) {
           state.requestParams = sanitizeRequestParams(cfg.requestParams);
+        }
+        if (Object.prototype.hasOwnProperty.call(cfg, 'hideClosed')) {
+          state.hideClosed = cfg.hideClosed === true;
         }
         state.cursor = null;
         state.nextCursor = null;

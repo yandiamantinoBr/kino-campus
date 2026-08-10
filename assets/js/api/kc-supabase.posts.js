@@ -226,13 +226,14 @@
   function normalizeSearchPostsParams(params) {
     const base = normalizeGetPostsParams(params);
     const limitRaw = (params && params.limit != null) ? parseInt(String(params.limit), 10) : base.limit;
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 50) : 50;
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 120) : 50;
     return {
       module: base.module,
       category: base.category,
       subcategory: base.subcategory,
       q: base.q,
       limit,
+      hideClosed: !!(params && (params.hideClosed === true || params.hideEnded === true)),
       terms: buildExpandedSearchTerms(base.q),
     };
   }
@@ -639,18 +640,40 @@
     var f = normalizeSearchPostsParams(params);
     if (!f.q || !f.terms.length) return [];
 
-    var rpcRequest = client.rpc('kc_search_posts_fts', {
+    var rpcArgs = {
       p_q: f.q,
       p_terms: f.terms,
       p_module: f.module || null,
       p_category: f.category || null,
       p_subcategory: f.subcategory || null,
       p_limit: f.limit,
-    });
+    };
+    if (f.hideClosed) rpcArgs.p_hide_closed = true;
+    var rpcRequest = client.rpc('kc_search_posts_fts', rpcArgs);
     if (params.signal && rpcRequest && typeof rpcRequest.abortSignal === 'function') {
       rpcRequest = rpcRequest.abortSignal(params.signal);
     }
     var rpc = await rpcRequest;
+
+    // Phased rollout compatibility: old databases do not yet expose
+    // p_hide_closed. Retry the legacy signature; the browser still applies the
+    // same lifecycle filter locally until the migration is present.
+    if (rpc && rpc.error && f.hideClosed) {
+      var errorText = String(rpc.error.message || rpc.error.details || rpc.error.hint || '').toLowerCase();
+      var signatureMismatch = errorText.includes('p_hide_closed')
+        || errorText.includes('could not find the function')
+        || errorText.includes('function public.kc_search_posts_fts');
+      if (signatureMismatch) {
+        var legacyRpcArgs = Object.assign({}, rpcArgs);
+        delete legacyRpcArgs.p_hide_closed;
+        legacyRpcArgs.p_limit = Math.max(f.limit, 120);
+        rpcRequest = client.rpc('kc_search_posts_fts', legacyRpcArgs);
+        if (params.signal && rpcRequest && typeof rpcRequest.abortSignal === 'function') {
+          rpcRequest = rpcRequest.abortSignal(params.signal);
+        }
+        rpc = await rpcRequest;
+      }
+    }
 
     if (rpc && rpc.error) {
       try { console.error('[KCSupabase] searchPosts erro:', rpc.error); } catch (_) { }

@@ -50,6 +50,7 @@ beforeAll(() => {
   require('../../assets/js/utils/kc-utils.identity.js');
   require('../../assets/js/utils/kc-utils.taxonomy.js');
   require('../../assets/js/utils/kc-utils.location.js');
+  window.KCPostLifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
   require('../../assets/js/utils/kc-utils.presentation.js');
 });
 
@@ -218,6 +219,23 @@ describe('applyPresentationRules ? shape b?sico', () => {
     expect(output._kcCtaText).toBe('Ver hist\u00F3rico');
     expect(output._kcRelativeTime).toBeTruthy();
   });
+
+  test('marca como encerrado pelo fim do evento, sem encerrar no primeiro dia', () => {
+    const active = pres().applyPresentationRules({
+      modulo: 'eventos',
+      status: 'published',
+      metadata: { data_evento: '2099-08-08', data_fim_evento: '2099-08-12' },
+    });
+    const ended = pres().applyPresentationRules({
+      modulo: 'eventos',
+      status: 'published',
+      metadata: { data_evento: '2000-08-08', data_fim_evento: '2000-08-12' },
+    });
+
+    expect(active.isClosed).toBe(false);
+    expect(ended.isClosed).toBe(true);
+    expect(ended._kcCtaText).toBe('Ver hist\u00F3rico');
+  });
 });
 
 describe('getDisplayMarkerTags', () => {
@@ -369,5 +387,21 @@ describe('renderPostCard', () => {
     expect(html).toContain('Ver hist\u00F3rico');
     expect(html).toContain('disabled aria-disabled="true"');
     expect(html).toContain('product.html?id=post-closed#comments');
+  });
+
+  test('expõe ciclo temporal no DOM para filtros locais, ads e realtime', () => {
+    const html = pres().renderPostCard({
+      id: 'post-ended-by-date',
+      modulo: 'eventos',
+      categoria: 'palestras',
+      status: 'published',
+      titulo: 'Palestra concluída',
+      metadata: { data_evento: '2000-08-01' },
+    });
+
+    expect(html).toContain('kc-card--closed');
+    expect(html).toContain('data-kc-closed-or-ended="true"');
+    expect(html).toContain('data-kc-lifecycle-end=');
+    expect(html).toContain('data-status="closed"');
   });
 });
