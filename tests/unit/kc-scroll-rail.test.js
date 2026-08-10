@@ -217,5 +217,9 @@ describe('kc-scroll-rail', () => {
     expect(css).toMatch(/\.kc-scroll-rail--tabs\s*\{[^}]*position:\s*sticky;/s);
     expect(css).toMatch(/\.kc-scroll-rail--tabs\s*>\s*\.kc-feed-tabs\s*\{[^}]*position:\s*static;/s);
     expect(css).toMatch(/\.kc-scroll-rail\.is-mobile\s+\.kc-scroll-rail__btn\s*\{[^}]*display:\s*none\s*!important;/s);
+    expect(css).toMatch(/\.kc-scroll-rail__btn::before\s*\{[^}]*border:\s*solid currentColor;/s);
+    expect(css).toMatch(/\.kc-scroll-rail__btn--prev::before\s*\{[^}]*rotate\(-135deg\)/s);
+    expect(css).toMatch(/\.kc-scroll-rail__btn--next::before\s*\{[^}]*rotate\(45deg\)/s);
+    expect(css).toMatch(/\.kc-feed-toolbar\s*>\s*\.kc-scroll-rail--tabs\.is-overflow-end:not\(\.is-overflow-start\)\s*>\s*\.kc-feed-tabs\s*\{[^}]*mask-image:\s*linear-gradient/s);
   });
 });

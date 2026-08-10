@@ -32,7 +32,7 @@ function documentFor(relativePath) {
   return new JSDOM(read(relativePath)).window.document;
 }
 
-describe('contrato estrutural do seletor mobile de módulos', () => {
+describe('contrato estrutural do seletor responsivo de módulos', () => {
   test('deriva páginas, rótulos e emojis do schema canônico real', () => {
     expect(MODULES.length).toBeGreaterThan(0);
     expect(new Set(MODULES.map((module) => module.key)).size).toBe(MODULES.length);
@@ -92,13 +92,15 @@ describe('contrato estrutural do seletor mobile de módulos', () => {
       String(script.getAttribute('src') || '').includes('kc-module-picker.js'))).toBe(false);
   });
 
-  test('CSS mantém desktop intacto e põe rail antes das ações compactas no mobile', () => {
+  test('CSS põe rail antes das ações compactas em qualquer viewport', () => {
     const css = read('assets/css/styles.css');
 
-    expect(css).toMatch(/\.kc-module-picker-trigger\s*\{[^}]*display:\s*none;/s);
-    expect(css).toMatch(/@media\s*\(max-width:\s*768px\)[\s\S]*?\.kc-feed-toolbar\s*>\s*\.kc-scroll-rail--tabs\s*\{[^}]*grid-row:\s*1;/s);
-    expect(css).toMatch(/@media\s*\(max-width:\s*768px\)[\s\S]*?\.kc-feed-toolbar\s*>\s*\.kc-feed-toolbar__actions\s*\{[^}]*grid-row:\s*2;[^}]*justify-content:\s*space-between;/s);
+    expect(css).toMatch(/\.kc-feed-toolbar\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
+    expect(css).toMatch(/\.kc-feed-toolbar\s*>\s*\.kc-scroll-rail--tabs\s*\{[^}]*grid-row:\s*1;/s);
+    expect(css).toMatch(/\.kc-feed-toolbar\s*>\s*\.kc-feed-toolbar__actions\s*\{[^}]*grid-row:\s*2;[^}]*justify-content:\s*space-between;/s);
     expect(css).toMatch(/\.kc-module-picker-trigger:not\(\[hidden\]\)\s*\{[^}]*min-height:\s*44px;/s);
+    expect(css).toMatch(/\.kc-module-picker-trigger\s*>\s*i:first-child::before\s*\{[^}]*box-shadow:/s);
+    expect(css).toMatch(/\.kc-module-picker-trigger__chevron::before\s*\{[^}]*border-width:\s*0\s+2px\s+2px\s+0;/s);
     expect(css).toMatch(/\.kc-feed-toolbar\s+\.kc-hide-closed-toggle__track\s*\{[^}]*width:\s*40px;[^}]*height:\s*22px;/s);
     expect(css).toMatch(/\.kc-sidebar-context-modal\.kc-module-picker-modal\s*\{[^}]*align-items:\s*flex-end;/s);
     expect(css).toMatch(/\.kc-module-picker-list\s*\{[^}]*grid-auto-rows:\s*1fr;/s);
