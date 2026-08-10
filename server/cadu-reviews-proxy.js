@@ -41,6 +41,8 @@ const CARRY_POLICIES_BY_SCOPE = new Map([
 ]);
 const REVIEW_LINK_POLICY = 'independent_version_bound';
 const MAX_REVIEW_PROVENANCE = 20;
+const MAX_REVIEW_ISSUE_LENGTH = 100;
+const MAX_LEGACY_PIPELINE_INCIDENT_ISSUE_LENGTH = 180;
 const LIST_QUERY_KEYS = new Set(['origin', 'state', 'search', 'limit', 'offset']);
 const AUDIT_QUERY_KEYS = new Set(['origin', 'decision', 'limit', 'offset']);
 const UNSAFE_TEXT_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
@@ -371,6 +373,11 @@ function validV2ReviewItem(item) {
 }
 
 function validReviewItem(item, schemaVersion) {
+  const maxIssueLength = (
+    schemaVersion === 1 && item?.kind === 'pipeline_incident'
+      ? MAX_LEGACY_PIPELINE_INCIDENT_ISSUE_LENGTH
+      : MAX_REVIEW_ISSUE_LENGTH
+  );
   if (!isPlainObject(item)
       || !UUID.test(item.id || '')
       || !SHA256.test(item.item_version || '')
@@ -383,7 +390,9 @@ function validReviewItem(item, schemaVersion) {
       || !validHttpsUrl(item.action_url)
       || !validHttpsUrl(item.image_url)
       || !Array.isArray(item.issues)
-      || !item.issues.every((value) => typeof value === 'string' && value.length <= 100)
+      || !item.issues.every((value) => (
+        typeof value === 'string' && value.length <= maxIssueLength
+      ))
       || !Array.isArray(item.allowed_decisions)
       || !item.allowed_decisions.every((value) => DECISIONS.has(value))
       || !isPlainObject(item.metadata)) {
