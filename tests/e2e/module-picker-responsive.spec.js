@@ -40,6 +40,17 @@ async function prepareReadOnlyPage(page) {
   });
 }
 
+async function blockExternalRequests(page) {
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      await route.continue();
+      return;
+    }
+    await route.abort('blockedbyclient');
+  });
+}
+
 test.describe('Seletor responsivo de módulos', () => {
   for (const pagePath of FEED_PAGES) {
     for (const viewport of TOOLBAR_VIEWPORTS) {
@@ -216,6 +227,69 @@ test.describe('Seletor responsivo de módulos', () => {
     await page.keyboard.press('Escape');
     await expect(modal).toHaveAttribute('aria-hidden', 'true');
     await expect(trigger).toBeFocused();
+  });
+
+  test('permanece utilizável acima do consentimento pendente na primeira visita', async ({ page }) => {
+    await blockExternalRequests(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/oportunidades.html', { waitUntil: 'domcontentloaded' });
+
+    const consent = page.locator('#kcConsentBanner');
+    const trigger = page.locator('[data-kc-module-picker-open]');
+    await expect(consent).toBeVisible();
+    await trigger.click();
+
+    const modal = page.locator('#kcModulePickerModal');
+    const closeButton = modal.locator('.kc-sidebar-context-modal__close');
+    await expect(modal).toHaveAttribute('aria-hidden', 'false');
+    await expect(closeButton).toBeFocused();
+    await expect(modal.locator('[data-kc-module-picker-option]')).toHaveCount(6);
+    const closeBox = await closeButton.boundingBox();
+    expect(closeBox?.width || 0).toBeGreaterThanOrEqual(44);
+    expect(closeBox?.height || 0).toBeGreaterThanOrEqual(44);
+
+    const layers = await page.evaluate(() => {
+      const picker = document.getElementById('kcModulePickerModal');
+      const banner = document.getElementById('kcConsentBanner');
+      const dialog = picker.querySelector('[role="dialog"]');
+      const rect = dialog.getBoundingClientRect();
+      const topElement = document.elementFromPoint(
+        Math.round(rect.left + rect.width / 2),
+        Math.round(rect.top + 24),
+      );
+      return {
+        pickerZ: Number(getComputedStyle(picker).zIndex),
+        bannerZ: Number(getComputedStyle(banner).zIndex),
+        bannerInert: banner.closest('[inert]') !== null,
+        topInsidePicker: picker.contains(topElement),
+      };
+    });
+    expect(layers.pickerZ).toBeGreaterThan(layers.bannerZ);
+    expect(layers.bannerInert).toBe(true);
+    expect(layers.topInsidePicker).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(modal).toHaveAttribute('aria-hidden', 'true');
+    await expect(consent).toBeVisible();
+    expect(await consent.evaluate((element) => element.closest('[inert]') !== null)).toBe(false);
+
+    await consent.locator('[data-consent-config]').click();
+    const consentModal = page.locator('#kcConsentModal');
+    const consentClose = consentModal.locator('.kc-consent-modal__close');
+    await expect(consentModal).toHaveAttribute('aria-hidden', 'false');
+    await expect(consentClose.locator('.kc-consent-modal__close-glyph')).toHaveText('×');
+    const consentCloseBox = await consentClose.boundingBox();
+    expect(consentCloseBox?.width || 0).toBeGreaterThanOrEqual(42);
+    expect(consentCloseBox?.height || 0).toBeGreaterThanOrEqual(42);
+    await expect(consentModal.locator('#kcConsentPreferences')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(consentClose).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(consentModal.locator('[data-consent-save]')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(consentModal).toHaveAttribute('aria-hidden', 'true');
+    await expect(consent).toBeVisible();
+    await expect(consent.locator('[data-consent-config]')).toBeFocused();
+    expect(await consent.evaluate((element) => element.closest('[inert]') !== null)).toBe(false);
   });
 
   test('nomes de módulos permanecem dentro dos cards em 320 px', async ({ page }) => {

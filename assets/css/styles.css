@@ -12113,6 +12113,8 @@ body.kc-admin-page .kc-consent-btn {
 }
 
 .kc-consent-modal__close {
+  display: grid;
+  place-items: center;
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -12120,6 +12122,15 @@ body.kc-admin-page .kc-consent-btn {
   background: var(--kc-background-dark);
   color: var(--kc-text-dark-primary);
   cursor: pointer;
+}
+
+.kc-consent-modal__close-glyph {
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 1.65rem;
+  font-weight: 400;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .kc-consent-modal__body {
@@ -13117,6 +13128,18 @@ body.kc-admin-page .kc-consent-btn {
  * feeds, mas mantém lifecycle, IDs e seletores próprios. */
 .kc-module-picker-modal .kc-module-picker-modal__dialog {
   width: min(100%, 540px);
+}
+
+/* O seletor é aberto por ação explícita e torna os demais filhos do body
+ * inertes. Ele precisa ficar acima do aviso de consentimento ainda pendente;
+ * ao fechar, o aviso volta intacto e continua exigindo uma escolha. */
+.kc-sidebar-context-modal.kc-module-picker-modal {
+  z-index: 10040;
+}
+
+.kc-module-picker-modal .kc-sidebar-context-modal__close {
+  width: 44px;
+  height: 44px;
 }
 
 .kc-module-picker-modal .kc-module-picker-modal__body {
