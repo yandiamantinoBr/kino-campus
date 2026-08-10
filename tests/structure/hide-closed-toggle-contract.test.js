@@ -72,15 +72,18 @@ describe('contrato visual e acessivel de Ocultar encerrados', () => {
     expect(status.textContent.trim()).toBe('Encerrados visíveis');
   });
 
-  test.each(FEED_PAGES)('%s mantem o switch como irmao da faixa de abas', (page) => {
+  test.each(FEED_PAGES)('%s mantem o switch fora das abas e dentro da faixa de acoes', (page) => {
     const document = documentFor(page);
     const toolbar = document.querySelector('.kc-feed-toolbar');
+    const actions = toolbar && toolbar.querySelector(':scope > .kc-feed-toolbar__actions');
     const control = document.querySelector('[data-kc-hide-closed-toggle]');
     const tabs = toolbar && toolbar.querySelector('.kc-feed-tabs');
 
     expect(toolbar).not.toBeNull();
     expect(tabs).not.toBeNull();
-    expect(control.parentElement).toBe(toolbar);
+    expect(actions).not.toBeNull();
+    expect(actions.parentElement).toBe(toolbar);
+    expect(control.parentElement).toBe(actions);
     expect(tabs.contains(control)).toBe(false);
   });
 
