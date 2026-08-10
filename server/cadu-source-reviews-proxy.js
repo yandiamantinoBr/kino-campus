@@ -9,6 +9,7 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { TextDecoder } from 'node:util';
 import { requireCaduAdmin } from './cadu-auth.mjs';
+import { fetchCaduUpstream } from './cadu-upstream-fetch.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SOURCE_ID = /^web\.[a-z0-9][a-z0-9.-]{0,115}$/;
@@ -452,7 +453,7 @@ export async function handleCaduSourceReviews(req, res, options = {}) {
   }
 
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await fetchCaduUpstream(targetUrl, {
       method: req.method,
       headers,
       body: upstreamBody,
@@ -462,6 +463,8 @@ export async function handleCaduSourceReviews(req, res, options = {}) {
       // proxy gives the upstream 12 s, and the browser waits 15 s before it
       // reloads the authoritative state instead of guessing the outcome.
       signal: AbortSignal.timeout(12000),
+    }, {
+      operation: `source_reviews.${route.kind}`,
     });
     const text = await readLimitedSourceReviewResponse(
       upstream,

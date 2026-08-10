@@ -5,6 +5,7 @@
 // CADU_API_TOKEN permanece apenas no serverless.
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
+import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
 
 const REVIEW_POLICY = Object.freeze({
   intent: 'review',
@@ -161,7 +162,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const upstream = await fetch(`${apiUrl.replace(/\/$/, '')}/api/publish`, {
+    const upstream = await fetchCaduUpstream(`${apiUrl.replace(/\/$/, '')}/api/publish`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -171,6 +172,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify(upstreamBody),
       signal: AbortSignal.timeout(30000),
+    }, {
+      operation: `publish.${action}`,
     });
 
     const text = await upstream.text();

@@ -6,6 +6,7 @@
 // - POST /api/cadu/feed?path={chunk_id}/ask
 
 import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
+import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
 
 export const config = {
   maxDuration: 300,
@@ -64,7 +65,7 @@ export default async function handler(req, res) {
   const targetUrl = `${apiUrl.replace(/\/$/, '')}/api/feed${subPath ? '/' + subPath : ''}${finalQs ? '?' + finalQs : ''}`;
 
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await fetchCaduUpstream(targetUrl, {
       method: req.method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -76,6 +77,8 @@ export default async function handler(req, res) {
         ? (req.body ? JSON.stringify(req.body) : undefined)
         : undefined,
       signal: AbortSignal.timeout(routeKind === 'ask' ? 285000 : 30000),
+    }, {
+      operation: `feed.${routeKind}`,
     });
 
     const text = await upstream.text();

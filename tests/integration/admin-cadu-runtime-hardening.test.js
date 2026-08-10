@@ -174,7 +174,7 @@ describe('admin Cadu runtime hardening', () => {
   test('never caches Cadu health and rejects browser-direct production configuration', () => {
     expect(controller.match(/fetch\('\/api\/cadu\/health', \{\s*cache: 'no-store'/g)).toHaveLength(2);
     expect(healthProxy).toContain("res.setHeader('Cache-Control', 'private, no-store')");
-    expect(healthProxy).toMatch(/fetch\(`\$\{apiUrl\.replace[\s\S]*?cache: 'no-store'/);
+    expect(healthProxy).toMatch(/fetchCaduUpstream\(`\$\{apiUrl\.replace[\s\S]*?cache: 'no-store'/);
     const configSource = functionSource('getCaduConfig');
     expect(configSource).toContain('direct && (!localDev || !localToken)');
     expect(configSource).toContain('em produção use o proxy autenticado do KinoCampus');
