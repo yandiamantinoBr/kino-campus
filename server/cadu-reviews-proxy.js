@@ -14,16 +14,32 @@ import {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const ORIGINS = new Set(['pipeline', 'feed', 'sites', 'openclaw']);
-const STATES = new Set([
-  'pending', 'resolved', 'approved', 'rejected',
-  'changes_requested', 'deferred', 'acknowledged',
-]);
 const RESOLVED_STATES = new Set([
   'approved', 'rejected', 'changes_requested', 'deferred', 'acknowledged',
 ]);
+const ITEM_STATES = new Set(['pending', ...RESOLVED_STATES]);
+const QUERY_STATES = new Set([...ITEM_STATES, 'resolved']);
 const DECISIONS = new Set(RESOLVED_STATES);
 const KINDS = new Set(['pipeline_quality', 'pipeline_incident', 'feed_item']);
+const REPASS_KINDS = new Set(['pipeline_quality', 'feed_item']);
 const REPASS_HINTS = new Set(['publish_ready', 'review', 'reject', 'unknown']);
+const REVIEW_CONTRACTS = new Map([
+  [1, 'cadu-review-center-v1'],
+  [2, 'cadu-review-center-v2'],
+]);
+const REVIEW_IDENTITY_VERSION = 'cadu-review-identity-v2';
+const LEGACY_REVIEW_IDENTITY_VERSION = 'legacy-v1';
+const IDENTITY_SCOPES = new Set([
+  'record', 'aggregate_subject', 'content_unresolved', 'operational_run',
+]);
+const CARRY_POLICIES_BY_SCOPE = new Map([
+  ['record', new Set(['stable_record'])],
+  ['aggregate_subject', new Set(['subject_bound', 'no_automatic_carry'])],
+  ['content_unresolved', new Set(['no_automatic_carry'])],
+  ['operational_run', new Set(['version_bound'])],
+]);
+const REVIEW_LINK_POLICY = 'independent_version_bound';
+const MAX_REVIEW_PROVENANCE = 20;
 const LIST_QUERY_KEYS = new Set(['origin', 'state', 'search', 'limit', 'offset']);
 const AUDIT_QUERY_KEYS = new Set(['origin', 'decision', 'limit', 'offset']);
 const UNSAFE_TEXT_CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;
@@ -96,7 +112,7 @@ export function parseCentralReviewListQuery(query = {}) {
   const rawOffset = singleQueryValue(query.offset);
   if ([origin, state, rawLimit, rawOffset].includes(null) || search === undefined) return null;
   if (origin !== undefined && !ORIGINS.has(origin)) return null;
-  if (state !== undefined && !STATES.has(state)) return null;
+  if (state !== undefined && !QUERY_STATES.has(state)) return null;
   const limit = canonicalInteger(rawLimit, 25, 100);
   const offset = canonicalInteger(rawOffset, 0, 100_000);
   if (limit === null || limit < 1 || offset === null) return null;
@@ -227,14 +243,140 @@ function validHttpsUrl(value) {
   }
 }
 
-function validReviewItem(item) {
+function reviewSchemaVersion(body) {
+  if (!isPlainObject(body) || !Number.isSafeInteger(body.schema_version)) return null;
+  const expectedContract = REVIEW_CONTRACTS.get(body.schema_version);
+  return typeof expectedContract === 'string' && expectedContract === body.contract_version
+    ? body.schema_version
+    : null;
+}
+
+function hasUniqueValues(values) {
+  return new Set(values).size === values.length;
+}
+
+function hasOnlyKeys(value, allowed) {
+  return Object.keys(value).every((key) => allowed.has(key));
+}
+
+function validReviewLinks(value, item) {
+  const allowed = new Set([
+    'evidence_count', 'item_ids', 'origins', 'kinds', 'decision_policy',
+  ]);
+  return isPlainObject(value)
+    && hasOnlyKeys(value, allowed)
+    && Number.isSafeInteger(value.evidence_count)
+    && value.evidence_count >= 2
+    && Array.isArray(value.item_ids)
+    && value.item_ids.length >= 1
+    && value.item_ids.length <= MAX_REVIEW_PROVENANCE
+    && value.item_ids.length <= value.evidence_count
+    && value.item_ids.every((entry) => UUID.test(entry || ''))
+    && hasUniqueValues(value.item_ids)
+    && Array.isArray(value.origins)
+    && value.origins.length >= 1
+    && value.origins.length <= ORIGINS.size
+    && value.origins.every((entry) => ORIGINS.has(entry))
+    && hasUniqueValues(value.origins)
+    && value.origins.includes(item.origin)
+    && Array.isArray(value.kinds)
+    && value.kinds.length >= 1
+    && value.kinds.length <= KINDS.size
+    && value.kinds.every((entry) => KINDS.has(entry))
+    && hasUniqueValues(value.kinds)
+    && value.kinds.includes(item.kind)
+    && value.decision_policy === REVIEW_LINK_POLICY;
+}
+
+function validReviewCluster(value, item) {
+  const allowed = new Set([
+    'occurrence_count', 'version_count', 'item_versions', 'first_seen_at',
+    'last_seen_at', 'run_ids', 'artifacts', 'provenance_truncated',
+  ]);
+  if (!isPlainObject(value)
+      || !hasOnlyKeys(value, allowed)
+      || !Number.isSafeInteger(value.occurrence_count)
+      || value.occurrence_count < 1
+      || value.occurrence_count !== item.occurrence_count
+      || !Number.isSafeInteger(value.version_count)
+      || value.version_count < 1
+      || value.version_count > value.occurrence_count
+      || !Array.isArray(value.item_versions)
+      || value.item_versions.length < 1
+      || value.item_versions.length > MAX_REVIEW_PROVENANCE
+      || value.item_versions.length > value.version_count
+      || !value.item_versions.every((entry) => SHA256.test(entry || ''))
+      || !hasUniqueValues(value.item_versions)
+      || !value.item_versions.includes(item.item_version)
+      || !Number.isSafeInteger(value.first_seen_at) || value.first_seen_at <= 0
+      || !Number.isSafeInteger(value.last_seen_at)
+      || value.last_seen_at < value.first_seen_at
+      || value.first_seen_at !== item.first_seen_at
+      || value.last_seen_at !== item.last_seen_at
+      || item.created_at < value.first_seen_at
+      || item.created_at > value.last_seen_at
+      || !Array.isArray(value.run_ids)
+      || value.run_ids.length > MAX_REVIEW_PROVENANCE
+      || !value.run_ids.every((entry) => UUID.test(entry || ''))
+      || !hasUniqueValues(value.run_ids)
+      || !Array.isArray(value.artifacts)
+      || value.artifacts.length > MAX_REVIEW_PROVENANCE
+      || !value.artifacts.every((entry) => (
+        typeof entry === 'string'
+        && entry.length >= 1
+        && entry.length <= MAX_ITEM_ARTIFACT
+        && !UNSAFE_TEXT_CONTROL.test(entry)
+      ))
+      || !hasUniqueValues(value.artifacts)
+      || typeof value.provenance_truncated !== 'boolean') {
+    return false;
+  }
+  if (!value.provenance_truncated
+      && value.version_count !== value.item_versions.length) return false;
+  if (item.run_id !== null && !value.run_ids.includes(item.run_id)) return false;
+  if (item.artifact !== null && !value.artifacts.includes(item.artifact)) return false;
+  return true;
+}
+
+function validV2ReviewItem(item) {
+  const metadata = item.metadata;
+  const scope = metadata.identity_scope;
+  const carryPolicy = metadata.carry_policy;
+  const policies = CARRY_POLICIES_BY_SCOPE.get(scope);
+  if (item.review_identity_version !== REVIEW_IDENTITY_VERSION
+      || !SHA256.test(item.review_key || '')
+      || !Number.isSafeInteger(item.occurrence_count)
+      || item.occurrence_count < 1
+      || !Number.isSafeInteger(item.first_seen_at) || item.first_seen_at <= 0
+      || !Number.isSafeInteger(item.last_seen_at)
+      || item.last_seen_at < item.first_seen_at
+      || !IDENTITY_SCOPES.has(scope)
+      || !policies || !policies.has(carryPolicy)
+      || Object.prototype.hasOwnProperty.call(metadata, 'source_identity')
+      || !validReviewCluster(metadata.review_cluster, item)) {
+    return false;
+  }
+  if (item.kind === 'pipeline_incident') {
+    if (scope !== 'operational_run' || carryPolicy !== 'version_bound') return false;
+  } else if (scope === 'operational_run') {
+    return false;
+  }
+  if (item.origin === 'feed' && !SHA256.test(metadata.source_revision || '')) return false;
+  if (Object.prototype.hasOwnProperty.call(metadata, 'source_revision')
+      && !SHA256.test(metadata.source_revision || '')) return false;
+  if (Object.prototype.hasOwnProperty.call(metadata, 'review_links')
+      && !validReviewLinks(metadata.review_links, item)) return false;
+  return true;
+}
+
+function validReviewItem(item, schemaVersion) {
   if (!isPlainObject(item)
       || !UUID.test(item.id || '')
       || !SHA256.test(item.item_version || '')
       || !ORIGINS.has(item.origin)
       || !KINDS.has(item.kind)
       || typeof item.title !== 'string' || !item.title || item.title.length > 300
-      || !STATES.has(item.state)
+      || !ITEM_STATES.has(item.state)
       || !Number.isSafeInteger(item.created_at) || item.created_at < 0
       || !validHttpsUrl(item.source_url)
       || !validHttpsUrl(item.action_url)
@@ -255,21 +397,30 @@ function validReviewItem(item) {
       && (typeof item.artifact !== 'string'
         || item.artifact.length > MAX_ITEM_ARTIFACT
         || UNSAFE_TEXT_CONTROL.test(item.artifact))) return false;
-  if (item.state === 'pending') return item.resolution === null;
-  if (!isPlainObject(item.resolution)
-    || item.resolution.decision !== item.state
-    || !UUID.test(item.resolution.resolved_by || '')
-    || !Number.isSafeInteger(item.resolution.resolved_at)) {
-    return false;
+  if (item.state === 'pending') {
+    if (item.resolution !== null) return false;
+  } else {
+    if (!isPlainObject(item.resolution)
+      || item.resolution.decision !== item.state
+      || !UUID.test(item.resolution.resolved_by || '')
+      || !Number.isSafeInteger(item.resolution.resolved_at)) {
+      return false;
+    }
   }
-  return validRepass(item.repass);
+  if (!validRepass(item.repass, item, schemaVersion)) return false;
+  return schemaVersion === 1 || (schemaVersion === 2 && validV2ReviewItem(item));
 }
 
-function validRepass(value) {
+function validRepass(value, item, schemaVersion) {
   if (value === null || value === undefined) return true;
   if (!isPlainObject(value)
       || !UUID.test(value.run_id || '')
       || !SHA256.test(value.item_version || '')
+      || value.item_version !== item.item_version
+      || !ORIGINS.has(value.origin)
+      || value.origin !== item.origin
+      || !REPASS_KINDS.has(value.kind)
+      || value.kind !== item.kind
       || !Number.isSafeInteger(value.created_at) || value.created_at <= 0
       || typeof value.score !== 'number' || !Number.isFinite(value.score)
       || value.score < 0 || value.score > 1
@@ -288,6 +439,23 @@ function validRepass(value) {
       || !isPlainObject(value.evidence)) {
     return false;
   }
+  if ((value.previous_score === null) !== (value.delta === null)) return false;
+  if (value.previous_score !== null
+      && Math.abs(value.delta - (value.score - value.previous_score)) > 0.000001) {
+    return false;
+  }
+  if (schemaVersion === 2) {
+    const expectedPrevious = item.metadata.score;
+    if (expectedPrevious === null || expectedPrevious === undefined) {
+      if (value.previous_score !== null) return false;
+    } else if (typeof expectedPrevious !== 'number'
+        || !Number.isFinite(expectedPrevious)
+        || expectedPrevious < 0 || expectedPrevious > 1
+        || value.previous_score === null
+        || Math.abs(value.previous_score - expectedPrevious) > 0.000001) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -301,27 +469,57 @@ function validProvider(provider) {
     && Number.isSafeInteger(provider.resolved) && provider.resolved >= 0;
 }
 
+function validV2Diagnostics(diagnostics) {
+  const projection = diagnostics.projection;
+  const allowed = new Set([
+    'raw_items', 'unique_items', 'collapsed_occurrences',
+    'linked_evidence_groups', 'linked_evidence_items', 'identity_version',
+    'legacy_resolution_policy',
+  ]);
+  return isPlainObject(projection)
+    && hasOnlyKeys(projection, allowed)
+    && Number.isSafeInteger(projection.raw_items) && projection.raw_items >= 0
+    && Number.isSafeInteger(projection.unique_items) && projection.unique_items >= 0
+    && projection.unique_items <= projection.raw_items
+    && Number.isSafeInteger(projection.collapsed_occurrences)
+    && projection.collapsed_occurrences === projection.raw_items - projection.unique_items
+    && Number.isSafeInteger(projection.linked_evidence_groups)
+    && projection.linked_evidence_groups >= 0
+    && Number.isSafeInteger(projection.linked_evidence_items)
+    && projection.linked_evidence_items >= projection.linked_evidence_groups * 2
+    && (projection.linked_evidence_groups > 0 || projection.linked_evidence_items === 0)
+    && projection.identity_version === REVIEW_IDENTITY_VERSION
+    && projection.legacy_resolution_policy === 'audit_only_no_automatic_carry';
+}
+
 function validateListResponse(body, query) {
-  if (!isPlainObject(body)
-      || body.schema_version !== 1
-      || body.contract_version !== 'cadu-review-center-v1'
+  const schemaVersion = reviewSchemaVersion(body);
+  if (schemaVersion === null
       || !Array.isArray(body.items)
       || body.items.length > query.limit
-      || !body.items.every(validReviewItem)
+      || !body.items.every((item) => validReviewItem(item, schemaVersion))
       || !Number.isSafeInteger(body.total) || body.total < 0
+      || (body.items.length > 0 && body.total < query.offset + body.items.length)
       || body.limit !== query.limit || body.offset !== query.offset
       || typeof body.has_more !== 'boolean'
       || body.has_more !== (query.offset + body.items.length < body.total)
       || !Array.isArray(body.providers) || !body.providers.every(validProvider)
       || !isPlainObject(body.diagnostics)
+      || (schemaVersion === 2 && !validV2Diagnostics(body.diagnostics))
       || !Number.isSafeInteger(body.generated_at)) {
     return null;
   }
+  if (query.origin !== null
+      && !body.items.every((item) => item.origin === query.origin)) return null;
+  if (query.state === 'resolved'
+      && !body.items.every((item) => RESOLVED_STATES.has(item.state))) return null;
+  if (query.state !== null && query.state !== 'resolved'
+      && !body.items.every((item) => item.state === query.state)) return null;
   return body;
 }
 
-function validAuditItem(item) {
-  return isPlainObject(item)
+function validAuditItem(item, schemaVersion) {
+  const commonValid = isPlainObject(item)
     && UUID.test(item.id || '')
     && UUID.test(item.item_id || '')
     && SHA256.test(item.item_version || '')
@@ -340,22 +538,34 @@ function validAuditItem(item) {
         && !UNSAFE_TEXT_CONTROL.test(item.title)))
     && (item.run_id === null || UUID.test(item.run_id || ''))
     && validHttpsUrl(item.source_url);
+  if (!commonValid) return false;
+  if (schemaVersion === 1) return true;
+  if (schemaVersion !== 2) return false;
+  if (item.review_identity_version === REVIEW_IDENTITY_VERSION) {
+    return SHA256.test(item.review_key || '');
+  }
+  return item.review_identity_version === LEGACY_REVIEW_IDENTITY_VERSION
+    && item.review_key === null;
 }
 
 function validateAuditResponse(body, query) {
-  if (!isPlainObject(body)
-      || body.schema_version !== 1
-      || body.contract_version !== 'cadu-review-center-v1'
+  const schemaVersion = reviewSchemaVersion(body);
+  if (schemaVersion === null
       || !Array.isArray(body.items)
       || body.items.length > query.limit
-      || !body.items.every(validAuditItem)
+      || !body.items.every((item) => validAuditItem(item, schemaVersion))
       || !Number.isSafeInteger(body.total) || body.total < 0
+      || (body.items.length > 0 && body.total < query.offset + body.items.length)
       || body.limit !== query.limit || body.offset !== query.offset
       || typeof body.has_more !== 'boolean'
       || body.has_more !== (query.offset + body.items.length < body.total)
       || !Number.isSafeInteger(body.generated_at)) {
     return null;
   }
+  if (query.origin !== null
+      && !body.items.every((item) => item.origin === query.origin)) return null;
+  if (query.decision !== null
+      && !body.items.every((item) => item.decision === query.decision)) return null;
   return body;
 }
 
@@ -378,7 +588,7 @@ function validateResolutionResponse(body, resolution, adminId) {
 }
 
 function validateRepassResponse(body, adminId) {
-  return isPlainObject(body)
+  const structurallyValid = isPlainObject(body)
     && UUID.test(body.run_id || '')
     && Number.isSafeInteger(body.evaluated) && body.evaluated >= 0
     && Number.isSafeInteger(body.entries) && body.entries >= 0
@@ -394,9 +604,14 @@ function validateRepassResponse(body, adminId) {
     && Number.isSafeInteger(body.finished_at) && body.finished_at > 0
     && ['manual', 'pipeline_post_run'].includes(body.trigger)
     && UUID.test(body.requested_by || '')
-    && body.requested_by === adminId
-    ? body
-    : null;
+    && body.requested_by === adminId;
+  if (!structurallyValid
+      || body.evaluated !== body.entries + body.errors
+      || body.with_previous_score > body.entries
+      || body.increased + body.decreased + body.stable !== body.with_previous_score
+      || body.publish_ready + body.review + body.rejected > body.entries
+      || body.finished_at < body.started_at) return null;
+  return body;
 }
 
 function configureResponse(res) {

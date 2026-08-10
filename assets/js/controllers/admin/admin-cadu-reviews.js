@@ -68,6 +68,18 @@
     sites: 'fa-university',
     openclaw: 'fa-robot'
   };
+  var IDENTITY_SCOPE_LABELS = {
+    record: 'Registro estável',
+    aggregate_subject: 'Assunto em fonte agregadora',
+    content_unresolved: 'Conteúdo sem identidade estável',
+    operational_run: 'Execução operacional'
+  };
+  var CARRY_POLICY_LABELS = {
+    stable_record: 'escopo: mesmo registro',
+    subject_bound: 'escopo: mesmo assunto',
+    no_automatic_carry: 'sem reaproveitamento automático',
+    version_bound: 'somente esta versão'
+  };
   var ISSUE_LABELS = {
     application_deadline_mismatch: 'Prazo de inscrição divergente',
     application_status_claim_mismatch: 'Status de inscrição divergente',
@@ -134,7 +146,7 @@
 
   function repassHintLabel(hint) {
     return ({
-      publish_ready: 'pronto para publicação',
+      publish_ready: 'candidato sem bloqueios automáticos',
       review: 'manter em revisão',
       reject: 'abaixo do limite',
       unknown: 'indefinido'
@@ -170,6 +182,38 @@
         escapeHtml(formatScore(base)) + '</span>';
     }
     return '';
+  }
+
+  function reviewProvenance(item) {
+    if (item.review_identity_version !== 'cadu-review-identity-v2'
+        || !item.metadata || typeof item.metadata !== 'object') return '';
+    var metadata = item.metadata;
+    var parts = [];
+    var scope = IDENTITY_SCOPE_LABELS[metadata.identity_scope];
+    var carry = CARRY_POLICY_LABELS[metadata.carry_policy];
+    if (scope && carry) {
+      parts.push('<span><i class="fas fa-fingerprint" aria-hidden="true"></i> ' +
+        escapeHtml(scope) + ' · ' + escapeHtml(carry) + '</span>');
+    }
+    var occurrenceCount = Number(item.occurrence_count);
+    if (Number.isSafeInteger(occurrenceCount) && occurrenceCount > 1) {
+      parts.push('<span><i class="fas fa-layer-group" aria-hidden="true"></i> ' +
+        escapeHtml(occurrenceCount) + ' ocorrências agrupadas · ' +
+        escapeHtml(fmtDate(item.first_seen_at)) + ' a ' + escapeHtml(fmtDate(item.last_seen_at)) + '</span>');
+    }
+    var links = metadata.review_links;
+    if (links && typeof links === 'object' && Number(links.evidence_count) > 1) {
+      var origins = Array.isArray(links.origins) ? links.origins.map(function (origin) {
+        return ORIGIN_LABELS[origin] || origin;
+      }) : [];
+      parts.push('<span><i class="fas fa-link" aria-hidden="true"></i> ' +
+        escapeHtml(links.evidence_count) + ' evidências relacionadas' +
+        (origins.length ? ' em ' + escapeHtml(origins.join(' e ')) : '') +
+        ' · decisões independentes por versão</span>');
+    }
+    return parts.length
+      ? '<div class="kc-cadu-review-item__provenance" role="note"><strong>Identidade e proveniência</strong>' + parts.join('') + '</div>'
+      : '';
   }
 
   function repassFilterPasses(item) {
@@ -369,6 +413,7 @@
         '</div>' +
         '<h3>' + escapeHtml(item.title) + '</h3>' +
         (item.summary ? '<p class="kc-cadu-review-item__summary">' + escapeHtml(item.summary) + '</p>' : '') +
+        reviewProvenance(item) +
         repassInfo +
         '<div class="kc-cadu-review-item__issues">' + issues + '</div>' +
         '<div class="kc-cadu-review-item__links">' + reviewLinks(item) + '</div>' +
@@ -637,7 +682,7 @@
     setStatus(
       'Reanálise concluída: ' + data.evaluated + ' item(ns) avaliado(s); '
       + data.increased + ' subiram, ' + data.decreased + ' caíram; '
-      + data.publish_ready + ' prontos para publicação. A decisão final permanece manual.'
+      + data.publish_ready + ' candidatos sem bloqueios automáticos. A decisão final permanece manual.'
     );
     renderRepassSummary();
     await refresh();
@@ -750,12 +795,16 @@
       return;
     }
     target.innerHTML = items.map(function (item) {
+      var legacyWarning = item.review_identity_version === 'legacy-v1'
+        ? '<span class="kc-cadu-review-audit__legacy"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> Identidade legada: somente auditoria, sem reaproveitamento automático.</span>'
+        : '';
       return '<div class="kc-cadu-review-audit__item">' +
         '<strong>' + escapeHtml(item.title || item.item_id) + '</strong>' +
         '<span>' + escapeHtml(STATE_LABELS[item.decision] || item.decision) + '</span>' +
         '<span>' + escapeHtml(ORIGIN_LABELS[item.origin] || item.origin) + ' · ' + escapeHtml(fmtDate(item.resolved_at)) + '</span>' +
         '<span>evidência ' + escapeHtml(String(item.item_version || '').slice(0, 10)) + '</span>' +
         (item.resolution_note ? '<span>' + escapeHtml(item.resolution_note) + '</span>' : '') +
+        legacyWarning +
         '</div>';
     }).join('');
   }

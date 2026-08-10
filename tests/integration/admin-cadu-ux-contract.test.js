@@ -30,6 +30,13 @@ describe('admin Cadu UX contracts', () => {
     });
   });
 
+  test('content-addresses the review center stylesheet', () => {
+    const relativePath = 'assets/css/admin-cadu-reviews.css';
+    const canonicalText = fs.readFileSync(path.join(ROOT, relativePath), 'utf8').replace(/\r\n/g, '\n');
+    const version = crypto.createHash('sha256').update(canonicalText, 'utf8').digest('hex').slice(0, 16);
+    expect(html).toContain(`href="../${relativePath}?v=${version}"`);
+  });
+
   test('keeps the feed page size aligned with the visible default', () => {
     expect(controller).toContain('var FEED_PAGE_SIZE = 25;');
     expect(controller).toContain('feedLimit: FEED_PAGE_SIZE');

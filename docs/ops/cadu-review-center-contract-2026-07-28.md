@@ -1,6 +1,6 @@
 # Central de Revisões do Cadu
 
-Data de consolidação: 2026-07-28.
+Data de consolidação: 2026-07-28. Revisão de contrato v2: 2026-08-10.
 
 ## Objetivo
 
@@ -17,6 +17,9 @@ Princípios do contrato:
 5. cada origem preserva seu contrato de escrita existente;
 6. o provedor OpenClaw só receberá itens quando existir evidência estável,
    versionável e não sensível.
+7. ocorrências repetidas podem ser agrupadas somente quando compartilham a
+   mesma identidade estável; evidências apenas relacionadas não compartilham
+   decisão.
 
 ## Diagnóstico do run `27292866`
 
@@ -160,6 +163,46 @@ Decisões disponíveis:
 - `deferred`: adia a conclusão;
 - `acknowledged`: reconhece um incidente operacional.
 
+## Contrato v2: identidade e proveniência
+
+O backend v2 responde com `schema_version: 2` e
+`contract_version: cadu-review-center-v2`. Durante o rollout, o proxy do Kino
+Campus aceita também o par v1 original; combinações cruzadas de schema e
+contrato falham fechadas.
+
+Cada item v2 acrescenta:
+
+- `review_identity_version: cadu-review-identity-v2`;
+- `review_key`, digest SHA-256 que permite apontar evidências relacionadas sem
+  expor a identidade interna usada pela Pipeline;
+- `occurrence_count`, `first_seen_at` e `last_seen_at`;
+- `metadata.identity_scope`, um de `record`, `aggregate_subject`,
+  `content_unresolved` ou `operational_run`;
+- `metadata.carry_policy`, coerente com o escopo: `stable_record`,
+  `subject_bound`, `no_automatic_carry` ou `version_bound`;
+- `metadata.review_cluster`, com contagem, versões, runs e artefatos limitados a
+  20 entradas, além do indicador explícito de truncamento;
+- `metadata.review_links`, quando outras evidências compartilham `review_key`,
+  sempre com `decision_policy: independent_version_bound`.
+
+O agrupamento só colapsa itens de mesmo `id`, já derivado de origem, tipo e
+identidade semântica. Links entre Pipeline e Feed dão contexto ao operador, mas
+não propagam aprovação ou rejeição. Toda escrita continua presa ao par
+`item_id` + `item_version`.
+
+Resoluções criadas sob a identidade v1 aparecem na auditoria como `legacy-v1`.
+Elas são preservadas como histórico, sem reaproveitamento automático. O repass
+é validado integralmente inclusive em itens `pending`; estado pendente não é
+atalho para aceitar evidência de repass malformada.
+
+Ordem obrigatória de implantação:
+
+1. proxy/UI dual v1+v2 do Kino Campus;
+2. smoke test do contrato v1;
+3. backend OpenClaw v2;
+4. smoke test de lista, auditoria, repass, CAS e falha fechada;
+5. revisão manual da fila única remanescente.
+
 ## Fluxo de segurança
 
 ```mermaid
@@ -202,6 +245,8 @@ A aba oferece:
 - filtro de origem, estado e texto;
 - paginação de 10, 25, 50 ou 100 itens;
 - links HTTPS para fonte e ação;
+- indicação de ocorrências agrupadas, escopo de identidade e evidências
+  relacionadas, sem exibir hashes internos;
 - atalho para abrir o run da Pipeline;
 - atalho para usar o contexto no chat do Cadu;
 - formulário explícito de decisão;
@@ -216,7 +261,9 @@ navegação inferior não cobre o conteúdo final.
 
 - Uma aprovação não reenvia o item ao publicador.
 - A Central não altera post já publicado.
-- A Central não executa deduplicação.
+- A Central agrupa somente ocorrências da mesma identidade estável; ela não faz
+  deduplicação editorial por título/URL nem compartilha decisões entre
+  evidências relacionadas.
 - A Central não ativa fonte do Mapa UFG.
 - A Central não usa conversa do OpenClaw como evidência.
 - A exportação é um relatório de auditoria, não um mecanismo de importação.
@@ -235,6 +282,9 @@ autorização explícita, idempotência e testes de regressão.
 - autenticação admin e assinatura HMAC;
 - confirmação `published: false`;
 - validação estrita do proxy;
+- leitura transitória v1+v2, rejeição de pares de contrato cruzados e validação
+  de identidade, proveniência, clusters e links v2;
+- validação do repass também para itens pendentes;
 - troca entre histórico central e institucional;
 - QA desktop/mobile sem overflow;
 - health, readiness e preflight após deploy.
