@@ -12,7 +12,7 @@
  *
  * Expõe: window._KCProduct.render (Object.freeze)
  * Carregado: após product.controller.js, antes de product.load.js
- * Dependências: window.KCUtils (opcional, com fallbacks)
+ * Dependências: window.KCPostLifecycle (datas semânticas), window.KCUtils (opcional)
  */
 
 (function () {
@@ -88,6 +88,227 @@
       if (parsed.search && label.length < 42) label += parsed.search;
     } catch (_) {}
     return label.length > 56 ? label.slice(0, 53).trim() + '...' : label;
+  }
+
+  // Espelha kc-post-lifecycle.shared.js. A ordem e parte do contrato: para cada
+  // alias, o valor na raiz precede o mesmo alias no metadata consolidado.
+  var DEADLINE_PATHS = Object.freeze([
+    'applicationDeadline', 'application_deadline', 'applicationDeadlineAt', 'application_deadline_at',
+    'deadlineAt', 'deadline_at', 'deadlineDate', 'deadline_date', 'deadline', 'dataLimite',
+    'data_limite', 'inscricoesAte', 'inscricoes_ate', 'prazoInscricao', 'prazo_inscricao',
+    'submissionDeadline', 'submission_deadline', 'prazo', 'dates.applicationDeadline',
+    'dates.application_deadline', 'dates.deadlineAt', 'dates.deadline_at', 'dates.deadlineDate',
+    'dates.deadline', 'dates.submissionDeadline', 'dates.submission_deadline'
+  ]);
+
+  // Quando a pipeline declara a fase ativa, aliases de outra finalidade deixam
+  // de ser um fallback valido. A lista ampla acima continua sendo o contrato de
+  // compatibilidade apenas para publicacoes legadas sem fase identificavel.
+  var CURRENT_DEADLINE_PATHS = Object.freeze([
+    'applicationDeadline', 'application_deadline', 'applicationDeadlineAt', 'application_deadline_at',
+    'deadlineAt', 'deadline_at', 'deadlineDate', 'deadline_date', 'deadline', 'dataLimite',
+    'data_limite', 'inscricoesAte', 'inscricoes_ate', 'prazoInscricao', 'prazo_inscricao', 'prazo',
+    'dates.applicationDeadline', 'dates.application_deadline', 'dates.deadlineAt', 'dates.deadline_at',
+    'dates.deadlineDate', 'dates.deadline',
+  ]);
+  var APPLICATION_PURPOSE_PATHS = Object.freeze([
+    'applicationPurpose', 'application_purpose',
+    'dates.applicationPurpose', 'dates.application_purpose',
+  ]);
+  var ACTIVE_EPISODE_PATHS = Object.freeze([
+    'applicationEpisode', 'application_episode',
+    'dates.applicationEpisode', 'dates.application_episode',
+  ]);
+  var APPLICATION_EPISODES_PATHS = Object.freeze([
+    'applicationEpisodes', 'application_episodes',
+    'dates.applicationEpisodes', 'dates.application_episodes',
+  ]);
+  var EPISODE_DEADLINE_PATHS = Object.freeze([
+    'applicationDeadline', 'application_deadline', 'applicationDeadlineAt', 'application_deadline_at',
+    'deadlineAt', 'deadline_at', 'deadlineDate', 'deadline_date', 'deadline',
+  ]);
+  var APPLICATION_PURPOSES = Object.freeze([
+    'registration', 'submission', 'candidacy', 'enrollment', 'listener_registration',
+  ]);
+
+  function readPath(source, path) {
+    var current = source;
+    var parts = String(path || '').split('.').filter(Boolean);
+    for (var i = 0; i < parts.length; i += 1) {
+      if (!current || typeof current !== 'object') return undefined;
+      current = current[parts[i]];
+    }
+    return current;
+  }
+
+  function dateKeyInSaoPaulo(parsedMs) {
+    try {
+      var parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date(parsedMs));
+      var values = {};
+      parts.forEach(function (part) {
+        if (part.type !== 'literal') values[part.type] = part.value;
+      });
+      return values.year && values.month && values.day
+        ? values.year + '-' + values.month + '-' + values.day
+        : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function normalizeApplicationPurpose(value) {
+    if (typeof value !== 'string') return '';
+    var normalized = value.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    return APPLICATION_PURPOSES.indexOf(normalized) !== -1 ? normalized : '';
+  }
+
+  function episodePurpose(episode) {
+    if (!episode || typeof episode !== 'object' || Array.isArray(episode)) return '';
+    return normalizeApplicationPurpose(
+      episode.purpose || episode.applicationPurpose || episode.application_purpose
+    );
+  }
+
+  function isActiveEpisode(episode) {
+    if (!episode || typeof episode !== 'object' || Array.isArray(episode)) return false;
+    if (episode.active === true || episode.isActive === true || episode.is_active === true || episode.current === true) {
+      return true;
+    }
+    var status = String(episode.status || '').trim().toLowerCase();
+    return status === 'open' || status === 'active' || status === 'ongoing' || status === 'current';
+  }
+
+  function valuesAtPaths(source, metadata, paths) {
+    var values = [];
+    paths.forEach(function (path) {
+      var direct = readPath(source, path);
+      if (direct != null && direct !== '') values.push(direct);
+      var nested = readPath(metadata, path);
+      if (nested != null && nested !== '') values.push(nested);
+    });
+    return values;
+  }
+
+  function phaseContract(source, metadata) {
+    var identified = false;
+    var invalid = false;
+    var purposes = [];
+    var explicitEpisodes = [];
+
+    valuesAtPaths(source, metadata, APPLICATION_PURPOSE_PATHS).forEach(function (value) {
+      identified = true;
+      var purpose = normalizeApplicationPurpose(value);
+      if (purpose) purposes.push(purpose);
+      else invalid = true;
+    });
+
+    valuesAtPaths(source, metadata, ACTIVE_EPISODE_PATHS).forEach(function (value) {
+      identified = true;
+      if (typeof value === 'string') {
+        var purpose = normalizeApplicationPurpose(value);
+        if (purpose) purposes.push(purpose);
+        else invalid = true;
+        return;
+      }
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        var objectPurpose = episodePurpose(value);
+        if (objectPurpose) {
+          purposes.push(objectPurpose);
+          explicitEpisodes.push(value);
+        } else {
+          invalid = true;
+        }
+        return;
+      }
+      invalid = true;
+    });
+
+    valuesAtPaths(source, metadata, APPLICATION_EPISODES_PATHS).forEach(function (value) {
+      if (!Array.isArray(value)) return;
+      value.filter(isActiveEpisode).forEach(function (episode) {
+        identified = true;
+        var purpose = episodePurpose(episode);
+        if (purpose) {
+          purposes.push(purpose);
+          explicitEpisodes.push(episode);
+        } else {
+          invalid = true;
+        }
+      });
+    });
+
+    var uniquePurposes = purposes.filter(function (purpose, index) {
+      return purposes.indexOf(purpose) === index;
+    });
+    if (!identified) return { identified: false, purpose: '', episodes: [] };
+    if (invalid || uniquePurposes.length !== 1) {
+      return { identified: true, purpose: '', episodes: [] };
+    }
+
+    var selectedPurpose = uniquePurposes[0];
+    return {
+      identified: true,
+      purpose: selectedPurpose,
+      episodes: explicitEpisodes.filter(function (episode) {
+        return episodePurpose(episode) === selectedPurpose;
+      }),
+    };
+  }
+
+  function deadlineFromPaths(source, metadata, paths, lifecycle) {
+    for (var i = 0; i < paths.length; i += 1) {
+      var path = paths[i];
+      var direct = readPath(source, path);
+      if (direct != null && direct !== '') {
+        var directParsed = lifecycle.parseDateMs(direct, 'end');
+        if (directParsed != null) return dateKeyInSaoPaulo(directParsed);
+      }
+      var nested = readPath(metadata, path);
+      if (nested != null && nested !== '') {
+        var nestedParsed = lifecycle.parseDateMs(nested, 'end');
+        if (nestedParsed != null) return dateKeyInSaoPaulo(nestedParsed);
+      }
+    }
+    return '';
+  }
+
+  function purposeDeadlinePaths(purpose) {
+    var parts = String(purpose || '').split('_').filter(Boolean);
+    if (!parts.length) return [];
+    var camel = parts[0] + parts.slice(1).map(function (part) {
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join('');
+    var camelAlias = camel + 'Deadline';
+    var snakeAlias = parts.join('_') + '_deadline';
+    return [camelAlias, snakeAlias, 'dates.' + camelAlias, 'dates.' + snakeAlias];
+  }
+
+  function getDeclaredDeadline(post) {
+    var lifecycle = window.KCPostLifecycle;
+    if (!lifecycle || typeof lifecycle.metadataOf !== 'function' || typeof lifecycle.parseDateMs !== 'function') return '';
+
+    var source = (post && typeof post === 'object' && !Array.isArray(post)) ? post : {};
+    var metadata = lifecycle.metadataOf(source);
+    var phase = phaseContract(source, metadata);
+    if (!phase.identified) return deadlineFromPaths(source, metadata, DEADLINE_PATHS, lifecycle);
+    if (!phase.purpose) return '';
+
+    var generalDeadline = deadlineFromPaths(source, metadata, CURRENT_DEADLINE_PATHS, lifecycle);
+    if (generalDeadline) return generalDeadline;
+
+    for (var i = 0; i < phase.episodes.length; i += 1) {
+      var episodeDeadline = deadlineFromPaths(phase.episodes[i], {}, EPISODE_DEADLINE_PATHS, lifecycle);
+      if (episodeDeadline) return episodeDeadline;
+    }
+    return deadlineFromPaths(source, metadata, purposeDeadlinePaths(phase.purpose), lifecycle);
   }
 
   // ── Helpers de identificação ─────────────────────────────────────────────────
@@ -190,8 +411,8 @@
     } else if (typeof post.preco === 'number' && post.preco > 0) {
       badges.push('<span class="kc-badge"><i class="fas fa-money-bill-wave"></i> ' + esc(formatCurrency(post.preco)) + '</span>');
     }
-    // Prazo (se metadata.deadline_date)
-    var deadline = metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || post.expires_at || '';
+    // Prazo semantico declarado pela fonte; aliases de expiracao sao apenas ciclo de vida tecnico.
+    var deadline = getDeclaredDeadline(post);
     if (deadline) {
       var datePart = String(deadline).slice(0, 10);
       badges.push('<span class="kc-badge"><i class="fas fa-calendar-check"></i> Prazo: ' + esc(datePart) + '</span>');
@@ -422,7 +643,7 @@
     if (local) pairs.push(['fas fa-map-marker-alt', 'Local', local.replace(/^\*\*\s*/, '').replace(/\*\*$/, '').trim() || local]);
     var dataEvento = metadata.data_evento || metadata.event_date || metadata.eventDate || '';
     if (dataEvento) pairs.push(['fas fa-calendar-day', 'Data do evento', String(dataEvento).slice(0, 10)]);
-    var deadline = metadata.deadline_date || metadata.validThrough || metadata.data_encerramento || post.expires_at || '';
+    var deadline = getDeclaredDeadline(post);
     if (deadline) pairs.push(['fas fa-calendar-check', 'Prazo', String(deadline).slice(0, 10)]);
     var modalidade = metadata.modalidadeTrabalho || metadata.modalidade || metadata.workModeLabel || '';
     if (modalidade) pairs.push(['fas fa-laptop-house', 'Modalidade', modalidade]);
