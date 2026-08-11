@@ -136,6 +136,17 @@ function v2PendingItem() {
   return item;
 }
 
+function communityRelevance() {
+  return {
+    contract: 'cadu-community-relevance-v1',
+    score: 0.84,
+    tier: 'high',
+    audiences: ['undergraduate_students', 'external_community'],
+    signals: ['student_support_and_rights'],
+    recovery_actions: ['find_action_url', 'corroborate_official_source'],
+  };
+}
+
 function providers() {
   return [
     { id: 'pipeline', label: 'Pipeline', description: 'Quality gate.', queue: 'central', pending: 1, resolved: 0 },
@@ -481,6 +492,52 @@ describe('Cadu central review proxy', () => {
     });
     expect(rejected.statusCode).toBe(502);
     expect(rejected.body).toEqual({ error: 'invalid_cadu_api_response' });
+  });
+
+  test('accepts optional community relevance in v1/v2 and rejects malformed evidence fail-closed', async () => {
+    const query = parseCentralReviewListQuery({ origin: 'pipeline', state: 'pending' });
+    for (const responseFactory of [listResponse, v2ListResponse]) {
+      const body = responseFactory(query);
+      body.items[0].metadata.community_relevance = communityRelevance();
+      global.fetch.mockResolvedValueOnce(upstreamResponse(200, body));
+      const accepted = createResponse();
+      await handler({ method: 'GET', headers: {}, query: {} }, accepted, {
+        path: 'reviews',
+        query: { origin: 'pipeline', state: 'pending' },
+      });
+      expect(accepted.statusCode).toBe(200);
+      expect(accepted.body.items[0].metadata.community_relevance).toEqual(communityRelevance());
+    }
+
+    const malformedCases = [
+      (value) => { value.contract = 'cadu-community-relevance-v2'; },
+      (value) => { value.score = '0.84'; },
+      (value) => { value.score = 1.01; },
+      (value) => { value.tier = 'critical'; },
+      (value) => { value.score = 0.10; value.tier = 'high'; },
+      (value) => { value.audiences = 'undergraduate_students'; },
+      (value) => { value.audiences = ['undergraduate_students', 'undergraduate_students']; },
+      (value) => { value.signals = ['student_support<script>']; },
+      (value) => { value.recovery_actions = Array.from({ length: 21 }, (_, index) => `action_${index}`); },
+      (value) => {
+        delete value.recovery_actions;
+        value.recoveryActions = ['find_action_url'];
+      },
+      (value) => { value.debug_hash = 'f'.repeat(64); },
+    ];
+    for (const mutate of malformedCases) {
+      const body = v2ListResponse(query);
+      body.items[0].metadata.community_relevance = communityRelevance();
+      mutate(body.items[0].metadata.community_relevance);
+      global.fetch.mockResolvedValueOnce(upstreamResponse(200, body));
+      const rejected = createResponse();
+      await handler({ method: 'GET', headers: {}, query: {} }, rejected, {
+        path: 'reviews',
+        query: { origin: 'pipeline', state: 'pending' },
+      });
+      expect(rejected.statusCode).toBe(502);
+      expect(rejected.body).toEqual({ error: 'invalid_cadu_api_response' });
+    }
   });
 
   test('dual-decodes v1 and v2 while validating v2 identity and provenance fail-closed', async () => {

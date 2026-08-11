@@ -253,6 +253,20 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('reviewSummaryRefresh = window.KCCaduReviews.refreshSummary();');
   });
 
+  test('presents the bounded community relevance contract as responsive editorial context', () => {
+    expect(reviewsController).toContain("value.contract !== 'cadu-community-relevance-v1'");
+    expect(reviewsController).toContain("'contract', 'score', 'tier', 'audiences', 'signals', 'recovery_actions'");
+    expect(reviewsController).toContain('communityRelevancePanel(item)');
+    expect(reviewsController).toContain('aria-label="Relevância para a comunidade"');
+    expect(reviewsController).toContain("undergraduate_students: 'Estudantes de graduação'");
+    expect(reviewsController).toContain("technical_staff: 'Técnicos-administrativos'");
+    expect(reviewsController).toContain("external_community: 'Comunidade externa'");
+    expect(reviewsController).toContain("find_action_url: 'Localizar o link oficial de inscrição ou ação'");
+    expect(reviewsCss).toContain('.kc-cadu-review-community__grid');
+    expect(reviewsCss).toMatch(/@media \(max-width: 700px\)[\s\S]*\.kc-cadu-review-community__grid \{[\s\S]*grid-template-columns: minmax\(0, 1fr\);/);
+    expect(reviewsCss).toMatch(/\.kc-cadu-review-community__group li \{[\s\S]*overflow-wrap: anywhere;/);
+  });
+
   test('keeps operational tabs visible and review actions touch-friendly on narrow screens', () => {
     expect(controller).toContain('function keepCaduTabVisible(selectedTab, behavior)');
     expect(controller).toContain("var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs')");
