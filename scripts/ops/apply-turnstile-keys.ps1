@@ -17,7 +17,7 @@ param(
   O que o script faz (sem você abrir painéis técnicos):
   1) Grava KC_TURNSTILE_SITE_KEY no Vercel Production
   2) Grava secrets no Supabase Edge (secret, environment, hostnames)
-  3) Dispara redeploy de produção no Vercel
+  3) Orienta redeploy pela integração GitHub a partir de main
 
 .EXAMPLE
   cd C:\Users\yan1n\Documents\GitHub\kino-campus
@@ -56,23 +56,6 @@ function Invoke-VercelWithInput {
       $safeDetail = $safeDetail.Substring(0, 500)
     }
     throw "Vercel CLI falhou sem expor a credencial: $safeDetail"
-  }
-  return @($output)
-}
-
-function Invoke-Vercel {
-  param([string[]]$Arguments)
-
-  $previousErrorAction = $ErrorActionPreference
-  try {
-    $ErrorActionPreference = 'Continue'
-    $output = vercel @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
-  } finally {
-    $ErrorActionPreference = $previousErrorAction
-  }
-  if ($exitCode -ne 0) {
-    throw "Vercel CLI falhou."
   }
   return @($output)
 }
@@ -183,13 +166,11 @@ $productionArgs = @(
 [void](Invoke-VercelWithInput -InputValue $siteKey -Arguments $productionArgs)
 Write-Host "  OK env Vercel Production" -ForegroundColor Green
 
-if ($SkipDeploy) {
-  Write-Host "[3/3] Redeploy adiado para o proximo merge." -ForegroundColor Yellow
-} else {
-  Write-Host "[3/3] Redeploy produção..." -ForegroundColor Yellow
-  Invoke-Vercel -Arguments (@('--prod', '--yes') + $vercelCwdArgs) |
-    Select-Object -Last 20
+Write-Host "[3/3] Redeploy deve partir da integração GitHub em main." -ForegroundColor Yellow
+if (-not $SkipDeploy) {
+  Write-Host "  CLI --prod foi desativada pelo guard de origem de produção." -ForegroundColor Yellow
 }
+Write-Host "  Faça merge de um PR em main ou crie no Dashboard um deployment da referência Git main."
 
 $siteKey = $null
 $secretKey = $null

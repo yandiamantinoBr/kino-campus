@@ -186,6 +186,7 @@ var CANONICAL_JS = [
 var SCRIPTS = [
   'scripts/hygiene-check.js',
   'scripts/inject-env.js',
+  'scripts/vercel-production-guard.js',
   'scripts/validate-version-map.js',
   'scripts/validate-repository-structure.js',
   'scripts/validate-script-chains.js',
