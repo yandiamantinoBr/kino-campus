@@ -478,6 +478,12 @@ function runDeployInvariantChecks() {
   }
 
   const buildScript = read('scripts/inject-env.js');
+  if (!buildScript.includes("require('./vercel-production-guard')")) {
+    errors.push('inject-env.js must run the Vercel production origin guard');
+  }
+  if (buildScript.indexOf('assertVercelProductionOrigin({') > buildScript.indexOf('function resolveEnv(')) {
+    errors.push('inject-env.js must run the production origin guard before build processing');
+  }
   if (!buildScript.includes("require('./build-static-output')")) {
     errors.push('inject-env.js must build the static public allowlist before deploy');
   }

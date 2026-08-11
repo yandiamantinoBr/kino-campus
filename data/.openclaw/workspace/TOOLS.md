@@ -116,7 +116,7 @@ Quando Yan enviar URL pelo Telegram:
 - Plataforma roda em Vercel + Supabase
 - Repo público: https://github.com/yandiamantinoBr/kino-campus
 - Cada PR precisa ser mergeado antes de deploy em produção
-- Vercel auto-deploy via git push, mas às vezes trava (deploy manual: `vercel --prod`)
+- Produção Vercel somente pela integração GitHub depois do merge em `main`; nunca use `vercel --prod`
 
 ## Para ver mais
 

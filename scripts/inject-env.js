@@ -19,9 +19,20 @@
 const fs   = require('fs');
 const path = require('path');
 const {
+  assertVercelProductionOrigin,
+} = require('./vercel-production-guard');
+const {
   resolveBuildRevision,
   applyStaticCacheRevision,
 } = require('./static-cache-revision');
+
+// Este e o primeiro gate com efeito no build. Producoes so podem nascer da
+// integracao GitHub oficial em main; previews e execucoes locais nao-production
+// seguem sem restricao adicional.
+assertVercelProductionOrigin({
+  env: process.env,
+  rootDir: path.join(__dirname, '..'),
+});
 
 // ── Contexto de execução (CI vs local) ─────────────────────────────────────
 const isCI = (
@@ -166,7 +177,7 @@ if (isProductionDeployment && !TURNSTILE_SITE_KEY) {
   console.warn('   Fluxos autenticados (Configurações → exclusão/export) não usam Turnstile.');
   console.warn('');
   console.warn('   Configure quando tiver a Site Key real (Cloudflare Turnstile, 0x4AAAA...):');
-  console.warn('   vercel env add KC_TURNSTILE_SITE_KEY production && vercel --prod');
+  console.warn('   vercel env add KC_TURNSTILE_SITE_KEY production; depois redeploy GitHub de main.');
   console.warn('   Edge guest também precisa KC_TURNSTILE_SECRET_KEY no Supabase.');
   console.warn('   Docs: docs/ops/production-turnstile-unblock.md');
   console.warn('');

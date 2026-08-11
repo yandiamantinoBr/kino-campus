@@ -94,13 +94,13 @@ npx vercel env add KC_TURNSTILE_SITE_KEY production
 npx vercel env add KC_TURNSTILE_SITE_KEY preview
 ```
 
-3. Redeploy de produção (não use chave de teste `1x0000…` / `2x0000…` — o build  
-   recusa com `TURNSTILE_TEST_SITE_KEY_FORBIDDEN`):
+3. Redeploy de produção pela integração GitHub (não use chave de teste
+   `1x0000…` / `2x0000…` — o build recusa com
+   `TURNSTILE_TEST_SITE_KEY_FORBIDDEN`):
 
-```bash
-npx vercel --prod
-# ou: git commit --allow-empty -m "chore(ops): redeploy after Turnstile env" && git push
-```
+Use **Create Deployment** no Dashboard da Vercel com a referência Git `main`,
+ou faça merge de um PR em `main`. `vercel --prod` é recusado pelo guard de
+origem documentado em `docs/ops/vercel-production-origin-guard.md`.
 
 ### B) Secret server-side (Supabase Edge — guest form)
 
