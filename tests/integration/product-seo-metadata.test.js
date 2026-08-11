@@ -1,6 +1,8 @@
 'use strict';
 
+const lifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
 const { buildProductValues, shouldIndexPost } = require('../../api/og-product.js');
+const { parseDateLike } = require('../../api/_lib/product-seo-policy.js');
 
 function buildPost(overrides) {
   return {
@@ -76,10 +78,143 @@ describe('metadados SEO de product.html', () => {
       });
       const values = buildProductValues(post);
 
-      expect(values.deadline).toBe('02/07/2026');
+      expect(values.deadline).toBe('2026-07-02');
       expect(shouldIndexPost(post, values)).toBe(true);
     } finally {
       nowSpy.mockRestore();
     }
+  });
+
+  test.each([
+    ['data civil ISO', '2026-07-02'],
+    ['data brasileira com barra', '02/07/2026'],
+    ['data brasileira com ponto', '02.07.2026'],
+    ['data brasileira com hifen', '02-07-2026'],
+    ['datetime local', '2026-08-20 00:30'],
+    ['datetime ISO com offset', '2026-08-20T00:30:00-03:00'],
+    ['epoch em segundos numerico', 1787194800],
+    ['epoch em milissegundos numerico', 1787194800000],
+    ['epoch em segundos textual', '1787194800'],
+    ['epoch em milissegundos textual', '1787194800000'],
+    ['data civil impossivel', '2026-02-31'],
+    ['datetime local impossivel', '2026-02-31 12:00'],
+    ['datetime ISO impossivel', '2026-09-31T12:00:00-03:00'],
+    ['objeto invalido', { value: '2026-08-20' }],
+  ])('parser SSR permanece identico ao lifecycle do cliente: %s', (_label, value) => {
+    const expectedMs = lifecycle.parseDateMs(value, 'end');
+    const parsed = parseDateLike(value, 'end');
+    expect(parsed ? parsed.getTime() : null).toBe(expectedMs);
+
+    const expectedDeadline = expectedMs == null
+      ? ''
+      : new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(expectedMs));
+    expect(buildProductValues(buildPost({ metadata: { deadline_date: value } })).deadline)
+      .toBe(expectedDeadline);
+  });
+
+  test('SSR nao exibe expiracao tecnica nem prazo historico de outra fase', () => {
+    const post = buildPost({
+      expires_at: '2026-08-15T23:59:59-03:00',
+      metadata: {
+        applicationPurpose: 'listener_registration',
+        application_episode: 'listener_registration',
+        application_episodes: [
+          { deadline: '2026-07-15', purpose: 'submission', status: 'closed' },
+          { deadline: null, purpose: 'listener_registration', status: 'open' },
+        ],
+        dates: {
+          applicationPurpose: 'listener_registration',
+          applicationDeadline: null,
+          submissionDeadline: '2026-07-15',
+        },
+      },
+    });
+
+    expect(buildProductValues(post).deadline).toBe('');
+  });
+
+  test.each([
+    ['PROFMAT', {
+      applicationPurpose: 'registration',
+      application_episodes: [
+        { deadline: '2026-08-09', purpose: 'submission', status: 'closed' },
+        { deadline: '2026-09-15', purpose: 'registration', status: 'open' },
+      ],
+      deadline_date: '2026-09-15',
+      dates: {
+        applicationDeadline: '2026-09-15',
+        applicationPurpose: 'registration',
+        submissionDeadline: '2026-08-09',
+      },
+    }, '2026-09-15'],
+    ['SIPACV', {
+      applicationPurpose: 'submission',
+      application_episodes: [
+        { deadline: '2026-08-20', purpose: 'submission', status: 'open' },
+        { deadline: '2026-10-10', purpose: 'listener_registration', status: 'scheduled' },
+      ],
+      deadline_date: '2026-08-20',
+      dates: {
+        applicationDeadline: '2026-08-20',
+        applicationPurpose: 'submission',
+        listenerRegistrationDeadline: '2026-10-10',
+      },
+    }, '2026-08-20'],
+  ])('SSR da fixture literal %s usa apenas a fase ativa', (_name, metadata, expected) => {
+    expect(buildProductValues(buildPost({ metadata })).deadline).toBe(expected);
+  });
+
+  test('episodio aberto identifica finalidade sem applicationPurpose global', () => {
+    const values = buildProductValues(buildPost({
+      metadata: {
+        application_episodes: [
+          { deadline: '2026-07-15', purpose: 'submission', status: 'closed' },
+          { deadline: '2026-09-15', purpose: 'registration', status: 'open' },
+        ],
+        dates: { submissionDeadline: '2026-07-15' },
+      },
+    }));
+
+    expect(values.deadline).toBe('2026-09-15');
+  });
+
+  test.each([
+    ['registration', 'registrationDeadline'],
+    ['submission', 'submissionDeadline'],
+    ['candidacy', 'candidacyDeadline'],
+    ['enrollment', 'enrollmentDeadline'],
+    ['listener_registration', 'listenerRegistrationDeadline'],
+  ])('SSR usa apenas o prazo declarado da fase %s', (purpose, alias) => {
+    const metadata = {
+      dates: {
+        applicationPurpose: purpose,
+        submissionDeadline: '2026-07-15',
+      },
+    };
+    metadata.dates[alias] = '2026-09-15T23:59:59-03:00';
+
+    expect(buildProductValues(buildPost({ metadata })).deadline).toBe('2026-09-15');
+  });
+
+  test('fase desconhecida ou conflitante falha fechada', () => {
+    expect(buildProductValues(buildPost({
+      metadata: {
+        applicationPurpose: 'future_unknown_phase',
+        deadline_date: '2026-09-15',
+      },
+    })).deadline).toBe('');
+
+    expect(buildProductValues(buildPost({
+      applicationPurpose: 'registration',
+      metadata: {
+        applicationPurpose: 'submission',
+        deadline_date: '2026-09-15',
+      },
+    })).deadline).toBe('');
   });
 });
