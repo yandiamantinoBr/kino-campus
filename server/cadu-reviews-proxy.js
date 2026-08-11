@@ -41,6 +41,13 @@ const CARRY_POLICIES_BY_SCOPE = new Map([
 ]);
 const REVIEW_LINK_POLICY = 'independent_version_bound';
 const MAX_REVIEW_PROVENANCE = 20;
+const COMMUNITY_RELEVANCE_CONTRACT = 'cadu-community-relevance-v1';
+const COMMUNITY_RELEVANCE_TIERS = new Set(['low', 'medium', 'high']);
+const COMMUNITY_RELEVANCE_KEYS = new Set([
+  'contract', 'score', 'tier', 'audiences', 'signals', 'recovery_actions',
+]);
+const COMMUNITY_RELEVANCE_IDENTIFIER = /^[a-z][a-z0-9_]{1,79}$/u;
+const MAX_COMMUNITY_RELEVANCE_VALUES = 20;
 const MAX_REVIEW_ISSUE_LENGTH = 100;
 const MAX_LEGACY_PIPELINE_INCIDENT_ISSUE_LENGTH = 180;
 const LIST_QUERY_KEYS = new Set(['origin', 'state', 'search', 'limit', 'offset']);
@@ -246,6 +253,14 @@ function validHttpsUrl(value) {
   }
 }
 
+function validActionUrl(value) {
+  if (validHttpsUrl(value)) return true;
+  if (value === null) return true;
+  return typeof value === 'string'
+    && value.length <= 320
+    && /^mailto:[^\s@/?#]+@[^\s@/?#]+\.[^\s@/?#]+$/u.test(value);
+}
+
 function reviewSchemaVersion(body) {
   if (!isPlainObject(body) || !Number.isSafeInteger(body.schema_version)) return null;
   const expectedContract = REVIEW_CONTRACTS.get(body.schema_version);
@@ -260,6 +275,34 @@ function hasUniqueValues(values) {
 
 function hasOnlyKeys(value, allowed) {
   return Object.keys(value).every((key) => allowed.has(key));
+}
+
+function validCommunityRelevanceList(value) {
+  return Array.isArray(value)
+    && value.length <= MAX_COMMUNITY_RELEVANCE_VALUES
+    && value.every((entry) => (
+      typeof entry === 'string' && COMMUNITY_RELEVANCE_IDENTIFIER.test(entry)
+    ))
+    && hasUniqueValues(value);
+}
+
+function validCommunityRelevance(value) {
+  const expectedTier = typeof value?.score === 'number'
+    ? (value.score >= 0.65 ? 'high' : value.score >= 0.45 ? 'medium' : 'low')
+    : null;
+  return isPlainObject(value)
+    && hasOnlyKeys(value, COMMUNITY_RELEVANCE_KEYS)
+    && Object.keys(value).length === COMMUNITY_RELEVANCE_KEYS.size
+    && value.contract === COMMUNITY_RELEVANCE_CONTRACT
+    && typeof value.score === 'number'
+    && Number.isFinite(value.score)
+    && value.score >= 0
+    && value.score <= 1
+    && COMMUNITY_RELEVANCE_TIERS.has(value.tier)
+    && value.tier === expectedTier
+    && validCommunityRelevanceList(value.audiences)
+    && validCommunityRelevanceList(value.signals)
+    && validCommunityRelevanceList(value.recovery_actions);
 }
 
 function validReviewLinks(value, item) {
@@ -387,7 +430,7 @@ function validReviewItem(item, schemaVersion) {
       || !ITEM_STATES.has(item.state)
       || !Number.isSafeInteger(item.created_at) || item.created_at < 0
       || !validHttpsUrl(item.source_url)
-      || !validHttpsUrl(item.action_url)
+      || !validActionUrl(item.action_url)
       || !validHttpsUrl(item.image_url)
       || !Array.isArray(item.issues)
       || !item.issues.every((value) => (
@@ -407,6 +450,8 @@ function validReviewItem(item, schemaVersion) {
       && (typeof item.artifact !== 'string'
         || item.artifact.length > MAX_ITEM_ARTIFACT
         || UNSAFE_TEXT_CONTROL.test(item.artifact))) return false;
+  if (Object.prototype.hasOwnProperty.call(item.metadata, 'community_relevance')
+      && !validCommunityRelevance(item.metadata.community_relevance)) return false;
   if (item.state === 'pending') {
     if (item.resolution !== null) return false;
   } else {

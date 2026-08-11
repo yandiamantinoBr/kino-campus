@@ -90,6 +90,40 @@
     curator_review_required: 'Encaminhado pelo Curador',
     dedup_preview_state_changed: 'A plataforma mudou depois da simulação'
   };
+  var COMMUNITY_RELEVANCE_TIERS = {
+    low: 'Baixa',
+    medium: 'Média',
+    high: 'Alta'
+  };
+  var COMMUNITY_AUDIENCE_LABELS = {
+    undergraduate_students: 'Estudantes de graduação',
+    postgraduate_students: 'Estudantes de pós-graduação',
+    technical_staff: 'Técnicos-administrativos',
+    faculty_researchers: 'Docentes e pesquisadores',
+    external_community: 'Comunidade externa'
+  };
+  var COMMUNITY_SIGNAL_LABELS = {
+    student_support_and_rights: 'Assistência, acolhimento e direitos',
+    funding_and_professional_path: 'Bolsas, financiamento e trajetória profissional',
+    academic_access: 'Acesso acadêmico',
+    research_and_innovation: 'Pesquisa e inovação',
+    public_service_and_extension: 'Serviço público e extensão',
+    culture_and_open_knowledge: 'Cultura e conhecimento aberto',
+    learning_and_participation: 'Formação e participação',
+    academic_public_event: 'Evento acadêmico aberto'
+  };
+  var COMMUNITY_RECOVERY_LABELS = {
+    verify_public_access: 'Confirmar se a atividade é aberta ao público',
+    verify_event_schedule: 'Confirmar data e horário do evento',
+    verify_event_location: 'Confirmar local ou acesso on-line',
+    verify_active_window: 'Confirmar se a oportunidade continua ativa',
+    find_action_url: 'Localizar o link oficial de inscrição ou ação',
+    corroborate_official_source: 'Corroborar as informações em outra fonte oficial'
+  };
+  var COMMUNITY_RELEVANCE_KEYS = [
+    'contract', 'score', 'tier', 'audiences', 'signals', 'recovery_actions'
+  ];
+  var COMMUNITY_IDENTIFIER = /^[a-z][a-z0-9_]{1,79}$/;
 
   function $(selector) {
     return document.querySelector(selector);
@@ -119,6 +153,14 @@
     }
   }
 
+  function safeActionUrl(value) {
+    var httpsUrl = safeHttpsUrl(value);
+    if (httpsUrl) return httpsUrl;
+    if (typeof value !== 'string'
+        || !/^mailto:[^\s@/?#]+@[^\s@/?#]+\.[^\s@/?#]+$/i.test(value)) return '';
+    return 'mailto:' + value.slice('mailto:'.length).toLowerCase();
+  }
+
   function fmtDate(unix) {
     var value = Number(unix);
     var date;
@@ -141,7 +183,93 @@
 
   function formatScore(value) {
     var number = Number(value);
-    return Number.isFinite(number) ? number.toFixed(2) : '';
+    return Number.isFinite(number) ? number.toFixed(2).replace('.', ',') : '';
+  }
+
+  function safeCommunityList(value) {
+    if (!Array.isArray(value) || value.length > 20) return null;
+    var unique = [];
+    for (var index = 0; index < value.length; index += 1) {
+      if (typeof value[index] !== 'string'
+          || !COMMUNITY_IDENTIFIER.test(value[index])
+          || unique.indexOf(value[index]) !== -1) return null;
+      unique.push(value[index]);
+    }
+    return unique;
+  }
+
+  function safeCommunityRelevance(item) {
+    var metadata = item && item.metadata;
+    var value = metadata && metadata.community_relevance;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    var keys = Object.keys(value);
+    if (keys.length !== COMMUNITY_RELEVANCE_KEYS.length
+        || keys.some(function (key) { return COMMUNITY_RELEVANCE_KEYS.indexOf(key) === -1; })
+        || value.contract !== 'cadu-community-relevance-v1'
+        || typeof value.score !== 'number'
+        || !Number.isFinite(value.score)
+        || value.score < 0
+        || value.score > 1
+        || !Object.prototype.hasOwnProperty.call(COMMUNITY_RELEVANCE_TIERS, value.tier)
+        || value.tier !== (value.score >= 0.65 ? 'high' : value.score >= 0.45 ? 'medium' : 'low')) {
+      return null;
+    }
+    var audiences = safeCommunityList(value.audiences);
+    var signals = safeCommunityList(value.signals);
+    var recoveryActions = safeCommunityList(value.recovery_actions);
+    if (!audiences || !signals || !recoveryActions) return null;
+    return {
+      score: value.score,
+      tier: value.tier,
+      audiences: audiences,
+      signals: signals,
+      recoveryActions: recoveryActions
+    };
+  }
+
+  function communityIdentifierLabel(identifier, labels) {
+    if (Object.prototype.hasOwnProperty.call(labels, identifier)) return labels[identifier];
+    var text = String(identifier || '').replace(/_/g, ' ');
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+  }
+
+  function communityValueGroup(title, icon, values, labels, modifier) {
+    var emptyCopy = title === 'Públicos'
+      ? 'Nenhum público identificado automaticamente.'
+      : 'Nenhum sinal identificado automaticamente.';
+    var content = values.length
+      ? '<ul>' + values.map(function (value) {
+        return '<li>' + escapeHtml(communityIdentifierLabel(value, labels)) + '</li>';
+      }).join('') + '</ul>'
+      : '<p class="kc-cadu-review-community__empty">' + escapeHtml(emptyCopy) + '</p>';
+    return '<div class="kc-cadu-review-community__group ' + escapeHtml(modifier) + '">' +
+      '<strong><i class="fas ' + escapeHtml(icon) + '" aria-hidden="true"></i> ' + escapeHtml(title) + '</strong>' +
+      content + '</div>';
+  }
+
+  function communityRelevancePanel(item) {
+    var relevance = safeCommunityRelevance(item);
+    if (!relevance) return '';
+    var score = Math.round(relevance.score * 100);
+    var tierLabel = COMMUNITY_RELEVANCE_TIERS[relevance.tier];
+    var recovery = relevance.recoveryActions.length
+      ? communityValueGroup(
+        'O que falta conferir',
+        'fa-list-check',
+        relevance.recoveryActions,
+        COMMUNITY_RECOVERY_LABELS,
+        'kc-cadu-review-community__group--recovery'
+      )
+      : '';
+    return '<section class="kc-cadu-review-community is-' + escapeHtml(relevance.tier) + '" aria-label="Relevância para a comunidade">' +
+      '<div class="kc-cadu-review-community__head"><h4>Relevância para a comunidade</h4>' +
+      '<span class="kc-cadu-review-community__tier">' +
+      '<span class="kc-sr-only">Relevância ' + escapeHtml(tierLabel.toLowerCase()) + ', pontuação ' + escapeHtml(score) + ' de 100</span>' +
+      '<span aria-hidden="true">' + escapeHtml(tierLabel) + ' · ' + escapeHtml(score) + '/100</span></span></div>' +
+      '<div class="kc-cadu-review-community__grid">' +
+      communityValueGroup('Públicos', 'fa-users', relevance.audiences, COMMUNITY_AUDIENCE_LABELS, 'kc-cadu-review-community__group--audiences') +
+      communityValueGroup('Sinais de valor', 'fa-bullseye', relevance.signals, COMMUNITY_SIGNAL_LABELS, 'kc-cadu-review-community__group--signals') +
+      recovery + '</div></section>';
   }
 
   function repassHintLabel(hint) {
@@ -162,24 +290,28 @@
     if (repass) {
       var deltaClass = '';
       var deltaText = '';
+      var deltaLabel = '';
       if (repass.delta !== null) {
         if (repass.delta > 0.005) {
           deltaClass = ' is-up';
-          deltaText = ' ▲ ' + Number(repass.delta).toFixed(2);
+          deltaText = ' ▲ ' + formatScore(repass.delta);
+          deltaLabel = ', aumento de ' + formatScore(repass.delta);
         } else if (repass.delta < -0.005) {
           deltaClass = ' is-down';
-          deltaText = ' ▼ ' + Math.abs(Number(repass.delta)).toFixed(2);
+          deltaText = ' ▼ ' + formatScore(Math.abs(Number(repass.delta)));
+          deltaLabel = ', redução de ' + formatScore(Math.abs(Number(repass.delta)));
         } else {
           deltaClass = ' is-flat';
           deltaText = ' =';
+          deltaLabel = ', sem alteração relevante';
         }
       }
-      return '<span class="kc-cadu-review-score' + deltaClass + '" title="Reanálise automática: ' + escapeHtml(repassHintLabel(repass.decision_hint)) + '">' +
-        escapeHtml(formatScore(repass.score)) + escapeHtml(deltaText) + '</span>';
+      return '<span class="kc-cadu-review-score' + deltaClass + '" title="Reanálise automática: ' + escapeHtml(repassHintLabel(repass.decision_hint)) + '" aria-label="Nota da reanálise: ' + escapeHtml(formatScore(repass.score)) + escapeHtml(deltaLabel) + '">' +
+        'Reanálise ' + escapeHtml(formatScore(repass.score)) + escapeHtml(deltaText) + '</span>';
     }
     if (base !== null) {
-      return '<span class="kc-cadu-review-score is-base" title="Nota original do Curador">' +
-        escapeHtml(formatScore(base)) + '</span>';
+      return '<span class="kc-cadu-review-score is-base" title="Nota original do Curador" aria-label="Nota original do Curador: ' + escapeHtml(formatScore(base)) + '">' +
+        'Curador ' + escapeHtml(formatScore(base)) + '</span>';
     }
     return '';
   }
@@ -307,12 +439,13 @@
   function reviewLinks(item) {
     var links = [];
     var sourceUrl = safeHttpsUrl(item.source_url);
-    var actionUrl = safeHttpsUrl(item.action_url);
+    var actionUrl = safeActionUrl(item.action_url);
     if (sourceUrl) {
       links.push('<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir fonte</a>');
     }
     if (actionUrl && actionUrl !== sourceUrl) {
-      links.push('<a href="' + escapeHtml(actionUrl) + '" target="_blank" rel="noopener"><i class="fas fa-link" aria-hidden="true"></i> Abrir ação</a>');
+      var actionTarget = actionUrl.indexOf('mailto:') === 0 ? '' : ' target="_blank" rel="noopener"';
+      links.push('<a href="' + escapeHtml(actionUrl) + '"' + actionTarget + '><i class="fas fa-link" aria-hidden="true"></i> Abrir ação</a>');
     }
     if (item.run_id) {
       links.push('<button type="button" data-review-run="' + escapeHtml(item.run_id) + '"><i class="fas fa-gears" aria-hidden="true"></i> Abrir run ' + escapeHtml(item.run_id.slice(0, 8)) + '</button>');
@@ -413,6 +546,7 @@
         '</div>' +
         '<h3>' + escapeHtml(item.title) + '</h3>' +
         (item.summary ? '<p class="kc-cadu-review-item__summary">' + escapeHtml(item.summary) + '</p>' : '') +
+        communityRelevancePanel(item) +
         reviewProvenance(item) +
         repassInfo +
         '<div class="kc-cadu-review-item__issues">' + issues + '</div>' +

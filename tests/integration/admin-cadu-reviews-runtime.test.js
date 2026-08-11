@@ -89,6 +89,17 @@ function centralV2Item() {
   return item;
 }
 
+function communityRelevance() {
+  return {
+    contract: 'cadu-community-relevance-v1',
+    score: 0.84,
+    tier: 'high',
+    audiences: ['undergraduate_students', 'postgraduate_students', 'external_community'],
+    signals: ['student_support_and_rights', 'cross_campus_collaboration'],
+    recovery_actions: ['find_action_url', 'corroborate_official_source']
+  };
+}
+
 function createPage(apiFetchResponse) {
   const dom = new JSDOM(`<!doctype html><html><body>
     <span id="badge-reviews"></span>
@@ -228,6 +239,136 @@ describe('Admin Cadu review center runtime', () => {
     expect(provenance.textContent).toContain('2 evidências relacionadas em Pipeline e Feed Coletado');
     expect(provenance.textContent).toContain('decisões independentes por versão');
     expect(page.window.document.getElementById('reviews-list').textContent).not.toContain(REVIEW_KEY);
+    page.dom.window.close();
+  });
+
+  test('renders bounded community relevance as accessible editorial context without internal fields', async () => {
+    const item = centralV2Item();
+    item.metadata.score = 0.72;
+    item.metadata.community_relevance = communityRelevance();
+    item.metadata.source_revision = 'c'.repeat(64);
+    const apiFetchResponse = jest.fn(async () => ({
+      ok: true,
+      data: {
+        schema_version: 2,
+        contract_version: 'cadu-review-center-v2',
+        items: [item],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    }));
+    const page = createPage(apiFetchResponse);
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('.kc-cadu-review-community'));
+    const panel = page.window.document.querySelector('.kc-cadu-review-community');
+    const tier = panel.querySelector('.kc-cadu-review-community__tier');
+    const curatorScore = page.window.document.querySelector('.kc-cadu-review-score.is-base');
+    expect(panel.getAttribute('aria-label')).toBe('Relevância para a comunidade');
+    expect(tier.hasAttribute('aria-label')).toBe(false);
+    expect(tier.querySelector('.kc-sr-only').textContent).toBe('Relevância alta, pontuação 84 de 100');
+    expect(curatorScore.textContent).toBe('Curador 0,72');
+    expect(curatorScore.getAttribute('aria-label')).toBe('Nota original do Curador: 0,72');
+    expect(panel.querySelectorAll('ul')).toHaveLength(3);
+    expect(panel.textContent).toContain('Estudantes de graduação');
+    expect(panel.textContent).toContain('Estudantes de pós-graduação');
+    expect(panel.textContent).toContain('Comunidade externa');
+    expect(panel.textContent).toContain('Assistência, acolhimento e direitos');
+    expect(panel.textContent).toContain('Cross campus collaboration');
+    expect(panel.textContent).toContain('Localizar o link oficial de inscrição ou ação');
+    expect(panel.textContent).toContain('Corroborar as informações em outra fonte oficial');
+    const listText = page.window.document.getElementById('reviews-list').textContent;
+    expect(listText).not.toContain('cadu-community-relevance-v1');
+    expect(listText).not.toContain(REVIEW_KEY);
+    expect(listText).not.toContain('c'.repeat(64));
+    page.dom.window.close();
+  });
+
+  test('renders unknown inherited-property identifiers as inert fallback text', async () => {
+    const item = centralV2Item();
+    item.metadata.community_relevance = {
+      ...communityRelevance(),
+      audiences: ['constructor'],
+      signals: ['future_signal'],
+      recovery_actions: ['future_action']
+    };
+    const page = createPage(jest.fn(async () => ({
+      ok: true,
+      data: {
+        schema_version: 2,
+        contract_version: 'cadu-review-center-v2',
+        items: [item],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    })));
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('.kc-cadu-review-community'));
+    const panelText = page.window.document.querySelector('.kc-cadu-review-community').textContent;
+    expect(panelText).toContain('Constructor');
+    expect(panelText).toContain('Future signal');
+    expect(panelText).toContain('Future action');
+    expect(panelText).not.toContain('[native code]');
+    expect(panelText).not.toContain('function Object');
+    page.dom.window.close();
+  });
+
+  test('suppresses malformed community relevance when the controller is invoked without the proxy', async () => {
+    const item = centralItem();
+    item.metadata.community_relevance = {
+      ...communityRelevance(),
+      score: '0.84',
+      debug_hash: 'd'.repeat(64),
+      audiences: ['undergraduate_students<script>']
+    };
+    const apiFetchResponse = jest.fn(async () => ({
+      ok: true,
+      data: {
+        items: [item],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    }));
+    const page = createPage(apiFetchResponse);
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('[data-review-item]'));
+    expect(page.window.document.querySelector('.kc-cadu-review-community')).toBeNull();
+    expect(page.window.document.getElementById('reviews-list').textContent).not.toContain('debug_hash');
+    expect(page.window.document.querySelector('script')).toBeNull();
+    page.dom.window.close();
+  });
+
+  test('renders a strict email action without opening an unsafe browsing context', async () => {
+    const item = centralItem();
+    item.action_url = 'mailto:bolsas@ufg.br';
+    const page = createPage(jest.fn(async () => ({
+      ok: true,
+      data: {
+        items: [item],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    })));
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('a[href="mailto:bolsas@ufg.br"]'));
+    const action = page.window.document.querySelector('a[href="mailto:bolsas@ufg.br"]');
+    expect(action.textContent).toContain('Abrir ação');
+    expect(action.hasAttribute('target')).toBe(false);
+    expect(action.hasAttribute('rel')).toBe(false);
     page.dom.window.close();
   });
 
