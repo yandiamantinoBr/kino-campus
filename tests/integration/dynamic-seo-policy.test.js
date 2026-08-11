@@ -121,6 +121,30 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(noindexSsr.body).toContain('noindex,follow,noarchive');
   });
 
+  test('SSR da fase de ouvintes nao injeta expires_at nem submissao encerrada como Prazo', async () => {
+    const semana = buildPost({
+      id: 'semana-filosofia',
+      title: 'Semana de Filosofia - inscricoes para ouvintes',
+      expires_at: '2026-08-15T23:59:59-03:00',
+      metadata: {
+        dates: {
+          applicationPurpose: 'listener_registration',
+          applicationDeadline: null,
+          submissionDeadline: '2026-07-15',
+        },
+      },
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [semana] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: semana.id } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).not.toContain('Prazo: 2026-08-15');
+    expect(response.body).not.toContain('Prazo: 2026-07-15');
+    expect(response.body).not.toContain('"validThrough"');
+  });
+
   test('serializa JSON-LD sem permitir encerramento de script ou separadores Unicode crus', () => {
     const data = { text: '</script><tag>&\u2028\u2029' };
     const serialized = serializeJsonForHtml(data);
