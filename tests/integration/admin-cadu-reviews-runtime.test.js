@@ -349,6 +349,29 @@ describe('Admin Cadu review center runtime', () => {
     page.dom.window.close();
   });
 
+  test('renders a strict email action without opening an unsafe browsing context', async () => {
+    const item = centralItem();
+    item.action_url = 'mailto:bolsas@ufg.br';
+    const page = createPage(jest.fn(async () => ({
+      ok: true,
+      data: {
+        items: [item],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    })));
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('a[href="mailto:bolsas@ufg.br"]'));
+    const action = page.window.document.querySelector('a[href="mailto:bolsas@ufg.br"]');
+    expect(action.textContent).toContain('Abrir ação');
+    expect(action.hasAttribute('target')).toBe(false);
+    expect(action.hasAttribute('rel')).toBe(false);
+    page.dom.window.close();
+  });
+
   test('requires a rejection note and records an editorial-only versioned decision', async () => {
     const calls = [];
     const apiFetchResponse = jest.fn(async (url, options = {}) => {

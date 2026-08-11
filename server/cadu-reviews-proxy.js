@@ -253,6 +253,14 @@ function validHttpsUrl(value) {
   }
 }
 
+function validActionUrl(value) {
+  if (validHttpsUrl(value)) return true;
+  if (value === null) return true;
+  return typeof value === 'string'
+    && value.length <= 320
+    && /^mailto:[^\s@/?#]+@[^\s@/?#]+\.[^\s@/?#]+$/u.test(value);
+}
+
 function reviewSchemaVersion(body) {
   if (!isPlainObject(body) || !Number.isSafeInteger(body.schema_version)) return null;
   const expectedContract = REVIEW_CONTRACTS.get(body.schema_version);
@@ -422,7 +430,7 @@ function validReviewItem(item, schemaVersion) {
       || !ITEM_STATES.has(item.state)
       || !Number.isSafeInteger(item.created_at) || item.created_at < 0
       || !validHttpsUrl(item.source_url)
-      || !validHttpsUrl(item.action_url)
+      || !validActionUrl(item.action_url)
       || !validHttpsUrl(item.image_url)
       || !Array.isArray(item.issues)
       || !item.issues.every((value) => (

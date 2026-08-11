@@ -153,6 +153,14 @@
     }
   }
 
+  function safeActionUrl(value) {
+    var httpsUrl = safeHttpsUrl(value);
+    if (httpsUrl) return httpsUrl;
+    if (typeof value !== 'string'
+        || !/^mailto:[^\s@/?#]+@[^\s@/?#]+\.[^\s@/?#]+$/i.test(value)) return '';
+    return 'mailto:' + value.slice('mailto:'.length).toLowerCase();
+  }
+
   function fmtDate(unix) {
     var value = Number(unix);
     var date;
@@ -431,12 +439,13 @@
   function reviewLinks(item) {
     var links = [];
     var sourceUrl = safeHttpsUrl(item.source_url);
-    var actionUrl = safeHttpsUrl(item.action_url);
+    var actionUrl = safeActionUrl(item.action_url);
     if (sourceUrl) {
       links.push('<a href="' + escapeHtml(sourceUrl) + '" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir fonte</a>');
     }
     if (actionUrl && actionUrl !== sourceUrl) {
-      links.push('<a href="' + escapeHtml(actionUrl) + '" target="_blank" rel="noopener"><i class="fas fa-link" aria-hidden="true"></i> Abrir ação</a>');
+      var actionTarget = actionUrl.indexOf('mailto:') === 0 ? '' : ' target="_blank" rel="noopener"';
+      links.push('<a href="' + escapeHtml(actionUrl) + '"' + actionTarget + '><i class="fas fa-link" aria-hidden="true"></i> Abrir ação</a>');
     }
     if (item.run_id) {
       links.push('<button type="button" data-review-run="' + escapeHtml(item.run_id) + '"><i class="fas fa-gears" aria-hidden="true"></i> Abrir run ' + escapeHtml(item.run_id.slice(0, 8)) + '</button>');

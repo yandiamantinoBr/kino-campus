@@ -540,6 +540,30 @@ describe('Cadu central review proxy', () => {
     }
   });
 
+  test('accepts a strict mailto action and rejects mail headers', async () => {
+    const query = parseCentralReviewListQuery({});
+    const valid = listResponse(query);
+    valid.items[0].action_url = 'mailto:bolsas@ufg.br';
+    global.fetch.mockResolvedValueOnce(upstreamResponse(200, valid));
+    const accepted = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, accepted, {
+      path: 'reviews',
+      query: {},
+    });
+    expect(accepted.statusCode).toBe(200);
+
+    const invalid = listResponse(query);
+    invalid.items[0].action_url = 'mailto:bolsas@ufg.br?bcc=attacker@example.org';
+    global.fetch.mockResolvedValueOnce(upstreamResponse(200, invalid));
+    const rejected = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, rejected, {
+      path: 'reviews',
+      query: {},
+    });
+    expect(rejected.statusCode).toBe(502);
+    expect(rejected.body).toEqual({ error: 'invalid_cadu_api_response' });
+  });
+
   test('dual-decodes v1 and v2 while validating v2 identity and provenance fail-closed', async () => {
     const query = parseCentralReviewListQuery({ origin: 'pipeline', state: 'pending' });
     global.fetch.mockResolvedValueOnce(upstreamResponse(200, v2ListResponse(query)));
