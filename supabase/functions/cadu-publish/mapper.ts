@@ -10,6 +10,7 @@
 
 import {
   CaduItem,
+  actionFingerprintMetadataForItem,
   categoryLabel,
   ModuleKey,
   normalizeCategoryForModule,
@@ -717,14 +718,8 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const sourceId = normalizeWhitespace(item.sourceId).slice(0, 500);
   const sourceTitle = normalizeWhitespace(item.sourceTitle ?? item.source_title).slice(0, 1_000);
   const sourceRegistryId = normalizeWhitespace(item.sourceRegistryId || item.source_registry_id).slice(0, 200);
-  const rawActionFingerprints = Array.isArray(item.actionFingerprints)
-    ? item.actionFingerprints
-    : (Array.isArray(item.action_fingerprints) ? item.action_fingerprints : []);
-  const actionFingerprints = uniq(
-    rawActionFingerprints
-      .map((value) => normalizeWhitespace(value).slice(0, 200))
-      .filter(Boolean),
-  ).slice(0, 20);
+  const actionFingerprintMetadata = actionFingerprintMetadataForItem(item);
+  const actionFingerprints = actionFingerprintMetadata.fingerprints;
   const extractedLinks = Array.isArray(item.extractedLinks) ? item.extractedLinks.slice(0, 12) : [];
   const relevantLinks = item.relevantLinks && typeof item.relevantLinks === "object" && !Array.isArray(item.relevantLinks)
     ? Object.fromEntries(
@@ -764,6 +759,12 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     source_title: sourceTitle,
     source_registry_id: sourceRegistryId,
     action_fingerprints: actionFingerprints,
+    ...(actionFingerprintMetadata.contract
+      ? {
+        action_fingerprint_contract: actionFingerprintMetadata.contract,
+        action_fingerprint_v2: actionFingerprintMetadata.v2Fingerprints,
+      }
+      : {}),
     content_hash: lightHash(`${item.title || ""}\n${item.text || item.description || ""}`),
     original_title: normalizeWhitespace(item.title),
     image_url: safeExternalImage,

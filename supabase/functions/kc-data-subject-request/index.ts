@@ -1348,6 +1348,8 @@ export async function buildDataExport(
         "unrecognized_metadata",
         "action_evidence",
         "action_fingerprints",
+        "action_fingerprint_contract",
+        "action_fingerprint_v2",
         "closed_by",
         "deleted_by",
         "hidden_by_audit",

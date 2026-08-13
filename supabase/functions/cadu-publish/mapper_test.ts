@@ -67,6 +67,54 @@ Deno.test("Cadu mapper preserves raw source title, registry lineage and action f
   }]);
 });
 
+Deno.test("Cadu mapper persists only a complete and exact action fingerprint v2 contract", () => {
+  const first = "a".repeat(64);
+  const second = "b".repeat(64);
+  const valid = {
+    module: "oportunidades",
+    category: "editais",
+    title: "CONPEEX abre cadastro de avaliadores pos-graduandos",
+    description: "Cadastro aberto para avaliadores pos-graduandos da UFG.",
+    sourceUrl: "https://proex.ufg.br/n/203312",
+    sourceId: "proex:203312",
+    actionFingerprints: [first, second],
+    actionFingerprintContract: "cadu-opportunity-action-v2",
+    actionFingerprintV2: [second, first],
+  } satisfies CaduItem;
+
+  const mapped = mapItemToPost(valid);
+  assert.deepEqual(mapped.row.metadata.action_fingerprints, [first, second]);
+  assert.equal(
+    mapped.row.metadata.action_fingerprint_contract,
+    "cadu-opportunity-action-v2",
+  );
+  assert.deepEqual(mapped.row.metadata.action_fingerprint_v2, [second, first]);
+  assert.equal(validateItem(valid).ok, true);
+
+  const legacyPublisherShape = {
+    ...valid,
+    actionFingerprintContract: "",
+    actionFingerprintV2: [],
+  } satisfies CaduItem;
+  const mappedLegacy = mapItemToPost(legacyPublisherShape);
+  assert.equal(validateItem(legacyPublisherShape).ok, true);
+  assert.equal(mappedLegacy.row.metadata.action_fingerprint_contract, undefined);
+  assert.equal(mappedLegacy.row.metadata.action_fingerprint_v2, undefined);
+
+  const invalidItems: CaduItem[] = [
+    { ...valid, actionFingerprintContract: "future-v99" },
+    { ...valid, actionFingerprintV2: [first] },
+    { ...valid, actionFingerprintV2: [first, first] },
+    { ...valid, actionFingerprintV2: ["A".repeat(64), second] },
+    { ...valid, actionFingerprintContract: undefined, actionFingerprintV2: [first, second] },
+    { ...valid, actionFingerprintContract: undefined, actionFingerprintV2: "" as unknown as string[] },
+  ];
+  for (const invalid of invalidItems) {
+    assert.equal(validateItem(invalid).ok, false);
+    assert.throws(() => mapItemToPost(invalid), TypeError);
+  }
+});
+
 Deno.test("Cadu mapper aligns expiry with an event end or opportunity deadline", () => {
   const event = mapItemToPost({
     module: "eventos",
