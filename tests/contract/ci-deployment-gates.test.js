@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 
 const packageJson = JSON.parse(read('package.json'));
+const packageLock = JSON.parse(read('package-lock.json'));
 const essential = read('.github/workflows/essential-validation.yml');
 const edgeDeploy = read('.github/workflows/edge-deploy.yml');
 const edgeSourceComparator = read('scripts/compare-edge-function-source.js');
@@ -38,6 +39,22 @@ describe('CI and deployment safety contracts', () => {
       expect(workflow).toContain("node-version: '24'");
       expect(workflow).not.toMatch(/node-version:\s*['\"]?20/);
     });
+  });
+
+  test('keeps Lighthouse browser extraction off the vulnerable extract-zip chain', () => {
+    expect(packageJson.overrides['@puppeteer/browsers']).toBe('3.2.0');
+    const browserPackage =
+      packageLock.packages[
+        'node_modules/puppeteer-core/node_modules/@puppeteer/browsers'
+      ];
+    expect(browserPackage.version).toBe('3.2.0');
+    expect(browserPackage.dependencies['modern-tar']).toBe('^0.8.0');
+    expect(browserPackage.dependencies['extract-zip']).toBeUndefined();
+    expect(
+      Object.keys(packageLock.packages).some((entry) =>
+        /(^|\/)node_modules\/extract-zip$/.test(entry)
+      )
+    ).toBe(false);
   });
 
   test('rebuilds and tests the active Supabase migration chain in CI', () => {

@@ -91,6 +91,7 @@
     "chrome-launcher": "1.2.1",
     "ip-address": "10.4.0",
     "socks": "2.8.9",
+    "@puppeteer/browsers": "3.2.0",
     "@vercel/og": {
       "sharp": "0.35.0"
     },
