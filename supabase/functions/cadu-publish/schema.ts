@@ -359,6 +359,8 @@ export interface CaduItem {
   sourceTitle?: string;
   sourceRegistryId?: string;
   actionFingerprints?: string[];
+  actionFingerprintContract?: string;
+  actionFingerprintV2?: string[];
   relevantLinks?: Record<string, unknown>;
   actionEvidence?: Array<Record<string, unknown>>;
   sourceName?: string;
@@ -382,6 +384,71 @@ export interface CaduItem {
   [k: string]: unknown;
 }
 
+export const ACTION_FINGERPRINT_V2_CONTRACT = "cadu-opportunity-action-v2";
+const SHA256_HEX = /^[a-f0-9]{64}$/;
+
+export interface ActionFingerprintMetadata {
+  fingerprints: string[];
+  contract: string;
+  v2Fingerprints: string[];
+}
+
+function normalizedLegacyFingerprints(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value
+    .map((entry) => String(entry ?? "").trim().slice(0, 200))
+    .filter(Boolean))].slice(0, 20);
+}
+
+function strictV2Fingerprints(value: unknown, field: string): string[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 20) {
+    throw new TypeError(`${field} deve conter de 1 a 20 hashes SHA-256.`);
+  }
+  if (value.some((entry) => typeof entry !== "string" || !SHA256_HEX.test(entry))) {
+    throw new TypeError(`${field} contem hash SHA-256 invalido.`);
+  }
+  if (new Set(value).size !== value.length) {
+    throw new TypeError(`${field} contem hashes duplicados.`);
+  }
+  return [...value];
+}
+
+// The v2 marker is authoritative only when both arrays are exact, canonical,
+// and equal. This prevents an Edge invocation from laundering a legacy or
+// malformed fingerprint into the stronger cross-source identity contract.
+export function actionFingerprintMetadataForItem(item: CaduItem): ActionFingerprintMetadata {
+  const record = item as Record<string, unknown>;
+  const rawFingerprints = item.actionFingerprints ?? record.action_fingerprints;
+  const rawContract = item.actionFingerprintContract ?? record.action_fingerprint_contract;
+  const rawV2 = item.actionFingerprintV2 ?? record.action_fingerprint_v2;
+  const contract = typeof rawContract === "string" ? rawContract.trim() : "";
+
+  if (!contract) {
+    if (rawV2 !== undefined && rawV2 !== null) {
+      if (!Array.isArray(rawV2) || rawV2.length !== 0) {
+        throw new TypeError("actionFingerprintV2 exige actionFingerprintContract v2.");
+      }
+    }
+    return {
+      fingerprints: normalizedLegacyFingerprints(rawFingerprints),
+      contract: "",
+      v2Fingerprints: [],
+    };
+  }
+  if (contract !== ACTION_FINGERPRINT_V2_CONTRACT) {
+    throw new TypeError(`actionFingerprintContract desconhecido: "${contract}".`);
+  }
+
+  const fingerprints = strictV2Fingerprints(rawFingerprints, "actionFingerprints");
+  const v2Fingerprints = strictV2Fingerprints(rawV2, "actionFingerprintV2");
+  const expected = [...fingerprints].sort();
+  const declared = [...v2Fingerprints].sort();
+  if (expected.length !== declared.length || expected.some((value, index) => value !== declared[index])) {
+    throw new TypeError("actionFingerprintV2 deve coincidir exatamente com actionFingerprints.");
+  }
+  return { fingerprints, contract, v2Fingerprints };
+}
+
 function hasText(v: unknown): boolean {
   return !!String(v ?? "").trim();
 }
@@ -399,6 +466,12 @@ export function validateItem(item: CaduItem): ValidationResult {
   if (!hasText(item.title)) errors.push("title obrigatorio.");
   if (!hasText(item.description) && !hasText(item.summary) && !hasText(item.text)) {
     errors.push("description (ou summary/text) obrigatorio.");
+  }
+
+  try {
+    actionFingerprintMetadataForItem(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
   }
 
   const allowedCategories = categoriesForModule(module);
