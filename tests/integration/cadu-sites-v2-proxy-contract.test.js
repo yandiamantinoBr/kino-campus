@@ -279,7 +279,8 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  test('preserves GET root compatibility without forwarding the admin JWT', async () => {
+  test('normalizes an edge BOM in the server token without forwarding the admin JWT', async () => {
+    process.env.CADU_API_TOKEN = '\ufeffserver-secret\r\n';
     global.fetch.mockResolvedValue(upstreamResponse({ body: [{ name: 'PRPG' }] }));
     const res = createResponse();
 

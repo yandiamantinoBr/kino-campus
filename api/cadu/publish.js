@@ -5,7 +5,7 @@
 // CADU_API_TOKEN permanece apenas no serverless.
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
-import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
+import { fetchCaduUpstream, normalizeCaduApiToken } from '../../server/cadu-upstream-fetch.js';
 
 const REVIEW_POLICY = Object.freeze({
   intent: 'review',
@@ -115,7 +115,7 @@ export default async function handler(req, res) {
   if (!admin) return;
 
   const apiUrl = process.env.CADU_API_URL;
-  const token = process.env.CADU_API_TOKEN;
+  const token = normalizeCaduApiToken(process.env.CADU_API_TOKEN);
   if (!apiUrl || !token) {
     return res.status(503).json({ error: 'cadu_api_not_configured', message: 'CADU_API_URL/CADU_API_TOKEN ausentes' });
   }

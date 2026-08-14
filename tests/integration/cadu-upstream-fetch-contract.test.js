@@ -8,6 +8,7 @@ const path = require('node:path');
 const {
   createCaduUpstreamDispatcher,
   fetchCaduUpstream,
+  normalizeCaduApiToken,
 } = require('../../server/cadu-upstream-fetch.js');
 
 const ROOT = path.resolve(__dirname, '../..');
@@ -35,6 +36,17 @@ describe('Cadu upstream transport hardening', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     jest.restoreAllMocks();
+  });
+
+  test('normalizes an edge BOM but rejects non-ASCII and control bytes before headers', () => {
+    expect(normalizeCaduApiToken('server-secret')).toBe('server-secret');
+    expect(normalizeCaduApiToken('\ufeffserver-secret\r\n')).toBe('server-secret');
+    expect(normalizeCaduApiToken('server-secret\ufeffsuffix')).toBe('');
+    expect(normalizeCaduApiToken('server secret')).toBe('');
+    expect(normalizeCaduApiToken('server-secret\nheader')).toBe('');
+    expect(normalizeCaduApiToken('á')).toBe('');
+    expect(normalizeCaduApiToken('x'.repeat(4097))).toBe('');
+    expect(normalizeCaduApiToken(null)).toBe('');
   });
 
   test('adds the scoped dispatcher while preserving the request and signal exactly once', async () => {
@@ -170,6 +182,7 @@ describe('Cadu upstream transport hardening', () => {
     for (const [relativePath, contract] of surfaces) {
       const source = read(relativePath);
       expect(source).toContain('cadu-upstream-fetch.js');
+      expect(source).toContain('normalizeCaduApiToken(process.env.CADU_API_TOKEN)');
       expect(source).not.toMatch(/\bfetch\s*\(/u);
       expect(source.match(/\bfetchCaduUpstream\s*\(/gu) || []).toHaveLength(contract.calls);
       for (const deadline of contract.deadlines) expect(source).toContain(deadline);

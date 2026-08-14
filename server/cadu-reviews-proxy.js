@@ -6,7 +6,7 @@
 // server-side secret to the browser. Editorial approval never publishes.
 
 import { requireCaduAdmin } from './cadu-auth.mjs';
-import { fetchCaduUpstream } from './cadu-upstream-fetch.js';
+import { fetchCaduUpstream, normalizeCaduApiToken } from './cadu-upstream-fetch.js';
 import {
   buildCaduReviewSignatureHeaders,
   readLimitedSourceReviewResponse,
@@ -767,9 +767,7 @@ export async function handleCaduReviews(req, res, options = {}) {
   const apiUrl = typeof process.env.CADU_API_URL === 'string'
     ? process.env.CADU_API_URL.trim()
     : '';
-  const token = typeof process.env.CADU_API_TOKEN === 'string'
-    ? process.env.CADU_API_TOKEN.trim()
-    : '';
+  const token = normalizeCaduApiToken(process.env.CADU_API_TOKEN);
   if (!apiUrl || !token) return sendError(res, 503, 'cadu_api_not_configured');
 
   let targetUrl;
