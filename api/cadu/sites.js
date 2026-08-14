@@ -5,7 +5,7 @@
 // into the upstream URL: every accepted route is rebuilt from known segments.
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
-import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
+import { fetchCaduUpstream, normalizeCaduApiToken } from '../../server/cadu-upstream-fetch.js';
 import { getCaduSourceRegistryMirror } from '../../server/cadu-source-registry-mirror.js';
 import {
   buildCaduReviewSignatureHeaders,
@@ -398,9 +398,7 @@ export default async function handler(req, res) {
   const apiUrl = typeof process.env.CADU_API_URL === 'string'
     ? process.env.CADU_API_URL.trim()
     : '';
-  const token = typeof process.env.CADU_API_TOKEN === 'string'
-    ? process.env.CADU_API_TOKEN.trim()
-    : '';
+  const token = normalizeCaduApiToken(process.env.CADU_API_TOKEN);
   if (!apiUrl || !token) {
     if (route.kind === 'registry_list') {
       const mirrorResponse = serveRegistryMirror(res, 503);

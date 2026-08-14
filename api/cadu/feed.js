@@ -6,7 +6,7 @@
 // - POST /api/cadu/feed?path={chunk_id}/ask
 
 import { requireCaduAdmin, stripCaduAdminQuery } from '../../server/cadu-auth.mjs';
-import { fetchCaduUpstream } from '../../server/cadu-upstream-fetch.js';
+import { fetchCaduUpstream, normalizeCaduApiToken } from '../../server/cadu-upstream-fetch.js';
 
 export const config = {
   maxDuration: 300,
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
   }
 
   const apiUrl = process.env.CADU_API_URL;
-  const token = process.env.CADU_API_TOKEN;
+  const token = normalizeCaduApiToken(process.env.CADU_API_TOKEN);
   if (!apiUrl || !token) {
     return res.status(503).json({ error: 'cadu_api_not_configured' });
   }

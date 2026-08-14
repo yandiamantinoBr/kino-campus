@@ -9,7 +9,7 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { TextDecoder } from 'node:util';
 import { requireCaduAdmin } from './cadu-auth.mjs';
-import { fetchCaduUpstream } from './cadu-upstream-fetch.js';
+import { fetchCaduUpstream, normalizeCaduApiToken } from './cadu-upstream-fetch.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SOURCE_ID = /^web\.[a-z0-9][a-z0-9.-]{0,115}$/;
@@ -419,9 +419,7 @@ export async function handleCaduSourceReviews(req, res, options = {}) {
   const apiUrl = typeof process.env.CADU_API_URL === 'string'
     ? process.env.CADU_API_URL.trim()
     : '';
-  const token = typeof process.env.CADU_API_TOKEN === 'string'
-    ? process.env.CADU_API_TOKEN.trim()
-    : '';
+  const token = normalizeCaduApiToken(process.env.CADU_API_TOKEN);
   if (!apiUrl || !token) return sendError(res, 503, 'cadu_api_not_configured');
 
   let targetUrl;

@@ -1,8 +1,18 @@
 import { Agent } from 'undici';
 
 const CADU_FAMILY_ATTEMPT_TIMEOUT_MS = 250;
+const MAX_CADU_API_TOKEN_CHARS = 4096;
 const SAFE_LOG_IDENTIFIER = /^[A-Za-z0-9_.:-]{1,96}$/u;
+const SAFE_CADU_API_TOKEN = /^[\x21-\x7e]+$/u;
 const MAX_CAUSE_NODES = 8;
+
+export function normalizeCaduApiToken(value) {
+  if (typeof value !== 'string') return '';
+  const normalized = value.trim();
+  if (!normalized || normalized.length > MAX_CADU_API_TOKEN_CHARS
+      || !SAFE_CADU_API_TOKEN.test(normalized)) return '';
+  return normalized;
+}
 
 function safeLogIdentifier(value, fallback = 'unknown') {
   return typeof value === 'string' && SAFE_LOG_IDENTIFIER.test(value)
