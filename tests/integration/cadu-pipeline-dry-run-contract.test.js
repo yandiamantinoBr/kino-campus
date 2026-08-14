@@ -42,6 +42,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
   const buildPipelineRunRequest = extractFunction('buildPipelineRunRequest');
   const pipelineStageActionModes = extractFunction('pipelineStageActionModes');
   const pipelineStageModePrecondition = extractFunction('pipelineStageModePrecondition');
+  const pipelineRealRunApprovalGated = extractFunction('pipelineRealRunApprovalGated');
   const lockPipelineActionButtons = extractFunction('lockPipelineActionButtons');
   const isSafePipelineRunId = extractFunction('isSafePipelineRunId');
   const normalizePipelineStage = Function(
@@ -335,6 +336,26 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(nullableReason.live_disabled_reason).toBe('');
     const legacy = normalizePipelineStage(base, now);
     expect(legacy.live_enabled).toBe(true);
+  });
+
+  test('real run is auto-approved when the broker is enabled', () => {
+    const gatedStage = { live_enabled: false };
+    const openStage = { live_enabled: true };
+    const capabilities = {
+      explicit_dry_run: true,
+      explicit_run_mode_routes: true,
+      publish_approval: { enabled: true },
+    };
+    const disabledBroker = {
+      explicit_dry_run: true,
+      explicit_run_mode_routes: true,
+      publish_approval: { enabled: false },
+    };
+    expect(pipelineRealRunApprovalGated(gatedStage, false, capabilities)).toBe(false);
+    expect(pipelineRealRunApprovalGated(gatedStage, false, disabledBroker)).toBe(true);
+    expect(pipelineRealRunApprovalGated(gatedStage, false, {})).toBe(true);
+    expect(pipelineRealRunApprovalGated(openStage, false, disabledBroker)).toBe(false);
+    expect(pipelineRealRunApprovalGated(gatedStage, true, disabledBroker)).toBe(false);
   });
 
   test('locking one action locks its sibling and restores original states and markup', () => {

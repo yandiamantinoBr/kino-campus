@@ -6042,6 +6042,13 @@
     };
   }
 
+  function pipelineRealRunApprovalGated(stage, dryRun, capabilities) {
+    if (!stage || dryRun !== false) return false;
+    if (stage.live_enabled !== false) return false;
+    var approval = capabilities && capabilities.publish_approval;
+    return !(approval && approval.enabled === true);
+  }
+
   function lockPipelineActionButtons(clickedButton) {
     var parent = clickedButton && clickedButton.parentElement;
     var buttons = parent ? Array.prototype.slice.call(parent.querySelectorAll('.kc-pipeline-stage__btn')) : (clickedButton ? [clickedButton] : []);
@@ -6082,7 +6089,7 @@
     return labels[effect] || effect;
   }
 
-  function renderStagePreflight(s) {
+  function renderStagePreflight(s, capabilities) {
     if (!s.preflight) {
       return '<div class="kc-pipeline-stage__preflight">' + stageChip('verificação prévia indisponível', 'danger') +
         stageChip('somente leitura', 'warning') + '</div>' +
@@ -6107,10 +6114,14 @@
       ));
     }
     if (s.live_enabled === false) {
+      var approval = capabilities && capabilities.publish_approval;
+      var autoApproval = approval && approval.enabled === true;
       chips.push(stageChip(
-        'aprovação obrigatória',
-        'danger',
-        s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)'
+        autoApproval ? 'aprovação automática' : 'aprovação obrigatória',
+        autoApproval ? 'warning' : 'danger',
+        autoApproval
+          ? 'Executar real solicita e materializa a aprovação Ed25519 automaticamente'
+          : (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
       ));
     }
     (profile.effects || []).slice(0, 3).forEach(function (effect) { chips.push(stageChip(effectLabel(effect), '')); });
@@ -6234,13 +6245,11 @@
         var modePrecondition = pipelineStageModePrecondition(s, dryRun);
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
         var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
-        var approvalGatedReal = s.live_enabled === false && dryRun === false;
+        var approvalGatedReal = pipelineRealRunApprovalGated(s, dryRun, state.pipelineCapabilities);
         var disabled = (!canRefreshControl && (!canRun || approvalGatedReal || (modeBlocked && !guardedDedupReal))) || state.pipelineStartPending;
         var displayLabel = canRefreshControl
           ? 'Renovar · ' + label
-          : (approvalGatedReal
-            ? 'Executar real · requer aprovação'
-            : (guardedDedupReal ? 'Executar real · simule antes' : label));
+          : (guardedDedupReal ? 'Executar real · simule antes' : label);
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
           : (canRefreshControl
@@ -6263,7 +6272,7 @@
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
         '<div class="kc-pipeline-stage__desc">' + escapeHtml(s.description) + '</div>' +
-        renderStagePreflight(s) +
+        renderStagePreflight(s, state.pipelineCapabilities) +
         renderDedupProtectedFlow(s) +
         '<div class="kc-pipeline-stage__meta">' +
           '<span class="kc-pipeline-history-item ' + lastCls + '" style="border:none;padding:2px 6px;"><i class="fas fa-clock"></i> ' + escapeHtml(lastTxt) + '</span>' +
@@ -7161,11 +7170,17 @@
         var dedupPreviewNotice = stageId === 'dedup' && dryRun === false
           ? '\n\n' + modePrecondition.detail + '\nEsta ação aplica a simulação recente sem consultar novamente a IA. Se posts, pares ou ações tiverem mudado, o backend bloqueará toda escrita e pedirá uma nova simulação.'
           : '';
+        var approvalCapability = state.pipelineCapabilities && state.pipelineCapabilities.publish_approval;
+        var autoApprovalNotice = (stageId === 'all' || stageId === 'publish') && dryRun === false
+          && approvalCapability && approvalCapability.enabled === true
+          ? '\n\n🔐 Aprovação Ed25519 será solicitada e materializada automaticamente para os candidatos aptos antes de publicar.'
+          : '';
         var message = 'Iniciar pipeline "' + stageId + '"?\n\nComando: ' + pf.command +
           '\nRisco: ' + (profile.risk || 'n/d') +
           '\nModo solicitado: ' + modeLabel +
           mutationNotice +
           dedupPreviewNotice +
+          autoApprovalNotice +
           (warnings ? '\n\nAvisos:\n' + warnings : '') +
           '\n\nEsta verificação prévia expira em até 15 segundos. Os logs ficarão disponíveis em tempo real abaixo.';
         if (!confirm(message)) return;
