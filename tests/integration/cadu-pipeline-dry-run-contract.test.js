@@ -44,6 +44,18 @@ describe('Cadu pipeline explicit dry-run contract', () => {
   const pipelineStageModePrecondition = extractFunction('pipelineStageModePrecondition');
   const lockPipelineActionButtons = extractFunction('lockPipelineActionButtons');
   const isSafePipelineRunId = extractFunction('isSafePipelineRunId');
+  const normalizePipelineStage = Function(
+    `"use strict";
+     const isSafePipelineStageId = ${extractFunctionSource('isSafePipelineStageId')};
+     const isSafePipelineRunId = ${extractFunctionSource('isSafePipelineRunId')};
+     const PIPELINE_SNAPSHOT_TTL_MS = 15000;
+     const normalizePipelineRun = ${extractFunctionSource('normalizePipelineRun')};
+     const normalizePipelineStringList = ${extractFunctionSource('normalizePipelineStringList')};
+     const normalizePipelineCheck = ${extractFunctionSource('normalizePipelineCheck')};
+     const normalizePipelineCheckList = ${extractFunctionSource('normalizePipelineCheckList')};
+     const normalizePipelinePreflight = ${extractFunctionSource('normalizePipelinePreflight')};
+     return (${extractFunctionSource('normalizePipelineStage')});`
+  )();
   const validatePipelineControlSnapshot = Function(
     `"use strict";
      const PIPELINE_CONTROL_CONTRACT = 'cadu-pipeline-control-v1';
@@ -207,7 +219,11 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(validatePipelineControlSnapshot({ ...snapshot, contract_version: 'legacy' }, now).ok).toBe(false);
     expect(validatePipelineControlSnapshot({ ...snapshot, generated_at: new Date(now - 16000).toISOString() }, now).ok).toBe(false);
     expect(validatePipelineControlSnapshot({ ...snapshot, capabilities: { explicit_dry_run: true } }, now).ok).toBe(false);
-    expect(validatePipelineControlSnapshot({ ...snapshot, capabilities: { ...explicitCapabilities, legacy_fallback: true } }, now).ok).toBe(false);
+    // Chaves aditivas (ex.: publish_approval) não podem derrubar o painel:
+    // o contrato exige os dois modos explícitos, mas tolera evolução do backend.
+    expect(validatePipelineControlSnapshot({ ...snapshot, capabilities: { ...explicitCapabilities, legacy_fallback: true } }, now).ok).toBe(true);
+    expect(validatePipelineControlSnapshot({ ...snapshot, capabilities: { ...explicitCapabilities, publish_approval: { enabled: true } } }, now).ok).toBe(true);
+    expect(validatePipelineControlSnapshot({ ...snapshot, capabilities: { explicit_run_mode_routes: true } }, now).ok).toBe(false);
     expect(validatePipelineControlSnapshot({
       ...snapshot,
       stages: [{ ...snapshot.stages[0], preflight: { ...snapshot.stages[0].preflight, can_run: undefined } }],
@@ -270,6 +286,55 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(isSafePipelineRunId('legacy-run_1')).toBe(true);
     expect(isSafePipelineRunId('run.with.dot')).toBe(false);
     expect(isSafePipelineRunId('run:with:colon')).toBe(false);
+  });
+
+  test('stages preserve live gating for signed publish approvals', () => {
+    const now = Date.parse('2026-07-13T20:00:00.000Z');
+    const base = {
+      id: 'all',
+      name: 'Pipeline completa',
+      description: 'Encadeia curadoria, formatação, publicação e dedup.',
+      script: 'scripts/pipeline-kino.js',
+      estimated_sec: 2700,
+      category: 'publish',
+      last_run: null,
+      preflight: {
+        stage: 'all',
+        checked_at: now / 1000,
+        can_run: true,
+        command: 'node scripts/pipeline-kino.js all',
+        profile: {
+          risk: 'high',
+          mode: 'publish',
+          dry_run_available: true,
+          default_dry_run: false,
+          force_dry_run: false,
+          mutates_platform: true,
+          effects: ['workspace_artifacts', 'edge_publish'],
+          notes: ['real exige aprovação assinada'],
+        },
+        checks: [{ id: 'script', label: 'Script', status: 'ok', blocking: true, detail: 'scripts/pipeline-kino.js' }],
+        blockers: [],
+        warnings: [],
+        script: {
+          exists: true,
+          path: '/workspace/scripts/pipeline-kino.js',
+          relative_path: 'scripts/pipeline-kino.js',
+        },
+      },
+    };
+    const gated = normalizePipelineStage({ ...base, live_enabled: false, live_disabled_reason: 'signed_publish_approval_required' }, now);
+    expect(gated.live_enabled).toBe(false);
+    expect(gated.live_disabled_reason).toBe('signed_publish_approval_required');
+    const opened = normalizePipelineStage({ ...base, live_enabled: true }, now);
+    expect(opened.live_enabled).toBe(true);
+    expect(opened.live_disabled_reason).toBe('');
+    // O backend serializa live_disabled_reason como null para estágios liberados.
+    const nullableReason = normalizePipelineStage({ ...base, live_enabled: true, live_disabled_reason: null }, now);
+    expect(nullableReason.live_enabled).toBe(true);
+    expect(nullableReason.live_disabled_reason).toBe('');
+    const legacy = normalizePipelineStage(base, now);
+    expect(legacy.live_enabled).toBe(true);
   });
 
   test('locking one action locks its sibling and restores original states and markup', () => {

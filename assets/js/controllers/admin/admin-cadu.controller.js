@@ -5686,6 +5686,9 @@
         stage.name.length > 120 || typeof stage.description !== 'string' ||
         stage.description.length > 500 || typeof stage.script !== 'string' ||
         stage.script.length > 500 || ['scan', 'process', 'publish', 'maintenance'].indexOf(stage.category) < 0) return null;
+    if (stage.live_enabled !== undefined && typeof stage.live_enabled !== 'boolean') return null;
+    if (stage.live_disabled_reason !== undefined && stage.live_disabled_reason !== null &&
+        (typeof stage.live_disabled_reason !== 'string' || stage.live_disabled_reason.length > 240)) return null;
     var estimatedSeconds = Number(stage.estimated_sec);
     if (!Number.isFinite(estimatedSeconds) || estimatedSeconds < 0 || estimatedSeconds > 86400) return null;
     var lastRun = stage.last_run == null ? null : normalizePipelineRun(stage.last_run);
@@ -5699,6 +5702,10 @@
       script: stage.script,
       estimated_sec: estimatedSeconds,
       category: stage.category,
+      live_enabled: stage.live_enabled !== false,
+      live_disabled_reason: typeof stage.live_disabled_reason === 'string'
+        ? stage.live_disabled_reason
+        : (stage.live_enabled === false ? 'execução real requer aprovação' : ''),
       last_run: lastRun,
       preflight: preflight,
     };
@@ -5719,6 +5726,10 @@
       script: stage.script,
       estimated_sec: estimatedSeconds,
       category: stage.category,
+      live_enabled: stage.live_enabled !== false,
+      live_disabled_reason: typeof stage.live_disabled_reason === 'string'
+        ? stage.live_disabled_reason.slice(0, 240)
+        : (stage.live_enabled === false ? 'execução real requer aprovação' : ''),
       last_run: stage.last_run == null ? null : normalizePipelineRun(stage.last_run),
       preflight: null,
     };
@@ -5761,8 +5772,10 @@
       return { ok: false, reason: 'snapshot expirado ou com relógio inconsistente' };
     }
     var capabilities = status.capabilities;
+    // O contrato exige os dois modos explícitos; chaves aditivas (ex.:
+    // publish_approval) são toleradas para não derrubar o painel quando o
+    // backend evolui o snapshot sem mudar o contrato v1.
     if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities) ||
-        Object.keys(capabilities).sort().join('|') !== 'explicit_dry_run|explicit_run_mode_routes' ||
         capabilities.explicit_dry_run !== true || capabilities.explicit_run_mode_routes !== true) {
       return { ok: false, reason: 'capabilities explicitas ausentes' };
     }
@@ -5795,10 +5808,7 @@
       ok: true,
       generatedAt: generatedAt,
       expiresAt: expiresAt,
-      capabilities: {
-        explicit_dry_run: true,
-        explicit_run_mode_routes: true,
-      },
+      capabilities: capabilities,
       stages: normalizedStages,
       activeRun: activeRun,
     };
@@ -6096,6 +6106,13 @@
         dedupPreviewCheck.detail
       ));
     }
+    if (s.live_enabled === false) {
+      chips.push(stageChip(
+        'aprovação obrigatória',
+        'danger',
+        s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)'
+      ));
+    }
     (profile.effects || []).slice(0, 3).forEach(function (effect) { chips.push(stageChip(effectLabel(effect), '')); });
     if ((profile.effects || []).length > 3) chips.push(stageChip('+' + ((profile.effects || []).length - 3), ''));
     var script = pf.script || {};
@@ -6217,17 +6234,22 @@
         var modePrecondition = pipelineStageModePrecondition(s, dryRun);
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
         var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
-        var disabled = (!canRefreshControl && (!canRun || (modeBlocked && !guardedDedupReal))) || state.pipelineStartPending;
+        var approvalGatedReal = s.live_enabled === false && dryRun === false;
+        var disabled = (!canRefreshControl && (!canRun || approvalGatedReal || (modeBlocked && !guardedDedupReal))) || state.pipelineStartPending;
         var displayLabel = canRefreshControl
           ? 'Renovar · ' + label
-          : (guardedDedupReal ? 'Executar real · simule antes' : label);
+          : (approvalGatedReal
+            ? 'Executar real · requer aprovação'
+            : (guardedDedupReal ? 'Executar real · simule antes' : label));
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
           : (canRefreshControl
             ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
-            : (modeBlocked
+            : (approvalGatedReal
+              ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
+              : (modeBlocked
               ? 'Indisponível: ' + modePrecondition.detail
-              : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason)));
+              : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason))));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
@@ -7201,6 +7223,8 @@
         var preconditionDetail = resp.data && (resp.data.detail || resp.data);
         if (preconditionDetail && preconditionDetail.code === 'dedup_preview_required') {
           msg = '⚠️ A execução real foi recusada com segurança porque não há uma prévia recente compatível.\n\nExecute “Simular”, revise o relatório e então tente “Executar real” novamente. Nenhum run real foi criado.';
+        } else if (preconditionDetail && preconditionDetail.code === 'signed_publish_approval_required') {
+          msg = '🔐 Execução real de "' + stageId + '" requer aprovação assinada (Ed25519).\n\nUse o fluxo de aprovação de publicação (publish-approval-cli) antes de executar este estágio real. A simulação continua disponível. Nenhum run real foi criado.';
         } else {
           msg = '⚠️ Execução recusada com segurança: pré-condição não atendida. Atualize o painel e revise o diagnóstico antes de tentar novamente.';
         }
