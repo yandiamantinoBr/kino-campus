@@ -137,6 +137,45 @@ function renderDeadlinePresentation(post) {
   return result;
 }
 
+function renderGallery(post) {
+  const dom = new JSDOM(`<!doctype html><html><body>
+    <div class="kc-gallery-main">
+      <img id="mainImage" style="display:none;" />
+      <div id="emojiCover">✨</div>
+    </div>
+    <div id="thumbnails" style="display:none;"></div>
+  </body></html>`, {
+    runScripts: 'outside-only',
+    url: 'http://localhost/_product.html',
+  });
+
+  dom.window.eval(source);
+  dom.window._KCProduct.render.setGallery(post);
+
+  const result = {
+    mainSrc: dom.window.document.getElementById('mainImage').getAttribute('src'),
+    mainDisplay: dom.window.document.getElementById('mainImage').style.display,
+    emojiDisplay: dom.window.document.getElementById('emojiCover').style.display,
+    thumbsDisplay: dom.window.document.getElementById('thumbnails').style.display,
+    thumbnails: Array.from(dom.window.document.querySelectorAll('#thumbnails .kc-thumbnail')).map((img) => ({
+      src: img.getAttribute('data-full-src'),
+      active: img.classList.contains('active'),
+    })),
+    clickThumbnail: function (index) {
+      const thumbs = dom.window.document.querySelectorAll('#thumbnails .kc-thumbnail');
+      if (thumbs[index]) thumbs[index].click();
+      return dom.window.document.getElementById('mainImage').getAttribute('src');
+    },
+    thumbnailActive: function (index) {
+      const thumbs = dom.window.document.querySelectorAll('#thumbnails .kc-thumbnail');
+      return !!(thumbs[index] && thumbs[index].classList.contains('active'));
+    },
+    close: function () { dom.window.close(); },
+  };
+
+  return result;
+}
+
 function setPath(target, pathValue, value) {
   const parts = String(pathValue).split('.');
   let current = target;
@@ -175,7 +214,7 @@ describe('product.render.js - estrutura IIFE e namespace', () => {
 
   test('pagina usa o cache-buster atualizado do renderizador', () => {
     const lifecycleTag = 'assets/js/shared/kc-post-lifecycle.shared.js?v=8.6.1';
-    const renderTag = 'assets/js/controllers/public/product.render.js?v=8.6.4';
+    const renderTag = 'assets/js/controllers/public/product.render.js?v=8.6.5';
     expect(page.split(lifecycleTag)).toHaveLength(2);
     expect(page.split(renderTag)).toHaveLength(2);
     expect(page.indexOf(lifecycleTag)).toBeLessThan(page.indexOf(renderTag));
@@ -189,6 +228,42 @@ describe('product.render.js - galeria acessivel', () => {
     expect(source).toContain('mainImg.alt = imageAlt;');
     expect(source).toContain("img.alt = 'Miniatura ' + (idx + 1) + ' de ' + title;");
     expect(source).toContain('mainImg.alt = img.alt;');
+  });
+
+  test('capa permanece como primeira miniatura ativa da galeria', () => {
+    const gallery = renderGallery({
+      titulo: 'Anúncio com capa',
+      imagens: [
+        'https://cdn.example/cover.jpg',
+        'https://cdn.example/second.jpg',
+        'https://cdn.example/third.jpg',
+      ],
+    });
+
+    expect(gallery.mainSrc).toBe('https://cdn.example/cover.jpg');
+    expect(gallery.mainDisplay).toBe('block');
+    expect(gallery.emojiDisplay).toBe('none');
+    expect(gallery.thumbsDisplay).toBe('grid');
+    expect(gallery.thumbnails).toHaveLength(3);
+    expect(gallery.thumbnails[0]).toEqual({ src: 'https://cdn.example/cover.jpg', active: true });
+    expect(gallery.thumbnails[1]).toEqual({ src: 'https://cdn.example/second.jpg', active: false });
+    expect(gallery.clickThumbnail(1)).toBe('https://cdn.example/second.jpg');
+    expect(gallery.thumbnailActive(1)).toBe(true);
+    expect(gallery.thumbnailActive(0)).toBe(false);
+    gallery.close();
+  });
+
+  test('galeria com uma unica imagem nao abre faixa redundante de miniaturas', () => {
+    const gallery = renderGallery({
+      titulo: 'Anúncio com uma imagem',
+      imagens: ['https://cdn.example/cover.jpg'],
+    });
+
+    expect(gallery.mainSrc).toBe('https://cdn.example/cover.jpg');
+    expect(gallery.thumbnails).toHaveLength(1);
+    expect(gallery.thumbnails[0].src).toBe('https://cdn.example/cover.jpg');
+    expect(gallery.thumbsDisplay).toBe('none');
+    gallery.close();
   });
 });
 
