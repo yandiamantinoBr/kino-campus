@@ -255,7 +255,7 @@
     }
 
     function onPointerDown(event) {
-      if (event.button != null && event.button !== 0) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
       var thumb = event.target && event.target.closest ? event.target.closest('.kc-img-thumb') : null;
       if (!thumb || !grid.contains(thumb)) return;
       if (event.target && event.target.closest && event.target.closest('.kc-img-action')) return;
@@ -288,7 +288,12 @@
       if (!target || target === drag.thumb) return;
 
       var rect = target.getBoundingClientRect();
-      var before = event.clientX < rect.left + (rect.width / 2);
+      var centerX = rect.left + (rect.width / 2);
+      var centerY = rect.top + (rect.height / 2);
+      var sameRow = Math.abs(event.clientY - centerY) <= Math.max(4, rect.height * 0.55);
+      var before = sameRow
+        ? event.clientX < centerX
+        : event.clientY < centerY;
       if (before) {
         grid.insertBefore(drag.thumb, target);
       } else {

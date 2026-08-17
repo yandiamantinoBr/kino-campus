@@ -344,7 +344,7 @@
     }
 
     function onGalleryPointerDown(event) {
-      if (event.button != null && event.button !== 0) return;
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
       var thumb = event.target && event.target.closest ? event.target.closest('.kc-edit-gallery-thumb') : null;
       if (!thumb || !galleryGrid.contains(thumb)) return;
       if (galleryGrid.querySelectorAll('.kc-edit-gallery-thumb').length < 2) return;
@@ -374,7 +374,12 @@
       var target = galleryGridElementFromPoint(event.clientX, event.clientY, galleryDrag.thumb);
       if (!target || target === galleryDrag.thumb) return;
       var rect = target.getBoundingClientRect();
-      var before = event.clientX < rect.left + (rect.width / 2);
+      var centerX = rect.left + (rect.width / 2);
+      var centerY = rect.top + (rect.height / 2);
+      var sameRow = Math.abs(event.clientY - centerY) <= Math.max(4, rect.height * 0.55);
+      var before = sameRow
+        ? event.clientX < centerX
+        : event.clientY < centerY;
       if (before) {
         galleryGrid.insertBefore(galleryDrag.thumb, target);
       } else {
