@@ -25,7 +25,7 @@ var PAGE_CACHE = CACHE_VERSION + ':pages';
 // Cache Storage keys include the query string, so one global version would
 // pre-cache URLs that the pages never request when assets evolve separately.
 var SHELL_ASSETS = [
-  '/assets/css/styles.css?v=8.6.20',
+  '/assets/css/styles.css?v=8.6.21',
   '/assets/css/kc-chat-shortcut.css?v=8.6.1',
   '/assets/css/kc-public-shell.css?v=8.6.15',
   '/assets/js/boot/kc-constants.js?v=8.6.2',
