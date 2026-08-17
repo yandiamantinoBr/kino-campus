@@ -5375,6 +5375,11 @@ body.kc-scroll-locked {
     border-radius: 14px;
     overflow: hidden;
     background: var(--kc-surface-dark);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .kc-img-thumb img {
@@ -5382,11 +5387,20 @@ body.kc-scroll-locked {
     height: 86px;
     object-fit: cover;
     display: block;
+    pointer-events: none;
 }
 
 .kc-img-thumb.is-cover {
     border-color: rgba(255, 107, 0, 0.85);
     box-shadow: 0 10px 24px rgba(255, 107, 0, 0.16);
+}
+
+.kc-img-thumb.is-dragging {
+    opacity: 0.72;
+    transform: scale(0.96);
+    border-color: var(--kc-primary-brand);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.24);
+    z-index: 3;
 }
 
 .kc-img-badge {
@@ -5402,6 +5416,68 @@ body.kc-scroll-locked {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.kc-img-order {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.74);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.kc-edit-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.kc-edit-gallery-thumb {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--kc-border-dark);
+    border-radius: 12px;
+    background: var(--kc-surface-dark);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.kc-edit-gallery-thumb img {
+    width: 100%;
+    height: 72px;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.kc-edit-gallery-thumb:first-child {
+    border-color: rgba(255, 107, 0, 0.85);
+    box-shadow: 0 8px 18px rgba(255, 107, 0, 0.12);
+}
+
+.kc-edit-gallery-thumb.is-dragging {
+    opacity: 0.72;
+    transform: scale(0.96);
+    border-color: var(--kc-primary-brand);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+    z-index: 3;
 }
 
 .kc-img-actions {

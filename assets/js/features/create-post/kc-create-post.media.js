@@ -180,6 +180,12 @@
     var exists = state.images.some(function (img) { return String(img.id) === String(id); });
     if (!exists) return;
 
+    var index = state.images.findIndex(function (img) { return String(img.id) === String(id); });
+    if (index > 0) {
+      var cover = state.images[index];
+      state.images.splice(index, 1);
+      state.images.unshift(cover);
+    }
     state.coverImageId = id;
     _rerender();
   }
@@ -205,6 +211,109 @@
     return [cover.dataUrl].concat(others).filter(Boolean);
   }
 
+  // ── Reordenação por arraste (pointer events; funciona em web e touch) ─────
+  function kcInitCreateImagesDrag(grid) {
+    if (!grid) return;
+    var state = _getState();
+    if (!state) return;
+
+    var drag = null;
+
+    function resetDrag() {
+      if (!drag) return;
+      var thumb = drag.thumb;
+      if (thumb) {
+        thumb.classList.remove('is-dragging');
+        thumb.style.pointerEvents = '';
+        thumb.style.opacity = '';
+        try { thumb.releasePointerCapture(drag.pointerId); } catch (_) { }
+      }
+      drag = null;
+    }
+
+    function getThumbAtPoint(x, y, ignored) {
+      if (!ignored || !ignored.style) return null;
+      ignored.style.pointerEvents = 'none';
+      var hit = document.elementFromPoint(x, y);
+      ignored.style.pointerEvents = '';
+      return hit && hit.closest ? hit.closest('.kc-img-thumb') : null;
+    }
+
+    function applyDomOrder() {
+      if (!grid) return;
+      var ids = Array.prototype.map.call(
+        grid.querySelectorAll('.kc-img-thumb[data-kc-img-id]'),
+        function (el) { return el.getAttribute('data-kc-img-id'); }
+      ).filter(Boolean);
+      if (!ids.length) return;
+      var byId = new Map(state.images.map(function (img) { return [String(img.id), img]; }));
+      var ordered = ids.map(function (id) { return byId.get(id); }).filter(Boolean);
+      if (ordered.length !== state.images.length) return;
+      state.images = ordered;
+      if (state.images.length) state.coverImageId = state.images[0].id;
+      _rerender();
+    }
+
+    function onPointerDown(event) {
+      if (event.button != null && event.button !== 0) return;
+      var thumb = event.target && event.target.closest ? event.target.closest('.kc-img-thumb') : null;
+      if (!thumb || !grid.contains(thumb)) return;
+      if (event.target && event.target.closest && event.target.closest('.kc-img-action')) return;
+      if (grid.querySelectorAll('.kc-img-thumb').length < 2) return;
+
+      drag = {
+        thumb: thumb,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+      };
+      thumb.classList.add('is-dragging');
+      thumb.style.pointerEvents = 'none';
+      try { thumb.setPointerCapture(event.pointerId); } catch (_) { }
+      event.preventDefault();
+    }
+
+    function onPointerMove(event) {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      var dx = event.clientX - drag.startX;
+      var dy = event.clientY - drag.startY;
+      if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+
+      drag.moved = true;
+      drag.thumb.style.opacity = '0.55';
+      event.preventDefault();
+
+      var target = getThumbAtPoint(event.clientX, event.clientY, drag.thumb);
+      if (!target || target === drag.thumb) return;
+
+      var rect = target.getBoundingClientRect();
+      var before = event.clientX < rect.left + (rect.width / 2);
+      if (before) {
+        grid.insertBefore(drag.thumb, target);
+      } else {
+        grid.insertBefore(drag.thumb, target.nextSibling);
+      }
+    }
+
+    function onPointerUp(event) {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      var didMove = drag.moved;
+      resetDrag();
+      if (didMove) applyDomOrder();
+    }
+
+    function onPointerCancel(event) {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      resetDrag();
+    }
+
+    grid.addEventListener('pointerdown', onPointerDown);
+    grid.addEventListener('pointermove', onPointerMove);
+    grid.addEventListener('pointerup', onPointerUp);
+    grid.addEventListener('pointercancel', onPointerCancel);
+  }
+
   // ── HTML da seção de imagens ──────────────────────────────────────────────
   function kcCreateImagesSectionHtml() {
     var state = _getState();
@@ -215,12 +324,13 @@
     var remaining = KC_CREATE_MAX_IMAGES - count;
     var disabled = remaining <= 0;
 
-    var thumbs = images.map(function (img) {
+    var thumbs = images.map(function (img, index) {
       var isCover = coverImageId && String(coverImageId) === String(img.id);
       return (
-        '<div class="kc-img-thumb' + (isCover ? ' is-cover' : '') + '">' +
-        '<img src="' + _esc(img.dataUrl) + '" alt="Imagem da publicação" loading="lazy" />' +
+        '<div class="kc-img-thumb' + (isCover ? ' is-cover' : '') + '" data-kc-img-id="' + _esc(img.id) + '" title="Arraste para reordenar">' +
+        '<img src="' + _esc(img.dataUrl) + '" alt="Imagem da publicação" loading="lazy" draggable="false" />' +
         (isCover ? '<div class="kc-img-badge"><i class="fas fa-star"></i> Capa</div>' : '') +
+        '<span class="kc-img-order" aria-hidden="true">' + (index + 1) + '</span>' +
         '<div class="kc-img-actions">' +
         '<button type="button" class="kc-img-action" data-kc-img-action="cover" data-kc-img-id="' + _esc(img.id) + '" title="Definir como capa">' +
         '<i class="fas fa-star"></i>' +
@@ -248,7 +358,7 @@
       '</div>' +
       '</button>' +
       (count ? '<div class="kc-img-grid">' + thumbs + '</div>' : '') +
-      '<div class="kc-img-hint">Dica: clique na estrela para escolher a <strong>capa</strong>.</div>' +
+      '<div class="kc-img-hint">Dica: arraste para reordenar. A primeira imagem é a <strong>capa</strong>.</div>' +
       '</div>'
     );
   }
@@ -262,6 +372,7 @@
     removeById: kcRemoveCreateImageById,
     setCoverById: kcSetCreateCoverImageById,
     getOrdered: kcGetOrderedCreateImages,
+    initDrag: kcInitCreateImagesDrag,
     sectionHtml: kcCreateImagesSectionHtml,
   };
 

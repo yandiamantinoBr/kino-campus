@@ -719,6 +719,10 @@
       .replace(/outros marcadores para o ambiente/g, 'outras características do ambiente');
     if (dynamic) dynamic.innerHTML = renderedFieldsHtml;
 
+    if (window._KCCreatePost && window._KCCreatePost.media && typeof window._KCCreatePost.media.initDrag === 'function') {
+      window._KCCreatePost.media.initDrag(dynamic.querySelector('.kc-img-grid'));
+    }
+
     // Texto do botão de submit (edição vs criação)
     if (submitBtn) {
       submitBtn.textContent = kcCreateState.editMode ? 'Salvar Alterações' : 'Publicar Agora';
