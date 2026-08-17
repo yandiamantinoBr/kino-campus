@@ -246,7 +246,8 @@ describe('kc-create-post.media — HTML da seção de imagens', () => {
 
   test('exibe contagem count/MAX e dica de capa', () => {
     expect(source).toContain('KC_CREATE_MAX_IMAGES');
-    expect(source).toContain('Dica: clique na estrela para escolher a');
+    expect(source).toContain('Dica: arraste para reordenar');
+    expect(source).toContain('A primeira imagem é a');
   });
 
   test('exporta sectionHtml no namespace', () => {

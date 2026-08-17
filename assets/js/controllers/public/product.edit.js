@@ -254,8 +254,9 @@
       // v13.6.3: galeria de imagens — uma URL por linha. A 1ª vira cover.
       '  <div class="kc-form-group">',
       '    <label>Galeria de imagens <span style="color:var(--text-muted, #64748b);font-size:.85em;">(1 URL por linha — a 1ª \u00E9 a capa)</span></label>',
+      '    <div class="kc-edit-gallery-grid" data-kc-edit-gallery-grid="true"></div>',
       '    <textarea class="kc-input" name="gallery" rows="6" placeholder="https://... (1 URL por linha)"></textarea>',
-      '    <small style="color:var(--text-muted, #64748b);">At\u00E9 12 imagens. Fa\u00E7a upload no Supabase Storage (bucket <code>kino-media</code>) e cole as URLs p\u00FAblicas aqui.</small>',
+      '    <small style="color:var(--text-muted, #64748b);">At\u00E9 12 imagens. Arraste as miniaturas para reordenar; a 1\u00AA \u00E9 a capa. Fa\u00E7a upload no Supabase Storage (bucket <code>kino-media</code>) e cole as URLs p\u00FAblicas aqui.</small>',
       '  </div>',
       '  <div class="kc-create-actions">',
       '    <button type="button" class="kc-btn-secondary" data-action="cancel">Cancelar</button>',
@@ -286,6 +287,121 @@
       tags: modal.querySelector('[name="tags"]'),
       gallery: modal.querySelector('[name="gallery"]'),
     };
+
+    var galleryGrid = modal.querySelector('[data-kc-edit-gallery-grid]');
+    var galleryDrag = null;
+
+    function parseGalleryUrls(text) {
+      return String(text || '')
+        .split(/\r?\n/)
+        .map(function (u) { return String(u || '').trim(); })
+        .filter(function (u) { return /^https?:\/\//i.test(u); });
+    }
+
+    function escapeGalleryUrl(url) {
+      return String(url || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function renderEditGalleryGrid() {
+      if (!galleryGrid || !form.gallery) return;
+      var urls = parseGalleryUrls(form.gallery.value);
+      galleryGrid.innerHTML = urls.map(function (url, index) {
+        return '<div class="kc-edit-gallery-thumb" data-kc-edit-gallery-url="' + escapeGalleryUrl(url) + '" title="Arraste para reordenar">' +
+          '<img src="' + escapeGalleryUrl(url) + '" alt="Miniatura ' + (index + 1) + '" loading="lazy" draggable="false" />' +
+          '<span class="kc-img-order" aria-hidden="true">' + (index + 1) + '</span>' +
+        '</div>';
+      }).join('');
+      galleryGrid.style.display = urls.length ? 'grid' : 'none';
+    }
+
+    function galleryGridElementFromPoint(x, y, ignored) {
+      ignored.style.pointerEvents = 'none';
+      var hit = document.elementFromPoint(x, y);
+      ignored.style.pointerEvents = '';
+      return hit && hit.closest ? hit.closest('.kc-edit-gallery-thumb') : null;
+    }
+
+    function galleryDragReset() {
+      if (!galleryDrag) return;
+      var thumb = galleryDrag.thumb;
+      if (thumb) {
+        thumb.classList.remove('is-dragging');
+        thumb.style.pointerEvents = '';
+        thumb.style.opacity = '';
+        try { thumb.releasePointerCapture(galleryDrag.pointerId); } catch (_) { }
+      }
+      galleryDrag = null;
+    }
+
+    function applyEditGalleryDomOrder() {
+      if (!galleryGrid || !form.gallery) return;
+      var urls = Array.prototype.map.call(
+        galleryGrid.querySelectorAll('.kc-edit-gallery-thumb'),
+        function (el) { return el.getAttribute('data-kc-edit-gallery-url'); }
+      ).filter(Boolean);
+      form.gallery.value = urls.join('\n');
+      renderEditGalleryGrid();
+    }
+
+    function onGalleryPointerDown(event) {
+      if (event.button != null && event.button !== 0) return;
+      var thumb = event.target && event.target.closest ? event.target.closest('.kc-edit-gallery-thumb') : null;
+      if (!thumb || !galleryGrid.contains(thumb)) return;
+      if (galleryGrid.querySelectorAll('.kc-edit-gallery-thumb').length < 2) return;
+      galleryDrag = {
+        thumb: thumb,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+      };
+      thumb.classList.add('is-dragging');
+      thumb.style.pointerEvents = 'none';
+      try { thumb.setPointerCapture(event.pointerId); } catch (_) { }
+      event.preventDefault();
+    }
+
+    function onGalleryPointerMove(event) {
+      if (!galleryDrag || event.pointerId !== galleryDrag.pointerId) return;
+      var dx = event.clientX - galleryDrag.startX;
+      var dy = event.clientY - galleryDrag.startY;
+      if (!galleryDrag.moved && Math.hypot(dx, dy) < 6) return;
+
+      galleryDrag.moved = true;
+      galleryDrag.thumb.style.opacity = '0.55';
+      event.preventDefault();
+
+      var target = galleryGridElementFromPoint(event.clientX, event.clientY, galleryDrag.thumb);
+      if (!target || target === galleryDrag.thumb) return;
+      var rect = target.getBoundingClientRect();
+      var before = event.clientX < rect.left + (rect.width / 2);
+      if (before) {
+        galleryGrid.insertBefore(galleryDrag.thumb, target);
+      } else {
+        galleryGrid.insertBefore(galleryDrag.thumb, target.nextSibling);
+      }
+    }
+
+    function onGalleryPointerUp(event) {
+      if (!galleryDrag || event.pointerId !== galleryDrag.pointerId) return;
+      var didMove = galleryDrag.moved;
+      galleryDragReset();
+      if (didMove) applyEditGalleryDomOrder();
+    }
+
+    function onGalleryPointerCancel(event) {
+      if (!galleryDrag || event.pointerId !== galleryDrag.pointerId) return;
+      galleryDragReset();
+    }
+
+    if (galleryGrid && form.gallery) {
+      galleryGrid.addEventListener('pointerdown', onGalleryPointerDown);
+      galleryGrid.addEventListener('pointermove', onGalleryPointerMove);
+      galleryGrid.addEventListener('pointerup', onGalleryPointerUp);
+      galleryGrid.addEventListener('pointercancel', onGalleryPointerCancel);
+      form.gallery.addEventListener('input', renderEditGalleryGrid);
+      form.gallery.addEventListener('change', renderEditGalleryGrid);
+    }
 
     function setContext(nextContext) {
       liveContext = nextContext || {};
@@ -322,6 +438,7 @@
       gallery = Array.isArray(post.imagens) ? post.imagens : (Array.isArray(md.gallery_image_urls) ? md.gallery_image_urls : []);
       if (form.gallery) {
         form.gallery.value = (gallery || []).filter(function(u){ return u && /^https?:\/\//i.test(u); }).join('\n');
+        renderEditGalleryGrid();
       }
 
       overlay.style.display = 'flex';
