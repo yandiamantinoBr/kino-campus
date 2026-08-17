@@ -1,5 +1,5 @@
 /**
- * KinoCampus — product.render.js v13.4.1
+ * KinoCampus — product.render.js v13.4.2
  *
  * Sub-módulo de renderização pura para a página de produto (_product.html).
  * Extraído de product.controller.js (v13.4.1 split).
@@ -434,14 +434,12 @@
     var thumbs = document.getElementById('thumbnails');
     var galleryMain = document.querySelector('.kc-gallery-main');
     var images = Array.isArray(post.imagens) ? post.imagens : (Array.isArray(post.images) ? post.images : []);
-    // A imagem principal (imagens[0]) tambem era escrita como primeiro item
-    // da galeria por versoes antigas do Cadu, fazendo a mesma imagem aparecer
-    // duas vezes (principal + miniatura). As miniaturas mostram apenas as
-    // imagens ADICIONAIS; a capa continua sendo a imagem principal.
-    var mainImageSrc = images.length ? String(images[0] || '').trim() : '';
-    var thumbImages = images.filter(function (src) {
-      return String(src || '').trim() !== mainImageSrc;
-    });
+    // A capa (imagens[0]) também é a primeira miniatura, ativa por padrão.
+    // As demais imagens seguem na mesma ordem. Isso mantém a galeria visível
+    // consistente com o post_media e evita que a capa "suma" da faixa de
+    // miniaturas quando a pipeline espelha gallery_image_urls com a capa
+    // como primeiro item.
+    var thumbImages = images;
     var isLegacy = isLegacyExamplePost(post);
     syncLegacyExampleMarker(galleryMain, isLegacy, 'Exemplo', 'kc-product-example-ribbon--gallery');
     var emoji = post.emoji || '✨';
