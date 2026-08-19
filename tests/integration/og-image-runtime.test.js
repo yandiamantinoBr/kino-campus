@@ -15,7 +15,7 @@ describe('dynamic OG image runtime', () => {
       },
     }).png().toBuffer();
 
-    expect(sharp.versions.sharp).toBe('0.35.0');
+    expect(sharp.versions.sharp).toBe('0.35.3');
     expect(png.subarray(0, 8)).toEqual(
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     );
