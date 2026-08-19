@@ -64,7 +64,7 @@
   "homepage": "https://github.com/yandiamantinoBr/kino-campus#readme",
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
-    "@vercel/og": "^0.11.1",
+    "@vercel/og": "^1.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "undici": "^7.29.0"
   },
@@ -93,7 +93,7 @@
     "socks": "2.8.9",
     "@puppeteer/browsers": "3.2.0",
     "@vercel/og": {
-      "sharp": "0.35.0"
+      "sharp": "0.35.3"
     },
     "@lhci/cli": {
       "uuid": "11.1.1"
