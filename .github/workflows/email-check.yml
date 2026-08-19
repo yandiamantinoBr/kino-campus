@@ -1,6 +1,6 @@
 # GitHub Actions — E-mail deliverability checks
 #
-# Roda diariamente + em PRs que tocam arquivos de e-mail.
+# Roda diariamente + em todo PR para fornecer o status obrigatório da main.
 # Quebra o build se DNS/Supabase Auth perderem configuração crítica.
 
 name: Email deliverability
@@ -8,12 +8,6 @@ name: Email deliverability
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'supabase/functions/**'
-      - 'services/cadu-ufg-publisher/**'
-      - '.github/workflows/email-check.yml'
-      - 'docs/EMAIL-DELIVERABILITY-2026-07-07.md'
-      - 'tests/test-email-*.js'
   schedule:
     # Daily 06:00 UTC (~03:00 BRT) - detecta drift em config de DNS/Auth
     - cron: '0 6 * * *'
