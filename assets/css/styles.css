@@ -2536,13 +2536,12 @@ main {
 .kc-badge--closed {
     background-color: rgba(148, 163, 184, 0.16);
     border-color: rgba(148, 163, 184, 0.35);
-    color: #cbd5e1;
+    color: var(--kc-text-dark-secondary);
 }
 
 .kc-card--closed {
     border-color: rgba(148, 163, 184, 0.28);
     background-color: color-mix(in srgb, var(--kc-surface-dark) 86%, #94a3b8 14%);
-    filter: grayscale(0.55);
 }
 
 .kc-card--closed:hover {
@@ -2552,13 +2551,14 @@ main {
 
 .kc-card--closed .kc-card__image-wrapper img,
 .kc-card--closed .kc-card__emoji {
-    opacity: 0.62;
+    filter: grayscale(0.55);
+    opacity: 0.72;
 }
 
 .kc-card--closed .kc-card__title,
 .kc-card--closed .kc-card__description-preview,
 .kc-card--closed .kc-card__author {
-    color: #cbd5e1;
+    color: var(--kc-text-dark-secondary);
 }
 
 .kc-card--closed .kc-vote-box button[disabled] {

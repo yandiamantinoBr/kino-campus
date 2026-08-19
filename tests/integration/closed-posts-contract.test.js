@@ -203,6 +203,21 @@ describe('closed posts - contratos publicos JS', () => {
     expect(supabasePosts).toContain(".in('status', ['published', 'closed'])");
     expect(supabasePosts).toContain(".order('status', { ascending: false })");
   });
+
+  test('cards encerrados preservam contraste do texto e dessaturam apenas a mídia', () => {
+    const css = read('assets/css/styles.css');
+    const cardRule = css.match(/\.kc-card--closed\s*\{([^}]*)\}/);
+    const mediaRule = css.match(/\.kc-card--closed \.kc-card__image-wrapper img,[\s\S]*?\{([^}]*)\}/);
+    const textRule = css.match(/\.kc-card--closed \.kc-card__title,[\s\S]*?\{([^}]*)\}/);
+
+    expect(cardRule).not.toBeNull();
+    expect(cardRule[1]).not.toContain('filter:');
+    expect(mediaRule).not.toBeNull();
+    expect(mediaRule[1]).toContain('filter: grayscale(0.55)');
+    expect(textRule).not.toBeNull();
+    expect(textRule[1]).toContain('color: var(--kc-text-dark-secondary)');
+    expect(css).toMatch(/\.kc-badge--closed\s*\{[^}]*color: var\(--kc-text-dark-secondary\)/s);
+  });
 });
 
 describe('closed posts - contratos admin, shell e notificacoes', () => {

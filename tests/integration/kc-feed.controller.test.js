@@ -237,6 +237,30 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
     expect(empty).not.toBeNull();
     expect(empty.textContent).toContain('Nenhuma publicação disponível agora');
     expect(empty.textContent).toContain('Consulte os módulos da comunidade UFG');
+    expect(document.querySelector('.kc-feed-pager__status').textContent).toBe('');
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
+  test('feed concluído com posts mantém o indicador de fim da lista', async () => {
+    window.KCUtils = {
+      renderPostCard: jest.fn((post) => `<article class="kc-card">${post.titulo}</article>`),
+    };
+    window.KCAPI.getFeedCursor.mockResolvedValueOnce({
+      posts: [{ id: 'post-1', titulo: 'Publicação existente' }],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    const pager = await window.KCControllers.injectFeed({
+      containerSelector: '#feed-container',
+      module: null,
+      pageModule: '',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.querySelector('.kc-feed-pager__status').textContent).toBe('Fim da lista');
 
     pager.destroy();
     delete window.KCUtils;

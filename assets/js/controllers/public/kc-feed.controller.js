@@ -674,7 +674,9 @@
 
       if (state.done) {
         pagerUI.loadMoreBtn.style.display = 'none';
-        if (next !== 'error') pagerUI.status.textContent = 'Fim da lista';
+        if (next !== 'error') {
+          pagerUI.status.textContent = state.renderedPosts.length > 0 ? 'Fim da lista' : '';
+        }
       }
     }
 
