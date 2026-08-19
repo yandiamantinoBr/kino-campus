@@ -26,7 +26,11 @@
 
 'use strict';
 
-const { signInWithRetry } = require('./auth-retry');
+const { signInWithRetry, signOutCurrentSession } = require('./auth-retry');
+const {
+  appendPostMediaIfAbsent,
+  buildCanonicalGalleryImageUrls,
+} = require('./post-media-append');
 const {
   nonEnrichableSourceReason,
   selectEnrichmentSourceUrl,
@@ -44,6 +48,7 @@ const path = require('path');
 
 const SUPABASE_URL = 'https://wacyrkwhkvzwkqpolrbg.supabase.co';
 const BASE_DIR = '/data/.openclaw/workspace';
+let activeAuthClient = null;
 
 // Load env
 const env = {};
@@ -606,30 +611,31 @@ async function enrichPost(supabase, token, postId, sourceUrl, options = {}) {
   console.log(`   📤 Inserindo ${toAdd.length} imagens no post_media...`);
   
   try {
-    // 6a. Inserir cada nova imagem no post_media
-    let inserted = 0;
-    for (const imgUrl of toAdd) {
-      const { error: insertErr } = await supabase
-        .from('post_media')
-        .insert({
-          post_id: postId,
-          url: imgUrl,
-          is_cover: false,
-        });
-      
-      if (insertErr) {
-        throw new Error(`post_media insert failed: ${insertErr.message}`);
-      } else {
-        inserted++;
-        console.log(`   ✅ post_media inserido: ${imgUrl.slice(0, 70)}...`);
-      }
+    // 6a. Inserir em lote sem violar a unicidade em execuções concorrentes.
+    const appendResult = await appendPostMediaIfAbsent(supabase, postId, toAdd);
+    const inserted = appendResult.inserted.length;
+    appendResult.inserted.forEach(mediaRow => {
+      console.log(`   ✅ post_media inserido: ${String(mediaRow.url || '').slice(0, 70)}...`);
+    });
+
+    // A corrida pode ter sido vencida por outra etapa. Releia o estado que o
+    // banco efetivamente aceitou antes de espelhar a galeria no metadata.
+    const { data: canonicalMedia, error: canonicalMediaError } = await supabase
+      .from('post_media')
+      .select('id,url,is_cover,sort_order')
+      .eq('post_id', postId)
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true });
+    if (canonicalMediaError) {
+      throw new Error(`post_media canonical read failed: ${canonicalMediaError.message}`);
     }
+    const canonicalImages = buildCanonicalGalleryImageUrls(post.image_url, canonicalMedia, 5);
     
     // 6b. Atualizar metadata.gallery_image_urls
     const currentMeta = post.metadata || {};
     const updatedMeta = {
       ...currentMeta,
-      gallery_image_urls: allImages,
+      gallery_image_urls: canonicalImages,
     };
     
     const { error: patchErr } = await supabase
@@ -640,11 +646,11 @@ async function enrichPost(supabase, token, postId, sourceUrl, options = {}) {
     if (patchErr) {
       throw new Error(`gallery metadata update failed: ${patchErr.message}`);
     } else {
-      console.log(`   ✅ metadata.gallery_image_urls atualizado (${allImages.length} imgs)`);
+      console.log(`   ✅ metadata.gallery_image_urls atualizado (${canonicalImages.length} imgs)`);
     }
     
     console.log(`   ✅ ${inserted} imagens adicionadas ao post`);
-    return { added: inserted, total: allImages.length, images: allImages };
+    return { added: inserted, total: canonicalImages.length, images: canonicalImages };
   } catch (e) {
     console.error(`   ❌ Erro na inserção: ${e.message}`);
     return { added: 0, total: existingImages.length, images: existingImages, error: 'INSERT_ERROR' };
@@ -712,6 +718,7 @@ async function main() {
     process.exit(1);
   }
   const token = auth.session.access_token;
+  activeAuthClient = supabase;
   console.log(`🔑 Logado como ${auth.user.id} (apos ${auth.attempts} tentativa(s))`);
   
   const dryRun = ENRICH_OPTIONS.dryRun;
@@ -850,7 +857,11 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch(e => { console.error('💥', e.message); process.exitCode = 1; });
+  main()
+    .catch(e => { console.error('💥', e.message); process.exitCode = 1; })
+    .finally(() => signOutCurrentSession(activeAuthClient, {
+      onError: e => console.error('⚠️ Logout local do Cadu falhou:', e.message),
+    }));
 }
 
 module.exports = {

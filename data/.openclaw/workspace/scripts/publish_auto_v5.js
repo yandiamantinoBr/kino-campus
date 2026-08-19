@@ -14,8 +14,10 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
+const { signOutCurrentSession } = require('./auth-retry');
 const fs = require('fs');
 const path = require('path');
+let activeAuthClient = null;
 const {
   isKnownPlaceholderImageUrl,
   normalizeImageUrl: normalizeCmsUrl,
@@ -1198,6 +1200,7 @@ async function main() {
     process.exit(1);
   }
   const token = auth.session.access_token;
+  activeAuthClient = supabase;
   console.log(`🔑 Logado como ${auth.user.id}`);
 
   const reportFile = CUSTOM_FILE || pickLatestReport();
@@ -1494,7 +1497,11 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch(e => { console.error('💥', e.message); process.exit(1); });
+  main()
+    .catch(e => { console.error('💥', e.message); process.exitCode = 1; })
+    .finally(() => signOutCurrentSession(activeAuthClient, {
+      onError: e => console.error('⚠️ Logout local do Cadu falhou:', e.message),
+    }));
 }
 
 module.exports = {

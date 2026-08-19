@@ -27,11 +27,12 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
-const { signInWithRetry } = require('./auth-retry');
+const { signInWithRetry, signOutCurrentSession } = require('./auth-retry');
 const sharp = require('sharp');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+let activeAuthClient = null;
 const { writeJsonAtomic } = require('./lib/atomic-json-file.js');
 const { canonicalUrl, webySameEvent } = require('./lib/canonical-url.js');
 const {
@@ -736,6 +737,7 @@ async function main() {
     process.exit(1);
   }
   const bearer = `Bearer ${auth.session.access_token}`;
+  activeAuthClient = supabase;
   console.log(`🔑 Logado como ${auth.user.id} (apos ${auth.attempts} tentativa(s))\n`);
 
   // === Carregar posts ===
@@ -1330,5 +1332,7 @@ async function main() {
 main().catch(e => {
   console.error('💥 Erro fatal:', e.message);
   console.error(e.stack);
-  process.exit(1);
-});
+  process.exitCode = 1;
+}).finally(() => signOutCurrentSession(activeAuthClient, {
+  onError: e => console.error('⚠️ Logout local do Cadu falhou:', e.message),
+}));
