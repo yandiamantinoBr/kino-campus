@@ -33,6 +33,13 @@ const baseline = read('supabase/migrations/00000000000001_baseline_v76.sql');
 const workflows = [essential, edgeDeploy, emailCheck, lighthouse];
 
 describe('CI and deployment safety contracts', () => {
+  test('runs the required DNS and Auth gate on every pull request to main', () => {
+    const pullRequestTrigger = emailCheck.split(/\r?\n  schedule:/)[0];
+    expect(pullRequestTrigger).toMatch(/pull_request:\r?\n    branches: \[main\]/);
+    expect(pullRequestTrigger).not.toMatch(/\r?\n    paths:/);
+    expect(emailCheck).toContain('name: DNS + Supabase Auth');
+  });
+
   test('uses the same Node major configured in the Vercel project', () => {
     expect(packageJson.engines.node).toBe('24.x');
     [essential, emailCheck, lighthouse].forEach((workflow) => {

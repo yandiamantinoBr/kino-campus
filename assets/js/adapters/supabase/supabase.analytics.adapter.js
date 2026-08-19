@@ -10,6 +10,11 @@
       ? window._KCSA.getClient() : null;
   }
 
+  function getCurrentUser() {
+    return (window._KCSA && typeof window._KCSA.getCurrentUser === 'function')
+      ? window._KCSA.getCurrentUser() : Promise.resolve(null);
+  }
+
   // ── Top Contribuidores (ranking de engajamento) ────────────────────────────
   async function getTopContributors(period, module, limit) {
     const client = getClient();
@@ -56,11 +61,16 @@
 
   // ── Rastrear visualização (v9.3.1) ──────────────────────────────────────────
   async function trackView(postId) {
-    const client = getClient();
-    if (!client) return { ok: false };
     const uuid = String(postId || '').trim();
     if (!uuid) return { ok: false };
     try {
+      // kc_track_view is intentionally authenticated-only. Keep this guard in
+      // the adapter as a final boundary so any future caller cannot turn an
+      // anonymous product visit into a noisy Postgres 42501.
+      const user = await getCurrentUser();
+      if (!user || !user.id) return { ok: false };
+      const client = getClient();
+      if (!client) return { ok: false };
       const { data, error } = await client.rpc('kc_track_view', { p_post_id: uuid });
       if (error) return { ok: false, error };
       return data || { ok: false };
