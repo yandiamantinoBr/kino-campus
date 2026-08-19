@@ -38,6 +38,13 @@ function loadController() {
   (0, eval)(code);
 }
 
+async function waitForMockCall(mock, timeoutMs = 1000) {
+  const deadline = Date.now() + timeoutMs;
+  while (mock.mock.calls.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 describe('kc-feed.controller — public API surface', () => {
   beforeEach(() => {
     delete window.KCControllers;
@@ -643,7 +650,7 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
       module: 'eventos',
       onAfterAppend,
     });
-    await new Promise((resolve) => setTimeout(resolve, 110));
+    await waitForMockCall(window.kcInitVoteStates);
 
     expect(document.getElementById('feed-container').textContent).toContain('Card revalidado');
     expect(document.getElementById('feed-container').textContent).toContain('Card da segunda pagina');
