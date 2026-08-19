@@ -509,7 +509,7 @@ async function prepareFinalImages(
   return { images: Array.from(new Set(images)).slice(0, MAX_IMAGE_COUNT), uploads };
 }
 
-// Aplica galeria ao post: posts.image_url + metadata + post_media (best-effort).
+// Aplica galeria ao post atomically: posts.image_url + metadata + post_media.
 async function applyImages(
   admin: SupabaseClient,
   postId: string,
@@ -525,34 +525,13 @@ async function applyImages(
     cover_url: coverUrl,
     gallery_image_urls: cleanUrls,
   });
-  const { data: previousPost } = await admin
-    .from("posts")
-    .select("image_url,metadata")
-    .eq("id", postId)
-    .maybeSingle();
-  const { data: previousMedia } = await admin
-    .from("post_media")
-    .select("post_id,url,is_cover,sort_order")
-    .eq("post_id", postId);
-  try {
-    await admin.from("posts").update({ image_url: coverUrl, metadata }).eq("id", postId);
-    await admin.from("post_media").delete().eq("post_id", postId);
-    await admin.from("post_media").insert(
-      cleanUrls.map((url, index) => ({ post_id: postId, url, is_cover: index === 0, sort_order: index })),
-    );
-  } catch (_) {
-    if (previousPost) {
-      await admin
-        .from("posts")
-        .update({ image_url: previousPost.image_url || null, metadata: previousPost.metadata || {} })
-        .eq("id", postId)
-        .then(() => {}, () => {});
-    }
-    if (Array.isArray(previousMedia) && previousMedia.length) {
-      await admin.from("post_media").insert(previousMedia).then(() => {}, () => {});
-    }
-    return (previousPost?.metadata as Record<string, unknown>) || currentMetadata || {};
-  }
+  const { data, error } = await admin.rpc("kc_cadu_replace_post_media", {
+    p_post_id: postId,
+    p_image_urls: cleanUrls,
+    p_metadata: metadata,
+  });
+  if (error) throw error;
+  if (!data || data.ok !== true) throw new Error("CADU_MEDIA_REPLACEMENT_FAILED");
   return metadata;
 }
 

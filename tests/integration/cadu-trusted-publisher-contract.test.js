@@ -150,9 +150,10 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('uploadCover');
     expect(index).toContain('prepareFinalImages');
     expect(index).toContain('applyImages');
+    expect(index).toContain('kc_cadu_replace_post_media');
     expect(index).toContain('post-media/');
     expect(index).toContain('gallery_image_urls');
-    expect(index).toContain('sort_order: index');
+    expect(index).toContain('if (error) throw error');
   });
 
   test('mapper preenche data_fim_evento, modalidade e merge profundo', () => {
