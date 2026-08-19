@@ -418,9 +418,9 @@ describe('CI and deployment safety contracts', () => {
       '20260729203000',
       '20260731193000',
       '20260801183000',
-      '20260819131233',
-      '20260819135516',
-      '20260819140615',
+      '20260819150332',
+      '20260819150333',
+      '20260819150335',
     ].forEach((migrationVersion) => {
       expect(edgeDeploy).toContain(`"${migrationVersion}"`);
       expect(privacyDeployScript).toContain(`"${migrationVersion}"`);
