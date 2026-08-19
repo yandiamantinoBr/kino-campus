@@ -111,6 +111,11 @@
     return generation === refreshGeneration;
   }
 
+  function isMissingPrivacyRpcError(error) {
+    const code = String(error && error.code || '').toUpperCase();
+    return code === '42883' || code === 'PGRST202';
+  }
+
   async function loadPrivacySummary(options) {
     options = options || {};
     const generation = Number(options.generation) || ++refreshGeneration;
@@ -151,7 +156,12 @@
       ]);
     } catch (error) {
       if (!isCurrentGeneration(generation)) return;
-      const fallbackClient = window.KCSupabase && typeof window.KCSupabase.getClient === 'function'
+      // A direct-table fallback is only a compatibility path for a genuinely
+      // absent RPC. Authorization/session failures must remain fail-closed;
+      // retrying three protected tables only multiplies expected 401/42501 logs.
+      const fallbackClient = isMissingPrivacyRpcError(error)
+        && window.KCSupabase
+        && typeof window.KCSupabase.getClient === 'function'
         ? window.KCSupabase.getClient()
         : null;
       if (fallbackClient) {

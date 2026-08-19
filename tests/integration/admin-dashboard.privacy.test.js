@@ -189,4 +189,33 @@ describe('admin-dashboard.privacy.js', () => {
     expect(health).toContain('Fallback parcial');
     expect(health).not.toContain('Fallback ativo');
   });
+
+  test.each([
+    ['42501', 401],
+    ['PGRST301', 401],
+    ['AUTH_SESSION_NOT_ACTIVE', 403],
+  ])('falha fechado sem consultar tabelas após erro de autorização %s', async (code, status) => {
+    const from = jest.fn();
+    window.KCSupabase = {
+      getClient() {
+        return {
+          rpc: jest.fn().mockResolvedValue({
+            data: null,
+            error: { code, status, message: 'authorization failed' },
+          }),
+          from,
+        };
+      },
+    };
+
+    require(MODULE_PATH);
+    await window._KCAD.privacy.loadPrivacySummary({
+      periodDays: 30,
+      periodLabel: 'últimos 30 dias',
+      since: '2026-06-17T03:00:00Z',
+    });
+
+    expect(from).not.toHaveBeenCalled();
+    expect(document.getElementById('admin-health-list').textContent).toContain('Indisponível');
+  });
 });
