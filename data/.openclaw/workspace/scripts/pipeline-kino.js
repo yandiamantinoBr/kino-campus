@@ -1271,7 +1271,9 @@ async function collectPaginatedRows(fetchPage, {
 }
 
 function fetchPublishedUrlPage(key, { offset, limit }) {
-  const url = `${SUPABASE_URL}/rest/v1/posts?select=id,metadata&status=eq.published&order=id.asc&limit=${limit}&offset=${offset}`;
+  // Keep moderated canonicals in the source identity index so they are not
+  // rediscovered and merged again on every complete run.
+  const url = `${SUPABASE_URL}/rest/v1/posts?select=id,metadata&status=in.(published,hidden,closed)&order=id.asc&limit=${limit}&offset=${offset}`;
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,

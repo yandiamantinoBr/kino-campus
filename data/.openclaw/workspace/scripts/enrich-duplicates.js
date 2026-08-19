@@ -18,7 +18,8 @@
 
 'use strict';
 
-const { signInWithRetry } = require('./auth-retry');
+const { signInWithRetry, signOutCurrentSession } = require('./auth-retry');
+const { appendPostMediaIfAbsent } = require('./post-media-append');
 const fs = require('fs');
 const path = require('path');
 const {
@@ -30,6 +31,7 @@ const {
 const SUPABASE_URL = 'https://wacyrkwhkvzwkqpolrbg.supabase.co';
 const BASE_DIR = '/data/.openclaw/workspace/data/ufg-scrape';
 const IG_DIR = '/data/.openclaw/workspace/data/ufg-instagram';
+let activeAuthClient = null;
 
 const env = {};
 function loadEnvFile(filePath) {
@@ -762,20 +764,16 @@ async function enrichDuplicate(supabase, item, options = {}) {
           newImages,
         );
 
-        // Add only URLs that are not already attached to this post.
-        for (const imgUrl of newImages.slice(0, 4)) {
-          const { error: insertErr } = await supabase
-            .from('post_media')
-            .insert({ post_id: existingPost.id, url: imgUrl, is_cover: false });
-          if (insertErr) {
-            // Duplicate key is OK
-            if (!insertErr.message.includes('duplicate')) {
-              throw new Error(`post_media insert failed: ${insertErr.message}`);
-            }
-          } else {
-            console.log(`   ✅ img: ${imgUrl.slice(0, 70)}...`);
-          }
-        }
+        // Add only URLs that are not already attached to this post. The upsert
+        // also closes a concurrent enricher race after the read above.
+        const appended = await appendPostMediaIfAbsent(
+          supabase,
+          existingPost.id,
+          newImages.slice(0, 4),
+        );
+        appended.inserted.forEach(media => {
+          console.log(`   ✅ img: ${String(media.url || '').slice(0, 70)}...`);
+        });
       }
     }
   }
@@ -868,14 +866,8 @@ async function enrichUpdate(supabase, item, options = {}) {
     const oldImageUrl = existingPost.image_url;
     if (oldImageUrl && oldImageUrl !== newImageUrl) {
       // Mover cover antiga para post_media (gallery) — preserva histórico
-      const { error: moveErr } = await supabase
-        .from('post_media')
-        .insert({ post_id: existingPost.id, url: oldImageUrl, is_cover: false });
-      if (moveErr && !moveErr.message.includes('duplicate')) {
-        throw new Error(`old cover move failed: ${moveErr.message}`);
-      } else {
-        console.log(`   ✅ cover antiga movida para gallery: ${oldImageUrl.slice(0, 60)}...`);
-      }
+      await appendPostMediaIfAbsent(supabase, existingPost.id, [oldImageUrl]);
+      console.log(`   ✅ cover antiga preservada na gallery: ${oldImageUrl.slice(0, 60)}...`);
     }
     // Atualizar cover do post
     const { error: coverErr } = await supabase
@@ -908,14 +900,7 @@ async function enrichUpdate(supabase, item, options = {}) {
         }
       }
       newImages = sizeFiltered;
-      for (const imgUrl of newImages.slice(0, 4)) {
-        const { error: insertErr } = await supabase
-          .from('post_media')
-          .insert({ post_id: existingPost.id, url: imgUrl, is_cover: false });
-        if (insertErr && !insertErr.message.includes('duplicate')) {
-          throw new Error(`supplemental image insert failed: ${insertErr.message}`);
-        }
-      }
+      await appendPostMediaIfAbsent(supabase, existingPost.id, newImages.slice(0, 4));
       if (newImages.length) console.log(`   🖼️  +${newImages.length} imagens complementares`);
     }
   }
@@ -978,6 +963,7 @@ async function main() {
     console.error('❌ Login falhou apos retries:', e.message);
     process.exit(1);
   }
+  activeAuthClient = supabase;
   console.log(`🔑 Logado como ${auth.user.id} (apos ${auth.attempts} tentativa(s))`);
   
   const dryRun = DUPLICATE_OPTIONS.dryRun;
@@ -1085,7 +1071,11 @@ function partitionEnrichmentWork(discarded) {
 }
 
 if (require.main === module) {
-  main().catch(e => { console.error('💥', e.message); process.exit(1); });
+  main()
+    .catch(e => { console.error('💥', e.message); process.exitCode = 1; })
+    .finally(() => signOutCurrentSession(activeAuthClient, {
+      onError: e => console.error('⚠️ Logout local do Cadu falhou:', e.message),
+    }));
 }
 
 module.exports = {

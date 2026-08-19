@@ -254,6 +254,13 @@
     var viewPostId = (post && post.uuid) ? post.uuid : (post && post.id) || fallbackId;
     var key = String(viewPostId || '').trim();
     if (!key || _trackedViewIds[key]) return;
+
+    // kc_track_view is intentionally restricted to authenticated users. Product
+    // pages are public, so cached/SSR content can render before refreshViewerState
+    // finishes. Do not turn an expected anonymous visit into a Postgres 42501.
+    var viewer = (_deps && typeof _deps.getUser === 'function') ? _deps.getUser() : null;
+    if (!viewer || !viewer.id) return;
+
     _trackedViewIds[key] = true;
 
     try {

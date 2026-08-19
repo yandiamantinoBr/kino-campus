@@ -133,4 +133,22 @@ async function signInWithRetry(supabase, email, password, options = {}) {
   );
 }
 
-module.exports = { signInWithRetry, isRetryable, sleep };
+async function signOutCurrentSession(supabase, options = {}) {
+  const onError = typeof options.onError === 'function' ? options.onError : (() => {});
+  if (!supabase || !supabase.auth || typeof supabase.auth.signOut !== 'function') {
+    return { ok: false, skipped: true };
+  }
+  try {
+    const result = await supabase.auth.signOut({ scope: 'local' });
+    if (result && result.error) {
+      onError(result.error);
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  } catch (error) {
+    onError(error);
+    return { ok: false, error };
+  }
+}
+
+module.exports = { signInWithRetry, signOutCurrentSession, isRetryable, sleep };
