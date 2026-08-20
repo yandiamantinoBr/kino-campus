@@ -90,6 +90,7 @@ describe('SEO e indexacao publica', () => {
     expect(vercel).toContain('"source": "/404.html"');
     expect(vercel).toContain('"destination": "/api/og-product?kc_not_found=1"');
     expect(vercel).toContain('"api/og-product.js"');
+    expect(vercel).toContain('"source": "/(.*)"');
 
     const publicHtml = fs.readdirSync(ROOT)
       .filter((file) => file.endsWith('.html'));
