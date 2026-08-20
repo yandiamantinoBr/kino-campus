@@ -523,7 +523,10 @@
       if ((filters && filters.signal && filters.signal.aborted) || (e && e.name === 'AbortError')) throw e;
       console.error('[KCAPI][Supabase] searchPosts falhou:', e);
       if (e && e.code === 'KC_SEARCH_BACKEND_UNAVAILABLE') throw e;
-      return [];
+      const backendError = new Error('KC_SEARCH_BACKEND_UNAVAILABLE');
+      backendError.code = 'KC_SEARCH_BACKEND_UNAVAILABLE';
+      backendError.details = e;
+      throw backendError;
     }
 
     console.warn('[KCAPI][Supabase] KCSupabase.searchPosts indisponivel; retornando lista vazia.');

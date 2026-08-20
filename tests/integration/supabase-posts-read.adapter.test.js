@@ -278,6 +278,8 @@ describe('supabase.posts-read.adapter.js — searchPosts', () => {
 
   test('loga erro com prefixo [KCAPI][Supabase] searchPosts', () => {
     expect(source).toContain('[KCAPI][Supabase] searchPosts falhou:');
+    expect(source).toContain("const backendError = new Error('KC_SEARCH_BACKEND_UNAVAILABLE')");
+    expect(source).toContain("backendError.code = 'KC_SEARCH_BACKEND_UNAVAILABLE'");
   });
 });
 
