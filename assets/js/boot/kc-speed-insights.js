@@ -84,14 +84,38 @@
     });
   }
 
-  function boot() {
+  function hasAnalyticsConsent() {
+    try {
+      return !!(
+        window.KCConsent &&
+        typeof window.KCConsent.hasConsent === 'function' &&
+        window.KCConsent.hasConsent('analytics')
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function bootIfConsented() {
+    // Speed Insights and Web Analytics are optional telemetry. They must not
+    // establish a network connection until the visitor explicitly allows
+    // analytics in the KinoCampus consent manager.
+    if (!hasAnalyticsConsent()) return;
     injectSpeedInsights();
     injectWebAnalytics();
   }
 
+  function handleConsentChange(event) {
+    var preferences = event && event.detail && event.detail.preferences;
+    if (preferences && preferences.analytics !== true) return;
+    bootIfConsented();
+  }
+
+  window.addEventListener('kc:consentchange', handleConsentChange);
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('DOMContentLoaded', bootIfConsented);
   } else {
-    boot();
+    bootIfConsented();
   }
 })();

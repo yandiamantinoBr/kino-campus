@@ -381,10 +381,24 @@ async function kcRefreshVisibleScores(options = {}) {
       .in('id', ids);
 
     if (error || !Array.isArray(data)) return;
+    const returnedIds = new Set();
     data.forEach((row) => {
-      if (!row || !row.id || kcHasPendingVote(row.id)) return;
+      if (!row || !row.id) return;
+      const postId = String(row.id).trim();
+      if (!postId) return;
+      returnedIds.add(postId);
+      if (kcHasPendingVote(postId)) return;
       kcUpdateVoteScoreInDOM(row.id, row.votos);
     });
+
+    // A resposta pode repetir exatamente os mesmos votos. Ainda assim ela
+    // confirmou que todos os cards visíveis continuam atuais; sem renovar o
+    // timestamp, o polling de 5 s faria uma nova consulta a cada tick após o
+    // TTL, apesar de não haver nenhuma mudança para renderizar.
+    if (ids.every((postId) => returnedIds.has(String(postId)))) {
+      KC_VOTE_SCORE_CACHE_TS = Date.now();
+      kcScheduleVoteSessionPersist();
+    }
   } catch (_) { }
 }
 

@@ -7,7 +7,7 @@ Módulos do núcleo da aplicação: UI shell, modelo de dados, widgets reutiliz�
 | Arquivo | Namespace | Responsabilidade |
 |---|---|---|
 | `kc-core.js` | `window.KCCore` | Shell mobile, scroll, layout, boot DOMContentLoaded |
-| `kc-core-widgets.js` | `window.KCCore.initWhatsAppShare`, `window.KCCore.bindModuleSortTabs` | WhatsApp share + sort tabs |
+| `kc-core-widgets.js` | `window.KCCore.initWhatsAppShare`, `window.KCCore.bindModuleSortTabs`, `window.KCCore.initMobileTextTruncation` | WhatsApp share, sort tabs e compactação textual móvel |
 | `kc-post-model.js` | `window.KCPostModel` | Fábrica de modelo de post normalizado |
 | `kc-user-posts.js` | `window.kcUserPosts` | Posts de usuário em localStorage |
 | `kc-auth.ui.js` | — | UI de autenticação (modais de login/signup) |

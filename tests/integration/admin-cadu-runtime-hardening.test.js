@@ -171,14 +171,36 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).not.toContain('Bot: 8746');
   });
 
-  test('never caches Cadu health and rejects browser-direct production configuration', () => {
-    expect(controller.match(/fetch\('\/api\/cadu\/health', \{\s*cache: 'no-store'/g)).toHaveLength(2);
+  test('never caches Cadu health and rejects browser-direct production configuration', async () => {
+    const healthFetch = functionSource('fetchCaduHealth');
+    expect(controller).toContain('var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;');
+    expect(controller.match(/fetch\('\/api\/cadu\/health', \{\s*cache: 'no-store'/g)).toHaveLength(1);
+    expect(healthFetch).toContain('timeoutController.abort()');
+    expect(healthFetch).toContain('upstreamSignal.addEventListener');
+    expect(functionSource('checkHealth')).toContain('await fetchCaduHealth()');
+    expect(controller).toContain('fetchCaduHealth()\n        .then(function (health)');
     expect(healthProxy).toContain("res.setHeader('Cache-Control', 'private, no-store')");
     expect(healthProxy).toMatch(/fetchCaduUpstream\(`\$\{apiUrl\.replace[\s\S]*?cache: 'no-store'/);
     const configSource = functionSource('getCaduConfig');
     expect(configSource).toContain('direct && (!localDev || !localToken)');
     expect(configSource).toContain('em produção use o proxy autenticado do KinoCampus');
     expect(functionSource('caduFetchRaw')).toContain('if (cfg.configurationError) throw new Error(cfg.configurationError)');
+
+    const fetchStub = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 'ok' }),
+    }));
+    const executableHealthFetch = healthFetch.replace(/^function /, 'async function ');
+    const fetchCaduHealth = Function(
+      'fetch', 'AbortController', 'setTimeout', 'clearTimeout', 'CADU_HEALTH_REQUEST_TIMEOUT_MS',
+      `"use strict"; return (${executableHealthFetch});`,
+    )(fetchStub, AbortController, setTimeout, clearTimeout, 12000);
+    const health = await fetchCaduHealth();
+    expect(health).toEqual({ ok: true, status: 200, data: { status: 'ok' } });
+    expect(fetchStub).toHaveBeenCalledWith('/api/cadu/health', expect.objectContaining({
+      cache: 'no-store', signal: expect.any(AbortSignal),
+    }));
 
     const configFor = Function('window', 'location', `"use strict"; return (${configSource})();`);
     const productionWindow = {

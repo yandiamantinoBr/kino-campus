@@ -345,7 +345,10 @@ describe('Cadu institutional review — durable database and admin proxy', () =>
     ].forEach((field) => expect(proxy).toContain(`${field}:`));
     expect(proxy).toContain("action === 'review'");
     expect(proxy).toContain("source: REVIEW_POLICY.origin");
-    expect(proxy).toContain('body: JSON.stringify(upstreamBody)');
+    // The exact envelope is serialized once through the bounded helper before
+    // it crosses the server-side trust boundary.
+    expect(proxy).toContain('serializeCaduPublishBody(upstreamBody)');
+    expect(proxy).toContain('body: serializedUpstreamBody');
     expect(proxy).toContain("body.source || 'cadu-admin'");
     expect(proxy).toContain('instagram: body.instagram || null');
   });

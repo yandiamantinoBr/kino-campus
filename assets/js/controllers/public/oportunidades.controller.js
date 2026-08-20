@@ -3,8 +3,7 @@
   'use strict';
 
   const MOBILE_SECTION_MODAL_ID = 'kcOpportunitySectionOverlay';
-  const SECTION_CACHE_KEY = 'oportunidades:index';
-  const SECTION_CACHE_MAX_AGE_MS = 1000 * 60 * 10;
+  let opportunityCatalog = null;
 
   const state = {
     selectedTypeFilters: new Set(),
@@ -17,7 +16,6 @@
     posts: new Map(),
     sections: [],
     refreshQueued: false,
-    fetchStarted: false,
     applyWrapped: false,
     activeSectionKey: '',
     activeSectionNode: null,
@@ -47,14 +45,25 @@
   }
 
   function restoreCachedPosts() {
-    const store = getSessionStore();
-    if (!store) return false;
-    const cached = store.get('feed-index', SECTION_CACHE_KEY, { maxAge: SECTION_CACHE_MAX_AGE_MS });
-    const posts = cached && cached.value && Array.isArray(cached.value.posts) ? cached.value.posts : [];
+    const catalog = getOpportunityCatalog();
+    const posts = catalog ? catalog.restore() : [];
     if (!posts.length) return false;
     upsertPosts(posts);
     queueRefresh();
     return true;
+  }
+
+  function getOpportunityCatalog() {
+    if (opportunityCatalog) return opportunityCatalog;
+    if (!window._KCOpCatalog || typeof window._KCOpCatalog.createCatalog !== 'function') return null;
+    opportunityCatalog = window._KCOpCatalog.createCatalog();
+    return opportunityCatalog;
+  }
+
+  function syncCatalogPosts(posts) {
+    if (!Array.isArray(posts) || !posts.length) return;
+    upsertPosts(posts);
+    queueRefresh();
   }
 
   function decorateFreshCards(payload) {
@@ -300,6 +309,7 @@
   function openMobileSectionModal(sectionKey, trigger) {
     const sectionMeta = getSidebarSections().find((entry) => entry.key === sectionKey);
     if (!sectionMeta || !sectionMeta.node) return;
+    if (sectionKey === 'areas') fetchAllPosts({ targetPages: 4 });
 
     const overlay = ensureMobileSectionModal();
     const slot = overlay.querySelector('[data-kc-opp-section-modal-slot="true"]');
@@ -597,47 +607,19 @@
     state.applyWrapped = true;
   }
 
-  async function fetchAllPosts() {
-    if (state.fetchStarted) return;
-    state.fetchStarted = true;
+  function fetchAllPosts(options) {
+    const catalog = getOpportunityCatalog();
+    if (!catalog) return Promise.resolve([]);
+    return catalog.fetch(options).then(function (posts) {
+      syncCatalogPosts(posts);
+      return posts;
+    });
+  }
 
-    const collected = [];
-
-    try {
-      // Filter catalog only — light rows, capped pages (was 20×100 full embeds).
-      if (window.KCAPI && typeof window.KCAPI.getPosts === 'function') {
-        const limit = 50;
-        const maxPages = 4;
-        for (let page = 1; page <= maxPages; page += 1) {
-          const batch = await window.KCAPI.getPosts({
-            module: 'oportunidades',
-            page,
-            limit,
-            light: true,
-          });
-          if (!Array.isArray(batch) || batch.length === 0) break;
-          collected.push(...batch);
-          if (batch.length < limit) break;
-        }
-      } else if (window.KCAPI && typeof window.KCAPI.getDatabaseNormalized === 'function') {
-        const db = await window.KCAPI.getDatabaseNormalized();
-        const posts = Array.isArray(db && db.posts) ? db.posts : [];
-        collected.push(...posts.filter((post) => normalizeText(post && post.modulo) === 'oportunidades'));
-      }
-    } catch (_) { }
-
-    try {
-      if (window.kcUserPosts && typeof window.kcUserPosts.list === 'function') {
-        const userPosts = window.kcUserPosts.list();
-        if (Array.isArray(userPosts)) {
-          collected.push(...userPosts.filter((post) => normalizeText(post && post.modulo) === 'oportunidades'));
-        }
-      }
-    } catch (_) { }
-
-    upsertPosts(collected);
-    persistCachedPosts(collected);
-    queueRefresh();
+  function scheduleCatalogExpansion() {
+    const catalog = getOpportunityCatalog();
+    if (!catalog) return;
+    catalog.scheduleExpansion(syncCatalogPosts);
   }
 
   function setupExtraPredicate() {
@@ -676,13 +658,17 @@
     syncFilterInputs(state.selectedTypeFilters, state.selectedModeFilters, state.priceMin, state.priceMax, state.datePreset);
     bindSidebarEvents();
     setupExtraPredicate();
-    restoreCachedPosts();
+    const restoredCatalog = restoreCachedPosts();
     if (window.KCCore && typeof window.KCCore.bindModuleSortTabs === 'function') {
       window.KCCore.bindModuleSortTabs({ initFeedFn: initFeed });
     } else {
       initFeed();
     }
-    fetchAllPosts();
+    if (!restoredCatalog) {
+      fetchAllPosts({ targetPages: 1 }).finally(scheduleCatalogExpansion);
+    } else {
+      scheduleCatalogExpansion();
+    }
     queueRefresh();
   });
 })();

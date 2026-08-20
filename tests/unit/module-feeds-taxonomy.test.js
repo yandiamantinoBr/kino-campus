@@ -24,7 +24,7 @@ describe('module feeds taxonomy + filter contracts', () => {
     Object.entries(PAGES).forEach(([name, html]) => {
       expect(html).toContain('kc-filters.js?v=8.6.6');
       expect(html).toContain('kc-feed-filters.js?v=8.6.3');
-      expect(html).toContain('kc-core-widgets.js?v=8.6.3');
+      expect(html).toContain('kc-core-widgets.js?v=8.6.4');
       expect(html).toContain('data-kc-filters="tab-search"');
     });
   });

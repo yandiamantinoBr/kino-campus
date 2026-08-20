@@ -1,5 +1,5 @@
 /**
- * KinoCampus Service Worker - v12.17.0
+ * KinoCampus Service Worker - v12.21.0
  *
  * Estrategia:
  *   - Shell local versionado (CSS + JS core): stale-while-revalidate
@@ -17,7 +17,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'kc-shell-';
-var CACHE_VERSION = 'kc-shell-v12.19.0';
+var CACHE_VERSION = 'kc-shell-v12.21.0';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';
 
@@ -37,7 +37,8 @@ var SHELL_ASSETS = [
   '/assets/js/utils/kc-utils.format.js?v=8.6.1',
   '/assets/js/utils/kc-utils.dom.js?v=8.6.1',
   '/assets/js/utils/kc-utils.js?v=8.6.1',
-  '/assets/js/core/kc-core.js?v=8.6.6',
+  '/assets/js/core/kc-core-widgets.js?v=8.6.4',
+  '/assets/js/core/kc-core.js?v=8.6.8',
 ];
 
 /** Padroes que nunca devem ser cacheados (Supabase, CDNs, Fonts). */
@@ -107,8 +108,11 @@ function networkFirstNavigation(event) {
     }).catch(function () {
       return cache.match(request).then(function (cached) {
         if (cached) return cached;
-        return cache.match('/index.html').then(function (indexFallback) {
-          return indexFallback || new Response('Offline', {
+        // The navigation cache key for the home page is '/', not
+        // '/index.html'.  Use the canonical route so a previously visited
+        // home page remains available as the offline fallback.
+        return cache.match('/').then(function (homeFallback) {
+          return homeFallback || new Response('Offline', {
             status: 503,
             statusText: 'Offline',
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },

@@ -96,4 +96,35 @@ describe('Voting session hydration', () => {
 
     jest.useRealTimers();
   });
+
+  test('uma resposta sem mudança renova o cache e evita novo polling antes do TTL', async () => {
+    const visiblePostId = '550e8400-e29b-41d4-a716-446655440099';
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-08-20T12:00:00.000Z'));
+    window.KCSessionStore.get.mockReturnValue(null);
+    document.body.innerHTML =
+      '<div class="kc-vote-box">' +
+        `<button data-action="vote-hot" data-post-id="${visiblePostId}"></button>` +
+        '<span data-kc-vote-score>17</span>' +
+        `<button data-action="vote-cold" data-post-id="${visiblePostId}"></button>` +
+      '</div>';
+
+    const inQuery = jest.fn().mockResolvedValue({
+      data: [{ id: visiblePostId, votos: 17 }],
+      error: null,
+    });
+    const select = jest.fn(() => ({ in: inQuery }));
+    const client = { from: jest.fn(() => ({ select })) };
+    window.KCSupabase.getClient.mockReturnValue(client);
+
+    kcUpdateVoteScoreInDOM(visiblePostId, 17);
+    jest.advanceTimersByTime(15001);
+    await kcRefreshVisibleScores();
+    await kcRefreshVisibleScores();
+
+    expect(client.from).toHaveBeenCalledTimes(1);
+    expect(inQuery).toHaveBeenCalledWith('id', [visiblePostId]);
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
 });

@@ -3,9 +3,11 @@
 const feedHandler = require('../../api/feed.js').default;
 const sitemapHandler = require('../../api/sitemap.js').default;
 const productHandler = require('../../api/og-product.js').default;
+const { fetchPublicSupabaseJson } = require('../../api/_lib/supabase-public-request.js');
 const {
   buildProductJsonLd,
   buildProductValues,
+  fetchPost,
   serializeJsonForHtml,
 } = require('../../api/og-product.js');
 const {
@@ -119,6 +121,169 @@ describe('política SEO dinâmica compartilhada', () => {
     await productHandler({ query: { id: rows[1].id } }, noindexSsr);
     expect(noindexSsr.statusCode).toBe(200);
     expect(noindexSsr.body).toContain('noindex,follow,noarchive');
+  });
+
+  test('sitemap e RSS mantêm 200 cacheável para uma lista vazia válida', async () => {
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+
+    const sitemapResponse = createResponse();
+    await sitemapHandler({}, sitemapResponse);
+    const feedResponse = createResponse();
+    await feedHandler({}, feedResponse);
+
+    for (const response of [sitemapResponse, feedResponse]) {
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toContain('s-maxage=900');
+    }
+    expect(feedResponse.body).not.toContain('<item>');
+    expect(sitemapResponse.body).toContain('<loc>https://www.kinocampus.com.br/</loc>');
+  });
+
+  test('sitemap preserva fallback compatível de schema somente após 400', async () => {
+    global.fetch
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [buildPost()] });
+
+    const response = createResponse();
+    await sitemapHandler({}, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch.mock.calls[1][0]).not.toContain('image_url');
+  });
+
+  test('sitemap e RSS devolvem 503 sem cache quando Supabase falha', async () => {
+    global.fetch.mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
+
+    const sitemapResponse = createResponse();
+    await sitemapHandler({}, sitemapResponse);
+    const feedResponse = createResponse();
+    await feedHandler({}, feedResponse);
+
+    for (const response of [sitemapResponse, feedResponse]) {
+      expect(response.statusCode).toBe(503);
+      expect(response.headers['cache-control']).toBe('no-store, max-age=0');
+      expect(response.headers['retry-after']).toBe('60');
+      expect(response.body).toBe('Service unavailable');
+    }
+  });
+
+  test('requisição pública ao Supabase interrompe upstream suspenso', async () => {
+    const fetchImpl = jest.fn((_, options) => new Promise((_, reject) => {
+      options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+    }));
+
+    const result = await fetchPublicSupabaseJson('https://project.example.supabase.co/rest/v1/posts', {
+      key: 'public-anon-key',
+      fetchImpl,
+      timeoutMs: 1,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'supabase_timeout', status: null });
+    expect(fetchImpl.mock.calls[0][1].signal.aborted).toBe(true);
+  });
+
+  test('requisição pública respeita abort externo sem abortar o sinal chamador no próprio timeout', async () => {
+    const parent = new AbortController();
+    const fetchImpl = jest.fn((_, options) => new Promise((_, reject) => {
+      options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+    }));
+
+    const pending = fetchPublicSupabaseJson('https://project.example.supabase.co/rest/v1/posts', {
+      key: 'public-anon-key',
+      fetchImpl,
+      signal: parent.signal,
+      timeoutMs: 50,
+    });
+    parent.abort(new Error('caller cancelled'));
+
+    await expect(pending).resolves.toEqual({
+      ok: false,
+      reason: 'supabase_request_aborted',
+      status: null,
+    });
+    expect(fetchImpl.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(parent.signal.aborted).toBe(true);
+
+    const timeoutParent = new AbortController();
+    const timeoutResult = await fetchPublicSupabaseJson('https://project.example.supabase.co/rest/v1/posts', {
+      key: 'public-anon-key',
+      fetchImpl,
+      signal: timeoutParent.signal,
+      timeoutMs: 1,
+    });
+    expect(timeoutResult).toEqual({ ok: false, reason: 'supabase_timeout', status: null });
+    expect(timeoutParent.signal.aborted).toBe(false);
+  });
+
+  test('requisição pública aplica o deadline também ao corpo JSON suspenso', async () => {
+    const fetchImpl = jest.fn((_, options) => Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => new Promise((_, reject) => {
+        options.signal.addEventListener('abort', () => reject(new Error('body aborted')), { once: true });
+      }),
+    }));
+
+    await expect(fetchPublicSupabaseJson('https://project.example.supabase.co/rest/v1/posts', {
+      key: 'public-anon-key',
+      fetchImpl,
+      timeoutMs: 1,
+    })).resolves.toEqual({ ok: false, reason: 'supabase_timeout', status: null });
+  });
+
+  test('OG preserva compatibilidade 400 e fallback UUID para legacy_id dentro de um prazo único', async () => {
+    const uuid = '2bbcfb9e-331a-4e02-93dd-7bd809f355a8';
+    const fallbackPost = buildPost({ id: uuid, legacy_id: uuid });
+    global.fetch
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [] })
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => [fallbackPost] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: uuid } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(4);
+    expect(global.fetch.mock.calls[1][0]).not.toContain('image_url');
+    expect(global.fetch.mock.calls[2][0]).toContain(`legacy_id=eq.${uuid}`);
+    expect(global.fetch.mock.calls[3][0]).not.toContain('image_url');
+  });
+
+  test('deadline compartilhado do OG impede retries após a tentativa compatível suspensa', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const uuid = '406aa2bc-b2a1-45c3-9553-3fedb9b9cf9a';
+    const fetchImpl = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) })
+      .mockImplementationOnce((_, options) => new Promise((_, reject) => {
+        options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      }));
+
+    await expect(fetchPost(uuid, { fetchImpl, timeoutMs: 20 })).rejects.toThrow(/Supabase post request failed/);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[1][1].signal.aborted).toBe(true);
+  });
+
+  test('SSR OG responde 503 privado quando o upstream fica suspenso', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.useFakeTimers();
+    try {
+      global.fetch.mockImplementation((_, options) => new Promise((_, reject) => {
+        options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      }));
+      const response = createResponse();
+      const pending = productHandler({ query: { id: 'produto-suspenso' } }, response);
+
+      await jest.advanceTimersByTimeAsync(8_000);
+      await pending;
+
+      expect(response.statusCode).toBe(503);
+      expect(response.headers['cache-control']).toContain('private, no-store');
+      expect(response.headers['retry-after']).toBe('60');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('SSR da fase de ouvintes nao injeta expires_at nem submissao encerrada como Prazo', async () => {

@@ -1,5 +1,13 @@
 import { requireCaduAdmin } from './cadu-auth.mjs';
 import { fetchCaduUpstream, normalizeCaduApiToken } from './cadu-upstream-fetch.js';
+import responseLimits from './cadu-response-limits.cjs';
+
+const {
+  CaduProxyLimitError,
+  MAX_CADU_ERROR_RESPONSE_BYTES,
+  MAX_CADU_RESPONSE_BYTES,
+  readLimitedCaduResponse,
+} = responseLimits;
 
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/u;
 const ENCODED_PATH_SYNTAX = /%(?:2e|2f|3f|23|5c)/iu;
@@ -7,8 +15,6 @@ const SAFE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u;
 const MAX_PATH_LENGTH = 512;
 const MAX_QUERY_LENGTH = 2048;
 const MAX_REQUEST_BYTES = 64 * 1024;
-const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
-const MAX_ERROR_RESPONSE_BYTES = 64 * 1024;
 const MAX_SSE_BYTES = 16 * 1024 * 1024;
 const NON_STREAM_TIMEOUT_MS = 25_000;
 const AGENT_SEND_TIMEOUT_MS = 285_000;
@@ -18,13 +24,7 @@ const SAFE_UPSTREAM_ERROR_STATUS = new Map([
   ['pipeline_runtime_busy', 409],
 ]);
 
-export class CaduProxyLimitError extends Error {
-  constructor(code) {
-    super(code);
-    this.name = 'CaduProxyLimitError';
-    this.code = code;
-  }
-}
+export { CaduProxyLimitError, readLimitedCaduResponse };
 
 function decodePathForValidation(rawPath) {
   if (typeof rawPath !== 'string' || rawPath.length > MAX_PATH_LENGTH) return null;
@@ -302,40 +302,6 @@ function byteLength(value) {
   return Buffer.byteLength(String(value || ''), 'utf8');
 }
 
-export async function readLimitedCaduResponse(upstream, maximumBytes = MAX_RESPONSE_BYTES) {
-  const lengthHeader = upstream?.headers?.get?.('content-length');
-  if (lengthHeader && /^[0-9]+$/u.test(lengthHeader) && Number(lengthHeader) > maximumBytes) {
-    throw new CaduProxyLimitError('cadu_api_response_too_large');
-  }
-
-  if (upstream?.body && typeof upstream.body.getReader === 'function') {
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let total = 0;
-    let text = '';
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (!value) continue;
-        total += value.byteLength;
-        if (total > maximumBytes) throw new CaduProxyLimitError('cadu_api_response_too_large');
-        text += decoder.decode(value, { stream: true });
-      }
-      text += decoder.decode();
-      return text;
-    } finally {
-      try { await reader.cancel(); } catch {}
-    }
-  }
-
-  const text = await upstream.text();
-  if (byteLength(text) > maximumBytes) {
-    throw new CaduProxyLimitError('cadu_api_response_too_large');
-  }
-  return text;
-}
-
 function configureControlCors(res) {
   // The admin console uses this proxy same-origin. Deliberately omit
   // Access-Control-Allow-Origin so a leaked bearer cannot be exercised by an
@@ -361,7 +327,7 @@ async function sanitizedUpstreamFailure(upstream) {
   const payload = { ok: false, error: 'cadu_api_error', status };
   let parsed = null;
   try {
-    const text = await readLimitedCaduResponse(upstream, MAX_ERROR_RESPONSE_BYTES);
+    const text = await readLimitedCaduResponse(upstream, MAX_CADU_ERROR_RESPONSE_BYTES);
     parsed = text ? JSON.parse(text) : null;
   } catch {}
 
@@ -430,7 +396,7 @@ async function proxyNonStream(req, res, route, targetUrl, token) {
     const failure = await sanitizedUpstreamFailure(upstream);
     return res.status(failure.status).json(failure.payload);
   }
-  const responseBody = await readLimitedCaduResponse(upstream);
+  const responseBody = await readLimitedCaduResponse(upstream, MAX_CADU_RESPONSE_BYTES);
   const contentType = upstream.headers.get('content-type') || 'application/json';
   return res.status(upstream.status).setHeader('Content-Type', contentType).send(responseBody);
 }

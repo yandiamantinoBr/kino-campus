@@ -109,7 +109,7 @@
     }).join('');
 
     return [
-      '<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">',
+      '<div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true" inert>',
       '  <div class="kc-mobile-menu-header">',
       '    <h3>Menu</h3>',
       '    <button class="kc-close-menu" data-kc-mobile-menu="close" type="button" aria-label="Fechar menu"><i class="fas fa-times"></i></button>',
@@ -135,16 +135,33 @@
     return { menu, overlay };
   }
 
+  function setMobileMenuInteractivity(menu, isOpen) {
+    if (!menu) return;
+    menu.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    if (isOpen) {
+      menu.removeAttribute('inert');
+      menu.inert = false;
+    } else {
+      menu.setAttribute('inert', '');
+      menu.inert = true;
+    }
+  }
+
   function openMobileMenu() {
     const { menu, overlay } = getMobileMenuElements();
     if (!menu || !overlay) return;
+    setMobileMenuInteractivity(menu, true);
     menu.classList.add('active');
     overlay.classList.add('active');
     document.documentElement.classList.add('kc-menu-open');
-    menu.setAttribute('aria-hidden', 'false');
     overlay.setAttribute('aria-hidden', 'false');
     const toggle = document.querySelector('[data-kc-mobile-menu="toggle"]');
     if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    const closeButton = menu.querySelector('[data-kc-mobile-menu="close"]');
+    const scheduleFocus = window.requestAnimationFrame || function (callback) { return window.setTimeout(callback, 0); };
+    if (closeButton && typeof closeButton.focus === 'function') {
+      scheduleFocus(function () { closeButton.focus({ preventScroll: true }); });
+    }
     if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
       window.KCOverlayLock.lock('mobile-menu');
     }
@@ -153,13 +170,17 @@
   function closeMobileMenu() {
     const { menu, overlay } = getMobileMenuElements();
     if (!menu || !overlay) return;
+    const wasOpen = menu.classList.contains('active');
     menu.classList.remove('active');
     overlay.classList.remove('active');
     document.documentElement.classList.remove('kc-menu-open');
-    menu.setAttribute('aria-hidden', 'true');
+    setMobileMenuInteractivity(menu, false);
     overlay.setAttribute('aria-hidden', 'true');
     const toggle = document.querySelector('[data-kc-mobile-menu="toggle"]');
-    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', 'false');
+      if (wasOpen && typeof toggle.focus === 'function') toggle.focus({ preventScroll: true });
+    }
     if (window.KCOverlayLock && typeof window.KCOverlayLock.unlock === 'function') {
       window.KCOverlayLock.unlock('mobile-menu');
     }
@@ -329,6 +350,8 @@
     if (document.documentElement.dataset.kcPublicShellReady === '1') return;
     document.documentElement.dataset.kcPublicShellReady = '1';
     injectShellIfNeeded();
+    const initialMobileMenu = getMobileMenuElements().menu;
+    if (initialMobileMenu) setMobileMenuInteractivity(initialMobileMenu, initialMobileMenu.classList.contains('active'));
     bindMobileMenu();
     normalizeControlButtons();
     applyActiveStates();

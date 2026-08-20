@@ -3,34 +3,59 @@ function getMobileMenuElements() {
   const overlay = document.getElementById('mobileMenuOverlay');
   return { menu, overlay };
 }
+
+function setMobileMenuInteractivity(menu, isOpen) {
+  if (!menu) return;
+  menu.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+  if (isOpen) {
+    menu.removeAttribute('inert');
+    menu.inert = false;
+  } else {
+    // aria-hidden alone leaves off-screen controls in the keyboard order.
+    // `inert` removes them while the drawer is closed and is supported by
+    // current browsers; the attribute is also a safe declarative fallback.
+    menu.setAttribute('inert', '');
+    menu.inert = true;
+  }
+}
+
 function openMobileMenu() {
   const { menu, overlay } = getMobileMenuElements();
   if (!menu || !overlay) return;
+  setMobileMenuInteractivity(menu, true);
   menu.classList.add('active');
   overlay.classList.add('active');
   // Não usa KCOverlayLock: position:fixed no body quebra position:sticky
   // no kc-header e kc-feed-tabs — o overlay com touch-action:none já
   // impede scroll de fundo no iOS sem remover o sticky do header.
   document.documentElement.classList.add('kc-menu-open');
-  menu.setAttribute('aria-hidden', 'false');
   overlay.setAttribute('aria-hidden', 'false');
   const toggleBtn = document.querySelector('[data-kc-mobile-menu="toggle"]');
   if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+  const closeButton = menu.querySelector('[data-kc-mobile-menu="close"]');
+  const scheduleFocus = window.requestAnimationFrame || function (callback) { return window.setTimeout(callback, 0); };
+  if (closeButton && typeof closeButton.focus === 'function') {
+    scheduleFocus(() => closeButton.focus({ preventScroll: true }));
+  }
 }
 
 function closeMobileMenu() {
   const { menu, overlay } = getMobileMenuElements();
   if (!menu || !overlay) return;
+  const wasOpen = menu.classList.contains('active');
 
   menu.classList.remove('active');
   overlay.classList.remove('active');
   document.documentElement.classList.remove('kc-menu-open');
 
-  menu.setAttribute('aria-hidden', 'true');
+  setMobileMenuInteractivity(menu, false);
   overlay.setAttribute('aria-hidden', 'true');
 
   const toggleBtn = document.querySelector('[data-kc-mobile-menu="toggle"]');
-  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+  if (toggleBtn) {
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    if (wasOpen && typeof toggleBtn.focus === 'function') toggleBtn.focus({ preventScroll: true });
+  }
 }
 
 function toggleMobileMenu(event) {
@@ -698,6 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.classList.remove('kc-loading');
   });
   if (typeof window.applySavedTheme === 'function') window.applySavedTheme();
+  const initialMobileMenu = getMobileMenuElements().menu;
+  if (initialMobileMenu) setMobileMenuInteractivity(initialMobileMenu, initialMobileMenu.classList.contains('active'));
   initMobileNavActive();
   initSmoothAnchors();
   installRippleStylesOnce();
@@ -799,48 +826,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.kcUserPosts && typeof window.kcUserPosts.inject === 'function') window.kcUserPosts.inject();
 });
 
-/* =========================================================
-   V5.5.4 - Mobile text truncation (Pelando-like density)
-   - Reduz tamanho aparente das descrições no mobile para caber melhor no card
-   - Mantém texto original em data-kc-fulltext
-   ========================================================= */
-
-(function () {
-  function kcTruncateText(el, maxChars) {
-    if (!el) return;
-    const existing = el.getAttribute('data-kc-fulltext');
-    const full = (existing != null ? existing : (el.textContent || '')).trim();
-    if (existing == null) el.setAttribute('data-kc-fulltext', full);
-
-    if (!maxChars || maxChars <= 0) {
-      el.textContent = full;
-      return;
-    }
-
-    if (full.length <= maxChars) {
-      el.textContent = full;
-      return;
-    }
-
-    const cut = Math.max(0, maxChars - 1);
-    el.textContent = full.slice(0, cut).trimEnd() + '…';
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.KCCore && typeof window.KCCore.initMobileTextTruncation === 'function') {
+    window.KCCore.initMobileTextTruncation();
   }
-
-  function kcApplyMobileTextTruncation() {
-    const isMobile = window.matchMedia('(max-width: 520px)').matches;
-
-    document.querySelectorAll('.kc-card__title').forEach((el) => {
-      // títulos longos ficam mais compactos
-      kcTruncateText(el, isMobile ? 80 : null);
-    });
-
-    document.querySelectorAll('.kc-card__description-preview').forEach((el) => {
-      kcTruncateText(el, isMobile ? 160 : null);
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    kcApplyMobileTextTruncation();
-    window.addEventListener('resize', kcDebounce(kcApplyMobileTextTruncation, 150));
-  });
-})();
+});

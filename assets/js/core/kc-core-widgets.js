@@ -265,3 +265,37 @@
   window.KCCore = window.KCCore || {};
   window.KCCore.bindModuleSortTabs = bindModuleSortTabs;
 })();
+
+// Compacta somente a apresentação de cards no mobile, mantendo o texto
+// completo no DOM para a volta ao desktop e para tecnologias assistivas.
+(function () {
+  'use strict';
+
+  function kcTruncateText(el, maxChars) {
+    if (!el) return;
+    const existing = el.getAttribute('data-kc-fulltext');
+    const full = (existing != null ? existing : (el.textContent || '')).trim();
+    if (existing == null) el.setAttribute('data-kc-fulltext', full);
+    if (!maxChars || maxChars <= 0 || full.length <= maxChars) {
+      el.textContent = full;
+      return;
+    }
+    el.textContent = full.slice(0, Math.max(0, maxChars - 1)).trimEnd() + '…';
+  }
+
+  function kcApplyMobileTextTruncation() {
+    const isMobile = window.matchMedia('(max-width: 520px)').matches;
+    document.querySelectorAll('.kc-card__title').forEach((el) => kcTruncateText(el, isMobile ? 80 : null));
+    document.querySelectorAll('.kc-card__description-preview').forEach((el) => kcTruncateText(el, isMobile ? 160 : null));
+  }
+
+  function initMobileTextTruncation() {
+    if (document.documentElement.dataset.kcMobileTextTruncationBound === '1') return;
+    document.documentElement.dataset.kcMobileTextTruncationBound = '1';
+    kcApplyMobileTextTruncation();
+    window.addEventListener('resize', kcDebounce(kcApplyMobileTextTruncation, 150));
+  }
+
+  window.KCCore = window.KCCore || {};
+  window.KCCore.initMobileTextTruncation = initMobileTextTruncation;
+})();
