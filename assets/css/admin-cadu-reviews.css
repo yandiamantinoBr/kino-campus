@@ -314,7 +314,8 @@ button.kc-cadu-review-provider:focus-visible {
 }
 
 .kc-cadu-review-item__origin,
-.kc-cadu-review-item__state {
+.kc-cadu-review-item__state,
+.kc-cadu-review-item__kind {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -333,6 +334,22 @@ button.kc-cadu-review-provider:focus-visible {
 .kc-cadu-review-item.is-resolved .kc-cadu-review-item__state {
   background: color-mix(in srgb, #10b981 12%, transparent);
   color: #10b981;
+}
+
+.kc-cadu-review-item__kind {
+  background: color-mix(in srgb, #60a5fa 12%, transparent);
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.kc-cadu-review-item__kind--pipeline-quality {
+  background: color-mix(in srgb, #a78bfa 13%, transparent);
+  color: #c4b5fd;
+}
+
+.kc-cadu-review-item__kind--pipeline-incident {
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  color: #fcd34d;
 }
 
 .kc-cadu-review-score {

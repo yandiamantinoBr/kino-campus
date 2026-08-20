@@ -46,6 +46,59 @@ function dedupRun() {
   };
 }
 
+function reviewClarityItems() {
+  return [
+    {
+      id: '1f755f2e-798f-4cdf-9ac0-34d5717a0601',
+      item_version: 'a'.repeat(64),
+      origin: 'feed',
+      kind: 'feed_item',
+      title: 'Oficina aberta para estudantes',
+      summary: 'Evidência recebida do Feed Coletado.',
+      source_url: 'https://ufg.br/n/123',
+      action_url: null,
+      image_url: null,
+      state: 'pending',
+      created_at: STARTED_AT,
+      issues: [],
+      allowed_decisions: ['approved', 'rejected', 'changes_requested', 'deferred'],
+      metadata: { score: 0.82 },
+    },
+    {
+      id: '3d4e890b-a5e6-4a14-a3d5-e7b509801b02',
+      item_version: 'b'.repeat(64),
+      origin: 'pipeline',
+      kind: 'pipeline_quality',
+      title: 'Edital com prazo a confirmar',
+      summary: 'A Pipeline solicitou uma decisão editorial.',
+      source_url: 'https://ufg.br/n/124',
+      action_url: null,
+      image_url: null,
+      state: 'pending',
+      created_at: STARTED_AT,
+      issues: ['quality_review_required'],
+      allowed_decisions: ['approved', 'rejected', 'changes_requested', 'deferred'],
+      metadata: { score: 0.76 },
+    },
+    {
+      id: '6a63d3be-c4f2-4344-89f8-4bcb29a1cb03',
+      item_version: 'c'.repeat(64),
+      origin: 'pipeline',
+      kind: 'pipeline_incident',
+      title: 'Falha de deduplicação',
+      summary: 'Incidente operacional para acompanhamento.',
+      source_url: 'https://ufg.br/n/125',
+      action_url: null,
+      image_url: null,
+      state: 'pending',
+      created_at: STARTED_AT,
+      issues: ['dedup_preview_state_changed'],
+      allowed_decisions: ['acknowledged', 'deferred'],
+      metadata: { score: 0.64 },
+    },
+  ];
+}
+
 function pipelineSnapshot(previewStatus = 'ok', runtimeBusy = false) {
   const nowSeconds = Date.now() / 1000;
   const run = dedupRun();
@@ -181,7 +234,22 @@ async function installAdminSession(page) {
   });
 }
 
-async function mockCaduApi(page, previewStatus = 'ok', runtimeBusy = false) {
+async function stubExternalCaduAssets(page) {
+  await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2', (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.supabase = { createClient: function () { return null; } };',
+  }));
+  await page.route('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', (route) => route.fulfill({
+    contentType: 'text/css',
+    body: '',
+  }));
+  await page.route('**/_vercel/insights/script.js', (route) => route.fulfill({
+    contentType: 'application/javascript',
+    body: '',
+  }));
+}
+
+async function mockCaduApi(page, previewStatus = 'ok', runtimeBusy = false, reviewItems = []) {
   await page.route('**/api/cadu/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -273,8 +341,8 @@ async function mockCaduApi(page, previewStatus = 'ok', runtimeBusy = false) {
     if (requestPath === '/api/cadu/reviews') {
       return route.fulfill({
         json: {
-          items: [],
-          total: 147,
+          items: reviewItems,
+          total: reviewItems.length || 147,
           limit: Number(url.searchParams.get('limit')) || 25,
           offset: 0,
           has_more: true,
@@ -314,8 +382,7 @@ async function mockCaduApi(page, previewStatus = 'ok', runtimeBusy = false) {
   });
 }
 
-async function openDedupDetails(page) {
-  await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+async function dismissOptionalConsent(page) {
   const rejectConsent = page.getByRole('button', { name: 'Rejeitar opcionais' }).first();
   try {
     await rejectConsent.waitFor({ state: 'visible', timeout: 1500 });
@@ -323,6 +390,11 @@ async function openDedupDetails(page) {
   } catch (_) {
     // O banner pode já ter sido resolvido pelo estado local do navegador.
   }
+}
+
+async function openDedupDetails(page) {
+  await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+  await dismissOptionalConsent(page);
   await page.getByRole('tab', { name: /Pipeline/ }).click();
   const history = page.locator(`[data-run-id="${RUN_ID}"]`);
   await expect(history).toBeVisible();
@@ -347,10 +419,12 @@ async function openDedupDetails(page) {
 test.describe('Admin Cadu - observabilidade da deduplicação', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     await installAdminSession(page);
+    await stubExternalCaduAssets(page);
     await mockCaduApi(
       page,
       testInfo.title.includes('prévia expirada') ? 'warning' : 'ok',
       testInfo.title.includes('lock global'),
+      testInfo.title.includes('identifica evidências, qualidade e incidentes') ? reviewClarityItems() : [],
     );
   });
 
@@ -359,7 +433,33 @@ test.describe('Admin Cadu - observabilidade da deduplicação', () => {
 
     await expect(page.getByRole('tab', { name: /Mapa UFG/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#badge-reviews')).toHaveText('147');
-    await expect(page.locator('#badge-reviews')).toHaveAttribute('title', '147 revisões pendentes');
+    await expect(page.locator('#badge-reviews')).toHaveAttribute(
+      'title',
+      '147 itens de revisão pendentes; não é uma fila de publicação.'
+    );
+    await expect(page.locator('#badge-reviews')).toHaveAttribute(
+      'aria-label',
+      '147 itens de revisão pendentes; não é uma fila de publicação.'
+    );
+  });
+
+  test('identifica evidências, qualidade e incidentes sem sugerir publicação pendente', async ({ page }) => {
+    await page.goto('/admin/cadu.html', { waitUntil: 'domcontentloaded' });
+    await dismissOptionalConsent(page);
+    await page.getByRole('tab', { name: /Revisões/ }).click();
+
+    const kindBadges = page.locator('.kc-cadu-review-item__kind');
+    await expect(kindBadges).toHaveCount(3);
+    await expect(kindBadges.nth(0)).toHaveText('Evidência do Feed · não publica');
+    await expect(kindBadges.nth(1)).toHaveText('Qualidade da Pipeline · decisão editorial');
+    await expect(kindBadges.nth(2)).toHaveText('Incidente da Pipeline · acompanhamento');
+    await expect(page.locator('#badge-reviews')).toHaveAttribute(
+      'title',
+      '147 itens de revisão pendentes; não é uma fila de publicação.'
+    );
+    await page.locator('#reviews-list').screenshot({
+      path: path.resolve('output/playwright/cadu-review-kind-clarity.png'),
+    });
   });
 
   test('mostra o funil e separa artefatos atuais no desktop', async ({ page }) => {
