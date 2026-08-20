@@ -16,6 +16,10 @@ import {
   metadataOf,
   shouldIndexPost,
 } from './_lib/product-seo-policy.js';
+import {
+  fetchPublicSupabaseJson,
+  PUBLIC_SUPABASE_TIMEOUT_MS,
+} from './_lib/supabase-public-request.js';
 
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -23,6 +27,7 @@ const INDEXABLE_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1';
 const NOINDEX_ROBOTS = 'noindex,follow,noarchive';
 const META_DESCRIPTION_MAX_LENGTH = 180;
 const SEO_TITLE_MAX_LENGTH = 70;
+const OG_SUPABASE_TIMEOUT_MS = PUBLIC_SUPABASE_TIMEOUT_MS;
 
 let cachedHtml = null;
 
@@ -55,7 +60,24 @@ function getSupabaseConfig() {
   };
 }
 
-async function fetchPost(id) {
+function createLookupDeadline(timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error('OG Supabase lookup timed out')),
+    timeoutMs,
+  );
+  return {
+    signal: controller.signal,
+    dispose() {
+      clearTimeout(timer);
+    },
+  };
+}
+
+async function fetchPost(id, {
+  fetchImpl = globalThis.fetch,
+  timeoutMs = OG_SUPABASE_TIMEOUT_MS,
+} = {}) {
   const { url, key } = getSupabaseConfig();
   if (!url || !key) {
     console.error('[og-product] Supabase config missing - url:', url ? 'OK' : 'EMPTY', '| key:', key ? 'OK' : 'EMPTY');
@@ -81,38 +103,46 @@ async function fetchPost(id) {
     'post_media(url,is_cover)',
   ].join(',');
   const selectCompat = select.replace('image_url,', '');
-  const headers = {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    Accept: 'application/json',
-  };
-
   const isUuid = UUID_RE.test(id);
   const primaryFilter = isUuid ? `id=eq.${encodeURIComponent(id)}` : `legacy_id=eq.${encodeURIComponent(id)}`;
   const primaryEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${primaryFilter}&status=eq.published&limit=1`;
   const primaryCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${primaryFilter}&status=eq.published&limit=1`;
 
-  try {
-    let response = await fetch(primaryEndpoint, { headers });
-    if (!response.ok && response.status === 400) response = await fetch(primaryCompat, { headers });
-    if (!response.ok) {
-      throw new BackendUnavailableError(`Supabase request failed with status ${response.status}`);
+  const lookupDeadline = createLookupDeadline(timeoutMs);
+  const requestRows = async (endpoint, compatEndpoint, label) => {
+    let result = await fetchPublicSupabaseJson(endpoint, {
+      key,
+      fetchImpl,
+      timeoutMs,
+      signal: lookupDeadline.signal,
+    });
+    if (!result.ok && result.status === 400) {
+      result = await fetchPublicSupabaseJson(compatEndpoint, {
+        key,
+        fetchImpl,
+        timeoutMs,
+        signal: lookupDeadline.signal,
+      });
     }
-    const rows = await response.json();
-    if (!Array.isArray(rows)) throw new BackendUnavailableError('Supabase returned an invalid post payload');
+    if (!result.ok) {
+      const status = Number.isInteger(result.status) ? ` with status ${result.status}` : '';
+      throw new BackendUnavailableError(`Supabase ${label} request failed${status}`);
+    }
+    if (!Array.isArray(result.data)) {
+      throw new BackendUnavailableError(`Supabase returned an invalid ${label} payload`);
+    }
+    return result.data;
+  };
+
+  try {
+    const rows = await requestRows(primaryEndpoint, primaryCompat, 'post');
     if (Array.isArray(rows) && rows.length > 0) return rows[0];
 
     if (isUuid) {
       const fallbackFilter = `legacy_id=eq.${encodeURIComponent(id)}`;
       const fallbackEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${fallbackFilter}&status=eq.published&limit=1`;
       const fallbackCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${fallbackFilter}&status=eq.published&limit=1`;
-      let fallback = await fetch(fallbackEndpoint, { headers });
-      if (!fallback.ok && fallback.status === 400) fallback = await fetch(fallbackCompat, { headers });
-      if (!fallback.ok) {
-        throw new BackendUnavailableError(`Supabase fallback request failed with status ${fallback.status}`);
-      }
-      const fallbackRows = await fallback.json();
-      if (!Array.isArray(fallbackRows)) throw new BackendUnavailableError('Supabase returned an invalid fallback payload');
+      const fallbackRows = await requestRows(fallbackEndpoint, fallbackCompat, 'fallback post');
       return fallbackRows.length > 0 ? fallbackRows[0] : null;
     }
     return null;
@@ -120,6 +150,8 @@ async function fetchPost(id) {
     console.error('[og-product] fetchPost error:', err && err.message ? err.message : err);
     if (err instanceof BackendUnavailableError) throw err;
     throw new BackendUnavailableError('Supabase post lookup failed', err);
+  } finally {
+    lookupDeadline.dispose();
   }
 }
 
@@ -1065,6 +1097,7 @@ export default async function handler(req, res) {
 export {
   buildProductJsonLd,
   buildProductValues,
+  fetchPost,
   serializeJsonForHtml,
   shouldIndexPost,
 };

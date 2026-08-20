@@ -6,6 +6,7 @@ import {
   parseDateLike,
   shouldIndexPost,
 } from './_lib/product-seo-policy.js';
+import { fetchPublicSupabaseJson } from './_lib/supabase-public-request.js';
 
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const FEED_URL = `${SITE_ORIGIN}/feed.xml`;
@@ -61,27 +62,18 @@ function getPostCategory(post) {
 
 async function fetchPublishedPosts() {
   const { url, key } = getSupabaseConfig();
-  if (!url || !key) return [];
+  if (!url || !key) return { ok: false, reason: 'supabase_not_configured' };
 
   const select = 'id,legacy_id,title,description,module,category,updated_at,created_at,expires_at,status,metadata';
   const endpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&status=eq.published&order=updated_at.desc.nullslast&limit=30`;
-
-  try {
-    const response = await fetch(endpoint, {
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        Accept: 'application/json',
-      },
-    });
-    if (!response.ok) return [];
-    const rows = await response.json();
-    if (!Array.isArray(rows)) return [];
-    return rows
-      .filter((post) => shouldIndexPost(post, buildIndexabilityValues(post)));
-  } catch (_) {
-    return [];
+  const result = await fetchPublicSupabaseJson(endpoint, { key });
+  if (!result.ok || !Array.isArray(result.data)) {
+    return { ok: false, reason: result.reason || 'supabase_invalid_response' };
   }
+  return {
+    ok: true,
+    posts: result.data.filter((post) => shouldIndexPost(post, buildIndexabilityValues(post))),
+  };
 }
 
 function buildItem(post) {
@@ -124,9 +116,18 @@ function buildFeed(posts) {
 }
 
 export default async function handler(req, res) {
-  const posts = await fetchPublishedPosts();
-  const xml = buildFeed(posts);
+  const result = await fetchPublishedPosts();
+  if (!result.ok) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('Retry-After', '60');
+    res.status(503).send('Service unavailable');
+    return;
+  }
+  const xml = buildFeed(result.posts);
   res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
   res.status(200).send(xml);
 }
+
+export { fetchPublishedPosts };

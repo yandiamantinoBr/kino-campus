@@ -5,6 +5,7 @@ import {
   metadataOf,
   shouldIndexPost,
 } from './_lib/product-seo-policy.js';
+import { fetchPublicSupabaseJson } from './_lib/supabase-public-request.js';
 
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 
@@ -89,33 +90,22 @@ function buildUrlNode(entry) {
 
 async function fetchPublishedPostRoutes() {
   const { url, key } = getSupabaseConfig();
-  if (!url || !key) return [];
+  if (!url || !key) return { ok: false, reason: 'supabase_not_configured' };
 
   const select = 'id,legacy_id,title,description,updated_at,created_at,expires_at,status,image_url,metadata';
   const selectCompat = 'id,legacy_id,title,description,updated_at,created_at,expires_at,status,metadata';
   const endpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
   const endpointCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
-  try {
-    let response = await fetch(endpoint, {
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        Accept: 'application/json',
-      },
-    });
-    if (!response.ok && response.status === 400) {
-      response = await fetch(endpointCompat, {
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          Accept: 'application/json',
-        },
-      });
-    }
-    if (!response.ok) return [];
-    const rows = await response.json();
-    if (!Array.isArray(rows)) return [];
-    return rows
+  let result = await fetchPublicSupabaseJson(endpoint, { key });
+  if (!result.ok && result.status === 400) {
+    result = await fetchPublicSupabaseJson(endpointCompat, { key });
+  }
+  if (!result.ok || !Array.isArray(result.data)) {
+    return { ok: false, reason: result.reason || 'supabase_invalid_response' };
+  }
+  return {
+    ok: true,
+    routes: result.data
       .filter((post) => shouldIndexPost(post, buildIndexabilityValues(post)))
       .map((post) => ({
         path: `/product.html?id=${encodeURIComponent(canonicalPostId(post))}`,
@@ -123,14 +113,20 @@ async function fetchPublishedPostRoutes() {
         changefreq: 'weekly',
         priority: '0.7',
         image: getPostImage(post),
-      }));
-  } catch (_) {
-    return [];
-  }
+      })),
+  };
 }
 
 export default async function handler(req, res) {
-  const postRoutes = await fetchPublishedPostRoutes();
+  const result = await fetchPublishedPostRoutes();
+  if (!result.ok) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('Retry-After', '60');
+    res.status(503).send('Service unavailable');
+    return;
+  }
+  const postRoutes = result.routes;
   const seen = new Set();
   const routes = STATIC_ROUTES.concat(postRoutes).filter((entry) => {
     if (!entry || !entry.path || seen.has(entry.path)) return false;
@@ -150,3 +146,5 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
   res.status(200).send(xml);
 }
+
+export { fetchPublishedPostRoutes };
