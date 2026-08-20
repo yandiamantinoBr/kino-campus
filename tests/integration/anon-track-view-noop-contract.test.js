@@ -5,7 +5,7 @@ const path = require('path');
 
 const MIGRATION = path.resolve(
   __dirname,
-  '../../supabase/migrations/20260820021000_allow_anon_track_view_noop.sql',
+  '../../supabase/migrations/20260820011214_allow_anon_track_view_noop.sql',
 );
 
 describe('anonymous kc_track_view boundary', () => {
