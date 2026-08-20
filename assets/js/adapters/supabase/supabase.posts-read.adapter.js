@@ -522,6 +522,7 @@
     } catch (e) {
       if ((filters && filters.signal && filters.signal.aborted) || (e && e.name === 'AbortError')) throw e;
       console.error('[KCAPI][Supabase] searchPosts falhou:', e);
+      if (e && e.code === 'KC_SEARCH_BACKEND_UNAVAILABLE') throw e;
       return [];
     }
 

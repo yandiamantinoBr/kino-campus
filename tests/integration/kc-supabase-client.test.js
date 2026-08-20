@@ -86,12 +86,11 @@ describe('KCSupabase.searchPosts', () => {
     expect(new Set(params.p_terms).size).toBe(params.p_terms.length);
   });
 
-  test('returns an empty array when the RPC fails', async () => {
+  test('propagates a stable error when the RPC fails', async () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: 'boom' } });
 
-    const result = await window.KCSupabase.searchPosts({ q: 'notebook', limit: 8 });
-
-    expect(result).toEqual([]);
+    await expect(window.KCSupabase.searchPosts({ q: 'notebook', limit: 8 }))
+      .rejects.toMatchObject({ code: 'KC_SEARCH_BACKEND_UNAVAILABLE' });
   });
 
   test('envia hideClosed ao RPC, aceita até 120 e preserva compatibilidade com a assinatura antiga', async () => {

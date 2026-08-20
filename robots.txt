@@ -1,38 +1,14 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
-Disallow: /account-setup.html
-Disallow: /auth-callback.html
-Disallow: /create-post.html
-Disallow: /mensagens.html
-Disallow: /my-posts.html
-Disallow: /profile.html
-Disallow: /search-results.html
-Disallow: /settings.html
 
 User-agent: OAI-SearchBot
 Allow: /
 Disallow: /admin/
-Disallow: /account-setup.html
-Disallow: /auth-callback.html
-Disallow: /create-post.html
-Disallow: /mensagens.html
-Disallow: /my-posts.html
-Disallow: /profile.html
-Disallow: /search-results.html
-Disallow: /settings.html
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /admin/
-Disallow: /account-setup.html
-Disallow: /auth-callback.html
-Disallow: /create-post.html
-Disallow: /mensagens.html
-Disallow: /my-posts.html
-Disallow: /profile.html
-Disallow: /search-results.html
-Disallow: /settings.html
 
 User-agent: GPTBot
 Disallow: /
