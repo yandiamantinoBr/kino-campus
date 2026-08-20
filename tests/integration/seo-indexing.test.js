@@ -88,8 +88,8 @@ describe('SEO e indexacao publica', () => {
   test('rota explícita de erro retorna um 404 real e links públicos não criam salto para index.html', () => {
     const vercel = read('vercel.json');
     expect(vercel).toContain('"source": "/404.html"');
-    expect(vercel).toContain('"destination": "/api/not-found"');
-    expect(vercel).toContain('"api/not-found.js"');
+    expect(vercel).toContain('"destination": "/api/og-product?kc_not_found=1"');
+    expect(vercel).toContain('"api/og-product.js"');
 
     const publicHtml = fs.readdirSync(ROOT)
       .filter((file) => file.endsWith('.html'));

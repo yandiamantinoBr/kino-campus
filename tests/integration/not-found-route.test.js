@@ -1,6 +1,6 @@
 'use strict';
 
-const handler = require('../../api/not-found.js');
+const handler = require('../../api/og-product.js').default;
 
 function createResponse() {
   return {
@@ -22,9 +22,9 @@ function createResponse() {
 }
 
 describe('rota publica da página 404', () => {
-  test('preserva o layout e responde 404/noindex para /404.html', () => {
+  test('preserva o layout e responde 404/noindex para /404.html', async () => {
     const response = createResponse();
-    handler({}, response);
+    await handler({ query: { kc_not_found: '1' } }, response);
 
     expect(response.statusCode).toBe(404);
     expect(response.headers['content-type']).toBe('text/html; charset=utf-8');

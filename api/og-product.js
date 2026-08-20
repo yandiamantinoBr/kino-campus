@@ -30,6 +30,7 @@ const SEO_TITLE_MAX_LENGTH = 70;
 const OG_SUPABASE_TIMEOUT_MS = PUBLIC_SUPABASE_TIMEOUT_MS;
 
 let cachedHtml = null;
+let cachedErrorHtml = null;
 
 class BackendUnavailableError extends Error {
   constructor(message, cause) {
@@ -43,6 +44,18 @@ function getProductHtml() {
     cachedHtml = fs.readFileSync(path.join(process.cwd(), '_product.html'), 'utf8');
   }
   return cachedHtml;
+}
+
+function getErrorHtml() {
+  if (!cachedErrorHtml) {
+    cachedErrorHtml = fs.readFileSync(path.join(process.cwd(), '404.html'), 'utf8');
+  }
+  return cachedErrorHtml;
+}
+
+function isExplicitNotFoundRequest(req) {
+  const value = req && req.query ? req.query.kc_not_found : null;
+  return value === '1' || (Array.isArray(value) && value.includes('1'));
 }
 
 function resolveEnv(candidates) {
@@ -1047,7 +1060,20 @@ function sendHtmlResponse(res, status, body, cacheControl, retryAfter) {
   return res.send(body);
 }
 
+function sendExplicitNotFoundResponse(res) {
+  res.setHeader('X-Robots-Tag', 'noindex, follow, noarchive');
+  return sendHtmlResponse(
+    res,
+    404,
+    getErrorHtml(),
+    'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
+  );
+}
+
 export default async function handler(req, res) {
+  // /404.html is rewritten here so the app can return a real 404 without
+  // adding a thirteenth Serverless Function to the Hobby deployment.
+  if (isExplicitNotFoundRequest(req)) return sendExplicitNotFoundResponse(res);
   const html = getProductHtml();
   const id = req && req.query ? req.query.id : '';
 
@@ -1098,6 +1124,8 @@ export {
   buildProductJsonLd,
   buildProductValues,
   fetchPost,
+  isExplicitNotFoundRequest,
+  sendExplicitNotFoundResponse,
   serializeJsonForHtml,
   shouldIndexPost,
 };
