@@ -73,7 +73,9 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
 - imagens principais em `<image:image>` quando a URL de imagem publica for valida;
 - filtro de expiracao por `expires_at` ou datas de encerramento em `metadata`.
 
-Se o Supabase estiver indisponivel, o sitemap ainda responde com as paginas estaticas para nao quebrar rastreamento.
+Se o Supabase estiver indisponivel, o sitemap responde HTTP 200 com as paginas estaticas
+e o header `X-Kino-Sitemap-Mode: static-fallback`, permitindo que o Google continue
+descobrindo as rotas canonicas sem inventar URLs de publicacoes.
 
 ## RSS publico
 
@@ -88,7 +90,9 @@ Se o Supabase estiver indisponivel ou sem variaveis de ambiente, o endpoint aind
 
 ## IA e agentes
 
-- `robots.txt` permite rastreamento publico por `OAI-SearchBot` e `ChatGPT-User`, mantendo areas privadas bloqueadas.
+- `robots.txt` permite rastreamento publico por `OAI-SearchBot` e `ChatGPT-User` e bloqueia
+  somente `/admin/`; telas operacionais usam `noindex` no HTML para que o Google possa
+  ler a diretiva em vez de classificá-las como bloqueadas por robots.
 - `GPTBot` fica bloqueado por padrao para separar descoberta em busca/assistente de uso amplo em treinamento.
 - `llms.txt` e apenas um mapa auxiliar; nao deve ser tratado como fator garantido de ranking.
 - A visibilidade real depende principalmente de conteudo publico claro, links internos, sitemap, metadados e qualidade das publicacoes.

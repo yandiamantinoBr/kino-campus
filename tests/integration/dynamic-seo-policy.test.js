@@ -152,7 +152,7 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(global.fetch.mock.calls[1][0]).not.toContain('image_url');
   });
 
-  test('sitemap e RSS devolvem 503 sem cache quando Supabase falha', async () => {
+  test('sitemap preserva URLs estaticas quando Supabase falha e RSS sinaliza indisponibilidade', async () => {
     global.fetch.mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
 
     const sitemapResponse = createResponse();
@@ -160,12 +160,18 @@ describe('política SEO dinâmica compartilhada', () => {
     const feedResponse = createResponse();
     await feedHandler({}, feedResponse);
 
-    for (const response of [sitemapResponse, feedResponse]) {
-      expect(response.statusCode).toBe(503);
-      expect(response.headers['cache-control']).toBe('no-store, max-age=0');
-      expect(response.headers['retry-after']).toBe('60');
-      expect(response.body).toBe('Service unavailable');
-    }
+    expect(sitemapResponse.statusCode).toBe(200);
+    expect(sitemapResponse.headers['content-type']).toContain('application/xml');
+    expect(sitemapResponse.headers['cache-control']).toContain('max-age=60');
+    expect(sitemapResponse.headers['retry-after']).toBe('60');
+    expect(sitemapResponse.headers['x-kino-sitemap-mode']).toBe('static-fallback');
+    expect(sitemapResponse.body).toContain('<loc>https://www.kinocampus.com.br/</loc>');
+    expect(sitemapResponse.body).not.toContain('/product.html?id=');
+
+    expect(feedResponse.statusCode).toBe(503);
+    expect(feedResponse.headers['cache-control']).toBe('no-store, max-age=0');
+    expect(feedResponse.headers['retry-after']).toBe('60');
+    expect(feedResponse.body).toBe('Service unavailable');
   });
 
   test('requisição pública ao Supabase interrompe upstream suspenso', async () => {

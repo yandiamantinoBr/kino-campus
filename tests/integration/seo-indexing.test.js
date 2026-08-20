@@ -47,7 +47,7 @@ const ADMIN_NOINDEX_PAGES = [
 ];
 
 describe('SEO e indexacao publica', () => {
-  test('robots.txt aponta sitemap e bloqueia rotas privadas', () => {
+  test('robots.txt aponta sitemap, bloqueia admin e deixa o noindex ser lido', () => {
     const robots = read('robots.txt');
 
     expect(robots).toContain('Sitemap: https://www.kinocampus.com.br/sitemap.xml');
@@ -56,8 +56,33 @@ describe('SEO e indexacao publica', () => {
     expect(robots).toContain('User-agent: GPTBot');
     expect(robots).toMatch(/User-agent:\s*GPTBot\s+Disallow:\s*\//);
     expect(robots).toContain('Disallow: /admin/');
-    expect(robots).toContain('Disallow: /search-results.html');
+    [
+      '/account-setup.html',
+      '/auth-callback.html',
+      '/create-post.html',
+      '/mensagens.html',
+      '/my-posts.html',
+      '/profile.html',
+      '/search-results.html',
+      '/settings.html',
+    ].forEach((route) => expect(robots).not.toContain(`Disallow: ${route}`));
     expect(robots).not.toContain('User-agent: Googlebot');
+  });
+
+  test('rotas legadas de colecoes redirecionam para as URLs canonicas', () => {
+    const vercel = read('vercel.json');
+    expect(vercel).toContain('"source": "/compra-venda.html"');
+    expect(vercel).toContain('"destination": "/compra-venda-feed.html"');
+    expect(vercel).toContain('"source": "/caronas.html"');
+    expect(vercel).toContain('"destination": "/caronas-feed.html"');
+  });
+
+  test('aliases de conteudo apontam para uma unica URL canonica via redirect', () => {
+    const vercel = read('vercel.json');
+    expect(vercel).toContain('"source": "/index.html"');
+    expect(vercel).toContain('"destination": "/"');
+    expect(vercel).toContain('"source": "/apresentacao-institucional"');
+    expect(vercel).toContain('"destination": "/apresentacao-institucional.html"');
   });
 
   test('sitemap dinamico lista paginas estaticas e posts published', () => {

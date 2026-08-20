@@ -117,16 +117,19 @@ async function fetchPublishedPostRoutes() {
   };
 }
 
+function buildSitemapXml(routes) {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
+    routes.map(buildUrlNode).join('\n'),
+    '</urlset>',
+    '',
+  ].join('\n');
+}
+
 export default async function handler(req, res) {
   const result = await fetchPublishedPostRoutes();
-  if (!result.ok) {
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('Retry-After', '60');
-    res.status(503).send('Service unavailable');
-    return;
-  }
-  const postRoutes = result.routes;
+  const postRoutes = result.ok ? result.routes : [];
   const seen = new Set();
   const routes = STATIC_ROUTES.concat(postRoutes).filter((entry) => {
     if (!entry || !entry.path || seen.has(entry.path)) return false;
@@ -134,17 +137,17 @@ export default async function handler(req, res) {
     return true;
   });
 
-  const xml = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
-    routes.map(buildUrlNode).join('\n'),
-    '</urlset>',
-    '',
-  ].join('\n');
+  const xml = buildSitemapXml(routes);
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
+  if (!result.ok) {
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60');
+    res.setHeader('Retry-After', '60');
+    res.setHeader('X-Kino-Sitemap-Mode', 'static-fallback');
+  } else {
+    res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=3600');
+  }
   res.status(200).send(xml);
 }
 
-export { fetchPublishedPostRoutes };
+export { buildSitemapXml, fetchPublishedPostRoutes };

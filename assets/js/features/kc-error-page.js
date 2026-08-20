@@ -12,6 +12,7 @@
   }
 
   function init() {
+    document.documentElement.classList.remove('kc-loading');
     var backLink = document.querySelector('[data-kc-error-back]');
     if (!backLink) return;
 

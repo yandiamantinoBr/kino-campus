@@ -105,6 +105,20 @@ function auditRobots(errors) {
   if (!/User-agent:\s*ChatGPT-User[\s\S]*?Allow:\s*\//i.test(robots)) errors.push('robots.txt: ChatGPT-User nao esta explicitamente liberado.');
   if (!/User-agent:\s*GPTBot[\s\S]*?Disallow:\s*\//i.test(robots)) errors.push('robots.txt: GPTBot deveria estar bloqueado.');
   if (!robots.includes('Disallow: /admin/')) errors.push('robots.txt: /admin/ deveria estar bloqueado.');
+  [
+    '/account-setup.html',
+    '/auth-callback.html',
+    '/create-post.html',
+    '/mensagens.html',
+    '/my-posts.html',
+    '/profile.html',
+    '/search-results.html',
+    '/settings.html',
+  ].forEach((route) => {
+    if (robots.includes(`Disallow: ${route}`)) {
+      errors.push(`robots.txt: ${route} deve ser rastreavel para que o Google leia o noindex.`);
+    }
+  });
 }
 
 function auditSitemap(errors) {

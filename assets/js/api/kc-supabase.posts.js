@@ -677,7 +677,10 @@
 
     if (rpc && rpc.error) {
       try { console.error('[KCSupabase] searchPosts erro:', rpc.error); } catch (_) { }
-      return [];
+      var searchError = new Error('KC_SEARCH_BACKEND_UNAVAILABLE');
+      searchError.code = 'KC_SEARCH_BACKEND_UNAVAILABLE';
+      searchError.details = rpc.error;
+      throw searchError;
     }
 
     return Array.isArray(rpc && rpc.data) ? rpc.data : [];

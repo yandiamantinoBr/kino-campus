@@ -1,6 +1,6 @@
 /**
  * KinoCampus - Sistema de Busca Global
- * Busca local/offline-first, pagina de resultados e analytics de buscas.
+ * Busca local/offline-first, pagina de resultados e analytics de buscas (V8.6.15).
  */
 
 (function () {
@@ -941,7 +941,8 @@
       noResultsMessage: document.getElementById('noResultsMessage'),
       noResultsRelax: document.getElementById('searchResultsRelaxStructured'),
       noResultsRestore: document.getElementById('searchResultsRestoreStructured'),
-      noResultsRevealClosed: document.querySelector('#noResults [data-kc-hide-closed-reveal]')
+      noResultsRevealClosed: document.querySelector('#noResults [data-kc-hide-closed-reveal]'),
+      noResultsRetry: document.getElementById('searchResultsRetry')
     };
   }
 
@@ -1151,11 +1152,14 @@
     const controls = getResultControls();
     const hasResults = Array.isArray(results) && results.length > 0;
     if (noElement) noElement.style.display = hasResults ? 'none' : 'block';
+    if (controls.noResultsRetry) controls.noResultsRetry.hidden = hasResults || context.error !== true;
     if (hasResults) return;
 
     const hiddenClosedCount = Math.max(0, Number(context.hiddenClosedCount) || 0);
     let message = 'Nenhuma publicação corresponde à busca. Revise os termos ou consulte os módulos do KinoCampus.';
-    if (context.hideClosed === true) {
+    if (context.error === true) {
+      message = 'Não foi possível carregar a busca agora. Tente novamente em instantes.';
+    } else if (context.hideClosed === true) {
       if (hiddenClosedCount > 0) {
         message = hiddenClosedCount === 1
           ? 'Há 1 publicação encerrada correspondente. Mostre os encerrados para consultá-la.'
@@ -1171,10 +1175,10 @@
       message = 'Ainda não encontramos publicações após ampliar os critérios. Tente um termo mais geral ou reaplique os filtros.';
     }
     if (controls.noResultsMessage) controls.noResultsMessage.textContent = message;
-    if (controls.noResultsRelax) controls.noResultsRelax.hidden = !(state && state.active);
-    if (controls.noResultsRestore) controls.noResultsRestore.hidden = !(state && state.dismissedCount > 0);
+    if (controls.noResultsRelax) controls.noResultsRelax.hidden = context.error === true || !(state && state.active);
+    if (controls.noResultsRestore) controls.noResultsRestore.hidden = context.error === true || !(state && state.dismissedCount > 0);
     if (controls.noResultsRevealClosed) {
-      controls.noResultsRevealClosed.hidden = context.hideClosed !== true;
+      controls.noResultsRevealClosed.hidden = context.error === true || context.hideClosed !== true;
     }
   }
 
@@ -1349,6 +1353,11 @@
       button.dataset.kcSearchBound = '1';
       button.addEventListener('click', restore);
     });
+
+    if (controls.noResultsRetry && controls.noResultsRetry.dataset.kcSearchBound !== '1') {
+      controls.noResultsRetry.dataset.kcSearchBound = '1';
+      controls.noResultsRetry.addEventListener('click', rerender);
+    }
 
     if (controls.noResultsRelax && controls.noResultsRelax.dataset.kcSearchBound !== '1') {
       controls.noResultsRelax.dataset.kcSearchBound = '1';
@@ -1603,7 +1612,7 @@
       updateResultsControlsState([], [], readResultFilters());
       renderStructuredSearchState(null);
       renderSearchPersonalizationState([], 'relevance', { suppressed: false });
-      updateNoResultsState(noEl, [], null);
+      updateNoResultsState(noEl, [], null, { error: false });
       recordSearchPerformance(request, 'ok', 0);
       return;
     }
@@ -1613,6 +1622,7 @@
     const filters = readResultFilters();
 
     let results = [];
+    let searchError = null;
     try {
       if (KCAPI && typeof KCAPI.searchPosts === 'function') {
         const params = { q, limit: SEARCH_RESULTS_LIMIT, hideClosed: filters.hideClosed, signal: request.signal };
@@ -1634,11 +1644,22 @@
       }
       console.error('[KinoCampus] Busca falhou:', error);
       recordSearchPerformance(request, 'error', 0);
+      searchError = error;
       results = [];
     }
 
     if (!isCurrentSearchRequest(request)) {
       recordSearchPerformance(request, 'stale', 0);
+      return;
+    }
+
+    if (searchError) {
+      listEl.innerHTML = '';
+      lastRenderedSearchResults = new Map();
+      renderStructuredSearchState(null);
+      renderSearchPersonalizationState([], 'relevance', { suppressed: personalizationSuppressed });
+      updateResultsControlsState([], [], filters);
+      updateNoResultsState(noEl, [], null, { error: true });
       return;
     }
 

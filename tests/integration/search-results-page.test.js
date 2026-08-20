@@ -19,6 +19,7 @@ describe('search-results.html', () => {
     expect(html).toContain('id="searchResultsStructuredChips"');
     expect(html).toContain('id="searchResultsStructuredRestore"');
     expect(html).toContain('id="searchResultsRelaxStructured"');
+    expect(html).toContain('id="searchResultsRetry"');
     expect(html).toContain('id="noResultsMessage"');
     expect(html).toContain('kc-search-results-controls__summary');
     expect(html).toContain('kc-search-results-controls__toolbar');
@@ -33,7 +34,7 @@ describe('search-results.html', () => {
     const html = read('search-results.html');
 
     expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.3');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.14');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.15');
   });
 });
 
@@ -57,6 +58,10 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('startSearchResultsFreshness()');
     // Visible summary must track the rendered feed list, not a pre-filter pool.
     expect(source).toContain('formatVisibleResultsLabel(visible)');
+    expect(source).toContain('let searchError = null');
+    expect(source).toContain('if (searchError)');
+    expect(source).toContain('context.error === true');
+    expect(source).toContain('noResultsRetry');
   });
 
   test('keeps the header search global outside the results page', () => {

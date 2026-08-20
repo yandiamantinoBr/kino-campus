@@ -11,6 +11,12 @@
     }
   },
   "redirects": [
+    { "source": "/index.html", "destination": "/", "permanent": true },
+    { "source": "/pitch", "destination": "/apresentacao-institucional.html", "permanent": true },
+    { "source": "/apresentacao", "destination": "/apresentacao-institucional.html", "permanent": true },
+    { "source": "/apresentacao-institucional", "destination": "/apresentacao-institucional.html", "permanent": true },
+    { "source": "/compra-venda.html", "destination": "/compra-venda-feed.html", "permanent": true },
+    { "source": "/caronas.html", "destination": "/caronas-feed.html", "permanent": true },
     { "source": "/admin/ga4/dashboard.html", "destination": "/admin/ga4-dashboard.html", "permanent": true },
     { "source": "/admin/ga4/dashboard", "destination": "/admin/ga4-dashboard.html", "permanent": true }
   ],
