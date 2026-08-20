@@ -55,7 +55,7 @@ describe('eventos taxonomy + filter contracts', () => {
   test('eventos page wires cache-busted filter and sort scripts', () => {
     expect(PAGE).toContain('kc-filters.js?v=8.6.6');
     expect(PAGE).toContain('kc-feed-filters.js?v=8.6.3');
-    expect(PAGE).toContain('kc-core-widgets.js?v=8.6.3');
+    expect(PAGE).toContain('kc-core-widgets.js?v=8.6.4');
     expect(PAGE).toContain('home-categories.shared.js?v=8.6.2');
   });
 });

@@ -31,8 +31,15 @@ describe('sw.js — integridade', function () {
   });
 
   test('SHELL_ASSETS nao pre-cacheia HTML estatico', function () {
-    expect(SW).not.toContain("'/'");
+    var shellAssets = SW.match(/var SHELL_ASSETS\s*=\s*\[([\s\S]*?)\];/);
+    expect(shellAssets).not.toBeNull();
+    expect(shellAssets[1]).not.toContain("'/'");
     expect(SW).toContain("request.mode === 'navigate'");
+  });
+
+  test('fallback de navegação offline usa a rota canônica da home', function () {
+    expect(SW).toContain("return cache.match('/').then(function (homeFallback)");
+    expect(SW).not.toContain("cache.match('/index.html')");
   });
 
   test('SHELL_ASSETS inclui os arquivos CSS obrigatórios', function () {

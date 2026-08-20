@@ -22,6 +22,11 @@ abaixo registram o snapshot em que foram geradas.
 para renderizar o bottom sheet "Escolher Modulo"; `search-results.html` conserva seu filtro de
 modulo proprio e nao carrega esse componente.
 
+**Atualizacao 2026-08-20:** `core/kc-core-widgets.js?v=8.6.4` passou a concentrar
+a compactacao textual de cards no mobile; todos os consumidores de `kc-core.js` o carregam
+antes do core. O Service Worker pre-cacheia a mesma revisao, enquanto `kc-core.js?v=8.6.8`
+mantem somente o boot e delega o widget.
+
 ---
 
 ## 1. Escopo
@@ -57,7 +62,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -153,7 +158,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -254,7 +259,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -324,7 +329,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -420,7 +425,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -481,7 +486,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 62. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
 63. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
 64. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
-65. `assets/js/components/voting.js?v=8.6.2` (components)
+65. `assets/js/components/voting.js?v=8.6.3` (components)
 66. `assets/js/core/kc-core.js?v=8.6.1` (core)
 67. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
 68. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
@@ -498,7 +503,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -568,7 +573,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -664,7 +669,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -759,7 +764,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -845,7 +850,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -942,7 +947,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1037,7 +1042,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1127,7 +1132,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1217,7 +1222,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1313,7 +1318,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1374,7 +1379,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 61. `assets/js/features/kc-comments.js?v=8.6.1` (features)
 62. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
 63. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
-64. `assets/js/components/voting.js?v=8.6.2` (components)
+64. `assets/js/components/voting.js?v=8.6.3` (components)
 65. `assets/js/core/kc-core.js?v=8.6.1` (core)
 66. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
 67. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
@@ -1397,7 +1402,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1468,7 +1473,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1556,7 +1561,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 
 1. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 2. `https://cdn.vercel-insights.com/v1/script.js` (external)
-3. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+3. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 4. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 5. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 6. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1616,7 +1621,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 60. `assets/js/shared/account-profile.shared.js?v=8.6.1` (shared)
 61. `assets/js/core/kc-profiles.client.js?v=8.6.1` (core)
 62. `assets/js/features/kc-pull-to-refresh.js?v=8.6.1` (features)
-63. `assets/js/components/voting.js?v=8.6.2` (components)
+63. `assets/js/components/voting.js?v=8.6.3` (components)
 64. `assets/js/core/kc-core.js?v=8.6.1` (core)
 65. `assets/js/core/kc-public-shell.js?v=8.6.1` (core)
 66. `assets/js/core/kc-auth.ui.js?v=8.6.1` (core)
@@ -1634,7 +1639,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)
@@ -1706,7 +1711,7 @@ Cada bloco lista todos os scripts carregados pela pagina, apos normalizar o pref
 1. `assets/js/boot/kc-seo-structured-data.js?v=8.6.1` (boot)
 2. `assets/js/boot/kc-theme-boot.js?v=8.6.1` (boot)
 3. `https://cdn.vercel-insights.com/v1/script.js` (external)
-4. `assets/js/boot/kc-speed-insights.js?v=8.6.1` (boot)
+4. `assets/js/boot/kc-speed-insights.js?v=8.6.2` (boot)
 5. `assets/js/boot/kc-constants.js?v=8.6.1` (boot)
 6. `assets/js/core/kc-i18n.js?v=8.6.1` (core)
 7. `assets/js/utils/kc-utils.string.js?v=8.6.1` (utils)

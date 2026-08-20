@@ -440,16 +440,16 @@ deleção, e sincronização com o backend. Encapsula a lógica de "minhas publi
 | Padrão | IIFE + augmenta `window.KCCore` |
 | Páginas | Todas as páginas públicas |
 
-**Responsabilidade:** Widgets UI compartilhados: dialogs de confirmação, spinners de loading,
-estados vazios (empty states), alerts e banners de erro genéricos. É carregado antes de
-`kc-core.js` para que o core possa usar os widgets.
+**Responsabilidade:** Widgets de cards compartilhados: compartilhamento por WhatsApp,
+abas de ordenação de feeds e compactação visual de título/descrição no mobile. É carregado
+antes de `kc-core.js` para que o boot delegue esses comportamentos sem crescer o core.
 
 **Exports públicos:** Augmenta `window.KCCore` com:
-- `window.KCCore.showConfirm(msg, onConfirm)` — dialog de confirmação
-- `window.KCCore.showSpinner(el)` / `hideSpinner(el)` — loading state
-- `window.KCCore.showEmptyState(el, msg)` — empty state
+- `window.KCCore.initWhatsAppShare()` — injeta e rastreia compartilhamento nos cards
+- `window.KCCore.bindModuleSortTabs(opts)` — conecta as abas de ordenação dos feeds
+- `window.KCCore.initMobileTextTruncation()` — compacta cards no mobile sem perder o texto-fonte
 
-**Dependências em runtime:** `window.KC_CONSTANTS`, `window.KCUtils`
+**Dependências em runtime:** `window.KCAPI`, `window.KCUtils`, `kcDebounce` (definido pelo core antes do boot DOM)
 
 **Consumido por:** kc-core.js (augmenta o mesmo objeto), controllers
 
