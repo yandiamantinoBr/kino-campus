@@ -16,7 +16,7 @@ describe('Vercel static output allowlist', () => {
 
   beforeEach(() => {
     fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-vercel-output-'));
-    ['index.html', '_product.html'].forEach((file) => write(fixtureRoot, file));
+    ['index.html', '_product.html', '404.html'].forEach((file) => write(fixtureRoot, file));
     PUBLIC_ROOT_FILES.forEach((file) => write(fixtureRoot, file));
     write(fixtureRoot, 'admin/index.html');
     write(fixtureRoot, 'assets/js/boot/kc-env.js');
@@ -40,6 +40,7 @@ describe('Vercel static output allowlist', () => {
     buildStaticOutput({ sourceRoot: fixtureRoot, outputRoot });
 
     expect(fs.existsSync(path.join(outputRoot, 'index.html'))).toBe(true);
+    expect(fs.existsSync(path.join(outputRoot, '404.html'))).toBe(false);
     expect(fs.existsSync(path.join(outputRoot, 'admin/index.html'))).toBe(true);
     expect(fs.existsSync(path.join(outputRoot, 'assets/js/boot/kc-env.js'))).toBe(true);
     expect(fs.existsSync(path.join(outputRoot, 'data/database.json'))).toBe(true);

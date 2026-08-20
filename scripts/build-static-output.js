@@ -11,6 +11,9 @@ const PUBLIC_ROOT_FILES = Object.freeze([
   'robots.txt',
   'sw.js',
 ]);
+// The 404 template is bundled only with api/og-product.js. Publishing it as a
+// static /404.html makes Vercel serve it with HTTP 200 before rewrites run.
+const SERVER_RENDERED_ROOT_TEMPLATES = Object.freeze(['404.html']);
 const REQUIRED_OUTPUTS = Object.freeze([
   'index.html',
   '_product.html',
@@ -51,7 +54,9 @@ function buildStaticOutput(options) {
   fs.mkdirSync(outputRoot, { recursive: true });
 
   const rootHtmlFiles = fs.readdirSync(sourceRoot, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.html'))
+    .filter((entry) => entry.isFile()
+      && entry.name.toLowerCase().endsWith('.html')
+      && !SERVER_RENDERED_ROOT_TEMPLATES.includes(entry.name))
     .map((entry) => entry.name)
     .sort();
 
@@ -88,5 +93,6 @@ module.exports = Object.freeze({
   PUBLIC_DATA_FILES,
   PUBLIC_ROOT_FILES,
   REQUIRED_OUTPUTS,
+  SERVER_RENDERED_ROOT_TEMPLATES,
   buildStaticOutput,
 });

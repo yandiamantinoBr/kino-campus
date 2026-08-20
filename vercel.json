@@ -36,7 +36,8 @@
     { "source": "/api/cadu/reviews/(.+)", "destination": "/api/cadu/sites?path=reviews/$1" },
     { "source": "/api/cadu/sites/(.+)", "destination": "/api/cadu/sites?path=$1" },
     { "source": "/api/cadu/pipeline/(.+)", "destination": "/api/cadu/pipeline-router?path=$1" },
-    { "source": "/api/cadu/openclaw/(.+)", "destination": "/api/cadu/openclaw-router?path=$1" }
+    { "source": "/api/cadu/openclaw/(.+)", "destination": "/api/cadu/openclaw-router?path=$1" },
+    { "source": "/(.*)", "destination": "/api/og-product?kc_not_found=1" }
   ],
   "headers": [
     {
