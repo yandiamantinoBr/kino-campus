@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(67);
+select extensions.plan(68);
 
 select extensions.ok(
   not pg_catalog.has_function_privilege('anon', signature, 'execute'),
@@ -14,9 +14,22 @@ from unnest(array[
   'public.kc_get_post_analytics(uuid)',
   'public.kc_get_user_rating_state(uuid,uuid)',
   'public.kc_report_post(uuid,text,text)',
-  'public.kc_track_view(uuid)',
   'public.kc_upsert_user_rating(uuid,uuid,integer,text)'
 ]::text[]) as owner_rpc(signature);
+
+select extensions.ok(
+  pg_catalog.has_function_privilege('anon', 'public.kc_track_view(uuid)', 'execute'),
+  'public.kc_track_view(uuid) is callable by anon as a safe no-op boundary'
+);
+
+select pg_catalog.set_config('request.jwt.claims', '{"role":"anon"}', true);
+set local role anon;
+select extensions.is(
+  public.kc_track_view('00000000-0000-4000-8000-000000000001'::uuid),
+  '{"ok": false, "code": "AUTH_REQUIRED"}'::jsonb,
+  'anonymous kc_track_view returns AUTH_REQUIRED without touching data'
+);
+reset role;
 
 select extensions.ok(
   pg_catalog.has_function_privilege('authenticated', signature, 'execute'),
