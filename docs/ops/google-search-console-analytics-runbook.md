@@ -13,6 +13,26 @@ AdSense, use também `docs/ops/adsense-search-console-readiness-runbook.md`.
 - OAuth 2.0 Playground serve para teste manual de APIs. Não é um mecanismo de produção.
 - Integrações com APIs Google devem ser server-side, em função protegida ou rotina administrativa, nunca em HTML público.
 
+### Consulta local somente de leitura
+
+Para auditorias no computador administrativo, o cliente local usa exclusivamente
+`GOOGLE_APPLICATION_CREDENTIALS`, já configurada no perfil do sistema. O caminho
+da credencial é lido em tempo de execução; o JSON, token de acesso e e-mail da
+conta técnica não são impressos, copiados para o repositório nem enviados ao
+Supabase.
+
+```powershell
+npm run analytics:connection:check
+npm run analytics:report -- --service ga4
+npm run analytics:report -- --service search-console --json --limit 1000
+```
+
+`--service ga4` e `--service search-console` isolam a disponibilidade de cada
+API. A conta técnica precisa ter Viewer na propriedade GA4 e acesso de leitura
+na propriedade do Search Console. O cliente não tenta criar chaves, alterar
+permissões ou enviar sitemaps. Para eventos individuais de GA4, use a exportação
+oficial para BigQuery; a Data API retorna somente relatórios agregados.
+
 ## O que cada ferramenta responde
 
 | Ferramenta | Pergunta principal | Onde usar |
@@ -119,12 +139,15 @@ Front-end emite via `window.KCEvents.track(name, params)` (helper em `assets/js/
 | `kc_contact_click`| clique no CTA de contato de uma publicação    | `post_id`, `contact_type`, `channel`           | `controllers/public/product.controller.js`            |
 | `kc_post_create`  | criação de publicação (RPC `kc_create_post`)  | `post_id`, `module`                            | `controllers/public/create-post.controller.js`       |
 | `kc_search`       | busca (termo com ≥ 2 chars e consentimento)    | `term`, `source`                               | `features/kc-search.js`                               |
+| `kc_search_outcome` | resultado final da busca na página de resultados | `search_source`, `search_outcome`, faixas de resultado e latência; nunca o termo | `features/kc-search.js` |
 | `kc_chat_open`    | abertura de conversa 1:1                      | `conversation_id`, `peer_id`, `is_new`         | `controllers/public/chat-inbox.controller.js`        |
 | `kc_chat_inbox_open` | primeira carga da inbox de chat             | `conversation_count`                           | `controllers/public/chat-inbox.controller.js`        |
 
 **Validação no GA4**: `Relatórios → Engajamento → Eventos` (lag de 24-48h para primeira aparição). Para debug em tempo real, use `DebugView` no GA4 (requer `?debug_mode=1` ou `window.KCEvents.enableDebug()`).
 
 **Fila pós-consentimento (2026-07-20):** eventos `kc_*` tentados antes do aceite de Métricas ficam em fila interna e são reenviados em `kc:consentchange` via `KCEvents.flushQueue()`. Assim a primeira navegação útil após o banner não se perde.
+
+**Saúde da busca (2026-08-20):** `kc_search_outcome` diferencia `success`, `zero_results` e `error` com faixas discretas de resultado e latência. Para analisar cada parâmetro no GA4, registre-o como dimensão personalizada; o evento em si já aparece em Engajamento → Eventos sem enviar o termo pesquisado.
 
 **Landing de módulo:** `kc_module_view` dispara uma vez por sessão/página ao abrir feeds (eventos, oportunidades, caronas, moradia, compra-venda, achados-perdidos, editorial, ods).
 

@@ -46,6 +46,7 @@
     kc_post_view: Object.freeze({ post_id: true, module: true, content_type: true }),
     kc_profile_cta_click: Object.freeze({ item_id: true, content_type: true }),
     kc_search: Object.freeze({ search_source: true, query_length_bucket: true }),
+    kc_search_outcome: Object.freeze({ search_source: true, search_outcome: true, result_count_bucket: true, search_latency_bucket: true }),
     kc_share: Object.freeze({ post_id: true, method: true }),
     kc_sign_up: Object.freeze({ method: true, needs_confirmation: true }),
     kc_sign_up_submit: Object.freeze({ method: true, needs_confirmation: true }),
@@ -60,7 +61,10 @@
     module: Object.freeze({ 'achados-perdidos': true, caronas: true, 'compra-venda': true, eventos: true, moradia: true, oportunidades: true, editorial: true, ods: true, unknown: true }),
     publication_status: Object.freeze({ published: true, pending_review: true }),
     query_length_bucket: Object.freeze({ '2_4': true, '5_8': true, '9_16': true, '17_32': true, '33_plus': true }),
-    search_source: Object.freeze({ 'dropdown-item': true, 'results-load': true, 'results-submit': true, search: true }),
+    result_count_bucket: Object.freeze({ zero: true, '1_5': true, '6_20': true, '21_plus': true }),
+    search_latency_bucket: Object.freeze({ under_250ms: true, '250ms_1s': true, '1s_5s': true, '5s_plus': true }),
+    search_outcome: Object.freeze({ success: true, zero_results: true, error: true }),
+    search_source: Object.freeze({ 'dropdown-item': true, 'results-load': true, 'results-submit': true, results: true, search: true }),
     source: Object.freeze({ 'ga4-dashboard': true }),
   });
 

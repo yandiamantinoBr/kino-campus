@@ -6,6 +6,9 @@
     "api/og-product.js": {
       "includeFiles": "_product.html"
     },
+    "api/not-found.js": {
+      "includeFiles": "404.html"
+    },
     "api/cadu/sites.js": {
       "includeFiles": "services/cadu-ufg-publisher/config/cadu-source-registry/*.json"
     }
@@ -21,6 +24,7 @@
     { "source": "/admin/ga4/dashboard", "destination": "/admin/ga4-dashboard.html", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/404.html", "destination": "/api/not-found" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/feed.xml", "destination": "/api/feed" },
     { "source": "/product.html", "destination": "/api/og-product" },

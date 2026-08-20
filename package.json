@@ -18,6 +18,8 @@
     "check:hygiene": "node scripts/hygiene-check.js",
     "seo:audit": "node scripts/seo-audit.js",
     "analytics:secrets:set": "node scripts/set-google-analytics-secrets.js",
+    "analytics:connection:check": "node scripts/google-reporting-read.js --check",
+    "analytics:report": "node scripts/google-reporting-read.js",
     "check:structure": "node scripts/validate-repository-structure.js",
     "check:scripts": "node scripts/validate-script-chains.js",
     "check:routes": "node scripts/validate-public-routes.js",

@@ -124,15 +124,53 @@
   function recordSearchPerformance(request, outcome, resultCount) {
     if (!request || request.finished) return;
     request.finished = true;
+    const durationMs = Math.max(0, Math.round((performanceNow() - request.startedAt) * 100) / 100);
+    const normalizedOutcome = String(outcome || 'ok');
+    const normalizedResultCount = Math.max(0, Math.min(120, Number(resultCount) || 0));
     searchPerformanceSamples.push(Object.freeze({
       surface: request.surface,
-      durationMs: Math.max(0, Math.round((performanceNow() - request.startedAt) * 100) / 100),
-      outcome: String(outcome || 'ok'),
-      resultCount: Math.max(0, Math.min(120, Number(resultCount) || 0))
+      durationMs,
+      outcome: normalizedOutcome,
+      resultCount: normalizedResultCount
     }));
     if (searchPerformanceSamples.length > SEARCH_PERFORMANCE_SAMPLE_LIMIT) {
       searchPerformanceSamples.splice(0, searchPerformanceSamples.length - SEARCH_PERFORMANCE_SAMPLE_LIMIT);
     }
+    trackSearchOutcome(request, normalizedOutcome, normalizedResultCount, durationMs);
+  }
+
+  function searchResultCountBucket(value) {
+    const count = Math.max(0, Number(value) || 0);
+    if (count === 0) return 'zero';
+    if (count <= 5) return '1_5';
+    if (count <= 20) return '6_20';
+    return '21_plus';
+  }
+
+  function searchLatencyBucket(value) {
+    const duration = Math.max(0, Number(value) || 0);
+    if (duration < 250) return 'under_250ms';
+    if (duration < 1000) return '250ms_1s';
+    if (duration < 5000) return '1s_5s';
+    return '5s_plus';
+  }
+
+  function trackSearchOutcome(request, outcome, resultCount, durationMs) {
+    // Dropdown keystrokes and superseded requests are UX details, not a search
+    // outcome. The results page emits only one coarse, consent-gated GA4 event
+    // per completed query and never sends the search term or a user identifier.
+    if (!request || request.surface !== 'results' || !request.analytics ||
+        !['ok', 'error'].includes(outcome)) return;
+    try {
+      if (window.KCEvents && typeof window.KCEvents.track === 'function') {
+        window.KCEvents.track('kc_search_outcome', {
+          search_source: request.analytics.source,
+          search_outcome: outcome === 'error' ? 'error' : (resultCount === 0 ? 'zero_results' : 'success'),
+          result_count_bucket: searchResultCountBucket(resultCount),
+          search_latency_bucket: searchLatencyBucket(durationMs)
+        });
+      }
+    } catch (_) {}
   }
 
   function getSearchPerformanceSnapshot() {
@@ -1592,14 +1630,15 @@
 
   async function renderResultsToPage(query) {
     clearSearchResultsLifecycleTimer();
+    const q = String(query || '').trim();
     const request = startSearchRequest('results');
+    request.analytics = q.length >= 2 ? { source: 'results' } : null;
     const listEl = document.getElementById('searchResultsList');
     if (!listEl) {
       recordSearchPerformance(request, 'ok', 0);
       return;
     }
 
-    const q = String(query || '').trim();
     const personalizationSuppressed = syncSearchPersonalizationContext(q);
     const titleEl = document.getElementById('searchQueryText');
     const noEl = document.getElementById('noResults');
