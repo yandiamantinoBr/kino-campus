@@ -160,9 +160,38 @@ describe('Admin Cadu review center runtime', () => {
       { timeoutMs: 15000 }
     );
     expect(page.window.document.getElementById('badge-reviews').textContent).toBe('147');
-    expect(page.window.document.getElementById('badge-reviews').title).toBe('147 revisões pendentes');
+    expect(page.window.document.getElementById('badge-reviews').title)
+      .toBe('147 itens de revisão pendentes; não é uma fila de publicação.');
+    expect(page.window.document.getElementById('badge-reviews').getAttribute('aria-label'))
+      .toBe('147 itens de revisão pendentes; não é uma fila de publicação.');
     expect(page.window.document.querySelector('[data-review-provider="pipeline"]').textContent).toContain('128 pendentes');
     expect(page.window.document.getElementById('reviews-list').textContent).toBe(listBeforeSummary);
+    page.dom.window.close();
+  });
+
+  test.each([
+    ['pipeline_quality', 'Qualidade da Pipeline · decisão editorial', 'Qualidade da Pipeline — decisão editorial; não publica automaticamente.'],
+    ['pipeline_incident', 'Incidente da Pipeline · acompanhamento', 'Incidente da Pipeline — acompanhamento operacional; não é publicação pendente.'],
+    ['feed_item', 'Evidência do Feed · não publica', 'Evidência do Feed — não é publicação pendente.']
+  ])('labels %s without presenting it as a publication queue', async (kind, label, title) => {
+    const item = { ...centralItem(), kind };
+    const page = createPage(jest.fn(async () => ({
+      ok: true,
+      data: {
+        items: [item],
+        total: 1,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    })));
+
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('.kc-cadu-review-item__kind'));
+    const kindBadge = page.window.document.querySelector('.kc-cadu-review-item__kind');
+    expect(kindBadge.textContent).toBe(label);
+    expect(kindBadge.title).toBe(title);
     page.dom.window.close();
   });
 

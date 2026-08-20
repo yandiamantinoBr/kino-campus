@@ -68,6 +68,23 @@
     sites: 'fa-university',
     openclaw: 'fa-robot'
   };
+  var REVIEW_KIND_META = {
+    pipeline_quality: {
+      className: 'pipeline-quality',
+      label: 'Qualidade da Pipeline · decisão editorial',
+      title: 'Qualidade da Pipeline — decisão editorial; não publica automaticamente.'
+    },
+    pipeline_incident: {
+      className: 'pipeline-incident',
+      label: 'Incidente da Pipeline · acompanhamento',
+      title: 'Incidente da Pipeline — acompanhamento operacional; não é publicação pendente.'
+    },
+    feed_item: {
+      className: 'feed-item',
+      label: 'Evidência do Feed · não publica',
+      title: 'Evidência do Feed — não é publicação pendente.'
+    }
+  };
   var IDENTITY_SCOPE_LABELS = {
     record: 'Registro estável',
     aggregate_subject: 'Assunto em fonte agregadora',
@@ -316,6 +333,16 @@
     return '';
   }
 
+  function reviewKindBadge(item) {
+    var kind = item && item.kind;
+    var meta = Object.prototype.hasOwnProperty.call(REVIEW_KIND_META, kind)
+      ? REVIEW_KIND_META[kind]
+      : null;
+    if (!meta) return '';
+    return '<span class="kc-cadu-review-item__kind kc-cadu-review-item__kind--' + meta.className + '" title="' +
+      escapeHtml(meta.title) + '">' + escapeHtml(meta.label) + '</span>';
+  }
+
   function reviewProvenance(item) {
     if (item.review_identity_version !== 'cadu-review-identity-v2'
         || !item.metadata || typeof item.metadata !== 'object') return '';
@@ -374,8 +401,12 @@
       return provider.id === 'sites' ? total : total + (Number(provider.pending) || 0);
     }, 0);
     var total = centralPending + institutionalPending;
+    var badgeLabel = total === 1
+      ? '1 item de revisão pendente; não é uma fila de publicação.'
+      : total + ' itens de revisão pendentes; não é uma fila de publicação.';
     badge.textContent = String(total);
-    badge.title = total === 1 ? '1 revisão pendente' : total + ' revisões pendentes';
+    badge.title = badgeLabel;
+    badge.setAttribute('aria-label', badgeLabel);
     badge.classList.toggle('is-warning', total > 0);
   }
 
@@ -541,6 +572,7 @@
         '<div class="kc-cadu-review-item__eyebrow">' +
         '<span class="kc-cadu-review-item__origin"><i class="fas ' + escapeHtml(ORIGIN_ICONS[item.origin] || 'fa-clipboard-check') + '" aria-hidden="true"></i> ' + escapeHtml(ORIGIN_LABELS[item.origin] || item.origin) + '</span>' +
         '<span class="kc-cadu-review-item__state">' + escapeHtml(STATE_LABELS[item.state] || item.state) + '</span>' +
+        reviewKindBadge(item) +
         scoreBadge(item) +
         '<span>' + escapeHtml(fmtDate(item.created_at)) + '</span>' +
         '</div>' +
