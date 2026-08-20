@@ -16,6 +16,7 @@
   var PIPELINE_SNAPSHOT_TTL_MS = 15000;
   var OPENCLAW_POLL_INTERVAL_MS = 60000;
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
+  var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;
   var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
   var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
   var SOURCE_REGISTRY_READINESS_TIMEOUT_MS = 15000;
@@ -390,24 +391,57 @@
     return null;
   }
 
+  async function fetchCaduHealth(options) {
+    options = options || {};
+    var timeoutMs = Number(options.timeoutMs || CADU_HEALTH_REQUEST_TIMEOUT_MS);
+    var timeoutController = null;
+    var timeoutId = null;
+    var upstreamSignal = options.signal;
+    var upstreamAbort = null;
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0 && typeof AbortController === 'function') {
+      timeoutController = new AbortController();
+      if (upstreamSignal) {
+        upstreamAbort = function () { timeoutController.abort(upstreamSignal.reason); };
+        if (upstreamSignal.aborted) upstreamAbort();
+        else upstreamSignal.addEventListener('abort', upstreamAbort, { once: true });
+      }
+      timeoutId = setTimeout(function () { timeoutController.abort(); }, timeoutMs);
+    }
+    try {
+      var response = await fetch('/api/cadu/health', {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+        signal: timeoutController ? timeoutController.signal : upstreamSignal
+      });
+      var data = null;
+      try { data = await response.json(); } catch (_) {}
+      return { ok: response.ok, status: response.status, data: data };
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (upstreamSignal && upstreamAbort) upstreamSignal.removeEventListener('abort', upstreamAbort);
+    }
+  }
+
   async function checkHealth() {
     var pill = $('#cadu-status-pill');
     var contextPill = $('#cadu-context-pill');
     var versionPill = $('#cadu-version-pill');
     var versionText = $('#cadu-version-text');
     try {
-      var res = await fetch('/api/cadu/health', {
-        cache: 'no-store',
-        headers: { Accept: 'application/json' }
-      });
-      var data = await res.json();
-      if (res.ok && data && data.status === 'ok') {
+      var health = await fetchCaduHealth();
+      var data = health.data;
+      if (health.ok && data && data.status === 'ok') {
         state.apiHealthy = true;
         setStatus(pill, null,
           '<span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fas fa-circle-check"></i> cadu-api online (v' + (data.version || '?') + ')');
         // atualiza KPI api
         $('#kpi-api').textContent = 'OK';
-        $('#kpi-api-detail').textContent = 'ts ' + new Date(data.ts * 1000).toLocaleTimeString('pt-BR');
+        var healthTimestampMs = typeof data.ts === 'number'
+          ? data.ts * 1000
+          : Date.parse(String(data.ts || ''));
+        $('#kpi-api-detail').textContent = Number.isFinite(healthTimestampMs)
+          ? 'ts ' + new Date(healthTimestampMs).toLocaleTimeString('pt-BR')
+          : 'ts indisponível';
         if (versionText) versionText.textContent = 'v' + (data.version || '?');
         if (versionPill) versionPill.style.display = '';
         // O endpoint de contexto também consulta o OpenClaw. Na aba OpenClaw,
@@ -434,7 +468,7 @@
       } else {
         state.apiHealthy = false;
         setStatus(pill, 'is-down',
-          '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> cadu-api respondeu ' + res.status);
+          '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> cadu-api respondeu ' + health.status);
         $('#kpi-api').textContent = 'OFF';
         $('#kpi-api-detail').textContent = (data && data.error) || 'ver logs';
         if (contextPill) contextPill.style.display = 'none';
@@ -5042,12 +5076,9 @@
     setInterval(function () {
       if (document.hidden) return;
       // Poll silencioso: atualiza health e atividade recente quando a API está saudável.
-      fetch('/api/cadu/health', {
-        cache: 'no-store',
-        headers: { Accept: 'application/json' }
-      })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (data) {
+      fetchCaduHealth()
+        .then(function (health) {
+          var data = health.ok ? health.data : null;
           if (!data) return;
           pollNotifActivity();
           var vp = $('#cadu-version-text');

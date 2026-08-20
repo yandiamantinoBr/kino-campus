@@ -6,6 +6,17 @@
 
 import { requireCaduAdmin } from '../../server/cadu-auth.mjs';
 import { fetchCaduUpstream, normalizeCaduApiToken } from '../../server/cadu-upstream-fetch.js';
+import responseLimits from '../../server/cadu-response-limits.cjs';
+
+const {
+  MAX_CADU_ERROR_RESPONSE_BYTES,
+  MAX_CADU_RESPONSE_BYTES,
+  parseCaduJson,
+  readLimitedCaduResponse,
+  stableCaduTransportFailure,
+} = responseLimits;
+
+const MAX_CADU_PUBLISH_REQUEST_BYTES = 64 * 1024;
 
 const REVIEW_POLICY = Object.freeze({
   intent: 'review',
@@ -101,10 +112,38 @@ function institutionalReviewPayload(body) {
   };
 }
 
+function byteLength(value) {
+  return Buffer.byteLength(String(value || ''), 'utf8');
+}
+
+export function serializeCaduPublishBody(body) {
+  let serialized;
+  try {
+    serialized = JSON.stringify(body);
+  } catch {
+    const error = new Error('invalid_cadu_request_body');
+    error.code = 'invalid_cadu_request_body';
+    throw error;
+  }
+  if (typeof serialized !== 'string') {
+    const error = new Error('invalid_cadu_request_body');
+    error.code = 'invalid_cadu_request_body';
+    throw error;
+  }
+  if (byteLength(serialized) > MAX_CADU_PUBLISH_REQUEST_BYTES) {
+    const error = new Error('cadu_request_body_too_large');
+    error.code = 'cadu_request_body_too_large';
+    throw error;
+  }
+  return serialized;
+}
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // This authenticated administrative endpoint is consumed same-origin.
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') {
@@ -117,7 +156,7 @@ export default async function handler(req, res) {
   const apiUrl = process.env.CADU_API_URL;
   const token = normalizeCaduApiToken(process.env.CADU_API_TOKEN);
   if (!apiUrl || !token) {
-    return res.status(503).json({ error: 'cadu_api_not_configured', message: 'CADU_API_URL/CADU_API_TOKEN ausentes' });
+    return res.status(503).json({ error: 'cadu_api_not_configured' });
   }
 
   const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -161,6 +200,16 @@ export default async function handler(req, res) {
     };
   }
 
+  let serializedUpstreamBody;
+  try {
+    serializedUpstreamBody = serializeCaduPublishBody(upstreamBody);
+  } catch (error) {
+    if (error?.code === 'cadu_request_body_too_large') {
+      return res.status(413).json({ error: error.code });
+    }
+    return res.status(422).json({ error: 'invalid_cadu_request_body' });
+  }
+
   try {
     const upstream = await fetchCaduUpstream(`${apiUrl.replace(/\/$/, '')}/api/publish`, {
       method: 'POST',
@@ -170,29 +219,28 @@ export default async function handler(req, res) {
         Accept: 'application/json',
         'User-Agent': 'KinoCampus-Admin/1.0',
       },
-      body: JSON.stringify(upstreamBody),
+      body: serializedUpstreamBody,
+      redirect: 'error',
       signal: AbortSignal.timeout(30000),
     }, {
       operation: `publish.${action}`,
     });
 
-    const text = await upstream.text();
-    let respBody;
-    try { respBody = JSON.parse(text); } catch { respBody = { raw: text }; }
-
     if (!upstream.ok) {
+      try { await readLimitedCaduResponse(upstream, MAX_CADU_ERROR_RESPONSE_BYTES); } catch {}
       return res.status(upstream.status).json({
         error: 'cadu_api_error',
         status: upstream.status,
-        body: respBody,
       });
     }
 
-    return res.status(200).json(respBody);
-  } catch (err) {
-    return res.status(502).json({
-      error: 'cadu_api_unreachable',
-      message: String(err && err.message ? err.message : err),
-    });
+    const text = await readLimitedCaduResponse(upstream, MAX_CADU_RESPONSE_BYTES);
+    const parsed = parseCaduJson(text);
+    if (!parsed.ok) return res.status(502).json({ error: 'cadu_api_invalid_response' });
+
+    return res.status(200).json(parsed.value);
+  } catch (error) {
+    const failure = stableCaduTransportFailure(error);
+    return res.status(failure.status).json({ error: failure.error });
   }
 }
