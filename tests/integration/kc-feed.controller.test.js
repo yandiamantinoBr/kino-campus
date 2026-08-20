@@ -266,6 +266,40 @@ describe('kc-feed.controller — KCSessionStore integration', () => {
     delete window.KCUtils;
   });
 
+  test('não exibe vazio durante a hidratação e exibe após resposta vazia concluída', async () => {
+    document.body.innerHTML = [
+      '<section>',
+      '  <div id="feed-container" class="kc-feed-list"></div>',
+      '  <div id="noResults" style="display:block">Nenhum resultado</div>',
+      '</section>',
+    ].join('');
+    window.KCUtils = { renderPostCard: jest.fn(() => '<article class="kc-card"></article>') };
+
+    let resolveFeed;
+    window.KCAPI.getFeedCursor.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveFeed = resolve;
+    }));
+
+    const pager = window.KCControllers.createFeedPager({
+      containerSelector: '#feed-container',
+      module: 'oportunidades',
+    });
+
+    expect(document.getElementById('noResults').style.display).toBe('none');
+    expect(document.getElementById('feed-container').getAttribute('aria-busy')).toBe('true');
+    expect(document.getElementById('feed-container').getAttribute('data-kc-feed-state')).toBe('loading');
+
+    resolveFeed({ posts: [], nextCursor: null, hasMore: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.getElementById('noResults').style.display).toBe('');
+    expect(document.getElementById('feed-container').getAttribute('aria-busy')).toBe('false');
+    expect(document.getElementById('feed-container').getAttribute('data-kc-feed-state')).toBe('done');
+
+    pager.destroy();
+    delete window.KCUtils;
+  });
+
   test('dependência de renderização ausente nunca deixa o spinner preso', () => {
     document.body.innerHTML = [
       '<div id="feed-container" class="kc-feed-list">',
