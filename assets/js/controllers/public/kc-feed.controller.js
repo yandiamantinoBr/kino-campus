@@ -523,6 +523,15 @@
     }
 
     const fallbackHTML = container.innerHTML;
+    // The page-level filter can run before this controller's first request and
+    // briefly interpret the empty feed container as a real empty result. Mark
+    // the container as pending and hide the static empty state until the first
+    // response settles; this prevents a false "no results" flash on slower
+    // networks without changing the final empty/error contracts.
+    const initialPageEmptyState = getPageEmptyState();
+    if (initialPageEmptyState) initialPageEmptyState.style.display = 'none';
+    container.setAttribute('data-kc-feed-state', 'loading');
+    container.setAttribute('aria-busy', 'true');
     const realtimeUI = createRealtimeBanner(container);
     const pagerUI = createPagerUI(container);
 
@@ -582,7 +591,7 @@
       const isEmpty = state.hydrated && state.done && state.renderedPosts.length === 0;
       const pageEmpty = getPageEmptyState();
       if (pageEmpty) {
-        if (isEmpty) pageEmpty.style.display = '';
+        pageEmpty.style.display = isEmpty ? '' : 'none';
         const reveal = pageEmpty.querySelector('[data-kc-hide-closed-reveal]');
         if (reveal) reveal.hidden = !(isEmpty && state.hideClosed);
         removeGeneratedEmptyState();
@@ -658,6 +667,8 @@
 
     function setStatus(next, message) {
       state.status = next;
+      container.setAttribute('data-kc-feed-state', next);
+      container.setAttribute('aria-busy', next === 'loading' ? 'true' : 'false');
       pagerUI.status.textContent = message || '';
       pagerUI.retryBtn.style.display = next === 'error' ? 'inline-flex' : 'none';
 
