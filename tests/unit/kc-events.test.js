@@ -50,6 +50,26 @@ describe('KCEvents privacy and queue robustness', () => {
     expect(events.getQueue()).toHaveLength(2);
   });
 
+  test('accepts apenas os buckets anônimos de resultado de busca', () => {
+    window.gtag = jest.fn();
+    window.KCConsent = { hasConsent: () => true };
+    const events = loadEvents();
+
+    expect(events.track('kc_search_outcome', {
+      search_source: 'results',
+      search_outcome: 'zero_results',
+      result_count_bucket: 'zero',
+      search_latency_bucket: '250ms_1s',
+      term: 'nunca deve sair',
+    })).toBe(true);
+    expect(window.gtag).toHaveBeenCalledWith('event', 'kc_search_outcome', {
+      search_source: 'results',
+      search_outcome: 'zero_results',
+      result_count_bucket: 'zero',
+      search_latency_bucket: '250ms_1s',
+    });
+  });
+
   test('trackOnce keeps its state in the closure without mutating the frozen API', () => {
     window.KCConsent = { hasConsent: () => true };
     const events = loadEvents();

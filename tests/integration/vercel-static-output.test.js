@@ -57,7 +57,7 @@ describe('Vercel static output allowlist', () => {
     const ignore = fs.readFileSync(path.join(root, '.vercelignore'), 'utf8');
 
     expect(config.outputDirectory).toBe('dist');
-    expect(config.functions['api/og-product.js'].includeFiles).toBe('_product.html');
+    expect(config.functions['api/og-product.js'].includeFiles).toBe('{_product.html,404.html}');
     for (const pattern of ['.env.*', '.github/**', 'docs/**', 'supabase/**', 'tests/**']) {
       expect(ignore).toContain(pattern);
     }

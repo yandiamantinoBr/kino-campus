@@ -85,6 +85,19 @@ describe('SEO e indexacao publica', () => {
     expect(vercel).toContain('"destination": "/apresentacao-institucional.html"');
   });
 
+  test('rota explícita de erro retorna um 404 real e links públicos não criam salto para index.html', () => {
+    const vercel = read('vercel.json');
+    expect(vercel).toContain('"source": "/404.html"');
+    expect(vercel).toContain('"destination": "/api/og-product?kc_not_found=1"');
+    expect(vercel).toContain('"api/og-product.js"');
+
+    const publicHtml = fs.readdirSync(ROOT)
+      .filter((file) => file.endsWith('.html'));
+    publicHtml.forEach((file) => {
+      expect(read(file)).not.toContain('href="index.html');
+    });
+  });
+
   test('sitemap dinamico lista paginas estaticas e posts published', () => {
     const sitemap = read('api/sitemap.js');
     const vercel = read('vercel.json');

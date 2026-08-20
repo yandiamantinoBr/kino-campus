@@ -139,6 +139,17 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(sitemapResponse.body).toContain('<loc>https://www.kinocampus.com.br/</loc>');
   });
 
+  test('query de rota interna de 404 nunca altera a resposta pública do sitemap', async () => {
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+    const sitemapResponse = createResponse();
+
+    await sitemapHandler({ query: { kc_not_found: '1' } }, sitemapResponse);
+
+    expect(sitemapResponse.statusCode).toBe(200);
+    expect(sitemapResponse.headers['content-type']).toContain('application/xml');
+    expect(sitemapResponse.body).toContain('<urlset ');
+  });
+
   test('sitemap preserva fallback compatível de schema somente após 400', async () => {
     global.fetch
       .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) })

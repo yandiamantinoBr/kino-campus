@@ -54,6 +54,10 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(search).not.toContain("client.from('search_queries').insert");
     expect(search).toContain('isTrackableSearchTerm');
     expect(search).toContain('query_length_bucket: searchLengthBucket(q.length)');
+    expect(search).toContain("window.KCEvents.track('kc_search_outcome'");
+    expect(search).toContain('search_outcome: outcome === \'error\'');
+    expect(search).toContain('result_count_bucket: searchResultCountBucket(resultCount)');
+    expect(search).toContain('search_latency_bucket: searchLatencyBucket(durationMs)');
     expect(privacy).toContain("'query_length_bucket'");
     expect(privacy).not.toMatch(/['"]value['"]\s*,/);
     expect(sql).toContain('search_queries_user_id_anonymous_check');
