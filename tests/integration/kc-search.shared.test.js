@@ -116,6 +116,16 @@ describe('KCSearchShared', () => {
       expect(results[0].id).toBe('3');
     });
 
+    test('encontra tags adicionais e suas chaves normalizadas', () => {
+      const results = SearchShared.searchCollection([{
+        id: 'user-tag-only',
+        title: 'Oportunidade',
+        module: 'oportunidades',
+        metadata: { userTags: ['Acessibilidade'], userTagKeys: ['acessibilidade'] },
+      }], { q: 'acessibilidade', limit: 10 });
+      expect(results.map((post) => post.id)).toEqual(['user-tag-only']);
+    });
+
     test('supports accent-insensitive matching on subcategory', () => {
       const results = SearchShared.searchCollection(posts, { q: 'matematica', limit: 10 });
       expect(results.map((post) => post.id)).toContain('3');

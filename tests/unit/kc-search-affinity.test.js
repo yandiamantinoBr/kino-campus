@@ -50,6 +50,18 @@ describe('afinidade local e reranking responsável', () => {
       ]));
   });
 
+  test('inclui tags adicionais somente como sinal de afinidade local opt-in', () => {
+    const post = eventPost('user-tag', 1);
+    post.metadata.userTags = ['Acessibilidade', 'Inclusão'];
+    post.metadata.userTagKeys = ['acessibilidade', 'inclusao'];
+    const signals = Affinity.extractSignals(post, Registry);
+    expect(signals).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'user-tag:eventos:acessibilidade', type: 'user-tag' }),
+      expect.objectContaining({ key: 'user-tag:eventos:inclusao', type: 'user-tag' }),
+    ]));
+    expect(signals.filter((signal) => signal.type === 'user-tag')).toHaveLength(2);
+  });
+
   test('não registra sem opt-in separado, em automação ou fora de clique deliberado', () => {
     const storage = memoryStorage();
     const post = eventPost('e1', 1);

@@ -98,6 +98,7 @@ describe('kc-create-post.submit.js — captura e validação', () => {
 
   test('procura o formulário por ID kcCreatePostForm', () => {
     expect(source).toContain("document.getElementById('kcCreatePostForm')");
+    expect(source).toContain("form.closest('.kc-modal-overlay')");
   });
 
   test('desabilita submitBtn durante o envio', () => {
