@@ -67,6 +67,30 @@ Deno.test("Cadu mapper preserves raw source title, registry lineage and action f
   }]);
 });
 
+Deno.test("Cadu mapper persists only an exact source evidence revision", () => {
+  const valid = {
+    module: "oportunidades",
+    category: "editais",
+    title: "Edital 43/2026 prorroga inscricoes",
+    description: "Inscricoes abertas para estudantes da UFG com prazo oficialmente prorrogado.",
+    sourceUrl: "https://ufg.br/n/edital-43-2026",
+    sourceId: "ufg:edital:43-2026",
+    sourceRevision: "c".repeat(64),
+  } satisfies CaduItem;
+
+  assert.equal(validateItem(valid).ok, true);
+  assert.equal(mapItemToPost(valid).row.metadata.source_revision, "c".repeat(64));
+
+  for (const invalid of [
+    { ...valid, sourceRevision: "C".repeat(64) },
+    { ...valid, sourceRevision: "not-a-sha256" },
+    { ...valid, sourceRevision: 42 as unknown as string },
+  ]) {
+    assert.equal(validateItem(invalid).ok, false);
+    assert.throws(() => mapItemToPost(invalid), TypeError);
+  }
+});
+
 Deno.test("Cadu mapper persists only a complete and exact action fingerprint v2 contract", () => {
   const first = "a".repeat(64);
   const second = "b".repeat(64);

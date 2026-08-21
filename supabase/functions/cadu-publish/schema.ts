@@ -358,6 +358,7 @@ export interface CaduItem {
   sourceId?: string;
   sourceTitle?: string;
   sourceRegistryId?: string;
+  sourceRevision?: string;
   actionFingerprints?: string[];
   actionFingerprintContract?: string;
   actionFingerprintV2?: string[];
@@ -449,6 +450,20 @@ export function actionFingerprintMetadataForItem(item: CaduItem): ActionFingerpr
   return { fingerprints, contract, v2Fingerprints };
 }
 
+// A source revision is evidence supplied by the collector, not a derived
+// presentation hash. Preserve it only in the canonical lowercase SHA-256
+// form so the pipeline can safely distinguish a real lifecycle update from a
+// repeated scrape of the same source.
+export function sourceRevisionForItem(item: CaduItem): string {
+  const record = item as Record<string, unknown>;
+  const value = item.sourceRevision ?? record.source_revision;
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string" || !SHA256_HEX.test(value)) {
+    throw new TypeError("sourceRevision deve ser um hash SHA-256 em minúsculas.");
+  }
+  return value;
+}
+
 function hasText(v: unknown): boolean {
   return !!String(v ?? "").trim();
 }
@@ -470,6 +485,11 @@ export function validateItem(item: CaduItem): ValidationResult {
 
   try {
     actionFingerprintMetadataForItem(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    sourceRevisionForItem(item);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }

@@ -21,6 +21,7 @@ import {
   secondaryInputForItem,
   secondaryLabelForModule,
   secondaryValuesForModule,
+  sourceRevisionForItem,
 } from "./schema.ts";
 import {
   adaptTitleForPlatform,
@@ -718,6 +719,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const sourceId = normalizeWhitespace(item.sourceId).slice(0, 500);
   const sourceTitle = normalizeWhitespace(item.sourceTitle ?? item.source_title).slice(0, 1_000);
   const sourceRegistryId = normalizeWhitespace(item.sourceRegistryId || item.source_registry_id).slice(0, 200);
+  const sourceRevision = sourceRevisionForItem(item);
   const actionFingerprintMetadata = actionFingerprintMetadataForItem(item);
   const actionFingerprints = actionFingerprintMetadata.fingerprints;
   const extractedLinks = Array.isArray(item.extractedLinks) ? item.extractedLinks.slice(0, 12) : [];
@@ -758,6 +760,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     source_id: sourceId,
     source_title: sourceTitle,
     source_registry_id: sourceRegistryId,
+    ...(sourceRevision ? { source_revision: sourceRevision } : {}),
     action_fingerprints: actionFingerprints,
     ...(actionFingerprintMetadata.contract
       ? {
