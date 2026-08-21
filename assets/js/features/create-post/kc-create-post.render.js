@@ -190,6 +190,13 @@
   function kcRenderUserTagsField(field, value) {
     const tags = kcNormalizeUserTags(value);
     const limit = Number(field.maxItems) || 6;
+    const api = kcGetUserTagsApi();
+    const state = _getState();
+    const preservesExistingOverflow = !!(
+      state && state.editMode && tags.length > limit
+      && api && typeof api.sameTags === 'function'
+      && api.sameTags(tags, state.initialUserTags)
+    );
     const selectedHtml = tags.length
       ? tags.map((tag) => `
         <button class="kc-field-chip" type="button" data-kc-user-tag-remove="${_esc(kcUserTagKey(tag))}" aria-label="Remover ${_esc(tag)}">
@@ -200,9 +207,12 @@
       : '<span class="kc-field-chip__empty">Nenhuma tag adicional.</span>';
     const fieldId = 'kcField_' + field.name;
     const hint = field.hint || ('Adicione até ' + limit + ' tags adicionais para facilitar a descoberta desta publicação.');
+    const counter = preservesExistingOverflow
+      ? tags.length + ' tags existentes; para alterá-las, reduza a lista para ' + limit + ' ou menos.'
+      : tags.length + '/' + limit;
 
     return `
-      <div class="kc-field kc-field--user-tags" data-kc-user-tags-field="true" data-kc-user-tags-limit="${_esc(limit)}">
+      <div class="kc-field kc-field--user-tags${preservesExistingOverflow ? ' kc-field--user-tags-overflow' : ''}" data-kc-user-tags-field="true" data-kc-user-tags-limit="${_esc(limit)}">
         <label for="${_esc(fieldId)}">${_esc(field.label)}</label>
         <input type="hidden" name="${_esc(field.name)}" value="${_esc(kcSerializeUserTags(tags))}" data-kc-user-tags-value="true" />
         <div class="kc-field-chip-row" data-kc-user-tags-selected="true">${selectedHtml}</div>
@@ -210,7 +220,7 @@
           <input id="${_esc(fieldId)}" type="text" maxlength="${_esc(field.maxLength || 60)}" placeholder="${_esc(field.placeholder || '')}" data-kc-user-tags-input="true" aria-describedby="${_esc(fieldId)}Hint" />
           <button class="kc-field-inline__action" type="button" data-kc-user-tag-add="true">Adicionar</button>
         </div>
-        <small id="${_esc(fieldId)}Hint" class="kc-field-hint">${_esc(hint)} (${tags.length}/${limit})</small>
+        <small id="${_esc(fieldId)}Hint" class="kc-field-hint">${_esc(hint)} (${_esc(counter)})</small>
       </div>
     `;
   }

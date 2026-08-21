@@ -181,12 +181,17 @@
     }
     userTagsResult = userTagsApi.metadataPatch(tagsRaw, {
       isPrivileged: !!(options && options.isPrivilegedUserTagManager),
+      // A fallback editor may open an imported historical list above today's
+      // creation ceiling. Preserve it only while untouched; any actual tag
+      // edit is validated against the caller's current 6/12 limit.
+      allowExistingOverflow: true,
+      initialTags: userTagsApi.read(sourcePost || {}).tags,
     });
     if (!userTagsResult.ok) {
       return { error: { message: (userTagsResult.errors && userTagsResult.errors[0] && userTagsResult.errors[0].message) || 'Revise as tags adicionais.' } };
     }
-    // `tags`/`tagKeys` pertencem à taxonomia automática. Nunca os apagamos
-    // neste fallback de edição; apenas a dupla livre é alterada explicitamente.
+    // `tags`/`tagKeys` são a superfície legada de compatibilidade. Nunca os
+    // apagamos neste fallback; a dupla editável é persistida separadamente.
     metadata.userTags = userTagsResult.tags;
     metadata.userTagKeys = userTagsResult.tagKeys;
 
@@ -271,7 +276,7 @@
       '  <div class="kc-form-group"><label>Subcategoria</label><input class="kc-input" name="subcategory" /></div>',
       '  <div class="kc-form-group"><label>Condi\u00E7\u00E3o</label><input class="kc-input" name="condition" /></div>',
       '  <div class="kc-form-group"><label>Emoji</label><input class="kc-input" name="emoji" maxlength="4" /></div>',
-      '  <div class="kc-form-group"><label>Tags adicionais</label><input class="kc-input" name="tags" placeholder="Ex.: monitoria, acessibilidade" /><small style="color:var(--text-muted, #64748b);">Separe por vírgulas. Categorias, tipos e características automáticas não entram neste limite.</small></div>',
+      '  <div class="kc-form-group"><label>Tags</label><input class="kc-input" name="tags" placeholder="Ex.: monitoria, acessibilidade" /><small style="color:var(--text-muted, #64748b);">Separe por vírgulas. Tags importadas permanecem visíveis; ao alterá-las, respeite o limite aplicável.</small></div>',
       // v13.6.3: galeria de imagens — uma URL por linha. A 1ª vira cover.
       '  <div class="kc-form-group">',
       '    <label>Galeria de imagens <span style="color:var(--text-muted, #64748b);font-size:.85em;">(1 URL por linha — a 1ª \u00E9 a capa)</span></label>',

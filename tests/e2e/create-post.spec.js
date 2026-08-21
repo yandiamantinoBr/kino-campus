@@ -15,6 +15,46 @@
 
 const { test, expect } = require('@playwright/test');
 
+const LEGACY_SUPABASE_POST = Object.freeze({
+  id: 'c843fa56-ded9-4b9b-a982-0257313f343d',
+  module: 'oportunidades',
+  category: 'concursos',
+  title: 'Concurso Público de teste',
+  description: 'Registro sintético de compatibilidade.',
+  metadata: {
+    tags: ['Direito', 'Concursos', 'UFG', 'institutoverbena', 'Presencial'],
+    tagKeys: ['direito', 'concursos', 'ufg', 'institutoverbena', 'presencial'],
+  },
+});
+
+async function openNormalizedLegacyEditor(page) {
+  await page.waitForFunction(() => (
+    typeof window.kcOpenEditPostModal === 'function'
+    && !!(window.KCAPI && typeof window.KCAPI.normalizePost === 'function')
+  ));
+  await page.evaluate((rawLegacyPost) => {
+    // Exercita o caminho real do Supabase/My Posts: o normalizador cria
+    // userTags top-level vazias para um registro que ainda só tem metadata.tags.
+    window.kcOpenEditPostModal(window.KCAPI.normalizePost(rawLegacyPost));
+  }, LEGACY_SUPABASE_POST);
+}
+
+async function expectLegacyTagsInEditor(page) {
+  const tagsField = page.locator('[data-kc-user-tags-field]');
+  await expect(tagsField).toBeVisible();
+  await expect(tagsField.getByRole('button', { name: 'Remover Direito' })).toBeVisible();
+  await expect(tagsField.getByRole('button', { name: 'Remover institutoverbena' })).toBeVisible();
+  await expect(tagsField.locator('[data-kc-user-tags-value]')).toHaveValue(JSON.stringify([
+    'Direito', 'Concursos', 'UFG', 'institutoverbena', 'Presencial',
+  ]));
+  await expect(tagsField.locator('.kc-field-hint')).toContainText('(5/6)');
+}
+
+async function dismissOptionalCookies(page) {
+  const rejectOptionalCookies = page.getByRole('button', { name: 'Rejeitar opcionais' });
+  if (await rejectOptionalCookies.isVisible()) await rejectOptionalCookies.click();
+}
+
 test.describe('Criar Post — create-post.html', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/create-post.html');
@@ -83,13 +123,24 @@ test.describe('Criar Post - gatilhos globais', () => {
   test('atalho kc-create-btn em viewport mobile abre o mesmo campo Tags', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/index.html');
-    const rejectOptionalCookies = page.getByRole('button', { name: 'Rejeitar opcionais' });
-    if (await rejectOptionalCookies.isVisible()) await rejectOptionalCookies.click();
+    await dismissOptionalCookies(page);
     await page.locator('.kc-create-btn').first().click();
 
     await expect(page).not.toHaveURL(/create-post\.html/);
     await expect(page.locator('#kcCreatePostModalOverlay.active')).toBeVisible();
     await page.getByRole('button', { name: /Eventos/ }).click();
     await expect(page.locator('[data-kc-user-tags-field]')).toBeVisible();
+  });
+
+  test('Tags legadas do Supabase preenchem o editor sem apagar a superfície antiga', async ({ page }) => {
+    await page.goto('/index.html');
+    await openNormalizedLegacyEditor(page);
+    await expectLegacyTagsInEditor(page);
+  });
+
+  test('My Posts também abre Tags legadas no mesmo kc-create-modal', async ({ page }) => {
+    await page.goto('/my-posts.html');
+    await openNormalizedLegacyEditor(page);
+    await expectLegacyTagsInEditor(page);
   });
 });

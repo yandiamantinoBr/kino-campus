@@ -81,6 +81,9 @@ const kcCreateState = {
   editMode: false,
   editPostId: null,
   editCallback: null,
+  // Snapshot used only to preserve imported historical lists above the
+  // current creation limit while an unrelated field is edited.
+  initialUserTags: [],
 };
 
 // Expõe referência ao estado para sub-módulos (v11.31.3)
@@ -440,6 +443,7 @@ function kcOpenCreatePostModal(prefModuleKey) {
   kcLastFocus = document.activeElement;
 
   if (prefModuleKey && KC_CREATE_SCHEMA[prefModuleKey]) kcCreateState.moduleKey = prefModuleKey;
+  if (!kcCreateState.editMode) kcCreateState.initialUserTags = [];
 
   kcCreateState.open = true;
   const overlay = document.getElementById(KC_CREATE_MODAL_ID);
@@ -489,6 +493,7 @@ function kcCloseCreatePostModal() {
   kcCreateState.editMode = false;
   kcCreateState.editPostId = null;
   kcCreateState.editCallback = null;
+  kcCreateState.initialUserTags = [];
   overlay.classList.remove('active');
   overlay.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('kc-modal-open');
@@ -519,6 +524,9 @@ function kcOpenEditPostModal(post, callback) {
     return false;
   }
   const md = (post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+  const userTagsRead = (window.KCPostUserTags && typeof window.KCPostUserTags.read === 'function')
+    ? window.KCPostUserTags.read(post)
+    : { tags: [] };
 
   // ── State ──
   kcCreateState.moduleKey = moduleKey;
@@ -526,6 +534,7 @@ function kcOpenEditPostModal(post, callback) {
   kcCreateState.editPostId = String(post.uuid || post.id || post.legacyId || '');
   kcCreateState.editCallback = typeof callback === 'function' ? callback : null;
   kcCreateState.open = true;
+  kcCreateState.initialUserTags = Array.isArray(userTagsRead.tags) ? userTagsRead.tags.slice() : [];
 
   // ── Seleções (tags) ──
   kcCreateState.selections = {};
@@ -553,9 +562,7 @@ function kcOpenEditPostModal(post, callback) {
   kcCreateState.values = {
     titulo: post.titulo || post.title || '',
     descricao: post.descricao || post.description || '',
-    userTags: (window.KCPostUserTags && typeof window.KCPostUserTags.read === 'function')
-      ? window.KCPostUserTags.read(post).tags
-      : [],
+    userTags: kcCreateState.initialUserTags.slice(),
     preco: post.preco != null ? String(post.preco) : '',
     localizacao: kcResolveEditLocationValue(post, md, moduleKey),
     condicao: post.condicao || md.condicao || '',
@@ -667,6 +674,7 @@ function kcOpenCreatePostModalPrefilled(moduleKey, selections) {
     kcCreateState.coverImageId = null;
     kcCreateState.editMode = false;
     kcCreateState.editPostId = null;
+    kcCreateState.initialUserTags = [];
   }
   return kcOpenCreatePostModal(moduleKey);
 }

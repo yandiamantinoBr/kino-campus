@@ -173,7 +173,14 @@
       }
       const userTagsResult = userTagsApi.validate(
         kcReadActiveCreateArrayValue(activeFieldNames, kcCreateState.values, 'userTags'),
-        { isPrivileged: isAdminOperator }
+        {
+          isPrivileged: isAdminOperator,
+          // Historical posts may have been imported with more legacy labels
+          // than today's limit.  Saving an unrelated field preserves that
+          // exact list; adding/removing/renaming any label must comply.
+          allowExistingOverflow: kcCreateState.editMode === true,
+          initialTags: kcCreateState.initialUserTags,
+        }
       );
       if (!userTagsResult.ok) {
         const firstError = userTagsResult.errors && userTagsResult.errors[0];

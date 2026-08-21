@@ -47,14 +47,45 @@ describe('KCPostUserTags', () => {
     ]));
   });
 
-  test('lê somente a dupla adicional e permite limpeza explícita', () => {
+  test('lê tags legadas até a dupla canônica existir e respeita limpeza explícita', () => {
     expect(UserTags.read({ metadata: { tags: ['Evento', 'Curso'], tagKeys: ['evento', 'curso'] } }))
-      .toMatchObject({ tags: [], tagKeys: [] });
+      .toMatchObject({ tags: ['Evento', 'Curso'], tagKeys: ['evento', 'curso'], source: 'legacy', isLegacy: true });
+    // KCAPI normaliza propriedades de conveniência vazias no nível superior.
+    // Elas não podem esconder a lista legada que ainda vive no JSONB.
+    expect(UserTags.read({
+      userTags: [],
+      userTagKeys: [],
+      metadata: { tags: ['Direito', 'Concursos', 'UFG', 'institutoverbena', 'Presencial'] },
+    })).toMatchObject({
+      tags: ['Direito', 'Concursos', 'UFG', 'institutoverbena', 'Presencial'],
+      source: 'legacy',
+      isLegacy: true,
+    });
     expect(UserTags.read({ metadata: { userTags: ['Monitoria'], userTagKeys: ['forjada'] } }))
-      .toMatchObject({ tags: ['Monitoria'], tagKeys: ['monitoria'] });
+      .toMatchObject({ tags: ['Monitoria'], tagKeys: ['monitoria'], source: 'canonical', isLegacy: false });
+    expect(UserTags.read({ metadata: { tags: ['Evento'], userTags: [] } }))
+      .toMatchObject({ tags: [], tagKeys: [], source: 'canonical', isLegacy: false });
     expect(UserTags.metadataPatch([], { isPrivileged: false })).toMatchObject({
       ok: true,
       metadata: { userTags: [], userTagKeys: [] },
     });
+  });
+
+  test('preserva uma lista histórica acima do limite apenas quando ela permanece idêntica', () => {
+    const imported = ['Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete'];
+
+    expect(UserTags.validate(imported, {
+      allowExistingOverflow: true,
+      initialTags: imported,
+    })).toMatchObject({ ok: true, preservesExistingOverflow: true, tags: imported });
+
+    const changed = UserTags.validate(imported.concat('Oito'), {
+      allowExistingOverflow: true,
+      initialTags: imported,
+    });
+    expect(changed.ok).toBe(false);
+    expect(changed.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'TOO_MANY_TAGS', limit: 6 }),
+    ]));
   });
 });
