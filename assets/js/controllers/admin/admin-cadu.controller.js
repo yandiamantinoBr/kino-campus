@@ -5552,6 +5552,10 @@
     return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value);
   }
 
+  function pipelineRunIsActive(run) {
+    return !!(run && ['pending', 'running', 'stopping'].indexOf(run.status) >= 0);
+  }
+
   function normalizePipelineRun(run) {
     if (!run || typeof run !== 'object' || Array.isArray(run)) return null;
     if (!isSafePipelineRunId(run.id) || !isSafePipelineStageId(run.stage)) return null;
@@ -5831,7 +5835,7 @@
     var activeRun = null;
     if (status.active_run !== null) {
       activeRun = normalizePipelineRun(status.active_run);
-      if (!activeRun || !seen[activeRun.stage] || ['pending', 'running', 'stopping'].indexOf(activeRun.status) < 0) {
+      if (!activeRun || !seen[activeRun.stage] || !pipelineRunIsActive(activeRun)) {
         return { ok: false, reason: 'estado da execução ativa inválido' };
       }
     }
@@ -5944,9 +5948,11 @@
       return;
     }
 
-    // Se ha run ativo, acompanha por SSE curto ou polling para runs longos.
-    if (state.pipelineActive && state.pipelineActive.status === 'running') {
-      if (shouldUsePipelineLogPolling(state.pipelineActive)) {
+    // Pending e stopping ainda são estados ativos no contrato. Enquanto a
+    // execução não está em running, usa polling autenticado: o stream pode
+    // ainda não ter sido aberto (pending) ou estar sendo fechado (stopping).
+    if (pipelineRunIsActive(state.pipelineActive)) {
+      if (state.pipelineActive.status !== 'running' || shouldUsePipelineLogPolling(state.pipelineActive)) {
         connectPipelineLogPolling(state.pipelineActive.id);
       } else {
         stopPipelineLogPolling();
@@ -6926,11 +6932,12 @@
   function updatePipelineBadge(status) {
     var badge = $('#badge-pipeline');
     if (!badge) return;
-    var running = status.active_run && status.active_run.status === 'running';
+    var active = pipelineRunIsActive(status.active_run);
+    var activeLabel = active ? pipelineStatusLabel(status.active_run.status) : '';
     var stageCount = Array.isArray(state.pipelineStages) ? state.pipelineStages.length : 0;
-    badge.textContent = running ? '● em execução' : String(stageCount);
-    badge.title = running
-      ? 'Há uma execução ativa'
+    badge.textContent = active ? '● ' + activeLabel : String(stageCount);
+    badge.title = active
+      ? 'Há uma execução ativa (' + activeLabel + ')'
       : stageCount + (stageCount === 1 ? ' estágio disponível' : ' estágios disponíveis');
   }
 
@@ -7269,6 +7276,8 @@
         var preconditionDetail = resp.data && (resp.data.detail || resp.data);
         if (preconditionDetail && preconditionDetail.code === 'dedup_preview_required') {
           msg = '⚠️ A execução real foi recusada com segurança porque não há uma prévia recente compatível.\n\nExecute “Simular”, revise o relatório e então tente “Executar real” novamente. Nenhum run real foi criado.';
+        } else if (preconditionDetail && preconditionDetail.code === 'all_dry_run_required') {
+          msg = '⚠️ A execução real da Pipeline completa foi recusada com segurança porque não há uma simulação completa recente bem-sucedida.\n\nExecute “Simular” para a Pipeline completa, confira o funil e os itens em revisão e então tente “Executar real” novamente. Nenhum run real foi criado.';
         } else if (preconditionDetail && preconditionDetail.code === 'signed_publish_approval_required') {
           msg = '🔐 Execução real de "' + stageId + '" requer aprovação assinada (Ed25519).\n\nUse o fluxo de aprovação de publicação (publish-approval-cli) antes de executar este estágio real. A simulação continua disponível. Nenhum run real foi criado.';
         } else {

@@ -107,6 +107,7 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("check.id === 'dedup_preview_real'");
     expect(controller).toContain("resp.status === 412");
     expect(controller).toContain("preconditionDetail.code === 'dedup_preview_required'");
+    expect(controller).toContain("preconditionDetail.code === 'all_dry_run_required'");
     expect(controller).toContain("detail.code === 'pipeline_runtime_busy'");
     expect(controller).toContain('Nenhum run foi criado.');
     expect(controller).toContain('buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities)');
@@ -128,6 +129,18 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("typeof active.dry_run === 'boolean'");
     expect(controller).toContain("active.dry_run ? 'simulação' : 'execução real'");
     expect(controller).toContain("typeof r.dry_run === 'boolean'");
+  });
+
+  test('keeps queued and stopping pipeline runs visible without relying on motion', () => {
+    expect(controller).toContain('function pipelineRunIsActive(run)');
+    expect(controller).toContain('if (pipelineRunIsActive(state.pipelineActive))');
+    expect(controller).toContain("var active = pipelineRunIsActive(status.active_run);");
+    expect(html).toContain('.kc-pipeline-active-card.is-pending');
+    expect(html).toContain('.kc-pipeline-active-card.is-stopping');
+    expect(html).toContain('.kc-pipeline-status-dot.is-pending');
+    expect(html).toContain('.kc-pipeline-status-dot.is-stopping');
+    expect(html).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(html).toMatch(/\.kc-pipeline-status-dot\.is-running\s*\{\s*animation: none !important;/);
   });
 
   test('PDF explains registry provenance without calling scanner evidence confirmation', () => {
