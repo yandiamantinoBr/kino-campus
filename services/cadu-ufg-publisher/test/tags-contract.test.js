@@ -6,6 +6,7 @@ const test = require('node:test');
 const {
   MAX_USER_TAGS,
   mapToKinoPayload,
+  normalizeUserTagSurface,
   toPostgrestInsert,
 } = require('../src/mapper');
 const { SupabasePublisher } = require('../src/publisher');
@@ -58,6 +59,7 @@ test('maps legacy source tags to the editable surface without changing automatic
       'Prazo',
       'site-institucional',
       'tier-1',
+      'tier-na',
       'Direito',
       '🏷️ Acessibilidade',
       'direito',
@@ -71,16 +73,25 @@ test('maps legacy source tags to the editable surface without changing automatic
   assert.deepEqual(payload.metadata.userTagKeys, ['direito', 'acessibilidade']);
 });
 
-test('makes userTags authoritative, derives keys, and enforces the Cadu limit after automatic facets', () => {
+test('makes userTags authoritative, derives keys, and rejects the Cadu limit after automatic facets', () => {
   const topics = Array.from({ length: MAX_USER_TAGS + 2 }, (_, index) => `Tema ${index + 1}`);
-  const row = toPostgrestInsert({
+  const base = {
     modulo: 'oportunidades',
     categoriaKey: 'estagios',
     titulo: 'Estágio de teste',
     descricao: 'Descrição de teste.',
     tags: ['UFG', 'Estágio', 'Edital'],
     tagKeys: ['ufg', 'estagio', 'edital'],
+  };
+  assert.throws(() => toPostgrestInsert({
+    ...base,
     userTags: ['UFG', 'Estágio', ...topics, 'Tema 1'],
+    userTagKeys: ['forged-key'],
+  }, 'agent-1'), /at most 12/i);
+
+  const row = toPostgrestInsert({
+    ...base,
+    userTags: ['UFG', 'Estágio', ...topics.slice(0, MAX_USER_TAGS)],
     userTagKeys: ['forged-key'],
   }, 'agent-1');
 
@@ -88,6 +99,14 @@ test('makes userTags authoritative, derives keys, and enforces the Cadu limit af
   assert.deepEqual(row.metadata.tagKeys, ['ufg', 'estagio', 'edital']);
   assert.deepEqual(row.metadata.userTags, topics.slice(0, MAX_USER_TAGS));
   assert.deepEqual(row.metadata.userTagKeys, topics.slice(0, MAX_USER_TAGS).map((topic) => topic.toLowerCase().replace(/ /g, '-')));
+  assert.deepEqual(
+    normalizeUserTagSurface({
+      labelsPresent: true,
+      tags: ['', 'Acessibilidade'],
+      tagKeys: ['Direito', 'forjada'],
+    }),
+    { tags: ['direito', 'Acessibilidade'], tagKeys: ['direito', 'acessibilidade'] },
+  );
 });
 
 test('edits preserve omitted Tags, normalize explicit replacements, and only clear on an explicit empty array', async () => {
@@ -97,8 +116,8 @@ test('edits preserve omitted Tags, normalize explicit replacements, and only cle
     module: 'oportunidades',
     category: 'estagios',
     metadata: {
-      tags: ['UFG', 'Estágio', 'Edital'],
-      tagKeys: ['ufg', 'estagio', 'edital'],
+      tags: ['UFG', 'Estágio', 'Edital', 'Direito'],
+      tagKeys: ['ufg', 'estagio', 'edital', 'direito'],
       userTags: ['Direito'],
       userTagKeys: ['direito'],
       preserved: true,

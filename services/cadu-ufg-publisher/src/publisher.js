@@ -650,6 +650,7 @@ class SupabasePublisher {
       const userTagSurface = filterUserTagSurface(normalizeUserTagSurface(userTagInput), {
         moduleKey: categoryIdentity ? categoryIdentity.module : effectiveModule,
         automaticTags: patch.metadata.tags,
+        knownAutomaticTags: [patch.metadata.source_unit],
       });
       patch.metadata.userTags = userTagSurface.tags;
       patch.metadata.userTagKeys = userTagSurface.tagKeys;

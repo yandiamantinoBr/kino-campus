@@ -247,15 +247,14 @@ function normalizeUserTagLabel(value) {
 }
 
 function normalizeUserTagSurface(input) {
-  const source = input && input.labelsPresent
-    ? tagArray(input.tags)
-    : tagArray(input && input.tagKeys).map(labelFromTagKey);
+  const labels = tagArray(input && input.tags);
+  const suppliedKeys = tagArray(input && input.tagKeys);
   const seen = new Set();
   const tags = [];
   const tagKeys = [];
 
-  for (const value of source) {
-    const label = normalizeUserTagLabel(value);
+  for (let index = 0; index < Math.max(labels.length, suppliedKeys.length); index += 1) {
+    const label = normalizeUserTagLabel(labels[index]) || labelFromTagKey(suppliedKeys[index]);
     const key = slugify(label);
     if (!label || !key || seen.has(key)) continue;
     seen.add(key);
@@ -266,33 +265,51 @@ function normalizeUserTagSurface(input) {
   return { tags, tagKeys };
 }
 
-function automaticTagKeysForModule(moduleKey, automaticTags = []) {
+function automaticTagKeysForModule(moduleKey, automaticTags = [], knownAutomaticTags = []) {
   const module = slugify(moduleKey || '');
   const labels = CATEGORY_LABELS[module] || {};
   const aliases = CATEGORY_ALIASES[module] || {};
-  return new Set([
-    ...tagArray(automaticTags),
+  const taxonomyKeys = new Set([
     ...Object.keys(labels),
     ...Object.values(labels),
     ...Object.keys(aliases),
     ...Object.values(aliases),
   ].map((value) => slugify(value)).filter(Boolean));
+  tagArray(automaticTags)
+    .map((value) => slugify(value))
+    .filter(Boolean)
+    .filter((key) => (
+      taxonomyKeys.has(key)
+      || key === 'ufg'
+      || key === 'edital'
+      || key === 'prazo'
+      || isReservedCaduTagKey(key)
+    ))
+    .forEach((key) => taxonomyKeys.add(key));
+  tagArray(knownAutomaticTags)
+    .map((value) => slugify(value))
+    .filter(Boolean)
+    .forEach((key) => taxonomyKeys.add(key));
+  return taxonomyKeys;
 }
 
 function isReservedCaduTagKey(value) {
-  return value === 'site-institucional' || /^tier-\d+(?:-.+)?$/.test(value);
+  return value === 'site-institucional' || /^tier-[a-z0-9]+(?:-.+)?$/.test(value);
 }
 
-function filterUserTagSurface(surface, { moduleKey, automaticTags = [] } = {}) {
-  const automaticKeys = automaticTagKeysForModule(moduleKey, automaticTags);
+function filterUserTagSurface(surface, { moduleKey, automaticTags = [], knownAutomaticTags = [] } = {}) {
+  const automaticKeys = automaticTagKeysForModule(moduleKey, automaticTags, knownAutomaticTags);
   const tags = [];
   const tagKeys = [];
   (surface && surface.tags ? surface.tags : []).forEach((tag, index) => {
     const key = (surface && surface.tagKeys && surface.tagKeys[index]) || slugify(tag);
-    if (!key || tags.length >= MAX_USER_TAGS || automaticKeys.has(key) || isReservedCaduTagKey(key)) return;
+    if (!key || automaticKeys.has(key) || isReservedCaduTagKey(key)) return;
     tags.push(tag);
     tagKeys.push(key);
   });
+  if (tags.length > MAX_USER_TAGS) {
+    throw new RangeError('userTags accepts at most ' + MAX_USER_TAGS + ' additional tags.');
+  }
   return { tags, tagKeys };
 }
 
@@ -302,7 +319,11 @@ function userTagsForItem(item, moduleKey, automaticTags) {
   if (canonicalInput.present) {
     return {
       present: true,
-      ...filterUserTagSurface(normalizeUserTagSurface(canonicalInput), { moduleKey, automaticTags }),
+      ...filterUserTagSurface(normalizeUserTagSurface(canonicalInput), {
+        moduleKey,
+        automaticTags,
+        knownAutomaticTags: [item && item.sourceName],
+      }),
     };
   }
 
@@ -310,7 +331,11 @@ function userTagsForItem(item, moduleKey, automaticTags) {
   // compatibilidade somente aqui, onde as facetas automáticas ainda podem ser
   // identificadas e removidas do conjunto editável.
   const legacyInput = legacyTagInputFromSources([item, metadata]);
-  const surface = filterUserTagSurface(normalizeUserTagSurface(legacyInput), { moduleKey, automaticTags });
+  const surface = filterUserTagSurface(normalizeUserTagSurface(legacyInput), {
+    moduleKey,
+    automaticTags,
+    knownAutomaticTags: [item && item.sourceName],
+  });
   return {
     present: legacyInput.present && surface.tags.length > 0,
     ...surface,
@@ -745,6 +770,7 @@ function toPostgrestInsert(payload, userId, options = {}) {
   const userTagSurface = filterUserTagSurface(normalizeUserTagSurface(userTagInput), {
     moduleKey: categoryIdentity.module,
     automaticTags: automaticTagSurface.tags,
+    knownAutomaticTags: [source.sourceName, metadata.source_unit],
   });
   const preserveMissingTagSurfaces = !!(options && options.preserveMissingTagSurfaces);
   const includeAutomaticTags = automaticTagSurface.present || !preserveMissingTagSurfaces;
