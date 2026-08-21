@@ -259,6 +259,124 @@ function publicationDateFields(rec, todayIso = '') {
   };
 }
 
+// The edge function persists automatic taxonomy separately.  Keep this
+// producer's free-form input in the canonical userTags pair, with tags/tagKeys
+// retained only as a rollout bridge for older edge deployments.
+const MAX_CADU_USER_TAGS = 12;
+
+function normalizeCaduUserTagText(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .normalize('NFKC')
+    .replace(/^(?:🏷️?\s*)+/u, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function caduUserTagKey(value) {
+  return normalizeCaduUserTagText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function caduUserTagLabelFromKey(value) {
+  return normalizeCaduUserTagText(value).replace(/[-_]+/g, ' ').trim();
+}
+
+function firstTagArray(sources, keys) {
+  for (const source of sources) {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) continue;
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        if (Array.isArray(source[key])) return { present: true, values: source[key] };
+      }
+    }
+  }
+  return { present: false, values: [] };
+}
+
+function automaticCaduTagKeys(rec) {
+  const keys = [
+    'ufg',
+    'site-institucional',
+    'tier-na',
+    rec?.module,
+    rec?.category,
+    rec?.subcategory,
+    rec?.subcategoryKey,
+    rec?.subcategoria,
+    rec?.subcategoriaKey,
+    rec?.type,
+    rec?.sourceName,
+    rec?.site,
+    rec?.source,
+    rec?.tier ? `tier-${rec.tier}` : '',
+  ].map(caduUserTagKey).filter(Boolean);
+  return new Set(keys);
+}
+
+function isAutomaticCaduTagKey(key, automaticKeys) {
+  return automaticKeys.has(key) || /^tier-[a-z0-9]+$/.test(key);
+}
+
+function caduUserTagsForRecord(rec) {
+  const metadata = rec?.metadata && typeof rec.metadata === 'object' && !Array.isArray(rec.metadata)
+    ? rec.metadata
+    : null;
+  const sources = [rec, metadata];
+  const canonicalLabels = firstTagArray(sources, ['userTags', 'user_tags']);
+  const canonicalKeys = firstTagArray(sources, ['userTagKeys', 'user_tag_keys']);
+  const useCanonical = canonicalLabels.present || canonicalKeys.present;
+  const legacyLabels = firstTagArray(sources, ['tags']);
+  const legacyKeys = firstTagArray(sources, ['tagKeys', 'tag_keys']);
+  const labels = useCanonical ? canonicalLabels.values : legacyLabels.values;
+  const suppliedKeys = useCanonical ? canonicalKeys.values : legacyKeys.values;
+  const automaticKeys = automaticCaduTagKeys(rec);
+  const pairs = new Map();
+
+  function appendPair(key, label) {
+    if (!key || !label || label.length > 60 || isAutomaticCaduTagKey(key, automaticKeys) || pairs.has(key)) return;
+    pairs.set(key, label);
+  }
+
+  for (let index = 0; index < Math.max(labels.length, suppliedKeys.length); index += 1) {
+    const label = normalizeCaduUserTagText(labels[index]);
+    const suppliedKey = caduUserTagKey(suppliedKeys[index]);
+    const labelKey = caduUserTagKey(label);
+    if (useCanonical) {
+      const canonicalLabel = label || caduUserTagLabelFromKey(suppliedKeys[index]);
+      appendPair(caduUserTagKey(canonicalLabel), canonicalLabel);
+      continue;
+    }
+    // Legacy tag/tagKey arrays can have a taxonomy item paired with an
+    // independent key (or the opposite). Keep the independent half rather
+    // than silently losing it while migrating those older reports.
+    appendPair(labelKey, label);
+    if (!label || isAutomaticCaduTagKey(labelKey, automaticKeys)) {
+      appendPair(suppliedKey, caduUserTagLabelFromKey(suppliedKeys[index]));
+    }
+  }
+
+  if (pairs.size > MAX_CADU_USER_TAGS) {
+    return {
+      ok: false,
+      error: `mais de ${MAX_CADU_USER_TAGS} tags adicionais independentes`,
+      tags: [],
+      tagKeys: [],
+    };
+  }
+
+  const entries = Array.from(pairs.entries());
+  return {
+    ok: true,
+    tags: entries.map(([, label]) => label),
+    tagKeys: entries.map(([key]) => key),
+  };
+}
+
 function recordToItem(rec, now = null) {
   const todayIso = publisherTodayIso(now);
   const publicationDates = publicationDateFields(rec, todayIso);
@@ -327,6 +445,11 @@ function recordToItem(rec, now = null) {
   if ((!contato || contato === 'Ver link oficial da UFG') && rec.site) {
     contato = `${rec.site.toLowerCase()}.ufg.br`;
   }
+  const userTags = caduUserTagsForRecord(rec);
+  if (!userTags.ok) {
+    console.error(`   ⚠️ REJEITADO: ${userTags.error} — '${(rec.title || '').slice(0, 60)}'`);
+    return null;
+  }
   
   return {
     module: rec.module || 'oportunidades',
@@ -373,7 +496,12 @@ function recordToItem(rec, now = null) {
     sourceName: rec.sourceName || rec.site || 'UFG',
     area: rec.area || '',
     contato,
-    tags: Array.isArray(rec.tags) ? rec.tags : [],
+    // userTags is canonical. The aliases preserve publication compatibility
+    // until every deployed cadu-publish revision reads the canonical pair.
+    userTags: userTags.tags,
+    userTagKeys: userTags.tagKeys,
+    tags: userTags.tags,
+    tagKeys: userTags.tagKeys,
   };
 }
 
@@ -1507,6 +1635,7 @@ if (require.main === module) {
 module.exports = {
   buildDedupHiddenMetadata,
   canonicalUrl,
+  caduUserTagsForRecord,
   DEDUP_RECENT_PAGE_SIZE,
   DedupQueryError,
   fetchPaginatedDedupRows,
