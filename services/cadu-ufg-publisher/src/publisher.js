@@ -2,7 +2,13 @@
 
 const MAX_IMAGE_COUNT = 6;
 
-const { canonicalCategoryIdentity, toPostgrestInsert } = require('./mapper');
+const {
+  canonicalCategoryIdentity,
+  filterUserTagSurface,
+  normalizeUserTagSurface,
+  toPostgrestInsert,
+  userTagInputFromSources,
+} = require('./mapper');
 const { sha256, slugify } = require('./utils');
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -580,6 +586,8 @@ class SupabasePublisher {
       'tagKeys',
       'userTags',
       'userTagKeys',
+      'user_tags',
+      'user_tag_keys',
       'category',
       'categoria',
       'categoriaKey',
@@ -603,6 +611,12 @@ class SupabasePublisher {
     ].forEach((key) => {
       if (has(key)) metadataPatch[key] = input[key];
     });
+    const userTagInput = userTagInputFromSources([input, metadataPatch]);
+    if (userTagInput.present) {
+      ['userTags', 'userTagKeys', 'user_tags', 'user_tag_keys'].forEach((key) => {
+        delete metadataPatch[key];
+      });
+    }
     if (candidateImages[0]) {
       metadataPatch.image_url = candidateImages[0];
       metadataPatch.cover_url = candidateImages[0];
@@ -631,6 +645,14 @@ class SupabasePublisher {
         patch.category = categoryIdentity.category;
       }
       Object.assign(patch.metadata, categoryIdentity.metadata);
+    }
+    if (userTagInput.present) {
+      const userTagSurface = filterUserTagSurface(normalizeUserTagSurface(userTagInput), {
+        moduleKey: categoryIdentity ? categoryIdentity.module : effectiveModule,
+        automaticTags: patch.metadata.tags,
+      });
+      patch.metadata.userTags = userTagSurface.tags;
+      patch.metadata.userTagKeys = userTagSurface.tagKeys;
     }
     return stripUndefined(patch);
   }
@@ -725,6 +747,7 @@ class SupabasePublisher {
       const allowExternalFallback = options.allowExternalImageFallback !== false;
       const row = this.buildSafePatch(current, fields);
       const changedMetadata = isPlainObject(fields && fields.metadata) ? fields.metadata : {};
+      const changedUserTagInput = userTagInputFromSources([fields, changedMetadata]);
       let prepared = { images: [], uploads: [] };
       let previousMedia = [];
 
@@ -776,6 +799,13 @@ class SupabasePublisher {
       const expectedMetadata = {
         ...changedMetadata,
       };
+      if (changedUserTagInput.present) {
+        ['userTags', 'userTagKeys', 'user_tags', 'user_tag_keys'].forEach((key) => {
+          delete expectedMetadata[key];
+        });
+        expectedMetadata.userTags = row.metadata.userTags;
+        expectedMetadata.userTagKeys = row.metadata.userTagKeys;
+      }
       if (row.image_url) {
         expectedMetadata.image_url = row.image_url;
         expectedMetadata.cover_url = row.image_url;
@@ -808,7 +838,9 @@ class SupabasePublisher {
   }
 
   async updatePost(postId, payload) {
-    const row = toPostgrestInsert(payload, this.session && this.session.user ? this.session.user.id : '');
+    const row = toPostgrestInsert(payload, this.session && this.session.user ? this.session.user.id : '', {
+      preserveMissingTagSurfaces: true,
+    });
     delete row.author_id;
     return this.safeUpdatePost(postId, row);
   }

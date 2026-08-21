@@ -19,6 +19,11 @@ const ICON_DOCUMENT = '\u{1F4C4}';
 const ICON_LINK = '\u{1F517}';
 const ICON_SCHEDULE = '\u{1F4CB}';
 
+const MAX_USER_TAGS = 12;
+const MAX_USER_TAG_LENGTH = 60;
+const USER_TAG_LABEL_KEYS = ['userTags', 'user_tags'];
+const USER_TAG_KEY_KEYS = ['userTagKeys', 'user_tag_keys'];
+
 function detectArea(text) {
   const normalized = normalizeText(text);
   if (/direito|juridic/.test(normalized)) return 'Direito';
@@ -173,6 +178,142 @@ function canonicalCategoryIdentity(moduleKey, categoryKey) {
       categoria: label,
       categoriaLabel: label,
     },
+  };
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasOwn(object, key) {
+  return isPlainObject(object) && Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function tagArray(value) {
+  if (Array.isArray(value)) return value;
+  return typeof value === 'string' ? [value] : [];
+}
+
+function firstTagInput(sources, keys) {
+  for (const source of sources || []) {
+    if (!isPlainObject(source)) continue;
+    for (const key of keys) {
+      if (hasOwn(source, key)) return { present: true, value: source[key] };
+    }
+  }
+  return { present: false, value: [] };
+}
+
+function tagInputFromSources(sources, labelKeys, keyKeys) {
+  const labels = firstTagInput(sources, labelKeys);
+  const keys = firstTagInput(sources, keyKeys);
+  return {
+    present: labels.present || keys.present,
+    labelsPresent: labels.present,
+    tags: tagArray(labels.value),
+    tagKeys: tagArray(keys.value),
+  };
+}
+
+function userTagInputFromSources(sources) {
+  return tagInputFromSources(sources, USER_TAG_LABEL_KEYS, USER_TAG_KEY_KEYS);
+}
+
+function legacyTagInputFromSources(sources) {
+  return tagInputFromSources(sources, ['tags'], ['tagKeys', 'tag_keys']);
+}
+
+function automaticTagSurfaceFromSources(sources) {
+  const input = legacyTagInputFromSources(sources);
+  const tags = tagArray(input.tags);
+  return {
+    present: input.present,
+    tags,
+    tagKeys: input.tagKeys.length ? input.tagKeys : tags.map((tag) => slugify(tag)).filter(Boolean),
+  };
+}
+
+function labelFromTagKey(value) {
+  const key = slugify(value || '');
+  if (!key) return '';
+  if (key === 'ufg') return 'UFG';
+  return normalizeWhitespace(key.replace(/-/g, ' '));
+}
+
+function normalizeUserTagLabel(value) {
+  const text = String(stripHtml(String(value || '')) || '')
+    .replace(/^\s*🏷(?:\uFE0F)?\s*/u, '');
+  return clamp(normalizeWhitespace(text), MAX_USER_TAG_LENGTH);
+}
+
+function normalizeUserTagSurface(input) {
+  const source = input && input.labelsPresent
+    ? tagArray(input.tags)
+    : tagArray(input && input.tagKeys).map(labelFromTagKey);
+  const seen = new Set();
+  const tags = [];
+  const tagKeys = [];
+
+  for (const value of source) {
+    const label = normalizeUserTagLabel(value);
+    const key = slugify(label);
+    if (!label || !key || seen.has(key)) continue;
+    seen.add(key);
+    tags.push(label);
+    tagKeys.push(key);
+  }
+
+  return { tags, tagKeys };
+}
+
+function automaticTagKeysForModule(moduleKey, automaticTags = []) {
+  const module = slugify(moduleKey || '');
+  const labels = CATEGORY_LABELS[module] || {};
+  const aliases = CATEGORY_ALIASES[module] || {};
+  return new Set([
+    ...tagArray(automaticTags),
+    ...Object.keys(labels),
+    ...Object.values(labels),
+    ...Object.keys(aliases),
+    ...Object.values(aliases),
+  ].map((value) => slugify(value)).filter(Boolean));
+}
+
+function isReservedCaduTagKey(value) {
+  return value === 'site-institucional' || /^tier-\d+(?:-.+)?$/.test(value);
+}
+
+function filterUserTagSurface(surface, { moduleKey, automaticTags = [] } = {}) {
+  const automaticKeys = automaticTagKeysForModule(moduleKey, automaticTags);
+  const tags = [];
+  const tagKeys = [];
+  (surface && surface.tags ? surface.tags : []).forEach((tag, index) => {
+    const key = (surface && surface.tagKeys && surface.tagKeys[index]) || slugify(tag);
+    if (!key || tags.length >= MAX_USER_TAGS || automaticKeys.has(key) || isReservedCaduTagKey(key)) return;
+    tags.push(tag);
+    tagKeys.push(key);
+  });
+  return { tags, tagKeys };
+}
+
+function userTagsForItem(item, moduleKey, automaticTags) {
+  const metadata = isPlainObject(item && item.metadata) ? item.metadata : {};
+  const canonicalInput = userTagInputFromSources([item, metadata]);
+  if (canonicalInput.present) {
+    return {
+      present: true,
+      ...filterUserTagSurface(normalizeUserTagSurface(canonicalInput), { moduleKey, automaticTags }),
+    };
+  }
+
+  // item.tags/item.tagKeys foi o contrato legado do coletor. Mantemos a
+  // compatibilidade somente aqui, onde as facetas automáticas ainda podem ser
+  // identificadas e removidas do conjunto editável.
+  const legacyInput = legacyTagInputFromSources([item, metadata]);
+  const surface = filterUserTagSurface(normalizeUserTagSurface(legacyInput), { moduleKey, automaticTags });
+  return {
+    present: legacyInput.present && surface.tags.length > 0,
+    ...surface,
   };
 }
 
@@ -467,6 +608,10 @@ function mapToKinoPayload(item, classification, options = {}) {
     classification.hasDeadline ? 'Prazo' : '',
   ]).slice(0, 8);
   const tagKeys = tags.map((tag) => slugify(tag)).filter(Boolean);
+  const userTagSurface = userTagsForItem(item, moduleKey, tags);
+  const userTagMetadata = userTagSurface.present
+    ? { userTags: userTagSurface.tags, userTagKeys: userTagSurface.tagKeys }
+    : {};
   const emails = extractEmails(text);
   const contato = emails[0] || 'Ver link oficial da UFG';
   const area = classification.module === 'eventos' ? categoryText : detectArea(text);
@@ -502,6 +647,7 @@ function mapToKinoPayload(item, classification, options = {}) {
     areaKey,
     tags,
     tagKeys,
+    ...userTagMetadata,
     categoria: categoryText,
     categoriaLabel: categoryText,
     categoriaKey: category,
@@ -573,53 +719,69 @@ function mapToKinoPayload(item, classification, options = {}) {
   };
 }
 
-function toPostgrestInsert(payload, userId) {
-  const metadata = payload.metadata || {};
-  const moduleDB = payload.modulo || payload.module;
-  const categoryDB = payload.categoriaKey
-    || payload.category
-    || payload.categoria
+function withoutUserTagAliases(metadata) {
+  const clean = { ...metadata };
+  [...USER_TAG_LABEL_KEYS, ...USER_TAG_KEY_KEYS].forEach((key) => {
+    delete clean[key];
+  });
+  return clean;
+}
+
+function toPostgrestInsert(payload, userId, options = {}) {
+  const source = isPlainObject(payload) ? payload : {};
+  const metadata = isPlainObject(source.metadata) ? source.metadata : {};
+  const moduleDB = source.modulo || source.module;
+  const categoryDB = source.categoriaKey
+    || source.category
+    || source.categoria
     || metadata.category
     || metadata.categoryKey
     || metadata.categoriaKey;
   const categoryIdentity = canonicalCategoryIdentity(moduleDB, categoryDB);
-  const images = Array.isArray(payload.imagens) ? payload.imagens : (Array.isArray(payload.images) ? payload.images : []);
-  const imageUrl = metadata.cover_url || metadata.image_url || payload.cover_url || payload.image_url || images[0] || null;
-  const tags = Array.isArray(payload.tags) ? payload.tags : (Array.isArray(metadata.tags) ? metadata.tags : []);
-  const tagKeys = Array.isArray(payload.tagKeys) ? payload.tagKeys : (Array.isArray(metadata.tagKeys) ? metadata.tagKeys : tags.map((tag) => slugify(tag)).filter(Boolean));
-  const userTags = Array.isArray(payload.userTags) ? payload.userTags : (Array.isArray(metadata.userTags) ? metadata.userTags : []);
-  const userTagKeys = Array.isArray(payload.userTagKeys) ? payload.userTagKeys : (Array.isArray(metadata.userTagKeys) ? metadata.userTagKeys : userTags.map((tag) => slugify(tag)).filter(Boolean));
-  const subcategoryKey = payload.subcategoriaKey || metadata.subcategoryKey || metadata.subcategoriaKey || metadata.subcategory || '';
-  const subcategoryLabel = payload.subcategoriaLabel || metadata.subcategoryLabel || metadata.subcategoria || payload.subcategoria || '';
+  const images = Array.isArray(source.imagens) ? source.imagens : (Array.isArray(source.images) ? source.images : []);
+  const imageUrl = metadata.cover_url || metadata.image_url || source.cover_url || source.image_url || images[0] || null;
+  const automaticTagSurface = automaticTagSurfaceFromSources([source, metadata]);
+  const userTagInput = userTagInputFromSources([source, metadata]);
+  const userTagSurface = filterUserTagSurface(normalizeUserTagSurface(userTagInput), {
+    moduleKey: categoryIdentity.module,
+    automaticTags: automaticTagSurface.tags,
+  });
+  const preserveMissingTagSurfaces = !!(options && options.preserveMissingTagSurfaces);
+  const includeAutomaticTags = automaticTagSurface.present || !preserveMissingTagSurfaces;
+  const includeUserTags = userTagInput.present || !preserveMissingTagSurfaces;
+  const subcategoryKey = source.subcategoriaKey || metadata.subcategoryKey || metadata.subcategoriaKey || metadata.subcategory || '';
+  const subcategoryLabel = source.subcategoriaLabel || metadata.subcategoryLabel || metadata.subcategoria || source.subcategoria || '';
   return {
     author_id: userId,
-    title: payload.titulo || payload.title,
-    description: payload.descricao || payload.description,
-    price: payload.preco == null ? null : payload.preco,
-    location: payload.localizacao || '',
+    title: source.titulo || source.title,
+    description: source.descricao || source.description,
+    price: source.preco == null ? null : source.preco,
+    location: source.localizacao || '',
     module: categoryIdentity.module,
     category: categoryIdentity.category,
     image_url: imageUrl || null,
-    visibility: payload.visibility || metadata.visibility || 'public',
+    visibility: source.visibility || metadata.visibility || 'public',
     metadata: {
-      ...metadata,
+      ...withoutUserTagAliases(metadata),
       image_url: metadata.image_url || imageUrl || '',
       cover_url: metadata.cover_url || imageUrl || '',
-      tags,
-      tagKeys,
-      userTags,
-      userTagKeys,
-      contato: metadata.contato || payload.contato || 'Ver link oficial da UFG',
-      link: metadata.link || payload.link || '',
-      link_as_cta: metadata.link_as_cta !== undefined ? !!metadata.link_as_cta : !!payload.link_as_cta,
-      actionLabel: metadata.actionLabel || payload.actionLabel || '',
-      actionKey: metadata.actionKey || payload.actionKey || '',
-      gratuito: metadata.gratuito !== undefined ? !!metadata.gratuito : !!payload.gratuito,
-      area: metadata.area || payload.area || '',
-      areaLabel: metadata.areaLabel || payload.areaLabel || metadata.area || payload.area || '',
-      areaKey: metadata.areaKey || payload.areaKey || '',
-      modalidadeTrabalho: metadata.modalidadeTrabalho || payload.modalidadeTrabalho || '',
-      remuneracao: metadata.remuneracao || payload.remuneracao || '',
+      ...(includeAutomaticTags
+        ? { tags: automaticTagSurface.tags, tagKeys: automaticTagSurface.tagKeys }
+        : {}),
+      ...(includeUserTags
+        ? { userTags: userTagSurface.tags, userTagKeys: userTagSurface.tagKeys }
+        : {}),
+      contato: metadata.contato || source.contato || 'Ver link oficial da UFG',
+      link: metadata.link || source.link || '',
+      link_as_cta: metadata.link_as_cta !== undefined ? !!metadata.link_as_cta : !!source.link_as_cta,
+      actionLabel: metadata.actionLabel || source.actionLabel || '',
+      actionKey: metadata.actionKey || source.actionKey || '',
+      gratuito: metadata.gratuito !== undefined ? !!metadata.gratuito : !!source.gratuito,
+      area: metadata.area || source.area || '',
+      areaLabel: metadata.areaLabel || source.areaLabel || metadata.area || source.area || '',
+      areaKey: metadata.areaKey || source.areaKey || '',
+      modalidadeTrabalho: metadata.modalidadeTrabalho || source.modalidadeTrabalho || '',
+      remuneracao: metadata.remuneracao || source.remuneracao || '',
       ...categoryIdentity.metadata,
       subcategoryKey,
       subcategoryLabel,
@@ -630,6 +792,10 @@ function toPostgrestInsert(payload, userId) {
 module.exports = {
   buildDescription,
   canonicalCategoryIdentity,
+  filterUserTagSurface,
   mapToKinoPayload,
+  MAX_USER_TAGS,
+  normalizeUserTagSurface,
   toPostgrestInsert,
+  userTagInputFromSources,
 };

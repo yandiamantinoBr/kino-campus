@@ -33,6 +33,9 @@ O publicador usa Auth REST do Supabase com a conta dedicada do Cadu, sincroniza 
 
 - `eventos`: local, data/hora detectadas, link oficial e `link_as_cta`;
 - `oportunidades`: area, modalidade presencial por padrao, contato e link oficial.
+- `metadata.tags`/`metadata.tagKeys` para facetas automáticas e
+  `metadata.userTags`/`metadata.userTagKeys` para Tags adicionais editáveis. O
+  Cadu normaliza os rótulos, deriva as chaves e limita as Tags adicionais a 12.
 - descricao em Markdown seguro (`**negrito**`, listas e links oficiais essenciais), compatível com o preview/render do Kino;
 - imagem de capa quando a fonte oficial expõe `image`, `image_url` ou `og:image`; o Cadu baixa a imagem remota, sobe para o bucket `kino-media` e grava a URL publica em `posts.image_url`, `metadata.image_url`/`cover_url` e `post_media` como capa. Se o upload falhar, usa a URL remota como fallback e reporta em `media.uploads`.
 
