@@ -128,6 +128,19 @@
     if (normalized && target.indexOf(normalized) === -1) target.push(normalized);
   }
 
+  function canonicalUserTagKey(value) {
+    var raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      raw = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    } catch (_) {}
+    return raw
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+  }
+
   function canonicalModule(post) {
     var raw = String(post && (post.module || post.modulo) || '').trim().toLowerCase();
     var aliases = {
@@ -164,6 +177,28 @@
           label: String(option.label || option.key),
           groupLabel: String(group.label || group.id)
         });
+      });
+    });
+    // Tags livres são sinais locais opt-in: diferentemente da taxonomia, elas
+    // não entram nas preferências explícitas nem são sincronizadas como perfil.
+    var metadata = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+    var userTags = [];
+    appendValues(userTags, post && post.userTags);
+    appendValues(userTags, post && post.userTagKeys);
+    appendValues(userTags, metadata.userTags);
+    appendValues(userTags, metadata.userTagKeys);
+    userTags.forEach(function (value) {
+      var tagKey = canonicalUserTagKey(value);
+      if (!tagKey) return;
+      var signalKey = 'user-tag:' + moduleKey + ':' + tagKey;
+      if (signals.some(function (signal) { return signal.key === signalKey; })) return;
+      signals.push({
+        key: signalKey,
+        type: 'user-tag',
+        module: moduleKey,
+        value: tagKey,
+        label: String(value),
+        groupLabel: 'Tags'
       });
     });
     return signals;

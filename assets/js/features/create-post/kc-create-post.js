@@ -149,11 +149,19 @@ function kcCaptureCreateValues() {
     if (!name) return;
     values[name] = kcParseStringArrayValue(input.value);
   });
+  form.querySelectorAll('[data-kc-user-tags-value]').forEach((input) => {
+    const name = input.getAttribute('name');
+    if (!name) return;
+    const tagsApi = window.KCPostUserTags;
+    values[name] = tagsApi && typeof tagsApi.parseSerialized === 'function'
+      ? tagsApi.parseSerialized(input.value)
+      : [];
+  });
   kcCreateState.values = values;
 }
 
 function kcGetActiveCreateFieldNames(moduleKey, selections, values) {
-  const names = new Set(['titulo', 'descricao', 'visibility', 'sustentavel']);
+  const names = new Set(['titulo', 'descricao', 'userTags', 'visibility', 'sustentavel']);
   const fields = kcBuildFieldsForModule(moduleKey, selections || {}, values || {});
   fields.forEach((field) => {
     if (!field || !field.name) return;
@@ -545,6 +553,9 @@ function kcOpenEditPostModal(post, callback) {
   kcCreateState.values = {
     titulo: post.titulo || post.title || '',
     descricao: post.descricao || post.description || '',
+    userTags: (window.KCPostUserTags && typeof window.KCPostUserTags.read === 'function')
+      ? window.KCPostUserTags.read(post).tags
+      : [],
     preco: post.preco != null ? String(post.preco) : '',
     localizacao: kcResolveEditLocationValue(post, md, moduleKey),
     condicao: post.condicao || md.condicao || '',

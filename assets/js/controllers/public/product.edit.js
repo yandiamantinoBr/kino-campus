@@ -108,6 +108,14 @@
     return !isAuthor(post, viewer) && canManagePost(post, viewer, context);
   }
 
+  function canUsePrivilegedUserTagLimit(user, context) {
+    var viewer = resolveCurrentUser(context, user);
+    return isAdminProfile(resolveCurrentProfile(context, viewer))
+      || isAdminProfile(viewer && viewer.app_metadata)
+      || isOperatorProfile(viewer)
+      || isOperatorAppMetadata(viewer && viewer.app_metadata);
+  }
+
   function getPostIdForMutation(post) {
     if (!post) return null;
     return post.uuid || post.id || null;
@@ -156,8 +164,10 @@
     titleEl.parentNode.insertBefore(badge, titleEl.nextSibling);
   }
 
-  function buildEditPayload(form, sourcePost) {
+  function buildEditPayload(form, sourcePost, options) {
     var tagsRaw = String(form.tags.value || '').trim();
+    var userTagsApi = window.KCPostUserTags;
+    var userTagsResult;
     var metadata = Object.assign(
       {},
       (sourcePost && sourcePost.metadata && typeof sourcePost.metadata === 'object') ? sourcePost.metadata : {},
@@ -166,8 +176,19 @@
       form.emoji.value ? { emoji: String(form.emoji.value).trim() } : {}
     );
 
-    if (tagsRaw) metadata.tags = tagsRaw.split(',').map(function (tag) { return tag.trim(); }).filter(Boolean);
-    else delete metadata.tags;
+    if (!userTagsApi || typeof userTagsApi.metadataPatch !== 'function') {
+      return { error: { message: 'Não foi possível validar as tags adicionais. Recarregue a página e tente novamente.' } };
+    }
+    userTagsResult = userTagsApi.metadataPatch(tagsRaw, {
+      isPrivileged: !!(options && options.isPrivilegedUserTagManager),
+    });
+    if (!userTagsResult.ok) {
+      return { error: { message: (userTagsResult.errors && userTagsResult.errors[0] && userTagsResult.errors[0].message) || 'Revise as tags adicionais.' } };
+    }
+    // `tags`/`tagKeys` pertencem à taxonomia automática. Nunca os apagamos
+    // neste fallback de edição; apenas a dupla livre é alterada explicitamente.
+    metadata.userTags = userTagsResult.tags;
+    metadata.userTagKeys = userTagsResult.tagKeys;
 
     // v13.6.3: gerenciar galeria de imagens. O editor mostra uma lista de URLs
     // (textarea com 1 URL por linha). O admin pode remover URLs existentes e/ou
@@ -250,7 +271,7 @@
       '  <div class="kc-form-group"><label>Subcategoria</label><input class="kc-input" name="subcategory" /></div>',
       '  <div class="kc-form-group"><label>Condi\u00E7\u00E3o</label><input class="kc-input" name="condition" /></div>',
       '  <div class="kc-form-group"><label>Emoji</label><input class="kc-input" name="emoji" maxlength="4" /></div>',
-      '  <div class="kc-form-group"><label>Tags (v\u00EDrgula)</label><input class="kc-input" name="tags" /></div>',
+      '  <div class="kc-form-group"><label>Tags adicionais</label><input class="kc-input" name="tags" placeholder="Ex.: monitoria, acessibilidade" /><small style="color:var(--text-muted, #64748b);">Separe por vírgulas. Categorias, tipos e características automáticas não entram neste limite.</small></div>',
       // v13.6.3: galeria de imagens — uma URL por linha. A 1ª vira cover.
       '  <div class="kc-form-group">',
       '    <label>Galeria de imagens <span style="color:var(--text-muted, #64748b);font-size:.85em;">(1 URL por linha — a 1ª \u00E9 a capa)</span></label>',
@@ -435,7 +456,9 @@
       form.subcategory.value = post.subcategoria || md.subcategory || '';
       form.condition.value = post.condicao || md.condicao || '';
       form.emoji.value = post.emoji || md.emoji || '';
-      tags = Array.isArray(post.tags) ? post.tags : (Array.isArray(md.tags) ? md.tags : []);
+      tags = (window.KCPostUserTags && typeof window.KCPostUserTags.read === 'function')
+        ? window.KCPostUserTags.read(post).tags
+        : [];
       form.tags.value = tags.join(', ');
 
       // v13.6.3: popular galeria de imagens. Prioridade: post.imagens (normalizado) > metadata.gallery_image_urls.
@@ -466,7 +489,17 @@
       cancelBtn.disabled = true;
       status.textContent = 'Salvando...';
 
-      payload = buildEditPayload(form, editingPost);
+      payload = buildEditPayload(form, editingPost, {
+        isPrivilegedUserTagManager: canUsePrivilegedUserTagLimit(viewer, liveContext),
+      });
+      if (payload && payload.error) {
+        msg = String(payload.error.message || 'Revise as tags adicionais.');
+        status.textContent = msg;
+        toast(msg, 'error', 2400);
+        saveBtn.disabled = false;
+        cancelBtn.disabled = false;
+        return;
+      }
       try {
         if (window.KCAPI && typeof window.KCAPI.updatePost === 'function') {
           res = await window.KCAPI.updatePost(getPostIdForMutation(editingPost), payload);

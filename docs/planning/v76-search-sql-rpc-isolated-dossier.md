@@ -97,17 +97,21 @@ substituí-lo.
 
 | Módulo | Grupos | Campos filtráveis |
 |---|---|---|
-| Achados e perdidos | `status`, `tipo` | `entrega`, `localizacao`, `recompensa` |
-| Caronas | `tipo` | `contribuicao`, `destino`, `horario`, `marcadoresCarona`, `origem`, `vagas` |
-| Compra e venda | `categoria`, `acao` | `condicao`, `localizacao`, `preco` |
-| Eventos | `topico` | `data`, `data_fim`, `gratuito`, `hora`, `localizacao`, `preco` |
-| Moradia | `tipo` | `localizacao`, `marcadoresMoradia`, `orcamento`, `preco`, `regiao` |
-| Oportunidades | `tipo` | `areaAtuacao`, `localizacao`, `modalidadeTrabalho`, `regimeContratacao`, `remuneracao` |
+| Achados e perdidos | `status`, `tipo` | `entrega`, `localizacao`, `recompensa`, `userTags` |
+| Caronas | `tipo` | `contribuicao`, `destino`, `horario`, `marcadoresCarona`, `origem`, `userTags`, `vagas` |
+| Compra e venda | `categoria`, `acao` | `condicao`, `localizacao`, `preco`, `userTags` |
+| Eventos | `topico` | `data`, `data_fim`, `gratuito`, `hora`, `localizacao`, `preco`, `userTags` |
+| Moradia | `tipo` | `localizacao`, `marcadoresMoradia`, `orcamento`, `preco`, `regiao`, `userTags` |
+| Oportunidades | `tipo` | `areaAtuacao`, `localizacao`, `modalidadeTrabalho`, `regimeContratacao`, `remuneracao`, `userTags` |
 
 O RPC não deve receber os labels como verdade de banco. Chaves canônicas são comparadas com
 os paths já declarados no registry. Faixas numéricas e datas precisam de parsing tipado e
 comparação, nunca `ILIKE` sobre JSON serializado. Campos indexáveis entram no documento FTS;
 campos apenas filtráveis não entram automaticamente no índice textual.
+
+`userTags` representa somente as tags adicionais livres da publicação. O filtro deve comparar
+as chaves canônicas derivadas (`metadata.userTagKeys`), sem substituir ou ampliar a taxonomia
+automática de categorias e tipos e sem transformar uma busca isolada em preferência de conta.
 
 ## 5. Matriz RLS obrigatória
 

@@ -587,6 +587,8 @@ function toPostgrestInsert(payload, userId) {
   const imageUrl = metadata.cover_url || metadata.image_url || payload.cover_url || payload.image_url || images[0] || null;
   const tags = Array.isArray(payload.tags) ? payload.tags : (Array.isArray(metadata.tags) ? metadata.tags : []);
   const tagKeys = Array.isArray(payload.tagKeys) ? payload.tagKeys : (Array.isArray(metadata.tagKeys) ? metadata.tagKeys : tags.map((tag) => slugify(tag)).filter(Boolean));
+  const userTags = Array.isArray(payload.userTags) ? payload.userTags : (Array.isArray(metadata.userTags) ? metadata.userTags : []);
+  const userTagKeys = Array.isArray(payload.userTagKeys) ? payload.userTagKeys : (Array.isArray(metadata.userTagKeys) ? metadata.userTagKeys : userTags.map((tag) => slugify(tag)).filter(Boolean));
   const subcategoryKey = payload.subcategoriaKey || metadata.subcategoryKey || metadata.subcategoriaKey || metadata.subcategory || '';
   const subcategoryLabel = payload.subcategoriaLabel || metadata.subcategoryLabel || metadata.subcategoria || payload.subcategoria || '';
   return {
@@ -605,6 +607,8 @@ function toPostgrestInsert(payload, userId) {
       cover_url: metadata.cover_url || imageUrl || '',
       tags,
       tagKeys,
+      userTags,
+      userTagKeys,
       contato: metadata.contato || payload.contato || 'Ver link oficial da UFG',
       link: metadata.link || payload.link || '',
       link_as_cta: metadata.link_as_cta !== undefined ? !!metadata.link_as_cta : !!payload.link_as_cta,

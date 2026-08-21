@@ -578,6 +578,8 @@ class SupabasePublisher {
       'remuneracao',
       'tags',
       'tagKeys',
+      'userTags',
+      'userTagKeys',
       'category',
       'categoria',
       'categoriaKey',

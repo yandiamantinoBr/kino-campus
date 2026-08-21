@@ -819,9 +819,16 @@ function renderPostCard(post, options) {
   const dataSub = (p.subcategoriaKey || p.subcategoria || '');
   if (dataSub) attrs.push(`data-subcategory="${_escapeHtml(String(dataSub))}"`);
 
-  // data-kc-tags: preferir tagKeys para filtros
-  const tagKeysRaw = Array.isArray(p.tagKeys) ? p.tagKeys : (Array.isArray(p.tags) ? p.tags : []);
-  const tagKeys = tagKeysRaw.map(String);
+  // data-kc-tags: inclui taxonomia automática e tags adicionais, sem usar
+  // estas últimas para inferir categoria/tipo da publicação.
+  const presentationMeta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
+  const tagKeysRaw = []
+    .concat(Array.isArray(p.tagKeys) ? p.tagKeys : (Array.isArray(p.tags) ? p.tags : []))
+    .concat(Array.isArray(p.userTagKeys) ? p.userTagKeys : [])
+    .concat(Array.isArray(p.userTags) ? p.userTags : [])
+    .concat(Array.isArray(presentationMeta.userTagKeys) ? presentationMeta.userTagKeys : [])
+    .concat(Array.isArray(presentationMeta.userTags) ? presentationMeta.userTags : []);
+  const tagKeys = Array.from(new Set(tagKeysRaw.map(String).filter(Boolean)));
   // garantir que a categoria principal participe do filtro por tabs
   if (p.categoriaKey && !tagKeys.includes(String(p.categoriaKey))) tagKeys.push(String(p.categoriaKey));
   if (tagKeys.length) attrs.push(`data-kc-tags="${_escapeHtml(tagKeys.join(' '))}"`);

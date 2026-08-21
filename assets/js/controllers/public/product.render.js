@@ -511,7 +511,16 @@
   // ── buildTagEntries, buildTagsSpecHtml ───────────────────────────────────────
 
   function buildTagEntries(post) {
-    var tags = Array.isArray(post.tags) ? post.tags.slice(0, 14) : [];
+    var metadata = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
+    var tags = []
+      .concat(Array.isArray(post.tags) ? post.tags : [])
+      .concat(Array.isArray(post.userTags) ? post.userTags : [])
+      .concat(Array.isArray(metadata.userTags) ? metadata.userTags : [])
+      .filter(function (tag, index, list) {
+        var key = String(tag || '').trim().toLowerCase();
+        return !!key && list.findIndex(function (candidate) { return String(candidate || '').trim().toLowerCase() === key; }) === index;
+      })
+      .slice(0, 20);
     var markerTags = (window.KCUtils && typeof window.KCUtils.getDisplayMarkerTags === 'function')
       ? window.KCUtils.getDisplayMarkerTags(post, { limit: 14 }) : [];
     var normalize = (window.KCUtils && typeof window.KCUtils.normalizeText === 'function')

@@ -47,7 +47,8 @@
 
     kcCaptureCreateValues();
     const form = document.getElementById('kcCreatePostForm');
-    const submitBtn = form ? form.querySelector('.kc-create-submit') : null;
+    const modal = form && typeof form.closest === 'function' ? form.closest('.kc-modal-overlay') : null;
+    const submitBtn = modal ? modal.querySelector('.kc-create-submit') : null;
     const originalSubmitText = submitBtn ? submitBtn.textContent : '';
 
     kcCreateState.submitting = true;
@@ -62,6 +63,9 @@
         showToast('Selecione um módulo para publicar.', 'warn', 2200);
         return;
       }
+      const fieldsModule = window._KCCreatePost && window._KCCreatePost.fields;
+      const isAdminOperator = !!(fieldsModule && typeof fieldsModule.isCurrentUserAdminOperator === 'function'
+        && fieldsModule.isCurrentUserAdminOperator());
 
       // valida tags obrigatórias
       const missing = (schema.tagGroups || []).filter(g => g.required && !kcCreateState.selections[g.id]);
@@ -81,9 +85,6 @@
           const normalizedDesc = String(descInput.value || '').trim();
           // Limite dinâmico: 2000 padrão, 5000 para admin operators
           // (mirror do override em kc-create-post.fields.js).
-          const fieldsModule = window._KCCreatePost && window._KCCreatePost.fields;
-          const isAdminOperator = !!(fieldsModule && typeof fieldsModule.isCurrentUserAdminOperator === 'function'
-            && fieldsModule.isCurrentUserAdminOperator());
           const maxDescLength = (fieldsModule && typeof fieldsModule.getMaxDescriptionLength === 'function')
             ? fieldsModule.getMaxDescriptionLength(isAdminOperator)
             : 2000;
@@ -165,6 +166,21 @@
       const activeLinkAsCta = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'link_as_cta', false);
       const activeGratuito = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'gratuito', false);
       const activeSustentavel = kcReadActiveCreateBooleanValue(activeFieldNames, kcCreateState.values, 'sustentavel', false);
+      const userTagsApi = window.KCPostUserTags;
+      if (!userTagsApi || typeof userTagsApi.validate !== 'function') {
+        showToast('Não foi possível validar as tags desta publicação. Recarregue a página e tente novamente.', 'error', 3600);
+        return;
+      }
+      const userTagsResult = userTagsApi.validate(
+        kcReadActiveCreateArrayValue(activeFieldNames, kcCreateState.values, 'userTags'),
+        { isPrivileged: isAdminOperator }
+      );
+      if (!userTagsResult.ok) {
+        const firstError = userTagsResult.errors && userTagsResult.errors[0];
+        showToast((firstError && firstError.message) || 'Revise as tags adicionais.', 'warn', 3200);
+        return;
+      }
+      kcCreateState.values.userTags = userTagsResult.tags;
 
       // Eventos: a data de término não pode ser anterior à data de início.
       if (kcCreateState.moduleKey === 'eventos' && activeDataEvento && activeDataFimEvento && activeDataFimEvento < activeDataEvento) {
@@ -458,6 +474,8 @@
         // tags (UI)
         tags: tagLabels,
         tagKeys,
+        userTags: userTagsResult.tags,
+        userTagKeys: userTagsResult.tagKeys,
 
         // conteúdo
         titulo: title,
@@ -515,6 +533,9 @@
           // categoria principal (UI + filtros)
           categoria: catLabel || '',
           categoriaKey: catKey || '',
+          // Tags livres, adicionais à taxonomia automática acima.
+          userTags: userTagsResult.tags,
+          userTagKeys: userTagsResult.tagKeys,
 
           // ação/subcategoria (UI)
           subcategoria: finalSubLabel || '',
