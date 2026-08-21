@@ -379,7 +379,13 @@
   function tagsOf(post) {
     var tags = [];
     appendList(tags, post && post.tags);
+    appendList(tags, post && post.tagKeys);
+    appendList(tags, post && post.userTags);
+    appendList(tags, post && post.userTagKeys);
     appendList(tags, metadataOf(post || {}).tags);
+    appendList(tags, metadataOf(post || {}).tagKeys);
+    appendList(tags, metadataOf(post || {}).userTags);
+    appendList(tags, metadataOf(post || {}).userTagKeys);
     appendList(tags, metadataOf(post || {}).keywords);
     return tags;
   }

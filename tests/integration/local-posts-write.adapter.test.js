@@ -250,6 +250,33 @@ describe('local.posts-write.adapter.js - updatePost e deletePost', () => {
     }));
   });
 
+  test('updatePost preserva tags adicionais e outros metadata em atualização parcial', async () => {
+    const drafts = buildDrafts();
+    drafts[0].metadata = {
+      tags: ['Moradia'],
+      tagKeys: ['moradia'],
+      userTags: ['Acessibilidade'],
+      userTagKeys: ['acessibilidade'],
+      nested: { preserved: true },
+    };
+    global.localStorage.setItem('kc_user_posts', JSON.stringify(drafts));
+
+    const result = await postsWrite().updatePost('legacy-1', {
+      title: 'Depois sem perder tags',
+      metadata: { nested: { changed: true } },
+    }, buildDeps());
+
+    expect(result.ok).toBe(true);
+    const stored = JSON.parse(global.localStorage.getItem('kc_user_posts') || '[]');
+    expect(stored[0].metadata).toMatchObject({
+      tags: ['Moradia'],
+      tagKeys: ['moradia'],
+      userTags: ['Acessibilidade'],
+      userTagKeys: ['acessibilidade'],
+      nested: { preserved: true, changed: true },
+    });
+  });
+
   test('updatePost retorna erro quando o id e invalido', async () => {
     const result = await postsWrite().updatePost('', { title: 'X' }, buildDeps());
     expect(result.ok).toBe(false);

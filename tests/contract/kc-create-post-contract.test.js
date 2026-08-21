@@ -69,7 +69,8 @@ describe('kc-create-post — modal bootstrap contracts', () => {
     expect(renderSource).toContain('overlay.id = _getModalId();');
     expect(renderSource).toContain('role="dialog" aria-modal="true" aria-labelledby="kcCreateModalTitle"');
     expect(renderSource).toContain('<form id="kcCreatePostForm" class="kc-create-form" novalidate>');
-    expect(renderSource).toContain('<button type="submit" class="kc-create-submit" disabled>Publicar Agora</button>');
+    expect(renderSource).toContain('<div class="kc-create-modal__footer">');
+    expect(renderSource).toContain('<button type="submit" form="kcCreatePostForm" class="kc-create-submit" disabled>Publicar Agora</button>');
   });
 
   test('wires close confirmation, submit delegation and escape handling in renderSource', () => {

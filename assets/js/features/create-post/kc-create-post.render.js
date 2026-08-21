@@ -165,6 +165,112 @@
     `;
   }
 
+  // ── Tags adicionais geridas pelo usuário ─────────────────────────────────
+
+  function kcGetUserTagsApi() {
+    const api = window.KCPostUserTags;
+    return api && typeof api.normalize === 'function' && typeof api.validate === 'function' ? api : null;
+  }
+
+  function kcNormalizeUserTags(value) {
+    const api = kcGetUserTagsApi();
+    return api ? api.normalize(value).tags : [];
+  }
+
+  function kcSerializeUserTags(value) {
+    const api = kcGetUserTagsApi();
+    return api && typeof api.serialize === 'function' ? api.serialize(value) : '[]';
+  }
+
+  function kcUserTagKey(value) {
+    const api = kcGetUserTagsApi();
+    return api && typeof api.tagKey === 'function' ? api.tagKey(value) : String(value || '');
+  }
+
+  function kcRenderUserTagsField(field, value) {
+    const tags = kcNormalizeUserTags(value);
+    const limit = Number(field.maxItems) || 6;
+    const selectedHtml = tags.length
+      ? tags.map((tag) => `
+        <button class="kc-field-chip" type="button" data-kc-user-tag-remove="${_esc(kcUserTagKey(tag))}" aria-label="Remover ${_esc(tag)}">
+          <span>${_esc(tag)}</span>
+          <i class="fas fa-times"></i>
+        </button>
+      `).join('')
+      : '<span class="kc-field-chip__empty">Nenhuma tag adicional.</span>';
+    const fieldId = 'kcField_' + field.name;
+    const hint = field.hint || ('Adicione até ' + limit + ' tags adicionais para facilitar a descoberta desta publicação.');
+
+    return `
+      <div class="kc-field kc-field--user-tags" data-kc-user-tags-field="true" data-kc-user-tags-limit="${_esc(limit)}">
+        <label for="${_esc(fieldId)}">${_esc(field.label)}</label>
+        <input type="hidden" name="${_esc(field.name)}" value="${_esc(kcSerializeUserTags(tags))}" data-kc-user-tags-value="true" />
+        <div class="kc-field-chip-row" data-kc-user-tags-selected="true">${selectedHtml}</div>
+        <div class="kc-field-inline">
+          <input id="${_esc(fieldId)}" type="text" maxlength="${_esc(field.maxLength || 60)}" placeholder="${_esc(field.placeholder || '')}" data-kc-user-tags-input="true" aria-describedby="${_esc(fieldId)}Hint" />
+          <button class="kc-field-inline__action" type="button" data-kc-user-tag-add="true">Adicionar</button>
+        </div>
+        <small id="${_esc(fieldId)}Hint" class="kc-field-hint">${_esc(hint)} (${tags.length}/${limit})</small>
+      </div>
+    `;
+  }
+
+  function kcShowUserTagValidation(message) {
+    if (typeof window.showToast === 'function') window.showToast(message, 'warn', 3200);
+  }
+
+  function kcAppendUserTagFromInput(input) {
+    if (!input) return;
+    const api = kcGetUserTagsApi();
+    const state = _getState();
+    const field = input.closest('[data-kc-user-tags-field]');
+    if (!api || !state || !field) return;
+    const raw = String(input.value || '').trim();
+    if (!raw) return;
+    const hidden = field.querySelector('[data-kc-user-tags-value]');
+    const current = hidden && typeof api.parseSerialized === 'function'
+      ? api.parseSerialized(hidden.value)
+      : kcNormalizeUserTags(state.values && state.values.userTags);
+    const additions = typeof api.parseText === 'function' ? api.parseText(raw) : [raw];
+    const limit = Number(field.getAttribute('data-kc-user-tags-limit')) || api.STANDARD_LIMIT || 6;
+    const checked = api.validate(current.concat(additions), { limit: limit });
+    if (!checked.ok) {
+      const firstError = checked.errors && checked.errors[0];
+      kcShowUserTagValidation((firstError && firstError.message) || 'Não foi possível adicionar esta tag.');
+      input.focus();
+      return;
+    }
+    state.values = state.values || {};
+    state.values.userTags = checked.tags;
+    input.value = '';
+    kcRenderCreateModal();
+    window.requestAnimationFrame(() => {
+      const nextInput = document.querySelector('[data-kc-user-tags-input]');
+      const nextField = nextInput && nextInput.closest ? nextInput.closest('[data-kc-user-tags-field]') : null;
+      if (nextField && typeof nextField.scrollIntoView === 'function') {
+        nextField.scrollIntoView({ block: 'center', inline: 'nearest' });
+      }
+      if (nextInput) {
+        try { nextInput.focus({ preventScroll: true }); } catch (_) { nextInput.focus(); }
+      }
+    });
+  }
+
+  function kcRemoveUserTag(button) {
+    const api = kcGetUserTagsApi();
+    const state = _getState();
+    const field = button && button.closest('[data-kc-user-tags-field]');
+    if (!api || !state || !field) return;
+    const hidden = field.querySelector('[data-kc-user-tags-value]');
+    const current = hidden && typeof api.parseSerialized === 'function'
+      ? api.parseSerialized(hidden.value)
+      : kcNormalizeUserTags(state.values && state.values.userTags);
+    const removeKey = button.getAttribute('data-kc-user-tag-remove') || '';
+    state.values = state.values || {};
+    state.values.userTags = current.filter((tag) => kcUserTagKey(tag) !== removeKey);
+    kcRenderCreateModal();
+  }
+
   // ── Modal DOM setup ───────────────────────────────────────────────────────
 
   function kcEnsureCreateModal() {
@@ -188,8 +294,10 @@
 
           <form id="kcCreatePostForm" class="kc-create-form" novalidate>
             <div id="kcCreateDynamic"></div>
-            <button type="submit" class="kc-create-submit" disabled>Publicar Agora</button>
           </form>
+        </div>
+        <div class="kc-create-modal__footer">
+          <button type="submit" form="kcCreatePostForm" class="kc-create-submit" disabled>Publicar Agora</button>
         </div>
       </div>
     `;
@@ -302,6 +410,20 @@
         return;
       }
 
+      const removeUserTag = e.target.closest('[data-kc-user-tag-remove]');
+      if (removeUserTag) {
+        kcRemoveUserTag(removeUserTag);
+        return;
+      }
+
+      const addUserTag = e.target.closest('[data-kc-user-tag-add]');
+      if (addUserTag) {
+        const field = addUserTag.closest('[data-kc-user-tags-field]');
+        const input = field ? field.querySelector('[data-kc-user-tags-input]') : null;
+        kcAppendUserTagFromInput(input);
+        return;
+      }
+
       const housingFeatureSuggestion = e.target.closest('[data-kc-housing-feature-suggestion]');
       if (housingFeatureSuggestion) {
         const field = kcGetHousingFeatureFieldContext(housingFeatureSuggestion);
@@ -362,8 +484,13 @@
       });
       form.addEventListener('keydown', (e) => {
         const target = e.target;
-        if (!target || !target.matches || !target.matches('[data-kc-housing-features-input="true"]')) return;
-        if (e.key === 'Enter' || e.key === ',') {
+        if (!target || !target.matches) return;
+        if (target.matches('[data-kc-user-tags-input]') && (e.key === 'Enter' || e.key === ',')) {
+          e.preventDefault();
+          kcAppendUserTagFromInput(target);
+          return;
+        }
+        if (target.matches('[data-kc-housing-features-input="true"]') && (e.key === 'Enter' || e.key === ',')) {
           e.preventDefault();
           kcAppendHousingFeatureFromInput(target);
           kcCaptureCreateValues();
@@ -499,6 +626,8 @@
     }
 
     const schema = kcGetSchema(kcCreateState.moduleKey);
+    const modalCard = overlay.querySelector('.kc-create-modal');
+    if (modalCard) modalCard.classList.toggle('kc-create-modal--form-active', !!schema);
 
     // Conteúdo dinâmico
     if (!schema) {
@@ -622,6 +751,8 @@
             <small class="kc-field-hint">Escolha um local comum ou digite outro ponto de referência.</small>
           </div>
         `);
+      } else if (f.type === 'user-tags') {
+        parts.push(kcRenderUserTagsField(f, val));
       } else if (f.type === 'housing-features') {
         const listId = id + 'Options';
         const selectedEntries = kcResolveHousingFeatureEntries(val);

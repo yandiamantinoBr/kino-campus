@@ -502,7 +502,12 @@
       if (moduleEqValue) q = q.eq('module', moduleEqValue);
       if (f.category) q = q.eq('category', f.category);
       if (f.subcategory) q = q.eq('metadata->>subcategory', f.subcategory);
-      if (f.tag) q = q.contains('metadata->tagKeys', [f.tag]);
+      if (f.tag) {
+        // O filtro remoto cobre a taxonomia automática e a dupla adicional.
+        // `f.tag` já foi slugificado em normalizeGetPostsParams, logo não
+        // precisa interpolar texto livre na expressão PostgREST.
+        q = q.or('metadata->tagKeys.cs.["' + f.tag + '"],metadata->userTagKeys.cs.["' + f.tag + '"]');
+      }
       if (f.q) q = q.or(buildOrILike(f.q));
 
       return await q.range(from, to);

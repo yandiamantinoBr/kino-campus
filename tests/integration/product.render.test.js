@@ -214,7 +214,7 @@ describe('product.render.js - estrutura IIFE e namespace', () => {
 
   test('pagina usa o cache-buster atualizado do renderizador', () => {
     const lifecycleTag = 'assets/js/shared/kc-post-lifecycle.shared.js?v=8.6.1';
-    const renderTag = 'assets/js/controllers/public/product.render.js?v=8.6.5';
+    const renderTag = 'assets/js/controllers/public/product.render.js?v=8.6.6';
     expect(page.split(lifecycleTag)).toHaveLength(2);
     expect(page.split(renderTag)).toHaveLength(2);
     expect(page.indexOf(lifecycleTag)).toBeLessThan(page.indexOf(renderTag));

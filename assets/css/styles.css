@@ -5098,6 +5098,8 @@ body.kc-scroll-locked {
     border-radius: 24px;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     transform: translateY(6px) scale(0.985);
     transition: transform 180ms ease;
     overscroll-behavior: contain;
@@ -5105,6 +5107,13 @@ body.kc-scroll-locked {
 
 .kc-modal-overlay.active .kc-create-modal {
     transform: translateY(0) scale(1);
+}
+
+/* O seletor inicial fica compacto. Depois de escolher o módulo, a altura
+   delimitada permite que corpo e rodapé participem do mesmo flex layout, sem
+   sobrepor o último campo visível. */
+.kc-create-modal.kc-create-modal--form-active {
+    height: calc(90vh - 24px);
 }
 
 .kc-create-modal__header {
@@ -5162,7 +5171,9 @@ body.kc-scroll-locked {
 .kc-create-modal__body {
     padding: 16px 18px calc(18px + env(safe-area-inset-bottom, 0px));
     overflow: auto;
-    max-height: calc(90vh - 80px);
+    flex: 1 1 auto;
+    min-height: 0;
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y pinch-zoom;
@@ -5237,6 +5248,18 @@ body.kc-scroll-locked {
     display: flex;
     flex-direction: column;
     gap: 16px; /* V8.2.4.3: aumentado de 14px para 16px para respiração uniforme entre grupos */
+}
+
+.kc-create-modal__footer {
+    flex: 0 0 auto;
+    padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: var(--kc-surface-dark);
+    border-top: 1px solid var(--kc-border-dark);
+    box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.kc-field--user-tags {
+    scroll-margin-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
 }
 
 .kc-create-group {
@@ -5830,10 +5853,7 @@ body.kc-scroll-locked {
     cursor: pointer;
     box-shadow: 0 16px 40px rgba(255, 107, 0, 0.20);
     transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
-    position: sticky;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    z-index: 2;
-    margin-top: 16px; /* V8.2.4.3: descola o botão da dica/grupo acima */
+    margin: 0;
 }
 
 .kc-create-submit:disabled {
@@ -5853,16 +5873,21 @@ body.kc-scroll-locked {
         width: 100%;
         max-width: 100%;
         max-height: 90vh;
-        overflow-y: auto;
-        overflow-x: hidden;
+        overflow: hidden;
         border-radius: 20px;
+    }
+    .kc-create-modal.kc-create-modal--form-active {
+        height: 90vh;
     }
     .kc-create-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .kc-create-modal__body {
         padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
-        max-height: calc(90vh - 86px);
+        scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+    .kc-create-modal__footer {
+        padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
     }
     .kc-create-visibility-toggle {
         grid-template-columns: 1fr;

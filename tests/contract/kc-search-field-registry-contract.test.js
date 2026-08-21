@@ -19,13 +19,13 @@ const ENV_PATH = path.join(ROOT, 'assets/js/boot/kc-env.js');
 const SearchFieldRegistry = require(REGISTRY_PATH);
 const corpus = JSON.parse(fs.readFileSync(CORPUS_PATH, 'utf8'));
 const EXPECTED_FIELDS = {
-  'compra-venda': ['titulo', 'descricao', 'localizacao', 'preco', 'condicao'],
-  caronas: ['titulo', 'descricao', 'origem', 'destino', 'horario', 'contribuicao', 'vagas', 'marcadoresCarona'],
-  moradia: ['titulo', 'descricao', 'regiao', 'marcadoresMoradia', 'orcamento', 'localizacao', 'preco', 'detalhes'],
-  eventos: ['titulo', 'descricao', 'localizacao', 'data', 'data_fim', 'hora', 'link', 'link_as_cta', 'gratuito', 'preco'],
-  'achados-perdidos': ['titulo', 'descricao', 'localizacao', 'recompensa', 'entrega'],
+  'compra-venda': ['titulo', 'descricao', 'userTags', 'localizacao', 'preco', 'condicao'],
+  caronas: ['titulo', 'descricao', 'userTags', 'origem', 'destino', 'horario', 'contribuicao', 'vagas', 'marcadoresCarona'],
+  moradia: ['titulo', 'descricao', 'userTags', 'regiao', 'marcadoresMoradia', 'orcamento', 'localizacao', 'preco', 'detalhes'],
+  eventos: ['titulo', 'descricao', 'userTags', 'localizacao', 'data', 'data_fim', 'hora', 'link', 'link_as_cta', 'gratuito', 'preco'],
+  'achados-perdidos': ['titulo', 'descricao', 'userTags', 'localizacao', 'recompensa', 'entrega'],
   oportunidades: [
-    'titulo', 'descricao', 'areaAtuacao', 'modalidadeTrabalho', 'regimeContratacao',
+    'titulo', 'descricao', 'userTags', 'areaAtuacao', 'modalidadeTrabalho', 'regimeContratacao',
     'localizacao', 'remuneracao', 'contato', 'link', 'link_as_cta'
   ]
 };
@@ -128,9 +128,9 @@ describe('KCSearchFieldRegistry — derivação canônica', () => {
     ]));
   });
 
-  test.each(registry.moduleKeys)('%s inclui título e descrição derivados do builder', (moduleKey) => {
+  test.each(registry.moduleKeys)('%s inclui título, descrição e Tags derivados do builder', (moduleKey) => {
     const fieldNames = registry.modules[moduleKey].fields.map((field) => field.name);
-    expect(fieldNames).toEqual(expect.arrayContaining(['titulo', 'descricao']));
+    expect(fieldNames).toEqual(expect.arrayContaining(['titulo', 'descricao', 'userTags']));
   });
 
   test.each(Object.entries(EXPECTED_FIELDS))('%s cobre todos os campos pesquisáveis/explicitamente bloqueados', (moduleKey, expected) => {

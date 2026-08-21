@@ -33,8 +33,8 @@ describe('search-results.html', () => {
   test('loads the updated shared search assets', () => {
     const html = read('search-results.html');
 
-    expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.3');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.15');
+    expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.4');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.16');
   });
 });
 

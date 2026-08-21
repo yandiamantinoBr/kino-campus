@@ -206,6 +206,11 @@ describe('supabase.posts-write.adapter.js — normalizeCreatePayload', () => {
     expect(source).toContain('d.images');
   });
 
+  test('encaminha a dupla de tags adicionais para metadata sem tocar em tags taxonômicas', () => {
+    expect(source).toContain("Array.isArray(d.userTags) ? { userTags: d.userTags }");
+    expect(source).toContain("Array.isArray(d.userTagKeys) ? { userTagKeys: d.userTagKeys }");
+  });
+
   test('normaliza visibility para community ou public', () => {
     expect(source).toContain("'community'");
     expect(source).toContain("'public'");

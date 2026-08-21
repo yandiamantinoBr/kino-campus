@@ -65,4 +65,31 @@ test.describe('Criar Post - gatilhos globais', () => {
     await expect(page.locator('#kcCreatePostModalOverlay.active')).toBeVisible();
     await expect(page.locator('#kcCreateModalTitle')).toContainText('Nova Publicação');
   });
+
+  test('Tags adicionais cria chips pesquisáveis sem misturar a taxonomia do módulo', async ({ page }) => {
+    await page.goto('/create-post.html');
+    await page.getByRole('button', { name: /Eventos/ }).click();
+
+    const tagsField = page.locator('[data-kc-user-tags-field]');
+    await expect(tagsField).toBeVisible();
+    await tagsField.locator('[data-kc-user-tags-input]').fill('Acessibilidade, Material aberto');
+    await tagsField.getByRole('button', { name: 'Adicionar', exact: true }).click();
+
+    await expect(tagsField.getByRole('button', { name: 'Remover Acessibilidade' })).toBeVisible();
+    await expect(tagsField.getByRole('button', { name: 'Remover Material aberto' })).toBeVisible();
+    await expect(tagsField.locator('.kc-field-hint')).toContainText('(2/6)');
+  });
+
+  test('atalho kc-create-btn em viewport mobile abre o mesmo campo Tags', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/index.html');
+    const rejectOptionalCookies = page.getByRole('button', { name: 'Rejeitar opcionais' });
+    if (await rejectOptionalCookies.isVisible()) await rejectOptionalCookies.click();
+    await page.locator('.kc-create-btn').first().click();
+
+    await expect(page).not.toHaveURL(/create-post\.html/);
+    await expect(page.locator('#kcCreatePostModalOverlay.active')).toBeVisible();
+    await page.getByRole('button', { name: /Eventos/ }).click();
+    await expect(page.locator('[data-kc-user-tags-field]')).toBeVisible();
+  });
 });

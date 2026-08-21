@@ -23,27 +23,27 @@
   "modules": {
     "achados-perdidos": {
       "groups": ["status", "tipo"],
-      "fields": ["entrega", "localizacao", "recompensa"]
+      "fields": ["entrega", "localizacao", "recompensa", "userTags"]
     },
     "caronas": {
       "groups": ["tipo"],
-      "fields": ["contribuicao", "destino", "horario", "marcadoresCarona", "origem", "vagas"]
+      "fields": ["contribuicao", "destino", "horario", "marcadoresCarona", "origem", "userTags", "vagas"]
     },
     "compra-venda": {
       "groups": ["categoria", "acao"],
-      "fields": ["condicao", "localizacao", "preco"]
+      "fields": ["condicao", "localizacao", "preco", "userTags"]
     },
     "eventos": {
       "groups": ["topico"],
-      "fields": ["data", "data_fim", "gratuito", "hora", "localizacao", "preco"]
+      "fields": ["data", "data_fim", "gratuito", "hora", "localizacao", "preco", "userTags"]
     },
     "moradia": {
       "groups": ["tipo"],
-      "fields": ["localizacao", "marcadoresMoradia", "orcamento", "preco", "regiao"]
+      "fields": ["localizacao", "marcadoresMoradia", "orcamento", "preco", "regiao", "userTags"]
     },
     "oportunidades": {
       "groups": ["tipo"],
-      "fields": ["areaAtuacao", "localizacao", "modalidadeTrabalho", "regimeContratacao", "remuneracao"]
+      "fields": ["areaAtuacao", "localizacao", "modalidadeTrabalho", "regimeContratacao", "remuneracao", "userTags"]
     }
   },
   "operators": {

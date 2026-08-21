@@ -553,6 +553,28 @@ describe('cadu-ufg-publisher', () => {
     expect(row.metadata.tagKeys).toEqual(expect.arrayContaining(['monitoria']));
   });
 
+  test('mapper keeps user-managed tags separate from the automatic taxonomy', () => {
+    const row = toPostgrestInsert({
+      modulo: 'oportunidades',
+      categoriaKey: 'estagios',
+      titulo: 'Estágio com acessibilidade',
+      descricao: 'Registro de teste para o editor Cadu.',
+      tags: ['UFG', 'Estágio'],
+      tagKeys: ['ufg', 'estagio'],
+      userTags: ['Acessibilidade', 'Material aberto'],
+      userTagKeys: ['acessibilidade', 'material-aberto'],
+      metadata: {
+        tags: ['Taxonomia legada'],
+        tagKeys: ['taxonomia-legada'],
+      },
+    }, 'agent-1');
+
+    expect(row.metadata.tags).toEqual(['UFG', 'Estágio']);
+    expect(row.metadata.tagKeys).toEqual(['ufg', 'estagio']);
+    expect(row.metadata.userTags).toEqual(['Acessibilidade', 'Material aberto']);
+    expect(row.metadata.userTagKeys).toEqual(['acessibilidade', 'material-aberto']);
+  });
+
   test('direct publisher persists all canonical category aliases for every supported feed category', () => {
     const categories = {
       eventos: {
@@ -653,6 +675,8 @@ describe('cadu-ufg-publisher', () => {
         categoryLabel: 'Academicos',
         categoria: 'Academicos',
         categoriaLabel: 'Academicos',
+        userTags: ['Acessibilidade', 'Material aberto'],
+        userTagKeys: ['acessibilidade', 'material-aberto'],
         kept: true,
       },
     };
@@ -669,8 +693,17 @@ describe('cadu-ufg-publisher', () => {
       categoryLabel: 'Palestras',
       categoria: 'Palestras',
       categoriaLabel: 'Palestras',
+      userTags: ['Acessibilidade', 'Material aberto'],
+      userTagKeys: ['acessibilidade', 'material-aberto'],
       kept: true,
     }));
+
+    const explicitTagEdit = publisher.buildSafePatch(current, {
+      userTags: ['Apoio pedagógico'],
+      userTagKeys: ['apoio-pedagogico'],
+    });
+    expect(explicitTagEdit.metadata.userTags).toEqual(['Apoio pedagógico']);
+    expect(explicitTagEdit.metadata.userTagKeys).toEqual(['apoio-pedagogico']);
 
     expect(() => publisher.buildSafePatch(current, {
       category: 'empregos',

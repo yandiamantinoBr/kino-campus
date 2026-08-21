@@ -87,6 +87,8 @@
     const visibility = String(r.visibility || meta.visibility || '').trim().toLowerCase() || 'public';
     const tagLabels = Array.isArray(r.tags) ? r.tags : [];
     const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
+    const userTags = Array.isArray(r.userTags) ? r.userTags : (Array.isArray(meta.userTags) ? meta.userTags : []);
+    const userTagKeys = Array.isArray(r.userTagKeys) ? r.userTagKeys : (Array.isArray(meta.userTagKeys) ? meta.userTagKeys : userTags);
     const ratingRaw = (r.rating != null)
       ? r.rating
       : (r.rating_avg != null ? r.rating_avg : (authorProfile && authorProfile.rating_avg != null ? authorProfile.rating_avg : null));
@@ -177,6 +179,8 @@
       subcategoriaLabel: r.subcategoriaLabel || r.subcategoryLabel || '',
       tags: tagLabels,
       tagKeys,
+      userTags,
+      userTagKeys,
       rating: Number.isFinite(rating) && ratingCount > 0 ? rating : null,
       ratingCount,
       rating_count: ratingCount,

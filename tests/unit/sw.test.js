@@ -83,7 +83,7 @@ describe('sw.js — integridade', function () {
     expect(SW).toContain('navigationPreload.enable()');
     expect(SW).toContain('url.searchParams.has');
     expect(SW).not.toContain('RUNTIME_VERSION');
-    expect(SW).toContain("'/assets/css/styles.css?v=8.6.21'");
+    expect(SW).toContain("'/assets/css/styles.css?v=8.6.23'");
     expect(SW).toContain("'/assets/js/core/kc-i18n.js?v=8.6.13'");
   });
 

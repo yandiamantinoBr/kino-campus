@@ -117,6 +117,8 @@
     [
       post && post.tags,
       post && post.tagKeys,
+      post && post.userTags,
+      post && post.userTagKeys,
       post && post.housingFeatureLabels,
       post && post.housingFeatureKeys,
       post && post.caronasFeatureLabels,
@@ -124,6 +126,8 @@
       post && post.features,
       meta.tags,
       meta.tagKeys,
+      meta.userTags,
+      meta.userTagKeys,
       meta.housingFeatureLabels,
       meta.housingFeatureKeys,
       meta.caronasFeatureLabels,
@@ -782,9 +786,13 @@
         const tagPool = [];
         if (Array.isArray(post.tagKeys)) tagPool.push(...post.tagKeys);
         if (Array.isArray(post.tags)) tagPool.push(...post.tags);
+        if (Array.isArray(post.userTagKeys)) tagPool.push(...post.userTagKeys);
+        if (Array.isArray(post.userTags)) tagPool.push(...post.userTags);
         const meta = post && (post.metadata || post.meta || post._meta);
         if (meta && Array.isArray(meta.tagKeys)) tagPool.push(...meta.tagKeys);
         if (meta && Array.isArray(meta.tags)) tagPool.push(...meta.tags);
+        if (meta && Array.isArray(meta.userTagKeys)) tagPool.push(...meta.userTagKeys);
+        if (meta && Array.isArray(meta.userTags)) tagPool.push(...meta.userTags);
 
         const tagsNorm = tagPool.map(normalizeTag).filter(Boolean);
         const wanted = normalizeTag(tagFilter);
