@@ -10,8 +10,10 @@
 
 import {
   CaduItem,
+  caduUserTagsForItem,
   actionFingerprintMetadataForItem,
   categoryLabel,
+  MAX_CADU_USER_TAGS,
   ModuleKey,
   normalizeCategoryForModule,
   normalizeOpportunityType,
@@ -543,12 +545,64 @@ function buildTags(
   required.forEach(({ key, label }) => appendTagPair(pairs, key, label));
   appendTagPair(pairs, "ufg", "UFG");
   appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
-  const inputLabels = Array.isArray(item.tags) ? item.tags : [];
-  const inputKeys = Array.isArray(item.tagKeys) ? item.tagKeys : [];
-  for (let index = 0; index < Math.max(inputLabels.length, inputKeys.length); index += 1) {
-    appendIndependentTagPair(pairs, module, inputKeys[index], inputLabels[index]);
-  }
   const entries = Array.from(pairs.entries()).slice(0, 10);
+  return {
+    tagKeys: entries.map(([key]) => key),
+    tags: entries.map(([, label]) => label),
+  };
+}
+
+function appendCaduUserTagCandidate(
+  target: Map<string, string>,
+  automatic: Set<string>,
+  module: ModuleKey,
+  key: unknown,
+  label: unknown,
+): void {
+  const keyText = slugify(key, 60);
+  const labelText = normalizeWhitespace(label);
+  if (!keyText && !labelText) return;
+
+  const keyIsTaxonomy = !!keyText && isModuleTaxonomyTag(module, keyText);
+  const labelIsTaxonomy = !!labelText && isModuleTaxonomyTag(module, labelText);
+  if (keyIsTaxonomy && labelIsTaxonomy) return;
+
+  // A few old Cadu payloads carried a taxonomy label beside an independent
+  // key (or the inverse). Preserve the independent half as the visible label
+  // and derive its key again, exactly as the database trigger does.
+  const canonicalLabel = keyIsTaxonomy
+    ? labelText
+    : (labelIsTaxonomy ? keyText : (labelText || keyText));
+  const canonicalKey = slugify(canonicalLabel, 60);
+  if (!canonicalKey || automatic.has(canonicalKey) || isModuleTaxonomyTag(module, canonicalKey)) return;
+  appendTagPair(target, canonicalKey, canonicalLabel);
+}
+
+function buildUserTags(
+  source: CaduItem | Record<string, unknown>,
+  module: ModuleKey,
+  automaticTagKeys: unknown,
+): { tags: string[]; tagKeys: string[] } {
+  const automatic = new Set(
+    (Array.isArray(automaticTagKeys) ? automaticTagKeys : [])
+      .map((value) => slugify(value, 60))
+      .filter(Boolean),
+  );
+  const record = source as Record<string, unknown>;
+  const input = caduUserTagsForItem(record);
+  const labels = input.explicit ? input.tags : (Array.isArray(record.tags) ? record.tags : []);
+  const keys = input.explicit ? input.tagKeys : (Array.isArray(record.tagKeys) ? record.tagKeys : []);
+  const pairs = new Map<string, string>();
+
+  for (let index = 0; index < Math.max(labels.length, keys.length); index += 1) {
+    appendCaduUserTagCandidate(pairs, automatic, module, keys[index], labels[index]);
+  }
+
+  if (pairs.size > MAX_CADU_USER_TAGS) {
+    throw new TypeError(`userTags aceita no máximo ${MAX_CADU_USER_TAGS} tags adicionais para publicadores confiáveis.`);
+  }
+
+  const entries = Array.from(pairs.entries());
   return {
     tagKeys: entries.map(([key]) => key),
     tags: entries.map(([, label]) => label),
@@ -926,6 +980,10 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     if (module === "moradia" && !location) location = normalizeWhitespace(item.regiao);
   }
 
+  const userTags = buildUserTags(item, module, metadata.tagKeys);
+  metadata.userTags = userTags.tags;
+  metadata.userTagKeys = userTags.tagKeys;
+
   const row: MappedPost["row"] = {
     title,
     description,
@@ -976,6 +1034,69 @@ export function deepMergeMetadata(
   return result;
 }
 
+const USER_TAG_PATCH_FIELDS = ["userTags", "userTagKeys", "user_tags", "user_tag_keys"] as const;
+const LEGACY_TAG_PATCH_FIELDS = ["tags", "tagKeys"] as const;
+
+function hasOwn(value: Record<string, unknown> | null | undefined, key: string): boolean {
+  return !!value && Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function hasUserTagsPatch(patch: Record<string, unknown> | null | undefined): boolean {
+  return USER_TAG_PATCH_FIELDS.some((key) => hasOwn(patch, key));
+}
+
+function hasLegacyTagsPatch(patch: Record<string, unknown> | null | undefined): boolean {
+  return LEGACY_TAG_PATCH_FIELDS.some((key) => hasOwn(patch, key));
+}
+
+interface UserTagsEditResolution {
+  metadataPatch: Record<string, unknown> | null | undefined;
+  userTagsSource: Record<string, unknown> | null;
+  rewriteAutomaticTags: boolean;
+}
+
+// tags/tagKeys remain automatic, server-computed facets. A legacy edit may
+// still send them as free Tags only while the stored post has no canonical
+// userTags pair. This protects current clients and preserves old Cadu payloads.
+function normalizeUserTagsMetadataPatch(
+  currentMetadata: Record<string, unknown> | null | undefined,
+  patch: Record<string, unknown> | null | undefined,
+): UserTagsEditResolution {
+  const current = currentMetadata || {};
+  const currentHasUserTags = hasUserTagsPatch(current);
+  if (!patch) {
+    return currentHasUserTags
+      ? { metadataPatch: patch, userTagsSource: null, rewriteAutomaticTags: false }
+      : { metadataPatch: patch, userTagsSource: current, rewriteAutomaticTags: true };
+  }
+
+  const explicitUserTags = hasUserTagsPatch(patch);
+  const legacyTags = hasLegacyTagsPatch(patch);
+  const result = { ...patch };
+  if (explicitUserTags) {
+    const normalized = caduUserTagsForItem(patch);
+    delete result.user_tags;
+    delete result.user_tag_keys;
+    delete result.tags;
+    delete result.tagKeys;
+    result.userTags = normalized.tags;
+    result.userTagKeys = normalized.tagKeys;
+    return { metadataPatch: result, userTagsSource: result, rewriteAutomaticTags: true };
+  }
+
+  if (legacyTags) {
+    delete result.tags;
+    delete result.tagKeys;
+    if (!currentHasUserTags) {
+      return { metadataPatch: result, userTagsSource: patch, rewriteAutomaticTags: true };
+    }
+  }
+
+  return currentHasUserTags
+    ? { metadataPatch: result, userTagsSource: null, rewriteAutomaticTags: false }
+    : { metadataPatch: result, userTagsSource: current, rewriteAutomaticTags: true };
+}
+
 function metadataSecondaryKey(
   module: ModuleKey,
   metadata: Record<string, unknown>,
@@ -1010,14 +1131,13 @@ function metadataSecondaryKey(
   throw new TypeError(`grupo secundario invalido ou ausente para module "${module}".`);
 }
 
-function editTagPairs(
+function appendEditAutomaticTagPairs(
+  pairs: Map<string, string>,
   module: ModuleKey,
-  _previousCategory: string,
   nextCategory: TagPair,
   metadata: Record<string, unknown>,
   secondary: TagPair | null,
-): { tags: string[]; tagKeys: string[] } {
-  const pairs = new Map<string, string>();
+): void {
   appendTagPair(pairs, nextCategory.key, nextCategory.label);
   if (secondary) appendTagPair(pairs, secondary.key, secondary.label);
   if (module === "oportunidades") {
@@ -1027,11 +1147,39 @@ function editTagPairs(
     const areaKey = slugify(metadata.areaKey || metadata.subcategory || metadata.subcategoriaKey || areaLabel);
     appendTagPair(pairs, areaKey, areaLabel || areaKey);
   }
+  appendTagPair(pairs, "ufg", "UFG");
+  appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
+  if (module === "oportunidades") {
+    const workModeKey = slugify(metadata.workMode || metadata.workModeLabel || metadata.modalidadeTrabalho);
+    const workModeLabel = normalizeWhitespace(
+      metadata.workModeLabel || metadata.modalidadeTrabalho || metadata.workMode || workModeKey,
+    );
+    appendTagPair(pairs, workModeKey, workModeLabel);
+    const regimeKey = slugify(metadata.employmentType || metadata.employmentTypeLabel || metadata.regimeContratacao);
+    const regimeLabel = normalizeWhitespace(
+      metadata.employmentTypeLabel || metadata.regimeContratacao || metadata.employmentType || regimeKey,
+    );
+    appendTagPair(pairs, regimeKey, regimeLabel);
+  }
+}
 
-  const labels = Array.isArray(metadata.tags) ? metadata.tags : [];
-  const keys = Array.isArray(metadata.tagKeys) ? metadata.tagKeys : [];
-  for (let index = 0; index < Math.max(labels.length, keys.length); index += 1) {
-    appendIndependentTagPair(pairs, module, keys[index], labels[index]);
+function editTagPairs(
+  module: ModuleKey,
+  _previousCategory: string,
+  nextCategory: TagPair,
+  metadata: Record<string, unknown>,
+  secondary: TagPair | null,
+  preserveExistingIndependentTags = true,
+): { tags: string[]; tagKeys: string[] } {
+  const pairs = new Map<string, string>();
+  appendEditAutomaticTagPairs(pairs, module, nextCategory, metadata, secondary);
+
+  if (preserveExistingIndependentTags) {
+    const labels = Array.isArray(metadata.tags) ? metadata.tags : [];
+    const keys = Array.isArray(metadata.tagKeys) ? metadata.tagKeys : [];
+    for (let index = 0; index < Math.max(labels.length, keys.length); index += 1) {
+      appendIndependentTagPair(pairs, module, keys[index], labels[index]);
+    }
   }
   const entries = Array.from(pairs.entries()).slice(0, 10);
   return {
@@ -1096,8 +1244,10 @@ export function buildTaxonomyEditPatch(
   if (module === "compra-venda") {
     validateCompraVendaPrimaryMetadataAliases(categoryKey, metadataPatch);
   }
-  const metadata = deepMergeMetadata(currentMetadata, metadataPatch);
-  const secondaryKey = metadataSecondaryKey(module, metadata, metadataPatch);
+  const userTagsResolution = normalizeUserTagsMetadataPatch(currentMetadata, metadataPatch);
+  const normalizedMetadataPatch = userTagsResolution.metadataPatch;
+  const metadata = deepMergeMetadata(currentMetadata, normalizedMetadataPatch);
+  const secondaryKey = metadataSecondaryKey(module, metadata, normalizedMetadataPatch);
   const secondaryText = secondaryLabelForModule(module, secondaryKey);
 
   Object.assign(metadata, {
@@ -1148,13 +1298,33 @@ export function buildTaxonomyEditPatch(
     delete metadata.housingTypeLabel;
   }
 
-  const tagPairs = editTagPairs(
+  const automaticTagPairs = editTagPairs(
     module,
     previousCategory,
     { key: categoryKey, label: categoryText },
     metadata,
     secondaryKey ? { key: secondaryKey, label: secondaryText } : null,
+    false,
   );
+  if (userTagsResolution.userTagsSource) {
+    const userTags = buildUserTags(
+      userTagsResolution.userTagsSource,
+      module,
+      automaticTagPairs.tagKeys,
+    );
+    metadata.userTags = userTags.tags;
+    metadata.userTagKeys = userTags.tagKeys;
+  }
+
+  const tagPairs = userTagsResolution.rewriteAutomaticTags
+    ? automaticTagPairs
+    : editTagPairs(
+      module,
+      previousCategory,
+      { key: categoryKey, label: categoryText },
+      metadata,
+      secondaryKey ? { key: secondaryKey, label: secondaryText } : null,
+    );
   metadata.tags = tagPairs.tags;
   metadata.tagKeys = tagPairs.tagKeys;
   return { categoryKey, categoryLabel: categoryText, metadata };

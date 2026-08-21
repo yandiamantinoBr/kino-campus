@@ -46,7 +46,11 @@ Campos obrigatorios/esperados:
 - `metadata.contato`: email institucional detectado. Se nao houver contato real,
   nao invente; o link oficial deve ser o caminho de esclarecimento.
 - `metadata.area` / `metadata.areaKey`: area/categoria visivel.
-- `metadata.tags` / `metadata.tagKeys`: tags e chaves normalizadas para filtros.
+- `metadata.tags` / `metadata.tagKeys`: facetas automáticas para filtros
+  (taxonomia, fonte e prazo); não são Tags editáveis.
+- `metadata.userTags` / `metadata.userTagKeys`: Tags adicionais editáveis; use
+  os rótulos em `userTags`, pois as chaves são derivadas automaticamente e o
+  Cadu mantém no máximo 12 termos.
 - `metadata.categoria`, `metadata.categoriaKey` e `metadata.categoryKey`: sempre preenchidos.
 - `metadata.gratuito`: `true` salvo evidencia clara de preco.
 
@@ -76,7 +80,11 @@ Campos obrigatorios/esperados:
 - `metadata.actionLabel`: texto do botao, como `Acessar edital`, `Acessar editais` ou `Realizar inscricao`.
 - `metadata.actionKey`: slug do botao.
 - `metadata.gratuito`: `true`.
-- `metadata.tags` / `metadata.tagKeys`: tags e chaves normalizadas para filtros.
+- `metadata.tags` / `metadata.tagKeys`: facetas automáticas para filtros
+  (taxonomia, fonte e prazo); não são Tags editáveis.
+- `metadata.userTags` / `metadata.userTagKeys`: Tags adicionais editáveis; use
+  os rótulos em `userTags`, pois as chaves são derivadas automaticamente e o
+  Cadu mantém no máximo 12 termos.
 - `metadata.categoria`, `metadata.categoriaKey` e `metadata.categoryKey`: sempre preenchidos.
 
 ## Markdown E Links
