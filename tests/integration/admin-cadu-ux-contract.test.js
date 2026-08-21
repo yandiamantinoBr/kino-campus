@@ -140,7 +140,9 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('.kc-pipeline-status-dot.is-pending');
     expect(html).toContain('.kc-pipeline-status-dot.is-stopping');
     expect(html).toContain('@media (prefers-reduced-motion: reduce)');
-    expect(html).toMatch(/\.kc-pipeline-status-dot\.is-running\s*\{\s*animation: none !important;/);
+    expect(html).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-pipeline-status-dot\.is-running,[\s\S]*animation:\s*kc-cadu-reduced-pulse/
+    );
   });
 
   test('PDF explains registry provenance without calling scanner evidence confirmation', () => {

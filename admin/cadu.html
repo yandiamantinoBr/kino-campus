@@ -788,9 +788,7 @@
     @keyframes kc-cadu-pulse { 0% { opacity: 1; } 50% { opacity: .4; } 100% { opacity: 1; } }
     @keyframes kc-cadu-reduced-pulse { 0%, 100% { opacity: .58; } 50% { opacity: 1; } }
     @media (prefers-reduced-motion: reduce) {
-      .kc-pipeline-status-dot.is-running {
-        animation: none !important;
-      }
+      .kc-pipeline-status-dot.is-running,
       .kc-cadu-status-dot--loading {
         animation: kc-cadu-reduced-pulse 2.4s ease-in-out infinite !important;
       }
