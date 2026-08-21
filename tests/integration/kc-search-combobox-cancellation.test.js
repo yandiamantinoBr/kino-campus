@@ -97,6 +97,11 @@ function input(window, value) {
   return element;
 }
 
+function closeResultsPage(page) {
+  page.window.dispatchEvent(new page.window.Event('pagehide'));
+  page.dom.window.close();
+}
+
 describe('dropdown ativo antes do limite', () => {
   test('envia hideClosed ao backend antes de limitar a oito resultados', async () => {
     const searchPosts = jest.fn(async () => [
@@ -118,6 +123,27 @@ describe('dropdown ativo antes do limite', () => {
 });
 
 describe('resultados ativos no limite temporal', () => {
+  test('mantém o estado de carregamento até a busca assíncrona terminar', async () => {
+    let resolveSearch;
+    const searchPosts = jest.fn(() => new Promise((resolve) => { resolveSearch = resolve; }));
+    const page = createResultsPage(searchPosts);
+    const { window } = page;
+
+    await waitFor(() => searchPosts.mock.calls.length === 1);
+    const list = window.document.getElementById('searchResultsList');
+    const noResults = window.document.getElementById('noResults');
+    expect(list.getAttribute('aria-busy')).toBe('true');
+    expect(list.querySelector('[data-kc-search-loading]')).not.toBeNull();
+    expect(noResults.style.display).toBe('none');
+    expect(window.document.getElementById('resultsCount').textContent).toBe('—');
+
+    resolveSearch([{ id: 'async-result', titulo: 'Resultado assíncrono', modulo: 'eventos' }]);
+    await waitFor(() => list.textContent.includes('Resultado assíncrono'));
+    expect(list.hasAttribute('aria-busy')).toBe(false);
+    expect(list.querySelector('[data-kc-search-loading]')).toBeNull();
+    closeResultsPage(page);
+  });
+
   test('preserva o alias closed=true ao inicializar os controles da busca', async () => {
     const searchPosts = jest.fn(async () => []);
     const page = createResultsPage(
@@ -128,8 +154,7 @@ describe('resultados ativos no limite temporal', () => {
     await waitFor(() => searchPosts.mock.calls.length >= 1 && page.window.document.getElementById('searchResultsVisibleSummary').textContent.length > 0);
     expect(page.window.document.getElementById('searchResultsHideClosed').checked).toBe(true);
     expect(searchPosts.mock.calls[0][0]).toEqual(expect.objectContaining({ hideClosed: true }));
-    page.window.dispatchEvent(new page.window.Event('pagehide'));
-    page.dom.window.close();
+    closeResultsPage(page);
   });
 
   test('rerenderiza e remove um resultado quando ele encerra com a pagina aberta', async () => {
@@ -147,12 +172,17 @@ describe('resultados ativos no limite temporal', () => {
       .mockResolvedValue([]);
     const page = createResultsPage(searchPosts);
 
-    await waitFor(() => page.window.document.getElementById('searchResultsList').textContent.includes('Evento terminando'));
-    await waitFor(() => searchPosts.mock.calls.length >= 2 && !page.window.document.getElementById('searchResultsList').textContent.includes('Evento terminando'));
+    const list = page.window.document.getElementById('searchResultsList');
+    await waitFor(() => list.textContent.includes('Evento terminando'));
+    await waitFor(() => (
+      searchPosts.mock.calls.length >= 2 &&
+      !list.textContent.includes('Evento terminando') &&
+      !list.querySelector('[data-kc-search-loading]')
+    ));
 
     expect(searchPosts.mock.calls[0][0]).toEqual(expect.objectContaining({ hideClosed: true }));
     expect(searchPosts.mock.calls[1][0]).toEqual(expect.objectContaining({ hideClosed: true }));
-    page.dom.window.close();
+    closeResultsPage(page);
   });
 
   test('revalida um resultado vencido ao restaurar a pagina pelo bfcache', async () => {
@@ -182,7 +212,7 @@ describe('resultados ativos no limite temporal', () => {
     window.dispatchEvent(pageShow);
     await waitFor(() => searchPosts.mock.calls.length >= 2 && !window.document.getElementById('searchResultsList').textContent.includes('Evento no cache'));
 
-    page.dom.window.close();
+    closeResultsPage(page);
   });
 
   test('revalida fechamento explicito sem prazo e ignora ruido de metricas', async () => {
@@ -197,15 +227,20 @@ describe('resultados ativos no limite temporal', () => {
       .mockResolvedValue([]);
     const page = createResultsPage(searchPosts);
 
-    await waitFor(() => page.window.document.getElementById('searchResultsList').textContent.includes('Evento sem prazo'));
+    const list = page.window.document.getElementById('searchResultsList');
+    await waitFor(() => list.textContent.includes('Evento sem prazo'));
     page.emitFreshness({ type: 'metrics_updated', source: 'realtime' });
     await wait(80);
     expect(searchPosts).toHaveBeenCalledTimes(1);
 
     page.emitFreshness({ type: 'status_changed', status: 'closed', source: 'realtime' });
-    await waitFor(() => searchPosts.mock.calls.length >= 2 && !page.window.document.getElementById('searchResultsList').textContent.includes('Evento sem prazo'));
+    await waitFor(() => (
+      searchPosts.mock.calls.length >= 2 &&
+      !list.textContent.includes('Evento sem prazo') &&
+      !list.querySelector('[data-kc-search-loading]')
+    ));
 
-    page.dom.window.close();
+    closeResultsPage(page);
   });
 });
 

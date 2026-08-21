@@ -984,6 +984,29 @@
     };
   }
 
+  function setSearchResultsLoadingState(listEl, noElement, isLoading) {
+    if (!listEl) return;
+    const controls = getResultControls();
+    const headerCount = document.getElementById('resultsCount');
+
+    if (!isLoading) {
+      listEl.removeAttribute('aria-busy');
+      return;
+    }
+
+    listEl.setAttribute('aria-busy', 'true');
+    listEl.innerHTML = [
+      '<div class="kc-search-results-loading" data-kc-search-loading role="status">',
+      '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>',
+      '<span>Carregando resultados…</span>',
+      '</div>'
+    ].join('');
+    if (noElement) noElement.style.display = 'none';
+    if (headerCount) headerCount.textContent = '—';
+    if (controls.count) controls.count.textContent = 'Carregando resultados…';
+    if (controls.active) controls.active.textContent = 'Buscando publicações…';
+  }
+
   function isEnabledFilterParam(value) {
     return ['1', 'true'].includes(String(value || '').trim().toLowerCase());
   }
@@ -1518,6 +1541,7 @@
   }
 
   function onSearchResultsPageHide() {
+    cancelSearchRequest('results');
     clearSearchResultsLifecycleTimer();
     stopSearchResultsFreshness();
   }
@@ -1646,6 +1670,7 @@
     if (titleEl) titleEl.textContent = q ? `"${q}"` : '';
 
     if (!q) {
+      setSearchResultsLoadingState(listEl, noEl, false);
       listEl.innerHTML = '';
       lastRenderedSearchResults = new Map();
       updateResultsControlsState([], [], readResultFilters());
@@ -1660,6 +1685,7 @@
     const subcategoryParam = getQueryParam('subcategory') || getQueryParam('subcategoria');
     const filters = readResultFilters();
 
+    setSearchResultsLoadingState(listEl, noEl, true);
     let results = [];
     let searchError = null;
     try {
@@ -1693,6 +1719,7 @@
     }
 
     if (searchError) {
+      setSearchResultsLoadingState(listEl, noEl, false);
       listEl.innerHTML = '';
       lastRenderedSearchResults = new Map();
       renderStructuredSearchState(null);
@@ -1745,6 +1772,7 @@
       facetSource: facetSource,
       hiddenClosedCount
     });
+    setSearchResultsLoadingState(listEl, noEl, false);
     lastRenderedSearchResults = new Map(filteredResults.map((post) => [getStructuredPostId(post), post]));
     listEl.innerHTML = filteredResults.map(buildResultCard).join('\n');
     scheduleSearchResultsLifecycleBoundary(filteredResults, filters, q);

@@ -171,6 +171,24 @@
             white-space: normal;
         }
 
+        .kc-search-results-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            min-height: 148px;
+            padding: 22px;
+            border: 1px dashed var(--kc-border-dark);
+            border-radius: 14px;
+            color: var(--kc-text-dark-secondary);
+            background: color-mix(in srgb, var(--kc-surface-dark) 92%, transparent);
+            font-weight: 700;
+        }
+
+        .kc-search-results-loading i {
+            color: var(--kc-primary-brand);
+        }
+
         .kc-search-structured {
             display: grid;
             gap: 10px;
@@ -655,7 +673,7 @@
             <div>
                 <h1>Mostrando resultados para: <span id="searchQueryText"></span></h1>
                 <div class="kc-search-results-meta">
-                    <span id="resultsCount">0</span> resultado(s)
+                    <span id="resultsCount" aria-live="polite">—</span> resultado(s)
                 </div>
             </div>
             <a href="/" class="kc-btn-secondary" style="text-decoration:none;">
@@ -669,7 +687,7 @@
                     <span class="kc-search-results-controls__icon" aria-hidden="true"><i class="fas fa-sliders"></i></span>
                     <div>
                         <strong>Filtros</strong>
-                        <span id="searchResultsVisibleSummary">0 resultados</span>
+                        <span id="searchResultsVisibleSummary" aria-live="polite">Carregando resultados…</span>
                     </div>
                 </div>
                 <div class="kc-search-results-controls__group">
@@ -751,7 +769,7 @@
             <p class="kc-search-structured__note" id="searchResultsStructuredNote" hidden></p>
         </section>
 
-        <div id="noResults">
+        <div id="noResults" style="display:none;">
             <i class="fas fa-search" aria-hidden="true"></i>
             <h2>Nenhuma publica&ccedil;&atilde;o encontrada</h2>
             <p id="noResultsMessage">Nenhuma publicação corresponde à busca. Revise os termos ou consulte os módulos do KinoCampus.</p>
@@ -891,7 +909,7 @@
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.4"></script>
-    <script defer src="assets/js/features/kc-search.js?v=8.6.16"></script>
+    <script defer src="assets/js/features/kc-search.js?v=8.6.17"></script>
     <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
 </body>
 
