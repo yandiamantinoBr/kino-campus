@@ -15,7 +15,7 @@
 //   { action: "capabilities" }              -> contrato read-only do endpoint
 //   { action: "publish", item, options? }   -> cria post + capa
 //   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
-//   { action: "edit", postId, fields?, metadata?, image?, images? } -> edita
+//   { action: "edit", postId, fields?, metadata?, userTags?, tags?, image?, images? } -> edita
 //   { action: "list", filters? }            -> lista posts do Cadu (filtra)
 //   { action: "check", sourceUrl?, sourceId? } -> dedup (ja postado?)
 //
@@ -638,7 +638,16 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
     return json(422, { ok: false, code: "VALIDATION_FAILED", message: validation.errors.join(" "), validation });
   }
 
-  const mapped = mapItemToPost(item, { runId: options.runId });
+  let mapped: ReturnType<typeof mapItemToPost>;
+  try {
+    mapped = mapItemToPost(item, { runId: options.runId });
+  } catch (error) {
+    return json(422, {
+      ok: false,
+      code: "VALIDATION_FAILED",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   // Dedup: nao republica o mesmo source_id/source_url.
   const existing = await findExisting(admin, userId, mapped.dedup.sourceId, mapped.dedup.sourceUrl);
@@ -943,8 +952,20 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
     update.category = categoryKey;
   }
 
-  const hasMetadataPatch = !!body.metadata && typeof body.metadata === "object" &&
-    !Array.isArray(body.metadata);
+  const rawMetadataPatch = !!body.metadata && typeof body.metadata === "object" &&
+    !Array.isArray(body.metadata)
+    ? body.metadata as Record<string, unknown>
+    : null;
+  const topLevelTagsPatch = Object.fromEntries(
+    ["userTags", "userTagKeys", "user_tags", "user_tag_keys", "tags", "tagKeys"]
+      .filter((key) => Object.prototype.hasOwnProperty.call(body, key))
+      .map((key) => [key, body[key]]),
+  );
+  const hasTopLevelTagsPatch = Object.keys(topLevelTagsPatch).length > 0;
+  const hasMetadataPatch = !!rawMetadataPatch || hasTopLevelTagsPatch;
+  const metadataPatch = hasMetadataPatch
+    ? { ...(rawMetadataPatch || {}), ...topLevelTagsPatch }
+    : null;
   if (hasMetadataPatch || update.category !== undefined) {
     try {
       const taxonomy = buildTaxonomyEditPatch(
@@ -952,7 +973,7 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
         current.category,
         categoryKey,
         current.metadata || {},
-        hasMetadataPatch ? body.metadata as Record<string, unknown> : null,
+        metadataPatch,
       );
       update.metadata = taxonomy.metadata;
     } catch (error) {
