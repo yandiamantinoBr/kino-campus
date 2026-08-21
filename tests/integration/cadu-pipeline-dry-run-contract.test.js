@@ -45,6 +45,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
   const pipelineRealRunApprovalGated = extractFunction('pipelineRealRunApprovalGated');
   const lockPipelineActionButtons = extractFunction('lockPipelineActionButtons');
   const isSafePipelineRunId = extractFunction('isSafePipelineRunId');
+  const pipelineRunIsActive = extractFunction('pipelineRunIsActive');
   const normalizePipelineStage = Function(
     `"use strict";
      const isSafePipelineStageId = ${extractFunctionSource('isSafePipelineStageId')};
@@ -63,6 +64,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
      const PIPELINE_SNAPSHOT_TTL_MS = 15000;
      const isSafePipelineStageId = ${extractFunctionSource('isSafePipelineStageId')};
      const isSafePipelineRunId = ${extractFunctionSource('isSafePipelineRunId')};
+     const pipelineRunIsActive = ${extractFunctionSource('pipelineRunIsActive')};
      const normalizePipelineRun = ${extractFunctionSource('normalizePipelineRun')};
      const normalizePipelineStringList = ${extractFunctionSource('normalizePipelineStringList')};
      const normalizePipelineCheck = ${extractFunctionSource('normalizePipelineCheck')};
@@ -287,6 +289,17 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(isSafePipelineRunId('legacy-run_1')).toBe(true);
     expect(isSafePipelineRunId('run.with.dot')).toBe(false);
     expect(isSafePipelineRunId('run:with:colon')).toBe(false);
+  });
+
+  test('keeps every backend-active state observable until the run is terminal', () => {
+    expect(pipelineRunIsActive({ status: 'pending' })).toBe(true);
+    expect(pipelineRunIsActive({ status: 'running' })).toBe(true);
+    expect(pipelineRunIsActive({ status: 'stopping' })).toBe(true);
+    expect(pipelineRunIsActive({ status: 'finished' })).toBe(false);
+    expect(pipelineRunIsActive({ status: 'success' })).toBe(false);
+    expect(pipelineRunIsActive(null)).toBe(false);
+    expect(controller).toContain('if (pipelineRunIsActive(state.pipelineActive))');
+    expect(controller).toContain("state.pipelineActive.status !== 'running' || shouldUsePipelineLogPolling(state.pipelineActive)");
   });
 
   test('stages preserve live gating for signed publish approvals', () => {

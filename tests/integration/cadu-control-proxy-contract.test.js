@@ -484,6 +484,31 @@ describe('strict Cadu control-plane proxy runtime', () => {
     });
     expect(JSON.stringify(previewRes.body)).not.toContain('preview report path');
     expect(JSON.stringify(previewRes.body)).not.toContain('service-secret');
+
+    global.fetch.mockResolvedValueOnce(upstreamResponse({
+      status: 412,
+      body: JSON.stringify({
+        detail: {
+          code: 'all_dry_run_required',
+          message: 'fresh dry-run evidence path',
+          token: 'service-secret',
+        },
+      }),
+    }));
+    const allReq = request({ method: 'POST', path: 'run/real', body: { stage: 'all' } });
+    const allRes = response();
+
+    await pipelineHandler(allReq, allRes);
+
+    expect(allRes.statusCode).toBe(412);
+    expect(allRes.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 412,
+      detail: { code: 'all_dry_run_required' },
+    });
+    expect(JSON.stringify(allRes.body)).not.toContain('fresh dry-run evidence path');
+    expect(JSON.stringify(allRes.body)).not.toContain('service-secret');
   });
 
   test('drops known pipeline codes when returned with the wrong status', async () => {

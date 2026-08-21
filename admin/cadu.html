@@ -358,7 +358,9 @@
     .kc-pipeline-stage__btn:disabled { background: rgba(255,107,0,.3); cursor: not-allowed; }
     .kc-pipeline-stage__btn.is-danger { background: rgba(239,68,68,.85); }
     .kc-pipeline-active-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; margin-bottom: 10px; min-width: 0; }
+    .kc-pipeline-active-card.is-pending { border-color: rgba(148,163,184,.55); border-style: dashed; }
     .kc-pipeline-active-card.is-running { border-color: rgba(255,107,0,.45); box-shadow: 0 0 0 1px rgba(255,107,0,.18); }
+    .kc-pipeline-active-card.is-stopping { border-color: rgba(245,158,11,.55); border-style: dashed; }
     .kc-pipeline-active-card.is-failed { border-color: rgba(239,68,68,.45); }
     .kc-pipeline-active-card.is-success { border-color: rgba(16,185,129,.45); }
     .kc-pipeline-active-card.is-partial { border-color: rgba(245,158,11,.5); }
@@ -388,7 +390,9 @@
     .kc-pipeline-log .kc-log-line--err { color: #f87171; }
     .kc-pipeline-log .kc-log-line--ok { color: #34d399; }
     .kc-pipeline-status-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); display: inline-block; margin-left: 6px; vertical-align: middle; transition: background .15s; }
+    .kc-pipeline-status-dot.is-pending { background: #94a3b8; }
     .kc-pipeline-status-dot.is-running { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.18); animation: kc-pulse 1.4s infinite; }
+    .kc-pipeline-status-dot.is-stopping { background: #f59e0b; }
     .kc-pipeline-status-dot.is-success { background: #10b981; }
     .kc-pipeline-status-dot.is-partial { background: #f59e0b; }
     .kc-pipeline-status-dot.is-finished { background: #94a3b8; }
@@ -1447,6 +1451,6 @@
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=e976ab67bb31a47a"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=8a10b5024c361a7e"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=b9412b90d72aaf2a"></script>
 </body>
 </html>

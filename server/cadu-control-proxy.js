@@ -21,6 +21,7 @@ const AGENT_SEND_TIMEOUT_MS = 285_000;
 const SSE_TIMEOUT_MS = 285_000;
 const SAFE_UPSTREAM_ERROR_STATUS = new Map([
   ['dedup_preview_required', 412],
+  ['all_dry_run_required', 412],
   ['pipeline_runtime_busy', 409],
 ]);
 
