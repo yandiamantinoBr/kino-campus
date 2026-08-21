@@ -472,6 +472,12 @@ class PublishRequest(BaseModel):
     tier: Optional[str] = Field(None, max_length=4)
     category: Optional[str] = Field(None, max_length=80)
     source: Optional[str] = Field("cadu-admin", max_length=40)
+    # Canonical extra tags. The old pair is accepted only as an input alias so
+    # existing admin/API callers keep working during the Edge Function rollout.
+    userTags: Optional[list[str]] = None
+    userTagKeys: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
+    tagKeys: Optional[list[str]] = None
 
 
 def _validate_review_multiline_input(value: Optional[str], field_name: str) -> Optional[str]:
@@ -482,6 +488,96 @@ def _validate_review_multiline_input(value: Optional[str], field_name: str) -> O
     ):
         raise ValueError(f"{field_name} contains unsupported control characters")
     return value
+
+
+MAX_CADU_USER_TAGS = 12
+
+
+def _normalize_cadu_user_tag_text(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    text = unicodedata.normalize("NFKC", value)
+    text = re.sub(r"^(?:🏷️?\s*)+", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _cadu_user_tag_key(value: object) -> str:
+    text = _normalize_cadu_user_tag_text(value)
+    decomposed = unicodedata.normalize("NFKD", text)
+    ascii_text = "".join(
+        character for character in decomposed if not unicodedata.combining(character)
+    ).casefold()
+    return re.sub(r"^-+|-+$", "", re.sub(r"[^a-z0-9]+", "-", ascii_text))
+
+
+def _cadu_user_tag_label_from_key(value: object) -> str:
+    return _normalize_cadu_user_tag_text(value).replace("-", " ").replace("_", " ").strip()
+
+
+def _cadu_publish_user_tags(req: PublishRequest) -> dict[str, list[str]]:
+    """Return one canonical free-tag pair plus legacy aliases for older Edge builds."""
+    use_canonical = req.userTags is not None or req.userTagKeys is not None
+    labels = req.userTags if use_canonical else req.tags
+    supplied_keys = req.userTagKeys if use_canonical else req.tagKeys
+    labels = labels if isinstance(labels, list) else []
+    supplied_keys = supplied_keys if isinstance(supplied_keys, list) else []
+    automatic_keys = {
+        _cadu_user_tag_key(value)
+        for value in (
+            "ufg",
+            "site-institucional",
+            "tier-na",
+            "oportunidades",
+            "monitoria",
+            req.category,
+            req.source,
+            f"tier-{req.tier}" if req.tier else "",
+        )
+        if _cadu_user_tag_key(value)
+    }
+    pairs: dict[str, str] = {}
+
+    def append_pair(key: str, candidate_label: str) -> None:
+        if (
+            not key
+            or not candidate_label
+            or len(candidate_label) > 60
+            or key in automatic_keys
+            or key.startswith("tier-")
+        ):
+            return
+        pairs.setdefault(key, candidate_label)
+
+    for index in range(max(len(labels), len(supplied_keys))):
+        label = _normalize_cadu_user_tag_text(labels[index] if index < len(labels) else "")
+        key_source = supplied_keys[index] if index < len(supplied_keys) else ""
+        supplied_key = _cadu_user_tag_key(key_source)
+        label_key = _cadu_user_tag_key(label)
+
+        if use_canonical:
+            canonical_label = label or _cadu_user_tag_label_from_key(key_source)
+            append_pair(_cadu_user_tag_key(canonical_label), canonical_label)
+            continue
+        # Legacy tag/tagKey arrays occasionally pair a taxonomy label with an
+        # independent key. Preserve that independent half during migration.
+        append_pair(label_key, label)
+        if not label or label_key in automatic_keys or label_key.startswith("tier-"):
+            append_pair(supplied_key, _cadu_user_tag_label_from_key(key_source))
+    if len(pairs) > MAX_CADU_USER_TAGS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"At most {MAX_CADU_USER_TAGS} additional tags are allowed",
+        )
+    tag_keys = list(pairs)
+    tag_labels = [pairs[key] for key in tag_keys]
+    return {
+        "userTags": tag_labels,
+        "userTagKeys": tag_keys,
+        # Compatibility aliases are intentionally the same free-form pair,
+        # never fabricated category/source/tier facets.
+        "tags": tag_labels,
+        "tagKeys": tag_keys,
+    }
 
 
 class InstitutionalReviewRequest(BaseModel):
@@ -1778,6 +1874,7 @@ def call_kinocampus_publish(req: PublishRequest) -> PublishResponse:
          TELEGRAM_CHAT_ID do admin. Requer ambos configurados.
       3. sem integração: registra a tentativa para auditoria e falha 503.
     """
+    user_tags = _cadu_publish_user_tags(req)
     payload = {
         "name": req.name,
         "url": req.url,
@@ -1828,6 +1925,9 @@ def call_kinocampus_publish(req: PublishRequest) -> PublishResponse:
                 "action": "publish",
                 "item": {
                     "module": "oportunidades",
+                    # req.category classifies the institutional source; the
+                    # Kino post itself needs a valid automatic taxonomy key.
+                    "category": "monitoria",
                     "type": "monitoria",
                     "title": req.name,
                     "description": build_site_description(req),
@@ -1836,7 +1936,7 @@ def call_kinocampus_publish(req: PublishRequest) -> PublishResponse:
                     "actionLabel": "Visitar site",
                     "source": req.source or "cadu-admin",
                     "sourceUrl": req.url,
-                    "tags": ["ufg", "site-institucional", req.category or "outros", f"tier-{req.tier}" if req.tier else "tier-na"],
+                    **user_tags,
                     "visibility": "public",
                 },
                 "options": {"cadu_bot": True},
@@ -6083,4 +6183,3 @@ async def admin_redeploy():
     _retired_admin_capability(
         "in-container redeploy disabled; host git-sync is the only deployment authority",
     )
-
