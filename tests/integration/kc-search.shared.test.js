@@ -126,6 +126,19 @@ describe('KCSearchShared', () => {
       expect(results.map((post) => post.id)).toEqual(['user-tag-only']);
     });
 
+    test('mantém tags históricas pesquisáveis enquanto o backfill ainda não alcançou uma linha', () => {
+      const results = SearchShared.searchCollection([{
+        id: 'legacy-tags-only',
+        title: 'Edital institucional',
+        module: 'oportunidades',
+        metadata: {
+          tags: ['Direito', 'Concursos', 'UFG', 'institutoverbena', 'Presencial'],
+          tagKeys: ['direito', 'concursos', 'ufg', 'institutoverbena', 'presencial'],
+        },
+      }], { q: 'institutoverbena', limit: 10 });
+      expect(results.map((post) => post.id)).toEqual(['legacy-tags-only']);
+    });
+
     test('supports accent-insensitive matching on subcategory', () => {
       const results = SearchShared.searchCollection(posts, { q: 'matematica', limit: 10 });
       expect(results.map((post) => post.id)).toContain('3');

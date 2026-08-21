@@ -85,8 +85,13 @@
       meta.isClosed, meta.is_closed, meta.isExpired, meta.is_expired, meta.expired,
     ].some((value) => value === true);
     const visibility = String(r.visibility || meta.visibility || '').trim().toLowerCase() || 'public';
-    const tagLabels = Array.isArray(r.tags) ? r.tags : [];
-    const tagKeys = Array.isArray(r.tagKeys) ? r.tagKeys : (tagLabels.length ? tagLabels : []);
+    // Supabase rows keep the historical pair inside metadata.  Expose it on
+    // the normalized model as well so legacy tags survive every read/edit path
+    // while the canonical editable pair is being backfilled.
+    const tagLabels = Array.isArray(r.tags) ? r.tags : (Array.isArray(meta.tags) ? meta.tags : []);
+    const tagKeys = Array.isArray(r.tagKeys)
+      ? r.tagKeys
+      : (Array.isArray(meta.tagKeys) ? meta.tagKeys : (tagLabels.length ? tagLabels : []));
     const userTags = Array.isArray(r.userTags) ? r.userTags : (Array.isArray(meta.userTags) ? meta.userTags : []);
     const userTagKeys = Array.isArray(r.userTagKeys) ? r.userTagKeys : (Array.isArray(meta.userTagKeys) ? meta.userTagKeys : userTags);
     const ratingRaw = (r.rating != null)

@@ -103,7 +103,7 @@
       required: false,
       maxItems: isAdmin ? 12 : 6,
       maxLength: 60,
-      hint: 'Adicione termos que ajudam a encontrar esta publicação. Categorias, tipos e características acima não contam neste limite.',
+      hint: 'Adicione termos que ajudam a encontrar esta publicação. As classificações acima continuam separadas; em edições, tags históricas aparecem aqui para serem preservadas ou alteradas.',
     });
 
     if (moduleKey === 'compra-venda') {

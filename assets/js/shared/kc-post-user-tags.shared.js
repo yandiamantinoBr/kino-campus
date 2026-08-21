@@ -1,8 +1,9 @@
 /*
   KinoCampus - contract for user-managed post tags.
 
-  `tags` / `tagKeys` remain the automatic taxonomy surface. This module owns
-  only the additional, explicitly user-managed pair:
+  `tags` / `tagKeys` are the historical compatibility surface. They may mix
+  old human labels and taxonomy generated before the editable contract
+  existed. This module owns the canonical, explicitly user-managed pair:
   `metadata.userTags` / `metadata.userTagKeys`.
 
   It is intentionally UMD so browser flows, Node-based Cadu tooling and Jest
@@ -25,6 +26,10 @@
 
   function isPlainObject(value) {
     return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function hasOwn(value, key) {
+    return isPlainObject(value) && Object.prototype.hasOwnProperty.call(value, key);
   }
 
   function normalizeWhitespace(value) {
@@ -96,6 +101,15 @@
     return isPrivileged === true ? PRIVILEGED_LIMIT : STANDARD_LIMIT;
   }
 
+  function sameTags(left, right) {
+    var leftNormalized = normalize(left).tags;
+    var rightNormalized = normalize(right).tags;
+    if (leftNormalized.length !== rightNormalized.length) return false;
+    return leftNormalized.every(function (tag, index) {
+      return tag === rightNormalized[index];
+    });
+  }
+
   function validate(input, options) {
     var opts = options || {};
     var normalized = normalize(input);
@@ -103,7 +117,9 @@
       ? Math.max(0, Math.floor(Number(opts.limit)))
       : limitFor(opts.isPrivileged === true);
     var errors = normalized.errors.slice();
-    if (normalized.tags.length > limit) {
+    var preservesExistingOverflow = opts.allowExistingOverflow === true
+      && sameTags(normalized.tags, opts.initialTags);
+    if (normalized.tags.length > limit && !preservesExistingOverflow) {
       errors.push({
         code: 'TOO_MANY_TAGS',
         message: 'Você pode adicionar no máximo ' + limit + ' tags adicionais nesta publicação.',
@@ -116,6 +132,7 @@
       tagKeys: normalized.tagKeys,
       errors: errors,
       limit: limit,
+      preservesExistingOverflow: preservesExistingOverflow,
     };
   }
 
@@ -137,16 +154,66 @@
   function read(post) {
     var source = isPlainObject(post) ? post : {};
     var metadata = isPlainObject(source.metadata) ? source.metadata : {};
-    var candidates = [
-      source[USER_TAGS_KEY],
-      metadata[USER_TAGS_KEY],
-      source.user_tags,
-      metadata.user_tags,
+    // The persisted metadata is authoritative.  Some read adapters flatten
+    // missing userTags as top-level [], so an empty synthetic convenience
+    // field must not hide metadata.tags on an old row.
+    var metadataCanonicalCandidates = [
+      [metadata, USER_TAGS_KEY],
+      [metadata, 'user_tags'],
     ];
-    for (var index = 0; index < candidates.length; index += 1) {
-      if (Array.isArray(candidates[index])) return normalize(candidates[index]);
+    for (var index = 0; index < metadataCanonicalCandidates.length; index += 1) {
+      var holder = metadataCanonicalCandidates[index][0];
+      var key = metadataCanonicalCandidates[index][1];
+      if (!hasOwn(holder, key)) continue;
+      var canonical = normalize(holder[key]);
+      canonical.source = 'canonical';
+      canonical.isLegacy = false;
+      return canonical;
     }
-    return normalize([]);
+
+    var hasLegacySurface = hasOwn(metadata, 'tags') || hasOwn(source, 'tags');
+    var deferredTopLevelCanonical = null;
+    var topLevelCanonicalCandidates = [
+      [source, USER_TAGS_KEY],
+      [source, 'user_tags'],
+    ];
+    for (var topLevelIndex = 0; topLevelIndex < topLevelCanonicalCandidates.length; topLevelIndex += 1) {
+      var topLevelHolder = topLevelCanonicalCandidates[topLevelIndex][0];
+      var topLevelKey = topLevelCanonicalCandidates[topLevelIndex][1];
+      if (!hasOwn(topLevelHolder, topLevelKey)) continue;
+      var topLevelCanonical = normalize(topLevelHolder[topLevelKey]);
+      topLevelCanonical.source = 'canonical';
+      topLevelCanonical.isLegacy = false;
+      if (topLevelCanonical.tags.length || !hasLegacySurface) return topLevelCanonical;
+      // Keep a true explicit clear as a last resort, after giving the
+      // historical metadata pair a chance to be displayed by old adapters.
+      deferredTopLevelCanonical = topLevelCanonical;
+    }
+
+    // Historical posts only had `tags`/`tagKeys`.  Prefer the visible labels
+    // and use this read-only fallback until the database backfill has written
+    // the canonical pair.  An explicit userTags: [] above deliberately wins
+    // and therefore remains a real clear action.
+    var legacyCandidates = [
+      [source, 'tags'],
+      [metadata, 'tags'],
+    ];
+    for (var legacyIndex = 0; legacyIndex < legacyCandidates.length; legacyIndex += 1) {
+      var legacyHolder = legacyCandidates[legacyIndex][0];
+      var legacyKey = legacyCandidates[legacyIndex][1];
+      if (!hasOwn(legacyHolder, legacyKey)) continue;
+      var legacy = normalize(legacyHolder[legacyKey]);
+      legacy.source = 'legacy';
+      legacy.isLegacy = true;
+      return legacy;
+    }
+
+    if (deferredTopLevelCanonical) return deferredTopLevelCanonical;
+
+    var empty = normalize([]);
+    empty.source = 'none';
+    empty.isLegacy = false;
+    return empty;
   }
 
   function metadataPatch(input, options) {
@@ -169,6 +236,7 @@
     parseText: parseText,
     normalize: normalize,
     limitFor: limitFor,
+    sameTags: sameTags,
     validate: validate,
     parseSerialized: parseSerialized,
     serialize: serialize,

@@ -56,7 +56,8 @@ describe('contrato de tags adicionais de post', () => {
     expect(render).toContain('data-kc-user-tags-field');
     expect(render).toContain('data-kc-user-tag-add');
     expect(core).toContain('data-kc-user-tags-value');
-    expect(core).toContain('KCPostUserTags.read(post).tags');
+    expect(core).toContain('window.KCPostUserTags.read(post)');
+    expect(core).toContain('initialUserTags');
     expect(submit).toContain('userTagsApi.validate');
     expect(submit).toContain('userTags: userTagsResult.tags');
     expect(submit).toContain('userTagKeys: userTagsResult.tagKeys');

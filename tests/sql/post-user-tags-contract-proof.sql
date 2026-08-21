@@ -235,5 +235,83 @@ begin
 end;
 $$;
 
+-- Historical rows may have been imported with seven or more labels.  A title
+-- or description correction must still succeed, while any active tag change
+-- has to reduce the list to the ordinary six-tag ceiling.
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
+
+alter table public.posts disable trigger user;
+insert into public.posts (
+  id, author_id, title, description, module, category, status, visibility, metadata
+) values (
+  'a1000000-0000-0000-0000-000000000003',
+  '11111111-1111-1111-1111-111111111111',
+  'Lista histórica com sete tags', 'Importada sem truncamento.',
+  'oportunidades', 'estagios', 'published', 'public',
+  jsonb_build_object(
+    'tags', jsonb_build_array('Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete'),
+    'tagKeys', jsonb_build_array('um', 'dois', 'tres', 'quatro', 'cinco', 'seis', 'sete'),
+    'userTags', jsonb_build_array('Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete'),
+    'userTagKeys', jsonb_build_array('um', 'dois', 'tres', 'quatro', 'cinco', 'seis', 'sete')
+  )
+);
+alter table public.posts enable trigger user;
+
+update public.posts
+set description = 'Correção não relacionada às tags históricas.'
+where id = 'a1000000-0000-0000-0000-000000000003';
+
+do $$
+declare
+  v_metadata jsonb;
+begin
+  select metadata into v_metadata
+  from public.posts
+  where id = 'a1000000-0000-0000-0000-000000000003';
+
+  if jsonb_array_length(v_metadata->'userTags') <> 7 then
+    raise exception 'historical user tags were not preserved on unrelated edit: %', v_metadata;
+  end if;
+
+  begin
+    update public.posts
+    set metadata = metadata || jsonb_build_object(
+      'userTags', jsonb_build_array('Um', 'Dois', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito')
+    )
+    where id = 'a1000000-0000-0000-0000-000000000003';
+    raise exception 'historical overflow mutation unexpectedly succeeded';
+  exception when sqlstate '22023' then
+    if SQLERRM <> 'post_user_tag_limit_exceeded' then raise; end if;
+  end;
+end;
+$$;
+
+-- A copied label must not appear twice in the indexed search text.
+do $$
+declare
+  v_tags_text text;
+  v_feed_text text;
+begin
+  v_tags_text := public.kc_posts_search_tags_text(jsonb_build_object(
+    'tags', jsonb_build_array('Duplicada'),
+    'tagKeys', jsonb_build_array('duplicada'),
+    'userTags', jsonb_build_array('Duplicada'),
+    'userTagKeys', jsonb_build_array('duplicada')
+  ));
+  v_feed_text := public.kc_posts_feed_metadata_search_text(jsonb_build_object(
+    'tags', jsonb_build_array('Duplicada'),
+    'tagKeys', jsonb_build_array('duplicada'),
+    'userTags', jsonb_build_array('Duplicada'),
+    'userTagKeys', jsonb_build_array('duplicada')
+  ));
+
+  if v_tags_text <> 'Duplicada'
+     or (length(lower(v_feed_text)) - length(replace(lower(v_feed_text), 'duplicada', ''))) / length('duplicada') <> 1 then
+    raise exception 'legacy/canonical tag copy inflated search text: tags=% feed=%', v_tags_text, v_feed_text;
+  end if;
+end;
+$$;
+
 rollback;
 \echo 'KC_PROOF post_user_tags=pass transaction_rollback=pass'
