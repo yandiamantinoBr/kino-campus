@@ -188,6 +188,19 @@ describe('kc-scroll-rail', () => {
     expect(scrollEl.scrollBy).toHaveBeenCalledWith({ left: 210, behavior: 'smooth' });
   });
 
+  test('mede o overflow pelo fallback quando o frame de animação é adiado', () => {
+    const { rail, next, state } = mountRail({ scrollWidth: 300 });
+    expect(next.hidden).toBe(true);
+
+    state.scrollWidth = 600;
+    rail.__kcScrollRailUpdate();
+    expect(rafQueue).toHaveLength(1);
+
+    jest.advanceTimersByTime(120);
+    expect(rail.classList.contains('is-overflow-end')).toBe(true);
+    expect(next.hidden).toBe(false);
+  });
+
   test('ResizeObserver e MutationObserver usam subtree e agrupam medições por frame', () => {
     const { rail, scrollEl, state } = mountRail();
     const initialReads = state.offsetReads;

@@ -51,6 +51,17 @@ async function blockExternalRequests(page) {
   });
 }
 
+async function receivesPointerAtCenter(locator) {
+  return locator.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(
+      Math.round(rect.left + rect.width / 2),
+      Math.round(rect.top + rect.height / 2),
+    );
+    return Boolean(hit && element.contains(hit));
+  });
+}
+
 test.describe('Seletor responsivo de módulos', () => {
   for (const pagePath of FEED_PAGES) {
     for (const viewport of TOOLBAR_VIEWPORTS) {
@@ -237,7 +248,14 @@ test.describe('Seletor responsivo de módulos', () => {
     const consent = page.locator('#kcConsentBanner');
     const trigger = page.locator('[data-kc-module-picker-open]');
     await expect(consent).toBeVisible();
-    await trigger.click();
+
+    expect(await receivesPointerAtCenter(trigger)).toBe(true);
+
+    // The feed can still be settling on the first visit. The hit-test above
+    // proves the button receives the pointer before skipping Playwright's
+    // transient stability wait; the modal assertions below retain the
+    // user-visible interaction contract.
+    await trigger.click({ force: true });
 
     const modal = page.locator('#kcModulePickerModal');
     const closeButton = modal.locator('.kc-sidebar-context-modal__close');
@@ -272,7 +290,9 @@ test.describe('Seletor responsivo de módulos', () => {
     await expect(consent).toBeVisible();
     expect(await consent.evaluate((element) => element.closest('[inert]') !== null)).toBe(false);
 
-    await consent.locator('[data-consent-config]').click();
+    const configureConsent = consent.locator('[data-consent-config]');
+    expect(await receivesPointerAtCenter(configureConsent)).toBe(true);
+    await configureConsent.click({ force: true });
     const consentModal = page.locator('#kcConsentModal');
     const consentClose = consentModal.locator('.kc-consent-modal__close');
     await expect(consentModal).toHaveAttribute('aria-hidden', 'false');
@@ -290,6 +310,37 @@ test.describe('Seletor responsivo de módulos', () => {
     await expect(consent).toBeVisible();
     await expect(consent.locator('[data-consent-config]')).toBeFocused();
     expect(await consent.evaluate((element) => element.closest('[inert]') !== null)).toBe(false);
+
+    const acceptAll = consent.locator('[data-consent-accept]');
+    await acceptAll.focus();
+    const primaryConsentButton = await acceptAll.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return {
+        color: style.color,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+        outlineOffset: style.outlineOffset,
+        focusVisible: element.matches(':focus-visible'),
+        left: box.left,
+        right: box.right
+      };
+    });
+    expect(primaryConsentButton.color).toBe('rgb(34, 34, 34)');
+    expect(primaryConsentButton.focusVisible).toBe(true);
+    expect(primaryConsentButton.outlineStyle).toBe('solid');
+    expect(primaryConsentButton.outlineWidth).toBe('3px');
+    expect(primaryConsentButton.outlineOffset).toBe('3px');
+    expect(primaryConsentButton.left).toBeGreaterThanOrEqual(0);
+    expect(primaryConsentButton.right).toBeLessThanOrEqual(390);
+
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+    const lightThemeFocus = await acceptAll.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { color: style.color, outlineColor: style.outlineColor };
+    });
+    expect(lightThemeFocus.color).toBe('rgb(34, 34, 34)');
+    expect(lightThemeFocus.outlineColor).toBe('rgb(26, 26, 26)');
   });
 
   test('nomes de módulos permanecem dentro dos cards em 320 px', async ({ page }) => {

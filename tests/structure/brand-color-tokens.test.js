@@ -13,6 +13,22 @@ const CSS = fs.readFileSync(
   'utf8'
 );
 
+function contrastRatio(first, second) {
+  const relativeLuminance = (hex) => {
+    const channels = hex.match(/[a-f\d]{2}/gi).map((channel) => Number.parseInt(channel, 16) / 255);
+    const linear = channels.map((channel) => (
+      channel <= 0.04045
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4
+    ));
+
+    return (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2]);
+  };
+  const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)].sort((a, b) => b - a);
+
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 describe('brand color tokens', () => {
   test('defines brand, bright and strong tokens in :root', () => {
     expect(CSS).toMatch(/--kc-primary-brand:\s*#FF6B00/i);
@@ -52,6 +68,16 @@ describe('brand color tokens', () => {
     expect(CSS).not.toMatch(
       /\.kc-btn-primary\s*\{\s*background:\s*var\(--kc-primary-brand-strong\)/
     );
+  });
+
+  test('consent primary keeps the brand fill with AA-safe foreground and focus', () => {
+    expect(CSS).toMatch(
+      /\.kc-consent-btn--primary\s*\{[\s\S]{0,220}?background:\s*var\(--kc-primary-brand\)[\s\S]{0,220}?color:\s*#222222/
+    );
+    expect(CSS).toMatch(
+      /\.kc-consent-btn:focus-visible\s*\{[\s\S]{0,160}?outline:\s*3px solid var\(--kc-text-dark-primary\)[\s\S]{0,160}?outline-offset:\s*3px/
+    );
+    expect(contrastRatio('#FF6B00', '#222222')).toBeGreaterThanOrEqual(4.5);
   });
 
   test('logo Campus word does not use the dark strong token on light theme', () => {
