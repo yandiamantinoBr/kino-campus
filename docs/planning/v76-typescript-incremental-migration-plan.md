@@ -2,7 +2,7 @@
 
 **Data:** 2026-08-24
 **Escopo:** decisão e roteiro técnico; nenhuma mudança de runtime, banco, deploy ou Pipeline Completa
-**Decisão atual:** **Go para pilotos TypeScript incrementais / No-Go para reescrita total e para Rust no núcleo**
+**Decisão atual:** **Go para planejamento e preparação de pilotos TypeScript incrementais; No-Go para introduzir o toolchain enquanto a política de stack vigente não for revisada explicitamente; No-Go para reescrita total e para Rust no núcleo**
 
 ## 1. Decisão
 
@@ -24,6 +24,20 @@ Não se deve iniciar conversão de código da Pipeline Completa enquanto houver 
 frente ativa alterando seu contrato de execução. Qualquer tipagem de DTOs de Cadu
 deve acontecer depois da estabilização desse fluxo, em uma PR separada.
 
+### Gate de governança da stack
+
+O guia arquitetural vigente classifica TypeScript, bundlers e transpilers como
+proibidos no frontend, inclusive quando não há alteração do JavaScript servido.
+Este roteiro não substitui essa regra: ele registra uma alternativa técnica para
+o caso de a política ser alterada de forma explícita e versionada.
+
+Até essa reconciliação, somente a Fase 0 é elegível. Não devem ser adicionados
+`typescript`, `tsconfig*.json`, um comando de typecheck, arquivos `.d.ts` ou
+comentários `@ts-check` sob a alegação de que são "somente desenvolvimento".
+Uma exceção futura precisa manter a entrega do navegador em JavaScript clássico,
+sem transpilação, bundler, alteração de URLs, ordem de scripts ou dependência de
+desenvolvimento no build da Vercel.
+
 ## 2. Evidência do repositório em 2026-08-24
 
 | Área | Evidência local | Consequência para a migração |
@@ -33,6 +47,7 @@ deve acontecer depois da estabilização desse fluxo, em uma PR separada.
 | Frontend | 33 páginas referenciam 175 arquivos em assets/js por cadeias ordenadas de scripts defer | renomear arquivos ou trocar para ESM altera ordem, globais e cache |
 | Fronteiras TypeScript existentes | Edge Functions em supabase/functions e app isolado apps/pitch-institucional | há prática TypeScript, mas em runtimes próprios |
 | API e servidor | api/package.json e server/package.json são ESM separados | cada runtime precisa de configuração própria |
+| Serviço Cadu | services/cadu-ufg-publisher é CommonJS e concentra coleta, IA, PDFs, qualidade, estado e publicação | qualquer piloto futuro fica isolado do browser e só começa após a estabilização operacional da Pipeline |
 | Testes | Jest, Playwright, LHCI e npm run check:all já existem | a migração pode ser protegida por gates que já são familiares |
 | Módulos puros | kc-search-query-parser.shared.js, kc-post-lifecycle.shared.js, kc-post-user-tags.shared.js e kc-search.shared.js usam UMD e têm testes diretos | são os primeiros candidatos seguros |
 
@@ -78,11 +93,11 @@ uma reescrita da plataforma.
 ~~~
 HTML + scripts defer existentes
           |
-          +-- UMD e globais: mesmos nomes e ordem
-          |       +-- JSDoc e declarations de contrato
+          +-- UMD e globais: mesmos nomes e ordem, JavaScript clássico
+          |       +-- JSDoc documental; typecheck somente após exceção específica
           |
-          +-- Adaptadores e APIs: DTOs compartilhados e validados
-          |       +-- TypeScript sem emissão em fatias pequenas
+          +-- Adaptadores, APIs e Cadu: runtimes Node separados
+          |       +-- projeto de tipos isolado por runtime, sem emissão e condicionado
           |
           +-- Supabase Edge Functions: TypeScript do runtime próprio
           |       +-- tipos versionados por contrato explícito
@@ -107,13 +122,20 @@ URL e o comportamento offline permanecem idênticos.
 
 **Gate:** diff somente documental e git diff --check limpo.
 
-### Fase 1 — infraestrutura de typecheck isolada
+### Fase 1 — infraestrutura de typecheck isolada (condicionada)
 
-Em uma PR própria:
+Pré-condição: uma decisão arquitetural posterior deve reconciliar explicitamente
+o guia de stack com um typecheck estritamente de desenvolvimento. Sem essa decisão,
+esta fase permanece bloqueada. Quando desbloqueada, executar em uma PR própria,
+escolhendo **um** dos dois domínios e sem criar um tsconfig global:
 
-- adicionar TypeScript apenas como dependência de desenvolvimento na raiz;
-- criar tsconfig dedicado ao typecheck público, com noEmit, allowJs e inclusão
-  explícita de poucos arquivos;
+- para um piloto de browser, adicionar TypeScript apenas como dependência de
+  desenvolvimento na raiz, depois da exceção específica para o frontend;
+- para um piloto Node/Cadu, manter dependência e configuração limitadas ao
+  serviço ou runtime correspondente, depois da estabilização da Pipeline;
+- criar configuração dedicada ao domínio escolhido, com noEmit, allowJs e
+  inclusão explícita de poucos arquivos; nunca incluir assets/js, Edge Functions
+  e o app de pitch no mesmo projeto de tipos;
 - deixar checkJs desligado globalmente e habilitá-lo arquivo a arquivo com
   comentário de verificação, evitando uma avalanche de erros legados;
 - adicionar um comando CI independente, sem substituir Jest, Playwright ou
@@ -122,7 +144,7 @@ Em uma PR própria:
 **Gate:** zero artefato JavaScript gerado; npm test, testes estruturais e cadeia de
 scripts continuam verdes; nenhuma página muda suas tags script.
 
-### Fase 2 — tipos para módulos UMD puros
+### Fase 2 — tipos para módulos UMD puros (somente com exceção do frontend)
 
 Ordem recomendada:
 
@@ -181,6 +203,9 @@ Somente quando não houver alteração concorrente no fluxo:
 
 - começar pelos JSON de artefato, resultado de preflight e funil;
 - gerar tipos a partir de schemas validados, não a partir de suposição;
+- quando houver projeto de tipos, mantê-lo separado de browser, Edge Functions e
+  pitch; iniciar por folhas puras de utilitários, XML, robots, qualidade e
+  mapeamento, nunca por runner, CLI, publisher ou jobs de sistema;
 - manter dry-run, locks, aprovação e publicação como comportamentos de runtime
   independentes do typecheck;
 - executar dry-run e análise de outcome conforme o runbook de produção.
@@ -224,7 +249,7 @@ todo o repositório são explicitamente não priorizados.
   testes, não migração de linguagem;
 - páginas HTML, Service Worker, versões de asset e configuração de cache.
 
-## 10. Primeiro ticket implementável
+## 10. Primeiro ticket implementável, após o gate de governança
 
 **Título:** chore(types): typecheck UMD contracts without changing browser delivery
 
@@ -245,6 +270,11 @@ todo o repositório são explicitamente não priorizados.
 - mudar Supabase, Vercel ou Pipeline;
 - converter controladores, páginas ou HTML.
 
+**Pré-condição não negociável:** antes de abrir esse ticket, alterar a decisão de
+stack em documento próprio e comprovar que a instalação de produção da Vercel
+continua independente de `devDependencies`. O plano, isoladamente, não autoriza
+essa mudança.
+
 **Prova de aceitação:**
 
 1. typecheck sem emissão aprovado;
@@ -255,7 +285,8 @@ todo o repositório são explicitamente não priorizados.
 
 ## 11. Próxima decisão
 
-Após a frente atual da Pipeline Completa estabilizar, revisar esta proposta com os
-resultados do primeiro piloto. O piloto só avança se encontrar defeitos reais ou
-reduzir risco de refactor sem aumentar custo de entrega. Caso contrário, manter
-JavaScript bem testado é preferível a uma migração motivada apenas por tecnologia.
+Após a frente atual da Pipeline Completa estabilizar, primeiro decidir se a regra
+de stack será revista. Apenas então revisar esta proposta com os resultados de um
+piloto. O piloto só avança se encontrar defeitos reais ou reduzir risco de
+refactor sem aumentar custo de entrega. Caso contrário, manter JavaScript bem
+testado é preferível a uma migração motivada apenas por tecnologia.
