@@ -65,6 +65,7 @@ function createRenderPipelineStages(state) {
      const pipelineRealRunApprovalGated = ${extractFunctionSource('pipelineRealRunApprovalGated')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
      const renderDedupProtectedFlow = ${extractFunctionSource('renderDedupProtectedFlow')};
+     const pipelineStageActionBlockerHtml = ${extractFunctionSource('pipelineStageActionBlockerHtml')};
      return (${extractFunctionSource('renderPipelineStages')});`
   )(
     state,
