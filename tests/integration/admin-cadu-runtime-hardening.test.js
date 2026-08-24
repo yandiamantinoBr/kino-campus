@@ -55,6 +55,35 @@ function isolatedInstitutionalReviewFunction(name, dependencies = []) {
   )();
 }
 
+function pipelineLogHarness(limit = 180) {
+  return Function(
+    'document', 'limit',
+    '"use strict";\n' +
+    'var PIPELINE_LOG_MAX_LINES = limit;\n' +
+    'function $(selector) { return document.querySelector(selector); }\n' +
+    functionSource('pipelineLogLineClass') + '\n' +
+    functionSource('appendPipelineLogEntry') + '\n' +
+    functionSource('clearPipelineLogMarkers') + '\n' +
+    functionSource('trimPipelineLogEntries') + '\n' +
+    functionSource('pipelineLogTailOverlap') + '\n' +
+    functionSource('appendLogLine') + '\n' +
+    functionSource('renderPipelineLogSnapshot') + '\n' +
+    'return { appendLogLine: appendLogLine, renderPipelineLogSnapshot: renderPipelineLogSnapshot, pipelineLogTailOverlap: pipelineLogTailOverlap };',
+  )(document, limit);
+}
+
+function pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive) {
+  return Function(
+    'apiFetch', 'confirm', 'refreshPipeline', 'alert', 'showCaduError', 'renderPipelineActive',
+    '"use strict";\n' +
+    'var state = { pipelineStopPendingRunId: null, pipelineActive: { id: "pending-stop-1", status: "pending" } };\n' +
+    functionSource('isSafePipelineRunId') + '\n' +
+    functionSource('reconcilePipelineStopRequest') + '\n' +
+    'async ' + functionSource('stopPipelineRun') + '\n' +
+    'return { state: state, stopPipelineRun: stopPipelineRun, reconcilePipelineStopRequest: reconcilePipelineStopRequest };',
+  )(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
+}
+
 function pendingReviewAuthorityHarness(apiFetchResponse) {
   return Function(
     'apiFetchResponse',
@@ -578,6 +607,72 @@ describe('admin Cadu runtime hardening', () => {
     expect(html).toContain('.kc-pipeline-history-item.is-success');
     expect(html).toContain('.kc-pipeline-history-item.is-partial');
     expect(html).toContain('.kc-pipeline-history-item.is-finished');
+  });
+
+  test('keeps the polling tail sequential, bounded, and readable without refresh-marker noise', () => {
+    document.body.innerHTML = '<div id="pipeline-log"><div class="kc-cadu-empty">Aguardando</div></div>';
+    const logBox = document.querySelector('#pipeline-log');
+    const log = pipelineLogHarness(3);
+    const pollState = { snapshotLines: null };
+    const visibleEntries = () => Array.from(
+      logBox.querySelectorAll('.kc-log-line:not([data-pipeline-log-marker])'),
+    ).map((entry) => entry.textContent);
+
+    log.renderPipelineLogSnapshot('alpha\nbeta', '[log polling] atualizado', pollState);
+    expect(pollState.snapshotLines).toEqual(['alpha', 'beta']);
+    expect(visibleEntries()).toEqual(['alpha', 'beta']);
+    expect(logBox.querySelector('[data-pipeline-log-marker]').getAttribute('aria-hidden')).toBe('true');
+
+    log.renderPipelineLogSnapshot('alpha\nbeta', '[log polling] atualizado novamente', pollState);
+    expect(visibleEntries()).toEqual(['alpha', 'beta']);
+    expect(log.pipelineLogTailOverlap(['alpha', 'beta'], ['beta', 'gamma'])).toBe(1);
+
+    log.renderPipelineLogSnapshot('beta\ngamma', '[log polling] atualizado', pollState);
+    expect(visibleEntries()).toEqual(['alpha', 'beta', 'gamma']);
+    log.renderPipelineLogSnapshot('gamma\ndelta', '[log polling] atualizado', pollState);
+    expect(visibleEntries()).toEqual(['beta', 'gamma', 'delta']);
+
+    document.body.innerHTML = '<div id="pipeline-log"></div>';
+    const scrollLogBox = document.querySelector('#pipeline-log');
+    Object.defineProperty(scrollLogBox, 'clientHeight', { configurable: true, get: () => 100 });
+    Object.defineProperty(scrollLogBox, 'scrollHeight', {
+      configurable: true,
+      get: () => scrollLogBox.querySelectorAll('.kc-log-line').length * 100,
+    });
+    const scrollLog = pipelineLogHarness(3);
+    scrollLog.renderPipelineLogSnapshot('primeira\nsegunda', '', { snapshotLines: null });
+    scrollLogBox.scrollTop = 100;
+    scrollLog.appendLogLine('terceira');
+    expect(scrollLogBox.scrollTop).toBe(300);
+  });
+
+  test('cancels pending pipeline runs once and keeps stop single-flight until state reconciliation', async () => {
+    let resolveStop;
+    const stopGate = new Promise((resolve) => { resolveStop = resolve; });
+    const apiFetch = jest.fn(() => stopGate);
+    const confirm = jest.fn(() => true);
+    const refreshPipeline = jest.fn(async () => {});
+    const alert = jest.fn();
+    const showCaduError = jest.fn();
+    const renderPipelineActive = jest.fn();
+    const pipeline = pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
+
+    const firstStop = pipeline.stopPipelineRun('pending-stop-1');
+    const duplicateStop = pipeline.stopPipelineRun('pending-stop-1');
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledWith('/api/cadu/pipeline/pending-stop-1/stop', { method: 'POST' });
+    expect(pipeline.state.pipelineStopPendingRunId).toBe('pending-stop-1');
+
+    resolveStop({ ok: true });
+    await Promise.all([firstStop, duplicateStop]);
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(pipeline.state.pipelineStopPendingRunId).toBe('pending-stop-1');
+    expect(pipeline.reconcilePipelineStopRequest({ id: 'pending-stop-1', status: 'running' })).toBe(false);
+    expect(pipeline.reconcilePipelineStopRequest({ id: 'pending-stop-1', status: 'stopping' })).toBe(true);
+    expect(pipeline.state.pipelineStopPendingRunId).toBeNull();
+    expect(alert).not.toHaveBeenCalled();
+    expect(showCaduError).not.toHaveBeenCalled();
   });
 
   test('rejects pipeline HTTP error envelopes and keeps the run modal accessible in every state', () => {
