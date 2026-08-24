@@ -298,8 +298,9 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(pipelineRunIsActive({ status: 'finished' })).toBe(false);
     expect(pipelineRunIsActive({ status: 'success' })).toBe(false);
     expect(pipelineRunIsActive(null)).toBe(false);
-    expect(controller).toContain('if (pipelineRunIsActive(state.pipelineActive))');
-    expect(controller).toContain("state.pipelineActive.status !== 'running' || shouldUsePipelineLogPolling(state.pipelineActive)");
+    expect(controller).toContain('function reconcilePipelineLogTransport(active)');
+    expect(controller).toContain('if (pipelineRunIsActive(active))');
+    expect(controller).toContain("active.status !== 'running' || shouldUsePipelineLogPolling(active)");
   });
 
   test('stages preserve live gating for signed publish approvals', () => {

@@ -139,7 +139,9 @@ describe('admin Cadu UX contracts', () => {
 
   test('keeps queued and stopping pipeline runs visible without relying on motion', () => {
     expect(controller).toContain('function pipelineRunIsActive(run)');
-    expect(controller).toContain('if (pipelineRunIsActive(state.pipelineActive))');
+    expect(controller).toContain('function reconcilePipelineLogTransport(active)');
+    expect(controller).toContain('if (pipelineRunIsActive(active))');
+    expect(controller).toContain('reconcilePipelineLogTransport(state.pipelineActive);');
     expect(controller).toContain("var active = pipelineRunIsActive(status.active_run);");
     expect(html).toContain('.kc-pipeline-active-card.is-pending');
     expect(html).toContain('.kc-pipeline-active-card.is-stopping');

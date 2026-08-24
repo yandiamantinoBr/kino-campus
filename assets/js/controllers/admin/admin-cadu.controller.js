@@ -5891,6 +5891,24 @@
     state.pipelineExpiryTimer = setTimeout(expirePipelineControl, Math.max(0, expiresAt - Date.now() + 1));
   }
 
+  function reconcilePipelineLogTransport(active) {
+    // A validade do contrato de controle só libera ações; o acompanhamento de
+    // um run já existente continua seguro quando sua forma foi normalizada.
+    if (pipelineRunIsActive(active)) {
+      if (active.status !== 'running' || shouldUsePipelineLogPolling(active)) {
+        connectPipelineLogPolling(active.id);
+      } else {
+        stopPipelineLogPolling();
+        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== active.id) {
+          connectPipelineStream(active.id);
+        }
+      }
+      return;
+    }
+    disconnectPipelineStream();
+    stopPipelineLogPolling();
+  }
+
   async function performPipelineRefresh() {
     var requestGeneration = ++state.pipelineRequestGeneration;
     var status = await apiFetch('/api/cadu/pipeline', { timeoutMs: 5000 });
@@ -5908,12 +5926,18 @@
       state.pipelineHistory = Array.isArray(status.history)
         ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
         : [];
-      renderPipelineStages(state.pipelineStages);
-      renderPipelineActive(state.pipelineActive);
-      renderPipelineHistory(state.pipelineHistory);
-      updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
-      if (status.health) renderPipelineHealth(status.health);
-      else refreshPipelineHealth();
+      try {
+        renderPipelineStages(state.pipelineStages);
+        renderPipelineActive(state.pipelineActive);
+        renderPipelineHistory(state.pipelineHistory);
+        updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
+        if (status.health) renderPipelineHealth(status.health);
+        else refreshPipelineHealth();
+      } finally {
+        // Even if presentation fails, a stale run transport must not survive
+        // an authoritative active_run update from the rejected control snapshot.
+        reconcilePipelineLogTransport(state.pipelineActive);
+      }
       return;
     }
     var normalizedStages = validation.stages;
@@ -5950,22 +5974,7 @@
       return;
     }
 
-    // Pending e stopping ainda são estados ativos no contrato. Enquanto a
-    // execução não está em running, usa polling autenticado: o stream pode
-    // ainda não ter sido aberto (pending) ou estar sendo fechado (stopping).
-    if (pipelineRunIsActive(state.pipelineActive)) {
-      if (state.pipelineActive.status !== 'running' || shouldUsePipelineLogPolling(state.pipelineActive)) {
-        connectPipelineLogPolling(state.pipelineActive.id);
-      } else {
-        stopPipelineLogPolling();
-        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== state.pipelineActive.id) {
-          connectPipelineStream(state.pipelineActive.id);
-        }
-      }
-    } else {
-      disconnectPipelineStream();
-      stopPipelineLogPolling();
-    }
+    reconcilePipelineLogTransport(state.pipelineActive);
   }
 
   function refreshPipeline(options) {
