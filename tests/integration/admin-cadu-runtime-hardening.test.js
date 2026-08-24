@@ -84,6 +84,32 @@ function pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCadu
   )(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
 }
 
+function pipelineStageRenderHarness() {
+  return Function(
+    'document',
+    '"use strict";\n' +
+    'var state = { pipelineControlReason: "", pipelineCapabilities: { explicit_dry_run: true, explicit_run_mode_routes: true }, pipelineStartPending: false };\n' +
+    'function $(selector) { return document.querySelector(selector); }\n' +
+    'function $$(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }\n' +
+    'function pipelineControlIsReady() { return true; }\n' +
+    'function pipelineRunDisplayStatus() { return "success"; }\n' +
+    'function pipelineStatusLabel(status) { return status; }\n' +
+    'function fmtAgo() { return "agora"; }\n' +
+    'function pipelineStageActionModes() { return [{ dryRun: true, label: "Simular", danger: false }, { dryRun: false, label: "Executar real", danger: true }]; }\n' +
+    'function pipelineStageModePrecondition() { return null; }\n' +
+    'function pipelineRealRunApprovalGated(stage, dryRun) { return dryRun === false && stage.live_enabled === false; }\n' +
+    'function renderStagePreflight() { return ""; }\n' +
+    'function renderDedupProtectedFlow() { return ""; }\n' +
+    'function renderRunSummary() { return ""; }\n' +
+    'function categoryIcon() { return "fa-gear"; }\n' +
+    'function runPipelineStage() {}\n' +
+    functionSource('escapeHtml') + '\n' +
+    functionSource('pipelineStageActionBlockerHtml') + '\n' +
+    functionSource('renderPipelineStages') + '\n' +
+    'return { renderPipelineStages: renderPipelineStages, state: state };',
+  )(document);
+}
+
 function pendingReviewAuthorityHarness(apiFetchResponse) {
   return Function(
     'apiFetchResponse',
@@ -644,6 +670,45 @@ describe('admin Cadu runtime hardening', () => {
     scrollLogBox.scrollTop = 100;
     scrollLog.appendLogLine('terceira');
     expect(scrollLogBox.scrollTop).toBe(300);
+  });
+
+  test('renders escaped, deduplicated explanations for disabled Pipeline actions', () => {
+    const renderBlocker = isolatedFunction('pipelineStageActionBlockerHtml', ['escapeHtml']);
+    expect(renderBlocker('pipeline-stage-blocker-test', [
+      { label: 'Executar real', detail: 'aprovação <assinada> obrigatória' },
+      { label: 'Executar real', detail: 'aprovação <assinada> obrigatória' },
+      { label: 'Simular', detail: 'prévia expirada' },
+    ])).toBe(
+      '<div class="kc-pipeline-stage__blocker" id="pipeline-stage-blocker-test" role="note">' +
+      '<i class="fas fa-circle-info" aria-hidden="true"></i><span><strong>Ações indisponíveis:</strong> ' +
+      'Executar real: aprovação &lt;assinada&gt; obrigatória · Simular: prévia expirada</span></div>'
+    );
+    expect(renderBlocker('pipeline-stage-blocker-test', [{ label: 'Simular', detail: '' }])).toBe('');
+  });
+
+  test('links a disabled real execution to its visible precondition without blocking simulation', () => {
+    document.body.innerHTML = '<div id="pipeline-stages-list"></div>';
+    const pipeline = pipelineStageRenderHarness();
+    pipeline.renderPipelineStages([{
+      id: 'all',
+      name: 'Pipeline Completa',
+      description: 'Fluxo completo.',
+      category: 'pipeline',
+      estimated_sec: 60,
+      live_enabled: false,
+      live_disabled_reason: 'aprovação <Ed25519> obrigatória',
+      preflight: { can_run: true, profile: {}, blockers: [] },
+    }]);
+
+    const simulate = document.querySelector('[data-dry-run="true"]');
+    const real = document.querySelector('[data-dry-run="false"]');
+    const blocker = document.querySelector('#pipeline-stage-blocker-all');
+    expect(simulate.disabled).toBe(false);
+    expect(real.disabled).toBe(true);
+    expect(real.getAttribute('aria-describedby')).toBe('pipeline-stage-blocker-all');
+    expect(blocker.getAttribute('role')).toBe('note');
+    expect(blocker.textContent).toContain('Executar real: aprovação <Ed25519> obrigatória');
+    expect(blocker.innerHTML).toContain('aprovação &lt;Ed25519&gt; obrigatória');
   });
 
   test('cancels pending pipeline runs once and keeps stop single-flight until state reconciliation', async () => {

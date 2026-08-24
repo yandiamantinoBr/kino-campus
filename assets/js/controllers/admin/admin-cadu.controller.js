@@ -6247,6 +6247,21 @@
     return parts.length ? '<div class="kc-pipeline-history-item__summary">' + parts.join('') + '</div>' : '';
   }
 
+  function pipelineStageActionBlockerHtml(noteId, blockers) {
+    var uniqueItems = [];
+    (Array.isArray(blockers) ? blockers : []).forEach(function (blocker) {
+      var label = String(blocker && blocker.label || '').trim();
+      var detail = String(blocker && blocker.detail || '').trim();
+      if (!label || !detail) return;
+      var item = label + ': ' + detail;
+      if (uniqueItems.indexOf(item) === -1) uniqueItems.push(item);
+    });
+    if (!uniqueItems.length) return '';
+    return '<div class="kc-pipeline-stage__blocker" id="' + escapeHtml(noteId) + '" role="note">' +
+      '<i class="fas fa-circle-info" aria-hidden="true"></i><span><strong>Ações indisponíveis:</strong> ' +
+      uniqueItems.map(escapeHtml).join(' · ') + '</span></div>';
+  }
+
   function renderPipelineStages(stages) {
     var container = $('#pipeline-stages-list');
     if (!container) return;
@@ -6279,6 +6294,8 @@
         ? (state.pipelineControlReason || 'snapshot expirado')
         : ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'a verificação prévia falhou');
       var actionButtons = [];
+      var actionBlockers = [];
+      var blockerId = 'pipeline-stage-blocker-' + String(s.id || 'unknown').replace(/[^a-z0-9_-]/gi, '-');
       function actionButton(dryRun, label, danger) {
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
         var modePrecondition = pipelineStageModePrecondition(s, dryRun);
@@ -6289,6 +6306,13 @@
         var displayLabel = canRefreshControl
           ? 'Renovar · ' + label
           : (guardedDedupReal ? 'Executar real · simule antes' : label);
+        var disabledReason = state.pipelineStartPending
+          ? 'Aguardando resposta da solicitação anterior.'
+          : (approvalGatedReal
+            ? (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
+            : ((modeBlocked && !guardedDedupReal)
+              ? modePrecondition.detail
+              : (!canRun && !canRefreshControl ? blockedReason : '')));
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
           : (canRefreshControl
@@ -6299,7 +6323,8 @@
               ? 'Indisponível: ' + modePrecondition.detail
               : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason))));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
-        return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
+        if (disabled && disabledReason) actionBlockers.push({ label: label, detail: disabledReason });
+        return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled && disabledReason ? ' aria-describedby="' + escapeHtml(blockerId) + '"' : '') + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
         '</button>';
       }
@@ -6307,6 +6332,7 @@
         actionButtons.push(actionButton(action.dryRun, action.label, action.danger));
       });
       if (!actionButtons.length) actionButtons.push(actionButton(null, 'Execução bloqueada', false));
+      var actionBlockerHtml = pipelineStageActionBlockerHtml(blockerId, actionBlockers);
       var lastSummary = s.last_run && s.last_run.summary ? renderRunSummary(s.last_run.summary) : '';
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
@@ -6318,6 +6344,7 @@
           '<span style="margin-left:auto;">~' + escapeHtml(s.estimated_sec) + 's</span>' +
         '</div>' +
         lastSummary +
+        actionBlockerHtml +
         '<div class="kc-pipeline-stage__actions">' + actionButtons.join('') + '</div>' +
       '</div>';
     }).join('');

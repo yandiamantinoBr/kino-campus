@@ -104,6 +104,10 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
     expect(controller).toContain("function pipelineStageModePrecondition(stage, dryRun)");
+    expect(controller).toContain('function pipelineStageActionBlockerHtml(noteId, blockers)');
+    expect(controller).toContain("var blockerId = 'pipeline-stage-blocker-'");
+    expect(controller).toContain("aria-describedby=\"' + escapeHtml(blockerId)");
+    expect(controller).toContain("actionBlockers.push({ label: label, detail: disabledReason });");
     expect(controller).toContain("check.id === 'dedup_preview_real'");
     expect(controller).toContain("resp.status === 412");
     expect(controller).toContain("preconditionDetail.code === 'dedup_preview_required'");
@@ -114,6 +118,7 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("path += dryRun ? '/dry-run' : '/real'");
     expect(controller).toContain('body: JSON.stringify(request.payload)');
     expect(html).toContain('.kc-pipeline-stage__actions');
+    expect(html).toContain('.kc-pipeline-stage__blocker');
   });
 
   test('pipeline action siblings are locked and restored as one operation', () => {
