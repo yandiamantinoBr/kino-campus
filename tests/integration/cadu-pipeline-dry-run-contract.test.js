@@ -43,6 +43,7 @@ describe('Cadu pipeline explicit dry-run contract', () => {
   const pipelineStageActionModes = extractFunction('pipelineStageActionModes');
   const pipelineStageModePrecondition = extractFunction('pipelineStageModePrecondition');
   const pipelineRealRunApprovalGated = extractFunction('pipelineRealRunApprovalGated');
+  const pipelineFullRunDryRunPolicyGated = extractFunction('pipelineFullRunDryRunPolicyGated');
   const lockPipelineActionButtons = extractFunction('lockPipelineActionButtons');
   const isSafePipelineRunId = extractFunction('isSafePipelineRunId');
   const pipelineRunIsActive = extractFunction('pipelineRunIsActive');
@@ -73,7 +74,11 @@ describe('Cadu pipeline explicit dry-run contract', () => {
      const normalizePipelineStage = ${extractFunctionSource('normalizePipelineStage')};
      return (${extractFunctionSource('validatePipelineControlSnapshot')});`
   )();
-  const explicitCapabilities = { explicit_dry_run: true, explicit_run_mode_routes: true };
+  const explicitCapabilities = {
+    explicit_dry_run: true,
+    explicit_run_mode_routes: true,
+    full_run_dry_run_optional: true,
+  };
 
   test.each([
     ['old API omits true', { dry_run_available: true }, true, {}, null],
@@ -370,6 +375,17 @@ describe('Cadu pipeline explicit dry-run contract', () => {
     expect(pipelineRealRunApprovalGated(gatedStage, false, {})).toBe(true);
     expect(pipelineRealRunApprovalGated(openStage, false, disabledBroker)).toBe(false);
     expect(pipelineRealRunApprovalGated(gatedStage, true, disabledBroker)).toBe(false);
+  });
+
+  test('real full run requires an explicit backend capability, never a prior simulation', () => {
+    const fullStage = { id: 'all' };
+    expect(pipelineFullRunDryRunPolicyGated(fullStage, false, explicitCapabilities)).toBe(false);
+    expect(pipelineFullRunDryRunPolicyGated(fullStage, false, {
+      explicit_dry_run: true,
+      explicit_run_mode_routes: true,
+    })).toBe(true);
+    expect(pipelineFullRunDryRunPolicyGated(fullStage, true, {})).toBe(false);
+    expect(pipelineFullRunDryRunPolicyGated({ id: 'dedup' }, false, {})).toBe(false);
   });
 
   test('locking one action locks its sibling and restores original states and markup', () => {

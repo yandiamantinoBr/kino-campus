@@ -111,7 +111,12 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("check.id === 'dedup_preview_real'");
     expect(controller).toContain("resp.status === 412");
     expect(controller).toContain("preconditionDetail.code === 'dedup_preview_required'");
-    expect(controller).toContain("preconditionDetail.code === 'all_dry_run_required'");
+    expect(controller).not.toContain("preconditionDetail.code === 'all_dry_run_required'");
+    expect(controller).not.toContain('não há uma simulação completa recente bem-sucedida');
+    expect(controller).toContain('A Pipeline completa não exige simulação prévia na versão atual');
+    expect(controller).toContain("preconditionDetail.code === 'signed_publish_approval_required'");
+    expect(controller).toContain('function pipelineRunStartOutcomeIsAmbiguous(response)');
+    expect(controller).toContain('O POST real não foi repetido automaticamente.');
     expect(controller).toContain("detail.code === 'pipeline_runtime_busy'");
     expect(controller).toContain('refreshPipeline({ force: true });');
     expect(controller).toContain('Nenhum run foi criado.');

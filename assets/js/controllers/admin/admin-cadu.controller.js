@@ -6017,6 +6017,28 @@
     });
   }
 
+  function pipelineRunStartOutcomeIsAmbiguous(response) {
+    if (!response || response.__error !== true) return false;
+    // Status 0 means the browser never received an HTTP response. A 502/504
+    // from the control proxy can also happen after the cadu-api accepted the
+    // POST but before its response reached the browser. Reconcile with GET;
+    // never retry this mutating request automatically.
+    return response.status === 0 || response.status === 502 || response.status === 504;
+  }
+
+  async function reconcilePipelineStartWithActionsLocked() {
+    // The POST may already have created a run, so no start action may become
+    // clickable until an authoritative GET has reconciled the global slot.
+    state.pipelineStartPending = true;
+    renderPipelineStages(state.pipelineStages || []);
+    try {
+      return await reconcilePipelineAfterRunMayExist();
+    } finally {
+      state.pipelineStartPending = false;
+      renderPipelineStages(state.pipelineStages || []);
+    }
+  }
+
   async function ensureFreshPipelineControl() {
     try {
       // Se o polling de 5 s já estiver renovando, o clique participa da mesma
@@ -6125,6 +6147,13 @@
     if (stage.live_enabled !== false) return false;
     var approval = capabilities && capabilities.publish_approval;
     return !(approval && approval.enabled === true);
+  }
+
+  function pipelineFullRunDryRunPolicyGated(stage, dryRun, capabilities) {
+    return Boolean(
+      stage && stage.id === 'all' && dryRun === false &&
+      (!capabilities || capabilities.full_run_dry_run_optional !== true)
+    );
   }
 
   function lockPipelineActionButtons(clickedButton) {
@@ -6345,8 +6374,9 @@
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
         var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
         var approvalGatedReal = pipelineRealRunApprovalGated(s, dryRun, state.pipelineCapabilities);
+        var fullRunPolicyGated = pipelineFullRunDryRunPolicyGated(s, dryRun, state.pipelineCapabilities);
         var disabled = Boolean(activeRun) ||
-          (!canRefreshControl && (!canRun || approvalGatedReal || (modeBlocked && !guardedDedupReal))) ||
+          (!canRefreshControl && (!canRun || approvalGatedReal || fullRunPolicyGated || (modeBlocked && !guardedDedupReal))) ||
           state.pipelineStartPending;
         var displayLabel = canRefreshControl
           ? 'Renovar · ' + label
@@ -6357,9 +6387,11 @@
             ? activeRunReason
             : (approvalGatedReal
               ? (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
-              : ((modeBlocked && !guardedDedupReal)
-                ? modePrecondition.detail
-                : (!canRun && !canRefreshControl ? blockedReason : ''))));
+              : (fullRunPolicyGated
+                ? 'o backend não confirmou que a simulação completa é opcional; atualize o cadu-api'
+                : ((modeBlocked && !guardedDedupReal)
+                  ? modePrecondition.detail
+                  : (!canRun && !canRefreshControl ? blockedReason : '')))));
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
           : (activeRunReason
@@ -6368,9 +6400,11 @@
               ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
               : (approvalGatedReal
                 ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
-                : (modeBlocked
-                  ? 'Indisponível: ' + modePrecondition.detail
-                  : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason)))));
+                : (fullRunPolicyGated
+                  ? 'Indisponível: o backend não confirmou a política atual da Pipeline completa; atualize o cadu-api'
+                  : (modeBlocked
+                    ? 'Indisponível: ' + modePrecondition.detail
+                    : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason))))));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         if (disabled && disabledReason) actionBlockers.push({ label: label, detail: disabledReason });
         return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled && disabledReason ? ' aria-describedby="' + escapeHtml(blockerId) + '"' : '') + (disabled ? ' disabled' : '') + '>' +
@@ -7381,6 +7415,10 @@
           alert('Modo de execução ausente ou inválido no contrato renovado. Nenhuma pipeline foi iniciada.');
           return;
         }
+        if (pipelineFullRunDryRunPolicyGated(stage, dryRun, state.pipelineCapabilities)) {
+          alert('O cadu-api atual não confirmou que a simulação da Pipeline completa é opcional. Atualize o backend; não execute “Simular” como pré-condição. Nenhuma pipeline foi iniciada.');
+          return;
+        }
         var modePrecondition = pipelineStageModePrecondition(stage, dryRun);
         if (modePrecondition && modePrecondition.canRun === false) {
           alert(modePrecondition.detail + '\n\nUse “Simular”, revise o relatório e execute o modo real em até 30 minutos. Nenhuma execução real foi iniciada.');
@@ -7457,42 +7495,45 @@
       if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
       disconnectPipelineStream();
       stopPipelineLogPolling();
-      var postStartReconciliation = reconcilePipelineAfterRunMayExist();
-      if (postStartReconciliation && typeof postStartReconciliation.catch === 'function') {
-        postStartReconciliation.catch(function () {});
-      }
+      try { await reconcilePipelineStartWithActionsLocked(); } catch (_) {}
     } else if (resp && resp.__error) {
       // Mensagens específicas por status code
       var msg = 'Falha ao iniciar.';
+      var ambiguousStartOutcome = pipelineRunStartOutcomeIsAmbiguous(resp);
+      if (ambiguousStartOutcome) {
+        try {
+          await reconcilePipelineStartWithActionsLocked();
+        } catch (_) {
+          // The message below remains explicitly inconclusive when this GET
+          // also fails. The operator is never told that no run was created.
+        }
+      }
       if (resp.status === 404 && typeof dryRun === 'boolean') {
         msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
       } else if (resp.status === 412) {
         var preconditionDetail = resp.data && (resp.data.detail || resp.data);
         if (preconditionDetail && preconditionDetail.code === 'dedup_preview_required') {
           msg = '⚠️ A execução real foi recusada com segurança porque não há uma prévia recente compatível.\n\nExecute “Simular”, revise o relatório e então tente “Executar real” novamente. Nenhum run real foi criado.';
-        } else if (preconditionDetail && preconditionDetail.code === 'all_dry_run_required') {
-          msg = '⚠️ A execução real da Pipeline completa foi recusada com segurança porque não há uma simulação completa recente bem-sucedida.\n\nExecute “Simular” para a Pipeline completa, confira o funil e os itens em revisão e então tente “Executar real” novamente. Nenhum run real foi criado.';
         } else if (preconditionDetail && preconditionDetail.code === 'signed_publish_approval_required') {
           msg = '🔐 Execução real de "' + stageId + '" requer aprovação assinada (Ed25519).\n\nUse o fluxo de aprovação de publicação (publish-approval-cli) antes de executar este estágio real. A simulação continua disponível. Nenhum run real foi criado.';
         } else {
-          msg = '⚠️ Execução recusada com segurança: pré-condição não atendida. Atualize o painel e revise o diagnóstico antes de tentar novamente.';
+          msg = '⚠️ Execução recusada por uma pré-condição não reconhecida. A Pipeline completa não exige simulação prévia na versão atual; esta resposta indica contrato incompatível ou outra proteção do backend. Atualize o painel e confira o diagnóstico e o release do cadu-api antes de tentar novamente. Nenhum run foi criado.';
         }
       } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
         // Um 409 pode ocorrer quando outro operador iniciou uma execução após
         // nosso snapshot. Releia o estado autorizado para exibir o run ativo e
         // reconectar seus logs; isto é somente GET e nunca tenta outro POST.
-        try {
-          var reconciliation = reconcilePipelineAfterRunMayExist();
-          if (reconciliation && typeof reconciliation.catch === 'function') {
-            reconciliation.catch(function () {});
-          }
-        } catch (_) {}
+        try { await reconcilePipelineStartWithActionsLocked(); } catch (_) {}
         if (detail && detail.code === 'pipeline_runtime_busy') {
           msg = '⏳ A pipeline está temporariamente ocupada por uma implantação ou manutenção externa.\n\nAguarde a operação terminar, atualize o painel e tente novamente. Nenhum run foi criado.';
         } else {
           var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
-          msg = '⛔ Já existe uma execução ativa para "' + stageId + '" (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
+          var activeAfterConflict = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+          var activeStage = activeAfterConflict && activeAfterConflict.stage
+            ? ' do estágio "' + activeAfterConflict.stage + '"'
+            : '';
+          msg = '⛔ Já existe uma execução global ativa' + activeStage + ' (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
         }
       } else if (resp.status === 400 || resp.status === 422) {
         var validationDetail = resp.data && (resp.data.detail || resp.data);
@@ -7502,6 +7543,15 @@
         msg = '🔒 Token inválido. Verifique KC_CADU_TOKEN.';
       } else if (resp.status === 503) {
         msg = '⚙️ cadu-api não configurado (CADU_API_TOKEN ausente no .env).';
+      } else if (ambiguousStartOutcome) {
+        var reconciledActive = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+        if (reconciledActive) {
+          msg = '⏳ A resposta do início da pipeline foi interrompida, mas o painel confirmou uma execução ativa' +
+            (reconciledActive.stage ? ' do estágio "' + reconciledActive.stage + '"' : '') +
+            ' (ID ' + String(reconciledActive.id || '?').slice(0, 8) + ').\n\nAcompanhe esta execução; não clique novamente em “Executar”.';
+        } else {
+          msg = '⚠️ A resposta do início da pipeline foi interrompida e não foi possível confirmar se um run foi criado.\n\nAtualize o painel e verifique o histórico antes de tentar novamente. O POST real não foi repetido automaticamente.';
+        }
       } else if (resp.status >= 500) {
         msg = '🔥 cadu-api erro interno (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
       } else if (resp.message) {
