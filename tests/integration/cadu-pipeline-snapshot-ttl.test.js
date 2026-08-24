@@ -356,6 +356,42 @@ describe('Cadu pipeline snapshot TTL control', () => {
     expect(alert).toHaveBeenCalledWith(expect.stringContaining('Nenhuma execução foi iniciada'));
   });
 
+  test('a fresh control snapshot that reveals another active run skips confirmation and POST', async () => {
+    const state = pipelineState(initialNow);
+    state.pipelineActive = null;
+    const apiFetch = jest.fn();
+    const confirm = jest.fn();
+    const alert = jest.fn();
+    const ensureFreshPipelineControl = jest.fn(async () => {
+      state.pipelineActive = { id: 'run-started-elsewhere', status: 'running' };
+      return true;
+    });
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl,
+      renderPipelineStages: jest.fn(),
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch,
+      confirm,
+      alert,
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline: jest.fn(),
+    });
+
+    await runPipelineStage('all', false, null);
+
+    expect(ensureFreshPipelineControl).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(apiFetch).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('Nenhuma nova execução foi iniciada'));
+    expect(state.pipelineStartPending).toBe(false);
+  });
+
   test.each([
     ['an existing active run', { existing_run_id: 'run-already-active' }, 'run-alr'],
     ['a busy runtime', { code: 'pipeline_runtime_busy' }, 'temporariamente ocupada'],

@@ -5895,7 +5895,14 @@
     // A validade do contrato de controle só libera ações; o acompanhamento de
     // um run já existente continua seguro quando sua forma foi normalizada.
     if (pipelineRunIsActive(active)) {
-      if (active.status !== 'running' || shouldUsePipelineLogPolling(active)) {
+      // Depois de uma falha de SSE, o polling é deliberadamente mantido para
+      // este run. Um refresh de status ainda atualiza a tela, mas não deve
+      // derrubar o fallback e abrir outra conexão que provavelmente falhará de
+      // novo. O próximo run volta a tentar SSE normalmente.
+      var streamFallbackPolling = pipelineLogPollState &&
+        pipelineLogPollState.runId === active.id &&
+        pipelineLogPollState.streamFallback === true;
+      if (active.status !== 'running' || shouldUsePipelineLogPolling(active) || streamFallbackPolling) {
         connectPipelineLogPolling(active.id);
       } else {
         stopPipelineLogPolling();
@@ -7170,11 +7177,21 @@
     }
   }
 
-  function connectPipelineLogPolling(runId) {
+  function connectPipelineLogPolling(runId, options) {
+    var opts = options || {};
     disconnectPipelineStream();
-    if (pipelineLogPollState && pipelineLogPollState.runId === runId) return;
+    if (pipelineLogPollState && pipelineLogPollState.runId === runId) {
+      if (opts.streamFallback === true) pipelineLogPollState.streamFallback = true;
+      return;
+    }
     stopPipelineLogPolling();
-    var pollState = { runId: runId, inFlight: false, timer: null, snapshotLines: null };
+    var pollState = {
+      runId: runId,
+      inFlight: false,
+      timer: null,
+      snapshotLines: null,
+      streamFallback: opts.streamFallback === true
+    };
     pipelineLogPollState = pollState;
     refreshPipelineLogSnapshot(runId, pollState);
     pollState.timer = setInterval(function () {
@@ -7246,7 +7263,7 @@
       console.warn('SSE via fetch falhou:', err);
       appendLogLine('[stream indisponível] acompanhando por polling autenticado');
       if (pipelineStreamRequest === request) pipelineStreamRequest = null;
-      connectPipelineLogPolling(runId);
+      connectPipelineLogPolling(runId, { streamFallback: true });
       setTimeout(function () { refreshPipeline(); }, 2000);
     } finally {
       if (reader) {
@@ -7340,6 +7357,12 @@
         }
         if (!await ensureFreshPipelineControl()) {
           alert('Não foi possível renovar o contrato e a verificação prévia da pipeline. Nenhuma execução foi iniciada.');
+          return;
+        }
+
+        var refreshedActiveRun = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+        if (refreshedActiveRun) {
+          alert('Já há uma execução ' + pipelineStatusLabel(refreshedActiveRun.status) + '. Aguarde seu término e a atualização do painel antes de iniciar outro estágio. Nenhuma nova execução foi iniciada.');
           return;
         }
 

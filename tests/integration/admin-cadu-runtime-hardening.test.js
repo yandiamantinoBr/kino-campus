@@ -106,9 +106,10 @@ function pipelineStartActiveGuardHarness(alert) {
   )(alert);
 }
 
-function pipelineLogTransportHarness(initialStreamRequest, dependencies) {
+function pipelineLogTransportHarness(initialStreamRequest, initialPollState, dependencies) {
   return Function(
     'initialStreamRequest',
+    'initialPollState',
     'shouldUsePipelineLogPolling',
     'connectPipelineLogPolling',
     'stopPipelineLogPolling',
@@ -116,16 +117,36 @@ function pipelineLogTransportHarness(initialStreamRequest, dependencies) {
     'disconnectPipelineStream',
     '"use strict";\n' +
     'var pipelineStreamRequest = initialStreamRequest;\n' +
+    'var pipelineLogPollState = initialPollState;\n' +
     functionSource('pipelineRunIsActive') + '\n' +
     functionSource('reconcilePipelineLogTransport') + '\n' +
     'return { reconcile: reconcilePipelineLogTransport };',
   )(
     initialStreamRequest,
+    initialPollState,
     dependencies.shouldUsePipelineLogPolling,
     dependencies.connectPipelineLogPolling,
     dependencies.stopPipelineLogPolling,
     dependencies.connectPipelineStream,
     dependencies.disconnectPipelineStream,
+  );
+}
+
+function pipelineLogPollingHarness(initialPollState, dependencies) {
+  return Function(
+    'initialPollState',
+    'disconnectPipelineStream',
+    'refreshPipelineLogSnapshot',
+    '"use strict";\n' +
+    'var pipelineLogPollState = initialPollState;\n' +
+    'var setInterval = function () { return null; };\n' +
+    functionSource('stopPipelineLogPolling') + '\n' +
+    functionSource('connectPipelineLogPolling') + '\n' +
+    'return { connect: connectPipelineLogPolling, getState: function () { return pipelineLogPollState; } };',
+  )(
+    initialPollState,
+    dependencies.disconnectPipelineStream,
+    dependencies.refreshPipelineLogSnapshot,
   );
 }
 
@@ -860,7 +881,7 @@ describe('admin Cadu runtime hardening', () => {
       connectPipelineStream: jest.fn(),
       disconnectPipelineStream: jest.fn(),
     };
-    const pipeline = pipelineLogTransportHarness({ runId: 'old-stream' }, dependencies);
+    const pipeline = pipelineLogTransportHarness({ runId: 'old-stream' }, null, dependencies);
 
     pipeline.reconcile({ id: 'pending-new', stage: 'scan', status: 'pending' });
     expect(dependencies.connectPipelineLogPolling).toHaveBeenCalledWith('pending-new');
@@ -873,6 +894,48 @@ describe('admin Cadu runtime hardening', () => {
     pipeline.reconcile({ id: 'finished-run', stage: 'scan', status: 'finished' });
     expect(dependencies.disconnectPipelineStream).toHaveBeenCalledTimes(1);
     expect(dependencies.stopPipelineLogPolling).toHaveBeenCalledTimes(2);
+  });
+
+  test('keeps authenticated log polling after an SSE fallback instead of reopening the stream on status refresh', () => {
+    const dependencies = {
+      shouldUsePipelineLogPolling: jest.fn(() => false),
+      connectPipelineLogPolling: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      connectPipelineStream: jest.fn(),
+      disconnectPipelineStream: jest.fn(),
+    };
+    const pipeline = pipelineLogTransportHarness(null, {
+      runId: 'running-fallback',
+      streamFallback: true,
+    }, dependencies);
+
+    pipeline.reconcile({ id: 'running-fallback', stage: 'scan', status: 'running' });
+
+    expect(dependencies.connectPipelineLogPolling).toHaveBeenCalledWith('running-fallback');
+    expect(dependencies.stopPipelineLogPolling).not.toHaveBeenCalled();
+    expect(dependencies.connectPipelineStream).not.toHaveBeenCalled();
+    expect(functionSource('connectPipelineStream')).toContain('connectPipelineLogPolling(runId, { streamFallback: true });');
+  });
+
+  test('marks and preserves a same-run polling fallback without creating another log request', () => {
+    const disconnectPipelineStream = jest.fn();
+    const refreshPipelineLogSnapshot = jest.fn();
+    const polling = pipelineLogPollingHarness(null, {
+      disconnectPipelineStream,
+      refreshPipelineLogSnapshot,
+    });
+
+    polling.connect('fallback-run', { streamFallback: true });
+    const firstState = polling.getState();
+    polling.connect('fallback-run');
+
+    expect(firstState).toEqual(expect.objectContaining({
+      runId: 'fallback-run',
+      streamFallback: true,
+    }));
+    expect(polling.getState()).toBe(firstState);
+    expect(refreshPipelineLogSnapshot).toHaveBeenCalledTimes(1);
+    expect(disconnectPipelineStream).toHaveBeenCalledTimes(2);
   });
 
   test('rejects pipeline HTTP error envelopes and keeps the run modal accessible in every state', () => {
