@@ -7406,6 +7406,15 @@
         }
       } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
+        // Um 409 pode ocorrer quando outro operador iniciou uma execução após
+        // nosso snapshot. Releia o estado autorizado para exibir o run ativo e
+        // reconectar seus logs; isto é somente GET e nunca tenta outro POST.
+        try {
+          var reconciliation = refreshPipeline({ force: true });
+          if (reconciliation && typeof reconciliation.catch === 'function') {
+            reconciliation.catch(function () {});
+          }
+        } catch (_) {}
         if (detail && detail.code === 'pipeline_runtime_busy') {
           msg = '⏳ A pipeline está temporariamente ocupada por uma implantação ou manutenção externa.\n\nAguarde a operação terminar, atualize o painel e tente novamente. Nenhum run foi criado.';
         } else {
