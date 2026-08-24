@@ -1060,10 +1060,11 @@
                 <i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.
               </div>
             </div>
+            <div id="pipeline-active-status" class="kc-sr-only" role="status" aria-live="polite" aria-atomic="true">Pipeline: nenhuma execução ativa.</div>
             <div id="pipeline-health-card" class="kc-pipeline-health-card">
               <div class="kc-cadu-empty"><i class="fas fa-heart-pulse"></i> Carregando saúde da automação…</div>
             </div>
-            <div class="kc-pipeline-log" id="pipeline-log">
+            <div class="kc-pipeline-log" id="pipeline-log" role="log" aria-label="Log operacional da Pipeline Completa" data-i18n-aria-label="aria-label.cadu-pipeline-log" aria-live="polite" aria-atomic="false" aria-relevant="additions text" tabindex="0">
               <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>
             </div>
           </div>
@@ -1415,7 +1416,7 @@
 
   <!-- Scripts -->
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.2"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.13"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.14"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.4"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
@@ -1451,6 +1452,6 @@
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=e976ab67bb31a47a"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=b9412b90d72aaf2a"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=9beba0964aecc367"></script>
 </body>
 </html>

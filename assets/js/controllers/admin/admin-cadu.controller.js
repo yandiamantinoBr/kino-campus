@@ -14,6 +14,7 @@
   var STORAGE_TAB = 'kc:cadu:tab';
   var PIPELINE_CONTROL_CONTRACT = 'cadu-pipeline-control-v1';
   var PIPELINE_SNAPSHOT_TTL_MS = 15000;
+  var PIPELINE_LOG_MAX_LINES = 180;
   var OPENCLAW_POLL_INTERVAL_MS = 60000;
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
   var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;
@@ -93,6 +94,7 @@
     pipelineExpiryTimer: null,
     pipelineExpiryGeneration: 0,
     pipelineStartPending: false,
+    pipelineStopPendingRunId: null,
     pipelineHealth: null,
     lastVersion: null
   };
@@ -6333,12 +6335,37 @@
     });
   }
 
+  function updatePipelineActiveStatus(active, displayStatus) {
+    var status = $('#pipeline-active-status');
+    if (!status) return;
+    var message = 'Pipeline: nenhuma execução ativa.';
+    if (active) {
+      message = 'Pipeline ' + pipelineActivityStageLabel(active.stage, state.pipelineStages) + ': ' +
+        pipelineStatusLabel(displayStatus || pipelineRunDisplayStatus(active)) + '.';
+    }
+    // Polling occurs every few seconds. Avoid repeating the same status in a
+    // live region when only the elapsed-duration presentation has changed.
+    if (status.textContent !== message) status.textContent = message;
+  }
+
+  function reconcilePipelineStopRequest(active) {
+    var requestedRunId = state.pipelineStopPendingRunId;
+    if (!requestedRunId) return false;
+    var remainsCancelable = active && active.id === requestedRunId &&
+      (active.status === 'pending' || active.status === 'running');
+    if (remainsCancelable) return false;
+    state.pipelineStopPendingRunId = null;
+    return true;
+  }
+
   function renderPipelineActive(active) {
     var card = $('#pipeline-active-card');
     var dot = $('#pipeline-status-dot');
     var logBox = $('#pipeline-log');
     if (!card) return;
+    reconcilePipelineStopRequest(active);
     if (!active) {
+      updatePipelineActiveStatus(null);
       card.className = 'kc-pipeline-active-card';
       card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.</div>';
       if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem execução ativa'; }
@@ -6346,12 +6373,19 @@
       return;
     }
     var displayStatus = pipelineRunDisplayStatus(active);
+    updatePipelineActiveStatus(active, displayStatus);
     var cls = 'is-' + displayStatus;
     var escapedActiveRunId = escapeHtml(active.id);
     card.className = 'kc-pipeline-active-card ' + cls;
     if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = pipelineStatusLabel(displayStatus) + ' (' + fmtAgo(active.started_at) + ')'; }
-    var stopBtn = active.status === 'running'
-      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + escapedActiveRunId + '"><i class="fas fa-stop"></i> Parar</button>'
+    var canStop = active.status === 'pending' || active.status === 'running';
+    var stopPending = state.pipelineStopPendingRunId === active.id;
+    var stopLabel = active.status === 'pending' ? 'Cancelar' : 'Parar';
+    var stopBtn = canStop
+      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + escapedActiveRunId + '" aria-label="' +
+        escapeHtml(stopLabel + ' execução ' + active.id.slice(0, 8)) + '"' +
+        (stopPending ? ' disabled aria-busy="true"' : '') + '><i class="fas ' + (stopPending ? 'fa-spinner fa-spin' : 'fa-stop') + '" aria-hidden="true"></i> ' +
+        escapeHtml(stopPending ? 'Solicitando parada…' : stopLabel) + '</button>'
       : '';
     card.innerHTML =
       '<div class="kc-pipeline-active-card__head">' +
@@ -6941,22 +6975,75 @@
       : stageCount + (stageCount === 1 ? ' estágio disponível' : ' estágios disponíveis');
   }
 
+  function pipelineLogLineClass(text) {
+    var lineClass = 'kc-log-line';
+    var lowText = String(text == null ? '' : text).toLowerCase();
+    if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('erro') || lowText.includes('falhou') || lowText.includes('✗')) {
+      return lineClass + ' kc-log-line--err';
+    }
+    if (lowText.includes('ok') || lowText.includes('✓') || lowText.includes('saved') || lowText.includes('concluido') || lowText.includes('concluído')) {
+      return lineClass + ' kc-log-line--ok';
+    }
+    return lineClass;
+  }
+
+  function appendPipelineLogEntry(logBox, text, options) {
+    var opts = options || {};
+    var div = document.createElement('div');
+    div.className = pipelineLogLineClass(text);
+    div.textContent = String(text == null ? '' : text).slice(0, 20000);
+    if (opts.marker === true) {
+      div.setAttribute('data-pipeline-log-marker', 'true');
+      // The refresh timestamp is visual context only. Announcing it every
+      // five seconds would hide the actual sequential log entries.
+      div.setAttribute('aria-hidden', 'true');
+    }
+    logBox.appendChild(div);
+    return div;
+  }
+
+  function clearPipelineLogMarkers(logBox) {
+    Array.prototype.slice.call(logBox.querySelectorAll('[data-pipeline-log-marker]')).forEach(function (marker) {
+      if (marker.parentNode) marker.parentNode.removeChild(marker);
+    });
+  }
+
+  function trimPipelineLogEntries(logBox) {
+    var entries = logBox.querySelectorAll('.kc-log-line:not([data-pipeline-log-marker])');
+    var excess = entries.length - PIPELINE_LOG_MAX_LINES;
+    for (var index = 0; index < excess; index += 1) {
+      if (entries[index] && entries[index].parentNode) entries[index].parentNode.removeChild(entries[index]);
+    }
+  }
+
+  function pipelineLogTailOverlap(previousLines, nextLines) {
+    if (!Array.isArray(previousLines) || !Array.isArray(nextLines)) return 0;
+    var maximum = Math.min(previousLines.length, nextLines.length);
+    for (var length = maximum; length > 0; length -= 1) {
+      var matches = true;
+      for (var index = 0; index < length; index += 1) {
+        if (previousLines[previousLines.length - length + index] !== nextLines[index]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return length;
+    }
+    return 0;
+  }
+
   function appendLogLine(text) {
     var logBox = $('#pipeline-log');
     if (!logBox) return;
-    text = String(text == null ? '' : text).slice(0, 20000);
+    // Measure before inserting: a wrapped/tall new line otherwise makes a
+    // user already at the end look as if they scrolled away from it.
+    var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
     // Limpa mensagem inicial se for a primeira linha
     if (logBox.querySelector('.kc-cadu-empty')) logBox.innerHTML = '';
-    var lineClass = 'kc-log-line';
-    var lowText = text.toLowerCase();
-    if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('✗')) lineClass += ' kc-log-line--err';
-    else if (lowText.includes('ok') || lowText.includes('✓') || lowText.includes('saved')) lineClass += ' kc-log-line--ok';
-    var div = document.createElement('div');
-    div.className = lineClass;
-    div.textContent = text;
-    logBox.appendChild(div);
+    clearPipelineLogMarkers(logBox);
+    appendPipelineLogEntry(logBox, text);
+    trimPipelineLogEntries(logBox);
     // Auto-scroll pra última linha (mas só se usuário já estava no fim)
-    var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
@@ -6967,27 +7054,34 @@
     return active.stage === 'all' || estimate > 260;
   }
 
-  function renderPipelineLogSnapshot(content, marker) {
+  function renderPipelineLogSnapshot(content, marker, pollState) {
     var logBox = $('#pipeline-log');
     if (!logBox) return;
     var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
     var lines = String(content || '').split(/\r?\n/).filter(Boolean);
-    if (marker) lines.push(marker);
-    logBox.innerHTML = '';
+    var previousLines = pollState && Array.isArray(pollState.snapshotLines)
+      ? pollState.snapshotLines
+      : null;
+    var overlap = previousLines === null ? 0 : pipelineLogTailOverlap(previousLines, lines);
+    // A zero-length first snapshot is still a valid baseline; once it gains
+    // lines, append them instead of reconstructing the live region.
+    var canAppend = previousLines !== null && (previousLines.length === 0 || overlap > 0);
+    clearPipelineLogMarkers(logBox);
+    if (!canAppend) logBox.innerHTML = '';
     if (!lines.length) {
-      logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
+      if (!canAppend || !logBox.querySelector('.kc-cadu-empty')) {
+        logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
+      }
+      if (pollState) pollState.snapshotLines = lines;
       return;
     }
-    lines.forEach(function (line) {
-      var lineClass = 'kc-log-line';
-      var lowText = String(line).toLowerCase();
-      if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('falhou')) lineClass += ' kc-log-line--err';
-      else if (lowText.includes('ok') || lowText.includes('saved') || lowText.includes('concluido') || lowText.includes('concluído')) lineClass += ' kc-log-line--ok';
-      var div = document.createElement('div');
-      div.className = lineClass;
-      div.textContent = line;
-      logBox.appendChild(div);
+    if (logBox.querySelector('.kc-cadu-empty')) logBox.innerHTML = '';
+    (canAppend ? lines.slice(overlap) : lines).forEach(function (line) {
+      appendPipelineLogEntry(logBox, line);
     });
+    trimPipelineLogEntries(logBox);
+    if (marker) appendPipelineLogEntry(logBox, marker, { marker: true });
+    if (pollState) pollState.snapshotLines = lines;
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
@@ -7001,7 +7095,7 @@
         appendLogLine('[log polling] falha ao buscar tail do log');
         return;
       }
-      renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'));
+      renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'), pollState);
     } finally {
       if (pipelineLogPollState === pollState) pollState.inFlight = false;
     }
@@ -7011,7 +7105,7 @@
     disconnectPipelineStream();
     if (pipelineLogPollState && pipelineLogPollState.runId === runId) return;
     stopPipelineLogPolling();
-    var pollState = { runId: runId, inFlight: false, timer: null };
+    var pollState = { runId: runId, inFlight: false, timer: null, snapshotLines: null };
     pipelineLogPollState = pollState;
     refreshPipelineLogSnapshot(runId, pollState);
     pollState.timer = setInterval(function () {
@@ -7315,23 +7409,46 @@
       showCaduError('Não foi possível parar: ID de execução da pipeline inválido.');
       return;
     }
-    if (!confirm('Parar esta execução? O processo será encerrado de forma controlada (SIGTERM).')) return;
-    // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
-    var resp = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stop', { method: 'POST' });
-    if (resp && resp.ok) {
-      refreshPipeline();
-    } else if (resp && resp.__error) {
-      var msg = 'Falha ao parar.';
-      if (resp.status === 409) {
-        msg = '⛔ A execução não está mais ativa (já terminou ou foi interrompida).';
-      } else if (resp.status === 404) {
-        msg = '❓ Execução não encontrada no cadu-api.';
+    if (state.pipelineStopPendingRunId) return;
+    var pendingRun = state.pipelineActive && state.pipelineActive.id === runId && state.pipelineActive.status === 'pending';
+    var confirmation = pendingRun
+      ? 'Cancelar esta execução pendente antes de ela iniciar?'
+      : 'Parar esta execução? O processo será encerrado de forma controlada (SIGTERM).';
+    if (!confirm(confirmation)) return;
+    state.pipelineStopPendingRunId = runId;
+    renderPipelineActive(state.pipelineActive);
+    var stopAccepted = false;
+    try {
+      // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
+      var resp = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stop', { method: 'POST' });
+      if (resp && resp.ok) {
+        stopAccepted = true;
+        // Keep the single-flight state until the next authoritative snapshot
+        // has reconciled pending/running with stopping or a terminal result.
+        try { await refreshPipeline(); } catch (_) {}
+      } else if (resp && resp.__error) {
+        var msg = 'Falha ao parar.';
+        if (resp.status === 409) {
+          msg = '⛔ A execução não está mais ativa (já terminou ou foi interrompida).';
+        } else if (resp.status === 404) {
+          msg = '❓ Execução não encontrada no cadu-api.';
+        } else {
+          msg = 'Erro ao parar (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
+        }
+        alert(msg);
       } else {
-        msg = 'Erro ao parar (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
+        alert('Falha ao parar: resposta vazia do cadu-api.');
       }
-      alert(msg);
-    } else {
-      alert('Falha ao parar: resposta vazia do cadu-api.');
+    } catch (_) {
+      // A transport failure after POST can be ambiguous. Do not imply that
+      // the worker certainly kept running or invite an immediate duplicate.
+      alert('Não foi possível confirmar a solicitação de parada. Atualize o painel antes de tentar novamente.');
+    } finally {
+      // A 200 can precede the observable state transition. Keep the request
+      // locked until the refresh sees stopping/a terminal state, but release
+      // it immediately when the POST was not accepted.
+      if (!stopAccepted) state.pipelineStopPendingRunId = null;
+      renderPipelineActive(state.pipelineActive);
     }
   }
 

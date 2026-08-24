@@ -145,6 +145,31 @@ describe('admin Cadu UX contracts', () => {
     );
   });
 
+  test('exposes the sequential Pipeline log without announcing polling timestamps as entries', () => {
+    expect(html).toMatch(
+      /id="pipeline-log"[^>]*role="log"[^>]*aria-label="Log operacional da Pipeline Completa"[^>]*aria-live="polite"[^>]*aria-atomic="false"[^>]*aria-relevant="additions text"[^>]*tabindex="0"/
+    );
+    expect(controller).toContain('var PIPELINE_LOG_MAX_LINES = 180;');
+    expect(controller).toContain('function pipelineLogTailOverlap(previousLines, nextLines)');
+    expect(controller).toContain("data-pipeline-log-marker");
+    expect(controller).toContain("div.setAttribute('aria-hidden', 'true');");
+    expect(controller).toContain('snapshotLines: null');
+  });
+
+  test('lets operators cancel a pending run once and announces active-state changes', () => {
+    expect(controller).toContain("pipelineStopPendingRunId: null");
+    expect(controller).toContain('function reconcilePipelineStopRequest(active)');
+    expect(controller).toContain("active.status === 'pending' || active.status === 'running'");
+    expect(controller).toContain("if (state.pipelineStopPendingRunId) return;");
+    expect(controller).toContain("state.pipelineStopPendingRunId = runId;");
+    expect(controller).toContain("await refreshPipeline();");
+    expect(controller).toContain('function updatePipelineActiveStatus(active, displayStatus)');
+    expect(controller).toContain('if (status.textContent !== message) status.textContent = message;');
+    expect(html).toMatch(
+      /id="pipeline-active-status"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/
+    );
+  });
+
   test('PDF explains registry provenance without calling scanner evidence confirmation', () => {
     expect(controller).not.toContain('perfis validados pelo scanner');
     expect(controller).toContain('perfil com evidência institucional confirmada');

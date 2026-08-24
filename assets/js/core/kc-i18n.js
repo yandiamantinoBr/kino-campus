@@ -499,6 +499,7 @@
     'aria-label.cadu-feed-search':      'Filtrar feed',
     'aria-label.cadu-feed-limit':       'Limite',
     'aria-label.cadu-openclaw-message': 'Mensagem para o Cadu',
+    'aria-label.cadu-pipeline-log':     'Log operacional da Pipeline Completa',
     'placeholder.cadu-sites-search':    'Filtrar por nome, site ou @instagram',
     'placeholder.cadu-review-source-id': 'Ex.: web.ufg.portal',
     'placeholder.cadu-feed-search':     'Filtrar por conteúdo do chunk',
