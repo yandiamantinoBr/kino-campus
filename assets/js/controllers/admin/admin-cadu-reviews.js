@@ -381,6 +381,34 @@
     return true;
   }
 
+  function selectedRepassFilter() {
+    var field = $('#reviews-repass-filter');
+    return field && ['all', 'done', 'pending'].indexOf(field.value) !== -1
+      ? field.value
+      : 'all';
+  }
+
+  function draftStillMatchesItem(draft, item) {
+    return Boolean(
+      draft
+      && item
+      && item.state === 'pending'
+      && item.item_version === draft.itemVersion
+      && Array.isArray(item.allowed_decisions)
+      && item.allowed_decisions.indexOf(draft.decision) !== -1
+    );
+  }
+
+  function invalidateChangedDecisionDraft(items) {
+    if (!state.decisionDraft) return false;
+    var currentItem = items.find(function (item) {
+      return item.id === state.decisionDraft.id;
+    });
+    if (draftStillMatchesItem(state.decisionDraft, currentItem)) return false;
+    state.decisionDraft = null;
+    return true;
+  }
+
   function setStatus(message, error) {
     var target = $('#reviews-status');
     if (!target) return;
@@ -503,7 +531,11 @@
       return '<span class="kc-cadu-review-item__resolved"><i class="fas fa-check-circle" aria-hidden="true"></i> ' +
         escapeHtml(STATE_LABELS[item.state] || item.state) + '</span>';
     }
-    return (item.allowed_decisions || []).map(function (decision) {
+    var allowedDecisions = Array.isArray(item.allowed_decisions) ? item.allowed_decisions : [];
+    if (!allowedDecisions.length) {
+      return '<span class="kc-cadu-review-item__unavailable" role="note"><i class="fas fa-clock" aria-hidden="true"></i> Esta pendência ainda não aceita uma decisão editorial. Atualize a fila ou consulte a evidência; nenhuma decisão será enviada.</span>';
+    }
+    return allowedDecisions.map(function (decision) {
       return '<button type="button" data-review-decision="' + escapeHtml(decision) + '" data-review-id="' + escapeHtml(item.id) + '"' +
         (state.resolvingId === item.id ? ' disabled' : '') + '>' +
         '<i class="fas ' + escapeHtml(DECISION_ICONS[decision] || 'fa-check') + '" aria-hidden="true"></i> ' +
@@ -594,9 +626,18 @@
     });
     $all('[data-review-decision]', target).forEach(function (button) {
       button.addEventListener('click', function () {
+        var item = state.items.find(function (candidate) {
+          return candidate.id === button.getAttribute('data-review-id');
+        });
+        var decision = button.getAttribute('data-review-decision');
+        if (!draftStillMatchesItem({
+          decision: decision,
+          itemVersion: item && item.item_version
+        }, item)) return;
         state.decisionDraft = {
           id: button.getAttribute('data-review-id'),
-          decision: button.getAttribute('data-review-decision')
+          decision: decision,
+          itemVersion: item.item_version
         };
         renderItems();
         var editor = $('[data-review-resolution="' + state.decisionDraft.id + '"]');
@@ -657,6 +698,11 @@
   }
 
   function renderRepassSummary() {
+    var button = $('#reviews-repass-run');
+    if (button) {
+      button.disabled = state.repassRunning;
+      button.setAttribute('aria-busy', state.repassRunning ? 'true' : 'false');
+    }
     var target = $('#reviews-repass-summary');
     if (!target) return;
     if (state.repassRunning) {
@@ -733,10 +779,15 @@
     state.error = '';
     render();
     setStatus('Consultando a fila e o estado atual de cada evidência…');
-    var envelope = await bridge.apiFetchResponse(reviewListPath(), {
-      timeoutMs: 15000,
-      signal: requestController ? requestController.signal : undefined
-    });
+    var envelope;
+    try {
+      envelope = await bridge.apiFetchResponse(reviewListPath(), {
+        timeoutMs: 15000,
+        signal: requestController ? requestController.signal : undefined
+      });
+    } catch (error) {
+      envelope = { ok: false, status: 0, data: null, message: String(error && error.message || error) };
+    }
     if (generation !== requestGeneration) return;
     state.loading = false;
     if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)
@@ -748,6 +799,7 @@
       render();
       return;
     }
+    var decisionDraftInvalidated = invalidateChangedDecisionDraft(envelope.data.items);
     state.items = envelope.data.items;
     state.providers = envelope.data.providers;
     state.total = Number(envelope.data.total) || 0;
@@ -757,7 +809,11 @@
     var pending = state.providers.reduce(function (sum, provider) {
       return provider.id === 'sites' ? sum : sum + (Number(provider.pending) || 0);
     }, 0);
-    setStatus(state.total + ' item(ns) no recorte atual; ' + pending + ' pendência(s) centrais no total. As decisões não publicam automaticamente.');
+    if (decisionDraftInvalidated) {
+      setStatus('A evidência da decisão aberta mudou ou já não aceita essa ação. Escolha novamente na versão atual; nenhuma decisão foi enviada.', true);
+    } else {
+      setStatus(state.total + ' item(ns) no recorte atual; ' + pending + ' pendência(s) centrais no total. As decisões não publicam automaticamente.');
+    }
     render();
   }
 
@@ -777,14 +833,20 @@
   async function submitResolution(event) {
     event.preventDefault();
     if (!state.decisionDraft || !bridge || typeof bridge.apiFetchResponse !== 'function') return;
+    var draft = state.decisionDraft;
     var item = state.items.find(function (candidate) {
-      return candidate.id === state.decisionDraft.id;
+      return candidate.id === draft.id;
     });
-    if (!item || item.state !== 'pending') return;
+    if (!draftStillMatchesItem(draft, item)) {
+      state.decisionDraft = null;
+      setStatus('A evidência mudou ou a decisão deixou de ser permitida. Escolha novamente na versão atual; nada foi enviado.', true);
+      renderItems();
+      return;
+    }
     var form = event.currentTarget;
     var noteField = form.querySelector('[data-review-note]');
     var note = noteField ? noteField.value.trim() : '';
-    var decision = state.decisionDraft.decision;
+    var decision = draft.decision;
     if ((decision === 'rejected' || decision === 'changes_requested') && !note) {
       if (noteField) {
         noteField.setCustomValidity('Registre o motivo desta decisão.');
@@ -798,26 +860,32 @@
     state.resolvingId = item.id;
     renderItems();
     setStatus('Registrando a decisão na versão exata da evidência…');
-    var envelope = await bridge.apiFetchResponse(
-      '/api/cadu/reviews/' + encodeURIComponent(item.id) + '/resolve',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          review_id: item.id,
-          expected_item_version: item.item_version,
-          decision: decision,
-          resolution_note: note || null
-        }),
-        timeoutMs: 15000
-      }
-    );
-    state.resolvingId = '';
+    var envelope;
+    try {
+      envelope = await bridge.apiFetchResponse(
+        '/api/cadu/reviews/' + encodeURIComponent(item.id) + '/resolve',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            review_id: item.id,
+            expected_item_version: draft.itemVersion,
+            decision: decision,
+            resolution_note: note || null
+          }),
+          timeoutMs: 15000
+        }
+      );
+    } catch (error) {
+      envelope = { ok: false, status: 0, data: null, message: String(error && error.message || error) };
+    } finally {
+      if (state.resolvingId === item.id) state.resolvingId = '';
+    }
     state.decisionDraft = null;
     if (!envelope.ok || !envelope.data || envelope.data.published !== false) {
       var message = responseError(envelope);
-      setStatus(message, true);
       await refresh();
+      setStatus(message, true);
       return;
     }
     setStatus((DECISION_LABELS[decision] || 'Decisão') + ' registrada. Nenhum conteúdo foi publicado.');
@@ -832,13 +900,19 @@
     state.repassRunning = true;
     renderRepassSummary();
     setStatus('Reanalisando eventos e oportunidades pendentes com o classificador do Curador…');
-    var envelope = await bridge.apiFetchResponse('/api/cadu/reviews/repass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ intent: 'repass', run_id: null }),
-      timeoutMs: 420000
-    });
-    state.repassRunning = false;
+    var envelope;
+    try {
+      envelope = await bridge.apiFetchResponse('/api/cadu/reviews/repass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ intent: 'repass', run_id: null }),
+        timeoutMs: 420000
+      });
+    } catch (error) {
+      envelope = { ok: false, status: 0, data: null, message: String(error && error.message || error) };
+    } finally {
+      state.repassRunning = false;
+    }
     if (!envelope.ok || !envelope.data) {
       setStatus(responseError(envelope), true);
       renderRepassSummary();
@@ -1054,10 +1128,7 @@
     state.search = ($('#reviews-search') && $('#reviews-search').value.trim()) || '';
     state.limit = Number(($('#reviews-limit') && $('#reviews-limit').value) || DEFAULT_PAGE_LIMIT);
     state.offset = 0;
-    var repassFilter = $('#reviews-repass-filter');
-    state.repassFilter = repassFilter && ['all', 'done', 'pending'].indexOf(repassFilter.value) !== -1
-      ? repassFilter.value
-      : 'all';
+    state.repassFilter = selectedRepassFilter();
     state.decisionDraft = null;
     if (previousOrigin !== state.origin) invalidateAudit('O recorte mudou. Atualizando o histórico correspondente…');
     refresh();
@@ -1113,6 +1184,7 @@
     if (repassButton) repassButton.addEventListener('click', runRepass);
     var repassFilter = $('#reviews-repass-filter');
     if (repassFilter) repassFilter.addEventListener('change', function () {
+      state.repassFilter = selectedRepassFilter();
       state.offset = 0;
       refresh();
     });

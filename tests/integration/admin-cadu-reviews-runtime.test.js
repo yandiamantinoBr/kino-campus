@@ -117,9 +117,12 @@ function createPage(apiFetchResponse) {
     <span id="reviews-page-meta"></span>
     <button id="reviews-prev"></button>
     <button id="reviews-next"></button>
-    <button id="reviews-refresh"></button>
-    <button id="reviews-export-json"></button>
-    <details id="reviews-audit">
+     <button id="reviews-refresh"></button>
+     <button id="reviews-export-json"></button>
+     <select id="reviews-repass-filter"><option value="all">Todas</option><option value="done">Com reanálise</option><option value="pending">Sem reanálise</option></select>
+     <button id="reviews-repass-run"></button>
+     <div id="reviews-repass-summary"></div>
+     <details id="reviews-audit">
       <button id="reviews-audit-refresh"></button>
       <div id="reviews-audit-list"></div>
     </details>
@@ -458,6 +461,119 @@ describe('Admin Cadu review center runtime', () => {
       .includes('não publicam automaticamente'));
     expect(page.window.document.getElementById('reviews-status').textContent)
       .toContain('não publicam automaticamente');
+    page.dom.window.close();
+  });
+
+  test('invalidates an open decision when a refresh returns a different evidence version', async () => {
+    const original = centralItem();
+    const refreshed = centralItem();
+    refreshed.item_version = 'c'.repeat(64);
+    refreshed.title = 'Evento atualizado na fonte oficial';
+    let listCalls = 0;
+    const apiFetchResponse = jest.fn(async (url, options = {}) => {
+      if (options.method === 'POST') {
+        return { ok: true, data: { published: false } };
+      }
+      listCalls += 1;
+      return {
+        ok: true,
+        data: {
+          items: [listCalls === 1 ? original : refreshed],
+          total: 1,
+          limit: 25,
+          offset: 0,
+          has_more: false,
+          providers: providers()
+        }
+      };
+    });
+    const page = createPage(apiFetchResponse);
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('[data-review-decision="approved"]'));
+
+    page.window.document.querySelector('[data-review-decision="approved"]').click();
+    expect(page.window.document.querySelector('[data-review-resolution]')).not.toBeNull();
+    await page.window.KCCaduReviews.refresh();
+
+    expect(page.window.document.querySelector('[data-review-resolution]')).toBeNull();
+    expect(page.window.document.getElementById('reviews-status').textContent)
+      .toContain('nenhuma decisão foi enviada');
+    expect(apiFetchResponse.mock.calls.filter(([, options = {}]) => options.method === 'POST')).toHaveLength(0);
+    page.dom.window.close();
+  });
+
+  test('applies the reanalysis filter immediately and explains pending items without a permitted decision', async () => {
+    const withoutRepass = centralItem();
+    withoutRepass.title = 'Item sem reanálise';
+    withoutRepass.allowed_decisions = [];
+    const withRepass = centralItem();
+    withRepass.id = '123e4567-e89b-52d3-a456-426614174006';
+    withRepass.title = 'Item com reanálise';
+    withRepass.repass = {
+      score: 0.84,
+      delta: null,
+      decision_hint: 'review',
+      reasons: [],
+      created_at: 1785300000
+    };
+    const apiFetchResponse = jest.fn(async () => ({
+      ok: true,
+      data: {
+        items: [withoutRepass, withRepass],
+        total: 2,
+        limit: 25,
+        offset: 0,
+        has_more: false,
+        providers: providers()
+      }
+    }));
+    const page = createPage(apiFetchResponse);
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('[data-review-item]'));
+    expect(page.window.document.getElementById('reviews-list').textContent)
+      .toContain('ainda não aceita uma decisão editorial');
+
+    const filter = page.window.document.getElementById('reviews-repass-filter');
+    filter.value = 'done';
+    filter.dispatchEvent(new page.window.Event('change', { bubbles: true }));
+    await waitFor(() => {
+      const text = page.window.document.getElementById('reviews-list').textContent;
+      return text.includes('Item com reanálise') && !text.includes('Item sem reanálise');
+    });
+
+    const listText = page.window.document.getElementById('reviews-list').textContent;
+    expect(listText).toContain('Item com reanálise');
+    expect(listText).not.toContain('Item sem reanálise');
+    page.dom.window.close();
+  });
+
+  test('recovers controls after an exceptional resolution transport failure', async () => {
+    const apiFetchResponse = jest.fn(async (url, options = {}) => {
+      if (options.method === 'POST') throw new Error('transport_unavailable');
+      return {
+        ok: true,
+        data: {
+          items: [centralItem()],
+          total: 1,
+          limit: 25,
+          offset: 0,
+          has_more: false,
+          providers: providers()
+        }
+      };
+    });
+    const page = createPage(apiFetchResponse);
+    page.window.KCCaduReviews.open('pipeline', 'pending');
+    await waitFor(() => page.window.document.querySelector('[data-review-decision="approved"]'));
+
+    page.window.document.querySelector('[data-review-decision="approved"]').click();
+    const form = page.window.document.querySelector('[data-review-resolution]');
+    form.dispatchEvent(new page.window.Event('submit', { bubbles: true, cancelable: true }));
+    await waitFor(() => page.window.document.getElementById('reviews-status').textContent.includes('não confirmou'));
+
+    const approved = page.window.document.querySelector('[data-review-decision="approved"]');
+    expect(approved.disabled).toBe(false);
+    expect(page.window.document.querySelector('[data-review-resolution]')).toBeNull();
     page.dom.window.close();
   });
 
