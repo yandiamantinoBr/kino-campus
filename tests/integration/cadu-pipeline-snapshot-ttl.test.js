@@ -352,6 +352,45 @@ describe('Cadu pipeline snapshot TTL control', () => {
     expect(alert).toHaveBeenCalledWith(expect.stringContaining('Nenhuma execução foi iniciada'));
   });
 
+  test.each([
+    ['an existing active run', { existing_run_id: 'run-already-active' }, 'run-alr'],
+    ['a busy runtime', { code: 'pipeline_runtime_busy' }, 'temporariamente ocupada'],
+  ])('a 409 for %s refreshes controls without attempting another execution', async (_label, detail, message) => {
+    const state = pipelineState(initialNow);
+    const apiFetch = jest.fn().mockResolvedValue({
+      __error: true,
+      status: 409,
+      data: { detail },
+    });
+    const alert = jest.fn();
+    const refreshPipeline = jest.fn().mockResolvedValue({});
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl: jest.fn().mockResolvedValue(true),
+      renderPipelineStages: jest.fn(),
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch,
+      confirm: jest.fn().mockReturnValue(true),
+      alert,
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline,
+    });
+
+    await runPipelineStage('all', true, null);
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledWith('/api/cadu/pipeline/run/dry-run', expect.any(Object));
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(refreshPipeline).toHaveBeenCalledWith({ force: true });
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(state.pipelineStartPending).toBe(false);
+  });
+
   test('a prepared Authorization header reaches fetch without another async auth gap', async () => {
     const getAdminAccessToken = jest.fn();
     const fetch = jest.fn().mockResolvedValue({ ok: true });
