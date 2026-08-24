@@ -5987,11 +5987,11 @@
     return state.pipelineRefreshPromise;
   }
 
-  function reconcilePipelineAfterAcceptedRun() {
-    // A POST can be accepted while a status GET that began before it is still
-    // in flight. That GET is authoritative only for its own instant and can
-    // legitimately return active_run=null. In that case, wait for it and make
-    // exactly one new read; never repeat the POST.
+  function reconcilePipelineAfterRunMayExist() {
+    // Um POST aceito, ou um 409 que informa execução concorrente, pode coincidir
+    // com um GET de status iniciado antes dela. Esse GET só é autoritativo para
+    // seu próprio instante e pode retornar active_run=null. Nesse caso, aguarda
+    // e faz exatamente uma nova leitura; nunca repete o POST.
     var hadRefreshInFlight = Boolean(state.pipelineRefreshPromise);
     function refreshAcceptedRunSnapshot() {
       try {
@@ -6299,6 +6299,10 @@
     if (!container) return;
     var controlReady = pipelineControlIsReady();
     var controlGuard = controlReady ? '' : '<div class="kc-cadu-empty">Controles bloqueados: ' + escapeHtml(state.pipelineControlReason || 'snapshot expirado') + '</div>';
+    var activeRun = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+    var activeRunReason = activeRun
+      ? 'Há uma execução ' + pipelineStatusLabel(activeRun.status) + '. Aguarde seu término e a atualização do painel.'
+      : '';
     if (!stages.length) {
       container.innerHTML = controlGuard + '<div class="kc-cadu-empty">O cadu-api não informou estágios seguros para exibição.</div>';
       return;
@@ -6334,26 +6338,32 @@
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
         var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
         var approvalGatedReal = pipelineRealRunApprovalGated(s, dryRun, state.pipelineCapabilities);
-        var disabled = (!canRefreshControl && (!canRun || approvalGatedReal || (modeBlocked && !guardedDedupReal))) || state.pipelineStartPending;
+        var disabled = Boolean(activeRun) ||
+          (!canRefreshControl && (!canRun || approvalGatedReal || (modeBlocked && !guardedDedupReal))) ||
+          state.pipelineStartPending;
         var displayLabel = canRefreshControl
           ? 'Renovar · ' + label
           : (guardedDedupReal ? 'Executar real · simule antes' : label);
         var disabledReason = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior.'
-          : (approvalGatedReal
-            ? (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
-            : ((modeBlocked && !guardedDedupReal)
-              ? modePrecondition.detail
-              : (!canRun && !canRefreshControl ? blockedReason : '')));
+          : (activeRunReason
+            ? activeRunReason
+            : (approvalGatedReal
+              ? (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
+              : ((modeBlocked && !guardedDedupReal)
+                ? modePrecondition.detail
+                : (!canRun && !canRefreshControl ? blockedReason : ''))));
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
-          : (canRefreshControl
-            ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
-            : (approvalGatedReal
-              ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
-              : (modeBlocked
-              ? 'Indisponível: ' + modePrecondition.detail
-              : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason))));
+          : (activeRunReason
+            ? 'Indisponível: ' + activeRunReason
+            : (canRefreshControl
+              ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
+              : (approvalGatedReal
+                ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
+                : (modeBlocked
+                  ? 'Indisponível: ' + modePrecondition.detail
+                  : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason)))));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         if (disabled && disabledReason) actionBlockers.push({ label: label, detail: disabledReason });
         return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled && disabledReason ? ' aria-describedby="' + escapeHtml(blockerId) + '"' : '') + (disabled ? ' disabled' : '') + '>' +
@@ -7301,6 +7311,11 @@
 
   async function runPipelineStage(stageId, dryRun, clickedButton) {
     if (state.pipelineStartPending) return;
+    var activeRun = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+    if (activeRun) {
+      alert('Já há uma execução ' + pipelineStatusLabel(activeRun.status) + '. Aguarde seu término e a atualização do painel antes de iniciar outro estágio. Nenhuma nova execução foi iniciada.');
+      return;
+    }
     var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
     state.pipelineStartPending = true;
     var restoreButtons = lockPipelineActionButtons(btn);
@@ -7419,7 +7434,7 @@
       if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
       disconnectPipelineStream();
       stopPipelineLogPolling();
-      var postStartReconciliation = reconcilePipelineAfterAcceptedRun();
+      var postStartReconciliation = reconcilePipelineAfterRunMayExist();
       if (postStartReconciliation && typeof postStartReconciliation.catch === 'function') {
         postStartReconciliation.catch(function () {});
       }
@@ -7445,7 +7460,7 @@
         // nosso snapshot. Releia o estado autorizado para exibir o run ativo e
         // reconectar seus logs; isto é somente GET e nunca tenta outro POST.
         try {
-          var reconciliation = refreshPipeline({ force: true });
+          var reconciliation = reconcilePipelineAfterRunMayExist();
           if (reconciliation && typeof reconciliation.catch === 'function') {
             reconciliation.catch(function () {});
           }

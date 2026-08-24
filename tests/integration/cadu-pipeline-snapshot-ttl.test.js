@@ -62,6 +62,7 @@ function createRenderPipelineStages(state) {
     'runPipelineStage',
     `"use strict";
      const pipelineControlIsReady = ${extractFunctionSource('pipelineControlIsReady')};
+     const pipelineRunIsActive = ${extractFunctionSource('pipelineRunIsActive')};
      const pipelineRealRunApprovalGated = ${extractFunctionSource('pipelineRealRunApprovalGated')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
      const renderDedupProtectedFlow = ${extractFunctionSource('renderDedupProtectedFlow')};
@@ -106,7 +107,9 @@ function createRunHarness(dependencies) {
      const resolvePipelineDryRun = ${extractFunctionSource('resolvePipelineDryRun')};
      const buildPipelineRunRequest = ${extractFunctionSource('buildPipelineRunRequest')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
-     const reconcilePipelineAfterAcceptedRun = ${extractFunctionSource('reconcilePipelineAfterAcceptedRun')};
+     const pipelineRunIsActive = ${extractFunctionSource('pipelineRunIsActive')};
+     const pipelineStatusLabel = ${extractFunctionSource('pipelineStatusLabel')};
+     const reconcilePipelineAfterRunMayExist = ${extractFunctionSource('reconcilePipelineAfterRunMayExist')};
      return (${extractFunctionSource('runPipelineStage')});`
   )(
     dependencies.state,
