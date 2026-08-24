@@ -12206,10 +12206,17 @@ a.kc-home-metric-card:hover {
   outline: none;
 }
 
+.kc-consent-btn:focus-visible {
+  outline: 3px solid var(--kc-text-dark-primary);
+  outline-offset: 3px;
+}
+
 .kc-consent-btn--primary {
   border-color: var(--kc-primary-brand);
   background: var(--kc-primary-brand);
-  color: #fff;
+  /* #222 on the brand fill is 5.57:1, retaining an AA-safe foreground in
+   * both themes without changing the established orange primary surface. */
+  color: #222222;
   box-shadow: 0 10px 24px rgba(255, 107, 0, 0.22);
 }
 
