@@ -17,6 +17,10 @@
   var PIPELINE_LOG_MAX_LINES = 180;
   var OPENCLAW_POLL_INTERVAL_MS = 60000;
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
+  // A cold context snapshot may wait up to 15 s for the bounded OpenClaw
+  // status probe. Keep this deadline above that bound and below the 25 s
+  // server proxy deadline so the browser never aborts a valid cold response.
+  var OPENCLAW_CONTEXT_TIMEOUT_MS = 20000;
   var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;
   var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
   var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
@@ -451,7 +455,7 @@
         try {
           var ctx = state.currentTab === 'openclaw'
             ? null
-            : await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
+            : await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS });
           if (ctx && !ctx.__error) {
             state.openclawContext = ctx;
             if (contextPill) {

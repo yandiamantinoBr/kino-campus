@@ -10,6 +10,7 @@ const controller = fs.readFileSync(
 );
 const html = fs.readFileSync(path.join(ROOT, 'admin/cadu.html'), 'utf8');
 const healthProxy = fs.readFileSync(path.join(ROOT, 'api/cadu/health.js'), 'utf8');
+const controlProxy = fs.readFileSync(path.join(ROOT, 'server/cadu-control-proxy.js'), 'utf8');
 const sourceModel = fs.readFileSync(
   path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-sources.js'),
   'utf8',
@@ -292,6 +293,21 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).toContain('refreshAll({ forceOperational: true });');
     expect(controller).not.toContain('}, 15000);');
     expect(controller).not.toContain('Bot: 8746');
+  });
+
+  test('allows a cold context snapshot to finish before the proxy deadline', () => {
+    const contextTimeout = Number(
+      controller.match(/var OPENCLAW_CONTEXT_TIMEOUT_MS = (\d+);/)[1],
+    );
+    const proxyTimeout = Number(
+      controlProxy.match(/const NON_STREAM_TIMEOUT_MS = ([\d_]+);/)[1].replace(/_/g, ''),
+    );
+
+    expect(contextTimeout).toBe(20000);
+    expect(contextTimeout).toBeLessThan(proxyTimeout);
+    expect(functionSource('checkHealth')).toContain(
+      "apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS })",
+    );
   });
 
   test('never caches Cadu health and rejects browser-direct production configuration', async () => {
