@@ -154,7 +154,7 @@ function pipelineStageRenderHarness() {
   return Function(
     'document',
     '"use strict";\n' +
-    'var state = { pipelineControlReason: "", pipelineCapabilities: { explicit_dry_run: true, explicit_run_mode_routes: true }, pipelineStartPending: false, pipelineActive: null };\n' +
+    'var state = { pipelineControlReason: "", pipelineCapabilities: { explicit_dry_run: true, explicit_run_mode_routes: true, full_run_dry_run_optional: true }, pipelineStartPending: false, pipelineActive: null };\n' +
     'function $(selector) { return document.querySelector(selector); }\n' +
     'function $$(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }\n' +
     'function pipelineControlIsReady() { return true; }\n' +
@@ -165,6 +165,7 @@ function pipelineStageRenderHarness() {
     'function pipelineStageActionModes() { return [{ dryRun: true, label: "Simular", danger: false }, { dryRun: false, label: "Executar real", danger: true }]; }\n' +
     'function pipelineStageModePrecondition() { return null; }\n' +
     'function pipelineRealRunApprovalGated(stage, dryRun) { return dryRun === false && stage.live_enabled === false; }\n' +
+    'function pipelineFullRunDryRunPolicyGated() { return false; }\n' +
     'function renderStagePreflight() { return ""; }\n' +
     'function renderDedupProtectedFlow() { return ""; }\n' +
     'function renderRunSummary() { return ""; }\n' +
@@ -870,7 +871,8 @@ describe('admin Cadu runtime hardening', () => {
     expect(freshRefresh).toHaveBeenCalledWith({ force: true });
     const conflictStart = controller.indexOf('} else if (resp.status === 409)');
     const nextErrorBranch = controller.indexOf('} else if (resp.status === 400 || resp.status === 422)', conflictStart);
-    expect(controller.slice(conflictStart, nextErrorBranch)).toContain('reconcilePipelineAfterRunMayExist()');
+    expect(controller.slice(conflictStart, nextErrorBranch)).toContain('reconcilePipelineStartWithActionsLocked()');
+    expect(controller).toContain('return await reconcilePipelineAfterRunMayExist();');
   });
 
   test('reconciles Pipeline log transport independently from the control snapshot', () => {
