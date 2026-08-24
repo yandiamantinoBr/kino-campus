@@ -106,6 +106,7 @@ function createRunHarness(dependencies) {
      const resolvePipelineDryRun = ${extractFunctionSource('resolvePipelineDryRun')};
      const buildPipelineRunRequest = ${extractFunctionSource('buildPipelineRunRequest')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
+     const reconcilePipelineAfterAcceptedRun = ${extractFunctionSource('reconcilePipelineAfterAcceptedRun')};
      return (${extractFunctionSource('runPipelineStage')});`
   )(
     dependencies.state,

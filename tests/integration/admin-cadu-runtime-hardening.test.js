@@ -84,6 +84,16 @@ function pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCadu
   )(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
 }
 
+function acceptedPipelineRunRefreshHarness(refreshPipeline, initialRefresh) {
+  return Function(
+    'refreshPipeline', 'initialRefresh',
+    '"use strict";\n' +
+    'var state = { pipelineRefreshPromise: initialRefresh };\n' +
+    functionSource('reconcilePipelineAfterAcceptedRun') + '\n' +
+    'return { reconcile: reconcilePipelineAfterAcceptedRun };',
+  )(refreshPipeline, initialRefresh);
+}
+
 function pipelineLogTransportHarness(initialStreamRequest, dependencies) {
   return Function(
     'initialStreamRequest',
@@ -763,6 +773,30 @@ describe('admin Cadu runtime hardening', () => {
     expect(pipeline.state.pipelineStopPendingRunId).toBeNull();
     expect(alert).not.toHaveBeenCalled();
     expect(showCaduError).not.toHaveBeenCalled();
+  });
+
+  test('re-reads Pipeline status after a start races with an older refresh', async () => {
+    let resolveOlderRefresh;
+    const olderRefresh = new Promise((resolve) => { resolveOlderRefresh = resolve; });
+    const refreshPipeline = jest.fn()
+      .mockImplementationOnce(() => olderRefresh)
+      .mockResolvedValueOnce(undefined);
+    const pipeline = acceptedPipelineRunRefreshHarness(refreshPipeline, olderRefresh);
+
+    const reconciliation = pipeline.reconcile();
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(refreshPipeline).toHaveBeenLastCalledWith({ force: true });
+
+    resolveOlderRefresh(undefined);
+    await reconciliation;
+
+    expect(refreshPipeline).toHaveBeenCalledTimes(2);
+    expect(refreshPipeline).toHaveBeenLastCalledWith({ force: true });
+
+    const freshRefresh = jest.fn().mockResolvedValue(undefined);
+    await acceptedPipelineRunRefreshHarness(freshRefresh, null).reconcile();
+    expect(freshRefresh).toHaveBeenCalledTimes(1);
+    expect(freshRefresh).toHaveBeenCalledWith({ force: true });
   });
 
   test('reconciles Pipeline log transport independently from the control snapshot', () => {

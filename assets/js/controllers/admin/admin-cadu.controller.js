@@ -5987,6 +5987,29 @@
     return state.pipelineRefreshPromise;
   }
 
+  function reconcilePipelineAfterAcceptedRun() {
+    // A POST can be accepted while a status GET that began before it is still
+    // in flight. That GET is authoritative only for its own instant and can
+    // legitimately return active_run=null. In that case, wait for it and make
+    // exactly one new read; never repeat the POST.
+    var hadRefreshInFlight = Boolean(state.pipelineRefreshPromise);
+    function refreshAcceptedRunSnapshot() {
+      try {
+        return Promise.resolve(refreshPipeline({ force: true })).then(
+          function () { return true; },
+          function () { return false; }
+        );
+      } catch (_) {
+        return Promise.resolve(false);
+      }
+    }
+    var firstRefresh = refreshAcceptedRunSnapshot();
+    if (!hadRefreshInFlight) return firstRefresh;
+    return firstRefresh.then(function () {
+      return refreshAcceptedRunSnapshot();
+    });
+  }
+
   async function ensureFreshPipelineControl() {
     try {
       // Se o polling de 5 s já estiver renovando, o clique participa da mesma
@@ -7396,7 +7419,10 @@
       if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
       disconnectPipelineStream();
       stopPipelineLogPolling();
-      refreshPipeline();
+      var postStartReconciliation = reconcilePipelineAfterAcceptedRun();
+      if (postStartReconciliation && typeof postStartReconciliation.catch === 'function') {
+        postStartReconciliation.catch(function () {});
+      }
     } else if (resp && resp.__error) {
       // Mensagens específicas por status code
       var msg = 'Falha ao iniciar.';
