@@ -84,6 +84,29 @@ function pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCadu
   )(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
 }
 
+function pipelineLogTransportHarness(initialStreamRequest, dependencies) {
+  return Function(
+    'initialStreamRequest',
+    'shouldUsePipelineLogPolling',
+    'connectPipelineLogPolling',
+    'stopPipelineLogPolling',
+    'connectPipelineStream',
+    'disconnectPipelineStream',
+    '"use strict";\n' +
+    'var pipelineStreamRequest = initialStreamRequest;\n' +
+    functionSource('pipelineRunIsActive') + '\n' +
+    functionSource('reconcilePipelineLogTransport') + '\n' +
+    'return { reconcile: reconcilePipelineLogTransport };',
+  )(
+    initialStreamRequest,
+    dependencies.shouldUsePipelineLogPolling,
+    dependencies.connectPipelineLogPolling,
+    dependencies.stopPipelineLogPolling,
+    dependencies.connectPipelineStream,
+    dependencies.disconnectPipelineStream,
+  );
+}
+
 function pipelineStageRenderHarness() {
   return Function(
     'document',
@@ -287,6 +310,8 @@ describe('admin Cadu runtime hardening', () => {
       controller.indexOf('var normalizedStages = validation.stages'),
     );
     expect(invalidSnapshotBranch).toContain('else refreshPipelineHealth();');
+    expect(invalidSnapshotBranch).toContain('finally {');
+    expect(invalidSnapshotBranch).toContain('reconcilePipelineLogTransport(state.pipelineActive);');
   });
 
   test('classifies a three-day-old feed as stale without pretending reload triggers collection', () => {
@@ -738,6 +763,29 @@ describe('admin Cadu runtime hardening', () => {
     expect(pipeline.state.pipelineStopPendingRunId).toBeNull();
     expect(alert).not.toHaveBeenCalled();
     expect(showCaduError).not.toHaveBeenCalled();
+  });
+
+  test('reconciles Pipeline log transport independently from the control snapshot', () => {
+    const dependencies = {
+      shouldUsePipelineLogPolling: jest.fn((run) => run.stage === 'all'),
+      connectPipelineLogPolling: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      connectPipelineStream: jest.fn(),
+      disconnectPipelineStream: jest.fn(),
+    };
+    const pipeline = pipelineLogTransportHarness({ runId: 'old-stream' }, dependencies);
+
+    pipeline.reconcile({ id: 'pending-new', stage: 'scan', status: 'pending' });
+    expect(dependencies.connectPipelineLogPolling).toHaveBeenCalledWith('pending-new');
+    expect(dependencies.connectPipelineStream).not.toHaveBeenCalled();
+
+    pipeline.reconcile({ id: 'running-new', stage: 'scan', status: 'running' });
+    expect(dependencies.stopPipelineLogPolling).toHaveBeenCalled();
+    expect(dependencies.connectPipelineStream).toHaveBeenCalledWith('running-new');
+
+    pipeline.reconcile({ id: 'finished-run', stage: 'scan', status: 'finished' });
+    expect(dependencies.disconnectPipelineStream).toHaveBeenCalledTimes(1);
+    expect(dependencies.stopPipelineLogPolling).toHaveBeenCalledTimes(2);
   });
 
   test('rejects pipeline HTTP error envelopes and keeps the run modal accessible in every state', () => {
