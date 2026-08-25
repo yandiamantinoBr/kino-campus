@@ -199,7 +199,10 @@ Visível apenas em `max-width: 767px`.
 
 ## Ícones
 
-O projeto usa **Font Awesome 6** (CDN):
+O projeto usa **Font Awesome Free 6.4.0** autocontido em
+`assets/vendor/fontawesome/`, incluindo licença e webfonts. As páginas carregam
+`assets/vendor/fontawesome/css/all.min.css?v=6.4.0`, sem depender de CDN para
+renderizar os ícones:
 - Sólidos: `fas fa-*`
 - Regular: `far fa-*`
 

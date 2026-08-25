@@ -154,7 +154,7 @@ describe('indicadores de carregamento globais', () => {
     ];
     const stale = [];
     const expectedVersions = {
-      'styles.css': '8.6.23',
+      'styles.css': '8.6.24',
       'kc-theme-boot.css': '8.6.12',
       'kc-i18n.js': '8.6.14',
       'admin-shell.css': '8.6.12',
@@ -186,7 +186,7 @@ describe('indicadores de carregamento globais', () => {
     const serviceWorker = read('sw.js');
     expect(serviceWorker).toContain("var CACHE_VERSION = 'kc-shell-v12.21.3';");
     expect(serviceWorker).toContain("'/assets/css/kc-public-shell.css?v=8.6.15'");
-    expect(serviceWorker).toContain("'/assets/css/styles.css?v=8.6.23'");
+    expect(serviceWorker).toContain("'/assets/css/styles.css?v=8.6.24'");
     expect(serviceWorker).toContain("'/assets/js/core/kc-i18n.js?v=8.6.14'");
     expect(serviceWorker).not.toContain('RUNTIME_VERSION');
 

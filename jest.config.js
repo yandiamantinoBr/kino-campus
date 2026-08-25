@@ -16,6 +16,7 @@ module.exports = {
   modulePathIgnorePatterns: [
     '<rootDir>/\\.claude/',
     '<rootDir>/docs/legacy/backend-placeholder/',
+    '<rootDir>/dist/',
   ],
   collectCoverage: true,
   coverageDirectory: 'output/coverage',
