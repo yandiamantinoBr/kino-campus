@@ -29,6 +29,7 @@ const META_DESCRIPTION_MAX_LENGTH = 180;
 const SEO_TITLE_MAX_LENGTH = 70;
 const SSR_DESCRIPTION_MAX_CHARACTERS = 12_000;
 const SSR_DESCRIPTION_MAX_BLOCKS = 80;
+const STRUCTURED_DESCRIPTION_MAX_CHARACTERS = 12_000;
 const OG_SUPABASE_TIMEOUT_MS = PUBLIC_SUPABASE_TIMEOUT_MS;
 
 let cachedHtml = null;
@@ -195,10 +196,25 @@ function formatLinkLabel(url) {
   return label.length > 56 ? `${label.slice(0, 53).trim()}...` : label;
 }
 
+function sliceAtCodePointBoundary(value, maxCodeUnits) {
+  const text = String(value || '');
+  let safeEnd = Math.min(text.length, Math.max(0, maxCodeUnits));
+  if (safeEnd > 0 && safeEnd < text.length) {
+    const trailingCodeUnit = text.charCodeAt(safeEnd - 1);
+    if (trailingCodeUnit >= 0xD800 && trailingCodeUnit <= 0xDBFF) safeEnd -= 1;
+  }
+  return text.slice(0, safeEnd);
+}
+
 function clamp(value, max) {
   const text = String(value || '').trim();
   if (text.length <= max) return text;
-  return `${text.slice(0, Math.max(0, max - 1)).trim()}…`;
+  if (max <= 0) return '';
+  return `${sliceAtCodePointBoundary(text, max - 1).trim()}…`;
+}
+
+function structuredDescription(value) {
+  return clamp(cleanText(value), STRUCTURED_DESCRIPTION_MAX_CHARACTERS);
 }
 
 function wordCount(value) {
@@ -363,10 +379,7 @@ function paragraphHtml(text) {
   const sourceWasClamped = source.length > SSR_DESCRIPTION_MAX_CHARACTERS;
   let visibleSource = source;
   if (sourceWasClamped) {
-    let safeEnd = SSR_DESCRIPTION_MAX_CHARACTERS;
-    const trailingCodeUnit = source.charCodeAt(safeEnd - 1);
-    if (trailingCodeUnit >= 0xD800 && trailingCodeUnit <= 0xDBFF) safeEnd -= 1;
-    visibleSource = source.slice(0, safeEnd);
+    visibleSource = sliceAtCodePointBoundary(source, SSR_DESCRIPTION_MAX_CHARACTERS);
   }
   const normalizedBlocks = visibleSource
     .split(/\n+/)
@@ -640,7 +653,7 @@ function buildArticleAuthor(post) {
 
 function buildArticle(post, values) {
   const metadata = metadataOf(post);
-  const body = cleanText(post.description);
+  const body = structuredDescription(post.description);
   const sourceUrl = getSourceUrl(post, values);
   const entity = {
     '@type': 'Article',
@@ -808,7 +821,7 @@ function buildEvent(post, values) {
     post.location,
     address && address.streetAddress,
   ]);
-  const description = cleanText(post.description);
+  const description = structuredDescription(post.description);
   if (post.module !== 'eventos' || !startDate || !address || !locationName || !cleanText(post.title) || !description) {
     return null;
   }
@@ -925,7 +938,7 @@ function buildJobPosting(post, values) {
     address && address.streetAddress,
     post.location,
   ]);
-  const description = cleanText(post.description);
+  const description = structuredDescription(post.description);
   const employmentType = String(metadata.employmentType || '').trim().toUpperCase();
   const supportedEmploymentTypes = new Set([
     'FULL_TIME',

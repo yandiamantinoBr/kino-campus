@@ -464,6 +464,62 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(JSON.parse(serialized)).toEqual(data);
   });
 
+  test('limita descricoes anormais no JSON-LD de Article, Event e JobPosting', async () => {
+    const hugeDescription = `${'detalhe oficial confirmado '.repeat(5_000)}SENTINELA_APOS_LIMITE`;
+    const posts = [
+      {
+        expectedType: 'Article',
+        field: 'articleBody',
+        post: buildPost({ id: 'jsonld-article-limit', description: hugeDescription }),
+      },
+      {
+        expectedType: 'Event',
+        field: 'description',
+        post: buildPost({
+          id: 'jsonld-event-limit',
+          description: hugeDescription,
+          metadata: {
+            data_evento: '2026-10-20',
+            event_address: 'Avenida Universitária, 1488',
+            event_city: 'Goiânia',
+          },
+          location: 'Centro de Cultura e Eventos',
+        }),
+      },
+      {
+        expectedType: 'JobPosting',
+        field: 'description',
+        post: buildPost({
+          id: 'jsonld-job-limit',
+          module: 'oportunidades',
+          category: 'empregos',
+          description: hugeDescription,
+          metadata: {
+            deadline_date: '2026-12-31',
+            link: 'https://example.edu.br/vaga',
+            source_unit: 'Instituto de Pesquisa Example',
+            city: 'Goiânia',
+          },
+          location: 'Goiânia',
+        }),
+      },
+    ];
+
+    for (const item of posts) {
+      const entity = richEntity(buildProductJsonLd(item.post, buildProductValues(item.post)));
+      expect(entity['@type']).toBe(item.expectedType);
+      expect(entity[item.field].length).toBeLessThanOrEqual(12_000);
+      expect(entity[item.field]).toMatch(/…$/u);
+      expect(entity[item.field]).not.toContain('SENTINELA_APOS_LIMITE');
+    }
+
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [posts[0].post] });
+    const response = createResponse();
+    await productHandler({ query: { id: posts[0].post.id } }, response);
+    expect(response.statusCode).toBe(200);
+    expect(response.body).not.toContain('SENTINELA_APOS_LIMITE');
+  });
+
   test('só gera Event com data e endereço postal explícitos e usa a descrição completa higienizada', () => {
     const venueOnly = buildPost({
       metadata: { data_evento: '2026-08-20' },
