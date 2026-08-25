@@ -103,6 +103,15 @@ describe('miniaturas do detalhe', () => {
     expect(base).toContain('object-fit: contain;');
     expect(mobileThumb).toContain('width: 100%;');
     expect(mobileThumb).toContain('height: auto;');
-    expect(PRODUCT_HTML).toContain('assets/css/product.css?v=8.6.4');
+    expect(PRODUCT_HTML).toContain('assets/css/product.css?v=8.6.5');
+  });
+});
+
+describe('breadcrumb do detalhe', () => {
+  test('agrupa separador e destino para evitar chevron orfao no mobile', () => {
+    expect(PRODUCT_HTML).toContain('kc-breadcrumb-segment kc-breadcrumb-segment--current');
+    expect(PRODUCT_HTML).toContain('aria-current="page"');
+    expect(PRODUCT_CSS).toContain('.kc-breadcrumb-segment {');
+    expect(PRODUCT_CSS).toContain('.kc-breadcrumb-segment--current > [aria-current="page"]');
   });
 });

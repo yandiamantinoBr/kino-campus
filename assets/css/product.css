@@ -40,6 +40,22 @@
       color: var(--kc-primary-brand);
     }
 
+    .kc-breadcrumb-segment {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .kc-breadcrumb-segment--current {
+      max-width: 100%;
+    }
+
+    .kc-breadcrumb-segment--current > [aria-current="page"] {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
     .kc-product-page .kc-product-container,
     .kc-product-container {
       display: flex;

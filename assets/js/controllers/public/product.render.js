@@ -78,6 +78,13 @@
     try { return Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); } catch (_) { return String(n); }
   }
 
+  function formatDateForDisplay(value) {
+    var text = String(value == null ? '' : value).trim();
+    var isoDate = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(text);
+    if (!isoDate) return text.slice(0, 10);
+    return isoDate[3] + '/' + isoDate[2] + '/' + isoDate[1];
+  }
+
   function formatLinkLabel(url) {
     var text = String(url || '').trim();
     var label = text;
@@ -372,14 +379,14 @@
     var subLbl = post.subcategoriaLabel || post.subcategoria || '';
     var title = post.titulo || post.title || '';
     var parts = [];
-    parts.push('<a href="index.html"><i class="fas fa-home"></i> KinoCampus</a>');
+    parts.push('<a class="kc-breadcrumb-segment kc-breadcrumb-segment--home" href="index.html"><i class="fas fa-home" aria-hidden="true"></i><span>KinoCampus</span></a>');
     var rawModulePage = String((post._kcModulePage || '') || 'index.html').trim();
     var safeModulePage = /^[a-z0-9_-]+\.html(?:[?#].*)?$/i.test(rawModulePage) ? rawModulePage : 'index.html';
-    if (modKey) parts.push('<i class="fas fa-chevron-right"></i><a href="' + esc(safeModulePage) + '">' + esc(modLbl) + '</a>');
-    if (catLbl) parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(catLbl) + '</span>');
-    if (subLbl) parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(subLbl) + '</span>');
-    if (title) parts.push('<i class="fas fa-chevron-right"></i><span>' + esc(title) + '</span>');
-    if (parts.length === 1) parts.push('<i class="fas fa-chevron-right"></i><span>Detalhes</span>');
+    if (modKey) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><a href="' + esc(safeModulePage) + '">' + esc(modLbl) + '</a></span>');
+    if (catLbl) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>' + esc(catLbl) + '</span></span>');
+    if (subLbl) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>' + esc(subLbl) + '</span></span>');
+    if (title) parts.push('<span class="kc-breadcrumb-segment kc-breadcrumb-segment--current"><i class="fas fa-chevron-right" aria-hidden="true"></i><span aria-current="page">' + esc(title) + '</span></span>');
+    if (parts.length === 1) parts.push('<span class="kc-breadcrumb-segment kc-breadcrumb-segment--current"><i class="fas fa-chevron-right" aria-hidden="true"></i><span aria-current="page">Detalhes</span></span>');
     bc.innerHTML = parts.join(' ');
   }
 
@@ -414,7 +421,7 @@
     // Prazo semantico declarado pela fonte; aliases de expiracao sao apenas ciclo de vida tecnico.
     var deadline = getDeclaredDeadline(post);
     if (deadline) {
-      var datePart = String(deadline).slice(0, 10);
+      var datePart = formatDateForDisplay(deadline);
       badges.push('<span class="kc-badge"><i class="fas fa-calendar-check"></i> Prazo: ' + esc(datePart) + '</span>');
     }
     if (isClosed) badges.push('<span class="kc-badge kc-badge--closed"><i class="fas fa-lock" aria-hidden="true"></i> Encerrado</span>');
@@ -649,9 +656,9 @@
     var local = post.location || metadata.location || metadata.local || '';
     if (local) pairs.push(['fas fa-map-marker-alt', 'Local', local.replace(/^\*\*\s*/, '').replace(/\*\*$/, '').trim() || local]);
     var dataEvento = metadata.data_evento || metadata.event_date || metadata.eventDate || '';
-    if (dataEvento) pairs.push(['fas fa-calendar-day', 'Data do evento', String(dataEvento).slice(0, 10)]);
+    if (dataEvento) pairs.push(['fas fa-calendar-day', 'Data do evento', formatDateForDisplay(dataEvento)]);
     var deadline = getDeclaredDeadline(post);
-    if (deadline) pairs.push(['fas fa-calendar-check', 'Prazo', String(deadline).slice(0, 10)]);
+    if (deadline) pairs.push(['fas fa-calendar-check', 'Prazo', formatDateForDisplay(deadline)]);
     var modalidade = metadata.modalidadeTrabalho || metadata.modalidade || metadata.workModeLabel || '';
     if (modalidade) pairs.push(['fas fa-laptop-house', 'Modalidade', modalidade]);
     var contato = metadata.contato || '';
