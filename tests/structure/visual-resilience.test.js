@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const STYLES = fs.readFileSync(path.join(ROOT, 'assets/css/styles.css'), 'utf8');
 const PRODUCT_CSS = fs.readFileSync(path.join(ROOT, 'assets/css/product.css'), 'utf8');
 const PRODUCT_HTML = fs.readFileSync(path.join(ROOT, '_product.html'), 'utf8');
+const PRODUCT_LOAD = fs.readFileSync(path.join(ROOT, 'assets/js/controllers/public/product.load.js'), 'utf8');
 const FONT_ROOT = path.join(ROOT, 'assets/vendor/fontawesome');
 const CDN_REFERENCE = 'cdnjs.cloudflare.com/ajax/libs/font-awesome';
 
@@ -113,5 +114,20 @@ describe('breadcrumb do detalhe', () => {
     expect(PRODUCT_HTML).toContain('aria-current="page"');
     expect(PRODUCT_CSS).toContain('.kc-breadcrumb-segment {');
     expect(PRODUCT_CSS).toContain('.kc-breadcrumb-segment--current > [aria-current="page"]');
+  });
+});
+
+describe('cabeçalho estreito e comentários', () => {
+  test('oculta o wordmark antes da colisão e mantém o nome opcional legível', () => {
+    const narrowStart = STYLES.lastIndexOf('@media (max-width: 400px)');
+    const narrow = STYLES.slice(narrowStart, STYLES.indexOf('/* v75.1 FINAL', narrowStart));
+
+    expect(narrowStart).toBeGreaterThan(-1);
+    expect(cssBlock(narrow, '.kc-header:not(.kc-header--admin) .kc-logo-text')).toContain(
+      'display: none !important;',
+    );
+    expect(PRODUCT_LOAD).toContain("setAttribute('placeholder', 'Seu nome (opcional)')");
+    expect(PRODUCT_LOAD).not.toContain('Seu nome (opcional no modo local/dev)');
+    expect(PRODUCT_HTML).toContain('product.load.js?v=8.6.14');
   });
 });

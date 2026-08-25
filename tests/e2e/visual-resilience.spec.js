@@ -126,4 +126,37 @@ test.describe('resiliência visual pública', () => {
     await expect(page.locator('#specsGrid')).toContainText('Data do evento01/03/2027');
     await expect(page.locator('#specsGrid')).toContainText('Prazo25/09/2026');
   });
+
+  test('cabeçalho estreito não colide e o placeholder do comentário cabe', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/_product.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window._KCProduct?.load?.applyCommentComposerSessionState);
+    await page.evaluate(() => window._KCProduct.load.applyCommentComposerSessionState(null, null));
+
+    for (const width of [320, 390, 414]) {
+      await page.setViewportSize({ width, height: 568 });
+      const presentation = await page.evaluate(() => {
+        const logoText = document.querySelector('.kc-logo-text');
+        const search = document.querySelector('#kcSearchMobileBtn');
+        const input = document.querySelector('#commentAuthor');
+        const logoRect = logoText?.getBoundingClientRect();
+        const searchRect = search?.getBoundingClientRect();
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (context && input) context.font = getComputedStyle(input).font;
+        return {
+          logoDisplay: logoText ? getComputedStyle(logoText).display : '',
+          logoSearchOverlap: !!logoRect && !!searchRect && logoRect.right > searchRect.left,
+          placeholder: input?.getAttribute('placeholder') || '',
+          placeholderWidth: context && input ? context.measureText(input.placeholder).width : Infinity,
+          inputWidth: input?.clientWidth || 0,
+        };
+      });
+
+      if (width <= 400) expect(presentation.logoDisplay).toBe('none');
+      else expect(presentation.logoSearchOverlap).toBe(false);
+      expect(presentation.placeholder).toBe('Seu nome (opcional)');
+      expect(presentation.placeholderWidth).toBeLessThanOrEqual(presentation.inputWidth);
+    }
+  });
 });
