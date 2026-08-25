@@ -171,8 +171,9 @@
 
     .kc-thumbnail {
       width: 100%;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
+      aspect-ratio: 4 / 3;
+      object-fit: contain;
+      background-color: var(--kc-background-dark);
       border-radius: 8px;
       cursor: pointer;
       border: 2px solid transparent;
@@ -1753,8 +1754,9 @@
       }
 
       .kc-thumbnail {
-        width: 72px;
-        height: 72px;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 4 / 3;
       }
 
       .kc-product-title {

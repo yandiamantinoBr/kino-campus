@@ -12163,6 +12163,12 @@ a.kc-home-metric-card:hover {
  * brighter brand variant so they hit AA. */
 .kc-consent-banner__links a {
   color: var(--kc-primary-brand-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+[data-theme="light"] .kc-consent-banner__links a {
+  color: var(--kc-primary-brand-strong);
 }
 
 .kc-consent-banner__content p,
@@ -12190,7 +12196,7 @@ a.kc-home-metric-card:hover {
 }
 
 .kc-consent-btn {
-  min-height: 40px;
+  min-height: 44px;
   padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--kc-border-dark);
@@ -12478,12 +12484,31 @@ body.kc-admin-page .kc-consent-btn {
     grid-template-columns: 1fr;
     left: 10px;
     right: 10px;
-    max-height: min(40vh, 340px);
+    max-height: min(calc(100vh - 32px), 480px);
+    max-height: min(calc(100dvh - 32px - env(safe-area-inset-bottom, 0px)), 480px);
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     padding: 14px;
   }
 
-  .kc-consent-banner__actions,
+  .kc-consent-banner__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .kc-consent-banner__actions .kc-consent-btn {
+    min-width: 0;
+    padding-inline: 10px;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .kc-consent-banner__actions .kc-consent-btn--primary {
+    grid-column: 1 / -1;
+  }
+
   .kc-consent-modal__footer {
     display: grid;
     grid-template-columns: 1fr;
