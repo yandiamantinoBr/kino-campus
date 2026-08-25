@@ -176,6 +176,26 @@ function renderGallery(post) {
   return result;
 }
 
+function renderBreadcrumb(post) {
+  const dom = new JSDOM('<!doctype html><html><body><div id="breadcrumb"></div></body></html>', {
+    runScripts: 'outside-only',
+    url: 'http://localhost/_product.html',
+  });
+
+  dom.window.eval(source);
+  dom.window._KCProduct.render.setBreadcrumb(post);
+  const breadcrumb = dom.window.document.getElementById('breadcrumb');
+  const result = {
+    html: breadcrumb.innerHTML,
+    segments: breadcrumb.querySelectorAll(':scope > .kc-breadcrumb-segment').length,
+    directChevrons: breadcrumb.querySelectorAll(':scope > .fa-chevron-right').length,
+    images: breadcrumb.querySelectorAll('img').length,
+    current: breadcrumb.querySelector('[aria-current="page"]')?.textContent || '',
+  };
+  dom.window.close();
+  return result;
+}
+
 function setPath(target, pathValue, value) {
   const parts = String(pathValue).split('.');
   let current = target;
@@ -214,10 +234,35 @@ describe('product.render.js - estrutura IIFE e namespace', () => {
 
   test('pagina usa o cache-buster atualizado do renderizador', () => {
     const lifecycleTag = 'assets/js/shared/kc-post-lifecycle.shared.js?v=8.6.1';
-    const renderTag = 'assets/js/controllers/public/product.render.js?v=8.6.6';
+    const renderTag = 'assets/js/controllers/public/product.render.js?v=8.6.7';
     expect(page.split(lifecycleTag)).toHaveLength(2);
     expect(page.split(renderTag)).toHaveLength(2);
     expect(page.indexOf(lifecycleTag)).toBeLessThan(page.indexOf(renderTag));
+  });
+});
+
+describe('product.render.js - breadcrumb responsivo', () => {
+  test('mantem cada separador junto ao destino e identifica a pagina atual', () => {
+    const rendered = renderBreadcrumb({
+      modulo: 'oportunidades',
+      _kcModulePage: 'oportunidades.html',
+      categoria: 'Processos seletivos',
+      titulo: 'PPGACV/UFG oferece 28 vagas para mestrado e doutorado',
+    });
+
+    expect(rendered.segments).toBe(4);
+    expect(rendered.directChevrons).toBe(0);
+    expect(rendered.current).toBe('PPGACV/UFG oferece 28 vagas para mestrado e doutorado');
+    expect(rendered.html).toContain('href="oportunidades.html"');
+    expect(rendered.html).toContain('aria-hidden="true"');
+  });
+
+  test('preserva escape do titulo dentro do segmento atual', () => {
+    const rendered = renderBreadcrumb({ titulo: '<img src=x onerror=alert(1)>' });
+
+    expect(rendered.current).toBe('<img src=x onerror=alert(1)>');
+    expect(rendered.html).not.toContain('<img');
+    expect(rendered.images).toBe(0);
   });
 });
 
@@ -275,8 +320,8 @@ describe('product.render.js - semantica de prazo', () => {
   test.each(DEADLINE_CASES)('reconhece $alias em $placement', ({ alias, placement }) => {
     const rendered = renderDeadlinePresentation(postWithCandidate(alias, placement));
 
-    expect(rendered.badges).toContain('Prazo: 2026-08-20');
-    expect(rendered.specs).toContain('Prazo2026-08-20');
+    expect(rendered.badges).toContain('Prazo: 20/08/2026');
+    expect(rendered.specs).toContain('Prazo20/08/2026');
     expect(rendered.badges).not.toContain('2099-12-31');
     expect(rendered.specs).not.toContain('2099-12-31');
   });
@@ -299,6 +344,7 @@ describe('product.render.js - semantica de prazo', () => {
 
     expect(rendered.badges).not.toContain('Prazo');
     expect(rendered.specs).not.toContain('Prazo');
+    expect(rendered.specs).toContain('Data do evento17/09/2026');
   });
 
   test('fixture literal Semana de Filosofia nao reaproveita submissao encerrada como prazo de ouvintes', () => {
@@ -312,8 +358,8 @@ describe('product.render.js - semantica de prazo', () => {
   });
 
   test.each([
-    ['PROFMAT', PROFMAT_FIXTURE, '2026-09-15', '2026-08-09'],
-    ['SIPACV', SIPACV_FIXTURE, '2026-08-20', '2026-10-10'],
+    ['PROFMAT', PROFMAT_FIXTURE, '15/09/2026', '2026-08-09'],
+    ['SIPACV', SIPACV_FIXTURE, '20/08/2026', '2026-10-10'],
   ])('fixture literal %s apresenta somente o prazo da fase ativa', (_name, fixture, expected, unrelated) => {
     const rendered = renderDeadlinePresentation(fixture);
 
@@ -338,8 +384,8 @@ describe('product.render.js - semantica de prazo', () => {
       },
     });
 
-    expect(rendered.badges.includes('Prazo: 2026-08-20')).toBe(accepted);
-    expect(rendered.specs.includes('Prazo2026-08-20')).toBe(accepted);
+    expect(rendered.badges.includes('Prazo: 20/08/2026')).toBe(accepted);
+    expect(rendered.specs.includes('Prazo20/08/2026')).toBe(accepted);
   });
 
   test('submissionDeadline preserva fallback legado quando nenhuma fase e identificavel', () => {
@@ -348,8 +394,8 @@ describe('product.render.js - semantica de prazo', () => {
       metadata: { dates: { submissionDeadline: '2026-08-20' } },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-08-20');
-    expect(rendered.specs).toContain('Prazo2026-08-20');
+    expect(rendered.badges).toContain('Prazo: 20/08/2026');
+    expect(rendered.specs).toContain('Prazo20/08/2026');
   });
 
   test('alias especifico de listener e aceito somente na fase listener_registration', () => {
@@ -375,7 +421,7 @@ describe('product.render.js - semantica de prazo', () => {
       },
     });
 
-    expect(listener.badges).toContain('Prazo: 2026-10-10');
+    expect(listener.badges).toContain('Prazo: 10/10/2026');
     expect(listener.badges).not.toContain('2026-08-20');
     expect(submission.badges).not.toContain('Prazo');
   });
@@ -392,7 +438,7 @@ describe('product.render.js - semantica de prazo', () => {
       },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-09-15');
+    expect(rendered.badges).toContain('Prazo: 15/09/2026');
     expect(rendered.badges).not.toContain('2026-07-15');
   });
 
@@ -438,7 +484,7 @@ describe('product.render.js - semantica de prazo', () => {
       metadata: { applicationDeadline: '2026-08-21' },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-08-20');
+    expect(rendered.badges).toContain('Prazo: 20/08/2026');
     expect(rendered.badges).not.toContain('2026-08-21');
   });
 
@@ -449,7 +495,7 @@ describe('product.render.js - semantica de prazo', () => {
       metadata: { applicationDeadline: '2026-08-20' },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-08-20');
+    expect(rendered.badges).toContain('Prazo: 20/08/2026');
     expect(rendered.badges).not.toContain('2026-08-21');
   });
 
@@ -463,7 +509,7 @@ describe('product.render.js - semantica de prazo', () => {
       },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-08-19');
+    expect(rendered.badges).toContain('Prazo: 19/08/2026');
     expect(rendered.badges).not.toContain('2026-08-20');
   });
 
@@ -479,7 +525,7 @@ describe('product.render.js - semantica de prazo', () => {
       },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-10-10');
+    expect(rendered.badges).toContain('Prazo: 10/10/2026');
     expect(rendered.badges).not.toContain('2026-08-20');
   });
 
@@ -508,8 +554,8 @@ describe('product.render.js - semantica de prazo', () => {
       },
     });
 
-    expect(rendered.badges).toContain('Prazo: 2026-08-21');
-    expect(rendered.specs).toContain('Prazo2026-08-21');
+    expect(rendered.badges).toContain('Prazo: 21/08/2026');
+    expect(rendered.specs).toContain('Prazo21/08/2026');
     expect(rendered.badgesHtml).not.toMatch(/<img|onerror|alert\(/i);
     expect(rendered.specsHtml).not.toMatch(/<img|onerror|alert\(/i);
   });

@@ -239,10 +239,6 @@ async function stubExternalCaduAssets(page) {
     contentType: 'application/javascript',
     body: 'window.supabase = { createClient: function () { return null; } };',
   }));
-  await page.route('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', (route) => route.fulfill({
-    contentType: 'text/css',
-    body: '',
-  }));
   await page.route('**/_vercel/insights/script.js', (route) => route.fulfill({
     contentType: 'application/javascript',
     body: '',
