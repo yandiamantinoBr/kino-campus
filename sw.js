@@ -1,5 +1,5 @@
 /**
- * KinoCampus Service Worker - v12.21.0
+ * KinoCampus Service Worker - v12.21.3
  *
  * Estrategia:
  *   - Shell local versionado (CSS + JS core): stale-while-revalidate
@@ -17,7 +17,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'kc-shell-';
-var CACHE_VERSION = 'kc-shell-v12.21.0';
+var CACHE_VERSION = 'kc-shell-v12.21.3';
 var ASSET_CACHE = CACHE_VERSION + ':assets';
 var PAGE_CACHE = CACHE_VERSION + ':pages';
 
@@ -25,14 +25,14 @@ var PAGE_CACHE = CACHE_VERSION + ':pages';
 // Cache Storage keys include the query string, so one global version would
 // pre-cache URLs that the pages never request when assets evolve separately.
 var SHELL_ASSETS = [
-  '/assets/css/styles.css?v=8.6.21',
+  '/assets/css/styles.css?v=8.6.23',
   '/assets/css/kc-chat-shortcut.css?v=8.6.1',
   '/assets/css/kc-public-shell.css?v=8.6.15',
   '/assets/js/boot/kc-constants.js?v=8.6.2',
   '/assets/js/boot/kc-env.js?v=8.6.13',
   '/assets/js/boot/kc-feature-flags.js?v=8.6.1',
   '/assets/js/boot/kc-sw-register.js?v=8.6.1',
-  '/assets/js/core/kc-i18n.js?v=8.6.13',
+  '/assets/js/core/kc-i18n.js?v=8.6.14',
   '/assets/js/utils/kc-utils.string.js?v=8.6.4',
   '/assets/js/utils/kc-utils.format.js?v=8.6.1',
   '/assets/js/utils/kc-utils.dom.js?v=8.6.1',

@@ -14,7 +14,7 @@
   'use strict';
 
   var VERSION = '1.0.0';
-  var COMMON_FIELDS = ['titulo', 'descricao'];
+  var COMMON_FIELDS = ['titulo', 'descricao', 'userTags'];
   var LEGACY_SEARCH_FIELDS = ['titulo', 'descricao'];
 
   var MODULE_SCENARIOS = {
@@ -47,6 +47,12 @@
   var FIELD_POLICIES = {
     titulo: policy('public-content', ['text'], ['title', 'titulo'], true, false),
     descricao: policy('public-content', ['text'], ['description', 'descricao'], true, false),
+    // Tags livres não criam uma preferência própria nem entram na taxonomia.
+    // Elas podem satisfazer uma preferência de tag já escolhida pela pessoa e
+    // entram em afinidade local somente com consentimento explícito.
+    userTags: policy('public-content', ['text', 'set'], [
+      'userTags', 'userTagKeys', 'metadata.userTags', 'metadata.userTagKeys'
+    ], true, true),
     localizacao: policy('public-content', ['text', 'location'], [
       'location', 'localizacao', 'metadata.lostFoundLocationKey', 'metadata.lostFoundLocationLabel'
     ], true, true, 'canonical-location'),

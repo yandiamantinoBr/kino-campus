@@ -49,13 +49,15 @@ describe('product.edit.js - estado local e helpers', () => {
     expect(source).toContain('function canManagePost(post, user, context)');
     expect(source).toContain('function getPostIdForMutation(post)');
     expect(source).toContain('function markPostAsEdited()');
-    expect(source).toContain('function buildEditPayload(form, sourcePost)');
+    expect(source).toContain('function buildEditPayload(form, sourcePost, options)');
     expect(source).toContain('function resolveCurrentUser(context, fallbackUser)');
   });
 
-  test('buildEditPayload preserva metadata e tags', () => {
-    expect(source).toContain('metadata.tags = tagsRaw.split');
-    expect(source).toContain('delete metadata.tags;');
+  test('buildEditPayload preserva metadata automática e altera apenas tags adicionais', () => {
+    expect(source).toContain('userTagsApi.metadataPatch');
+    expect(source).toContain('metadata.userTags = userTagsResult.tags;');
+    expect(source).toContain('metadata.userTagKeys = userTagsResult.tagKeys;');
+    expect(source).not.toContain('delete metadata.tags;');
     expect(source).toContain('price: String(form.price.value || \'\').trim()');
   });
 });

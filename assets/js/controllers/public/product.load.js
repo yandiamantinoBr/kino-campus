@@ -511,7 +511,14 @@
     document.body.setAttribute('data-post-module', String(post && (post.modulo || post.module) || ''));
     document.body.setAttribute('data-post-category', String(post && (post._kcTabCategoryKey || post.categoriaKey || post.categoria || post.categoryKey || post.category) || ''));
     document.body.setAttribute('data-post-subcategory', String(post && (post.subcategoriaKey || post.subcategoria || post.subcategoryKey || post.subcategory) || ''));
-    document.body.setAttribute('data-post-tags', Array.isArray(post && post.tagKeys) ? post.tagKeys.join(' ') : (Array.isArray(post && post.tags) ? post.tags.join(' ') : ''));
+    var postMetadata = (post && post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)) ? post.metadata : {};
+    var postTags = []
+      .concat(Array.isArray(post && post.tagKeys) ? post.tagKeys : (Array.isArray(post && post.tags) ? post.tags : []))
+      .concat(Array.isArray(post && post.userTagKeys) ? post.userTagKeys : [])
+      .concat(Array.isArray(post && post.userTags) ? post.userTags : [])
+      .concat(Array.isArray(postMetadata.userTagKeys) ? postMetadata.userTagKeys : [])
+      .concat(Array.isArray(postMetadata.userTags) ? postMetadata.userTags : []);
+    document.body.setAttribute('data-post-tags', Array.from(new Set(postTags.map(String).filter(Boolean))).join(' '));
     trackHomeCategoryInteraction('post_open', post);
 
     var R = window._KCProduct.render;

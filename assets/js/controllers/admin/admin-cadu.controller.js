@@ -14,8 +14,13 @@
   var STORAGE_TAB = 'kc:cadu:tab';
   var PIPELINE_CONTROL_CONTRACT = 'cadu-pipeline-control-v1';
   var PIPELINE_SNAPSHOT_TTL_MS = 15000;
+  var PIPELINE_LOG_MAX_LINES = 180;
   var OPENCLAW_POLL_INTERVAL_MS = 60000;
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
+  // A cold context snapshot may wait up to 15 s for the bounded OpenClaw
+  // status probe. Keep this deadline above that bound and below the 25 s
+  // server proxy deadline so the browser never aborts a valid cold response.
+  var OPENCLAW_CONTEXT_TIMEOUT_MS = 20000;
   var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;
   var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
   var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
@@ -93,6 +98,7 @@
     pipelineExpiryTimer: null,
     pipelineExpiryGeneration: 0,
     pipelineStartPending: false,
+    pipelineStopPendingRunId: null,
     pipelineHealth: null,
     lastVersion: null
   };
@@ -449,7 +455,7 @@
         try {
           var ctx = state.currentTab === 'openclaw'
             ? null
-            : await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS });
+            : await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS });
           if (ctx && !ctx.__error) {
             state.openclawContext = ctx;
             if (contextPill) {
@@ -5552,6 +5558,10 @@
     return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value);
   }
 
+  function pipelineRunIsActive(run) {
+    return !!(run && ['pending', 'running', 'stopping'].indexOf(run.status) >= 0);
+  }
+
   function normalizePipelineRun(run) {
     if (!run || typeof run !== 'object' || Array.isArray(run)) return null;
     if (!isSafePipelineRunId(run.id) || !isSafePipelineStageId(run.stage)) return null;
@@ -5831,7 +5841,7 @@
     var activeRun = null;
     if (status.active_run !== null) {
       activeRun = normalizePipelineRun(status.active_run);
-      if (!activeRun || !seen[activeRun.stage] || ['pending', 'running', 'stopping'].indexOf(activeRun.status) < 0) {
+      if (!activeRun || !seen[activeRun.stage] || !pipelineRunIsActive(activeRun)) {
         return { ok: false, reason: 'estado da execução ativa inválido' };
       }
     }
@@ -5885,6 +5895,31 @@
     state.pipelineExpiryTimer = setTimeout(expirePipelineControl, Math.max(0, expiresAt - Date.now() + 1));
   }
 
+  function reconcilePipelineLogTransport(active) {
+    // A validade do contrato de controle só libera ações; o acompanhamento de
+    // um run já existente continua seguro quando sua forma foi normalizada.
+    if (pipelineRunIsActive(active)) {
+      // Depois de uma falha de SSE, o polling é deliberadamente mantido para
+      // este run. Um refresh de status ainda atualiza a tela, mas não deve
+      // derrubar o fallback e abrir outra conexão que provavelmente falhará de
+      // novo. O próximo run volta a tentar SSE normalmente.
+      var streamFallbackPolling = pipelineLogPollState &&
+        pipelineLogPollState.runId === active.id &&
+        pipelineLogPollState.streamFallback === true;
+      if (active.status !== 'running' || shouldUsePipelineLogPolling(active) || streamFallbackPolling) {
+        connectPipelineLogPolling(active.id);
+      } else {
+        stopPipelineLogPolling();
+        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== active.id) {
+          connectPipelineStream(active.id);
+        }
+      }
+      return;
+    }
+    disconnectPipelineStream();
+    stopPipelineLogPolling();
+  }
+
   async function performPipelineRefresh() {
     var requestGeneration = ++state.pipelineRequestGeneration;
     var status = await apiFetch('/api/cadu/pipeline', { timeoutMs: 5000 });
@@ -5902,12 +5937,18 @@
       state.pipelineHistory = Array.isArray(status.history)
         ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
         : [];
-      renderPipelineStages(state.pipelineStages);
-      renderPipelineActive(state.pipelineActive);
-      renderPipelineHistory(state.pipelineHistory);
-      updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
-      if (status.health) renderPipelineHealth(status.health);
-      else refreshPipelineHealth();
+      try {
+        renderPipelineStages(state.pipelineStages);
+        renderPipelineActive(state.pipelineActive);
+        renderPipelineHistory(state.pipelineHistory);
+        updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
+        if (status.health) renderPipelineHealth(status.health);
+        else refreshPipelineHealth();
+      } finally {
+        // Even if presentation fails, a stale run transport must not survive
+        // an authoritative active_run update from the rejected control snapshot.
+        reconcilePipelineLogTransport(state.pipelineActive);
+      }
       return;
     }
     var normalizedStages = validation.stages;
@@ -5944,20 +5985,7 @@
       return;
     }
 
-    // Se ha run ativo, acompanha por SSE curto ou polling para runs longos.
-    if (state.pipelineActive && state.pipelineActive.status === 'running') {
-      if (shouldUsePipelineLogPolling(state.pipelineActive)) {
-        connectPipelineLogPolling(state.pipelineActive.id);
-      } else {
-        stopPipelineLogPolling();
-        if (!pipelineStreamRequest || pipelineStreamRequest.runId !== state.pipelineActive.id) {
-          connectPipelineStream(state.pipelineActive.id);
-        }
-      }
-    } else {
-      disconnectPipelineStream();
-      stopPipelineLogPolling();
-    }
+    reconcilePipelineLogTransport(state.pipelineActive);
   }
 
   function refreshPipeline(options) {
@@ -5968,6 +5996,51 @@
       state.pipelineRefreshPromise = null;
     });
     return state.pipelineRefreshPromise;
+  }
+
+  function reconcilePipelineAfterRunMayExist() {
+    // Um POST aceito, ou um 409 que informa execução concorrente, pode coincidir
+    // com um GET de status iniciado antes dela. Esse GET só é autoritativo para
+    // seu próprio instante e pode retornar active_run=null. Nesse caso, aguarda
+    // e faz exatamente uma nova leitura; nunca repete o POST.
+    var hadRefreshInFlight = Boolean(state.pipelineRefreshPromise);
+    function refreshAcceptedRunSnapshot() {
+      try {
+        return Promise.resolve(refreshPipeline({ force: true })).then(
+          function () { return true; },
+          function () { return false; }
+        );
+      } catch (_) {
+        return Promise.resolve(false);
+      }
+    }
+    var firstRefresh = refreshAcceptedRunSnapshot();
+    if (!hadRefreshInFlight) return firstRefresh;
+    return firstRefresh.then(function () {
+      return refreshAcceptedRunSnapshot();
+    });
+  }
+
+  function pipelineRunStartOutcomeIsAmbiguous(response) {
+    if (!response || response.__error !== true) return false;
+    // Status 0 means the browser never received an HTTP response. A 502/504
+    // from the control proxy can also happen after the cadu-api accepted the
+    // POST but before its response reached the browser. Reconcile with GET;
+    // never retry this mutating request automatically.
+    return response.status === 0 || response.status === 502 || response.status === 504;
+  }
+
+  async function reconcilePipelineStartWithActionsLocked() {
+    // The POST may already have created a run, so no start action may become
+    // clickable until an authoritative GET has reconciled the global slot.
+    state.pipelineStartPending = true;
+    renderPipelineStages(state.pipelineStages || []);
+    try {
+      return await reconcilePipelineAfterRunMayExist();
+    } finally {
+      state.pipelineStartPending = false;
+      renderPipelineStages(state.pipelineStages || []);
+    }
   }
 
   async function ensureFreshPipelineControl() {
@@ -6078,6 +6151,13 @@
     if (stage.live_enabled !== false) return false;
     var approval = capabilities && capabilities.publish_approval;
     return !(approval && approval.enabled === true);
+  }
+
+  function pipelineFullRunDryRunPolicyGated(stage, dryRun, capabilities) {
+    return Boolean(
+      stage && stage.id === 'all' && dryRun === false &&
+      (!capabilities || capabilities.full_run_dry_run_optional !== true)
+    );
   }
 
   function lockPipelineActionButtons(clickedButton) {
@@ -6239,11 +6319,30 @@
     return parts.length ? '<div class="kc-pipeline-history-item__summary">' + parts.join('') + '</div>' : '';
   }
 
+  function pipelineStageActionBlockerHtml(noteId, blockers) {
+    var uniqueItems = [];
+    (Array.isArray(blockers) ? blockers : []).forEach(function (blocker) {
+      var label = String(blocker && blocker.label || '').trim();
+      var detail = String(blocker && blocker.detail || '').trim();
+      if (!label || !detail) return;
+      var item = label + ': ' + detail;
+      if (uniqueItems.indexOf(item) === -1) uniqueItems.push(item);
+    });
+    if (!uniqueItems.length) return '';
+    return '<div class="kc-pipeline-stage__blocker" id="' + escapeHtml(noteId) + '" role="note">' +
+      '<i class="fas fa-circle-info" aria-hidden="true"></i><span><strong>Ações indisponíveis:</strong> ' +
+      uniqueItems.map(escapeHtml).join(' · ') + '</span></div>';
+  }
+
   function renderPipelineStages(stages) {
     var container = $('#pipeline-stages-list');
     if (!container) return;
     var controlReady = pipelineControlIsReady();
     var controlGuard = controlReady ? '' : '<div class="kc-cadu-empty">Controles bloqueados: ' + escapeHtml(state.pipelineControlReason || 'snapshot expirado') + '</div>';
+    var activeRun = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+    var activeRunReason = activeRun
+      ? 'Há uma execução ' + pipelineStatusLabel(activeRun.status) + '. Aguarde seu término e a atualização do painel.'
+      : '';
     if (!stages.length) {
       container.innerHTML = controlGuard + '<div class="kc-cadu-empty">O cadu-api não informou estágios seguros para exibição.</div>';
       return;
@@ -6271,27 +6370,48 @@
         ? (state.pipelineControlReason || 'snapshot expirado')
         : ((pf.blockers || []).map(function (b) { return b.detail || b.label || b.id; }).join(', ') || 'a verificação prévia falhou');
       var actionButtons = [];
+      var actionBlockers = [];
+      var blockerId = 'pipeline-stage-blocker-' + String(s.id || 'unknown').replace(/[^a-z0-9_-]/gi, '-');
       function actionButton(dryRun, label, danger) {
         var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
         var modePrecondition = pipelineStageModePrecondition(s, dryRun);
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
         var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
         var approvalGatedReal = pipelineRealRunApprovalGated(s, dryRun, state.pipelineCapabilities);
-        var disabled = (!canRefreshControl && (!canRun || approvalGatedReal || (modeBlocked && !guardedDedupReal))) || state.pipelineStartPending;
+        var fullRunPolicyGated = pipelineFullRunDryRunPolicyGated(s, dryRun, state.pipelineCapabilities);
+        var disabled = Boolean(activeRun) ||
+          (!canRefreshControl && (!canRun || approvalGatedReal || fullRunPolicyGated || (modeBlocked && !guardedDedupReal))) ||
+          state.pipelineStartPending;
         var displayLabel = canRefreshControl
           ? 'Renovar · ' + label
           : (guardedDedupReal ? 'Executar real · simule antes' : label);
+        var disabledReason = state.pipelineStartPending
+          ? 'Aguardando resposta da solicitação anterior.'
+          : (activeRunReason
+            ? activeRunReason
+            : (approvalGatedReal
+              ? (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
+              : (fullRunPolicyGated
+                ? 'o backend não confirmou que a simulação completa é opcional; atualize o cadu-api'
+                : ((modeBlocked && !guardedDedupReal)
+                  ? modePrecondition.detail
+                  : (!canRun && !canRefreshControl ? blockedReason : '')))));
         var btnTitle = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior'
-          : (canRefreshControl
-            ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
-            : (approvalGatedReal
-              ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
-              : (modeBlocked
-              ? 'Indisponível: ' + modePrecondition.detail
-              : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason))));
+          : (activeRunReason
+            ? 'Indisponível: ' + activeRunReason
+            : (canRefreshControl
+              ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
+              : (approvalGatedReal
+                ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
+                : (fullRunPolicyGated
+                  ? 'Indisponível: o backend não confirmou a política atual da Pipeline completa; atualize o cadu-api'
+                  : (modeBlocked
+                    ? 'Indisponível: ' + modePrecondition.detail
+                    : (canRun ? label + ' ' + s.id : 'Indisponível: ' + blockedReason))))));
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
-        return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled ? ' disabled' : '') + '>' +
+        if (disabled && disabledReason) actionBlockers.push({ label: label, detail: disabledReason });
+        return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled && disabledReason ? ' aria-describedby="' + escapeHtml(blockerId) + '"' : '') + (disabled ? ' disabled' : '') + '>' +
           '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
         '</button>';
       }
@@ -6299,6 +6419,7 @@
         actionButtons.push(actionButton(action.dryRun, action.label, action.danger));
       });
       if (!actionButtons.length) actionButtons.push(actionButton(null, 'Execução bloqueada', false));
+      var actionBlockerHtml = pipelineStageActionBlockerHtml(blockerId, actionBlockers);
       var lastSummary = s.last_run && s.last_run.summary ? renderRunSummary(s.last_run.summary) : '';
       return '<div class="kc-pipeline-stage">' +
         '<div class="kc-pipeline-stage__head"><i class="fas ' + categoryIcon(s.category) + '"></i><strong>' + escapeHtml(s.name) + '</strong></div>' +
@@ -6310,6 +6431,7 @@
           '<span style="margin-left:auto;">~' + escapeHtml(s.estimated_sec) + 's</span>' +
         '</div>' +
         lastSummary +
+        actionBlockerHtml +
         '<div class="kc-pipeline-stage__actions">' + actionButtons.join('') + '</div>' +
       '</div>';
     }).join('');
@@ -6327,12 +6449,37 @@
     });
   }
 
+  function updatePipelineActiveStatus(active, displayStatus) {
+    var status = $('#pipeline-active-status');
+    if (!status) return;
+    var message = 'Pipeline: nenhuma execução ativa.';
+    if (active) {
+      message = 'Pipeline ' + pipelineActivityStageLabel(active.stage, state.pipelineStages) + ': ' +
+        pipelineStatusLabel(displayStatus || pipelineRunDisplayStatus(active)) + '.';
+    }
+    // Polling occurs every few seconds. Avoid repeating the same status in a
+    // live region when only the elapsed-duration presentation has changed.
+    if (status.textContent !== message) status.textContent = message;
+  }
+
+  function reconcilePipelineStopRequest(active) {
+    var requestedRunId = state.pipelineStopPendingRunId;
+    if (!requestedRunId) return false;
+    var remainsCancelable = active && active.id === requestedRunId &&
+      (active.status === 'pending' || active.status === 'running');
+    if (remainsCancelable) return false;
+    state.pipelineStopPendingRunId = null;
+    return true;
+  }
+
   function renderPipelineActive(active) {
     var card = $('#pipeline-active-card');
     var dot = $('#pipeline-status-dot');
     var logBox = $('#pipeline-log');
     if (!card) return;
+    reconcilePipelineStopRequest(active);
     if (!active) {
+      updatePipelineActiveStatus(null);
       card.className = 'kc-pipeline-active-card';
       card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.</div>';
       if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem execução ativa'; }
@@ -6340,12 +6487,19 @@
       return;
     }
     var displayStatus = pipelineRunDisplayStatus(active);
+    updatePipelineActiveStatus(active, displayStatus);
     var cls = 'is-' + displayStatus;
     var escapedActiveRunId = escapeHtml(active.id);
     card.className = 'kc-pipeline-active-card ' + cls;
     if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = pipelineStatusLabel(displayStatus) + ' (' + fmtAgo(active.started_at) + ')'; }
-    var stopBtn = active.status === 'running'
-      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + escapedActiveRunId + '"><i class="fas fa-stop"></i> Parar</button>'
+    var canStop = active.status === 'pending' || active.status === 'running';
+    var stopPending = state.pipelineStopPendingRunId === active.id;
+    var stopLabel = active.status === 'pending' ? 'Cancelar' : 'Parar';
+    var stopBtn = canStop
+      ? '<button class="kc-pipeline-active-card__stop" data-stop="' + escapedActiveRunId + '" aria-label="' +
+        escapeHtml(stopLabel + ' execução ' + active.id.slice(0, 8)) + '"' +
+        (stopPending ? ' disabled aria-busy="true"' : '') + '><i class="fas ' + (stopPending ? 'fa-spinner fa-spin' : 'fa-stop') + '" aria-hidden="true"></i> ' +
+        escapeHtml(stopPending ? 'Solicitando parada…' : stopLabel) + '</button>'
       : '';
     card.innerHTML =
       '<div class="kc-pipeline-active-card__head">' +
@@ -6926,30 +7080,84 @@
   function updatePipelineBadge(status) {
     var badge = $('#badge-pipeline');
     if (!badge) return;
-    var running = status.active_run && status.active_run.status === 'running';
+    var active = pipelineRunIsActive(status.active_run);
+    var activeLabel = active ? pipelineStatusLabel(status.active_run.status) : '';
     var stageCount = Array.isArray(state.pipelineStages) ? state.pipelineStages.length : 0;
-    badge.textContent = running ? '● em execução' : String(stageCount);
-    badge.title = running
-      ? 'Há uma execução ativa'
+    badge.textContent = active ? '● ' + activeLabel : String(stageCount);
+    badge.title = active
+      ? 'Há uma execução ativa (' + activeLabel + ')'
       : stageCount + (stageCount === 1 ? ' estágio disponível' : ' estágios disponíveis');
+  }
+
+  function pipelineLogLineClass(text) {
+    var lineClass = 'kc-log-line';
+    var lowText = String(text == null ? '' : text).toLowerCase();
+    if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('erro') || lowText.includes('falhou') || lowText.includes('✗')) {
+      return lineClass + ' kc-log-line--err';
+    }
+    if (lowText.includes('ok') || lowText.includes('✓') || lowText.includes('saved') || lowText.includes('concluido') || lowText.includes('concluído')) {
+      return lineClass + ' kc-log-line--ok';
+    }
+    return lineClass;
+  }
+
+  function appendPipelineLogEntry(logBox, text, options) {
+    var opts = options || {};
+    var div = document.createElement('div');
+    div.className = pipelineLogLineClass(text);
+    div.textContent = String(text == null ? '' : text).slice(0, 20000);
+    if (opts.marker === true) {
+      div.setAttribute('data-pipeline-log-marker', 'true');
+      // The refresh timestamp is visual context only. Announcing it every
+      // five seconds would hide the actual sequential log entries.
+      div.setAttribute('aria-hidden', 'true');
+    }
+    logBox.appendChild(div);
+    return div;
+  }
+
+  function clearPipelineLogMarkers(logBox) {
+    Array.prototype.slice.call(logBox.querySelectorAll('[data-pipeline-log-marker]')).forEach(function (marker) {
+      if (marker.parentNode) marker.parentNode.removeChild(marker);
+    });
+  }
+
+  function trimPipelineLogEntries(logBox) {
+    var entries = logBox.querySelectorAll('.kc-log-line:not([data-pipeline-log-marker])');
+    var excess = entries.length - PIPELINE_LOG_MAX_LINES;
+    for (var index = 0; index < excess; index += 1) {
+      if (entries[index] && entries[index].parentNode) entries[index].parentNode.removeChild(entries[index]);
+    }
+  }
+
+  function pipelineLogTailOverlap(previousLines, nextLines) {
+    if (!Array.isArray(previousLines) || !Array.isArray(nextLines)) return 0;
+    var maximum = Math.min(previousLines.length, nextLines.length);
+    for (var length = maximum; length > 0; length -= 1) {
+      var matches = true;
+      for (var index = 0; index < length; index += 1) {
+        if (previousLines[previousLines.length - length + index] !== nextLines[index]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return length;
+    }
+    return 0;
   }
 
   function appendLogLine(text) {
     var logBox = $('#pipeline-log');
     if (!logBox) return;
-    text = String(text == null ? '' : text).slice(0, 20000);
+    // Measure before inserting: a wrapped/tall new line otherwise makes a
+    // user already at the end look as if they scrolled away from it.
+    var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
     // Limpa mensagem inicial se for a primeira linha
     if (logBox.querySelector('.kc-cadu-empty')) logBox.innerHTML = '';
-    var lineClass = 'kc-log-line';
-    var lowText = text.toLowerCase();
-    if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('✗')) lineClass += ' kc-log-line--err';
-    else if (lowText.includes('ok') || lowText.includes('✓') || lowText.includes('saved')) lineClass += ' kc-log-line--ok';
-    var div = document.createElement('div');
-    div.className = lineClass;
-    div.textContent = text;
-    logBox.appendChild(div);
+    clearPipelineLogMarkers(logBox);
+    appendPipelineLogEntry(logBox, text);
+    trimPipelineLogEntries(logBox);
     // Auto-scroll pra última linha (mas só se usuário já estava no fim)
-    var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
@@ -6960,27 +7168,34 @@
     return active.stage === 'all' || estimate > 260;
   }
 
-  function renderPipelineLogSnapshot(content, marker) {
+  function renderPipelineLogSnapshot(content, marker, pollState) {
     var logBox = $('#pipeline-log');
     if (!logBox) return;
     var wasAtBottom = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
     var lines = String(content || '').split(/\r?\n/).filter(Boolean);
-    if (marker) lines.push(marker);
-    logBox.innerHTML = '';
+    var previousLines = pollState && Array.isArray(pollState.snapshotLines)
+      ? pollState.snapshotLines
+      : null;
+    var overlap = previousLines === null ? 0 : pipelineLogTailOverlap(previousLines, lines);
+    // A zero-length first snapshot is still a valid baseline; once it gains
+    // lines, append them instead of reconstructing the live region.
+    var canAppend = previousLines !== null && (previousLines.length === 0 || overlap > 0);
+    clearPipelineLogMarkers(logBox);
+    if (!canAppend) logBox.innerHTML = '';
     if (!lines.length) {
-      logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
+      if (!canAppend || !logBox.querySelector('.kc-cadu-empty')) {
+        logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
+      }
+      if (pollState) pollState.snapshotLines = lines;
       return;
     }
-    lines.forEach(function (line) {
-      var lineClass = 'kc-log-line';
-      var lowText = String(line).toLowerCase();
-      if (lowText.includes('error') || lowText.includes('failed') || lowText.includes('falhou')) lineClass += ' kc-log-line--err';
-      else if (lowText.includes('ok') || lowText.includes('saved') || lowText.includes('concluido') || lowText.includes('concluído')) lineClass += ' kc-log-line--ok';
-      var div = document.createElement('div');
-      div.className = lineClass;
-      div.textContent = line;
-      logBox.appendChild(div);
+    if (logBox.querySelector('.kc-cadu-empty')) logBox.innerHTML = '';
+    (canAppend ? lines.slice(overlap) : lines).forEach(function (line) {
+      appendPipelineLogEntry(logBox, line);
     });
+    trimPipelineLogEntries(logBox);
+    if (marker) appendPipelineLogEntry(logBox, marker, { marker: true });
+    if (pollState) pollState.snapshotLines = lines;
     if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
   }
 
@@ -6994,17 +7209,27 @@
         appendLogLine('[log polling] falha ao buscar tail do log');
         return;
       }
-      renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'));
+      renderPipelineLogSnapshot(res.content || '', '[log polling] atualizado ' + new Date().toLocaleTimeString('pt-BR'), pollState);
     } finally {
       if (pipelineLogPollState === pollState) pollState.inFlight = false;
     }
   }
 
-  function connectPipelineLogPolling(runId) {
+  function connectPipelineLogPolling(runId, options) {
+    var opts = options || {};
     disconnectPipelineStream();
-    if (pipelineLogPollState && pipelineLogPollState.runId === runId) return;
+    if (pipelineLogPollState && pipelineLogPollState.runId === runId) {
+      if (opts.streamFallback === true) pipelineLogPollState.streamFallback = true;
+      return;
+    }
     stopPipelineLogPolling();
-    var pollState = { runId: runId, inFlight: false, timer: null };
+    var pollState = {
+      runId: runId,
+      inFlight: false,
+      timer: null,
+      snapshotLines: null,
+      streamFallback: opts.streamFallback === true
+    };
     pipelineLogPollState = pollState;
     refreshPipelineLogSnapshot(runId, pollState);
     pollState.timer = setInterval(function () {
@@ -7076,7 +7301,7 @@
       console.warn('SSE via fetch falhou:', err);
       appendLogLine('[stream indisponível] acompanhando por polling autenticado');
       if (pipelineStreamRequest === request) pipelineStreamRequest = null;
-      connectPipelineLogPolling(runId);
+      connectPipelineLogPolling(runId, { streamFallback: true });
       setTimeout(function () { refreshPipeline(); }, 2000);
     } finally {
       if (reader) {
@@ -7141,6 +7366,11 @@
 
   async function runPipelineStage(stageId, dryRun, clickedButton) {
     if (state.pipelineStartPending) return;
+    var activeRun = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+    if (activeRun) {
+      alert('Já há uma execução ' + pipelineStatusLabel(activeRun.status) + '. Aguarde seu término e a atualização do painel antes de iniciar outro estágio. Nenhuma nova execução foi iniciada.');
+      return;
+    }
     var btn = clickedButton || $$('#pipeline-stages-list .kc-pipeline-stage__btn[data-stage="' + stageId + '"]')[0];
     state.pipelineStartPending = true;
     var restoreButtons = lockPipelineActionButtons(btn);
@@ -7168,6 +7398,12 @@
           return;
         }
 
+        var refreshedActiveRun = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+        if (refreshedActiveRun) {
+          alert('Já há uma execução ' + pipelineStatusLabel(refreshedActiveRun.status) + '. Aguarde seu término e a atualização do painel antes de iniciar outro estágio. Nenhuma nova execução foi iniciada.');
+          return;
+        }
+
         var snapshotGeneration = state.pipelineRequestGeneration;
         var snapshotExpiresAt = state.pipelineSnapshotExpiresAt;
         var stage = findPipelineStage(stageId);
@@ -7181,6 +7417,10 @@
         dryRun = resolvePipelineDryRun(profile, requestedDryRun, state.pipelineCapabilities);
         if (typeof dryRun !== 'boolean') {
           alert('Modo de execução ausente ou inválido no contrato renovado. Nenhuma pipeline foi iniciada.');
+          return;
+        }
+        if (pipelineFullRunDryRunPolicyGated(stage, dryRun, state.pipelineCapabilities)) {
+          alert('O cadu-api atual não confirmou que a simulação da Pipeline completa é opcional. Atualize o backend; não execute “Simular” como pré-condição. Nenhuma pipeline foi iniciada.');
           return;
         }
         var modePrecondition = pipelineStageModePrecondition(stage, dryRun);
@@ -7259,10 +7499,19 @@
       if (logBox) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando primeira linha de log…</div>';
       disconnectPipelineStream();
       stopPipelineLogPolling();
-      refreshPipeline();
+      try { await reconcilePipelineStartWithActionsLocked(); } catch (_) {}
     } else if (resp && resp.__error) {
       // Mensagens específicas por status code
       var msg = 'Falha ao iniciar.';
+      var ambiguousStartOutcome = pipelineRunStartOutcomeIsAmbiguous(resp);
+      if (ambiguousStartOutcome) {
+        try {
+          await reconcilePipelineStartWithActionsLocked();
+        } catch (_) {
+          // The message below remains explicitly inconclusive when this GET
+          // also fails. The operator is never told that no run was created.
+        }
+      }
       if (resp.status === 404 && typeof dryRun === 'boolean') {
         msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
       } else if (resp.status === 412) {
@@ -7272,15 +7521,23 @@
         } else if (preconditionDetail && preconditionDetail.code === 'signed_publish_approval_required') {
           msg = '🔐 Execução real de "' + stageId + '" requer aprovação assinada (Ed25519).\n\nUse o fluxo de aprovação de publicação (publish-approval-cli) antes de executar este estágio real. A simulação continua disponível. Nenhum run real foi criado.';
         } else {
-          msg = '⚠️ Execução recusada com segurança: pré-condição não atendida. Atualize o painel e revise o diagnóstico antes de tentar novamente.';
+          msg = '⚠️ Execução recusada por uma pré-condição não reconhecida. A Pipeline completa não exige simulação prévia na versão atual; esta resposta indica contrato incompatível ou outra proteção do backend. Atualize o painel e confira o diagnóstico e o release do cadu-api antes de tentar novamente. Nenhum run foi criado.';
         }
       } else if (resp.status === 409) {
         var detail = resp.data && (resp.data.detail || resp.data);
+        // Um 409 pode ocorrer quando outro operador iniciou uma execução após
+        // nosso snapshot. Releia o estado autorizado para exibir o run ativo e
+        // reconectar seus logs; isto é somente GET e nunca tenta outro POST.
+        try { await reconcilePipelineStartWithActionsLocked(); } catch (_) {}
         if (detail && detail.code === 'pipeline_runtime_busy') {
           msg = '⏳ A pipeline está temporariamente ocupada por uma implantação ou manutenção externa.\n\nAguarde a operação terminar, atualize o painel e tente novamente. Nenhum run foi criado.';
         } else {
           var existingId = (detail && detail.existing_run_id) ? detail.existing_run_id.slice(0, 8) : '?';
-          msg = '⛔ Já existe uma execução ativa para "' + stageId + '" (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
+          var activeAfterConflict = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+          var activeStage = activeAfterConflict && activeAfterConflict.stage
+            ? ' do estágio "' + activeAfterConflict.stage + '"'
+            : '';
+          msg = '⛔ Já existe uma execução global ativa' + activeStage + ' (ID ' + existingId + ').\n\nAguarde terminar ou use o botão Parar antes de iniciar outra.';
         }
       } else if (resp.status === 400 || resp.status === 422) {
         var validationDetail = resp.data && (resp.data.detail || resp.data);
@@ -7290,6 +7547,15 @@
         msg = '🔒 Token inválido. Verifique KC_CADU_TOKEN.';
       } else if (resp.status === 503) {
         msg = '⚙️ cadu-api não configurado (CADU_API_TOKEN ausente no .env).';
+      } else if (ambiguousStartOutcome) {
+        var reconciledActive = pipelineRunIsActive(state.pipelineActive) ? state.pipelineActive : null;
+        if (reconciledActive) {
+          msg = '⏳ A resposta do início da pipeline foi interrompida, mas o painel confirmou uma execução ativa' +
+            (reconciledActive.stage ? ' do estágio "' + reconciledActive.stage + '"' : '') +
+            ' (ID ' + String(reconciledActive.id || '?').slice(0, 8) + ').\n\nAcompanhe esta execução; não clique novamente em “Executar”.';
+        } else {
+          msg = '⚠️ A resposta do início da pipeline foi interrompida e não foi possível confirmar se um run foi criado.\n\nAtualize o painel e verifique o histórico antes de tentar novamente. O POST real não foi repetido automaticamente.';
+        }
       } else if (resp.status >= 500) {
         msg = '🔥 cadu-api erro interno (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
       } else if (resp.message) {
@@ -7306,23 +7572,46 @@
       showCaduError('Não foi possível parar: ID de execução da pipeline inválido.');
       return;
     }
-    if (!confirm('Parar esta execução? O processo será encerrado de forma controlada (SIGTERM).')) return;
-    // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
-    var resp = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stop', { method: 'POST' });
-    if (resp && resp.ok) {
-      refreshPipeline();
-    } else if (resp && resp.__error) {
-      var msg = 'Falha ao parar.';
-      if (resp.status === 409) {
-        msg = '⛔ A execução não está mais ativa (já terminou ou foi interrompida).';
-      } else if (resp.status === 404) {
-        msg = '❓ Execução não encontrada no cadu-api.';
+    if (state.pipelineStopPendingRunId) return;
+    var pendingRun = state.pipelineActive && state.pipelineActive.id === runId && state.pipelineActive.status === 'pending';
+    var confirmation = pendingRun
+      ? 'Cancelar esta execução pendente antes de ela iniciar?'
+      : 'Parar esta execução? O processo será encerrado de forma controlada (SIGTERM).';
+    if (!confirm(confirmation)) return;
+    state.pipelineStopPendingRunId = runId;
+    renderPipelineActive(state.pipelineActive);
+    var stopAccepted = false;
+    try {
+      // v0.4.4: Vercel rewrite /api/cadu/pipeline/{id}/stop → pipeline-router
+      var resp = await apiFetch('/api/cadu/pipeline/' + encodeURIComponent(runId) + '/stop', { method: 'POST' });
+      if (resp && resp.ok) {
+        stopAccepted = true;
+        // Keep the single-flight state until the next authoritative snapshot
+        // has reconciled pending/running with stopping or a terminal result.
+        try { await refreshPipeline(); } catch (_) {}
+      } else if (resp && resp.__error) {
+        var msg = 'Falha ao parar.';
+        if (resp.status === 409) {
+          msg = '⛔ A execução não está mais ativa (já terminou ou foi interrompida).';
+        } else if (resp.status === 404) {
+          msg = '❓ Execução não encontrada no cadu-api.';
+        } else {
+          msg = 'Erro ao parar (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
+        }
+        alert(msg);
       } else {
-        msg = 'Erro ao parar (HTTP ' + resp.status + '): ' + (resp.data ? (resp.data.detail || JSON.stringify(resp.data)) : 'sem detalhe');
+        alert('Falha ao parar: resposta vazia do cadu-api.');
       }
-      alert(msg);
-    } else {
-      alert('Falha ao parar: resposta vazia do cadu-api.');
+    } catch (_) {
+      // A transport failure after POST can be ambiguous. Do not imply that
+      // the worker certainly kept running or invite an immediate duplicate.
+      alert('Não foi possível confirmar a solicitação de parada. Atualize o painel antes de tentar novamente.');
+    } finally {
+      // A 200 can precede the observable state transition. Keep the request
+      // locked until the refresh sees stopping/a terminal state, but release
+      // it immediately when the POST was not accepted.
+      if (!stopAccepted) state.pipelineStopPendingRunId = null;
+      renderPipelineActive(state.pipelineActive);
     }
   }
 

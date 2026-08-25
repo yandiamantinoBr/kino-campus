@@ -17,10 +17,13 @@ const MAX_QUERY_LENGTH = 2048;
 const MAX_REQUEST_BYTES = 64 * 1024;
 const MAX_SSE_BYTES = 16 * 1024 * 1024;
 const NON_STREAM_TIMEOUT_MS = 25_000;
+const PIPELINE_START_TIMEOUT_MS = 120_000;
 const AGENT_SEND_TIMEOUT_MS = 285_000;
 const SSE_TIMEOUT_MS = 285_000;
+const PIPELINE_START_KINDS = new Set(['run', 'run_dry-run', 'run_real']);
 const SAFE_UPSTREAM_ERROR_STATUS = new Map([
   ['dedup_preview_required', 412],
+  ['signed_publish_approval_required', 412],
   ['pipeline_runtime_busy', 409],
 ]);
 
@@ -377,6 +380,11 @@ function stableProxyFailure(res, error) {
 
 async function proxyNonStream(req, res, route, targetUrl, token) {
   const body = serializeRequestBody(req);
+  const timeoutMs = route.kind === 'agent-send'
+    ? AGENT_SEND_TIMEOUT_MS
+    : (route.namespace === 'pipeline' && PIPELINE_START_KINDS.has(route.kind)
+      ? PIPELINE_START_TIMEOUT_MS
+      : NON_STREAM_TIMEOUT_MS);
   const upstream = await fetchCaduUpstream(targetUrl, {
     method: req.method,
     headers: {
@@ -388,7 +396,7 @@ async function proxyNonStream(req, res, route, targetUrl, token) {
     },
     body,
     redirect: 'error',
-    signal: AbortSignal.timeout(route.kind === 'agent-send' ? AGENT_SEND_TIMEOUT_MS : NON_STREAM_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   }, {
     operation: `control.${route.namespace}.${route.kind}`,
   });

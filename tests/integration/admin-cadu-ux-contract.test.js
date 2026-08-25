@@ -104,15 +104,27 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("profile.force_dry_run === true");
     expect(controller).toContain("profile.mutates_platform ? 'Executar real' : 'Executar'");
     expect(controller).toContain("function pipelineStageModePrecondition(stage, dryRun)");
+    expect(controller).toContain('function pipelineStageActionBlockerHtml(noteId, blockers)');
+    expect(controller).toContain("var blockerId = 'pipeline-stage-blocker-'");
+    expect(controller).toContain("aria-describedby=\"' + escapeHtml(blockerId)");
+    expect(controller).toContain("actionBlockers.push({ label: label, detail: disabledReason });");
     expect(controller).toContain("check.id === 'dedup_preview_real'");
     expect(controller).toContain("resp.status === 412");
     expect(controller).toContain("preconditionDetail.code === 'dedup_preview_required'");
+    expect(controller).not.toContain("preconditionDetail.code === 'all_dry_run_required'");
+    expect(controller).not.toContain('não há uma simulação completa recente bem-sucedida');
+    expect(controller).toContain('A Pipeline completa não exige simulação prévia na versão atual');
+    expect(controller).toContain("preconditionDetail.code === 'signed_publish_approval_required'");
+    expect(controller).toContain('function pipelineRunStartOutcomeIsAmbiguous(response)');
+    expect(controller).toContain('O POST real não foi repetido automaticamente.');
     expect(controller).toContain("detail.code === 'pipeline_runtime_busy'");
+    expect(controller).toContain('refreshPipeline({ force: true });');
     expect(controller).toContain('Nenhum run foi criado.');
     expect(controller).toContain('buildPipelineRunRequest(stageId, dryRun, state.pipelineCapabilities)');
     expect(controller).toContain("path += dryRun ? '/dry-run' : '/real'");
     expect(controller).toContain('body: JSON.stringify(request.payload)');
     expect(html).toContain('.kc-pipeline-stage__actions');
+    expect(html).toContain('.kc-pipeline-stage__blocker');
   });
 
   test('pipeline action siblings are locked and restored as one operation', () => {
@@ -128,6 +140,47 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain("typeof active.dry_run === 'boolean'");
     expect(controller).toContain("active.dry_run ? 'simulação' : 'execução real'");
     expect(controller).toContain("typeof r.dry_run === 'boolean'");
+  });
+
+  test('keeps queued and stopping pipeline runs visible without relying on motion', () => {
+    expect(controller).toContain('function pipelineRunIsActive(run)');
+    expect(controller).toContain('function reconcilePipelineLogTransport(active)');
+    expect(controller).toContain('if (pipelineRunIsActive(active))');
+    expect(controller).toContain('reconcilePipelineLogTransport(state.pipelineActive);');
+    expect(controller).toContain("var active = pipelineRunIsActive(status.active_run);");
+    expect(html).toContain('.kc-pipeline-active-card.is-pending');
+    expect(html).toContain('.kc-pipeline-active-card.is-stopping');
+    expect(html).toContain('.kc-pipeline-status-dot.is-pending');
+    expect(html).toContain('.kc-pipeline-status-dot.is-stopping');
+    expect(html).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(html).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.kc-pipeline-status-dot\.is-running,[\s\S]*animation:\s*kc-cadu-reduced-pulse/
+    );
+  });
+
+  test('exposes the sequential Pipeline log without announcing polling timestamps as entries', () => {
+    expect(html).toMatch(
+      /id="pipeline-log"[^>]*role="log"[^>]*aria-label="Log operacional da Pipeline Completa"[^>]*aria-live="polite"[^>]*aria-atomic="false"[^>]*aria-relevant="additions text"[^>]*tabindex="0"/
+    );
+    expect(controller).toContain('var PIPELINE_LOG_MAX_LINES = 180;');
+    expect(controller).toContain('function pipelineLogTailOverlap(previousLines, nextLines)');
+    expect(controller).toContain("data-pipeline-log-marker");
+    expect(controller).toContain("div.setAttribute('aria-hidden', 'true');");
+    expect(controller).toContain('snapshotLines: null');
+  });
+
+  test('lets operators cancel a pending run once and announces active-state changes', () => {
+    expect(controller).toContain("pipelineStopPendingRunId: null");
+    expect(controller).toContain('function reconcilePipelineStopRequest(active)');
+    expect(controller).toContain("active.status === 'pending' || active.status === 'running'");
+    expect(controller).toContain("if (state.pipelineStopPendingRunId) return;");
+    expect(controller).toContain("state.pipelineStopPendingRunId = runId;");
+    expect(controller).toContain("await refreshPipeline();");
+    expect(controller).toContain('function updatePipelineActiveStatus(active, displayStatus)');
+    expect(controller).toContain('if (status.textContent !== message) status.textContent = message;');
+    expect(html).toMatch(
+      /id="pipeline-active-status"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/
+    );
   });
 
   test('PDF explains registry provenance without calling scanner evidence confirmation', () => {

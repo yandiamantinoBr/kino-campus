@@ -95,6 +95,16 @@
     // comuns
     fields.push({ type: 'text', name: 'titulo', label: 'Título', placeholder: 'Ex: Livro de Cálculo Vol. 1', required: true, maxLength: 80 });
     fields.push({ type: 'textarea', name: 'descricao', label: 'Descrição', placeholder: 'Descreva com detalhes…', required: true, rows: 4, maxLength: descMaxLength, maxLengthAdmin: KC_DESCRIPTION_MAX_LENGTH_ADMIN });
+    fields.push({
+      type: 'user-tags',
+      name: 'userTags',
+      label: 'Tags',
+      placeholder: 'Ex.: monitoria, acessibilidade',
+      required: false,
+      maxItems: isAdmin ? 12 : 6,
+      maxLength: 60,
+      hint: 'Adicione termos que ajudam a encontrar esta publicação. As classificações acima continuam separadas; em edições, tags históricas aparecem aqui para serem preservadas ou alteradas.',
+    });
 
     if (moduleKey === 'compra-venda') {
       const acao = selections.acao;

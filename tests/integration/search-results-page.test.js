@@ -21,6 +21,9 @@ describe('search-results.html', () => {
     expect(html).toContain('id="searchResultsRelaxStructured"');
     expect(html).toContain('id="searchResultsRetry"');
     expect(html).toContain('id="noResultsMessage"');
+    expect(html).toContain('kc-search-results-loading');
+    expect(html).toContain('style="display:none;"');
+    expect(html).toContain('Carregando resultados…');
     expect(html).toContain('kc-search-results-controls__summary');
     expect(html).toContain('kc-search-results-controls__toolbar');
     expect(html).toContain('id="searchResultsPersonalizationSlot"');
@@ -33,8 +36,8 @@ describe('search-results.html', () => {
   test('loads the updated shared search assets', () => {
     const html = read('search-results.html');
 
-    expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.3');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.15');
+    expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.4');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.17');
   });
 });
 
@@ -62,6 +65,8 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('if (searchError)');
     expect(source).toContain('context.error === true');
     expect(source).toContain('noResultsRetry');
+    expect(source).toContain('function setSearchResultsLoadingState');
+    expect(source).toContain('data-kc-search-loading');
   });
 
   test('keeps the header search global outside the results page', () => {

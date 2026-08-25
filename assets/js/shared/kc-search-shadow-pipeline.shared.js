@@ -100,7 +100,8 @@
       post && (post.category || post.categoria || post.categoryKey || post.categoriaKey),
       metadata.categoryKey, metadata.subcategory, metadata.subcategoryKey,
       metadata.actionKey, metadata.housingTypeKey,
-      post && post.tagKeys, metadata.tagKeys
+      post && post.tagKeys, metadata.tagKeys,
+      post && post.userTagKeys, metadata.userTagKeys
     ]);
   }
 

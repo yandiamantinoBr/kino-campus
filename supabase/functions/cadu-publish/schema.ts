@@ -5,7 +5,7 @@
 // services/cadu-ufg-publisher/src/mapper.js, para que posts do Cadu fiquem
 // estruturalmente identicos aos de humanos.
 
-import { normalizeText, slugify } from "./util.ts";
+import { normalizeText, normalizeWhitespace, slugify } from "./util.ts";
 
 export const MODULE_KEYS = [
   "eventos",
@@ -17,6 +17,11 @@ export const MODULE_KEYS = [
 ] as const;
 
 export type ModuleKey = typeof MODULE_KEYS[number];
+
+// Trusted publishers (Cadu and other server-side agents) may provide up to
+// twelve additional Tags. The database trigger remains authoritative, but the
+// Edge contract validates the same ceiling before attempting a write.
+export const MAX_CADU_USER_TAGS = 12;
 
 export function isValidModule(m: unknown): m is ModuleKey {
   return typeof m === "string" && (MODULE_KEYS as readonly string[]).includes(m);
@@ -354,10 +359,15 @@ export interface CaduItem {
   allowExternalImageFallback?: boolean;
   tags?: string[];
   tagKeys?: string[];
+  userTags?: string[];
+  userTagKeys?: string[];
+  user_tags?: string[];
+  user_tag_keys?: string[];
   sourceUrl?: string;
   sourceId?: string;
   sourceTitle?: string;
   sourceRegistryId?: string;
+  sourceRevision?: string;
   actionFingerprints?: string[];
   actionFingerprintContract?: string;
   actionFingerprintV2?: string[];
@@ -449,8 +459,88 @@ export function actionFingerprintMetadataForItem(item: CaduItem): ActionFingerpr
   return { fingerprints, contract, v2Fingerprints };
 }
 
+// A source revision is evidence supplied by the collector, not a derived
+// presentation hash. Preserve it only in the canonical lowercase SHA-256
+// form so the pipeline can safely distinguish a real lifecycle update from a
+// repeated scrape of the same source.
+export function sourceRevisionForItem(item: CaduItem): string {
+  const record = item as Record<string, unknown>;
+  const value = item.sourceRevision ?? record.source_revision;
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string" || !SHA256_HEX.test(value)) {
+    throw new TypeError("sourceRevision deve ser um hash SHA-256 em minúsculas.");
+  }
+  return value;
+}
+
 function hasText(v: unknown): boolean {
   return !!String(v ?? "").trim();
+}
+
+export interface CaduUserTags {
+  explicit: boolean;
+  tags: string[];
+  tagKeys: string[];
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function tagArray(value: unknown, field: string): unknown[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new TypeError(`${field} deve ser uma lista de textos.`);
+  return value;
+}
+
+// Canonical additional tags are label-led: supplied keys are only a legacy
+// fallback when no label is present. This mirrors the database trigger, which
+// derives userTagKeys from the visible labels and never trusts a forged key.
+export function caduUserTagsForItem(item: CaduItem | Record<string, unknown>): CaduUserTags {
+  const record = item as Record<string, unknown>;
+  const explicit = hasOwn(record, "userTags") || hasOwn(record, "userTagKeys") ||
+    hasOwn(record, "user_tags") || hasOwn(record, "user_tag_keys");
+  const labels = explicit
+    ? tagArray(record.userTags ?? record.user_tags, "userTags")
+    : tagArray(record.tags, "tags");
+  const keys = explicit
+    ? tagArray(record.userTagKeys ?? record.user_tag_keys, "userTagKeys")
+    : tagArray(record.tagKeys, "tagKeys");
+  const pairs = new Map<string, string>();
+
+  for (let index = 0; index < Math.max(labels.length, keys.length); index += 1) {
+    const rawLabel = labels[index];
+    const rawKey = keys[index];
+    if (rawLabel !== undefined && rawLabel !== null && typeof rawLabel !== "string") {
+      throw new TypeError(`userTags[${index}] deve ser texto.`);
+    }
+    if (rawKey !== undefined && rawKey !== null && typeof rawKey !== "string") {
+      throw new TypeError(`userTagKeys[${index}] deve ser texto.`);
+    }
+    const label = normalizeWhitespace(rawLabel) || normalizeWhitespace(rawKey);
+    if (!label) continue;
+    if (label.length > 60) {
+      throw new TypeError(`userTags[${index}] pode ter no máximo 60 caracteres.`);
+    }
+    const key = slugify(label, 60);
+    if (!key) {
+      throw new TypeError(`userTags[${index}] precisa conter uma letra ou número.`);
+    }
+    if (!pairs.has(key)) pairs.set(key, label);
+  }
+
+  // Legacy tags may still contain automatic category/source facets. Their
+  // ceiling is evaluated by the mapper only after those facets are removed.
+  if (explicit && pairs.size > MAX_CADU_USER_TAGS) {
+    throw new TypeError(`userTags aceita no máximo ${MAX_CADU_USER_TAGS} tags adicionais para publicadores confiáveis.`);
+  }
+
+  const entries = Array.from(pairs.entries());
+  return {
+    explicit,
+    tagKeys: entries.map(([key]) => key),
+    tags: entries.map(([, label]) => label),
+  };
 }
 
 export function validateItem(item: CaduItem): ValidationResult {
@@ -470,6 +560,16 @@ export function validateItem(item: CaduItem): ValidationResult {
 
   try {
     actionFingerprintMetadataForItem(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    sourceRevisionForItem(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    caduUserTagsForItem(item);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }

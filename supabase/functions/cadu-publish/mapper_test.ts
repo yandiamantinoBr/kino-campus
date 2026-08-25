@@ -67,6 +67,30 @@ Deno.test("Cadu mapper preserves raw source title, registry lineage and action f
   }]);
 });
 
+Deno.test("Cadu mapper persists only an exact source evidence revision", () => {
+  const valid = {
+    module: "oportunidades",
+    category: "editais",
+    title: "Edital 43/2026 prorroga inscricoes",
+    description: "Inscricoes abertas para estudantes da UFG com prazo oficialmente prorrogado.",
+    sourceUrl: "https://ufg.br/n/edital-43-2026",
+    sourceId: "ufg:edital:43-2026",
+    sourceRevision: "c".repeat(64),
+  } satisfies CaduItem;
+
+  assert.equal(validateItem(valid).ok, true);
+  assert.equal(mapItemToPost(valid).row.metadata.source_revision, "c".repeat(64));
+
+  for (const invalid of [
+    { ...valid, sourceRevision: "C".repeat(64) },
+    { ...valid, sourceRevision: "not-a-sha256" },
+    { ...valid, sourceRevision: 42 as unknown as string },
+  ]) {
+    assert.equal(validateItem(invalid).ok, false);
+    assert.throws(() => mapItemToPost(invalid), TypeError);
+  }
+});
+
 Deno.test("Cadu mapper persists only a complete and exact action fingerprint v2 contract", () => {
   const first = "a".repeat(64);
   const second = "b".repeat(64);
@@ -768,8 +792,13 @@ Deno.test("canonical tag keys never regress to singular or label-derived slugs",
   }
 });
 
-Deno.test("publish scrubs stale module taxonomy tags and preserves independent pairs", () => {
-  const cases: Array<{ item: CaduItem; expected: string[]; forbidden: string[] }> = [
+Deno.test("publish moves legacy independent Cadu tags into the editable contract", () => {
+  const cases: Array<{
+    item: CaduItem;
+    automatic: string[];
+    user: string[];
+    forbidden: string[];
+  }> = [
     {
       item: {
         ...validItem("eventos", "palestras"),
@@ -777,7 +806,8 @@ Deno.test("publish scrubs stale module taxonomy tags and preserves independent p
         tags: ["Acad\u00eamicos", "Campus Samambaia"],
         tagKeys: ["academicos", "campus-samambaia"],
       },
-      expected: ["palestras", "faculdade-de-letras", "campus-samambaia"],
+      automatic: ["palestras", "ufg", "faculdade-de-letras"],
+      user: ["campus-samambaia"],
       forbidden: ["academicos"],
     },
     {
@@ -787,7 +817,8 @@ Deno.test("publish scrubs stale module taxonomy tags and preserves independent p
         tags: ["Est\u00e1gio", "Tecnologia"],
         tagKeys: ["estagios", "tecnologia"],
       },
-      expected: ["empregos", "tecnologia"],
+      automatic: ["empregos", "tecnologia", "ufg"],
+      user: [],
       forbidden: ["estagios"],
     },
     {
@@ -796,7 +827,8 @@ Deno.test("publish scrubs stale module taxonomy tags and preserves independent p
         tags: ["Quartos", "Setor Universit\u00e1rio"],
         tagKeys: ["quartos", "setor-universitario"],
       },
-      expected: ["casas", "setor-universitario"],
+      automatic: ["casas", "ufg"],
+      user: ["setor-universitario"],
       forbidden: ["quartos"],
     },
     {
@@ -806,7 +838,8 @@ Deno.test("publish scrubs stale module taxonomy tags and preserves independent p
         tags: ["Eletr\u00f4nicos", "Compro", "Biblioteca Central"],
         tagKeys: ["eletronicos", "compro", "biblioteca-central"],
       },
-      expected: ["livros", "vendo", "biblioteca-central"],
+      automatic: ["livros", "vendo", "ufg"],
+      user: ["biblioteca-central"],
       forbidden: ["eletronicos", "compro"],
     },
     {
@@ -815,7 +848,8 @@ Deno.test("publish scrubs stale module taxonomy tags and preserves independent p
         tags: ["Ofere\u00e7o carona", "Campus Colemar"],
         tagKeys: ["ofereco", "campus-colemar"],
       },
-      expected: ["procuro", "campus-colemar"],
+      automatic: ["procuro", "ufg"],
+      user: ["campus-colemar"],
       forbidden: ["ofereco"],
     },
     {
@@ -825,26 +859,32 @@ Deno.test("publish scrubs stale module taxonomy tags and preserves independent p
         tags: ["Encontrados", "Eletr\u00f4nicos", "Biblioteca Central"],
         tagKeys: ["encontrados", "eletronicos", "biblioteca-central"],
       },
-      expected: ["perdidos", "documentos", "biblioteca-central"],
+      automatic: ["perdidos", "documentos", "ufg"],
+      user: ["biblioteca-central"],
       forbidden: ["encontrados", "eletronicos"],
     },
   ];
 
   for (const sample of cases) {
     const mapped = mapItemToPost(sample.item);
-    const tags = mapped.row.metadata.tags as string[];
-    const tagKeys = mapped.row.metadata.tagKeys as string[];
-    assert.equal(tags.length, tagKeys.length, `${sample.item.module}: pares`);
-    for (const key of sample.expected) {
-      assert.ok(tagKeys.includes(key), `${sample.item.module}: preserva ${key}`);
+    const automaticKeys = mapped.row.metadata.tagKeys as string[];
+    const userKeys = mapped.row.metadata.userTagKeys as string[];
+    assert.equal((mapped.row.metadata.tags as string[]).length, automaticKeys.length, `${sample.item.module}: pares automaticos`);
+    assert.equal((mapped.row.metadata.userTags as string[]).length, userKeys.length, `${sample.item.module}: pares editaveis`);
+    for (const key of sample.automatic) {
+      assert.ok(automaticKeys.includes(key), `${sample.item.module}: taxonomia ${key}`);
+    }
+    for (const key of sample.user) {
+      assert.ok(userKeys.includes(key), `${sample.item.module}: tag editavel ${key}`);
     }
     for (const key of sample.forbidden) {
-      assert.ok(!tagKeys.includes(key), `${sample.item.module}: remove ${key}`);
+      assert.ok(!automaticKeys.includes(key), `${sample.item.module}: remove taxonomia obsoleta ${key}`);
+      assert.ok(!userKeys.includes(key), `${sample.item.module}: nao duplica taxonomia em Tags ${key}`);
     }
   }
 });
 
-Deno.test("publish scrubs taxonomic source names and reconstructs independent half-pairs", () => {
+Deno.test("publish preserves legacy independent half-pairs as editable Tags", () => {
   for (const [tagKey, tagLabel] of [
     ["biblioteca-central", "Eletr\u00f4nicos"],
     ["eletronicos", "Biblioteca Central"],
@@ -856,19 +896,59 @@ Deno.test("publish scrubs taxonomic source names and reconstructs independent ha
       tags: [tagLabel],
       tagKeys: [tagKey],
     });
-    const tags = mapped.row.metadata.tags as string[];
-    const tagKeys = mapped.row.metadata.tagKeys as string[];
-    assert.equal(tags.length, tagKeys.length);
-    assert.ok(tagKeys.includes("livros"));
-    assert.ok(tagKeys.includes("vendo"));
-    assert.ok(tagKeys.includes("biblioteca-central"));
+    const automaticKeys = mapped.row.metadata.tagKeys as string[];
+    const userTags = mapped.row.metadata.userTags as string[];
+    const userTagKeys = mapped.row.metadata.userTagKeys as string[];
+    assert.equal(userTags.length, userTagKeys.length);
+    assert.ok(automaticKeys.includes("livros"));
+    assert.ok(automaticKeys.includes("vendo"));
+    assert.ok(userTagKeys.includes("biblioteca-central"));
     assert.equal(
-      tags[tagKeys.indexOf("biblioteca-central")],
+      userTags[userTagKeys.indexOf("biblioteca-central")],
       tagKey === "biblioteca-central" ? "biblioteca-central" : "Biblioteca Central",
     );
-    assert.ok(!tagKeys.includes("eletronicos"));
-    assert.ok(!tagKeys.includes("compro"));
+    assert.ok(!automaticKeys.includes("eletronicos"));
+    assert.ok(!automaticKeys.includes("compro"));
   }
+});
+
+Deno.test("publish honors explicit userTags, derives keys and enforces the trusted-publisher limit", () => {
+  const explicit = mapItemToPost({
+    ...validItem("oportunidades", "concursos"),
+    sourceName: "Instituto Verbena",
+    tags: ["Legada que nao deve vazar"],
+    tagKeys: ["legada-que-nao-deve-vazar"],
+    userTags: ["Direito", "Acessibilidade", "Material aberto"],
+    userTagKeys: ["forjada", "acessibilidade", "material-aberto"],
+  });
+  const metadata = explicit.row.metadata;
+  assert.deepEqual(metadata.userTags, ["Direito", "Acessibilidade", "Material aberto"]);
+  assert.deepEqual(metadata.userTagKeys, ["direito", "acessibilidade", "material-aberto"]);
+  assert.ok(!(metadata.tagKeys as string[]).includes("legada-que-nao-deve-vazar"));
+  assert.ok(!(metadata.userTagKeys as string[]).includes("legada-que-nao-deve-vazar"));
+
+  const keyFallback = mapItemToPost({
+    ...validItem("eventos", "academicos"),
+    userTags: ["", "Material aberto"],
+    userTagKeys: ["Direito", "forjada"],
+  });
+  assert.deepEqual(keyFallback.row.metadata.userTags, ["Direito", "Material aberto"]);
+  assert.deepEqual(keyFallback.row.metadata.userTagKeys, ["direito", "material-aberto"]);
+
+  const empty = mapItemToPost({
+    ...validItem("eventos", "academicos"),
+    tags: ["Legada que nao deve vazar"],
+    userTags: [],
+  });
+  assert.deepEqual(empty.row.metadata.userTags, []);
+  assert.deepEqual(empty.row.metadata.userTagKeys, []);
+
+  const tooMany = {
+    ...validItem("eventos", "academicos"),
+    userTags: Array.from({ length: 13 }, (_, index) => `Tag ${index + 1}`),
+  } satisfies CaduItem;
+  assert.equal(validateItem(tooMany).ok, false);
+  assert.throws(() => mapItemToPost(tooMany), /no m[aá]ximo 12/i);
 });
 
 Deno.test("required delivery follows achados category, not its secondary type", () => {
@@ -1028,7 +1108,7 @@ Deno.test("edit matrix reconciles category aliases while preserving independent 
   assert.equal(moradia.housingTypeLabel, "Casas");
 });
 
-Deno.test("edit reconstructs independent half-pairs without reviving stale taxonomy", () => {
+Deno.test("edit migrates legacy independent half-pairs without reviving stale taxonomy", () => {
   for (const [tagKey, tagLabel] of [
     ["biblioteca-central", "Eletr\u00f4nicos"],
     ["eletronicos", "Biblioteca Central"],
@@ -1045,17 +1125,76 @@ Deno.test("edit reconstructs independent half-pairs without reviving stale taxon
     ).metadata;
     const tags = metadata.tags as string[];
     const tagKeys = metadata.tagKeys as string[];
+    const userTags = metadata.userTags as string[];
+    const userTagKeys = metadata.userTagKeys as string[];
     assert.equal(tags.length, tagKeys.length);
+    assert.equal(userTags.length, userTagKeys.length);
     assert.ok(tagKeys.includes("livros"));
     assert.ok(tagKeys.includes("vendo"));
-    assert.ok(tagKeys.includes("biblioteca-central"));
+    assert.ok(tagKeys.includes("ufg"));
+    assert.ok(userTagKeys.includes("biblioteca-central"));
     assert.equal(
-      tags[tagKeys.indexOf("biblioteca-central")],
+      userTags[userTagKeys.indexOf("biblioteca-central")],
       tagKey === "biblioteca-central" ? "biblioteca-central" : "Biblioteca Central",
     );
     assert.ok(!tagKeys.includes("eletronicos"));
     assert.ok(!tagKeys.includes("compro"));
+    assert.ok(!tagKeys.includes("biblioteca-central"));
   }
+});
+
+Deno.test("edit treats legacy tags as a controlled bridge and filters automatic facets", () => {
+  const legacy = buildTaxonomyEditPatch(
+    "compra-venda",
+    "eletronicos",
+    "livros",
+    {
+      subcategoriaKey: "vendo",
+      tags: ["Eletrônicos", "Vendo", "UFG", "Biblioteca Central"],
+      tagKeys: ["eletronicos", "vendo", "ufg", "biblioteca-central"],
+    },
+    {
+      tags: ["Direito", "Livros", "UFG"],
+      tagKeys: ["direito", "livros", "ufg"],
+    },
+  ).metadata;
+  assert.deepEqual(legacy.userTags, ["Direito"]);
+  assert.deepEqual(legacy.userTagKeys, ["direito"]);
+  assert.deepEqual(legacy.tagKeys, ["livros", "vendo", "ufg"]);
+
+  const canonical = buildTaxonomyEditPatch(
+    "compra-venda",
+    "livros",
+    "livros",
+    {
+      subcategoriaKey: "vendo",
+      tags: ["Livros", "Vendo", "UFG"],
+      tagKeys: ["livros", "vendo", "ufg"],
+      userTags: ["Acessibilidade"],
+      userTagKeys: ["acessibilidade"],
+    },
+    {
+      tags: ["Direito"],
+      tagKeys: ["direito"],
+    },
+  ).metadata;
+  assert.deepEqual(canonical.userTags, ["Acessibilidade"]);
+  assert.deepEqual(canonical.userTagKeys, ["acessibilidade"]);
+  assert.ok(!(canonical.tagKeys as string[]).includes("direito"));
+
+  const explicit = buildTaxonomyEditPatch(
+    "compra-venda",
+    "livros",
+    "livros",
+    canonical,
+    {
+      userTags: ["Livros", "Acessibilidade"],
+      userTagKeys: ["forjada", "acessibilidade"],
+    },
+  ).metadata;
+  assert.deepEqual(explicit.userTags, ["Acessibilidade"]);
+  assert.deepEqual(explicit.userTagKeys, ["acessibilidade"]);
+  assert.ok(!(explicit.tagKeys as string[]).includes("acessibilidade"));
 });
 
 Deno.test("edit reconciliation rejects missing or malformed independent secondary groups", () => {
@@ -1162,6 +1301,8 @@ Deno.test({
         actionLabel: "Vendo",
         tags: ["Eletr\u00f4nicos", "Vendo", "UFG"],
         tagKeys: ["eletronicos", "vendo", "ufg"],
+        userTags: ["Acessibilidade", "Material aberto"],
+        userTagKeys: ["acessibilidade", "material-aberto"],
       },
     };
     const admin = {
@@ -1215,6 +1356,8 @@ Deno.test({
     assert.ok(!(metadata.tagKeys as string[]).includes("eletronicos"));
     assert.ok((metadata.tagKeys as string[]).includes("compro"));
     assert.ok(!(metadata.tagKeys as string[]).includes("vendo"));
+    assert.deepEqual(metadata.userTags, ["Acessibilidade", "Material aberto"]);
+    assert.deepEqual(metadata.userTagKeys, ["acessibilidade", "material-aberto"]);
 
     const conflict = await handleEdit(admin as never, "cadu-user", {
       postId: "post-1",
@@ -1254,6 +1397,98 @@ Deno.test({
       assert.equal(rejectedBody.code, "VALIDATION_FAILED");
       assert.match(String(rejectedBody.message), expected);
     }
+
+    const editedTags = await handleEdit(admin as never, "cadu-user", {
+      postId: "post-1",
+      userTags: ["Apoio pedag\u00f3gico"],
+      userTagKeys: ["forjada"],
+    });
+    assert.equal(editedTags.status, 200);
+    assert.equal(updates.length, 2);
+    const editedMetadata = updates[1].metadata as Record<string, unknown>;
+    assert.deepEqual(editedMetadata.userTags, ["Apoio pedag\u00f3gico"]);
+    assert.deepEqual(editedMetadata.userTagKeys, ["apoio-pedagogico"]);
+
+    const clearedTags = await handleEdit(admin as never, "cadu-user", {
+      postId: "post-1",
+      metadata: { userTags: [] },
+    });
+    assert.equal(clearedTags.status, 200);
+    assert.equal(updates.length, 3);
+    const clearedMetadata = updates[2].metadata as Record<string, unknown>;
+    assert.deepEqual(clearedMetadata.userTags, []);
+    assert.deepEqual(clearedMetadata.userTagKeys, []);
+  },
+});
+
+Deno.test({
+  name: "handleEdit bridges top-level legacy tags once and protects canonical Tags afterward",
+  fn: async () => {
+    const { handleEdit } = await import("./index.ts");
+    const updates: Array<Record<string, unknown>> = [];
+    let selectCount = 0;
+    const current = {
+      id: "legacy-post",
+      author_id: "cadu-user",
+      module: "compra-venda",
+      category: "livros",
+      status: "published",
+      image_url: "",
+      metadata: {
+        subcategoriaKey: "vendo",
+        tags: ["Livros", "Vendo", "UFG", "Biblioteca Central"],
+        tagKeys: ["livros", "vendo", "ufg", "biblioteca-central"],
+      },
+    };
+    const admin = {
+      from(table: string) {
+        if (table === "audit_log") {
+          return { insert: () => Promise.resolve({ error: null }) };
+        }
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: async () => {
+                    selectCount += 1;
+                    return selectCount === 1
+                      ? { data: current, error: null }
+                      : { data: { ...current, ...updates.at(-1) }, error: null };
+                  },
+                };
+              },
+            };
+          },
+          update(payload: Record<string, unknown>) {
+            updates.push(payload);
+            return { eq: async () => ({ error: null }) };
+          },
+        };
+      },
+    };
+
+    const bridged = await handleEdit(admin as never, "cadu-user", {
+      postId: "legacy-post",
+      tags: ["Direito", "Livros", "UFG"],
+      tagKeys: ["direito", "livros", "ufg"],
+    });
+    assert.equal(bridged.status, 200);
+    const bridgedMetadata = updates[0].metadata as Record<string, unknown>;
+    assert.deepEqual(bridgedMetadata.userTags, ["Direito"]);
+    assert.deepEqual(bridgedMetadata.userTagKeys, ["direito"]);
+    assert.deepEqual(bridgedMetadata.tagKeys, ["livros", "vendo", "ufg"]);
+
+    const protectedCanonical = await handleEdit(admin as never, "cadu-user", {
+      postId: "legacy-post",
+      tags: ["Nao deve substituir"],
+      tagKeys: ["nao-deve-substituir"],
+    });
+    assert.equal(protectedCanonical.status, 200);
+    const protectedMetadata = updates[1].metadata as Record<string, unknown>;
+    assert.deepEqual(protectedMetadata.userTags, ["Direito"]);
+    assert.deepEqual(protectedMetadata.userTagKeys, ["direito"]);
+    assert.ok(!(protectedMetadata.tagKeys as string[]).includes("nao-deve-substituir"));
   },
 });
 
@@ -1295,4 +1530,32 @@ Deno.test("handlePublish returns 422 for secondary alias drift and accepts equiv
   const row = acceptedBody.row as Record<string, unknown>;
   const metadata = row.metadata as Record<string, unknown>;
   assert.equal(metadata.subcategoriaKey, "vendo");
+
+  const tagged = await handlePublish({} as never, "cadu-user", {
+    item: {
+      ...base,
+      actionKey: "Vendo",
+      userTags: ["Acessibilidade", "Livro did\u00e1tico"],
+      userTagKeys: ["forjada", "livro-didatico"],
+    },
+    options: { dryRun: true },
+  });
+  assert.equal(tagged.status, 200);
+  const taggedBody = await tagged.json() as Record<string, unknown>;
+  const taggedMetadata = (taggedBody.row as Record<string, unknown>).metadata as Record<string, unknown>;
+  assert.deepEqual(taggedMetadata.userTags, ["Acessibilidade", "Livro did\u00e1tico"]);
+  assert.deepEqual(taggedMetadata.userTagKeys, ["acessibilidade", "livro-didatico"]);
+
+  const tooManyTags = await handlePublish({} as never, "cadu-user", {
+    item: {
+      ...base,
+      actionKey: "Vendo",
+      userTags: Array.from({ length: 13 }, (_, index) => `Tag ${index + 1}`),
+    },
+    options: { dryRun: true },
+  });
+  assert.equal(tooManyTags.status, 422);
+  const tooManyTagsBody = await tooManyTags.json() as Record<string, unknown>;
+  assert.equal(tooManyTagsBody.code, "VALIDATION_FAILED");
+  assert.match(String(tooManyTagsBody.message), /no m[aá]ximo 12/i);
 });

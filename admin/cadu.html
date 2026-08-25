@@ -10,7 +10,7 @@
   <script src="../assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
   <script defer src="/_vercel/insights/script.js"></script>
   <title>KinoCampus - Admin Cadu (OpenClaw)</title>
-  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.21" />
+  <link rel="stylesheet" href="../assets/css/styles.css?v=8.6.23" />
   <link rel="stylesheet" href="../assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
@@ -357,8 +357,13 @@
     .kc-pipeline-stage__btn:hover { filter: brightness(1.1); }
     .kc-pipeline-stage__btn:disabled { background: rgba(255,107,0,.3); cursor: not-allowed; }
     .kc-pipeline-stage__btn.is-danger { background: rgba(239,68,68,.85); }
+    .kc-pipeline-stage__blocker { display: flex; align-items: flex-start; gap: 6px; min-width: 0; overflow-wrap: anywhere; border: 1px solid rgba(245,158,11,.42); background: rgba(245,158,11,.09); color: #fbbf24; border-radius: 8px; padding: 7px 8px; font-size: .72rem; line-height: 1.35; }
+    .kc-pipeline-stage__blocker i { flex: 0 0 auto; margin-top: 1px; }
+    .kc-pipeline-stage__blocker strong { color: inherit; }
     .kc-pipeline-active-card { background: var(--kc-surface-dark); border: 1px solid var(--kc-border-dark); border-radius: 12px; padding: 12px; margin-bottom: 10px; min-width: 0; }
+    .kc-pipeline-active-card.is-pending { border-color: rgba(148,163,184,.55); border-style: dashed; }
     .kc-pipeline-active-card.is-running { border-color: rgba(255,107,0,.45); box-shadow: 0 0 0 1px rgba(255,107,0,.18); }
+    .kc-pipeline-active-card.is-stopping { border-color: rgba(245,158,11,.55); border-style: dashed; }
     .kc-pipeline-active-card.is-failed { border-color: rgba(239,68,68,.45); }
     .kc-pipeline-active-card.is-success { border-color: rgba(16,185,129,.45); }
     .kc-pipeline-active-card.is-partial { border-color: rgba(245,158,11,.5); }
@@ -388,7 +393,9 @@
     .kc-pipeline-log .kc-log-line--err { color: #f87171; }
     .kc-pipeline-log .kc-log-line--ok { color: #34d399; }
     .kc-pipeline-status-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); display: inline-block; margin-left: 6px; vertical-align: middle; transition: background .15s; }
+    .kc-pipeline-status-dot.is-pending { background: #94a3b8; }
     .kc-pipeline-status-dot.is-running { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.18); animation: kc-pulse 1.4s infinite; }
+    .kc-pipeline-status-dot.is-stopping { background: #f59e0b; }
     .kc-pipeline-status-dot.is-success { background: #10b981; }
     .kc-pipeline-status-dot.is-partial { background: #f59e0b; }
     .kc-pipeline-status-dot.is-finished { background: #94a3b8; }
@@ -791,7 +798,7 @@
     }
   </style>
   <link rel="stylesheet" href="../assets/css/admin-shell.css?v=8.6.12" />
-  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=b734e3a0c80bd706" />
+  <link rel="stylesheet" href="../assets/css/admin-cadu-reviews.css?v=3f359659c115dd64" />
 </head>
 <body class="kc-admin-page kc-admin-page--dashboard kc-admin-page--cadu">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -1056,10 +1063,11 @@
                 <i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.
               </div>
             </div>
+            <div id="pipeline-active-status" class="kc-sr-only" role="status" aria-live="polite" aria-atomic="true">Pipeline: nenhuma execução ativa.</div>
             <div id="pipeline-health-card" class="kc-pipeline-health-card">
               <div class="kc-cadu-empty"><i class="fas fa-heart-pulse"></i> Carregando saúde da automação…</div>
             </div>
-            <div class="kc-pipeline-log" id="pipeline-log">
+            <div class="kc-pipeline-log" id="pipeline-log" role="log" aria-label="Log operacional da Pipeline Completa" data-i18n-aria-label="aria-label.cadu-pipeline-log" aria-live="polite" aria-atomic="false" aria-relevant="additions text" tabindex="0">
               <div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>
             </div>
           </div>
@@ -1411,14 +1419,14 @@
 
   <!-- Scripts -->
   <script defer src="../assets/js/boot/kc-constants.js?v=8.6.2"></script>
-  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.13"></script>
+  <script defer src="../assets/js/core/kc-i18n.js?v=8.6.14"></script>
   <script defer src="../assets/js/utils/kc-utils.string.js?v=8.6.4"></script>
   <script defer src="../assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.identity.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.taxonomy.js?v=8.6.2"></script>
   <script defer src="../assets/js/utils/kc-utils.location.js?v=8.6.1"></script>
-  <script defer src="../assets/js/utils/kc-utils.presentation.js?v=8.6.2"></script>
+  <script defer src="../assets/js/utils/kc-utils.presentation.js?v=8.6.3"></script>
   <script defer src="../assets/js/features/kc-card-image-aspect.js?v=8.6.1"></script>
   <script defer src="../assets/js/utils/kc-utils.js?v=8.6.1"></script>
   <script defer src="../assets/js/boot/kc-env.js?v=8.6.13"></script>
@@ -1446,7 +1454,7 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=e976ab67bb31a47a"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=8a10b5024c361a7e"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=53f1cc040c2b3bd6"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=c182b4869f969688"></script>
 </body>
 </html>

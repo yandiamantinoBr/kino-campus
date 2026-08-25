@@ -62,9 +62,12 @@ function createRenderPipelineStages(state) {
     'runPipelineStage',
     `"use strict";
      const pipelineControlIsReady = ${extractFunctionSource('pipelineControlIsReady')};
+     const pipelineRunIsActive = ${extractFunctionSource('pipelineRunIsActive')};
      const pipelineRealRunApprovalGated = ${extractFunctionSource('pipelineRealRunApprovalGated')};
+     const pipelineFullRunDryRunPolicyGated = ${extractFunctionSource('pipelineFullRunDryRunPolicyGated')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
      const renderDedupProtectedFlow = ${extractFunctionSource('renderDedupProtectedFlow')};
+     const pipelineStageActionBlockerHtml = ${extractFunctionSource('pipelineStageActionBlockerHtml')};
      return (${extractFunctionSource('renderPipelineStages')});`
   )(
     state,
@@ -105,6 +108,12 @@ function createRunHarness(dependencies) {
      const resolvePipelineDryRun = ${extractFunctionSource('resolvePipelineDryRun')};
      const buildPipelineRunRequest = ${extractFunctionSource('buildPipelineRunRequest')};
      const pipelineStageModePrecondition = ${extractFunctionSource('pipelineStageModePrecondition')};
+     const pipelineRunIsActive = ${extractFunctionSource('pipelineRunIsActive')};
+     const pipelineStatusLabel = ${extractFunctionSource('pipelineStatusLabel')};
+     const pipelineFullRunDryRunPolicyGated = ${extractFunctionSource('pipelineFullRunDryRunPolicyGated')};
+     const reconcilePipelineAfterRunMayExist = ${extractFunctionSource('reconcilePipelineAfterRunMayExist')};
+     const pipelineRunStartOutcomeIsAmbiguous = ${extractFunctionSource('pipelineRunStartOutcomeIsAmbiguous')};
+     const reconcilePipelineStartWithActionsLocked = ${extractFunctionSource('reconcilePipelineStartWithActionsLocked')};
      return (${extractFunctionSource('runPipelineStage')});`
   )(
     dependencies.state,
@@ -149,7 +158,7 @@ function pipelineState(now) {
     pipelineExpiryTimer: null,
     pipelineExpiryGeneration: 0,
     pipelineStartPending: false,
-    pipelineCapabilities: { explicit_dry_run: true, explicit_run_mode_routes: true },
+    pipelineCapabilities: { explicit_dry_run: true, explicit_run_mode_routes: true, full_run_dry_run_optional: true },
     pipelineStages: [{
       id: 'all',
       preflight: {
@@ -243,7 +252,7 @@ describe('Cadu pipeline snapshot TTL control', () => {
       state.pipelineRequestGeneration += 1;
       state.pipelineControlReady = true;
       state.pipelineSnapshotExpiresAt = Date.now() + 15000;
-      state.pipelineCapabilities = { explicit_dry_run: true, explicit_run_mode_routes: true };
+      state.pipelineCapabilities = { explicit_dry_run: true, explicit_run_mode_routes: true, full_run_dry_run_optional: true };
       state.pipelineStages[0].preflight.command = 'node scripts/pipeline-kino.js all --contract=fresh';
       return true;
     });
@@ -288,7 +297,7 @@ describe('Cadu pipeline snapshot TTL control', () => {
       state.pipelineRequestGeneration += 1;
       state.pipelineControlReady = true;
       state.pipelineSnapshotExpiresAt = Date.now() + 15000;
-      state.pipelineCapabilities = { explicit_dry_run: true, explicit_run_mode_routes: true };
+      state.pipelineCapabilities = { explicit_dry_run: true, explicit_run_mode_routes: true, full_run_dry_run_optional: true };
       state.pipelineStages[0].preflight.command = 'node scripts/pipeline-kino.js all --contract=renewed';
       return true;
     });
@@ -349,6 +358,194 @@ describe('Cadu pipeline snapshot TTL control', () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(apiFetch).not.toHaveBeenCalled();
     expect(alert).toHaveBeenCalledWith(expect.stringContaining('Nenhuma execução foi iniciada'));
+  });
+
+  test('a fresh control snapshot that reveals another active run skips confirmation and POST', async () => {
+    const state = pipelineState(initialNow);
+    state.pipelineActive = null;
+    const apiFetch = jest.fn();
+    const confirm = jest.fn();
+    const alert = jest.fn();
+    const ensureFreshPipelineControl = jest.fn(async () => {
+      state.pipelineActive = { id: 'run-started-elsewhere', status: 'running' };
+      return true;
+    });
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl,
+      renderPipelineStages: jest.fn(),
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch,
+      confirm,
+      alert,
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline: jest.fn(),
+    });
+
+    await runPipelineStage('all', false, null);
+
+    expect(ensureFreshPipelineControl).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(apiFetch).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('Nenhuma nova execução foi iniciada'));
+    expect(state.pipelineStartPending).toBe(false);
+  });
+
+  test('an old backend contract blocks real all with an upgrade message, never a simulation demand', async () => {
+    const state = pipelineState(initialNow);
+    delete state.pipelineCapabilities.full_run_dry_run_optional;
+    const apiFetch = jest.fn();
+    const alert = jest.fn();
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl: jest.fn().mockResolvedValue(true),
+      renderPipelineStages: jest.fn(),
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch,
+      confirm: jest.fn(),
+      alert,
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline: jest.fn(),
+    });
+
+    await runPipelineStage('all', false, null);
+
+    expect(apiFetch).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('Atualize o backend'));
+    expect(alert.mock.calls[0][0]).toContain('não execute “Simular” como pré-condição');
+  });
+
+  test('an accepted start keeps every action locked until its authoritative GET completes', async () => {
+    const state = pipelineState(initialNow);
+    let finishRefresh;
+    const refreshPipeline = jest.fn(() => new Promise((resolve) => {
+      finishRefresh = () => {
+        state.pipelineActive = { id: 'run-authoritative', stage: 'all', status: 'pending' };
+        resolve({});
+      };
+    }));
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl: jest.fn().mockResolvedValue(true),
+      renderPipelineStages: jest.fn(),
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch: jest.fn().mockResolvedValue({ run_id: 'run-authoritative' }),
+      confirm: jest.fn().mockReturnValue(true),
+      alert: jest.fn(),
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline,
+    });
+
+    const startPromise = runPipelineStage('all', false, null);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(refreshPipeline).toHaveBeenCalledWith({ force: true });
+    expect(state.pipelineStartPending).toBe(true);
+    finishRefresh();
+    await startPromise;
+    expect(state.pipelineStartPending).toBe(false);
+    expect(state.pipelineActive).toMatchObject({ id: 'run-authoritative', status: 'pending' });
+  });
+
+  test.each([
+    ['an existing active run', { existing_run_id: 'run-already-active' }, 'run-alr'],
+    ['a busy runtime', { code: 'pipeline_runtime_busy' }, 'temporariamente ocupada'],
+  ])('a 409 for %s refreshes controls without attempting another execution', async (_label, detail, message) => {
+    const state = pipelineState(initialNow);
+    const apiFetch = jest.fn().mockResolvedValue({
+      __error: true,
+      status: 409,
+      data: { detail },
+    });
+    const alert = jest.fn();
+    const refreshPipeline = jest.fn().mockResolvedValue({});
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl: jest.fn().mockResolvedValue(true),
+      renderPipelineStages: jest.fn(),
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch,
+      confirm: jest.fn().mockReturnValue(true),
+      alert,
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline,
+    });
+
+    await runPipelineStage('all', true, null);
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledWith('/api/cadu/pipeline/run/dry-run', expect.any(Object));
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(refreshPipeline).toHaveBeenCalledWith({ force: true });
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(state.pipelineStartPending).toBe(false);
+  });
+
+  test.each([0, 502, 504])('an ambiguous pipeline start response (%i) reconciles once without retrying POST', async (status) => {
+    const state = pipelineState(initialNow);
+    const apiFetch = jest.fn().mockResolvedValue({
+      __error: true,
+      status,
+      data: status === 0 ? null : { error: 'cadu_api_timeout' },
+    });
+    const alert = jest.fn();
+    const renderPipelineStages = jest.fn();
+    const refreshPipeline = jest.fn().mockImplementation(async () => {
+      if (status === 504) {
+        state.pipelineActive = { id: 'run-confirmed-after-timeout', stage: 'all', status: 'running' };
+      }
+      return {};
+    });
+    const runPipelineStage = createRunHarness({
+      state,
+      getCaduConfig: jest.fn(() => ({ direct: false })),
+      getAdminAccessToken: jest.fn().mockResolvedValue('admin-jwt'),
+      ensureFreshPipelineControl: jest.fn().mockResolvedValue(true),
+      renderPipelineStages,
+      lockPipelineActionButtons: jest.fn(() => jest.fn()),
+      apiFetch,
+      confirm: jest.fn().mockReturnValue(true),
+      alert,
+      $: jest.fn(() => null),
+      $$: jest.fn(() => []),
+      disconnectPipelineStream: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      refreshPipeline,
+    });
+
+    await runPipelineStage('all', false, null);
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledWith('/api/cadu/pipeline/run/real', expect.any(Object));
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(refreshPipeline).toHaveBeenCalledWith({ force: true });
+    expect(renderPipelineStages).toHaveBeenCalled();
+    expect(state.pipelineStartPending).toBe(false);
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining(
+      status === 504 ? 'confirmou uma execução ativa' : 'não foi possível confirmar'
+    ));
   });
 
   test('a prepared Authorization header reaches fetch without another async auth gap', async () => {

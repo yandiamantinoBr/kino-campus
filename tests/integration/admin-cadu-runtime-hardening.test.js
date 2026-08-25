@@ -10,6 +10,7 @@ const controller = fs.readFileSync(
 );
 const html = fs.readFileSync(path.join(ROOT, 'admin/cadu.html'), 'utf8');
 const healthProxy = fs.readFileSync(path.join(ROOT, 'api/cadu/health.js'), 'utf8');
+const controlProxy = fs.readFileSync(path.join(ROOT, 'server/cadu-control-proxy.js'), 'utf8');
 const sourceModel = fs.readFileSync(
   path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-sources.js'),
   'utf8',
@@ -53,6 +54,129 @@ function isolatedInstitutionalReviewFunction(name, dependencies = []) {
     dependencies.map((dependency) => `const ${dependency} = ${functionSource(dependency)};`).join('\n') +
     `\nreturn (${functionSource(name)});`,
   )();
+}
+
+function pipelineLogHarness(limit = 180) {
+  return Function(
+    'document', 'limit',
+    '"use strict";\n' +
+    'var PIPELINE_LOG_MAX_LINES = limit;\n' +
+    'function $(selector) { return document.querySelector(selector); }\n' +
+    functionSource('pipelineLogLineClass') + '\n' +
+    functionSource('appendPipelineLogEntry') + '\n' +
+    functionSource('clearPipelineLogMarkers') + '\n' +
+    functionSource('trimPipelineLogEntries') + '\n' +
+    functionSource('pipelineLogTailOverlap') + '\n' +
+    functionSource('appendLogLine') + '\n' +
+    functionSource('renderPipelineLogSnapshot') + '\n' +
+    'return { appendLogLine: appendLogLine, renderPipelineLogSnapshot: renderPipelineLogSnapshot, pipelineLogTailOverlap: pipelineLogTailOverlap };',
+  )(document, limit);
+}
+
+function pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive) {
+  return Function(
+    'apiFetch', 'confirm', 'refreshPipeline', 'alert', 'showCaduError', 'renderPipelineActive',
+    '"use strict";\n' +
+    'var state = { pipelineStopPendingRunId: null, pipelineActive: { id: "pending-stop-1", status: "pending" } };\n' +
+    functionSource('isSafePipelineRunId') + '\n' +
+    functionSource('reconcilePipelineStopRequest') + '\n' +
+    'async ' + functionSource('stopPipelineRun') + '\n' +
+    'return { state: state, stopPipelineRun: stopPipelineRun, reconcilePipelineStopRequest: reconcilePipelineStopRequest };',
+  )(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
+}
+
+function potentialActivePipelineRunRefreshHarness(refreshPipeline, initialRefresh) {
+  return Function(
+    'refreshPipeline', 'initialRefresh',
+    '"use strict";\n' +
+    'var state = { pipelineRefreshPromise: initialRefresh };\n' +
+    functionSource('reconcilePipelineAfterRunMayExist') + '\n' +
+    'return { reconcile: reconcilePipelineAfterRunMayExist };',
+  )(refreshPipeline, initialRefresh);
+}
+
+function pipelineStartActiveGuardHarness(alert) {
+  return Function(
+    'alert',
+    '"use strict";\n' +
+    'var state = { pipelineStartPending: false, pipelineActive: { id: "active-run-1", status: "running" } };\n' +
+    functionSource('pipelineRunIsActive') + '\n' +
+    functionSource('pipelineStatusLabel') + '\n' +
+    'async ' + functionSource('runPipelineStage') + '\n' +
+    'return { state: state, runPipelineStage: runPipelineStage };',
+  )(alert);
+}
+
+function pipelineLogTransportHarness(initialStreamRequest, initialPollState, dependencies) {
+  return Function(
+    'initialStreamRequest',
+    'initialPollState',
+    'shouldUsePipelineLogPolling',
+    'connectPipelineLogPolling',
+    'stopPipelineLogPolling',
+    'connectPipelineStream',
+    'disconnectPipelineStream',
+    '"use strict";\n' +
+    'var pipelineStreamRequest = initialStreamRequest;\n' +
+    'var pipelineLogPollState = initialPollState;\n' +
+    functionSource('pipelineRunIsActive') + '\n' +
+    functionSource('reconcilePipelineLogTransport') + '\n' +
+    'return { reconcile: reconcilePipelineLogTransport };',
+  )(
+    initialStreamRequest,
+    initialPollState,
+    dependencies.shouldUsePipelineLogPolling,
+    dependencies.connectPipelineLogPolling,
+    dependencies.stopPipelineLogPolling,
+    dependencies.connectPipelineStream,
+    dependencies.disconnectPipelineStream,
+  );
+}
+
+function pipelineLogPollingHarness(initialPollState, dependencies) {
+  return Function(
+    'initialPollState',
+    'disconnectPipelineStream',
+    'refreshPipelineLogSnapshot',
+    '"use strict";\n' +
+    'var pipelineLogPollState = initialPollState;\n' +
+    'var setInterval = function () { return null; };\n' +
+    functionSource('stopPipelineLogPolling') + '\n' +
+    functionSource('connectPipelineLogPolling') + '\n' +
+    'return { connect: connectPipelineLogPolling, getState: function () { return pipelineLogPollState; } };',
+  )(
+    initialPollState,
+    dependencies.disconnectPipelineStream,
+    dependencies.refreshPipelineLogSnapshot,
+  );
+}
+
+function pipelineStageRenderHarness() {
+  return Function(
+    'document',
+    '"use strict";\n' +
+    'var state = { pipelineControlReason: "", pipelineCapabilities: { explicit_dry_run: true, explicit_run_mode_routes: true, full_run_dry_run_optional: true }, pipelineStartPending: false, pipelineActive: null };\n' +
+    'function $(selector) { return document.querySelector(selector); }\n' +
+    'function $$(selector) { return Array.prototype.slice.call(document.querySelectorAll(selector)); }\n' +
+    'function pipelineControlIsReady() { return true; }\n' +
+    functionSource('pipelineRunIsActive') + '\n' +
+    'function pipelineRunDisplayStatus() { return "success"; }\n' +
+    'function pipelineStatusLabel(status) { return status; }\n' +
+    'function fmtAgo() { return "agora"; }\n' +
+    'function pipelineStageActionModes() { return [{ dryRun: true, label: "Simular", danger: false }, { dryRun: false, label: "Executar real", danger: true }]; }\n' +
+    'function pipelineStageModePrecondition() { return null; }\n' +
+    'function pipelineRealRunApprovalGated(stage, dryRun) { return dryRun === false && stage.live_enabled === false; }\n' +
+    'function pipelineFullRunDryRunPolicyGated() { return false; }\n' +
+    'function renderStagePreflight() { return ""; }\n' +
+    'function renderDedupProtectedFlow() { return ""; }\n' +
+    'function renderRunSummary() { return ""; }\n' +
+    'function categoryIcon() { return "fa-gear"; }\n' +
+    'function runPipelineStage() {}\n' +
+    functionSource('escapeHtml') + '\n' +
+    functionSource('pipelineStageActionBlockerHtml') + '\n' +
+    functionSource('renderPipelineStages') + '\n' +
+    'return { renderPipelineStages: renderPipelineStages, state: state };',
+  )(document);
 }
 
 function pendingReviewAuthorityHarness(apiFetchResponse) {
@@ -171,6 +295,21 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).not.toContain('Bot: 8746');
   });
 
+  test('allows a cold context snapshot to finish before the proxy deadline', () => {
+    const contextTimeout = Number(
+      controller.match(/var OPENCLAW_CONTEXT_TIMEOUT_MS = (\d+);/)[1],
+    );
+    const proxyTimeout = Number(
+      controlProxy.match(/const NON_STREAM_TIMEOUT_MS = ([\d_]+);/)[1].replace(/_/g, ''),
+    );
+
+    expect(contextTimeout).toBe(20000);
+    expect(contextTimeout).toBeLessThan(proxyTimeout);
+    expect(functionSource('checkHealth')).toContain(
+      "apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS })",
+    );
+  });
+
   test('never caches Cadu health and rejects browser-direct production configuration', async () => {
     const healthFetch = functionSource('fetchCaduHealth');
     expect(controller).toContain('var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;');
@@ -232,6 +371,8 @@ describe('admin Cadu runtime hardening', () => {
       controller.indexOf('var normalizedStages = validation.stages'),
     );
     expect(invalidSnapshotBranch).toContain('else refreshPipelineHealth();');
+    expect(invalidSnapshotBranch).toContain('finally {');
+    expect(invalidSnapshotBranch).toContain('reconcilePipelineLogTransport(state.pipelineActive);');
   });
 
   test('classifies a three-day-old feed as stale without pretending reload triggers collection', () => {
@@ -578,6 +719,241 @@ describe('admin Cadu runtime hardening', () => {
     expect(html).toContain('.kc-pipeline-history-item.is-success');
     expect(html).toContain('.kc-pipeline-history-item.is-partial');
     expect(html).toContain('.kc-pipeline-history-item.is-finished');
+  });
+
+  test('keeps the polling tail sequential, bounded, and readable without refresh-marker noise', () => {
+    document.body.innerHTML = '<div id="pipeline-log"><div class="kc-cadu-empty">Aguardando</div></div>';
+    const logBox = document.querySelector('#pipeline-log');
+    const log = pipelineLogHarness(3);
+    const pollState = { snapshotLines: null };
+    const visibleEntries = () => Array.from(
+      logBox.querySelectorAll('.kc-log-line:not([data-pipeline-log-marker])'),
+    ).map((entry) => entry.textContent);
+
+    log.renderPipelineLogSnapshot('alpha\nbeta', '[log polling] atualizado', pollState);
+    expect(pollState.snapshotLines).toEqual(['alpha', 'beta']);
+    expect(visibleEntries()).toEqual(['alpha', 'beta']);
+    expect(logBox.querySelector('[data-pipeline-log-marker]').getAttribute('aria-hidden')).toBe('true');
+
+    log.renderPipelineLogSnapshot('alpha\nbeta', '[log polling] atualizado novamente', pollState);
+    expect(visibleEntries()).toEqual(['alpha', 'beta']);
+    expect(log.pipelineLogTailOverlap(['alpha', 'beta'], ['beta', 'gamma'])).toBe(1);
+
+    log.renderPipelineLogSnapshot('beta\ngamma', '[log polling] atualizado', pollState);
+    expect(visibleEntries()).toEqual(['alpha', 'beta', 'gamma']);
+    log.renderPipelineLogSnapshot('gamma\ndelta', '[log polling] atualizado', pollState);
+    expect(visibleEntries()).toEqual(['beta', 'gamma', 'delta']);
+
+    document.body.innerHTML = '<div id="pipeline-log"></div>';
+    const scrollLogBox = document.querySelector('#pipeline-log');
+    Object.defineProperty(scrollLogBox, 'clientHeight', { configurable: true, get: () => 100 });
+    Object.defineProperty(scrollLogBox, 'scrollHeight', {
+      configurable: true,
+      get: () => scrollLogBox.querySelectorAll('.kc-log-line').length * 100,
+    });
+    const scrollLog = pipelineLogHarness(3);
+    scrollLog.renderPipelineLogSnapshot('primeira\nsegunda', '', { snapshotLines: null });
+    scrollLogBox.scrollTop = 100;
+    scrollLog.appendLogLine('terceira');
+    expect(scrollLogBox.scrollTop).toBe(300);
+  });
+
+  test('renders escaped, deduplicated explanations for disabled Pipeline actions', () => {
+    const renderBlocker = isolatedFunction('pipelineStageActionBlockerHtml', ['escapeHtml']);
+    expect(renderBlocker('pipeline-stage-blocker-test', [
+      { label: 'Executar real', detail: 'aprovação <assinada> obrigatória' },
+      { label: 'Executar real', detail: 'aprovação <assinada> obrigatória' },
+      { label: 'Simular', detail: 'prévia expirada' },
+    ])).toBe(
+      '<div class="kc-pipeline-stage__blocker" id="pipeline-stage-blocker-test" role="note">' +
+      '<i class="fas fa-circle-info" aria-hidden="true"></i><span><strong>Ações indisponíveis:</strong> ' +
+      'Executar real: aprovação &lt;assinada&gt; obrigatória · Simular: prévia expirada</span></div>'
+    );
+    expect(renderBlocker('pipeline-stage-blocker-test', [{ label: 'Simular', detail: '' }])).toBe('');
+  });
+
+  test('links a disabled real execution to its visible precondition without blocking simulation', () => {
+    document.body.innerHTML = '<div id="pipeline-stages-list"></div>';
+    const pipeline = pipelineStageRenderHarness();
+    pipeline.renderPipelineStages([{
+      id: 'all',
+      name: 'Pipeline Completa',
+      description: 'Fluxo completo.',
+      category: 'pipeline',
+      estimated_sec: 60,
+      live_enabled: false,
+      live_disabled_reason: 'aprovação <Ed25519> obrigatória',
+      preflight: { can_run: true, profile: {}, blockers: [] },
+    }]);
+
+    const simulate = document.querySelector('[data-dry-run="true"]');
+    const real = document.querySelector('[data-dry-run="false"]');
+    const blocker = document.querySelector('#pipeline-stage-blocker-all');
+    expect(simulate.disabled).toBe(false);
+    expect(real.disabled).toBe(true);
+    expect(real.getAttribute('aria-describedby')).toBe('pipeline-stage-blocker-all');
+    expect(blocker.getAttribute('role')).toBe('note');
+    expect(blocker.textContent).toContain('Executar real: aprovação <Ed25519> obrigatória');
+    expect(blocker.innerHTML).toContain('aprovação &lt;Ed25519&gt; obrigatória');
+  });
+
+  test('blocks every stage action while a known Pipeline run is pending, running, or stopping', () => {
+    document.body.innerHTML = '<div id="pipeline-stages-list"></div>';
+    const pipeline = pipelineStageRenderHarness();
+    const stage = {
+      id: 'all',
+      name: 'Pipeline Completa',
+      description: 'Fluxo completo.',
+      category: 'pipeline',
+      estimated_sec: 60,
+      live_enabled: true,
+      preflight: { can_run: true, profile: {}, blockers: [] },
+    };
+
+    ['pending', 'running', 'stopping'].forEach((status) => {
+      pipeline.state.pipelineActive = { id: 'active-run-1', status };
+      pipeline.renderPipelineStages([stage]);
+      const actions = Array.from(document.querySelectorAll('.kc-pipeline-stage__btn'));
+      expect(actions).toHaveLength(2);
+      expect(actions.every((button) => button.disabled)).toBe(true);
+      expect(document.querySelector('#pipeline-stage-blocker-all').textContent).toContain(status);
+    });
+
+    pipeline.state.pipelineActive = null;
+    pipeline.renderPipelineStages([stage]);
+    expect(Array.from(document.querySelectorAll('.kc-pipeline-stage__btn')).every((button) => !button.disabled)).toBe(true);
+  });
+
+  test('keeps a defensive no-POST guard when an active Pipeline run is already visible', async () => {
+    const alert = jest.fn();
+    const pipeline = pipelineStartActiveGuardHarness(alert);
+
+    await pipeline.runPipelineStage('all', true);
+
+    expect(pipeline.state.pipelineStartPending).toBe(false);
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('Nenhuma nova execução foi iniciada'));
+  });
+
+  test('cancels pending pipeline runs once and keeps stop single-flight until state reconciliation', async () => {
+    let resolveStop;
+    const stopGate = new Promise((resolve) => { resolveStop = resolve; });
+    const apiFetch = jest.fn(() => stopGate);
+    const confirm = jest.fn(() => true);
+    const refreshPipeline = jest.fn(async () => {});
+    const alert = jest.fn();
+    const showCaduError = jest.fn();
+    const renderPipelineActive = jest.fn();
+    const pipeline = pipelineStopHarness(apiFetch, confirm, refreshPipeline, alert, showCaduError, renderPipelineActive);
+
+    const firstStop = pipeline.stopPipelineRun('pending-stop-1');
+    const duplicateStop = pipeline.stopPipelineRun('pending-stop-1');
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(apiFetch).toHaveBeenCalledWith('/api/cadu/pipeline/pending-stop-1/stop', { method: 'POST' });
+    expect(pipeline.state.pipelineStopPendingRunId).toBe('pending-stop-1');
+
+    resolveStop({ ok: true });
+    await Promise.all([firstStop, duplicateStop]);
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(pipeline.state.pipelineStopPendingRunId).toBe('pending-stop-1');
+    expect(pipeline.reconcilePipelineStopRequest({ id: 'pending-stop-1', status: 'running' })).toBe(false);
+    expect(pipeline.reconcilePipelineStopRequest({ id: 'pending-stop-1', status: 'stopping' })).toBe(true);
+    expect(pipeline.state.pipelineStopPendingRunId).toBeNull();
+    expect(alert).not.toHaveBeenCalled();
+    expect(showCaduError).not.toHaveBeenCalled();
+  });
+
+  test('re-reads Pipeline status after a run may exist races with an older refresh', async () => {
+    let resolveOlderRefresh;
+    const olderRefresh = new Promise((resolve) => { resolveOlderRefresh = resolve; });
+    const refreshPipeline = jest.fn()
+      .mockImplementationOnce(() => olderRefresh)
+      .mockResolvedValueOnce(undefined);
+    const pipeline = potentialActivePipelineRunRefreshHarness(refreshPipeline, olderRefresh);
+
+    const reconciliation = pipeline.reconcile();
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    expect(refreshPipeline).toHaveBeenLastCalledWith({ force: true });
+
+    resolveOlderRefresh(undefined);
+    await reconciliation;
+
+    expect(refreshPipeline).toHaveBeenCalledTimes(2);
+    expect(refreshPipeline).toHaveBeenLastCalledWith({ force: true });
+
+    const freshRefresh = jest.fn().mockResolvedValue(undefined);
+    await potentialActivePipelineRunRefreshHarness(freshRefresh, null).reconcile();
+    expect(freshRefresh).toHaveBeenCalledTimes(1);
+    expect(freshRefresh).toHaveBeenCalledWith({ force: true });
+    const conflictStart = controller.indexOf('} else if (resp.status === 409)');
+    const nextErrorBranch = controller.indexOf('} else if (resp.status === 400 || resp.status === 422)', conflictStart);
+    expect(controller.slice(conflictStart, nextErrorBranch)).toContain('reconcilePipelineStartWithActionsLocked()');
+    expect(controller).toContain('return await reconcilePipelineAfterRunMayExist();');
+  });
+
+  test('reconciles Pipeline log transport independently from the control snapshot', () => {
+    const dependencies = {
+      shouldUsePipelineLogPolling: jest.fn((run) => run.stage === 'all'),
+      connectPipelineLogPolling: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      connectPipelineStream: jest.fn(),
+      disconnectPipelineStream: jest.fn(),
+    };
+    const pipeline = pipelineLogTransportHarness({ runId: 'old-stream' }, null, dependencies);
+
+    pipeline.reconcile({ id: 'pending-new', stage: 'scan', status: 'pending' });
+    expect(dependencies.connectPipelineLogPolling).toHaveBeenCalledWith('pending-new');
+    expect(dependencies.connectPipelineStream).not.toHaveBeenCalled();
+
+    pipeline.reconcile({ id: 'running-new', stage: 'scan', status: 'running' });
+    expect(dependencies.stopPipelineLogPolling).toHaveBeenCalled();
+    expect(dependencies.connectPipelineStream).toHaveBeenCalledWith('running-new');
+
+    pipeline.reconcile({ id: 'finished-run', stage: 'scan', status: 'finished' });
+    expect(dependencies.disconnectPipelineStream).toHaveBeenCalledTimes(1);
+    expect(dependencies.stopPipelineLogPolling).toHaveBeenCalledTimes(2);
+  });
+
+  test('keeps authenticated log polling after an SSE fallback instead of reopening the stream on status refresh', () => {
+    const dependencies = {
+      shouldUsePipelineLogPolling: jest.fn(() => false),
+      connectPipelineLogPolling: jest.fn(),
+      stopPipelineLogPolling: jest.fn(),
+      connectPipelineStream: jest.fn(),
+      disconnectPipelineStream: jest.fn(),
+    };
+    const pipeline = pipelineLogTransportHarness(null, {
+      runId: 'running-fallback',
+      streamFallback: true,
+    }, dependencies);
+
+    pipeline.reconcile({ id: 'running-fallback', stage: 'scan', status: 'running' });
+
+    expect(dependencies.connectPipelineLogPolling).toHaveBeenCalledWith('running-fallback');
+    expect(dependencies.stopPipelineLogPolling).not.toHaveBeenCalled();
+    expect(dependencies.connectPipelineStream).not.toHaveBeenCalled();
+    expect(functionSource('connectPipelineStream')).toContain('connectPipelineLogPolling(runId, { streamFallback: true });');
+  });
+
+  test('marks and preserves a same-run polling fallback without creating another log request', () => {
+    const disconnectPipelineStream = jest.fn();
+    const refreshPipelineLogSnapshot = jest.fn();
+    const polling = pipelineLogPollingHarness(null, {
+      disconnectPipelineStream,
+      refreshPipelineLogSnapshot,
+    });
+
+    polling.connect('fallback-run', { streamFallback: true });
+    const firstState = polling.getState();
+    polling.connect('fallback-run');
+
+    expect(firstState).toEqual(expect.objectContaining({
+      runId: 'fallback-run',
+      streamFallback: true,
+    }));
+    expect(polling.getState()).toBe(firstState);
+    expect(refreshPipelineLogSnapshot).toHaveBeenCalledTimes(1);
+    expect(disconnectPipelineStream).toHaveBeenCalledTimes(2);
   });
 
   test('rejects pipeline HTTP error envelopes and keeps the run modal accessible in every state', () => {

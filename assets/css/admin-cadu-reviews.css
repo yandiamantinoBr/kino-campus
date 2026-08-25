@@ -652,6 +652,16 @@ button.kc-cadu-review-provider:focus-visible {
   opacity: .58;
 }
 
+.kc-cadu-review-item__unavailable {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  color: var(--kc-text-dark-secondary);
+  font-size: .74rem;
+  line-height: 1.45;
+}
+
 .kc-cadu-review-resolution {
   grid-column: 1 / -1;
   display: grid;

@@ -115,8 +115,12 @@
     var raw = []
       .concat(Array.isArray(post && post.tags) ? post.tags : [])
       .concat(Array.isArray(post && post.tagKeys) ? post.tagKeys : [])
+      .concat(Array.isArray(post && post.userTags) ? post.userTags : [])
+      .concat(Array.isArray(post && post.userTagKeys) ? post.userTagKeys : [])
       .concat(Array.isArray(metadata.tags) ? metadata.tags : [])
-      .concat(Array.isArray(metadata.tagKeys) ? metadata.tagKeys : []);
+      .concat(Array.isArray(metadata.tagKeys) ? metadata.tagKeys : [])
+      .concat(Array.isArray(metadata.userTags) ? metadata.userTags : [])
+      .concat(Array.isArray(metadata.userTagKeys) ? metadata.userTagKeys : []);
     return uniqueTerms(raw);
   }
 

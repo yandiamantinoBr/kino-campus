@@ -76,7 +76,9 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `image`        | URL             | capa preferida (sera baixada e re-hospedada em `kino-media`) |
 | `images`       | URL[]           | galeria, até 6 imagens; a primeira vira capa |
 | `allowExternalImageFallback` | boolean | quando `false`, nunca grava URL externa se o upload para Storage falhar |
-| `tags`         | string[]        | complementa as tags derivadas |
+| `userTags`     | string[]        | termos livres e editáveis do post; é a entrada canônica, tem no máximo 12 valores e cada chave é derivada do rótulo |
+| `userTagKeys`  | string[]        | aceito apenas por compatibilidade; o publicador sempre recalcula as chaves a partir de `userTags` |
+| `tags`/`tagKeys` | string[]      | facetas automáticas de taxonomia, fonte e prazo; o cliente não deve usá-las para editar Tags adicionais |
 | `sourceUrl`    | URL             | fonte oficial (usado em dedup) |
 | `sourceId`     | string          | id estavel da fonte (usado em dedup/idempotencia) |
 | `sourceName`   | string          | ex.: "Eventos UFG" |
@@ -131,18 +133,27 @@ Bloqueios atuais: evento passado, prazo vencido, release institucional/biografic
   "action": "edit",
   "postId": "uuid",
   "fields":   { "title": "...", "description": "...", "status": "published" },
-  "metadata": { "link": "https://...", "link_as_cta": true },
+  "metadata": {
+    "link": "https://...",
+    "link_as_cta": true,
+    "userTags": ["Acessibilidade", "Material aberto"]
+  },
   "image": "https://.../nova-capa.jpg",
   "images": ["https://.../nova-capa.jpg", "https://.../programacao.jpg"]
 }
 ```
 
-- `metadata` faz **merge profundo** e preserva chaves independentes. Quando a
-  taxonomia e editada, `tags`/`tagKeys` sao reconciliados para remover somente
-  categorias ou grupos secundarios antigos e manter os pares canonicos atuais.
-- No publish, pares recebidos em `tags`/`tagKeys` que representem outra categoria
-  ou outro grupo secundario do modulo sao descartados; a categoria e o secundario
-  validados sao reinseridos com chave/label canonicos, sem remover tags independentes.
+- `metadata` faz **merge profundo** e preserva chaves independentes. Para Tags
+  adicionais, omita `metadata.userTags` para manter o conjunto atual e envie
+  `metadata.userTags: []` somente para limpá-lo de propósito.
+- `metadata.userTags`/`metadata.userTagKeys` é o par canônico das Tags
+  adicionais: rótulos são normalizados, duplicatas e facetas automáticas são
+  removidas, e as chaves são sempre derivadas dos rótulos. O publicador limita
+  esse conjunto a 12 valores.
+- `metadata.tags`/`metadata.tagKeys` são facetas automáticas de taxonomia, fonte
+  e prazo. Elas são recompostas pelo publicador e não devem ser usadas por
+  clientes para alterar Tags adicionais. O fallback legado de `tags`/`tagKeys`
+  só é considerado na preparação de novos itens, após remover essas facetas.
 - `fields.category` aceita a chave canonica ou um alias explicito do modulo. A
   edicao sincroniza `category`, `categoriaKey`, `categoriaLabel`,
   `categoryKey`, `categoryLabel` e os campos derivados do modulo; em

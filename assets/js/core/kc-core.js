@@ -315,6 +315,7 @@ function kcAttachScrollIndicators(rail) {
 
   rail.__kcScrollRailAttached = true;
   let updatePending = false;
+  let fallbackTimer = null;
   const measure = () => {
     updatePending = false;
     void scrollEl.offsetWidth; // accurate width after tab/font changes
@@ -332,10 +333,22 @@ function kcAttachScrollIndicators(rail) {
     if (btnPrev) btnPrev.hidden = !hasOverflow || atStart;
     if (btnNext) btnNext.hidden = !hasOverflow || atEnd;
   };
+  const runMeasure = () => {
+    if (!updatePending) return;
+    if (fallbackTimer !== null) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+    measure();
+  };
   const update = () => {
     if (updatePending) return;
     updatePending = true;
-    requestAnimationFrame(measure);
+    // requestAnimationFrame is ideal for the normal paint path, but browsers
+    // can throttle it in a background tab. Keep overflow controls functional
+    // with a bounded fallback instead of leaving the measurement pending.
+    fallbackTimer = setTimeout(runMeasure, 120);
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(runMeasure);
   };
   rail.__kcScrollRailUpdate = update;
   const scrollByAmount = (dir) => {

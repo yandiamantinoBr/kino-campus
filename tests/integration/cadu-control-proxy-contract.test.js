@@ -345,6 +345,23 @@ describe('strict Cadu control-plane proxy runtime', () => {
     }
   });
 
+  test.each(['run', 'run/dry-run', 'run/real'])('allows deep preflight to finish before timing out %s', async (path) => {
+    global.fetch.mockResolvedValue(upstreamResponse({ body: '{"run_id":"run-started"}' }));
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout');
+    const req = request({ method: 'POST', path, body: { stage: 'all' } });
+    const res = response();
+
+    try {
+      await pipelineHandler(req, res);
+
+      expect(timeoutSpy).toHaveBeenCalledWith(120000);
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(res.statusCode).toBe(200);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+
   test('rejects traversal before auth and never attaches the service token', async () => {
     const req = request({ method: 'POST', path: '%252e%252e%252fopenclaw' });
     const res = response();
@@ -484,6 +501,58 @@ describe('strict Cadu control-plane proxy runtime', () => {
     });
     expect(JSON.stringify(previewRes.body)).not.toContain('preview report path');
     expect(JSON.stringify(previewRes.body)).not.toContain('service-secret');
+
+    global.fetch.mockResolvedValueOnce(upstreamResponse({
+      status: 412,
+      body: JSON.stringify({
+        detail: {
+          code: 'signed_publish_approval_required',
+          message: 'private signing configuration',
+          token: 'service-secret',
+        },
+      }),
+    }));
+    const approvalReq = request({ method: 'POST', path: 'run/real', body: { stage: 'all' } });
+    const approvalRes = response();
+
+    await pipelineHandler(approvalReq, approvalRes);
+
+    expect(approvalRes.statusCode).toBe(412);
+    expect(approvalRes.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 412,
+      detail: { code: 'signed_publish_approval_required' },
+    });
+    expect(JSON.stringify(approvalRes.body)).not.toContain('private signing configuration');
+    expect(JSON.stringify(approvalRes.body)).not.toContain('service-secret');
+  });
+
+  test('drops the obsolete full-pipeline dry-run gate instead of exposing it as a supported contract', async () => {
+    global.fetch.mockResolvedValueOnce(upstreamResponse({
+      status: 412,
+      body: JSON.stringify({
+        detail: {
+          code: 'all_dry_run_required',
+          message: 'fresh dry-run evidence path',
+          token: 'service-secret',
+        },
+      }),
+    }));
+    const req = request({ method: 'POST', path: 'run/real', body: { stage: 'all' } });
+    const res = response();
+
+    await pipelineHandler(req, res);
+
+    expect(res.statusCode).toBe(412);
+    expect(res.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 412,
+    });
+    expect(JSON.stringify(res.body)).not.toContain('all_dry_run_required');
+    expect(JSON.stringify(res.body)).not.toContain('fresh dry-run evidence path');
+    expect(JSON.stringify(res.body)).not.toContain('service-secret');
   });
 
   test('drops known pipeline codes when returned with the wrong status', async () => {

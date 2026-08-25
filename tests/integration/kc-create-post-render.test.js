@@ -219,8 +219,9 @@ describe('kc-create-post.render.js — kcEnsureCreateModal: estrutura', () => {
     expect(source).toContain('<form id="kcCreatePostForm" class="kc-create-form" novalidate>');
   });
 
-  test('inclui botão submit desabilitado inicialmente', () => {
-    expect(source).toContain('<button type="submit" class="kc-create-submit" disabled>Publicar Agora</button>');
+  test('inclui botão submit no rodapé sem sobrepor o formulário', () => {
+    expect(source).toContain('<div class="kc-create-modal__footer">');
+    expect(source).toContain('<button type="submit" form="kcCreatePostForm" class="kc-create-submit" disabled>Publicar Agora</button>');
   });
 });
 

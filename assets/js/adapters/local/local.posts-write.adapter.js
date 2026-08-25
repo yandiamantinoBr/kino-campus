@@ -109,6 +109,28 @@
     return getBuildPostKeys(deps)(post).includes(key);
   }
 
+  function isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  // Atualizações locais precisam ter a mesma semântica de merge do adapter
+  // Supabase: campos de metadata que o formulário não conhece (como
+  // userTags/userTagKeys) sobrevivem a qualquer edição parcial.
+  function mergePostMetadata(base, patch) {
+    var merged = Object.assign({}, isPlainObject(base) ? base : {});
+    if (!isPlainObject(patch)) return merged;
+    Object.keys(patch).forEach(function (key) {
+      var value = patch[key];
+      if (value === undefined) return;
+      if (isPlainObject(value) && isPlainObject(merged[key])) {
+        merged[key] = mergePostMetadata(merged[key], value);
+      } else {
+        merged[key] = value;
+      }
+    });
+    return merged;
+  }
+
   function preparePostForPersistence(body, currentPost, deps) {
     var existing = (currentPost && typeof currentPost === 'object' && !Array.isArray(currentPost)) ? { ...currentPost } : {};
     var input = (body && typeof body === 'object' && !Array.isArray(body)) ? body : {};
@@ -116,6 +138,7 @@
       ...existing,
       ...input,
     };
+    raw.metadata = mergePostMetadata(existing.metadata, input.metadata);
     var getNowIso = getNowIsoFn(deps);
     var viewerId = getViewerId(deps);
     var mockUsersById = getMockUsersById(deps);

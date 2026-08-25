@@ -350,6 +350,8 @@
       ...((effectiveSubKey || d.subcategoriaKey || d.subcategoryKey) ? { subcategoryKey: toSlug(effectiveSubKey || d.subcategoriaKey || d.subcategoryKey) } : {}),
       ...(Array.isArray(d.tags) ? { tags: d.tags } : {}),
       ...(Array.isArray(d.tagKeys) ? { tagKeys: d.tagKeys } : {}),
+      ...(Array.isArray(d.userTags) ? { userTags: d.userTags } : {}),
+      ...(Array.isArray(d.userTagKeys) ? { userTagKeys: d.userTagKeys } : {}),
       ...(d.condicao ? { condicao: String(d.condicao) } : {}),
       ...(d.precoTexto ? { precoTexto: String(d.precoTexto) } : {}),
       ...(typeof d.sustentavel === 'boolean' ? { sustentavel: d.sustentavel } : {}),
