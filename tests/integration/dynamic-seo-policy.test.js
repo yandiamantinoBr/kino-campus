@@ -327,6 +327,33 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(response.body).not.toContain('"validThrough"');
   });
 
+  test('SSR inicial usa datas brasileiras e breadcrumb agrupado antes da hidratacao', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-08-25T12:00:00.000Z').getTime());
+    const opportunity = buildPost({
+      id: 'processo-seletivo-ppgacv',
+      module: 'oportunidades',
+      category: 'pesquisa',
+      title: 'PPGACV/UFG oferece 28 vagas para mestrado e doutorado',
+      metadata: {
+        subcategoria: 'Artes',
+        data_evento: '2026-10-01',
+        deadline_date: '2026-09-25',
+      },
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [opportunity] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: opportunity.id } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('Prazo: 25/09/2026');
+    expect(response.body).toMatch(/<strong>Data do evento<\/strong><span>01\/10\/2026<\/span>/u);
+    expect(response.body).toMatch(/<strong>Prazo<\/strong><span>25\/09\/2026<\/span>/u);
+    expect(response.body).toContain('kc-breadcrumb-segment kc-breadcrumb-segment--home');
+    expect(response.body).toContain('<span aria-current="page">PPGACV/UFG oferece 28 vagas para mestrado e doutorado</span>');
+    expect(response.body).not.toMatch(/id="breadcrumb"[^>]*>[\s\S]*?<\/a>\s*<i class="fas fa-chevron-right"><\/i>/u);
+  });
+
   test('serializa JSON-LD sem permitir encerramento de script ou separadores Unicode crus', () => {
     const data = { text: '</script><tag>&\u2028\u2029' };
     const serialized = serializeJsonForHtml(data);

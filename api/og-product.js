@@ -308,6 +308,13 @@ function formatPrice(price) {
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function formatDateForDisplay(value) {
+  const text = String(value == null ? '' : value).trim();
+  const isoDate = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(text);
+  if (!isoDate) return text.slice(0, 10);
+  return `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}`;
+}
+
 function joinDateAndTime(date, time) {
   const day = dateOnly(date);
   const cleanTime = String(time || '').match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/)?.[0] || '';
@@ -445,7 +452,7 @@ function buildBadgesHtml(post, values) {
   if (values.categoryLabel) badges.push(`<span class="kc-badge"><i class="fas fa-layer-group"></i> ${escapeHtml(values.categoryLabel)}</span>`);
   if (post.category) badges.push(`<span class="kc-badge"><i class="fas fa-tag"></i> ${escapeHtml(beautifyKey(post.category))}</span>`);
   if (values.priceText) badges.push(`<span class="kc-badge"><i class="fas fa-money-bill-wave"></i> ${escapeHtml(values.priceText)}</span>`);
-  if (values.deadline) badges.push(`<span class="kc-badge"><i class="fas fa-calendar-check"></i> Prazo: ${escapeHtml(dateOnly(values.deadline) || values.deadline)}</span>`);
+  if (values.deadline) badges.push(`<span class="kc-badge"><i class="fas fa-calendar-check"></i> Prazo: ${escapeHtml(formatDateForDisplay(values.deadline))}</span>`);
   return badges.join(' ');
 }
 
@@ -478,7 +485,9 @@ function specRowsHtml(post, values) {
   };
 
   const grid = rows.map(([label, value]) => {
-    const text = String(value || '').trim();
+    const text = ['Data do evento', 'Prazo'].includes(label)
+      ? formatDateForDisplay(value)
+      : String(value || '').trim();
     const isLink = /^https?:\/\//i.test(text);
     const safeValue = isLink
       ? `<a href="${escapeAttr(text)}" rel="noopener noreferrer" target="_blank" title="${escapeAttr(text)}">${escapeHtml(formatLinkLabel(text))}</a>`
@@ -489,6 +498,42 @@ function specRowsHtml(post, values) {
   }).join('');
 
   return { blockStyle: 'display:block;', grid };
+}
+
+function buildBreadcrumbHtml(post, values) {
+  const metadata = metadataOf(post);
+  const category = cleanText(
+    post.category_label
+      || post.categoryLabel
+      || metadata.categoria
+      || metadata.area
+      || beautifyKey(post.category || ''),
+  );
+  const subcategory = cleanText(
+    post.subcategory_label
+      || post.subcategoryLabel
+      || post.subcategory
+      || post.subcategoria
+      || metadata.subcategoria
+      || metadata.subcategory
+      || '',
+  );
+  const parts = [
+    '<a class="kc-breadcrumb-segment kc-breadcrumb-segment--home" href="index.html"><i class="fas fa-home" aria-hidden="true"></i><span>KinoCampus</span></a>',
+  ];
+
+  if (post.module) {
+    parts.push(`<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><a href="${escapeAttr(modulePage(post.module))}">${escapeHtml(values.categoryLabel)}</a></span>`);
+  }
+  if (category && category.toLowerCase() !== String(post.module || '').trim().toLowerCase()) {
+    parts.push(`<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>${escapeHtml(category)}</span></span>`);
+  }
+  if (subcategory) {
+    parts.push(`<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>${escapeHtml(subcategory)}</span></span>`);
+  }
+  parts.push(`<span class="kc-breadcrumb-segment kc-breadcrumb-segment--current"><i class="fas fa-chevron-right" aria-hidden="true"></i><span aria-current="page">${escapeHtml(values.title)}</span></span>`);
+
+  return `<div class="kc-post-breadcrumb" id="breadcrumb">${parts.join(' ')}</div>`;
 }
 
 function replaceMainImage(html, values) {
@@ -524,7 +569,7 @@ function injectVisibleProductContent(html, post, values) {
   modified = replaceById(
     modified,
     'breadcrumb',
-    `<div class="kc-post-breadcrumb" id="breadcrumb"><a href="index.html"><i class="fas fa-home"></i> KinoCampus</a> <i class="fas fa-chevron-right"></i> <a href="${escapeAttr(modulePage(post.module))}">${escapeHtml(values.categoryLabel)}</a> <i class="fas fa-chevron-right"></i> <span>${escapeHtml(values.title)}</span></div>`
+    buildBreadcrumbHtml(post, values),
   );
   modified = replaceById(modified, 'postTitle', `<h1 class="kc-product-title" id="postTitle">${escapeHtml(values.title)}</h1>`);
   modified = replaceById(modified, 'badges', `<div class="kc-product-badges" id="badges">${buildBadgesHtml(post, values)}</div>`);
