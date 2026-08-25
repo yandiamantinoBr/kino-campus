@@ -9096,11 +9096,12 @@ textarea::placeholder {
   }
 }
 
-/* Em viewports muito estreitas (<= 360px) esconde o texto do logo para
-   evitar que o kc-search-mobile-btn invada a área do kc-logo-name */
-@media (max-width: 360px) {
+/* Em viewports estreitas (<= 400px) prioriza os controles do cabeçalho.
+   A regra mobile anterior usa !important para mostrar o wordmark, portanto
+   este limite também precisa ser explícito para impedir colisões reais. */
+@media (max-width: 400px) {
   .kc-header:not(.kc-header--admin) .kc-logo-text {
-    display: none;
+    display: none !important;
   }
   .kc-header:not(.kc-header--admin) .kc-logo a {
     gap: 0;
