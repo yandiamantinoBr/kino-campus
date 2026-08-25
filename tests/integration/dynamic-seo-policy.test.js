@@ -354,6 +354,99 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(response.body).not.toMatch(/id="breadcrumb"[^>]*>[\s\S]*?<\/a>\s*<i class="fas fa-chevron-right"><\/i>/u);
   });
 
+  test('SSR inicial preserva cronograma e fontes oficiais em descricoes editoriais detalhadas', async () => {
+    const description = [
+      'Edital 01/2026 para ingresso em 2027.',
+      'São 28 vagas: 19 no mestrado e 9 no doutorado.',
+      'Inscrições gratuitas até 25/09/2026.',
+      'Mestrado exige graduação em Artes Visuais ou área afim.',
+      'Doutorado exige graduação e mestrado em Artes Visuais ou área afim.',
+      'A documentação deve ser enviada em dois arquivos PDF.',
+      'O pré-projeto deve seguir o Anexo V.',
+      'A seleção tem três etapas eliminatórias e classificatórias.',
+      'Cronograma principal: prova escrita em 30/10/2026.',
+      'Avaliações orais de 17 a 19/11/2026.',
+      'Resultado final em 14/12/2026.',
+      'Leia o edital completo e a página oficial do processo seletivo.',
+      'Contato: arteeculturavisual.fav@ufg.br.',
+    ].join('\n\n');
+    const opportunity = buildPost({
+      id: 'processo-seletivo-detalhado',
+      module: 'oportunidades',
+      description,
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [opportunity] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: opportunity.id } }, response);
+    const visibleDescription = response.body.match(/id="postDescription">([\s\S]*?)<\/div>/u)?.[1] || '';
+
+    expect(response.statusCode).toBe(200);
+    expect(visibleDescription).toContain('Cronograma principal: prova escrita em 30/10/2026.');
+    expect(visibleDescription).toContain('Resultado final em 14/12/2026.');
+    expect(visibleDescription).toContain('Leia o edital completo e a página oficial do processo seletivo.');
+    expect(visibleDescription).toContain('Contato: arteeculturavisual.fav@ufg.br.');
+    expect(visibleDescription.match(/<p>/g)).toHaveLength(13);
+  });
+
+  test('SSR limita o DOM visivel de descricoes anormais sem perder escaping', async () => {
+    const blocks = Array.from({ length: 90 }, (_, index) => `Bloco editorial ${index + 1}`);
+    blocks[79] += ' <img src=x onerror="alert(1)">';
+    const opportunity = buildPost({
+      id: 'descricao-editorial-anormal',
+      module: 'oportunidades',
+      description: blocks.join('\n'),
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [opportunity] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: opportunity.id } }, response);
+    const visibleDescription = response.body.match(/id="postDescription">([\s\S]*?)<\/div>/u)?.[1] || '';
+
+    expect(response.statusCode).toBe(200);
+    expect(visibleDescription).toContain('<p>Bloco editorial 80\u2026</p>');
+    expect(visibleDescription).not.toContain('Bloco editorial 81');
+    expect(visibleDescription).not.toContain('onerror=');
+  });
+
+  test('SSR respeita limites exatos sem dividir caracteres Unicode', async () => {
+    async function renderVisibleDescription(description, id) {
+      const opportunity = buildPost({ id, module: 'oportunidades', description });
+      global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [opportunity] });
+      const response = createResponse();
+      await productHandler({ query: { id } }, response);
+      expect(response.statusCode).toBe(200);
+      return response.body.match(/id="postDescription">([\s\S]*?)<\/div>/u)?.[1] || '';
+    }
+
+    const exactCharacters = await renderVisibleDescription(
+      'a'.repeat(12_000),
+      'descricao-exata-12000',
+    );
+    expect(exactCharacters).not.toContain('\u2026</p>');
+
+    const excessCharacters = await renderVisibleDescription(
+      'a'.repeat(12_001),
+      'descricao-excedente-12001',
+    );
+    expect(excessCharacters).toContain('\u2026</p>');
+
+    const unicodeBoundary = await renderVisibleDescription(
+      `${'a'.repeat(11_999)}😀 depois`,
+      'descricao-fronteira-unicode',
+    );
+    expect(unicodeBoundary).toContain('\u2026</p>');
+    expect(unicodeBoundary).not.toMatch(/[\uD800-\uDFFF]/u);
+
+    const exactBlocks = await renderVisibleDescription(
+      Array.from({ length: 80 }, (_, index) => `Bloco exato ${index + 1}`).join('\n'),
+      'descricao-exata-80-blocos',
+    );
+    expect(exactBlocks.match(/<p>/g)).toHaveLength(80);
+    expect(exactBlocks).toContain('<p>Bloco exato 80</p>');
+    expect(exactBlocks).not.toContain('\u2026</p>');
+  });
+
   test('serializa JSON-LD sem permitir encerramento de script ou separadores Unicode crus', () => {
     const data = { text: '</script><tag>&\u2028\u2029' };
     const serialized = serializeJsonForHtml(data);
