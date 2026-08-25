@@ -29,6 +29,7 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(html).toContain('Este formulário registra uma referência de atendimento');
     expect(html).toContain('Ela não permite consulta pública nesta página');
     expect(html).toContain('Enviar o formulário, por si só, não apaga a conta');
+    expect(html).not.toContain("<script>document.addEventListener('DOMContentLoaded'");
   });
 
   test('controller aceita somente request canônico, não importa PII da URL e mostra protocolo', () => {
@@ -57,6 +58,9 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(controller).toContain("expected_auth_state: authenticatedAccount ? 'authenticated' : 'anonymous'");
     expect(controller).toContain('expected_user_id: expectedUserId || null');
     expect(controller).toContain('state.accountLoadGeneration !== generation');
+    expect(controller).toContain('!state.authResolved &&');
+    expect(controller).toContain('state.turnstileWidgetId !== null');
+    expect(controller).toContain('await waitForPrivacyRecoveryCompletion()');
     expect(controller).toContain("form.setAttribute('aria-busy'");
     expect(controller).toContain("button.setAttribute('aria-busy'");
     expect(html).toMatch(/id="helpProtocol"[^>]*role="group"/);
@@ -99,6 +103,7 @@ describe('public privacy-rights discovery and request contract', () => {
       'normalizedToken.length <= TURNSTILE_TOKEN_MAX_CHARS'
     );
     expect(controller).toContain('action: TURNSTILE_ACTION');
+    expect(controller).toContain('size: getTurnstileWidgetSize(target)');
     expect(edge).toContain('const TURNSTILE_ACTION = "help_privacy_guest"');
     expect(controller).toContain('env.TURNSTILE_SITE_KEY || privacyHelp.turnstileSiteKey');
     expect(controller).toContain('state.authResolved &&');

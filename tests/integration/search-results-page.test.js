@@ -26,6 +26,10 @@ describe('search-results.html', () => {
     expect(html).toContain('Carregando resultados…');
     expect(html).toContain('kc-search-results-controls__summary');
     expect(html).toContain('kc-search-results-controls__toolbar');
+    expect(html).toContain('id="searchResultsFiltersToggle"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls="searchResultsFiltersPanel"');
+    expect(html).toMatch(/id="searchResultsFiltersPanel"[^>]*hidden/);
     expect(html).toContain('id="searchResultsPersonalizationSlot"');
     expect(html).toContain('id="searchResultsPersonalization"');
     // Personalization lives inside the filters toolbar, not as a loose sibling block.
@@ -37,7 +41,7 @@ describe('search-results.html', () => {
     const html = read('search-results.html');
 
     expect(html).toContain('assets/js/shared/kc-search.shared.js?v=8.6.4');
-    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.17');
+    expect(html).toContain('assets/js/features/kc-search.js?v=8.6.18');
   });
 });
 
@@ -67,6 +71,10 @@ describe('kc-search.js search results controller', () => {
     expect(source).toContain('noResultsRetry');
     expect(source).toContain('function setSearchResultsLoadingState');
     expect(source).toContain('data-kc-search-loading');
+    expect(source).toContain('function bindResultFiltersDisclosure');
+    expect(source).toContain("window.matchMedia('(max-width: 760px)')");
+    expect(source).toContain('controls.filtersPanel.hidden = !isExpanded');
+    expect(source).toContain("'class=\"$1 kc-card--has-corner-badge\"'");
   });
 
   test('keeps the header search global outside the results page', () => {
