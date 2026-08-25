@@ -29,12 +29,31 @@ function resolveDeepSeekEndpoint(config = {}) {
   return url.toString();
 }
 
+// 2026-08-25: switched default to deepseek-v4-flash-vision-exp (V4-Flash
+// Vision Exp) with reasoning_effort=max. Old text-only models remain
+// allowed as a defensive fallback so an operator can roll back via env var
+// (CADU_DEEPSEEK_MODEL) without a code change.
+const ALLOWED_DEEPSEEK_MODELS = new Set([
+  'deepseek-v4-flash-vision-exp',
+  'deepseek-v4-flash',
+  'deepseek-v4-pro',
+]);
+
 function resolveDeepSeekModel(config = {}) {
-  const model = String(config.deepseekModel || 'deepseek-v4-flash').trim();
-  if (!['deepseek-v4-flash', 'deepseek-v4-pro'].includes(model)) {
-    throw new Error('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+  const model = String(config.deepseekModel || 'deepseek-v4-flash-vision-exp').trim();
+  if (!ALLOWED_DEEPSEEK_MODELS.has(model)) {
+    throw new Error('DeepSeek model must be deepseek-v4-flash-vision-exp, deepseek-v4-flash, or deepseek-v4-pro');
   }
   return model;
+}
+
+function resolveReasoningEffort(value = 'max') {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === '' || raw === 'max') return { thinking: { type: 'enabled' }, reasoning_effort: 'max' };
+  if (raw === 'high') return { thinking: { type: 'enabled' }, reasoning_effort: 'high' };
+  if (raw === 'low') return { thinking: { type: 'enabled' }, reasoning_effort: 'low' };
+  if (raw === 'off' || raw === 'disabled') return { thinking: { type: 'disabled' } };
+  throw new Error('Reasoning effort must be low|high|max|off');
 }
 
 async function summarizeWithDeepSeek(config, item, classification) {
@@ -59,10 +78,13 @@ async function summarizeWithDeepSeek(config, item, classification) {
   // 2026-08-04 (cost controls): a system message e o preamble do user sao
   // estaveis em todas as chamadas. Marcar a system com cache_control.ephemeral
   // faz o DeepSeek cobrar $0.0028/M (1/50 do cache-miss) para esse prefixo
-  // em todas as chamadas depois da primeira. max_tokens 1000 mantem o orcamento
-  // de output apertado (o sumario raramente passa de 800 chars); o modelo pode
-  // parar antes com finish_reason=length, mas o publisher ja trata conteudo
-  // truncado como revisao.
+  // em todas as chamadas depois da primeira.
+  // 2026-08-25: switched to deepseek-v4-flash-vision-exp with
+  // reasoning_effort=max. The summarizer runs on cached system prompt so
+  // cache hit rate stays high; max reasoning is applied only to the user
+  // turn which is short. max_tokens bumped to 4000 to fit the rich thinking
+  // tail; the publisher still treats truncated content as revisao.
+  const reasoning = resolveReasoningEffort(config.reasoningEffort || 'max');
   const response = await fetch(resolveDeepSeekEndpoint(config), {
     method: 'POST',
     headers: {
@@ -72,8 +94,8 @@ async function summarizeWithDeepSeek(config, item, classification) {
     body: JSON.stringify({
       model: resolveDeepSeekModel(config),
       temperature: 0.2,
-      max_tokens: 1000,
-      thinking: { type: 'disabled' },
+      max_tokens: 4000,
+      ...reasoning,
       messages: [
         {
           role: 'system',
@@ -96,5 +118,6 @@ async function summarizeWithDeepSeek(config, item, classification) {
 module.exports = {
   resolveDeepSeekEndpoint,
   resolveDeepSeekModel,
+  resolveReasoningEffort,
   summarizeWithDeepSeek,
 };

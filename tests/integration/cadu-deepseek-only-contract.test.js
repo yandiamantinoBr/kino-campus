@@ -37,49 +37,55 @@ describe('Cadu DeepSeek-only contract', () => {
     expect(read(relativePath)).not.toMatch(removedProviderPattern);
   });
 
-  test('formatter and dedup default to Flash, allow only Pro, and pin the official endpoint', () => {
+  test('formatter and dedup default to Vision Exp, allow Flash/Pro as fallback, and pin the official endpoint', () => {
+    // 2026-08-25: switched default to deepseek-v4-flash-vision-exp
+    // (V4-Flash Vision Exp, 21/ago/2026) with reasoning_effort=max.
+    // Old text-only models stay allowed as defensive fallback.
     const formatter = read('data/.openclaw/workspace/scripts/formatador-ia.js');
     const dedup = read('data/.openclaw/workspace/scripts/dedup-kino.js');
 
     for (const source of [formatter, dedup]) {
+      expect(source).toContain("'deepseek-v4-flash-vision-exp'");
       expect(source).toContain("'deepseek-v4-flash'");
       expect(source).toContain("'deepseek-v4-pro'");
       expect(source).toContain("hostname !== 'api.deepseek.com'");
       expect(source).toContain("'/v1/chat/completions'");
     }
-    expect(formatter).toContain("const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash'");
+    expect(formatter).toContain("const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash-vision-exp'");
     expect(formatter).not.toContain('dependencies.provider');
-    expect(dedup).toContain("String(value || 'deepseek-v4-flash')");
-    expect(dedup).toContain("thinking: { type: 'disabled' }");
+    expect(dedup).toContain("String(value || 'deepseek-v4-flash-vision-exp')");
+    expect(dedup).toContain("thinking: { type: 'enabled' }");
+    expect(dedup).toContain("reasoning_effort: 'max'");
     expect(dedup).toContain("response_format: { type: 'json_object' }");
-    expect(dedup).not.toContain('reasoning_effort');
   });
 
   test('publisher example and model resolver expose the same strict contract', () => {
     const envExample = read('services/cadu-ufg-publisher/.env.example');
     const model = read('services/cadu-ufg-publisher/src/model.js');
 
-    expect(envExample).toContain('CADU_DEEPSEEK_MODEL=deepseek-v4-flash');
+    expect(envExample).toContain('CADU_DEEPSEEK_MODEL=deepseek-v4-flash-vision-exp');
     expect(envExample).toContain(
       'CADU_DEEPSEEK_ENDPOINT=https://api.deepseek.com/v1/chat/completions',
     );
-    expect(model).toContain("!['deepseek-v4-flash', 'deepseek-v4-pro'].includes(model)");
+    expect(model).toContain("'deepseek-v4-flash-vision-exp'");
+    expect(model).toContain("'deepseek-v4-flash'");
+    expect(model).toContain("'deepseek-v4-pro'");
     expect(model).toContain("url.hostname !== 'api.deepseek.com'");
   });
 
   // 2026-08-04 (cost controls — mirror of openclaw-cadu PR #148): the
-  // publisher summarizer must request the DeepSeek V4 ephemeral cache
-  // and cap max_tokens so a single run cannot burst a 4K output. The
-  // system prompt is byte-identical across the same publish run, so
+  // publisher summarizer must request the DeepSeek V4 ephemeral cache.
+  // The system prompt is byte-identical across the same publish run, so
   // the cache_hit rate (1/50 of cache_miss) is the cheapest possible
   // input cost on V4-Flash.
+  // 2026-08-25: max_tokens bumped to 4000 to fit the rich reasoning tail
+  // from V4-Flash Vision Exp at reasoning_effort=max.
   test('publisher summarizer pins the V4 cost control contract', () => {
     const model = read('services/cadu-ufg-publisher/src/model.js');
 
     expect(model).toContain("cache_control: { type: 'ephemeral' }");
-    expect(model).toMatch(/max_tokens:\s*1000\b/);
-    expect(model).toContain("thinking: { type: 'disabled' }");
-    expect(model).not.toMatch(/max_tokens:\s*[2-9]\d{3,}\b/);
+    expect(model).toMatch(/max_tokens:\s*4000\b/);
+    expect(model).toContain("reasoning_effort: 'max'");
   });
 
   test('local Supabase Studio has no external text-model credential configured', () => {
@@ -88,10 +94,11 @@ describe('Cadu DeepSeek-only contract', () => {
     expect(config).not.toContain(removedCredential);
   });
 
-  test('current admin state is Flash-first and marks old provider mentions as historical', () => {
+  test('current admin state is Vision Exp-first and marks old provider mentions as historical', () => {
+    // 2026-08-25: V4-Flash Vision Exp replaced Flash-0731 as the primary model.
     const state = read('docs/CADU-ADMIN-STATE.md');
-    expect(state).toContain('Nota de migração de modelos (2026-08-02)');
-    expect(state).toContain('main + deepseek-v4-flash + ctx 1M');
+    expect(state).toContain('Nota de migração de modelos (2026-08-25)');
+    expect(state).toContain('main + deepseek-v4-flash-vision-exp + ctx 500k');
     expect(state).toContain('consome chave DeepSeek e gera `_formatted_*.json`');
   });
 });

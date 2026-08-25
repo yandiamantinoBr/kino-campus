@@ -1043,11 +1043,15 @@ describe('cadu-ufg-publisher', () => {
       .toThrow('DeepSeek endpoint must be a valid URL');
   });
 
-  test('DeepSeek model permits Flash by default and Pro as the only alternative', () => {
-    expect(resolveDeepSeekModel({})).toBe('deepseek-v4-flash');
+  test('DeepSeek model permits Vision Exp by default, Flash and Pro as alternatives', () => {
+    // 2026-08-25: switched default to deepseek-v4-flash-vision-exp
+    // (V4-Flash Vision Exp, 21/ago/2026) with reasoning_effort=max.
+    // Flash and Pro remain valid alternatives for defensive rollback.
+    expect(resolveDeepSeekModel({})).toBe('deepseek-v4-flash-vision-exp');
+    expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-v4-flash' })).toBe('deepseek-v4-flash');
     expect(resolveDeepSeekModel({ deepseekModel: 'deepseek-v4-pro' })).toBe('deepseek-v4-pro');
     expect(() => resolveDeepSeekModel({ deepseekModel: 'other-model' }))
-      .toThrow('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+      .toThrow('DeepSeek model must be deepseek-v4-flash-vision-exp, deepseek-v4-flash, or deepseek-v4-pro');
   });
 
   test('publisher uploads remote cover images to Supabase Storage before post_media', async () => {
