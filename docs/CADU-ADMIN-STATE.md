@@ -2,9 +2,9 @@
 
 > **Aviso de leitura (2026-06-29):** este documento preserva auditorias v1/v2 com achados históricos. Vários pontos antigos sobre `cadu-api v0.4.2`, token obsoleto, endpoints 404 e restart pendente foram corrigidos ou reclassificados na seção **v3 — Verificação Codex pós-devolutiva OpenClaw (2026-06-29)** no fim do arquivo. Para estado vivo atual, leia a v3 primeiro e use v1/v2 como contexto histórico.
 
-> **Nota de migração de modelos (2026-08-02):** os provedores anteriores foram removidos do runtime; suas menções abaixo são registros históricos. O runtime atual usa DeepSeek V4 Flash, com DeepSeek V4 Pro como única alternativa.
+> **Nota de migração de modelos (2026-08-25):** o runtime atual usa **DeepSeek-V4-Flash-Vision-Exp** (`deepseek-v4-flash-vision-exp`, lançado 21/ago/2026) com `reasoning_effort=max` e `thinking: enabled`. As menções a `DeepSeek V4 Flash` (0731) e `DeepSeek V4 Pro` abaixo são registros históricos ou fallbacks defensivos. Modelos permitidos atualmente: `deepseek-v4-flash-vision-exp` (default), `deepseek-v4-flash` (fallback), `deepseek-v4-pro` (fallback).
 
-**Última atualização:** 2026-08-03 (contrato DeepSeek-only; narrativa histórica preservada)
+**Última atualização:** 2026-08-25 (migração para V4-Flash Vision Exp; narrativa histórica preservada)
 **Branch kino-campus:** `kinocampus-V75.0-foundations`
 **Commits relevantes:**
 - `218e7a6` — feat(admin/cadu): cross-tab "Perguntar Cadu" buttons + status indicators
@@ -306,7 +306,7 @@ appendLogLine(text)             // adiciona linha ao log com cor
 
 ### Funcionalidades
 - **4 stat cards**:
-  - AGENT: status (online/offline) + main + deepseek-v4-flash + ctx 1M tokens
+  - AGENT: status (online/offline) + main + deepseek-v4-flash-vision-exp + ctx 500k tokens
   - TELEGRAM: ON/OFF + bot ID truncado + 1/1 account
   - HEARTBEAT: timestamp + cadence
   - TASKS: total/0/0 ratio
@@ -451,7 +451,7 @@ pollNotifActivity()              // notification bell (novo v0.4.6)
 ### Quando pipeline falha
 1. Ver `cadu-pipeline-logs/{run_id}.log` no VPS
 2. Cada stage imprime `[stage_name]` timestamps
-3. Stage 4 (format) usa DeepSeek V4 Pro — pode dar timeout
+3. Stage 4 (format) usa DeepSeek V4 Flash Vision Exp (reasoning_effort=max) — pode dar timeout (120s ceiling por request; configurável via `CADU_FORMATTER_REQUEST_TIMEOUT_MS`)
 4. Stage 5 (publish) chama Edge Function `cadu-publish` no Supabase
 
 ---
@@ -781,7 +781,7 @@ O sistema tem **3 camadas de autenticação** validando coisas distintas:
 ### 4.4 OpenClaw (Cadu agent)
 
 **4 stat cards** (`refreshOpenclaw` linha 621-719):
-- AGENT: `main + deepseek-v4-flash + ctx 1M` (hardcoded hint linha 652)
+- AGENT: `main + deepseek-v4-flash-vision-exp + ctx 500k` (lido dinamicamente de `sessionDefaults` e `mainAgent`; o hardcoded hint linha 652 era histórico, hoje é dinâmico)
 - TELEGRAM: `Bot: 8746…f8DM · 1/1 account` (hardcoded, vaza início do bot token — aceitável)
 - HEARTBEAT: regex em `healthText` (`/Telegram:\s*configured/i`, `/Heartbeat/i`)
 - TASKS: `active/total` + `succeeded OK · failures falhas`

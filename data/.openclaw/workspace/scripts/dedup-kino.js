@@ -179,7 +179,15 @@ const ANON_KEY = runtimeEnv.CADU_SUPABASE_ANON_KEY
   || runtimeEnv.KINOCAMPUS_SUPABASE_ANON_KEY;
 const KINO_EMAIL = runtimeEnv.CADU_KINO_EMAIL || runtimeEnv.CADU_EMAIL;
 const KINO_PASSWORD = runtimeEnv.CADU_KINO_PASSWORD || runtimeEnv.CADU_PASSWORD;
-const ALLOWED_DEEPSEEK_MODELS = new Set(['deepseek-v4-flash', 'deepseek-v4-pro']);
+// 2026-08-25: switched default to deepseek-v4-flash-vision-exp (V4-Flash
+// Vision Exp) with reasoning_effort=max for the semantic dedup classifier.
+// Old text-only models stay in the allowed set as a defensive fallback so
+// an operator can roll back via CADU_DEEPSEEK_MODEL env var.
+const ALLOWED_DEEPSEEK_MODELS = new Set([
+  'deepseek-v4-flash-vision-exp',
+  'deepseek-v4-flash',
+  'deepseek-v4-pro',
+]);
 
 function resolveDeepSeekEndpoint(value) {
   let endpoint;
@@ -205,9 +213,9 @@ function resolveDeepSeekEndpoint(value) {
 }
 
 function resolveDeepSeekModel(value) {
-  const model = String(value || 'deepseek-v4-flash').trim();
+  const model = String(value || 'deepseek-v4-flash-vision-exp').trim();
   if (!ALLOWED_DEEPSEEK_MODELS.has(model)) {
-    throw new Error('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+    throw new Error('DeepSeek model must be deepseek-v4-flash-vision-exp, deepseek-v4-flash, or deepseek-v4-pro');
   }
   return model;
 }
@@ -361,12 +369,18 @@ async function callAI(prompt, retries = 3) {
             },
             { role: 'user', content: prompt },
           ],
-          max_tokens: 2000,
+          max_tokens: 4000,
           temperature: 0.1,
-          thinking: { type: 'disabled' },
+          // 2026-08-25: V4-Flash Vision Exp with max reasoning.
+          // The classifier benefits from richer thinking on ambiguous pairs.
+          thinking: { type: 'enabled' },
+          reasoning_effort: 'max',
           response_format: { type: 'json_object' },
         }),
-        signal: AbortSignal.timeout(60000),
+        // Vision Exp with max reasoning can take >60s on a long pair list;
+        // bump the per-call ceiling to 180s to give the model room before
+        // the outer retry path kicks in. Retry is still 3x with 10/20/40s.
+        signal: AbortSignal.timeout(180000),
       });
       if (res.status === 429) {
         const wait = delays[attempt] || 20000;

@@ -347,7 +347,11 @@ CADU_TELEGRAM_CHAT_ID=
 CADU_RESEND_API_KEY=
 CADU_EMAIL_TO=contato@kinocampus.com.br
 CADU_USE_MODEL=true
-CADU_DEEPSEEK_MODEL=deepseek-v4-flash
+# 2026-08-25: switched to deepseek-v4-flash-vision-exp (V4-Flash Vision
+# Exp, 21/ago/2026) with reasoning_effort=max. Other supported models:
+# deepseek-v4-flash, deepseek-v4-pro.
+CADU_DEEPSEEK_MODEL=deepseek-v4-flash-vision-exp
+CADU_REASONING_EFFORT=max
 CADU_DEEPSEEK_BASE_URL=https://api.deepseek.com
 CADU_DEEPSEEK_ENDPOINT=https://api.deepseek.com/v1/chat/completions
 CADU_REVIEW_BEFORE_PUBLISH=true

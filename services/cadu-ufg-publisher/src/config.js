@@ -56,6 +56,9 @@ function loadConfig() {
     deepseekBaseUrl: process.env.CADU_DEEPSEEK_BASE_URL,
     deepseekEndpoint: process.env.CADU_DEEPSEEK_ENDPOINT,
     deepseekModel: process.env.CADU_DEEPSEEK_MODEL,
+    // 2026-08-25: lets the operator dial reasoning effort down for cost
+    // control (low|high|max|off). Default is 'max' for V4-Flash Vision Exp.
+    reasoningEffort: process.env.CADU_REASONING_EFFORT || process.env.CADU_DEEPSEEK_REASONING_EFFORT,
     useModel: useModelEnv ? useModelEnv === 'true' : Boolean(deepseekApiKey),
   };
 }

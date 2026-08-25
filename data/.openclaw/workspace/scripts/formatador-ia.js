@@ -56,9 +56,17 @@ function loadEnvFile(filePath) {
 ].forEach(loadEnvFile);
 
 // ---- API de texto DeepSeek-only ----
+// 2026-08-25: switched default to deepseek-v4-flash-vision-exp (V4-Flash
+// Vision Exp, 21/ago/2026) with reasoning_effort=max. The Vision Exp model
+// inherits V4-Flash text capabilities and adds image input; we do not send
+// images from the formatter, but its larger reasoning budget produces more
+// stable Portuguese descriptions for the UFG pipeline.
+// Old text-only models are kept in ALLOWED_DEEPSEEK_MODELS as a defensive
+// fallback so an operator can roll back via env var without a code change.
 const DEFAULT_DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/v1/chat/completions';
-const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash';
+const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash-vision-exp';
 const ALLOWED_DEEPSEEK_MODELS = new Set([
+  'deepseek-v4-flash-vision-exp',
   'deepseek-v4-flash',
   'deepseek-v4-pro',
 ]);
@@ -97,7 +105,7 @@ function resolveDeepSeekEndpoint(value = DEFAULT_DEEPSEEK_ENDPOINT) {
 function resolveDeepSeekModel(value = DEFAULT_DEEPSEEK_MODEL) {
   const model = String(value || '').trim() || DEFAULT_DEEPSEEK_MODEL;
   if (!ALLOWED_DEEPSEEK_MODELS.has(model)) {
-    throw new Error('DeepSeek model must be deepseek-v4-flash or deepseek-v4-pro');
+    throw new Error('DeepSeek model must be deepseek-v4-flash-vision-exp, deepseek-v4-flash, or deepseek-v4-pro');
   }
   return model;
 }
@@ -149,13 +157,45 @@ function providerRuntimeConfig(env = process.env) {
 
 const PROVIDER_RUNTIME = providerRuntimeConfig();
 
-function buildProviderPayload(messages, model = MODEL) {
+function resolveReasoningEffort(value = 'max') {
+  // Vision Exp accepts 'low' | 'high' | 'max'. The default is 'max' per the
+  // operator policy; CADU_REASONING_EFFORT / CADU_DEEPSEEK_REASONING_EFFORT
+  // env vars let an operator dial it down for cost control without a code
+  // change. The legacy 'disabled' (thinking:off) path is not valid for
+  // Vision Exp because DeepSeek only reasons at the chosen level; we drop
+  // the parameter only when the operator explicitly sets it to 'off' or
+  // 'disabled', keeping the door open for a fast path on trivial batches.
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === '' || raw === 'max') return { thinking: { type: 'enabled' }, reasoning_effort: 'max' };
+  if (raw === 'high') return { thinking: { type: 'enabled' }, reasoning_effort: 'high' };
+  if (raw === 'low') return { thinking: { type: 'enabled' }, reasoning_effort: 'low' };
+  if (raw === 'off' || raw === 'disabled') return { thinking: { type: 'disabled' } };
+  throw new Error('Reasoning effort must be low|high|max|off');
+}
+
+function buildProviderPayload(messages, model = MODEL, reasoningEffort = process.env.CADU_REASONING_EFFORT || process.env.CADU_DEEPSEEK_REASONING_EFFORT) {
+  // 2026-08-25: V4-Flash Vision Exp runs in "thinking" mode with
+  // reasoning_effort=max. The model produces a <think> block followed by
+  // JSON content; stripReasoning() cleans it up before JSON.parse runs.
+  // The max_tokens ceiling is raised so the rich-thinking tail fits inside
+  // the response envelope (Vision Exp supports 384K output).
+  // Cache the stable first message (system prompt + stable preamble) on
+  // DeepSeek's ephemeral cache so the cost is ~1/50 of cache-miss on every
+  // call after the first within a run.
+  const messagesWithCache = Array.isArray(messages) && messages.length > 0
+    ? messages.map((message, index) => (
+        index === 0
+          ? { ...message, cache_control: { type: 'ephemeral' } }
+          : message
+      ))
+    : messages;
+  const reasoning = resolveReasoningEffort(reasoningEffort);
   const payload = {
     model: resolveDeepSeekModel(model),
-    messages,
+    messages: messagesWithCache,
     temperature: 0.4,
-    max_tokens: 4000,
-    thinking: { type: 'disabled' },
+    max_tokens: 16000,
+    ...reasoning,
     response_format: { type: 'json_object' },
   };
   return payload;
@@ -1167,6 +1207,7 @@ module.exports = {
   requestProviderAttempt,
   resolveDeepSeekEndpoint,
   resolveDeepSeekModel,
+  resolveReasoningEffort,
   resolveTextProviderConfig,
   sanitizeFormattedDescriptionLinks,
 };

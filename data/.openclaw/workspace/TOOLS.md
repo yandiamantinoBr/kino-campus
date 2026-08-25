@@ -96,12 +96,12 @@ Quando Yan enviar URL pelo Telegram:
 
 1. `cadu-curador-v4.4.js` — varre sites UFG (Tier 1+2+3) e gera candidatos
 2. `enrich-duplicates.js` — marca itens já publicados
-3. `formatador-ia.js` (DeepSeek V4 Flash) — gera `formattedDescription` Markdown rico
+3. `formatador-ia.js` (DeepSeek V4 Flash Vision Exp) — gera `formattedDescription` Markdown rico
 4. `publish_auto_v5.js` — envia pra Edge Function `cadu-publish`
 5. `cadu-publish` (Deno) — valida, deduplica, completa metadata, sobe imagem, publica
 6. `enrich-images.js` — adiciona imagens complementares aos posts publicados
 
-**Modelo de IA atual:** DeepSeek V4 Flash. A única alternativa permitida é DeepSeek V4 Pro.
+**Modelo de IA atual:** `deepseek-v4-flash-vision-exp` (DeepSeek-V4-Flash-Vision-Exp, lançado 21/ago/2026) com `reasoning_effort=max` e `thinking: enabled`. Alternativas permitidas: `deepseek-v4-flash` (Flash-0731, fallback), `deepseek-v4-pro` (Pro-0813, fallback).
 
 ## Thresholds de auto-publicação
 
