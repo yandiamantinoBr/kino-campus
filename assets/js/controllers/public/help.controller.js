@@ -242,6 +242,15 @@
     );
   }
 
+  function getTurnstileWidgetSize(target) {
+    if (!target) return 'compact';
+    const rect = typeof target.getBoundingClientRect === 'function'
+      ? target.getBoundingClientRect()
+      : null;
+    const availableWidth = Number(rect && rect.width) || Number(target.clientWidth) || 0;
+    return availableWidth >= 300 ? 'flexible' : 'compact';
+  }
+
   function setPrivacyLoginGateVisible(visible) {
     const gate = $('#helpPrivacyLoginGate');
     const secondary = $('#helpPrivacyLoginSecondary');
@@ -287,6 +296,26 @@
     const container = $('#helpPrivacyVerification');
     const target = $('#helpPrivacyTurnstileWidget');
     if (!container || !target) return;
+    // Applying a draft updates type, topic and subtopic in sequence. Those
+    // intermediate values are not a real route change, so defer CAPTCHA
+    // reconciliation until the complete draft has been restored.
+    if (helpFormDraftRestoring) {
+      if (state.turnstileWidgetId !== null) container.hidden = false;
+      return;
+    }
+    // Auth refreshes are asynchronous. Keep an already rendered guest widget
+    // (and its in-memory token) alive while the next auth snapshot is pending;
+    // the resolved snapshot below will either reuse it for a guest or remove it
+    // for an authenticated account. Recreating it here invalidates a solved
+    // challenge and can make a valid submission fail intermittently.
+    if (
+      !state.authResolved &&
+      !isAuthenticatedAccountUser(state.user) &&
+      state.turnstileWidgetId !== null
+    ) {
+      container.hidden = false;
+      return;
+    }
     const shouldRender = isGuestPrivacyRoute();
     container.hidden = !shouldRender;
     if (!shouldRender) {
@@ -345,6 +374,7 @@
         sitekey: siteKey,
         action: TURNSTILE_ACTION,
         theme: 'auto',
+        size: getTurnstileWidgetSize(target),
         callback(token) {
           if (
             generation !== state.turnstileRenderGeneration ||
@@ -758,6 +788,7 @@
       return false;
     } finally {
       helpFormDraftRestoring = false;
+      syncPrivacyVerification().catch(function () {});
     }
   }
 
@@ -1946,9 +1977,34 @@
     return '';
   }
 
+  async function waitForPrivacyRecoveryCompletion() {
+    if (!state.privacyRecoveryInProgress) return true;
+    const deadline = Date.now() + 5000;
+    while (state.privacyRecoveryInProgress && Date.now() < deadline) {
+      await new Promise(function (resolve) { setTimeout(resolve, 25); });
+    }
+    return !state.privacyRecoveryInProgress;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
-    if (state.submitting || state.privacyRecoveryInProgress) return;
+    if (state.submitting) return;
+    if (state.privacyRecoveryInProgress) {
+      setStatus(
+        'Concluindo a verificação de tentativas anteriores antes do envio...',
+        'info'
+      );
+      const recoveryCompleted = await waitForPrivacyRecoveryCompletion();
+      if (!recoveryCompleted) {
+        setStatus(
+          'A verificação de tentativas anteriores está demorando mais que o esperado. Aguarde alguns instantes e tente novamente.',
+          'warn',
+          { toast: true }
+        );
+        return;
+      }
+      if (state.submitting) return;
+    }
 
     if (!window.KCAPI || typeof window.KCAPI.createHelpRequest !== 'function') {
       setStatus('O envio de pedidos de ajuda não está disponível neste ambiente.', 'error', { toast: true });
