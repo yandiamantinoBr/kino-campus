@@ -89,4 +89,41 @@ test.describe('resiliência visual pública', () => {
     expect(presentation.ratio).toBeGreaterThan(1.3);
     expect(presentation.ratio).toBeLessThan(1.36);
   });
+
+  test('breadcrumb não deixa chevron órfão e datas usam padrão brasileiro', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/_product.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window._KCProduct?.render?.setBreadcrumb);
+
+    await page.evaluate(() => {
+      const post = {
+        modulo: 'oportunidades',
+        _kcModulePage: 'oportunidades.html',
+        categoria: 'Processos seletivos',
+        titulo: 'PPGACV/UFG oferece 28 vagas para mestrado e doutorado',
+        metadata: { applicationDeadline: '2026-09-25', data_evento: '2027-03-01' },
+      };
+      window._KCProduct.render.setBreadcrumb(post);
+      window._KCProduct.render.setBadges(post);
+      window._KCProduct.render.setSpecs(post);
+    });
+
+    const presentation = await page.locator('#breadcrumb').evaluate((element) => ({
+      directChevrons: element.querySelectorAll(':scope > .fa-chevron-right').length,
+      segments: [...element.querySelectorAll(':scope > .kc-breadcrumb-segment')].map((segment) => ({
+        display: getComputedStyle(segment).display,
+        hasChevron: !!segment.querySelector('.fa-chevron-right'),
+        text: segment.textContent.trim(),
+      })),
+      current: element.querySelector('[aria-current="page"]')?.textContent || '',
+    }));
+
+    expect(presentation.directChevrons).toBe(0);
+    expect(presentation.segments).toHaveLength(4);
+    expect(presentation.segments.slice(1).every((segment) => /^(?:inline-)?flex$/u.test(segment.display) && segment.hasChevron)).toBe(true);
+    expect(presentation.current).toContain('PPGACV/UFG oferece 28 vagas');
+    await expect(page.locator('#badges')).toContainText('Prazo: 25/09/2026');
+    await expect(page.locator('#specsGrid')).toContainText('Data do evento01/03/2027');
+    await expect(page.locator('#specsGrid')).toContainText('Prazo25/09/2026');
+  });
 });
