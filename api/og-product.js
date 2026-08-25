@@ -27,6 +27,8 @@ const INDEXABLE_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1';
 const NOINDEX_ROBOTS = 'noindex,follow,noarchive';
 const META_DESCRIPTION_MAX_LENGTH = 180;
 const SEO_TITLE_MAX_LENGTH = 70;
+const SSR_DESCRIPTION_MAX_CHARACTERS = 12_000;
+const SSR_DESCRIPTION_MAX_BLOCKS = 80;
 const OG_SUPABASE_TIMEOUT_MS = PUBLIC_SUPABASE_TIMEOUT_MS;
 
 let cachedHtml = null;
@@ -358,11 +360,24 @@ function getSourceUrl(post, values) {
 function paragraphHtml(text) {
   const source = String(text || '').trim();
   if (!source) return '';
-  return source
+  const sourceWasClamped = source.length > SSR_DESCRIPTION_MAX_CHARACTERS;
+  let visibleSource = source;
+  if (sourceWasClamped) {
+    let safeEnd = SSR_DESCRIPTION_MAX_CHARACTERS;
+    const trailingCodeUnit = source.charCodeAt(safeEnd - 1);
+    if (trailingCodeUnit >= 0xD800 && trailingCodeUnit <= 0xDBFF) safeEnd -= 1;
+    visibleSource = source.slice(0, safeEnd);
+  }
+  const normalizedBlocks = visibleSource
     .split(/\n+/)
     .map((line) => cleanText(line))
-    .filter(Boolean)
-    .slice(0, 8)
+    .filter(Boolean);
+  const blocksWereClamped = normalizedBlocks.length > SSR_DESCRIPTION_MAX_BLOCKS;
+  const visibleBlocks = normalizedBlocks.slice(0, SSR_DESCRIPTION_MAX_BLOCKS);
+  if ((sourceWasClamped || blocksWereClamped) && visibleBlocks.length) {
+    visibleBlocks[visibleBlocks.length - 1] = `${visibleBlocks[visibleBlocks.length - 1].replace(/\s*\u2026?$/u, '')}\u2026`;
+  }
+  return visibleBlocks
     .map((line) => `<p>${escapeHtml(line)}</p>`)
     .join('\n');
 }
