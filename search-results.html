@@ -19,7 +19,7 @@
         }
     </style>
     <title>Resultados de Busca - KinoCampus</title>
-<link rel="stylesheet" href="assets/css/styles.css?v=8.6.24" />
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.25" />
     <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
     <link href="assets/vendor/fontawesome/css/all.min.css?v=6.4.0" rel="stylesheet" />
     <style>
@@ -32,9 +32,17 @@
             flex-wrap: wrap;
         }
 
+        .kc-search-results-header > div {
+            flex: 1 1 16rem;
+            min-width: 0;
+            max-width: 100%;
+        }
+
         .kc-search-results-header h1 {
             margin: 0;
             font-size: 1.4em;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .kc-search-results-meta {
@@ -71,6 +79,41 @@
             background: rgba(255,124,0,.08);
             color: var(--kc-text-dark-primary);
             flex: 0 0 auto;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            appearance: none;
+        }
+
+        .kc-search-results-controls__summary:hover {
+            background: rgba(255,124,0,.13);
+        }
+
+        .kc-search-results-controls__summary:focus-visible {
+            outline: 3px solid color-mix(in srgb, var(--kc-primary-brand) 38%, transparent);
+            outline-offset: 2px;
+        }
+
+        .kc-search-results-controls__summary-chevron {
+            margin-left: auto;
+            color: var(--kc-text-dark-secondary);
+            transition: transform .18s ease;
+        }
+
+        .kc-search-results-controls__summary[aria-expanded="true"] .kc-search-results-controls__summary-chevron {
+            transform: rotate(180deg);
+        }
+
+        .kc-search-results-controls__panel {
+            display: contents;
+        }
+
+        .kc-search-results-controls__panel[hidden] {
+            display: none !important;
+        }
+
+        .kc-search-results-controls.is-collapsed > .kc-search-results-controls__personalization {
+            display: none !important;
         }
 
         .kc-search-results-controls__icon {
@@ -85,17 +128,22 @@
             flex: 0 0 auto;
         }
 
-        .kc-search-results-controls__summary strong,
-        .kc-search-results-controls__summary span:last-child {
+        .kc-search-results-controls__summary-copy {
+            display: block;
+            min-width: 0;
+        }
+
+        .kc-search-results-controls__summary-copy strong,
+        .kc-search-results-controls__summary-copy > span {
             display: block;
         }
 
-        .kc-search-results-controls__summary strong {
+        .kc-search-results-controls__summary-copy strong {
             font-size: .86rem;
             line-height: 1.2;
         }
 
-        .kc-search-results-controls__summary span:last-child {
+        .kc-search-results-controls__summary-copy > span {
             margin-top: 3px;
             font-size: .78rem;
             color: var(--kc-text-dark-secondary);
@@ -466,8 +514,7 @@
         .kc-result-signal-badge--sustainable { background: rgba(16, 185, 129, 0.92); }
         .kc-result-signal-badge--cashback { background: var(--kc-green-check, #16a34a); }
 
-        .kc-card--has-corner-badge .kc-card__main,
-        .kc-card:has(.kc-card__corner-signals) .kc-card__main {
+        .kc-card--has-corner-badge .kc-card__main {
             position: relative;
         }
 
@@ -489,6 +536,7 @@
 
             .kc-search-results-controls__toolbar {
                 flex-direction: column;
+                flex-wrap: nowrap;
                 align-items: stretch;
                 gap: 10px;
             }
@@ -515,10 +563,13 @@
 
             .kc-search-results-controls__summary {
                 min-width: 0;
+                width: 100%;
                 padding: 9px 10px;
             }
 
             .kc-search-results-active {
+                flex: 0 0 auto;
+                width: 100%;
                 text-align: left;
                 align-self: stretch;
                 border-radius: 10px;
@@ -570,6 +621,36 @@
 
             .kc-result-signal-badge span {
                 max-width: 6.2rem;
+            }
+
+            .kc-card--has-corner-badge .kc-card__main {
+                grid-template-areas:
+                    "media corner-badge"
+                    "media content";
+                gap: 4px 12px !important;
+            }
+
+            .kc-card--has-corner-badge .kc-card__image-wrapper {
+                grid-area: media;
+            }
+
+            .kc-card--has-corner-badge .kc-card__content {
+                grid-area: content;
+            }
+
+            .kc-card--has-corner-badge .kc-card__corner-signals {
+                position: static;
+                grid-area: corner-badge;
+                justify-self: end;
+                align-self: start;
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .kc-card .kc-card__footer .kc-comment-link {
+                min-width: 68px !important;
+                padding-inline: 8px !important;
             }
         }
 
@@ -626,6 +707,12 @@
             cursor: pointer;
         }
     </style>
+    <noscript>
+        <style>
+            #searchResultsFiltersToggle { display: none; }
+            #searchResultsFiltersPanel[hidden] { display: contents !important; }
+        </style>
+    </noscript>
 </head>
 
 <body>
@@ -681,16 +768,19 @@
             </a>
         </div>
 
-        <section class="kc-search-results-controls" aria-label="Filtros dos resultados de busca" data-i18n-aria-label="aria-label.search-results-filters">
+        <section class="kc-search-results-controls is-collapsed" aria-label="Filtros dos resultados de busca" data-i18n-aria-label="aria-label.search-results-filters">
             <div class="kc-search-results-controls__toolbar">
-                <div class="kc-search-results-controls__summary" aria-live="polite">
+                <button class="kc-search-results-controls__summary" id="searchResultsFiltersToggle" type="button"
+                    aria-expanded="false" aria-controls="searchResultsFiltersPanel">
                     <span class="kc-search-results-controls__icon" aria-hidden="true"><i class="fas fa-sliders"></i></span>
-                    <div>
+                    <span class="kc-search-results-controls__summary-copy">
                         <strong>Filtros</strong>
                         <span id="searchResultsVisibleSummary" aria-live="polite">Carregando resultados…</span>
-                    </div>
-                </div>
-                <div class="kc-search-results-controls__group">
+                    </span>
+                    <i class="fas fa-chevron-down kc-search-results-controls__summary-chevron" aria-hidden="true"></i>
+                </button>
+                <div class="kc-search-results-controls__panel" id="searchResultsFiltersPanel" hidden>
+                  <div class="kc-search-results-controls__group">
                     <label class="kc-search-results-field" for="searchResultsModuleFilter">
                         <span>Por m&oacute;dulo</span>
                         <select id="searchResultsModuleFilter" aria-label="Filtrar por m&oacute;dulo" data-i18n-aria-label="aria-label.search-results-module">
@@ -727,8 +817,9 @@
                     <button class="kc-btn-secondary" type="button" id="searchResultsClearFilters">
                         <i class="fas fa-rotate-left"></i> Limpar filtros
                     </button>
+                  </div>
+                  <div class="kc-search-results-active" id="searchResultsActiveFilters">Todos os m&oacute;dulos &middot; Mais relevantes</div>
                 </div>
-                <div class="kc-search-results-active" id="searchResultsActiveFilters">Todos os m&oacute;dulos &middot; Mais relevantes</div>
             </div>
 
             <div class="kc-search-results-controls__personalization" id="searchResultsPersonalizationSlot" hidden>
@@ -909,7 +1000,7 @@
   <script defer src="assets/js/features/kc-nav-links-personalized.js?v=8.6.3"></script>
     <script defer src="assets/js/shared/search-analytics.shared.js?v=8.6.1"></script>
     <script defer src="assets/js/shared/kc-search.shared.js?v=8.6.4"></script>
-    <script defer src="assets/js/features/kc-search.js?v=8.6.17"></script>
+    <script defer src="assets/js/features/kc-search.js?v=8.6.18"></script>
     <script defer src="assets/js/features/kc-search-modal.js?v=8.6.2"></script>
 </body>
 

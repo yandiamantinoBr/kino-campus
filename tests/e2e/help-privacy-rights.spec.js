@@ -24,6 +24,14 @@ const cases = [
 ];
 
 test.describe('direitos de privacidade na Central de Ajuda', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('https://cdn.jsdelivr.net/**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/javascript; charset=utf-8',
+      body: 'window.supabase = window.supabase || {};'
+    }));
+  });
+
   for (const item of cases) {
     test(`deep link ${item.request} usa somente valores canônicos`, async ({ page }) => {
       await page.goto(`/ajuda.html?request=${item.request}#helpRequestForm`, { waitUntil: 'domcontentloaded' });
@@ -140,6 +148,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
   });
 
   test('visitante envia prova efêmera somente no transporte e o widget é resetado', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 844 });
     await page.addInitScript(() => {
       window.KC_ENV = {
         TURNSTILE_SITE_KEY: 'turnstile-public-test-site-key'
@@ -189,8 +198,10 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
           contentType: 'application/javascript; charset=utf-8',
           body: `
             window.__turnstileResetCount = 0;
+            window.__turnstileRenderCount = 0;
             window.turnstile = {
               render: function (target, options) {
+                window.__turnstileRenderCount += 1;
                 window.__turnstileOptions = options;
                 target.setAttribute('data-test-widget', 'ready');
                 return 'help-privacy-widget';
@@ -213,10 +224,26 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       'data-test-widget',
       'ready'
     );
+    await expect.poll(
+      async () => page.evaluate(() => window.__turnstileOptions.size)
+    ).toBe('compact');
     await page.locator('#helpSubtopic').dispatchEvent('change');
     await page.evaluate(() => {
       window.__turnstileOptions.callback('turnstile-one-time-proof');
     });
+    await expect(page.locator('#helpPrivacyVerificationStatus')).toContainText(
+      'Verificação concluída'
+    );
+    const verifiedRenderCount = await page.evaluate(() => window.__turnstileRenderCount);
+    await page.evaluate(() => {
+      document.dispatchEvent(new CustomEvent('kc:authchange', {
+        detail: { user: null }
+      }));
+    });
+    await expect(page.locator('#helpStatus')).toContainText('Central de ajuda atualizada');
+    await expect.poll(
+      async () => page.evaluate(() => window.__turnstileRenderCount)
+    ).toBe(verifiedRenderCount);
     await expect(page.locator('#helpPrivacyVerificationStatus')).toContainText(
       'Verificação concluída'
     );
@@ -228,6 +255,13 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
     await page.locator('#helpContactEmail').fill('guest@example.com');
     await page.locator('#helpSubmitButton').click();
 
+    await expect.poll(async () => page.evaluate(() => ({
+      payloadCreated: Boolean(window.__guestPrivacyPayload),
+      status: document.getElementById('helpStatus')?.textContent || '',
+      verification: document.getElementById('helpPrivacyVerificationStatus')?.textContent || '',
+      buttonDisabled: document.getElementById('helpSubmitButton')?.disabled === true,
+      buttonBusy: document.getElementById('helpSubmitButton')?.getAttribute('aria-busy') || ''
+    }))).toMatchObject({ payloadCreated: true });
     await expect(page.locator('#helpProtocolValue')).toHaveText(
       '66666666-6666-4666-8666-666666666666'
     );

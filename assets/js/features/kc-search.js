@@ -964,6 +964,8 @@
       clear: document.getElementById('searchResultsClearFilters'),
       active: document.getElementById('searchResultsActiveFilters'),
       count: document.getElementById('searchResultsVisibleSummary'),
+      filtersToggle: document.getElementById('searchResultsFiltersToggle'),
+      filtersPanel: document.getElementById('searchResultsFiltersPanel'),
       structured: document.getElementById('searchResultsStructured'),
       structuredChips: document.getElementById('searchResultsStructuredChips'),
       structuredNote: document.getElementById('searchResultsStructuredNote'),
@@ -982,6 +984,45 @@
       noResultsRevealClosed: document.querySelector('#noResults [data-kc-hide-closed-reveal]'),
       noResultsRetry: document.getElementById('searchResultsRetry')
     };
+  }
+
+  function setResultFiltersExpanded(controls, expanded) {
+    if (!controls || !controls.filtersToggle || !controls.filtersPanel) return;
+    const isExpanded = expanded === true;
+    controls.filtersToggle.setAttribute('aria-expanded', String(isExpanded));
+    controls.filtersPanel.hidden = !isExpanded;
+    const root = controls.filtersToggle.closest('.kc-search-results-controls');
+    if (root) root.classList.toggle('is-collapsed', !isExpanded);
+  }
+
+  function bindResultFiltersDisclosure(controls) {
+    const toggle = controls && controls.filtersToggle;
+    const panel = controls && controls.filtersPanel;
+    if (!toggle || !panel || toggle.dataset.kcSearchDisclosureBound === '1') return;
+
+    toggle.dataset.kcSearchDisclosureBound = '1';
+    const mobileQuery = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 760px)')
+      : null;
+    const syncToViewport = (event) => {
+      const isMobile = event && typeof event.matches === 'boolean'
+        ? event.matches
+        : (mobileQuery ? mobileQuery.matches : window.innerWidth <= 760);
+      setResultFiltersExpanded(controls, !isMobile);
+    };
+
+    toggle.addEventListener('click', () => {
+      setResultFiltersExpanded(
+        controls,
+        toggle.getAttribute('aria-expanded') !== 'true'
+      );
+    });
+    if (mobileQuery && typeof mobileQuery.addEventListener === 'function') {
+      mobileQuery.addEventListener('change', syncToViewport);
+    } else if (mobileQuery && typeof mobileQuery.addListener === 'function') {
+      mobileQuery.addListener(syncToViewport);
+    }
+    syncToViewport(mobileQuery);
   }
 
   function setSearchResultsLoadingState(listEl, noElement, isLoading) {
@@ -1365,6 +1406,8 @@
     const searchInput = document.getElementById('searchInput');
     const rerender = () => renderResultsToPage(searchInput ? searchInput.value : getQueryParam('q'));
 
+    bindResultFiltersDisclosure(controls);
+
     ['module', 'sort'].forEach((key) => {
       const el = controls[key];
       if (!el || el.dataset.kcSearchBound === '1') return;
@@ -1600,6 +1643,17 @@
     const signalBadge = buildResultSignalBadge(post);
     if (!signalBadge) return decorated;
 
+    // Use an explicit state class instead of relying on the relational :has()
+    // selector. This keeps the mobile layout deterministic in older embedded
+    // browsers while covering cards with either a signal alone or signal +
+    // cashback badge.
+    if (!/kc-card--has-corner-badge/i.test(decorated)) {
+      decorated = decorated.replace(
+        /class="([^"]*\bkc-card\b[^"]*)"/i,
+        'class="$1 kc-card--has-corner-badge"'
+      );
+    }
+
     // Prefer the top-right corner stack (same zone as cashback/coupon badges).
     // Order: signal first, cashback last → with flex-end cashback stays outermost right.
     if (/kc-cashback-badge/i.test(decorated)) {
@@ -1607,9 +1661,6 @@
         /(<span class="kc-cashback-badge"[\s\S]*?<\/span>)/i,
         `<div class="kc-card__corner-signals">${signalBadge}$1</div>`
       );
-      if (!/kc-card--has-corner-badge/i.test(decorated)) {
-        decorated = decorated.replace(/class="([^"]*\bkc-card\b[^"]*)"/i, 'class="$1 kc-card--has-corner-badge"');
-      }
       return decorated;
     }
 

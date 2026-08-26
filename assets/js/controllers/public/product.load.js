@@ -356,7 +356,7 @@
       }
     } else {
       commentAuthorInput.removeAttribute('readonly');
-      commentAuthorInput.setAttribute('placeholder', 'Seu nome (opcional no modo local/dev)');
+      commentAuthorInput.setAttribute('placeholder', 'Seu nome (opcional)');
       if (commentAuthorHint) {
         commentAuthorHint.textContent = '';
         commentAuthorHint.style.display = 'none';
