@@ -12221,10 +12221,25 @@ a.kc-home-metric-card:hover {
 .kc-consent-btn--primary {
   border-color: var(--kc-primary-brand);
   background: var(--kc-primary-brand);
-  /* #222 on the brand fill is 5.57:1, retaining an AA-safe foreground in
-   * both themes without changing the established orange primary surface. */
+  /* Light theme: texto preto sobre a marca laranja (#FF6B00) garante 5.57:1
+   * (AA Normal). É o mesmo #222 de antes e continua AA-safe. */
   color: #222222;
   box-shadow: 0 10px 24px rgba(255, 107, 0, 0.22);
+}
+
+/* Dark theme: branco sobre laranja #FF6B00 daria apenas 2.35:1 (falha AA).
+ * Para manter consistência visual com os botões ghost (todos com texto
+ * branco no escuro), o primary adota o mesmo fundo cinza e ganha uma
+ * borda laranja grossa + box-shadow brand para continuar se diferenciando
+ * como CTA principal. Resultado: 3 botões com texto branco, primary
+ * destacado pelo anel laranja. Contraste ghost (#222 x #E9EAED) = 13.0:1
+ * (AAA). */
+[data-theme="dark"] .kc-consent-btn--primary {
+  background: var(--kc-background-dark);
+  color: var(--kc-text-dark-primary);
+  border-color: var(--kc-primary-brand);
+  border-width: 2px;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.32), 0 10px 24px rgba(255, 107, 0, 0.18);
 }
 
 .kc-consent-btn--ghost {
