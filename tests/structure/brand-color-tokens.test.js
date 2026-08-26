@@ -71,13 +71,29 @@ describe('brand color tokens', () => {
   });
 
   test('consent primary keeps the brand fill with AA-safe foreground and focus', () => {
+    // Light theme: primary continua com fill laranja + texto preto (#222222)
+    // → 5.57:1 (AA Normal).
     expect(CSS).toMatch(
-      /\.kc-consent-btn--primary\s*\{[\s\S]{0,220}?background:\s*var\(--kc-primary-brand\)[\s\S]{0,220}?color:\s*#222222/
+      /\.kc-consent-btn--primary\s*\{[\s\S]{0,400}?background:\s*var\(--kc-primary-brand\)[\s\S]{0,400}?color:\s*#222222/
+    );
+    // Dark theme: branco sobre laranja daria 2.35:1 (falha AA). Para preservar
+    // a consistência visual com os botões ghost (todos com texto branco no
+    // escuro), o primary troca o fill pelo background escuro e ganha uma
+    // borda laranja grossa + box-shadow brand para continuar se diferenciando
+    // como CTA principal.
+    expect(CSS).toMatch(
+      /\[data-theme="dark"\]\s*\.kc-consent-btn--primary\s*\{[\s\S]{0,400}?background:\s*var\(--kc-background-dark\)[\s\S]{0,400}?color:\s*var\(--kc-text-dark-primary\)/
+    );
+    expect(CSS).toMatch(
+      /\[data-theme="dark"\]\s*\.kc-consent-btn--primary\s*\{[\s\S]{0,400}?border-color:\s*var\(--kc-primary-brand\)/
     );
     expect(CSS).toMatch(
       /\.kc-consent-btn:focus-visible\s*\{[\s\S]{0,160}?outline:\s*3px solid var\(--kc-text-dark-primary\)[\s\S]{0,160}?outline-offset:\s*3px/
     );
+    // Light: preto sobre laranja.
     expect(contrastRatio('#FF6B00', '#222222')).toBeGreaterThanOrEqual(4.5);
+    // Dark: branco sobre cinza escuro.
+    expect(contrastRatio('#222222', '#E9EAED')).toBeGreaterThanOrEqual(4.5);
   });
 
   test('logo Campus word does not use the dark strong token on light theme', () => {
