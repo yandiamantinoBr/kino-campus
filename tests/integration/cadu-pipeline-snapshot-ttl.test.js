@@ -40,6 +40,8 @@ function createExpiryHarness(state, renderPipelineStages) {
     'state',
     'renderPipelineStages',
     `"use strict";
+     const renderPipelineActive = () => {};
+     const renderPipelineHealth = () => {};
      const invalidatePipelineControl = ${extractFunctionSource('invalidatePipelineControl')};
      const schedulePipelineControlExpiry = ${extractFunctionSource('schedulePipelineControlExpiry')};
      return { schedulePipelineControlExpiry };`
@@ -209,7 +211,7 @@ describe('Cadu pipeline snapshot TTL control', () => {
     expect(state.pipelineControlReason).toContain('dados de controle expirados');
     expect(renderPipelineStages).toHaveBeenCalledWith(state.pipelineStages);
     expect(document.querySelector('.kc-pipeline-stage__btn').disabled).toBe(false);
-    expect(document.querySelector('.kc-pipeline-stage__btn').textContent).toContain('Renovar');
+    expect(document.querySelector('.kc-pipeline-stage__btn').textContent).toContain('Verificar para');
     expect(document.querySelector('#pipeline-stages-list').textContent).toContain('dados de controle expirados');
   });
 

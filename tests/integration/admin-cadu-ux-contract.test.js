@@ -97,7 +97,7 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('schedulePipelineControlExpiry();');
     expect(controller).toContain('snapshotGeneration !== state.pipelineRequestGeneration');
     expect(controller).toContain("var displayLabel = canRefreshControl");
-    expect(controller).toContain("'Renovar · ' + label");
+    expect(controller).toContain("'Verificar para ' + label.toLowerCase()");
     expect(controller).toContain("'Executar real · simule antes'");
     expect(controller).toContain("var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;");
     expect(controller).toContain("capabilities.explicit_run_mode_routes === true");
@@ -303,7 +303,19 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).toContain('!opts.skipOperationalRefresh && name === \'reviews\'');
     expect(controller).toContain('switchTab(state.currentTab, { skipOperationalRefresh: true });');
     expect(controller).toContain("typeof window.KCCaduReviews.refreshSummary === 'function'");
-    expect(controller).toContain('reviewSummaryRefresh = window.KCCaduReviews.refreshSummary();');
+    expect(controller).toContain('supportingRefreshes.push(window.KCCaduReviews.refreshSummary());');
+    expect(controller).toContain('await Promise.allSettled(supportingRefreshes);');
+  });
+
+  test('distinguishes safe snapshot-renewal controls from executable actions', () => {
+    expect(controller).toContain("(canRefreshControl ? ' is-renewal' : '')");
+    expect(controller).toContain("? 'Verificar para ' + label.toLowerCase()");
+    expect(html).toContain('.kc-pipeline-stage__btn.is-renewal');
+    expect(html).toContain('background: rgba(245,158,11,.10)');
+    expect(controller).toContain("? 'controle degradado'");
+    expect(controller).toContain('contrato de controle da Pipeline está desatualizado');
+    expect(controller).toContain('nenhuma ação começa sem nova verificação e confirmação');
+    expect(controller).toContain('Renove o snapshot antes de iniciar.');
   });
 
   test('presents the bounded community relevance contract as responsive editorial context', () => {
