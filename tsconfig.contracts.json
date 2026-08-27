@@ -17,6 +17,7 @@
     "types/**/*.ts"
   ],
   "exclude": [
+    "types/umd-pilot/**",
     "assets/**",
     "admin/**",
     "api/**",

@@ -2,6 +2,32 @@
 
 ---
 
+## [v76.46] - 2026-08-27 - piloto TypeScript no contrato UMD de Tags
+
+### Adicionado
+
+- `tsconfig.umd-pilot.json` aplica `checkJs` estrito e `noEmit` somente ao módulo
+  compartilhado de Tags, sem renomear o asset, introduzir bundler ou alterar sua
+  URL/ordem nos 12 HTMLs consumidores.
+- Tipos JSDoc cobrem normalização, leitura canônica/legada, limites 6/12,
+  validação e patch de metadata; um type-test protege a API pública e rejeita
+  opções/papéis inválidos em tempo de CI.
+- O gate `typecheck:umd-pilot` passa a integrar a validação essencial, enquanto o
+  build Vercel continua instalando somente dependências de produção e sem executar
+  TypeScript.
+- O Lighthouse CI passa a medir quatro páginas públicas reais (Home, Compra e
+  Venda, Eventos e Ajuda); a rota administrativa sem sessão deixa de duplicar a
+  Home por redirect e de contaminar a amostra com um erro de console artificial.
+
+### Validado
+
+- O contrato UMD atual produz resultados idênticos ao código anterior em 15
+  cenários canônicos, legados, inválidos e de overflow; os 16 exports permanecem.
+- O custo do JSDoc e das guardas exigidas por `noUncheckedIndexedAccess` é de
+  681 bytes gzip no único asset público incluído no piloto.
+
+---
+
 ## [v76.45] - 2026-08-27 - ações móveis sem cobertura de conteúdo
 
 ### Corrigido
