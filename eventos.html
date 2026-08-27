@@ -113,30 +113,34 @@
       </h2>
       <!-- Feed Tabs -->
       <div class="kc-feed-toolbar">
-      <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação e categorias do feed" data-i18n-aria-label="aria-label.feed-sort">
-        <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true">
-          <i class="fas fa-fire"></i>
-          <span>Destaques</span>
-        </button>
-        <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false">
-          <i class="fas fa-clock"></i>
-          <span>Recentes</span>
-        </button>
-        <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false">
-          <i class="fas fa-comments"></i>
-          <span>Comentados</span>
-        </button>
+      <div class="kc-feed-tabs">
+        <div class="kc-feed-tabs__view" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
+          <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true">
+            <i class="fas fa-fire"></i>
+            <span>Destaques</span>
+          </button>
+          <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false">
+            <i class="fas fa-clock"></i>
+            <span>Recentes</span>
+          </button>
+          <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false">
+            <i class="fas fa-comments"></i>
+            <span>Comentados</span>
+          </button>
+        </div>
         <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
-        <a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
-        <a data-category="academicos" href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
-        <a data-category="palestras" href="#palestras"><i class="fas fa-microphone-lines"></i><span>Palestras</span></a>
-        <a data-category="congressos" href="#congressos"><i class="fas fa-users-rectangle"></i><span>Congressos</span></a>
-        <a data-category="cursos" href="#cursos"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
-        <a data-category="culturais" href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
-        <a data-category="esportivos" href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
-        <a data-category="workshops" href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
-        <a data-category="festas" href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
-        <a data-category="sustentabilidade" href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
+        <nav class="kc-feed-tabs__nav" aria-label="Categorias de eventos" data-i18n-aria-label="aria-label.feed-categories">
+          <a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
+          <a data-category="academicos" href="#academicos"><i class="fas fa-graduation-cap"></i><span>Acadêmicos</span></a>
+          <a data-category="palestras" href="#palestras"><i class="fas fa-microphone-lines"></i><span>Palestras</span></a>
+          <a data-category="congressos" href="#congressos"><i class="fas fa-users-rectangle"></i><span>Congressos</span></a>
+          <a data-category="cursos" href="#cursos"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
+          <a data-category="culturais" href="#culturais"><i class="fas fa-theater-masks"></i><span>Culturais</span></a>
+          <a data-category="esportivos" href="#esportivos"><i class="fas fa-running"></i><span>Esportivos</span></a>
+          <a data-category="workshops" href="#workshops"><i class="fas fa-chalkboard-teacher"></i><span>Workshops</span></a>
+          <a data-category="festas" href="#festas"><i class="fas fa-music"></i><span>Festas</span></a>
+          <a data-category="sustentabilidade" href="#sustentabilidade"><i class="fas fa-leaf"></i><span>Sustentabilidade</span></a>
+        </nav>
       </div>
       <div class="kc-feed-toolbar__actions">
         <button class="kc-module-picker-trigger" type="button" data-kc-module-picker-open

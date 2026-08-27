@@ -175,7 +175,7 @@ body.kc-error-shell-page {
 .kc-error-action--primary {
   border-color: var(--kc-primary-brand);
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 .kc-error-action:hover,

@@ -365,7 +365,7 @@ body.kc-admin-page .kc-admin-tab:hover {
 
 body.kc-admin-page .kc-admin-tab.is-active {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   border-color: var(--kc-primary-brand);
 }
 

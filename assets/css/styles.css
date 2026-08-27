@@ -4,6 +4,8 @@
     /* Primary brand orange. Default for brand fills (active tabs, primary
      * buttons, ranking chips, login) and large brand surfaces. */
     --kc-primary-brand: #FF6B00;
+    /* Foreground AA para superfícies sólidas da marca: 5.57:1 sobre #FF6B00. */
+    --kc-on-primary: #222222;
     /* Slightly lighter orange for orange-on-dark text (logo / nav / consent
      * links on dark surfaces). ~4.83:1 on #333 — better AA than #FF6B00. */
     --kc-primary-brand-bright: #FF8000;
@@ -61,7 +63,7 @@
     top: -100%;
     left: 0;
     background: var(--kc-primary-brand);
-    color: #fff;
+    color: var(--kc-on-primary);
     padding: 8px 16px;
     font-weight: 600;
     font-size: 0.9rem;
@@ -137,7 +139,7 @@ header {
     height: 44px;
     border-radius: 14px;
     background: var(--kc-primary-brand);
-    color: #fff;
+    color: var(--kc-on-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -752,7 +754,7 @@ body.kc-modal-open .kc-search-dropdown {
 .kc-user-actions a.btn-login {
     font-size: 0.9em;
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     padding: 8px 15px;
     border-radius: 18px;
     font-weight: bold;
@@ -1366,7 +1368,7 @@ main {
 }
 .kc-ranking-filter.active {
     background: var(--kc-primary-brand);
-    color: #fff;
+    color: var(--kc-on-primary);
     border-color: var(--kc-primary-brand);
 }
 .kc-ranking-info-btn {
@@ -1456,14 +1458,14 @@ main {
     min-height: 54px;
     gap: 8px;
     background: linear-gradient(135deg, var(--kc-primary-brand) 0%, #ff8a2a 100%);
-    color: #fff;
+    color: var(--kc-on-primary);
     border: 1px solid rgba(255, 107, 0, 0.42);
     box-shadow: 0 12px 28px rgba(255, 107, 0, 0.28);
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
 }
 .kc-ranking-modal__footer .kc-btn-primary:hover,
 .kc-ranking-modal__footer .kc-btn-primary:focus-visible {
-    color: #fff;
+    color: var(--kc-on-primary);
     border-color: rgba(255, 138, 42, 0.7);
     box-shadow: 0 16px 34px rgba(255, 107, 0, 0.34);
 }
@@ -1674,7 +1676,7 @@ main {
 .kc-feed-tabs a.active,
 .kc-feed-tabs button[data-feed-tab].active {
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(255, 107, 0, 0.2);
     border-color: var(--kc-primary-brand);
@@ -1844,7 +1846,7 @@ main {
 }
 .kc-feed-tabs button[data-module].active {
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(255, 107, 0, 0.2);
     border-color: var(--kc-primary-brand);
@@ -1965,7 +1967,7 @@ main {
 }
 .kc-my-posts-header .kc-btn-primary {
     background-color: var(--kc-primary-brand);
-    color: #fff;
+    color: var(--kc-on-primary);
     border: none;
 }
 @media (max-width: 600px) {
@@ -2297,15 +2299,15 @@ main {
     padding: 8px 13px;
     border-radius: 999px;
     background: var(--kc-primary-brand);
-    color: #fff;
+    color: var(--kc-on-primary);
     font-weight: 800;
     font-size: 0.86rem;
     text-decoration: none;
 }
 
 .kc-ad-card__cta:hover {
-    background: #e05f00;
-    color: #fff;
+    background: #e06400;
+    color: var(--kc-on-primary);
     text-decoration: none;
 }
 
@@ -2863,12 +2865,12 @@ main {
 
 .kc-get-coupon-button {
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     border: none;
 }
 
 .kc-get-coupon-button:hover {
-    background-color: #e05f00;
+    background-color: #e06400;
     box-shadow: 0 4px 8px rgba(255, 107, 0, 0.2);
 }
 
@@ -3054,7 +3056,7 @@ main {
     width: 50px;
     height: 50px;
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -3277,7 +3279,7 @@ main {
 
 .kc-ods-badge {
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     padding: 10px;
     border-radius: 8px;
     text-align: center;
@@ -3324,7 +3326,7 @@ main {
     justify-content: center;
     gap: 10px;
     background-color: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     padding: 15px 20px;
     border-radius: 25px;
     font-weight: bold;
@@ -4927,7 +4929,7 @@ html, body {
     /* Botão de criar publicação destacado */
     .kc-mobile-nav .kc-create-btn {
         background-color: var(--kc-primary-brand);
-        color: white;
+        color: var(--kc-on-primary);
         border-radius: 50%;
         width: 45px;
         height: 45px;
@@ -5431,7 +5433,7 @@ body.kc-scroll-locked {
     top: 8px;
     left: 8px;
     background: rgba(255, 107, 0, 0.92);
-    color: white;
+    color: var(--kc-on-primary);
     padding: 4px 8px;
     border-radius: 999px;
     font-size: 0.75rem;
@@ -5849,7 +5851,7 @@ body.kc-scroll-locked {
     font-size: 1.08rem;
     min-height: 56px;
     background: var(--kc-primary-brand);
-    color: white;
+    color: var(--kc-on-primary);
     cursor: pointer;
     box-shadow: 0 16px 40px rgba(255, 107, 0, 0.20);
     transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
@@ -6821,7 +6823,7 @@ header,
 .kc-feed-tabs a.active:hover,
 .kc-feed-tabs a.active:focus,
 .kc-feed-tabs a.active:focus-visible {
-  color: #ffffff !important;
+  color: var(--kc-on-primary) !important;
 }
 
 .kc-feed-tabs a.active i,
@@ -7234,7 +7236,7 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   .kc-feed-tabs a.active:hover,
   .kc-feed-tabs a.active:focus,
   .kc-feed-tabs a.active:focus-visible {
-    color: #fff !important;
+    color: var(--kc-on-primary) !important;
   }
 }
 
@@ -7282,7 +7284,7 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
 .kc-feed-tabs button[data-feed-tab].active:hover,
 .kc-feed-tabs button[data-feed-tab].active:focus,
 .kc-feed-tabs button[data-feed-tab].active:focus-visible {
-  color: #ffffff !important;
+  color: var(--kc-on-primary) !important;
 }
 
 .kc-feed-tabs button[data-feed-tab].active i,
@@ -7307,7 +7309,7 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   .kc-feed-tabs button[data-feed-tab].active:hover,
   .kc-feed-tabs button[data-feed-tab].active:focus,
   .kc-feed-tabs button[data-feed-tab].active:focus-visible {
-    color: #fff !important;
+    color: var(--kc-on-primary) !important;
   }
 }
 
@@ -7722,7 +7724,7 @@ textarea::placeholder {
 .kc-auth-btn.primary {
   background: linear-gradient(135deg, #ff7c00, #ff9b3d);
   border-color: transparent;
-  color: #fff;
+  color: var(--kc-on-primary);
   box-shadow: 0 18px 34px rgba(255, 124, 0, 0.18);
 }
 
@@ -8380,7 +8382,7 @@ textarea::placeholder {
   box-sizing: border-box;
   border-radius: 999px;
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   font-size: 0.64em;
   font-weight: 700;
   line-height: 18px;
@@ -9320,7 +9322,7 @@ textarea::placeholder {
   border: 1px solid transparent;
   border-radius: 12px;
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -9560,7 +9562,7 @@ textarea::placeholder {
 
 .kc-opportunity-section-modal[data-kc-opp-section-view="areas"] .kc-category-item.is-active .kc-category-count {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 .kc-sidebar--marketplace .kc-category-list {
@@ -9751,7 +9753,7 @@ textarea::placeholder {
 
 .kc-marketplace-section-modal[data-kc-market-section-view="categories"] .kc-category-item.is-active .kc-category-count {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 .kc-field-pill.is-active {
@@ -10196,7 +10198,7 @@ textarea::placeholder {
 
 .kc-housing-section-modal[data-kc-housing-section-view="regions"] .kc-category-item.is-active .kc-category-count {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 /* ── Modais de seção — Eventos e Caronas (mesmo padrão housing) ── */
@@ -10430,7 +10432,7 @@ textarea::placeholder {
 
 .kc-lostfound-section-modal[data-kc-achados-section-view="locations"] .kc-category-item.is-active .kc-category-count {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 @media (max-width: 768px) {
@@ -10853,7 +10855,7 @@ textarea::placeholder {
 
 .kc-cal-day--today .kc-cal-day-num {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   font-weight: 700;
 }
 
@@ -12425,7 +12427,7 @@ body.kc-admin-page .kc-consent-btn {
   justify-content: center;
   border-radius: 12px;
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 .kc-platform-footer__brand-mark span span {
@@ -12765,7 +12767,7 @@ body.kc-admin-page .kc-consent-btn {
   width: 56px;
   height: 56px;
   background-color: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -12778,8 +12780,8 @@ body.kc-admin-page .kc-consent-btn {
 }
 .kc-fab:hover {
   transform: scale(1.05);
-  background-color: var(--kc-primary-color, #e05e15);
-  color: #fff;
+  background-color: var(--kc-primary-color, #e06400);
+  color: var(--kc-on-primary);
 }
 @media (min-width: 768px) {
   .kc-fab {
@@ -12933,7 +12935,7 @@ body.kc-admin-page .kc-consent-btn {
 }
 .kc-btn-primary {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   border-color: var(--kc-primary-brand);
 }
 .kc-btn-primary:hover { filter: brightness(1.08); }

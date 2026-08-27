@@ -3,7 +3,8 @@
  * Guards the accidental a11y regression where PR #801:
  *  1) introduced --kc-primary-brand-strong fills (#C44A00) on primary UI
  *  2) referenced --kc-primary-brand-bright without defining it
- * Product surfaces must keep the brand orange (#FF6B00) for solid fills.
+ * Product surfaces must keep the brand orange (#FF6B00) for solid fills and
+ * pair it with the AA-safe foreground token instead of white (2.86:1).
  */
 const fs = require('fs');
 const path = require('path');
@@ -12,6 +13,7 @@ const CSS = fs.readFileSync(
   path.join(__dirname, '../../assets/css/styles.css'),
   'utf8'
 );
+const CSS_DIR = path.join(__dirname, '../../assets/css');
 
 function contrastRatio(first, second) {
   const relativeLuminance = (hex) => {
@@ -30,8 +32,9 @@ function contrastRatio(first, second) {
 }
 
 describe('brand color tokens', () => {
-  test('defines brand, bright and strong tokens in :root', () => {
+  test('defines brand, on-primary, bright and strong tokens in :root', () => {
     expect(CSS).toMatch(/--kc-primary-brand:\s*#FF6B00/i);
+    expect(CSS).toMatch(/--kc-on-primary:\s*#222222/i);
     expect(CSS).toMatch(/--kc-primary-brand-bright:\s*#FF8000/i);
     expect(CSS).toMatch(/--kc-primary-brand-strong:\s*#C44A00/i);
   });
@@ -68,6 +71,47 @@ describe('brand color tokens', () => {
     expect(CSS).not.toMatch(
       /\.kc-btn-primary\s*\{\s*background:\s*var\(--kc-primary-brand-strong\)/
     );
+  });
+
+  test('solid brand fills never declare a white foreground', () => {
+    const offenders = [];
+
+    fs.readdirSync(CSS_DIR)
+      .filter((file) => file.endsWith('.css'))
+      .forEach((file) => {
+        const source = fs.readFileSync(path.join(CSS_DIR, file), 'utf8');
+        const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
+        let match;
+
+        while ((match = rulePattern.exec(source))) {
+          const declarations = match[2]
+            .split(';')
+            .map((declaration) => declaration.trim())
+            .filter(Boolean);
+          const solidPrimary = declarations.some((declaration) => (
+            /^background(?:-color)?\s*:\s*var\(--kc-primary-brand\)$/i.test(declaration)
+          ));
+          const whiteForeground = declarations.some((declaration) => (
+            /^color\s*:\s*(?:#fff(?:fff)?|white)(?:\s*!important)?$/i.test(declaration)
+          ));
+
+          if (solidPrimary && whiteForeground) {
+            offenders.push(`${file}: ${match[1].trim().replace(/\s+/g, ' ')}`);
+          }
+        }
+      });
+
+    expect(offenders).toEqual([]);
+    expect(CSS).toMatch(
+      /\.kc-user-actions a\.btn-login\s*\{[\s\S]{0,180}?color:\s*var\(--kc-on-primary\)/
+    );
+    expect(CSS).toMatch(
+      /\.kc-feed-tabs a\.active,[\s\S]{0,240}?color:\s*var\(--kc-on-primary\)/
+    );
+    expect(CSS).toMatch(
+      /\.kc-btn-primary\s*\{[\s\S]{0,120}?color:\s*var\(--kc-on-primary\)/
+    );
+    expect(contrastRatio('#FF6B00', '#222222')).toBeGreaterThanOrEqual(4.5);
   });
 
   test('consent primary keeps the brand fill with AA-safe foreground and focus', () => {

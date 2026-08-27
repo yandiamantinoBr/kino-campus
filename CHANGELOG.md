@@ -2,6 +2,31 @@
 
 ---
 
+## [v76.47] - 2026-08-27 - contraste AA e semântica das abas de feed
+
+### Corrigido
+
+- Eventos, Oportunidades, Moradia, Caronas e Achados e Perdidos agora separam as
+  três abas de ordenação (`role="tablist"`) dos links de categoria (`nav`),
+  eliminando filhos ARIA inválidos sem mudar a ordem, o texto ou o rail visual.
+- Superfícies sólidas da marca preservam o laranja `#FF6B00` e passam a usar o
+  foreground compartilhado `--kc-on-primary: #222222`, com contraste 5,57:1
+  em vez do branco abaixo de AA; estados hover equivalentes usam `#E06400`,
+  com 4,54:1.
+- Botões, badges, abas, chat, formulários, FABs e marcas que usam fill primário
+  compartilham o mesmo contrato de foreground nos temas claro e escuro.
+
+### Validado
+
+- Contratos estáticos verificam as sete páginas de feed e impedem novas regras
+  com branco sobre um fill sólido `--kc-primary-brand`.
+- Chromium, Firefox, WebKit, Pixel 7 e iPhone 15 calculam contraste AA, semântica
+  das abas e largura sem overflow nos dois temas.
+- Lighthouse local mantém acessibilidade 100 nas quatro rotas públicas medidas
+  (Home, Compra e Venda, Eventos e Ajuda), sem erro de contraste ou ARIA.
+
+---
+
 ## [v76.46] - 2026-08-27 - piloto TypeScript no contrato UMD de Tags
 
 ### Adicionado
