@@ -16,6 +16,7 @@
     "test:e2e:cross-browser": "node node_modules/@playwright/test/cli.js test --config=playwright.cross-browser.config.js",
     "test:e2e:report": "node node_modules/@playwright/test/cli.js show-report output/playwright-report",
     "typecheck:contracts": "tsc --project tsconfig.contracts.json --pretty false",
+    "typecheck:umd-pilot": "tsc --project tsconfig.umd-pilot.json --pretty false",
     "lhci": "lhci autorun",
     "check:hygiene": "node scripts/hygiene-check.js",
     "seo:audit": "node scripts/seo-audit.js",

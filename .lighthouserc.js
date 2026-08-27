@@ -1,10 +1,15 @@
 /**
- * Lighthouse CI — KinoCampus v75.1.0
+ * Lighthouse CI — KinoCampus v76.46
  *
- * Audita 3 páginas representativas da plataforma:
+ * Audita 4 páginas públicas representativas da plataforma:
  *   - Home (index.html)      → shell, carousel e ranking
  *   - Feed público           → compra-venda-feed.html
- *   - Admin Dashboard        → admin/index.html
+ *   - Eventos                → conteúdo e listagem pública
+ *   - Central de Ajuda       → conteúdo longo e layout responsivo
+ *
+ * Rotas administrativas autenticadas ficam nos testes E2E. Auditá-las aqui
+ * sem sessão mede o redirect para a Home, duplica a amostra e introduz um erro
+ * de console que não pertence à página administrativa real.
  *
  * Observação SEO:
  *   `_product.html` é deliberadamente um fallback/app shell noindex.
@@ -31,7 +36,8 @@ module.exports = {
       url: [
         'http://localhost:4000/',
         'http://localhost:4000/compra-venda-feed.html',
-        'http://localhost:4000/admin/index.html',
+        'http://localhost:4000/eventos.html',
+        'http://localhost:4000/ajuda.html',
       ],
       startServerCommand: 'npx http-server . -p 4000 -s -c-1',
       startServerReadyPattern: 'Available on',

@@ -9,13 +9,47 @@
   It is intentionally UMD so browser flows, Node-based Cadu tooling and Jest
   tests use the same normalization and limits.
 */
+/**
+ * @typedef {'TAG_NOT_STRING' | 'TAG_TOO_LONG' | 'TAG_INVALID' | 'TOO_MANY_TAGS'} KCUserTagErrorCode
+ * @typedef {{ code: KCUserTagErrorCode, message: string, limit?: number }} KCUserTagError
+ * @typedef {{ tags: string[], tagKeys: string[], errors: KCUserTagError[] }} KCNormalizedUserTags
+ * @typedef {KCNormalizedUserTags & { source: 'canonical' | 'legacy' | 'none', isLegacy: boolean }} KCReadUserTags
+ * @typedef {{ isPrivileged?: boolean, limit?: number, allowExistingOverflow?: boolean, initialTags?: unknown }} KCUserTagValidationOptions
+ * @typedef {KCNormalizedUserTags & { ok: boolean, limit: number, preservesExistingOverflow: boolean }} KCUserTagValidationResult
+ * @typedef {KCUserTagValidationResult & { metadata?: Record<string, string[]> }} KCUserTagMetadataPatchResult
+ * @typedef {Record<string, unknown>} KCUnknownRecord
+ * @typedef {[KCUnknownRecord, string]} KCUserTagCandidate
+ * @typedef {{
+ *   USER_TAGS_KEY: string,
+ *   USER_TAG_KEYS_KEY: string,
+ *   STANDARD_LIMIT: number,
+ *   PRIVILEGED_LIMIT: number,
+ *   MAX_TAG_LENGTH: number,
+ *   normalizeWhitespace: (value: unknown) => string,
+ *   tagKey: (value: unknown) => string,
+ *   parseText: (value: unknown) => string[],
+ *   normalize: (input: unknown) => KCNormalizedUserTags,
+ *   limitFor: (isPrivileged: boolean) => number,
+ *   sameTags: (left: unknown, right: unknown) => boolean,
+ *   validate: (input: unknown, options?: KCUserTagValidationOptions) => KCUserTagValidationResult,
+ *   parseSerialized: (value: unknown) => string[],
+ *   serialize: (value: unknown) => string,
+ *   read: (post: unknown) => KCReadUserTags,
+ *   metadataPatch: (input: unknown, options?: KCUserTagValidationOptions) => KCUserTagMetadataPatchResult,
+ * }} KCPostUserTagsApi
+ * @typedef {(Window & typeof globalThis) & { KCPostUserTags?: KCPostUserTagsApi }} KCPostUserTagsRoot
+ */
+/**
+ * @param {KCPostUserTagsRoot} root
+ * @param {() => KCPostUserTagsApi} factory
+ */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = factory();
   } else {
     root.KCPostUserTags = factory();
   }
-}(typeof window !== 'undefined' ? window : this, function () {
+}(/** @type {KCPostUserTagsRoot} */ (typeof window !== 'undefined' ? window : /** @type {unknown} */ (this)), function () {
   'use strict';
 
   var USER_TAGS_KEY = 'userTags';
@@ -24,18 +58,29 @@
   var PRIVILEGED_LIMIT = 12;
   var MAX_TAG_LENGTH = 60;
 
+  /**
+   * @param {unknown} value
+   * @returns {value is KCUnknownRecord}
+   */
   function isPlainObject(value) {
     return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 
+  /**
+   * @param {unknown} value
+   * @param {string} key
+   * @returns {value is KCUnknownRecord}
+   */
   function hasOwn(value, key) {
     return isPlainObject(value) && Object.prototype.hasOwnProperty.call(value, key);
   }
 
+  /** @param {unknown} value */
   function normalizeWhitespace(value) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
   }
 
+  /** @param {unknown} value */
   function tagKey(value) {
     var label = normalizeWhitespace(value);
     if (!label) return '';
@@ -52,6 +97,7 @@
     }
   }
 
+  /** @param {unknown} value */
   function parseText(value) {
     return String(value == null ? '' : value)
       .split(/[\n,;]/)
@@ -59,6 +105,10 @@
       .filter(Boolean);
   }
 
+  /**
+   * @param {unknown} value
+   * @returns {unknown[]}
+   */
   function sourceValues(value) {
     if (Array.isArray(value)) return value.slice();
     if (typeof value === 'string') return parseText(value);
@@ -66,10 +116,18 @@
     return [value];
   }
 
+  /**
+   * @param {unknown} input
+   * @returns {KCNormalizedUserTags}
+   */
   function normalize(input) {
+    /** @type {string[]} */
     var tags = [];
+    /** @type {string[]} */
     var tagKeys = [];
+    /** @type {KCUserTagError[]} */
     var errors = [];
+    /** @type {Record<string, true>} */
     var seen = {};
 
     sourceValues(input).forEach(function (raw) {
@@ -97,10 +155,15 @@
     return { tags: tags, tagKeys: tagKeys, errors: errors };
   }
 
+  /** @param {boolean} isPrivileged */
   function limitFor(isPrivileged) {
     return isPrivileged === true ? PRIVILEGED_LIMIT : STANDARD_LIMIT;
   }
 
+  /**
+   * @param {unknown} left
+   * @param {unknown} right
+   */
   function sameTags(left, right) {
     var leftNormalized = normalize(left).tags;
     var rightNormalized = normalize(right).tags;
@@ -110,6 +173,11 @@
     });
   }
 
+  /**
+   * @param {unknown} input
+   * @param {KCUserTagValidationOptions=} options
+   * @returns {KCUserTagValidationResult}
+   */
   function validate(input, options) {
     var opts = options || {};
     var normalized = normalize(input);
@@ -136,6 +204,7 @@
     };
   }
 
+  /** @param {unknown} value */
   function parseSerialized(value) {
     if (Array.isArray(value)) return normalize(value).tags;
     var text = String(value == null ? '' : value).trim();
@@ -147,41 +216,53 @@
     return normalize(text).tags;
   }
 
+  /** @param {unknown} value */
   function serialize(value) {
     return JSON.stringify(normalize(value).tags);
   }
 
+  /**
+   * @param {unknown} post
+   * @returns {KCReadUserTags}
+   */
   function read(post) {
     var source = isPlainObject(post) ? post : {};
     var metadata = isPlainObject(source.metadata) ? source.metadata : {};
     // The persisted metadata is authoritative.  Some read adapters flatten
     // missing userTags as top-level [], so an empty synthetic convenience
     // field must not hide metadata.tags on an old row.
+    /** @type {KCUserTagCandidate[]} */
     var metadataCanonicalCandidates = [
       [metadata, USER_TAGS_KEY],
       [metadata, 'user_tags'],
     ];
     for (var index = 0; index < metadataCanonicalCandidates.length; index += 1) {
-      var holder = metadataCanonicalCandidates[index][0];
-      var key = metadataCanonicalCandidates[index][1];
+      var metadataCandidate = metadataCanonicalCandidates[index];
+      if (!metadataCandidate) continue;
+      var holder = metadataCandidate[0];
+      var key = metadataCandidate[1];
       if (!hasOwn(holder, key)) continue;
-      var canonical = normalize(holder[key]);
+      var canonical = /** @type {KCReadUserTags} */ (normalize(holder[key]));
       canonical.source = 'canonical';
       canonical.isLegacy = false;
       return canonical;
     }
 
     var hasLegacySurface = hasOwn(metadata, 'tags') || hasOwn(source, 'tags');
+    /** @type {KCReadUserTags | null} */
     var deferredTopLevelCanonical = null;
+    /** @type {KCUserTagCandidate[]} */
     var topLevelCanonicalCandidates = [
       [source, USER_TAGS_KEY],
       [source, 'user_tags'],
     ];
     for (var topLevelIndex = 0; topLevelIndex < topLevelCanonicalCandidates.length; topLevelIndex += 1) {
-      var topLevelHolder = topLevelCanonicalCandidates[topLevelIndex][0];
-      var topLevelKey = topLevelCanonicalCandidates[topLevelIndex][1];
+      var topLevelCandidate = topLevelCanonicalCandidates[topLevelIndex];
+      if (!topLevelCandidate) continue;
+      var topLevelHolder = topLevelCandidate[0];
+      var topLevelKey = topLevelCandidate[1];
       if (!hasOwn(topLevelHolder, topLevelKey)) continue;
-      var topLevelCanonical = normalize(topLevelHolder[topLevelKey]);
+      var topLevelCanonical = /** @type {KCReadUserTags} */ (normalize(topLevelHolder[topLevelKey]));
       topLevelCanonical.source = 'canonical';
       topLevelCanonical.isLegacy = false;
       if (topLevelCanonical.tags.length || !hasLegacySurface) return topLevelCanonical;
@@ -194,15 +275,18 @@
     // and use this read-only fallback until the database backfill has written
     // the canonical pair.  An explicit userTags: [] above deliberately wins
     // and therefore remains a real clear action.
+    /** @type {KCUserTagCandidate[]} */
     var legacyCandidates = [
       [source, 'tags'],
       [metadata, 'tags'],
     ];
     for (var legacyIndex = 0; legacyIndex < legacyCandidates.length; legacyIndex += 1) {
-      var legacyHolder = legacyCandidates[legacyIndex][0];
-      var legacyKey = legacyCandidates[legacyIndex][1];
+      var legacyCandidate = legacyCandidates[legacyIndex];
+      if (!legacyCandidate) continue;
+      var legacyHolder = legacyCandidate[0];
+      var legacyKey = legacyCandidate[1];
       if (!hasOwn(legacyHolder, legacyKey)) continue;
-      var legacy = normalize(legacyHolder[legacyKey]);
+      var legacy = /** @type {KCReadUserTags} */ (normalize(legacyHolder[legacyKey]));
       legacy.source = 'legacy';
       legacy.isLegacy = true;
       return legacy;
@@ -210,14 +294,19 @@
 
     if (deferredTopLevelCanonical) return deferredTopLevelCanonical;
 
-    var empty = normalize([]);
+    var empty = /** @type {KCReadUserTags} */ (normalize([]));
     empty.source = 'none';
     empty.isLegacy = false;
     return empty;
   }
 
+  /**
+   * @param {unknown} input
+   * @param {KCUserTagValidationOptions=} options
+   * @returns {KCUserTagMetadataPatchResult}
+   */
   function metadataPatch(input, options) {
-    var checked = validate(input, options);
+    var checked = /** @type {KCUserTagMetadataPatchResult} */ (validate(input, options));
     if (!checked.ok) return checked;
     checked.metadata = {};
     checked.metadata[USER_TAGS_KEY] = checked.tags.slice();

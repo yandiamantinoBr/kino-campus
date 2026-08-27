@@ -46,6 +46,9 @@ jobs:
       - name: TypeScript contracts (no emit)
         run: npm run typecheck:contracts
 
+      - name: TypeScript UMD pilot (checkJs, no emit)
+        run: npm run typecheck:umd-pilot
+
       - name: Version map
         run: npm run check:version
 

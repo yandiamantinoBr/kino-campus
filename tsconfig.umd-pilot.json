@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.contracts.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": [
+    "types/umd-pilot.globals.d.ts",
+    "types/umd-pilot/**/*.ts",
+    "assets/js/shared/kc-post-user-tags.shared.js"
+  ],
+  "exclude": [
+    "dist/**",
+    "node_modules/**"
+  ]
+}

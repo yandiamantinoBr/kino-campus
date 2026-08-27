@@ -10,6 +10,12 @@ a revisão estreita da política de stack. A Fase 1 passa a permitir TypeScript
 tipos Supabase versionados e CI sem emissão. O runtime público, a Pipeline Completa,
 as páginas e a esteira Vercel permanecem inalterados por essa adoção.
 
+**Piloto Fase 2 (2026-08-27):** `kc-post-user-tags.shared.js` passou a ser o único
+asset público incluído por `tsconfig.umd-pilot.json`. O gate usa `allowJs`,
+`checkJs`, `strict` herdado e `noEmit`; mantém o arquivo UMD e sua URL, adiciona
+tipos JSDoc para normalização/leitura/validação/patch e valida o consumo por um
+type-test. Nenhum outro script do navegador entra implicitamente no projeto.
+
 ## 1. Decisão
 
 O próximo ganho de confiabilidade deve vir de TypeScript aplicado gradualmente às
@@ -141,7 +147,7 @@ criar um `tsconfig.json` global:
 **Gate:** zero artefato JavaScript gerado; npm test, testes estruturais e cadeia de
 scripts continuam verdes; nenhuma página muda suas tags script.
 
-### Fase 2 — tipos para módulos UMD puros (somente com exceção do frontend)
+### Fase 2 — tipos para módulos UMD puros (piloto de Tags em execução)
 
 Ordem recomendada:
 
@@ -152,6 +158,11 @@ Ordem recomendada:
 4. assets/js/shared/kc-search.shared.js;
 5. assets/js/utils/kc-utils.taxonomy.js, somente depois de declarar os globais
    _KCU e KC_CONSTANTS.
+
+O primeiro piloto autorizado priorizou `kc-post-user-tags.shared.js` antes dessa
+fila por já possuir contrato crítico de persistência, limites 6/12, compatibilidade
+legada e testes diretos. A exceção é deliberadamente nominal: ampliar o `include`
+continua exigindo uma tranche própria e as mesmas provas de não regressão.
 
 Para cada módulo:
 
@@ -246,17 +257,17 @@ todo o repositório são explicitamente não priorizados.
   testes, não migração de linguagem;
 - páginas HTML, Service Worker, versões de asset e configuração de cache.
 
-## 10. Primeiro ticket implementável, após o gate de governança
+## 10. Primeiro ticket implementado após o gate de governança
 
-**Título:** chore(types): typecheck UMD contracts without changing browser delivery
+**Título:** chore(types): validar contrato UMD de Tags com checkJs
 
 **Escopo máximo:**
 
-- dependência TypeScript de desenvolvimento;
-- configuração noEmit limitada ao parser de busca e a dois módulos UMD puros;
-- declarations mínimas para window.KCPostLifecycle, window.KCPostUserTags e
-  window.KCSearchShared;
-- JSDoc somente onde necessário para os contratos públicos;
+- configuração `noEmit` e `checkJs` limitada a
+  `assets/js/shared/kc-post-user-tags.shared.js`;
+- declaration mínima apenas para a bifurcação CommonJS do wrapper UMD;
+- JSDoc para os contratos públicos de normalização, leitura, limites e metadata;
+- type-test negativo para opções e papéis inválidos;
 - comando de typecheck separado na CI.
 
 **Fora do escopo:**
@@ -267,23 +278,23 @@ todo o repositório são explicitamente não priorizados.
 - mudar Supabase, Vercel ou Pipeline;
 - converter controladores, páginas ou HTML.
 
-**Pré-condição não negociável:** antes de abrir esse ticket, alterar a decisão de
-stack em documento próprio e comprovar que a instalação de produção da Vercel
-continua independente de `devDependencies`. O plano, isoladamente, não autoriza
-essa mudança.
+**Pré-condição cumprida:** a decisão de stack foi alterada em tranche própria e o
+build Vercel continua usando `npm ci --omit=dev`, sem TypeScript em runtime.
 
 **Prova de aceitação:**
 
 1. typecheck sem emissão aprovado;
-2. Jest direcionado aos três módulos aprovado;
+2. Jest direcionado ao módulo e comparação diferencial de 15 cenários aprovados;
 3. npm run check:all aprovado;
 4. testes de estrutura confirmam as mesmas cadeias de script;
-5. diff de artefatos públicos vazio.
+5. os 16 exports e os resultados serializados permanecem idênticos;
+6. aumento medido de 681 bytes gzip no único asset público modificado.
 
 ## 11. Próxima decisão
 
-Após a frente atual da Pipeline Completa estabilizar, primeiro decidir se a regra
-de stack será revista. Apenas então revisar esta proposta com os resultados de um
-piloto. O piloto só avança se encontrar defeitos reais ou reduzir risco de
-refactor sem aumentar custo de entrega. Caso contrário, manter JavaScript bem
-testado é preferível a uma migração motivada apenas por tecnologia.
+O piloto de Tags reduz risco de refactor sem exigir transpilação ou bundler, mas
+seu custo de bytes deve permanecer explícito. A próxima ampliação só deve ocorrer
+em uma tranche independente, com comparação diferencial equivalente e benefício
+concreto. A Pipeline Completa permanece fora dessa migração enquanto seu contrato
+operacional estiver em estabilização. Caso esses critérios não sejam atendidos,
+manter JavaScript bem testado é preferível a migrar apenas por tecnologia.
