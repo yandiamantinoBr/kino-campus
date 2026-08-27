@@ -86,10 +86,18 @@
     return Math.max(min, Math.min(max, n));
   }
 
+  function _usesLocalProductShell() {
+    const env = window.KC_ENV && typeof window.KC_ENV === 'object' ? window.KC_ENV : {};
+    const driver = String(env.DATA_DRIVER || env.driver || '').trim().toLowerCase();
+    if (driver === 'local') return true;
+    return Boolean(window.location && window.location.protocol === 'file:');
+  }
+
   function buildProductDetailHref(postId) {
     const normalized = String(postId || '').trim();
     if (!normalized) return '';
-    return `_product.html?id=${encodeURIComponent(normalized)}`;
+    const shell = _usesLocalProductShell() ? '_product.html' : 'product.html';
+    return `${shell}?id=${encodeURIComponent(normalized)}`;
   }
 
   function getConditionLabel(raw) {

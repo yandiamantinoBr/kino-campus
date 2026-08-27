@@ -66,7 +66,7 @@
     if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
       return window.KCUtils.buildProductDetailHref(data.post_id);
     }
-    return '_product.html?id=' + encodeURIComponent(data.post_id);
+    return 'product.html?id=' + encodeURIComponent(data.post_id);
   }
 
   function isDirectMessageNotification(notif) {

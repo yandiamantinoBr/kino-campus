@@ -2,7 +2,7 @@
 
 ## Visão geral
 
-O KinoCampus continua operando como aplicação estática hospedada na Vercel, com backend Supabase e sem bundler. Cada página HTML carrega explicitamente os scripts de que precisa via `<script defer>`, e a composição entre módulos acontece por meio de IIFEs e contratos expostos em `window.*`.
+O KinoCampus continua operando como aplicação estática hospedada na Vercel, com backend Supabase e sem bundler. Cada página HTML carrega explicitamente os scripts de que precisa via `<script defer>`, e a composição entre módulos acontece por meio de IIFEs e contratos expostos em `window.*`. TypeScript é usado somente em desenvolvimento para verificar contratos isolados em `types/`, com `noEmit` e sem participação no runtime ou build Vercel.
 
 ## Estado atual do repositório
 

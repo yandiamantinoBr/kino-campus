@@ -221,11 +221,11 @@ describe('_KCU.format.buildProductDetailHref', () => {
   beforeEach(() => { fn = window._KCU.format.buildProductDetailHref; });
 
   test('gera URL correta para ID simples', () => {
-    expect(fn('abc-123')).toBe('_product.html?id=abc-123');
+    expect(fn('abc-123')).toBe('product.html?id=abc-123');
   });
 
   test('encoda caracteres especiais no ID', () => {
-    expect(fn('id com espaço')).toBe('_product.html?id=id%20com%20espa%C3%A7o');
+    expect(fn('id com espaço')).toBe('product.html?id=id%20com%20espa%C3%A7o');
   });
 
   test('retorna "" para ID vazio', () => {
@@ -239,7 +239,18 @@ describe('_KCU.format.buildProductDetailHref', () => {
 
   test('aceita UUID como ID', () => {
     const uuid = '550e8400-e29b-41d4-a716-446655440000';
-    expect(fn(uuid)).toBe(`_product.html?id=${uuid}`);
+    expect(fn(uuid)).toBe(`product.html?id=${uuid}`);
+  });
+
+  test('preserva o shell estático quando o driver de desenvolvimento é local', () => {
+    const previous = window.KC_ENV;
+    window.KC_ENV = { driver: 'local' };
+    try {
+      expect(fn('abc-123')).toBe('_product.html?id=abc-123');
+    } finally {
+      if (previous === undefined) delete window.KC_ENV;
+      else window.KC_ENV = previous;
+    }
   });
 });
 

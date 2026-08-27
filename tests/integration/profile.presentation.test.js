@@ -141,7 +141,7 @@ beforeEach(() => {
       return normalized ? ('@' + normalized) : '';
     },
     buildProductDetailHref(postId) {
-      return '_product.html?id=' + encodeURIComponent(String(postId || '').trim());
+      return 'product.html?id=' + encodeURIComponent(String(postId || '').trim());
     }
   };
   window.KCAccountProfileUtils = createSharedMocks();

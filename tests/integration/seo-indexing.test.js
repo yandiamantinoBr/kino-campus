@@ -220,6 +220,7 @@ describe('SEO e indexacao publica', () => {
     expect(source).toContain('replaceOrInsertCanonical');
     expect(source).toContain('replaceOrInsertRobots');
     expect(source).toContain('replaceOrInsertProductJsonLd');
+    expect(source).toContain('replaceOrInsertImagePreload');
     expect(source).toContain('injectVisibleProductContent');
     expect(source).toContain('postTitle');
     expect(source).toContain('postDescription');

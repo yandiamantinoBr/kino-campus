@@ -43,6 +43,9 @@ jobs:
       - name: Dependency security audit
         run: npm audit --audit-level=high
 
+      - name: TypeScript contracts (no emit)
+        run: npm run typecheck:contracts
+
       - name: Version map
         run: npm run check:version
 
@@ -155,6 +158,39 @@ jobs:
       - name: Stop local Supabase
         if: always()
         run: supabase stop --no-backup
+
+  browser-compatibility:
+    name: Chromium, Firefox, WebKit and mobile smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install browser engines
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
+
+      - name: Canonical route smoke across browser engines
+        run: npm run test:e2e:cross-browser
+
+      - name: Upload cross-browser report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-cross-browser-report
+          path: output/playwright-cross-browser-report
+          retention-days: 7
+          if-no-files-found: ignore
 
   edge-functions:
     name: Edge Functions type-check

@@ -179,6 +179,37 @@ describe('KCAds feed monetization', () => {
     expect(script.parentElement).toBe(document.head);
   });
 
+  test('reconcilia grant e revoke de publicidade sem recarregar a página', () => {
+    document.body.innerHTML = [
+      '<div class="kc-feed-list">',
+      Array.from({ length: 5 }, (_, index) => '<article class="kc-card">' + (index + 1) + '</article>').join(''),
+      '</div>',
+    ].join('');
+    const config = KCAds.normalizeAdConfig({
+      status: 'active',
+      adsense_client_id: 'ca-pub-2776499020194231',
+      placement_modes: { feed_inline: 'adsense_only' },
+      adsense_slots: { feed_inline: '1234567890' },
+    });
+
+    expect(KCAds.renderAllAds([], { module_key: 'eventos' }, document, config)).toBe(false);
+    expect(document.querySelector('ins.adsbygoogle')).toBeFalsy();
+
+    window.KCConsent = { hasConsent: (key) => key === 'advertising' };
+    window.dispatchEvent(new CustomEvent('kc:consentchange'));
+    expect(document.querySelectorAll('ins.adsbygoogle')).toHaveLength(1);
+    expect(document.querySelectorAll('#kcAdsenseScript')).toHaveLength(1);
+
+    expect(KCAds.reconcileAdvertisingConsent()).toBe(true);
+    expect(document.querySelectorAll('ins.adsbygoogle')).toHaveLength(1);
+    expect(document.querySelectorAll('#kcAdsenseScript')).toHaveLength(1);
+
+    window.KCConsent = { hasConsent: () => false };
+    window.dispatchEvent(new CustomEvent('kc:consentchange'));
+    expect(document.querySelector('ins.adsbygoogle')).toBeFalsy();
+    expect(document.querySelector('#kcAdsenseScript')).toBeFalsy();
+  });
+
   test('carrega Auto ads apenas em feed com consentimento de publicidade', () => {
     const config = KCAds.normalizeAdConfig({
       status: 'active',
@@ -513,6 +544,7 @@ describe('KCAds feed monetization', () => {
     expect(source).toContain('if (initialLoadCompleted || initialLoadStarted) return;');
     expect(source).toContain('initialLoadStarted = true;');
     expect(source).toContain("root.document.addEventListener('kc:authchange', run);");
+    expect(source).toContain("root.addEventListener('kc:consentchange', reconcileAdvertisingConsent);");
   });
 
   test('tenta novamente no authchange quando o cliente Supabase fica pronto depois do fallback', async () => {

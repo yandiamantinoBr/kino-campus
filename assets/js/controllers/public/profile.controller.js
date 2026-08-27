@@ -300,7 +300,7 @@
     if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
       return window.KCUtils.buildProductDetailHref(normalized);
     }
-    return `_product.html?id=${encodeURIComponent(normalized)}`;
+    return `product.html?id=${encodeURIComponent(normalized)}`;
   }
 
   function statusBadge(status) {

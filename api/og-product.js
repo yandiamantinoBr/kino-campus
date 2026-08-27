@@ -446,6 +446,24 @@ function replaceTitleTag(html, title) {
   return html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(title)}</title>`);
 }
 
+function getDeploymentRevision() {
+  const revision = String(
+    process.env.KC_BUILD_REVISION
+      || process.env.VERCEL_GIT_COMMIT_SHA
+      || '',
+  ).trim().toLowerCase();
+  return /^[a-f0-9]{7,64}$/.test(revision) ? revision : '';
+}
+
+function applyRuntimeAssetRevision(html) {
+  const revision = getDeploymentRevision();
+  if (!revision) return html;
+  return String(html || '').replace(
+    /(\b(?:src|href)="assets\/[^"?#]+)(?:\?v=[^"#]*)?((?:#[^"]*)?")/gi,
+    (_match, assetPath, suffix) => `${assetPath}?v=${revision}${suffix}`,
+  );
+}
+
 function replaceOrInsertCanonical(html, canonicalUrl) {
   const tag = `<link rel="canonical" href="${escapeAttr(canonicalUrl)}" />`;
   if (/<link\s+rel="canonical"/i.test(html)) {
@@ -466,6 +484,17 @@ function replaceOrInsertMetaDescription(html, description) {
   const tag = `<meta name="description" content="${escapeAttr(description)}" />`;
   if (/<meta\s+name="description"/i.test(html)) {
     return html.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, tag);
+  }
+  return html.replace('</head>', `  ${tag}\n</head>`);
+}
+
+function replaceOrInsertImagePreload(html, imageUrl) {
+  const image = isRemoteImageUrl(imageUrl) ? String(imageUrl).trim() : '';
+  if (!image) return html;
+
+  const tag = `<link rel="preload" as="image" href="${escapeAttr(image)}" fetchpriority="high" data-kc-product-image-preload="true" />`;
+  if (/data-kc-product-image-preload="true"/i.test(html)) {
+    return html.replace(/<link\s+[^>]*data-kc-product-image-preload="true"[^>]*\/?>/i, tag);
   }
   return html.replace('</head>', `  ${tag}\n</head>`);
 }
@@ -990,8 +1019,9 @@ function buildJobPosting(post, values) {
 
 function buildProduct(post, values) {
   if (post.module !== 'compra-venda') return null;
+  if (post.price == null || String(post.price).trim() === '') return null;
   const price = Number(post.price);
-  if (!Number.isFinite(price)) return null;
+  if (!Number.isFinite(price) || price < 0) return null;
   return {
     '@type': 'Product',
     '@id': `${values.canonicalUrl}#product`,
@@ -1118,6 +1148,7 @@ function applyIndexableMeta(html, post, values) {
   modified = replaceOrInsertMetaDescription(modified, values.description);
   modified = replaceOrInsertCanonical(modified, values.canonicalUrl);
   modified = replaceOrInsertRobots(modified, INDEXABLE_ROBOTS);
+  modified = replaceOrInsertImagePreload(modified, values.image);
   if (!/property="og:locale"/i.test(modified)) {
     modified = modified.replace('<meta property="og:type"', '<meta property="og:locale" content="pt_BR" />\n  <meta property="og:type"');
   }
@@ -1138,7 +1169,7 @@ function sendExplicitNotFoundResponse(res) {
   return sendHtmlResponse(
     res,
     404,
-    getErrorHtml(),
+    applyRuntimeAssetRevision(getErrorHtml()),
     'public, max-age=0, s-maxage=60, stale-while-revalidate=300'
   );
 }
@@ -1147,7 +1178,7 @@ export default async function handler(req, res) {
   // /404.html is rewritten here so the app can return a real 404 without
   // adding a thirteenth Serverless Function to the Hobby deployment.
   if (isExplicitNotFoundRequest(req)) return sendExplicitNotFoundResponse(res);
-  const html = getProductHtml();
+  const html = applyRuntimeAssetRevision(getProductHtml());
   const id = req && req.query ? req.query.id : '';
 
   if (!id) {
@@ -1194,6 +1225,7 @@ export default async function handler(req, res) {
 }
 
 export {
+  applyRuntimeAssetRevision,
   buildProductJsonLd,
   buildProductValues,
   fetchPost,

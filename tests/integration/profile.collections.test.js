@@ -109,7 +109,7 @@ function installPresentationFallback() {
       },
       buildPostDetailHref(value) {
         const normalized = String(value || '').trim();
-        return normalized ? ('_product.html?id=' + encodeURIComponent(normalized)) : '';
+        return normalized ? ('product.html?id=' + encodeURIComponent(normalized)) : '';
       },
       statusBadge(value) {
         return '<span class="status">' + String(value || '') + '</span>';
@@ -378,7 +378,7 @@ describe('window._KCPR.collections - comportamento', () => {
     }], false, deps);
 
     expect(list.children).toHaveLength(1);
-    expect(list.children[0].href).toContain('_product.html?id=post-1');
+    expect(list.children[0].href).toContain('product.html?id=post-1');
     expect(list.children[0].innerHTML).toContain('Oferta de quarto');
     expect(list.children[0].innerHTML).toContain('status');
     expect(list.children[0].innerHTML).toContain('visibility');
@@ -472,7 +472,7 @@ describe('window._KCPR.collections - comportamento', () => {
     expect(deps.state.comments).toHaveLength(1);
     expect(list.children).toHaveLength(1);
     expect(list.children[0].innerHTML).toContain('Post alvo');
-    expect(list.children[0].innerHTML).toContain('_product.html?id=legacy-1');
+    expect(list.children[0].innerHTML).toContain('product.html?id=legacy-1');
     expect(list.children[0].innerHTML).toContain('LINK:Comentário legal');
   });
 
@@ -503,7 +503,7 @@ describe('window._KCPR.collections - comportamento', () => {
     }], false, deps);
 
     expect(list.children).toHaveLength(1);
-    expect(list.children[0].href).toContain('_product.html?id=saved-1');
+    expect(list.children[0].href).toContain('product.html?id=saved-1');
     expect(list.children[0].innerHTML).toContain('save-kind');
     expect(list.children[0].innerHTML).toContain('compra-venda');
   });
@@ -563,8 +563,8 @@ describe('window._KCPR.collections - comportamento', () => {
 
     expect(list.innerHTML).toContain('Publicou');
     expect(list.innerHTML).toContain('Comentou em');
-    expect(list.innerHTML).toContain('_product.html?id=post-1');
-    expect(list.innerHTML).toContain('_product.html?id=legacy-2');
+    expect(list.innerHTML).toContain('product.html?id=post-1');
+    expect(list.innerHTML).toContain('product.html?id=legacy-2');
     expect(loading.style.display).toBe('none');
     expect(empty.style.display || '').not.toBe('block');
   });

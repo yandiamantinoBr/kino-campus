@@ -139,6 +139,42 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(sitemapResponse.body).toContain('<loc>https://www.kinocampus.com.br/</loc>');
   });
 
+  test('SSR antecipa somente a imagem LCP canônica de um post indexável', async () => {
+    const post = buildPost({
+      post_media: [
+        {
+          url: 'https://project.example.supabase.co/storage/v1/object/public/kino-media/capa.webp?width=1200&quality=80',
+          is_cover: true,
+        },
+      ],
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [post] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: post.id } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(
+      '<link rel="preload" as="image" href="https://project.example.supabase.co/storage/v1/object/public/kino-media/capa.webp?width=1200&amp;quality=80" fetchpriority="high" data-kc-product-image-preload="true" />',
+    );
+    expect(response.body.match(/data-kc-product-image-preload="true"/g)).toHaveLength(1);
+  });
+
+  test('SSR noindex não antecipa mídia que não será renderizada no HTML inicial', async () => {
+    const post = buildPost({
+      description: 'Curta.',
+      post_media: [{ url: 'https://project.example.supabase.co/storage/noindex.webp', is_cover: true }],
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [post] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: post.id } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('noindex,follow,noarchive');
+    expect(response.body).not.toContain('data-kc-product-image-preload="true"');
+  });
+
   test('query de rota interna de 404 nunca altera a resposta pública do sitemap', async () => {
     global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [] });
     const sitemapResponse = createResponse();
@@ -161,6 +197,27 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(response.statusCode).toBe(200);
     expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(global.fetch.mock.calls[1][0]).not.toContain('image_url');
+  });
+
+  test('sitemap pagina publicações com ordenação determinística além do primeiro lote', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => buildPost({
+      id: `post-page-1-${index}`,
+    }));
+    const secondPage = [buildPost({ id: 'post-page-2-0' })];
+    global.fetch
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => firstPage })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => secondPage });
+
+    const response = createResponse();
+    await sitemapHandler({}, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch.mock.calls[0][0]).toContain('order=updated_at.desc.nullslast,id.asc');
+    expect(global.fetch.mock.calls[0][0]).toContain('offset=0&limit=1000');
+    expect(global.fetch.mock.calls[1][0]).toContain('offset=1000&limit=1000');
+    expect(response.body).toContain('product.html?id=post-page-1-999');
+    expect(response.body).toContain('product.html?id=post-page-2-0');
   });
 
   test('sitemap preserva URLs estaticas quando Supabase falha e RSS sinaliza indisponibilidade', async () => {
@@ -734,6 +791,31 @@ describe('política SEO dinâmica compartilhada', () => {
 
     expect(richEntity(buildProductJsonLd(invalidJob, buildProductValues(invalidJob)))['@type'])
       .toBe('Article');
+  });
+
+  test.each([
+    ['preço ausente', null],
+    ['preço vazio', ''],
+    ['preço negativo', -1],
+    ['preço não numérico', 'a combinar'],
+  ])('Product volta para Article quando %s não forma uma oferta válida', (_label, price) => {
+    const post = buildPost({ module: 'compra-venda', price });
+    const entity = richEntity(buildProductJsonLd(post, buildProductValues(post)));
+
+    expect(entity['@type']).toBe('Article');
+    expect(entity).not.toHaveProperty('offers');
+  });
+
+  test('Product preserva preço zero explícito como oferta gratuita válida', () => {
+    const post = buildPost({ module: 'compra-venda', price: 0 });
+    const entity = richEntity(buildProductJsonLd(post, buildProductValues(post)));
+
+    expect(entity['@type']).toBe('Product');
+    expect(entity.offers).toMatchObject({
+      price: 0,
+      priceCurrency: 'BRL',
+      availability: 'https://schema.org/InStock',
+    });
   });
 
   test('título ausente permanece noindex no SSR mesmo com fallback visual', async () => {

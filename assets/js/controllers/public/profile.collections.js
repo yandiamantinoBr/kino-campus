@@ -71,7 +71,7 @@
       return presentation.buildPostDetailHref(value);
     }
     var normalized = String(value || '').trim();
-    return normalized ? ('_product.html?id=' + encodeURIComponent(normalized)) : '';
+    return normalized ? ('product.html?id=' + encodeURIComponent(normalized)) : '';
   }
 
   function _statusBadge(value, deps) {

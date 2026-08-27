@@ -8,6 +8,8 @@ import {
 import { fetchPublicSupabaseJson } from './_lib/supabase-public-request.js';
 
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
+const POST_PAGE_SIZE = 1000;
+const MAX_POST_PAGES = 49;
 
 const STATIC_ROUTES = [
   { path: '/', changefreq: 'daily', priority: '1.0' },
@@ -94,18 +96,33 @@ async function fetchPublishedPostRoutes() {
 
   const select = 'id,legacy_id,title,description,updated_at,created_at,expires_at,status,image_url,metadata';
   const selectCompat = 'id,legacy_id,title,description,updated_at,created_at,expires_at,status,metadata';
-  const endpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
-  const endpointCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&status=eq.published&order=updated_at.desc.nullslast&limit=1000`;
-  let result = await fetchPublicSupabaseJson(endpoint, { key });
-  if (!result.ok && result.status === 400) {
-    result = await fetchPublicSupabaseJson(endpointCompat, { key });
+  let activeSelect = select;
+  const posts = [];
+
+  for (let page = 0; page < MAX_POST_PAGES; page += 1) {
+    const offset = page * POST_PAGE_SIZE;
+    const endpoint = `${url}/rest/v1/posts?select=${encodeURI(activeSelect)}&status=eq.published&order=updated_at.desc.nullslast,id.asc&offset=${offset}&limit=${POST_PAGE_SIZE}`;
+    let result = await fetchPublicSupabaseJson(endpoint, { key });
+
+    if (page === 0 && !result.ok && result.status === 400 && activeSelect === select) {
+      activeSelect = selectCompat;
+      const compatEndpoint = `${url}/rest/v1/posts?select=${encodeURI(activeSelect)}&status=eq.published&order=updated_at.desc.nullslast,id.asc&offset=0&limit=${POST_PAGE_SIZE}`;
+      result = await fetchPublicSupabaseJson(compatEndpoint, { key });
+    }
+    if (!result.ok || !Array.isArray(result.data)) {
+      return { ok: false, reason: result.reason || 'supabase_invalid_response' };
+    }
+
+    posts.push(...result.data);
+    if (result.data.length < POST_PAGE_SIZE) break;
+    if (page === MAX_POST_PAGES - 1) {
+      return { ok: false, reason: 'sitemap_requires_index' };
+    }
   }
-  if (!result.ok || !Array.isArray(result.data)) {
-    return { ok: false, reason: result.reason || 'supabase_invalid_response' };
-  }
+
   return {
     ok: true,
-    routes: result.data
+    routes: posts
       .filter((post) => shouldIndexPost(post, buildIndexabilityValues(post)))
       .map((post) => ({
         path: `/product.html?id=${encodeURIComponent(canonicalPostId(post))}`,
