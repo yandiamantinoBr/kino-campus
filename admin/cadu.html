@@ -357,6 +357,9 @@
     .kc-pipeline-stage__btn:hover { filter: brightness(1.1); }
     .kc-pipeline-stage__btn:disabled { background: rgba(255,107,0,.3); cursor: not-allowed; }
     .kc-pipeline-stage__btn.is-danger { background: rgba(239,68,68,.85); }
+    .kc-pipeline-stage__btn.is-renewal { background: rgba(245,158,11,.10); border: 1px dashed rgba(245,158,11,.72); color: #fbbf24; box-shadow: inset 0 0 0 1px rgba(245,158,11,.08); }
+    .kc-pipeline-stage__btn.is-renewal:hover { background: rgba(245,158,11,.18); filter: none; }
+    .kc-pipeline-log > .kc-cadu-empty { color: #cbd5e1; opacity: .92; }
     .kc-pipeline-stage__blocker { display: flex; align-items: flex-start; gap: 6px; min-width: 0; overflow-wrap: anywhere; border: 1px solid rgba(245,158,11,.42); background: rgba(245,158,11,.09); color: #fbbf24; border-radius: 8px; padding: 7px 8px; font-size: .72rem; line-height: 1.35; }
     .kc-pipeline-stage__blocker i { flex: 0 0 auto; margin-top: 1px; }
     .kc-pipeline-stage__blocker strong { color: inherit; }
@@ -663,6 +666,7 @@
     html:not([data-theme="dark"]) .kc-cadu-review-decision.is-reject { color: #b91c1c; }
     html:not([data-theme="dark"]) .kc-cadu-review-decision.is-approve { color: #047857; }
     html:not([data-theme="dark"]) .kc-cadu-review-queue__action-warning { color: #92400e; }
+    html:not([data-theme="dark"]) .kc-pipeline-stage__btn.is-renewal { color: #92400e; }
     .kc-cadu-muted { color: var(--kc-text-dark-secondary); font-size: .78rem; }
     .kc-cadu-source-tier-select, .kc-cadu-source-note-input { width: 100%; min-width: 0; max-width: 100%; }
     .kc-cadu-url-link { overflow-wrap: anywhere; }
@@ -859,7 +863,7 @@
       <section class="kc-cadu-hero">
         <div>
           <h1><i class="fas fa-robot"></i> Cadu (OpenClaw)</h1>
-          <p>Curador de sites institucionais e perfis do Instagram da UFG. Dados ao vivo da VPS Hostinger via cadu-api.</p>
+          <p>Curador de sites institucionais e perfis do Instagram da UFG. Dados operacionais consultados na VPS Hostinger via cadu-api.</p>
           <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <span class="kc-cadu-status is-loading" id="cadu-status-pill" role="status" aria-live="polite" aria-atomic="true" aria-busy="true"><span class="kc-cadu-status-dot kc-cadu-status-dot--loading"></span> <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Checando cadu-api…</span>
             <span class="kc-cadu-status" id="cadu-bot-pill" style="display:none;"><span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fab fa-telegram"></i> Bot Telegram ativo</span>
@@ -902,7 +906,7 @@
           <div class="kc-cadu-kpi__hint"><i class="fas fa-arrow-right"></i> ver aba Feed Coletado</div>
         </button>
         <div class="kc-cadu-kpi" data-kpi-tab="" title="Status do cadu-api (FastAPI sidecar) — somente leitura" data-i18n-tooltip="tooltip.cadu-kpi-api">
-          <div class="kc-cadu-kpi__label"><i class="fas fa-heart-pulse"></i> cadu-api</div>
+          <div class="kc-cadu-kpi__label"><i class="fas fa-heart-pulse"></i> Saúde cadu-api</div>
           <strong id="kpi-api">—</strong>
           <small id="kpi-api-detail">FastAPI sidecar</small>
         </div>
@@ -1455,6 +1459,6 @@
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=53f1cc040c2b3bd6"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=c182b4869f969688"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=dd988b7d5bb9f8d1"></script>
 </body>
 </html>
