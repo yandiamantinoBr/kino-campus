@@ -11,6 +11,7 @@ const controller = fs.readFileSync(
 const html = fs.readFileSync(path.join(ROOT, 'admin/cadu.html'), 'utf8');
 const healthProxy = fs.readFileSync(path.join(ROOT, 'api/cadu/health.js'), 'utf8');
 const controlProxy = fs.readFileSync(path.join(ROOT, 'server/cadu-control-proxy.js'), 'utf8');
+const caduAuth = fs.readFileSync(path.join(ROOT, 'server/cadu-auth.mjs'), 'utf8');
 const sourceModel = fs.readFileSync(
   path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-sources.js'),
   'utf8',
@@ -295,6 +296,23 @@ describe('admin Cadu runtime hardening', () => {
     expect(controller).not.toContain('Bot: 8746');
   });
 
+  test('prioritizes the active tab before auxiliary Cadu refreshes', () => {
+    const refreshAll = functionSource('performRefreshAll');
+    const primaryGate = refreshAll.indexOf('await Promise.all([');
+    const supportingWave = refreshAll.indexOf('var supportingRefreshes = [');
+
+    expect(refreshAll).toContain("if (state.currentTab === 'sites')");
+    expect(refreshAll).toContain("else if (state.currentTab === 'feed')");
+    expect(refreshAll).toContain('operationalRefresh = refreshPipeline()');
+    expect(primaryGate).toBeGreaterThan(0);
+    expect(supportingWave).toBeGreaterThan(primaryGate);
+    expect(refreshAll.slice(0, primaryGate)).not.toContain('loadInstitutionalReviews()');
+    expect(refreshAll.slice(0, primaryGate)).not.toContain('loadPendingInstitutionalReviewAuthority()');
+    expect(refreshAll).toContain('await Promise.allSettled(supportingRefreshes)');
+    expect(functionSource('refreshAll')).toContain('if (state.refreshAllPromise)');
+    expect(functionSource('refreshAll')).toContain('return state.refreshAllPromise');
+  });
+
   test('allows a cold context snapshot to finish before the proxy deadline', () => {
     const contextTimeout = Number(
       controller.match(/var OPENCLAW_CONTEXT_TIMEOUT_MS = (\d+);/)[1],
@@ -305,19 +323,19 @@ describe('admin Cadu runtime hardening', () => {
 
     expect(contextTimeout).toBe(20000);
     expect(contextTimeout).toBeLessThan(proxyTimeout);
-    expect(functionSource('checkHealth')).toContain(
+    expect(functionSource('refreshCaduOperationalContext')).toContain(
       "apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS })",
     );
   });
 
   test('never caches Cadu health and rejects browser-direct production configuration', async () => {
     const healthFetch = functionSource('fetchCaduHealth');
-    expect(controller).toContain('var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;');
+    expect(controller).toContain('var CADU_HEALTH_REQUEST_TIMEOUT_MS = 18000;');
     expect(controller.match(/fetch\('\/api\/cadu\/health', \{\s*cache: 'no-store'/g)).toHaveLength(1);
     expect(healthFetch).toContain('timeoutController.abort()');
     expect(healthFetch).toContain('upstreamSignal.addEventListener');
     expect(functionSource('checkHealth')).toContain('await fetchCaduHealth()');
-    expect(controller).toContain('fetchCaduHealth()\n        .then(function (health)');
+    expect(controller).toContain('checkHealth({ includeContext: false })\n        .then(function (health)');
     expect(healthProxy).toContain("res.setHeader('Cache-Control', 'private, no-store')");
     expect(healthProxy).toMatch(/fetchCaduUpstream\(`\$\{apiUrl\.replace[\s\S]*?cache: 'no-store'/);
     const configSource = functionSource('getCaduConfig');
@@ -334,7 +352,7 @@ describe('admin Cadu runtime hardening', () => {
     const fetchCaduHealth = Function(
       'fetch', 'AbortController', 'setTimeout', 'clearTimeout', 'CADU_HEALTH_REQUEST_TIMEOUT_MS',
       `"use strict"; return (${executableHealthFetch});`,
-    )(fetchStub, AbortController, setTimeout, clearTimeout, 12000);
+    )(fetchStub, AbortController, setTimeout, clearTimeout, 18000);
     const health = await fetchCaduHealth();
     expect(health).toEqual({ ok: true, status: 200, data: { status: 'ok' } });
     expect(fetchStub).toHaveBeenCalledWith('/api/cadu/health', expect.objectContaining({
@@ -363,6 +381,286 @@ describe('admin Cadu runtime hardening', () => {
     };
     expect(configFor(localAuthenticatedWindow, localAuthenticatedWindow.location))
       .toMatchObject({ direct: true, token: 'local-only', configurationError: '' });
+  });
+
+  test('keeps browser deadlines beyond the complete proxy contracts', () => {
+    const healthTimeout = Number(
+      controller.match(/var CADU_HEALTH_REQUEST_TIMEOUT_MS = (\d+);/)[1],
+    );
+    const pipelineTimeout = Number(
+      controller.match(/var CADU_PIPELINE_REQUEST_TIMEOUT_MS = (\d+);/)[1],
+    );
+    const upstreamHealthTimeout = Number(
+      healthProxy.match(/AbortSignal\.timeout\((\d+)\)/)[1],
+    );
+    const authTimeout = Number(
+      caduAuth.match(/const ADMIN_AUTH_DEADLINE_MS = ([\d_]+);/)[1].replace(/_/g, ''),
+    );
+    const controlTimeout = Number(
+      controlProxy.match(/const NON_STREAM_TIMEOUT_MS = ([\d_]+);/)[1].replace(/_/g, ''),
+    );
+
+    expect(healthTimeout).toBeGreaterThan(upstreamHealthTimeout);
+    expect(pipelineTimeout).toBeGreaterThan(authTimeout + controlTimeout);
+    expect(functionSource('performPipelineRefresh')).toContain(
+      'timeoutMs: CADU_PIPELINE_REQUEST_TIMEOUT_MS',
+    );
+    expect(functionSource('performPipelineRefresh')).not.toContain('timeoutMs: 5000');
+  });
+
+  test('recovers the health pill after a transient timeout and coalesces concurrent probes', async () => {
+    document.body.innerHTML = [
+      '<div id="cadu-status-pill"></div>',
+      '<div id="cadu-context-pill"></div>',
+      '<div id="cadu-version-pill"></div>',
+      '<div id="cadu-version-text"></div>',
+      '<div id="kpi-api"></div>',
+      '<div id="kpi-api-detail"></div>',
+    ].join('');
+    let release;
+    const fetchCaduHealth = jest.fn()
+      .mockImplementationOnce(() => new Promise((resolve, reject) => {
+        release = () => {
+          const error = new Error('aborted');
+          error.name = 'AbortError';
+          reject(error);
+        };
+      }))
+      .mockResolvedValueOnce({ ok: true, status: 200, data: { status: 'ok', version: '0.5.26', ts: 1_787_863_989 } });
+    const harness = Function(
+      'document', 'fetchCaduHealth',
+      `"use strict";
+       var state = { healthCheckPromise: null, currentTab: 'pipeline', apiHealthy: false, lastVersion: null };
+       function $(selector) { return document.querySelector(selector); }
+       function setStatus(element, className, html) { element.className = className || ''; element.innerHTML = html; }
+       function hideTelegramHeroStatus() {}
+       function clearCaduHealthRecovery() { state.healthFailureCount = 0; }
+       function scheduleCaduHealthRecovery() { state.healthFailureCount = (state.healthFailureCount || 0) + 1; }
+       function apiFetch() { throw new Error('context must stay lazy on Pipeline'); }
+       function openclawReachableFromContext() { return null; }
+       var OPENCLAW_CONTEXT_TIMEOUT_MS = 20000;
+       async ${functionSource('checkHealth')}
+       return { state: state, checkHealth: checkHealth };`,
+    )(document, fetchCaduHealth);
+
+    const first = harness.checkHealth({ includeContext: false });
+    const concurrent = harness.checkHealth({ includeContext: false });
+    expect(fetchCaduHealth).toHaveBeenCalledTimes(1);
+    release();
+    await Promise.all([first, concurrent]);
+    expect(harness.state.apiHealthy).toBe(false);
+    expect(document.querySelector('#cadu-status-pill').textContent).toContain('demorou para responder');
+
+    await harness.checkHealth({ includeContext: false });
+    expect(fetchCaduHealth).toHaveBeenCalledTimes(2);
+    expect(harness.state.apiHealthy).toBe(true);
+    expect(document.querySelector('#cadu-status-pill').textContent).toContain('cadu-api online');
+    expect(document.querySelector('#kpi-api').textContent).toBe('OK');
+  });
+
+  test('preserves a concurrent context request behind a lightweight health probe', async () => {
+    document.body.innerHTML = [
+      '<div id="cadu-status-pill"></div>',
+      '<div id="cadu-context-pill" style="display:none"></div>',
+      '<div id="cadu-version-pill"></div>',
+      '<div id="cadu-version-text"></div>',
+      '<div id="kpi-api"></div>',
+      '<div id="kpi-api-detail"></div>',
+    ].join('');
+    let releaseHealth;
+    const fetchCaduHealth = jest.fn(() => new Promise((resolve) => {
+      releaseHealth = () => resolve({
+        ok: true,
+        status: 200,
+        data: { status: 'ok', version: '0.5.26', ts: 1_787_863_989 },
+      });
+    }));
+    const apiFetch = jest.fn().mockResolvedValue({
+      sites: { count: 172 },
+      feed: { count: 273 },
+    });
+    const harness = Function(
+      'document', 'fetchCaduHealth', 'apiFetch',
+      `"use strict";
+       var state = { healthCheckPromise: null, healthContextPromise: null, currentTab: 'sites', apiHealthy: false, openclawContext: null };
+       function $(selector) { return document.querySelector(selector); }
+       function setStatus(element, className, html) { element.className = className || ''; element.innerHTML = html; }
+       function hideTelegramHeroStatus() {}
+       function clearCaduHealthRecovery() { state.healthFailureCount = 0; }
+       function scheduleCaduHealthRecovery() { state.healthFailureCount = (state.healthFailureCount || 0) + 1; }
+       function openclawReachableFromContext() { return true; }
+       var OPENCLAW_CONTEXT_TIMEOUT_MS = 20000;
+       async ${functionSource('refreshCaduOperationalContext')}
+       async ${functionSource('checkHealth')}
+       return { state: state, checkHealth: checkHealth };`,
+    )(document, fetchCaduHealth, apiFetch);
+
+    const lightProbe = harness.checkHealth({ includeContext: false });
+    const contextualProbe = harness.checkHealth({ includeContext: true });
+    expect(fetchCaduHealth).toHaveBeenCalledTimes(1);
+    releaseHealth();
+    await Promise.all([lightProbe, contextualProbe]);
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(harness.state.openclawContext).toMatchObject({ sites: { count: 172 } });
+    expect(document.querySelector('#cadu-context-pill').style.display).toBe('');
+    expect(document.querySelector('#cadu-context-pill').textContent).toContain('172 sites');
+  });
+
+  test('classifies snapshot transport failures and preserves a last valid display', () => {
+    const state = {
+      pipelineLastSuccessAt: Date.parse('2026-08-27T20:00:00Z'),
+      pipelineStages: [{ id: 'all' }],
+    };
+    const classify = Function(
+      'state',
+      `"use strict"; return (${functionSource('pipelineSnapshotFailureReason')});`,
+    )(state);
+
+    expect(classify({ status: 0, errorCode: 'client_timeout' })).toContain('tempo limite');
+    expect(classify({ status: 401 })).toContain('sessão administrativa expirada');
+    expect(classify({ status: 403 })).toContain('permissão administrativa');
+    expect(classify({ status: 502, data: { error: 'cadu_api_unreachable' } })).toContain('alcançar o cadu-api');
+    expect(classify({ status: 504, data: { error: 'cadu_api_timeout' } })).toContain('tempo limite do proxy');
+    expect(classify({ status: 503, data: { error: 'admin_auth_unreachable' } })).toContain('autoridade administrativa');
+    expect(classify({ status: 503, data: { error: 'cadu_api_not_configured' } })).toContain('não está configurado');
+    expect(classify({ status: 504 })).toContain('exibindo a última visão válida');
+
+    const refreshSource = functionSource('performPipelineRefresh');
+    expect(refreshSource).toContain('if (!Array.isArray(state.pipelineStages) || state.pipelineStages.length === 0)');
+    expect(refreshSource).toContain('pipelineSnapshotFailureReason(response)');
+    expect(refreshSource).toContain('state.pipelineHealthStale = true');
+    expect(refreshSource).toContain('renderPipelineActive(state.pipelineActive)');
+    expect(refreshSource).toContain('renderPipelineHealth(state.pipelineHealth)');
+    expect(functionSource('schedulePipelineControlExpiry')).toContain('renderPipelineActive(state.pipelineActive)');
+    expect(functionSource('schedulePipelineControlExpiry')).toContain('renderPipelineHealth(state.pipelineHealth)');
+    expect(functionSource('renderPipelineActive')).toContain('var canStop = pipelineControlIsReady() &&');
+  });
+
+  test('keeps the last valid pipeline state when a 200 response has a null body', async () => {
+    const previousActive = { id: 'run-preserved', status: 'running' };
+    const state = {
+      pipelineRequestGeneration: 0,
+      pipelineStages: [{ id: 'all' }],
+      pipelineActive: previousActive,
+      pipelineHistory: [{ id: 'old-run' }],
+      pipelineHealth: { level: 'ok' },
+      pipelineHealthStale: false,
+    };
+    const renderPipelineActive = jest.fn();
+    const reconcilePipelineLogTransport = jest.fn();
+    const refresh = Function(
+      'state', 'apiFetchResponse', 'invalidatePipelineControl', 'pipelineSnapshotFailureReason',
+      'renderPipelineStages', 'renderPipelineActive', 'renderPipelineHealth',
+      'validatePipelineControlSnapshot', 'pipelineStagesForDisplay', 'normalizePipelineRun',
+      'renderPipelineHistory', 'updatePipelineBadge', 'refreshPipelineHealth',
+      'reconcilePipelineLogTransport', 'schedulePipelineControlExpiry',
+      `"use strict"; var CADU_PIPELINE_REQUEST_TIMEOUT_MS = 38000; async ${functionSource('performPipelineRefresh')}; return performPipelineRefresh;`,
+    )(
+      state,
+      jest.fn().mockResolvedValue({ ok: true, status: 200, data: null }),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      renderPipelineActive,
+      jest.fn(),
+      jest.fn(() => ({ ok: false, reason: 'payload inválido' })),
+      jest.fn(() => []),
+      jest.fn((value) => value),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      reconcilePipelineLogTransport,
+      jest.fn(),
+    );
+
+    await expect(refresh()).resolves.toBeUndefined();
+    expect(state.pipelineActive).toBe(previousActive);
+    expect(state.pipelineHealthStale).toBe(true);
+    expect(renderPipelineActive).toHaveBeenCalledWith(previousActive);
+    expect(reconcilePipelineLogTransport).toHaveBeenCalledWith(previousActive);
+  });
+
+  test('coalesces concurrent full refreshes into one supporting request wave', async () => {
+    document.body.innerHTML = '<div id="cadu-loading"></div><div id="cadu-status-pill"></div>';
+    let releasePrimary;
+    const refreshPipeline = jest.fn(() => new Promise((resolve) => {
+      releasePrimary = resolve;
+    }));
+    const loadSites = jest.fn().mockResolvedValue(undefined);
+    const loadFeed = jest.fn().mockResolvedValue(undefined);
+    const loadInstitutionalReviews = jest.fn().mockResolvedValue(undefined);
+    const loadPendingAuthority = jest.fn().mockResolvedValue(undefined);
+    const checkHealth = jest.fn().mockResolvedValue({ ok: true });
+    const reviews = { refreshSummary: jest.fn().mockResolvedValue(undefined) };
+    const harness = Function(
+      'document', 'window', 'refreshPipeline', 'loadSites', 'loadFeed',
+      'loadInstitutionalReviews', 'loadPendingInstitutionalReviewAuthority', 'checkHealth',
+      `"use strict";
+       var state = { currentTab: 'pipeline', refreshAllPromise: null, refreshAllForcePending: false, refreshAllForceInFlight: false };
+       function $(selector) { return document.querySelector(selector); }
+       function loadSitesProxy() { return loadSites(); }
+       function loadFeedProxy(force) { return loadFeed(force); }
+       function refreshOpenclaw() { return Promise.resolve(); }
+       async ${functionSource('performRefreshAll')
+    .replace(/loadSites\(\)/g, 'loadSitesProxy()')
+    .replace(/loadFeed\(true\)/g, 'loadFeedProxy(true)')}
+       ${functionSource('refreshAll')}
+       return { refreshAll: refreshAll, state: state };`,
+    )(
+      document,
+      { KCCaduReviews: reviews },
+      refreshPipeline,
+      loadSites,
+      loadFeed,
+      loadInstitutionalReviews,
+      loadPendingAuthority,
+      checkHealth,
+    );
+
+    const first = harness.refreshAll();
+    const second = harness.refreshAll();
+    expect(first).toBe(second);
+    expect(refreshPipeline).toHaveBeenCalledTimes(1);
+    releasePrimary();
+    await Promise.all([first, second]);
+
+    expect(checkHealth).toHaveBeenCalledTimes(1);
+    expect(loadSites).toHaveBeenCalledTimes(1);
+    expect(loadFeed).toHaveBeenCalledTimes(1);
+    expect(loadInstitutionalReviews).toHaveBeenCalledTimes(1);
+    expect(loadPendingAuthority).toHaveBeenCalledTimes(1);
+    expect(reviews.refreshSummary).toHaveBeenCalledTimes(1);
+  });
+
+  test('marks only its own request deadline as a client timeout', async () => {
+    jest.useFakeTimers();
+    const caduFetchRaw = jest.fn((_path, options) => new Promise((resolve, reject) => {
+      options.signal.addEventListener('abort', () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      }, { once: true });
+    }));
+    const apiFetchResponse = Function(
+      'caduFetchRaw',
+      `"use strict";
+       function buildCaduApiUrl(path) { return path; }
+       return (async ${functionSource('apiFetchResponse')});`,
+    )(caduFetchRaw);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const pending = apiFetchResponse('/api/cadu/pipeline', { timeoutMs: 50 });
+      await jest.advanceTimersByTimeAsync(50);
+      await expect(pending).resolves.toMatchObject({
+        ok: false,
+        status: 0,
+        errorCode: 'client_timeout',
+      });
+    } finally {
+      errorSpy.mockRestore();
+      jest.useRealTimers();
+    }
   });
 
   test('does not leave pipeline health indefinitely loading on a legacy snapshot', () => {

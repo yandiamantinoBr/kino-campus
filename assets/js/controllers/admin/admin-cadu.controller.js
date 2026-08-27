@@ -21,7 +21,14 @@
   // status probe. Keep this deadline above that bound and below the 25 s
   // server proxy deadline so the browser never aborts a valid cold response.
   var OPENCLAW_CONTEXT_TIMEOUT_MS = 20000;
-  var CADU_HEALTH_REQUEST_TIMEOUT_MS = 12000;
+  // O navegador deve aguardar mais que o limite do proxy (15 s), incluindo
+  // cold start e trânsito Vercel. Desistir antes do proxy produz falso OFF.
+  var CADU_HEALTH_REQUEST_TIMEOUT_MS = 18000;
+  var CADU_HEALTH_RECOVERY_BASE_MS = 5000;
+  var CADU_HEALTH_RECOVERY_MAX_MS = 60000;
+  // A rota protegida pode gastar até 8 s na autoridade administrativa e mais
+  // 25 s no cadu-api. O cliente precisa cobrir o contrato serverless inteiro.
+  var CADU_PIPELINE_REQUEST_TIMEOUT_MS = 38000;
   var OPENCLAW_AGENT_SEND_TIMEOUT_MS = 290000;
   var OPENCLAW_MAX_BACKOFF_MS = 5 * 60000;
   var SOURCE_REGISTRY_READINESS_TIMEOUT_MS = 15000;
@@ -85,6 +92,10 @@
     feedFilter: { q: '' },
     currentTab: 'sites',
     apiHealthy: false,
+    healthCheckPromise: null,
+    healthContextPromise: null,
+    healthFailureCount: 0,
+    healthRecoveryTimer: null,
     publishingKey: null,  // chave da ação editorial em curso (evita duplo-clique)
     pipelineActive: null,
     pipelineStages: [],
@@ -93,6 +104,7 @@
     pipelineControlReady: false,
     pipelineControlReason: 'snapshot ainda não validado',
     pipelineSnapshotExpiresAt: 0,
+    pipelineLastSuccessAt: 0,
     pipelineRequestGeneration: 0,
     pipelineRefreshPromise: null,
     pipelineExpiryTimer: null,
@@ -100,7 +112,10 @@
     pipelineStartPending: false,
     pipelineStopPendingRunId: null,
     pipelineHealth: null,
-    lastVersion: null
+    pipelineHealthStale: false,
+    refreshAllPromise: null,
+    refreshAllForcePending: false,
+    refreshAllForceInFlight: false
   };
 
   // ============================================================
@@ -124,23 +139,6 @@
     var d = new Date(unix * (unix < 1e12 ? 1000 : 1));
     if (isNaN(d.getTime())) return '—';
     return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  }
-
-  function compareVersions(a, b) {
-    var pa = String(a || '').split('.').map(function (part) { return parseInt(part, 10) || 0; });
-    var pb = String(b || '').split('.').map(function (part) { return parseInt(part, 10) || 0; });
-    var len = Math.max(pa.length, pb.length);
-    for (var i = 0; i < len; i++) {
-      var da = pa[i] || 0;
-      var db = pb[i] || 0;
-      if (da > db) return 1;
-      if (da < db) return -1;
-    }
-    return 0;
-  }
-
-  function versionAtLeast(version, minimum) {
-    return compareVersions(version, minimum) >= 0;
   }
 
   function setStatus(pill, kind, html) {
@@ -428,50 +426,89 @@
     }
   }
 
-  async function checkHealth() {
-    var pill = $('#cadu-status-pill');
-    var contextPill = $('#cadu-context-pill');
-    var versionPill = $('#cadu-version-pill');
-    var versionText = $('#cadu-version-text');
-    try {
-      var health = await fetchCaduHealth();
-      var data = health.data;
-      if (health.ok && data && data.status === 'ok') {
-        state.apiHealthy = true;
-        setStatus(pill, null,
-          '<span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fas fa-circle-check"></i> cadu-api online (v' + (data.version || '?') + ')');
-        // atualiza KPI api
-        $('#kpi-api').textContent = 'OK';
-        var healthTimestampMs = typeof data.ts === 'number'
-          ? data.ts * 1000
-          : Date.parse(String(data.ts || ''));
-        $('#kpi-api-detail').textContent = Number.isFinite(healthTimestampMs)
-          ? 'ts ' + new Date(healthTimestampMs).toLocaleTimeString('pt-BR')
-          : 'ts indisponível';
-        if (versionText) versionText.textContent = 'v' + (data.version || '?');
-        if (versionPill) versionPill.style.display = '';
-        // O endpoint de contexto também consulta o OpenClaw. Na aba OpenClaw,
-        // o refresh dedicado já fornece o estado e evitamos CLIs concorrentes.
-        try {
-          var ctx = state.currentTab === 'openclaw'
-            ? null
-            : await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS });
-          if (ctx && !ctx.__error) {
-            state.openclawContext = ctx;
-            if (contextPill) {
-              var openclawReachable = openclawReachableFromContext(ctx);
-              contextPill.style.display = '';
-              contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (openclawReachable === true ? 'OpenClaw OK' : 'OpenClaw ?');
-            }
-          } else {
-            state.openclawContext = null;
-            if (contextPill) contextPill.style.display = 'none';
+  function clearCaduHealthRecovery() {
+    state.healthFailureCount = 0;
+    if (state.healthRecoveryTimer !== null) {
+      clearTimeout(state.healthRecoveryTimer);
+      state.healthRecoveryTimer = null;
+    }
+  }
+
+  function scheduleCaduHealthRecovery() {
+    state.healthFailureCount = Math.min(16, Number(state.healthFailureCount || 0) + 1);
+    if (state.healthRecoveryTimer !== null || document.hidden) return;
+    var delay = Math.min(
+      CADU_HEALTH_RECOVERY_MAX_MS,
+      CADU_HEALTH_RECOVERY_BASE_MS * Math.pow(2, Math.max(0, state.healthFailureCount - 1))
+    );
+    state.healthRecoveryTimer = setTimeout(function () {
+      state.healthRecoveryTimer = null;
+      checkHealth({ includeContext: false }).catch(function () {});
+    }, delay);
+  }
+
+  async function refreshCaduOperationalContext() {
+    if (state.healthContextPromise) return state.healthContextPromise;
+    var task = (async function () {
+      var contextPill = $('#cadu-context-pill');
+      try {
+        var ctx = await apiFetch('/api/cadu/openclaw/context', { timeoutMs: OPENCLAW_CONTEXT_TIMEOUT_MS });
+        if (ctx && !ctx.__error) {
+          state.openclawContext = ctx;
+          if (contextPill) {
+            var openclawReachable = openclawReachableFromContext(ctx);
+            contextPill.style.display = '';
+            contextPill.innerHTML = '<i class="fas fa-layer-group"></i> Contexto operacional: ' + ctx.sites.count + ' sites · ' + ctx.feed.count + ' itens públicos · ' + (openclawReachable === true ? 'OpenClaw OK' : 'OpenClaw ?');
           }
-        } catch (_) {
-          state.openclawContext = null;
-          if (contextPill) contextPill.style.display = 'none';
+          return ctx;
         }
-      } else {
+        state.openclawContext = null;
+        if (contextPill) contextPill.style.display = 'none';
+        return null;
+      } catch (_) {
+        state.openclawContext = null;
+        if (contextPill) contextPill.style.display = 'none';
+        return null;
+      }
+    })();
+    state.healthContextPromise = task;
+    try {
+      return await task;
+    } finally {
+      if (state.healthContextPromise === task) state.healthContextPromise = null;
+    }
+  }
+
+  async function checkHealth(options) {
+    options = options || {};
+    var includeContext = options.includeContext !== false &&
+      state.currentTab !== 'openclaw' && state.currentTab !== 'pipeline';
+    var task = state.healthCheckPromise;
+    if (!task) task = (async function () {
+      var pill = $('#cadu-status-pill');
+      var contextPill = $('#cadu-context-pill');
+      var versionPill = $('#cadu-version-pill');
+      var versionText = $('#cadu-version-text');
+      try {
+        var health = await fetchCaduHealth();
+        var data = health.data;
+        if (health.ok && data && data.status === 'ok') {
+          clearCaduHealthRecovery();
+          state.apiHealthy = true;
+          setStatus(pill, null,
+            '<span class="kc-cadu-status-dot kc-cadu-status-dot--ok"></span> <i class="fas fa-circle-check"></i> Saúde cadu-api online (v' + (data.version || '?') + ')');
+          $('#kpi-api').textContent = 'OK';
+          var healthTimestampMs = typeof data.ts === 'number'
+            ? data.ts * 1000
+            : Date.parse(String(data.ts || ''));
+          $('#kpi-api-detail').textContent = Number.isFinite(healthTimestampMs)
+            ? 'health às ' + new Date(healthTimestampMs).toLocaleTimeString('pt-BR')
+            : 'horário do health indisponível';
+          if (versionText) versionText.textContent = 'v' + (data.version || '?');
+          if (versionPill) versionPill.style.display = '';
+          return { ok: true, status: health.status, data: data };
+        }
+
         state.apiHealthy = false;
         setStatus(pill, 'is-down',
           '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> cadu-api respondeu ' + health.status);
@@ -480,16 +517,34 @@
         if (contextPill) contextPill.style.display = 'none';
         if (versionPill) versionPill.style.display = 'none';
         hideTelegramHeroStatus();
+        scheduleCaduHealthRecovery();
+        return { ok: false, status: health.status, data: data };
+      } catch (err) {
+        var timedOut = err && (err.name === 'AbortError' || err.name === 'TimeoutError');
+        state.apiHealthy = false;
+        setStatus(pill, 'is-down', '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> ' +
+          (timedOut ? 'cadu-api demorou para responder' : 'cadu-api temporariamente inacessível'));
+        $('#kpi-api').textContent = 'OFF';
+        $('#kpi-api-detail').textContent = timedOut ? 'tempo limite do proxy excedido' : 'falha de transporte';
+        if (contextPill) contextPill.style.display = 'none';
+        if (versionPill) versionPill.style.display = 'none';
+        hideTelegramHeroStatus();
+        scheduleCaduHealthRecovery();
+        return { ok: false, status: 0, errorCode: timedOut ? 'client_timeout' : 'network_error' };
       }
-    } catch (err) {
-      state.apiHealthy = false;
-      setStatus(pill, 'is-down', '<span class="kc-cadu-status-dot kc-cadu-status-dot--down"></span> <i class="fas fa-triangle-exclamation"></i> cadu-api inacessível');
-      $('#kpi-api').textContent = 'OFF';
-      $('#kpi-api-detail').textContent = 'fetch falhou';
-      if (contextPill) contextPill.style.display = 'none';
-      if (versionPill) versionPill.style.display = 'none';
-      hideTelegramHeroStatus();
+    })();
+    if (!state.healthCheckPromise) state.healthCheckPromise = task;
+    var result;
+    try {
+      result = await task;
+    } finally {
+      if (state.healthCheckPromise === task) state.healthCheckPromise = null;
     }
+    // O poll leve compartilha somente a prova de saúde. Um chamador que precisa
+    // do contexto ainda recebe sua consulta, coalescida separadamente, sem que
+    // uma chamada includeContext:false apague um contexto válido já exibido.
+    if (result && result.ok && includeContext) await refreshCaduOperationalContext();
+    return result;
   }
 
   // ============================================================
@@ -5081,24 +5136,13 @@
     // Poll leve do sidecar. Abas em segundo plano não geram tráfego operacional.
     setInterval(function () {
       if (document.hidden) return;
-      // Poll silencioso: atualiza health e atividade recente quando a API está saudável.
-      fetchCaduHealth()
+      // Reutiliza a renderização completa de health para que um timeout
+      // transitório nunca deixe o painel visualmente OFF após a recuperação.
+      // O contexto consolidado fica de fora deste poll leve.
+      checkHealth({ includeContext: false })
         .then(function (health) {
-          var data = health.ok ? health.data : null;
-          if (!data) return;
+          if (!health || health.ok !== true) return;
           pollNotifActivity();
-          var vp = $('#cadu-version-text');
-          if (vp && data.version && vp.textContent !== 'v' + data.version) {
-            vp.textContent = 'v' + data.version;
-          }
-          if (data.version && data.version !== state.lastVersion) {
-            state.lastVersion = data.version;
-            // Se a versão mudou (ex: Yan restartou cadu-api), refrescar pills
-            var cp = $('#cadu-context-pill');
-            if (cp && cp.style.display === 'none' && versionAtLeast(data.version, '0.4.6')) {
-              pollNotifActivity();
-            }
-          }
         })
         .catch(function () {});
     }, 60000);
@@ -5425,6 +5469,7 @@
     delete requestOptions.timeoutMs;
     var timeoutController = null;
     var timeoutId = null;
+    var timedOut = false;
     var upstreamSignal = requestOptions.signal;
     var upstreamAbort = null;
     if (Number.isFinite(timeoutMs) && timeoutMs > 0 && typeof AbortController === 'function') {
@@ -5435,7 +5480,10 @@
         else upstreamSignal.addEventListener('abort', upstreamAbort, { once: true });
       }
       requestOptions.signal = timeoutController.signal;
-      timeoutId = setTimeout(function () { timeoutController.abort(); }, timeoutMs);
+      timeoutId = setTimeout(function () {
+        timedOut = true;
+        timeoutController.abort();
+      }, timeoutMs);
     }
     try {
       var res = await caduFetchRaw(path, requestOptions);
@@ -5466,7 +5514,8 @@
         status: 0,
         data: null,
         headers: { etag: '', canonicalEtag: null, registrySha256: '', registryOrigin: '', auditCutoff: '', upstreamStatus: '', cacheControl: '' },
-        message: String(e && e.message || e)
+        message: String(e && e.message || e),
+        errorCode: timedOut ? 'client_timeout' : (upstreamSignal && upstreamSignal.aborted ? 'client_aborted' : 'network_error')
       };
     } finally {
       if (timeoutId !== null) clearTimeout(timeoutId);
@@ -5483,7 +5532,8 @@
         __error: true,
         status: result.status,
         data: result.data,
-        message: result.message
+        message: result.message,
+        errorCode: result.errorCode
       };
     }
     return result.data;
@@ -5891,6 +5941,8 @@
       state.pipelineExpiryTimer = null;
       invalidatePipelineControl('dados de controle expirados; a verificação prévia será renovada no próximo clique');
       renderPipelineStages(state.pipelineStages || []);
+      renderPipelineActive(state.pipelineActive);
+      renderPipelineHealth(state.pipelineHealth);
     }
     state.pipelineExpiryTimer = setTimeout(expirePipelineControl, Math.max(0, expiresAt - Date.now() + 1));
   }
@@ -5920,29 +5972,80 @@
     stopPipelineLogPolling();
   }
 
+  function pipelineSnapshotFailureReason(response) {
+    response = response || {};
+    var status = Number(response.status || 0);
+    var code = String(response.errorCode || '');
+    var upstreamCode = response.data && typeof response.data === 'object'
+      ? String(response.data.error || '')
+      : '';
+    var reason;
+    if (status === 0 && code === 'client_timeout') {
+      reason = 'tempo limite ao atualizar o snapshot da pipeline';
+    } else if (status === 0 && code === 'client_aborted') {
+      reason = 'atualização do snapshot cancelada por uma navegação mais recente';
+    } else if (status === 0) {
+      reason = 'falha temporária de rede ao atualizar o snapshot da pipeline';
+    } else if (status === 401) {
+      reason = 'sessão administrativa expirada; autentique-se novamente';
+    } else if (status === 403) {
+      reason = 'o proxy não confirmou a permissão administrativa';
+    } else if (status === 504 || upstreamCode === 'cadu_api_timeout') {
+      reason = 'o cadu-api excedeu o tempo limite do proxy';
+    } else if (status === 502 || upstreamCode === 'cadu_api_unreachable') {
+      reason = 'o proxy não conseguiu alcançar o cadu-api';
+    } else if (upstreamCode === 'admin_auth_unreachable' || upstreamCode === 'admin_authorization_unreachable') {
+      reason = 'a autoridade administrativa está temporariamente indisponível';
+    } else if (upstreamCode === 'cadu_api_not_configured') {
+      reason = 'o proxy do cadu-api não está configurado';
+    } else if (status === 503) {
+      reason = 'o cadu-api está temporariamente indisponível';
+    } else {
+      reason = 'falha ao atualizar o snapshot da pipeline' + (status ? ' (HTTP ' + status + ')' : '');
+    }
+    if (state.pipelineLastSuccessAt > 0 && Array.isArray(state.pipelineStages) && state.pipelineStages.length) {
+      reason += '; exibindo a última visão válida de ' +
+        new Date(state.pipelineLastSuccessAt).toLocaleTimeString('pt-BR');
+    }
+    return reason;
+  }
+
   async function performPipelineRefresh() {
     var requestGeneration = ++state.pipelineRequestGeneration;
-    var status = await apiFetch('/api/cadu/pipeline', { timeoutMs: 5000 });
+    var response = await apiFetchResponse('/api/cadu/pipeline', {
+      timeoutMs: CADU_PIPELINE_REQUEST_TIMEOUT_MS
+    });
     if (requestGeneration !== state.pipelineRequestGeneration) return;
-    if (!status || status.__error) {
-      invalidatePipelineControl('falha ao atualizar o snapshot da pipeline');
+    if (!response || response.ok !== true) {
+      invalidatePipelineControl(pipelineSnapshotFailureReason(response));
+      state.pipelineHealthStale = true;
       renderPipelineStages(state.pipelineStages || []);
+      renderPipelineActive(state.pipelineActive);
+      renderPipelineHealth(state.pipelineHealth);
       return;
     }
+    var status = response.data;
+    var statusObject = status && typeof status === 'object' ? status : null;
     var validation = validatePipelineControlSnapshot(status, Date.now());
     if (!validation.ok) {
       invalidatePipelineControl(validation.reason);
-      state.pipelineStages = pipelineStagesForDisplay(status);
-      state.pipelineActive = status.active_run == null ? null : normalizePipelineRun(status.active_run);
-      state.pipelineHistory = Array.isArray(status.history)
-        ? status.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
-        : [];
+      state.pipelineHealthStale = true;
+      if (!Array.isArray(state.pipelineStages) || state.pipelineStages.length === 0) {
+        state.pipelineStages = pipelineStagesForDisplay(statusObject || {});
+      }
+      if (statusObject) {
+        state.pipelineActive = statusObject.active_run == null ? null : normalizePipelineRun(statusObject.active_run);
+        state.pipelineHistory = Array.isArray(statusObject.history)
+          ? statusObject.history.map(normalizePipelineRun).filter(Boolean).slice(0, 20)
+          : [];
+      }
       try {
         renderPipelineStages(state.pipelineStages);
         renderPipelineActive(state.pipelineActive);
         renderPipelineHistory(state.pipelineHistory);
         updatePipelineBadge({ active_run: state.pipelineActive, history: state.pipelineHistory });
-        if (status.health) renderPipelineHealth(status.health);
+        if (statusObject && statusObject.health) renderPipelineHealth(statusObject.health);
+        else if (state.pipelineHealth) renderPipelineHealth(state.pipelineHealth);
         else refreshPipelineHealth();
       } finally {
         // Even if presentation fails, a stale run transport must not survive
@@ -5963,7 +6066,9 @@
     state.pipelineControlReady = true;
     state.pipelineControlReason = '';
     state.pipelineSnapshotExpiresAt = validation.expiresAt;
+    state.pipelineLastSuccessAt = Date.now();
     state.pipelineHealth = status.health || state.pipelineHealth;
+    state.pipelineHealthStale = false;
     try {
       renderPipelineStages(state.pipelineStages);
       renderPipelineActive(state.pipelineActive);
@@ -6373,7 +6478,8 @@
       var actionBlockers = [];
       var blockerId = 'pipeline-stage-blocker-' + String(s.id || 'unknown').replace(/[^a-z0-9_-]/gi, '-');
       function actionButton(dryRun, label, danger) {
-        var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '');
+        var btnClass = 'kc-pipeline-stage__btn' + (danger ? ' is-danger' : '') +
+          (canRefreshControl ? ' is-renewal' : '');
         var modePrecondition = pipelineStageModePrecondition(s, dryRun);
         var modeBlocked = Boolean(modePrecondition && modePrecondition.canRun === false);
         var guardedDedupReal = s.id === 'dedup' && dryRun === false && modeBlocked;
@@ -6383,7 +6489,7 @@
           (!canRefreshControl && (!canRun || approvalGatedReal || fullRunPolicyGated || (modeBlocked && !guardedDedupReal))) ||
           state.pipelineStartPending;
         var displayLabel = canRefreshControl
-          ? 'Renovar · ' + label
+          ? 'Verificar para ' + label.toLowerCase()
           : (guardedDedupReal ? 'Executar real · simule antes' : label);
         var disabledReason = state.pipelineStartPending
           ? 'Aguardando resposta da solicitação anterior.'
@@ -6401,7 +6507,7 @@
           : (activeRunReason
             ? 'Indisponível: ' + activeRunReason
             : (canRefreshControl
-              ? 'Renovar contrato e verificação prévia antes de ' + label.toLowerCase()
+              ? 'Atualizar o snapshot e a verificação prévia; a ação só continua após uma confirmação nova para ' + label.toLowerCase()
               : (approvalGatedReal
                 ? 'Indisponível: ' + (s.live_disabled_reason || 'execução real requer aprovação assinada (Ed25519)')
                 : (fullRunPolicyGated
@@ -6412,7 +6518,7 @@
         var modeAttr = typeof dryRun === 'boolean' ? ' data-dry-run="' + dryRun + '"' : '';
         if (disabled && disabledReason) actionBlockers.push({ label: label, detail: disabledReason });
         return '<button class="' + btnClass + (guardedDedupReal ? ' is-guarded' : '') + '" data-stage="' + escapeHtml(s.id) + '"' + modeAttr + ' title="' + escapeHtml(btnTitle) + '"' + (disabled && disabledReason ? ' aria-describedby="' + escapeHtml(blockerId) + '"' : '') + (disabled ? ' disabled' : '') + '>' +
-          '<i class="fas ' + (canRefreshControl ? 'fa-rotate' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
+          '<i class="fas ' + (canRefreshControl ? 'fa-shield-halved' : (dryRun === true ? 'fa-flask' : 'fa-play')) + '"></i> ' + escapeHtml(displayLabel) +
         '</button>';
       }
       pipelineStageActionModes(profile, displayCapabilities).forEach(function (action) {
@@ -6452,7 +6558,9 @@
   function updatePipelineActiveStatus(active, displayStatus) {
     var status = $('#pipeline-active-status');
     if (!status) return;
-    var message = 'Pipeline: nenhuma execução ativa.';
+    var message = pipelineControlIsReady()
+      ? 'Pipeline: nenhuma execução ativa.'
+      : 'Pipeline: estado de controle indisponível; renove o snapshot.';
     if (active) {
       message = 'Pipeline ' + pipelineActivityStageLabel(active.stage, state.pipelineStages) + ': ' +
         pipelineStatusLabel(displayStatus || pipelineRunDisplayStatus(active)) + '.';
@@ -6481,7 +6589,12 @@
     if (!active) {
       updatePipelineActiveStatus(null);
       card.className = 'kc-pipeline-active-card';
-      card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.</div>';
+      var emptyMessage = pipelineControlIsReady()
+        ? 'Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.'
+        : (state.pipelineLastSuccessAt > 0
+          ? 'Nenhuma execução ativa na última visão válida. Renove o snapshot antes de iniciar.'
+          : 'Aguardando um snapshot operacional válido antes de liberar ações.');
+      card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> ' + escapeHtml(emptyMessage) + '</div>';
       if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem execução ativa'; }
       if (logBox && (!pipelineStreamRequest) && (!pipelineLogPollState)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>';
       return;
@@ -6492,7 +6605,8 @@
     var escapedActiveRunId = escapeHtml(active.id);
     card.className = 'kc-pipeline-active-card ' + cls;
     if (dot) { dot.className = 'kc-pipeline-status-dot ' + cls; dot.title = pipelineStatusLabel(displayStatus) + ' (' + fmtAgo(active.started_at) + ')'; }
-    var canStop = active.status === 'pending' || active.status === 'running';
+    var canStop = pipelineControlIsReady() &&
+      (active.status === 'pending' || active.status === 'running');
     var stopPending = state.pipelineStopPendingRunId === active.id;
     var stopLabel = active.status === 'pending' ? 'Cancelar' : 'Parar';
     var stopBtn = canStop
@@ -6532,15 +6646,16 @@
         '<div class="kc-pipeline-health-card__meta">Endpoint de health ainda não respondeu.</div>';
       return;
     }
-    var level = health.level || health.status || 'warning';
+    var controlStale = state.pipelineHealthStale === true;
+    var level = controlStale ? 'warning' : (health.level || health.status || 'warning');
     if (health.status === 'running' && level === 'ok') level = 'running';
     if (['ok', 'running', 'warning', 'critical'].indexOf(level) === -1) level = 'warning';
-    var label = {
+    var label = controlStale ? 'controle degradado' : ({
       ok: 'ok',
       running: 'rodando',
       warning: 'atenção',
       critical: 'crítico'
-    }[level] || level;
+    }[level] || level);
     var lastSuccess = health.last_successful_all_run || null;
     var latest = health.latest_run ? normalizePipelineRun(health.latest_run) : null;
     var since = fmtSecondsWindow(health.seconds_since_successful_all);
@@ -6556,9 +6671,10 @@
         '<span class="kc-pipeline-health-card__level is-' + level + '">' + escapeHtml(label) + '</span>' +
       '</div>' +
       '<div class="kc-pipeline-health-card__meta">' +
+        (controlStale ? '<span><i class="fas fa-shield-halved"></i> A saúde da API pode estar online, mas o contrato de controle da Pipeline está desatualizado. Dados preservados; nenhuma ação começa sem nova verificação e confirmação.</span>' : '') +
         '<span><i class="fas fa-rotate"></i> all ok: ' + (lastSuccess ? fmtAgo(lastSuccess.finished_at || lastSuccess.started_at) : 'nunca') + '</span>' +
         '<span><i class="fas fa-hourglass-half"></i> atraso: ' + escapeHtml(since) + '</span>' +
-        '<span><i class="fas fa-triangle-exclamation"></i> falhas 24h: ' + failures + '</span>' +
+        '<span><i class="fas fa-triangle-exclamation"></i> falhas de execução 24h: ' + failures + '</span>' +
         (latest ? '<span><i class="fas fa-clock"></i> última: ' + escapeHtml(pipelineActivityStageLabel(latest.stage, state.pipelineStages)) + ' ' + escapeHtml(pipelineStatusLabel(pipelineRunDisplayStatus(latest))) + '</span>' : '') +
       '</div>' +
       issueHtml +
@@ -7628,6 +7744,7 @@
 
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
+    checkHealth({ includeContext: false }).catch(function () {});
     if (state.currentTab === 'openclaw') refreshOpenclaw();
     if (state.currentTab === 'pipeline') refreshPipeline();
     if (state.currentTab === 'reviews' && window.KCCaduReviews &&
@@ -7636,7 +7753,7 @@
     }
   });
 
-  async function refreshAll(options) {
+  async function performRefreshAll(options) {
     var opts = options || {};
     var loading = $('#cadu-loading');
     if (loading) loading.style.display = 'flex';
@@ -7647,8 +7764,15 @@
       statusPill.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Atualizando…';
     }
     var operationalRefresh = Promise.resolve();
-    var reviewSummaryRefresh = Promise.resolve();
-    if (state.currentTab === 'openclaw') {
+    var sitesLoadedAsPrimary = false;
+    var feedLoadedAsPrimary = false;
+    if (state.currentTab === 'sites') {
+      sitesLoadedAsPrimary = true;
+      operationalRefresh = loadSites();
+    } else if (state.currentTab === 'feed') {
+      feedLoadedAsPrimary = true;
+      operationalRefresh = loadFeed(true);
+    } else if (state.currentTab === 'openclaw') {
       operationalRefresh = refreshOpenclaw({ force: opts.forceOperational === true });
     } else if (state.currentTab === 'pipeline') {
       operationalRefresh = refreshPipeline();
@@ -7656,21 +7780,59 @@
         typeof window.KCCaduReviews.refresh === 'function') {
       operationalRefresh = window.KCCaduReviews.refresh();
     }
-    if (state.currentTab !== 'reviews' && window.KCCaduReviews &&
-        typeof window.KCCaduReviews.refreshSummary === 'function') {
-      reviewSummaryRefresh = window.KCCaduReviews.refreshSummary();
-    }
+    // Primeiro resolva somente saúde + conteúdo da aba ativa. Na Pipeline isso
+    // limita a carga inicial a duas requisições, evitando disputar o timeout do
+    // snapshot com sites, feed, revisões e autoridade editorial.
     await Promise.all([
       checkHealth(),
-      loadSites(),
+      operationalRefresh,
+    ]);
+    if (loading) loading.style.display = 'none';
+
+    // Contagens e painéis auxiliares entram numa segunda onda. Falhas isoladas
+    // aqui não devem apagar nem atrasar o snapshot operacional já validado.
+    var supportingRefreshes = [
+      sitesLoadedAsPrimary ? Promise.resolve() : loadSites(),
       loadInstitutionalReviews(),
       loadPendingInstitutionalReviewAuthority(),
-      state.currentTab === 'feed' ? loadFeed(true) : Promise.resolve(),
-      operationalRefresh,
-      reviewSummaryRefresh,
-    ]);
-    if (state.currentTab !== 'feed') loadFeed(true); // atualiza contagem mesmo com tab sites
-    if (loading) loading.style.display = 'none';
+      feedLoadedAsPrimary ? Promise.resolve() : loadFeed(true),
+    ];
+    if (state.currentTab !== 'reviews' && window.KCCaduReviews &&
+        typeof window.KCCaduReviews.refreshSummary === 'function') {
+      supportingRefreshes.push(window.KCCaduReviews.refreshSummary());
+    }
+    await Promise.allSettled(supportingRefreshes);
+  }
+
+  function refreshAll(options) {
+    var opts = options || {};
+    if (state.refreshAllPromise) {
+      if (opts.forceOperational === true && state.refreshAllForceInFlight !== true) {
+        state.refreshAllForcePending = true;
+      }
+      return state.refreshAllPromise;
+    }
+
+    var firstForce = opts.forceOperational === true;
+    var task = (async function () {
+      state.refreshAllForceInFlight = firstForce;
+      try {
+        await performRefreshAll({ forceOperational: firstForce });
+        // Preserve a stronger refresh requested while the shared wave was in
+        // flight, but execute it once rather than duplicating every auxiliary
+        // request for each caller.
+        while (state.refreshAllForcePending === true) {
+          state.refreshAllForcePending = false;
+          state.refreshAllForceInFlight = true;
+          await performRefreshAll({ forceOperational: true });
+        }
+      } finally {
+        state.refreshAllForceInFlight = false;
+        if (state.refreshAllPromise === task) state.refreshAllPromise = null;
+      }
+    })();
+    state.refreshAllPromise = task;
+    return task;
   }
 
   // ============================================================
