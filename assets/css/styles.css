@@ -4,8 +4,12 @@
     /* Primary brand orange. Default for brand fills (active tabs, primary
      * buttons, ranking chips, login) and large brand surfaces. */
     --kc-primary-brand: #FF6B00;
-    /* Foreground AA para superfícies sólidas da marca: 5.57:1 sobre #FF6B00. */
-    --kc-on-primary: #222222;
+    /* Foreground histórico das superfícies sólidas da marca. Este token também
+     * colore o glifo da logo, CTAs, abas ativas, badges e FABs; portanto, uma
+     * troca global altera a identidade visual de toda a plataforma. Ajustes de
+     * contraste para texto pequeno devem ser contextuais e passar por revisão
+     * visual, nunca mudar este contrato compartilhado indiscriminadamente. */
+    --kc-on-primary: #FFFFFF;
     /* Slightly lighter orange for orange-on-dark text (logo / nav / consent
      * links on dark surfaces). ~4.83:1 on #333 — better AA than #FF6B00. */
     --kc-primary-brand-bright: #FF8000;
@@ -2306,7 +2310,7 @@ main {
 }
 
 .kc-ad-card__cta:hover {
-    background: #e06400;
+    background: #e05f00;
     color: var(--kc-on-primary);
     text-decoration: none;
 }
@@ -12780,7 +12784,7 @@ body.kc-admin-page .kc-consent-btn {
 }
 .kc-fab:hover {
   transform: scale(1.05);
-  background-color: var(--kc-primary-color, #e06400);
+  background-color: var(--kc-primary-color, #e05e15);
   color: var(--kc-on-primary);
 }
 @media (min-width: 768px) {

@@ -124,7 +124,7 @@ test('runtime público crítico inicializa sem exceção nos motores principais'
   expect(failures, failures.join('\n')).toEqual([]);
 });
 
-test('abas do feed preservam semântica, contraste AA e largura nos dois temas', async ({ page }) => {
+test('abas do feed preservam semântica, identidade visual e largura nos dois temas', async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     localStorage.setItem('kc_consent_v1', JSON.stringify({
       version: '2026-06-05',
@@ -187,27 +187,15 @@ test('abas do feed preservam semântica, contraste AA e largura nos dois temas',
 
       const tab = document.querySelector('.kc-feed-tabs button[data-feed-tab].active');
       const login = document.querySelector('.kc-user-actions a.btn-login');
+      const logo = document.querySelector('.kc-logo-mark');
+      const mobileCreate = document.querySelector('.kc-mobile-nav .kc-create-btn');
       const root = document.documentElement;
       const body = document.body;
-      const parseRgb = (value) => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
-      const luminance = (rgb) => {
-        const channels = rgb.map((value) => {
-          const channel = value / 255;
-          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-        });
-        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
-      };
-      const contrast = (foreground, background) => {
-        const values = [luminance(parseRgb(foreground)), luminance(parseRgb(background))]
-          .sort((first, second) => second - first);
-        return (values[0] + 0.05) / (values[1] + 0.05);
-      };
       const stylesFor = (element) => {
         const style = getComputedStyle(element);
         return {
           color: style.color,
           background: style.backgroundColor,
-          contrast: contrast(style.color, style.backgroundColor),
         };
       };
 
@@ -215,18 +203,24 @@ test('abas do feed preservam semântica, contraste AA e largura nos dois temas',
         theme: activeTheme,
         tab: stylesFor(tab),
         login: stylesFor(login),
+        logo: stylesFor(logo),
+        mobileCreate: stylesFor(mobileCreate),
         viewportWidth: root.clientWidth,
         contentWidth: Math.max(root.scrollWidth, body.scrollWidth),
       };
     }, theme);
 
     expect(visualContract.theme).toBe(theme);
-    expect(visualContract.tab.color).toBe('rgb(34, 34, 34)');
+    expect(visualContract.logo.color).toBe('rgb(255, 255, 255)');
+    expect(visualContract.logo.background).toBe('rgb(255, 107, 0)');
+    expect(visualContract.tab.color).toBe('rgb(255, 255, 255)');
     expect(visualContract.tab.background).toBe('rgb(255, 107, 0)');
-    expect(visualContract.tab.contrast).toBeGreaterThanOrEqual(4.5);
-    expect(visualContract.login.color).toBe('rgb(34, 34, 34)');
+    expect(visualContract.login.color).toBe('rgb(255, 255, 255)');
     expect(visualContract.login.background).toBe('rgb(255, 107, 0)');
-    expect(visualContract.login.contrast).toBeGreaterThanOrEqual(4.5);
+    if (testInfo.project.name.startsWith('mobile-')) {
+      expect(visualContract.mobileCreate.color).toBe('rgb(255, 255, 255)');
+      expect(visualContract.mobileCreate.background).toBe('rgb(255, 107, 0)');
+    }
     expect(visualContract.contentWidth).toBeLessThanOrEqual(visualContract.viewportWidth + 1);
   }
 });
