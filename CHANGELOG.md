@@ -2,6 +2,20 @@
 
 ---
 
+## [v76.45] - 2026-08-27 - ações móveis sem cobertura de conteúdo
+
+### Corrigido
+
+- O atalho móvel de Mensagens deixa de usar um FAB fixo sobre cards e formulários
+  e passa a ocupar uma entrada dedicada no menu móvel, com o mesmo contador de
+  não lidas e sem duplicação quando o shell já fornece o link.
+- CSS defensivo mantém o FAB legado oculto durante transições de cache; o atalho
+  do cabeçalho desktop e o acesso a `mensagens.html` permanecem funcionais.
+- Regressão E2E cobre busca e Central de Ajuda em viewport móvel para impedir que
+  o botão flutuante volte a encobrir conteúdo.
+
+---
+
 ## [v76.44] - 2026-08-27 - contratos TypeScript e descoberta antecipada da imagem LCP
 
 ### Adicionado

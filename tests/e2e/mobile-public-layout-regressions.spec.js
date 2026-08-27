@@ -253,6 +253,17 @@ test.describe('mobile public layout regressions', () => {
     expect(controlsHeight).toBeLessThan(100);
   });
 
+  test('atalho de mensagens permanece no menu e não cobre conteúdo mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    for (const route of ['/search-results.html', '/ajuda.html']) {
+      await page.goto(route, { waitUntil: 'load' });
+      await expect(page.locator('.kc-chat-mobile-fab')).toHaveCount(0);
+      await expect(page.locator('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveCount(1);
+      await expect(page.locator('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).toHaveCount(1);
+    }
+  });
+
   test('desktop search and help layouts remain expanded and two-column', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await installSearchFixture(page);

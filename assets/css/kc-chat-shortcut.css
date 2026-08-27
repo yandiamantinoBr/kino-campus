@@ -1,6 +1,6 @@
 /* Atalho global de mensagens injetado por kc-notifications.js. */
 .kc-chat-shortcut,
-.kc-chat-mobile-fab {
+.kc-chat-mobile-menu-link {
   position: relative;
 }
 
@@ -27,34 +27,17 @@
   display: none !important;
 }
 
+.kc-chat-mobile-menu-link .kc-chat-shortcut__badge {
+  position: static;
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  box-shadow: none;
+}
+
+/* Defesa para HTML/JS antigo em cache: o acesso móvel fica no menu. */
 .kc-chat-mobile-fab {
-  display: none;
-  position: fixed;
-  right: max(16px, env(safe-area-inset-right, 0px));
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-  z-index: 210;
-  width: 50px;
-  height: 50px;
-  border-radius: 999px;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  color: #fff;
-  background: var(--kc-primary-brand);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 14px 34px rgba(255, 107, 0, 0.34);
-}
-
-.kc-chat-mobile-fab i {
-  font-size: 1.15rem;
-}
-
-.kc-chat-mobile-fab .kc-chat-shortcut__badge {
-  top: -6px;
-  right: -6px;
-  min-width: 20px;
-  height: 20px;
-  box-shadow: 0 0 0 3px var(--kc-background-dark, #0f1117), 0 6px 16px rgba(0, 0, 0, 0.22);
+  display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -62,7 +45,4 @@
     display: none !important;
   }
 
-  body:not(.kc-chat-route) .kc-chat-mobile-fab {
-    display: inline-flex;
-  }
 }
