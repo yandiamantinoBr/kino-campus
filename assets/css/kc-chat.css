@@ -156,7 +156,7 @@
 .kc-chat-filter-tab.is-active {
   background: var(--kc-primary-brand);
   border-color: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 .kc-chat-filter-tab__count {
@@ -171,7 +171,7 @@
 
 .kc-chat-filter-tab:not(.is-active) .kc-chat-filter-tab__count {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
 }
 
 .kc-chat-search {
@@ -993,7 +993,7 @@
 .kc-chat-msg__edit-save, .kc-chat-msg__edit-cancel { border: none; border-radius: 8px; padding: 5px 14px; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
 .kc-chat-msg__edit-save { background: rgba(255,255,255,0.25); color: #fff; }
 .kc-chat-msg--mine .kc-chat-msg__edit-save { background: #fff; color: var(--kc-primary-brand); }
-[data-theme="light"] .kc-chat-msg--other .kc-chat-msg__edit-save { background: var(--kc-primary-brand); color: #fff; }
+[data-theme="light"] .kc-chat-msg--other .kc-chat-msg__edit-save { background: var(--kc-primary-brand); color: var(--kc-on-primary); }
 .kc-chat-msg__edit-cancel { background: transparent; color: inherit; opacity: 0.7; }
 .kc-chat-msg__edit-save:disabled, .kc-chat-msg__edit-cancel:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -1047,7 +1047,7 @@
   border-radius: 999px;
   padding: 10px 14px;
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   font: inherit;
   font-size: 0.88rem;
   font-weight: 800;
@@ -1177,7 +1177,7 @@
 /* Botão de send fica FORA da pill — círculo laranja independente */
 .kc-chat-composer__btn--send {
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   box-shadow: 0 2px 8px rgba(255, 107, 0, 0.35);
   width: 46px;
   height: 46px;
@@ -1356,7 +1356,7 @@
 .kc-chat-blocked-banner button {
   margin-left: auto;
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   border: none;
   border-radius: 10px;
   padding: 8px 14px;

@@ -104,11 +104,14 @@
                 <button class="kc-context-info-btn" type="button" data-kc-context-open="achados-perdidos" aria-label="Informações sobre Achados e Perdidos" data-i18n-aria-label="aria-label.context-achados-perdidos" aria-haspopup="dialog"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
             </h2>
             <div class="kc-feed-toolbar">
-            <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
+            <div class="kc-feed-tabs">
+              <div class="kc-feed-tabs__view" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
                 <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
                 <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
                 <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
+              </div>
                 <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
+              <nav class="kc-feed-tabs__nav" aria-label="Categorias de achados e perdidos" data-i18n-aria-label="aria-label.feed-categories">
                 <a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
                 <a data-category="perdidos" href="#perdidos">
                     <i class="fas fa-exclamation-circle"></i>
@@ -130,6 +133,7 @@
                     <i class="fas fa-box"></i>
                     <span>Outros</span>
                 </a>
+              </nav>
             </div>
             <div class="kc-feed-toolbar__actions">
                 <button class="kc-module-picker-trigger" type="button" data-kc-module-picker-open

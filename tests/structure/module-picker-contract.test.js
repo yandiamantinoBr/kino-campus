@@ -70,6 +70,26 @@ describe('contrato estrutural do seletor responsivo de módulos', () => {
     expect(trigger.closest('[role="tablist"]')).toBeNull();
   });
 
+  test.each(FEED_PAGES)('%s separa abas de ordenação dos links de categoria', (page) => {
+    const document = documentFor(page);
+    const tabs = document.querySelector('.kc-feed-toolbar > .kc-feed-tabs');
+    const tablist = tabs && tabs.querySelector(':scope > .kc-feed-tabs__view[role="tablist"]');
+    const divider = tabs && tabs.querySelector(':scope > .kc-feed-tabs__divider');
+    const navigation = tabs && tabs.querySelector(':scope > .kc-feed-tabs__nav');
+
+    expect(tabs).not.toBeNull();
+    expect(tabs.getAttribute('role')).toBeNull();
+    expect(tablist).not.toBeNull();
+    expect(divider).not.toBeNull();
+    expect(navigation).not.toBeNull();
+    expect(Array.from(tabs.children)).toEqual([tablist, divider, navigation]);
+    expect(tablist.querySelectorAll(':scope > [role="tab"]')).toHaveLength(3);
+    expect(tablist.querySelector(':scope > a')).toBeNull();
+    expect(navigation.querySelectorAll(':scope > a').length).toBeGreaterThan(0);
+    expect(navigation.querySelector('[role="tab"]')).toBeNull();
+    expect(navigation.getAttribute('aria-label')).toBeTruthy();
+  });
+
   test.each(FEED_PAGES)('%s carrega o picker depois do schema canônico', (page) => {
     const document = documentFor(page);
     const sources = Array.from(document.scripts)

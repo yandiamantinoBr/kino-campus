@@ -16,7 +16,7 @@
   align-items: center;
   justify-content: center;
   background: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   font-size: 0.68rem;
   font-weight: 900;
   line-height: 1;

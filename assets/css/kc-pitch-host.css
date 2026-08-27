@@ -104,7 +104,7 @@ body.kc-pitch-host-page {
 
 .kc-pitch-hostbar__button--primary {
   border-color: var(--kc-primary-brand);
-  color: #fff;
+  color: var(--kc-on-primary);
   background: var(--kc-primary-brand);
 }
 
@@ -191,7 +191,7 @@ body.kc-pitch-host-page {
   margin-top: 12px;
   padding: 10px 14px;
   border-radius: 10px;
-  color: #fff;
+  color: var(--kc-on-primary);
   background: var(--kc-primary-brand);
   font-weight: 800;
   pointer-events: auto;

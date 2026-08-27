@@ -694,7 +694,7 @@
 
     .kc-btn-primary {
       background-color: var(--kc-primary-brand);
-      color: #fff;
+      color: var(--kc-on-primary);
       border: none;
       padding: 12px 18px;
       border-radius: 10px;

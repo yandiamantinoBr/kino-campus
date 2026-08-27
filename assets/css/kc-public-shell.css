@@ -1372,7 +1372,7 @@ body.kc-help-page .kc-help-item {
 }
 
 .kc-legal-actions .kc-btn-primary {
-  color: #fff;
+  color: var(--kc-on-primary);
   background: var(--kc-primary-brand);
 }
 

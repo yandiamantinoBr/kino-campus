@@ -113,11 +113,14 @@
             </h2>
             <!-- Feed Tabs -->
             <div class="kc-feed-toolbar">
-            <div class="kc-feed-tabs" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
+            <div class="kc-feed-tabs">
+              <div class="kc-feed-tabs__view" role="tablist" aria-label="Ordenação do feed" data-i18n-aria-label="aria-label.feed-sort">
                 <button class="active" type="button" role="tab" data-feed-tab="destaques" aria-selected="true"><i class="fas fa-fire"></i><span>Destaques</span></button>
                 <button type="button" role="tab" data-feed-tab="recentes" aria-selected="false"><i class="fas fa-clock"></i><span>Recentes</span></button>
                 <button type="button" role="tab" data-feed-tab="comentados" aria-selected="false"><i class="fas fa-comments"></i><span>Comentados</span></button>
+              </div>
                 <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
+              <nav class="kc-feed-tabs__nav" aria-label="Categorias de oportunidades" data-i18n-aria-label="aria-label.feed-categories">
                 <a data-category="todas" href="#todas"><i class="fas fa-border-all"></i><span>Todas</span></a>
                 <a data-category="editais" href="#editais"><i class="fas fa-file-signature"></i><span>Editais</span></a>
                 <a data-category="concursos" href="#concursos"><i class="fas fa-clipboard-check"></i><span>Concursos</span></a>
@@ -129,6 +132,7 @@
                 <a data-category="pesquisa" href="#pesquisa"><i class="fas fa-microscope"></i><span>Pesquisa</span></a>
                 <a data-category="cursos-capacitacoes" href="#cursos-capacitacoes"><i class="fas fa-book-open-reader"></i><span>Cursos</span></a>
                 <a data-category="voluntariado" href="#voluntariado"><i class="fas fa-hands-helping"></i><span>Voluntariado</span></a>
+              </nav>
             </div>
             <div class="kc-feed-toolbar__actions">
                 <button class="kc-module-picker-trigger" type="button" data-kc-module-picker-open
