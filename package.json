@@ -13,7 +13,9 @@
     "test": "jest",
     "test:cache-artifact": "jest tests/integration/asset-cache-bust.test.js tests/unit/sw.test.js --runInBand",
     "test:e2e": "node node_modules/@playwright/test/cli.js test",
+    "test:e2e:cross-browser": "node node_modules/@playwright/test/cli.js test --config=playwright.cross-browser.config.js",
     "test:e2e:report": "node node_modules/@playwright/test/cli.js show-report output/playwright-report",
+    "typecheck:contracts": "tsc --project tsconfig.contracts.json --pretty false",
     "lhci": "lhci autorun",
     "check:hygiene": "node scripts/hygiene-check.js",
     "seo:audit": "node scripts/seo-audit.js",
@@ -81,7 +83,8 @@
     "http-server": "^14.1.1",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "typescript": "5.9.3"
   },
   "overrides": {
     "tmp": "0.2.7",

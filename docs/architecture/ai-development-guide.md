@@ -1,6 +1,6 @@
 # Guia de Desenvolvimento para IA — KinoCampus
 
-**Versão:** v76.11.0 · **Atualizado em:** 2026-06-13
+**Versão:** v76.44.0 · **Atualizado em:** 2026-08-27
 
 > **Leia este documento integralmente antes de qualquer modificação.**
 > Este guia é auto-contido: uma IA sem contexto anterior deve conseguir trabalhar
@@ -30,27 +30,42 @@ Plataforma de comunidade universitária para a **Universidade Federal de Goiás 
 
 **URL de produção:** [kinocampus.com.br](https://www.kinocampus.com.br)
 
-### Stack — imutável
+### Runtime estável e ferramentas de desenvolvimento controladas
 
 | Camada | Tecnologia | Restrição |
 |--------|-----------|-----------|
-| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, sem framework) | **Sem React, Vue, TypeScript, bundler, transpiler ou npm em prod** |
+| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, sem framework) | **Sem TypeScript transpilado, framework, bundler ou npm em produção** |
 | Backend | Supabase (PostgreSQL + Auth + Storage + Edge Functions + Realtime) | — |
 | Hosting | Vercel | `vercel.json` é imutável sem aprovação explícita |
 | Build | `node scripts/inject-env.js` | Substitui placeholders `__KC_*__` nas variáveis |
-| Testes | Jest (191 suites) + Playwright (11 specs E2E) | Nunca reduzir contagem |
+| Testes | Jest + Playwright + pgTAP + contratos Deno/SQL | Preservar cobertura e investigar qualquer redução |
 | JS | `import`/`export` ES modules **proibidos** | Somente `window.*` para exports |
 
-### Estado atual (v76.40)
+#### Exceção arquitetural: TypeScript somente para contratos `noEmit`
+
+TypeScript `5.9.3` é permitido exclusivamente como dependência de desenvolvimento
+para verificar arquivos em `types/` por meio de `tsconfig.contracts.json`.
+Essa exceção não autoriza converter scripts públicos, introduzir bundler, emitir
+JavaScript, alterar URLs/ordem de scripts ou incluir o compilador no build Vercel.
+
+- comando canônico: `npm run typecheck:contracts`;
+- configuração obrigatória: `strict: true` e `noEmit: true`;
+- contratos gerados do Supabase ficam em `types/supabase.generated.ts`;
+- `assets/`, `admin/`, páginas HTML, APIs, Cadu e Edge Functions ficam fora desse
+  projeto de tipos;
+- o build de produção continua instalando apenas dependências de runtime e
+  executando `node scripts/inject-env.js`.
+
+### Estado atual (política documental v76.44)
 
 | Campo | Valor |
 |-------|-------|
-| Branch principal | `kinocampus-V75.0-foundations` |
-| Branch de features | `feature/v75.X.Y-descricao-curta` |
+| Branch principal | `main` |
+| Branch de features | `codex/<escopo-curto>` |
 | appVersion | `75.1.0` (performance phase 1; Speed Insights mergeado no PR #549) |
 | frontendRuntimeVersion | `8.6.1` (constante canonica do runtime atual) |
-| Jest | 191 suites · 3784 testes |
-| Playwright | 11 specs · 78 testes listados |
+| Jest | 336 suites · 5658 testes no inventário de 2026-08-27 (5651 ativos, 7 ignorados) |
+| Playwright | 24 specs · 212 testes no projeto Chromium |
 | check:all | 6 gates verdes |
 | Itens validados (check:structure) | 169 |
 
@@ -78,13 +93,13 @@ kino-campus/
 ├── data/database.json          ← fixture para driver local
 ├── docs/                       ← Toda documentação técnica
 ├── scripts/                    ← validators, auditorias e geradores
-├── tests/                      ← 191 suites Jest
+├── tests/                      ← Jest, contratos e Playwright
 │   ├── unit/         (26)
 │   ├── integration/ (131)
 │   ├── contract/     (13)
 │   ├── structure/    (14)
 │   ├── a11y/          (5)
-│   └── e2e/          (11)      ← Playwright specs
+│   └── e2e/                    ← Playwright specs
 └── VERSION.json                ← Fonte de verdade de versão
 ```
 
@@ -95,34 +110,34 @@ kino-campus/
 ### Sequência exata — não pular etapas
 
 ```
-1. git checkout kinocampus-V75.0-foundations
-2. git pull
-3. git checkout -b feature/v75.X.Y-descricao-curta
+1. git checkout main
+2. git pull --ff-only
+3. git checkout -b codex/descricao-curta
 4. [ implementar mudanças ]
-5. npm run check:all          ← DEVE ser 5/5 verdes
-   npm test                   ← DEVE ser ≥177/177 suites, ≥3600/3600 testes
+5. npm run check:all          ← todos os gates devem ficar verdes
+   npm run test:e2e           ← executar quando a mudança alcança o navegador
 6. git add <arquivos específicos>
-7. git commit -m "tipo(escopo): descrição\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-8. git push -u origin feature/v75.X.Y-descricao-curta
+7. git commit -m "tipo(escopo): descrição"
+8. git push -u origin codex/descricao-curta
 9. gh pr create --title "..." --body "..."
-10. gh pr merge <número> --squash --delete-branch
-11. git checkout kinocampus-V75.0-foundations
-12. git pull
+10. gh pr checks <número> --watch
+11. gh pr merge <número> --squash --delete-branch
+12. git checkout main && git pull --ff-only
 ```
 
 ### Nomeação de branches
 
 ```
-feature/v75.X.Y-descricao-curta
+codex/descricao-curta
 
 Exemplos válidos:
-  feature/v75.1.1-docs-sync
-  feature/v75.2.0-public-a11y-follow-up
-  feature/v75.3.0-admin-privacy-analytics
+  codex/docs-sync
+  codex/public-a11y-follow-up
+  codex/admin-privacy-analytics
 
 Proibido:
   main, master, develop, fix/..., hotfix/...
-  Qualquer nome sem o prefixo feature/v75.X.Y-
+  Qualquer nome sem o prefixo codex/
 ```
 
 ### Regras do PR
@@ -282,7 +297,7 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 **O que verifica:**
 - `VERSION.json` existe e tem todos os 6 campos obrigatórios: `project`, `appVersion`, `frontendRuntimeVersion`, `branch`, `status`, `updatedAt`
 - `frontendRuntimeVersion` é exatamente `"8.6.1"` (constante canônica atual do runtime)
-- `branch` é exatamente `"kinocampus-V75.0-foundations"`
+- `branch` é exatamente `"main"`
 - `appVersion` tem formato semântico `X.Y.Z`
 - `updatedAt` tem formato `YYYY-MM-DD`
 - A string `'8.6.1'` aparece literalmente nos arquivos JS versionados do runtime (todos devem bater)
@@ -292,12 +307,12 @@ npm run check:version && npm run check:structure && npm run check:scripts && npm
 ```json
 // VERSION.json — campos obrigatórios
 {
-  "project": "KinoCampus",
+  "project": "Kino Campus",
   "appVersion": "75.1.0",
   "frontendRuntimeVersion": "8.6.1",
-  "branch": "kinocampus-V75.0-foundations",
+  "branch": "main",
   "status": "v75.1 performance phase 1",
-  "updatedAt": "2026-05-21"
+  "updatedAt": "2026-08-05"
 }
 ```
 
@@ -342,7 +357,7 @@ var CANONICAL_JS = [
 ### `check:scripts` — `scripts/validate-script-chains.js`
 
 **O que verifica:**
-- Os 26 HTMLs canônicos contêm a cadeia de boot obrigatória **na ordem correta**:
+- Os 33 HTMLs canônicos contêm a cadeia de boot obrigatória **na ordem correta**:
   ```
   assets/js/boot/kc-constants.js
   assets/js/boot/kc-env.js
@@ -549,7 +564,7 @@ describe('MeuModulo', () => {
 | Estrutura do repositório | `docs/architecture/repository-structure.md` |
 | Catálogo de módulos | `docs/architecture/module-catalog.md` |
 | Catálogo de controllers (48) | `docs/architecture/controllers-catalog.md` |
-| Ordem de scripts nos 26 HTMLs canonicos | `docs/architecture/script-loading-reference.md` |
+| Ordem de scripts nos 33 HTMLs canonicos | `docs/architecture/script-loading-reference.md` |
 | Fluxo de dados ponta a ponta | `docs/architecture/data-flow-guide.md` |
 | Este guia (comportamento de IA) | `docs/architecture/ai-development-guide.md` |
 | Estratégia de testes | `docs/architecture/test-strategy.md` |
@@ -685,8 +700,9 @@ git add -A
 | `on*` inline em HTML (`onclick=`, `onsubmit=`) | Viola CSP; detectado por check:hygiene |
 | `innerHTML` sem `escapeHtml()` em conteúdo de usuário | Vulnerabilidade XSS direta |
 | Instalar dependências de produção (`npm install --save`) | Stack vanilla — sem npm em prod |
-| Usar React, Vue, Angular, TypeScript, Babel, Webpack, Vite | Stack imutável |
-| Push direto para `kinocampus-V75.0-foundations` | Branch protegida — fluxo via PR |
+| Usar React, Vue, Angular, Babel, Webpack ou Vite no frontend | Runtime público permanece Vanilla JS |
+| Emitir/transpilar TypeScript ou colocá-lo em `assets/`, `admin/` ou HTML | A exceção TypeScript é somente `types/` + `noEmit` |
+| Push direto para `main` | Branch protegida — fluxo via PR |
 | `git push --force` em qualquer branch | Proibido sem aprovação explícita |
 | `git commit --amend` em commits já publicados | Reescreve histórico público |
 
@@ -696,7 +712,7 @@ git add -A
 |----------|--------|
 | Deletar suites existentes | Reduz cobertura; vide regra de ouro |
 | `it.skip` ou `describe.skip` sem aprovação | Mascara falhas |
-| Reduzir contagem de testes sem aprovação explícita | Contagem mínima é 177/3600 |
+| Reduzir cobertura ou inventário sem justificativa explícita | Pode esconder regressões funcionais |
 | Commitar com `npm test` com falhas | Proibido terminantemente |
 
 ### Validators
@@ -720,7 +736,7 @@ git add -A
 | Quais scripts cada HTML carrega e em que ordem | `docs/architecture/script-loading-reference.md` |
 | Como os dados fluem de controller → KCAPI → adapter → banco | `docs/architecture/data-flow-guide.md` |
 | Estrutura do repositório, grupos JS, namespaces, delta de versões | `docs/architecture/repository-structure.md` |
-| Onde adicionar novos testes, estrutura das 177 suites | `docs/architecture/test-strategy.md` |
+| Onde adicionar novos testes e como escolher a camada | `docs/architecture/test-strategy.md` |
 | CSS em produção, `future-split/`, convenções | `docs/architecture/css-architecture.md` |
 | Arquitetura geral, camadas, hotspots | `docs/architecture.md` |
 | Métodos públicos de KCAPI, contratos de retorno | `docs/api-contract.md` |
@@ -776,13 +792,14 @@ npm run check:all
 
 # Individualmente
 npm run check:version    # VERSION.json válido
-npm run check:structure  # 163 itens + raiz limpa
-npm run check:scripts    # cadeia de boot nos 26 HTMLs
-npm run check:routes     # 26 rotas + CSS
+npm run check:structure  # contrato estrutural + raiz limpa
+npm run check:scripts    # cadeia de boot nos 33 HTMLs
+npm run check:routes     # 33 rotas + CSS
 npm run check:hygiene    # 8.6.1, i18n B2, inline handlers, cadeias
+npm run typecheck:contracts # contratos TypeScript sem emissão
 
 # Testes
-npm test                 # 177 suites · 3600 testes
-npx playwright test --list # inventário: 13 specs · 83 testes
-npx playwright test        # executa as 83 specs (chromium); webServer sobe http-server:4000
+npm test                   # inventário completo Jest
+npx playwright test --list # inventário E2E atual
+npx playwright test        # projeto Chromium; webServer sobe http-server:4000
 ```

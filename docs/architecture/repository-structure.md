@@ -1,16 +1,16 @@
 # Estrutura do Repositório - KinoCampus
 
-**Versão:** v76.40.0
-**Data:** 2026-06-20
-**Atualizado em:** v76.40.0 - chips removíveis, facetas e zero-results estruturados sob flags
+**Versão:** v76.44.0
+**Data:** 2026-08-27
+**Atualizado em:** v76.44.0 - contratos TypeScript noEmit fora do runtime público
 
 ---
 
 ## 1. Visao Geral
 
-KinoCampus e uma plataforma HTML5 + CSS3 + Vanilla JS, sem framework, sem bundler e sem transpilador.
+KinoCampus e uma plataforma HTML5 + CSS3 + Vanilla JS, sem framework, sem bundler e sem transpilador em producao. TypeScript existe apenas como verificador de contratos `noEmit` em desenvolvimento.
 O runtime e servido como arquivos estaticos via Vercel, com scripts carregados por `<script defer>`
-em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
+em ordem deterministica nos 33 HTMLs canonicos validados pelos scripts.
 
 **Stack imutavel:**
 
@@ -21,11 +21,12 @@ em ordem deterministica nos 26 HTMLs canonicos validados pelos scripts.
 | Hosting | Vercel (`vercel.json`) |
 | Runtime JS | `frontendRuntimeVersion=8.6.1` |
 | appVersion | `75.1.0` |
-| Branch principal | `kinocampus-V75.0-foundations` |
-| Testes | Jest 191 suites / 3784 testes + Playwright 11 specs E2E |
+| Branch principal | `main` |
+| Testes | Jest + Playwright + pgTAP + contratos Deno/SQL |
 | Gates locais | `npm run check:all` com 6 gates |
+| Contratos de dados | `types/` + `tsconfig.contracts.json`, estrito e sem emissao |
 
-V75.1 e a fase operacional atual de performance/observabilidade. Este arquivo mantem o baseline estrutural reancorado em V23 e reflete a
+A fase operacional canonica continua declarada em `VERSION.json`. Este arquivo mantem o baseline estrutural reancorado em V23 e registra a
 janela operacional atual: archive consolidado, planning ativo com ledger pos-V23, QA ativo separado do
 historico, worktree Claude arquivada, runbook QA real V25, templates de evidencia V26, gate visual/a11y V27,
 auditoria unaccent/FTS V28, checklist Supabase Advisor V29, checklist de sandbox para providers V30, matriz
@@ -60,6 +61,7 @@ performance phase 1 com runtime 8.6.1 em V75.1, decomposicao V76 de diagnostics/
 ```text
 kino-campus/
 |-- assets/
+|   |-- vendor/                     SDK Supabase UMD fixado e licenca
 |   |-- js/
 |   |   |-- boot/                  9 arquivos
 |   |   |-- core/                  12 arquivos
@@ -100,14 +102,18 @@ kino-campus/
 |   |-- ops/                       runbooks operacionais
 |   |-- planning/                  backlog e roteiros V18+
 |   `-- qa/                        QA ativo
+|-- types/                         contratos TypeScript sem artefato publico
+|   |-- supabase.generated.ts      tipos gerados do schema public
+|   |-- posts.contracts.ts         contratos de dominio de posts e Tags
+|   `-- tests/                     testes de compilacao dos contratos
 |-- tests/
-|   |-- unit/                     26 suites
-|   |-- integration/              131 suites
-|   |-- contract/                 13 suites
-|   |-- structure/                14 suites
-|   |-- a11y/                     5 suites
+|   |-- unit/
+|   |-- integration/
+|   |-- contract/
+|   |-- structure/
+|   |-- a11y/
 |   |-- fixtures/
-|   `-- e2e/                      11 specs
+|   `-- e2e/
 |-- scripts/
 |   |-- validate-version-map.js
 |   |-- validate-repository-structure.js
@@ -126,6 +132,7 @@ kino-campus/
 |-- sw.js
 |-- vercel.json
 |-- package.json
+|-- tsconfig.contracts.json
 |-- VERSION.json
 |-- CHANGELOG.md
 |-- README.md
@@ -270,15 +277,15 @@ Relatorios anteriores devem ser movidos com `git mv` para `docs/archive/relatori
 |---|---|
 | `npm run check:version` | Valida `VERSION.json`, branch canonica e runtime JS `8.6.1` |
 | `npm run check:structure` | Valida 169 itens estruturais + raiz `assets/js/` limpa |
-| `npm run check:scripts` | Valida cadeias de scripts nos 28 HTMLs canonicos |
-| `npm run check:routes` | Valida 22 rotas publicas + 6 admin |
+| `npm run check:scripts` | Valida cadeias de scripts nos 33 HTMLs canonicos |
+| `npm run check:routes` | Valida as 33 rotas canonicas e seus assets |
 | `npm run check:hygiene` | Valida higiene estatica de runtime, branch e changelog |
 | `npm run check:all` | Executa os 5 validadores estruturais, paridade do snapshot e Jest |
 | `npm run check:search-registry` | Falha se o snapshot divergir de schema, builder ou políticas |
-| `npm test` | Mantém 191/191 suites e 3784/3784 testes Jest |
+| `npm test` | Executa o inventario Jest completo; regressões exigem diagnóstico explícito |
 | `npm run benchmark:search-shadow` | Mede 12 cenários sintéticos dos seis módulos, sem dados reais |
-| `npx playwright test --list` | Lista 13 specs / 83 testes Playwright sem exigir ambiente local ativo (inventário) |
-| `npx playwright test` | Executa as 83 specs Playwright (chromium); sobe `http-server` via `webServer` automaticamente. Gate de regressão real desde V76.48 |
+| `npx playwright test --list` | Lista o inventario Playwright sem exigir ambiente local ativo |
+| `npx playwright test` | Executa o projeto Chromium; sobe `http-server` via `webServer` automaticamente |
 | `npm run lhci` | Evidencia Lighthouse; depende de ambiente local/provider |
 
 ---

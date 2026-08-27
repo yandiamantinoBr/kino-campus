@@ -436,11 +436,11 @@ describe('KCUtils - Testes Expandidos', () => {
 
   describe('buildProductDetailHref', () => {
     test('monta a rota canônica do detalhe com o id informado', () => {
-      expect(utils.buildProductDetailHref('abc-123')).toBe('_product.html?id=abc-123');
+      expect(utils.buildProductDetailHref('abc-123')).toBe('product.html?id=abc-123');
     });
 
     test('codifica caracteres especiais no id', () => {
-      expect(utils.buildProductDetailHref('uuid/with spaces')).toBe('_product.html?id=uuid%2Fwith%20spaces');
+      expect(utils.buildProductDetailHref('uuid/with spaces')).toBe('product.html?id=uuid%2Fwith%20spaces');
     });
 
     test('retorna string vazia para id ausente', () => {

@@ -1,7 +1,11 @@
 'use strict';
 
 const lifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
-const { buildProductValues, shouldIndexPost } = require('../../api/og-product.js');
+const {
+  applyRuntimeAssetRevision,
+  buildProductValues,
+  shouldIndexPost,
+} = require('../../api/og-product.js');
 const { parseDateLike } = require('../../api/_lib/product-seo-policy.js');
 
 function buildPost(overrides) {
@@ -20,6 +24,38 @@ function buildPost(overrides) {
 }
 
 describe('metadados SEO de product.html', () => {
+  test('revisiona assets imutáveis do SSR com o SHA exato do deploy', () => {
+    const previous = process.env.VERCEL_GIT_COMMIT_SHA;
+    process.env.VERCEL_GIT_COMMIT_SHA = '1dc1471f19eb0ce7bcdf0f0bafb3107270f5d5a2';
+    try {
+      const html = [
+        '<link href="assets/css/product.css?v=8.6.1" rel="stylesheet" />',
+        '<script defer src="assets/vendor/supabase-js-2.112.4.js"></script>',
+        '<script defer src="https://cdn.example.com/external.js?v=old"></script>',
+      ].join('');
+      const revised = applyRuntimeAssetRevision(html);
+
+      expect(revised).toContain('assets/css/product.css?v=1dc1471f19eb0ce7bcdf0f0bafb3107270f5d5a2');
+      expect(revised).toContain('assets/vendor/supabase-js-2.112.4.js?v=1dc1471f19eb0ce7bcdf0f0bafb3107270f5d5a2');
+      expect(revised).toContain('https://cdn.example.com/external.js?v=old');
+    } finally {
+      if (previous === undefined) delete process.env.VERCEL_GIT_COMMIT_SHA;
+      else process.env.VERCEL_GIT_COMMIT_SHA = previous;
+    }
+  });
+
+  test('não inventa revisão quando a variável de deploy é inválida', () => {
+    const previous = process.env.VERCEL_GIT_COMMIT_SHA;
+    process.env.VERCEL_GIT_COMMIT_SHA = 'not-a-commit';
+    try {
+      expect(applyRuntimeAssetRevision('<script src="assets/app.js?v=8.6.1"></script>'))
+        .toContain('assets/app.js?v=8.6.1');
+    } finally {
+      if (previous === undefined) delete process.env.VERCEL_GIT_COMMIT_SHA;
+      else process.env.VERCEL_GIT_COMMIT_SHA = previous;
+    }
+  });
+
   test('mantém canonical e imagem de fallback no domínio oficial', () => {
     const values = buildProductValues(buildPost());
 

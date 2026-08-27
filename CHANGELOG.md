@@ -2,6 +2,40 @@
 
 ---
 
+## [v76.44] - 2026-08-27 - contratos TypeScript e descoberta antecipada da imagem LCP
+
+### Adicionado
+
+- Projeto TypeScript estrito e isolado em `types/`, com tipos gerados do schema
+  público do Supabase, contratos de posts/Tags e testes de compilação sem emissão.
+- Gate `typecheck:contracts` na validação essencial, sem dependência do build Vercel
+  e sem conversão dos scripts Vanilla JS servidos ao navegador.
+- Preload SSR da imagem principal de publicações indexáveis para antecipar a
+  descoberta do elemento LCP, sem antecipar mídia de páginas `noindex`.
+- Links de Minhas Publicações, perfil, notificações e previews agora apontam para
+  `product.html?id=...`, preservando SSR, canonical e JSON-LD ao compartilhar;
+  o driver local continua usando o shell `_product.html` para desenvolvimento.
+- Marcação `Product` só publica `Offer` quando há preço explícito, finito e não
+  negativo; valores ausentes ou inválidos voltam com segurança para `Article`.
+- Sitemap pagina as publicações em lotes determinísticos de 1.000, sem omitir
+  silenciosamente os itens posteriores ao primeiro lote.
+- Imagens estáticas e avatares declarados no HTML recebem dimensões intrínsecas,
+  reduzindo risco de CLS sem alterar seus tamanhos visuais definidos em CSS.
+- AdSense reage a `kc:consentchange`: grant renderiza uma vez e revoke remove os
+  slots/script gerenciados, sem exigir recarga nem duplicar anúncios.
+- As 33 páginas usam o bundle UMD oficial e versionado do Supabase no próprio
+  domínio, removendo o jsDelivr flutuante do caminho crítico de `DOMContentLoaded`.
+- O SSR de produto e o 404 reescrevem revisões de assets locais com o SHA do
+  próprio deploy, impedindo mistura de arquivos imutáveis entre versões.
+
+### Operação
+
+- A política arquitetural passa a permitir TypeScript somente como ferramenta de
+  desenvolvimento `noEmit`; runtime, URLs, ordem de scripts, Pipeline e estética
+  permanecem inalterados.
+
+---
+
 ## [v76.43] - 2026-07-29 - direitos do titular, portabilidade e exclusão segura
 
 ### Adicionado

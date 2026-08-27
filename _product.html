@@ -8,7 +8,7 @@
   <link rel="alternate" type="application/rss+xml" href="https://www.kinocampus.com.br/feed.xml" />
   <meta name="robots" content="noindex,follow,noarchive" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" as="script" />
+  <link rel="preload" href="assets/vendor/supabase-js-2.112.4.js?v=2.112.4" as="script" />
   <meta name="description" content="KinoCampus — plataforma da comunidade universitária da UFG. Compra e venda, caronas, moradia, eventos, oportunidades e achados/perdidos entre estudantes." />
 
   <!-- Open Graph / WhatsApp / redes sociais — atualizados via JS no carregamento do post -->
@@ -209,7 +209,7 @@
       <div class="kc-seller-card" id="sellerCard" style="display:none;">
         <h3><i class="fas fa-user"></i> Autor</h3>
         <div class="kc-seller-profile" id="sellerAvatarWrap" data-kc-view-profile="1" style="cursor: pointer;" title="Ver perfil do autor" data-i18n-tooltip="tooltip.view-author" aria-label="Ver perfil do autor" data-i18n-aria-label="aria-label.view-author">
-          <img class="kc-seller-avatar" id="sellerAvatar" alt="Avatar do autor" data-i18n-alt="alt.author-avatar" />
+          <img class="kc-seller-avatar" id="sellerAvatar" alt="Avatar do autor" data-i18n-alt="alt.author-avatar" width="60" height="60" />
           <div class="kc-seller-info">
             <div class="kc-seller-name" id="sellerName"></div>
             <div class="kc-seller-handle" id="sellerHandle" style="display:none;"></div>
@@ -232,7 +232,7 @@
 
         <div class="kc-comment-composer">
           <!-- Coluna 1: avatar -->
-          <img id="commentComposerAvatar" class="kc-comment-composer-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff7c00'/%3E%3Cstop offset='1' stop-color='%23ff6b00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23g)'/%3E%3Ccircle cx='50' cy='38' r='14' fill='white' opacity='0.92'/%3E%3Cellipse cx='50' cy='72' rx='22' ry='16' fill='white' opacity='0.92'/%3E%3C/svg%3E" alt="Seu avatar" data-i18n-alt="alt.comment-user-avatar" />
+          <img id="commentComposerAvatar" class="kc-comment-composer-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff7c00'/%3E%3Cstop offset='1' stop-color='%23ff6b00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23g)'/%3E%3Ccircle cx='50' cy='38' r='14' fill='white' opacity='0.92'/%3E%3Cellipse cx='50' cy='72' rx='22' ry='16' fill='white' opacity='0.92'/%3E%3C/svg%3E" alt="Seu avatar" data-i18n-alt="alt.comment-user-avatar" width="44" height="44" />
           <!-- Coluna 2: nome do autor -->
           <div class="kc-comment-composer-main">
             <div class="kc-comment-author-wrap">
@@ -356,7 +356,7 @@
   <script defer src="assets/js/boot/kc-google-tag.js?v=8.6.6"></script>
   <script defer src="assets/js/boot/kc-events.js?v=8.6.8"></script>
   <script defer src="assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="assets/vendor/supabase-js-2.112.4.js?v=2.112.4"></script>
 
   <script defer src="assets/js/api/kc-supabase.client.js?v=8.6.9"></script>
     <script defer src="assets/js/api/kc-supabase.posts.js?v=8.6.10"></script>

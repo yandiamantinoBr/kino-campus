@@ -8,3 +8,6 @@ supabase/migrations/*.sql text eol=lf
 data/.openclaw/workspace/scripts/dedup-kino.js whitespace=cr-at-eol
 data/.openclaw/workspace/scripts/formatador-ia.js whitespace=cr-at-eol
 data/.openclaw/workspace/skills/cadu-api/pipeline.py whitespace=cr-at-eol
+
+# Preserve the pinned upstream UMD bundle byte-for-byte; never normalize or merge it.
+assets/vendor/supabase-js-2.112.4.js binary

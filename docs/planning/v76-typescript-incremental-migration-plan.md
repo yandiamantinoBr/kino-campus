@@ -2,7 +2,13 @@
 
 **Data:** 2026-08-24
 **Escopo:** decisão e roteiro técnico; nenhuma mudança de runtime, banco, deploy ou Pipeline Completa
-**Decisão atual:** **Go para planejamento e preparação de pilotos TypeScript incrementais; No-Go para introduzir o toolchain enquanto a política de stack vigente não for revisada explicitamente; No-Go para reescrita total e para Rust no núcleo**
+**Decisão atual:** **Go para contratos TypeScript isolados em `types/` com `noEmit`; pilotos JSDoc/checkJs continuam condicionados a uma tranche própria; No-Go para reescrita total e para Rust no núcleo**
+
+**Atualização de execução (2026-08-27):** o pedido explícito do mantenedor autorizou
+a revisão estreita da política de stack. A Fase 1 passa a permitir TypeScript
+`5.9.3` somente como dependência de desenvolvimento, com configuração dedicada,
+tipos Supabase versionados e CI sem emissão. O runtime público, a Pipeline Completa,
+as páginas e a esteira Vercel permanecem inalterados por essa adoção.
 
 ## 1. Decisão
 
@@ -26,17 +32,11 @@ deve acontecer depois da estabilização desse fluxo, em uma PR separada.
 
 ### Gate de governança da stack
 
-O guia arquitetural vigente classifica TypeScript, bundlers e transpilers como
-proibidos no frontend, inclusive quando não há alteração do JavaScript servido.
-Este roteiro não substitui essa regra: ele registra uma alternativa técnica para
-o caso de a política ser alterada de forma explícita e versionada.
-
-Até essa reconciliação, somente a Fase 0 é elegível. Não devem ser adicionados
-`typescript`, `tsconfig*.json`, um comando de typecheck, arquivos `.d.ts` ou
-comentários `@ts-check` sob a alegação de que são "somente desenvolvimento".
-Uma exceção futura precisa manter a entrega do navegador em JavaScript clássico,
-sem transpilação, bundler, alteração de URLs, ordem de scripts ou dependência de
-desenvolvimento no build da Vercel.
+O guia arquitetural foi reconciliado em 2026-08-27 para permitir apenas contratos
+em `types/`, validados por `tsconfig.contracts.json` com `noEmit`. A permissão não
+se estende a scripts do navegador, JSDoc/checkJs em arquivos publicados, bundlers,
+transpilação, alteração de URLs/ordem ou dependência de desenvolvimento no build
+da Vercel. Qualquer ampliação exige nova tranche, testes e decisão explícita.
 
 ## 2. Evidência do repositório em 2026-08-24
 
@@ -122,22 +122,19 @@ URL e o comportamento offline permanecem idênticos.
 
 **Gate:** diff somente documental e git diff --check limpo.
 
-### Fase 1 — infraestrutura de typecheck isolada (condicionada)
+### Fase 1 — infraestrutura de typecheck isolada (em execução)
 
-Pré-condição: uma decisão arquitetural posterior deve reconciliar explicitamente
-o guia de stack com um typecheck estritamente de desenvolvimento. Sem essa decisão,
-esta fase permanece bloqueada. Quando desbloqueada, executar em uma PR própria,
-escolhendo **um** dos dois domínios e sem criar um tsconfig global:
+Pré-condição cumprida em 2026-08-27 por decisão explícita do mantenedor e revisão
+versionada do guia de stack. A primeira tranche escolhe contratos de dados, sem
+criar um `tsconfig.json` global:
 
-- para um piloto de browser, adicionar TypeScript apenas como dependência de
-  desenvolvimento na raiz, depois da exceção específica para o frontend;
+- adicionar TypeScript apenas como dependência de desenvolvimento na raiz;
 - para um piloto Node/Cadu, manter dependência e configuração limitadas ao
   serviço ou runtime correspondente, depois da estabilização da Pipeline;
-- criar configuração dedicada ao domínio escolhido, com noEmit, allowJs e
-  inclusão explícita de poucos arquivos; nunca incluir assets/js, Edge Functions
-  e o app de pitch no mesmo projeto de tipos;
-- deixar checkJs desligado globalmente e habilitá-lo arquivo a arquivo com
-  comentário de verificação, evitando uma avalanche de erros legados;
+- criar configuração dedicada com `noEmit` e inclusão exclusiva de `types/**/*.ts`;
+  nunca incluir `assets/js`, Edge Functions e o app de pitch no mesmo projeto;
+- manter checkJs fora desta tranche, evitando alterar bytes públicos ou abrir uma
+  avalanche de erros legados;
 - adicionar um comando CI independente, sem substituir Jest, Playwright ou
   npm run check:all.
 

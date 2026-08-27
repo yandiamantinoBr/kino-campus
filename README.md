@@ -15,7 +15,7 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 
 | Camada | Tecnologia |
 |--------|------------|
-| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, `window.*` + `Object.freeze`, sem framework/bundler) |
+| Frontend | HTML5 + CSS3 + Vanilla JS (IIFE, `window.*` + `Object.freeze`, sem framework/bundler); contratos TypeScript `noEmit` apenas em desenvolvimento |
 | Arquitetura | Driver Pattern: KCAPI fachada única, com adapters `local` (dev) e `supabase` (prod) |
 | Backend | Supabase (PostgreSQL 17, Auth, Storage, Edge Functions Deno/TS, Realtime) |
 | Hosting | Vercel (estático + 4 serverless functions) |
@@ -24,6 +24,10 @@ Conecta alunos, professores e egressos em 6 módulos temáticos: Compra e Venda,
 | Tamanho JS | `assets/js/` ~1.5 MB; fachada `kc-api.client.js` ~55 KB (com submódulos `_KCAPI.*` extraídos) |
 | Tamanho CSS | `assets/css/` ~422 KB total; `styles.css` monolito ~274 KB (reduzido de 287 KB via micro-splits) |
 | Testes | Jest (unitário/integração/contrato), Playwright E2E, pgTAP e verificações Deno/SQL |
+
+Os contratos de dados da raiz são verificados com
+`npm run typecheck:contracts`. O comando não emite JavaScript, não participa do
+build Vercel e não altera os scripts servidos ao navegador.
 
 ## Documentação Técnica
 

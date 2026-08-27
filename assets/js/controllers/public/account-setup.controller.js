@@ -74,7 +74,7 @@
   function buildPreviewPostUrl() {
     const relativeHref = window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function'
       ? window.KCUtils.buildProductDetailHref('demo')
-      : `_product.html?id=${encodeURIComponent('demo')}`;
+      : `product.html?id=${encodeURIComponent('demo')}`;
     return new URL(relativeHref, window.location.origin).toString();
   }
 
@@ -787,4 +787,3 @@
   window.addEventListener('beforeunload', releaseAvatarPreview);
   document.addEventListener('DOMContentLoaded', init);
 })();
-

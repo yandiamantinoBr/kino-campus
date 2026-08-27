@@ -21,6 +21,8 @@
   let frequencyMemory = {};
   let initialLoadStarted = false;
   let initialLoadCompleted = false;
+  let latestRenderState = null;
+  let consentListenerBound = false;
   const safeSetTimeout = typeof root.setTimeout === 'function'
     ? root.setTimeout.bind(root)
     : (typeof setTimeout === 'function' ? setTimeout : function (fn) {
@@ -694,12 +696,43 @@
     if (!targetDoc || !isFeedPage()) return false;
     const feedLists = Array.from(targetDoc.querySelectorAll('.kc-feed-list'));
     const cfg = normalizeAdConfig(config || defaultAdConfig());
+    latestRenderState = {
+      ads: normalizeAdRows(ads),
+      context: Object.assign({}, context || {}),
+      doc: targetDoc,
+      config: cfg,
+    };
     let rendered = maybeLoadAutoAds(cfg);
     rendered = renderAsideAds(ads, context, targetDoc, cfg) || rendered;
     feedLists.forEach((container) => {
       rendered = renderInlineAds(container, ads, context, cfg) || rendered;
     });
     return rendered;
+  }
+
+  function removeAdsenseArtifacts(targetDoc) {
+    const doc = targetDoc || root.document;
+    if (!doc || !doc.querySelectorAll) return;
+    doc.querySelectorAll('[data-kc-ad-provider="adsense"], ins.adsbygoogle').forEach((node) => {
+      const managedCard = node.closest && node.closest('[data-kc-managed-ad="true"]');
+      (managedCard || node).remove();
+    });
+    const script = doc.getElementById && doc.getElementById(ADSENSE_SCRIPT_ID);
+    if (script && typeof script.remove === 'function') script.remove();
+  }
+
+  function reconcileAdvertisingConsent() {
+    const state = latestRenderState;
+    const targetDoc = state && state.doc ? state.doc : root.document;
+    if (!hasAdvertisingConsent()) removeAdsenseArtifacts(targetDoc);
+    if (!state) return false;
+    return renderAllAds(state.ads, state.context, targetDoc, state.config);
+  }
+
+  function bindConsentListener() {
+    if (consentListenerBound || typeof root.addEventListener !== 'function') return;
+    consentListenerBound = true;
+    root.addEventListener('kc:consentchange', reconcileAdvertisingConsent);
   }
 
   const trackedImpressions = new Set();
@@ -874,6 +907,7 @@
 
   function init() {
     if (!root.document || !isFeedPage()) return;
+    bindConsentListener();
     let retryIndex = 0;
     let retryTimer = null;
 
@@ -960,5 +994,6 @@
     clearFrequencyCaps,
     loadAndRender,
     observeFeeds,
+    reconcileAdvertisingConsent,
   });
 }));
