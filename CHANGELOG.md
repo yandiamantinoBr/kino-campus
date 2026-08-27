@@ -2,6 +2,39 @@
 
 ---
 
+## [v76.48] - 2026-08-27 - restauração da identidade visual primária
+
+### Corrigido
+
+- Logo, Login/Cadastro, CTAs, abas ativas, badges, FABs e botões de chat voltam
+  a usar o foreground branco histórico sobre as superfícies laranja da marca.
+- O token compartilhado `--kc-on-primary` volta a representar o contrato visual
+  branco; sua documentação agora impede que uma decisão de contraste local seja
+  aplicada globalmente a componentes com funções e escalas diferentes.
+- Os dois estados hover alterados junto com a regressão retornam aos valores
+  anteriores, preservando a reprodução visual do deploy estável.
+
+### Preservado
+
+- A separação semântica entre as abas de ordenação (`tablist`) e os links de
+  categoria (`nav`) do v76.47 permanece intacta.
+- O cache-bust de produção continua vinculado ao SHA de cada deploy, evitando
+  que navegadores ou o Service Worker mantenham o CSS da versão regressiva.
+- O hotfix não volta a classificar branco sobre `#FF6B00` como AA para texto
+  pequeno: o Lighthouse mede 2,85:1. Uma evolução de contraste precisa ser
+  contextual e visualmente comparada, sem alterar outra vez o token da marca.
+
+### Validado
+
+- Contratos estáticos e cross-browser verificam branco computado na logo, no
+  Login/Cadastro e na aba ativa, nos temas claro e escuro, sem overflow.
+- Comparação automatizada usa o deploy anterior ao v76.47 como referência
+  visual para desktop e mobile.
+- Lighthouse local passa os gates nas quatro rotas auditadas: performance entre
+  0,91 e 1,00, acessibilidade 0,96, boas práticas 0,82 e SEO 1,00.
+
+---
+
 ## [v76.47] - 2026-08-27 - contraste AA e semântica das abas de feed
 
 ### Corrigido

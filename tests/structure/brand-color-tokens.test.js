@@ -3,8 +3,10 @@
  * Guards the accidental a11y regression where PR #801:
  *  1) introduced --kc-primary-brand-strong fills (#C44A00) on primary UI
  *  2) referenced --kc-primary-brand-bright without defining it
- * Product surfaces must keep the brand orange (#FF6B00) for solid fills and
- * pair it with the AA-safe foreground token instead of white (2.86:1).
+ * Product surfaces must keep the brand orange (#FF6B00) for solid fills. The
+ * shared foreground is also inherited by the logo and other identity elements,
+ * so its default value is part of the visual contract and cannot be changed as
+ * a global shortcut for a component-specific contrast adjustment.
  */
 const fs = require('fs');
 const path = require('path');
@@ -34,7 +36,7 @@ function contrastRatio(first, second) {
 describe('brand color tokens', () => {
   test('defines brand, on-primary, bright and strong tokens in :root', () => {
     expect(CSS).toMatch(/--kc-primary-brand:\s*#FF6B00/i);
-    expect(CSS).toMatch(/--kc-on-primary:\s*#222222/i);
+    expect(CSS).toMatch(/--kc-on-primary:\s*#FFFFFF/i);
     expect(CSS).toMatch(/--kc-primary-brand-bright:\s*#FF8000/i);
     expect(CSS).toMatch(/--kc-primary-brand-strong:\s*#C44A00/i);
   });
@@ -73,35 +75,39 @@ describe('brand color tokens', () => {
     );
   });
 
-  test('solid brand fills never declare a white foreground', () => {
-    const offenders = [];
+  test('shared foreground preserves the established white brand identity', () => {
+    const cssSources = Object.fromEntries(
+      fs.readdirSync(CSS_DIR)
+        .filter((file) => file.endsWith('.css'))
+        .map((file) => [file, fs.readFileSync(path.join(CSS_DIR, file), 'utf8')])
+    );
+    const declarations = Object.values(cssSources)
+      .flatMap((source) => Array.from(source.matchAll(/--kc-on-primary:\s*([^;]+);/gi)))
+      .map((match) => match[1].trim().toUpperCase());
+    const consumersByFile = Object.fromEntries(
+      Object.entries(cssSources)
+        .map(([file, source]) => [
+          file,
+          (source.match(/color:\s*var\(--kc-on-primary\)/g) || []).length,
+        ])
+        .filter(([, count]) => count > 0)
+    );
 
-    fs.readdirSync(CSS_DIR)
-      .filter((file) => file.endsWith('.css'))
-      .forEach((file) => {
-        const source = fs.readFileSync(path.join(CSS_DIR, file), 'utf8');
-        const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
-        let match;
-
-        while ((match = rulePattern.exec(source))) {
-          const declarations = match[2]
-            .split(';')
-            .map((declaration) => declaration.trim())
-            .filter(Boolean);
-          const solidPrimary = declarations.some((declaration) => (
-            /^background(?:-color)?\s*:\s*var\(--kc-primary-brand\)$/i.test(declaration)
-          ));
-          const whiteForeground = declarations.some((declaration) => (
-            /^color\s*:\s*(?:#fff(?:fff)?|white)(?:\s*!important)?$/i.test(declaration)
-          ));
-
-          if (solidPrimary && whiteForeground) {
-            offenders.push(`${file}: ${match[1].trim().replace(/\s+/g, ' ')}`);
-          }
-        }
-      });
-
-    expect(offenders).toEqual([]);
+    expect(declarations).toEqual(['#FFFFFF']);
+    expect(consumersByFile).toEqual({
+      'admin-shell.css': 1,
+      'kc-chat-shortcut.css': 1,
+      'kc-chat.css': 6,
+      'kc-error-page.css': 1,
+      'kc-pitch-host.css': 2,
+      'kc-public-shell.css': 1,
+      'product.css': 1,
+      'styles.css': 34,
+    });
+    expect(CSS).not.toMatch(/--kc-on-primary:\s*#222222/i);
+    expect(CSS).toMatch(
+      /\.kc-logo-mark\s*\{[\s\S]{0,180}?color:\s*var\(--kc-on-primary\)/
+    );
     expect(CSS).toMatch(
       /\.kc-user-actions a\.btn-login\s*\{[\s\S]{0,180}?color:\s*var\(--kc-on-primary\)/
     );
@@ -111,7 +117,21 @@ describe('brand color tokens', () => {
     expect(CSS).toMatch(
       /\.kc-btn-primary\s*\{[\s\S]{0,120}?color:\s*var\(--kc-on-primary\)/
     );
-    expect(contrastRatio('#FF6B00', '#222222')).toBeGreaterThanOrEqual(4.5);
+    expect(CSS).toMatch(
+      /\.kc-mobile-nav \.kc-create-btn\s*\{[\s\S]{0,180}?color:\s*var\(--kc-on-primary\)/
+    );
+
+    [
+      'admin-shell.css',
+      'kc-chat-shortcut.css',
+      'kc-chat.css',
+      'kc-error-page.css',
+      'kc-pitch-host.css',
+      'kc-public-shell.css',
+      'product.css',
+    ].forEach((file) => {
+      expect(cssSources[file]).toContain('color: var(--kc-on-primary)');
+    });
   });
 
   test('consent primary keeps the brand fill with AA-safe foreground and focus', () => {
