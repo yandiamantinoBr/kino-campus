@@ -13,6 +13,8 @@
   var _activeUserId = '';
   var _authListenerBound = false;
   var _chatRuntimePromise = null;
+  var _chatUnreadCount = 0;
+  var _mobileAccessReconcileScheduled = false;
 
   var _handleBellClick = null;
   var _handleDocumentClick = null;
@@ -242,7 +244,7 @@
     return _chatRuntimePromise;
   }
 
-  function ensureChatEntryPoints() {
+  function ensureChatEntryPoints(allowDeferredReconcile) {
     var href = chatHref();
     document.querySelectorAll('.kc-user-actions').forEach(function (actions) {
       if (!actions || actions.querySelector('.kc-chat-shortcut')) return;
@@ -260,18 +262,51 @@
       }
     });
 
-    if (!document.querySelector('.kc-chat-mobile-fab')) {
-      var mobile = document.createElement('a');
-      mobile.className = 'kc-chat-mobile-fab';
-      mobile.href = href;
-      mobile.setAttribute('aria-label', 'Mensagens');
-      mobile.innerHTML = '<i class="fas fa-envelope" aria-hidden="true"></i><span class="kc-chat-shortcut__badge" hidden>0</span>';
-      document.body.appendChild(mobile);
+    document.querySelectorAll('.kc-mobile-menu-content').forEach(function (menu) {
+      var mobileLink = menu.querySelector('a[href*="mensagens.html"]');
+      if (!mobileLink) {
+        mobileLink = document.createElement('a');
+        mobileLink.href = href;
+        mobileLink.innerHTML = '<i class="fas fa-envelope" aria-hidden="true"></i><span>Mensagens</span>';
+        menu.appendChild(mobileLink);
+      }
+      mobileLink.classList.add('kc-chat-mobile-menu-link');
+      if (!mobileLink.querySelector('.kc-chat-shortcut__badge')) {
+        var badge = document.createElement('span');
+        badge.className = 'kc-chat-shortcut__badge';
+        badge.hidden = true;
+        badge.textContent = '0';
+        mobileLink.appendChild(badge);
+      }
+    });
+
+    // O menu móvel já expõe Mensagens. Remover o FAB evita cobrir cards,
+    // formulários e ações fixas sem retirar o acesso à funcionalidade.
+    document.querySelectorAll('.kc-chat-mobile-fab').forEach(function (mobileFab) {
+      mobileFab.remove();
+    });
+
+    if (allowDeferredReconcile !== false
+      && !_mobileAccessReconcileScheduled
+      && document.body.classList.contains('kc-shell-page')
+      && !document.querySelector('.kc-mobile-menu-content')) {
+      _mobileAccessReconcileScheduled = true;
+      var reconcile = function () {
+        _mobileAccessReconcileScheduled = false;
+        ensureChatEntryPoints(false);
+        updateChatBadge(_chatUnreadCount);
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(reconcile);
+      } else {
+        window.setTimeout(reconcile, 0);
+      }
     }
   }
 
   function updateChatBadge(count) {
     var total = Number(count) > 0 ? Number(count) : 0;
+    _chatUnreadCount = total;
     document.querySelectorAll('.kc-chat-shortcut__badge').forEach(function (badge) {
       if (total > 0) {
         badge.textContent = total > 99 ? '99+' : String(total);
@@ -870,6 +905,8 @@
     _initialized = false;
     _activeBell = null;
     _activeUserId = '';
+    _chatUnreadCount = 0;
+    _mobileAccessReconcileScheduled = false;
     _handleBellClick = null;
     _handleDocumentClick = null;
     _handleDocumentKeydown = null;

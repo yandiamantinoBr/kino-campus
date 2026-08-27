@@ -95,6 +95,48 @@ describe('KCNotifications dropdown hardening', () => {
     expect(window.KCAPI.getNotifications).toHaveBeenCalledTimes(1);
   });
 
+  test('mantém Mensagens no menu móvel sem FAB sobre o conteúdo', () => {
+    document.body.innerHTML = [
+      '<div class="kc-user-actions"><button class="kc-notif-bell" id="kcNotifBell"></button></div>',
+      '<div class="kc-mobile-menu-content"><a href="eventos.html">Eventos</a></div>',
+      '<a class="kc-chat-mobile-fab" href="mensagens.html">legado</a>',
+    ].join('');
+    const code = fs.readFileSync(
+      path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
+      'utf8'
+    );
+    // eslint-disable-next-line no-eval
+    (0, eval)(code);
+
+    window.KCNotifications.init();
+    window.KCNotifications.init();
+
+    expect(document.querySelector('.kc-chat-mobile-fab')).toBeNull();
+    expect(document.querySelectorAll('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveLength(1);
+    expect(document.querySelector('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).not.toBeNull();
+    expect(document.querySelectorAll('.kc-user-actions .kc-chat-shortcut')).toHaveLength(1);
+  });
+
+  test('enriquece o link de Mensagens já criado pelo shell sem duplicá-lo', () => {
+    document.body.innerHTML = [
+      '<button class="kc-notif-bell" id="kcNotifBell"></button>',
+      '<div class="kc-mobile-menu-content">',
+      '  <a href="mensagens.html"><i class="fas fa-envelope"></i><span>Mensagens</span></a>',
+      '</div>',
+    ].join('');
+    const code = fs.readFileSync(
+      path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
+      'utf8'
+    );
+    // eslint-disable-next-line no-eval
+    (0, eval)(code);
+
+    window.KCNotifications.init();
+
+    expect(document.querySelectorAll('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveLength(1);
+    expect(document.querySelector('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).not.toBeNull();
+  });
+
   test('keeps read, clear and realtime actions alive after rerender', async () => {
     const code = fs.readFileSync(
       path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
