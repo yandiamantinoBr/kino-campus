@@ -9,8 +9,15 @@
   var initialized = false;
   var requestGeneration = 0;
   var requestController = null;
-  var summaryRequestGeneration = 0;
+  var listRequest = null;
+  var countRequestGeneration = 0;
+  var pendingReads = Object.create(null);
   var institutionalPending = 0;
+  // Leituras: autenticação (8 s) + proxy (12 s) + margem de trânsito.
+  var REVIEW_READ_TIMEOUT_MS = 25000;
+  // Escritas mantêm os limites anteriores; timeout nunca autoriza replay.
+  var REVIEW_RESOLUTION_TIMEOUT_MS = 15000;
+  var REVIEW_REPASS_TIMEOUT_MS = 420000;
   var DEFAULT_PAGE_LIMIT = (
     typeof window.matchMedia === 'function'
     && window.matchMedia('(max-width: 700px)').matches
@@ -18,6 +25,8 @@
   var state = {
     items: [],
     providers: [],
+    countStatus: 'unknown',
+    countError: '',
     total: 0,
     limit: DEFAULT_PAGE_LIMIT,
     offset: 0,
@@ -199,8 +208,9 @@
   }
 
   function formatScore(value) {
-    var number = Number(value);
-    return Number.isFinite(number) ? number.toFixed(2).replace('.', ',') : '';
+    return typeof value === 'number' && Number.isFinite(value)
+      ? (value * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+      : '—';
   }
 
   function safeCommunityList(value) {
@@ -283,6 +293,7 @@
       '<span class="kc-cadu-review-community__tier">' +
       '<span class="kc-sr-only">Relevância ' + escapeHtml(tierLabel.toLowerCase()) + ', pontuação ' + escapeHtml(score) + ' de 100</span>' +
       '<span aria-hidden="true">' + escapeHtml(tierLabel) + ' · ' + escapeHtml(score) + '/100</span></span></div>' +
+      '<p class="kc-cadu-review-community__empty">Mede interesse comunitário, não elegibilidade. É distinta da nota curatorial e não confirma prazo, ação nem autorização para publicar.</p>' +
       '<div class="kc-cadu-review-community__grid">' +
       communityValueGroup('Públicos', 'fa-users', relevance.audiences, COMMUNITY_AUDIENCE_LABELS, 'kc-cadu-review-community__group--audiences') +
       communityValueGroup('Sinais de valor', 'fa-bullseye', relevance.signals, COMMUNITY_SIGNAL_LABELS, 'kc-cadu-review-community__group--signals') +
@@ -291,7 +302,7 @@
 
   function repassHintLabel(hint) {
     return ({
-      publish_ready: 'candidato sem bloqueios automáticos',
+      publish_ready: 'candidato à Pipeline; ainda depende das validações de publicação',
       review: 'manter em revisão',
       reject: 'abaixo do limite',
       unknown: 'indefinido'
@@ -308,27 +319,31 @@
       var deltaClass = '';
       var deltaText = '';
       var deltaLabel = '';
-      if (repass.delta !== null) {
+      if (typeof repass.delta === 'number' && Number.isFinite(repass.delta)) {
         if (repass.delta > 0.005) {
           deltaClass = ' is-up';
-          deltaText = ' ▲ ' + formatScore(repass.delta);
-          deltaLabel = ', aumento de ' + formatScore(repass.delta);
+          deltaText = ' ▲ ' + formatScore(repass.delta) + ' p.';
+          deltaLabel = ', aumento de ' + formatScore(repass.delta) + ' pontos';
         } else if (repass.delta < -0.005) {
           deltaClass = ' is-down';
-          deltaText = ' ▼ ' + formatScore(Math.abs(Number(repass.delta)));
-          deltaLabel = ', redução de ' + formatScore(Math.abs(Number(repass.delta)));
+          deltaText = ' ▼ ' + formatScore(Math.abs(repass.delta)) + ' p.';
+          deltaLabel = ', redução de ' + formatScore(Math.abs(repass.delta)) + ' pontos';
         } else {
           deltaClass = ' is-flat';
           deltaText = ' =';
           deltaLabel = ', sem alteração relevante';
         }
       }
-      return '<span class="kc-cadu-review-score' + deltaClass + '" title="Reanálise automática: ' + escapeHtml(repassHintLabel(repass.decision_hint)) + '" aria-label="Nota da reanálise: ' + escapeHtml(formatScore(repass.score)) + escapeHtml(deltaLabel) + '">' +
-        'Reanálise ' + escapeHtml(formatScore(repass.score)) + escapeHtml(deltaText) + '</span>';
+      var previousLabel = typeof repass.previous_score === 'number'
+        ? '; nota curatorial anterior: ' + formatScore(repass.previous_score) + '/100'
+        : '; nota curatorial anterior não informada';
+      var scoreLabel = 'Nota curatorial da reanálise: ' + formatScore(repass.score) + '/100' + deltaLabel + previousLabel;
+      return '<span class="kc-cadu-review-score' + deltaClass + '" title="' + escapeHtml(scoreLabel + '. Indicação: ' + repassHintLabel(repass.decision_hint) + '. Nota não é aprovação.') + '" aria-label="' + escapeHtml(scoreLabel + '. Nota não é aprovação.') + '">' +
+        'Reanálise ' + escapeHtml(formatScore(repass.score)) + '/100' + escapeHtml(deltaText) + '</span>';
     }
     if (base !== null) {
-      return '<span class="kc-cadu-review-score is-base" title="Nota original do Curador" aria-label="Nota original do Curador: ' + escapeHtml(formatScore(base)) + '">' +
-        'Curador ' + escapeHtml(formatScore(base)) + '</span>';
+      return '<span class="kc-cadu-review-score is-base" title="Nota curatorial original; distinta da relevância comunitária. Nota não é aprovação." aria-label="Nota original do Curador: ' + escapeHtml(formatScore(base)) + ' de 100. Nota não é aprovação.">' +
+        'Curador ' + escapeHtml(formatScore(base)) + '/100</span>';
     }
     return '';
   }
@@ -418,24 +433,44 @@
   }
 
   function providerPending(provider) {
-    if (!provider || provider.id !== 'sites') return Number(provider && provider.pending) || 0;
+    if (!provider || provider.id !== 'sites') return state.providers.length ? provider.pending : '—';
     return institutionalPending;
+  }
+
+  function centralPendingCount() {
+    return state.providers.reduce(function (total, provider) {
+      return provider.id === 'sites' ? total : total + provider.pending;
+    }, 0);
   }
 
   function updateBadge() {
     var badge = $('#badge-reviews');
     if (!badge) return;
-    var centralPending = state.providers.reduce(function (total, provider) {
-      return provider.id === 'sites' ? total : total + (Number(provider.pending) || 0);
-    }, 0);
-    var total = centralPending + institutionalPending;
+    var known = state.providers.length > 0;
+    var total = centralPendingCount() + institutionalPending;
     var badgeLabel = total === 1
       ? '1 item de revisão pendente; não é uma fila de publicação.'
       : total + ' itens de revisão pendentes; não é uma fila de publicação.';
-    badge.textContent = String(total);
+    if (state.countStatus === 'loading') {
+      badgeLabel = known ? 'Atualizando. Última contagem confirmada: ' + badgeLabel : 'Consultando revisões; contagem ainda não confirmada.';
+    } else if (state.countStatus === 'stale') {
+      badgeLabel = 'Contagem desatualizada. Última confirmação: ' + badgeLabel + ' ' + state.countError;
+    } else if (!known) {
+      badgeLabel = 'Contagem de revisões ainda não confirmada.' + (state.countError ? ' ' + state.countError : '');
+    }
+    badge.textContent = known
+      ? String(total) + (state.countStatus === 'stale' ? '*' : state.countStatus === 'loading' ? '…' : '')
+      : state.countStatus === 'loading' ? '…' : '—';
     badge.title = badgeLabel;
     badge.setAttribute('aria-label', badgeLabel);
-    badge.classList.toggle('is-warning', total > 0);
+    badge.setAttribute('aria-busy', state.countStatus === 'loading' ? 'true' : 'false');
+    badge.setAttribute('data-snapshot-state', state.countStatus);
+    badge.classList.toggle('is-warning', known && total > 0);
+    var countStatus = $('#reviews-count-status');
+    if (countStatus) {
+      if (countStatus.textContent !== badgeLabel) countStatus.textContent = badgeLabel;
+      countStatus.classList.toggle('is-error', Boolean(state.countError));
+    }
   }
 
   function renderProviders() {
@@ -457,7 +492,7 @@
       return '<button type="button" class="kc-cadu-review-provider' + (active ? ' is-active' : '') + '" data-review-provider="' + escapeHtml(provider.id) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' +
         '<span class="kc-cadu-review-provider__head"><strong><i class="fas ' + escapeHtml(ORIGIN_ICONS[provider.id] || 'fa-clipboard-check') + '" aria-hidden="true"></i> ' + escapeHtml(provider.label || ORIGIN_LABELS[provider.id]) + '</strong><i class="fas fa-chevron-right" aria-hidden="true"></i></span>' +
         '<p>' + escapeHtml(provider.description || '') + '</p>' +
-        '<span class="kc-cadu-review-provider__counts"><span class="kc-cadu-review-provider__pending"><strong>' + escapeHtml(pending) + '</strong> pendentes</span><span><strong>' + escapeHtml(provider.resolved || 0) + '</strong> resolvidas</span></span>' +
+        '<span class="kc-cadu-review-provider__counts"><span class="kc-cadu-review-provider__pending"><strong>' + escapeHtml(pending) + '</strong> pendentes</span><span><strong>' + escapeHtml(state.providers.length ? provider.resolved : '—') + '</strong> resolvidas</span></span>' +
         '</button>';
     }).join('');
     $all('[data-review-provider]', target).forEach(function (button) {
@@ -750,6 +785,9 @@
     if (data && typeof data.detail === 'string') return data.detail;
     if (envelope && envelope.status === 401) return 'Sua sessão administrativa expirou. Reautentique e tente novamente.';
     if (envelope && envelope.status === 409) return 'A versão mudou ou já recebeu outra decisão. Atualize antes de continuar.';
+    if (envelope && (envelope.status === 504 || envelope.errorCode === 'client_timeout')) {
+      return 'Tempo limite ao consultar o serviço de revisões. Atualize para confirmar o estado; nenhuma operação foi repetida automaticamente.';
+    }
     return 'O serviço de revisões não confirmou a operação.';
   }
 
@@ -769,65 +807,115 @@
     if (auditIsOpen()) loadAudit();
   }
 
-  async function refresh() {
+  function validProviderCounts(providers) {
+    // Ausência, duplicação ou valor inválido não comprovam uma fila vazia.
+    return Array.isArray(providers) && providers.length === ORIGINS.length
+      && ORIGINS.every(function (origin) {
+        var matches = providers.filter(function (provider) { return provider && provider.id === origin; });
+        return matches.length === 1
+          && Number.isSafeInteger(matches[0].pending) && matches[0].pending >= 0
+          && Number.isSafeInteger(matches[0].resolved) && matches[0].resolved >= 0;
+      });
+  }
+
+  function readReviewSnapshot(path, force) {
+    var pending = pendingReads[path];
+    if (pending && !force && !(pending.controller && pending.controller.signal.aborted)) return pending;
+    if (pending && pending.controller) pending.controller.abort();
+    var read = {
+      generation: ++countRequestGeneration,
+      controller: typeof AbortController === 'function' ? new AbortController() : null,
+      promise: null
+    };
+    pendingReads[path] = read;
+    state.countStatus = 'loading';
+    state.countError = '';
+    updateBadge();
+    read.promise = (async function () {
+      try {
+        var envelope;
+        try {
+          envelope = await bridge.apiFetchResponse(path, {
+            timeoutMs: REVIEW_READ_TIMEOUT_MS,
+            signal: read.controller ? read.controller.signal : undefined
+          });
+        } catch (error) {
+          envelope = { ok: false, status: 0, data: null, message: String(error && error.message || error) };
+        }
+        // Lista e resumo compartilham esta geração. Coalescer não promove uma leitura antiga.
+        if (read.generation === countRequestGeneration) {
+          if (envelope && envelope.ok && envelope.data && validProviderCounts(envelope.data.providers)) {
+            state.providers = envelope.data.providers;
+            state.countStatus = 'fresh';
+            state.countError = '';
+          } else {
+            state.countStatus = state.providers.length ? 'stale' : 'unknown';
+            state.countError = responseError(envelope);
+          }
+          renderProviders();
+        }
+        return envelope;
+      } finally {
+        if (pendingReads[path] === read) delete pendingReads[path];
+      }
+    })();
+    return read;
+  }
+
+  function refresh(options) {
     if (!bridge || typeof bridge.apiFetchResponse !== 'function') return;
-    ++summaryRequestGeneration;
+    var force = Boolean(options && options.force);
+    var path = reviewListPath();
+    if (listRequest && listRequest.path === path && !force) return listRequest.promise;
     var generation = ++requestGeneration;
     if (requestController) requestController.abort();
-    requestController = typeof AbortController === 'function' ? new AbortController() : null;
+    var read = readReviewSnapshot(path, force);
+    requestController = read.controller;
+    var request = { path: path, promise: null };
+    listRequest = request;
     state.loading = true;
     state.error = '';
     render();
     setStatus('Consultando a fila e o estado atual de cada evidência…');
-    var envelope;
-    try {
-      envelope = await bridge.apiFetchResponse(reviewListPath(), {
-        timeoutMs: 15000,
-        signal: requestController ? requestController.signal : undefined
-      });
-    } catch (error) {
-      envelope = { ok: false, status: 0, data: null, message: String(error && error.message || error) };
-    }
-    if (generation !== requestGeneration) return;
-    state.loading = false;
-    if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)
-        || !Array.isArray(envelope.data.providers)) {
-      state.error = responseError(envelope);
-      state.items = [];
-      state.total = 0;
-      setStatus(state.error, true);
-      render();
-      return;
-    }
-    var decisionDraftInvalidated = invalidateChangedDecisionDraft(envelope.data.items);
-    state.items = envelope.data.items;
-    state.providers = envelope.data.providers;
-    state.total = Number(envelope.data.total) || 0;
-    state.limit = Number(envelope.data.limit) || state.limit;
-    state.offset = Number(envelope.data.offset) || 0;
-    state.error = '';
-    var pending = state.providers.reduce(function (sum, provider) {
-      return provider.id === 'sites' ? sum : sum + (Number(provider.pending) || 0);
-    }, 0);
-    if (decisionDraftInvalidated) {
-      setStatus('A evidência da decisão aberta mudou ou já não aceita essa ação. Escolha novamente na versão atual; nenhuma decisão foi enviada.', true);
-    } else {
-      setStatus(state.total + ' item(ns) no recorte atual; ' + pending + ' pendência(s) centrais no total. As decisões não publicam automaticamente.');
-    }
-    render();
+    request.promise = (async function () {
+      try {
+        var envelope = await read.promise;
+        if (generation !== requestGeneration) return;
+        state.loading = false;
+        if (!envelope || !envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)
+            || !Array.isArray(envelope.data.providers)) {
+          state.error = responseError(envelope);
+          state.items = [];
+          state.total = 0;
+          setStatus(state.error, true);
+          render();
+          return;
+        }
+        var decisionDraftInvalidated = invalidateChangedDecisionDraft(envelope.data.items);
+        state.items = envelope.data.items;
+        state.total = Number(envelope.data.total) || 0;
+        state.limit = Number(envelope.data.limit) || state.limit;
+        state.offset = Number(envelope.data.offset) || 0;
+        state.error = '';
+        if (decisionDraftInvalidated) {
+          setStatus('A evidência da decisão aberta mudou ou já não aceita essa ação. Escolha novamente na versão atual; nenhuma decisão foi enviada.', true);
+        } else {
+          setStatus(state.total + ' item(ns) no recorte atual. As decisões nesta tela não publicam automaticamente; candidatos aprovados podem reentrar na Pipeline, sob suas validações.');
+        }
+        render();
+      } finally {
+        if (listRequest === request) {
+          listRequest = null;
+          requestController = null;
+        }
+      }
+    })();
+    return request.promise;
   }
 
-  async function refreshSummary() {
+  function refreshSummary() {
     if (!bridge || typeof bridge.apiFetchResponse !== 'function') return;
-    var generation = ++summaryRequestGeneration;
-    var envelope = await bridge.apiFetchResponse(
-      '/api/cadu/reviews?state=pending&limit=1&offset=0',
-      { timeoutMs: 15000 }
-    );
-    if (generation !== summaryRequestGeneration) return;
-    if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.providers)) return;
-    state.providers = envelope.data.providers;
-    renderProviders();
+    return readReviewSnapshot('/api/cadu/reviews?state=pending&limit=1&offset=0', false).promise;
   }
 
   async function submitResolution(event) {
@@ -873,7 +961,7 @@
             decision: decision,
             resolution_note: note || null
           }),
-          timeoutMs: 15000
+          timeoutMs: REVIEW_RESOLUTION_TIMEOUT_MS
         }
       );
     } catch (error) {
@@ -884,13 +972,13 @@
     state.decisionDraft = null;
     if (!envelope.ok || !envelope.data || envelope.data.published !== false) {
       var message = responseError(envelope);
-      await refresh();
+      await refresh({ force: true });
       setStatus(message, true);
       return;
     }
     setStatus((DECISION_LABELS[decision] || 'Decisão') + ' registrada. Nenhum conteúdo foi publicado.');
     state.auditLoaded = false;
-    await refresh();
+    await refresh({ force: true });
     if ($('#reviews-audit') && $('#reviews-audit').open) loadAudit();
   }
 
@@ -906,7 +994,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ intent: 'repass', run_id: null }),
-        timeoutMs: 420000
+        timeoutMs: REVIEW_REPASS_TIMEOUT_MS
       });
     } catch (error) {
       envelope = { ok: false, status: 0, data: null, message: String(error && error.message || error) };
@@ -922,10 +1010,10 @@
     setStatus(
       'Reanálise concluída: ' + data.evaluated + ' item(ns) avaliado(s); '
       + data.increased + ' subiram, ' + data.decreased + ' caíram; '
-      + data.publish_ready + ' candidatos sem bloqueios automáticos. A decisão final permanece manual.'
+      + data.publish_ready + ' candidatos sinalizados para a Pipeline. A reanálise não publica; autoaprovação e reentrada dependem da política e das validações de publicação.'
     );
     renderRepassSummary();
-    await refresh();
+    await refresh({ force: true });
     if ($('#reviews-audit') && $('#reviews-audit').open) loadAudit();
   }
 
@@ -977,7 +1065,7 @@
         params.set('offset', String(offset));
         var envelope = await bridge.apiFetchResponse(
           '/api/cadu/source-reviews?' + params.toString(),
-          { timeoutMs: 15000 }
+          { timeoutMs: REVIEW_READ_TIMEOUT_MS }
         );
         if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)) {
           throw new Error(responseError(envelope));
@@ -1014,7 +1102,7 @@
     while (hasMore && items.length < maximum) {
       var envelope = await bridge.apiFetchResponse(
         auditPath(Math.min(200, maximum - items.length), offset),
-        { timeoutMs: 15000 }
+        { timeoutMs: REVIEW_READ_TIMEOUT_MS }
       );
       if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)) {
         throw new Error(responseError(envelope));
@@ -1203,7 +1291,8 @@
   }
 
   function setInstitutionalPending(count) {
-    var nextCount = Number.isSafeInteger(count) && count >= 0 ? count : 0;
+    if (!Number.isSafeInteger(count) || count < 0) return;
+    var nextCount = count;
     if (nextCount !== institutionalPending) {
       institutionalPending = nextCount;
       invalidateAudit('A fila institucional mudou. Atualizando o histórico…');

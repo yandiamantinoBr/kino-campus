@@ -332,6 +332,22 @@ describe('admin Cadu UX contracts', () => {
     expect(reviewsCss).toMatch(/\.kc-cadu-review-community__group li \{[\s\S]*overflow-wrap: anywhere;/);
   });
 
+  test('explains unknown/stale counts, separate score axes and conditional review reentry', () => {
+    expect(html).toContain('id="badge-reviews" data-snapshot-state="unknown"');
+    expect(html).toContain('id="reviews-count-status"');
+    expect(html).toContain('Contagem de revisões ainda não confirmada.');
+    expect(html).toContain('Uma aprovação humana vale para a versão exata da evidência.');
+    expect(html).toContain('Candidatos aprovados podem reentrar na Pipeline');
+    expect(html).toContain('autoaprovar apenas os casos permitidos pela política');
+    expect(html).toContain('Nota alta não é aprovação.');
+    expect(html).toContain('A variação da reanálise compara notas curatoriais, não a relevância comunitária.');
+    expect(html).not.toContain('a decisão final continua com você');
+    expect(reviewsController).not.toContain('A decisão final permanece manual.');
+    expect(reviewsController).toContain('nota curatorial anterior:');
+    // A fila institucional continua com seu contrato independente, sem ativação/publicação.
+    expect(controller).toContain('Não publica conteúdo e não ativa fonte, Instagram ou pipeline.');
+  });
+
   test('keeps operational tabs visible and review actions touch-friendly on narrow screens', () => {
     expect(controller).toContain('function keepCaduTabVisible(selectedTab, behavior)');
     expect(controller).toContain("var tabRail = selectedTab && selectedTab.closest('.kc-cadu-tabs')");

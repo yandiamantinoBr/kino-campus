@@ -7,6 +7,7 @@
 
 import { requireCaduAdmin } from './cadu-auth.mjs';
 import { fetchCaduUpstream, normalizeCaduApiToken } from './cadu-upstream-fetch.js';
+import responseLimits from './cadu-response-limits.cjs';
 import {
   buildCaduReviewSignatureHeaders,
   readLimitedSourceReviewResponse,
@@ -842,8 +843,9 @@ export async function handleCaduReviews(req, res, options = {}) {
           : validateRepassResponse(body, admin.id);
     if (!validated) return sendError(res, 502, 'invalid_cadu_api_response');
     return res.status(200).json(validated);
-  } catch {
-    return sendError(res, 502, 'cadu_api_unreachable');
+  } catch (error) {
+    const failure = responseLimits.stableCaduTransportFailure(error);
+    return sendError(res, failure.status, failure.error);
   }
 }
 
