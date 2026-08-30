@@ -924,7 +924,7 @@
           <i class="fas fa-gears"></i> Pipeline <span class="kc-cadu-tab__badge" id="badge-pipeline">—</span>
         </button>
         <button class="kc-cadu-tab" id="cadu-tab-reviews" data-tab="reviews" role="tab" aria-controls="tab-reviews" aria-selected="false" tabindex="-1">
-          <i class="fas fa-clipboard-check"></i> Revisões <span class="kc-cadu-tab__badge" id="badge-reviews">—</span>
+          <i class="fas fa-clipboard-check"></i> Revisões <span class="kc-cadu-tab__badge" id="badge-reviews" data-snapshot-state="unknown">—</span>
         </button>
         <button class="kc-cadu-tab" id="cadu-tab-openclaw" data-tab="openclaw" role="tab" aria-controls="tab-openclaw" aria-selected="false" tabindex="-1">
           <i class="fas fa-robot"></i> OpenClaw <span class="kc-cadu-tab__badge" id="badge-openclaw">—</span>
@@ -1180,13 +1180,14 @@
 
         <div class="kc-cadu-reviews__notice" role="note">
           <i class="fas fa-shield-halved" aria-hidden="true"></i>
-          <div><strong>Aprovação editorial não é publicação.</strong> Itens aprovados ficam registrados para auditoria e futuras melhorias. Qualquer publicação continua exigindo um fluxo separado e suas validações próprias.</div>
+          <div><strong>Aprovação editorial não é publicação.</strong> Uma aprovação humana vale para a versão exata da evidência. Candidatos aprovados podem reentrar na Pipeline; publicar continua exigindo elegibilidade, qualidade e autorização válidas.</div>
         </div>
 
         <div class="kc-cadu-review-repass" id="reviews-repass-toolbar">
           <div class="kc-cadu-review-repass__copy">
             <strong><i class="fas fa-magnifying-glass-chart" aria-hidden="true"></i> Reanálise automática</strong>
-            <p>A cada Pipeline Completa, os eventos e oportunidades pendentes são reavaliados com o mesmo classificador do Curador; a nota pode subir ou cair. Isso não publica nem rejeita: a decisão final continua com você.</p>
+            <p>A Pipeline Completa reavalia eventos e oportunidades pendentes com o classificador do Curador. A reanálise, por si só, não publica. A Pipeline pode autoaprovar apenas os casos permitidos pela política e reintroduzir candidatos aprovados, sempre sujeitos às demais validações. Nota alta não é aprovação.</p>
+            <p>Relevância comunitária e nota curatorial usam a escala de 0 a 100, mas medem aspectos distintos. A variação da reanálise compara notas curatoriais, não a relevância comunitária.</p>
           </div>
           <div class="kc-cadu-review-repass__controls">
             <label for="reviews-repass-filter">Reanálise
@@ -1204,6 +1205,7 @@
         <div class="kc-cadu-review-providers" id="reviews-providers">
           <div class="kc-cadu-review-provider is-loading"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando origens…</div>
         </div>
+        <div id="reviews-count-status" class="kc-cadu-review-status" role="status" aria-live="polite" aria-atomic="true">Contagem de revisões ainda não confirmada.</div>
 
         <form class="kc-cadu-review-filters" id="reviews-filters">
           <label for="reviews-origin">Origem
@@ -1458,7 +1460,7 @@
   <!-- Cadu controller -->
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=53f1cc040c2b3bd6"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=dd988b7d5bb9f8d1"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=d1d06a2c071ea863"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=1adf4bec53d2c694"></script>
 </body>
 </html>

@@ -38,6 +38,49 @@ function isolatedFunction(name, dependencies = []) {
   )();
 }
 
+function deferredFeedResponse() {
+  let resolve;
+  let reject;
+  const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
+}
+
+function feedRequestHarness(apiFetch) {
+  document.body.innerHTML = '<div id="feed-list"></div><span id="badge-feed"></span>' +
+    '<span id="kpi-memory"></span><span id="kpi-memory-detail"></span>';
+  const state = {
+    feedLimit: 25, feedPage: 0, feedTotal: 0, allFeedItems: [],
+    feedRequestGeneration: 0, feedRequestController: null, feedRequest: null,
+    feedLoading: false, sourceCatalog: null,
+  };
+  const normalize = jest.fn((data) => data);
+  const applyFeedFilter = jest.fn();
+  const loadFeed = Function(
+    'state', 'apiFetch', 'document', 'normalizePublicFeedResponse', 'applyFeedFilter',
+    `"use strict";
+     var FEED_PAGE_SIZE = 25;
+     ${controller.match(/var FEED_REQUEST_TIMEOUT_MS = \d+;/)[0]}
+     function $(selector) { return document.querySelector(selector); }
+     function renderSitesTable() {}
+     function renderFeedFreshness() {}
+     function updateFeedPager() {}
+     function newestFeedTimestamp() { return null; }
+     function indexSourceDiagnostics(value) { return value || {}; }
+     function escapeHtml(value) { return String(value); }
+     return (${functionSource('loadFeed')});`,
+  )(state, apiFetch, document, normalize, applyFeedFilter);
+  return { state, loadFeed, normalize, applyFeedFilter };
+}
+
+function feedSnapshot(id, total = id ? 1 : 0) {
+  return {
+    items: id ? [{ id }] : [],
+    total,
+    hasMore: false,
+    meta: { validArtifacts: 1, artifactsScanned: 1, sourceDiagnostics: {} },
+  };
+}
+
 function isolatedInstitutionalReviewFunction(name, dependencies = []) {
   const states = ['pending', 'approved', 'rejected', 'superseded'];
   const decisions = ['approved', 'rejected', 'superseded'];
@@ -697,6 +740,138 @@ describe('admin Cadu runtime hardening', () => {
     expect(source).toContain("return { stale: true }");
     expect(source).toContain('if (requestGeneration === state.feedRequestGeneration)');
     expect(functionSource('applyFeedFilter')).toContain('sourceReviewCanonicalUrl(it.url)');
+  });
+
+  test('budgets feed and review routes above authentication plus the corresponding upstream deadline', () => {
+    const reviews = fs.readFileSync(path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-reviews.js'), 'utf8');
+    const reviewsProxy = fs.readFileSync(path.join(ROOT, 'server/cadu-reviews-proxy.js'), 'utf8');
+    const feedProxy = fs.readFileSync(path.join(ROOT, 'api/cadu/feed.js'), 'utf8');
+    const authBudget = Number(caduAuth.match(/ADMIN_AUTH_DEADLINE_MS = ([\d_]+)/)[1].replace(/_/g, ''));
+    const feedBudget = Number(controller.match(/FEED_REQUEST_TIMEOUT_MS = (\d+)/)[1]);
+    const readBudget = Number(reviews.match(/REVIEW_REQUEST_TIMEOUT_MS = (\d+)/)[1]);
+    const repassBudget = Number(reviews.match(/REVIEW_REPASS_TIMEOUT_MS = (\d+)/)[1]);
+    const [, repassUpstream, readUpstream] = reviewsProxy.match(/AbortSignal\.timeout\(route.kind === 'repass' \? (\d+) : (\d+)\)/);
+    const feedUpstream = Number(feedProxy.match(/AbortSignal\.timeout\(routeKind === 'ask' \? \d+ : (\d+)\)/)[1]);
+    expect(feedBudget).toBeGreaterThan(authBudget + feedUpstream);
+    expect(readBudget).toBeGreaterThan(authBudget + Number(readUpstream));
+    expect(repassBudget).toBeGreaterThan(authBudget + Number(repassUpstream));
+    expect(feedBudget).toBeLessThanOrEqual(45000);
+    expect(readBudget).toBeLessThanOrEqual(25000);
+    expect(repassBudget).toBeLessThanOrEqual(435000);
+    expect(controller).toContain("apiFetch('/api/cadu/openclaw/status', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS })");
+  });
+
+  test('coalesces duplicate feed refreshes without aborting a valid request or retaining settled data', async () => {
+    const pending = deferredFeedResponse();
+    const apiFetch = jest.fn().mockReturnValueOnce(pending.promise).mockResolvedValueOnce(feedSnapshot(null));
+    const harness = feedRequestHarness(apiFetch);
+    const first = harness.loadFeed(true);
+    const second = harness.loadFeed(true);
+    expect(second).toBe(first);
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(apiFetch.mock.calls[0]).toEqual([
+      '/api/cadu/feed?limit=25&offset=0&with_meta=true',
+      expect.objectContaining({ timeoutMs: 45000, cache: 'no-store' }),
+    ]);
+    expect(apiFetch.mock.calls[0][1].signal.aborted).toBe(false);
+    pending.resolve(feedSnapshot('current', 312));
+    await Promise.all([first, second]);
+    expect(harness.applyFeedFilter).toHaveBeenCalledTimes(1);
+    expect(harness.state.feedLoading).toBe(false);
+    expect(harness.state.feedRequest).toBeNull();
+    await harness.loadFeed(true);
+    expect(apiFetch).toHaveBeenCalledTimes(2);
+    expect(document.getElementById('badge-feed').textContent).toBe('0');
+  });
+
+  test.each(['older-first', 'newer-first'])('applies only the latest feed query (%s)', async (order) => {
+    const older = deferredFeedResponse();
+    const newer = deferredFeedResponse();
+    const apiFetch = jest.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    const harness = feedRequestHarness(apiFetch);
+    const first = harness.loadFeed(true);
+    harness.state.feedLimit = 50;
+    const second = harness.loadFeed(true);
+    expect(apiFetch).toHaveBeenCalledTimes(2);
+    expect(apiFetch.mock.calls[0][1].signal.aborted).toBe(true);
+    if (order === 'older-first') {
+      older.resolve(feedSnapshot('obsolete', 100));
+      await expect(first).resolves.toEqual({ stale: true });
+      expect(harness.state.feedLoading).toBe(true);
+      expect(harness.loadFeed(true)).toBe(second);
+      newer.resolve(feedSnapshot('latest', 312));
+      await second;
+    } else {
+      newer.resolve(feedSnapshot('latest', 312));
+      await second;
+      older.resolve(feedSnapshot('obsolete', 100));
+      await expect(first).resolves.toEqual({ stale: true });
+    }
+    expect(harness.state.allFeedItems).toEqual([{ id: 'latest' }]);
+    expect(document.getElementById('badge-feed').textContent).toBe('312');
+    expect(harness.normalize).toHaveBeenCalledTimes(1);
+    expect(harness.state.feedRequest).toBeNull();
+  });
+
+  test('coalesces append operations once but keeps an equivalent replace request independent', async () => {
+    const append = deferredFeedResponse();
+    const repeatedAppend = deferredFeedResponse();
+    const replace = deferredFeedResponse();
+    const apiFetch = jest.fn().mockReturnValueOnce(append.promise)
+      .mockReturnValueOnce(repeatedAppend.promise).mockReturnValueOnce(replace.promise);
+    const harness = feedRequestHarness(apiFetch);
+    harness.state.allFeedItems = [{ id: 'first-page' }];
+    const first = harness.loadFeed(false, 1);
+    const duplicate = harness.loadFeed(false, 1);
+    expect(duplicate).toBe(first);
+    append.resolve(feedSnapshot('second-page', 50));
+    await first;
+    expect(harness.state.allFeedItems).toEqual([{ id: 'first-page' }, { id: 'second-page' }]);
+    const secondAppend = harness.loadFeed(false, 1);
+    harness.state.feedPage = 1;
+    const replacement = harness.loadFeed(false);
+    expect(replacement).not.toBe(secondAppend);
+    expect(apiFetch.mock.calls[1][0]).toBe(apiFetch.mock.calls[2][0]);
+    expect(apiFetch.mock.calls[1][1].signal.aborted).toBe(true);
+    replace.resolve(feedSnapshot('replacement', 50));
+    await replacement;
+    repeatedAppend.resolve(feedSnapshot('obsolete-append', 50));
+    await secondAppend;
+    expect(harness.state.allFeedItems).toEqual([{ id: 'replacement' }]);
+  });
+
+  test.each([
+    [{ __error: true, status: 0, errorCode: 'client_timeout' }, 'Tempo limite da consulta ao feed (45 s)'],
+    [{ __error: true, status: 504, data: { error: 'cadu_api_timeout' } }, 'O proxy atingiu o tempo limite'],
+  ])('recovers after a feed failure with its timeout cause intact (%j)', async (failure, message) => {
+    const apiFetch = jest.fn().mockResolvedValueOnce(failure).mockResolvedValueOnce(feedSnapshot(null));
+    const harness = feedRequestHarness(apiFetch);
+    await expect(harness.loadFeed(true)).resolves.toMatchObject({ ok: false });
+    expect(document.getElementById('feed-list').textContent).toContain(message);
+    expect(document.getElementById('feed-list').textContent).not.toContain('status 0');
+    expect(harness.state.feedRequest).toBeNull();
+    await expect(harness.loadFeed(true)).resolves.toMatchObject({ ok: true });
+    expect(apiFetch).toHaveBeenCalledTimes(2);
+    expect(document.getElementById('badge-feed').textContent).toBe('0');
+  });
+
+  test('does not share a feed append with a request that first resets the same page', async () => {
+    const append = deferredFeedResponse();
+    const reset = deferredFeedResponse();
+    const apiFetch = jest.fn().mockReturnValueOnce(append.promise).mockReturnValueOnce(reset.promise);
+    const harness = feedRequestHarness(apiFetch);
+    harness.state.allFeedItems = [{ id: 'existing' }];
+    const first = harness.loadFeed(false, 1);
+    const second = harness.loadFeed(true, 1);
+    expect(first).not.toBe(second);
+    expect(apiFetch).toHaveBeenCalledTimes(2);
+    expect(apiFetch.mock.calls[0][0]).toBe(apiFetch.mock.calls[1][0]);
+    expect(apiFetch.mock.calls[0][1].signal.aborted).toBe(true);
+    reset.resolve(feedSnapshot('replacement', 25));
+    await second;
+    append.resolve(feedSnapshot('obsolete', 50));
+    await first;
+    expect(harness.state.allFeedItems).toEqual([{ id: 'replacement' }]);
   });
 
   test('keeps a fresh degraded feed current while surfacing integrity warnings', () => {

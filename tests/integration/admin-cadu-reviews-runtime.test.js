@@ -100,10 +100,35 @@ function communityRelevance() {
   };
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
+}
+
+function snapshotEnvelope(pending, items = [centralItem()]) {
+  return {
+    ok: true,
+    data: {
+      items,
+      total: items.length,
+      limit: 25,
+      offset: 0,
+      has_more: false,
+      providers: providers().map((provider) => ({
+        ...provider,
+        pending: provider.id === 'pipeline' ? pending : 0,
+      })),
+    },
+  };
+}
+
 function createPage(apiFetchResponse) {
   const dom = new JSDOM(`<!doctype html><html><body>
     <span id="badge-reviews"></span>
     <div id="reviews-providers"></div>
+    <div id="reviews-count-status"></div>
     <form id="reviews-filters">
       <select id="reviews-origin"><option value=""></option><option value="pipeline">Pipeline</option><option value="sites">Mapa UFG</option></select>
       <select id="reviews-state"><option value="pending">Pendente</option><option value="resolved">Resolvida</option></select>
@@ -154,13 +179,13 @@ describe('Admin Cadu review center runtime', () => {
     }));
     const page = createPage(apiFetchResponse);
 
-    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('0');
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('—');
     const listBeforeSummary = page.window.document.getElementById('reviews-list').textContent;
     await page.window.KCCaduReviews.refreshSummary();
 
     expect(apiFetchResponse).toHaveBeenCalledWith(
       '/api/cadu/reviews?state=pending&limit=1&offset=0',
-      { timeoutMs: 15000 }
+      { timeoutMs: 25000, signal: expect.anything() }
     );
     expect(page.window.document.getElementById('badge-reviews').textContent).toBe('147');
     expect(page.window.document.getElementById('badge-reviews').title)
@@ -169,6 +194,206 @@ describe('Admin Cadu review center runtime', () => {
       .toBe('147 itens de revisão pendentes; não é uma fila de publicação.');
     expect(page.window.document.querySelector('[data-review-provider="pipeline"]').textContent).toContain('128 pendentes');
     expect(page.window.document.getElementById('reviews-list').textContent).toBe(listBeforeSummary);
+    page.dom.window.close();
+  });
+
+  test('does not report zero before a successful complete snapshot, then confirms a real zero', async () => {
+    const failed = deferred();
+    const apiFetchResponse = jest.fn()
+      .mockReturnValueOnce(failed.promise)
+      .mockResolvedValueOnce(snapshotEnvelope(0, []));
+    const page = createPage(apiFetchResponse);
+    const badge = page.window.document.getElementById('badge-reviews');
+    expect(badge.dataset.snapshotState).toBe('unknown');
+    expect(page.window.document.querySelector('[data-review-provider="pipeline"]').textContent).toContain('— pendentes');
+
+    const request = page.window.KCCaduReviews.refreshSummary();
+    expect(badge.textContent).toBe('…');
+    expect(badge.dataset.snapshotState).toBe('loading');
+    expect(badge.getAttribute('aria-busy')).toBe('true');
+    failed.resolve({ ok: false, status: 504, data: { error: 'cadu_api_timeout' } });
+    await request;
+    expect(badge.textContent).toBe('—');
+    expect(badge.dataset.snapshotState).toBe('unknown');
+    expect(badge.getAttribute('aria-busy')).toBe('false');
+    expect(page.window.document.getElementById('reviews-count-status').textContent).toContain('Tempo limite');
+
+    await page.window.KCCaduReviews.refreshSummary();
+    expect(badge.textContent).toBe('0');
+    expect(badge.dataset.snapshotState).toBe('fresh');
+    expect(badge.classList.contains('is-warning')).toBe(false);
+    expect(page.window.document.getElementById('reviews-count-status').classList.contains('is-error')).toBe(false);
+    page.dom.window.close();
+  });
+
+  test('retains the last confirmed count as stale after failure and recovers without a cached rejection', async () => {
+    const failed = deferred();
+    const apiFetchResponse = jest.fn()
+      .mockResolvedValueOnce(snapshotEnvelope(312))
+      .mockReturnValueOnce(failed.promise)
+      .mockResolvedValueOnce(snapshotEnvelope(0, []));
+    const page = createPage(apiFetchResponse);
+    const badge = page.window.document.getElementById('badge-reviews');
+    await page.window.KCCaduReviews.refresh();
+    const retry = page.window.KCCaduReviews.refreshSummary();
+    expect(badge.textContent).toBe('312…');
+    failed.reject(new Error('fixture_transport_unavailable'));
+    await retry;
+    expect(badge.textContent).toBe('312*');
+    expect(badge.dataset.snapshotState).toBe('stale');
+    expect(badge.title).toContain('Contagem desatualizada');
+    expect(page.window.document.querySelector('[data-review-provider="pipeline"]').textContent).toContain('312 pendentes');
+    await page.window.KCCaduReviews.refresh();
+    expect(badge.textContent).toBe('0');
+    expect(badge.dataset.snapshotState).toBe('fresh');
+    expect(apiFetchResponse).toHaveBeenCalledTimes(3);
+    page.dom.window.close();
+  });
+
+  test.each([
+    ['absent', undefined],
+    ['empty', []],
+    ['partial', providers().slice(0, 1)],
+    ['duplicate', providers().map((provider) => ({ ...provider, id: 'pipeline' }))],
+    ['invalid', providers().map((provider) => ({ ...provider, pending: '0' }))],
+  ])('does not turn %s provider counts into a confirmed zero', async (_name, counts) => {
+    const page = createPage(jest.fn(async () => ({ ok: true, data: { providers: counts } })));
+    await page.window.KCCaduReviews.refreshSummary();
+    const badge = page.window.document.getElementById('badge-reviews');
+    expect(badge.textContent).toBe('—');
+    expect(badge.dataset.snapshotState).toBe('unknown');
+    page.dom.window.close();
+  });
+
+  test.each([
+    ['refresh', 'refreshSummary', 'older-first'],
+    ['refresh', 'refreshSummary', 'newer-first'],
+    ['refreshSummary', 'refresh', 'older-first'],
+    ['refreshSummary', 'refresh', 'newer-first'],
+  ])('shares count generation across %s -> %s (%s)', async (first, second, order) => {
+    const older = deferred();
+    const newer = deferred();
+    const apiFetchResponse = jest.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    const page = createPage(apiFetchResponse);
+    const reviews = page.window.KCCaduReviews;
+    const badge = page.window.document.getElementById('badge-reviews');
+    const oldRequest = reviews[first]();
+    const newRequest = reviews[second]();
+    expect(apiFetchResponse).toHaveBeenCalledTimes(2);
+    if (order === 'older-first') {
+      older.resolve(snapshotEnvelope(100));
+      await oldRequest;
+      expect(badge.dataset.snapshotState).toBe('loading');
+      expect(badge.textContent).toBe('…');
+      newer.resolve(snapshotEnvelope(312));
+      await newRequest;
+    } else {
+      newer.resolve(snapshotEnvelope(312));
+      await newRequest;
+      expect(badge.textContent).toBe('312');
+      older.resolve(snapshotEnvelope(100));
+      await oldRequest;
+    }
+    expect(badge.textContent).toBe('312');
+    expect(badge.dataset.snapshotState).toBe('fresh');
+    expect(page.window.document.getElementById('reviews-count-status').textContent).toContain('312');
+    page.dom.window.close();
+  });
+
+  test.each(['refresh', 'refreshSummary'])('coalesces concurrent identical %s reads, but not settled results', async (method) => {
+    const pending = deferred();
+    const apiFetchResponse = jest.fn().mockReturnValueOnce(pending.promise).mockResolvedValueOnce(snapshotEnvelope(0, []));
+    const page = createPage(apiFetchResponse);
+    const first = page.window.KCCaduReviews[method]();
+    const second = page.window.KCCaduReviews[method]();
+    expect(second).toBe(first);
+    expect(apiFetchResponse).toHaveBeenCalledTimes(1);
+    expect(apiFetchResponse.mock.calls[0][1].signal.aborted).toBe(false);
+    pending.resolve(snapshotEnvelope(312));
+    await Promise.all([first, second]);
+    await page.window.KCCaduReviews[method]();
+    expect(apiFetchResponse).toHaveBeenCalledTimes(2);
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('0');
+    page.dom.window.close();
+  });
+
+  test('coalescing an older list does not promote it over a newer summary', async () => {
+    const older = deferred();
+    const newer = deferred();
+    const apiFetchResponse = jest.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    const page = createPage(apiFetchResponse);
+    const oldRequest = page.window.KCCaduReviews.refresh();
+    const newRequest = page.window.KCCaduReviews.refreshSummary();
+    const shared = page.window.KCCaduReviews.refresh();
+    expect(shared).toBe(oldRequest);
+    newer.resolve(snapshotEnvelope(312));
+    await newRequest;
+    older.resolve(snapshotEnvelope(100));
+    await shared;
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('312');
+    expect(apiFetchResponse).toHaveBeenCalledTimes(2);
+    page.dom.window.close();
+  });
+
+  test.each(['older-first', 'newer-first'])('supersedes a changed list query without stale rows or count rollback (%s)', async (order) => {
+    const older = deferred();
+    const newer = deferred();
+    const apiFetchResponse = jest.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    const page = createPage(apiFetchResponse);
+    const oldRequest = page.window.KCCaduReviews.refresh();
+    page.window.KCCaduReviews.open('feed', 'pending');
+    const newRequest = page.window.KCCaduReviews.refresh();
+    expect(apiFetchResponse).toHaveBeenCalledTimes(2);
+    expect(apiFetchResponse.mock.calls[0][1].signal.aborted).toBe(true);
+    const newItem = { ...centralItem(), origin: 'feed', title: 'Recorte atual' };
+    if (order === 'older-first') {
+      older.resolve(snapshotEnvelope(100, [{ ...centralItem(), title: 'Recorte antigo' }]));
+      await oldRequest;
+      expect(page.window.KCCaduReviews.refresh()).toBe(newRequest);
+      newer.resolve(snapshotEnvelope(312, [newItem]));
+      await newRequest;
+    } else {
+      newer.resolve(snapshotEnvelope(312, [newItem]));
+      await newRequest;
+      older.resolve(snapshotEnvelope(100, [{ ...centralItem(), title: 'Recorte antigo' }]));
+      await oldRequest;
+    }
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('312');
+    expect(page.window.document.getElementById('reviews-list').textContent).toContain('Recorte atual');
+    expect(page.window.document.getElementById('reviews-list').textContent).not.toContain('Recorte antigo');
+    page.dom.window.close();
+  });
+
+  test.each([true, false])('obsolete results cannot hide a newer failure or introduce an old failure (newerOk=%s)', async (newerOk) => {
+    const older = deferred();
+    const newer = deferred();
+    const page = createPage(jest.fn()
+      .mockResolvedValueOnce(snapshotEnvelope(250))
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise));
+    await page.window.KCCaduReviews.refreshSummary();
+    const oldRequest = page.window.KCCaduReviews.refresh();
+    const newRequest = page.window.KCCaduReviews.refreshSummary();
+    newer.resolve(newerOk ? snapshotEnvelope(312) : { ok: false, status: 502 });
+    await newRequest;
+    older.resolve(newerOk ? { ok: false, status: 502 } : snapshotEnvelope(100));
+    await oldRequest;
+    const badge = page.window.document.getElementById('badge-reviews');
+    expect(badge.textContent).toBe(newerOk ? '312' : '250*');
+    expect(badge.dataset.snapshotState).toBe(newerOk ? 'fresh' : 'stale');
+    page.dom.window.close();
+  });
+
+  test('keeps the institutional count separate and ignores invalid values rather than inventing zero', async () => {
+    const page = createPage(jest.fn().mockResolvedValue(snapshotEnvelope(0, [])));
+    page.window.KCCaduReviews.setInstitutionalPending(3);
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('—');
+    await page.window.KCCaduReviews.refreshSummary();
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('3');
+    page.window.KCCaduReviews.setInstitutionalPending(null);
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('3');
+    page.window.KCCaduReviews.setInstitutionalPending(0);
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('0');
     page.dom.window.close();
   });
 
@@ -302,8 +527,8 @@ describe('Admin Cadu review center runtime', () => {
     expect(panel.getAttribute('aria-label')).toBe('Relevância para a comunidade');
     expect(tier.hasAttribute('aria-label')).toBe(false);
     expect(tier.querySelector('.kc-sr-only').textContent).toBe('Relevância alta, pontuação 84 de 100');
-    expect(curatorScore.textContent).toBe('Curador 0,72');
-    expect(curatorScore.getAttribute('aria-label')).toBe('Nota original do Curador: 0,72');
+    expect(curatorScore.textContent).toBe('Curador 72/100');
+    expect(curatorScore.getAttribute('aria-label')).toBe('Nota original do Curador: 72 de 100. Nota não é aprovação.');
     expect(panel.querySelectorAll('ul')).toHaveLength(3);
     expect(panel.textContent).toContain('Estudantes de graduação');
     expect(panel.textContent).toContain('Estudantes de pós-graduação');
@@ -316,6 +541,43 @@ describe('Admin Cadu review center runtime', () => {
     expect(listText).not.toContain('cadu-community-relevance-v1');
     expect(listText).not.toContain(REVIEW_KEY);
     expect(listText).not.toContain('c'.repeat(64));
+    page.dom.window.close();
+  });
+
+  test.each(['reject', 'publish_ready'])('keeps community value distinct from curatorial reassessment without inventing approval (%s)', async (hint) => {
+    const item = centralV2Item();
+    item.metadata.score = 0.50;
+    item.metadata.community_relevance = { ...communityRelevance(), score: 0.86 };
+    item.allowed_decisions = [];
+    item.repass = {
+      score: 0.15,
+      previous_score: 0.50,
+      delta: -0.35,
+      decision_hint: hint,
+      reasons: ['Prazo e ação ainda não confirmados.'],
+      created_at: 1785300000,
+    };
+    const page = createPage(jest.fn().mockResolvedValue(snapshotEnvelope(1, [item])));
+    await page.window.KCCaduReviews.refresh();
+    const score = page.window.document.querySelector('.kc-cadu-review-score');
+    expect(score.textContent).toBe('Reanálise 15/100 ▼ 35 p.');
+    expect(score.getAttribute('aria-label')).toContain('nota curatorial anterior: 50/100');
+    expect(score.getAttribute('aria-label')).not.toContain('86');
+    expect(score.title).toContain('Nota não é aprovação');
+    expect(page.window.document.querySelector('.kc-cadu-review-community__tier').textContent).toContain('86/100');
+    expect(page.window.document.querySelector('.kc-cadu-review-community').textContent).toContain('não confirma prazo, ação nem autorização');
+    expect(page.window.document.querySelector('[data-review-decision="approved"]')).toBeNull();
+    page.dom.window.close();
+  });
+
+  test('displays a real zero reanalysis score without inventing a missing previous score', async () => {
+    const item = centralItem();
+    item.repass = { score: 0, previous_score: null, delta: null, decision_hint: 'reject', reasons: [], created_at: 1785300000 };
+    const page = createPage(jest.fn().mockResolvedValue(snapshotEnvelope(1, [item])));
+    await page.window.KCCaduReviews.refresh();
+    const score = page.window.document.querySelector('.kc-cadu-review-score');
+    expect(score.textContent).toBe('Reanálise 0/100');
+    expect(score.title).toContain('nota curatorial anterior não informada');
     page.dom.window.close();
   });
 
@@ -574,6 +836,62 @@ describe('Admin Cadu review center runtime', () => {
     const approved = page.window.document.querySelector('[data-review-decision="approved"]');
     expect(approved.disabled).toBe(false);
     expect(page.window.document.querySelector('[data-review-resolution]')).toBeNull();
+    const posts = apiFetchResponse.mock.calls.filter(([, options = {}]) => options.method === 'POST');
+    expect(posts).toHaveLength(1);
+    expect(posts[0][1].timeoutMs).toBe(25000);
+    page.dom.window.close();
+  });
+
+  test('forces a post-decision snapshot rather than reusing a read that started before the write finished', async () => {
+    const write = deferred();
+    const beforeWrite = deferred();
+    const afterWrite = deferred();
+    let gets = 0;
+    const apiFetchResponse = jest.fn((url, options = {}) => {
+      if (options.method === 'POST') return write.promise;
+      gets += 1;
+      if (gets === 1) return Promise.resolve(snapshotEnvelope(1));
+      return gets === 2 ? beforeWrite.promise : afterWrite.promise;
+    });
+    const page = createPage(apiFetchResponse);
+    await page.window.KCCaduReviews.refresh();
+    page.window.document.querySelector('[data-review-decision="approved"]').click();
+    page.window.document.querySelector('[data-review-resolution]').dispatchEvent(
+      new page.window.Event('submit', { bubbles: true, cancelable: true }),
+    );
+    const obsolete = page.window.KCCaduReviews.refresh();
+    write.resolve({ ok: true, data: { published: false } });
+    await waitFor(() => gets === 3);
+    const oldGet = apiFetchResponse.mock.calls.filter(([, options = {}]) => options.method !== 'POST')[1];
+    expect(oldGet[1].signal.aborted).toBe(true);
+    afterWrite.resolve(snapshotEnvelope(0, []));
+    await waitFor(() => page.window.document.getElementById('badge-reviews').textContent === '0');
+    beforeWrite.resolve(snapshotEnvelope(1));
+    await obsolete;
+    expect(page.window.document.getElementById('badge-reviews').textContent).toBe('0');
+    expect(page.window.document.querySelector('[data-review-decision="approved"]')).toBeNull();
+    const posts = apiFetchResponse.mock.calls.filter(([, options = {}]) => options.method === 'POST');
+    expect(posts).toHaveLength(1);
+    expect(JSON.parse(posts[0][1].body)).toMatchObject({ expected_item_version: ITEM_VERSION, decision: 'approved' });
+    page.dom.window.close();
+  });
+
+  test('does not retry a timed-out repass POST and uses its own route budget', async () => {
+    const pending = deferred();
+    const apiFetchResponse = jest.fn().mockReturnValue(pending.promise);
+    const page = createPage(apiFetchResponse);
+    const button = page.window.document.getElementById('reviews-repass-run');
+    button.click();
+    button.click();
+    expect(apiFetchResponse).toHaveBeenCalledTimes(1);
+    expect(apiFetchResponse.mock.calls[0]).toEqual([
+      '/api/cadu/reviews/repass',
+      expect.objectContaining({ method: 'POST', timeoutMs: 435000 }),
+    ]);
+    pending.resolve({ ok: false, status: 504, data: { error: 'cadu_api_timeout' } });
+    await waitFor(() => !button.disabled);
+    expect(apiFetchResponse).toHaveBeenCalledTimes(1);
+    expect(page.window.document.getElementById('reviews-status').textContent).toContain('nenhuma operação foi repetida automaticamente');
     page.dom.window.close();
   });
 

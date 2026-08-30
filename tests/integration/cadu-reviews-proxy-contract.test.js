@@ -921,6 +921,75 @@ describe('Cadu central review proxy', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  test.each([
+    ['GET', 401], ['GET', 403], ['POST', 401], ['POST', 403],
+  ])('preserves the admin denial for %s (%i) before reaching Cadu', async (method, status) => {
+    requireCaduAdmin.mockImplementationOnce(async (_req, res) => {
+      res.status(status).json({ error: status === 401 ? 'unauthorized' : 'forbidden' });
+      return null;
+    });
+    const res = createResponse();
+    await handler({ method, headers: {}, query: {}, body: { intent: 'repass', run_id: null } }, res, {
+      path: method === 'GET' ? 'reviews' : 'reviews/repass', query: {},
+    });
+    expect(res.statusCode).toBe(status);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['TimeoutError', 'list'], ['AbortError', 'list'],
+    ['TimeoutError', 'resolve'], ['AbortError', 'resolve'],
+    ['TimeoutError', 'repass'], ['AbortError', 'repass'],
+  ])('maps %s on %s to a sanitized 504 without replaying the request', async (name, kind) => {
+    const failure = new Error('fixture-sensitive-message');
+    failure.name = name;
+    global.fetch.mockRejectedValue(failure);
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const method = kind === 'list' ? 'GET' : 'POST';
+    const body = kind === 'repass' ? { intent: 'repass', run_id: null }
+      : kind === 'resolve' ? { review_id: REVIEW_ID, expected_item_version: ITEM_VERSION, decision: 'approved' }
+        : undefined;
+    const route = kind === 'list' ? 'reviews' : kind === 'resolve' ? `reviews/${REVIEW_ID}/resolve` : 'reviews/repass';
+    const res = createResponse();
+    try {
+      await handler({ method, headers: {}, query: {}, body }, res, { path: route, query: {} });
+      expect(res.statusCode).toBe(504);
+      expect(res.body).toEqual({ error: 'cadu_api_timeout' });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(requireCaduAdmin).toHaveBeenCalledTimes(1);
+      expect(global.fetch.mock.calls[0][1].method).toBe(method);
+      expect(JSON.stringify(res.body)).not.toContain(failure.message);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  test('also classifies a body-read timeout and preserves ordinary network failures as 502', async () => {
+    const timedOut = new Error('fixture body timeout');
+    timedOut.name = 'TimeoutError';
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => null },
+      text: jest.fn().mockRejectedValue(timedOut),
+    });
+    const timeoutResponse = createResponse();
+    await handler({ method: 'GET', headers: {}, query: {} }, timeoutResponse, { path: 'reviews', query: {} });
+    expect(timeoutResponse.statusCode).toBe(504);
+    expect(timeoutResponse.body).toEqual({ error: 'cadu_api_timeout' });
+
+    global.fetch.mockRejectedValueOnce(new TypeError('fixture network failure'));
+    const networkResponse = createResponse();
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await handler({ method: 'GET', headers: {}, query: {} }, networkResponse, { path: 'reviews', query: {} });
+      expect(networkResponse.statusCode).toBe(502);
+      expect(networkResponse.body).toEqual({ error: 'cadu_api_unreachable' });
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   test('fails closed for invalid body, stale response and missing signing config', async () => {
     const invalid = createResponse();
     await handler({
