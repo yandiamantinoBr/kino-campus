@@ -543,6 +543,16 @@ export function caduUserTagsForItem(item: CaduItem | Record<string, unknown>): C
   };
 }
 
+// A missing cost field is unknown, not a promise of free participation.
+// Do not coerce strings such as "false" (or null) into a public price claim.
+export function freeAccessForItem(item: Pick<CaduItem, "gratuito">): boolean | undefined {
+  if (item.gratuito === undefined) return undefined;
+  if (typeof item.gratuito !== "boolean") {
+    throw new TypeError("gratuito deve ser booleano quando informado.");
+  }
+  return item.gratuito;
+}
+
 export function validateItem(item: CaduItem): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -565,6 +575,11 @@ export function validateItem(item: CaduItem): ValidationResult {
   }
   try {
     sourceRevisionForItem(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    freeAccessForItem(item);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }
