@@ -17,6 +17,8 @@
   var PIPELINE_LOG_MAX_LINES = 180;
   var OPENCLAW_POLL_INTERVAL_MS = 60000;
   var OPENCLAW_REQUEST_TIMEOUT_MS = 10000;
+  // Feed: autenticação (8 s) + leitura upstream (30 s) + margem de trânsito.
+  var FEED_REQUEST_TIMEOUT_MS = 45000;
   // A cold context snapshot may wait up to 15 s for the bounded OpenClaw
   // status probe. Keep this deadline above that bound and below the 25 s
   // server proxy deadline so the browser never aborts a valid cold response.
@@ -82,6 +84,7 @@
     feedMeta: null,
     feedRequestGeneration: 0,
     feedRequestController: null,
+    feedRequest: null,
     feedLoading: false,
     feedDiagnostics: null,
     feedDiagnosticsLoading: false,
@@ -3269,7 +3272,15 @@
     if (openPipeline) openPipeline.addEventListener('click', function () { switchTab('pipeline'); });
   }
 
-  async function loadFeed(initial, appendPage) {
+  function loadFeed(initial, appendPage) {
+    var limit = state.feedLimit || FEED_PAGE_SIZE;
+    var shouldAppend = typeof appendPage === 'number';
+    var requestPage = shouldAppend ? appendPage : initial ? 0 : state.feedPage;
+    var offset = requestPage * limit;
+    var path = '/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true';
+    // Só compartilha GETs com o mesmo recorte e o mesmo efeito na lista.
+    var requestKey = path + (initial ? '|reset' : '|retain') + (shouldAppend ? '|append' : '|replace');
+    if (state.feedRequest && state.feedRequest.key === requestKey) return state.feedRequest.promise;
     var list = $('#feed-list');
     var requestGeneration = ++state.feedRequestGeneration;
     if (state.feedRequestController && typeof state.feedRequestController.abort === 'function') {
@@ -3277,6 +3288,8 @@
     }
     var requestController = typeof AbortController === 'function' ? new AbortController() : null;
     state.feedRequestController = requestController;
+    var request = { key: requestKey, promise: null };
+    state.feedRequest = request;
     state.feedLoading = true;
     if (initial) {
       state.feedPage = 0;
@@ -3287,47 +3300,57 @@
       state.sourceDiagnosticsById = Object.create(null);
       if (state.sourceCatalog) renderSitesTable();
     }
-    var limit = state.feedLimit || FEED_PAGE_SIZE;
-    var shouldAppend = typeof appendPage === 'number';
-    var requestPage = shouldAppend ? appendPage : state.feedPage;
-    var offset = requestPage * limit;
-    try {
-      var data = await apiFetch('/api/cadu/feed?limit=' + limit + '&offset=' + offset + '&with_meta=true', {
-        cache: 'no-store',
-        timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS,
-        signal: requestController ? requestController.signal : undefined
-      });
-      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
-      if (data && data.__error) throw new Error((data.data && data.data.message) || (data.data && data.data.error) || 'status ' + data.status);
-      var feed = normalizePublicFeedResponse(data);
-      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
-      var items = feed.items;
-      state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
-      state.feedMeta = feed.meta;
-      state.sourceDiagnosticsById = indexSourceDiagnostics(feed.meta.sourceDiagnostics);
-      state.feedLatestAt = feed.meta.latestCollectionAt || newestFeedTimestamp(state.allFeedItems);
-      state.feedTotal = feed.total;
-      state.feedHasMore = feed.hasMore;
-      $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
-      $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
-      $('#kpi-memory-detail').textContent = 'itens públicos do Curador; ' + feed.meta.validArtifacts + '/' + feed.meta.artifactsScanned + ' artefatos válidos; página ' + (state.feedPage + 1);
-      renderFeedFreshness(null);
-      applyFeedFilter();
-      if (state.sourceCatalog) renderSitesTable();
-      return { ok: true, page: requestPage };
-    } catch (err) {
-      if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
-      if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
-      $('#badge-feed').textContent = '!';
-      renderFeedFreshness(err);
-      updateFeedPager(0);
-      return { ok: false, error: err };
-    } finally {
-      if (requestGeneration === state.feedRequestGeneration) {
-        state.feedLoading = false;
-        state.feedRequestController = null;
+    request.promise = (async function () {
+      try {
+        var data = await apiFetch(path, {
+          cache: 'no-store',
+          timeoutMs: FEED_REQUEST_TIMEOUT_MS,
+          signal: requestController ? requestController.signal : undefined
+        });
+        if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
+        if (data && data.__error) {
+          var failure = (data.data && data.data.message) || (data.data && data.data.error) || data.message || 'status ' + data.status;
+          if (data.errorCode === 'client_timeout') {
+            failure = 'Tempo limite da consulta ao feed (45 s). Atualize para tentar novamente.';
+          } else if (data.status === 504) {
+            failure = 'O proxy atingiu o tempo limite ao consultar o feed. Atualize para tentar novamente.';
+          } else if (data.errorCode === 'client_aborted') {
+            failure = 'Consulta ao feed cancelada.';
+          }
+          throw new Error(failure);
+        }
+        var feed = normalizePublicFeedResponse(data);
+        if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
+        var items = feed.items;
+        state.allFeedItems = shouldAppend ? state.allFeedItems.concat(items) : items;
+        state.feedMeta = feed.meta;
+        state.sourceDiagnosticsById = indexSourceDiagnostics(feed.meta.sourceDiagnostics);
+        state.feedLatestAt = feed.meta.latestCollectionAt || newestFeedTimestamp(state.allFeedItems);
+        state.feedTotal = feed.total;
+        state.feedHasMore = feed.hasMore;
+        $('#badge-feed').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
+        $('#kpi-memory').textContent = state.feedTotal ? String(state.feedTotal) : String(items.length);
+        $('#kpi-memory-detail').textContent = 'itens públicos do Curador; ' + feed.meta.validArtifacts + '/' + feed.meta.artifactsScanned + ' artefatos válidos; página ' + (state.feedPage + 1);
+        renderFeedFreshness(null);
+        applyFeedFilter();
+        if (state.sourceCatalog) renderSitesTable();
+        return { ok: true, page: requestPage };
+      } catch (err) {
+        if (requestGeneration !== state.feedRequestGeneration) return { stale: true };
+        if (list) list.innerHTML = '<div class="kc-cadu-empty">Erro ao carregar feed: ' + escapeHtml(err.message || err) + '</div>';
+        $('#badge-feed').textContent = '!';
+        renderFeedFreshness(err);
+        updateFeedPager(0);
+        return { ok: false, error: err };
+      } finally {
+        if (requestGeneration === state.feedRequestGeneration) {
+          state.feedLoading = false;
+          state.feedRequestController = null;
+          state.feedRequest = null;
+        }
       }
-    }
+    })();
+    return request.promise;
   }
 
   function applyFeedFilter() {
