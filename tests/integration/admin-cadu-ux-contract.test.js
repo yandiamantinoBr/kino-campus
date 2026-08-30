@@ -127,6 +127,17 @@ describe('admin Cadu UX contracts', () => {
     expect(html).toContain('.kc-pipeline-stage__blocker');
   });
 
+  test('initial Pipeline markup does not assert an idle run before the first snapshot', () => {
+    const page = new DOMParser().parseFromString(html, 'text/html');
+    expect(page.querySelector('#pipeline-active-card').textContent).toContain('Aguardando um snapshot operacional válido');
+    expect(page.querySelector('#pipeline-active-status').textContent).toBe('Pipeline: aguardando um snapshot operacional válido.');
+    const dot = page.querySelector('#pipeline-status-dot');
+    expect(dot.title).toBe('');
+    expect(dot.getAttribute('aria-describedby')).toBe('pipeline-active-status');
+    // This tooltip is computed from the run snapshot, not a static idle label.
+    expect(dot.hasAttribute('data-i18n-tooltip')).toBe(false);
+  });
+
   test('pipeline action siblings are locked and restored as one operation', () => {
     expect(controller).toContain('function lockPipelineActionButtons(clickedButton)');
     expect(controller).toContain("parent.querySelectorAll('.kc-pipeline-stage__btn')");

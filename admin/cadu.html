@@ -1060,14 +1060,14 @@
           <div class="kc-pipeline-runner">
             <h3 style="margin-top:0;font-size:1rem;color:var(--kc-text-dark-secondary);text-transform:uppercase;letter-spacing:.06em;">
               <i class="fas fa-play"></i> Execução atual
-              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" title="Sem execução ativa" data-i18n-tooltip="tooltip.cadu-pipeline-idle"></span>
+              <span class="kc-pipeline-status-dot" id="pipeline-status-dot" aria-describedby="pipeline-active-status"></span>
             </h3>
             <div id="pipeline-active-card" class="kc-pipeline-active-card">
               <div class="kc-cadu-empty">
-                <i class="fas fa-moon"></i> Nenhuma execução ativa. Clique em um estágio à esquerda para iniciar.
+                <i class="fas fa-moon"></i> Aguardando um snapshot operacional válido antes de liberar ações.
               </div>
             </div>
-            <div id="pipeline-active-status" class="kc-sr-only" role="status" aria-live="polite" aria-atomic="true">Pipeline: nenhuma execução ativa.</div>
+            <div id="pipeline-active-status" class="kc-sr-only" role="status" aria-live="polite" aria-atomic="true">Pipeline: aguardando um snapshot operacional válido.</div>
             <div id="pipeline-health-card" class="kc-pipeline-health-card">
               <div class="kc-cadu-empty"><i class="fas fa-heart-pulse"></i> Carregando saúde da automação…</div>
             </div>
@@ -1461,6 +1461,6 @@
   <script defer src="../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-sources.js?v=a0aff870c73dc9bc"></script>
   <script defer src="../assets/js/controllers/admin/admin-cadu-reviews.js?v=a5fad4fc9b09c765"></script>
-  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=1adf4bec53d2c694"></script>
+  <script defer src="../assets/js/controllers/admin/admin-cadu.controller.js?v=63b09abf94f082c8"></script>
 </body>
 </html>
