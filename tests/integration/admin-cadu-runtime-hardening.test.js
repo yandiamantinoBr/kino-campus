@@ -742,23 +742,28 @@ describe('admin Cadu runtime hardening', () => {
     expect(functionSource('applyFeedFilter')).toContain('sourceReviewCanonicalUrl(it.url)');
   });
 
-  test('budgets feed and review routes above authentication plus the corresponding upstream deadline', () => {
+  test('budgets feed and review reads above authentication plus the corresponding upstream deadline', () => {
     const reviews = fs.readFileSync(path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-reviews.js'), 'utf8');
     const reviewsProxy = fs.readFileSync(path.join(ROOT, 'server/cadu-reviews-proxy.js'), 'utf8');
     const feedProxy = fs.readFileSync(path.join(ROOT, 'api/cadu/feed.js'), 'utf8');
     const authBudget = Number(caduAuth.match(/ADMIN_AUTH_DEADLINE_MS = ([\d_]+)/)[1].replace(/_/g, ''));
     const feedBudget = Number(controller.match(/FEED_REQUEST_TIMEOUT_MS = (\d+)/)[1]);
-    const readBudget = Number(reviews.match(/REVIEW_REQUEST_TIMEOUT_MS = (\d+)/)[1]);
-    const repassBudget = Number(reviews.match(/REVIEW_REPASS_TIMEOUT_MS = (\d+)/)[1]);
-    const [, repassUpstream, readUpstream] = reviewsProxy.match(/AbortSignal\.timeout\(route.kind === 'repass' \? (\d+) : (\d+)\)/);
+    const readBudget = Number(reviews.match(/REVIEW_READ_TIMEOUT_MS = (\d+)/)[1]);
+    const [, , readUpstream] = reviewsProxy.match(/AbortSignal\.timeout\(route.kind === 'repass' \? (\d+) : (\d+)\)/);
     const feedUpstream = Number(feedProxy.match(/AbortSignal\.timeout\(routeKind === 'ask' \? \d+ : (\d+)\)/)[1]);
     expect(feedBudget).toBeGreaterThan(authBudget + feedUpstream);
     expect(readBudget).toBeGreaterThan(authBudget + Number(readUpstream));
-    expect(repassBudget).toBeGreaterThan(authBudget + Number(repassUpstream));
     expect(feedBudget).toBeLessThanOrEqual(45000);
     expect(readBudget).toBeLessThanOrEqual(25000);
-    expect(repassBudget).toBeLessThanOrEqual(435000);
     expect(controller).toContain("apiFetch('/api/cadu/openclaw/status', { timeoutMs: OPENCLAW_REQUEST_TIMEOUT_MS })");
+  });
+
+  test('preserves the original resolution and repass write deadlines independently of read budgets', () => {
+    const reviews = fs.readFileSync(path.join(ROOT, 'assets/js/controllers/admin/admin-cadu-reviews.js'), 'utf8');
+    const resolutionBudget = Number(reviews.match(/REVIEW_RESOLUTION_TIMEOUT_MS = (\d+)/)[1]);
+    const repassBudget = Number(reviews.match(/REVIEW_REPASS_TIMEOUT_MS = (\d+)/)[1]);
+    expect(resolutionBudget).toBe(15000);
+    expect(repassBudget).toBe(420000);
   });
 
   test('coalesces duplicate feed refreshes without aborting a valid request or retaining settled data', async () => {

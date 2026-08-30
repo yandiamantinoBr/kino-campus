@@ -809,9 +809,15 @@ describe('Admin Cadu review center runtime', () => {
     page.dom.window.close();
   });
 
-  test('recovers controls after an exceptional resolution transport failure', async () => {
+  test.each([
+    ['exceptional transport failure', null, 'não confirmou'],
+    ['timeout', { ok: false, status: 504, data: { error: 'cadu_api_timeout' } }, 'Tempo limite'],
+  ])('recovers controls after resolution %s without extending its deadline or replaying the POST', async (_label, failure, expectedMessage) => {
     const apiFetchResponse = jest.fn(async (url, options = {}) => {
-      if (options.method === 'POST') throw new Error('transport_unavailable');
+      if (options.method === 'POST') {
+        if (failure) return failure;
+        throw new Error('transport_unavailable');
+      }
       return {
         ok: true,
         data: {
@@ -831,14 +837,15 @@ describe('Admin Cadu review center runtime', () => {
     page.window.document.querySelector('[data-review-decision="approved"]').click();
     const form = page.window.document.querySelector('[data-review-resolution]');
     form.dispatchEvent(new page.window.Event('submit', { bubbles: true, cancelable: true }));
-    await waitFor(() => page.window.document.getElementById('reviews-status').textContent.includes('não confirmou'));
+    await waitFor(() => page.window.document.getElementById('reviews-status').textContent.includes(expectedMessage));
 
     const approved = page.window.document.querySelector('[data-review-decision="approved"]');
     expect(approved.disabled).toBe(false);
     expect(page.window.document.querySelector('[data-review-resolution]')).toBeNull();
     const posts = apiFetchResponse.mock.calls.filter(([, options = {}]) => options.method === 'POST');
     expect(posts).toHaveLength(1);
-    expect(posts[0][1].timeoutMs).toBe(25000);
+    expect(posts[0][1].timeoutMs).toBe(15000);
+    expect(JSON.parse(posts[0][1].body)).toMatchObject({ expected_item_version: ITEM_VERSION, decision: 'approved' });
     page.dom.window.close();
   });
 
@@ -886,7 +893,7 @@ describe('Admin Cadu review center runtime', () => {
     expect(apiFetchResponse).toHaveBeenCalledTimes(1);
     expect(apiFetchResponse.mock.calls[0]).toEqual([
       '/api/cadu/reviews/repass',
-      expect.objectContaining({ method: 'POST', timeoutMs: 435000 }),
+      expect.objectContaining({ method: 'POST', timeoutMs: 420000 }),
     ]);
     pending.resolve({ ok: false, status: 504, data: { error: 'cadu_api_timeout' } });
     await waitFor(() => !button.disabled);

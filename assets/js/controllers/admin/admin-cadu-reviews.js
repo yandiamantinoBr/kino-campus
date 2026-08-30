@@ -13,9 +13,11 @@
   var countRequestGeneration = 0;
   var pendingReads = Object.create(null);
   var institutionalPending = 0;
-  // Autenticação (8 s) + proxy (12 s; reanálise 420 s) + margem de trânsito.
-  var REVIEW_REQUEST_TIMEOUT_MS = 25000;
-  var REVIEW_REPASS_TIMEOUT_MS = 435000;
+  // Leituras: autenticação (8 s) + proxy (12 s) + margem de trânsito.
+  var REVIEW_READ_TIMEOUT_MS = 25000;
+  // Escritas mantêm os limites anteriores; timeout nunca autoriza replay.
+  var REVIEW_RESOLUTION_TIMEOUT_MS = 15000;
+  var REVIEW_REPASS_TIMEOUT_MS = 420000;
   var DEFAULT_PAGE_LIMIT = (
     typeof window.matchMedia === 'function'
     && window.matchMedia('(max-width: 700px)').matches
@@ -834,7 +836,7 @@
         var envelope;
         try {
           envelope = await bridge.apiFetchResponse(path, {
-            timeoutMs: REVIEW_REQUEST_TIMEOUT_MS,
+            timeoutMs: REVIEW_READ_TIMEOUT_MS,
             signal: read.controller ? read.controller.signal : undefined
           });
         } catch (error) {
@@ -959,7 +961,7 @@
             decision: decision,
             resolution_note: note || null
           }),
-          timeoutMs: REVIEW_REQUEST_TIMEOUT_MS
+          timeoutMs: REVIEW_RESOLUTION_TIMEOUT_MS
         }
       );
     } catch (error) {
@@ -1063,7 +1065,7 @@
         params.set('offset', String(offset));
         var envelope = await bridge.apiFetchResponse(
           '/api/cadu/source-reviews?' + params.toString(),
-          { timeoutMs: REVIEW_REQUEST_TIMEOUT_MS }
+          { timeoutMs: REVIEW_READ_TIMEOUT_MS }
         );
         if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)) {
           throw new Error(responseError(envelope));
@@ -1100,7 +1102,7 @@
     while (hasMore && items.length < maximum) {
       var envelope = await bridge.apiFetchResponse(
         auditPath(Math.min(200, maximum - items.length), offset),
-        { timeoutMs: REVIEW_REQUEST_TIMEOUT_MS }
+        { timeoutMs: REVIEW_READ_TIMEOUT_MS }
       );
       if (!envelope.ok || !envelope.data || !Array.isArray(envelope.data.items)) {
         throw new Error(responseError(envelope));
