@@ -6618,7 +6618,14 @@
           ? 'Nenhuma execução ativa na última visão válida. Renove o snapshot antes de iniciar.'
           : 'Aguardando um snapshot operacional válido antes de liberar ações.');
       card.innerHTML = '<div class="kc-cadu-empty"><i class="fas fa-moon"></i> ' + escapeHtml(emptyMessage) + '</div>';
-      if (dot) { dot.className = 'kc-pipeline-status-dot'; dot.title = 'Sem execução ativa'; }
+      if (dot) {
+        dot.className = 'kc-pipeline-status-dot';
+        dot.title = pipelineControlIsReady()
+          ? 'Sem execução ativa'
+          : (state.pipelineLastSuccessAt > 0
+            ? 'Estado atual desconhecido; snapshot operacional desatualizado.'
+            : 'Estado da execução desconhecido; aguardando snapshot operacional.');
+      }
       if (logBox && (!pipelineStreamRequest) && (!pipelineLogPollState)) logBox.innerHTML = '<div class="kc-cadu-empty" style="padding:30px 0;">Aguardando início da execução…</div>';
       return;
     }
@@ -7941,6 +7948,7 @@
     // segunda chamada aqui impede aborts espúrios quando a aba persistida é
     // Pipeline, Revisões ou OpenClaw.
     switchTab(state.currentTab, { skipOperationalRefresh: true });
+    renderPipelineActive(state.pipelineActive);
     if (main) main.style.display = 'block';
     keepCaduTabVisible($('.kc-cadu-tab.is-active'), 'instant');
     if (typeof window.requestAnimationFrame === 'function') {
