@@ -13,6 +13,7 @@ import {
   caduUserTagsForItem,
   actionFingerprintMetadataForItem,
   categoryLabel,
+  freeAccessForItem,
   MAX_CADU_USER_TAGS,
   ModuleKey,
   normalizeCategoryForModule,
@@ -774,6 +775,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const sourceTitle = normalizeWhitespace(item.sourceTitle ?? item.source_title).slice(0, 1_000);
   const sourceRegistryId = normalizeWhitespace(item.sourceRegistryId || item.source_registry_id).slice(0, 200);
   const sourceRevision = sourceRevisionForItem(item);
+  const gratuito = freeAccessForItem(item);
   const actionFingerprintMetadata = actionFingerprintMetadataForItem(item);
   const actionFingerprints = actionFingerprintMetadata.fingerprints;
   const extractedLinks = Array.isArray(item.extractedLinks) ? item.extractedLinks.slice(0, 12) : [];
@@ -869,7 +871,6 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const metadata: Record<string, unknown> = { ...commonMeta };
 
   if (module === "eventos") {
-    const gratuito = item.gratuito !== undefined ? !!item.gratuito : true;
     if (gratuito) price = 0;
 
     // A presença de qualquer papel semântico torna o contrato autoritativo.
@@ -898,7 +899,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       data_evento: dataEvento,
       data_fim_evento: dataFim,
       hora_evento: horaEvento,
-      gratuito,
+      ...(gratuito === undefined ? {} : { gratuito }),
       deadline_date: dataEvento ? formatDatePt(dataEvento) : "",
     });
     if (!location) location = "UFG";
@@ -913,7 +914,6 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     const remuneracaoText = normalizeWhitespace(item.remuneracao);
     const remunValue = parseBRLNumber(item.remuneracao as unknown);
     if (remunValue != null) price = remunValue;
-    const gratuito = item.gratuito !== undefined ? !!item.gratuito : true;
     if (gratuito && price == null) price = 0;
     const deadlineDate = resolveOpportunityDeadline(item, fullText);
 
@@ -933,7 +933,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       regimeContratacao: regime.label,
       remuneracao: remuneracaoText,
       opportunityType: type,
-      gratuito,
+      ...(gratuito === undefined ? {} : { gratuito }),
       deadline_date: deadlineDate,
     });
     if (wm.label) {
