@@ -26,7 +26,7 @@ CSS_PATH = ROOT / 'assets/css/kc-ui-icons.css'
 FAMILY = 'Kino Campus UI Icons'
 
 
-def validate_output_path(target: Path):
+def validate_output_path(target: Path, *, directory: bool = False):
     relative = target.relative_to(ROOT)
     current = ROOT
     for part in relative.parts:
@@ -41,6 +41,10 @@ def validate_output_path(target: Path):
             raise RuntimeError(f'Refusing hard-linked output: {current}')
         if current != target and not stat.S_ISDIR(info.st_mode):
             raise RuntimeError(f'Output ancestor is not a directory: {current}')
+        if current == target and (stat.S_ISDIR(info.st_mode) if not directory else not stat.S_ISDIR(info.st_mode)):
+            raise RuntimeError(f'Output has the wrong file/directory type: {current}')
+        if current == target and not directory and not stat.S_ISREG(info.st_mode):
+            raise RuntimeError(f'Output is not a regular file: {current}')
     if not target.resolve().is_relative_to(ROOT):
         raise RuntimeError(f'Output escapes the repository: {target}')
 
@@ -172,7 +176,7 @@ def main():
     serialized = json.dumps(metadata, indent=2) + '\n'
     # Prepare and validate every destination before the first write.
     for file in [FONT_DIR, font_path, CSS_PATH, MANIFEST_PATH]:
-        validate_output_path(file)
+        validate_output_path(file, directory=file == FONT_DIR)
     if args.write:
         # Explicit files only; never remove older fonts or change vendor files.
         FONT_DIR.mkdir(parents=True, exist_ok=True)
