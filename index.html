@@ -10,6 +10,8 @@
   <meta name="google-adsense-account" content="ca-pub-2776499020194231" />
   <meta name="google-site-verification" content="pUhcnFNqCxds-Z6VQcj7g5-IbIcEwSVZ9b2l4_OHIcc" />
   <meta property="og:locale" content="pt_BR" />
+  <link rel="preload" href="assets/vendor/fontawesome/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin />
+  <script defer src="assets/js/core/kc-consent.js?v=8.6.5"></script>
   <script defer src="assets/js/boot/kc-seo-structured-data.js?v=8.6.1"></script>
   <meta name="description" content="KinoCampus é a plataforma da comunidade universitária da UFG. Compra e venda, caronas, moradia, eventos, oportunidades e achados/perdidos entre estudantes." />
   <meta property="og:type" content="website" />
@@ -235,15 +237,15 @@
 
       <!-- Feed Destaques: wrapper isola pager/banner deste tab -->
       <div class="kc-feed-tab-wrap kc-feed-tab-wrap--active" data-feed-wrap="destaques">
-        <div class="kc-feed-list kc-feed-panel kc-feed-panel--active" id="kc-feed-destaques" role="tabpanel" aria-labelledby="tab-destaques"></div>
+        <div class="kc-feed-list kc-feed-panel kc-feed-panel--active" id="kc-feed-destaques" role="tabpanel" aria-labelledby="tab-destaques" data-kc-feed-state="loading" aria-busy="true"></div>
       </div>
       <!-- Feed Recentes: posts ordenados por data (mais novos) -->
       <div class="kc-feed-tab-wrap" data-feed-wrap="recentes" hidden>
-        <div class="kc-feed-list kc-feed-panel" id="kc-feed-recentes" role="tabpanel" aria-labelledby="tab-recentes"></div>
+        <div class="kc-feed-list kc-feed-panel" id="kc-feed-recentes" role="tabpanel" aria-labelledby="tab-recentes" data-kc-feed-state="loading" aria-busy="true"></div>
       </div>
       <!-- Feed Comentados: posts com comentário mais recente primeiro -->
       <div class="kc-feed-tab-wrap" data-feed-wrap="comentados" hidden>
-        <div class="kc-feed-list kc-feed-panel" id="kc-feed-comentados" role="tabpanel" aria-labelledby="tab-comentados"></div>
+        <div class="kc-feed-list kc-feed-panel" id="kc-feed-comentados" role="tabpanel" aria-labelledby="tab-comentados" data-kc-feed-state="loading" aria-busy="true"></div>
       </div>
 
       <section class="kc-feed-guide">
@@ -417,7 +419,7 @@
     </button>
   </nav>
 
-  <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true">
+  <div class="kc-mobile-menu-drawer kc-mobile-menu" id="mobileMenuDrawer" aria-hidden="true" inert>
     <div class="kc-mobile-menu-header">
       <h3>Menu</h3>
       <button class="kc-close-menu" data-kc-mobile-menu="close" aria-label="Fechar menu" data-i18n-aria-label="aria-label.menu-close">
@@ -479,7 +481,6 @@
   <script defer src="assets/js/boot/kc-env.js?v=8.6.13"></script>
   <script defer src="assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
   <script defer src="assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
-  <script defer src="assets/js/core/kc-consent.js?v=8.6.5"></script>
   <script defer src="assets/js/boot/kc-google-tag.js?v=8.6.6"></script>
   <script defer src="assets/js/boot/kc-events.js?v=8.6.8"></script>
   <script defer src="assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
