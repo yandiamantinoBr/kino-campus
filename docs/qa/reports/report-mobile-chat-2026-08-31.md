@@ -21,8 +21,9 @@ acompanhando logout e novas sessões sem duplicação.
 
 - Base: `origin/main` `35381695eaddd3bdb087c4055967c860f03bc582`.
 - A branch inicial `codex/chat` estava 29 commits atrás e continha uma alteração
-  de consentimento já integrada por equivalência no PR #890. Foi preservada;
-  o hotfix foi feito em worktree isolado sobre main atual.
+  de consentimento já integrada por equivalência no PR #890. O hotfix foi feito
+  em worktree isolado; depois da análise, o checkout principal voltou à `main`,
+  preservando seus 29 arquivos não rastreados e o histórico antigo no backup.
 - Sete validadores de repositório aprovados; TypeScript contracts/UMD aprovados.
 - Jest: 337 suítes, 5.724 testes aprovados, sete pulados, três snapshots.
 - E2E Chromium: 222/222; cross-browser: 15/15 (Chromium, Firefox, WebKit,

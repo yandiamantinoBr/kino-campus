@@ -29,6 +29,14 @@ segredo local ou modificação não commitada foi apagado.
   com as decisões registradas abaixo. Não foram mescladas cegamente.
 - Total dessas duas passagens: **162 branches locais removidas**, incluindo
   reactions e as quatro propostas. Seus commits continuam recuperáveis.
+- Fechamento do checkout principal: `main` foi transferida do worktree limpo
+  `kino-campus-review-clarity` para `kino-campus`, com detach no mesmo SHA e
+  `pull --ff-only`. Os 29 arquivos não rastreados foram preservados.
+- A antiga `codex/chat` tinha só um commit exclusivo, patch-id idêntico ao
+  consentimento integrado no PR #890, e seu parent já era ancestral da main.
+  Após backup e liberação do checkout, suas refs local/remota foram removidas.
+  **Total: 163 branches locais antigas e cinco remotas antigas removidas**,
+  sem contar a branch temporária do próprio hotfix.
 
 Remotas obsoletas removidas:
 
@@ -38,6 +46,7 @@ Remotas obsoletas removidas:
 | `codex/cadu-ufg-publisher-tags-contract` | patch equivalente a `24a774e4`, PR #866 |
 | `kinocampus-V75.0-foundations` | ancestral da main, zero commits exclusivos; 272 atrás na auditoria |
 | `site-efg-marketing-vendas-2026` | apontava para `1dc1471f`, consentimento do PR #890 já integrado; não continha trabalho exclusivo de site |
+| `codex/chat` | único commit exclusivo `f4cd46c7` equivalente a `1dc1471f`; checkout principal atualizado para main sem perder arquivos locais |
 
 O PR #901, `codex/cadu-covers-dating-20260831`, surgiu e avançou durante a
 auditoria. Sua branch/worktree foi preservada como trabalho concorrente, sem
@@ -85,6 +94,8 @@ Na pasta `output/` do worktree `kino-campus-chat-mobile-20260831`:
 - `branch-audit-20260831.json`: inventário individual com nomes, SHA, PRs,
   equivalência e estados dos worktrees.
 - `branch-cleanup-result.json`: resultado efetivo da primeira passagem.
+- `branch-cleanup-supplement.json`: cinco decisões finais e migração segura
+  do checkout principal para main.
 
 Esses arquivos locais não são publicados. Para recuperar uma branch, consultar
 o SHA no inventário/bundle e criar **uma nova referência**, sem resetar checkout
