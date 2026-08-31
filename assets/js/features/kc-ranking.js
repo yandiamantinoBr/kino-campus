@@ -79,6 +79,59 @@
     }
   }
 
+  function getRankingAvatarThumbnailUrl(value) {
+    try {
+      var raw = String(value == null ? '' : value).trim();
+      var env = window.KC_ENV || {};
+      var configuredUrl = env.SUPABASE_URL || (env.supabase && env.supabase.url);
+      var origin = new URL(String(configuredUrl || ''));
+      var avatar = new URL(raw);
+      var prefix = '/storage/v1/object/public/kino-media/profile-avatars/';
+      // Restrict transformations to our public raster avatars. Signed URLs,
+      // query parameters, animated/vector formats and other origins are untouched.
+      if (origin.protocol !== 'https:' || origin.username || origin.password ||
+          origin.pathname !== '/' || origin.search || origin.hash ||
+          avatar.protocol !== 'https:' || avatar.origin !== origin.origin ||
+          avatar.username || avatar.password || /[?#\\]/.test(raw) ||
+          avatar.pathname.indexOf(prefix) !== 0 ||
+          /%(?:2f|5c|00)/i.test(avatar.pathname) ||
+          !/\.(?:jpe?g|png|webp)$/i.test(avatar.pathname)) return '';
+      avatar.pathname = avatar.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+      // The largest ranking avatar is 44 CSS px; 144 also covers DPR 3.
+      avatar.search = '?width=144&height=144&resize=cover&quality=90';
+      return avatar.href;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function getRankingAvatarMarkup(value, safeName) {
+    var original = getSafeAvatarUrl(value);
+    if (!original) return '';
+    var thumbnail = getRankingAvatarThumbnailUrl(value);
+    var fallbackAttribute = thumbnail
+      ? ' data-kc-ranking-avatar-original="' + escapeHtml(original) + '"'
+      : '';
+    return '<img src="' + escapeHtml(thumbnail || original) + '" alt="' + safeName + '" loading="lazy"' + fallbackAttribute + '>';
+  }
+
+  function bindRankingAvatarFallbacks(container) {
+    container.querySelectorAll('img[data-kc-ranking-avatar-original]').forEach(function (image) {
+      var original = image.getAttribute('data-kc-ranking-avatar-original');
+      var restored = false;
+      function restoreOriginal() {
+        if (restored) return;
+        restored = true;
+        image.removeEventListener('error', restoreOriginal);
+        image.removeAttribute('data-kc-ranking-avatar-original');
+        image.src = original;
+      }
+      image.addEventListener('error', restoreOriginal, { once: true });
+      // A failed cached image may have completed before its listener was attached.
+      if (image.complete && image.naturalWidth === 0) restoreOriginal();
+    });
+  }
+
   function getSafeProfileHref(userId) {
     return 'profile.html?id=' + encodeURIComponent(String(userId == null ? '' : userId).trim().slice(0, 160));
   }
@@ -197,6 +250,7 @@
     if (!container) return false;
     if (container.dataset.kcRankingSignature === signature) return false;
     container.innerHTML = markup;
+    bindRankingAvatarFallbacks(container);
     container.dataset.kcRankingSignature = signature;
     return true;
   }
@@ -213,11 +267,8 @@
 
     var markup = normalized.map(function (u, i) {
       var name = String(u.display_name || 'Usuario');
-      var avatarSrc = getSafeAvatarUrl(u.avatar_url);
       var safeName = escapeHtml(name);
-      var avatarHtml = avatarSrc
-        ? '<img src="' + escapeHtml(avatarSrc) + '" alt="' + safeName + '" loading="lazy">'
-        : '<i class="fas fa-user" aria-hidden="true"></i>';
+      var avatarHtml = getRankingAvatarMarkup(u.avatar_url, safeName) || '<i class="fas fa-user" aria-hidden="true"></i>';
       return '<a href="' + escapeHtml(getSafeProfileHref(u.user_id)) + '" class="kc-ranking-sidebar-item">' +
         '<span class="kc-ranking-sidebar-item__pos"><i class="' + iconClass + '" style="font-size:0.85em;margin-right:2px;" aria-hidden="true"></i>' + (i + 1) + '</span>' +
         '<span class="kc-ranking-sidebar-item__avatar">' + avatarHtml + '</span>' +
@@ -243,12 +294,9 @@
 
     var markup = normalized.map(function (u, i) {
       var name = String(u.display_name || 'Usuario');
-      var avatarSrc = getSafeAvatarUrl(u.avatar_url);
       var safeName = escapeHtml(name);
       var score = getSafeScore(u.score);
-      var avatarHtml = avatarSrc
-        ? '<img src="' + escapeHtml(avatarSrc) + '" alt="' + safeName + '" loading="lazy">'
-        : '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);" aria-hidden="true"></i>';
+      var avatarHtml = getRankingAvatarMarkup(u.avatar_url, safeName) || '<i class="fas fa-user" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:0.9em;color:var(--kc-text-dark-secondary);" aria-hidden="true"></i>';
       return '<a href="' + escapeHtml(getSafeProfileHref(u.user_id)) + '" class="kc-ranking-user" title="' + safeName + ' - ' + score + ' pts">' +
         '<div class="kc-ranking-user-avatar">' + avatarHtml +
           '<span class="kc-ranking-user-position"><i class="' + iconClass + '" aria-hidden="true"></i>' + (i + 1) + '</span>' +

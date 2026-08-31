@@ -102,7 +102,56 @@ Evidências locais preservadas em `output/playwright/performance-*` no worktree
 `kino-campus-pagespeed-20260831`. Integração/produção e segunda rodada de imagens
 serão registradas após os respectivos checks, sem confundir preview com produção.
 
-## Referências técnicas
+## Integração e primeira medição em produção
+
+PR [#915](https://github.com/yandiamantinoBr/kino-campus/pull/915) integrada após
+todos os checks verdes. Merge `68c5b74a948d232cb354f0c9851516f7ed663391`, deploy
+Vercel `dpl_9AUTiqyBpbWSmjH9JegmEJ17ax69`, READY/production/main e domínio
+canônico verificados. HTML público confirmou a revisão e a ordem antecipada do
+consentimento. O preview protegido redirecionou para login Vercel; sua auditoria
+foi descartada, sem usar esses números como evidência da plataforma.
+
+[Novo PageSpeed mobile](https://pagespeed.web.dev/analysis/https-kinocampus-com-br/c4jzbd78rq?hl=en_GB&form_factor=mobile),
+31/08 às 12:23 GMT-3, mesmo Lighthouse 13.4.1/Moto G Power/4G lento:
+
+| Métrica | Antes | Primeiro lote publicado |
+| --- | ---: | ---: |
+| Performance | 49 | 89 |
+| FCP | 2,1 s | 1,4 s |
+| LCP | 5,9 s | 3,2 s |
+| TBT | 470 ms | 20 ms |
+| CLS | 0,22 | 0,075 |
+| Speed Index | 5,9 s | 4,0 s |
+| Acessibilidade / boas práticas / SEO | 95 / 96 / 100 | 95 / 96 / 100 |
+
+As duas medições locais controladas pós-deploy (Lighthouse 12.6.1) deram notas
+68 e 78; CLS 0,0805 e 0,0910, TBT 72,5 e 33,5 ms. FCP/LCP/SI variaram com a
+rede local, portanto não são apresentados como ganho uniforme. O resultado
+remoto é uma amostra de laboratório, não uma garantia de nota constante; CrUX
+permanece histórico de 28 dias.
+
+Produção passou 6 E2E no Chrome/Edge nativos: 720 combinações de cabeçalho
+mobile (larguras, claro/escuro, fontes ampliadas e conta sintética) e abertura do
+formulário de login. Conta sintética comprova layout, não autenticação real.
+Os cinco módulos retornaram HTTP 200, sem erros de console/página no runner.
+
+A comparação visual encontrou distribuição horizontal diferente no cabeçalho
+desktop. A investigação reproduziu os dois estados em **ambos** os commits
+(baseline `43ac3541` e produção minificada): fonte antes do DOMContentLoaded
+mostra quatro rótulos e seta; fonte depois mostra três rótulos, sem seta. Seis
+cenários controlados (atraso de fonte/defer) comprovaram geometria equivalente
+entre commits, sem erros de página. A recálculo explícito leva ambos ao mesmo
+estado. Trata-se de uma variação preexistente da inicialização responsiva,
+não de CSS alterado ou código perdido na minificação. Não se aplicou mudança
+estética arbitrária para tornar capturas com temporizações distintas idênticas.
+
+Evidências `header-timing-audit.json` e `header-timing-early-font-audit.json` no
+worktree do primeiro lote. As imagens dos demais módulos preservam o estilo;
+faixas horizontais de categorias podem mostrar um item parcial junto da seta,
+comportamento preexistente. A cobertura visual não inclui áreas sob o banner
+de consentimento; os controles também foram exercitados sem o banner.
+
+## Referências técnicas consultadas
 
 - [Google: investigar e reduzir CLS](https://web.dev/articles/optimize-cls).
 - [Google: preload de recursos críticos](https://web.dev/articles/preload-critical-assets).
