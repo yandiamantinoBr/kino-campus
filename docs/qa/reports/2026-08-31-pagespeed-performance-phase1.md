@@ -140,7 +140,7 @@ desktop. A investigação reproduziu os dois estados em **ambos** os commits
 (baseline `43ac3541` e produção minificada): fonte antes do DOMContentLoaded
 mostra quatro rótulos e seta; fonte depois mostra três rótulos, sem seta. Seis
 cenários controlados (atraso de fonte/defer) comprovaram geometria equivalente
-entre commits, sem erros de página. A recálculo explícito leva ambos ao mesmo
+entre commits, sem erros de página. O recálculo explícito leva ambos ao mesmo
 estado. Trata-se de uma variação preexistente da inicialização responsiva,
 não de CSS alterado ou código perdido na minificação. Não se aplicou mudança
 estética arbitrária para tornar capturas com temporizações distintas idênticas.
