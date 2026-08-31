@@ -9102,18 +9102,6 @@ textarea::placeholder {
   }
 }
 
-/* Em viewports estreitas (<= 400px) prioriza os controles do cabeçalho.
-   A regra mobile anterior usa !important para mostrar o wordmark, portanto
-   este limite também precisa ser explícito para impedir colisões reais. */
-@media (max-width: 400px) {
-  .kc-header:not(.kc-header--admin) .kc-logo-text {
-    display: none !important;
-  }
-  .kc-header:not(.kc-header--admin) .kc-logo a {
-    gap: 0;
-  }
-}
-
 /* v75.1 FINAL: garante footer SEMPRE em uma linha em qualquer mobile.
  * Regra colocada por ULTIMO no arquivo para vencer cascata sobre as
  * regras de display:grid/flex-wrap:wrap espalhadas em max-width:576/380/360. */

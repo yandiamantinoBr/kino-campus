@@ -1,10 +1,57 @@
 /**
  * kc-core-widgets.js — v13.6.1
  * Extraído de kc-core.js (v13.6.1 split).
- * Contém: WhatsApp share helpers + KCCore.bindModuleSortTabs
+ * Contém: WhatsApp share, sort tabs, compactação textual e wordmark responsivo.
  */
 (function () {
   'use strict';
+
+  function kcInitHeaderWordmarkFit() {
+    document.querySelectorAll('.kc-header:not(.kc-header--admin) .kc-logo').forEach((logo) => {
+      if (logo.dataset.kcWordmarkFitBound === '1') return;
+      const link = logo.querySelector('a');
+      const mark = logo.querySelector('.kc-logo-mark');
+      const text = logo.querySelector('.kc-logo-text');
+      if (!link || !mark || !text) return;
+      logo.dataset.kcWordmarkFitBound = '1';
+
+      let frame = 0;
+      const sync = () => {
+        const mobile = window.innerWidth <= 768;
+        const gap = parseFloat(window.getComputedStyle(link).columnGap) || 0;
+        // offsetWidth ignores the decorative rotation of the mark. CSS keeps
+        // hidden text measurable; its intrinsic width never sizes the grid track.
+        const required = mark.offsetWidth + text.offsetWidth + gap + 1;
+        const visible = mobile && text.offsetWidth > 0 && required <= logo.clientWidth;
+        if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
+          logo.classList.toggle('kc-logo--wordmark-visible', visible);
+        }
+      };
+      const schedule = () => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          sync();
+        });
+      };
+
+      // The free grid track changes after login, bell/chat injection and font
+      // loading, even without a viewport resize. Observe sizes, not mutations.
+      if (typeof window.ResizeObserver === 'function') {
+        const observer = new window.ResizeObserver(schedule);
+        [logo, mark, text].forEach((element) => observer.observe(element));
+      }
+      window.addEventListener('resize', schedule, { passive: true });
+      window.addEventListener('orientationchange', schedule, { passive: true });
+      document.addEventListener('kc:profilechange', schedule);
+      document.addEventListener('kc:authchange', schedule);
+      if (document.fonts) {
+        document.fonts.ready.then(schedule);
+        if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', schedule);
+      }
+      sync();
+    });
+  }
 
   // -----------------------------
   // WhatsApp Share (V8.1.2.4.8)
@@ -169,6 +216,7 @@
   // Init
 
   window.KCCore = window.KCCore || {};
+  window.KCCore.initHeaderWordmarkFit = kcInitHeaderWordmarkFit;
   window.KCCore.initWhatsAppShare = kcInitWhatsAppShare;
 })();
 

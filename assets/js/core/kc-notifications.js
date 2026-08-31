@@ -263,6 +263,12 @@
       }
     });
 
+    var chatPageActive = /(?:^|\/)mensagens\.html$/i.test(window.location.pathname);
+    document.querySelectorAll('.kc-chat-shortcut').forEach(function (link) {
+      if (chatPageActive) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+
     document.querySelectorAll('.kc-mobile-menu-content').forEach(function (menu) {
       var mobileLink = menu.querySelector('a[href*="mensagens.html"]');
       if (!mobileLink) {

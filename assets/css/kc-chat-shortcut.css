@@ -44,25 +44,55 @@
   .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut {
     display: inline-flex;
     border-radius: 50%;
-    color: var(--kc-text-dark-primary);
-    background: var(--kc-background-dark);
-    border: 1px solid var(--kc-border-dark);
+    color: var(--kc-text-dark-secondary);
+    background: transparent;
+    border: 0;
   }
 
   .kc-header:not(.kc-header--admin) .kc-chat-shortcut:focus-visible {
-    outline: 2px solid var(--kc-text-dark-primary);
+    outline: 2px solid rgba(255, 107, 0, 0.45);
     outline-offset: 2px;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut:active,
+  .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut[aria-current="page"] {
+    color: var(--kc-primary-brand);
+    background: rgba(255, 107, 0, 0.12);
+  }
+
+  /* A coluna grid já desconta busca e ações. O core mede o texto inteiro,
+     inclusive oculto, e o revela apenas quando cabe nessa coluna livre. */
+  .kc-header:not(.kc-header--admin) .kc-logo a {
+    position: relative;
+    gap: 8px;
+    transform: none;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo .kc-logo-text {
+    display: flex !important;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    visibility: hidden;
+    pointer-events: none;
+    white-space: nowrap;
+    flex: none;
+    width: max-content;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo--wordmark-visible .kc-logo-text {
+    position: static;
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
   }
 }
 
-/* Reserva espaço para Mensagens sem sobrepor busca, marca ou autenticação. */
-@media (max-width: 480px) {
-  .kc-header:not(.kc-header--admin) .kc-logo-text {
-    display: none !important;
-  }
-
-  .kc-header:not(.kc-header--admin) .kc-logo a {
-    gap: 0;
+@media (max-width: 768px) and (hover: hover) {
+  .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut:hover:not(:active):not([aria-current="page"]) {
+    color: var(--kc-primary-brand);
+    background: rgba(255, 107, 0, 0.08);
   }
 }
 

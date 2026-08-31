@@ -145,7 +145,7 @@ test.describe('resiliência visual pública', () => {
         const context = canvas.getContext('2d');
         if (context && input) context.font = getComputedStyle(input).font;
         return {
-          logoDisplay: logoText ? getComputedStyle(logoText).display : '',
+          logoVisible: !!logoText && getComputedStyle(logoText).visibility === 'visible',
           logoSearchOverlap: !!logoRect && !!searchRect && logoRect.right > searchRect.left,
           placeholder: input?.getAttribute('placeholder') || '',
           placeholderWidth: context && input ? context.measureText(input.placeholder).width : Infinity,
@@ -153,8 +153,7 @@ test.describe('resiliência visual pública', () => {
         };
       });
 
-      if (width <= 400) expect(presentation.logoDisplay).toBe('none');
-      else expect(presentation.logoSearchOverlap).toBe(false);
+      if (presentation.logoVisible) expect(presentation.logoSearchOverlap).toBe(false);
       expect(presentation.placeholder).toBe('Seu nome (opcional)');
       expect(presentation.placeholderWidth).toBeLessThanOrEqual(presentation.inputWidth);
     }

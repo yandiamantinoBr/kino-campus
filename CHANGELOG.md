@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-08-31] - estados de Mensagens e marca adaptativa no cabeçalho
+
+- O atalho mobile de Mensagens permanece transparente em repouso, sem círculo
+  cinza ou borda persistente. Toque e página atual recebem destaque laranja;
+  foco de teclado e badge continuam disponíveis.
+- A marca textual aparece quando o espaço real comporta nome, símbolo e gap,
+  reagindo a fontes, autenticação, sino e redimensionamento. Quando não cabe,
+  somente o símbolo permanece visível, sem sobrepor os demais controles.
+- Substituídos testes de ocultação por largura fixa por contratos de encaixe
+  real, incluindo estados ativo/inativo, temas e Chromium/WebKit.
+
 ## [2026-08-31] - acesso visível a Mensagens no mobile
 
 - O ícone de Mensagens fica visível no cabeçalho mobile, com foco de teclado e
