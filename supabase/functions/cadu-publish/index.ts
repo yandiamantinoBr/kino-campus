@@ -461,9 +461,10 @@ async function prepareFinalImages(
       try {
         const storageUrl = await uploadCover(admin, userId, postId, candidate, index);
         if (!storageUrl) throw new Error("storage_url_empty");
-        // Padrão de capa/OG: sirve a capa pelo render do Storage (faixa
-        // 200–500 KB para crawler) mantendo o objeto original íntegro.
-        results[index] = { source: candidate, url: toOptimizedCoverUrl(storageUrl), uploaded: true, fallback: false };
+        // URLs armazenadas mantêm a identidade exata do objeto (contrato de
+        // dedup/provenância/auditoria do pipeline). A compressão para crawler
+        // acontece na camada OG (api/og-product → toOptimizedCoverUrl).
+        results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
       } catch (e) {
         const error = e instanceof Error ? e.message : String(e);
         results[index] = allowExternalFallback && !(e instanceof RemoteResourceError) && canPersistExternalImageUrl(candidate)
