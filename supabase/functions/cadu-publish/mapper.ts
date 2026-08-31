@@ -35,7 +35,6 @@ import {
   clamp,
   clampMarkdown,
   extractEmails,
-  formatDatePt,
   hostOf,
   isoDateFromAny,
   lightHash,
@@ -964,7 +963,9 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       data_fim_evento: dataFim,
       hora_evento: horaEvento,
       ...(gratuito === undefined ? {} : { gratuito }),
-      deadline_date: dataEvento ? formatDatePt(dataEvento) : "",
+      // Starting an event does not close registration. Preserve only the
+      // explicit application role; lifecycle expiry still uses the event end.
+      deadline_date: semanticDates.applicationDeadline || "",
     });
   } else if (module === "oportunidades") {
     const type = normalizeOpportunityType(item.type);
