@@ -65,7 +65,9 @@ for (const route of ['/', '/mensagens.html']) {
                 rowCenters: nodes.map(node => { const r = node.getBoundingClientRect(); return r.top + r.height / 2; }),
                 targetSizes: [...header.querySelectorAll('.kc-search-mobile-btn, .kc-user-actions > *')].filter(node => node.getClientRects().length).map(node => { const r = node.getBoundingClientRect(); return { width: r.width, height: r.height }; }),
                 legacyWrap: !!header.querySelector('.kc-header-container--wordmark-wrap'),
-                documentWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+                documentWidth: document.documentElement.scrollWidth,
+                bodyWidth: document.body.scrollWidth,
+                headerWidth: header.scrollWidth, headerClientWidth: header.clientWidth,
                 authenticated: header.querySelector('.btn-login').classList.contains('is-auth'),
                 bellVisible: header.querySelector('#kcNotifBell').getClientRects().length > 0,
                 mainTop: document.querySelector('main').getBoundingClientRect().top, headerBottom: bounds.bottom,
@@ -83,6 +85,9 @@ for (const route of ['/', '/mensagens.html']) {
             expect(result.blocked, context).toEqual([]);
             expect(result.legacyWrap, context).toBe(false);
             expect(result.documentWidth, context).toBeLessThanOrEqual(width + 1);
+            // Body may include existing off-canvas feed/ranking overflow. The
+            // header itself must never enlarge its scrollable box (hidden label included).
+            expect(result.headerWidth, context).toBeLessThanOrEqual(result.headerClientWidth + 1);
             expect(Math.max(...result.rowCenters) - Math.min(...result.rowCenters), context).toBeLessThanOrEqual(2);
             for (const target of result.targetSizes) {
               expect(target.width, context).toBeGreaterThanOrEqual(24);

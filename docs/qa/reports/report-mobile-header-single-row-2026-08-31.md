@@ -28,7 +28,10 @@ no mobile. A altura compartilhada continua sincronizada com o cabeçalho.
 O rótulo completo recortado é ancorado à direita do próprio botão: continua
 mensurável, mas não amplia o scrollWidth do body. Esse problema apareceu
 na verificação WebKit com fontes externas bloqueadas e também foi medido
-em Chromium com fonte ampliada; o contrato verifica tanto body quanto root.
+em Chromium com fonte ampliada; o contrato verifica root e scrollWidth do
+próprio cabeçalho. O body também é registrado, mas seu overflow preexistente
+no ranking da Home em 320 px não é atribuído a esta correção. O smoke global
+cross-browser que verifica max(root,body) permanece intacto.
 
 Asserções de navegador exigem centros verticais no mesmo eixo, altura
 compacta, texto inteiro via Range, alvos atingíveis, largura do documento
