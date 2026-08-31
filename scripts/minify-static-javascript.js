@@ -7,8 +7,10 @@ const zlib = require('zlib');
 const { minify_sync: minifySync } = require('terser');
 
 // These are classic scripts with shared globals and per-file strict-mode
-// boundaries. Only remove formatting/comments: never concatenate, wrap,
+// boundaries. This formatter only removes formatting/comments: never concatenate, wrap,
 // rename, transpile, drop code or change evaluation/loading order.
+// A separate guarded build step may group the reviewed home definition IIFEs
+// AFTER this formatter; initializers and all other scripts stay separate.
 // https://terser.org/docs/api-reference/
 const MINIFY_OPTIONS = Object.freeze({
   compress: false,

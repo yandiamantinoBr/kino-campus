@@ -111,14 +111,15 @@ test('pending reserve is home-only and not applied without JavaScript boot', asy
   await page.evaluate(() => window.__feedPager.destroy());
 });
 
-test('critical icon font preload matches the unchanged stylesheet request', async ({ page }) => {
+test('critical icon font preload matches the compact stylesheet request without duplication', async ({ page }) => {
   await page.goto('/');
   const preload = page.locator('link[rel="preload"][as="font"]');
   await expect(preload).toHaveCount(1);
   await expect(preload).toHaveAttribute('type', 'font/woff2');
   await expect(preload).toHaveAttribute('crossorigin', '');
-  await expect(preload).toHaveAttribute('href', 'assets/vendor/fontawesome/webfonts/fa-solid-900.woff2');
+  const icons = require('../../assets/fonts/kc-ui-icons/manifest.json');
+  await expect(preload).toHaveAttribute('href', 'assets/fonts/kc-ui-icons/' + icons.subsetFile);
   await page.evaluate(() => document.fonts.ready);
-  const requests = await page.evaluate(() => performance.getEntriesByType('resource').filter(entry => entry.name.includes('/webfonts/fa-solid-900.woff2')).map(entry => entry.name));
+  const requests = await page.evaluate(file => performance.getEntriesByType('resource').filter(entry => entry.name.includes('/fonts/kc-ui-icons/' + file)).map(entry => entry.name), icons.subsetFile);
   expect(requests).toHaveLength(1);
 });
