@@ -1,10 +1,74 @@
 /**
  * kc-core-widgets.js — v13.6.1
  * Extraído de kc-core.js (v13.6.1 split).
- * Contém: WhatsApp share helpers + KCCore.bindModuleSortTabs
+ * Contém: WhatsApp share, sort tabs, compactação textual e wordmark responsivo.
  */
 (function () {
   'use strict';
+
+  function kcInitHeaderWordmarkFit() {
+    document.querySelectorAll('.kc-header:not(.kc-header--admin) .kc-logo').forEach((logo) => {
+      if (logo.dataset.kcWordmarkFitBound === '1') return;
+      const link = logo.querySelector('a');
+      const mark = logo.querySelector('.kc-logo-mark');
+      const text = logo.querySelector('.kc-logo-text');
+      const container = logo.parentElement;
+      if (!link || !mark || !text) return;
+      logo.dataset.kcWordmarkFitBound = '1';
+
+      let frame = 0;
+      const sync = () => {
+        const mobile = window.innerWidth <= 768;
+        const gap = parseFloat(window.getComputedStyle(link).columnGap) || 0;
+        // offsetWidth ignores the decorative rotation of the mark. CSS keeps
+        // hidden text measurable; its intrinsic width never sizes the grid track.
+        const required = mark.offsetWidth + text.offsetWidth + gap + 1;
+        let available = logo.clientWidth;
+        const nav = container.querySelector('.kc-nav-links');
+        if (mobile && nav && window.getComputedStyle(container).display === 'flex'
+          && window.getComputedStyle(nav).display !== 'none') {
+          // 577–767px uses a flex navigation rail, not a free grid track.
+          // Resolve the wrapper on each pass: the core wraps nav after init.
+          const rail = nav.closest('[data-kc-scroll-rail]') || nav;
+          const reserve = Array.from(nav.querySelectorAll('a')).reduce((largest, item) => {
+            const style = window.getComputedStyle(item);
+            return Math.max(largest, item.offsetWidth + (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0));
+          }, 44);
+          // logo + rail is invariant when the wordmark takes space from nav.
+          // Keep at least one navigation target; mobile rail arrows are hidden.
+          available = logo.getBoundingClientRect().width + rail.getBoundingClientRect().width - reserve;
+        }
+        const visible = mobile && text.offsetWidth > 0 && required <= available;
+        if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
+          logo.classList.toggle('kc-logo--wordmark-visible', visible);
+        }
+      };
+      const schedule = () => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          sync();
+        });
+      };
+
+      // The free grid track changes after login, bell/chat injection and font
+      // loading, even without a viewport resize. Observe sizes, not mutations.
+      if (typeof window.ResizeObserver === 'function') {
+        const observer = new window.ResizeObserver(schedule);
+        [logo, mark, text, container, container.querySelector('.kc-nav-links')]
+          .filter(Boolean).forEach((element) => observer.observe(element));
+      }
+      window.addEventListener('resize', schedule, { passive: true });
+      window.addEventListener('orientationchange', schedule, { passive: true });
+      document.addEventListener('kc:profilechange', schedule);
+      document.addEventListener('kc:authchange', schedule);
+      if (document.fonts) {
+        document.fonts.ready.then(schedule);
+        if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', schedule);
+      }
+      sync();
+    });
+  }
 
   // -----------------------------
   // WhatsApp Share (V8.1.2.4.8)
@@ -169,6 +233,7 @@
   // Init
 
   window.KCCore = window.KCCore || {};
+  window.KCCore.initHeaderWordmarkFit = kcInitHeaderWordmarkFit;
   window.KCCore.initWhatsAppShare = kcInitWhatsAppShare;
 })();
 

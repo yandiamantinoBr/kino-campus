@@ -119,13 +119,13 @@ describe('breadcrumb do detalhe', () => {
 
 describe('cabeçalho estreito e comentários', () => {
   test('oculta o wordmark antes da colisão e mantém o nome opcional legível', () => {
-    const narrowStart = STYLES.lastIndexOf('@media (max-width: 400px)');
-    const narrow = STYLES.slice(narrowStart, STYLES.indexOf('/* v75.1 FINAL', narrowStart));
-
-    expect(narrowStart).toBeGreaterThan(-1);
-    expect(cssBlock(narrow, '.kc-header:not(.kc-header--admin) .kc-logo-text')).toContain(
-      'display: none !important;',
-    );
+    const shortcut = fs.readFileSync(path.join(ROOT, 'assets/css/kc-chat-shortcut.css'), 'utf8');
+    expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-logo .kc-logo-text')).toContain('visibility: hidden;');
+    expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-logo .kc-logo-text')).toContain('display: flex !important;');
+    expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-logo--wordmark-visible .kc-logo-text')).toContain('visibility: visible;');
+    expect(shortcut).not.toContain('@media (max-width: 480px)');
+    expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core-widgets.js'), 'utf8')).toContain('required <= available');
+    expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core.js'), 'utf8')).toContain('window.KCCore.initHeaderWordmarkFit()');
     expect(PRODUCT_LOAD).toContain("setAttribute('placeholder', 'Seu nome (opcional)')");
     expect(PRODUCT_LOAD).not.toContain('Seu nome (opcional no modo local/dev)');
     expect(PRODUCT_HTML).toContain('product.load.js?v=8.6.14');

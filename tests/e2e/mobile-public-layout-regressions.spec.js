@@ -263,6 +263,13 @@ test.describe('mobile public layout regressions', () => {
       await expect(page.locator('.kc-chat-mobile-fab')).toHaveCount(0);
       await expect(page.locator('.kc-header .kc-chat-shortcut')).toBeVisible();
       await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAccessibleName('Mensagens');
+      if (route === '/mensagens.html') {
+        await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAttribute('aria-current', 'page');
+        await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveCSS('color', 'rgb(255, 107, 0)');
+        await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveCSS('background-color', 'rgba(255, 107, 0, 0.12)');
+      } else {
+        await expect(page.locator('.kc-header .kc-chat-shortcut')).not.toHaveAttribute('aria-current');
+      }
       await expect(page.locator('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveCount(1);
       await expect(page.locator('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).toHaveCount(1);
     }
@@ -274,7 +281,7 @@ test.describe('mobile public layout regressions', () => {
     const login = page.locator('.kc-header .btn-login');
     const originalLogin = await login.innerHTML();
 
-    for (const width of [320, 360, 390, 412, 480, 576, 768, 769, 1280]) {
+    for (const width of [320, 360, 390, 412, 440, 480, 481, 576, 577, 767, 768, 769, 1280, 390]) {
       await page.setViewportSize({ width, height: 844 });
       for (const loggedIn of [false, true]) {
         // Exercise the real header styles with both anonymous and authenticated
@@ -288,25 +295,47 @@ test.describe('mobile public layout regressions', () => {
         }, { loggedIn, originalLogin });
 
         for (const light of [false, true]) {
-          await page.evaluate((isLight) => document.body.classList.toggle('light-mode', isLight), light);
+          await page.evaluate((isLight) => window.kcSetTheme(isLight ? 'light' : 'dark'), light);
+          await expect(page.locator('html')).toHaveAttribute('data-theme', light ? 'light' : 'dark');
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
           const shortcut = page.locator('.kc-header .kc-chat-shortcut');
           await expect(shortcut).toBeVisible();
           const layout = await shortcut.evaluate((element) => {
             const rect = element.getBoundingClientRect();
-            const controls = [...document.querySelectorAll('.kc-header .kc-logo-mark, .kc-header .kc-search-mobile-btn, .kc-header .kc-user-actions > *')];
+            const controls = [...document.querySelectorAll('.kc-header .kc-logo-mark, .kc-header .kc-logo-text, .kc-header .kc-search-mobile-btn, .kc-header .kc-user-actions > *')];
             const overlaps = controls.filter((other) => {
-              if (other === element || !other.getClientRects().length) return false;
+              if (other === element || !other.getClientRects().length || getComputedStyle(other).visibility === 'hidden') return false;
               const bounds = other.getBoundingClientRect();
               return rect.left < bounds.right && rect.right > bounds.left
                 && rect.top < bounds.bottom && rect.bottom > bounds.top;
             }).map((other) => other.className);
             const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            const logo = document.querySelector('.kc-header .kc-logo');
+            const text = logo.querySelector('.kc-logo-text');
+            const mark = logo.querySelector('.kc-logo-mark');
+            const gap = parseFloat(getComputedStyle(logo.querySelector('a')).columnGap) || 0;
+            const logoVisible = getComputedStyle(text).visibility === 'visible' && text.getClientRects().length > 0;
+            const search = document.querySelector('.kc-search-mobile-btn').getBoundingClientRect();
+            const nav = logo.parentElement.querySelector('.kc-nav-links');
+            const rail = nav.closest('[data-kc-scroll-rail]') || nav;
+            const flexNav = getComputedStyle(logo.parentElement).display === 'flex' && getComputedStyle(nav).display !== 'none';
+            const reserve = Math.max(44, ...Array.from(nav.querySelectorAll('a'), (item) => item.offsetWidth + (parseFloat(getComputedStyle(item).marginLeft) || 0) + (parseFloat(getComputedStyle(item).marginRight) || 0)));
+            const available = flexNav ? logo.getBoundingClientRect().width + rail.getBoundingClientRect().width - reserve : logo.clientWidth;
             return {
               width: rect.width, height: rect.height, left: rect.left, right: rect.right,
               viewportWidth: document.documentElement.clientWidth,
               contentWidth: document.documentElement.scrollWidth,
               clickable: Boolean(hit && element.contains(hit)), overlaps,
               position: getComputedStyle(element).position,
+              background: getComputedStyle(element).backgroundColor,
+              border: getComputedStyle(element).borderTopWidth,
+              logoVisible,
+              logoFits: mark.offsetWidth + text.offsetWidth + gap + 1 <= available,
+              logoSearchOverlap: logoVisible && text.getBoundingClientRect().right > search.left,
+              logoNavOverlap: logoVisible && flexNav && text.getBoundingClientRect().right > rail.getBoundingClientRect().left,
+              navWidth: nav.clientWidth,
+              navReserve: reserve,
+              flexNav,
             };
           });
           const context = `${width}px loggedIn=${loggedIn} light=${light}: ${JSON.stringify(layout)}`;
@@ -318,6 +347,17 @@ test.describe('mobile public layout regressions', () => {
           expect(layout.clickable, context).toBe(true);
           expect(layout.overlaps, context).toEqual([]);
           expect(layout.position, context).not.toBe('fixed');
+          if (width <= 768) {
+            expect(layout.background, context).toBe('rgba(0, 0, 0, 0)');
+            expect(layout.border, context).toBe('0px');
+            expect(layout.logoVisible, context).toBe(layout.logoFits);
+            expect(layout.logoSearchOverlap, context).toBe(false);
+            expect(layout.logoNavOverlap, context).toBe(false);
+            if (layout.flexNav && layout.logoVisible) expect(layout.navWidth, context).toBeGreaterThanOrEqual(layout.navReserve - 1);
+            // Independent regression: these known roomy layouts MUST reveal
+            // the name, not merely agree with the implementation's fit flag.
+            if ((!loggedIn && width >= 480) || width === 767) expect(layout.logoVisible, context).toBe(true);
+          }
         }
       }
     }

@@ -84,7 +84,25 @@ describe('KCNotifications dropdown hardening', () => {
     delete global.window.KCAPI;
     delete global.window.confirm;
     document.body.innerHTML = '';
+    window.history.replaceState({}, '', '/');
   });
+
+  test.each(['/mensagens.html', '/mensagens.html?conversation=demo#chat', '/eventos.html'])(
+    'marca o atalho como página atual apenas em Mensagens: %s', (route) => {
+      window.history.replaceState({}, '', route);
+      document.body.innerHTML = '<div class="kc-user-actions"></div>';
+      const code = fs.readFileSync(path.resolve(__dirname, '../../assets/js/core/kc-notifications.js'), 'utf8');
+      (0, eval)(code);
+      window.KCNotifications.init();
+      const shortcut = document.querySelector('.kc-chat-shortcut');
+      expect(shortcut.getAttribute('aria-current')).toBe(route.startsWith('/mensagens.html') ? 'page' : null);
+      expect(shortcut.hasAttribute('aria-expanded')).toBe(false);
+      window.history.replaceState({}, '', '/eventos.html');
+      window.KCNotifications.init();
+      expect(shortcut.hasAttribute('aria-current')).toBe(false);
+      expect(document.querySelectorAll('.kc-chat-shortcut')).toHaveLength(1);
+    }
+  );
 
   test('opens dropdown immediately while getNotifications revalidates in background', () => {
     const code = fs.readFileSync(

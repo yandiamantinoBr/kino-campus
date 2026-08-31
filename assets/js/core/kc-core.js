@@ -744,6 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Layout helpers (sticky tabs, drag-scroll)
   kcUpdateHeaderHeightVar();
   kcApplyResponsiveVars();
+  if (window.KCCore && typeof window.KCCore.initHeaderWordmarkFit === 'function') window.KCCore.initHeaderWordmarkFit();
   kcInitHorizontalDragAreas();
   kcEnsureNavA11yLabels();
   kcInitScrollIndicators();
