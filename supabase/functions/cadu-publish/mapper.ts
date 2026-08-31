@@ -31,10 +31,10 @@ import {
   REVIEW_PUBLICATION_DIRECTIVES_CONTRACT,
 } from "./directive.ts";
 import { selfPacedValidityForItem } from "./self-paced-validity.ts";
+import { caduDescriptionBody, MAX_CADU_DESCRIPTION_LENGTH } from "./description.ts";
 import {
   adaptTitleForPlatform,
   clamp,
-  clampMarkdown,
   extractEmails,
   hostOf,
   isoDateFromAny,
@@ -346,54 +346,6 @@ function markdownUrlLink(url: unknown): string {
   return clean ? `[${clean}](${clean})` : "";
 }
 
-function normalizeMarkdownInput(value: unknown): string {
-  return String(value ?? "")
-    .normalize("NFKC")
-    .replace(/\r\n?/g, "\n")
-    .split(/\n+/)
-    .map(normalizeWhitespace)
-    .filter(Boolean)
-    .join("\n");
-}
-
-function stripCmsCreditLines(value: unknown): string {
-  return normalizeMarkdownInput(value)
-    .split("\n")
-    .map((line) => normalizeWhitespace(line))
-    .filter((line) => {
-      if (!line) return false;
-      if (/^(texto|fotos?|foto|imagens?|imagem|reportagem|edicao|edição)\s*:\s*[^:]{2,120}$/i.test(line)) return false;
-      if (/^por\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ' .-]{2,80}\*?$/u.test(line)) return false;
-      if (/^fonte\s+oficial\s*:\s*https?:\/\//i.test(line)) return false;
-      if (/^\*\*?\s*🔗?\s*fonte\s+oficial\s*:/i.test(line)) return false;
-      if (/^https?:\/\/\S+$/i.test(line)) return false;
-      return true;
-    })
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function hasCmsCreditLine(value: unknown): boolean {
-  return normalizeMarkdownInput(value)
-    .split("\n")
-    .map((line) => normalizeWhitespace(line))
-    .filter(Boolean)
-    .some((line) =>
-      /^(texto|fotos?|foto|imagens?|imagem|reportagem|edicao|edição)\s*:\s*[^:]{2,120}$/i.test(line) ||
-      /^por\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ' .-]{2,80}\*?$/u.test(line)
-    );
-}
-
-function isUsefulFormattedDescription(value: unknown): boolean {
-  const text = stripCmsCreditLines(value);
-  if (text.length < 140) return false;
-  if (hasCmsCreditLine(value)) return false;
-  const normalized = normalizeText(text);
-  if (/universidade gratuita|mais de\s+\d+\s+mil alunos|ensino pesquisa e extensao/.test(normalized)) return false;
-  return /\*\*|\[[^\]]+\]\(https?:\/\/|prazo|inscric|edital|evento|bolsa|curso|palestra|sele[cç][aã]o|submiss/i.test(text);
-}
-
 function buildSourceLabel(sourceName: string): string {
   const name = normalizeWhitespace(sourceName || "UFG");
   if (!name || /^ufg$/i.test(name)) return "Fonte oficial: UFG";
@@ -404,18 +356,52 @@ function buildSourceLabel(sourceName: string): string {
 function normalizeDocumentLinks(item: CaduItem): Array<{ url: string; label: string }> {
   const byUrl = new Map<string, { url: string; label: string }>();
   (Array.isArray(item.extractedLinks) ? item.extractedLinks : []).forEach((link) => {
-    const url = typeof link === "string" ? link : (link && link.url) || "";
+    const url = supportingDocumentUrl(typeof link === "string" ? link : (link && link.url) || "");
     if (!url || byUrl.has(url)) return;
     const label = typeof link === "object" ? (link.label || "") : "";
     if (/\.pdf(?:$|[?#])/i.test(url) || /edital|chamada|fapeg|pibic|pivic|mobilidade|documento/i.test(label || url)) {
       byUrl.set(url, { url, label: normalizeWhitespace(label) });
     }
   });
-  (Array.isArray(item.pdfLinks) ? item.pdfLinks : []).forEach((url, index) => {
+  (Array.isArray(item.pdfLinks) ? item.pdfLinks : []).forEach((value, index) => {
+    const url = supportingDocumentUrl(value);
     if (!url || byUrl.has(url)) return;
     byUrl.set(url, { url, label: `documento ${index + 1}` });
   });
   return Array.from(byUrl.values());
+}
+
+function supportingDocumentUrl(value: unknown): string {
+  const clean = validRemoteImageUrl(value);
+  if (!clean) return "";
+  const url = new URL(clean);
+  // A source's news/tag index is navigation, not the document named by the tag.
+  if (/\/(?:news|noticias)\/?$/i.test(url.pathname) &&
+    [...url.searchParams.keys()].every((key) => /^(?:tags?|page|q|search|category|categoria)$/i.test(key))) return "";
+  // PDF line wrapping may leave only half of a Google Forms identifier. Never
+  // add that observation as a usable document. This is not form authorization;
+  // the original extracted/relevant evidence remains intact in metadata.
+  if (url.hostname === "docs.google.com" && /^\/forms\//i.test(url.pathname) &&
+    !/^\/forms\/d\/(?:e\/)?[A-Za-z0-9_-]+\/(?:viewform|formResponse)\/?$/.test(url.pathname)) return "";
+  return clean;
+}
+
+function markdownLabel(value: string): string {
+  return value.replace(/[\\`*_{}\[\]()#+.!|>]/g, "\\$&");
+}
+
+function descriptionUrlKeys(body: string): Set<string> {
+  const keys = new Set<string>();
+  for (const match of body.matchAll(/https?:\/\/[^\s<>\[\]]+/gi)) {
+    let token = match[0];
+    // Remove the Markdown closing delimiter without damaging balanced URL
+    // parentheses (e.g. an official filename "Edital_(retificado).pdf").
+    while (token.endsWith(")") && (token.match(/\)/g) || []).length > (token.match(/\(/g) || []).length) {
+      token = token.slice(0, -1);
+    }
+    if (validRemoteImageUrl(token)) keys.add(new URL(token).href);
+  }
+  return keys;
 }
 
 /**
@@ -483,39 +469,38 @@ function normalizeEnrichmentSources(item: CaduItem): Array<{ url: string; label:
   return Array.from(out.values()).slice(0, 12);
 }
 
-function buildDescription(item: CaduItem): string {
-  const formatted = stripCmsCreditLines(item.formattedDescription || item.formatted_description || "");
-  const lead = normalizeWhitespace(
-    stripCmsCreditLines(stripHtml(item.description || item.summary || item.text || "")),
-  );
-  const chunks: string[] = [];
+function buildDescription(item: CaduItem, warnings: string[]): string {
+  const body = caduDescriptionBody(item);
+  const chunks: string[] = body ? [body] : [];
 
   const sourceUrl = validRemoteImageUrl(item.sourceUrl);
   const sourceLabel = buildSourceLabel(String(item.sourceName || ""));
-  const alreadyHasSource = sourceUrl && (formatted.includes(sourceUrl) || lead.includes(sourceUrl));
+  const existingUrls = descriptionUrlKeys(body);
+  const alreadyHasSource = sourceUrl && existingUrls.has(new URL(sourceUrl).href);
 
   const module = (item.module as string) || "";
-  const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
-  if (formatted && isUsefulFormattedDescription(formatted)) {
-    chunks.push(clampMarkdown(formatted, 1700));
-  } else if (lead) {
-    chunks.push(clamp(lead, 1400));
+  const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3)
+    .filter((link) => !existingUrls.has(new URL(link.url).href));
+  const sourceBlock = sourceUrl && !alreadyHasSource
+    ? `**${ICON_LINK} ${markdownLabel(sourceLabel)}:** ${markdownUrlLink(sourceUrl)}` : "";
+  const wouldFit = (blocks: string[]) => blocks.filter(Boolean).join("\n\n").length <= MAX_CADU_DESCRIPTION_LENGTH;
+  let omitted = false;
+  // Reserve room for provenance, then append only whole optional document
+  // lines. Canonical source/document metadata is retained even if no room is
+  // left in the visible body. Never truncate the formatter's approved facts.
+  const reservedSource = sourceBlock && wouldFit([...chunks, sourceBlock]) ? sourceBlock : "";
+  if (sourceBlock && !reservedSource) omitted = true;
+  const documentLines: string[] = [];
+  for (const link of documentLinks) {
+    const line = `- ${link.label ? `**${markdownLabel(link.label)}:** ` : ""}${markdownUrlLink(link.url)}`;
+    const section = [`**${ICON_DOCUMENT} Editais e documentos:**`, ...documentLines, line].join("\n");
+    if (wouldFit([...chunks, section, reservedSource])) documentLines.push(line);
+    else omitted = true;
   }
-
-  if (documentLinks.length) {
-    chunks.push(
-      [
-        `**${ICON_DOCUMENT} Editais e documentos:**`,
-        ...documentLinks.map((l) => `- ${l.label ? `**${l.label}:** ` : ""}${markdownUrlLink(l.url)}`),
-      ].join("\n"),
-    );
-  }
-
-  if (sourceUrl && !alreadyHasSource) {
-    chunks.push(`**${ICON_LINK} ${sourceLabel}:** ${markdownUrlLink(sourceUrl)}`);
-  }
-
-  return clampMarkdown(chunks.filter(Boolean).join("\n\n"), 2000);
+  if (documentLines.length) chunks.push([`**${ICON_DOCUMENT} Editais e documentos:**`, ...documentLines].join("\n"));
+  if (reservedSource) chunks.push(reservedSource);
+  if (omitted) warnings.push("description_supplement_omitted_budget");
+  return chunks.join("\n\n");
 }
 
 interface TagPair {
@@ -823,7 +808,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   // Se é título cru da fonte, clamp em 100 para evitar truncamento agressivo.
   const hasFormattedTitle = !!(item.formattedTitle || item.formatted_title);
   const title = hasFormattedTitle ? clamp(rawTitle, 120) : clamp(rawTitle, 100);
-  const description = buildDescription(item);
+  const description = buildDescription(item, warnings);
   const sourceUrl = String(item.sourceUrl || "").trim().slice(0, 2_048);
   const sourceId = normalizeWhitespace(item.sourceId).slice(0, 500);
   const sourceTitle = normalizeWhitespace(item.sourceTitle ?? item.source_title).slice(0, 1_000);
