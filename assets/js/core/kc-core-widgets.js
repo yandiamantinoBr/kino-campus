@@ -21,15 +21,32 @@
       let frame = 0;
       const sync = () => {
         const mobile = window.innerWidth <= 768;
+        const login = container.querySelector('.btn-login:not(.is-auth)');
+        // Auth hydration replaces the contents, never the trigger itself.
+        // Keep the full label measurable while allowing a short visual one.
+        if (login && !login.querySelector('.kc-login-label-full') && login.textContent.trim() === 'Login/Cadastro') {
+          const full = document.createElement('span');
+          full.className = 'kc-login-label-full';
+          full.textContent = login.textContent;
+          const compact = document.createElement('span');
+          compact.className = 'kc-login-label-compact';
+          compact.textContent = 'Entrar';
+          compact.setAttribute('aria-hidden', 'true');
+          login.replaceChildren(full, compact);
+        }
         const gap = parseFloat(window.getComputedStyle(link).columnGap) || 0;
-        // The name is required; the subtitle is optional on mobile. Measure a
-        // hypothetical single row, never the extra room created by wrapping.
-        // Otherwise ResizeObserver would alternate between one and two rows.
+        // Compare with the FULL login label even when the short label is shown.
+        // Measuring the compact button would alternate between labels forever.
         const required = mark.offsetWidth + name.offsetWidth + gap + 1;
         const style = window.getComputedStyle(container);
         const outerWidth = (element) => {
           const itemStyle = window.getComputedStyle(element);
-          return element.getBoundingClientRect().width
+          const full = element === login && element.querySelector('.kc-login-label-full');
+          const width = full ? full.getBoundingClientRect().width
+            + (parseFloat(itemStyle.paddingLeft) || 0) + (parseFloat(itemStyle.paddingRight) || 0)
+            + (parseFloat(itemStyle.borderLeftWidth) || 0) + (parseFloat(itemStyle.borderRightWidth) || 0)
+            : element.getBoundingClientRect().width;
+          return width
             + (parseFloat(itemStyle.marginLeft) || 0) + (parseFloat(itemStyle.marginRight) || 0);
         };
         const slots = [];
@@ -48,9 +65,19 @@
         const available = container.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0)
           - slots.reduce((sum, width) => sum + width, 0) - slots.length * (parseFloat(style.columnGap) || 0);
         const visible = mobile && name.offsetWidth > 0;
-        const wrap = visible && required > available;
-        if (container.classList.contains('kc-header-container--wordmark-wrap') !== wrap) {
-          container.classList.toggle('kc-header-container--wordmark-wrap', wrap);
+        const compactLogin = visible && !!login && required > available;
+        if (container.classList.contains('kc-header-container--compact-login') !== compactLogin) {
+          container.classList.toggle('kc-header-container--compact-login', compactLogin);
+        }
+        // Voice control and screen readers must receive the visible label.
+        // aria-hidden does not affect the full span's intrinsic measurement.
+        if (login) {
+          const full = login.querySelector('.kc-login-label-full');
+          const compact = login.querySelector('.kc-login-label-compact');
+          if (full && compact) {
+            full.setAttribute('aria-hidden', String(compactLogin));
+            compact.setAttribute('aria-hidden', String(!compactLogin));
+          }
         }
         if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
           logo.classList.toggle('kc-logo--wordmark-visible', visible);
