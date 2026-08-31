@@ -186,6 +186,23 @@
     return s.substring(0, end);
   }
 
+  function parseCalendarCivilDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.substring(0, 4) === '0000') return null;
+    var date = new Date(value + 'T00:00:00.000Z');
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) return null;
+    return date;
+  }
+
+  function exclusiveCalendarEnd(value) {
+    var date = parseCalendarCivilDate(value);
+    if (!date) return '';
+    // Civil dates have no local offset. Mixing ISO/UTC parsing with local getters
+    // loses the added day west of UTC. RFC 5545 and Google require an exclusive end.
+    date.setUTCDate(date.getUTCDate() + 1);
+    var result = date.toISOString().slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(result) ? result : '';
+  }
+
   function setEventCalendar(post) {
     var moduleKey = String(post && (post.modulo || post.module) || '').trim().toLowerCase();
     var status = String(post && (post.status || post.estado) || '').trim().toLowerCase();
@@ -217,20 +234,17 @@
 
     var fimParts = dataFimEvento ? dataFimEvento.split('-') : null;
     var isMultiDay = !!(fimParts && fimParts.length === 3 && dataFimEvento > dataEvento);
+    var isAllDay = isMultiDay || !hasTime;
 
-    if (isMultiDay) {
-      // Evento de vários dias → all-day spanning. DTEND é exclusivo: soma 1 dia ao fim.
-      startStr = dateParts[0] + dateParts[1] + dateParts[2];
-      startIso = dateParts[0] + '-' + dateParts[1] + '-' + dateParts[2];
-      var endSpan = new Date(fimParts[0] + '-' + fimParts[1] + '-' + fimParts[2]);
-      endSpan.setDate(endSpan.getDate() + 1);
-      endStr = String(endSpan.getFullYear()) +
-        String(endSpan.getMonth() + 1).padStart(2, '0') +
-        String(endSpan.getDate()).padStart(2, '0');
-      endIso = String(endSpan.getFullYear()) + '-' +
-        String(endSpan.getMonth() + 1).padStart(2, '0') + '-' +
-        String(endSpan.getDate()).padStart(2, '0');
-    } else if (hasTime) {
+    if (isAllDay) {
+      var inclusiveEnd = dataFimEvento || dataEvento;
+      if (!parseCalendarCivilDate(dataEvento) || !parseCalendarCivilDate(inclusiveEnd) || inclusiveEnd < dataEvento) return;
+      endIso = exclusiveCalendarEnd(inclusiveEnd);
+      if (!endIso) return;
+      startIso = dataEvento;
+      startStr = startIso.replace(/-/g, '');
+      endStr = endIso.replace(/-/g, '');
+    } else {
       var hh = String(timeParts[0]).padStart(2, '0');
       var mm = String(timeParts[1]).padStart(2, '0');
       startStr = dateParts[0] + dateParts[1] + dateParts[2] + 'T' + hh + mm + '00';
@@ -250,17 +264,6 @@
       var endHH = String(endHour).padStart(2, '0');
       endStr = endYear + endMonth + endDay + 'T' + endHH + mm + '00';
       endIso = endYear + '-' + endMonth + '-' + endDay + 'T' + endHH + ':' + mm + ':00';
-    } else {
-      startStr = dateParts[0] + dateParts[1] + dateParts[2];
-      startIso = dateParts[0] + '-' + dateParts[1] + '-' + dateParts[2];
-      var dayAfter = new Date(dateParts[0] + '-' + dateParts[1] + '-' + dateParts[2]);
-      dayAfter.setDate(dayAfter.getDate() + 1);
-      endStr = String(dayAfter.getFullYear()) +
-        String(dayAfter.getMonth() + 1).padStart(2, '0') +
-        String(dayAfter.getDate()).padStart(2, '0');
-      endIso = String(dayAfter.getFullYear()) + '-' +
-        String(dayAfter.getMonth() + 1).padStart(2, '0') + '-' +
-        String(dayAfter.getDate()).padStart(2, '0');
     }
 
     var gParams = new URLSearchParams({ action: 'TEMPLATE', text: titulo, dates: startStr + '/' + endStr });
@@ -288,8 +291,8 @@
       'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//KinoCampus//PT',
       'BEGIN:VEVENT',
       'SUMMARY:' + safeStr(titulo),
-      'DTSTART:' + startStr,
-      'DTEND:' + endStr
+      'DTSTART' + (isAllDay ? ';VALUE=DATE:' : ':') + startStr,
+      'DTEND' + (isAllDay ? ';VALUE=DATE:' : ':') + endStr
     ];
     if (localizacao) icsLines.push('LOCATION:' + safeStr(localizacao));
     if (descricao) icsLines.push('DESCRIPTION:' + safeStr(descricao));
