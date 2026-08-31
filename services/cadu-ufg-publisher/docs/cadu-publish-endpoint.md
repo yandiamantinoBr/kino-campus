@@ -54,7 +54,7 @@ Campos do `item` (semi-estruturado — o curador ja extrai a maior parte):
 | `description`  | string          | usa este; senao `summary`/`text`. Vira markdown e recebe fonte + documentos |
 | `formattedDescription` | string | descricao final ja revisada pelo formatador IA; quando for boa, o endpoint preserva o Markdown e so completa fonte/documentos ausentes |
 | `summary`/`text` | string        | fallback de descricao |
-| `score`        | number\|string | score do curador; se informado e menor que `0.70`, o endpoint bloqueia auto-publicacao |
+| `score`        | number\|string | score do curador; se informado e menor que `0.70`, o endpoint bloqueia auto-publicacao — exceto quando o item carrega uma diretiva de publicação da Central de Revisões válida e ligada ao registro exato (`reviewPublicationDirective`, contrato `cadu-review-publication-directives-v1`), que é a autoridade editorial para aquele item |
 | `dates`        | object          | datas detectadas pelo curador; usadas como sinal auxiliar, mas o endpoint recalcula os checks basicos |
 | `category`     | string (obrig.) | chave canonica do modulo; rotulos e aliases explicitos (ex.: `academico`, `estagio`, `república`) sao normalizados. Ausencia, valor desconhecido ou categoria de outro modulo retorna `422`; nao ha default |
 | `type`/`subcategoriaKey` | string | grupo secundario obrigatorio em `compra-venda` (`vendo`/`compro`) e `achados-perdidos` (`documentos`/`eletronicos`/`outros`); aliases explicitos devem ser validos e equivalentes, ou o publish retorna `422` |
@@ -124,7 +124,7 @@ Quando a barreira editorial bloquear o item, o endpoint **nao cria post** e reto
 }
 ```
 
-Bloqueios atuais: evento passado, prazo vencido, release institucional/biografico sem acao concreta, credito CMS na descricao, descricao fraca/crua, score informado abaixo de `0.70`, somente imagens temporarias/SVG e item originado apenas de Instagram sem fonte oficial complementar.
+Bloqueios atuais: evento passado, prazo vencido, release institucional/biografico sem acao concreta, credito CMS na descricao, descricao fraca/crua, score informado abaixo de `0.70` (salvo diretiva de publicação válida da Central de Revisões ligada ao registro exato — a diretiva é persistida em `metadata.review_publication_directive`), somente imagens temporarias/SVG e item originado apenas de Instagram sem fonte oficial complementar.
 
 ### `edit` — edita um post do Cadu
 
