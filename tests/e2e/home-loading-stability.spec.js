@@ -63,15 +63,35 @@ for (const width of [320, 390, 768, 1280]) {
     await expect(feed).not.toHaveCSS('min-height', '844px');
     // Pagination must keep existing cards in place, without reapplying a reserve.
     await feed.locator('.kc-card').evaluate(async card => {
-      await Promise.all(card.getAnimations().map(animation => animation.finished.catch(() => {})));
+      const animations = new Set();
+      for (let element = card; element; element = element.parentElement) {
+        element.getAnimations().forEach(animation => {
+          if (Number.isFinite(animation.effect.getComputedTiming().endTime)) animations.add(animation);
+        });
+      }
+      await Promise.all([...animations].map(animation => animation.finished.catch(() => {})));
     });
-    const layoutBox = card => ({ top: card.offsetTop, left: card.offsetLeft, width: card.offsetWidth, height: card.offsetHeight });
+    const layoutBox = card => {
+      const box = card.getBoundingClientRect();
+      const feedBox = card.closest('.kc-feed-list').getBoundingClientRect();
+      const precision = value => Math.round(value * 1000) / 1000;
+      return {
+        top: precision(box.top + window.scrollY),
+        left: precision(box.left + window.scrollX),
+        relativeTop: precision(box.top - feedBox.top),
+        relativeLeft: precision(box.left - feedBox.left),
+        width: precision(box.width),
+        height: precision(box.height),
+      };
+    };
     const before = await feed.locator('.kc-card').evaluate(layoutBox);
     await page.evaluate(() => { window.__feedPager.loadNextPage(); });
     await expect(feed).toHaveAttribute('data-kc-feed-state', 'loading');
     await expect(feed).not.toHaveCSS('min-height', '844px');
-    // Compare layout coordinates, not viewport positions while the browser
-    // may still be completing the retry button's smooth scroll into view.
+    // The feed's entrance transform temporarily makes it the offsetParent.
+    // After it finishes, offsetTop/Left switch reference to body without any
+    // layout shift. Compare document AND feed-relative geometry instead;
+    // document coordinates also cancel the retry button's smooth scrolling.
     expect(await feed.locator('.kc-card').evaluate(layoutBox)).toEqual(before);
     await page.evaluate(() => window.__feedRequests.shift().resolve({ ok: true, posts: [], hasMore: false, nextCursor: null }));
     await expect(feed).toHaveAttribute('data-kc-feed-state', 'done');

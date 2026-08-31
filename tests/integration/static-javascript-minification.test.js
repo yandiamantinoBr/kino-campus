@@ -9,6 +9,7 @@ const zlib = require('zlib');
 const parser = require('@babel/parser');
 const { buildStaticOutput } = require('../../scripts/build-static-output');
 const { MINIFY_OPTIONS, minifyJavaScript, minifyStaticJavaScript } = require('../../scripts/minify-static-javascript');
+const { minifyCssComments } = require('../../scripts/minify-static-css-comments');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -215,7 +216,7 @@ describe('static build artifact boundary', () => {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   });
 
-  test('build is synchronous and only optimizes dist/assets/js', () => {
+  test('build is synchronous and keeps JS optimization isolated from source/vendor/HTML', () => {
     const originals = ['index.html', 'admin/index.html', 'assets/css/styles.css', 'assets/vendor/official.js', 'sw.js', 'assets/js/app.js', 'assets/js/boot/kc-env.js', 'api/server.js'];
     const originalContents = Object.fromEntries(originals.map((file) => [file, fs.readFileSync(path.join(fixtureRoot, file), 'utf8')]));
     const result = buildStaticOutput({ sourceRoot: fixtureRoot, outputRoot });
@@ -224,9 +225,10 @@ describe('static build artifact boundary', () => {
     expect(result.javascript.changedFiles).toBe(2);
     expect(result.javascript.bytesAfter).toBeLessThan(result.javascript.bytesBefore);
     originals.forEach((file) => expect(fs.readFileSync(path.join(fixtureRoot, file), 'utf8')).toBe(originalContents[file]));
-    ['index.html', 'admin/index.html', 'assets/css/styles.css', 'assets/vendor/official.js', 'sw.js'].forEach((file) => {
+    ['index.html', 'admin/index.html', 'assets/vendor/official.js', 'sw.js'].forEach((file) => {
       expect(fs.readFileSync(path.join(outputRoot, file), 'utf8')).toBe(originalContents[file]);
     });
+    expect(fs.readFileSync(path.join(outputRoot, 'assets/css/styles.css'), 'utf8')).toBe(minifyCssComments(originalContents['assets/css/styles.css']));
     expect(fs.readFileSync(path.join(outputRoot, 'assets/js/app.js'), 'utf8')).toBe(minifyJavaScript(originalContents['assets/js/app.js']));
     expect(fs.existsSync(path.join(outputRoot, 'api/server.js'))).toBe(false);
   });

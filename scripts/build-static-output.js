@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { minifyStaticJavaScript } = require('./minify-static-javascript');
+const { minifyStaticCssComments } = require('./minify-static-css-comments');
 
 const PUBLIC_DIRECTORIES = Object.freeze(['admin', 'assets']);
 const PUBLIC_DATA_FILES = Object.freeze(['data/database.json']);
@@ -77,15 +78,17 @@ function buildStaticOutput(options) {
     }
   }
 
-  // Optimize only the copied first-party browser scripts. Original sources,
-  // vendor artifacts, serverless APIs, CSS and HTML remain byte-for-byte intact.
+  // Optimize only copied first-party assets. Original sources, vendor artifacts,
+  // serverless APIs and HTML remain intact; CSS only loses explanatory comments.
   const javascript = minifyStaticJavaScript({ sourceRoot, outputRoot });
+  const css = minifyStaticCssComments({ sourceRoot, outputRoot });
 
   return Object.freeze({
     outputRoot,
     rootFiles: rootHtmlFiles.length + PUBLIC_ROOT_FILES.length,
     directories: PUBLIC_DIRECTORIES.length,
     javascript,
+    css,
   });
 }
 
@@ -93,6 +96,7 @@ if (require.main === module) {
   const result = buildStaticOutput();
   console.log(`Static output ready: ${result.rootFiles} root files and ${result.directories} public directories.`);
   console.log(`JavaScript: ${result.javascript.bytesBefore} -> ${result.javascript.bytesAfter} bytes (${result.javascript.files} files; no mangling/compression).`);
+  console.log(`CSS: ${result.css.bytesBefore} -> ${result.css.bytesAfter} bytes (${result.css.files} files; comments only, exact other tokens).`);
 }
 
 module.exports = Object.freeze({
