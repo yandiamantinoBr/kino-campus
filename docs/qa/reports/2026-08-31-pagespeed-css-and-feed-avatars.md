@@ -60,8 +60,49 @@ da original e fonte alterada enquanto havia requisição pendente.
 
 ## Verificação e publicação
 
-Resultados completos, integração e medições finais serão registrados após os
-respectivos checks. Evidências locais permanecem em `output/playwright` nos
-três worktrees de performance. Não se versionam screenshots privados, dados
-de sessão ou credenciais. Nenhuma conversa foi enviada, publicação criada ou
-perfil alterado durante a verificação autenticada de leitura.
+- 345 suítes / 5.936 testes Jest passaram (7 ignorados preexistentes); após
+  incorporar a main, 221 testes relevantes adicionais passaram.
+- 245 E2E completos do fonte passaram, mais quatro novos testes do boot real
+  feed/ranking coletados depois; o artefato completo final passou 249/249.
+- Chrome e Edge nativos: 42/42 testes do artefato passaram, cobrindo 720 estados
+  de cabeçalho, consentimento antecipado, imagens/fallback e CSSOM claro/escuro.
+- Chromium/Firefox/WebKit desktop/mobile: 15/15 testes de rotas, runtime e abas.
+- Typechecks, estrutura, versões, cadeia de 33 HTMLs, rotas, higiene, registry,
+  build/revisão de cache e auditoria npm completa passaram, zero vulnerabilidades
+  reportadas. Scan delimitado de padrões de segredo sem achados.
+- A revisão independente repetiu 212 Jest e os quatro E2Es do feed; comparou DOM
+  em sete módulos. CSS: 83 testes e 12 cenários CSSOM de navegador independentes.
+
+O primeiro full artifact teve uma falha de coordenadas no teste de loading a
+768 px, embora o isolado passasse. Uma reprodução independente de 30 casos
+produziu duas falhas em outras larguras. A investigação confirmou a causa: a
+animação de entrada de 220 ms do **ancestral feed** troca `offsetParent` de
+feed para body ao terminar; largura, altura e posição relativa não mudaram.
+Não era deslocamento da plataforma. O teste agora aguarda animações finitas
+dos ancestrais e compara geometria de documento e relativa ao feed, preservando
+as verificações de reserva, empty/error/retry e paginação. Não muda CSS, não
+insere sleep fixo e não remove a asserção de estabilidade.
+
+A correção do harness passou 30/30 repetições com dois workers e 12/12 casos
+independentes em Chrome/Edge reais. Seis controles negativos confirmaram que
+margem do card, padding do feed e deslocamento do próprio feed ainda fazem a
+asserção falhar precisamente na comparação geométrica. Nenhum teste foi
+silenciado para conseguir um resultado verde.
+
+Boot controlado: zero downloads da original e uma miniatura compartilhada.
+Thumbnail 503/original 200: uma original compartilhada. Se ambos retornam 503,
+o navegador pode realizar até dois GETs da original, um por consumidor; eventos
+de erro repetidos não causam novos requests. Não se introduziu cache negativo
+global para forçar compartilhamento de respostas que falharam.
+
+Verificação autenticada real no Chrome conectado: home, menu de conta e shell
+de Mensagens carregaram. Em 320 e 390 px, nome KinoCampus completo, uma linha,
+sem sobreposição ou overflow do cabeçalho; chat inativo sem fundo persistente.
+Foi inspeção DOM, não captura visual da conta: a tentativa de screenshot via
+extensão expirou. O viewport foi restaurado e só as abas criadas para QA foram
+fechadas. Nenhuma conversa foi enviada/aberta, publicação criada ou perfil
+alterado. Não se versionam dados privados, screenshots de sessão ou credenciais.
+
+Integração e medições finais serão registradas após os respectivos checks.
+Evidências locais permanecem em `output/playwright` nos três worktrees de
+performance; alguns reporters resolvem esse caminho relativo à própria config.
