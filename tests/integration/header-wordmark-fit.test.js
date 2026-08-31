@@ -7,8 +7,9 @@ const { JSDOM } = require('jsdom');
 const WIDGETS_PATH = path.resolve(__dirname, '../../assets/js/core/kc-core-widgets.js');
 const VISIBLE_CLASS = 'kc-logo--wordmark-visible';
 const WRAP_CLASS = 'kc-header-container--wordmark-wrap';
+const COMPACT_CLASS = 'kc-header-container--compact-login';
 
-describe('wordmark do cabeçalho — nome prioritário e reflow estável', () => {
+describe('wordmark do cabeçalho — linha única e login compacto estável', () => {
   const windows = [];
 
   function bootHeader(options = {}) {
@@ -27,7 +28,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
             <button class="kc-notif-bell" style="display:none" aria-label="Notificações"></button>
             <a class="icon-btn kc-chat-shortcut" style="display:inline-flex" href="mensagens.html" aria-label="Mensagens"></a>
             <button class="theme-toggle" style="display:inline-flex" aria-label="Alterar tema"></button>
-            <a class="btn-login" style="display:inline-flex" href="#login">Login/Cadastro</a>
+            <a class="btn-login" style="display:inline-flex" href="#login" data-kc-login="true">Login/Cadastro</a>
           </div>
         </div>
       </header>
@@ -64,14 +65,14 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
       chatWidth: 36,
       themeWidth: 36,
       loginWidth: 112,
-      singleLogoWidth: 154,
-      singleActionsWidth: 196,
-      singleHeight: 64,
-      wrappedHeight: 104,
+      fullLabelWidth: 112,
+      compactLabelWidth: 40,
+      height: 64,
       containerReads: 0,
       heightReads: [],
     };
     const wrapped = () => container.classList.contains(WRAP_CLASS);
+    const compact = () => container.classList.contains(COMPACT_CLASS);
     const rect = (width, height = 36) => new window.DOMRect(0, 0, width, height);
     const measure = (element, width) => {
       Object.defineProperty(element, 'offsetWidth', { configurable: true, get: width });
@@ -79,7 +80,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     };
 
     // JSDOM has no layout engine. These are independent element dimensions,
-    // not a mocked fit decision: expected one/two-row results below are literal.
+    // not a mocked fit decision: the expected compact/full label is literal.
     Object.defineProperty(window, 'innerWidth', { configurable: true, get: () => state.viewport });
     Object.defineProperty(document.documentElement, 'clientWidth', { configurable: true, get: () => state.viewport });
     Object.defineProperty(container, 'clientWidth', {
@@ -88,13 +89,13 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     });
     Object.defineProperty(logo, 'clientWidth', {
       configurable: true,
-      get: () => wrapped() ? state.containerWidth - 44 : state.singleLogoWidth,
+      get: () => state.containerWidth - 248 + (compact() ? state.fullLabelWidth - state.compactLabelWidth : 0),
     });
     Object.defineProperty(header, 'offsetHeight', {
       configurable: true,
       get: () => {
-        state.heightReads.push({ wrapped: wrapped(), visible: logo.classList.contains(VISIBLE_CLASS) });
-        return wrapped() ? state.wrappedHeight : state.singleHeight;
+        state.heightReads.push({ compact: compact(), wrapped: wrapped(), visible: logo.classList.contains(VISIBLE_CLASS) });
+        return state.height;
       },
     });
     measure(mark, () => state.markWidth);
@@ -104,10 +105,22 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     measure(bell, () => state.bellWidth);
     measure(chat, () => state.chatWidth);
     measure(theme, () => state.themeWidth);
-    measure(login, () => state.loginWidth);
-    // The wrapped actions occupy a stretched second row. Their actual row
-    // width must never be mistaken for the intrinsic single-row control budget.
-    actions.getBoundingClientRect = jest.fn(() => rect(wrapped() ? state.containerWidth : state.singleActionsWidth));
+    const horizontalBox = () => {
+      const style = window.getComputedStyle(login);
+      return ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth']
+        .reduce((sum, key) => sum + (parseFloat(style[key]) || 0), 0);
+    };
+    measure(login, () => login.classList.contains('is-auth') ? state.loginWidth
+      : (compact() ? state.compactLabelWidth : state.fullLabelWidth) + horizontalBox());
+    // Full/compact spans are created by production code, including after logout.
+    // Both remain measurable even though only one occupies the visible button.
+    const nativeRect = window.HTMLElement.prototype.getBoundingClientRect;
+    window.HTMLElement.prototype.getBoundingClientRect = function () {
+      if (this.classList.contains('kc-login-label-full')) return rect(state.fullLabelWidth);
+      if (this.classList.contains('kc-login-label-compact')) return rect(state.compactLabelWidth);
+      return nativeRect.call(this);
+    };
+    actions.getBoundingClientRect = jest.fn(() => rect(84 + login.getBoundingClientRect().width));
     logo.getBoundingClientRect = jest.fn(() => rect(logo.clientWidth, 38));
 
     let frameId = 0;
@@ -176,7 +189,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     flushFrames();
 
     return {
-      ...elements, state, frames, observers, fonts, measure, init, visible, wrapped,
+      ...elements, state, frames, observers, fonts, measure, init, visible, wrapped, compact,
       resize, profileChange, authChange, fontsLoaded, resolveFontsReady, notifyResize, flushFrames,
     };
   }
@@ -198,9 +211,9 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
         const widths = options.itemWidths ?? [32, 36];
         items.forEach((item, index) => measure(item, () => widths[index]));
         if (options.itemMargins) items[1].style.cssText = options.itemMargins;
-        // Navigation can expand after wrapping, but its minimum useful target
-        // is intrinsic; the scroll rail's expanded width is not a reserved slot.
-        nav.getBoundingClientRect = jest.fn(() => new window.DOMRect(0, 0, container.classList.contains(WRAP_CLASS) ? 340 : 44, 36));
+        // The rail can expand after the label shrinks. Reserve the intrinsic
+        // minimum useful target, never the rail's current stretched width.
+        nav.getBoundingClientRect = jest.fn(() => new window.DOMRect(0, 0, container.classList.contains(COMPACT_CLASS) ? 116 : 44, 36));
       },
     });
     const wrapNav = () => {
@@ -216,9 +229,10 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     return { ...header, nav, items, wrapNav };
   }
 
-  function expectMobileName(header, wrap) {
+  function expectMobileName(header, compact) {
     expect(header.visible()).toBe(true);
-    expect(header.wrapped()).toBe(wrap);
+    expect(header.wrapped()).toBe(false);
+    expect(header.compact()).toBe(compact);
     expect(header.name.textContent).toBe('KinoCampus');
     expect(header.name.hidden).toBe(false);
     expect(header.text.style.display).not.toBe('none');
@@ -227,18 +241,96 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
 
   afterEach(() => windows.splice(0).forEach((window) => window.close()));
 
-  test.each([[394, true], [395, false], [396, false]])(
-    'preserva nome e 1px de reserva: container %ipx, duas linhas=%s',
-    (containerWidth, wrap) => {
+  test.each([[389, true], [390, false], [391, false]])(
+    'preserva nome e 1px de reserva: container %ipx, login compacto=%s',
+    (containerWidth, compact) => {
       // 38 mark + 100 name + 8 gap + 1 safety = 147px.
-      // Search 36 + controls 196 + two 8px column gaps = 248px.
-      expectMobileName(bootHeader({ containerWidth }), wrap);
+      // Three >=43px targets + full112 + two 1px gaps require >=243px.
+      expectMobileName(bootHeader({ containerWidth }), compact);
     },
   );
 
-  test.each([360, 375, 390, 412, 430])('nome permanece visível no viewport mobile de %ipx', (viewport) => {
+  test.each([320, 360, 375, 390, 412, 430])('nome permanece visível no viewport mobile de %ipx sem criar outra linha', (viewport) => {
     const header = bootHeader({ viewport });
     expectMobileName(header, viewport < 430);
+  });
+
+  test('alinha nome acessível ao rótulo visível e preserva link e listener existente', () => {
+    const onClick = jest.fn((event) => event.preventDefault());
+    let originalTrigger;
+    const header = bootHeader({
+      viewport: 390,
+      beforeInit({ login }) {
+        originalTrigger = login;
+        login.addEventListener('click', onClick);
+      },
+    });
+    const full = header.login.querySelector('.kc-login-label-full');
+    const short = header.login.querySelector('.kc-login-label-compact');
+    expectMobileName(header, true);
+    expect(header.login).toBe(originalTrigger);
+    expect(full.textContent).toBe('Login/Cadastro');
+    expect(full.hidden).toBe(false);
+    expect(full.getAttribute('aria-hidden')).toBe('true');
+    expect(short.textContent).toBe('Entrar');
+    expect(short.getAttribute('aria-hidden')).toBe('false');
+    expect(header.login.getAttribute('href')).toBe('#login');
+    expect(header.login.dataset.kcLogin).toBe('true');
+    header.login.dispatchEvent(new header.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    header.resize(769);
+    header.flushFrames();
+    expect(header.compact()).toBe(false);
+    expect(header.wrapped()).toBe(false);
+    expect(full.getAttribute('aria-hidden')).toBe('false');
+    expect(short.getAttribute('aria-hidden')).toBe('true');
+    expect(header.login.querySelector('.kc-login-label-full')).toBe(full);
+    expect(header.login.querySelector('.kc-login-label-compact')).toBe(short);
+    expect(header.login.querySelectorAll('.kc-login-label-full, .kc-login-label-compact')).toHaveLength(2);
+    header.resize(390);
+    header.flushFrames();
+    expect(full.getAttribute('aria-hidden')).toBe('true');
+    expect(short.getAttribute('aria-hidden')).toBe('false');
+  });
+
+  test('reset do conteúdo visitante é reconstruído uma vez sem perder a medição completa', () => {
+    const header = bootHeader({ viewport: 390 });
+    for (let reset = 0; reset < 3; reset += 1) {
+      const previousFull = header.login.querySelector('.kc-login-label-full');
+      header.login.textContent = 'Login/Cadastro';
+      header.profileChange();
+      header.notifyResize(header.actions);
+      header.flushFrames();
+      expectMobileName(header, true);
+      const full = header.login.querySelector('.kc-login-label-full');
+      expect(full).not.toBe(previousFull);
+      expect(full.getBoundingClientRect().width).toBe(112);
+      expect(header.login.querySelectorAll('.kc-login-label-full, .kc-login-label-compact')).toHaveLength(2);
+      header.profileChange();
+      header.flushFrames();
+      expect(header.login.querySelector('.kc-login-label-full')).toBe(full);
+    }
+    expect(header.observers).toHaveLength(1);
+    expect(header.frames.size).toBe(0);
+  });
+
+  test('preserva rótulo visitante personalizado e não inventa uma tradução compacta', () => {
+    const header = bootHeader({ beforeInit: ({ login }) => { login.innerHTML = '<span>Acessar conta</span>'; } });
+    expectMobileName(header, false);
+    expect(header.login.innerHTML).toBe('<span>Acessar conta</span>');
+    expect(header.login.querySelector('.kc-login-label-compact')).toBeNull();
+    header.profileChange();
+    header.flushFrames();
+    expect(header.login.innerHTML).toBe('<span>Acessar conta</span>');
+  });
+
+  test('sem botão de login continua a mostrar nome em linha única e não ativa compactação', () => {
+    const header = bootHeader({ viewport: 390, beforeInit: ({ login }) => login.remove() });
+    expectMobileName(header, false);
+    expect(header.container.querySelector('.btn-login')).toBeNull();
+    header.authChange();
+    header.flushFrames();
+    expectMobileName(header, false);
   });
 
   test.each([false, true])('funciona no cabeçalho público com kc-shell-page=%s', (shellPage) => {
@@ -254,7 +346,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     const header = bootHeader({
       textWidth: 240,
       // A legacy/optional subtitle may be wider than the name. Its width
-      // cannot make the required brand name disappear or force another row.
+      // cannot make the required brand name disappear or shorten the login.
       beforeInit: ({ subtitle }) => { subtitle.style.display = 'block'; },
     });
     expectMobileName(header, false);
@@ -269,24 +361,32 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     expectMobileName(header, true);
   });
 
-  test('desconta padding, margens externas, gaps e frações sem arredondar o déficit', () => {
+  test('desconta padding, bordas, margens e gaps sem usar a largura do botão já compacto', () => {
     const header = bootHeader({
-      containerWidth: 414,
+      containerWidth: 422,
       beforeInit({ container, search, login }) {
         container.style.paddingLeft = '5px';
         container.style.paddingRight = '7px';
         search.style.marginLeft = '2px';
         search.style.marginRight = '3px';
         login.style.marginRight = '2px';
+        login.style.paddingLeft = '4px';
+        login.style.paddingRight = '6px';
+        login.style.borderLeft = '1px solid transparent';
+        login.style.borderRight = '2px solid transparent';
       },
     });
-    // 414 - 12 padding - 41 search - 198 actions - 16 gaps = 147px.
+    // 422 - 12 container padding - 3*43 targets - 5 search margins
+    // - 2 login margin - 112 full label - 13 box - 2 minimum gaps = 147px.
     expectMobileName(header, false);
-    header.login.style.marginRight = '2.25px';
+    expect(header.login.getBoundingClientRect().width).toBe(125);
+    header.login.style.borderRightWidth = '2.25px';
     header.notifyResize(header.actions);
     header.flushFrames();
     expectMobileName(header, true);
-    header.login.style.marginRight = '1.75px';
+    expect(header.login.getBoundingClientRect().width).toBe(53.25);
+    expect(header.login.querySelector('.kc-login-label-full').getBoundingClientRect().width).toBe(112);
+    header.login.style.borderRightWidth = '1.75px';
     header.notifyResize(header.actions);
     header.flushFrames();
     expectMobileName(header, false);
@@ -308,7 +408,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     expect(header.bell.getBoundingClientRect).not.toHaveBeenCalled();
   });
 
-  test('acompanha 768/769px e volta ao mobile mantendo o nome, com e sem quebra', () => {
+  test('acompanha 768/769px e volta ao mobile mantendo o nome, sem segunda linha', () => {
     const header = bootHeader({ viewport: 768 });
     expectMobileName(header, false);
     header.resize(390);
@@ -318,6 +418,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     header.flushFrames();
     expect(header.visible()).toBe(false);
     expect(header.wrapped()).toBe(false);
+    expect(header.compact()).toBe(false);
     expect(header.text.style.display).not.toBe('none');
     expect(header.name.hidden).toBe(false);
     header.resize(390);
@@ -328,28 +429,47 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     expectMobileName(header, false);
   });
 
-  test('auth e controles mudam o orçamento sem resize nem ocultar a identidade da plataforma', () => {
-    const header = bootHeader();
-    expectMobileName(header, false);
-    header.bell.style.display = 'inline-flex';
-    header.login.classList.add('is-auth');
-    header.login.innerHTML = '<span class="kc-header-user"><span class="kc-header-user__avatar">Y</span><i class="fas fa-check-circle kc-header-user__verified"></i><i class="fas fa-chevron-down kc-header-user__chevron"></i></span>';
-    header.state.loginWidth = 80;
-    header.notifyResize(header.actions);
-    header.flushFrames();
-    // Four visible controls need 210px; the same container now has only 140px.
+  test('auth troca conteúdo sem perder o trigger e logout recompõe o rótulo completo mensurável', () => {
+    const header = bootHeader({ viewport: 390 });
     expectMobileName(header, true);
-    expect(header.window.innerWidth).toBe(430);
-    header.bell.style.display = 'none';
-    header.state.loginWidth = 112;
+    const trigger = header.login;
+    const firstFull = trigger.querySelector('.kc-login-label-full');
+    const onClick = jest.fn((event) => event.preventDefault());
+    trigger.addEventListener('click', onClick);
+    header.bell.style.display = 'inline-flex';
+    trigger.classList.add('is-auth');
+    const identity = '<span class="kc-header-user"><span class="kc-header-user__avatar">Y</span><i class="fas fa-check-circle kc-header-user__verified"></i><i class="fas fa-chevron-down kc-header-user__chevron"></i></span>';
+    trigger.innerHTML = identity;
+    header.state.loginWidth = 80;
     header.authChange();
+    header.flushFrames();
+    // No unauthenticated label exists to shorten, even under a tight budget.
+    expectMobileName(header, false);
+    expect(trigger.innerHTML).toBe(identity);
+    expect(trigger.querySelectorAll('.kc-login-label-full, .kc-login-label-compact')).toHaveLength(0);
+    header.bell.style.display = 'none';
+    trigger.classList.remove('is-auth');
+    trigger.textContent = 'Login/Cadastro';
+    header.authChange();
+    header.flushFrames();
+    expectMobileName(header, true);
+    expect(header.container.querySelector('.btn-login')).toBe(trigger);
+    expect(trigger.querySelector('.kc-login-label-full')).not.toBe(firstFull);
+    expect(trigger.querySelector('.kc-login-label-full').textContent).toBe('Login/Cadastro');
+    expect(trigger.querySelectorAll('.kc-login-label-full, .kc-login-label-compact')).toHaveLength(2);
+    expect(trigger.getAttribute('href')).toBe('#login');
+    expect(trigger.dataset.kcLogin).toBe('true');
+    trigger.dispatchEvent(new header.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(header.window.innerWidth).toBe(390);
+    header.resize(430);
     header.flushFrames();
     expectMobileName(header, false);
   });
 
-  test('mudanças de marca e gap provocam reflow e recuperam a linha única', () => {
+  test('mudanças de marca e gap selecionam o rótulo curto e recuperam o completo', () => {
     const header = bootHeader();
-    header.state.markWidth = 50;
+    header.state.markWidth = 51;
     header.notifyResize(header.mark);
     header.flushFrames();
     expectMobileName(header, true);
@@ -357,7 +477,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     header.notifyResize(header.mark);
     header.flushFrames();
     expectMobileName(header, false);
-    header.link.style.columnGap = '16px';
+    header.link.style.columnGap = '21px';
     header.resize();
     header.flushFrames();
     expectMobileName(header, true);
@@ -370,6 +490,31 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     await Promise.resolve();
     header.flushFrames();
     expectMobileName(header, true);
+    header.state.nameWidth = 100;
+    header.fontsLoaded();
+    header.flushFrames();
+    expectMobileName(header, false);
+  });
+
+  test('fonte/root-scale altera a largura do rótulo completo mesmo enquanto Entrar aparece', () => {
+    const header = bootHeader();
+    expectMobileName(header, false);
+    header.document.documentElement.style.fontSize = '20px';
+    header.state.fullLabelWidth = 140;
+    header.state.compactLabelWidth = 50;
+    header.fontsLoaded();
+    header.flushFrames();
+    // Increasing only the label consumes the available headroom first.
+    expectMobileName(header, true);
+    header.state.nameWidth = 125;
+    header.notifyResize(header.name);
+    header.flushFrames();
+    expectMobileName(header, true);
+    expect(header.login.querySelector('.kc-login-label-full').getBoundingClientRect().width).toBe(140);
+    expect(header.login.getBoundingClientRect().width).toBe(50);
+    header.document.documentElement.style.fontSize = '16px';
+    header.state.fullLabelWidth = 112;
+    header.state.compactLabelWidth = 40;
     header.state.nameWidth = 100;
     header.fontsLoaded();
     header.flushFrames();
@@ -423,6 +568,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     const header = bootHeader({ viewport: 1280, containerWidth: 300 });
     expect(header.visible()).toBe(false);
     expect(header.wrapped()).toBe(false);
+    expect(header.compact()).toBe(false);
     expect(header.text.style.display).not.toBe('none');
     expect(header.name.hidden).toBe(false);
     header.resize(390);
@@ -436,6 +582,8 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     expect(header.logo.dataset.kcWordmarkFitBound).toBeUndefined();
     expect(header.visible()).toBe(false);
     expect(header.wrapped()).toBe(false);
+    expect(header.compact()).toBe(false);
+    expect(header.login.innerHTML).toBe('Login/Cadastro');
     header.resize();
     header.profileChange();
     header.authChange();
@@ -502,7 +650,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     expectMobileName(header, true);
   });
 
-  test('altura publicada corresponde à classe aplicada e não é reescrita sem mudança', () => {
+  test('altura publicada continua de uma linha e acompanha fontes sem reescritas inúteis', () => {
     const header = bootHeader();
     const rootStyle = header.document.documentElement.style;
     expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('64px');
@@ -510,38 +658,46 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     header.resize(390);
     header.flushFrames();
     expectMobileName(header, true);
-    expect(header.state.heightReads.at(-1)).toEqual({ wrapped: true, visible: true });
-    expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('104px');
-    expect(setProperty).toHaveBeenCalledTimes(1);
+    expect(header.state.heightReads.at(-1)).toEqual({ compact: true, wrapped: false, visible: true });
+    expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('64px');
+    expect(setProperty).not.toHaveBeenCalled();
     header.notifyResize(header.container);
     header.flushFrames();
-    expect(setProperty).toHaveBeenCalledTimes(1);
-    header.state.wrappedHeight = 120;
+    expect(setProperty).not.toHaveBeenCalled();
+    header.state.height = 70;
     header.notifyResize(header.header);
     header.flushFrames();
-    expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('120px');
-    header.state.wrappedHeight = 0;
+    expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('70px');
+    expect(setProperty).toHaveBeenCalledTimes(1);
+    header.state.height = 0;
     header.profileChange();
     header.flushFrames();
-    expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('120px');
+    expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('70px');
+    expect(setProperty).toHaveBeenCalledTimes(1);
+    header.state.height = 64;
     header.resize(430);
     header.flushFrames();
-    expect(header.state.heightReads.at(-1)).toEqual({ wrapped: false, visible: true });
+    expect(header.state.heightReads.at(-1)).toEqual({ compact: false, wrapped: false, visible: true });
     expect(rootStyle.getPropertyValue('--kc-header-height')).toBe('64px');
+    expect(setProperty).toHaveBeenCalledTimes(2);
   });
 
-  test('reflow em duas linhas fica estável apesar da nova largura de logo e ações', () => {
+  test('Entrar permanece estável mesmo devolvendo espaço à marca por oito ciclos de observer', () => {
     const header = bootHeader({ viewport: 390 });
     expectMobileName(header, true);
-    expect(header.logo.clientWidth).toBe(318);
-    expect(header.actions.getBoundingClientRect().width).toBe(362);
+    // Full label leaves 114px, compact leaves 186px. Using the current button
+    // width would incorrectly restore the full label in the following frame.
+    expect(header.logo.clientWidth).toBe(186);
+    expect(header.actions.getBoundingClientRect().width).toBe(124);
+    expect(header.login.getBoundingClientRect().width).toBe(40);
+    expect(header.login.querySelector('.kc-login-label-full').getBoundingClientRect().width).toBe(112);
     const toggle = jest.spyOn(header.container.classList, 'toggle');
     const logoToggle = jest.spyOn(header.logo.classList, 'toggle');
     for (let cycle = 0; cycle < 8; cycle += 1) {
       header.notifyResize(header.logo, header.container, header.actions);
       header.flushFrames();
       expectMobileName(header, true);
-      expect(header.document.documentElement.style.getPropertyValue('--kc-header-height')).toBe('104px');
+      expect(header.document.documentElement.style.getPropertyValue('--kc-header-height')).toBe('64px');
     }
     expect(toggle).not.toHaveBeenCalled();
     expect(logoToggle).not.toHaveBeenCalled();
@@ -558,21 +714,21 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
   });
 
   test('nav mantém reserva mínima de 44px mesmo quando seus links são menores', () => {
-    const header = bootNavHeader();
-    // 441 - search36 - actions196 - nav44 - three gaps24 = 141px.
+    const header = bootNavHeader({ containerWidth: 434 });
+    // 434 - 3*43 controls - full112 - nav44 - three 1px gaps = 146px.
     expectMobileName(header, true);
     expect(header.observers[0].targets.has(header.nav)).toBe(true);
-    header.state.containerWidth = 447;
+    header.state.containerWidth = 435;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
   });
 
   test('reserva o maior link da nav com margens e recupera espaço sem resize', () => {
-    const header = bootNavHeader({ containerWidth: 462, itemWidths: [32, 48], itemMargins: 'margin-left:5px;margin-right:7px' });
-    // 462 - 36 - 196 - (48 + 5 + 7) - 24 = 146px, one short.
+    const header = bootNavHeader({ containerWidth: 450, itemWidths: [32, 48], itemMargins: 'margin-left:5px;margin-right:7px' });
+    // 450 - 3*43 controls - full112 - (48 + 5 + 7) - 3 gaps = 146px.
     expectMobileName(header, true);
-    header.state.containerWidth = 463;
+    header.state.containerWidth = 451;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
@@ -585,12 +741,12 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
   });
 
   test('wrapper da navegação criado depois do init não altera o orçamento nem duplica observers', () => {
-    const header = bootNavHeader({ containerWidth: 447 });
+    const header = bootNavHeader({ containerWidth: 435 });
     expectMobileName(header, false);
     const rail = header.wrapNav();
     const observer = header.observers[0];
     const observeCalls = observer.observe.mock.calls.length;
-    header.state.containerWidth = 446;
+    header.state.containerWidth = 434;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, true);
@@ -600,7 +756,7 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
       header.flushFrames();
       expectMobileName(header, true);
     }
-    header.state.containerWidth = 447;
+    header.state.containerWidth = 435;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
@@ -608,5 +764,168 @@ describe('wordmark do cabeçalho — nome prioritário e reflow estável', () =>
     expect(observer.observe).toHaveBeenCalledTimes(observeCalls);
     expect(observer.targets.has(header.nav)).toBe(true);
     expect(header.frames.size).toBe(0);
+  });
+
+  test('usa a folga para controles de 44px e glifos de 22px, sem compactar login que ainda cabe', () => {
+    const header = bootHeader({ viewport: 430 });
+    expectMobileName(header, false);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+    expect(header.header.style.getPropertyValue('--kc-header-icon-size')).toBe('22px');
+    expect(parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'))).toBeGreaterThanOrEqual(1);
+    expect(parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'))).toBeGreaterThanOrEqual(0);
+  });
+
+  test('prioriza Entrar e alvos de 44px quando o rótulo completo reduziria os controles', () => {
+    const header = bootHeader({ viewport: 390 });
+    expectMobileName(header, true);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+    expect(header.login.querySelector('.kc-login-label-compact').getAttribute('aria-hidden')).toBe('false');
+  });
+
+  test('fallback estreito preserva marca ampliada e perfil sem ultrapassar o orçamento', () => {
+    const header = bootHeader({ viewport: 320, containerWidth: 304, markWidth: 26, nameWidth: 125,
+      beforeInit({ login, link, bell, state }) {
+        link.style.columnGap = '2px';
+        login.classList.add('is-auth');
+        login.innerHTML = '<span class="kc-header-user">Perfil</span>';
+        state.loginWidth = 44;
+        bell.style.display = 'inline-flex';
+      },
+    });
+    const width = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    const columnGap = parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'));
+    const actionGap = parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'));
+    expectMobileName(header, false);
+    expect(width).toBeGreaterThanOrEqual(26);
+    expect(width).toBeLessThan(44);
+    expect(26 + 125 + 2 + 1 + 44 + 4 * width + 2 * columnGap + 3 * actionGap).toBeLessThanOrEqual(304);
+  });
+
+  test('redimensionamento desktop limpa somente propriedades do fit mobile', () => {
+    const header = bootHeader({ viewport: 390 });
+    header.header.style.setProperty('--unrelated-component-color', 'orange');
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+    header.resize(1280);
+    header.flushFrames();
+    for (const property of ['--kc-header-control-width', '--kc-header-icon-size', '--kc-header-column-gap', '--kc-header-action-gap']) {
+      expect(header.header.style.getPropertyValue(property)).toBe('');
+    }
+    expect(header.header.style.getPropertyValue('--unrelated-component-color')).toBe('orange');
+    expect(header.compact()).toBe(false);
+    header.resize(390);
+    header.flushFrames();
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+  });
+
+  test('login oculto não devolve uma economia fictícia ao orçamento', () => {
+    const header = bootHeader({ containerWidth: 270, beforeInit({ login }) { login.style.display = 'none'; } });
+    expectMobileName(header, false);
+    const width = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    const columnGap = parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'));
+    const actionGap = parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'));
+    expect(width).toBeLessThan(44);
+    expect(147 + width * 3 + columnGap * 2 + actionGap).toBeLessThanOrEqual(270);
+    expect(header.login.querySelector('.kc-login-label-full')).toBeNull();
+  });
+
+  test('placeholder de auth com texto sem largura mantém min-width e não compacta', () => {
+    const header = bootHeader({ viewport: 390,
+      beforeInit({ login, state }) {
+        login.style.minWidth = '69px';
+        login.style.fontSize = '0px';
+        state.fullLabelWidth = 0;
+        state.compactLabelWidth = 0;
+      },
+    });
+    expectMobileName(header, false);
+    const width = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    const columnGap = parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'));
+    const actionGap = parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'));
+    expect(147 + 69 + width * 3 + columnGap * 2 + actionGap * 2).toBeLessThanOrEqual(362);
+  });
+
+  test('larguras já aplicadas e track esticado não realimentam a decisão por oito ciclos', () => {
+    const header = bootHeader({ viewport: 390 });
+    const properties = ['--kc-header-control-width', '--kc-header-icon-size', '--kc-header-column-gap', '--kc-header-action-gap'];
+    const before = properties.map(property => header.header.style.getPropertyValue(property));
+    const setProperty = jest.spyOn(header.header.style, 'setProperty');
+    for (let cycle = 0; cycle < 8; cycle += 1) {
+      header.state.searchWidth = cycle % 2 ? 26 : 44;
+      header.state.chatWidth = cycle % 2 ? 44 : 26;
+      header.state.themeWidth = cycle % 2 ? 26 : 44;
+      header.notifyResize(header.logo, header.actions, header.container);
+      header.flushFrames();
+      expect(properties.map(property => header.header.style.getPropertyValue(property))).toEqual(before);
+      expectMobileName(header, true);
+    }
+    expect(setProperty).not.toHaveBeenCalled();
+    expect(header.frames.size).toBe(0);
+  });
+
+  test('perfil real mais estreito recupera espaço sem alterar identidade ou criar rótulos', () => {
+    const header = bootHeader({ viewport: 390,
+      beforeInit({ login, bell, state }) {
+        login.classList.add('is-auth');
+        login.innerHTML = '<span class="kc-header-user">Perfil</span>';
+        bell.style.display = 'inline-flex';
+        state.loginWidth = 80;
+      },
+    });
+    const trigger = header.login;
+    const before = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    header.state.loginWidth = 48;
+    header.notifyResize(header.actions);
+    header.flushFrames();
+    expect(parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'))).toBeGreaterThan(before);
+    expect(header.login).toBe(trigger);
+    expect(trigger.innerHTML).toBe('<span class="kc-header-user">Perfil</span>');
+    expect(trigger.querySelector('.kc-login-label-full')).toBeNull();
+    expectMobileName(header, false);
+  });
+
+  test('412px visitante preserva Login/Cadastro com alvo43.890625 em vez de deixar buraco após Entrar', () => {
+    const header = bootHeader({ viewport: 412, containerWidth: 388, markWidth: 38, nameWidth: 100,
+      beforeInit({ login, link, state }) {
+        link.style.columnGap = '4.3px';
+        login.style.paddingLeft = '6px';
+        login.style.paddingRight = '6px';
+        state.fullLabelWidth = 98.3125;
+        state.compactLabelWidth = 38.90625;
+      },
+    });
+    expectMobileName(header, false);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('43.890625px');
+    expect(header.header.style.getPropertyValue('--kc-header-column-gap')).toBe('1px');
+    expect(header.header.style.getPropertyValue('--kc-header-action-gap')).toBe('0px');
+    expect(header.login.querySelector('.kc-login-label-full').getAttribute('aria-hidden')).toBe('false');
+    expect(144 + 110.3125 + 3 * 43.890625 + 2).toBeLessThanOrEqual(388);
+  });
+
+  test('mesmo orçamento com Liberation Sans preserva Login/Cadastro e alvos43.421875 sem exceção por sistema', () => {
+    const header = bootHeader({ viewport: 412, containerWidth: 388, markWidth: 38, nameWidth: 100,
+      beforeInit({ login, link, state }) {
+        link.style.columnGap = '4.3px';
+        login.style.paddingLeft = '6px';
+        login.style.paddingRight = '6px';
+        // Real Chromium Linux measurements: the same label is 1.390625px
+        // wider than Segoe UI. Keeping it costs <1px per 44px-wide target.
+        state.fullLabelWidth = 99.703125;
+        state.compactLabelWidth = 40.046875;
+      },
+    });
+    expectMobileName(header, false);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('43.421875px');
+    expect(header.header.style.getPropertyValue('--kc-header-column-gap')).toBe('1px');
+    expect(header.header.style.getPropertyValue('--kc-header-action-gap')).toBe('0px');
+    expect(header.login.querySelector('.kc-login-label-full').getAttribute('aria-hidden')).toBe('false');
+    expect(144 + 111.703125 + 3 * 43.421875 + 2).toBeLessThanOrEqual(388);
+
+    // A genuinely smaller budget must still prefer the short label. This
+    // prevents the cross-platform band from silently accepting narrow targets.
+    header.state.containerWidth = 386;
+    header.notifyResize(header.container);
+    header.flushFrames();
+    expectMobileName(header, true);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
   });
 });

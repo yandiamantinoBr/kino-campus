@@ -6,6 +6,8 @@
 // estruturalmente identicos aos de humanos.
 
 import { normalizeText, normalizeWhitespace, slugify } from "./util.ts";
+import { selfPacedValidityForItem } from "./self-paced-validity.ts";
+import { caduDescriptionBody } from "./description.ts";
 
 export const MODULE_KEYS = [
   "eventos",
@@ -569,6 +571,12 @@ export function validateItem(item: CaduItem): ValidationResult {
   }
 
   try {
+    caduDescriptionBody(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+
+  try {
     actionFingerprintMetadataForItem(item);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
@@ -585,6 +593,11 @@ export function validateItem(item: CaduItem): ValidationResult {
   }
   try {
     caduUserTagsForItem(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
+  }
+  try {
+    selfPacedValidityForItem(item);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }

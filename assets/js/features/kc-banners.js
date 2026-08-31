@@ -72,6 +72,7 @@
   const BANNER_CACHE_STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
   const BANNER_PUBLIC_STORAGE_KEY = 'kc:hero-banners:v2:public';
   const CLIENT_RETRY_DELAYS_MS = [0, 200, 500, 1000, 2000];
+  let bannerLoadInFlight = null;
 
   function esc(str) {
     return String(str || '')
@@ -423,7 +424,7 @@
     return null;
   }
 
-  async function loadBanners() {
+  async function loadBannersOnce() {
     const driver = resolveDriver();
     if (driver !== 'supabase') {
       // Local/dev only: keep any authoring markup if present, no mock injection.
@@ -476,6 +477,18 @@
       console.warn('[KC Banners] Excecao ao carregar banners:', e && e.message || e);
       if (!renderedCached) clearCarousel();
     }
+  }
+
+  function loadBanners() {
+    // Startup and auth-settled events can overlap. They read the same public
+    // active catalog, so share only the pending load (not an auth/session cache).
+    // Release after every outcome so a later event can retry or revalidate.
+    if (!bannerLoadInFlight) {
+      bannerLoadInFlight = loadBannersOnce().finally(function () {
+        bannerLoadInFlight = null;
+      });
+    }
+    return bannerLoadInFlight;
   }
 
   if (typeof document !== 'undefined') {

@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 for (const route of ['/', '/mensagens.html']) {
-  test(`nome obrigatório no mobile com fontes, temas e controles reais: ${route}`, async ({ page }) => {
+  test(`nome e controles em uma linha no mobile com fontes e temas: ${route}`, async ({ page }) => {
     test.setTimeout(90000);
     await page.addInitScript(() => localStorage.setItem('kc_consent_v1', JSON.stringify({ version: '2026-06-05', necessary: true, preferences: false, analytics: false, advertising: false, updatedAt: new Date().toISOString() })));
     await page.setViewportSize({ width: 412, height: 844 });
@@ -17,7 +17,7 @@ for (const route of ['/', '/mensagens.html']) {
     }
     const login = page.locator('.kc-header .btn-login');
     const initialLogin = await login.innerHTML();
-    for (const width of [320, 360, 375, 390, 400, 412, 414, 430, 440, 480, 576, 577, 767, 768, 390]) {
+    for (const width of [320, 360, 375, 384, 390, 400, 412, 414, 430, 440, 480, 576, 577, 767, 768, 390]) {
       await page.setViewportSize({ width, height: 844 });
       for (const authenticated of [false, true]) {
         await login.evaluate((element, state) => {
@@ -62,17 +62,39 @@ for (const route of ['/', '/mensagens.html']) {
                 collisions, outside: nodes.filter(node => { const r = node.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth + 1 || r.top < bounds.top - 2 || r.bottom > bounds.bottom + 1; }).map(node => node.className),
                 blocked: nodes.filter(node => { const r = node.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !hit || !(node.contains(hit) || hit.contains(node)); }).map(node => node.className),
                 height: header.offsetHeight, heightVar: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--kc-header-height')),
+                rowCenters: nodes.map(node => { const r = node.getBoundingClientRect(); return r.top + r.height / 2; }),
+                targetSizes: [...header.querySelectorAll('.kc-search-mobile-btn, .kc-user-actions > *')].filter(node => node.getClientRects().length).map(node => { const r = node.getBoundingClientRect(); return { width: r.width, height: r.height }; }),
+                legacyWrap: !!header.querySelector('.kc-header-container--wordmark-wrap'),
+                documentWidth: document.documentElement.scrollWidth,
+                bodyWidth: document.body.scrollWidth,
+                headerWidth: header.scrollWidth, headerClientWidth: header.clientWidth,
+                authenticated: header.querySelector('.btn-login').classList.contains('is-auth'),
+                bellVisible: header.querySelector('#kcNotifBell').getClientRects().length > 0,
                 mainTop: document.querySelector('main').getBoundingClientRect().top, headerBottom: bounds.bottom,
               };
             });
             const context = `${route} ${width}px auth=${authenticated} ${theme} scale=${scale}: ${JSON.stringify(result)}`;
             expect(result.name, context).toBe('KinoCampus');
+            expect(result.authenticated, context).toBe(authenticated);
+            expect(result.bellVisible, context).toBe(authenticated);
             expect(result.visible, context).toBe(true);
-            expect(result.fontSize, context).toBeGreaterThanOrEqual(16 * scale);
+            expect(result.fontSize, context).toBeGreaterThanOrEqual(14 * scale);
             expect(result.clipped, context).toBe(false);
             expect(result.collisions, context).toEqual([]);
             expect(result.outside, context).toEqual([]);
             expect(result.blocked, context).toEqual([]);
+            expect(result.legacyWrap, context).toBe(false);
+            expect(result.documentWidth, context).toBeLessThanOrEqual(width + 1);
+            // Body may include existing off-canvas feed/ranking overflow. The
+            // header itself must never enlarge its scrollable box (hidden label included).
+            expect(result.headerWidth, context).toBeLessThanOrEqual(result.headerClientWidth + 1);
+            expect(Math.max(...result.rowCenters) - Math.min(...result.rowCenters), context).toBeLessThanOrEqual(2);
+            for (const target of result.targetSizes) {
+              expect(target.width, context).toBeGreaterThanOrEqual(24);
+              expect(target.height, context).toBeGreaterThanOrEqual(44);
+            }
+            // The intermediate navigation rail also respects enlarged text.
+            expect(result.height, context).toBeLessThanOrEqual(width >= 577 && scale > 1 ? 72 : 64);
             expect(result.heightVar, context).toBe(result.height);
             expect(result.mainTop, context).toBeGreaterThanOrEqual(result.headerBottom - 1);
           }
@@ -81,3 +103,24 @@ for (const route of ['/', '/mensagens.html']) {
     }
   });
 }
+
+test('nome acessível acompanha rótulo visível e abre o mesmo formulário', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('kc_consent_v1', JSON.stringify({ version: '2026-06-05', necessary: true, preferences: false, analytics: false, advertising: false, updatedAt: new Date().toISOString() })));
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('/', { waitUntil: 'load' });
+  await page.evaluate(() => { document.documentElement.style.fontSize = '24px'; });
+  const login = page.locator('.kc-header .btn-login');
+  await expect(page.locator('.kc-header-container')).toHaveClass(/kc-header-container--compact-login/);
+  await expect(login).toHaveAccessibleName('Entrar');
+  await expect(login.locator('.kc-login-label-compact')).toHaveText('Entrar');
+  await expect(login.locator('.kc-login-label-compact')).toHaveAttribute('aria-hidden', 'false');
+  await expect(login.locator('.kc-login-label-full')).toHaveAttribute('aria-hidden', 'true');
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await expect(login).toHaveAccessibleName('Login/Cadastro');
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect(login).toHaveAccessibleName('Entrar');
+  await login.click();
+  await expect(page.locator('#kcAuthModal')).toBeVisible();
+  await expect(page.locator('#kcAuthLoginEmail')).toBeVisible();
+  await expect(page.locator('#kcAuthLoginPassword')).toBeVisible();
+});

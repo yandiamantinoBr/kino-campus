@@ -15,6 +15,8 @@
     modalOpen: false,
     returnFocus: null,
     inertSnapshot: [],
+    inertObserver: null,
+    scrollLockOwner: null,
   };
 
   function $(selector, root) {
@@ -85,16 +87,31 @@
 
   function lockScroll(active) {
     try {
-      if (window.KCOverlayLock && typeof window.KCOverlayLock.lock === 'function') {
-        if (active) window.KCOverlayLock.lock('consent-modal');
-        else window.KCOverlayLock.unlock('consent-modal');
-        return;
+      if (active) {
+        if (state.scrollLockOwner) return;
+        const manager = window.KCOverlayLock;
+        if (manager && typeof manager.lock === 'function' && typeof manager.unlock === 'function') {
+          manager.lock('consent-modal');
+          state.scrollLockOwner = { manager };
+        } else {
+          const body = document.body;
+          const addedClass = !body.classList.contains('kc-modal-open');
+          body.classList.add('kc-modal-open');
+          state.scrollLockOwner = { body, addedClass };
+        }
+      } else {
+        // Deferred auth can install KCOverlayLock after this dialog was opened.
+        // Release only the mechanism we acquired, never another modal's lock.
+        const owner = state.scrollLockOwner;
+        state.scrollLockOwner = null;
+        if (owner && owner.manager) owner.manager.unlock('consent-modal');
+        else if (owner && owner.addedClass) owner.body.classList.remove('kc-modal-open');
       }
-      document.body.classList.toggle('kc-modal-open', !!active);
     } catch (_) { }
   }
 
   function setElementInert(element) {
+    if (state.inertSnapshot.some(function (entry) { return entry.element === element; })) return;
     state.inertSnapshot.push({
       element,
       hadAttribute: element.hasAttribute('inert'),
@@ -113,11 +130,31 @@
     Array.prototype.forEach.call(consentRoot.children, function (element) {
       if (element !== modal) setElementInert(element);
     });
+    // Later deferred scripts may append auth/search UI while preferences are open.
+    // Observe only sibling additions, not the whole page or attribute changes.
+    if (typeof window.MutationObserver === 'function') {
+      state.inertObserver = new window.MutationObserver(function (records) {
+        records.forEach(function (record) {
+          Array.prototype.forEach.call(record.addedNodes, function (element) {
+            if (element.nodeType !== 1 || element === consentRoot || element === modal) return;
+            if (element.parentElement === document.body || element.parentElement === consentRoot) {
+              setElementInert(element);
+            }
+          });
+        });
+      });
+      state.inertObserver.observe(document.body, { childList: true });
+      state.inertObserver.observe(consentRoot, { childList: true });
+    }
   }
 
   function restoreBackgroundInert() {
+    if (state.inertObserver) {
+      state.inertObserver.disconnect();
+      state.inertObserver = null;
+    }
     state.inertSnapshot.forEach(function (entry) {
-      if (!entry.element || !entry.element.isConnected) return;
+      if (!entry.element) return;
       if (!entry.hadAttribute) entry.element.removeAttribute('inert');
       entry.element.inert = entry.propertyValue;
     });

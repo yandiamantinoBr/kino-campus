@@ -4,6 +4,8 @@
 // Espelham (em TS) os utilitarios de services/cadu-ufg-publisher/src/utils.js
 // para manter a mesma normalizacao de texto/slug/data que ja era usada.
 
+import { publicRemoteUrl } from "./remote-resource.ts";
+
 export const DEFAULT_AUTO_PUBLISH_SCORE_MIN = 0.7;
 
 export function resolveAutoPublishScoreMin(value: unknown): number {
@@ -152,13 +154,7 @@ export function uniq<T>(list: T[]): T[] {
 }
 
 export function validRemoteImageUrl(value: unknown): string {
-  try {
-    const url = new URL(String(value ?? "").trim());
-    if (!/^https?:$/.test(url.protocol)) return "";
-    return url.toString();
-  } catch (_) {
-    return "";
-  }
+  return publicRemoteUrl(value);
 }
 
 /**
