@@ -124,6 +124,9 @@ async function fetchPost(id, {
   // Fix 2026-08-31: o id curto de 8 hex é a convenção de exibição em toda a
   // administração, nos logs do cadu-api e nos runs — compartilhar essa forma
   // produzia OG genérico (og-default) porque só UUID completo era resolvido.
+  // Fix 2026-08-31: o id curto de 8 hex é a convenção de exibição em toda a
+  // administração, nos logs do cadu-api e nos runs — compartilhar essa forma
+  // produzia OG genérico (og-default) porque só UUID completo era resolvido.
   // `ilike` não existe para uuid no PostgREST; a resolução correta é por
   // INTERVALO: [prefix-0000…, prefix+1-0000…) — gte/lt são suportados para
   // uuid e o intervalo cobre exatamente os uuids com aquele prefixo.
