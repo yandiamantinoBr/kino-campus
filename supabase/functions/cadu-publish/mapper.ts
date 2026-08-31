@@ -734,6 +734,23 @@ function scoreCoverCandidate(url: string, title: string, category: string, sourc
 }
 
 // Escolhe a melhor capa entre os candidatos usando scoring heurístico.
+// Fix 2026-08-31: bancas de Defesa/Qualificação raramente têm imagem oficial
+// vinculada. Capa padrão UFG (capelo + diploma) — SOMENTE para esses títulos e
+// SOMENTE quando o item não traz nenhuma imagem própria/vinculada. A URL é
+// pública no kino-media; o fluxo normal de re-host do endpoint baixa e
+// reposiciona a capa como qualquer outra imagem.
+const ACADEMIC_BOARD_DEFAULT_COVER_URL =
+  "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/2345582d-8bf7-4393-aa0d-f9953d0e02ca/fd263e05-21ff-4209-b54f-913830c96dd6/cadu-2-6c14b3b7.png";
+const ACADEMIC_BOARD_TITLE_RE =
+  /\b(defesa[s]?|qualifica[cç][aã]o|[qk]ualificacoes|exame\s+de\s+qualifica[cç][aã]o)\b/i;
+
+export function defaultAcademicBoardCover(item: CaduItem, hasImageCandidates: boolean): string {
+  if (hasImageCandidates) return "";
+  if (String(item.module || "") !== "eventos") return "";
+  const haystack = `${item.title || ""} ${item.formattedTitle || item.formatted_title || ""}`;
+  return ACADEMIC_BOARD_TITLE_RE.test(haystack) ? ACADEMIC_BOARD_DEFAULT_COVER_URL : "";
+}
+
 function pickCoverImage(candidates: string[], title: string, category: string, sourceHost: string): string {
   const persistable = candidates.filter(canPersistExternalImageUrl);
   if (persistable.length === 0) return "";
@@ -795,7 +812,8 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const images = buildImageList(item);
   const sourceHost = hostOf(sourceUrl);
   // Cover: escolhe o melhor candidato por scoring heurístico (não apenas o primeiro)
-  const safeExternalImage = pickCoverImage(images, title, categoryKey, sourceHost);
+  const safeExternalImage = pickCoverImage(images, title, categoryKey, sourceHost)
+    || defaultAcademicBoardCover(item, images.length > 0);
   const safeGalleryImages = images.filter(canPersistExternalImageUrl);
   const documentLinks = filterRelevantDocuments(normalizeDocumentLinks(item), item, module, 3);
   const enrichmentSources = normalizeEnrichmentSources(item);

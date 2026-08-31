@@ -39,6 +39,7 @@ import {
   MAX_IMAGE_COUNT,
 } from "./mapper.ts";
 import { boundReviewPublicationDirective } from "./directive.ts";
+import { officialCoverCandidates } from "./official-cover.ts";
 import {
   INSTITUTIONAL_REVIEW_POLICY_CODE,
   institutionalReviewRpcArguments,
@@ -646,6 +647,26 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
   const validation = validateItem(item);
   if (!validation.ok) {
     return json(422, { ok: false, code: "VALIDATION_FAILED", message: validation.errors.join(" "), validation });
+  }
+
+  // Fix 2026-08-31: item sem NENHUMA imagem candidata tenta og:image nas
+  // fontes oficiais vinculadas (página da notícia, Even3/Sympla/Plateia)
+  // antes do mapeamento — os candidatos entram no fluxo normal de re-host.
+  // Best-effort e bounded; dry-run não sonda (latência zero).
+  const hasImageCandidates = Boolean(
+    item.image || item.imageUrl || item.image_url || item.cover ||
+      (Array.isArray(item.images) && item.images.length),
+  );
+  if (!hasImageCandidates && options.dryRun !== true) {
+    try {
+      const covers = await officialCoverCandidates(item);
+      if (covers.length) {
+        item.images = [...(Array.isArray(item.images) ? item.images : []), ...covers];
+        if (!item.image) item.image = covers[0];
+      }
+    } catch {
+      // best-effort: segue sem capa, como hoje
+    }
   }
 
   let mapped: ReturnType<typeof mapItemToPost>;
