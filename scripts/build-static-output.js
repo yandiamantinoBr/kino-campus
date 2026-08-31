@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { minifyStaticJavaScript } = require('./minify-static-javascript');
 
 const PUBLIC_DIRECTORIES = Object.freeze(['admin', 'assets']);
 const PUBLIC_DATA_FILES = Object.freeze(['data/database.json']);
@@ -76,16 +77,22 @@ function buildStaticOutput(options) {
     }
   }
 
+  // Optimize only the copied first-party browser scripts. Original sources,
+  // vendor artifacts, serverless APIs, CSS and HTML remain byte-for-byte intact.
+  const javascript = minifyStaticJavaScript({ sourceRoot, outputRoot });
+
   return Object.freeze({
     outputRoot,
     rootFiles: rootHtmlFiles.length + PUBLIC_ROOT_FILES.length,
     directories: PUBLIC_DIRECTORIES.length,
+    javascript,
   });
 }
 
 if (require.main === module) {
   const result = buildStaticOutput();
   console.log(`Static output ready: ${result.rootFiles} root files and ${result.directories} public directories.`);
+  console.log(`JavaScript: ${result.javascript.bytesBefore} -> ${result.javascript.bytesAfter} bytes (${result.javascript.files} files; no mangling/compression).`);
 }
 
 module.exports = Object.freeze({
