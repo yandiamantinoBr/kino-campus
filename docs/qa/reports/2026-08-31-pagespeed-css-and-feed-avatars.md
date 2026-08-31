@@ -103,6 +103,72 @@ extensão expirou. O viewport foi restaurado e só as abas criadas para QA foram
 fechadas. Nenhuma conversa foi enviada/aberta, publicação criada ou perfil
 alterado. Não se versionam dados privados, screenshots de sessão ou credenciais.
 
-Integração e medições finais serão registradas após os respectivos checks.
-Evidências locais permanecem em `output/playwright` nos três worktrees de
+## Integração e produção
+
+PR [#918](https://github.com/yandiamantinoBr/kino-campus/pull/918) integrada em
+31/08 às 16:25 UTC, merge `63a74c979177993c003a93e0aad73287ff904af8`, todos os
+checks verdes. CI final: 345 suítes / 5.940 Jest, 7 ignorados preexistentes,
+249 E2E, cross-browser, typechecks de Edge Functions, Supabase reset/lint/pgTAP,
+Lighthouse de quatro páginas e DNS/Auth aprovados. O job de banco precisou de
+uma repetição por HTTP 502 ao iniciar o container local Edge Runtime; não houve
+mudança de migração, workflow, limite ou asserção para fazê-lo passar.
+
+Vercel `dpl_8psrSbUVJ1a2KbkrWFfj1HEoCdwP` confirmado READY/production/main,
+com SHA correspondente também no HTML do domínio canônico. Os onze artefatos
+públicos comparados são byte a byte iguais ao esperado desse Git SHA: cinco
+CSS próprios, JavaScript de apresentação, CSS Font Awesome e quatro WOFF2.
+
+QA após deploy: cinco módulos HTTP 200, zero erros JS/console; Chrome e Edge
+nativos em 390 px, claro/escuro, oito navegações e quatro aberturas de login
+passaram. Logo íntegro, cabeçalho em uma linha, sem colisões; chat inativo
+transparente e ativo laranja. A varredura anterior de 25 rotas canônicas também
+mostrou conteúdo visível em todas, com 404 esperado, gates de login e estados
+sem parâmetros corretos; não se enviou formulário, mensagem ou publicação.
+
+### Todas as amostras finais de PageSpeed, sem selecionar só o pico
+
+Lighthouse 13.4.1, Moto G Power, 4G lento:
+
+| Amostra GMT-3 | Performance | FCP | LCP | TBT | CLS | SI |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| [Original 11:23](https://pagespeed.web.dev/analysis/https-kinocampus-com-br/jz2zw256p6?hl=en_GB&form_factor=mobile) | 49 | 2,1 s | 5,9 s | 470 ms | 0,22 | 5,9 s |
+| [Terceiro lote 13:26](https://pagespeed.web.dev/analysis/https-kinocampus-com-br/wfblmsswsr?hl=en_GB&form_factor=mobile) | 80 | 1,4 s | 4,6 s | 30 ms | 0,071 | 4,1 s |
+| [Repetição 13:27](https://pagespeed.web.dev/analysis/https-kinocampus-com-br/oaz0z1wgay?hl=en_GB&form_factor=mobile) | 67 | 1,7 s | 7,0 s | 20 ms | 0,156 | 4,5 s |
+
+As duas notas finais ficaram acima da original e o TBT caiu fortemente, mas
+**não há ganho uniforme de LCP nem nota fixa**. A segunda amostra identifica
+0,137 de CLS no wrapper do feed e 0,010 no card; esses resíduos são distintos
+do salto do guia tratado no primeiro lote. O relatório anterior também guarda
+as amostras intermediárias 89, 66 e 67. Acessibilidade/boas práticas/SEO se
+mantiveram 95/96/100 nos relatórios remotos. CrUX permanece histórico de 28 dias,
+portanto não se declara aprovação imediata de Core Web Vitals de campo.
+
+Não se removeram CSS/JS ditos não usados, ícones, galerias, consentimento ou
+funcionalidades para aumentar a nota. Reduções adicionais de boot e reservas
+de conteúdo assíncrono exigem outra investigação com os mesmos contratos.
+
+### Repetição local controlada e rede da página completa
+
+Lighthouse 12.6.1, mesmo controle de antivírus da baseline, após encerrar os
+outros navegadores de teste locais. Não comparar suas notas diretamente com
+Lighthouse 13 do PageSpeed remoto:
+
+| Execução | Performance | FCP | LCP | TBT | CLS | SI | Transferência total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 71 | 3,71 s | 4,53 s | 14,5 ms | 0,0824 | 5,43 s | 2.374.792 B |
+| 2 | 80 | 2,63 s | 4,13 s | 39,5 ms | 0,0672 | 3,89 s | 2.374.781 B |
+
+Antes do complemento do feed, a amostra local do segundo lote tinha 3.245.746 B.
+Agora são aproximadamente **871 KB a menos (26,8%) nessa página/amostra**.
+As duas novas capturas de rede contêm uma única resposta da thumbnail real
+de 6.118 B e **nenhuma requisição da original** de 862.958 B. Essa evidência é
+da home anônima; não implica que fotos de perfil, galeria ou todas as outras
+imagens tenham sido reduzidas, nem que todo visitante economize o mesmo total.
+
+Observação operacional: Vercel não retornou 5xx no agrupamento público desde
+o deploy até a checagem; Supabase continuou ACTIVE_HEALTHY, com zero deadlocks
+e conflitos, e cache hit arredondado a 100,000% na amostra. Isso não é prova
+de ausência universal de erros nem de latência igual para todas as contas.
+
+Evidências locais permanecem em `output/playwright` nos worktrees de
 performance; alguns reporters resolvem esse caminho relativo à própria config.
