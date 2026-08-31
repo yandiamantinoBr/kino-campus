@@ -60,8 +60,8 @@
     background: rgba(255, 107, 0, 0.12);
   }
 
-  /* A coluna grid já desconta busca e ações. O core mede o texto inteiro,
-     inclusive oculto, e o revela apenas quando cabe nessa coluna livre. */
+  /* O nome tem prioridade; em déficit de espaço as ações ganham outra linha.
+     O texto segue mensurável antes da primeira medição e durante fontes tardias. */
   .kc-header:not(.kc-header--admin) .kc-logo a {
     position: relative;
     gap: 8px;
@@ -79,6 +79,15 @@
     white-space: nowrap;
     flex: none;
     width: max-content;
+    align-items: flex-start;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo .kc-logo-name {
+    width: max-content;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo .kc-logo-sub {
+    display: none !important;
   }
 
   .kc-header:not(.kc-header--admin) .kc-logo--wordmark-visible .kc-logo-text {
@@ -86,6 +95,35 @@
     transform: none;
     visibility: visible;
     pointer-events: auto;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-container.kc-header-container--wordmark-wrap {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 36px !important;
+    row-gap: 8px !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-logo {
+    grid-column: 1 !important;
+    grid-row: 1;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-search-mobile-btn {
+    grid-column: 2 !important;
+    grid-row: 1;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-user-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: 2;
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-scroll-rail--nav,
+  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap > .kc-nav-links {
+    grid-column: 1 / -1 !important;
+    grid-row: 3;
   }
 }
 

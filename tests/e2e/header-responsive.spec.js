@@ -103,7 +103,9 @@ test.describe('Header responsivo', () => {
     await page.waitForTimeout(120);
 
     const metrics = await headerMetrics(page);
-    expect(metrics.header.height).toBeLessThanOrEqual(64);
+    // Name remains legible; a constrained header deliberately uses two rows.
+    expect(metrics.header.height).toBeLessThanOrEqual(116);
+    await expect(page.locator('.kc-header .kc-logo-name')).toBeVisible();
     expect(metrics.search.display).toBe('none');
     expect(metrics.mobileSearch.display).toBe('flex');
   });
