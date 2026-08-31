@@ -27,6 +27,10 @@ import {
   sourceRevisionForItem,
 } from "./schema.ts";
 import {
+  boundReviewPublicationDirective,
+  REVIEW_PUBLICATION_DIRECTIVES_CONTRACT,
+} from "./directive.ts";
+import {
   adaptTitleForPlatform,
   clamp,
   clampMarkdown,
@@ -809,6 +813,9 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const visibility = item.visibility === "community" ? "community" : "public";
 
   // Metadata comum a todos os modulos (fonte, capa, identidade, tags).
+  const boundDirective = boundReviewPublicationDirective(
+    item as unknown as Record<string, unknown>,
+  );
   const commonMeta: Record<string, unknown> = {
     source_url: sourceUrl,
     source_host: hostOf(sourceUrl),
@@ -817,6 +824,14 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     source_title: sourceTitle,
     source_registry_id: sourceRegistryId,
     ...(sourceRevision ? { source_revision: sourceRevision } : {}),
+    ...(boundDirective
+      ? {
+        review_publication_directive: {
+          contract: REVIEW_PUBLICATION_DIRECTIVES_CONTRACT,
+          ...boundDirective,
+        },
+      }
+      : {}),
     action_fingerprints: actionFingerprints,
     ...(actionFingerprintMetadata.contract
       ? {

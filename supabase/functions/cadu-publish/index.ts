@@ -38,6 +38,7 @@ import {
   mapItemToPost,
   MAX_IMAGE_COUNT,
 } from "./mapper.ts";
+import { boundReviewPublicationDirective } from "./directive.ts";
 import {
   INSTITUTIONAL_REVIEW_POLICY_CODE,
   institutionalReviewRpcArguments,
@@ -368,8 +369,17 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   if (hasCmsCreditLine(description)) block("cms_credits_in_description");
   if (!hasActionableMarkdownDescription(description)) block("weak_description");
 
+  // A diretiva de publicação da Central de Revisões (contrato
+  // cadu-review-publication-directives-v1) é a autoridade editorial para o
+  // registro exato: o publisher openclaw-cadu só a anexa após revalidar o
+  // vínculo dentro da prova de aprovação assinada. Um vínculo válido isenta
+  // APENAS o gate de score do curador — os demais bloqueios permanecem.
+  const boundDirective = boundReviewPublicationDirective(item as unknown as Record<string, unknown>);
   const numericScore = Number(item.score);
-  if (Number.isFinite(numericScore) && numericScore < AUTO_PUBLISH_SCORE_MIN) {
+  if (
+    Number.isFinite(numericScore) && numericScore < AUTO_PUBLISH_SCORE_MIN &&
+    !boundDirective
+  ) {
     block("score_below_auto_publish_threshold");
   }
 
