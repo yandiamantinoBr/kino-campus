@@ -91,9 +91,29 @@ function detectArea(text: string): string {
   return "Academica";
 }
 
-function detectLocation(text: string, sourceName: string): string {
-  const match = String(text || "").match(/\b(?:local|onde|campus|cidade)\s*:\s*([^\n.;]{4,90})/i);
-  return normalizeWhitespace(match ? match[1] : (sourceName || "UFG"));
+function detectLocation(text: string): string {
+  // Work on individual lines: an empty label must never consume the next
+  // paragraph. Periods belong to venue abbreviations and remote addresses.
+  for (const rawLine of String(text || "").split(/[\r\n\u2028\u2029]/)) {
+    const line = rawLine
+      // Location is plain text; keep link labels (the description keeps URLs).
+      .replace(/\[([^\]\r\n]+)\]\(https?:\/\/[^\s)]+\)/gi, "$1")
+      .replace(/<(https?:\/\/[^<>\s]+)>/gi, "$1")
+      // Strip paired inline markup, not underscores inside URL paths.
+      .replace(/(^|[\s(])(\*\*|__|\*|_|`)(.+?)\2(?=$|[\s,.;:!?)])/g, "$1$3");
+    const match = line.match(/\b(?:local|onde|campus|cidade)[ \t]*:[ \t]*(.*)$/i);
+    if (!match) continue;
+    const value = normalizeWhitespace(match[1].split(
+      /(?:[ \t]*[;|][ \t]*|[ \t]+)(?:data|hor[aá]rio|inscri[çc][oõ]es|contato|link)[ \t]*:/i,
+    )[0]);
+    if (!/[\p{L}\p{N}]/u.test(value)) continue;
+    if (value.length <= 90) return value;
+    // Keep the historical bound without persisting a half-word/half-URL.
+    const boundary = value.lastIndexOf(" ", 90);
+    if (boundary > 0) return value.slice(0, boundary).trim();
+  }
+  // The publisher/source name is provenance, not evidence of a venue.
+  return "";
 }
 
 interface DeadlineCandidate {
@@ -911,7 +931,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   commonMeta.categoryLabel = categoryText;
 
   let price: number | null = parseBRLNumber(item.price as unknown);
-  let location = normalizeWhitespace(item.location) || detectLocation(fullText, String(item.sourceName || ""));
+  let location = normalizeWhitespace(item.location) || detectLocation(fullText);
   const metadata: Record<string, unknown> = { ...commonMeta };
 
   if (module === "eventos") {
@@ -946,7 +966,6 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
       ...(gratuito === undefined ? {} : { gratuito }),
       deadline_date: dataEvento ? formatDatePt(dataEvento) : "",
     });
-    if (!location) location = "UFG";
   } else if (module === "oportunidades") {
     const type = normalizeOpportunityType(item.type);
     const area = normalizeWhitespace(item.area) || detectArea(fullText);
