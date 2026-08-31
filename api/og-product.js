@@ -124,9 +124,27 @@ async function fetchPost(id, {
   // Fix 2026-08-31: o id curto de 8 hex é a convenção de exibição em toda a
   // administração, nos logs do cadu-api e nos runs — compartilhar essa forma
   // produzia OG genérico (og-default) porque só UUID completo era resolvido.
+  // Fix 2026-08-31: o id curto de 8 hex é a convenção de exibição em toda a
+  // administração, nos logs do cadu-api e nos runs — compartilhar essa forma
+  // produzia OG genérico (og-default) porque só UUID completo era resolvido.
+  // `ilike` não existe para uuid no PostgREST; a resolução correta é por
+  // INTERVALO: [prefix-0000…, prefix+1-0000…) — gte/lt são suportados para
+  // uuid e o intervalo cobre exatamente os uuids com aquele prefixo.
   const isShortId = !isUuid && SHORT_ID_RE.test(id);
+  function shortIdRangeFilter(prefix) {
+    const lower = prefix + '-0000-0000-0000-000000000000';
+    const chars = prefix.split('');
+    for (let i = chars.length - 1; i >= 0; i -= 1) {
+      const value = parseInt(chars[i], 16);
+      if (value < 15) { chars[i] = (value + 1).toString(16); break; }
+      chars[i] = '0';
+      if (i === 0) return `id=gte.${encodeURIComponent(lower)}`;
+    }
+    const upper = chars.join('') + '-0000-0000-0000-000000000000';
+    return `id=gte.${encodeURIComponent(lower)}&id=lt.${encodeURIComponent(upper)}`;
+  }
   const primaryFilter = isUuid ? `id=eq.${encodeURIComponent(id)}`
-    : isShortId ? `id=ilike.${encodeURIComponent(id)}*`
+    : isShortId ? shortIdRangeFilter(id.toLowerCase())
     : `legacy_id=eq.${encodeURIComponent(id)}`;
   const primaryEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${primaryFilter}&status=eq.published&limit=1`;
   const primaryCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${primaryFilter}&status=eq.published&limit=1`;
