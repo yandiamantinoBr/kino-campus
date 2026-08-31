@@ -55,7 +55,10 @@ test('redistribui espaço do cabeçalho para toque sem ocultar marca ou criar ou
       }
       expect(Math.max(...result.squareWidths) - Math.min(...result.squareWidths), context).toBeLessThanOrEqual(0.1);
       for (const targetWidth of result.squareWidths) {
-        const minimum = authenticated && width < 412 ? 36 : !authenticated && width === 412 ? 43.5 : 43.9;
+        // The same full label is wider in Liberation Sans than Segoe UI. The
+        // measured 43–44px comfort band preserves it on both, still requiring
+        // 44px height, equal widths, edge hit testing and no unused narrow fit.
+        const minimum = authenticated && width < 412 ? 36 : !authenticated && width === 412 ? 43 : 43.9;
         expect(targetWidth, context).toBeGreaterThanOrEqual(minimum);
         expect(targetWidth, context).toBeLessThanOrEqual(44.1);
       }

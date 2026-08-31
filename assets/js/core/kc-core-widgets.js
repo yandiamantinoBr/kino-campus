@@ -84,9 +84,11 @@
         // Keep a 1px minimum between the logo/search/actions/nav slots. At
         // 320px with enlarged text, inner action gaps may need to reach zero.
         const minimumGaps = slotCount;
-        // Preserve the full label at subpixel boundaries: losing at most half
-        // a pixel per target is preferable to a much shorter label and a hole.
-        const comfortableWidth = 43.5;
+        // Preserve the full label across system-font metrics: the 43–44px
+        // comfort band costs at most 1px per target (height stays 44px), while
+        // avoiding a much shorter label and a large unused gap. This uses the
+        // measured budget, never the operating system or a viewport exception.
+        const comfortableWidth = 43;
         let compactLogin = false;
         if (visible && login && budget < controls.length * comfortableWidth + minimumGaps) {
           const full = login.querySelector('.kc-login-label-full');

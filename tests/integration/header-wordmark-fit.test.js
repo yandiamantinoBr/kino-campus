@@ -241,11 +241,11 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
 
   afterEach(() => windows.splice(0).forEach((window) => window.close()));
 
-  test.each([[391, true], [392, false], [393, false]])(
+  test.each([[389, true], [390, false], [391, false]])(
     'preserva nome e 1px de reserva: container %ipx, login compacto=%s',
     (containerWidth, compact) => {
       // 38 mark + 100 name + 8 gap + 1 safety = 147px.
-      // Three >=43.5px targets + full112 + two 1px gaps require >=244.5px.
+      // Three >=43px targets + full112 + two 1px gaps require >=243px.
       expectMobileName(bootHeader({ containerWidth }), compact);
     },
   );
@@ -363,7 +363,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
 
   test('desconta padding, bordas, margens e gaps sem usar a largura do botão já compacto', () => {
     const header = bootHeader({
-      containerWidth: 423.5,
+      containerWidth: 422,
       beforeInit({ container, search, login }) {
         container.style.paddingLeft = '5px';
         container.style.paddingRight = '7px';
@@ -376,7 +376,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
         login.style.borderRight = '2px solid transparent';
       },
     });
-    // 423.5 - 12 container padding - 3*43.5 targets - 5 search margins
+    // 422 - 12 container padding - 3*43 targets - 5 search margins
     // - 2 login margin - 112 full label - 13 box - 2 minimum gaps = 147px.
     expectMobileName(header, false);
     expect(header.login.getBoundingClientRect().width).toBe(125);
@@ -469,7 +469,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
 
   test('mudanças de marca e gap selecionam o rótulo curto e recuperam o completo', () => {
     const header = bootHeader();
-    header.state.markWidth = 50;
+    header.state.markWidth = 51;
     header.notifyResize(header.mark);
     header.flushFrames();
     expectMobileName(header, true);
@@ -477,7 +477,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     header.notifyResize(header.mark);
     header.flushFrames();
     expectMobileName(header, false);
-    header.link.style.columnGap = '19px';
+    header.link.style.columnGap = '21px';
     header.resize();
     header.flushFrames();
     expectMobileName(header, true);
@@ -714,21 +714,21 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
   });
 
   test('nav mantém reserva mínima de 44px mesmo quando seus links são menores', () => {
-    const header = bootNavHeader({ containerWidth: 436 });
-    // 436 - 3*43.5 controls - full112 - nav44 - three 1px gaps = 146.5px.
+    const header = bootNavHeader({ containerWidth: 434 });
+    // 434 - 3*43 controls - full112 - nav44 - three 1px gaps = 146px.
     expectMobileName(header, true);
     expect(header.observers[0].targets.has(header.nav)).toBe(true);
-    header.state.containerWidth = 437;
+    header.state.containerWidth = 435;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
   });
 
   test('reserva o maior link da nav com margens e recupera espaço sem resize', () => {
-    const header = bootNavHeader({ containerWidth: 452, itemWidths: [32, 48], itemMargins: 'margin-left:5px;margin-right:7px' });
-    // 452 - 3*43.5 controls - full112 - (48 + 5 + 7) - 3 gaps = 146.5px.
+    const header = bootNavHeader({ containerWidth: 450, itemWidths: [32, 48], itemMargins: 'margin-left:5px;margin-right:7px' });
+    // 450 - 3*43 controls - full112 - (48 + 5 + 7) - 3 gaps = 146px.
     expectMobileName(header, true);
-    header.state.containerWidth = 453;
+    header.state.containerWidth = 451;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
@@ -741,12 +741,12 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
   });
 
   test('wrapper da navegação criado depois do init não altera o orçamento nem duplica observers', () => {
-    const header = bootNavHeader({ containerWidth: 437 });
+    const header = bootNavHeader({ containerWidth: 435 });
     expectMobileName(header, false);
     const rail = header.wrapNav();
     const observer = header.observers[0];
     const observeCalls = observer.observe.mock.calls.length;
-    header.state.containerWidth = 436;
+    header.state.containerWidth = 434;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, true);
@@ -756,7 +756,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
       header.flushFrames();
       expectMobileName(header, true);
     }
-    header.state.containerWidth = 437;
+    header.state.containerWidth = 435;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
@@ -899,5 +899,33 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     expect(header.header.style.getPropertyValue('--kc-header-action-gap')).toBe('0px');
     expect(header.login.querySelector('.kc-login-label-full').getAttribute('aria-hidden')).toBe('false');
     expect(144 + 110.3125 + 3 * 43.890625 + 2).toBeLessThanOrEqual(388);
+  });
+
+  test('mesmo orçamento com Liberation Sans preserva Login/Cadastro e alvos43.421875 sem exceção por sistema', () => {
+    const header = bootHeader({ viewport: 412, containerWidth: 388, markWidth: 38, nameWidth: 100,
+      beforeInit({ login, link, state }) {
+        link.style.columnGap = '4.3px';
+        login.style.paddingLeft = '6px';
+        login.style.paddingRight = '6px';
+        // Real Chromium Linux measurements: the same label is 1.390625px
+        // wider than Segoe UI. Keeping it costs <1px per 44px-wide target.
+        state.fullLabelWidth = 99.703125;
+        state.compactLabelWidth = 40.046875;
+      },
+    });
+    expectMobileName(header, false);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('43.421875px');
+    expect(header.header.style.getPropertyValue('--kc-header-column-gap')).toBe('1px');
+    expect(header.header.style.getPropertyValue('--kc-header-action-gap')).toBe('0px');
+    expect(header.login.querySelector('.kc-login-label-full').getAttribute('aria-hidden')).toBe('false');
+    expect(144 + 111.703125 + 3 * 43.421875 + 2).toBeLessThanOrEqual(388);
+
+    // A genuinely smaller budget must still prefer the short label. This
+    // prevents the cross-platform band from silently accepting narrow targets.
+    header.state.containerWidth = 386;
+    header.notifyResize(header.container);
+    header.flushFrames();
+    expectMobileName(header, true);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
   });
 });
