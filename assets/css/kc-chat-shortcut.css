@@ -35,14 +35,40 @@
   box-shadow: none;
 }
 
-/* Defesa para HTML/JS antigo em cache: o acesso móvel fica no menu. */
+/* Defesa para HTML/JS antigo em cache: os acessos ficam no cabeçalho e menu. */
 .kc-chat-mobile-fab {
   display: none !important;
 }
 
 @media (max-width: 768px) {
   .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut {
+    display: inline-flex;
+    border-radius: 50%;
+    color: var(--kc-text-dark-primary);
+    background: var(--kc-background-dark);
+    border: 1px solid var(--kc-border-dark);
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-chat-shortcut:focus-visible {
+    outline: 2px solid var(--kc-text-dark-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Reserva espaço para Mensagens sem sobrepor busca, marca ou autenticação. */
+@media (max-width: 480px) {
+  .kc-header:not(.kc-header--admin) .kc-logo-text {
     display: none !important;
   }
 
+  .kc-header:not(.kc-header--admin) .kc-logo a {
+    gap: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login:not(.is-auth) {
+    font-size: 0.8rem;
+    padding-inline: 8px;
+  }
 }

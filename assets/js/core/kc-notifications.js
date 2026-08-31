@@ -12,6 +12,7 @@
   var _activeBell = null;
   var _activeUserId = '';
   var _authListenerBound = false;
+  var _chatUnreadListenerBound = false;
   var _chatRuntimePromise = null;
   var _chatUnreadCount = 0;
   var _mobileAccessReconcileScheduled = false;
@@ -280,7 +281,7 @@
       }
     });
 
-    // O menu móvel já expõe Mensagens. Remover o FAB evita cobrir cards,
+    // Cabeçalho e menu móvel expõem Mensagens. Remover o FAB evita cobrir cards,
     // formulários e ações fixas sem retirar o acesso à funcionalidade.
     document.querySelectorAll('.kc-chat-mobile-fab').forEach(function (mobileFab) {
       mobileFab.remove();
@@ -831,16 +832,22 @@
     });
   }
 
+  function bindChatUnreadListener() {
+    if (_chatUnreadListenerBound) return;
+    _chatUnreadListenerBound = true;
+    // Como o listener de autenticação, acompanha logout e novas sessões sem
+    // duplicar a assinatura nas reinicializações do shell.
+    document.addEventListener('kc:chat:unread-changed', function (event) {
+      var detail = event && event.detail ? event.detail : {};
+      refreshChatUnreadCount(detail.total);
+    });
+  }
+
   function init() {
     ensureChatEntryPoints();
+    bindChatUnreadListener();
     var bell = $('#kcNotifBell');
-    if (!bell) {
-      document.addEventListener('kc:chat:unread-changed', function (event) {
-        var detail = event && event.detail ? event.detail : {};
-        refreshChatUnreadCount(detail.total);
-      });
-      return;
-    }
+    if (!bell) return;
 
     bindAuthListener(bell);
 
@@ -870,11 +877,6 @@
     if (!snapshotUser || !snapshotUser.id) {
       bell.style.display = 'none';
     }
-
-    document.addEventListener('kc:chat:unread-changed', function (event) {
-      var detail = event && event.detail ? event.detail : {};
-      refreshChatUnreadCount(detail.total);
-    });
   }
 
   function destroy() {
