@@ -8,7 +8,7 @@
 - Alvos utilitários preservam 36 px de altura e pelo menos 26 px de largura;
   o nome usa limites em rem para acompanhar ampliação do texto.
 - Login/Cadastro usa o rótulo visual Entrar somente quando o completo não
-  cabe, preservando o nome acessível e o botão original. A decisão mede o
+  cabe, alinhando o nome acessível ao texto visível e preservando o botão. A decisão mede o
   rótulo completo para não alternar continuamente entre os dois estados.
 - Regressões exigem linha única, altura compacta, nome inteiro, controles
   atingíveis e ausência de colisões, incluindo fontes ampliadas.

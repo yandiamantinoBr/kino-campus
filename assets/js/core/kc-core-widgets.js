@@ -23,7 +23,7 @@
         const mobile = window.innerWidth <= 768;
         const login = container.querySelector('.btn-login:not(.is-auth)');
         // Auth hydration replaces the contents, never the trigger itself.
-        // Preserve the complete accessible label while allowing a short visual one.
+        // Keep the full label measurable while allowing a short visual one.
         if (login && !login.querySelector('.kc-login-label-full') && login.textContent.trim() === 'Login/Cadastro') {
           const full = document.createElement('span');
           full.className = 'kc-login-label-full';
@@ -68,6 +68,16 @@
         const compactLogin = visible && !!login && required > available;
         if (container.classList.contains('kc-header-container--compact-login') !== compactLogin) {
           container.classList.toggle('kc-header-container--compact-login', compactLogin);
+        }
+        // Voice control and screen readers must receive the visible label.
+        // aria-hidden does not affect the full span's intrinsic measurement.
+        if (login) {
+          const full = login.querySelector('.kc-login-label-full');
+          const compact = login.querySelector('.kc-login-label-compact');
+          if (full && compact) {
+            full.setAttribute('aria-hidden', String(compactLogin));
+            compact.setAttribute('aria-hidden', String(!compactLogin));
+          }
         }
         if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
           logo.classList.toggle('kc-logo--wordmark-visible', visible);

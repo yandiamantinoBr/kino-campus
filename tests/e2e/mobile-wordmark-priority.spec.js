@@ -104,15 +104,21 @@ for (const route of ['/', '/mensagens.html']) {
   });
 }
 
-test('rótulo curto preserva nome acessível e abre o mesmo formulário', async ({ page }) => {
+test('nome acessível acompanha rótulo visível e abre o mesmo formulário', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('kc_consent_v1', JSON.stringify({ version: '2026-06-05', necessary: true, preferences: false, analytics: false, advertising: false, updatedAt: new Date().toISOString() })));
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/', { waitUntil: 'load' });
   await page.evaluate(() => { document.documentElement.style.fontSize = '24px'; });
-  const login = page.getByRole('link', { name: 'Login/Cadastro', exact: true });
+  const login = page.locator('.kc-header .btn-login');
   await expect(page.locator('.kc-header-container')).toHaveClass(/kc-header-container--compact-login/);
+  await expect(login).toHaveAccessibleName('Entrar');
   await expect(login.locator('.kc-login-label-compact')).toHaveText('Entrar');
-  await expect(login.locator('.kc-login-label-compact')).toHaveAttribute('aria-hidden', 'true');
+  await expect(login.locator('.kc-login-label-compact')).toHaveAttribute('aria-hidden', 'false');
+  await expect(login.locator('.kc-login-label-full')).toHaveAttribute('aria-hidden', 'true');
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await expect(login).toHaveAccessibleName('Login/Cadastro');
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect(login).toHaveAccessibleName('Entrar');
   await login.click();
   await expect(page.locator('#kcAuthModal')).toBeVisible();
   await expect(page.locator('#kcAuthLoginEmail')).toBeVisible();

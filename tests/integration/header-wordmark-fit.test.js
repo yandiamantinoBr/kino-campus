@@ -255,7 +255,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     expectMobileName(header, viewport < 430);
   });
 
-  test('encurta apenas a apresentação e preserva rótulo acessível, link e listener existente', () => {
+  test('alinha nome acessível ao rótulo visível e preserva link e listener existente', () => {
     const onClick = jest.fn((event) => event.preventDefault());
     let originalTrigger;
     const header = bootHeader({
@@ -271,9 +271,9 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     expect(header.login).toBe(originalTrigger);
     expect(full.textContent).toBe('Login/Cadastro');
     expect(full.hidden).toBe(false);
-    expect(full.getAttribute('aria-hidden')).not.toBe('true');
+    expect(full.getAttribute('aria-hidden')).toBe('true');
     expect(short.textContent).toBe('Entrar');
-    expect(short.getAttribute('aria-hidden')).toBe('true');
+    expect(short.getAttribute('aria-hidden')).toBe('false');
     expect(header.login.getAttribute('href')).toBe('#login');
     expect(header.login.dataset.kcLogin).toBe('true');
     header.login.dispatchEvent(new header.window.MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -282,9 +282,15 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     header.flushFrames();
     expect(header.compact()).toBe(false);
     expect(header.wrapped()).toBe(false);
+    expect(full.getAttribute('aria-hidden')).toBe('false');
+    expect(short.getAttribute('aria-hidden')).toBe('true');
     expect(header.login.querySelector('.kc-login-label-full')).toBe(full);
     expect(header.login.querySelector('.kc-login-label-compact')).toBe(short);
     expect(header.login.querySelectorAll('.kc-login-label-full, .kc-login-label-compact')).toHaveLength(2);
+    header.resize(390);
+    header.flushFrames();
+    expect(full.getAttribute('aria-hidden')).toBe('true');
+    expect(short.getAttribute('aria-hidden')).toBe('false');
   });
 
   test('reset do conteúdo visitante é reconstruído uma vez sem perder a medição completa', () => {

@@ -14,7 +14,9 @@ histórico, não como critério de aceitação atual.
 - Nome com clamp entre .875rem e 1.05rem, preservando ampliação de texto.
 - Conta mantém avatar, verificado e seta, com padding e gaps menores.
 - Rótulo completo Login/Cadastro quando cabe; Entrar somente no déficit.
-  O span completo permanece mensurável e acessível; o curto é aria-hidden.
+  O span completo permanece mensurável; somente o rótulo visível participa
+  do nome acessível (Entrar compacto, Login/Cadastro normal), inclusive ao
+  alternar mobile/desktop. Isso permite ativação por voz pelo texto visível.
   Nenhum botão, href, listener ou comportamento de autenticação é substituído.
 - Desktop, admin, tokens globais, estilo ativo/inativo do chat e dados fora
   do escopo permanecem preservados.
@@ -41,7 +43,7 @@ têm teto de 64 px. As capturas usuais de 320/390/412 mediram 56–58 px.
 
 A matriz usa Home e Mensagens, 14 larguras de 320–768 px mais retorno a390,
 visitante/markup autenticado, claro/escuro e fontes 100/125/150%. Há teste
-dedicado ao nome acessível Login/Cadastro e abertura do formulário pelo
+dedicado ao nome acessível correspondente ao rótulo e abertura do formulário pelo
 rótulo curto, além das regressões existentes de desktop e navegação.
 
 ## Limites de evidência
