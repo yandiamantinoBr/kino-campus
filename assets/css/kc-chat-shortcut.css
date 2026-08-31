@@ -48,15 +48,16 @@
   .kc-header:not(.kc-header--admin) {
     --kc-header-control-width: clamp(26px, calc(10vw - 6px), 36px);
     padding-inline: clamp(8px, calc(5vw - 8px), 12px) !important;
+    padding-block: 10px !important;
   }
 
   .kc-header:not(.kc-header--admin) .kc-header-container {
     grid-template-columns: minmax(0, 1fr) var(--kc-header-control-width) auto;
-    gap: clamp(1px, calc(2.5vw - 7px), 4px) !important;
+    gap: var(--kc-header-column-gap, clamp(1px, calc(2.5vw - 7px), 4px)) !important;
   }
 
   .kc-header:not(.kc-header--admin) .kc-user-actions {
-    gap: clamp(0px, calc(2.5vw - 8px), 3px) !important;
+    gap: var(--kc-header-action-gap, clamp(0px, calc(2.5vw - 8px), 3px)) !important;
     flex-wrap: nowrap;
   }
 
@@ -65,9 +66,12 @@
   .kc-header:not(.kc-header--admin) .kc-user-actions a.icon-btn {
     width: var(--kc-header-control-width);
     min-width: var(--kc-header-control-width);
-    height: 36px;
-    min-height: 36px;
-    font-size: clamp(16px, 4.7vw, 20px);
+    height: 44px;
+    min-height: 44px;
+    font-size: var(--kc-header-icon-size, clamp(16px, 4.7vw, 20px));
+    /* Fit changes must take effect together. Animating width independently
+       of the grid track briefly overlaps the wordmark during auth/resize. */
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
   }
 
   .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login {
@@ -75,6 +79,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 44px !important;
     padding: 4px 6px;
     font-size: clamp(0.75rem, 3.4vw, 0.85rem);
     line-height: 1.2;
@@ -124,10 +129,10 @@
     background: rgba(255, 107, 0, 0.12);
   }
 
-  /* Uma linha: a marca e os controles compactam progressivamente, sem wrap. */
+  /* Uma linha: o fit distribui a folga entre alvos de toque e espaçamento. */
   .kc-header:not(.kc-header--admin) .kc-logo a {
     position: relative;
-    min-height: 36px;
+    min-height: 44px;
     gap: clamp(2px, calc(2.5vw - 6px), 5px);
     transform: none;
   }
@@ -177,6 +182,20 @@
     width: max-content;
   }
 
+  /* Ambos os rótulos têm largura intrínseca estável para o cálculo do fit.
+     O rótulo inativo fica fora do fluxo e aria-hidden é sincronizado no JS. */
+  .kc-header:not(.kc-header--admin) .kc-login-label-compact {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: max-content;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(100%);
+    white-space: nowrap;
+  }
+
   /* Mantém o nome acessível e a largura intrínseca mensurável, mesmo curto. */
   .kc-header:not(.kc-header--admin) .kc-header-container--compact-login .kc-login-label-full {
     position: absolute;
@@ -189,7 +208,10 @@
   }
 
   .kc-header:not(.kc-header--admin) .kc-header-container--compact-login .kc-login-label-compact {
-    display: inline;
+    position: static;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
 }
 

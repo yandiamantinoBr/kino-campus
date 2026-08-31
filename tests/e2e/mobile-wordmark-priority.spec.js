@@ -17,7 +17,7 @@ for (const route of ['/', '/mensagens.html']) {
     }
     const login = page.locator('.kc-header .btn-login');
     const initialLogin = await login.innerHTML();
-    for (const width of [320, 360, 375, 390, 400, 412, 414, 430, 440, 480, 576, 577, 767, 768, 390]) {
+    for (const width of [320, 360, 375, 384, 390, 400, 412, 414, 430, 440, 480, 576, 577, 767, 768, 390]) {
       await page.setViewportSize({ width, height: 844 });
       for (const authenticated of [false, true]) {
         await login.evaluate((element, state) => {
@@ -91,7 +91,7 @@ for (const route of ['/', '/mensagens.html']) {
             expect(Math.max(...result.rowCenters) - Math.min(...result.rowCenters), context).toBeLessThanOrEqual(2);
             for (const target of result.targetSizes) {
               expect(target.width, context).toBeGreaterThanOrEqual(24);
-              expect(target.height, context).toBeGreaterThanOrEqual(36);
+              expect(target.height, context).toBeGreaterThanOrEqual(44);
             }
             // The intermediate navigation rail also respects enlarged text.
             expect(result.height, context).toBeLessThanOrEqual(width >= 577 && scale > 1 ? 72 : 64);

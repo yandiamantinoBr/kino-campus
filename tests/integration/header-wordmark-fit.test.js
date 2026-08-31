@@ -241,11 +241,11 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
 
   afterEach(() => windows.splice(0).forEach((window) => window.close()));
 
-  test.each([[394, true], [395, false], [396, false]])(
+  test.each([[391, true], [392, false], [393, false]])(
     'preserva nome e 1px de reserva: container %ipx, login compacto=%s',
     (containerWidth, compact) => {
       // 38 mark + 100 name + 8 gap + 1 safety = 147px.
-      // Search 36 + controls 196 + two 8px column gaps = 248px.
+      // Three >=43.5px targets + full112 + two 1px gaps require >=244.5px.
       expectMobileName(bootHeader({ containerWidth }), compact);
     },
   );
@@ -363,7 +363,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
 
   test('desconta padding, bordas, margens e gaps sem usar a largura do botão já compacto', () => {
     const header = bootHeader({
-      containerWidth: 427,
+      containerWidth: 423.5,
       beforeInit({ container, search, login }) {
         container.style.paddingLeft = '5px';
         container.style.paddingRight = '7px';
@@ -376,7 +376,8 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
         login.style.borderRight = '2px solid transparent';
       },
     });
-    // 427 - 12 container padding - 41 search - (198 actions + 13 box) - 16 gaps = 147px.
+    // 423.5 - 12 container padding - 3*43.5 targets - 5 search margins
+    // - 2 login margin - 112 full label - 13 box - 2 minimum gaps = 147px.
     expectMobileName(header, false);
     expect(header.login.getBoundingClientRect().width).toBe(125);
     header.login.style.borderRightWidth = '2.25px';
@@ -476,7 +477,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     header.notifyResize(header.mark);
     header.flushFrames();
     expectMobileName(header, false);
-    header.link.style.columnGap = '16px';
+    header.link.style.columnGap = '19px';
     header.resize();
     header.flushFrames();
     expectMobileName(header, true);
@@ -713,21 +714,21 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
   });
 
   test('nav mantém reserva mínima de 44px mesmo quando seus links são menores', () => {
-    const header = bootNavHeader();
-    // 441 - search36 - actions196 - nav44 - three gaps24 = 141px.
+    const header = bootNavHeader({ containerWidth: 436 });
+    // 436 - 3*43.5 controls - full112 - nav44 - three 1px gaps = 146.5px.
     expectMobileName(header, true);
     expect(header.observers[0].targets.has(header.nav)).toBe(true);
-    header.state.containerWidth = 447;
+    header.state.containerWidth = 437;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
   });
 
   test('reserva o maior link da nav com margens e recupera espaço sem resize', () => {
-    const header = bootNavHeader({ containerWidth: 462, itemWidths: [32, 48], itemMargins: 'margin-left:5px;margin-right:7px' });
-    // 462 - 36 - 196 - (48 + 5 + 7) - 24 = 146px, one short.
+    const header = bootNavHeader({ containerWidth: 452, itemWidths: [32, 48], itemMargins: 'margin-left:5px;margin-right:7px' });
+    // 452 - 3*43.5 controls - full112 - (48 + 5 + 7) - 3 gaps = 146.5px.
     expectMobileName(header, true);
-    header.state.containerWidth = 463;
+    header.state.containerWidth = 453;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
@@ -740,12 +741,12 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
   });
 
   test('wrapper da navegação criado depois do init não altera o orçamento nem duplica observers', () => {
-    const header = bootNavHeader({ containerWidth: 447 });
+    const header = bootNavHeader({ containerWidth: 437 });
     expectMobileName(header, false);
     const rail = header.wrapNav();
     const observer = header.observers[0];
     const observeCalls = observer.observe.mock.calls.length;
-    header.state.containerWidth = 446;
+    header.state.containerWidth = 436;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, true);
@@ -755,7 +756,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
       header.flushFrames();
       expectMobileName(header, true);
     }
-    header.state.containerWidth = 447;
+    header.state.containerWidth = 437;
     header.notifyResize(header.nav);
     header.flushFrames();
     expectMobileName(header, false);
@@ -763,5 +764,140 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     expect(observer.observe).toHaveBeenCalledTimes(observeCalls);
     expect(observer.targets.has(header.nav)).toBe(true);
     expect(header.frames.size).toBe(0);
+  });
+
+  test('usa a folga para controles de 44px e glifos de 22px, sem compactar login que ainda cabe', () => {
+    const header = bootHeader({ viewport: 430 });
+    expectMobileName(header, false);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+    expect(header.header.style.getPropertyValue('--kc-header-icon-size')).toBe('22px');
+    expect(parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'))).toBeGreaterThanOrEqual(1);
+    expect(parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'))).toBeGreaterThanOrEqual(0);
+  });
+
+  test('prioriza Entrar e alvos de 44px quando o rótulo completo reduziria os controles', () => {
+    const header = bootHeader({ viewport: 390 });
+    expectMobileName(header, true);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+    expect(header.login.querySelector('.kc-login-label-compact').getAttribute('aria-hidden')).toBe('false');
+  });
+
+  test('fallback estreito preserva marca ampliada e perfil sem ultrapassar o orçamento', () => {
+    const header = bootHeader({ viewport: 320, containerWidth: 304, markWidth: 26, nameWidth: 125,
+      beforeInit({ login, link, bell, state }) {
+        link.style.columnGap = '2px';
+        login.classList.add('is-auth');
+        login.innerHTML = '<span class="kc-header-user">Perfil</span>';
+        state.loginWidth = 44;
+        bell.style.display = 'inline-flex';
+      },
+    });
+    const width = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    const columnGap = parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'));
+    const actionGap = parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'));
+    expectMobileName(header, false);
+    expect(width).toBeGreaterThanOrEqual(26);
+    expect(width).toBeLessThan(44);
+    expect(26 + 125 + 2 + 1 + 44 + 4 * width + 2 * columnGap + 3 * actionGap).toBeLessThanOrEqual(304);
+  });
+
+  test('redimensionamento desktop limpa somente propriedades do fit mobile', () => {
+    const header = bootHeader({ viewport: 390 });
+    header.header.style.setProperty('--unrelated-component-color', 'orange');
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+    header.resize(1280);
+    header.flushFrames();
+    for (const property of ['--kc-header-control-width', '--kc-header-icon-size', '--kc-header-column-gap', '--kc-header-action-gap']) {
+      expect(header.header.style.getPropertyValue(property)).toBe('');
+    }
+    expect(header.header.style.getPropertyValue('--unrelated-component-color')).toBe('orange');
+    expect(header.compact()).toBe(false);
+    header.resize(390);
+    header.flushFrames();
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('44px');
+  });
+
+  test('login oculto não devolve uma economia fictícia ao orçamento', () => {
+    const header = bootHeader({ containerWidth: 270, beforeInit({ login }) { login.style.display = 'none'; } });
+    expectMobileName(header, false);
+    const width = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    const columnGap = parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'));
+    const actionGap = parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'));
+    expect(width).toBeLessThan(44);
+    expect(147 + width * 3 + columnGap * 2 + actionGap).toBeLessThanOrEqual(270);
+    expect(header.login.querySelector('.kc-login-label-full')).toBeNull();
+  });
+
+  test('placeholder de auth com texto sem largura mantém min-width e não compacta', () => {
+    const header = bootHeader({ viewport: 390,
+      beforeInit({ login, state }) {
+        login.style.minWidth = '69px';
+        login.style.fontSize = '0px';
+        state.fullLabelWidth = 0;
+        state.compactLabelWidth = 0;
+      },
+    });
+    expectMobileName(header, false);
+    const width = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    const columnGap = parseFloat(header.header.style.getPropertyValue('--kc-header-column-gap'));
+    const actionGap = parseFloat(header.header.style.getPropertyValue('--kc-header-action-gap'));
+    expect(147 + 69 + width * 3 + columnGap * 2 + actionGap * 2).toBeLessThanOrEqual(362);
+  });
+
+  test('larguras já aplicadas e track esticado não realimentam a decisão por oito ciclos', () => {
+    const header = bootHeader({ viewport: 390 });
+    const properties = ['--kc-header-control-width', '--kc-header-icon-size', '--kc-header-column-gap', '--kc-header-action-gap'];
+    const before = properties.map(property => header.header.style.getPropertyValue(property));
+    const setProperty = jest.spyOn(header.header.style, 'setProperty');
+    for (let cycle = 0; cycle < 8; cycle += 1) {
+      header.state.searchWidth = cycle % 2 ? 26 : 44;
+      header.state.chatWidth = cycle % 2 ? 44 : 26;
+      header.state.themeWidth = cycle % 2 ? 26 : 44;
+      header.notifyResize(header.logo, header.actions, header.container);
+      header.flushFrames();
+      expect(properties.map(property => header.header.style.getPropertyValue(property))).toEqual(before);
+      expectMobileName(header, true);
+    }
+    expect(setProperty).not.toHaveBeenCalled();
+    expect(header.frames.size).toBe(0);
+  });
+
+  test('perfil real mais estreito recupera espaço sem alterar identidade ou criar rótulos', () => {
+    const header = bootHeader({ viewport: 390,
+      beforeInit({ login, bell, state }) {
+        login.classList.add('is-auth');
+        login.innerHTML = '<span class="kc-header-user">Perfil</span>';
+        bell.style.display = 'inline-flex';
+        state.loginWidth = 80;
+      },
+    });
+    const trigger = header.login;
+    const before = parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'));
+    header.state.loginWidth = 48;
+    header.notifyResize(header.actions);
+    header.flushFrames();
+    expect(parseFloat(header.header.style.getPropertyValue('--kc-header-control-width'))).toBeGreaterThan(before);
+    expect(header.login).toBe(trigger);
+    expect(trigger.innerHTML).toBe('<span class="kc-header-user">Perfil</span>');
+    expect(trigger.querySelector('.kc-login-label-full')).toBeNull();
+    expectMobileName(header, false);
+  });
+
+  test('412px visitante preserva Login/Cadastro com alvo43.890625 em vez de deixar buraco após Entrar', () => {
+    const header = bootHeader({ viewport: 412, containerWidth: 388, markWidth: 38, nameWidth: 100,
+      beforeInit({ login, link, state }) {
+        link.style.columnGap = '4.3px';
+        login.style.paddingLeft = '6px';
+        login.style.paddingRight = '6px';
+        state.fullLabelWidth = 98.3125;
+        state.compactLabelWidth = 38.90625;
+      },
+    });
+    expectMobileName(header, false);
+    expect(header.header.style.getPropertyValue('--kc-header-control-width')).toBe('43.890625px');
+    expect(header.header.style.getPropertyValue('--kc-header-column-gap')).toBe('1px');
+    expect(header.header.style.getPropertyValue('--kc-header-action-gap')).toBe('0px');
+    expect(header.login.querySelector('.kc-login-label-full').getAttribute('aria-hidden')).toBe('false');
+    expect(144 + 110.3125 + 3 * 43.890625 + 2).toBeLessThanOrEqual(388);
   });
 });

@@ -130,7 +130,12 @@ describe('cabeçalho estreito e comentários', () => {
     expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login')).toContain('position: relative;');
     expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-header-container--compact-login .kc-login-label-full')).toContain('right: 0;');
     expect(shortcut).toContain('grid-template-columns: minmax(0, 1fr) var(--kc-header-control-width) auto;');
-    expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core-widgets.js'), 'utf8')).toContain('const compactLogin = visible && !!login && required > available;');
+    expect(shortcut).toContain('height: 44px;');
+    expect(shortcut).toContain('min-height: 44px !important;');
+    expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-login-label-compact')).toContain('width: max-content;');
+    expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-login-label-compact')).toContain('clip-path: inset(100%);');
+    expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-header-container--compact-login .kc-login-label-compact')).toContain('clip-path: none;');
+    expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core-widgets.js'), 'utf8')).toContain('budget < controls.length * comfortableWidth + minimumGaps');
     expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core.js'), 'utf8')).toContain('window.KCCore.initHeaderWordmarkFit()');
     expect(PRODUCT_LOAD).toContain("setAttribute('placeholder', 'Seu nome (opcional)')");
     expect(PRODUCT_LOAD).not.toContain('Seu nome (opcional no modo local/dev)');
