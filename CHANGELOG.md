@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-08-31] - acesso visível a Mensagens no mobile
+
+- O ícone de Mensagens fica visível no cabeçalho mobile, com foco de teclado e
+  espaço reservado em telas estreitas. O acesso no menu continua disponível.
+- A decisão do PR #892 de não sobrepor cards, formulários e ações fixas com um
+  FAB é preservada; não se reintroduz o botão flutuante antigo.
+- O contador de não lidas agora recebe eventos locais mesmo quando a API de
+  autenticação está presente, com uma única assinatura entre reinicializações.
+- Regressões cobrem 320–1280 px, visitantes/identidade autenticada, temas,
+  navegação até Mensagens e atualizações do contador após logout/relogin.
+
 ---
 
 ## [v76.48] - 2026-08-27 - restauração da identidade visual primária
