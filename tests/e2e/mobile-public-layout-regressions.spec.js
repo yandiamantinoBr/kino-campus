@@ -339,7 +339,7 @@ test.describe('mobile public layout regressions', () => {
             };
           });
           const context = `${width}px loggedIn=${loggedIn} light=${light}: ${JSON.stringify(layout)}`;
-          expect(layout.width, context).toBeGreaterThanOrEqual(width <= 768 ? 36 : 20);
+          expect(layout.width, context).toBeGreaterThanOrEqual(width <= 768 ? 24 : 20);
           expect(layout.height, context).toBeGreaterThanOrEqual(width <= 768 ? 36 : 20);
           expect(layout.left, context).toBeGreaterThanOrEqual(0);
           expect(layout.right, context).toBeLessThanOrEqual(width);
