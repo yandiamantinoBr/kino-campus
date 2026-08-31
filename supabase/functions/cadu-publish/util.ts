@@ -245,6 +245,9 @@ export function toOptimizedCoverUrl(url: unknown): string {
   const marker = "/storage/v1/object/public/";
   const idx = value.indexOf(marker);
   if (idx < 0) return value;
+  // URLs que já carregam transformação própria (ex.: post_media com
+  // ?width=1200&quality=80 da pipeline) mantêm seus parâmetros contratuais.
+  if (/[?&](?:width|quality|format)=/.test(value)) return value;
   const rest = value.slice(idx + marker.length);
   const slash = rest.indexOf("/");
   if (slash <= 0) return value;
