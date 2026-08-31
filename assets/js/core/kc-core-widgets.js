@@ -12,6 +12,7 @@
       const link = logo.querySelector('a');
       const mark = logo.querySelector('.kc-logo-mark');
       const text = logo.querySelector('.kc-logo-text');
+      const container = logo.parentElement;
       if (!link || !mark || !text) return;
       logo.dataset.kcWordmarkFitBound = '1';
 
@@ -22,7 +23,22 @@
         // offsetWidth ignores the decorative rotation of the mark. CSS keeps
         // hidden text measurable; its intrinsic width never sizes the grid track.
         const required = mark.offsetWidth + text.offsetWidth + gap + 1;
-        const visible = mobile && text.offsetWidth > 0 && required <= logo.clientWidth;
+        let available = logo.clientWidth;
+        const nav = container.querySelector('.kc-nav-links');
+        if (mobile && nav && window.getComputedStyle(container).display === 'flex'
+          && window.getComputedStyle(nav).display !== 'none') {
+          // 577–767px uses a flex navigation rail, not a free grid track.
+          // Resolve the wrapper on each pass: the core wraps nav after init.
+          const rail = nav.closest('[data-kc-scroll-rail]') || nav;
+          const reserve = Array.from(nav.querySelectorAll('a')).reduce((largest, item) => {
+            const style = window.getComputedStyle(item);
+            return Math.max(largest, item.offsetWidth + (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0));
+          }, 44);
+          // logo + rail is invariant when the wordmark takes space from nav.
+          // Keep at least one navigation target; mobile rail arrows are hidden.
+          available = logo.getBoundingClientRect().width + rail.getBoundingClientRect().width - reserve;
+        }
+        const visible = mobile && text.offsetWidth > 0 && required <= available;
         if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
           logo.classList.toggle('kc-logo--wordmark-visible', visible);
         }
@@ -39,7 +55,8 @@
       // loading, even without a viewport resize. Observe sizes, not mutations.
       if (typeof window.ResizeObserver === 'function') {
         const observer = new window.ResizeObserver(schedule);
-        [logo, mark, text].forEach((element) => observer.observe(element));
+        [logo, mark, text, container, container.querySelector('.kc-nav-links')]
+          .filter(Boolean).forEach((element) => observer.observe(element));
       }
       window.addEventListener('resize', schedule, { passive: true });
       window.addEventListener('orientationchange', schedule, { passive: true });

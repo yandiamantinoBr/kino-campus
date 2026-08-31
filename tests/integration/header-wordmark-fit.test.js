@@ -106,6 +106,7 @@ describe('wordmark do cabeçalho — espaço disponível real', () => {
     window.eval(fs.readFileSync(WIDGETS_PATH, 'utf8'));
     expect(typeof window.KCCore.initHeaderWordmarkFit).toBe('function');
     expect(window.kcInitHeaderWordmarkFit).toBeUndefined();
+    if (options.beforeInit) options.beforeInit({ window, document, logo, mark, text, link, state });
 
     const init = () => window.KCCore.initHeaderWordmarkFit();
     const visible = () => logo.classList.contains(VISIBLE_CLASS);
@@ -122,6 +123,61 @@ describe('wordmark do cabeçalho — espaço disponível real', () => {
       window, document, logo, mark, text, link, state, frames, observers, fonts,
       init, visible, resize, profileChange, fontsLoaded, resolveFontsReady, notifyResize, flushFrames,
     };
+  }
+
+  function bootFlexHeader(options = {}) {
+    let flex;
+    const header = bootHeader({
+      viewport: 577,
+      markWidth: 38,
+      textWidth: 100,
+      beforeInit({ window, document, logo, link, state }) {
+        const container = logo.parentElement;
+        container.style.display = 'flex';
+        link.style.columnGap = '8px';
+        const nav = document.createElement('nav');
+        nav.className = 'kc-nav-links';
+        nav.style.cssText = 'display:flex;flex:1 1 0;min-width:0;overflow-x:auto';
+        nav.innerHTML = '<a href="eventos.html">Eventos</a><a href="moradia.html">Moradia</a>';
+        container.insertBefore(nav, logo.nextSibling);
+        const items = Array.from(nav.querySelectorAll('a'));
+        const itemWidths = options.itemWidths || [32, 36];
+        items.forEach((item, index) => {
+          Object.defineProperty(item, 'offsetWidth', { configurable: true, get: () => itemWidths[index] });
+        });
+        if (options.itemMargins) items[1].style.cssText = options.itemMargins;
+
+        flex = { container, nav, items, pool: options.pool ?? 191.25 };
+        flex.widths = () => {
+          // Real flex redistribution: revealing the wordmark takes exactly
+          // that width from nav; the total allocation stays independent of state.
+          const logoWidth = logo.classList.contains(VISIBLE_CLASS)
+            ? state.markWidth + state.textWidth + 8 + 0.25
+            : state.markWidth;
+          return { logo: logoWidth, nav: Math.max(0, flex.pool - logoWidth) };
+        };
+        const rect = (width) => new window.DOMRect(0, 0, width, 38);
+        Object.defineProperty(logo, 'clientWidth', {
+          configurable: true,
+          get: () => { state.logoReads += 1; return Math.round(flex.widths().logo); },
+        });
+        Object.defineProperty(nav, 'clientWidth', { configurable: true, get: () => Math.round(flex.widths().nav) });
+        logo.getBoundingClientRect = jest.fn(() => rect(flex.widths().logo));
+        nav.getBoundingClientRect = jest.fn(() => rect(flex.widths().nav));
+        flex.wrapNav = () => {
+          const rail = document.createElement('div');
+          rail.className = 'kc-scroll-rail kc-scroll-rail--nav';
+          rail.setAttribute('data-kc-scroll-rail', '');
+          rail.style.display = 'flex';
+          Object.defineProperty(rail, 'clientWidth', { configurable: true, get: () => Math.round(flex.widths().nav) });
+          rail.getBoundingClientRect = jest.fn(() => rect(flex.widths().nav));
+          container.insertBefore(rail, nav);
+          rail.appendChild(nav);
+          return rail;
+        };
+      },
+    });
+    return { ...header, flex };
   }
 
   afterEach(() => {
@@ -317,5 +373,90 @@ describe('wordmark do cabeçalho — espaço disponível real', () => {
     header.fontsLoaded();
     header.flushFrames();
     expect(header.visible()).toBe(false);
+  });
+
+  test('flex revela o wordmark com folga e permanece estável após redistribuir a largura da nav', () => {
+    const header = bootFlexHeader();
+    expect(header.visible()).toBe(true);
+    expect(header.flex.widths()).toEqual({ logo: 146.25, nav: 45 });
+    const observed = header.observers.flatMap((observer) => Array.from(observer.targets));
+    expect(observed).toEqual(expect.arrayContaining([header.flex.container, header.flex.nav]));
+    const toggle = jest.spyOn(header.logo.classList, 'toggle');
+
+    for (let cycle = 0; cycle < 8; cycle += 1) {
+      header.notifyResize(header.logo, header.flex.nav, header.flex.container);
+      header.flushFrames();
+      expect(header.visible()).toBe(true);
+      expect(header.flex.widths().nav).toBeGreaterThanOrEqual(44);
+      expect(header.flex.widths().logo + header.flex.widths().nav).toBeCloseTo(191.25, 5);
+    }
+    expect(toggle).not.toHaveBeenCalled();
+    expect(header.frames.size).toBe(0);
+
+    // 190.75px leaves only 146.75px after the 44px nav reserve, below the
+    // 147px requirement. Rounded clientWidth values would incorrectly sum to 191.
+    header.flex.pool = 190.75;
+    for (let cycle = 0; cycle < 4; cycle += 1) {
+      header.notifyResize(header.flex.nav, header.logo);
+      header.flushFrames();
+      expect(header.visible()).toBe(false);
+    }
+    expect(toggle).toHaveBeenCalledTimes(1);
+
+    header.flex.pool = 191.25;
+    header.notifyResize(header.flex.nav);
+    header.flushFrames();
+    expect(header.visible()).toBe(true);
+    expect(toggle).toHaveBeenCalledTimes(2);
+  });
+
+  test('flex preserva o maior alvo completo com margens e recupera espaço sem resize da janela', () => {
+    const header = bootFlexHeader({
+      pool: 220.25,
+      itemWidths: [32, 48],
+      itemMargins: 'margin-left:5px;margin-right:7px',
+    });
+    expect(header.visible()).toBe(true);
+    expect(header.flex.widths().nav).toBe(74);
+
+    // A 48px item plus its 12px margins requires 60px. Keeping the wordmark
+    // here would leave only 49px; reserving only the first item would be wrong.
+    header.flex.pool = 195.25;
+    header.notifyResize(header.flex.nav);
+    header.flushFrames();
+    expect(header.visible()).toBe(false);
+    expect(header.flex.widths()).toEqual({ logo: 38, nav: 157.25 });
+
+    header.flex.pool = 220.25;
+    header.notifyResize(header.flex.container);
+    header.flushFrames();
+    expect(header.visible()).toBe(true);
+    expect(header.flex.widths().nav).toBeGreaterThanOrEqual(60);
+    expect(header.window.innerWidth).toBe(577);
+  });
+
+  test('flex encontra o rail criado depois do init sem trocar nem duplicar o observer da nav', () => {
+    const header = bootFlexHeader();
+    expect(header.visible()).toBe(true);
+    expect(header.flex.nav.parentElement).toBe(header.flex.container);
+    const observerCount = header.observers.length;
+    const rail = header.flex.wrapNav();
+
+    header.flex.pool = 180;
+    header.notifyResize(header.flex.nav);
+    header.flushFrames();
+    expect(rail.getBoundingClientRect).toHaveBeenCalled();
+    expect(header.visible()).toBe(false);
+    expect(header.flex.nav.parentElement).toBe(rail);
+
+    header.flex.pool = 191.25;
+    for (let cycle = 0; cycle < 4; cycle += 1) {
+      header.notifyResize(header.flex.nav, header.logo);
+      header.flushFrames();
+      expect(header.visible()).toBe(true);
+      expect(header.flex.widths().nav).toBe(45);
+    }
+    expect(header.observers).toHaveLength(observerCount);
+    expect(header.frames.size).toBe(0);
   });
 });

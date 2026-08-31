@@ -17,6 +17,12 @@ foram substituídos por medição da coluna grid livre: largura intrínseca do
 símbolo + nome inteiro + gap + 1 px de reserva. Texto oculto continua mensurável,
 mas invisível e fora do fluxo. O link da marca conserva seu nome acessível.
 
+Entre 577 e 767 px, o layout existente usa flex e uma navegação horizontal.
+Nessa faixa, a medição considera a soma fracionária logo + rail, reservando pelo
+menos 44 px ou a largura externa do maior item de navegação. A soma não varia
+quando o nome toma espaço da navegação; não se somam rail e nav duas vezes.
+O wrapper é resolvido a cada medição porque surge depois da inicialização.
+
 ResizeObserver considera mudanças de tamanho do nome, símbolo e espaço livre,
 mesmo sem resize de viewport. Resize, orientação, perfil, autenticação e fontes
 prontas revalidam em um único requestAnimationFrame; a classe só muda quando
@@ -29,7 +35,7 @@ introduzido, e o limite de tamanho do core foi preservado.
 
 ## Cobertura e limites
 
-- Validação final local: 338 suítes Jest, 5.742 aprovados, sete pulados e
+- Primeira execução completa local: 338 suítes Jest, 5.742 aprovados, sete pulados e
   três snapshots; 222 E2E e 15 cross-browser aprovados. Validadores e ambos
   os contratos TypeScript passaram; npm audit sem vulnerabilidades.
 - O gate de tamanho do core inicialmente identificou a nova função no arquivo
@@ -39,9 +45,15 @@ introduzido, e o limite de tamanho do core foi preservado.
   767, 768, 769 e 1280 px; ida e volta; temas claro/escuro; visitante e markup
   autenticado, incluindo sino e identidade verificada no QA independente.
 - O teste de colisão considera o nome completo, não somente o símbolo.
-- A matriz independente verifica 106 estados Chromium/WebKit, com 8 capturas,
+- A matriz independente verifica 106 estados Chromium/WebKit, com 12 capturas,
   transparência inativa, estado laranja ativo, foco de teclado, click-through,
   largura do documento e resposta dinâmica à troca de markup de autenticação.
+- As larguras folgadas de 577/767 px têm expectativas explícitas de nome
+  visível, além do cálculo de encaixe, e a navegação mantém um item integral.
+- O fechamento do caso flex acrescentou três regressões: distribuição de espaço
+  com frações de pixel sem oscilar, reserva do maior item com margens, e wrapper
+  criado após init. Os 18 testes de medição passaram; os totais da nova execução
+  completa são reconfirmados no relatório de fechamento após CI/deploy.
 - Os novos testes de medição usam dimensões JSDOM simuladas. Geometria real,
   estilos computados e navegação são verificados separadamente no navegador.
 - O QA de tema usa `kcSetTheme` e confirma `data-theme`; a antiga alternância

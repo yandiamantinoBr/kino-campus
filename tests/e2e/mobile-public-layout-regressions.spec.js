@@ -316,6 +316,11 @@ test.describe('mobile public layout regressions', () => {
             const gap = parseFloat(getComputedStyle(logo.querySelector('a')).columnGap) || 0;
             const logoVisible = getComputedStyle(text).visibility === 'visible' && text.getClientRects().length > 0;
             const search = document.querySelector('.kc-search-mobile-btn').getBoundingClientRect();
+            const nav = logo.parentElement.querySelector('.kc-nav-links');
+            const rail = nav.closest('[data-kc-scroll-rail]') || nav;
+            const flexNav = getComputedStyle(logo.parentElement).display === 'flex' && getComputedStyle(nav).display !== 'none';
+            const reserve = Math.max(44, ...Array.from(nav.querySelectorAll('a'), (item) => item.offsetWidth + (parseFloat(getComputedStyle(item).marginLeft) || 0) + (parseFloat(getComputedStyle(item).marginRight) || 0)));
+            const available = flexNav ? logo.getBoundingClientRect().width + rail.getBoundingClientRect().width - reserve : logo.clientWidth;
             return {
               width: rect.width, height: rect.height, left: rect.left, right: rect.right,
               viewportWidth: document.documentElement.clientWidth,
@@ -325,8 +330,12 @@ test.describe('mobile public layout regressions', () => {
               background: getComputedStyle(element).backgroundColor,
               border: getComputedStyle(element).borderTopWidth,
               logoVisible,
-              logoFits: mark.offsetWidth + text.offsetWidth + gap + 1 <= logo.clientWidth,
+              logoFits: mark.offsetWidth + text.offsetWidth + gap + 1 <= available,
               logoSearchOverlap: logoVisible && text.getBoundingClientRect().right > search.left,
+              logoNavOverlap: logoVisible && flexNav && text.getBoundingClientRect().right > rail.getBoundingClientRect().left,
+              navWidth: nav.clientWidth,
+              navReserve: reserve,
+              flexNav,
             };
           });
           const context = `${width}px loggedIn=${loggedIn} light=${light}: ${JSON.stringify(layout)}`;
@@ -343,6 +352,11 @@ test.describe('mobile public layout regressions', () => {
             expect(layout.border, context).toBe('0px');
             expect(layout.logoVisible, context).toBe(layout.logoFits);
             expect(layout.logoSearchOverlap, context).toBe(false);
+            expect(layout.logoNavOverlap, context).toBe(false);
+            if (layout.flexNav && layout.logoVisible) expect(layout.navWidth, context).toBeGreaterThanOrEqual(layout.navReserve - 1);
+            // Independent regression: these known roomy layouts MUST reveal
+            // the name, not merely agree with the implementation's fit flag.
+            if ((!loggedIn && width >= 480) || width === 767) expect(layout.logoVisible, context).toBe(true);
           }
         }
       }
