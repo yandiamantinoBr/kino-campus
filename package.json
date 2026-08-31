@@ -68,6 +68,7 @@
   },
   "homepage": "https://github.com/yandiamantinoBr/kino-campus#readme",
   "dependencies": {
+    "@csstools/css-tokenizer": "3.0.4",
     "@vercel/analytics": "^2.0.1",
     "@vercel/og": "^1.0.1",
     "@vercel/speed-insights": "^2.0.0",
