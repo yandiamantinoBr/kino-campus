@@ -742,13 +742,24 @@ function scoreCoverCandidate(url: string, title: string, category: string, sourc
 const ACADEMIC_BOARD_DEFAULT_COVER_URL =
   "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/2345582d-8bf7-4393-aa0d-f9953d0e02ca/fd263e05-21ff-4209-b54f-913830c96dd6/cadu-2-6c14b3b7.png";
 const ACADEMIC_BOARD_TITLE_RE =
-  /\b(defesa[s]?|qualifica[cç][aã]o|[qk]ualificacoes|exame\s+de\s+qualifica[cç][aã]o)\b/i;
+  /\b(?:banca(?:\s+examinadora)?\s+de\s+(?:defesa|qualificacao)|exame\s+de\s+qualificacao|(?:defesas?|qualificac(?:ao|oes))\s+(?:publicas?\s+)?(?:d[aeo]s?\s+)?(?:dissertac(?:ao|oes)|teses?|tcc|mestrado|doutorado|memori(?:al|ais)\s+academic[oa]s?))\b/i;
+
+function isAcademicBoardTitle(value: unknown): boolean {
+  const title = String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const match = ACADEMIC_BOARD_TITLE_RE.exec(title);
+  if (!match) return false;
+  // A course about preparing a defense is not the defense itself. Only
+  // examine the prefix: the research title may itself discuss a course.
+  return !/\b(?:curso|oficina|seminario|palestra|preparacao|orientacoes|workshop|treinamento)\b/i
+    .test(title.slice(0, match.index));
+}
 
 export function defaultAcademicBoardCover(item: CaduItem, hasImageCandidates: boolean): string {
   if (hasImageCandidates) return "";
   if (String(item.module || "") !== "eventos") return "";
-  const haystack = `${item.title || ""} ${item.formattedTitle || item.formatted_title || ""}`;
-  return ACADEMIC_BOARD_TITLE_RE.test(haystack) ? ACADEMIC_BOARD_DEFAULT_COVER_URL : "";
+  // Do not join unrelated title fragments into invented academic evidence.
+  const titles = [item.title, item.formattedTitle, item.formatted_title];
+  return titles.some(isAcademicBoardTitle) ? ACADEMIC_BOARD_DEFAULT_COVER_URL : "";
 }
 
 function pickCoverImage(candidates: string[], title: string, category: string, sourceHost: string): string {
