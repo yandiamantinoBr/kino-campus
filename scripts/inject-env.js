@@ -317,8 +317,19 @@ const { buildStaticOutput } = require('./build-static-output');
 const staticOutput = buildStaticOutput({
   sourceRoot: path.join(__dirname, '..'),
   outputRoot: path.join(__dirname, '..', 'dist'),
+  definitionBundles: true,
 });
 console.log(`Static output isolated in dist (${staticOutput.rootFiles} root files).`);
+
+// Essential data origin only: prepare its connection without requesting data,
+// embedding credentials or changing consent gates. Source HTML stays intact.
+const { applySupabasePreconnect } = require('./static-resource-hints');
+const resourceHint = applySupabasePreconnect({
+  sourceRoot: path.join(__dirname, '..'),
+  outputRoot: staticOutput.outputRoot,
+  supabaseUrl: SUPABASE_URL,
+});
+console.log(`Supabase connection hint: ${resourceHint.reason}.`);
 
 // Não envolver em fallback silencioso: em produção, HTML, precache e namespace
 // precisam pertencer à mesma revisão ou o artefato não pode ser publicado.
