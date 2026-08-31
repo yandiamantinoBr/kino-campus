@@ -30,6 +30,7 @@ import {
   boundReviewPublicationDirective,
   REVIEW_PUBLICATION_DIRECTIVES_CONTRACT,
 } from "./directive.ts";
+import { selfPacedValidityForItem } from "./self-paced-validity.ts";
 import {
   adaptTitleForPlatform,
   clamp,
@@ -792,8 +793,10 @@ function pickCoverImage(candidates: string[], title: string, category: string, s
   return ranked[0].url;
 }
 
-export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}): MappedPost {
+export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: Date } = {}): MappedPost {
   const warnings: string[] = [];
+  const referenceNow = options.now || new Date();
+  const selfPacedValidity = selfPacedValidityForItem(item, referenceNow);
   const module = item.module as ModuleKey;
   const categoryKey = normalizeCategoryForModule(module, item.category);
   if (!categoryKey) {
@@ -933,6 +936,10 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   let price: number | null = parseBRLNumber(item.price as unknown);
   let location = normalizeWhitespace(item.location) || detectLocation(fullText);
   const metadata: Record<string, unknown> = { ...commonMeta };
+  if (selfPacedValidity) {
+    metadata.validity = selfPacedValidity;
+    metadata.dates = { applicationWindowMode: "self_paced_no_deadline" };
+  }
 
   if (module === "eventos") {
     if (gratuito) price = 0;
@@ -978,7 +985,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
     const remunValue = parseBRLNumber(item.remuneracao as unknown);
     if (remunValue != null) price = remunValue;
     if (gratuito && price == null) price = 0;
-    const deadlineDate = resolveOpportunityDeadline(item, fullText);
+    const deadlineDate = selfPacedValidity ? "" : resolveOpportunityDeadline(item, fullText);
 
     Object.assign(metadata, {
       subcategory: areaKey,
@@ -1065,7 +1072,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string } = {}):
   const relevanceDate = module === "eventos"
     ? String(metadata.data_fim_evento || metadata.data_evento || "")
     : (module === "oportunidades" ? String(metadata.deadline_date || "") : "");
-  const expiresAt = expiryAtEndOfDay(relevanceDate);
+  const expiresAt = selfPacedValidity?.verificationExpiresAt || expiryAtEndOfDay(relevanceDate, referenceNow);
   if (expiresAt) row.expires_at = expiresAt;
 
   return {

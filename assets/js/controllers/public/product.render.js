@@ -318,6 +318,28 @@
     return deadlineFromPaths(source, metadata, purposeDeadlinePaths(phase.purpose), lifecycle);
   }
 
+  // Absence of a source deadline is explicit, scoped and rechecked. Technical
+  // expiry must never be displayed as the course's application deadline.
+  function getSourceAvailability(post) {
+    var metadata = post && post.metadata;
+    var validity = metadata && metadata.validity;
+    if (!validity || typeof validity !== 'object' || Array.isArray(validity)
+        || String(post.modulo || post.module || '') !== 'oportunidades'
+        || validity.contract !== 'cadu-self-paced-course-v1'
+        || validity.mode !== 'no_final_deadline_informed'
+        || validity.sourceRegistryId !== 'web.ufg.iptsp'
+        || validity.sourceUrl !== 'https://iptsp.ufg.br/n/203499'
+        || validity.courseKey !== 'leptospirosetdtp:1365'
+        || validity.evidenceDigest !== '5e6c4dc953a90ff02f664d89a59bb75655a827d08f3663bc02fe2ab3f19ee223') return null;
+    var checked = Date.parse(validity.checkedAt);
+    var expiry = Date.parse(validity.verificationExpiresAt);
+    var next = Date.parse(validity.nextCheckAt);
+    if (!Number.isFinite(checked) || !Number.isFinite(expiry) || !Number.isFinite(next)
+        || checked > Date.now() + 300000 || next - checked !== 86400000
+        || expiry - checked !== 259200000) return null;
+    return { checkedAt: validity.checkedAt, needsCheck: Date.now() >= next };
+  }
+
   // ── Helpers de identificação ─────────────────────────────────────────────────
 
   function getPostAuthorId(post) {
@@ -423,6 +445,8 @@
     if (deadline) {
       var datePart = formatDateForDisplay(deadline);
       badges.push('<span class="kc-badge"><i class="fas fa-calendar-check"></i> Prazo: ' + esc(datePart) + '</span>');
+    } else if (getSourceAvailability(post)) {
+      badges.push('<span class="kc-badge"><i class="fas fa-calendar-check"></i> Sem prazo final informado</span>');
     }
     if (isClosed) badges.push('<span class="kc-badge kc-badge--closed"><i class="fas fa-lock" aria-hidden="true"></i> Encerrado</span>');
     if (post._kcStatusBadgeHtml) badges.push(post._kcStatusBadgeHtml);
@@ -659,6 +683,12 @@
     if (dataEvento) pairs.push(['fas fa-calendar-day', 'Data do evento', formatDateForDisplay(dataEvento)]);
     var deadline = getDeclaredDeadline(post);
     if (deadline) pairs.push(['fas fa-calendar-check', 'Prazo', formatDateForDisplay(deadline)]);
+    var sourceAvailability = !deadline && getSourceAvailability(post);
+    if (sourceAvailability) {
+      pairs.push(['fas fa-calendar-check', 'Prazo', 'Sem prazo final informado']);
+      pairs.push(['fas fa-clock', 'Disponibilidade', 'Conferida em ' + formatDateForDisplay(sourceAvailability.checkedAt)
+        + (sourceAvailability.needsCheck ? ' — nova conferência necessária' : ' — sujeita a vagas e às regras do curso')]);
+    }
     var modalidade = metadata.modalidadeTrabalho || metadata.modalidade || metadata.workModeLabel || '';
     if (modalidade) pairs.push(['fas fa-laptop-house', 'Modalidade', modalidade]);
     var contato = metadata.contato || '';
