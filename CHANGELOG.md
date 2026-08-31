@@ -1,5 +1,17 @@
 # Changelog
 
+## [2026-08-31] - nome KinoCampus obrigatório no mobile
+
+- Corrigida a prioridade do cabeçalho: o nome legível permanece visível em
+  telas estreitas. Quando nome, símbolo e controles não cabem juntos, as
+  ações ocupam outra linha; nenhuma ação é removida ou renomeada.
+- O subtítulo fica dispensado no mobile e o orçamento de uma linha é
+  independente do estado expandido, evitando alternância de layout.
+- A altura compartilhada do cabeçalho acompanha o reflow, inclusive após
+  fontes/autenticação, preservando o espaço disponível de Mensagens.
+- Regressões agora exigem nome visível em Home e Mensagens de 320 a 768 px,
+  com temas, markup autenticado completo e fontes a 100%, 125% e 150%.
+
 ## [2026-08-31] - estados de Mensagens e marca adaptativa no cabeçalho
 
 - O atalho mobile de Mensagens permanece transparente em repouso, sem círculo

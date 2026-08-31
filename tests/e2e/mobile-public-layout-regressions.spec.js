@@ -289,7 +289,7 @@ test.describe('mobile public layout regressions', () => {
         await login.evaluate((element, state) => {
           element.classList.toggle('is-auth', state.loggedIn);
           element.innerHTML = state.loggedIn
-            ? '<span class="kc-header-user"><span class="kc-header-user__avatar">Y</span><span class="kc-header-user__name">Nome de usuário longo para testar</span><i class="kc-header-user__chevron"></i></span>'
+            ? '<span class="kc-header-user"><span class="kc-header-user__avatar">Y</span><span class="kc-header-user__name">Nome de usuário longo para testar</span><i class="fas fa-check-circle kc-header-user__verified" aria-label="Verificado"></i><i class="fas fa-chevron-down kc-header-user__chevron" aria-hidden="true"></i></span>'
             : state.originalLogin;
           document.getElementById('kcNotifBell').style.display = state.loggedIn ? 'inline-flex' : 'none';
         }, { loggedIn, originalLogin });
@@ -350,13 +350,13 @@ test.describe('mobile public layout regressions', () => {
           if (width <= 768) {
             expect(layout.background, context).toBe('rgba(0, 0, 0, 0)');
             expect(layout.border, context).toBe('0px');
-            expect(layout.logoVisible, context).toBe(layout.logoFits);
+            expect(layout.logoVisible, context).toBe(true);
+            expect(layout.logoFits, context).toBe(true);
             expect(layout.logoSearchOverlap, context).toBe(false);
             expect(layout.logoNavOverlap, context).toBe(false);
             if (layout.flexNav && layout.logoVisible) expect(layout.navWidth, context).toBeGreaterThanOrEqual(layout.navReserve - 1);
-            // Independent regression: these known roomy layouts MUST reveal
-            // the name, not merely agree with the implementation's fit flag.
-            if ((!loggedIn && width >= 480) || width === 767) expect(layout.logoVisible, context).toBe(true);
+            // Visibility is required even at 320/360/390/412px. Agreement with
+            // the old hide-on-overflow formula is not a passing regression.
           }
         }
       }

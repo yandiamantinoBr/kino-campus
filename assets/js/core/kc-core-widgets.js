@@ -12,35 +12,54 @@
       const link = logo.querySelector('a');
       const mark = logo.querySelector('.kc-logo-mark');
       const text = logo.querySelector('.kc-logo-text');
+      const name = logo.querySelector('.kc-logo-name');
       const container = logo.parentElement;
-      if (!link || !mark || !text) return;
+      const header = logo.closest('.kc-header');
+      if (!link || !mark || !text || !name) return;
       logo.dataset.kcWordmarkFitBound = '1';
 
       let frame = 0;
       const sync = () => {
         const mobile = window.innerWidth <= 768;
         const gap = parseFloat(window.getComputedStyle(link).columnGap) || 0;
-        // offsetWidth ignores the decorative rotation of the mark. CSS keeps
-        // hidden text measurable; its intrinsic width never sizes the grid track.
-        const required = mark.offsetWidth + text.offsetWidth + gap + 1;
-        let available = logo.clientWidth;
-        const nav = container.querySelector('.kc-nav-links');
-        if (mobile && nav && window.getComputedStyle(container).display === 'flex'
-          && window.getComputedStyle(nav).display !== 'none') {
-          // 577–767px uses a flex navigation rail, not a free grid track.
-          // Resolve the wrapper on each pass: the core wraps nav after init.
-          const rail = nav.closest('[data-kc-scroll-rail]') || nav;
-          const reserve = Array.from(nav.querySelectorAll('a')).reduce((largest, item) => {
-            const style = window.getComputedStyle(item);
-            return Math.max(largest, item.offsetWidth + (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0));
-          }, 44);
-          // logo + rail is invariant when the wordmark takes space from nav.
-          // Keep at least one navigation target; mobile rail arrows are hidden.
-          available = logo.getBoundingClientRect().width + rail.getBoundingClientRect().width - reserve;
+        // The name is required; the subtitle is optional on mobile. Measure a
+        // hypothetical single row, never the extra room created by wrapping.
+        // Otherwise ResizeObserver would alternate between one and two rows.
+        const required = mark.offsetWidth + name.offsetWidth + gap + 1;
+        const style = window.getComputedStyle(container);
+        const outerWidth = (element) => {
+          const itemStyle = window.getComputedStyle(element);
+          return element.getBoundingClientRect().width
+            + (parseFloat(itemStyle.marginLeft) || 0) + (parseFloat(itemStyle.marginRight) || 0);
+        };
+        const slots = [];
+        const search = container.querySelector('.kc-search-mobile-btn');
+        if (search && window.getComputedStyle(search).display !== 'none') slots.push(outerWidth(search));
+        const actions = container.querySelector('.kc-user-actions');
+        if (actions) {
+          const items = Array.from(actions.children).filter((item) => window.getComputedStyle(item).display !== 'none');
+          const actionGap = parseFloat(window.getComputedStyle(actions).columnGap) || 0;
+          slots.push(items.reduce((sum, item) => sum + outerWidth(item), 0) + Math.max(0, items.length - 1) * actionGap);
         }
-        const visible = mobile && text.offsetWidth > 0 && required <= available;
+        const nav = container.querySelector('.kc-nav-links');
+        if (nav && window.getComputedStyle(nav).display !== 'none') {
+          slots.push(Array.from(nav.querySelectorAll('a')).reduce((largest, item) => Math.max(largest, outerWidth(item)), 44));
+        }
+        const available = container.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0)
+          - slots.reduce((sum, width) => sum + width, 0) - slots.length * (parseFloat(style.columnGap) || 0);
+        const visible = mobile && name.offsetWidth > 0;
+        const wrap = visible && required > available;
+        if (container.classList.contains('kc-header-container--wordmark-wrap') !== wrap) {
+          container.classList.toggle('kc-header-container--wordmark-wrap', wrap);
+        }
         if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
           logo.classList.toggle('kc-logo--wordmark-visible', visible);
+        }
+        // Messages uses this variable for its available height. Font/auth
+        // changes can reflow the header without a window resize event.
+        const height = header.offsetHeight;
+        if (height && document.documentElement.style.getPropertyValue('--kc-header-height') !== `${height}px`) {
+          document.documentElement.style.setProperty('--kc-header-height', `${height}px`);
         }
       };
       const schedule = () => {
@@ -55,7 +74,7 @@
       // loading, even without a viewport resize. Observe sizes, not mutations.
       if (typeof window.ResizeObserver === 'function') {
         const observer = new window.ResizeObserver(schedule);
-        [logo, mark, text, container, container.querySelector('.kc-nav-links')]
+        [logo, mark, text, name, container, header, container.querySelector('.kc-nav-links'), container.querySelector('.kc-user-actions')]
           .filter(Boolean).forEach((element) => observer.observe(element));
       }
       window.addEventListener('resize', schedule, { passive: true });

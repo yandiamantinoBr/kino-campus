@@ -118,13 +118,15 @@ describe('breadcrumb do detalhe', () => {
 });
 
 describe('cabeçalho estreito e comentários', () => {
-  test('oculta o wordmark antes da colisão e mantém o nome opcional legível', () => {
+  test('prioriza o nome da marca e reorganiza o cabeçalho antes da colisão', () => {
     const shortcut = fs.readFileSync(path.join(ROOT, 'assets/css/kc-chat-shortcut.css'), 'utf8');
     expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-logo .kc-logo-text')).toContain('visibility: hidden;');
     expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-logo .kc-logo-text')).toContain('display: flex !important;');
     expect(cssBlock(shortcut, '.kc-header:not(.kc-header--admin) .kc-logo--wordmark-visible .kc-logo-text')).toContain('visibility: visible;');
     expect(shortcut).not.toContain('@media (max-width: 480px)');
-    expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core-widgets.js'), 'utf8')).toContain('required <= available');
+    expect(shortcut).toContain('.kc-header-container.kc-header-container--wordmark-wrap');
+    expect(shortcut).toContain('grid-template-columns: minmax(0, 1fr) 36px !important;');
+    expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core-widgets.js'), 'utf8')).toContain('const wrap = visible && required > available;');
     expect(fs.readFileSync(path.join(ROOT, 'assets/js/core/kc-core.js'), 'utf8')).toContain('window.KCCore.initHeaderWordmarkFit()');
     expect(PRODUCT_LOAD).toContain("setAttribute('placeholder', 'Seu nome (opcional)')");
     expect(PRODUCT_LOAD).not.toContain('Seu nome (opcional no modo local/dev)');
