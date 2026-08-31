@@ -62,4 +62,38 @@ efetivamente renderizados no ranking.
 
 [Contrato da transformação e parâmetros oficiais](https://supabase.com/docs/guides/storage/serving/image-transformations).
 
-Integração, deploy e medições após publicação serão acrescentados após os checks.
+## Integração e medição da página completa
+
+PR [#916](https://github.com/yandiamantinoBr/kino-campus/pull/916) integrada com
+todos os checks verdes. Merge `bc4e7a2da66cf7cf40822c8ca3bdd7c3c6094269`,
+deploy `dpl_2njyfDRg9xnVUZkMdWJyKczc18WM`, READY/production/main e SHA no HTML
+canônico confirmados. A validação completa passou 342 suítes / 5.842 testes
+Jest (7 ignorados preexistentes), 243 E2E do fonte e 243 do artefato minificado.
+Uma falha transitória Windows EPERM na limpeza de fixture Cadu foi investigada:
+34 testes isolados passaram e a repetição de todas as 342 suítes ficou verde.
+Não se alterou o teste ou o código Cadu para esconder essa falha.
+
+O componente ficou menor, mas o boot completo ainda baixava o mesmo original
+de 862.958 bytes para um autor de card com 20 CSS px. A investigação de rede e
+DOM confirmou `kc-card__author`, não um segundo boot do ranking. Esse achado
+motivou o complemento do terceiro lote: ambos passam a compartilhar a mesma
+URL 144 px, em vez de afirmar indevidamente que o primeiro ajuste do ranking
+já tinha economizado esse download na página inteira.
+
+As medições remotas variaram; a nota 89 do primeiro lote não é constante:
+
+| PSI / horário GMT-3 | Performance | FCP | LCP | TBT | CLS | SI |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| [12:45](https://pagespeed.web.dev/analysis/https-kinocampus-com-br/mk7mjoh6b7?hl=en_GB&form_factor=mobile) | 66 | 2,0 s | 9,4 s | 100 ms | 0,07 | 6,2 s |
+| [12:52](https://pagespeed.web.dev/analysis/https-kinocampus-com-br/ewznnenhri?hl=en_GB&form_factor=mobile) | 67 | 2,0 s | 9,4 s | 0 ms | 0,017 | 6,7 s |
+
+Ambos usam Lighthouse 13.4.1/Moto G Power/4G lento; acessibilidade, boas práticas
+e SEO permaneceram 95/96/100. LCP continua sendo o parágrafo de consentimento,
+não o avatar. A decomposição observada informa render delay ~2,41 s, enquanto
+a métrica simulada é 9,4 s. Não confundir esses dois valores nem ocultar o
+consentimento para melhorar a nota. As duas amostras não provam causalidade
+entre a transformação e a regressão de LCP, mas impedem alegar ganho uniforme.
+
+Medição local controlada Lighthouse 12.6.1: nota 74, FCP 3,33 s, LCP 4,32 s,
+TBT 32,5 ms, CLS 0,0821, SI 5,22 s; payload total 3.245.746 bytes. A auditoria
+identificou tanto original quanto miniatura no tráfego, antes do complemento.
