@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-08-31] - cabeçalho mobile compacto em uma única linha
+
+- Substituída a segunda linha do PR #907 por margens, gaps, marca e controles
+  proporcionais à largura. Nome completo, busca, sino, chat, tema e conta
+  compartilham o mesmo eixo; avatar, verificado e seta permanecem presentes.
+- Alvos utilitários preservam 36 px de altura e pelo menos 26 px de largura;
+  o nome usa limites em rem para acompanhar ampliação do texto.
+- Login/Cadastro usa o rótulo visual Entrar somente quando o completo não
+  cabe, preservando o nome acessível e o botão original. A decisão mede o
+  rótulo completo para não alternar continuamente entre os dois estados.
+- Regressões exigem linha única, altura compacta, nome inteiro, controles
+  atingíveis e ausência de colisões, incluindo fontes ampliadas.
+
 ## [2026-08-31] - nome KinoCampus obrigatório no mobile
 
 - Corrigida a prioridade do cabeçalho: o nome legível permanece visível em

@@ -40,7 +40,71 @@
   display: none !important;
 }
 
+.kc-login-label-compact {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .kc-header:not(.kc-header--admin) {
+    --kc-header-control-width: clamp(26px, calc(10vw - 6px), 36px);
+    padding-inline: clamp(8px, calc(5vw - 8px), 12px) !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-container {
+    grid-template-columns: minmax(0, 1fr) var(--kc-header-control-width) auto;
+    gap: clamp(1px, calc(2.5vw - 7px), 4px) !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions {
+    gap: clamp(0px, calc(2.5vw - 8px), 3px) !important;
+    flex-wrap: nowrap;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-search-mobile-btn,
+  .kc-header:not(.kc-header--admin) .kc-user-actions button:not(.btn-login),
+  .kc-header:not(.kc-header--admin) .kc-user-actions a.icon-btn {
+    width: var(--kc-header-control-width);
+    min-width: var(--kc-header-control-width);
+    height: 36px;
+    min-height: 36px;
+    font-size: clamp(16px, 4.7vw, 20px);
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 6px;
+    font-size: clamp(0.75rem, 3.4vw, 0.85rem);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login.is-auth {
+    min-width: 0;
+    padding: 4px 3px !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-user {
+    gap: clamp(1px, calc(2.5vw - 7px), 3px);
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-user__avatar {
+    width: clamp(20px, calc(5vw + 4px), 24px);
+    height: clamp(20px, calc(5vw + 4px), 24px);
+    flex-shrink: 0;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-user__verified {
+    font-size: clamp(10px, 2.8vw, 12px);
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-header-user__chevron {
+    font-size: clamp(6px, 2vw, 8px);
+    margin: 0;
+  }
+
   .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut {
     display: inline-flex;
     border-radius: 50%;
@@ -60,11 +124,11 @@
     background: rgba(255, 107, 0, 0.12);
   }
 
-  /* O nome tem prioridade; em déficit de espaço as ações ganham outra linha.
-     O texto segue mensurável antes da primeira medição e durante fontes tardias. */
+  /* Uma linha: a marca e os controles compactam progressivamente, sem wrap. */
   .kc-header:not(.kc-header--admin) .kc-logo a {
     position: relative;
-    gap: 8px;
+    min-height: 36px;
+    gap: clamp(2px, calc(2.5vw - 6px), 5px);
     transform: none;
   }
 
@@ -84,6 +148,17 @@
 
   .kc-header:not(.kc-header--admin) .kc-logo .kc-logo-name {
     width: max-content;
+    font-size: clamp(0.875rem, 4.3vw, 1.05rem) !important;
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo-mark {
+    width: clamp(26px, calc(13vw - 15.6px), 38px);
+    height: clamp(26px, calc(13vw - 15.6px), 38px);
+    border-radius: clamp(9px, 3vw, 13px);
+  }
+
+  .kc-header:not(.kc-header--admin) .kc-logo-mark i {
+    font-size: clamp(14px, 4.7vw, 18px);
   }
 
   .kc-header:not(.kc-header--admin) .kc-logo .kc-logo-sub {
@@ -97,33 +172,24 @@
     pointer-events: auto;
   }
 
-  .kc-header:not(.kc-header--admin) .kc-header-container.kc-header-container--wordmark-wrap {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 36px !important;
-    row-gap: 8px !important;
+  .kc-header:not(.kc-header--admin) .kc-login-label-full {
+    display: inline-block;
+    width: max-content;
   }
 
-  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-logo {
-    grid-column: 1 !important;
-    grid-row: 1;
+  /* Mantém o nome acessível e a largura intrínseca mensurável, mesmo curto. */
+  .kc-header:not(.kc-header--admin) .kc-header-container--compact-login .kc-login-label-full {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(100%);
+    white-space: nowrap;
   }
 
-  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-search-mobile-btn {
-    grid-column: 2 !important;
-    grid-row: 1;
-  }
-
-  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-user-actions {
-    grid-column: 1 / -1 !important;
-    grid-row: 2;
-    flex-wrap: wrap;
-    max-width: 100%;
-  }
-
-  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap .kc-scroll-rail--nav,
-  .kc-header:not(.kc-header--admin) .kc-header-container--wordmark-wrap > .kc-nav-links {
-    grid-column: 1 / -1 !important;
-    grid-row: 3;
+  .kc-header:not(.kc-header--admin) .kc-header-container--compact-login .kc-login-label-compact {
+    display: inline;
   }
 }
 
@@ -131,12 +197,5 @@
   .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut:hover:not(:active):not([aria-current="page"]) {
     color: var(--kc-primary-brand);
     background: rgba(255, 107, 0, 0.08);
-  }
-}
-
-@media (max-width: 360px) {
-  .kc-header:not(.kc-header--admin) .kc-user-actions a.btn-login:not(.is-auth) {
-    font-size: 0.8rem;
-    padding-inline: 8px;
   }
 }
