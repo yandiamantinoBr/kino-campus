@@ -36,16 +36,37 @@ async function changedPixels(page, before, after) {
   }, [before.toString('base64'), after.toString('base64')]);
 }
 
+async function actualFont(page) {
+  // CSS family alone cannot prove the intended font supplied the glyph: a
+  // fallback can render the same shape. This suite runs in Chromium, so assert
+  // its actual platform font in addition to exact raster comparisons.
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send('DOM.enable');
+    await session.send('CSS.enable');
+    const { root } = await session.send('DOM.getDocument');
+    const { nodeId } = await session.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.fas' });
+    const { fonts } = await session.send('CSS.getPlatformFontsForNode', { nodeId });
+    // PostScript name is stable across DirectWrite/FreeType; familyName can
+    // legitimately expose either typographic or legacy family on each OS.
+    return fonts.filter(font => font.glyphCount > 0).map(font => ({ postScriptName: font.postScriptName, isCustomFont: font.isCustomFont }));
+  } finally {
+    await session.detach();
+  }
+}
+
 for (const size of [16, 22, 32]) {
   test(`all 281 reviewed glyphs retain exact pixels at ${size}px`, async ({ page }, testInfo) => {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await mount(page, manifest.codepoints, false, size);
+    expect(await actualFont(page)).toEqual([{ postScriptName: 'FontAwesome6Free-Solid', isCustomFont: true }]);
     const original = await page.locator('.grid').screenshot();
     await page.addStyleTag({ url: compactCss });
-    await page.evaluate(async points => {
-      await document.fonts.load('900 22px "Kino Campus UI Icons"', String.fromCodePoint(...points));
-    }, manifest.codepoints);
+    await page.evaluate(async ({ points, size }) => {
+      await document.fonts.load(`900 ${size}px "Kino Campus UI Icons"`, String.fromCodePoint(...points));
+    }, { points: manifest.codepoints, size });
     await expect(page.locator('.fas').first()).toHaveCSS('font-family', '"Kino Campus UI Icons"');
+    expect(await actualFont(page)).toEqual([{ postScriptName: 'KinoCampusUIIcons-Solid', isCustomFont: true }]);
     const compact = await page.locator('.grid').screenshot();
     await testInfo.attach(`font-original-${size}`, { body: original, contentType: 'image/png' });
     await testInfo.attach(`font-compact-${size}`, { body: compact, contentType: 'image/png' });

@@ -73,7 +73,17 @@ def generate():
     points = manifest['codepoints']
     if points != sorted(set(points)) or not set(points).issubset(cmap):
         raise RuntimeError('Manifest must contain unique sorted upstream codepoints')
-    advances = {point: font['hmtx'].metrics[cmap[point]] for point in points}
+    # FreeType's auto-hinter derives Latin alignment zones from other glyphs in
+    # the same font. Retaining outlines alone is not enough: removing Basic
+    # Latin/context aliases changes punctuation rendering on Linux. Preserve
+    # the complete upstream Basic Latin repertoire plus EVERY Unicode alias
+    # of each retained glyph, not a heuristic list of blue-zone characters.
+    # These extra cmap entries are internal rasterization context only. The CSS
+    # unicode-range remains the reviewed UI set, so fallback routing is intact.
+    basic_latin = {point for point in cmap if point <= 0x7F}
+    retained_glyphs = {cmap[point] for point in set(points) | basic_latin}
+    subset_points = sorted(point for point, glyph in cmap.items() if glyph in retained_glyphs)
+    advances = {point: font['hmtx'].metrics[cmap[point]] for point in subset_points}
     metric_fields = {
         'head': ['unitsPerEm', 'xMin', 'xMax', 'yMin', 'yMax'],
         'hhea': ['ascent', 'descent', 'lineGap'],
@@ -85,7 +95,7 @@ def generate():
     outline_source = TTFont(io.BytesIO(original), recalcTimestamp=False, recalcBBoxes=False)
     glyphs = outline_source.getGlyphSet()
     outlines = {}
-    for point in points:
+    for point in subset_points:
         pen = RecordingPen()
         glyphs[cmap[point]].draw(pen)
         outlines[point] = pen.value
@@ -99,7 +109,7 @@ def generate():
     options.recalc_bounds = False
     options.layout_features = ['*']
     subsetter = subset.Subsetter(options=options)
-    subsetter.populate(unicodes=points)
+    subsetter.populate(unicodes=subset_points)
     subsetter.subset(font)
     # Font Awesome is a Reserved Font Name. Keep copyright/license metadata,
     # but give the derived font its own internal family and PostScript names.
@@ -114,14 +124,14 @@ def generate():
     output = buffer.getvalue()
     verified = TTFont(io.BytesIO(output))
     output_cmap = verified.getBestCmap()
-    if set(output_cmap) != set(points):
-        raise RuntimeError('Generated cmap differs from the reviewed subset')
-    if advances != {point: verified['hmtx'].metrics[output_cmap[point]] for point in points}:
+    if set(output_cmap) != set(subset_points):
+        raise RuntimeError('Generated cmap differs from the UI and rasterization-context closure')
+    if advances != {point: verified['hmtx'].metrics[output_cmap[point]] for point in subset_points}:
         raise RuntimeError('Generated glyph advances changed')
     if metrics != {(table, field): getattr(verified[table], field) for table, fields in metric_fields.items() for field in fields}:
         raise RuntimeError('Generated font-wide layout metrics changed')
     output_glyphs = verified.getGlyphSet()
-    for point in points:
+    for point in subset_points:
         pen = RecordingPen()
         output_glyphs[output_cmap[point]].draw(pen)
         if pen.value != outlines[point]:
@@ -161,6 +171,8 @@ def generate():
 '''
     metadata = {**manifest, 'subsetFile': filename, 'subsetSha256': digest,
                 'subsetBytes': len(output), 'upstreamBytes': len(original),
+                'rasterizationContext': 'upstream-basic-latin-and-retained-glyph-unicode-aliases',
+                'subsetCodepoints': subset_points,
                 'remainderCodepoints': remainder}
     return filename, output, css, metadata
 

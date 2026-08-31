@@ -50,6 +50,27 @@ describe('optional home icon subset with complete upstream fallback', () => {
     expect(faces[1]).not.toContain(manifest.subsetFile);
   });
 
+  test('retains internal Latin autohint context and glyph aliases without expanding CSS routing', () => {
+    expect(manifest.rasterizationContext).toBe('upstream-basic-latin-and-retained-glyph-unicode-aliases');
+    expect(manifest.subsetCodepoints).toEqual([...new Set(manifest.subsetCodepoints)].sort((a, b) => a - b));
+    const retained = new Set(manifest.subsetCodepoints);
+    for (const point of manifest.codepoints) expect(retained.has(point)).toBe(true);
+    for (const character of 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') {
+      expect(retained.has(character.codePointAt(0))).toBe(true);
+    }
+    // The Linux regression involved punctuation aliases whose outlines were
+    // unchanged but whose auto-hint context was removed from the original cmap.
+    for (const point of [0xD7, 0x2013, 0x201D, 0x2212, 0x2795, 0xF067, 0xF128]) {
+      expect(retained.has(point)).toBe(true);
+    }
+    const uiPoints = new Set(manifest.codepoints);
+    const fallback = new Set(manifest.remainderCodepoints);
+    for (const point of manifest.subsetCodepoints.filter(value => !uiPoints.has(value))) {
+      expect(fallback.has(point)).toBe(true);
+    }
+    expect(manifest.codepoints).toHaveLength(281);
+  });
+
   test('opts in only the solid classes and preserves regular/brand/vendor definitions', () => {
     expect(css).toContain('.fa-solid, .fas {');
     expect(css).not.toMatch(/\.fa(?:r|b|-[rb][a-z-]+)\b/);
