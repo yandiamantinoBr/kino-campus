@@ -175,9 +175,15 @@ describe('Cadu publish — Edge Function', () => {
     expect(schema).toContain('score?: number | string');
     expect(schema).toContain('dates?: Record<string, unknown>');
     expect(schema).toContain('enrichmentCheckedAt?: string');
-    expect(mapper).toContain('isUsefulFormattedDescription');
-    expect(mapper).toContain('stripCmsCreditLines');
-    expect(mapper).toContain('item.formattedDescription');
+    const description = r('supabase/functions/cadu-publish/description.ts');
+    expect(description).toContain('isUsefulFormattedDescription');
+    expect(description).toContain('stripCmsCreditLines');
+    expect(description).toContain('item.formattedDescription');
+    expect(description).toContain('MAX_CADU_DESCRIPTION_LENGTH = 5000');
+    expect(r('assets/js/features/create-post/kc-create-post.fields.js')).toContain('KC_DESCRIPTION_MAX_LENGTH_ADMIN = 5000');
+    expect(schema).toContain('caduDescriptionBody(item)');
+    expect(mapper).toContain('caduDescriptionBody(item)');
+    expect(mapper).not.toContain('clampMarkdown(');
     expect(mapper).toContain('actionLabel');
     expect(mapper).toContain('actionKey');
     expect(mapper).toContain('inferActionLabel');

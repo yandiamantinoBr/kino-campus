@@ -1,0 +1,203 @@
+{
+  "runId": "d7b8f99b-3576-46b8-aa37-8072874d0ba3",
+  "observedAt": "2026-08-31T16:08:57Z",
+  "notes": "Public formatter text and persisted canonical descriptions from run d7. Only fields needed to reproduce description mapping; no authentication or personal account data.",
+  "cases": [
+    {
+      "postId": "d3e6a10e-0446-4e41-8f46-f5715b9a18a5",
+      "sourceUrl": "https://bc.ufg.br/n/203988",
+      "sourceRevision": "2d2af8647c73b69b9b436353d87f7e64bd58948e71126c4f11a7613947783d72",
+      "item": {
+        "module": "eventos",
+        "category": "workshops",
+        "title": "Servidores do Sibi/UFG lançam livros durante o Festival Flore-Ser",
+        "formattedTitle": "Servidores do Sibi/UFG lançam livros durante o Festival Flore-Ser",
+        "description": "📢 **Lançamento de livros de servidores do Sibi/UFG no Festival Flore-Ser!**\n\n📅 **2 de setembro de 2026**, às **20h**\n\n📊 Autores: Esdra Basílio, Wesley Nascimento e Márcio Cruzeiro. Destaque para *Biblioteconomia é coisa de mulher? Relações de gênero e estereótipos na região Centro-Oeste (1962-2021)*, de Esdra, fruto de sua tese de doutorado na UFG.\n\n🎯 Festival Flore-Ser: Saberes, Cuidados e Meio Ambiente – programação gratuita e aberta à comunidade, com oficinas, rodas de conversa, exposições.\n\n📍 **Local:** Biblioteca Central (BC) da UFG\n\n📎 [Mais informações](https://bc.ufg.br/n/203988)\n📄 [Acesse a tese na BDTD](https://repositorio.bc.ufg.br/tede/items/b73fe4b9-d19c-4cba-89d3-fcefb1ec9848)\n\n📌 **Fonte:** BC/UFG",
+        "formattedDescription": "📢 **Lançamento de livros de servidores do Sibi/UFG no Festival Flore-Ser!**\n\n📅 **2 de setembro de 2026**, às **20h**\n\n📊 Autores: Esdra Basílio, Wesley Nascimento e Márcio Cruzeiro. Destaque para *Biblioteconomia é coisa de mulher? Relações de gênero e estereótipos na região Centro-Oeste (1962-2021)*, de Esdra, fruto de sua tese de doutorado na UFG.\n\n🎯 Festival Flore-Ser: Saberes, Cuidados e Meio Ambiente – programação gratuita e aberta à comunidade, com oficinas, rodas de conversa, exposições.\n\n📍 **Local:** Biblioteca Central (BC) da UFG\n\n📎 [Mais informações](https://bc.ufg.br/n/203988)\n📄 [Acesse a tese na BDTD](https://repositorio.bc.ufg.br/tede/items/b73fe4b9-d19c-4cba-89d3-fcefb1ec9848)\n\n📌 **Fonte:** BC/UFG",
+        "sourceUrl": "https://bc.ufg.br/n/203988",
+        "sourceRegistryId": "web.ufg.bc",
+        "sourceRevision": "2d2af8647c73b69b9b436353d87f7e64bd58948e71126c4f11a7613947783d72",
+        "actionLabel": "Acessar edital",
+        "link": "https://bc.ufg.br/n/203988",
+        "extractedLinks": [
+          {
+            "url": "https://repositorio.bc.ufg.br/tede/items/b73fe4b9-d19c-4cba-89d3-fcefb1ec9848",
+            "type": "paginasOficiais",
+            "label": "Biblioteca Digital de Teses e Dissertações da UFG (BDTD)"
+          }
+        ],
+        "relevantLinks": {
+          "outros": [],
+          "editais": [],
+          "formularios": [],
+          "paginasOficiais": [
+            {
+              "url": "https://repositorio.bc.ufg.br/tede/items/b73fe4b9-d19c-4cba-89d3-fcefb1ec9848",
+              "label": "Biblioteca Digital de Teses e Dissertações da UFG (BDTD)"
+            }
+          ]
+        },
+        "pdfLinks": [],
+        "dates": {
+          "eventStartsAt": "2026-09-02",
+          "eventEndsAt": "2026-09-02",
+          "applicationDeadline": null,
+          "applicationOpensAt": null,
+          "canApply": false,
+          "applicationStatus": "unknown"
+        }
+      },
+      "persistedDescriptionBefore": "📢 **Lançamento de livros de servidores do Sibi/UFG no Festival Flore-Ser!**\n📅 **2 de setembro de 2026**, às **20h**\n📊 Autores: Esdra Basílio, Wesley Nascimento e Márcio Cruzeiro. Destaque para *Biblioteconomia é coisa de mulher? Relações de gênero e estereótipos na região Centro-Oeste (1962-2021)*, de Esdra, fruto de sua tese de doutorado na UFG.\n🎯 Festival Flore-Ser: Saberes, Cuidados e Meio Ambiente – programação gratuita e aberta à comunidade, com oficinas, rodas de conversa, exposições.\n📍 **Local:** Biblioteca Central (BC) da UFG\n📎 [Mais informações](https://bc.ufg.br/n/203988)\n📄 [Acesse a tese na BDTD](https://repositorio.bc.ufg.br/tede/items/b73fe4b9-d19c-4cba-89d3-fcefb1ec9848)\n📌 **Fonte:** BC/UFG"
+    },
+    {
+      "postId": "7538492f-aabb-4737-b25d-518669f15986",
+      "sourceUrl": "https://pos.letras.ufg.br/n/203943",
+      "sourceRevision": "da0d271692eb3d3b0eea75b251106019e61d2eafd6ffbdca7e868558447fab97",
+      "item": {
+        "module": "eventos",
+        "category": "congressos",
+        "title": "IX Seminário de Pesquisa do PPGLL",
+        "formattedTitle": "IX Seminário de Pesquisa do PPGLL",
+        "description": "🚨 **O IX Seminário de Pesquisa do PPGLL** acontece de **13 a 16 de outubro de 2026**! O evento, promovido pelo Programa de Pós-Graduação em Letras e Linguística da UFG, reúne apresentações de projetos de pesquisa de mestrado e doutorado com arguições de pesquisadores convidados.\n\n📅 **Datas importantes:**\n- Inscrições dos projetos: **21 a 25 de setembro de 2026** (abrem em 21/09)\n- Evento: **13 a 16 de outubro de 2026**\n- Programação preliminar: **6 de outubro de 2026** no site do programa\n\n📊 **Informações-chave:**\n- **Público-alvo:** discentes de **Mestrado** e **Doutorado** ingressantes em **2026** e ingressantes em **2025** que ainda não apresentaram trabalho por motivos assegurados pelo Regulamento.\n- **Modalidade:** presencial, híbrido ou **online**.\n- **Arguições:** podem ser **orais** (arguidor participa virtualmente ou presencialmente) ou **escritas** (parecer enviado antecipadamente).\n- Apresentação oral: **15 minutos** para o discente; arguição: **30 minutos**.\n\n📝 **Como participar:**\n- A inscrição deve ser feita **pelo orientador(a)**, que preenche a Ficha de Inscrição e envia junto com o projeto de pesquisa.\n- O projeto deve seguir o **Anexo 1**, com **10 a 20 páginas**, incluindo capa, resumo (máx. **300 palavras**), introdução, justificativa, objetivos, metodologia, cronograma e referências em ABNT.\n- Critérios de avaliação: vinculação às **linhas de pesquisa** do programa, problematização do tema, pertinência da justificativa e bibliografia, metodologia/exequibilidade, clareza e correção linguística.\n\n📍 **Local:** presencial, híbrido ou online (sem endereço específico).\n\n📎 **Links:**\n- 📄 [Acesse o edital completo (PDF)](https://files.cercomp.ufg.br/weby/up/26/o/IX_Semin%C3%A1rio_de_Pesquisa_-_Normas.pdf)\n- 🌐 [Notícias do PPGLL](https://pos.letras.ufg.br/news)\n- 📎 [Mais informações](https://pos.letras.ufg.br/n/203943)\n\n📌 **Fonte:** PPGLL/UFG",
+        "formattedDescription": "🚨 **O IX Seminário de Pesquisa do PPGLL** acontece de **13 a 16 de outubro de 2026**! O evento, promovido pelo Programa de Pós-Graduação em Letras e Linguística da UFG, reúne apresentações de projetos de pesquisa de mestrado e doutorado com arguições de pesquisadores convidados.\n\n📅 **Datas importantes:**\n- Inscrições dos projetos: **21 a 25 de setembro de 2026** (abrem em 21/09)\n- Evento: **13 a 16 de outubro de 2026**\n- Programação preliminar: **6 de outubro de 2026** no site do programa\n\n📊 **Informações-chave:**\n- **Público-alvo:** discentes de **Mestrado** e **Doutorado** ingressantes em **2026** e ingressantes em **2025** que ainda não apresentaram trabalho por motivos assegurados pelo Regulamento.\n- **Modalidade:** presencial, híbrido ou **online**.\n- **Arguições:** podem ser **orais** (arguidor participa virtualmente ou presencialmente) ou **escritas** (parecer enviado antecipadamente).\n- Apresentação oral: **15 minutos** para o discente; arguição: **30 minutos**.\n\n📝 **Como participar:**\n- A inscrição deve ser feita **pelo orientador(a)**, que preenche a Ficha de Inscrição e envia junto com o projeto de pesquisa.\n- O projeto deve seguir o **Anexo 1**, com **10 a 20 páginas**, incluindo capa, resumo (máx. **300 palavras**), introdução, justificativa, objetivos, metodologia, cronograma e referências em ABNT.\n- Critérios de avaliação: vinculação às **linhas de pesquisa** do programa, problematização do tema, pertinência da justificativa e bibliografia, metodologia/exequibilidade, clareza e correção linguística.\n\n📍 **Local:** presencial, híbrido ou online (sem endereço específico).\n\n📎 **Links:**\n- 📄 [Acesse o edital completo (PDF)](https://files.cercomp.ufg.br/weby/up/26/o/IX_Semin%C3%A1rio_de_Pesquisa_-_Normas.pdf)\n- 🌐 [Notícias do PPGLL](https://pos.letras.ufg.br/news)\n- 📎 [Mais informações](https://pos.letras.ufg.br/n/203943)\n\n📌 **Fonte:** PPGLL/UFG",
+        "sourceUrl": "https://pos.letras.ufg.br/n/203943",
+        "sourceRegistryId": "web.ufg.ppg.ppgll",
+        "sourceRevision": "da0d271692eb3d3b0eea75b251106019e61d2eafd6ffbdca7e868558447fab97",
+        "actionLabel": "Ver detalhes",
+        "link": "https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-rak6L9UP9Ow_wDMKD6uud1mecHDctZuMusQ/viewform",
+        "extractedLinks": [
+          {
+            "url": "https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-",
+            "type": "formularios",
+            "label": "Formulário citado no edital"
+          },
+          {
+            "url": "https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-rak6L9UP9Ow_wDMKD6uud1mecHDctZuMusQ/viewform",
+            "type": "formularios",
+            "label": "Formulário de inscrição"
+          },
+          {
+            "url": "https://files.cercomp.ufg.br/weby/up/26/o/IX_Semin%C3%A1rio_de_Pesquisa_-_Normas.pdf",
+            "type": "editais",
+            "label": "confira aqui"
+          },
+          {
+            "url": "https://pos.letras.ufg.br/news",
+            "type": "paginasOficiais",
+            "label": "Listar Todas"
+          }
+        ],
+        "relevantLinks": {
+          "outros": [],
+          "editais": [
+            {
+              "url": "https://files.cercomp.ufg.br/weby/up/26/o/IX_Semin%C3%A1rio_de_Pesquisa_-_Normas.pdf",
+              "label": "confira aqui"
+            }
+          ],
+          "formularios": [
+            {
+              "url": "https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-",
+              "label": "Formulário citado no edital",
+              "actionable": false,
+              "documentReferenced": true
+            },
+            {
+              "url": "https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-rak6L9UP9Ow_wDMKD6uud1mecHDctZuMusQ/viewform",
+              "label": "Formulário de inscrição",
+              "actionable": false,
+              "provenance": [
+                {
+                  "contract": "cadu-link-provenance-v1",
+                  "discoveredOn": "https://pos.letras.ufg.br/n/203943-ix-seminario-de-pesquisa-do-ppgll",
+                  "sourceSha256": "835f21969011d7f98fe3eaa47ab8870e772e684671e55dcc62ae06eb690ac688",
+                  "discoveryKind": "official_root_html",
+                  "observedInCurrentRun": true
+                }
+              ],
+              "researchVerified": false,
+              "applicationWindowDates": [],
+              "applicationPurposeEvidence": true
+            }
+          ],
+          "paginasOficiais": [
+            {
+              "url": "https://pos.letras.ufg.br/news",
+              "label": "Listar Todas"
+            }
+          ]
+        },
+        "pdfLinks": [
+          "https://files.cercomp.ufg.br/weby/up/26/o/IX_Semin%C3%A1rio_de_Pesquisa_-_Normas.pdf"
+        ],
+        "dates": {
+          "eventStartsAt": "2026-10-13",
+          "eventEndsAt": "2026-10-16",
+          "applicationDeadline": "2026-09-25",
+          "applicationOpensAt": "2026-09-21",
+          "canApply": false,
+          "applicationStatus": "scheduled"
+        }
+      },
+      "persistedDescriptionBefore": "🚨 **O IX Seminário de Pesquisa do PPGLL** acontece de **13 a 16 de outubro de 2026**! O evento, promovido pelo Programa de Pós-Graduação em Letras e Linguística da UFG, reúne apresentações de projetos de pesquisa de mestrado e doutorado com arguições de pesquisadores convidados.\n📅 **Datas importantes:**\n- Inscrições dos projetos: **21 a 25 de setembro de 2026** (abrem em 21/09)\n- Evento: **13 a 16 de outubro de 2026**\n- Programação preliminar: **6 de outubro de 2026** no site do programa\n📊 **Informações-chave:**\n- **Público-alvo:** discentes de **Mestrado** e **Doutorado** ingressantes em **2026** e ingressantes em **2025** que ainda não apresentaram trabalho por motivos assegurados pelo Regulamento.\n- **Modalidade:** presencial, híbrido ou **online**.\n- **Arguições:** podem ser **orais** (arguidor participa virtualmente ou presencialmente) ou **escritas** (parecer enviado antecipadamente).\n- Apresentação oral: **15 minutos** para o discente; arguição: **30 minutos**.\n📝 **Como participar:**\n- A inscrição deve ser feita **pelo orientador(a)**, que preenche a Ficha de Inscrição e envia junto com o projeto de pesquisa.\n- O projeto deve seguir o **Anexo 1**, com **10 a 20 páginas**, incluindo capa, resumo (máx. **300 palavras**), introdução, justificativa, objetivos, metodologia, cronograma e referências em ABNT.\n- Critérios de avaliação: vinculação às **linhas de pesquisa** do programa, problematização do tema, pertinência da justificativa e bibliografia, metodologia/exequibilidade, clareza e correção linguística.\n📍 **Local:** presencial, híbrido ou online (sem endereço específico).\n📎 **Links:**\n- 📄 [Acesse o edital completo...\n\n**📄 Editais e documentos:**\n- **Formulário citado no edital:** [https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-](https://docs.google.com/forms/d/e/1FAIpQLSc0Flu5PQWKJ0-)\n- **confira aqui:**..."
+    },
+    {
+      "postId": "0dafa9ed-c495-4edf-b5a3-bb0fa6df1279",
+      "sourceUrl": "https://inf.ufg.br/n/203734",
+      "sourceRevision": "cc96cef28e81d0b1c00f3b8515c11974f9d023583ff853f431ba5581306de4e9",
+      "item": {
+        "module": "oportunidades",
+        "category": "monitoria",
+        "title": "Edital PROEX nº 19/2026: seleção de atividades para o 23º CONPEEX",
+        "formattedTitle": "Edital PROEX nº 19/2026: seleção de atividades para o 23º CONPEEX",
+        "description": "📢 **A Pró-Reitoria de Extensão (PROEX/UFG) publicou o Edital nº 19/2026** para selecionar propostas de atividades que comporão a programação do **23º Congresso de Pesquisa, Ensino e Extensão (CONPEEX/UFG)**.\n\n📅 **Prazo final:** 04/09/2026.\n\n📊 **Vagas ofertadas:**\n- **15 vagas** para o **Espaço Extensão e Cultura** (atividades interativas e dinâmicas, com duração de 4h, nas áreas temáticas de extensão).\n- **31 vagas** para **Ações Formativas** (oficinas, palestras, rodas de conversa, mesas-redondas e afins, com duração de 1h30).\n\n👥 **Quem pode participar:** servidores(as) da UFG, previamente inscritos(as) no **23º CONPEEX**. Para a Categoria 1, é necessário coordenar ação de extensão cadastrada no SIGAA Extensão, em execução; para a Categoria 2, coordenar projeto de ensino, pesquisa ou extensão cadastrado no SIGAA. É permitida inscrição em ambas as categorias (na Categoria 1, apenas uma proposta por proponente).\n\n📝 **Seleção:** as propostas serão avaliadas por três critérios (detalhamento da proposta, coerência entre público-alvo/objetivos/metodologia e adequação ao espaço e horário), cada um com pontuação de 0 a 10. A média final deve ser **≥ 7,0** para classificação. Desempate pela ordem cronológica de inscrição. Propostas não selecionadas permanecem como suplentes.\n\n📅 **Cronograma:** resultado preliminar da habilitação em **10/09**; fase recursal até **11/09**; resultado final da habilitação em **15/09**; resultado preliminar da avaliação em **18/09**; fase recursal até **21/09**; resultado final em **25/09**.\n\n📍 **Local e período das atividades:** presenciais no **Centro de Cultura e Eventos Professor Ricardo Freua Bufáiçal**, de **9 a 13 de novembro de 2026**. A definição de dia e horário ficará a critério da Comissão Geral do CONPEEX.\n\n📎 **Links:**\n- 📄 [Acesse o edital completo (PDF)](https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf)\n- 📎 [Mais informações](https://inf.ufg.br/n/203734)\n\n📧 Dúvidas: **proex@ufg.br**\n\n📌 **Fonte:** PROEX/UFG",
+        "formattedDescription": "📢 **A Pró-Reitoria de Extensão (PROEX/UFG) publicou o Edital nº 19/2026** para selecionar propostas de atividades que comporão a programação do **23º Congresso de Pesquisa, Ensino e Extensão (CONPEEX/UFG)**.\n\n📅 **Prazo final:** 04/09/2026.\n\n📊 **Vagas ofertadas:**\n- **15 vagas** para o **Espaço Extensão e Cultura** (atividades interativas e dinâmicas, com duração de 4h, nas áreas temáticas de extensão).\n- **31 vagas** para **Ações Formativas** (oficinas, palestras, rodas de conversa, mesas-redondas e afins, com duração de 1h30).\n\n👥 **Quem pode participar:** servidores(as) da UFG, previamente inscritos(as) no **23º CONPEEX**. Para a Categoria 1, é necessário coordenar ação de extensão cadastrada no SIGAA Extensão, em execução; para a Categoria 2, coordenar projeto de ensino, pesquisa ou extensão cadastrado no SIGAA. É permitida inscrição em ambas as categorias (na Categoria 1, apenas uma proposta por proponente).\n\n📝 **Seleção:** as propostas serão avaliadas por três critérios (detalhamento da proposta, coerência entre público-alvo/objetivos/metodologia e adequação ao espaço e horário), cada um com pontuação de 0 a 10. A média final deve ser **≥ 7,0** para classificação. Desempate pela ordem cronológica de inscrição. Propostas não selecionadas permanecem como suplentes.\n\n📅 **Cronograma:** resultado preliminar da habilitação em **10/09**; fase recursal até **11/09**; resultado final da habilitação em **15/09**; resultado preliminar da avaliação em **18/09**; fase recursal até **21/09**; resultado final em **25/09**.\n\n📍 **Local e período das atividades:** presenciais no **Centro de Cultura e Eventos Professor Ricardo Freua Bufáiçal**, de **9 a 13 de novembro de 2026**. A definição de dia e horário ficará a critério da Comissão Geral do CONPEEX.\n\n📎 **Links:**\n- 📄 [Acesse o edital completo (PDF)](https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf)\n- 📎 [Mais informações](https://inf.ufg.br/n/203734)\n\n📧 Dúvidas: **proex@ufg.br**\n\n📌 **Fonte:** PROEX/UFG",
+        "sourceUrl": "https://inf.ufg.br/n/203734",
+        "sourceRegistryId": "web.ufg.inf",
+        "sourceRevision": "cc96cef28e81d0b1c00f3b8515c11974f9d023583ff853f431ba5581306de4e9",
+        "actionLabel": "Saiba mais",
+        "link": "https://inf.ufg.br/n/203734",
+        "extractedLinks": [
+          {
+            "url": "https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf",
+            "type": "editais",
+            "label": "edital completo"
+          },
+          {
+            "url": "https://inf.ufg.br/news?tags=EDITAL",
+            "type": "outros",
+            "label": "EDITAL"
+          }
+        ],
+        "relevantLinks": {
+          "outros": [
+            {
+              "url": "https://inf.ufg.br/news?tags=EDITAL",
+              "label": "EDITAL"
+            }
+          ],
+          "editais": [
+            {
+              "url": "https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf",
+              "label": "edital completo"
+            }
+          ],
+          "formularios": [],
+          "paginasOficiais": []
+        },
+        "pdfLinks": [
+          "https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf"
+        ],
+        "dates": {
+          "eventStartsAt": null,
+          "eventEndsAt": null,
+          "applicationDeadline": "2026-09-04",
+          "applicationOpensAt": null,
+          "canApply": false,
+          "applicationStatus": "open"
+        }
+      },
+      "persistedDescriptionBefore": "📢 **A Pró-Reitoria de Extensão (PROEX/UFG) publicou o Edital no 19/2026** para selecionar propostas de atividades que comporão a programação do **23o Congresso de Pesquisa, Ensino e Extensão (CONPEEX/UFG)**.\n📅 **Prazo final:** 04/09/2026.\n📊 **Vagas ofertadas:**\n- **15 vagas** para o **Espaço Extensão e Cultura** (atividades interativas e dinâmicas, com duração de 4h, nas áreas temáticas de extensão).\n- **31 vagas** para **Ações Formativas** (oficinas, palestras, rodas de conversa, mesas-redondas e afins, com duração de 1h30).\n👥 **Quem pode participar:** servidores(as) da UFG, previamente inscritos(as) no **23o CONPEEX**. Para a Categoria 1, é necessário coordenar ação de extensão cadastrada no SIGAA Extensão, em execução; para a Categoria 2, coordenar projeto de ensino, pesquisa ou extensão cadastrado no SIGAA. É permitida inscrição em ambas as categorias (na Categoria 1, apenas uma proposta por proponente).\n📝 **Seleção:** as propostas serão avaliadas por três critérios (detalhamento da proposta, coerência entre público-alvo/objetivos/metodologia e adequação ao espaço e horário), cada um com pontuação de 0 a 10. A média final deve ser **≥ 7,0** para classificação. Desempate pela ordem cronológica de inscrição. Propostas não selecionadas permanecem como suplentes.\n📅 **Cronograma:** resultado preliminar da habilitação em **10/09**; fase recursal até **11/09**; resultado final da habilitação em **15/09**; resultado preliminar da avaliação em **18/09**; fase recursal até **21/09**; resultado final em **25/09**.\n📍 **Local e período das atividades:** presenciais no **Centro de Cultura e Eventos Professor Ricardo Freua Bufáiçal**, de **9 a 13 de novembro de 2026**. A...\n\n**📄 Editais e documentos:**\n- **EDITAL:** [https://inf.ufg.br/news?tags=EDITAL](https://inf.ufg.br/news?tags=EDITAL)\n- **edital completo:** [https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf](https://files.cercomp.ufg.br/weby/up/694/o/SEI_6412306_Edital_462.pdf)"
+    }
+  ]
+}

@@ -7,6 +7,7 @@
 
 import { normalizeText, normalizeWhitespace, slugify } from "./util.ts";
 import { selfPacedValidityForItem } from "./self-paced-validity.ts";
+import { caduDescriptionBody } from "./description.ts";
 
 export const MODULE_KEYS = [
   "eventos",
@@ -567,6 +568,12 @@ export function validateItem(item: CaduItem): ValidationResult {
   if (!hasText(item.title)) errors.push("title obrigatorio.");
   if (!hasText(item.description) && !hasText(item.summary) && !hasText(item.text)) {
     errors.push("description (ou summary/text) obrigatorio.");
+  }
+
+  try {
+    caduDescriptionBody(item);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : String(error));
   }
 
   try {
