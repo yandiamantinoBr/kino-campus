@@ -60,6 +60,7 @@ import {
   parseDateRange,
   resolveAutoPublishScoreMin,
   stripHtml,
+  toOptimizedCoverUrl,
   validRemoteImageUrl,
 } from "./util.ts";
 
@@ -502,7 +503,9 @@ async function prepareFinalImages(
       try {
         const storageUrl = await uploadCover(admin, userId, postId, candidate, index);
         if (!storageUrl) throw new Error("storage_url_empty");
-        results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
+        // Padrão de capa/OG: sirve a capa pelo render do Storage (faixa
+        // 200–500 KB para crawler) mantendo o objeto original íntegro.
+        results[index] = { source: candidate, url: toOptimizedCoverUrl(storageUrl), uploaded: true, fallback: false };
       } catch (e) {
         const error = e instanceof Error ? e.message : String(e);
         results[index] = allowExternalFallback && canPersistExternalImageUrl(candidate)

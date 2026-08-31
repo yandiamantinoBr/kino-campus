@@ -235,6 +235,29 @@ export function canPersistExternalImageUrl(value: unknown): boolean {
   return !isTemporaryOrSocialImageUrl(clean);
 }
 
+/**
+ * Padrão de capa/OG (2026-08-31): URLs de objetos do kino-media são servidas
+ * pelo endpoint de transformação do Storage (render) com width/quality
+ * calibrados para previews de crawler (faixa verificada 200–500 KB em
+ * capas reais) — sem alterar o objeto original, que permanece íntegro no
+ * bucket para qualquer outro uso. Idempotente e não-kino URLs voltam intactas.
+ */
+export const COVER_RENDER_PARAMS = "width=1920&quality=85";
+
+export function toOptimizedCoverUrl(url: unknown): string {
+  const value = String(url || "").trim();
+  const marker = "/storage/v1/object/public/";
+  const idx = value.indexOf(marker);
+  if (idx < 0) return value;
+  const rest = value.slice(idx + marker.length);
+  const slash = rest.indexOf("/");
+  if (slash <= 0) return value;
+  const bucket = rest.slice(0, slash);
+  const objectPath = rest.slice(slash + 1).split("?")[0];
+  const origin = value.slice(0, idx);
+  return `${origin}/storage/v1/render/image/public/${bucket}/${objectPath}?${COVER_RENDER_PARAMS}`;
+}
+
 export function hostOf(value: unknown): string {
   try {
     return new URL(String(value ?? "")).host;
