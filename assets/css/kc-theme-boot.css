@@ -30,6 +30,16 @@ html.kc-loading .kc-feed-list {
   min-height: 280px;
 }
 
+/* A primeira página do feed é assíncrona e chega depois de kc-loading sair.
+   Reserve a área de conteúdo enquanto ela está vazia e pendente: o guia não
+   deve aparecer ali para logo ser empurrado pelos cards. :empty libera a área
+   assim que há conteúdo; o estado terminal libera também erros/resultados
+   vazios. data-theme é aplicado pelo boot JS, sem afastar o guia no no-JS. */
+html[data-theme] .kc-main-content--home .kc-feed-list[data-kc-feed-state="loading"]:empty {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
 /* ─── Transições suaves na revelação ─── */
 .kc-hero-carousel {
   transition: opacity 0.28s ease;

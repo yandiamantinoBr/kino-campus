@@ -40,6 +40,8 @@ import {
 } from "./mapper.ts";
 import { boundReviewPublicationDirective } from "./directive.ts";
 import { officialCoverCandidates } from "./official-cover.ts";
+import { downloadRemoteImage } from "./image-download.ts";
+import { RemoteResourceError } from "./remote-resource.ts";
 import {
   INSTITUTIONAL_REVIEW_POLICY_CODE,
   institutionalReviewRpcArguments,
@@ -405,54 +407,10 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   };
 }
 
-const IMAGE_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/jpg": "jpg",
-  "image/png": "png",
-  "image/gif": "gif",
-  "image/webp": "webp",
-};
-
 async function downloadImage(url: string): Promise<{ bytes: Uint8Array; contentType: string; ext: string }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), IMAGE_DOWNLOAD_TIMEOUT_MS);
-  try {
-    let resp: Response;
-    try {
-      resp = await fetch(url, {
-        headers: { accept: "image/*,*/*;q=0.5", "user-agent": USER_AGENT },
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (controller.signal.aborted) throw new Error("image_download_timeout");
-      throw error;
-    }
-    if (!resp.ok) throw new Error(`image_download_http_${resp.status}`);
-    const declaredBytes = Number(resp.headers.get("content-length") || 0);
-    if (Number.isFinite(declaredBytes) && declaredBytes > MAX_IMAGE_BYTES) {
-      throw new Error("image_too_large");
-    }
-    const ct = (resp.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-    let ext = IMAGE_EXT[ct] || "";
-    if (!ext) {
-      const m = url.toLowerCase().match(/\.(jpe?g|png|gif|webp)(?:$|[?#])/);
-      if (m) ext = m[1] === "jpeg" ? "jpg" : m[1];
-    }
-    if (!ext) throw new Error("unsupported_image_type");
-    let bytes: Uint8Array;
-    try {
-      bytes = new Uint8Array(await resp.arrayBuffer());
-    } catch (error) {
-      if (controller.signal.aborted) throw new Error("image_download_timeout");
-      throw error;
-    }
-    if (bytes.byteLength === 0) throw new Error("empty_image");
-    if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("image_too_large");
-    const contentType = ct.startsWith("image/") ? ct : `image/${ext === "jpg" ? "jpeg" : ext}`;
-    return { bytes, contentType, ext };
-  } finally {
-    clearTimeout(timeout);
-  }
+  return downloadRemoteImage(url, {
+    timeoutMs: IMAGE_DOWNLOAD_TIMEOUT_MS, maxBytes: MAX_IMAGE_BYTES, userAgent: USER_AGENT,
+  });
 }
 
 // Sobe a capa para kino-media e devolve a URL publica do Storage (ou "" se falhar).
@@ -508,7 +466,7 @@ async function prepareFinalImages(
         results[index] = { source: candidate, url: toOptimizedCoverUrl(storageUrl), uploaded: true, fallback: false };
       } catch (e) {
         const error = e instanceof Error ? e.message : String(e);
-        results[index] = allowExternalFallback && canPersistExternalImageUrl(candidate)
+        results[index] = allowExternalFallback && !(e instanceof RemoteResourceError) && canPersistExternalImageUrl(candidate)
           ? { source: candidate, url: candidate, uploaded: false, fallback: true, error }
           : { source: candidate, url: "", uploaded: false, fallback: false, error };
       }
@@ -711,7 +669,21 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
     });
   }
 
-  const insertRow = { ...mapped.row, author_id: userId, status: "published" };
+  // Mapping is pure and cannot validate DNS/redirects. Do not persist its
+  // candidate cover before prepareFinalImages crosses the network boundary;
+  // otherwise a blocked download would leave that unchecked external URL live.
+  const insertRow = {
+    ...mapped.row,
+    author_id: userId,
+    status: "published",
+    image_url: null,
+    metadata: {
+      ...mapped.row.metadata,
+      image_url: "",
+      cover_url: "",
+      gallery_image_urls: [],
+    },
+  };
   const { data: post, error } = await admin.from("posts").insert(insertRow).select("*").single();
   if (error || !post) {
     // The partial unique index closes the SELECT/INSERT race. A concurrent

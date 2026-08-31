@@ -47,6 +47,51 @@
     return s ? s.escapeHtml(v) : String(v || '');
   }
 
+  function _getFeedAvatarThumbnailUrl(value) {
+    try {
+      const raw = String(value == null ? '' : value).trim();
+      if (!raw || raw.length > 2048) return '';
+      const env = window.KC_ENV || {};
+      const configured = new URL(String(env.SUPABASE_URL || (env.supabase && env.supabase.url) || ''));
+      const avatar = new URL(raw);
+      const prefix = '/storage/v1/object/public/kino-media/profile-avatars/';
+      if (configured.protocol !== 'https:' || configured.username || configured.password ||
+          configured.pathname !== '/' || configured.search || configured.hash ||
+          avatar.protocol !== 'https:' || avatar.origin !== configured.origin ||
+          avatar.username || avatar.password || /[?#\\]/.test(raw) ||
+          avatar.pathname.indexOf(prefix) !== 0 || /%(?:2f|5c|00)/i.test(avatar.pathname) ||
+          !/\.(?:jpe?g|png|webp)$/i.test(avatar.pathname)) return '';
+      avatar.pathname = avatar.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+      // Share the ranking's exact URL: one cached image covers both 20px author
+      // icons and 44px ranking avatars at DPR3, without downloading the original.
+      avatar.search = '?width=144&height=144&resize=cover&quality=90';
+      return avatar.href;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function _handleFeedAvatarError(event) {
+    const image = event && event.target;
+    if (!image || image.tagName !== 'IMG' || !image.parentElement ||
+        !image.parentElement.classList.contains('kc-card__author') ||
+        !image.hasAttribute('data-kc-feed-avatar-original')) return;
+    const original = image.getAttribute('data-kc-feed-avatar-original');
+    const thumbnail = image.getAttribute('data-kc-feed-avatar-thumbnail');
+    image.removeAttribute('data-kc-feed-avatar-original');
+    image.removeAttribute('data-kc-feed-avatar-thumbnail');
+    // A late error from an older source must not overwrite a newer image.
+    if (!original || !thumbnail || image.getAttribute('src') !== thumbnail) return;
+    image.setAttribute('src', original);
+  }
+
+  // Capture non-bubbling image errors before cards are ever inserted, including
+  // dynamically appended cards and errors served immediately from HTTP cache.
+  // Only our marked author images are handled; no global scans or observers.
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('error', _handleFeedAvatarError, true);
+  }
+
   function _renderMarkdown(v) {
     const s = _str();
     return s ? s.renderMarkdownInline(v) : String(v || '');
@@ -763,6 +808,10 @@ function renderPostCard(post, options) {
   const authorAvatarAlt = String(authorName || '').trim()
     ? `Avatar de ${String(authorName).trim()}`
     : 'Avatar do autor';
+  const authorAvatarThumbnail = _getFeedAvatarThumbnailUrl(authorAvatar);
+  const authorAvatarFallback = authorAvatarThumbnail
+    ? ` data-kc-feed-avatar-original="${_escapeHtml(authorAvatar)}" data-kc-feed-avatar-thumbnail="${_escapeHtml(authorAvatarThumbnail)}"`
+    : '';
 
   const rating = (p.rating != null && p.rating !== '') ? Number(p.rating) : null;
   const ratingCount = Math.max(0, parseInt(String(p.ratingCount != null ? p.ratingCount : (p.rating_count != null ? p.rating_count : 0)), 10) || 0);
@@ -881,7 +930,7 @@ function renderPostCard(post, options) {
             ${preview}
           </div>
           <div class="kc-card__author"${authorId ? ' data-author-id="' + _escapeHtml(String(authorId)) + '"' : ''}>
-            <img alt="${_escapeHtml(authorAvatarAlt)}" src="${_escapeHtml(authorAvatar)}"/>
+            <img alt="${_escapeHtml(authorAvatarAlt)}" src="${_escapeHtml(authorAvatarThumbnail || authorAvatar)}"${authorAvatarFallback}/>
             <span><span class="kc-card__author-prefix">${_escapeHtml(authorPrefix)} </span><strong>${_escapeHtml(String(authorName))}</strong></span>
             ${ratingHtml}
           </div>

@@ -137,6 +137,56 @@ function renderDeadlinePresentation(post) {
   return result;
 }
 
+describe('source-bound self-paced availability presentation', () => {
+  function course(checked = Date.now() - 1000) {
+    return {
+      module: 'oportunidades', modulo: 'oportunidades', categoria: 'cursos-capacitacoes',
+      expires_at: new Date(checked + 259200000).toISOString(),
+      metadata: {
+        deadline_date: '',
+        validity: {
+          contract: 'cadu-self-paced-course-v1', mode: 'no_final_deadline_informed',
+          sourceRegistryId: 'web.ufg.iptsp', sourceUrl: 'https://iptsp.ufg.br/n/203499',
+          courseKey: 'leptospirosetdtp:1365',
+          evidenceDigest: '5e6c4dc953a90ff02f664d89a59bb75655a827d08f3663bc02fe2ab3f19ee223',
+          checkedAt: new Date(checked).toISOString(), nextCheckAt: new Date(checked + 86400000).toISOString(),
+          verificationExpiresAt: new Date(checked + 259200000).toISOString(),
+        },
+      },
+    };
+  }
+  test('labels the missing final deadline without promoting technical expiry to a deadline', () => {
+    const result = renderDeadlinePresentation(course());
+    expect(result.badges).toContain('Sem prazo final informado');
+    expect(result.badges).not.toMatch(/Prazo: \d/);
+    expect(result.specs).toContain('Conferida em');
+    expect(result.specs).toContain('sujeita a vagas e às regras do curso');
+    expect(result.specs).not.toMatch(/permanente|para sempre|indefinidamente/);
+  });
+  test('past recheck time is visible and is not a guarantee of current availability', () => {
+    const result = renderDeadlinePresentation(course(Date.now() - 25 * 3600000));
+    expect(result.specs).toContain('nova conferência necessária');
+  });
+  test('unverified, wrong-course and malformed metadata do not gain the label', () => {
+    for (const patch of [
+      { contract: 'other' }, { courseKey: 'another-course' }, { checkedAt: 'invalid' },
+      { evidenceDigest: 'a'.repeat(64) }, { verificationExpiresAt: '2099-01-01T00:00:00.000Z' },
+    ]) {
+      const post = course(); Object.assign(post.metadata.validity, patch);
+      expect(renderDeadlinePresentation(post).badges).not.toContain('Sem prazo final informado');
+    }
+    expect(renderDeadlinePresentation({ module: 'oportunidades', metadata: {} }).badges).not.toContain('Sem prazo final informado');
+    const wrongModule = course(); wrongModule.modulo = wrongModule.module = 'eventos';
+    expect(renderDeadlinePresentation(wrongModule).badges).not.toContain('Sem prazo final informado');
+  });
+  test('an actual declared deadline still takes priority in legacy display', () => {
+    const post = course(); post.metadata.deadline_date = '2027-08-01';
+    const result = renderDeadlinePresentation(post);
+    expect(result.badges).toContain('Prazo:');
+    expect(result.badges).not.toContain('Sem prazo final informado');
+  });
+});
+
 function renderGallery(post) {
   const dom = new JSDOM(`<!doctype html><html><body>
     <div class="kc-gallery-main">

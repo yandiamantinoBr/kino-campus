@@ -21,36 +21,130 @@
       let frame = 0;
       const sync = () => {
         const mobile = window.innerWidth <= 768;
+        const loginCandidate = container.querySelector('.btn-login:not(.is-auth)');
+        const login = loginCandidate && window.getComputedStyle(loginCandidate).display !== 'none' ? loginCandidate : null;
+        // Auth hydration replaces the contents, never the trigger itself.
+        // Keep the full label measurable while allowing a short visual one.
+        if (login && !login.querySelector('.kc-login-label-full') && login.textContent.trim() === 'Login/Cadastro') {
+          const full = document.createElement('span');
+          full.className = 'kc-login-label-full';
+          full.textContent = login.textContent;
+          const compact = document.createElement('span');
+          compact.className = 'kc-login-label-compact';
+          compact.textContent = 'Entrar';
+          compact.setAttribute('aria-hidden', 'true');
+          login.replaceChildren(full, compact);
+        }
         const gap = parseFloat(window.getComputedStyle(link).columnGap) || 0;
-        // The name is required; the subtitle is optional on mobile. Measure a
-        // hypothetical single row, never the extra room created by wrapping.
-        // Otherwise ResizeObserver would alternate between one and two rows.
-        const required = mark.offsetWidth + name.offsetWidth + gap + 1;
+        // Intrinsic brand/label measurements never depend on the stretched
+        // logo track or on the control widths applied by a previous frame.
+        const required = Math.ceil(mark.offsetWidth + name.offsetWidth + gap + 1);
         const style = window.getComputedStyle(container);
         const outerWidth = (element) => {
           const itemStyle = window.getComputedStyle(element);
-          return element.getBoundingClientRect().width
+          const full = element === login && element.querySelector('.kc-login-label-full');
+          const width = full ? Math.max(parseFloat(itemStyle.minWidth) || 0, full.getBoundingClientRect().width
+            + (parseFloat(itemStyle.paddingLeft) || 0) + (parseFloat(itemStyle.paddingRight) || 0)
+            + (parseFloat(itemStyle.borderLeftWidth) || 0) + (parseFloat(itemStyle.borderRightWidth) || 0))
+            : element.getBoundingClientRect().width;
+          return width
             + (parseFloat(itemStyle.marginLeft) || 0) + (parseFloat(itemStyle.marginRight) || 0);
         };
-        const slots = [];
+        const visible = mobile && name.offsetWidth > 0;
+        const properties = ['--kc-header-control-width', '--kc-header-icon-size', '--kc-header-column-gap', '--kc-header-action-gap'];
+        const controls = [];
+        let fixedWidth = 0;
+        let slotCount = 0;
+        let actionGapCount = 0;
         const search = container.querySelector('.kc-search-mobile-btn');
-        if (search && window.getComputedStyle(search).display !== 'none') slots.push(outerWidth(search));
+        if (search && window.getComputedStyle(search).display !== 'none') {
+          controls.push(search);
+          slotCount += 1;
+        }
         const actions = container.querySelector('.kc-user-actions');
         if (actions) {
           const items = Array.from(actions.children).filter((item) => window.getComputedStyle(item).display !== 'none');
-          const actionGap = parseFloat(window.getComputedStyle(actions).columnGap) || 0;
-          slots.push(items.reduce((sum, item) => sum + outerWidth(item), 0) + Math.max(0, items.length - 1) * actionGap);
+          if (items.length) slotCount += 1;
+          actionGapCount = Math.max(0, items.length - 1);
+          items.forEach((item) => {
+            if (item.matches('button:not(.btn-login), a.icon-btn')) controls.push(item);
+            else fixedWidth += outerWidth(item);
+          });
         }
         const nav = container.querySelector('.kc-nav-links');
         if (nav && window.getComputedStyle(nav).display !== 'none') {
-          slots.push(Array.from(nav.querySelectorAll('a')).reduce((largest, item) => Math.max(largest, outerWidth(item)), 44));
+          fixedWidth += Array.from(nav.querySelectorAll('a')).reduce((largest, item) => Math.max(largest, outerWidth(item)), 44);
+          slotCount += 1;
         }
-        const available = container.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0)
-          - slots.reduce((sum, width) => sum + width, 0) - slots.length * (parseFloat(style.columnGap) || 0);
-        const visible = mobile && name.offsetWidth > 0;
-        const wrap = visible && required > available;
-        if (container.classList.contains('kc-header-container--wordmark-wrap') !== wrap) {
-          container.classList.toggle('kc-header-container--wordmark-wrap', wrap);
+        controls.forEach((control) => {
+          const controlStyle = window.getComputedStyle(control);
+          fixedWidth += (parseFloat(controlStyle.marginLeft) || 0) + (parseFloat(controlStyle.marginRight) || 0);
+        });
+        let budget = container.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0) - required - fixedWidth;
+        // Keep a 1px minimum between the logo/search/actions/nav slots. At
+        // 320px with enlarged text, inner action gaps may need to reach zero.
+        const minimumGaps = slotCount;
+        // Preserve the full label across system-font metrics: the 43–44px
+        // comfort band costs at most 1px per target (height stays 44px), while
+        // avoiding a much shorter label and a large unused gap. This uses the
+        // measured budget, never the operating system or a viewport exception.
+        const comfortableWidth = 43;
+        let compactLogin = false;
+        if (visible && login && budget < controls.length * comfortableWidth + minimumGaps) {
+          const full = login.querySelector('.kc-login-label-full');
+          const compact = login.querySelector('.kc-login-label-compact');
+          if (full && compact) {
+            const loginStyle = window.getComputedStyle(login);
+            const boxWidth = (parseFloat(loginStyle.paddingLeft) || 0) + (parseFloat(loginStyle.paddingRight) || 0)
+              + (parseFloat(loginStyle.borderLeftWidth) || 0) + (parseFloat(loginStyle.borderRightWidth) || 0);
+            const minimumWidth = parseFloat(loginStyle.minWidth) || 0;
+            const fullWidth = Math.max(minimumWidth, full.getBoundingClientRect().width + boxWidth);
+            const shortWidth = Math.max(minimumWidth, compact.getBoundingClientRect().width + boxWidth);
+            // A cached-auth placeholder can have zero-size text. It is not a
+            // label to shorten; keep its actual minimum footprint until auth.
+            compactLogin = compact.getBoundingClientRect().width > 0 && shortWidth < fullWidth;
+            if (compactLogin) budget += fullWidth - shortWidth;
+          }
+        }
+        if (visible) {
+          const count = controls.length;
+          const gapCount = slotCount + actionGapCount;
+          let width = count ? Math.min(44, (budget - minimumGaps) / count) : 44;
+          let extraGap;
+          if (width < comfortableWidth) {
+            // Prefer some breathing room while targets are narrower, relaxing
+            // it only when necessary to retain the established 26px fallback.
+            extraGap = gapCount ? Math.max(0, Math.min(2, (budget - minimumGaps - count * 26) / gapCount)) : 0;
+            width = count ? (budget - minimumGaps - extraGap * gapCount) / count : 44;
+          } else {
+            extraGap = gapCount ? Math.max(0, Math.min(5, (budget - minimumGaps - count * 44) / gapCount)) : 0;
+          }
+          // Round down to a CSS layout unit so rounding never consumes the
+          // brand's safety pixel. Writes are idempotent under ResizeObserver.
+          width = Math.floor(Math.max(26, Math.min(44, width)) * 64) / 64;
+          extraGap = Math.floor(extraGap * 64) / 64;
+          const values = [width, Math.max(16, Math.min(22, width / 2)), 1 + extraGap, extraGap];
+          properties.forEach((property, index) => {
+            const value = `${values[index]}px`;
+            if (header.style.getPropertyValue(property) !== value) header.style.setProperty(property, value);
+          });
+        } else {
+          properties.forEach((property) => {
+            if (header.style.getPropertyValue(property)) header.style.removeProperty(property);
+          });
+        }
+        if (container.classList.contains('kc-header-container--compact-login') !== compactLogin) {
+          container.classList.toggle('kc-header-container--compact-login', compactLogin);
+        }
+        // Voice control and screen readers must receive the visible label.
+        // aria-hidden does not affect the full span's intrinsic measurement.
+        if (login) {
+          const full = login.querySelector('.kc-login-label-full');
+          const compact = login.querySelector('.kc-login-label-compact');
+          if (full && compact) {
+            full.setAttribute('aria-hidden', String(compactLogin));
+            compact.setAttribute('aria-hidden', String(!compactLogin));
+          }
         }
         if (logo.classList.contains('kc-logo--wordmark-visible') !== visible) {
           logo.classList.toggle('kc-logo--wordmark-visible', visible);

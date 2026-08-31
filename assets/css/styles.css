@@ -7168,6 +7168,17 @@ main, .kc-feed-section, .kc-feed-list, .kc-card, .kc-card__content {
   .kc-ranking-user { width: clamp(52px, 14vw, 64px) !important; }
   .kc-ranking-user-avatar { width: clamp(34px, 10vw, 44px) !important; height: clamp(34px, 10vw, 44px) !important; }
   .kc-ranking-user-name { font-size: 0.76em !important; }
+
+  /* Reserve the home row before its idle-scheduled request and while loading.
+     Match the existing avatar + two text lines (1.14em + 1.02em), margins
+     (5px + 1px) and bottom padding (5px). Terminal messages/ready users retain
+     their natural height; no-JS, sidebars and wider layouts stay unchanged.
+     Scores are unknown before the response: enlarged text may wrap afterward,
+     so reserve one score line without constraining the accessible final row. */
+  html[data-theme] .kc-main-content--home .kc-ranking-users:empty,
+  html[data-theme] .kc-main-content--home .kc-ranking-users:has(> .kc-ranking-empty[role="status"]) {
+    min-height: calc(clamp(34px, 10vw, 44px) + 2.16em + 11px);
+  }
 }
 
 /* ============

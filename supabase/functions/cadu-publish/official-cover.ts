@@ -10,6 +10,7 @@
 
 import { CaduItem } from "./schema.ts";
 import { canPersistExternalImageUrl, hostOf, isSvgUrl, isTemporaryOrSocialImageUrl, validRemoteImageUrl } from "./util.ts";
+import { fetchPublicResource, publicRemoteUrl, readBoundedBody, type RemoteResourceDependencies } from "./remote-resource.ts";
 
 function optionalEnv(name: string): string | undefined {
   try {
@@ -36,31 +37,6 @@ function isInstagramHost(value: unknown): boolean {
   return /(^|\.)instagram\.com$/.test(host) || /(^|\.)cdninstagram\.com$/.test(host);
 }
 
-async function readBoundedText(resp: Response, maxBytes: number): Promise<string> {
-  const reader = resp.body?.getReader();
-  if (!reader) return "";
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  while (total < maxBytes) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    total += value.length;
-  }
-  try {
-    await reader.cancel();
-  } catch {
-    // body already consumed/closed
-  }
-  const merged = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    merged.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return new TextDecoder("utf-8", { fatal: false }).decode(merged);
-}
-
 /** Extrai og:image/twitter:image de um HTML (primeira URL válida). */
 export function extractCoverFromHtml(html: string): string {
   for (const metaTag of html.match(OG_IMAGE_RE) || []) {
@@ -84,6 +60,7 @@ export function extractCoverFromHtml(html: string): string {
 
 /** Páginas oficiais do item candidatas à sondagem (sem Instagram/sem repetição). */
 export function officialPageCandidates(item: CaduItem, maxPages: number = OFFICIAL_COVER_MAX_PAGES): string[] {
+  const pageLimit = Math.min(OFFICIAL_COVER_MAX_PAGES, Math.max(0, Math.trunc(Number(maxPages) || 0)));
   const urls = [
     item.sourceUrl,
     item.url,
@@ -94,14 +71,12 @@ export function officialPageCandidates(item: CaduItem, maxPages: number = OFFICI
   const seen = new Set<string>();
   const pages: string[] = [];
   for (const raw of urls) {
-    if (pages.length >= maxPages) break;
+    if (pages.length >= pageLimit) break;
     if (typeof raw !== "string") continue;
-    const url = raw.trim();
-    if (!/^https:\/\//i.test(url)) continue;
+    const url = publicRemoteUrl(raw, true);
+    if (!url) continue;
     if (isInstagramHost(url)) continue;
-    const host = hostOf(url).toLowerCase();
-    if (!host || host === "localhost" || host.endsWith(".local")) continue;
-    const key = url.toLowerCase().replace(/\/+$/, "");
+    const key = url.replace(/\/+$/, "");
     if (seen.has(key)) continue;
     seen.add(key);
     pages.push(url);
@@ -109,24 +84,27 @@ export function officialPageCandidates(item: CaduItem, maxPages: number = OFFICI
   return pages;
 }
 
-async function fetchPageCover(pageUrl: string): Promise<string> {
+async function fetchPageCover(pageUrl: string, deps: RemoteResourceDependencies): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), OFFICIAL_COVER_PAGE_TIMEOUT_MS);
+  let resp: Response | undefined;
   try {
-    const resp = await fetch(pageUrl, {
-      headers: { "user-agent": "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)", accept: "text/html" },
+    resp = await fetchPublicResource(pageUrl, {
+      userAgent: "KinoCampus-Cadu/1.0 (+https://www.kinocampus.com.br)", accept: "text/html",
       signal: controller.signal,
-      redirect: "follow",
-    });
+      httpsOnly: true,
+    }, deps);
     if (!resp.ok) return "";
     const contentType = String(resp.headers.get("content-type") || "");
     if (contentType && !contentType.includes("text/html")) return "";
-    const html = await readBoundedText(resp, OFFICIAL_COVER_PAGE_MAX_BYTES);
+    const bytes = await readBoundedBody(resp, OFFICIAL_COVER_PAGE_MAX_BYTES, { truncate: true, signal: controller.signal });
+    const html = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     return extractCoverFromHtml(html);
   } catch {
     return "";
   } finally {
     clearTimeout(timer);
+    if (resp?.body && !resp.body.locked) void resp.body.cancel().catch(() => {});
   }
 }
 
@@ -137,10 +115,11 @@ async function fetchPageCover(pageUrl: string): Promise<string> {
 export async function officialCoverCandidates(
   item: CaduItem,
   maxPages: number = OFFICIAL_COVER_MAX_PAGES,
+  deps: RemoteResourceDependencies = {},
 ): Promise<string[]> {
   const covers: string[] = [];
   for (const page of officialPageCandidates(item, maxPages)) {
-    const cover = await fetchPageCover(page);
+    const cover = await fetchPageCover(page, deps);
     if (cover && !covers.includes(cover)) covers.push(cover);
   }
   return covers;

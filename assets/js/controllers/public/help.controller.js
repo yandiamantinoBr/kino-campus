@@ -793,6 +793,9 @@
   }
 
   function restoreHelpFormDraft(options) {
+    // A delayed restore must not replace live edits with an older saved draft
+    // before their debounce finishes, or rebuild a form during submission.
+    if (helpFormDraftTimer || state.submitting) return false;
     const opts = options && typeof options === 'object' ? options : {};
     const draft = loadHelpFormDraft();
     if (!draft) return false;
