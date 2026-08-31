@@ -23,6 +23,7 @@ import {
 
 const SITE_ORIGIN = 'https://www.kinocampus.com.br';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SHORT_ID_RE = /^[0-9a-f]{8}$/i;
 const INDEXABLE_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1';
 const NOINDEX_ROBOTS = 'noindex,follow,noarchive';
 const META_DESCRIPTION_MAX_LENGTH = 180;
@@ -120,7 +121,28 @@ async function fetchPost(id, {
   ].join(',');
   const selectCompat = select.replace('image_url,', '');
   const isUuid = UUID_RE.test(id);
-  const primaryFilter = isUuid ? `id=eq.${encodeURIComponent(id)}` : `legacy_id=eq.${encodeURIComponent(id)}`;
+  // Fix 2026-08-31: o id curto de 8 hex é a convenção de exibição em toda a
+  // administração, nos logs do cadu-api e nos runs — compartilhar essa forma
+  // produzia OG genérico (og-default) porque só UUID completo era resolvido.
+  // `ilike` não existe para uuid no PostgREST; a resolução correta é por
+  // INTERVALO: [prefix-0000…, prefix+1-0000…) — gte/lt são suportados para
+  // uuid e o intervalo cobre exatamente os uuids com aquele prefixo.
+  const isShortId = !isUuid && SHORT_ID_RE.test(id);
+  function shortIdRangeFilter(prefix) {
+    const lower = prefix + '-0000-0000-0000-000000000000';
+    const chars = prefix.split('');
+    for (let i = chars.length - 1; i >= 0; i -= 1) {
+      const value = parseInt(chars[i], 16);
+      if (value < 15) { chars[i] = (value + 1).toString(16); break; }
+      chars[i] = '0';
+      if (i === 0) return `id=gte.${encodeURIComponent(lower)}`;
+    }
+    const upper = chars.join('') + '-0000-0000-0000-000000000000';
+    return `id=gte.${encodeURIComponent(lower)}&id=lt.${encodeURIComponent(upper)}`;
+  }
+  const primaryFilter = isUuid ? `id=eq.${encodeURIComponent(id)}`
+    : isShortId ? shortIdRangeFilter(id.toLowerCase())
+    : `legacy_id=eq.${encodeURIComponent(id)}`;
   const primaryEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${primaryFilter}&status=eq.published&limit=1`;
   const primaryCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${primaryFilter}&status=eq.published&limit=1`;
 
