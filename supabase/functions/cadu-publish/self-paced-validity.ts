@@ -12,6 +12,7 @@ const DATE_FIELDS = [
   "applicationOpensAt", "applicationDeadline", "eventStartsAt", "eventEndsAt", "resultPublishedAt",
   "application_opens_at", "application_deadline", "event_starts_at", "event_ends_at", "result_published_at",
   "deadlineDate", "deadline_date", "deadlineAt", "deadline_at", "deadline", "dateStart", "dateEnd", "startDate", "endDate", "start", "end",
+  "date_start", "date_end", "data_evento", "data_fim_evento",
 ];
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -79,7 +80,8 @@ export function selfPacedValidityForItem(item: CaduItem, now = new Date()): Self
   }
   if (DATE_FIELDS.some(key => [item[key], dates[key]].some(value => value !== undefined && value !== null && value !== ""))) return fail();
   const capacity = record(proof.capacity);
-  if (!capacity || capacity.total !== 30000 || !Number.isInteger(capacity.enrolled)
+  if (!capacity || Object.keys(capacity).sort().join("|") !== "enrolled|total"
+    || capacity.total !== 30000 || !Number.isInteger(capacity.enrolled)
     || Number(capacity.enrolled) < 0 || Number(capacity.enrolled) >= 30000) return fail();
   const checked = instant(proof.checkedAt), next = instant(proof.nextCheckAt), expiry = instant(proof.verificationExpiresAt);
   const reference = now.getTime();
@@ -90,7 +92,8 @@ export function selfPacedValidityForItem(item: CaduItem, now = new Date()): Self
   const sources: Array<{ url: string; sha256: string }> = [];
   for (const rawReceipt of proof.sources) {
     const receipt = record(rawReceipt);
-    if (!receipt || typeof receipt.url !== "string" || !expected.delete(receipt.url)
+    if (!receipt || Object.keys(receipt).sort().join("|") !== "sha256|url"
+      || typeof receipt.url !== "string" || !expected.delete(receipt.url)
       || typeof receipt.sha256 !== "string" || !HASH.test(receipt.sha256)) return fail();
     sources.push({ url: receipt.url, sha256: receipt.sha256 });
   }

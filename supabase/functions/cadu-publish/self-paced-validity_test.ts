@@ -55,9 +55,11 @@ Deno.test("source scope, course identity, receipts and availability are fail-clo
     item => { proof(item).deadlineStatus = "unknown"; },
     item => { proof(item).capacity = { total: 30000, enrolled: 30000 }; },
     item => { proof(item).capacity = { total: 30000, enrolled: -1 }; },
+    item => { proof(item).capacity = { total: 30000, enrolled: 1, deadline: "2026-08-01" }; },
     item => { proof(item).evidenceDigest = "a".repeat(64); },
     item => { proof(item).sources = [{ url: ROOT, sha256: "a".repeat(64) }]; },
     item => { proof(item).sources = [ROOT, ROOT, ROOT].map(url => ({ url, sha256: "b".repeat(64) })); },
+    item => { (proof(item).sources as Array<Record<string, unknown>>)[0].extra = "unsupported"; },
     item => { proof(item).extra = "unsupported"; },
     item => { item.dates!.canApply = false; },
     item => { item.dates!.applicationMethod = "email"; },
@@ -74,7 +76,7 @@ Deno.test("source scope, course identity, receipts and availability are fail-clo
 });
 
 Deno.test("finite and conflicting date roles never get the no-deadline contract", () => {
-  for (const key of ["applicationDeadline", "applicationOpensAt", "eventStartsAt", "eventEndsAt", "deadlineDate", "dateEnd", "resultPublishedAt", "start", "end"]) {
+  for (const key of ["applicationDeadline", "applicationOpensAt", "eventStartsAt", "eventEndsAt", "deadlineDate", "dateEnd", "resultPublishedAt", "start", "end", "date_start", "date_end", "data_evento", "data_fim_evento"]) {
     for (const placement of ["root", "dates"]) {
       const item = fixture();
       (placement === "root" ? item : item.dates!)[key] = "2027-08-01";
