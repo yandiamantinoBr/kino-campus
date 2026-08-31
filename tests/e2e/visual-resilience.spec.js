@@ -1,8 +1,11 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('resiliência visual pública', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.route(/^https?:\/\/(?!localhost:4000\/)/u, (route) => route.abort());
+  test.beforeEach(async ({ page, baseURL }) => {
+    // Source and built-artifact QA may use different ports. Only the exact
+    // configured origin is local; third-party HTTP(S) remains blocked.
+    const localOrigin = new URL(baseURL).origin;
+    await page.route((url) => /^https?:$/u.test(url.protocol) && url.origin !== localOrigin, (route) => route.abort());
   });
 
   for (const viewport of [
@@ -45,18 +48,24 @@ test.describe('resiliência visual pública', () => {
     });
   }
 
-  test('Font Awesome é carregado do próprio domínio', async ({ page }) => {
+  test('Font Awesome é carregado do próprio domínio', async ({ page, baseURL }) => {
+    const localOrigin = new URL(baseURL).origin;
     const externalRequests = [];
     page.on('request', (request) => {
-      if (/font-awesome|fontawesome/i.test(request.url()) && !request.url().startsWith('http://localhost:4000/')) {
+      if (/font-awesome|fontawesome/i.test(request.url()) && new URL(request.url()).origin !== localOrigin) {
         externalRequests.push(request.url());
       }
     });
     const response = await page.goto('/_product.html', { waitUntil: 'domcontentloaded' });
     expect(response.status()).toBe(200);
 
-    const localSheet = page.locator('link[href="assets/vendor/fontawesome/css/all.min.css?v=6.4.0"]');
+    const localSheet = page.locator('link[rel="stylesheet"][href*="assets/vendor/fontawesome/css/all.min.css"]');
     await expect(localSheet).toHaveCount(1);
+    const stylesheetURL = new URL(await localSheet.evaluate((element) => element.href));
+    expect(stylesheetURL.origin).toBe(localOrigin);
+    expect(stylesheetURL.pathname).toBe('/assets/vendor/fontawesome/css/all.min.css');
+    // The source pins 6.4.0; the build replaces ?v with its immutable revision.
+    expect(stylesheetURL.searchParams.get('v')).toMatch(/^[0-9A-Za-z._-]+$/u);
     const icon = page.locator('.kc-logo .fas.fa-campground');
     await expect(icon).toBeVisible();
     const iconContent = await icon.evaluate((element) => getComputedStyle(element, '::before').content);

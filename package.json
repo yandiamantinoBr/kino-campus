@@ -71,6 +71,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/og": "^1.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "terser": "5.51.2",
     "undici": "^7.29.0"
   },
   "devDependencies": {
