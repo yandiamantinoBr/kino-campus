@@ -253,15 +253,83 @@ test.describe('mobile public layout regressions', () => {
     expect(controlsHeight).toBeLessThan(100);
   });
 
-  test('atalho de mensagens permanece no menu e não cobre conteúdo mobile', async ({ page }) => {
+  test('Mensagens fica visível no cabeçalho e no menu sem cobrir conteúdo mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
-    for (const route of ['/search-results.html', '/ajuda.html']) {
-      await page.goto(route, { waitUntil: 'load' });
+    for (const route of ['/', '/eventos.html', '/oportunidades.html', '/moradia.html', '/compra-venda-feed.html', '/search-results.html', '/ajuda.html', '/create-post.html', '/mensagens.html']) {
+      const response = await page.goto(route, { waitUntil: 'load' });
+      expect(response && response.status(), route).toBe(200);
+      if (route === '/create-post.html') await expect(page.locator('h1')).toHaveText('Criar Publicação');
       await expect(page.locator('.kc-chat-mobile-fab')).toHaveCount(0);
+      await expect(page.locator('.kc-header .kc-chat-shortcut')).toBeVisible();
+      await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAccessibleName('Mensagens');
       await expect(page.locator('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveCount(1);
       await expect(page.locator('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).toHaveCount(1);
     }
+  });
+
+  test('ícone de Mensagens cabe entre os controles em mobile, tablet e desktop nos dois temas', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'load' });
+    await expect(page.locator('html')).not.toHaveClass(/kc-loading/);
+    const login = page.locator('.kc-header .btn-login');
+    const originalLogin = await login.innerHTML();
+
+    for (const width of [320, 360, 390, 412, 480, 576, 768, 769, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const loggedIn of [false, true]) {
+        // Exercise the real header styles with both anonymous and authenticated
+        // identity markup, without credentials or a production auth session.
+        await login.evaluate((element, state) => {
+          element.classList.toggle('is-auth', state.loggedIn);
+          element.innerHTML = state.loggedIn
+            ? '<span class="kc-header-user"><span class="kc-header-user__avatar">Y</span><span class="kc-header-user__name">Nome de usuário longo para testar</span><i class="kc-header-user__chevron"></i></span>'
+            : state.originalLogin;
+          document.getElementById('kcNotifBell').style.display = state.loggedIn ? 'inline-flex' : 'none';
+        }, { loggedIn, originalLogin });
+
+        for (const light of [false, true]) {
+          await page.evaluate((isLight) => document.body.classList.toggle('light-mode', isLight), light);
+          const shortcut = page.locator('.kc-header .kc-chat-shortcut');
+          await expect(shortcut).toBeVisible();
+          const layout = await shortcut.evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            const controls = [...document.querySelectorAll('.kc-header .kc-logo-mark, .kc-header .kc-search-mobile-btn, .kc-header .kc-user-actions > *')];
+            const overlaps = controls.filter((other) => {
+              if (other === element || !other.getClientRects().length) return false;
+              const bounds = other.getBoundingClientRect();
+              return rect.left < bounds.right && rect.right > bounds.left
+                && rect.top < bounds.bottom && rect.bottom > bounds.top;
+            }).map((other) => other.className);
+            const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            return {
+              width: rect.width, height: rect.height, left: rect.left, right: rect.right,
+              viewportWidth: document.documentElement.clientWidth,
+              contentWidth: document.documentElement.scrollWidth,
+              clickable: Boolean(hit && element.contains(hit)), overlaps,
+              position: getComputedStyle(element).position,
+            };
+          });
+          const context = `${width}px loggedIn=${loggedIn} light=${light}: ${JSON.stringify(layout)}`;
+          expect(layout.width, context).toBeGreaterThanOrEqual(width <= 768 ? 36 : 20);
+          expect(layout.height, context).toBeGreaterThanOrEqual(width <= 768 ? 36 : 20);
+          expect(layout.left, context).toBeGreaterThanOrEqual(0);
+          expect(layout.right, context).toBeLessThanOrEqual(width);
+          expect(layout.contentWidth, context).toBeLessThanOrEqual(layout.viewportWidth + 1);
+          expect(layout.clickable, context).toBe(true);
+          expect(layout.overlaps, context).toEqual([]);
+          expect(layout.position, context).not.toBe('fixed');
+        }
+      }
+    }
+  });
+
+  test('atalho visível abre Mensagens com um toque e preserva o login do visitante', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/', { waitUntil: 'load' });
+    await page.locator('.kc-header .kc-chat-shortcut').click();
+    await expect(page).toHaveURL(/\/mensagens\.html$/);
+    await expect(page.locator('body')).toHaveClass(/kc-chat-route/);
+    await expect(page.locator('.kc-header .btn-login')).toBeVisible();
   });
 
   test('desktop search and help layouts remain expanded and two-column', async ({ page }) => {
