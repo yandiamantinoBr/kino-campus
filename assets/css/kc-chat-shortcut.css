@@ -215,6 +215,16 @@
   }
 }
 
+/* Touch browsers can retain :hover after a tap. Enlarging or lifting the
+   complete target then steals neighboring hit areas in the compact header.
+   Keep its geometry stable; colors, active states and focus stay unchanged. */
+@media (max-width: 768px) and (hover: none) {
+  .kc-header:not(.kc-header--admin) .kc-user-actions > button:hover,
+  .kc-header:not(.kc-header--admin) .kc-user-actions > a:hover {
+    transform: none;
+  }
+}
+
 @media (max-width: 768px) and (hover: hover) {
   .kc-header:not(.kc-header--admin) .kc-user-actions .kc-chat-shortcut:hover:not(:active):not([aria-current="page"]) {
     color: var(--kc-primary-brand);
