@@ -2081,10 +2081,20 @@
     // denser pixel ratio thumbs without shipping full post media
     const optimized = buildOptimizedThumbUrl(primary, { size: 80, quality: 62 });
     img.src = optimized;
+    // v12.30: percorre TODOS os candidatos (otimizado -> original -> [1..n])
+    // antes de cair no emoji — URLs quebradas nao persistem visualmente.
+    let thumbIndex = 0;
+    let triedOriginal = optimized === primary;
     img.onerror = function onThumbError() {
-      if (img.dataset.kcThumbFallback !== '1' && optimized !== primary) {
-        img.dataset.kcThumbFallback = '1';
+      if (!triedOriginal) {
+        triedOriginal = true;
         img.src = primary;
+        return;
+      }
+      thumbIndex += 1;
+      const next = candidates[thumbIndex];
+      if (next) {
+        img.src = buildOptimizedThumbUrl(next, { size: 80, quality: 62 }) || next;
         return;
       }
       wrap.classList.add('kc-search-dropdown__thumb--emoji', 'kc-search-dropdown__emoji');

@@ -628,7 +628,8 @@ function kcInitImageFallbacks() {
   };
 
   const applyFallback = (img) => {
-    const wrapper = img.closest('.kc-card__image-wrapper');
+    // Wrappers com candidatos pertencem ao handler delegado de kc-utils.presentation.js.
+    const wrapper = img.closest('.kc-card__image-wrapper:not([data-kc-image-candidates])');
     if (!wrapper) return;
 
     const card = img.closest('.kc-card');
@@ -648,7 +649,7 @@ function kcInitImageFallbacks() {
   document.querySelectorAll('.kc-card__image-wrapper img').forEach((img) => {
     // Se já existe emoji no wrapper, não mexe
     const wrapper = img.closest('.kc-card__image-wrapper');
-    if (wrapper && wrapper.querySelector('.kc-card__emoji')) return;
+    if (wrapper && (wrapper.querySelector('.kc-card__emoji') || wrapper.hasAttribute('data-kc-image-candidates'))) return;
 
     // erro de rede
     img.addEventListener('error', () => applyFallback(img), { once: true });

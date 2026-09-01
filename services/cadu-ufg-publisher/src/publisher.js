@@ -341,11 +341,24 @@ class SupabasePublisher {
         'user-agent': this.userAgent,
       },
     });
-    if (!response.ok) throw new Error(`image_download_http_${response.status}`);
+    if (!response.ok) {
+      // 4xx é permanente (recurso sumiu/acesso negado): não persistir a URL
+      // externa como fallback — produz imagens quebradas no feed.
+      if (response.status >= 400 && response.status < 500) {
+        const err = new Error(`image_download_http_${response.status}`);
+        err.permanent = true;
+        throw err;
+      }
+      throw new Error(`image_download_http_${response.status}`);
+    }
     const contentLength = Number(response.headers && response.headers.get && response.headers.get('content-length')) || 0;
     if (contentLength > this.maxImageBytes) throw new Error('image_too_large');
     const contentType = inferImageContentType(response, url);
-    if (!contentType) throw new Error('unsupported_image_type');
+    if (!contentType) {
+      const err = new Error('unsupported_image_type');
+      err.permanent = true;
+      throw err;
+    }
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.length > this.maxImageBytes) throw new Error('image_too_large');
     return {
@@ -394,9 +407,12 @@ class SupabasePublisher {
         uploads.push({ ok: false, source: originalUrl, source_url: fallbackUrl, error: error.message });
         // Fallback externo e aceitavel para URLs permanentes (ex.: cercomp UFG),
         // mas nunca para CDNs temporarias de redes sociais (expira e quebra o
-        // og:image/feed). Se o upload falhou e a candidata e temporaria, o post
-        // fica sem capa ate a reconciliacao persistir uma imagem real.
-        if (allowExternalFallback && fallbackUrl && !isTemporaryImageUrl(fallbackUrl)) out.push(fallbackUrl);
+        // og:image/feed) nem para falhas PERMANENTES de download (4xx /
+        // unsupported_image_type): persisti-las renderia imagens quebradas no
+        // feed. Nesses casos o post fica sem capa ate a reconciliacao
+        // persistir uma imagem real no storage.
+        const permanent = error && (error.permanent === true || /^image_download_http_4\d\d$/.test(String(error.message || '')));
+        if (allowExternalFallback && fallbackUrl && !isTemporaryImageUrl(fallbackUrl) && !permanent) out.push(fallbackUrl);
       }
     }
     return { images: out, uploads };

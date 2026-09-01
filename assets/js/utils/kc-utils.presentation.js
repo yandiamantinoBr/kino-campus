@@ -1,5 +1,5 @@
 /*
-  KinoCampus - Utils / Presentation Domain (v12.2.6)
+  KinoCampus - Utils / Presentation Domain (v12.3.0)
 
   Sub-modulo do kc-utils.js - dominio de presentation
   (cards, badges, markers, inferencias e regras visuais de feed).
@@ -85,11 +85,117 @@
     image.setAttribute('src', original);
   }
 
+  // ── Imagem do card: lista de candidatos + fallback delegado (v12.3.0) ──────
+  // Publicações legadas/externalizadas podem carregar URLs de imagem quebradas
+  // (ex.: gallery_image_urls com extensão errada apontando para o site de
+  // origem). O card renderiza o primeiro candidato e, em caso de erro de
+  // carregamento, o handler delegado abaixo avança para o próximo candidato
+  // (cover/metadata/galeria) até um URL válido; esgotada a lista, aplica o
+  // mesmo contrato visual do ramo sem-imagem (kc-image-fallback + emoji).
+  const POST_IMAGE_CANDIDATES_LIMIT = 6;
+
+  function _isRenderableImageUrl(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw || raw.length > 2048) return false;
+    if (/^https?:\/\//i.test(raw)) return true;
+    // Offline First: posts do driver local guardam dataURLs image/*.
+    if (/^data:image\/(?:png|jpe?g|webp|gif|avif);/i.test(raw)) return true;
+    // Caminhos site-relative são renderizáveis; esquemas desconhecidos e
+    // protocol-relative (//host) não.
+    return raw.charAt(0) === '/' && raw.charAt(1) !== '/';
+  }
+
+  function _buildPostImageCandidates(post) {
+    const p = post || {};
+    const meta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
+    const direct = Array.isArray(p.imagens) ? p.imagens : (Array.isArray(p.images) ? p.images : []);
+    const gallery = []
+      .concat(meta.gallery_image_urls, meta.galleryImageUrls, meta.image_urls, meta.imageUrls)
+      .filter((list) => Array.isArray(list));
+    const pool = []
+      .concat(direct)
+      .concat([p.cover_url, p.coverUrl, p.image_url, p.imageUrl])
+      .concat([meta.cover_url, meta.coverUrl, meta.image_url, meta.imageUrl]);
+    for (const list of gallery) pool.push(...list);
+
+    const seen = new Set();
+    const out = [];
+    for (const value of pool) {
+      const raw = String(value == null ? '' : value).trim();
+      if (!raw || seen.has(raw) || !_isRenderableImageUrl(raw)) continue;
+      seen.add(raw);
+      out.push(raw);
+      if (out.length >= POST_IMAGE_CANDIDATES_LIMIT) break;
+    }
+    return out;
+  }
+
+  function _applyCardImageEmojiFallback(wrapper, image) {
+    const fallbackClass = wrapper.getAttribute('data-kc-image-fallback-class') || 'kc-image-fallback';
+    if (wrapper.classList.contains(fallbackClass)) return;
+    wrapper.classList.add(fallbackClass);
+    if (image) image.style.display = 'none';
+    // Hero de produto: revela o emojiCover existente em vez de criar span novo.
+    const fallbackId = wrapper.getAttribute('data-kc-image-fallback-id');
+    if (fallbackId) {
+      const cover = document.getElementById(fallbackId);
+      if (cover) {
+        cover.textContent = wrapper.getAttribute('data-kc-image-emoji') || '\u2728';
+        cover.style.display = 'flex';
+        wrapper.removeAttribute('data-kc-image-candidates');
+        return;
+      }
+    }
+    const emojiClass = wrapper.getAttribute('data-kc-image-emoji-class') || 'kc-card__emoji';
+    if (!wrapper.querySelector('.' + emojiClass)) {
+      const span = document.createElement('span');
+      span.className = emojiClass;
+      span.textContent = wrapper.getAttribute('data-kc-image-emoji') || '\u2728';
+      wrapper.appendChild(span);
+    }
+    wrapper.removeAttribute('data-kc-image-candidates');
+  }
+
+  function _handlePostCardImageError(event) {
+    const image = event && event.target;
+    if (!image || image.tagName !== 'IMG') return;
+    const wrapper = image.closest ? image.closest('[data-kc-image-candidates]') : null;
+    if (!wrapper) return;
+    const fallbackClass = wrapper.getAttribute('data-kc-image-fallback-class') || 'kc-image-fallback';
+    if (wrapper.classList.contains(fallbackClass)) return;
+
+    let candidates;
+    try {
+      candidates = JSON.parse(wrapper.getAttribute('data-kc-image-candidates'));
+    } catch (_) {
+      return;
+    }
+    if (!Array.isArray(candidates) || !candidates.length) return;
+
+    let index = parseInt(wrapper.getAttribute('data-kc-image-candidate-index') || '0', 10);
+    if (!Number.isFinite(index) || index < 0) index = 0;
+    // Guarda anti-erro-velho: só reagimos à falha do candidato corrente.
+    const current = candidates[index];
+    if (current != null && image.getAttribute('src') !== current) return;
+
+    const next = index + 1;
+    if (next < candidates.length) {
+      wrapper.setAttribute('data-kc-image-candidate-index', String(next));
+      image.style.display = '';
+      image.setAttribute('src', candidates[next]);
+      // Lightbox herdando data-full-src precisa seguir a fonte corrente.
+      if (image.hasAttribute('data-full-src')) image.setAttribute('data-full-src', candidates[next]);
+      return;
+    }
+    _applyCardImageEmojiFallback(wrapper, image);
+  }
+
   // Capture non-bubbling image errors before cards are ever inserted, including
   // dynamically appended cards and errors served immediately from HTTP cache.
   // Only our marked author images are handled; no global scans or observers.
   if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
     document.addEventListener('error', _handleFeedAvatarError, true);
+    document.addEventListener('error', _handlePostCardImageError, true);
   }
 
   function _renderMarkdown(v) {
@@ -736,8 +842,10 @@ function renderPostCard(post, options) {
   }
 
   // Imagem (quando existir), senão emoji (mantém Offline First)
-  const images = Array.isArray(p.imagens) ? p.imagens : (Array.isArray(p.images) ? p.images : []);
-  const imgSrc = images.length ? String(images[0]) : '';
+  // v12.3.0: emite data-kc-image-candidates para o handler delegado trocar a
+  // fonte em caso de erro (URL quebrada) sem depender de listeners por-card.
+  const imageCandidates = _buildPostImageCandidates(p);
+  const imgSrc = imageCandidates.length ? imageCandidates[0] : '';
   const imageAlt = buildPostImageAlt(p, moduleKey);
   const productHref = id ? `product.html?id=${encodeURIComponent(id)}` : '#';
   const isLegacyExample = !!String(p.legacyId || p.legacy_id || '').trim();
@@ -745,8 +853,13 @@ function renderPostCard(post, options) {
   const legacyExampleBadgeHtml = isLegacyExample
     ? `<span class="kc-card__example-ribbon" aria-label="Exemplo de uso"><i class="fas fa-flask" aria-hidden="true"></i><span>Exemplo</span></span>`
     : '';
+  // Atributo presente sempre que há <img>: com 1 candidato só, o erro cai
+  // direto no fallback emoji; com vários, o handler troca a fonte.
+  const imageCandidatesAttr = imgSrc
+    ? ` data-kc-image-candidates="${_escapeHtml(JSON.stringify(imageCandidates))}" data-kc-image-emoji="${_escapeHtml(String(emoji == null ? '' : emoji))}"`
+    : '';
   const imageWrapperHtml = imgSrc
-    ? `<a class="kc-card__image-wrapper" href="${productHref}" aria-label="Abrir anúncio ${_escapeHtml(String(p.titulo || ''))}">
+    ? `<a class="kc-card__image-wrapper"${imageCandidatesAttr} href="${productHref}" aria-label="Abrir anúncio ${_escapeHtml(String(p.titulo || ''))}">
          <img alt="${_escapeHtml(imageAlt)}" src="${_escapeHtml(imgSrc)}" width="400" height="300" loading="lazy" decoding="async"/>
        </a>`
     : `<a class="kc-card__image-wrapper kc-image-fallback" href="${productHref}" aria-label="Abrir anúncio ${_escapeHtml(String(p.titulo || ''))}" style="font-size: 3em; display: flex; align-items: center; justify-content: center;">

@@ -171,9 +171,12 @@ function assertDefinitionScript(source, filename = 'definition.js') {
           safeExpression(node.arguments[0]); return;
         }
         // Existing CSP-safe avatar fallback must be installed before first render.
+        // data-kc-image-candidates: o fallback de imagem do card usa o mesmo
+        // padrao (capture 'error' + handler nomeado + capture=true).
         if (filename === 'assets/js/utils/kc-utils.presentation.js' && memberPath(node.callee) === 'document.addEventListener'
           && node.arguments.length === 3 && node.arguments[0].value === 'error'
-          && node.arguments[1].type === 'Identifier' && node.arguments[1].name === '_handleFeedAvatarError'
+          && node.arguments[1].type === 'Identifier'
+          && ['_handleFeedAvatarError', '_handlePostCardImageError'].includes(node.arguments[1].name)
           && node.arguments[2].value === true) return;
         fail('EVALUATION_CALL', filename);
         break;

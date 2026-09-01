@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-09-01] - imagens do feed resilientes e URLs externas quebradas eliminadas
+
+- Corrigida a causa raiz das imagens quebradas em kc-feed-section: o pipeline
+  cadu persistia URLs de origem (files.cercomp.ufg.br) com extensao .jpg
+  inexistente em metadata.gallery_image_urls, e normalizePost priorizava a
+  galeria sobre a capa local. Falhas de download 4xx/unsupported/empty agora
+  sao tratadas como permanentes (PermanentResourceError) e nunca viram
+  fallback externo no cadu-publish e no publisher Node.
+- renderPostCard e os cards relacionados emitem data-kc-image-candidates
+  (lista deduplicada, http/https, data:image e caminhos site-relative, max. 6)
+  e um handler delegado em capture troca a fonte em caso de erro ate esgotar
+  os candidatos, aplicando entao o fallback emoji (mesmo contrato do ramo
+  sem-imagem). kc-core nao interfere em wrappers com candidatos.
+- Reparo aplicado na base: 15 publicacoes com galeria quebrada (incluindo as 5
+  reportadas) tiveram gallery_image_urls reescritas para URLs funcionais
+  (espelho local ou .png verificado); URLs de paginas HTML e arquivos
+  inexistentes foram removidos da galeria.
+- Regressoes cobertas por tests/unit/kc-card-image-candidates.test.js,
+  services/cadu-ufg-publisher/test/image-fallback.test.js e testes Deno de
+  erro permanente em remote-resource_test.ts.
+
 ## [2026-08-31] - cabeçalho mobile compacto em uma única linha
 
 - Substituída a segunda linha do PR #907 por margens, gaps, marca e controles

@@ -459,6 +459,34 @@
 
   // ── setGallery ───────────────────────────────────────────────────────────────
 
+  function buildGalleryCandidates(post, images) {
+    // Mesmo contrato do data-kc-image-candidates dos cards (kc-utils.presentation):
+    // URLs renderizáveis, dedupe preservando ordem, teto generoso para galerias.
+    var meta = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+    var pool = (images || []).slice();
+    [post && post.cover_url, post && post.coverUrl, post && post.image_url, post && post.imageUrl]
+      .forEach(function (value) { if (value) pool.push(value); });
+    ['cover_url', 'coverUrl', 'image_url', 'imageUrl'].forEach(function (key) {
+      if (typeof meta[key] === 'string' && meta[key]) pool.push(meta[key]);
+    });
+    ['gallery_image_urls', 'galleryImageUrls', 'image_urls', 'imageUrls'].forEach(function (key) {
+      if (Array.isArray(meta[key])) pool = pool.concat(meta[key]);
+    });
+    var seen = {};
+    var out = [];
+    pool.forEach(function (value) {
+      var raw = String(value == null ? '' : value).trim();
+      if (!raw || seen[raw]) return;
+      var renderable = /^https?:\/\//i.test(raw)
+        || /^data:image\//i.test(raw)
+        || (raw.charAt(0) === '/' && raw.charAt(1) !== '/');
+      if (!renderable) return;
+      seen[raw] = true;
+      out.push(raw);
+    });
+    return out.slice(0, 12);
+  }
+
   function setGallery(post) {
     var mainImg = document.getElementById('mainImage');
     var emojiCover = document.getElementById('emojiCover');
@@ -477,7 +505,18 @@
     var title = String(post.titulo || post.title || 'publicação').trim() || 'publicação';
     var imageAlt = 'Imagem da publicação: ' + title;
     if (images && images.length) {
-      if (mainImg) { mainImg.src = images[0]; mainImg.alt = imageAlt; mainImg.style.display = 'block'; }
+      // Resiliencia (v11.31.0): hero e miniaturas carregam data-kc-image-candidates;
+      // o handler delegado de kc-utils.presentation.js troca a fonte em caso de
+      // URL quebrada e, esgotada a galeria, revela o emojiCover do hero.
+      var candidates = buildGalleryCandidates(post, images);
+      var hasCandidates = candidates.length > 0;
+      if (galleryMain && hasCandidates) {
+        galleryMain.setAttribute('data-kc-image-candidates', JSON.stringify(candidates));
+        galleryMain.setAttribute('data-kc-image-emoji', String(emoji || '\u2728'));
+        galleryMain.setAttribute('data-kc-image-fallback-id', 'emojiCover');
+        galleryMain.setAttribute('data-kc-image-candidate-index', '0');
+      }
+      if (mainImg) { mainImg.src = hasCandidates ? candidates[0] : images[0]; mainImg.alt = imageAlt; mainImg.style.display = 'block'; }
       if (emojiCover) emojiCover.style.display = 'none';
       if (thumbs) {
         thumbs.innerHTML = '';
@@ -489,10 +528,19 @@
           img.decoding = 'async';
           img.className = 'kc-thumbnail' + (idx === 0 ? ' active' : '');
           img.setAttribute('data-full-src', src);
+          if (hasCandidates) {
+            // Cada miniatura caminha pelos proprios candidatos; o index inicial
+            // e a posicao da fonte desta miniatura no pool do hero.
+            img.setAttribute('data-kc-image-candidates', JSON.stringify(candidates));
+            img.setAttribute('data-kc-image-candidate-index', String(Math.max(0, candidates.indexOf(src))));
+          }
           img.addEventListener('click', function () {
             var all = thumbs.querySelectorAll('.kc-thumbnail');
             all.forEach(function (t) { t.classList.remove('active'); });
             img.classList.add('active');
+            if (galleryMain && hasCandidates) {
+              galleryMain.setAttribute('data-kc-image-candidate-index', String(Math.max(0, candidates.indexOf(src))));
+            }
             if (mainImg) { mainImg.src = src; mainImg.alt = img.alt; }
           });
           thumbs.appendChild(img);
