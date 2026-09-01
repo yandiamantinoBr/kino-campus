@@ -303,8 +303,28 @@ describe('Cadu publish — Edge Function', () => {
     expect(index).toContain('institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED');
     expect(index).toContain('reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE');
     expect(index).toContain('createReviewRpc: "kc_create_institutional_source_review"');
+    expect(index).toContain('canonicalReclassification: RECLASSIFICATION_CONTRACT');
+    expect(index).toContain('cadu-edit-reclassification-v1');
     expect(index.indexOf('isTrustedPublisher(admin, user.id)'))
       .toBeLessThan(index.indexOf('case "capabilities"'));
+  });
+
+  test('reclassificação canônica remapeia o item, preserva mídia e usa CAS', () => {
+    const reclassification = index.slice(
+      index.indexOf('async function handleCanonicalReclassification'),
+      index.indexOf('export async function handleEdit'),
+    );
+    expect(reclassification).toContain('validateItem(item)');
+    expect(reclassification).toContain('mapItemToPost(item');
+    expect(reclassification).toContain('evaluateCaduPublishQuality(item, mapped)');
+    expect(reclassification).toContain('mapped.dedup.sourceId !== expected.sourceId');
+    expect(reclassification).toContain('mapped.dedup.sourceUrl !== expected.sourceUrl');
+    expect(reclassification).toContain('.eq("updated_at", String(expected.updatedAt))');
+    expect(reclassification).toContain('.eq("metadata->>source_id", String(expected.sourceId))');
+    expect(reclassification).toContain('.eq("metadata->>source_url", String(expected.sourceUrl))');
+    expect(reclassification).toContain('code: "EDIT_CONFLICT"');
+    expect(reclassification).toContain('RECLASSIFICATION_MEDIA_METADATA_FIELDS');
+    expect(reclassification).not.toContain('kc_cadu_replace_post_media');
   });
 });
 
