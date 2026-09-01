@@ -1,13 +1,16 @@
 import {
   DEFAULT_AUTO_PUBLISH_SCORE_MIN,
   isDurableSourceIdentityUrl,
+  readImageDimensions,
   resolveAutoPublishScoreMin,
-  toOptimizedCoverUrl,
+  toProportionalRenderUrl,
 } from "./util.ts";
 
 function assertEquals(actual: unknown, expected: unknown): void {
-  if (!Object.is(actual, expected)) {
-    throw new Error(`Expected ${String(expected)}, received ${String(actual)}`);
+  const same = Object.is(actual, expected) ||
+    JSON.stringify(actual) === JSON.stringify(expected);
+  if (!same) {
+    throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);
   }
 }
 
@@ -43,30 +46,32 @@ Deno.test("source URL identity accepts content pages and rejects reusable action
     "https://example.org/not-an-institutional-item",
   ]) assertEquals(isDurableSourceIdentityUrl(url), false);
 });
-Deno.test("toOptimizedCoverUrl converts kino-media objects to render URLs", () => {
-  const input = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u/p/cadu-1.jpg";
-  const output = toOptimizedCoverUrl(input);
-  assertEquals(output, "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/post-media/u/p/cadu-1.jpg?width=1920&quality=85");
+
+Deno.test("readImageDimensions reads PNG IHDR and JPEG SOF headers", () => {
+  const png = new Uint8Array(33);
+  png[0] = 0x89; png[1] = 0x50; png[2] = 0x4e; png[3] = 0x47;
+  const w = 1920, h = 772;
+  png[16] = (w >>> 24) & 255; png[17] = (w >>> 16) & 255;
+  png[18] = (w >>> 8) & 255; png[19] = w & 255;
+  png[20] = (h >>> 24) & 255; png[21] = (h >>> 16) & 255;
+  png[22] = (h >>> 8) & 255; png[23] = h & 255;
+  assertEquals(readImageDimensions(png), { width: 1920, height: 772 });
+  assertEquals(readImageDimensions(new Uint8Array([0xff, 0xd8])), null);
 });
 
-Deno.test("toOptimizedCoverUrl leaves non-kino and render URLs untouched", () => {
-  assertEquals(toOptimizedCoverUrl("https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg"),
-    "https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg");
-  const render = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/p/c.jpg?width=1920&quality=85";
-  assertEquals(toOptimizedCoverUrl(render), render);
-  assertEquals(toOptimizedCoverUrl(""), "");
+Deno.test("toProportionalRenderUrl builds exact proportional render URL", () => {
+  const url = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u/p/cadu-1.jpg";
+  assertEquals(
+    toProportionalRenderUrl(url, { width: 1920 }, { width: 4688, height: 1885 }),
+    url.replace("/object/public/", "/render/image/public/") + "?width=1920&height=772&resize=cover&quality=90",
+  );
 });
 
-Deno.test("toOptimizedCoverUrl converts kino-media objects to render URLs", () => {
-  const input = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u/p/cadu-1.jpg";
-  const output = toOptimizedCoverUrl(input);
-  assertEquals(output, "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/post-media/u/p/cadu-1.jpg?width=1920&quality=85");
-});
-
-Deno.test("toOptimizedCoverUrl leaves non-kino and render URLs untouched", () => {
-  assertEquals(toOptimizedCoverUrl("https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg"),
-    "https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg");
-  const render = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/p/c.jpg?width=1920&quality=85";
-  assertEquals(toOptimizedCoverUrl(render), render);
-  assertEquals(toOptimizedCoverUrl(""), "");
+Deno.test("toProportionalRenderUrl passes through contracted and non-kino URLs", () => {
+  const contracted = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/capa.webp?width=1200&quality=80";
+  assertEquals(toProportionalRenderUrl(contracted, { width: 1920 }, { width: 1920, height: 772 }), contracted);
+  assertEquals(toProportionalRenderUrl("https://files.cercomp.ufg.br/x.png", { width: 1920 }, { width: 1920, height: 772 }),
+    "https://files.cercomp.ufg.br/x.png");
+  assertEquals(toProportionalRenderUrl("https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/x", { width: 1920 }, { width: 1920, height: 772 }),
+    "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/x");
 });
