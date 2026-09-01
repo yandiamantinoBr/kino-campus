@@ -3,6 +3,7 @@ import {
   fetchPublicResource,
   isPublicAddress,
   MAX_REMOTE_REDIRECTS,
+  PermanentResourceError,
   publicRemoteUrl,
   readBoundedBody,
   type RemoteResourceDependencies,
@@ -501,4 +502,62 @@ Deno.test("blocked image redirects and DNS errors preserve safety error for no e
         deps,
       ), RemoteResourceError);
   }
+});
+
+Deno.test("permanent download failures (4xx, unsupported type, empty body) are typed so no external fallback persists", async () => {
+  const settle = (pending) => pending.then(() => null, (error) => error);
+  // 404: recurso sumiu — persistir a URL externa produziria imagem quebrada.
+  const notFound = await settle(
+    downloadRemoteImage("https://files.cercomp.ufg.br/sumiu.jpg", imageOptions, {
+      resolveDns: publicDns,
+      fetch: () => Promise.resolve(new Response("nope", { status: 404 })),
+    }),
+  );
+  assert.ok(notFound instanceof PermanentResourceError, "404 deve ser permanente");
+  assert.ok(notFound instanceof RemoteResourceError, "404 herda RemoteResourceError");
+  assert.equal(notFound.message, "image_download_http_404");
+  // 500 permanece transitório (Error simples): fallback externo continua válido.
+  const serverError = await settle(
+    downloadRemoteImage(
+      "https://files.cercomp.ufg.br/instavel.jpg",
+      imageOptions,
+      {
+        resolveDns: publicDns,
+        fetch: () =>
+          Promise.resolve(new Response("boom", { status: 500 })),
+      },
+    ),
+  );
+  assert.ok(!(serverError instanceof RemoteResourceError), "500 não é permanente");
+  assert.equal(serverError.message, "image_download_http_500");
+  // Content-type não-imagem sem extensão reconhecível — nunca vira imagem.
+  const unsupported = await settle(
+    downloadRemoteImage("https://files.cercomp.ufg.br/pagina", imageOptions, {
+      resolveDns: publicDns,
+      fetch: () =>
+        Promise.resolve(
+          new Response("<html></html>", {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+        ),
+    }),
+  );
+  assert.ok(unsupported instanceof PermanentResourceError);
+  assert.equal(unsupported.message, "unsupported_image_type");
+  // Corpo vazio com content-type de imagem — objeto inválido.
+  const empty = await settle(
+    downloadRemoteImage("https://files.cercomp.ufg.br/vazio.png", imageOptions, {
+      resolveDns: publicDns,
+      fetch: () =>
+        Promise.resolve(
+          new Response(new Uint8Array(0), {
+            status: 200,
+            headers: { "content-type": "image/png" },
+          }),
+        ),
+    }),
+  );
+  assert.ok(empty instanceof PermanentResourceError);
+  assert.equal(empty.message, "empty_image");
 });

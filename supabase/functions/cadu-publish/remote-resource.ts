@@ -4,6 +4,13 @@
 import { isIP } from "node:net";
 
 export class RemoteResourceError extends Error {}
+/**
+ * Falha permanente do recurso remoto (ex.: HTTP 404/410, conteúdo sem imagem,
+ * corpo vazio). Subclasse de RemoteResourceError para que os chamadores que já
+ * recusam fallback externo em RemoteResourceError também recusem aqui — não
+ * devemos persistir uma URL que NUNCA vai resolver em imagem válida.
+ */
+export class PermanentResourceError extends RemoteResourceError {}
 export const MAX_REMOTE_REDIRECTS = 3;
 
 export function isPublicAddress(address: string): boolean {

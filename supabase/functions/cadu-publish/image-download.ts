@@ -2,6 +2,7 @@ import {
   fetchPublicResource,
   readBoundedBody,
   type RemoteResourceDependencies,
+  PermanentResourceError,
   RemoteResourceError,
 } from "./remote-resource.ts";
 
@@ -27,7 +28,15 @@ export async function downloadRemoteImage(
       userAgent: options.userAgent,
       signal: controller.signal,
     }, deps);
-    if (!response.ok) throw new Error(`image_download_http_${response.status}`);
+    if (!response.ok) {
+      // 4xx é permanente: o recurso sumiu (404/410) ou o acesso é negado.
+      // Persistir a URL externa como fallback produziria imagens quebradas
+      // no feed (bug 2026-09: gallery_image_urls com .jpg 404 do cercomp).
+      if (response.status >= 400 && response.status < 500) {
+        throw new PermanentResourceError(`image_download_http_${response.status}`);
+      }
+      throw new Error(`image_download_http_${response.status}`);
+    }
     const ct = (response.headers.get("content-type") || "").split(";")[0].trim()
       .toLowerCase();
     let ext = IMAGE_EXT[ct] || "";
@@ -35,11 +44,11 @@ export async function downloadRemoteImage(
       const match = url.toLowerCase().match(/\.(jpe?g|png|gif|webp)(?:$|[?#])/);
       if (match) ext = match[1] === "jpeg" ? "jpg" : match[1];
     }
-    if (!ext) throw new Error("unsupported_image_type");
+    if (!ext) throw new PermanentResourceError("unsupported_image_type");
     const bytes = await readBoundedBody(response, options.maxBytes, {
       signal: controller.signal,
     });
-    if (!bytes.byteLength) throw new Error("empty_image");
+    if (!bytes.byteLength) throw new PermanentResourceError("empty_image");
     const contentType = ct.startsWith("image/")
       ? ct
       : `image/${ext === "jpg" ? "jpeg" : ext}`;

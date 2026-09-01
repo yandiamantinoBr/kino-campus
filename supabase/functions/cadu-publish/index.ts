@@ -485,6 +485,9 @@ async function prepareFinalImages(
         results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
       } catch (e) {
         const error = e instanceof Error ? e.message : String(e);
+        // RemoteResourceError também cobre PermanentResourceError (HTTP 4xx,
+        // unsupported_image_type, empty_image): fallback externo só faz sentido
+        // para falhas transitórias — URL 404 persistida = imagem quebrada no feed.
         results[index] = allowExternalFallback && !(e instanceof RemoteResourceError) && canPersistExternalImageUrl(candidate)
           ? { source: candidate, url: candidate, uploaded: false, fallback: true, error }
           : { source: candidate, url: "", uploaded: false, fallback: false, error };
