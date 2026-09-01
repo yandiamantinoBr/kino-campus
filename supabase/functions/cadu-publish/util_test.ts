@@ -2,6 +2,7 @@ import {
   DEFAULT_AUTO_PUBLISH_SCORE_MIN,
   isDurableSourceIdentityUrl,
   resolveAutoPublishScoreMin,
+  toOptimizedCoverUrl,
 } from "./util.ts";
 
 function assertEquals(actual: unknown, expected: unknown): void {
@@ -41,4 +42,31 @@ Deno.test("source URL identity accepts content pages and rejects reusable action
     "https://ufg.br/",
     "https://example.org/not-an-institutional-item",
   ]) assertEquals(isDurableSourceIdentityUrl(url), false);
+});
+Deno.test("toOptimizedCoverUrl converts kino-media objects to render URLs", () => {
+  const input = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u/p/cadu-1.jpg";
+  const output = toOptimizedCoverUrl(input);
+  assertEquals(output, "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/post-media/u/p/cadu-1.jpg?width=1920&quality=85");
+});
+
+Deno.test("toOptimizedCoverUrl leaves non-kino and render URLs untouched", () => {
+  assertEquals(toOptimizedCoverUrl("https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg"),
+    "https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg");
+  const render = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/p/c.jpg?width=1920&quality=85";
+  assertEquals(toOptimizedCoverUrl(render), render);
+  assertEquals(toOptimizedCoverUrl(""), "");
+});
+
+Deno.test("toOptimizedCoverUrl converts kino-media objects to render URLs", () => {
+  const input = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u/p/cadu-1.jpg";
+  const output = toOptimizedCoverUrl(input);
+  assertEquals(output, "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/post-media/u/p/cadu-1.jpg?width=1920&quality=85");
+});
+
+Deno.test("toOptimizedCoverUrl leaves non-kino and render URLs untouched", () => {
+  assertEquals(toOptimizedCoverUrl("https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg"),
+    "https://files.cercomp.ufg.br/weby/up/1/o/banner.jpg");
+  const render = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/p/c.jpg?width=1920&quality=85";
+  assertEquals(toOptimizedCoverUrl(render), render);
+  assertEquals(toOptimizedCoverUrl(""), "");
 });

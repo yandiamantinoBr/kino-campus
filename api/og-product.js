@@ -276,6 +276,30 @@ function isTemporaryImageUrl(value) {
     return false;
   }
 }
+/**
+ * Padrão de capa/OG (2026-08-31): URLs de objetos do kino-media são servidas
+ * pela transformação do Storage (render, width=1920, quality=85) — faixa
+ * verificada 200–500 KB em capas reais, sem alterar o objeto original.
+ * Espelho de supabase/functions/cadu-publish/util.ts::toOptimizedCoverUrl.
+ */
+function toOptimizedCoverUrl(url) {
+  const value = String(url || '').trim();
+  const marker = '/storage/v1/object/public/';
+  const idx = value.indexOf(marker);
+  if (idx < 0) return value;
+  // URLs que já carregam transformação própria (ex.: post_media com
+  // ?width=1200&quality=80 da pipeline) mantêm seus parâmetros contratuais.
+  if (/[?&](?:width|quality|format)=/.test(value)) return value;
+  const rest = value.slice(idx + marker.length);
+  const slash = rest.indexOf('/');
+  if (slash <= 0) return value;
+  const bucket = rest.slice(0, slash);
+  const objectPath = rest.slice(slash + 1).split('?')[0];
+  // Contrato dynamic-seo-policy: URL sem extensão de imagem passa intacta.
+  if (!/\.(?:jpg|jpeg|png|webp)$/i.test(objectPath)) return value;
+  return value.slice(0, idx) + '/storage/v1/render/image/public/' + bucket + '/' + objectPath + '?width=1920&quality=85';
+}
+
 function getPostImage(post) {
   const metadata = metadataOf(post);
   const media = post && post.post_media;
@@ -312,10 +336,14 @@ function getPostImage(post) {
     post && post.cover_url,
     post && post.coverUrl,
   ]);
-  return candidates
+  const found = candidates
     .map((item) => String(item || '').trim())
     .filter(isHttpUrl)
     .find((url) => !isTemporaryImageUrl(url)) || '';
+  // Padrão de capa/OG (2026-08-31): objetos do kino-media são servidos pela
+  // transformação do Storage (render) na faixa 200–500 KB para crawlers —
+  // espelho de supabase/functions/cadu-publish/util.ts::toOptimizedCoverUrl.
+  return toOptimizedCoverUrl(found);
 }
 
 function isRemoteImageUrl(value) {
