@@ -238,9 +238,66 @@ export function canPersistExternalImageUrl(value: unknown): boolean {
  * capas reais) — sem alterar o objeto original, que permanece íntegro no
  * bucket para qualquer outro uso. Idempotente e não-kino URLs voltam intactas.
  */
-export const COVER_RENDER_PARAMS = "width=1920&quality=85";
+export const COVER_RENDER_WIDTH = 1920;
+export const COVER_RENDER_QUALITY = 90;
 
-export function toOptimizedCoverUrl(url: unknown): string {
+/**
+ * Padrão de capa/OG (2026-08-31): objetos do kino-media são servidos pelo
+ * endpoint de transformação do Storage (render) com width proporcional e
+ * quality calibrada para previews de crawler (faixa verificada 200–500 KB
+ * em capas reais) — sem alterar o objeto original, que permanece íntegro no
+ * bucket. Requer as dimensões reais da imagem: com width isolado o render
+ * CORTA a altura (4688×1885 → 1920×1885 no caso CONPEEX), por isso height
+ * proporcional + resize=cover é obrigatório (sem corte, sem letterbox).
+ */
+export function buildCoverRenderUrl(objectUrl: string, width: number, height: number): string {
+  const marker = "/storage/v1/object/public/";
+  const idx = objectUrl.indexOf(marker);
+  if (idx < 0) return "";
+  const rest = objectUrl.slice(idx + marker.length);
+  const slash = rest.indexOf("/");
+  if (slash <= 0) return "";
+  const bucket = rest.slice(0, slash);
+  const objectPath = rest.slice(slash + 1).split("?")[0];
+  if (!/\.(?:jpg|jpeg|png|webp)$/i.test(objectPath)) return "";
+  const origin = objectUrl.slice(0, idx);
+  return `${origin}/storage/v1/render/image/public/${bucket}/${objectPath}?width=${width}&height=${height}&resize=cover&quality=${COVER_RENDER_QUALITY}`;
+}
+
+export function readImageDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+  // PNG: IHDR em bytes 16..24.
+  if (bytes.length > 24 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    const width = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+    const height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+    if (width > 0 && height > 0) return { width: width >>> 0, height: height >>> 0 };
+    return null;
+  }
+  // JPEG: varre marcadores SOF0/SOF1/SOF2... (C0-CF, exceto C4/C8/CC).
+  if (bytes.length > 4 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+    let offset = 2;
+    while (offset + 9 < bytes.length) {
+      if (bytes[offset] !== 0xff) { offset += 1; continue; }
+      const marker = bytes[offset + 1];
+      if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) { offset += 2; continue; }
+      const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+      const isSof = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+      if (isSof) {
+        const height = (bytes[offset + 5] << 8) | bytes[offset + 6];
+        const width = (bytes[offset + 7] << 8) | bytes[offset + 8];
+        if (width > 0 && height > 0) return { width, height };
+        return null;
+      }
+      offset += 2 + length;
+    }
+  }
+  return null;
+}
+
+export function toProportionalRenderUrl(
+  url: unknown,
+  target: { width: number },
+  dimensions: { width: number; height: number },
+): string {
   const value = String(url || "").trim();
   const marker = "/storage/v1/object/public/";
   const idx = value.indexOf(marker);
@@ -256,8 +313,11 @@ export function toOptimizedCoverUrl(url: unknown): string {
   // Contrato dynamic-seo-policy: URL sem extensão de imagem passa intacta
   // (não se assume que seja imagem — o render de não-imagem falharia).
   if (!/\.(?:jpg|jpeg|png|webp)$/i.test(objectPath)) return value;
+  if (!(dimensions.width > 0) || !(dimensions.height > 0)) return value;
   const origin = value.slice(0, idx);
-  return `${origin}/storage/v1/render/image/public/${bucket}/${objectPath}?${COVER_RENDER_PARAMS}`;
+  // Height proporcional à largura-alvo (1920) a partir da proporção real.
+  const proportionalHeight = Math.max(1, Math.round(dimensions.height * target.width / dimensions.width));
+  return `${origin}/storage/v1/render/image/public/${bucket}/${objectPath}?width=${target.width}&height=${proportionalHeight}&resize=cover&quality=${COVER_RENDER_QUALITY}`;
 }
 
 export function hostOf(value: unknown): string {

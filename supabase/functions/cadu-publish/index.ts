@@ -49,7 +49,9 @@ import {
   type InstitutionalReviewInput,
 } from "./review.ts";
 import {
+  buildCoverRenderUrl,
   canPersistExternalImageUrl,
+  COVER_RENDER_WIDTH,
   hostOf,
   isoDateFromAny,
   isDurableSourceIdentityUrl,
@@ -60,9 +62,9 @@ import {
   normalizeWhitespace,
   parseBrazilianDate,
   parseDateRange,
+  readImageDimensions,
   resolveAutoPublishScoreMin,
   stripHtml,
-  toOptimizedCoverUrl,
   validRemoteImageUrl,
 } from "./util.ts";
 
@@ -413,16 +415,22 @@ async function downloadImage(url: string): Promise<{ bytes: Uint8Array; contentT
   });
 }
 
-// Sobe a capa para kino-media e devolve a URL publica do Storage (ou "" se falhar).
+// Sobe a capa para kino-media e devolve a URL publica do Storage (ou "" se falhar)
+// junto da URL de render proporcional (para metadata.cover_render → og:image sem
+// corte e na faixa de KB para crawlers).
+interface UploadedCover {
+  publicUrl: string;
+  coverRenderUrl: string;
+}
 async function uploadCover(
   admin: SupabaseClient,
   userId: string,
   postId: string,
   sourceUrl: string,
   index = 0,
-): Promise<string> {
+): Promise<UploadedCover> {
   const clean = validRemoteImageUrl(sourceUrl);
-  if (!clean) return "";
+  if (!clean) return { publicUrl: "", coverRenderUrl: "" };
   const { bytes, contentType, ext } = await downloadImage(clean);
   const path = `post-media/${userId}/${postId}/cadu-${index + 1}-${lightHash(clean)}.${ext}`;
   const { error } = await admin.storage.from(STORAGE_BUCKET).upload(path, bytes, {
@@ -431,7 +439,12 @@ async function uploadCover(
   });
   if (error) throw error;
   const { data } = admin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data?.publicUrl || "";
+  const publicUrl = data?.publicUrl || "";
+  const dims = readImageDimensions(bytes);
+  const coverRenderUrl = dims
+    ? buildCoverRenderUrl(publicUrl, COVER_RENDER_WIDTH, Math.round(dims.height * COVER_RENDER_WIDTH / Math.max(1, dims.width)))
+    : "";
+  return { publicUrl, coverRenderUrl };
 }
 
 interface PreparedImage {
@@ -448,10 +461,11 @@ async function prepareFinalImages(
   postId: string,
   candidates: string[],
   allowExternalFallback: boolean,
-): Promise<{ images: string[]; uploads: PreparedImage[] }> {
+): Promise<{ images: string[]; uploads: PreparedImage[]; coverRender: string }> {
   const cleanCandidates = Array.from(new Set(candidates.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
   const results = new Array<PreparedImage>(cleanCandidates.length);
   let nextIndex = 0;
+  let coverRender = "";
 
   async function worker(): Promise<void> {
     while (nextIndex < cleanCandidates.length) {
@@ -459,11 +473,13 @@ async function prepareFinalImages(
       nextIndex += 1;
       const candidate = cleanCandidates[index];
       try {
-        const storageUrl = await uploadCover(admin, userId, postId, candidate, index);
+        const uploadedCover = await uploadCover(admin, userId, postId, candidate, index);
+        const storageUrl = uploadedCover.publicUrl;
         if (!storageUrl) throw new Error("storage_url_empty");
         // URLs armazenadas mantêm a identidade exata do objeto (contrato de
-        // dedup/provenância/auditoria do pipeline). A compressão para crawler
-        // acontece na camada OG (api/og-product → toOptimizedCoverUrl).
+        // dedup/provenância/auditoria do pipeline). A versão de crawler para
+        // og:image (render proporcional sem corte) vai em metadata.cover_render.
+        if (!coverRender && uploadedCover.coverRenderUrl) coverRender = uploadedCover.coverRenderUrl;
         results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
       } catch (e) {
         const error = e instanceof Error ? e.message : String(e);
@@ -479,7 +495,11 @@ async function prepareFinalImages(
   const uploads = results.filter(Boolean);
   const images = uploads.map((entry) => entry.url).filter(Boolean);
 
-  return { images: Array.from(new Set(images)).slice(0, MAX_IMAGE_COUNT), uploads };
+  return {
+    images: Array.from(new Set(images)).slice(0, MAX_IMAGE_COUNT),
+    uploads,
+    coverRender,
+  };
 }
 
 // Aplica galeria ao post atomically: posts.image_url + metadata + post_media.
@@ -488,6 +508,7 @@ async function applyImages(
   postId: string,
   imageUrls: string[],
   currentMetadata: Record<string, unknown>,
+  coverRender?: string,
 ): Promise<Record<string, unknown>> {
   const cleanUrls = Array.from(new Set(imageUrls.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
   if (!cleanUrls.length) return currentMetadata || {};
@@ -497,6 +518,7 @@ async function applyImages(
     image_url: coverUrl,
     cover_url: coverUrl,
     gallery_image_urls: cleanUrls,
+    ...(coverRender ? { cover_render: coverRender } : {}),
   });
   const { data, error } = await admin.rpc("kc_cadu_replace_post_media", {
     p_post_id: postId,
@@ -735,7 +757,7 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
       media.uploaded_count = prepared.uploads.filter((img) => img.uploaded).length;
       media.uploaded = media.uploaded_count > 0;
       if (prepared.images.length) {
-        post.metadata = await applyImages(admin, post.id, prepared.images, post.metadata || {});
+        post.metadata = await applyImages(admin, post.id, prepared.images, post.metadata || {}, prepared.coverRender);
         post.image_url = prepared.images[0];
         media.cover_url = prepared.images[0];
       } else {
@@ -1024,7 +1046,7 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
       uploaded = prepared.uploads.some((img) => img.uploaded);
       imageCount = prepared.images.length;
       if (prepared.images.length) {
-        await applyImages(admin, postId, prepared.images, baseMeta);
+        await applyImages(admin, postId, prepared.images, baseMeta, prepared.coverRender);
         coverUrl = prepared.images[0];
       } else {
         imageError = prepared.uploads.find((img) => img.error)?.error || "image_prepare_failed";
