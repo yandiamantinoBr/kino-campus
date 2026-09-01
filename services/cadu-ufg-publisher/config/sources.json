@@ -2,13 +2,13 @@
     "meta":  {
                  "lastAudit":  "2026-07-15",
                  "tier1":  93,
-                 "withInstagram":  63,
-                 "totalSites":  107,
+                 "withInstagram":  64,
+                 "totalSites":  108,
                  "quick":  103,
                  "tier2":  10,
                  "version":  "3.1",
-                 "withFeedRss":  103,
-                 "tier3":  4
+                 "withFeedRss":  104,
+                 "tier3":  5
              },
     "sources":  [
                     {
@@ -1615,6 +1615,21 @@
                         "lastPostDate":  "2026-07-06",
                         "qualityScore":  1,
                         "lastAudit":  "2026-07-10"
+                    },
+                    {
+                        "id":  "fapeg",
+                        "name":  "FAPEG - Fundacao de Amparo a Pesquisa do Estado de Goias",
+                        "baseUrl":  "https://goias.gov.br/fapeg",
+                        "tier":  3,
+                        "quick":  false,
+                        "hasFeedRss":  true,
+                        "hasEventsRss":  false,
+                        "feedRssUrl":  "https://goias.gov.br/fapeg/feed",
+                        "feedItemsCount":  10,
+                        "instagram":  "fapegoias",
+                        "lastPostDate":  "2026-08-03",
+                        "qualityScore":  0.6,
+                        "lastAudit":  "2026-08-03"
                     }
                 ]
 }
