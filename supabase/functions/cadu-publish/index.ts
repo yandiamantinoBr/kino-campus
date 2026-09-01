@@ -16,6 +16,7 @@
 //   { action: "publish", item, options? }   -> cria post + capa
 //   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
 //   { action: "edit", postId, fields?, metadata?, userTags?, tags?, image?, images? } -> edita
+//   { action: "edit", postId, reclassification: { expected, item } } -> reclassifica com CAS
 //   { action: "list", filters? }            -> lista posts do Cadu (filtra)
 //   { action: "check", sourceUrl?, sourceId? } -> dedup (ja postado?)
 //
@@ -97,6 +98,7 @@ const AUTO_PUBLISH_SCORE_MIN = resolveAutoPublishScoreMin(optionalEnv("AUTO_PUBL
 const INSTITUTIONAL_REVIEW_ENABLED =
   optionalEnv("CADU_INSTITUTIONAL_REVIEW_ENABLED") === "1";
 const CAPABILITY_VERSION = "cadu-publish-capabilities-v1";
+const RECLASSIFICATION_CONTRACT = "cadu-edit-reclassification-v1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -945,13 +947,210 @@ async function handleReview(admin: SupabaseClient, userId: string, body: Record<
 // ── edit ────────────────────────────────────────────────────────────────────
 const EDITABLE_FIELDS = ["title", "description", "price", "location", "category", "visibility", "status"] as const;
 
+const RECLASSIFICATION_MODULES = new Set(["eventos", "oportunidades"]);
+const RECLASSIFICATION_MEDIA_METADATA_FIELDS = [
+  "image_url",
+  "cover_url",
+  "gallery_image_urls",
+  "cover_render",
+] as const;
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function hasExactKeys(value: Record<string, unknown>, keys: string[]): boolean {
+  const expected = [...keys].sort();
+  const actual = Object.keys(value).sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function sameInstant(left: unknown, right: unknown): boolean {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  const leftMs = Date.parse(left);
+  const rightMs = Date.parse(right);
+  return Number.isFinite(leftMs) && Number.isFinite(rightMs) && leftMs === rightMs;
+}
+
+function reclassificationError(message: string, code = "RECLASSIFICATION_INVALID") {
+  return json(422, { ok: false, code, message });
+}
+
+async function handleCanonicalReclassification(
+  admin: SupabaseClient,
+  userId: string,
+  body: Record<string, unknown>,
+  current: Record<string, unknown>,
+) {
+  if (!hasExactKeys(body, ["action", "postId", "reclassification"])) {
+    return reclassificationError(
+      "A reclassificacao canonica nao pode ser combinada com fields, metadata, Tags ou imagens.",
+    );
+  }
+  const reclassification = recordValue(body.reclassification);
+  if (!reclassification || !hasExactKeys(reclassification, ["expected", "item"])) {
+    return reclassificationError("Informe reclassification.expected e reclassification.item, sem campos extras.");
+  }
+  const expected = recordValue(reclassification.expected);
+  const itemRecord = recordValue(reclassification.item);
+  if (!expected || !itemRecord || !hasExactKeys(expected, [
+    "module", "category", "status", "updatedAt", "expiresAt", "sourceId", "sourceUrl",
+  ])) {
+    return reclassificationError("O snapshot expected da reclassificacao esta incompleto ou possui campos extras.");
+  }
+
+  const currentMetadata = recordValue(current.metadata) || {};
+  const expectedSnapshotMatches =
+    expected.module === current.module &&
+    expected.category === current.category &&
+    expected.status === current.status &&
+    expected.updatedAt === current.updated_at &&
+    expected.expiresAt === (current.expires_at ?? null) &&
+    expected.sourceId === currentMetadata.source_id &&
+    expected.sourceUrl === currentMetadata.source_url;
+  if (!expectedSnapshotMatches) {
+    return json(409, {
+      ok: false,
+      code: "EDIT_CONFLICT",
+      message: "O post mudou desde o snapshot editorial; reabra e revise antes de reclassificar.",
+    });
+  }
+
+  const targetModule = String(itemRecord.module || "");
+  const currentModule = String(current.module || "");
+  if (!RECLASSIFICATION_MODULES.has(currentModule) || !RECLASSIFICATION_MODULES.has(targetModule) ||
+    currentModule === targetModule) {
+    return reclassificationError("A reclassificacao permite apenas a troca explicita entre eventos e oportunidades.");
+  }
+
+  const item = itemRecord as CaduItem;
+  const validation = validateItem(item);
+  if (!validation.ok) {
+    return reclassificationError(validation.errors.join(" "), "VALIDATION_FAILED");
+  }
+
+  let mapped: ReturnType<typeof mapItemToPost>;
+  try {
+    mapped = mapItemToPost(item, { runId: String(currentMetadata.cadu_run_id || "") });
+  } catch (error) {
+    return reclassificationError(
+      error instanceof Error ? error.message : String(error),
+      "VALIDATION_FAILED",
+    );
+  }
+  if (mapped.dedup.sourceId !== expected.sourceId || mapped.dedup.sourceUrl !== expected.sourceUrl) {
+    return reclassificationError("A reclassificacao nao pode alterar source_id nem source_url.");
+  }
+
+  const quality = evaluateCaduPublishQuality(item, mapped);
+  if (!quality.ok) {
+    return json(422, {
+      ok: false,
+      code: "QUALITY_BLOCKED",
+      message: "O item reclassificado nao passou na barreira de qualidade editorial do Cadu.",
+      quality,
+      warnings: [...validation.warnings, ...mapped.warnings, ...quality.warnings],
+    });
+  }
+
+  const expiresAt = mapped.row.expires_at;
+  if (typeof expiresAt !== "string" || !Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= Date.now()) {
+    return reclassificationError("A reclassificacao exige expires_at futuro derivado das datas semanticas do item.");
+  }
+
+  const metadata = { ...mapped.row.metadata };
+  for (const key of RECLASSIFICATION_MEDIA_METADATA_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(currentMetadata, key)) metadata[key] = currentMetadata[key];
+  }
+  const update = {
+    title: mapped.row.title,
+    description: mapped.row.description,
+    price: mapped.row.price,
+    location: mapped.row.location,
+    module: mapped.row.module,
+    category: mapped.row.category,
+    visibility: mapped.row.visibility,
+    metadata,
+    expires_at: expiresAt,
+  };
+
+  let mutation = admin
+    .from("posts")
+    .update(update)
+    .eq("id", String(current.id))
+    .eq("author_id", userId)
+    .eq("module", String(expected.module))
+    .eq("category", String(expected.category))
+    .eq("status", String(expected.status))
+    .eq("updated_at", String(expected.updatedAt))
+    .eq("metadata->>source_id", String(expected.sourceId))
+    .eq("metadata->>source_url", String(expected.sourceUrl));
+  mutation = expected.expiresAt === null
+    ? mutation.is("expires_at", null)
+    : mutation.eq("expires_at", String(expected.expiresAt));
+  const { data: fresh, error: updateError } = await mutation
+    .select("id,status,module,category,image_url,expires_at,updated_at,metadata")
+    .maybeSingle();
+  if (updateError) {
+    return json(500, { ok: false, code: "UPDATE_FAILED", message: updateError.message });
+  }
+  if (!fresh) {
+    return json(409, {
+      ok: false,
+      code: "EDIT_CONFLICT",
+      message: "O post mudou durante a reclassificacao; nenhuma alteracao foi aplicada.",
+    });
+  }
+
+  const freshMetadata = recordValue(fresh.metadata) || {};
+  if (fresh.module !== mapped.row.module || fresh.category !== mapped.row.category ||
+    !sameInstant(fresh.expires_at, expiresAt) || freshMetadata.source_id !== expected.sourceId ||
+    freshMetadata.source_url !== expected.sourceUrl) {
+    return json(502, {
+      ok: false,
+      code: "RECLASSIFICATION_RECEIPT_INVALID",
+      message: "O banco nao confirmou a reclassificacao canonica completa.",
+    });
+  }
+
+  audit(admin, "cadu_post_reclassified", String(current.id), userId, {
+    contract: RECLASSIFICATION_CONTRACT,
+    from_module: current.module,
+    from_category: current.category,
+    to_module: fresh.module,
+    to_category: fresh.category,
+    previous_expires_at: current.expires_at ?? null,
+    expires_at: fresh.expires_at,
+    source_id: expected.sourceId,
+  });
+  return json(200, {
+    ok: true,
+    code: "RECLASSIFIED",
+    contract: RECLASSIFICATION_CONTRACT,
+    post_id: fresh.id,
+    status: fresh.status,
+    module: fresh.module,
+    category: fresh.category,
+    expires_at: fresh.expires_at,
+    updated_at: fresh.updated_at,
+    image_url: fresh.image_url || current.image_url || "",
+    source_id: freshMetadata.source_id,
+    source_url: freshMetadata.source_url,
+    url: postUrl(String(fresh.module)),
+    quality,
+    warnings: [...validation.warnings, ...mapped.warnings, ...quality.warnings],
+  });
+}
+
 export async function handleEdit(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const postId = String(body.postId || "");
   if (!postId) return json(400, { ok: false, code: "MISSING_POST_ID", message: "Informe postId." });
 
   const { data: current, error: getErr } = await admin
     .from("posts")
-    .select("id,author_id,module,category,status,metadata,image_url")
+    .select("id,author_id,module,category,status,metadata,image_url,expires_at,updated_at")
     .eq("id", postId)
     .maybeSingle();
   if (getErr || !current) return json(404, { ok: false, code: "POST_NOT_FOUND", message: "Post nao encontrado." });
@@ -959,8 +1158,30 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
     return json(403, { ok: false, code: "NOT_OWNER", message: "O Cadu so pode editar os proprios posts." });
   }
 
+  if (body.reclassification !== undefined) {
+    return await handleCanonicalReclassification(
+      admin,
+      userId,
+      body,
+      current as Record<string, unknown>,
+    );
+  }
+
   const update: Record<string, unknown> = {};
-  const fields = (body.fields || {}) as Record<string, unknown>;
+  const fields = recordValue(body.fields) || {};
+  if (body.fields !== undefined && !recordValue(body.fields)) {
+    return json(422, { ok: false, code: "VALIDATION_FAILED", message: "fields deve ser um objeto." });
+  }
+  const unknownFields = Object.keys(fields).filter((field) =>
+    !(EDITABLE_FIELDS as readonly string[]).includes(field)
+  );
+  if (unknownFields.length) {
+    return json(422, {
+      ok: false,
+      code: "VALIDATION_FAILED",
+      message: `fields nao editaveis: ${unknownFields.sort().join(", ")}.`,
+    });
+  }
   for (const f of EDITABLE_FIELDS) {
     if (f === "category") continue;
     if (fields[f] !== undefined) update[f] = fields[f];
@@ -1181,6 +1402,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           ok: true,
           code: "OK",
           capabilityVersion: CAPABILITY_VERSION,
+          canonicalReclassification: RECLASSIFICATION_CONTRACT,
           institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
           reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
           createReviewRpc: "kc_create_institutional_source_review",
