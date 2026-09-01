@@ -157,6 +157,39 @@ describe('kc-card__image-wrapper data-kc-image-candidates', () => {
     expect(wrapper.hasAttribute('data-kc-image-candidates')).toBe(false);
   });
 
+  test('data-full-src acompanha a fonte ao avançar de candidato (lightbox)', () => {
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('data-kc-image-candidates', JSON.stringify([BROKEN_GALLERY, WORKING_META_IMAGE, WORKING_META_COVER]));
+    const image = document.createElement('img');
+    image.setAttribute('src', BROKEN_GALLERY);
+    image.setAttribute('data-full-src', BROKEN_GALLERY);
+    wrapper.appendChild(image);
+    document.body.appendChild(wrapper);
+    fail(image);
+    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE);
+    expect(image.getAttribute('data-full-src')).toBe(WORKING_META_IMAGE);
+  });
+
+  test('data-kc-image-fallback-id revela elemento de capa existente (hero do produto)', () => {
+    const cover = document.createElement('div');
+    cover.id = 'emojiCoverFixture';
+    cover.style.display = 'none';
+    document.body.appendChild(cover);
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('data-kc-image-candidates', JSON.stringify([BROKEN_GALLERY]));
+    wrapper.setAttribute('data-kc-image-emoji', '\uD83D\uDCC5');
+    wrapper.setAttribute('data-kc-image-fallback-id', 'emojiCoverFixture');
+    const image = document.createElement('img');
+    image.setAttribute('src', BROKEN_GALLERY);
+    wrapper.appendChild(image);
+    document.body.appendChild(wrapper);
+    fail(image);
+    expect(cover.style.display).toBe('flex');
+    expect(cover.textContent).toBe('\uD83D\uDCC5');
+    expect(image.style.display).toBe('none');
+    expect(wrapper.hasAttribute('data-kc-image-candidates')).toBe(false);
+  });
+
   test('não interfere no caminho dos avatares de autor', () => {
     const { container } = render(buildPost({
       imagens: [BROKEN_GALLERY],

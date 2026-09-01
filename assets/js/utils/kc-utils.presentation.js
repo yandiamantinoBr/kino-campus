@@ -135,6 +135,17 @@
     if (wrapper.classList.contains(fallbackClass)) return;
     wrapper.classList.add(fallbackClass);
     if (image) image.style.display = 'none';
+    // Hero de produto: revela o emojiCover existente em vez de criar span novo.
+    const fallbackId = wrapper.getAttribute('data-kc-image-fallback-id');
+    if (fallbackId) {
+      const cover = document.getElementById(fallbackId);
+      if (cover) {
+        cover.textContent = wrapper.getAttribute('data-kc-image-emoji') || '\u2728';
+        cover.style.display = 'flex';
+        wrapper.removeAttribute('data-kc-image-candidates');
+        return;
+      }
+    }
     const emojiClass = wrapper.getAttribute('data-kc-image-emoji-class') || 'kc-card__emoji';
     if (!wrapper.querySelector('.' + emojiClass)) {
       const span = document.createElement('span');
@@ -172,6 +183,8 @@
       wrapper.setAttribute('data-kc-image-candidate-index', String(next));
       image.style.display = '';
       image.setAttribute('src', candidates[next]);
+      // Lightbox herdando data-full-src precisa seguir a fonte corrente.
+      if (image.hasAttribute('data-full-src')) image.setAttribute('data-full-src', candidates[next]);
       return;
     }
     _applyCardImageEmojiFallback(wrapper, image);

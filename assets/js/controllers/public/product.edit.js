@@ -337,6 +337,15 @@
           '<span class="kc-img-order" aria-hidden="true">' + (index + 1) + '</span>' +
         '</div>';
       }).join('');
+      // v11.32.0: sinaliza visualmente URLs mortas no modal de edicao (fade +
+      // classe) para o admin remover/substituir antes de salvar.
+      galleryGrid.querySelectorAll('img').forEach(function (img) {
+        img.addEventListener('error', function () {
+          var thumb = img.closest('.kc-edit-gallery-thumb');
+          if (thumb) thumb.classList.add('kc-edit-gallery-thumb--broken');
+          img.style.opacity = '0.35';
+        }, { once: true });
+      });
       galleryGrid.style.display = urls.length ? 'grid' : 'none';
     }
 

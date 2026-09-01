@@ -426,7 +426,13 @@
     var coverUrl = post.cover_url || (post.images && post.images[0]) || '';
 
     var thumbHtml = coverUrl
-      ? '<img src="' + esc(coverUrl) + '" alt="' + esc(title) + '" style="width:64px;height:64px;object-fit:cover;border-radius:10px;flex-shrink:0;">'
+      ? // Handler delegado de kc-utils.presentation.js cobre a miniatura:
+        // URL quebrada cai no fallback emoji (mesmo contrato do card sem capa).
+        '<span data-kc-image-candidates="' + esc(JSON.stringify([coverUrl])) + '"' +
+        ' data-kc-image-emoji="' + esc(modInfo.emoji) + '"' +
+        ' style="flex-shrink:0;line-height:0;">' +
+        '<img src="' + esc(coverUrl) + '" alt="' + esc(title) + '" style="width:64px;height:64px;object-fit:cover;border-radius:10px;">' +
+        '</span>'
       : '<div style="width:64px;height:64px;border-radius:10px;background:var(--kc-background-dark);display:flex;align-items:center;justify-content:center;font-size:1.8em;flex-shrink:0;">' + modInfo.emoji + '</div>';
 
     var metaHtml = '';
