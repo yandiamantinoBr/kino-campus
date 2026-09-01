@@ -1,6 +1,6 @@
 /**
  * @file product.related.js
- * @description Sub-modulo de publicacoes relacionadas da pagina de produto (v11.30.11)
+ * @description Sub-modulo de publicacoes relacionadas da pagina de produto (v11.31.0)
  * Extraido de product.controller.js. Registra window._KCProduct.related.
  *
  * Dependencias em runtime:
@@ -87,7 +87,33 @@
       : 'Imagem de publicação relacionada em ' + context;
     var exampleBadge = isLegacyExamplePost(post) ? buildLegacyExampleBadgeHtml('Exemplo', 'kc-product-example-ribbon--related') : '';
     if (images.length) {
-      return '<div class="kc-related-card__media">' + exampleBadge + '<img src="' + esc(String(images[0])) + '" alt="' + esc(imageAlt) + '" loading="lazy" decoding="async" /></div>';
+      // v12.3.0: candidatos para o handler delegado de erro (URLs externas
+      // quebradas caem no próximo candidato e, por fim, no fallback emoji).
+      var candidates = [];
+      var meta = post && post.metadata && typeof post.metadata === 'object' ? post.metadata : {};
+      var pool = images
+        .concat([post && post.cover_url, post && post.coverUrl, post && post.image_url, post && post.imageUrl])
+        .concat([meta.cover_url, meta.coverUrl, meta.image_url, meta.imageUrl]);
+      ['gallery_image_urls', 'galleryImageUrls', 'image_urls', 'imageUrls'].forEach(function (key) {
+        if (Array.isArray(meta[key])) pool = pool.concat(meta[key]);
+      });
+      var seen = {};
+      pool.forEach(function (value) {
+        var raw = String(value == null ? '' : value).trim();
+        if (!raw || seen[raw]) return;
+        if (!/^https?:\/\//i.test(raw) && !/^data:image\//i.test(raw) && raw.charAt(0) !== '/') return;
+        if (raw.charAt(0) === '/' && raw.charAt(1) === '/') return;
+        seen[raw] = true;
+        if (candidates.length < 6) candidates.push(raw);
+      });
+      var src = candidates.length ? candidates[0] : esc(String(images[0]));
+      var attrs = candidates.length
+        ? ' data-kc-image-candidates="' + esc(JSON.stringify(candidates)) + '"'
+          + ' data-kc-image-emoji="' + esc(String(post && post.emoji || '✨').trim() || '✨') + '"'
+          + ' data-kc-image-fallback-class="kc-related-card__media--fallback"'
+          + ' data-kc-image-emoji-class="kc-related-card__media-emoji"'
+        : '';
+      return '<div class="kc-related-card__media"' + attrs + '>' + exampleBadge + '<img src="' + esc(src) + '" alt="' + esc(imageAlt) + '" loading="lazy" decoding="async" /></div>';
     }
 
     var emoji = String(post && post.emoji || '✨').trim() || '✨';
