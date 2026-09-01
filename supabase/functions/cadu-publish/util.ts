@@ -253,6 +253,9 @@ export function toOptimizedCoverUrl(url: unknown): string {
   if (slash <= 0) return value;
   const bucket = rest.slice(0, slash);
   const objectPath = rest.slice(slash + 1).split("?")[0];
+  // Contrato dynamic-seo-policy: URL sem extensão de imagem passa intacta
+  // (não se assume que seja imagem — o render de não-imagem falharia).
+  if (!/\.(?:jpg|jpeg|png|webp)$/i.test(objectPath)) return value;
   const origin = value.slice(0, idx);
   return `${origin}/storage/v1/render/image/public/${bucket}/${objectPath}?${COVER_RENDER_PARAMS}`;
 }

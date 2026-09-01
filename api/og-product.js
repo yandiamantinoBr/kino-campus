@@ -295,6 +295,8 @@ function toOptimizedCoverUrl(url) {
   if (slash <= 0) return value;
   const bucket = rest.slice(0, slash);
   const objectPath = rest.slice(slash + 1).split('?')[0];
+  // Contrato dynamic-seo-policy: URL sem extensão de imagem passa intacta.
+  if (!/\.(?:jpg|jpeg|png|webp)$/i.test(objectPath)) return value;
   return value.slice(0, idx) + '/storage/v1/render/image/public/' + bucket + '/' + objectPath + '?width=1920&quality=85';
 }
 
