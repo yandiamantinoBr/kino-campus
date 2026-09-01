@@ -505,7 +505,8 @@ Deno.test("blocked image redirects and DNS errors preserve safety error for no e
 });
 
 Deno.test("permanent download failures (4xx, unsupported type, empty body) are typed so no external fallback persists", async () => {
-  const settle = (pending) => pending.then(() => null, (error) => error);
+  const settle = (pending: Promise<unknown>): Promise<unknown> =>
+    pending.then(() => null, (error: unknown) => error);
   // 404: recurso sumiu — persistir a URL externa produziria imagem quebrada.
   const notFound = await settle(
     downloadRemoteImage("https://files.cercomp.ufg.br/sumiu.jpg", imageOptions, {
@@ -529,7 +530,7 @@ Deno.test("permanent download failures (4xx, unsupported type, empty body) are t
     ),
   );
   assert.ok(!(serverError instanceof RemoteResourceError), "500 não é permanente");
-  assert.equal(serverError.message, "image_download_http_500");
+  assert.equal((serverError as Error).message, "image_download_http_500");
   // Content-type não-imagem sem extensão reconhecível — nunca vira imagem.
   const unsupported = await settle(
     downloadRemoteImage("https://files.cercomp.ufg.br/pagina", imageOptions, {
