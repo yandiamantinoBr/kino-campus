@@ -397,7 +397,7 @@ describe('Cadu sites/source-registry v2 proxy contract', () => {
     expect(res.headers.get('x-cadu-canonical-etag')).toBe(res.headers.get('etag'));
     expect(res.headers.get('x-cadu-registry-sha256')).toMatch(/^[a-f0-9]{64}$/);
     expect(res.headers.get('x-cadu-registry-origin')).toBe('kino-campus-mirror');
-    expect(res.headers.get('x-cadu-registry-audit-cutoff')).toBe('2026-07-22');
+    expect(res.headers.get('x-cadu-registry-audit-cutoff')).toBe('2026-09-03');
     expect(res.headers.get('x-cadu-upstream-status')).toBe('404');
     expect(res.headers.get('cache-control')).toBe('private, no-store');
     expect(global.fetch.mock.calls[0][1].cache).toBe('no-store');
