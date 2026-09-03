@@ -1,35 +1,35 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-07-26.1",
-  "auditCutoff": "2026-07-22",
+  "registryVersion": "2026-09-03.1",
+  "auditCutoff": "2026-09-03",
   "upstream": {
     "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-    "commit": "749c05beff5d81253d3b5f36d4bf076950186740"
+    "commit": "b51056ffbad2f07b4da0c524046eace1d038e537"
   },
   "artifacts": [
     {
       "id": "candidate",
       "file": "ufg-source-registry.candidate.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.candidate.json",
-      "upstreamGitBlobOid": "8d69cc7f6ed555697d00bee804c809bf37c1d13a",
-      "contentSha256": "d6070fa6b031d8f82cf2e76c683548b67c717cb3516469e58974caceac03aa78",
-      "byteLength": 813381
+      "upstreamGitBlobOid": "08adfdb54067fcc0ac46f75f99829a3c32e8e3d4",
+      "contentSha256": "5e4233d74dc4ccba1213c3c57685c6a54d2c6236c6bf08b48ded5f8ca3e3d395",
+      "byteLength": 880947
     },
     {
       "id": "schema",
       "file": "ufg-source-registry.schema.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.schema.json",
-      "upstreamGitBlobOid": "04bc038f0694066b447f56940eb5e0dceb1dbcef",
-      "contentSha256": "1850871482d93a219deebe5d72ffcc556f492a0e1e053bea3b011ec9e1671892",
-      "byteLength": 23301
+      "upstreamGitBlobOid": "1a6763e187719d311a76bd3e558939490fb44570",
+      "contentSha256": "99e640f9a498c5e7ba8a29156e86f244e993ff212b5f1038f7049c390a198db3",
+      "byteLength": 23450
     },
     {
       "id": "reconciliation-report",
       "file": "source-reconciliation-report.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/source-reconciliation-report.json",
-      "upstreamGitBlobOid": "2efe00d49a06d0cf9344f9054a0d82ae9f33b467",
-      "contentSha256": "32e7162edc8f63bab6abb6974910dc275244e7956ca9e641e9d9928b3c6591c8",
-      "byteLength": 95512
+      "upstreamGitBlobOid": "9f3c7d5e316129aab9c25527c0f44f7277b78e51",
+      "contentSha256": "277fe45fe2d22eb1abc0b931d4399ebb10db64a683caeb58ab974b6ccb44e658",
+      "byteLength": 94953
     }
   ],
   "safety": {
