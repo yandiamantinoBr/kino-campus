@@ -454,12 +454,12 @@ describe('Cadu candidate source registry mirror', () => {
     const { manifest } = verifyMirroredRegistry();
     expect(manifest.upstream).toEqual({
       repository: 'https://github.com/yandiamantinoBr/openclaw-cadu',
-      commit: '749c05beff5d81253d3b5f36d4bf076950186740',
+      commit: 'b51056ffbad2f07b4da0c524046eace1d038e537',
     });
     expect(Object.fromEntries(manifest.artifacts.map((artifact) => [artifact.id, artifact.upstreamGitBlobOid]))).toEqual({
-      candidate: '8d69cc7f6ed555697d00bee804c809bf37c1d13a',
-      schema: '04bc038f0694066b447f56940eb5e0dceb1dbcef',
-      'reconciliation-report': '2efe00d49a06d0cf9344f9054a0d82ae9f33b467',
+      candidate: '08adfdb54067fcc0ac46f75f99829a3c32e8e3d4',
+      schema: '1a6763e187719d311a76bd3e558939490fb44570',
+      'reconciliation-report': '9f3c7d5e316129aab9c25527c0f44f7277b78e51',
     });
   });
 
@@ -467,9 +467,9 @@ describe('Cadu candidate source registry mirror', () => {
     const { registry, schema } = verifyMirroredRegistry();
     expect(loadCandidateSourceRegistry()).toEqual(registry);
     expect(registry.activation).toEqual({ state: 'shadow', runtimeConsumers: ['cadu-api'] });
-    expect(registry.entities).toHaveLength(172);
-    expect(registry.webSources).toHaveLength(198);
-    expect(registry.instagramProfiles).toHaveLength(103);
+    expect(registry.entities).toHaveLength(189);
+    expect(registry.webSources).toHaveLength(215);
+    expect(registry.instagramProfiles).toHaveLength(113);
     expect(registry.webSources.every((source) => source.enabled === false)).toBe(true);
     expect(registry.instagramProfiles.every((profile) => profile.enabled === false)).toBe(true);
 
@@ -488,6 +488,11 @@ describe('Cadu candidate source registry mirror', () => {
 
   test('enforces upstream directory, temporal, placeholder, execution and fail-closed invariants', () => {
     const { registry } = verifyMirroredRegistry();
+    // 2026-09-03: data 'after auditCutoff' dinâmica — o fixture fixado em
+    // 2026-07-23 ficou no passado quando a registry avançou para 2026-09-03.1.
+    const afterAuditCutoff = new Date(
+      new Date(`${registry.auditCutoff}T12:00:00Z`).getTime() + 86_400_000,
+    ).toISOString().slice(0, 10);
     const rejectMutation = (change, pattern) => {
       const candidate = JSON.parse(JSON.stringify(registry));
       change(candidate);
@@ -498,11 +503,11 @@ describe('Cadu candidate source registry mirror', () => {
       /duplicate directory id/,
     );
     rejectMutation(
-      (candidate) => { candidate.authoritativeDirectories[0].checkedAt = '2026-07-23'; },
+      (candidate) => { candidate.authoritativeDirectories[0].checkedAt = afterAuditCutoff; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.authoritativeDirectories[0].pageUpdatedAt = '2026-07-23'; },
+      (candidate) => { candidate.authoritativeDirectories[0].pageUpdatedAt = afterAuditCutoff; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -532,18 +537,18 @@ describe('Cadu candidate source registry mirror', () => {
       /executionModes order drift/,
     );
     rejectMutation(
-      (candidate) => { candidate.webSources[0].audit.checkedAt = '2026-07-23'; },
+      (candidate) => { candidate.webSources[0].audit.checkedAt = afterAuditCutoff; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
       (candidate) => {
         const source = candidate.webSources.find((entry) => entry.audit.evidence.length > 0);
-        source.audit.evidence[0].checkedAt = '2026-07-23';
+        source.audit.evidence[0].checkedAt = afterAuditCutoff;
       },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.webSources[0].transport.checkedAt = '2026-07-23'; },
+      (candidate) => { candidate.webSources[0].transport.checkedAt = afterAuditCutoff; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -551,12 +556,12 @@ describe('Cadu candidate source registry mirror', () => {
         const observation = candidate.webSources
           .flatMap((source) => source.observations)
           .find((entry) => entry.publisherDeclared !== null);
-        observation.publisherDeclared.lastAudit = '2026-07-23';
+        observation.publisherDeclared.lastAudit = afterAuditCutoff;
       },
       /must not be after auditCutoff/,
     );
     rejectMutation(
-      (candidate) => { candidate.instagramProfiles[0].audit.checkedAt = '2026-07-23'; },
+      (candidate) => { candidate.instagramProfiles[0].audit.checkedAt = afterAuditCutoff; },
       /must not be after auditCutoff/,
     );
     rejectMutation(
@@ -974,14 +979,19 @@ describe('Cadu candidate source registry mirror', () => {
     expect(publisherObservations.every((observation) => observation.publisherDeclared)).toBe(true);
     expect(publisherObservations.filter((observation) => observation.publisherDeclared.hasFeedRss)).toHaveLength(103);
 
-    expect(registry.instagramProfiles.filter((profile) => profile.audit.evidence.length > 0)).toHaveLength(57);
+    expect(registry.instagramProfiles.filter((profile) => profile.audit.evidence.length > 0)).toHaveLength(65);
     expect(report.instagramOverlap.legacyNotScanned).toEqual([
       'jornalufg',
       'labmic.ufg',
       'patiodaciencia_ufg',
       'ppgccufg',
     ]);
-    expect(report.instagramOverlap.scannerWithoutEntity).toHaveLength(5);
+    expect(report.instagramOverlap.scannerWithoutEntity).toEqual([
+      'ig.cecasufg',
+      'ig.floreser-ufg',
+      'ig.lacena-ufg',
+      'ig.lapigufg',
+    ]);
   });
 
   test('keeps the legacy registry as the only active publisher input', () => {

@@ -110,6 +110,7 @@ const WEB_SOURCE_KINDS = Object.freeze([
 const ENDPOINT_NAMES = Object.freeze(['news', 'events', 'rss', 'html']);
 const COLLECTION_STRATEGIES = Object.freeze([
   'weby_json_then_html',
+  'wordpress_rest_then_rss',
   'html',
   'external',
   'disabled',
@@ -431,10 +432,13 @@ function validateCandidateRegistry(registry) {
     directoryIds.add(directory.id);
     assert(typeof directory.title === 'string' && directory.title.length > 0, `${directory.id} title is required`);
     validateRegistryUrl(directory.url, directory.id);
-    assert.strictEqual(
-      directory.publisher,
-      'Universidade Federal de Goiás',
-      `${directory.id} publisher drift`,
+    // 2026-09-03: o catálogo passou a incluir diretórios oficiais não-UFG
+    // (governo estadual/federal). A integridade byte-a-byte contra o upstream
+    // continua garantida pelo registrySha256 pinado nos bindings; aqui basta
+    // exigir publisher declarado não-vazio.
+    assert(
+      typeof directory.publisher === 'string' && directory.publisher.length > 0,
+      `${directory.id} publisher is required`,
     );
     assertDateAtOrBefore(directory.checkedAt, registry.auditCutoff, `${directory.id} checkedAt`);
     if (directory.pageUpdatedAt !== undefined && directory.pageUpdatedAt !== null) {
