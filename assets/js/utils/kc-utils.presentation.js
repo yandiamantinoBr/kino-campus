@@ -105,6 +105,36 @@
     return raw.charAt(0) === '/' && raw.charAt(1) !== '/';
   }
 
+  // 2026-09-03: assinatura de identidade de imagem (paridade com a pipeline).
+  // Colapsa variantes da mesma imagem (CDN IG com tokens volateis; par
+  // thumb/original do weby UFG em /l/ vs /o/) no pool de candidatos do card.
+  var _IG_CDN_HOST_RE = /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$/;
+  var _IG_ASSET_KEY_RE = /(\d{6,}(?:_\d{6,}){1,})/;
+  var _VERSIONED_FILE_RE = /^[a-f0-9]{8,}_/;
+  function _imageUrlSignature(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    var url;
+    try { url = new URL(raw); } catch (_) { return raw.toLowerCase().slice(0, 300); }
+    var host = url.hostname.toLowerCase();
+    if (_IG_CDN_HOST_RE.test(host)) {
+      var segments = url.pathname.split('/').filter(Boolean);
+      var file = (segments[segments.length - 1] || '').toLowerCase();
+      var asset = _IG_ASSET_KEY_RE.exec(file);
+      if (asset) return 'ig-cdn/' + asset[1];
+      return 'ig-cdn/' + file.replace(_VERSIONED_FILE_RE, '').slice(0, 160);
+    }
+    var pathSegments;
+    try { pathSegments = decodeURIComponent(url.pathname).toLowerCase().split('/'); }
+    catch (_) { pathSegments = url.pathname.toLowerCase().split('/'); }
+    pathSegments = pathSegments.filter(Boolean)
+      .map(function (s) { return (s === 'l' || s === 'i') ? 'o' : s; });
+    if (!pathSegments.length) return host + '/';
+    var last = pathSegments.length - 1;
+    pathSegments[last] = (pathSegments[last].replace(_VERSIONED_FILE_RE, '').slice(0, 160)) || pathSegments[last];
+    return host + '/' + pathSegments.join('/').slice(-240);
+  }
+
   function _buildPostImageCandidates(post) {
     const p = post || {};
     const meta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
@@ -119,11 +149,15 @@
     for (const list of gallery) pool.push(...list);
 
     const seen = new Set();
+    const seenSignature = new Set();
     const out = [];
     for (const value of pool) {
       const raw = String(value == null ? '' : value).trim();
       if (!raw || seen.has(raw) || !_isRenderableImageUrl(raw)) continue;
+      const signature = _imageUrlSignature(raw);
+      if (signature && seenSignature.has(signature)) continue;
       seen.add(raw);
+      if (signature) seenSignature.add(signature);
       out.push(raw);
       if (out.length >= POST_IMAGE_CANDIDATES_LIMIT) break;
     }

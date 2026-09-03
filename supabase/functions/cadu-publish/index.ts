@@ -43,6 +43,7 @@ import { boundReviewPublicationDirective } from "./directive.ts";
 import { officialCoverCandidates } from "./official-cover.ts";
 import { downloadRemoteImage } from "./image-download.ts";
 import { RemoteResourceError } from "./remote-resource.ts";
+import { dedupeImageUrls } from "./image-signature.ts";
 import {
   INSTITUTIONAL_REVIEW_POLICY_CODE,
   institutionalReviewRpcArguments,
@@ -266,7 +267,10 @@ function hasActionableMarkdownDescription(value: unknown): boolean {
 
 function imageCandidatesFromItem(item: CaduItem): string[] {
   const raw = item.raw && typeof item.raw === "object" ? item.raw as Record<string, unknown> : {};
-  return Array.from(new Set([
+  // 2026-09-03: dedup por assinatura (mesma identidade da pipeline). Variantes
+  // da mesma imagem (tokens de CDN IG, /l/ vs /o/ do weby) NAO devem passar
+  // como candidatos distintos — viravam rows duplicadas em post_media.
+  return dedupeImageUrls([
     item.image,
     item.imageUrl,
     item.image_url,
@@ -275,7 +279,7 @@ function imageCandidatesFromItem(item: CaduItem): string[] {
     raw.image_url,
     raw.cover,
     ...(Array.isArray(item.images) ? item.images : []),
-  ].map(validRemoteImageUrl).filter(Boolean)));
+  ]);
 }
 
 function isInstagramUrl(value: unknown): boolean {
@@ -464,7 +468,12 @@ async function prepareFinalImages(
   candidates: string[],
   allowExternalFallback: boolean,
 ): Promise<{ images: string[]; uploads: PreparedImage[]; coverRender: string }> {
-  const cleanCandidates = Array.from(new Set(candidates.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
+  // 2026-09-03: dedup por assinatura evita subir o mesmo asset duas vezes
+  // (URLs com tokens diferentes da mesma imagem geravam uploads duplicados).
+  const cleanCandidates = dedupeImageUrls(
+    candidates.map(validRemoteImageUrl).filter(Boolean),
+    MAX_IMAGE_COUNT,
+  );
   const results = new Array<PreparedImage>(cleanCandidates.length);
   let nextIndex = 0;
   let coverRender = "";
@@ -515,7 +524,10 @@ async function applyImages(
   currentMetadata: Record<string, unknown>,
   coverRender?: string,
 ): Promise<Record<string, unknown>> {
-  const cleanUrls = Array.from(new Set(imageUrls.map(validRemoteImageUrl).filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
+  const cleanUrls = dedupeImageUrls(
+    imageUrls.map(validRemoteImageUrl).filter(Boolean),
+    MAX_IMAGE_COUNT,
+  );
   if (!cleanUrls.length) return currentMetadata || {};
 
   const coverUrl = cleanUrls[0];
@@ -1247,10 +1259,10 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
 
   // Troca de imagens (opcional). A primeira imagem final vira capa; as demais
   // entram em post_media como galeria ordenada.
-  const newImages = Array.from(new Set([
+  const newImages = dedupeImageUrls([
     validRemoteImageUrl(body.image),
     ...(Array.isArray(body.images) ? body.images.map(validRemoteImageUrl) : []),
-  ].filter(Boolean))).slice(0, MAX_IMAGE_COUNT);
+  ], MAX_IMAGE_COUNT);
   let coverUrl = String(current.image_url || "");
   let uploaded = false;
   let imageCount = 0;

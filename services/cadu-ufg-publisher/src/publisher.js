@@ -10,6 +10,7 @@ const {
   userTagInputFromSources,
 } = require('./mapper');
 const { sha256, slugify } = require('./utils');
+const { imageUrlSignature } = require('./lib/image-signature');
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const IMAGE_EXTENSIONS = {
@@ -62,8 +63,22 @@ function imageUrlFromCandidate(value) {
 }
 
 function normalizeImageValues(values) {
-  return Array.from(new Set((values || []).map(imageUrlFromCandidate).filter(Boolean)))
-    .slice(0, MAX_IMAGE_COUNT);
+  // 2026-09-03: dedup por assinatura (host + asset/filename, com /l/ -> /o/)
+  // alem da URL exata; mesma assinatura da pipeline (lib/image-signature).
+  const seen = new Set();
+  const seenSignature = new Set();
+  const result = [];
+  for (const value of values || []) {
+    const url = imageUrlFromCandidate(value);
+    if (!url || seen.has(url)) continue;
+    const signature = imageUrlSignature(url);
+    if (seenSignature.has(signature)) continue;
+    seen.add(url);
+    seenSignature.add(signature);
+    result.push(url);
+    if (result.length >= MAX_IMAGE_COUNT) break;
+  }
+  return result;
 }
 
 function normalizeImages(payload) {
