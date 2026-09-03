@@ -22,6 +22,36 @@
     return '';
   }
 
+  // 2026-09-03: assinatura de identidade de imagem (paridade com a pipeline).
+  // Colapsa variantes da mesma imagem: CDN do Instagram (hosts/tokens volateis,
+  // chave = asset estavel) e par thumb/original do weby UFG (/l/ vs /o/).
+  var IG_CDN_HOST_RE = /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$/;
+  var IG_ASSET_KEY_RE = /(\d{6,}(?:_\d{6,}){1,})/;
+  var VERSIONED_FILE_RE = /^[a-f0-9]{8,}_/;
+  function imageUrlSignature(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    var url;
+    try { url = new URL(raw); } catch (_) { return raw.toLowerCase().slice(0, 300); }
+    var host = url.hostname.toLowerCase();
+    if (IG_CDN_HOST_RE.test(host)) {
+      var segments = url.pathname.split('/').filter(Boolean);
+      var file = (segments[segments.length - 1] || '').toLowerCase();
+      var asset = IG_ASSET_KEY_RE.exec(file);
+      if (asset) return 'ig-cdn/' + asset[1];
+      return 'ig-cdn/' + file.replace(VERSIONED_FILE_RE, '').slice(0, 160);
+    }
+    var pathSegments;
+    try { pathSegments = decodeURIComponent(url.pathname).toLowerCase().split('/'); }
+    catch (_) { pathSegments = url.pathname.toLowerCase().split('/'); }
+    pathSegments = pathSegments.filter(Boolean)
+      .map(function (s) { return (s === 'l' || s === 'i') ? 'o' : s; });
+    if (!pathSegments.length) return host + '/';
+    var last = pathSegments.length - 1;
+    pathSegments[last] = (pathSegments[last].replace(VERSIONED_FILE_RE, '').slice(0, 160)) || pathSegments[last];
+    return host + '/' + pathSegments.join('/').slice(-240);
+  }
+
   function resolveAuthorIdWithDeps(deps, legacyAuthorName, legacyAuthorAvatar) {
     if (!deps || typeof deps.resolveAuthorId !== 'function') return null;
     return deps.resolveAuthorId(legacyAuthorName, legacyAuthorAvatar);
@@ -136,11 +166,14 @@
       } else {
         values = fallback ? [fallback] : [];
       }
-      // Deduplicar preservando ordem
+      // Deduplicar preservando ordem (URL exata + assinatura da mesma imagem)
       const seen = new Set();
+      const seenSignature = new Set();
       return values.map((value) => String(value || '').trim()).filter(Boolean).filter((v) => {
-        if (seen.has(v)) return false;
+        const signature = imageUrlSignature(v);
+        if (seen.has(v) || (signature && seenSignature.has(signature))) return false;
         seen.add(v);
+        if (signature) seenSignature.add(signature);
         return true;
       });
     })();
