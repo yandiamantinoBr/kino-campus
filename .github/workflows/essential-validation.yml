@@ -41,7 +41,18 @@ jobs:
         run: npm ci
 
       - name: Dependency security audit
-        run: npm audit --audit-level=high
+        # 2026-09-04: o endpoint de advisories do registry npm apresentou
+        # 503 intermitente e derrubou validacoes de main sem mudanca real
+        # de dependencias. Tenta novamente com recuo curto antes de falhar.
+        run: |
+          for attempt in 1 2 3; do
+            if npm audit --audit-level=high; then
+              exit 0
+            fi
+            echo "npm audit attempt $attempt failed; retrying after backoff" >&2
+            sleep 30
+          done
+          exit 1
 
       - name: TypeScript contracts (no emit)
         run: npm run typecheck:contracts
