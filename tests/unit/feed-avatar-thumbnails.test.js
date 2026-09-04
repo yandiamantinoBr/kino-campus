@@ -3,9 +3,9 @@
 const ORIGIN = 'https://feed-avatar-fixture.supabase.co';
 const PREFIX = '/storage/v1/object/public/kino-media/profile-avatars/';
 const ORIGINAL = ORIGIN + PREFIX + 'author/avatar.jpg';
-// 2026-09-04: thumbnails passam por /api/media (sharp na Vercel) — mesmo
+// 2026-09-04: thumbnails passam por /api/og-image (sharp na Vercel) — mesmo
 // recorte 144x144 fit=cover, sem consumir a quota de transformacoes do Supabase.
-const THUMBNAIL = '/api/media?path=' + encodeURIComponent('kino-media/profile-avatars/author/avatar.jpg') + '&w=144&h=144&fit=cover&q=80';
+const THUMBNAIL = '/api/og-image?path=' + encodeURIComponent('kino-media/profile-avatars/author/avatar.jpg') + '&w=144&h=144&fit=cover&q=80';
 const RESOLVED_THUMBNAIL = 'http://localhost' + THUMBNAIL;
 const POST = Object.freeze({ id: 'feed-avatar-post', modulo: 'eventos', titulo: 'Publicação de teste', descricao: 'Descrição', authorId: 'feed-avatar-author', imagens: Object.freeze([]) });
 
@@ -60,7 +60,7 @@ describe('feed author avatar thumbnails', () => {
 
   test.each(['jpg', 'jpeg', 'png', 'webp', 'JPG'])('handles known raster %s and preserves encoded filenames', (extension) => {
     const source = ORIGIN + PREFIX + 'author/avatar%20name.' + extension;
-    expect(render(source).image.getAttribute('src')).toBe('/api/media?path=' + encodeURIComponent(source.replace(ORIGIN + '/storage/v1/object/public/', '')) + '&w=144&h=144&fit=cover&q=80');
+    expect(render(source).image.getAttribute('src')).toBe('/api/og-image?path=' + encodeURIComponent(source.replace(ORIGIN + '/storage/v1/object/public/', '')) + '&w=144&h=144&fit=cover&q=80');
   });
 
   test.each([

@@ -13,6 +13,12 @@ module.exports = {
   testPathIgnorePatterns: [
     '<rootDir>/\\.claude/',
   ],
+  // @vercel/og so funciona bundleado pelo builder da Vercel (ESM/wasm edge);
+  // nos testes, api/og-image.js recebe um stub (nenhum teste gera a imagem
+  // institucional de verdade — o modo media usa sharp diretamente).
+  moduleNameMapper: {
+    '^@vercel/og$': '<rootDir>/tests/mocks/@vercel-og.js',
+  },
   modulePathIgnorePatterns: [
     '<rootDir>/\\.claude/',
     '<rootDir>/docs/legacy/backend-placeholder/',

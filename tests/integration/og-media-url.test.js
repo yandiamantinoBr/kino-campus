@@ -23,15 +23,15 @@ function buildPost(overrides) {
   };
 }
 
-describe('buildOgMediaDescriptor (og:image via /api/media)', () => {
-  test('roteia cover_render (render URL) para /api/media preservando proporcao', () => {
+describe('buildOgMediaDescriptor (og:image via /api/og-image)', () => {
+  test('roteia cover_render (render URL) para /api/og-image preservando proporcao', () => {
     const d = buildOgMediaDescriptor(RENDER_URL, '20260904170411');
     expect(d).not.toBeNull();
     expect(d.proxied).toBe(true);
     expect(d.type).toBe('image/jpeg');
     expect(d.width).toBe(1920);
     expect(d.height).toBe(1236);
-    expect(d.url.startsWith('https://www.kinocampus.com.br/api/media?')).toBe(true);
+    expect(d.url.startsWith('https://www.kinocampus.com.br/api/og-image?')).toBe(true);
     expect(d.url).toContain('path=kino-media%2Fpost-media%2F2345582d-8bf7-4393-aa0d-f9953d0e02ca%2Fc45dd940-2088-4b17-bd21-d59e2d2fe5fd%2Fcadu-1-d5d96aaa.png');
     expect(d.url).toContain('w=1920');
     expect(d.url).toContain('h=1236');
@@ -71,14 +71,14 @@ describe('buildOgMediaDescriptor (og:image via /api/media)', () => {
 });
 
 describe('buildProductValues integra og:image proxyado', () => {
-  test('capa em post_media via render vira ogImage /api/media com v do post', () => {
+  test('capa em post_media via render vira ogImage /api/og-image com v do post', () => {
     const values = buildProductValues(buildPost({
       post_media: [
         { url: OBJECT_URL, is_cover: true },
       ],
     }));
     expect(values.ogImageProxied).toBe(true);
-    expect(values.ogImage.startsWith('https://www.kinocampus.com.br/api/media?')).toBe(true);
+    expect(values.ogImage.startsWith('https://www.kinocampus.com.br/api/og-image?')).toBe(true);
     expect(values.ogImage).toContain('v=20260904170411');
     // values.image (exibicao/JSON-LD) permanece a URL original
     expect(values.image).toBe(OBJECT_URL);

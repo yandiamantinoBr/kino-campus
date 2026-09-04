@@ -42,16 +42,22 @@ não carregava no preview do WhatsApp.
 
 ### Fase 1 — crawler path (og:image) desacoplado da quota
 
-- Novo endpoint `api/media.js` (Vercel Node + `sharp`): baixa o objeto **cru**
-  de `kino-media` (sem `/render/`, sem quota), converte para **JPEG
-  progressivo mozjpeg ≤ ~280 KB** (escada de qualidade 82→72→62→52),
-  `fit=inside` por padrão (nunca corta, nunca amplia) ou `fit=cover`
-  (recorte exato w×h para thumbnails quadrados), cache longo de CDN
-  (`s-maxage=31536000` + stale-while-revalidate) e allowlist rigorosa
-  (bucket `kino-media`, extensões raster, sem traversal/encoding).
+- Novo modo **media** no `api/og-image.js` (`?path=kino-media/…&w=…&h=…&q=…`,
+  Vercel Node + `sharp`): baixa o objeto **cru** de `kino-media` (sem
+  `/render/`, sem quota), converte para **JPEG progressivo mozjpeg ≤ ~280 KB**
+  (escada de qualidade 82→72→62→52), `fit=inside` por padrão (nunca corta,
+  nunca amplia) ou `fit=cover` (recorte exato w×h para thumbnails quadrados),
+  cache longo de CDN (`s-maxage=31536000` + stale-while-revalidate) e allowlist
+  rigorosa (bucket `kino-media`, extensões raster, sem traversal/encoding).
+  - **Nota de arquitetura:** o modo vive dentro da function `og-image` porque o
+    plano **Hobby da Vercel limita o deployment a 12 Serverless Functions** — o
+    repo já estava exatamente em 12 (comentário no `og-product.js` registra o
+    teto) e um 13º arquivo (`api/media.js`, primeira tentativa) derrubava o
+    deploy com "Deployment has failed". Qualquer função nova exige consolidar
+    rotas em uma function existente ou trocar de plano.
 - `api/og-product.js`: `og:image`, `twitter:image` e os novos metas
   `og:image:type`/`og:image:width`/`og:image:height` agora usam
-  `/api/media?path=…&w=…&h=…&q=82&v=<timestamp do post>`. O `v=` quebra o
+  `/api/og-image?path=…&w=…&h=…&q=82&v=<timestamp do post>`. O `v=` quebra o
   cache do WhatsApp/CDN quando o post é editado. `values.image` (JSON-LD,
   SSR visível e preload do browser) permanece como estava.
 - Resultado verificado localmente com o objeto real do post afetado:
@@ -62,11 +68,11 @@ não carregava no preview do WhatsApp.
 Os maiores consumidores da quota eram avatares de feed/ranking e thumbs do
 dropdown de busca (`/render/…?width=144…` para cada avatar). Agora:
 
-- `kc-utils.presentation.js` (autor do card) e `kc-ranking.js`: `/api/media?…&w=144&h=144&fit=cover&q=80`.
-- `kc-search.js` (`buildOptimizedThumbUrl`): object e render URLs convergem para `/api/media`.
+- `kc-utils.presentation.js` (autor do card) e `kc-ranking.js`: `/api/og-image?…&w=144&h=144&fit=cover&q=80`.
+- `kc-search.js` (`buildOptimizedThumbUrl`): object e render URLs convergem para `/api/og-image`.
 - Semântica visual preservada (recorte quadrado, lazy, fallback único para o
   original em caso de erro); testes unitários e specs e2e atualizados para o
-  novo contrato (fixtures e2e interceptam `/api/media` localmente).
+  novo contrato (fixtures e2e interceptam `/api/og-image` localmente).
 
 ## Efeito sobre a quota do Supabase
 
@@ -80,11 +86,11 @@ dropdown de busca (`/render/…?width=144…` para cada avatar). Agora:
 - Se o uso restante de transformações (ex.: páginas admin) continuar
   relevante, as opções são: manter o spend cap desligado no mês corrente,
   aguardar o reset do ciclo, ou migrar os consumidores restantes para
-  `/api/media` (mesma receita das fases 1–2).
+  `/api/og-image` (mesma receita das fases 1–2).
 
 ## Limites e comportamentos
 
-- `/api/media` aceita somente `kino-media` + raster (jpg/jpeg/png/webp);
+- `/api/og-image` aceita somente `kino-media` + raster (jpg/jpeg/png/webp);
   path inválido ⇒ 400; objeto inexistente (Supabase responde 400 InvalidKey)
   ⇒ 404 com cache negativo curto (`s-maxage=300`); upstream 5xx ⇒ 502 no-store.
 - Conteúdo é imutável por construção (nomes de objeto com hash); o `v=` existe
@@ -92,27 +98,27 @@ dropdown de busca (`/render/…?width=144…` para cada avatar). Agora:
 - O WhatsApp revalida o preview ao reenviar o link; com o `og:image` novo
   (URL diferente) o preview volta a baixar a imagem. Para forçar de imediato,
   reenviar com `&v=2` na URL do post ou usar o Sharing Debugger da Meta.
-- Acessos ao `/api/media` contam como invocações de função na Vercel (com
+- Acessos ao `/api/og-image` contam como invocações de função na Vercel (com
   cache de CDN por URL, o volume de origem é baixo).
 
 ## Como verificar
 
 ```bash
-# 1) og:image no SSR aponta para /api/media
+# 1) og:image no SSR aponta para /api/og-image
 curl -s 'https://www.kinocampus.com.br/product.html?id=<ID>' | grep -o 'og:image" content="[^"]*"'
 
 # 2) imagem leve e JPEG
-curl -sI 'https://www.kinocampus.com.br/api/media?path=…' | grep -i 'content-type|cache-control'
+curl -sI 'https://www.kinocampus.com.br/api/og-image?path=…' | grep -i 'content-type|cache-control'
 ```
 
 ## Follow-ups conhecidos (não-bloqueantes)
 
 - O hero da página de produto troca a fonte no cliente para
   `post.imagens[0]` (objeto cru, às vezes PNG pesado). Migrar a galeria para
-  variantes `/api/media` (w=1200) reduziria banda mobile — requer revisão do
+  variantes `/api/og-image` (w=1200) reduziria banda mobile — requer revisão do
   contrato `data-kc-image-candidates` e dos testes visuais.
 - URLs `post_media` legacy com `?width=…&quality=…` na coluna da pipeline
   continuam servindo o objeto original (Supabase ignora query em
-  `/object/`); inofensivo para og:image (o SSR roteia por `/api/media`).
+  `/object/`); inofensivo para og:image (o SSR roteia por `/api/og-image`).
 - Páginas `/admin` ainda podem usar `/render/` pontualmente (tráfego
   interno, sem impacto no preview).
