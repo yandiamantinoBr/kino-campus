@@ -257,6 +257,14 @@ function hasInstitutionalOnlySignal(value: unknown): boolean {
   return /\b(marca presenca|marcou presenca|participa de encontro|recebe alunos|se engaja|reune autoridades|e finalista|fica em 3|homenageia|conquista|estao na china|recebe expoente|expoente nacional|reconhece os destaques|prospecta acordos|visita institucional|reuniao institucional|trajetoria academica|trajetoria profissional|perfil do servidor|perfil da servidora|servidor em destaque|historia de vida|conheca o servidor)\b/.test(normalizeText(value));
 }
 
+// Regra de produto (docs/PIPELINE.md): resultados, homologacoes e
+// retificacoes sao atualizacao/enriquecimento, nao posts novos. O titulo
+// carrega a natureza do item; acao futura no corpo (ex.: recurso ate uma
+// data) nao converte a divulgacao em oportunidade.
+export function hasResultAnnouncementTitleSignal(value: unknown): boolean {
+  return /\b(lista (de|do|das) (habilitados|aprovados|classificados|convocados)|resultado (final|preliminar)(?: do| da| dos| das)?\b|homologa\w*|divulgac\w* do resultado|retifica\w* de resultado|classifica\w* final)\b/.test(normalizeText(value));
+}
+
 function hasActionableMarkdownDescription(value: unknown): boolean {
   const text = normalizeWhitespace(stripHtml(value || ""));
   const normalized = normalizeText(text);
@@ -384,6 +392,7 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
     (hasInstitutionalOnlySignal(item.title) && !hasConcretePublishActionSignal(fullText)) ||
     (hasInstitutionalOnlySignal(fullText) && !hasStrongActionSignal(fullText))
   ) block("institutional_or_biographical_release");
+  if (hasResultAnnouncementTitleSignal(item.title)) block("result_announcement_not_publishable");
   if (hasCmsCreditLine(description)) block("cms_credits_in_description");
   if (!hasActionableMarkdownDescription(description)) block("weak_description");
 
