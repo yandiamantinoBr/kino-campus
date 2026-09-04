@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-09-04] - og:image do WhatsApp via /api/media e thumbnails fora da quota do Supabase
+
+- Corrigido o preview sem imagem no WhatsApp (og:image não carregava): o SSR
+  apontava para /storage/v1/render/ do Supabase, que com a quota de Image
+  Transformations excedida (142/100, spend cap ativo) serve o objeto ORIGINAL
+  (PNG 1920px ~826 KB, com upscale de 1280px) — acima do limite prático do
+  preview e sem recuperação por cache negativo do WhatsApp.
+- Novo endpoint api/media.js (Vercel + sharp): baixa o objeto cru de kino-media
+  e devolve JPEG progressivo mozjpeg <= ~280 KB (escada 82→52), fit inside
+  (proporção, sem upscale) ou cover (w×h exato), cache longo de CDN, allowlist
+  de bucket/extensão e 404 cacheável para objeto inexistente. Post afetado:
+  826 KB PNG → 90,8 KB JPEG.
+- api/og-product.js: og:image/twitter:image via /api/media com w/h derivados da
+  proporção real de metadata.cover_render e ?v=<timestamp do post> (cache-buster
+  de preview em edições); novos metas og:image:type/width/height. values.image
+  (SSR visível, JSON-LD e preload) inalterado.
+- Avatares de feed/ranking e thumbs do dropdown de busca migram de /render/ para
+  /api/media (144×144 fit=cover), eliminando os principais consumidores da quota
+  (142/100). Recorte quadrado, lazy e fallback único ao original preservados.
+- sharp 0.35.3 promovido a dependency (o build Vercel roda npm ci --omit=dev).
+- Diagnóstico completo e follow-ups em docs/OG-WHATSAPP-SUPABASE-QUOTA-2026-09-04.md.
+
 ## [2026-09-01] - imagens do feed resilientes e URLs externas quebradas eliminadas
 
 - Corrigida a causa raiz das imagens quebradas em kc-feed-section: o pipeline
