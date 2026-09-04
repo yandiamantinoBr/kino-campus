@@ -197,8 +197,8 @@ describe('bundled Cadu source-registry mirror', () => {
     });
     expect(catalog.summary).toMatchObject({
       sources: 215,
-      entities: 189,
-      instagramProfiles: 113,
+      entities: 196, // +7 oportunidades externas/núcleos UFG (upstream a22ffb5, 2026-09-04.1)
+      instagramProfiles: 120, // +7 handles Tier 10
       deferred: 0,
     });
     expect(catalog.sources.every((source) => source.enabled === false)).toBe(true);
