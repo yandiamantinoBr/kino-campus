@@ -38,6 +38,18 @@ jobs:
           echo "auth smtp PATCH -> HTTP $HTTP"
           test "$HTTP" = "200" || { cat /tmp/auth-cfg.json; exit 1; }
 
+      - name: Debug templates endpoint
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          REF="wacyrkwhkvzwkqpolrbg"
+          for T in signup invite recovery magiclink; do
+            HTTP=$(curl -sS -o /tmp/tpl-get-$T.json -w "%{http_code}" \
+              "https://api.supabase.com/v1/projects/$REF/config/auth/templates/$T" \
+              -H "Authorization: Bearer $SB_TOKEN")
+            echo "GET templates/$T -> HTTP $HTTP"
+            head -c 300 /tmp/tpl-get-$T.json; echo
+          done
       - name: Install branded signup template
         env:
           SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
