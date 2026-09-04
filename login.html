@@ -211,8 +211,8 @@
           </div>
           <section class="kc-auth-panel" data-auth-panel="login">
             <form class="kc-auth-form" id="kcAuthLoginForm">
-              <div class="kc-auth-field"><label for="kcAuthLoginEmail">E-mail institucional</label><input id="kcAuthLoginEmail" name="email" type="email" autocomplete="email" placeholder="voce@ufg.br" required /></div>
-              <div class="kc-auth-field kc-auth-field--password"><label for="kcAuthLoginPassword">Senha</label><div class="kc-auth-input-wrap"><input id="kcAuthLoginPassword" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="Sua senha" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthLoginPassword" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
+              <div class="kc-auth-field"><label for="kcAuthLoginEmail">E-mail institucional</label><input id="kcAuthLoginEmail" name="email" type="email" autocomplete="email" placeholder="voce@ufg.br" data-i18n-placeholder="placeholder.email-institutional" required /></div>
+              <div class="kc-auth-field kc-auth-field--password"><label for="kcAuthLoginPassword">Senha</label><div class="kc-auth-input-wrap"><input id="kcAuthLoginPassword" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="Sua senha" data-i18n-placeholder="placeholder.password-current" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthLoginPassword" data-i18n-aria-label="aria-label.password-toggle" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
               <div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">Entrar</button></div>
             </form>
             <div class="kc-auth-links kc-auth-links--split">
@@ -223,9 +223,9 @@
           </section>
           <section class="kc-auth-panel" data-auth-panel="signup" style="display:none;" aria-hidden="true">
             <form class="kc-auth-form" id="kcAuthSignupForm">
-              <div class="kc-auth-field"><label for="kcAuthSignupEmail">E-mail</label><input id="kcAuthSignupEmail" name="email" type="email" autocomplete="email" placeholder="voce@ufg.br" required /></div>
-              <div class="kc-auth-field kc-auth-field--password"><label for="kcAuthSignupPassword">Senha</label><div class="kc-auth-input-wrap"><input id="kcAuthSignupPassword" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo de 6 caracteres" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthSignupPassword" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
-              <div class="kc-auth-field"><label for="kcAuthSignupName">Nome</label><input id="kcAuthSignupName" name="display_name" type="text" autocomplete="name" placeholder="Como você aparece na UFG" /></div>
+              <div class="kc-auth-field"><label for="kcAuthSignupEmail">E-mail</label><input id="kcAuthSignupEmail" name="email" type="email" autocomplete="email" placeholder="voce@ufg.br" data-i18n-placeholder="placeholder.email-institutional" required /></div>
+              <div class="kc-auth-field kc-auth-field--password"><label for="kcAuthSignupPassword">Senha</label><div class="kc-auth-input-wrap"><input id="kcAuthSignupPassword" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo de 6 caracteres" data-i18n-placeholder="placeholder.password-min" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthSignupPassword" data-i18n-aria-label="aria-label.password-toggle" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
+              <div class="kc-auth-field"><label for="kcAuthSignupName">Nome</label><input id="kcAuthSignupName" name="display_name" type="text" autocomplete="name" data-i18n-placeholder="placeholder.signup-name" placeholder="Como você aparece na UFG" /></div>
               <div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">Criar conta</button></div>
             </form>
             <div class="kc-auth-links"><button type="button" class="kc-auth-link-btn" data-auth-link="login">Já tenho conta</button></div>
