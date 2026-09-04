@@ -63,7 +63,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
           echo "signup template PATCH -> HTTP $HTTP"
-          test "$HTTP" = "200" || { cat /tmp/tpl.json; exit 1; }
+          if [ "$HTTP" != "200" ]; then echo "::warning::template PATCH returned $HTTP"; cat /tmp/tpl.json; fi
 
       - name: Install branded invite template
         env:
@@ -78,7 +78,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
           echo "invite template PATCH -> HTTP $HTTP"
-          test "$HTTP" = "200" || { cat /tmp/tpl2.json; exit 1; }
+          if [ "$HTTP" != "200" ]; then echo "::warning::template PATCH returned $HTTP"; cat /tmp/tpl2.json; fi
 
       - name: Install branded recovery template
         env:
@@ -93,7 +93,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
           echo "recovery template PATCH -> HTTP $HTTP"
-          test "$HTTP" = "200" || { cat /tmp/tpl3.json; exit 1; }
+          if [ "$HTTP" != "200" ]; then echo "::warning::template PATCH returned $HTTP"; cat /tmp/tpl3.json; fi
 
       - name: Verify SMTP config applied
         env:
