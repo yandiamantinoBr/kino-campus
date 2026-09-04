@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-09-03.1",
+  "registryVersion": "2026-09-04.1",
   "auditCutoff": "2026-09-03",
   "generatedFrom": {
     "generator": "scripts/reconcile-cadu-source-registry.js",
-    "seedContentSha256": "dcb667deb2064f454a591f0ee3fc4444bf6228dd06a12c235d9cfd5aca4a2e22",
-    "adjudicationContentSha256": "a02f437a3395b574fb7ad5b37258cc45f4682f112421b203a3a5517ca953a1d8",
-    "transportVerificationContentSha256": "ee4e8aecea64753c176fff9b6f69d327aeab60c2aca49410c6db7e4f6dec1f44",
+    "seedContentSha256": "61f3742691815d43a779fb9863381cb78b78ed034d6d6c133e7787dfb8b275e1",
+    "adjudicationContentSha256": "373d4e4365309e63077d590bd113d20193215e23d00c12818bd584f2218abb0c",
+    "transportVerificationContentSha256": "aae3c51a24e570838ca20109cd54a10441e47df1f7614ce1012ef957d114866d",
     "schemaContentSha256": "99e640f9a498c5e7ba8a29156e86f244e993ff212b5f1038f7049c390a198db3",
     "inputs": [
       {
@@ -19,16 +19,16 @@
       {
         "id": "openclaw_curator",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "d4e9a0131dac07bdcbbfd97e287dbd1d17bf6fb6",
+        "commit": "ab9515b9aeff459de5b561903aaf9e7c17c15174",
         "path": "data/.openclaw/workspace/scripts/cadu-curador-v4.4.js",
-        "contentSha256": "e2cb235ab834cda4b3db59460a1c9325e66eab1081d5d20239ee301eeb6601db"
+        "contentSha256": "fc04ac4755de126a07ff01254143fe8be192a51dbb347378ab673251af933915"
       },
       {
         "id": "instagram_scanner",
         "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-        "commit": "179324ecfc393799a1cb1eff83df196ad9369243",
+        "commit": "db086fe28b63c123ed7578d7326678cace45e4b2",
         "path": "data/.openclaw/workspace/scripts/scan-ig-browser.js",
-        "contentSha256": "9678f14e06343c96068c2c8ed426c00e1b975b261f8e031d9596f2477b023729"
+        "contentSha256": "d51b39f1bb88d01efb7ee3619b938021301ed4e2e5cd2206da78f85eca36b931"
       },
       {
         "id": "admin_markdown",
@@ -62,33 +62,33 @@
       "uniqueInstagramHandles": 54
     },
     "curator": {
-      "entries": 169,
-      "uniqueIds": 169,
-      "uniqueUrls": 169,
+      "entries": 174,
+      "uniqueIds": 174,
+      "uniqueUrls": 174,
       "tiers": {
-        "1": 100,
+        "1": 105,
         "2": 44,
         "3": 25
       },
       "modes": {
         "quick": {
-          "declared": 100,
-          "unique": 100
+          "declared": 105,
+          "unique": 105
         },
         "daily": {
-          "declared": 144,
-          "unique": 144
+          "declared": 149,
+          "unique": 149
         },
         "full": {
-          "declared": 169,
-          "unique": 169
+          "declared": 174,
+          "unique": 174
         }
       },
       "instagramAssociations": 59,
       "uniqueInstagramHandles": 54
     },
     "instagramScanner": {
-      "canonicalHandles": 76,
+      "canonicalHandles": 83,
       "aliases": 7,
       "duplicatesSkipped": 0
     },
@@ -108,10 +108,10 @@
     "overlap": {
       "commonUniqueUrls": 107,
       "publisherOnlyUrls": 0,
-      "curatorOnlyUrls": 62,
+      "curatorOnlyUrls": 67,
       "commonIds": 98,
       "publisherOnlyIds": 9,
-      "curatorOnlyIds": 71,
+      "curatorOnlyIds": 76,
       "tierConflictsOnCommonUrls": 52,
       "declaredTierSetConflictsOnCommonUrls": 52,
       "instagramConflictsOnCommonUrls": 22,
@@ -119,9 +119,9 @@
     }
   },
   "normalizedRegistry": {
-    "entities": 189,
+    "entities": 196,
     "webSources": 215,
-    "instagramProfiles": 113,
+    "instagramProfiles": 120,
     "enabledWebSources": 0,
     "enabledInstagramProfiles": 0,
     "officiallyConfirmedWebSources": 160,
@@ -135,7 +135,7 @@
     "urlConflictSources": 19
   },
   "identityReconciliation": {
-    "authoritativeSeedEntities": 169,
+    "authoritativeSeedEntities": 176,
     "provisionalEntities": [
       {
         "id": "ufg.legacy.cei",
@@ -756,7 +756,7 @@
     "uniqueHandles": {
       "publisher": 54,
       "curator": 54,
-      "scanner": 76
+      "scanner": 83
     },
     "commonAll": [
       "campusaparecidaufg",
@@ -812,12 +812,18 @@
         "ppgccufg"
       ],
       "scannerOnly": [
+        "anpad.oficial",
         "cecasufg",
+        "cfaadm",
+        "direitoshumanosufg",
         "floreser.ufg",
         "funape.oficial",
         "fundacaofagep",
         "fundacaortve",
+        "gestaogovbr",
+        "goiasvagasoficial",
         "lacena_ufg",
+        "lapeiufg",
         "lapigufg",
         "patiodaciencia.ufg",
         "poshistoriaufg",
@@ -829,7 +835,8 @@
         "ppgeo.ufg",
         "ppggmp.ufg",
         "ppgoufg",
-        "ppgzufg"
+        "ppgzufg",
+        "tcegoias"
       ]
     },
     "legacyNotScanned": [
@@ -848,6 +855,20 @@
   "overlap": {
     "publisherOnly": [],
     "curatorOnly": [
+      {
+        "url": "https://aestudantil.goias.ufg.br/",
+        "candidateSourceId": "web.ufg.assistencia-estudantil-goias",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://agencia.go.gov.br/",
+        "candidateSourceId": "web.ext.agencia-go",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
       {
         "url": "https://artesdacenappg.iac.ufg.br/",
         "candidateSourceId": "web.ufg.ppg.ppgac.profile",
@@ -909,6 +930,13 @@
         "candidateSourceId": "web.legacy.cl",
         "reviewState": "pending_review",
         "classification": "pending_verification",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://conpeex.ufg.br/",
+        "candidateSourceId": "web.ufg.conpeex",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
       },
       {
@@ -989,6 +1017,13 @@
         "inventory": "openclaw_curator"
       },
       {
+        "url": "https://goias.gov.br/inovacao",
+        "candidateSourceId": "web.ext.scti-go",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
         "url": "https://idiomassemfronteiras.sri.ufg.br/",
         "candidateSourceId": "web.legacy.idiomassemfronteiras",
         "reviewState": "pending_review",
@@ -1019,6 +1054,13 @@
       {
         "url": "https://pgbm.icb.ufg.br/",
         "candidateSourceId": "web.ufg.ppg.ppgbm",
+        "reviewState": "confirmed_official",
+        "classification": "officially_confirmed_but_policy_unresolved",
+        "inventory": "openclaw_curator"
+      },
+      {
+        "url": "https://plateia.ufg.br/",
+        "candidateSourceId": "web.ufg.plateia",
         "reviewState": "confirmed_official",
         "classification": "officially_confirmed_but_policy_unresolved",
         "inventory": "openclaw_curator"
@@ -3295,7 +3337,7 @@
   "activationBlockers": [
     {
       "id": "collection-not-activated",
-      "count": 328,
+      "count": 335,
       "requiredAction": "keep all enabled flags false until shadow and dry-run gates pass"
     },
     {
@@ -3498,16 +3540,19 @@
     },
     {
       "id": "instagram-profile-verification-pending",
-      "count": 66,
+      "count": 73,
       "profileIds": [
+        "ig.anpad-oficial",
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
         "ig.cecasufg",
         "ig.cei-ufg",
         "ig.cepae-ufg",
         "ig.cerofufg",
+        "ig.cfaadm",
         "ig.ciar-ufg",
         "ig.dceufg",
+        "ig.direitoshumanosufg",
         "ig.direitoufg",
         "ig.ea-ufg",
         "ig.editora-ufg",
@@ -3525,6 +3570,8 @@
         "ig.firminopolis-ufg",
         "ig.floreser-ufg",
         "ig.gecon-eeca",
+        "ig.gestaogovbr",
+        "ig.goiasvagasoficial",
         "ig.governdegoias",
         "ig.ifg-oficial",
         "ig.ime-ufg",
@@ -3534,6 +3581,7 @@
         "ig.jornalufg",
         "ig.labmic-ufg",
         "ig.lacena-ufg",
+        "ig.lapeiufg",
         "ig.lapigufg",
         "ig.odontologia-ufg",
         "ig.patiodaciencia-ufg",
@@ -3563,6 +3611,7 @@
         "ig.sdh-ufg",
         "ig.sibi-ufg",
         "ig.sri-ufg",
+        "ig.tcegoias",
         "ig.tvufg",
         "ig.uegoficial",
         "ig.ufg-oficial"
@@ -3571,16 +3620,19 @@
     },
     {
       "id": "instagram-evidence-missing",
-      "count": 48,
+      "count": 55,
       "profileIds": [
+        "ig.anpad-oficial",
         "ig.campusaparecidaufg",
         "ig.campusgoiasufg",
         "ig.cecasufg",
         "ig.cei-ufg",
         "ig.cepae-ufg",
         "ig.cerofufg",
+        "ig.cfaadm",
         "ig.ciar-ufg",
         "ig.dceufg",
+        "ig.direitoshumanosufg",
         "ig.direitoufg",
         "ig.ea-ufg",
         "ig.editora-ufg",
@@ -3597,6 +3649,8 @@
         "ig.fic-ufg",
         "ig.firminopolis-ufg",
         "ig.floreser-ufg",
+        "ig.gestaogovbr",
+        "ig.goiasvagasoficial",
         "ig.governdegoias",
         "ig.ifg-oficial",
         "ig.ime-ufg",
@@ -3605,6 +3659,7 @@
         "ig.iqufg",
         "ig.jornalufg",
         "ig.lacena-ufg",
+        "ig.lapeiufg",
         "ig.lapigufg",
         "ig.odontologia-ufg",
         "ig.patiodaciencia-ufg",
@@ -3618,6 +3673,7 @@
         "ig.sdh-ufg",
         "ig.sibi-ufg",
         "ig.sri-ufg",
+        "ig.tcegoias",
         "ig.tvufg",
         "ig.uegoficial",
         "ig.ufg-oficial"

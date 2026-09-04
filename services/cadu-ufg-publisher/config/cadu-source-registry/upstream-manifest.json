@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "registryVersion": "2026-09-03.1",
+  "registryVersion": "2026-09-04.1",
   "auditCutoff": "2026-09-03",
   "upstream": {
     "repository": "https://github.com/yandiamantinoBr/openclaw-cadu",
-    "commit": "b51056ffbad2f07b4da0c524046eace1d038e537"
+    "commit": "a22ffb5b3144f7e685b1da7cd3112e2430976e92"
   },
   "artifacts": [
     {
       "id": "candidate",
       "file": "ufg-source-registry.candidate.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/ufg-source-registry.candidate.json",
-      "upstreamGitBlobOid": "08adfdb54067fcc0ac46f75f99829a3c32e8e3d4",
-      "contentSha256": "5e4233d74dc4ccba1213c3c57685c6a54d2c6236c6bf08b48ded5f8ca3e3d395",
-      "byteLength": 880947
+      "upstreamGitBlobOid": "b14df3b816ac85fef9e271834b725d39d7fbcc9a",
+      "contentSha256": "092e729a0c28accb7d9dbf1eb483d502e34cea3d4f5faa14ae87ee865c176896",
+      "byteLength": 892028
     },
     {
       "id": "schema",
@@ -27,9 +27,9 @@
       "id": "reconciliation-report",
       "file": "source-reconciliation-report.json",
       "upstreamPath": "data/.openclaw/workspace/config/cadu-source-registry/source-reconciliation-report.json",
-      "upstreamGitBlobOid": "9f3c7d5e316129aab9c25527c0f44f7277b78e51",
-      "contentSha256": "277fe45fe2d22eb1abc0b931d4399ebb10db64a683caeb58ab974b6ccb44e658",
-      "byteLength": 94953
+      "upstreamGitBlobOid": "5d687d19cffa321ef163314b25963532c31fb269",
+      "contentSha256": "85dc8770c617d0f875a5243dd13ad47ab83b041fba54340a9c3052a3061e30ca",
+      "byteLength": 96853
     }
   ],
   "safety": {
