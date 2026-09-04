@@ -38,62 +38,42 @@ jobs:
           echo "auth smtp PATCH -> HTTP $HTTP"
           if [ "$HTTP" != "200" ]; then echo "::warning::smtp config PATCH returned $HTTP (may already be configured)"; cat /tmp/auth-cfg.json; fi
 
-      - name: Debug templates endpoint
+      - name: Install branded templates (signup / invite / recovery)
         env:
           SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           REF="wacyrkwhkvzwkqpolrbg"
-          for T in signup invite recovery magiclink; do
-            HTTP=$(curl -sS -o /tmp/tpl-get-$T.json -w "%{http_code}" \
-              "https://api.supabase.com/v1/projects/$REF/config/auth/templates/$T" \
-              -H "Authorization: Bearer $SB_TOKEN")
-            echo "GET templates/$T -> HTTP $HTTP"
-            head -c 300 /tmp/tpl-get-$T.json; echo
-          done
-      - name: Install branded signup template
-        env:
-          SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          REF="wacyrkwhkvzwkqpolrbg"
-          BODY=$(python3 -c "import json;print(json.dumps(open('supabase/templates/kino-auth-email-template.html').read()))")
-          PAYLOAD="{\"subject\": \"Confirme seu e-mail \u2014 KinoCampus\", \"body\": $BODY}"
-          HTTP=$(curl -sS -o /tmp/tpl.json -w "%{http_code}" -X PATCH \
-            "https://api.supabase.com/v1/projects/$REF/config/auth/templates/signup" \
+          # 1. GET current config and list mailer_* keys (schema probe)
+          curl -sS "https://api.supabase.com/v1/projects/$REF/config/auth" \
+            -H "Authorization: Bearer $SB_TOKEN" > /tmp/auth-cfg-now.json
+          jq "keys | map(select(startswith(\"mailer_\")))" /tmp/auth-cfg-now.json || true
+          # 2. PATCH templates + subjects via mailer_templates_* / mailer_subjects_* fields
+          python3 - <<PYEOF
+          import json
+          tpl = open("supabase/templates/kino-auth-email-template.html").read()
+          cfg = json.load(open("/tmp/auth-cfg-now.json"))
+          payload = {}
+          for key in ("smtp_host","smtp_port","smtp_user","smtp_pass","smtp_sender_email","smtp_sender_name","smtp_max_frequency","smtp_ignore_tls"):
+              if key in cfg: payload[key] = cfg[key]
+          payload["mailer_subjects_confirmation"] = "Confirme seu e-mail \u2014 KinoCampus"
+          payload["mailer_subjects_invite"] = "Voc\u00ea foi convidado para a KinoCampus"
+          payload["mailer_subjects_recovery"] = "Redefinir sua senha \u2014 KinoCampus"
+          payload["mailer_templates_confirmation_content"] = tpl
+          payload["mailer_templates_invite_content"] = tpl
+          payload["mailer_templates_recovery_content"] = tpl
+          open("/tmp/auth-patch.json","w").write(json.dumps(payload))
+          PYEOF
+          HTTP=$(curl -sS -o /tmp/auth-patch-res.json -w "%{http_code}" -X PATCH \
+            "https://api.supabase.com/v1/projects/$REF/config/auth" \
             -H "Authorization: Bearer $SB_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          echo "signup template PATCH -> HTTP $HTTP"
-          if [ "$HTTP" != "200" ]; then echo "::warning::template PATCH returned $HTTP"; cat /tmp/tpl.json; fi
-
-      - name: Install branded invite template
-        env:
-          SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          REF="wacyrkwhkvzwkqpolrbg"
-          BODY=$(python3 -c "import json;print(json.dumps(open('supabase/templates/kino-auth-email-template.html').read()))")
-          PAYLOAD="{\"subject\": \"Voc\u00ea foi convidado para a KinoCampus\", \"body\": $BODY}"
-          HTTP=$(curl -sS -o /tmp/tpl2.json -w "%{http_code}" -X PATCH \
-            "https://api.supabase.com/v1/projects/$REF/config/auth/templates/invite" \
-            -H "Authorization: Bearer $SB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          echo "invite template PATCH -> HTTP $HTTP"
-          if [ "$HTTP" != "200" ]; then echo "::warning::template PATCH returned $HTTP"; cat /tmp/tpl2.json; fi
-
-      - name: Install branded recovery template
-        env:
-          SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          REF="wacyrkwhkvzwkqpolrbg"
-          BODY=$(python3 -c "import json;print(json.dumps(open('supabase/templates/kino-auth-email-template.html').read()))")
-          PAYLOAD="{\"subject\": \"Redefinir sua senha \u2014 KinoCampus\", \"body\": $BODY}"
-          HTTP=$(curl -sS -o /tmp/tpl3.json -w "%{http_code}" -X PATCH \
-            "https://api.supabase.com/v1/projects/$REF/config/auth/templates/recovery" \
-            -H "Authorization: Bearer $SB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-          echo "recovery template PATCH -> HTTP $HTTP"
-          if [ "$HTTP" != "200" ]; then echo "::warning::template PATCH returned $HTTP"; cat /tmp/tpl3.json; fi
+            -d @/tmp/auth-patch.json)
+          echo "templates PATCH -> HTTP $HTTP"
+          if [ "$HTTP" != "200" ]; then head -c 500 /tmp/auth-patch-res.json; fi
+          # 3. verify: the confirmation template must contain the tent SVG path
+          curl -sS "https://api.supabase.com/v1/projects/$REF/config/auth" \
+            -H "Authorization: Bearer $SB_TOKEN" > /tmp/auth-cfg-after.json
+          jq -r ".mailer_templates_confirmation_content" /tmp/auth-cfg-after.json | grep -c "M12 3.2" || echo "LOGO-MISSING"
 
       - name: Verify SMTP config applied
         env:
