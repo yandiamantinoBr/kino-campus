@@ -1988,3 +1988,33 @@ Referências:
 
 - `docs/ops/cadu-review-center-contract-2026-07-28.md`;
 - `openclaw-cadu/docs/incidents/2026-07-28-runs-bd38466f-29da18c0-6b0018ac.md`.
+
+## Estados dos botões da Pipeline (Simular/Executar × Verificar para…)
+
+A sub-aba **Estágios pré-definidos** renderiza o MESMO par de botões em dois
+estados do ciclo de vida do controle administrativo — não são dois sistemas
+nem há sobreposição entre eles:
+
+- **Controle válido** (snapshot validado e dentro do prazo,
+  `pipelineControlIsReady()`): botões sólidos **Simular** (frasco) e
+  **Executar**/**Executar real** (play; vermelho quando o estágio altera dados
+  reais, e "Executar real" sempre sujeito à aprovação Ed25519).
+- **Controle expirado** (sessão administrativa vencida ou snapshot fora do
+  prazo): os mesmos botões viram **Verificar para simular / verificar para
+  executar** — visual âmbar tracejado com escudo (`is-renewal`,
+  `fa-shield-halved`). O clique NÃO executa nada: apenas renova o snapshot e a
+  verificação prévia; com a sessão expirada o handler falha fechado com
+  "Sessão administrativa indisponível. Nenhuma execução foi iniciada."
+
+O estado é global (um `pipelineControlReady` para a página inteira), então os
+botões de todos os estágios mudam de estética juntos — nunca há mistura de
+estados entre cartões. O aviso "Controles bloqueados: sessão administrativa
+expirada… exibindo a última visão válida" indica a última visão renderizada
+enquanto o painel aguarda re-autenticação; após renovar, os botões voltam ao
+estado sólido de execução.
+
+Implementação: `renderPipelineStages`
+(`assets/js/controllers/admin/admin-cadu.controller.js`) — rótulo alternado
+por `canRefreshControl` ("Verificar para " + label), classe `is-renewal`,
+ícone `fa-shield-halved`; handler `runPipelineStage` renova via
+`ensureFreshPipelineControl()` antes de qualquer POST.
