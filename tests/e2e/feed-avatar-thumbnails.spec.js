@@ -4,9 +4,9 @@ const csp = require('../../vercel.json').headers.flatMap((entry) => entry.header
   .find((header) => header.key === 'Content-Security-Policy').value;
 const origin = 'https://feed-avatar-fixture.supabase.co';
 const original = origin + '/storage/v1/object/public/kino-media/profile-avatars/author/avatar.jpg';
-// 2026-09-04: thumbnails agora passam por /api/media (sharp na Vercel) em vez
+// 2026-09-04: thumbnails agora passam por /api/og-image (sharp na Vercel) em vez
 // de /render/image — a URL e relativa ao site sob teste.
-const thumbnail = '/api/media?path=' + encodeURIComponent('kino-media/profile-avatars/author/avatar.jpg') + '&w=144&h=144&fit=cover&q=80';
+const thumbnail = '/api/og-image?path=' + encodeURIComponent('kino-media/profile-avatars/author/avatar.jpg') + '&w=144&h=144&fit=cover&q=80';
 const authorId = '11111111-1111-4111-8111-111111111111';
 const postId = '22222222-2222-4222-8222-222222222222';
 const author = { id: authorId, display_name: 'Ana Campus', avatar_url: original, verified: false };
@@ -72,7 +72,7 @@ async function bootHome(page, { failThumbnail = false, failOriginal = false } = 
         const response = await route.fetch();
         return route.fulfill({ response, headers: { ...response.headers(), 'content-security-policy': csp } });
       }
-      if (url.pathname === '/api/media') {
+      if (url.pathname === '/api/og-image') {
         const mediaUrl = url.pathname + url.search;
         imageRequests.push(mediaUrl);
         const failed = mediaUrl === thumbnail && failThumbnail;

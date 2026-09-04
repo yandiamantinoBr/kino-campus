@@ -7,9 +7,9 @@ const vercel = require('../../vercel.json');
 const csp = vercel.headers.flatMap((entry) => entry.headers).find((header) => header.key === 'Content-Security-Policy').value;
 const origin = 'https://ranking-fixture.supabase.co';
 const original = origin + '/storage/v1/object/public/kino-media/profile-avatars/fixture/avatar.png';
-// 2026-09-04: thumbnails passam por /api/media (sharp na Vercel) em vez de
+// 2026-09-04: thumbnails passam por /api/og-image (sharp na Vercel) em vez de
 // /render/image — URL relativa ao site sob teste.
-const thumbnail = '/api/media?path=' + encodeURIComponent('kino-media/profile-avatars/fixture/avatar.png') + '&w=144&h=144&fit=cover&q=80';
+const thumbnail = '/api/og-image?path=' + encodeURIComponent('kino-media/profile-avatars/fixture/avatar.png') + '&w=144&h=144&fit=cover&q=80';
 const users = [{ user_id: 'avatar-fixture', display_name: 'Ana Campus', avatar_url: original, score: 42 }];
 
 test.use({ deviceScaleFactor: 3 });
@@ -51,7 +51,7 @@ async function mountRanking(page, { pagePath = 'index.html', optimized = true, f
         ? { status: 503, contentType: 'text/plain', body: 'controlled image failure' }
         : { status: 200, contentType: 'image/png', body: image });
     } else if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-      if (url.pathname === '/api/media') {
+      if (url.pathname === '/api/og-image') {
         const mediaUrl = url.pathname + url.search;
         imageRequests.push(mediaUrl);
         const failed = mediaUrl === thumbnail && failThumbnail;

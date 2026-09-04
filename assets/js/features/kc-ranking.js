@@ -96,11 +96,12 @@
           avatar.pathname.indexOf(prefix) !== 0 ||
           /%(?:2f|5c|00)/i.test(avatar.pathname) ||
           !/\.(?:jpe?g|png|webp)$/i.test(avatar.pathname)) return '';
-      // 2026-09-04: /api/media substitui /render/ (quota de transformacoes do
-      // Supabase estourada). Recorte quadrado 144x144 preservado (fit=cover);
-      // a maior avatar do ranking tem 44 CSS px, 144 cobre DPR 3.
+      // 2026-09-04: /api/og-image?path= substitui /render/ (quota de
+      // transformacoes do Supabase estourada). Recorte quadrado 144x144
+      // preservado (fit=cover); a maior avatar do ranking tem 44 CSS px,
+      // 144 cobre DPR 3.
       var objectPath = avatar.pathname.slice('/storage/v1/object/public/'.length);
-      return '/api/media?path=' + encodeURIComponent(objectPath) + '&w=144&h=144&fit=cover&q=80';
+      return '/api/og-image?path=' + encodeURIComponent(objectPath) + '&w=144&h=144&fit=cover&q=80';
     } catch (_) {
       return '';
     }

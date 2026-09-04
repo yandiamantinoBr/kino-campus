@@ -2025,9 +2025,9 @@
 
   /**
    * Build a compact thumbnail URL when the media is hosted on Supabase Storage.
-   * 2026-09-04: /api/media (sharp na Vercel) substitui /render/image — a quota
-   * de Image Transformations do Supabase foi excedida (142/100) e o render
-   * passaria a servir o objeto original. Externos mantêm a URL original
+   * 2026-09-04: /api/og-image?path= (sharp na Vercel) substitui /render/image —
+   * a quota de Image Transformations do Supabase foi excedida (142/100) e o
+   * render passaria a servir o objeto original. Externos mantêm a URL original
    * (browser ainda carrega pequeno via width/height + CSS cover).
    */
   function buildOptimizedThumbUrl(src, options = {}) {
@@ -2039,7 +2039,7 @@
       const url = new URL(raw);
       const objectMatch = url.pathname.match(/\/storage\/v1\/(?:object|render\/image)\/public\/([^/]+)\/(.+)$/i);
       if (objectMatch) {
-        return '/api/media?path=' + encodeURIComponent(`${objectMatch[1]}/${objectMatch[2]}`)
+        return '/api/og-image?path=' + encodeURIComponent(`${objectMatch[1]}/${objectMatch[2]}`)
           + '&w=' + size + '&h=' + size + '&fit=cover&q=' + quality;
       }
     } catch (_) { /* keep original */ }

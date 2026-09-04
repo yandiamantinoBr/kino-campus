@@ -40,7 +40,7 @@ function withEnv(origin) {
 
 describe('api/media handler', () => {
   beforeAll(() => {
-    mediaModule = require('../../api/media.js');
+    mediaModule = require('../../api/og-image.js');
   });
 
   afterEach(() => {

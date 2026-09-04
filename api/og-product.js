@@ -334,12 +334,13 @@ function getPostImage(post) {
  * do WhatsApp), o render preserva o formato de origem (.png => PNG), então
  * nenhuma calibração de quality tornava o preview leve.
  *
- * Roteamos o og:image por /api/media (Vercel + sharp): baixa o objeto CRU,
- * converte para JPEG progressivo <= ~280 KB e é servido com cache longo de
- * CDN. `version` (timestamp do post) vira ?v= para o WhatsApp refazer o
- * preview quando o post é editado.
+ * Roteamos o og:image por /api/og-image?path=... (Vercel + sharp, modo media
+ * dentro da MESMA function por causa do limite de 12 Serverless Functions do
+ * plano Hobby): baixa o objeto CRU, converte para JPEG progressivo <= ~280 KB
+ * e é servido com cache longo de CDN. `version` (timestamp do post) vira ?v=
+ * para o WhatsApp refazer o preview quando o post é editado.
  */
-const OG_MEDIA_ENDPOINT = SITE_ORIGIN + '/api/media';
+const OG_MEDIA_ENDPOINT = SITE_ORIGIN + '/api/og-image';
 const OG_MEDIA_SUPABASE_HOST_RE = /(?:^|\.)supabase\.co$/i;
 const OG_MEDIA_OBJECT_PREFIX = '/storage/v1/object/public/';
 const OG_MEDIA_RENDER_PREFIX = '/storage/v1/render/image/public/';

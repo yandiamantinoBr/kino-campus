@@ -64,12 +64,12 @@
       // 2026-09-04: quota de Storage Image Transformations do Supabase
       // estourada (142/100) — /render/ passa a servir o objeto original quando
       // o spend cap bloqueia, desperdicando banda. Avatares agora passam por
-      // /api/media (sharp na Vercel): mesmo recorte quadrado 144x144 (fit=cover),
-      // JPEG progressivo, cache longo de CDN e zero consumo da quota Supabase.
-      // URL relativa ao site: um cache cobre os icones de 20px do autor e os
-      // avatares de 44px do ranking no DPR3, sem baixar o original.
+      // /api/og-image?path= (sharp na Vercel): mesmo recorte quadrado 144x144
+      // (fit=cover), JPEG progressivo, cache longo de CDN e zero consumo da
+      // quota Supabase. URL relativa ao site: um cache cobre os icones de 20px
+      // do autor e os avatares de 44px do ranking no DPR3, sem baixar o original.
       var objectPath = avatar.pathname.slice('/storage/v1/object/public/'.length);
-      return '/api/media?path=' + encodeURIComponent(objectPath) + '&w=144&h=144&fit=cover&q=80';
+      return '/api/og-image?path=' + encodeURIComponent(objectPath) + '&w=144&h=144&fit=cover&q=80';
     } catch (_) {
       return '';
     }
