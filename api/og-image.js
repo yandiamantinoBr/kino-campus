@@ -151,7 +151,15 @@ async function loadFonts() {
 // ---------------------------------------------------------------------------
 export default async function handler(req, res) {
   try {
-    var parsedUrl = new URL(req.url, 'https://' + (req.headers.host || 'www.kinocampus.com.br'));
+    var requestHost = req && req.headers && req.headers.host ? req.headers.host : 'www.kinocampus.com.br';
+    var parsedUrl = new URL(req && req.url ? req.url : '/', 'https://' + requestHost);
+    // 2026-09-04: modo media (resize/conversao de objetos crus do Storage para
+    // og:image e thumbnails). Vive no MESMO Serverless Function porque o plano
+    // Hobby da Vercel limita o deployment a 12 funcoes (ver og-product.js) —
+    // a query "path" ativa o modo; "type" continua gerando a imagem institucional.
+    if (parsedUrl.searchParams.get('path') || (req && req.query && req.query.path)) {
+      return await handleMediaRequest(parsedUrl, req, res);
+    }
     var type = parsedUrl.searchParams.get('type') || 'home';
     var m = MODULES[type] || MODULES['home'];
 
@@ -316,3 +324,195 @@ export default async function handler(req, res) {
     res.status(500).json({ error: String(err && err.message ? err.message : err) });
   }
 }
+
+// ---------------------------------------------------------------------------
+// Media mode (2026-09-04) — resize/conversao de objetos publicos do Storage.
+// Derivado de api/media.js (integrado aqui por causa do limite de 12
+// Serverless Functions do plano Hobby). Baixa o objeto CRU de kino-media e
+// devolve JPEG progressivo <= ~280 KB, imune a quota de Image Transformations
+// do Supabase (/render/), que com spend cap estourado serve o objeto original
+// (PNG ~800 KB) e quebra o preview do WhatsApp.
+// ---------------------------------------------------------------------------
+const MEDIA_ALLOWED_BUCKET = 'kino-media';
+const MEDIA_OBJECT_PATH_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,320}$/;
+const MEDIA_IMAGE_EXT_RE = /\.(?:jpe?g|png|webp)$/i;
+const MEDIA_MAX_UPSTREAM_BYTES = 30 * 1024 * 1024;
+const MEDIA_MAX_EDGE = 1920;
+const MEDIA_MIN_EDGE = 16;
+const MEDIA_DEFAULT_WIDTH = 1200;
+const MEDIA_DEFAULT_QUALITY = 82;
+const MEDIA_TARGET_MAX_BYTES = 280 * 1024;
+const MEDIA_QUALITY_LADDER = [MEDIA_DEFAULT_QUALITY, 72, 62, 52];
+const MEDIA_UPSTREAM_TIMEOUT_MS = 9_000;
+
+function mediaResolveEnv(candidates) {
+  for (var i = 0; i < candidates.length; i++) {
+    var value = process.env[candidates[i]];
+    if (value && String(value).trim()) return String(value).trim().replace(/\/+$/, '');
+  }
+  return '';
+}
+
+function mediaClampInt(value, min, max, fallback) {
+  var parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+/** Valida "kino-media/post-media/.../file.jpg" -> caminho normalizado ou ''. */
+function mediaParseObjectPath(raw) {
+  var value = String(raw || '').trim();
+  if (!value || !MEDIA_OBJECT_PATH_RE.test(value)) return '';
+  if (value.includes('..') || value.includes('%') || value.includes('\\')) return '';
+  if (!MEDIA_IMAGE_EXT_RE.test(value)) return '';
+  var slash = value.indexOf('/');
+  if (slash <= 0) return '';
+  var bucket = value.slice(0, slash);
+  var objectPath = value.slice(slash + 1);
+  if (bucket !== MEDIA_ALLOWED_BUCKET || !objectPath) return '';
+  return bucket + '/' + objectPath;
+}
+
+function mediaBuildUpstreamUrl(origin, bucketObjectPath) {
+  if (!origin) return '';
+  return origin + '/storage/v1/object/public/' + bucketObjectPath;
+}
+
+function mediaPickQualityLadder(requested) {
+  var first = mediaClampInt(requested, 40, 92, MEDIA_DEFAULT_QUALITY);
+  var ladder = [first];
+  for (var i = 0; i < MEDIA_QUALITY_LADDER.length; i++) {
+    if (MEDIA_QUALITY_LADDER[i] < first) ladder.push(MEDIA_QUALITY_LADDER[i]);
+  }
+  return ladder.length ? ladder : [MEDIA_DEFAULT_QUALITY];
+}
+
+async function mediaEncodeJpeg(inputBuffer, resize, qualities) {
+  var sharpModule = await import('sharp');
+  var sharp = sharpModule.default;
+  var lastBuffer = null;
+  var lastInfo = null;
+  for (var i = 0; i < qualities.length; i++) {
+    var pipeline = sharp(inputBuffer, { failOn: 'none' }).rotate();
+    if (resize) pipeline = pipeline.resize(resize);
+    var encoded = await pipeline
+      .jpeg({ quality: qualities[i], progressive: true, mozjpeg: true, chromaSubsampling: '4:2:0' })
+      .toBuffer({ resolveWithObject: true });
+    lastBuffer = encoded.data;
+    lastInfo = encoded.info;
+    if (encoded.data.length <= MEDIA_TARGET_MAX_BYTES) break;
+  }
+  return { buffer: lastBuffer, info: lastInfo };
+}
+
+function mediaSendError(res, status, message, cacheable) {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', cacheable ? 'public, max-age=0, s-maxage=300' : 'no-store');
+  res.status(status).send(message);
+}
+
+/** Query unificado: aceita req.url (Vercel passa a query string) e req.query. */
+function mediaQueryGet(req, parsedUrl, name) {
+  var fromUrl = parsedUrl.searchParams.get(name);
+  if (fromUrl !== null && fromUrl !== undefined) return fromUrl;
+  var q = req && req.query;
+  if (q && q[name] !== undefined) {
+    return Array.isArray(q[name]) ? String(q[name][0]) : String(q[name]);
+  }
+  return null;
+}
+
+async function handleMediaRequest(parsedUrl, req, res) {
+  var method = String((req && req.method) || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    return mediaSendError(res, 405, 'method not allowed', false);
+  }
+
+  var bucketObjectPath = mediaParseObjectPath(mediaQueryGet(req, parsedUrl, 'path'));
+  if (!bucketObjectPath) {
+    return mediaSendError(res, 400, 'invalid media path', false);
+  }
+
+  var origin = mediaResolveEnv(['SUPABASE_URL', 'KC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL']);
+  var upstreamUrl = mediaBuildUpstreamUrl(origin, bucketObjectPath);
+  if (!upstreamUrl) {
+    return mediaSendError(res, 503, 'media backend unavailable', false);
+  }
+
+  var width = mediaClampInt(mediaQueryGet(req, parsedUrl, 'w'), MEDIA_MIN_EDGE, MEDIA_MAX_EDGE, MEDIA_DEFAULT_WIDTH);
+  var heightRaw = mediaClampInt(mediaQueryGet(req, parsedUrl, 'h'), MEDIA_MIN_EDGE, MEDIA_MAX_EDGE, 0);
+  var fit = String(mediaQueryGet(req, parsedUrl, 'fit') || '').toLowerCase() === 'cover' ? 'cover' : 'inside';
+  var resize = heightRaw
+    ? { width: width, height: heightRaw, fit: fit, withoutEnlargement: true }
+    : { width: width, withoutEnlargement: true };
+
+  var upstream;
+  try {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(new Error('media upstream timeout')); }, MEDIA_UPSTREAM_TIMEOUT_MS);
+    try {
+      upstream = await fetch(upstreamUrl, {
+        signal: controller.signal,
+        redirect: 'follow',
+        headers: { Accept: 'image/*' },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (_) {
+    return mediaSendError(res, 504, 'media upstream unreachable', false);
+  }
+
+  if (!upstream || !upstream.ok) {
+    // Supabase Storage responde 400 (InvalidKey) para objetos inexistentes;
+    // tratamos como 404 para permitir cache negativo curto no CDN.
+    var notFound = upstream && (upstream.status === 404 || upstream.status === 400);
+    var status = notFound ? 404 : 502;
+    return mediaSendError(res, status, notFound ? 'media not found' : 'media upstream error', notFound);
+  }
+
+  var declaredLength = Number(upstream.headers.get('content-length') || 0);
+  if (declaredLength > MEDIA_MAX_UPSTREAM_BYTES) {
+    return mediaSendError(res, 413, 'media too large', false);
+  }
+
+  var inputBuffer;
+  try {
+    inputBuffer = Buffer.from(await upstream.arrayBuffer());
+  } catch (_) {
+    return mediaSendError(res, 502, 'media download failed', false);
+  }
+  if (!inputBuffer.length || inputBuffer.length > MEDIA_MAX_UPSTREAM_BYTES) {
+    return mediaSendError(res, 502, 'media payload invalid', false);
+  }
+
+  var encoded;
+  try {
+    encoded = await mediaEncodeJpeg(inputBuffer, resize, mediaPickQualityLadder(mediaQueryGet(req, parsedUrl, 'q')));
+  } catch (err) {
+    console.error('[og-image] media encode failed:', err && err.message ? err.message : err);
+    return mediaSendError(res, 502, 'media conversion failed', false);
+  }
+  if (!encoded || !encoded.buffer || !encoded.buffer.length) {
+    return mediaSendError(res, 502, 'media conversion empty', false);
+  }
+
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=31536000, stale-while-revalidate=604800');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-KC-Media-Width', String(encoded.info ? encoded.info.width : ''));
+  res.setHeader('X-KC-Media-Height', String(encoded.info ? encoded.info.height : ''));
+  res.status(200).send(encoded.buffer);
+}
+
+export const __internals = {
+  parseObjectPath: mediaParseObjectPath,
+  clampInt: mediaClampInt,
+  buildUpstreamUrl: mediaBuildUpstreamUrl,
+  pickQualityLadder: mediaPickQualityLadder,
+  TARGET_MAX_BYTES: MEDIA_TARGET_MAX_BYTES,
+  MAX_EDGE: MEDIA_MAX_EDGE,
+  DEFAULT_WIDTH: MEDIA_DEFAULT_WIDTH,
+  DEFAULT_QUALITY: MEDIA_DEFAULT_QUALITY,
+};
+

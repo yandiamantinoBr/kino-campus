@@ -3,7 +3,10 @@
 const ORIGIN = 'https://feed-avatar-fixture.supabase.co';
 const PREFIX = '/storage/v1/object/public/kino-media/profile-avatars/';
 const ORIGINAL = ORIGIN + PREFIX + 'author/avatar.jpg';
-const THUMBNAIL = ORIGINAL.replace('/object/public/', '/render/image/public/') + '?width=144&height=144&resize=cover&quality=90';
+// 2026-09-04: thumbnails passam por /api/og-image (sharp na Vercel) — mesmo
+// recorte 144x144 fit=cover, sem consumir a quota de transformacoes do Supabase.
+const THUMBNAIL = '/api/og-image?path=' + encodeURIComponent('kino-media/profile-avatars/author/avatar.jpg') + '&w=144&h=144&fit=cover&q=80';
+const RESOLVED_THUMBNAIL = 'http://localhost' + THUMBNAIL;
 const POST = Object.freeze({ id: 'feed-avatar-post', modulo: 'eventos', titulo: 'Publicação de teste', descricao: 'Descrição', authorId: 'feed-avatar-author', imagens: Object.freeze([]) });
 
 beforeAll(() => {
@@ -57,7 +60,7 @@ describe('feed author avatar thumbnails', () => {
 
   test.each(['jpg', 'jpeg', 'png', 'webp', 'JPG'])('handles known raster %s and preserves encoded filenames', (extension) => {
     const source = ORIGIN + PREFIX + 'author/avatar%20name.' + extension;
-    expect(render(source).image.src).toBe(source.replace('/object/public/', '/render/image/public/') + '?width=144&height=144&resize=cover&quality=90');
+    expect(render(source).image.getAttribute('src')).toBe('/api/og-image?path=' + encodeURIComponent(source.replace(ORIGIN + '/storage/v1/object/public/', '')) + '&w=144&h=144&fit=cover&q=80');
   });
 
   test.each([
@@ -110,7 +113,7 @@ describe('feed author avatar thumbnails', () => {
     window.KCAPI = { getAuthorById: () => null };
     const legacy = Object.freeze({ ...POST, autor: 'Ana', autorAvatar: ORIGINAL });
     document.querySelector('#feed-avatar-container').innerHTML = window._KCU.presentation.renderPostCard(legacy);
-    expect(document.querySelector('.kc-card__author img').src).toBe(THUMBNAIL);
+    expect(document.querySelector('.kc-card__author img').src).toBe(RESOLVED_THUMBNAIL);
     expect(legacy.autorAvatar).toBe(ORIGINAL);
   });
 
@@ -150,9 +153,9 @@ describe('feed author avatar thumbnails', () => {
     unrelated.src = THUMBNAIL;
     document.body.appendChild(unrelated);
     unrelated.dispatchEvent(new Event('error'));
-    expect(unrelated.src).toBe(THUMBNAIL);
+    expect(unrelated.src).toBe(RESOLVED_THUMBNAIL);
     document.body.appendChild(image);
     image.dispatchEvent(new Event('error'));
-    expect(image.src).toBe(THUMBNAIL);
+    expect(image.src).toBe(RESOLVED_THUMBNAIL);
   });
 });

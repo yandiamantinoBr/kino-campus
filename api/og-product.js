@@ -326,6 +326,100 @@ function getPostImage(post) {
     .find((url) => !isTemporaryImageUrl(url)) || '';
 }
 
+/**
+ * WhatsApp/OG (2026-09-04): o og:image NÃO pode depender do endpoint de
+ * transformação do Supabase Storage (/storage/v1/render/...). Além da quota
+ * própria (142/100 em 2026-09) que, com spend cap ativo, passa a servir o
+ * objeto ORIGINAL (PNG 1920px ~800 KB — acima do limite pratico do preview
+ * do WhatsApp), o render preserva o formato de origem (.png => PNG), então
+ * nenhuma calibração de quality tornava o preview leve.
+ *
+ * Roteamos o og:image por /api/og-image?path=... (Vercel + sharp, modo media
+ * dentro da MESMA function por causa do limite de 12 Serverless Functions do
+ * plano Hobby): baixa o objeto CRU, converte para JPEG progressivo <= ~280 KB
+ * e é servido com cache longo de CDN. `version` (timestamp do post) vira ?v=
+ * para o WhatsApp refazer o preview quando o post é editado.
+ */
+const OG_MEDIA_ENDPOINT = SITE_ORIGIN + '/api/og-image';
+const OG_MEDIA_SUPABASE_HOST_RE = /(?:^|\.)supabase\.co$/i;
+const OG_MEDIA_OBJECT_PREFIX = '/storage/v1/object/public/';
+const OG_MEDIA_RENDER_PREFIX = '/storage/v1/render/image/public/';
+const OG_MEDIA_IMAGE_EXT_RE = /\.(?:jpe?g|png|webp)$/i;
+const OG_MEDIA_PATH_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const OG_MEDIA_DEFAULT_WIDTH = 1200;
+const OG_MEDIA_MAX_EDGE = 1920;
+const OG_MEDIA_QUALITY = 82;
+
+function clampOgMediaEdge(value, min, max) {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+export function buildOgMediaDescriptor(rawImageUrl, version = '') {
+  const original = String(rawImageUrl || '').trim();
+  if (!original) return null;
+  let parsed;
+  try {
+    parsed = new URL(original);
+  } catch (_) {
+    return null;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+  if (!OG_MEDIA_SUPABASE_HOST_RE.test(parsed.hostname)) return null;
+
+  const pathname = parsed.pathname;
+  let bucketObjectPath = null;
+  for (const prefix of [OG_MEDIA_OBJECT_PREFIX, OG_MEDIA_RENDER_PREFIX]) {
+    const idx = pathname.indexOf(prefix);
+    if (idx >= 0) {
+      bucketObjectPath = pathname.slice(idx + prefix.length);
+      break;
+    }
+  }
+  if (!bucketObjectPath) return null;
+
+  const slash = bucketObjectPath.indexOf('/');
+  if (slash <= 0) return null;
+  const bucket = bucketObjectPath.slice(0, slash);
+  const objectPath = bucketObjectPath.slice(slash + 1);
+  if (bucket !== 'kino-media') return null;
+  if (!OG_MEDIA_IMAGE_EXT_RE.test(objectPath)) return null;
+  if (objectPath.includes('..') || objectPath.includes('%')) return null;
+
+  // cover_render carrega width/height proporcionais as dimensoes REAIS da
+  // imagem (Edge cadu-publish) — reaproveitamos a proporcao como caixa do
+  // resize (fit inside: nunca corta, nunca amplia).
+  const width = clampOgMediaEdge(parsed.searchParams.get('width'), 16, OG_MEDIA_MAX_EDGE) || OG_MEDIA_DEFAULT_WIDTH;
+  const height = clampOgMediaEdge(parsed.searchParams.get('height'), 16, OG_MEDIA_MAX_EDGE) || 0;
+  const sanitizedVersion = String(version || '').replace(/[^0-9]/g, '').slice(0, 14);
+
+  const params = new URLSearchParams();
+  params.set('path', bucket + '/' + objectPath);
+  params.set('w', String(width));
+  if (height) params.set('h', String(height));
+  params.set('q', String(OG_MEDIA_QUALITY));
+  if (sanitizedVersion) params.set('v', sanitizedVersion);
+
+  return {
+    url: OG_MEDIA_ENDPOINT + '?' + params.toString(),
+    width: width,
+    height: height,
+    type: 'image/jpeg',
+    proxied: true,
+  };
+}
+
+export function buildOgMediaUrl(rawImageUrl, version = '') {
+  const descriptor = buildOgMediaDescriptor(rawImageUrl, version);
+  return descriptor ? descriptor.url : String(rawImageUrl || '').trim();
+}
+
+function ogImageVersionOf(post) {
+  const source = String((post && (post.updated_at || post.created_at)) || '').trim();
+  return source.replace(/[^0-9]/g, '').slice(0, 14);
+}
+
 function isRemoteImageUrl(value) {
   return isHttpUrl(value) && !/\.(?:pdf|docx?|xlsx?|pptx?|zip|html?|php)(?:[?#].*)?$/i.test(String(value || '').trim());
 }
@@ -452,6 +546,10 @@ function buildProductValues(post) {
     || 'Publicação pública da comunidade universitária da UFG no KinoCampus.';
   const imageFallback = `${SITE_ORIGIN}/api/og-image?type=${encodeURIComponent(post.module || 'product')}`;
   const image = getPostImage(post) || imageFallback;
+  // og:image via /api/media (JPEG <= ~280 KB, sem quota de transformacao do
+  // Supabase). Fallbacks/URLs externas nao proxieaveis permanecem intactos.
+  const ogDescriptor = buildOgMediaDescriptor(image, ogImageVersionOf(post));
+  const ogImage = ogDescriptor ? ogDescriptor.url : image;
   const canonicalUrl = `${SITE_ORIGIN}/product.html?id=${encodeURIComponent(id)}`;
 
   return {
@@ -463,6 +561,11 @@ function buildProductValues(post) {
     categoryLabel,
     priceText,
     image,
+    ogImage,
+    ogImageProxied: Boolean(ogDescriptor),
+    ogImageWidth: ogDescriptor ? ogDescriptor.width : 0,
+    ogImageHeight: ogDescriptor ? ogDescriptor.height : 0,
+    ogImageType: ogDescriptor ? ogDescriptor.type : '',
     canonicalUrl,
     actionLink: getActionLink(post),
     deadline: getDeadline(post),
@@ -1163,24 +1266,43 @@ function applyNoindexMeta(html, canonicalUrl) {
   return modified;
 }
 
+function insertOgImageDimensions(html, values) {
+  if (!values || !values.ogImageProxied || /<meta\s+property="og:image:type"/i.test(html)) return html;
+  const tags = ['<meta property="og:image:type" content="image/jpeg" />'];
+  if (values.ogImageWidth > 0) tags.push(`<meta property="og:image:width" content="${values.ogImageWidth}" />`);
+  if (values.ogImageHeight > 0) tags.push(`<meta property="og:image:height" content="${values.ogImageHeight}" />`);
+  return html.replace(
+    /(<meta\s+property="og:image"\s+content="[^"]*"\s*\/?>)/i,
+    (match) => `${match}\n  ${tags.join('\n  ')}`
+  );
+}
+
 function applyIndexableMeta(html, post, values) {
   let modified = html;
   const imageAlt = `Imagem da publicação: ${values.title}`;
   modified = replaceMetaContent(modified, 'property', 'og:type', post.module === 'eventos' ? 'event' : 'article');
   modified = replaceMetaContent(modified, 'property', 'og:title', values.seoTitle);
   modified = replaceMetaContent(modified, 'property', 'og:description', values.description);
-  modified = replaceMetaContent(modified, 'property', 'og:image', values.image);
+  // og:image (WhatsApp/Meta/Twitter) via /api/media — JPEG leve e imune a
+  // quota/erros do render do Supabase; ?v= (timestamp do post) quebra o cache
+  // do preview quando o post é editado.
+  const ogImage = values.ogImage || values.image;
+  modified = replaceMetaContent(modified, 'property', 'og:image', ogImage);
+  modified = insertOgImageDimensions(modified, values);
   modified = replaceMetaContent(modified, 'property', 'og:image:alt', imageAlt);
   modified = replaceMetaContent(modified, 'property', 'og:url', values.canonicalUrl);
   modified = replaceMetaContent(modified, 'name', 'twitter:card', 'summary_large_image');
   modified = replaceMetaContent(modified, 'name', 'twitter:title', values.seoTitle);
   modified = replaceMetaContent(modified, 'name', 'twitter:description', values.description);
-  modified = replaceMetaContent(modified, 'name', 'twitter:image', values.image);
+  modified = replaceMetaContent(modified, 'name', 'twitter:image', ogImage);
   modified = replaceMetaContent(modified, 'name', 'twitter:image:alt', imageAlt);
   modified = replaceTitleTag(modified, values.seoTitle);
   modified = replaceOrInsertMetaDescription(modified, values.description);
   modified = replaceOrInsertCanonical(modified, values.canonicalUrl);
   modified = replaceOrInsertRobots(modified, INDEXABLE_ROBOTS);
+  // Preload do BROWSER permanece na URL de exibicao (values.image): o JS do
+  // cliente troca o hero pelos candidatos do post e o preload precisa bater
+  // com o primeiro paint. Crawlers (og:image) usam ogImage via /api/media.
   modified = replaceOrInsertImagePreload(modified, values.image);
   if (!/property="og:locale"/i.test(modified)) {
     modified = modified.replace('<meta property="og:type"', '<meta property="og:locale" content="pt_BR" />\n  <meta property="og:type"');

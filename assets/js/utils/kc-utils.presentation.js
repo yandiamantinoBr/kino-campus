@@ -61,11 +61,15 @@
           avatar.username || avatar.password || /[?#\\]/.test(raw) ||
           avatar.pathname.indexOf(prefix) !== 0 || /%(?:2f|5c|00)/i.test(avatar.pathname) ||
           !/\.(?:jpe?g|png|webp)$/i.test(avatar.pathname)) return '';
-      avatar.pathname = avatar.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
-      // Share the ranking's exact URL: one cached image covers both 20px author
-      // icons and 44px ranking avatars at DPR3, without downloading the original.
-      avatar.search = '?width=144&height=144&resize=cover&quality=90';
-      return avatar.href;
+      // 2026-09-04: quota de Storage Image Transformations do Supabase
+      // estourada (142/100) — /render/ passa a servir o objeto original quando
+      // o spend cap bloqueia, desperdicando banda. Avatares agora passam por
+      // /api/og-image?path= (sharp na Vercel): mesmo recorte quadrado 144x144
+      // (fit=cover), JPEG progressivo, cache longo de CDN e zero consumo da
+      // quota Supabase. URL relativa ao site: um cache cobre os icones de 20px
+      // do autor e os avatares de 44px do ranking no DPR3, sem baixar o original.
+      var objectPath = avatar.pathname.slice('/storage/v1/object/public/'.length);
+      return '/api/og-image?path=' + encodeURIComponent(objectPath) + '&w=144&h=144&fit=cover&q=80';
     } catch (_) {
       return '';
     }
