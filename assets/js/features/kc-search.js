@@ -2025,8 +2025,10 @@
 
   /**
    * Build a compact thumbnail URL when the media is hosted on Supabase Storage.
-   * Uses /render/image for server-side resize/compress. External hosts keep the
-   * original URL (browser still loads it small via width/height + CSS cover).
+   * 2026-09-04: /api/media (sharp na Vercel) substitui /render/image — a quota
+   * de Image Transformations do Supabase foi excedida (142/100) e o render
+   * passaria a servir o objeto original. Externos mantêm a URL original
+   * (browser ainda carrega pequeno via width/height + CSS cover).
    */
   function buildOptimizedThumbUrl(src, options = {}) {
     const size = Math.max(32, Math.min(160, Number(options.size) || 80));
@@ -2035,22 +2037,10 @@
     if (!raw || !/^https?:\/\//i.test(raw)) return raw;
     try {
       const url = new URL(raw);
-      const objectMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/i);
+      const objectMatch = url.pathname.match(/\/storage\/v1\/(?:object|render\/image)\/public\/([^/]+)\/(.+)$/i);
       if (objectMatch) {
-        url.pathname = `/storage/v1/render/image/public/${objectMatch[1]}/${objectMatch[2]}`;
-        url.search = '';
-        url.searchParams.set('width', String(size));
-        url.searchParams.set('height', String(size));
-        url.searchParams.set('resize', 'cover');
-        url.searchParams.set('quality', String(quality));
-        return url.toString();
-      }
-      if (/\/storage\/v1\/render\/image\//i.test(url.pathname)) {
-        url.searchParams.set('width', String(size));
-        url.searchParams.set('height', String(size));
-        url.searchParams.set('resize', 'cover');
-        url.searchParams.set('quality', String(quality));
-        return url.toString();
+        return '/api/media?path=' + encodeURIComponent(`${objectMatch[1]}/${objectMatch[2]}`)
+          + '&w=' + size + '&h=' + size + '&fit=cover&q=' + quality;
       }
     } catch (_) { /* keep original */ }
     return raw;

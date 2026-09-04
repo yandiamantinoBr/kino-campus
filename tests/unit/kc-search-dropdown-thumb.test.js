@@ -138,14 +138,22 @@ describe('search dropdown thumbs', () => {
     expect(typeof internals.createDropdownThumb).toBe('function');
   });
 
-  test('converte storage público do Supabase em render/image compacto', () => {
+  test('converte storage público do Supabase em /api/media compacto', () => {
     const src = 'https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u1/p1/cover.jpg';
     const thumb = internals.buildOptimizedThumbUrl(src, { size: 80, quality: 62 });
-    expect(thumb).toContain('/storage/v1/render/image/public/kino-media/post-media/u1/p1/cover.jpg');
-    expect(thumb).toContain('width=80');
-    expect(thumb).toContain('height=80');
-    expect(thumb).toContain('resize=cover');
-    expect(thumb).toContain('quality=62');
+    expect(thumb).toContain('/api/media?path=kino-media%2Fpost-media%2Fu1%2Fp1%2Fcover.jpg');
+    expect(thumb).toContain('w=80');
+    expect(thumb).toContain('h=80');
+    expect(thumb).toContain('fit=cover');
+    expect(thumb).toContain('q=62');
+  });
+
+  test('converte URLs ja renderizadas (/render/image) em /api/media', () => {
+    const rendered = 'https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/render/image/public/kino-media/post-media/u2/p2/capa.png?width=1920&height=1236&resize=cover&quality=90';
+    const thumb = internals.buildOptimizedThumbUrl(rendered, { size: 64, quality: 60 });
+    expect(thumb).toContain('/api/media?path=kino-media%2Fpost-media%2Fu2%2Fp2%2Fcapa.png');
+    expect(thumb).toContain('w=64');
+    expect(thumb).not.toContain('supabase.co');
   });
 
   test('não altera hosts externos (sem transform server-side)', () => {
@@ -175,7 +183,7 @@ describe('search dropdown thumbs', () => {
     });
     expect(withImage.className).toContain('kc-search-dropdown__thumb');
     expect(withImage.childNodes[0].tagName).toBe('IMG');
-    expect(withImage.childNodes[0].src).toContain('/render/image/');
+    expect(withImage.childNodes[0].src).toContain('/api/media');
     expect(withImage.childNodes[0].loading).toBe('lazy');
 
     const without = internals.createDropdownThumb({ emoji: '📚', titulo: 'Sem foto' });

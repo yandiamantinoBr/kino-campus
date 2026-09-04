@@ -3,7 +3,10 @@
 const ORIGIN = 'https://ranking-fixture.supabase.co';
 const PREFIX = '/storage/v1/object/public/kino-media/profile-avatars/';
 const ORIGINAL = ORIGIN + PREFIX + 'test-user/avatar.jpg';
-const THUMBNAIL = ORIGINAL.replace('/object/public/', '/render/image/public/') + '?width=144&height=144&resize=cover&quality=90';
+// 2026-09-04: /api/media substitui /render/image (quota Supabase). jsdom
+// resolve a URL relativa contra http://localhost.
+const SITE_ORIGIN = 'http://localhost';
+const THUMBNAIL = SITE_ORIGIN + '/api/media?path=' + encodeURIComponent('kino-media/profile-avatars/test-user/avatar.jpg') + '&w=144&h=144&fit=cover&q=80';
 const RENDERERS = ['renderHomeRanking', 'renderSidebarRanking'];
 
 describe('ranking avatar thumbnails', () => {
@@ -51,7 +54,7 @@ describe('ranking avatar thumbnails', () => {
 
   test.each(['jpg', 'jpeg', 'png', 'webp', 'JPG'])('supports known raster extension %s and preserves encoded file names', (extension) => {
     const source = ORIGIN + PREFIX + 'test-user/avatar%20name.' + extension;
-    expect(render('renderHomeRanking', source).src).toBe(source.replace('/object/public/', '/render/image/public/') + '?width=144&height=144&resize=cover&quality=90');
+    expect(render('renderHomeRanking', source).src).toBe(SITE_ORIGIN + '/api/media?path=' + encodeURIComponent(source.replace(ORIGIN + '/storage/v1/object/public/', '')) + '&w=144&h=144&fit=cover&q=80');
   });
 
   const untouched = [
