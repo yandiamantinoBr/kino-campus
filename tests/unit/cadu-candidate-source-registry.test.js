@@ -454,12 +454,12 @@ describe('Cadu candidate source registry mirror', () => {
     const { manifest } = verifyMirroredRegistry();
     expect(manifest.upstream).toEqual({
       repository: 'https://github.com/yandiamantinoBr/openclaw-cadu',
-      commit: 'b51056ffbad2f07b4da0c524046eace1d038e537',
+      commit: 'a22ffb5b3144f7e685b1da7cd3112e2430976e92', // merge do PR #361 (2026-09-04.1)
     });
     expect(Object.fromEntries(manifest.artifacts.map((artifact) => [artifact.id, artifact.upstreamGitBlobOid]))).toEqual({
-      candidate: '08adfdb54067fcc0ac46f75f99829a3c32e8e3d4',
+      candidate: 'b14df3b816ac85fef9e271834b725d39d7fbcc9a',
       schema: '1a6763e187719d311a76bd3e558939490fb44570',
-      'reconciliation-report': '9f3c7d5e316129aab9c25527c0f44f7277b78e51',
+      'reconciliation-report': '5d687d19cffa321ef163314b25963532c31fb269',
     });
   });
 
@@ -467,9 +467,9 @@ describe('Cadu candidate source registry mirror', () => {
     const { registry, schema } = verifyMirroredRegistry();
     expect(loadCandidateSourceRegistry()).toEqual(registry);
     expect(registry.activation).toEqual({ state: 'shadow', runtimeConsumers: ['cadu-api'] });
-    expect(registry.entities).toHaveLength(189);
+    expect(registry.entities).toHaveLength(196); // +7 oportunidades externas/núcleos UFG (2026-09-04.1)
     expect(registry.webSources).toHaveLength(215);
-    expect(registry.instagramProfiles).toHaveLength(113);
+    expect(registry.instagramProfiles).toHaveLength(120); // +7 handles Tier 10
     expect(registry.webSources.every((source) => source.enabled === false)).toBe(true);
     expect(registry.instagramProfiles.every((profile) => profile.enabled === false)).toBe(true);
 
