@@ -11,33 +11,116 @@
     }
   },
   "redirects": [
-    { "source": "/index.html", "destination": "/", "permanent": true },
-    { "source": "/pitch", "destination": "/apresentacao-institucional.html", "permanent": true },
-    { "source": "/apresentacao", "destination": "/apresentacao-institucional.html", "permanent": true },
-    { "source": "/apresentacao-institucional", "destination": "/apresentacao-institucional.html", "permanent": true },
-    { "source": "/compra-venda.html", "destination": "/compra-venda-feed.html", "permanent": true },
-    { "source": "/caronas.html", "destination": "/caronas-feed.html", "permanent": true },
-    { "source": "/admin/ga4/dashboard.html", "destination": "/admin/ga4-dashboard.html", "permanent": true },
-    { "source": "/admin/ga4/dashboard", "destination": "/admin/ga4-dashboard.html", "permanent": true }
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/pitch",
+      "destination": "/apresentacao-institucional.html",
+      "permanent": true
+    },
+    {
+      "source": "/apresentacao",
+      "destination": "/apresentacao-institucional.html",
+      "permanent": true
+    },
+    {
+      "source": "/apresentacao-institucional",
+      "destination": "/apresentacao-institucional.html",
+      "permanent": true
+    },
+    {
+      "source": "/compra-venda.html",
+      "destination": "/compra-venda-feed.html",
+      "permanent": true
+    },
+    {
+      "source": "/caronas.html",
+      "destination": "/caronas-feed.html",
+      "permanent": true
+    },
+    {
+      "source": "/admin/ga4/dashboard.html",
+      "destination": "/admin/ga4-dashboard.html",
+      "permanent": true
+    },
+    {
+      "source": "/admin/ga4/dashboard",
+      "destination": "/admin/ga4-dashboard.html",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    { "source": "/404.html", "destination": "/api/og-product?kc_not_found=1" },
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
-    { "source": "/feed.xml", "destination": "/api/feed" },
-    { "source": "/product.html", "destination": "/api/og-product" },
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/pitch", "destination": "/apresentacao-institucional.html" },
-    { "source": "/apresentacao", "destination": "/apresentacao-institucional.html" },
-    { "source": "/apresentacao-institucional", "destination": "/apresentacao-institucional.html" },
-    { "source": "/mensagens", "destination": "/mensagens.html" },
-    { "source": "/auth/callback", "destination": "/auth-callback.html" },
-    { "source": "/api/cadu/source-reviews", "destination": "/api/cadu/sites?path=source-reviews" },
-    { "source": "/api/cadu/reviews", "destination": "/api/cadu/sites?path=reviews" },
-    { "source": "/api/cadu/reviews/(.+)", "destination": "/api/cadu/sites?path=reviews/$1" },
-    { "source": "/api/cadu/sites/(.+)", "destination": "/api/cadu/sites?path=$1" },
-    { "source": "/api/cadu/pipeline/(.+)", "destination": "/api/cadu/pipeline-router?path=$1" },
-    { "source": "/api/cadu/openclaw/(.+)", "destination": "/api/cadu/openclaw-router?path=$1" },
-    { "source": "/(.*)", "destination": "/api/og-product?kc_not_found=1" }
+    {
+      "source": "/404.html",
+      "destination": "/api/og-product?kc_not_found=1"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/feed.xml",
+      "destination": "/api/feed"
+    },
+    {
+      "source": "/product.html",
+      "destination": "/api/og-product"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pitch",
+      "destination": "/apresentacao-institucional.html"
+    },
+    {
+      "source": "/apresentacao",
+      "destination": "/apresentacao-institucional.html"
+    },
+    {
+      "source": "/apresentacao-institucional",
+      "destination": "/apresentacao-institucional.html"
+    },
+    {
+      "source": "/mensagens",
+      "destination": "/mensagens.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/auth-callback.html"
+    },
+    {
+      "source": "/api/cadu/source-reviews",
+      "destination": "/api/cadu/sites?path=source-reviews"
+    },
+    {
+      "source": "/api/cadu/reviews",
+      "destination": "/api/cadu/sites?path=reviews"
+    },
+    {
+      "source": "/api/cadu/reviews/(.+)",
+      "destination": "/api/cadu/sites?path=reviews/$1"
+    },
+    {
+      "source": "/api/cadu/sites/(.+)",
+      "destination": "/api/cadu/sites?path=$1"
+    },
+    {
+      "source": "/api/cadu/pipeline/(.+)",
+      "destination": "/api/cadu/pipeline-router?path=$1"
+    },
+    {
+      "source": "/api/cadu/openclaw/(.+)",
+      "destination": "/api/cadu/openclaw-router?path=$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/og-product?kc_not_found=1"
+    }
   ],
   "headers": [
     {
@@ -114,5 +197,6 @@
         }
       ]
     }
-  ]
+  ],
+  "cleanUrls": true
 }
