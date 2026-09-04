@@ -1,0 +1,27 @@
+name: CADU deep-links apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      updates_path:
+        description: 'Caminho (relativo ao repo) do JSON de updates do backfill'
+        required: true
+        default: 'data/cadu-deep-links-updates/latest.json'
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Aplicar updates via Management API (project wacyrkwhkvzwkqpolrbg)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: wacyrkwhkvzwkqpolrbg
+          UPDATES_PATH: ${{ inputs.updates_path }}
+        run: node scripts/cadu-deep-links-apply.mjs
