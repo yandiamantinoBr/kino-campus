@@ -154,10 +154,21 @@ function isExternalAccess(row: HelpRequestRow) {
 
 function brandedHeader() {
   return `
-    <div style="background:#ff6b00;border-radius:14px;padding:24px;text-align:center;color:#fff;margin-bottom:24px">
-      <h1 style="margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-0.02em">KinoCampus</h1>
-      <p style="margin:6px 0 0;font-size:0.85rem;opacity:0.92;letter-spacing:0.15em;text-transform:uppercase">Comunidade UFG</p>
-    </div>`;
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff4ec;border-radius:14px;padding:20px 24px;margin-bottom:24px">
+      <tr>
+        <td style="width:48px;vertical-align:middle">
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:44px;height:44px;background:#FF6B00;border-radius:12px"><tr><td align="center" valign="middle">
+            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:block"><path fill="#ffffff" d="M12 3.2 2.4 19.6c-.3.55.08 1.2.7 1.2h5.1l2.75-4.9c.45-.8 1.6-.8 2.05 0l2.75 4.9h5.1c.62 0 1-.65.7-1.2L12 3.2z"/></svg>
+          </td></tr></table>
+        </td>
+        <td style="vertical-align:middle;padding-left:14px">
+          <div style="font-size:1.45rem;font-weight:900;letter-spacing:-0.02em;line-height:1.1">
+            <span style="color:#FF6B00">Kino</span><span style="color:#1a1a1a">Campus</span>
+          </div>
+          <div style="font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#6b7280;margin-top:3px">Comunidade UFG</div>
+        </td>
+      </tr>
+    </table>`;
 }
 
 function brandedFooter() {
