@@ -165,6 +165,13 @@ async function checkSupabaseAuth() {
 
 async function checkSignup() {
   console.log('\n=== 3. Real Signup Test (creates user, checks confirmation_sent_at) ===\n');
+  // 2026-09-04: runners do GitHub Actions recebem ECONNRESET do endpoint /auth/v1
+  // (protecao anti-abuso contra IPs de datacenter). O teste real de signup deve rodar
+  // de um IP confiavel (VPS/local) — no CI ficamos apenas nas checagens DNS + config.
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    warnings.push('[Signup] running on GitHub Actions — auth endpoint blocks datacenter IPs (ECONNRESET), skipping');
+    return;
+  }
   const anon = process.env.KINOCAMPUS_SUPABASE_ANON_KEY;
   if (!anon) {
     warnings.push('[Signup] KINOCAMPUS_SUPABASE_ANON_KEY not set, skipping');
