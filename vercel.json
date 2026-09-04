@@ -12,6 +12,11 @@
   },
   "redirects": [
     {
+      "source": "/login.html",
+      "destination": "/login",
+      "permanent": true
+    },
+    {
       "source": "/index.html",
       "destination": "/",
       "permanent": true
@@ -72,6 +77,10 @@
     {
       "source": "/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
     },
     {
       "source": "/pitch",
@@ -197,6 +206,5 @@
         }
       ]
     }
-  ],
-  "cleanUrls": true
+  ]
 }

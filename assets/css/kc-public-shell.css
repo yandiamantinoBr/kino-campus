@@ -1587,13 +1587,12 @@ body.kc-auth-callback-route .kc-callback-card {
   }
 }
 
-/* login.html — palco vazio sob o modal de acesso (o overlay do kc-auth.ui cobre a tela) */
+/* login.html — fundo sutil da marca sob o card de acesso */
 .kc-login-stage {
-  min-height: calc(100vh - 200px);
-  background: var(--kc-primary-brand, #FF6B00);
+  display: none;
 }
-body:has(.kc-login-stage) .kc-auth-overlay {
-  background: var(--kc-primary-brand, #FF6B00);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+body:has(#kcAuthModal.kc-auth-modal) .kc-auth-overlay {
+  background: linear-gradient(160deg, #fff4ec 0%, #ffe8d6 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }

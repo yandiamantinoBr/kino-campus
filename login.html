@@ -194,69 +194,61 @@
     </div>
   </header>
   <main class="kc-main-content" id="kc-main">
-    <div class="kc-login-stage" aria-hidden="true"></div>
-    <noscript>
-      <div class="kc-callback-page">
-        <div class="kc-callback-card">
-          <div class="kc-callback-logo"><i class="fas fa-campground" aria-hidden="true"></i><span>Kino</span>Campus</div>
-          <h2 class="kc-callback-title">Para entrar, ative o JavaScript</h2>
-          <p class="kc-callback-msg">Seu navegador bloqueou scripts e nao conseguimos abrir o formulario de acesso.</p>
-          <p class="kc-callback-msg"><a href="/" style="color:#FF6B00">Voltar ao inicio</a></p>
+    <div id="kcAuthOverlay" class="kc-auth-overlay active"></div>
+    <div id="kcAuthModal" class="kc-auth-modal active">
+      <div class="kc-auth-card">
+        <div class="kc-auth-header">
+          <div class="kc-auth-title">
+            <h1 class="kc-sr-only">Entrar na KinoCampus</h1><h2>Conta KinoCampus</h2>
+            <p class="kc-auth-sub">Entre, confirme seu cadastro ou recupere sua senha sem sair da página.</p>
+          </div>
         </div>
-      </div>
-    </noscript>
-    <div class="kc-login-fallback" id="kcLoginFallback" hidden>
-      <div class="kc-callback-page">
-        <div class="kc-callback-card">
-          <div class="kc-callback-logo"><i class="fas fa-campground" aria-hidden="true"></i><span>Kino</span>Campus</div>
-          <h1 class="kc-callback-title">Entrar na KinoCampus</h1>
-          <p class="kc-callback-msg">Clique no botao abaixo para abrir o acesso.</p>
-          <p class="kc-callback-msg"><a href="#login" style="color:#FF6B00;font-weight:700">Entrar / Cadastro</a></p>
+        <div class="kc-auth-status" id="kcAuthStatus" role="status" aria-live="polite"></div>
+        <div class="kc-auth-body">
+          <div class="kc-auth-tabs" role="tablist">
+            <button class="kc-auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">Login</button>
+            <button class="kc-auth-tab" type="button" data-auth-tab="signup" role="tab" aria-selected="false">Cadastro</button>
+          </div>
+          <section class="kc-auth-panel" data-auth-panel="login">
+            <form class="kc-auth-form" id="kcAuthLoginForm">
+              <div class="kc-auth-field"><label for="kcAuthLoginEmail">E-mail institucional</label><input id="kcAuthLoginEmail" name="email" type="email" autocomplete="email" placeholder="voce@ufg.br" required /></div>
+              <div class="kc-auth-field kc-auth-field--password"><label for="kcAuthLoginPassword">Senha</label><div class="kc-auth-input-wrap"><input id="kcAuthLoginPassword" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="Sua senha" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthLoginPassword" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
+              <div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">Entrar</button></div>
+            </form>
+            <div class="kc-auth-links kc-auth-links--split">
+              <button type="button" class="kc-auth-link-btn kc-auth-link-btn--inline" data-auth-link="forgot">Esqueci minha senha</button>
+              <button type="button" class="kc-auth-link-btn kc-auth-link-btn--inline" data-auth-link="signup">Ainda não tenho conta</button>
+              <button type="button" class="kc-auth-link-btn kc-auth-link-btn--quiet kc-auth-link-btn--full" data-auth-link="resend">Reenviar confirmação</button>
+            </div>
+          </section>
+          <section class="kc-auth-panel" data-auth-panel="signup" style="display:none;" aria-hidden="true">
+            <form class="kc-auth-form" id="kcAuthSignupForm">
+              <div class="kc-auth-field"><label for="kcAuthSignupEmail">E-mail</label><input id="kcAuthSignupEmail" name="email" type="email" autocomplete="email" placeholder="voce@ufg.br" required /></div>
+              <div class="kc-auth-field kc-auth-field--password"><label for="kcAuthSignupPassword">Senha</label><div class="kc-auth-input-wrap"><input id="kcAuthSignupPassword" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo de 6 caracteres" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthSignupPassword" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div>
+              <div class="kc-auth-field"><label for="kcAuthSignupName">Nome</label><input id="kcAuthSignupName" name="display_name" type="text" autocomplete="name" placeholder="Como você aparece na UFG" /></div>
+              <div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">Criar conta</button></div>
+            </form>
+            <div class="kc-auth-links"><button type="button" class="kc-auth-link-btn" data-auth-link="login">Já tenho conta</button></div>
+          </section>
+        </div>
+        <div class="kc-auth-footer">
+          <p style="margin:0;font-size:.8rem;color:#6b7280">KinoCampus · Comunidade UFG · <a href="/" style="color:#FF6B00">voltar ao início</a></p>
         </div>
       </div>
     </div>
     <script>
     (function () {
       'use strict';
+      // Na página /login o card é o conteúdo principal: sem botão de fechar e sem voltar
+      // para trás — o painel permanece aberto. O kc-auth.ui.js encontra o markup estático
+      // acima (ensureModal não recria nada) e liga todos os eventos nele.
       var tries = 0;
-      function ready() {
-        return !!(window.kcOpenAuthModal && window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function');
-      }
-      function fallback(show) {
-        var f = document.getElementById('kcLoginFallback');
-        if (f) f.hidden = !show;
-      }
-      function open() {
-        try { window.kcOpenAuthModal({ tab: 'login', nextPath: '/' }); }
-        catch (e) { fallback(true); }
-      }
-      function afterAuthUi() {
-        window.KCSupabase.getCurrentUser().then(function (user) {
-          if (user) { window.location.href = '/'; return; }
-          fallback(false);
-          open();
-          watchClose();
-        }).catch(function () { fallback(true); });
-      }
-      function watchClose() {
-        var modal = document.getElementById('kcAuthModal');
-        if (!modal) return;
-        var observer = new MutationObserver(function () {
-          var isAuth = document.body.classList.contains('kc-is-auth') ||
-            (window.KCSupabase && window.KCSupabase.session);
-          if (!modal.classList.contains('active')) {
-            window.KCSupabase.getCurrentUser().then(function (user) {
-              if (user) { window.location.href = '/'; return; }
-              fallback(true);
-            }).catch(function () { fallback(true); });
-          }
-        });
-        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
-      }
       (function boot() {
-        if (ready()) { afterAuthUi(); return; }
-        if (tries++ > 60) { fallback(true); return; }
-        setTimeout(boot, 150);
+        var ok = window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function';
+        if (!ok) { if (tries++ > 60) return; return setTimeout(boot, 150); }
+        window.KCSupabase.getCurrentUser().then(function (user) {
+          if (user) window.location.href = '/';
+        }).catch(function () {});
       })();
     })();
     </script>
