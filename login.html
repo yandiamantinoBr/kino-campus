@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="kc-loading" data-i18n-title="meta-title.login" data-i18n-description="meta-description.auth-callback">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="canonical" href="https://www.kinocampus.com.br/login" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <title>KinoCampus - Entrar</title>
+  <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.12" />
+  <script src="assets/js/boot/kc-theme-boot.js?v=8.6.1"></script>
+  <script defer src="assets/js/boot/kc-speed-insights.js?v=8.6.2"></script>
+  <script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){document.documentElement.classList.remove('kc-loading');});});</script>
+<link rel="stylesheet" href="assets/css/styles.css?v=8.6.25" />
+  <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css?v=6.4.0" />
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(255, 124, 0, 0.18), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(68, 190, 233, 0.16), transparent 26%),
+        var(--kc-background-dark);
+    }
+    .kc-callback-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .kc-callback-card {
+      width: min(520px, 100%);
+      border-radius: 24px;
+      background: rgba(13, 18, 26, 0.82);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 26px 80px rgba(0,0,0,0.28);
+      backdrop-filter: blur(16px);
+      padding: 32px 28px;
+      display: grid;
+      gap: 18px;
+      text-align: center;
+    }
+    .kc-callback-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-callback-logo span { color: var(--kc-primary-brand); }
+    .kc-callback-icon {
+      width: 84px;
+      height: 84px;
+      margin: 0 auto;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      background: rgba(255,255,255,0.04);
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-callback-icon.loading {
+      color: #5ec8ff;
+      background: rgba(94, 200, 255, 0.10);
+    }
+    .kc-callback-icon.success {
+      color: #59d487;
+      background: rgba(89, 212, 135, 0.12);
+    }
+    .kc-callback-icon.warn {
+      color: #ffce56;
+      background: rgba(255, 206, 86, 0.12);
+    }
+    .kc-callback-icon.error {
+      color: #ff7b7b;
+      background: rgba(255, 123, 123, 0.12);
+    }
+    .kc-callback-title {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      line-height: 1.08;
+      color: var(--kc-text-dark-primary);
+    }
+    .kc-callback-msg {
+      margin: 0;
+      color: var(--kc-text-dark-secondary);
+      line-height: 1.7;
+    }
+    .kc-callback-progress {
+      display: none;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .kc-callback-progress.visible { display: block; }
+    .kc-callback-progress-bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #ff7c00, #4ac9ff);
+      transition: width .2s linear;
+    }
+    .kc-callback-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: fit-content;
+      margin: 0 auto;
+      padding: 13px 20px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ff7c00, #ff9a3a);
+      color: #fff;
+      box-shadow: 0 18px 34px rgba(255, 124, 0, 0.22);
+    }
+    .kc-callback-countdown {
+      margin: 0;
+      color: var(--kc-text-dark-secondary);
+      font-size: .88rem;
+    }
+    .kc-callback-reset {
+      display: none;
+      gap: 12px;
+      text-align: left;
+      padding-top: 4px;
+    }
+    .kc-callback-reset label {
+      display: grid;
+      gap: 8px;
+      color: var(--kc-text-dark-primary);
+      font-weight: 700;
+      font-size: .9rem;
+    }
+    .kc-callback-reset input {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(6, 10, 16, 0.72);
+      color: var(--kc-text-dark-primary);
+      padding: 13px 14px;
+      font: inherit;
+    }
+    .kc-callback-reset button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+      border-radius: 14px;
+      padding: 13px 18px;
+      font-weight: 800;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff7c00, #ff9a3a);
+      color: #fff;
+    }
+    .kc-callback-footer {
+      color: var(--kc-text-dark-secondary);
+      font-size: .84rem;
+    }
+    .kc-callback-footer a {
+      color: var(--kc-primary-brand);
+      text-decoration: none;
+      font-weight: 700;
+    }
+  </style>
+  <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.16" />
+</head>
+<body class="kc-shell-page kc-auth-callback-route">
+  <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
+  <header class="kc-header">
+    <div class="kc-header-container">
+      <div class="kc-logo">
+        <a href="/" aria-label="KinoCampus - Comunidade UFG" data-i18n-aria-label="aria-label.brand-home">
+          <span aria-hidden="true" class="kc-logo-mark"><i class="fas fa-campground"></i></span>
+          <span class="kc-logo-text">
+            <span class="kc-logo-name">Kino<span>Campus</span></span>
+            <span class="kc-logo-sub">Comunidade UFG</span>
+          </span>
+        </a>
+      </div>
+      <div class="kc-user-actions">
+        <button class="kc-notif-bell" id="kcNotifBell" aria-label="Notificações" data-i18n-aria-label="aria-label.notifications-bell" style="display:none;"><i class="fas fa-bell"></i><span class="kc-notif-badge" id="kcNotifBadge" style="display:none;">0</span></button>
+        <button class="theme-toggle" title="Alternar tema" data-i18n-tooltip="tooltip.theme-toggle" aria-label="Alternar tema claro/escuro" data-i18n-aria-label="aria-label.theme-toggle"><i class="fas fa-sun"></i></button>
+        <a class="btn-login" href="#login">Login/Cadastro</a>
+      </div>
+    </div>
+  </header>
+  <main class="kc-main-content" id="kc-main">
+    <div class="kc-login-stage" aria-hidden="true"></div>
+    <noscript>
+      <div class="kc-callback-page">
+        <div class="kc-callback-card">
+          <div class="kc-callback-logo"><i class="fas fa-campground" aria-hidden="true"></i><span>Kino</span>Campus</div>
+          <h2 class="kc-callback-title">Para entrar, ative o JavaScript</h2>
+          <p class="kc-callback-msg">Seu navegador bloqueou scripts e nao conseguimos abrir o formulario de acesso.</p>
+          <p class="kc-callback-msg"><a href="/" style="color:#FF6B00">Voltar ao inicio</a></p>
+        </div>
+      </div>
+    </noscript>
+    <div class="kc-login-fallback" id="kcLoginFallback" hidden>
+      <div class="kc-callback-page">
+        <div class="kc-callback-card">
+          <div class="kc-callback-logo"><i class="fas fa-campground" aria-hidden="true"></i><span>Kino</span>Campus</div>
+          <h1 class="kc-callback-title">Entrar na KinoCampus</h1>
+          <p class="kc-callback-msg">Clique no botao abaixo para abrir o acesso.</p>
+          <p class="kc-callback-msg"><a href="#login" style="color:#FF6B00;font-weight:700">Entrar / Cadastro</a></p>
+        </div>
+      </div>
+    </div>
+    <script>
+    (function () {
+      'use strict';
+      var tries = 0;
+      function ready() {
+        return !!(window.kcOpenAuthModal && window.KCSupabase && typeof window.KCSupabase.getCurrentUser === 'function');
+      }
+      function fallback(show) {
+        var f = document.getElementById('kcLoginFallback');
+        if (f) f.hidden = !show;
+      }
+      function open() {
+        try { window.kcOpenAuthModal({ tab: 'login', nextPath: '/' }); }
+        catch (e) { fallback(true); }
+      }
+      function afterAuthUi() {
+        window.KCSupabase.getCurrentUser().then(function (user) {
+          if (user) { window.location.href = '/'; return; }
+          fallback(false);
+          open();
+          watchClose();
+        }).catch(function () { fallback(true); });
+      }
+      function watchClose() {
+        var modal = document.getElementById('kcAuthModal');
+        if (!modal) return;
+        var observer = new MutationObserver(function () {
+          var isAuth = document.body.classList.contains('kc-is-auth') ||
+            (window.KCSupabase && window.KCSupabase.session);
+          if (!modal.classList.contains('active')) {
+            window.KCSupabase.getCurrentUser().then(function (user) {
+              if (user) { window.location.href = '/'; return; }
+              fallback(true);
+            }).catch(function () { fallback(true); });
+          }
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+      }
+      (function boot() {
+        if (ready()) { afterAuthUi(); return; }
+        if (tries++ > 60) { fallback(true); return; }
+        setTimeout(boot, 150);
+      })();
+    })();
+    </script>
+  </main>
+
+  <script defer src="assets/js/boot/kc-constants.js?v=8.6.2"></script>
+<script defer src="assets/js/core/kc-i18n.js?v=8.6.14"></script>
+  <script defer src="assets/js/utils/kc-utils.string.js?v=8.6.4"></script>
+  <script defer src="assets/js/utils/kc-utils.format.js?v=8.6.1"></script>
+    <script defer src="assets/js/utils/kc-utils.dom.js?v=8.6.1"></script>
+    <script defer src="assets/js/utils/kc-utils.identity.js?v=8.6.1"></script>
+    <script defer src="assets/js/utils/kc-utils.taxonomy.js?v=8.6.2"></script>
+    <script defer src="assets/js/utils/kc-utils.location.js?v=8.6.1"></script>
+    <script defer src="assets/js/utils/kc-utils.presentation.js?v=8.6.3"></script>
+  <script defer src="assets/js/features/kc-card-image-aspect.js?v=8.6.1"></script>
+  <script defer src="assets/js/utils/kc-utils.js?v=8.6.1"></script>
+  <script defer src="assets/js/boot/kc-env.js?v=8.6.13"></script>
+  <script defer src="assets/js/boot/kc-feature-flags.js?v=8.6.1"></script>
+  <script defer src="assets/js/boot/kc-sw-register.js?v=8.6.1"></script>
+  <script defer src="assets/js/core/kc-consent.js?v=8.6.5"></script>
+  <script defer src="assets/js/boot/kc-google-tag.js?v=8.6.6"></script>
+  <script defer src="assets/js/boot/kc-events.js?v=8.6.8"></script>
+  <script defer src="assets/js/boot/kc-telemetry.js?v=8.6.1"></script>
+  <script defer src="assets/vendor/supabase-js-2.112.4.js?v=2.112.4"></script>
+  <script defer src="assets/js/api/kc-supabase.client.js?v=8.6.9"></script>
+    <script defer src="assets/js/api/kc-supabase.posts.js?v=8.6.10"></script>
+    <script defer src="assets/js/api/kc-supabase.ratings.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.notifications.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.saved.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.help.js?v=8.6.13"></script>
+  <script defer src="assets/js/api/kc-api.posts-read.js?v=8.6.2"></script>
+  <script defer src="assets/js/api/kc-api.comments-votes.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.ratings.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.posts-feed.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.posts-write.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.profiles.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.related.js?v=8.6.2"></script>
+  <script defer src="assets/js/api/kc-api.auth.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.diagnostics.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.session.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.filters.js?v=8.6.4"></script>
+  <script defer src="assets/js/api/kc-api.authors.js?v=8.6.1"></script>
+  <script defer src="assets/js/api/kc-api.posts-normalize.js?v=8.6.4"></script>
+  <script defer src="assets/js/api/kc-api.client.js?v=8.6.13"></script>
+  <script defer src="assets/js/adapters/local/local.notifications.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.ratings.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.saved.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.posts-read.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.posts-write.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.profile.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/local/local.help.adapter.js?v=8.6.13"></script>
+<script defer src="assets/js/adapters/supabase/supabase.analytics.adapter.js?v=8.6.10"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.admin.adapter.js?v=8.6.17"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.comments.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.votes.adapter.js?v=8.6.1"></script>
+    <script defer src="assets/js/adapters/supabase/supabase.media.adapter.js?v=8.6.1"></script>
+    <script defer src="assets/js/adapters/supabase/supabase.posts-read.adapter.js?v=8.6.3"></script>
+    <script defer src="assets/js/adapters/supabase/supabase.saved.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.notifications.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.posts-write.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.profiles.adapter.js?v=8.6.1"></script>
+  <script defer src="assets/js/adapters/supabase/supabase.adapter.js?v=8.6.13"></script>
+  <script defer src="assets/js/shared/account-profile.shared.js?v=8.6.1"></script>
+  <script defer src="assets/js/core/kc-profiles.client.js?v=8.6.1"></script>
+  <script defer src="assets/js/core/kc-public-shell.js?v=8.6.3"></script>
+  <script defer src="assets/js/core/kc-auth.ui.js?v=8.6.14"></script>
+  <script defer src="assets/js/core/kc-notifications.js?v=8.6.1"></script>
+  <script defer src="assets/js/core/kc-theme.js?v=8.6.1"></script>
+  <script defer src="assets/js/core/kc-auth-callback.js?v=8.6.2"></script>
+</body>
+</html>

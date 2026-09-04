@@ -1586,3 +1586,14 @@ body.kc-auth-callback-route .kc-callback-card {
     grid-template-columns: 1fr;
   }
 }
+
+/* login.html — palco vazio sob o modal de acesso (o overlay do kc-auth.ui cobre a tela) */
+.kc-login-stage {
+  min-height: calc(100vh - 200px);
+  background: var(--kc-primary-brand, #FF6B00);
+}
+body:has(.kc-login-stage) .kc-auth-overlay {
+  background: var(--kc-primary-brand, #FF6B00);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
