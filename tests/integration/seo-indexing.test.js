@@ -71,10 +71,13 @@ describe('SEO e indexacao publica', () => {
 
   test('rotas legadas de colecoes redirecionam para as URLs canonicas', () => {
     const vercel = read('vercel.json');
-    expect(vercel).toContain('"source": "/compra-venda.html"');
-    expect(vercel).toContain('"destination": "/compra-venda-feed.html"');
-    expect(vercel).toContain('"source": "/caronas.html"');
-    expect(vercel).toContain('"destination": "/caronas-feed.html"');
+    // 2026-09-04: esquema de URLs limpas — .html 308 para a rota canonica
+    expect(vercel).toContain('"source": "/compra-venda-feed.html"');
+    expect(vercel).toContain('"destination": "/compra-venda"');
+    expect(vercel).toContain('"source": "/caronas-feed.html"');
+    expect(vercel).toContain('"destination": "/caronas"');
+    expect(vercel).toContain('"source": "/eventos.html"');
+    expect(vercel).toContain('"destination": "/eventos"');
   });
 
   test('aliases de conteudo apontam para uma unica URL canonica via redirect', () => {

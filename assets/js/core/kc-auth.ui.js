@@ -188,7 +188,7 @@
   }
 
   function buildAccountSetupHref(nextPath) {
-    const url = new URL('/account-setup.html', window.location.origin);
+    const url = new URL('/conta', window.location.origin);
     url.searchParams.set('next', normalizeNextPath(nextPath || buildCurrentPath()));
     return `${url.pathname}${url.search}`;
   }

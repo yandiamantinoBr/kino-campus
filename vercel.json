@@ -17,6 +17,101 @@
       "permanent": true
     },
     {
+      "source": "/eventos.html",
+      "destination": "/eventos",
+      "permanent": true
+    },
+    {
+      "source": "/oportunidades.html",
+      "destination": "/oportunidades",
+      "permanent": true
+    },
+    {
+      "source": "/moradia.html",
+      "destination": "/moradia",
+      "permanent": true
+    },
+    {
+      "source": "/compra-venda-feed.html",
+      "destination": "/compra-venda",
+      "permanent": true
+    },
+    {
+      "source": "/caronas-feed.html",
+      "destination": "/caronas",
+      "permanent": true
+    },
+    {
+      "source": "/achados-perdidos.html",
+      "destination": "/achados-perdidos",
+      "permanent": true
+    },
+    {
+      "source": "/create-post.html",
+      "destination": "/criar-post",
+      "permanent": true
+    },
+    {
+      "source": "/profile.html",
+      "destination": "/perfil",
+      "permanent": true
+    },
+    {
+      "source": "/my-posts.html",
+      "destination": "/meus-posts",
+      "permanent": true
+    },
+    {
+      "source": "/settings.html",
+      "destination": "/configuracoes",
+      "permanent": true
+    },
+    {
+      "source": "/search-results.html",
+      "destination": "/busca",
+      "permanent": true
+    },
+    {
+      "source": "/ajuda.html",
+      "destination": "/ajuda",
+      "permanent": true
+    },
+    {
+      "source": "/sobre.html",
+      "destination": "/sobre",
+      "permanent": true
+    },
+    {
+      "source": "/editorial.html",
+      "destination": "/editorial",
+      "permanent": true
+    },
+    {
+      "source": "/transparencia.html",
+      "destination": "/transparencia",
+      "permanent": true
+    },
+    {
+      "source": "/privacidade.html",
+      "destination": "/privacidade",
+      "permanent": true
+    },
+    {
+      "source": "/termos.html",
+      "destination": "/termos",
+      "permanent": true
+    },
+    {
+      "source": "/ods.html",
+      "destination": "/ods",
+      "permanent": true
+    },
+    {
+      "source": "/account-setup.html",
+      "destination": "/conta",
+      "permanent": true
+    },
+    {
       "source": "/index.html",
       "destination": "/",
       "permanent": true
@@ -34,16 +129,6 @@
     {
       "source": "/apresentacao-institucional",
       "destination": "/apresentacao-institucional.html",
-      "permanent": true
-    },
-    {
-      "source": "/compra-venda.html",
-      "destination": "/compra-venda-feed.html",
-      "permanent": true
-    },
-    {
-      "source": "/caronas.html",
-      "destination": "/caronas-feed.html",
       "permanent": true
     },
     {
@@ -81,6 +166,82 @@
     {
       "source": "/login",
       "destination": "/login.html"
+    },
+    {
+      "source": "/eventos",
+      "destination": "/eventos.html"
+    },
+    {
+      "source": "/oportunidades",
+      "destination": "/oportunidades.html"
+    },
+    {
+      "source": "/moradia",
+      "destination": "/moradia.html"
+    },
+    {
+      "source": "/compra-venda",
+      "destination": "/compra-venda-feed.html"
+    },
+    {
+      "source": "/caronas",
+      "destination": "/caronas-feed.html"
+    },
+    {
+      "source": "/achados-perdidos",
+      "destination": "/achados-perdidos.html"
+    },
+    {
+      "source": "/criar-post",
+      "destination": "/create-post.html"
+    },
+    {
+      "source": "/perfil",
+      "destination": "/profile.html"
+    },
+    {
+      "source": "/meus-posts",
+      "destination": "/my-posts.html"
+    },
+    {
+      "source": "/configuracoes",
+      "destination": "/settings.html"
+    },
+    {
+      "source": "/busca",
+      "destination": "/search-results.html"
+    },
+    {
+      "source": "/ajuda",
+      "destination": "/ajuda.html"
+    },
+    {
+      "source": "/sobre",
+      "destination": "/sobre.html"
+    },
+    {
+      "source": "/editorial",
+      "destination": "/editorial.html"
+    },
+    {
+      "source": "/transparencia",
+      "destination": "/transparencia.html"
+    },
+    {
+      "source": "/privacidade",
+      "destination": "/privacidade.html"
+    },
+    {
+      "source": "/termos",
+      "destination": "/termos.html"
+    },
+    {
+      "source": "/ods",
+      "destination": "/ods.html"
+    },
+    {
+      "source": "/conta",
+      "destination": "/account-setup.html"
     },
     {
       "source": "/pitch",
