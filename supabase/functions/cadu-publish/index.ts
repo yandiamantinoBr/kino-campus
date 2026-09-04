@@ -287,7 +287,7 @@ function isInstagramUrl(value: unknown): boolean {
   return /(^|\.)instagram\.com$/.test(host) || /(^|\.)cdninstagram\.com$/.test(host);
 }
 
-function hasOfficialNonInstagramSource(item: CaduItem): boolean {
+export function hasOfficialNonInstagramSource(item: CaduItem): boolean {
   const sources = [
     item.sourceUrl,
     ...(Array.isArray(item.enrichmentSources)
@@ -297,6 +297,12 @@ function hasOfficialNonInstagramSource(item: CaduItem): boolean {
   return sources.some((source) => {
     const host = hostOf(source).toLowerCase();
     if (!host || /(^|\.)instagram\.com$/.test(host) || /(^|\.)cdninstagram\.com$/.test(host)) return false;
+    // 2026-09-04: instituições oficiais além do escopo gov.br — Tribunais
+    // (jus.br) e entidades nacionais de ensino/controle reconhecidas
+    // (ANPAD, CFA) publicam oportunidades legítimas para a comunidade.
+    if (/(^|\.)jus\.br$/.test(host)) return true;
+    if (/(^|\.)anpad\.org\.br$/.test(host)) return true;
+    if (/(^|\.)cfa\.org\.br$/.test(host)) return true;
     return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host);
   });
 }
