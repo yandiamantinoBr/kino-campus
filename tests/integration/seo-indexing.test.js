@@ -108,11 +108,11 @@ describe('SEO e indexacao publica', () => {
 
     expect(vercel).toContain('"source": "/sitemap.xml"');
     expect(sitemap).toContain('STATIC_ROUTES');
-    expect(sitemap).toContain('/eventos.html');
-    expect(sitemap).toContain('/oportunidades.html');
-    expect(sitemap).toContain('/sobre.html');
-    expect(sitemap).toContain('/editorial.html');
-    expect(sitemap).toContain('/transparencia.html');
+    expect(sitemap).toContain('/eventos');
+    expect(sitemap).toContain('/oportunidades');
+    expect(sitemap).toContain('/sobre');
+    expect(sitemap).toContain('/editorial');
+    expect(sitemap).toContain('/transparencia');
     expect(sitemap).toContain('status=eq.published');
     expect(sitemap).toContain('expires_at');
     expect(sitemap).toContain('xmlns:image');
