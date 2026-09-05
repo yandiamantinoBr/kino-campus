@@ -264,6 +264,10 @@
     'auth.modal-tab-signup':           'Cadastro',
     'auth.modal-email-institutional':  'E-mail institucional',
     'auth.modal-email-placeholder':    'voce@ufg.br',
+    'placeholder.auth-email':          'voce@ufg.br',
+    'placeholder.auth-current-password': 'Sua senha',
+    'placeholder.auth-signup-name':    'Como você aparece na UFG',
+    'aria-label.auth-show-password':   'Mostrar senha',
     'auth.modal-show-password':        'Mostrar senha',
     'auth.modal-hide-password':        'Ocultar senha',
     'auth.modal-password-label':       'Senha',
@@ -628,6 +632,7 @@
     'placeholder.email-generic':        'voce@dominio.com',
     'placeholder.email-institutional':  'voce@ufg.br',
     'placeholder.password-current':     'Sua senha',
+    'placeholder.password-create':      'Crie uma senha',
     'placeholder.signup-name':          'Como você aparece na UFG',
     'placeholder.lattes-url':           'URL ou identificador do Lattes',
 
