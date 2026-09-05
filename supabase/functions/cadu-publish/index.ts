@@ -311,6 +311,13 @@ export function hasOfficialNonInstagramSource(item: CaduItem): boolean {
     if (/(^|\.)jus\.br$/.test(host)) return true;
     if (/(^|\.)anpad\.org\.br$/.test(host)) return true;
     if (/(^|\.)cfa\.org\.br$/.test(host)) return true;
+    // 2026-09-05: fontes oficiais já aceitas pelo registro do curador
+    // (web.ext.sescgo, web.ext.ifgoiano) e institutos federais — os handles
+    // @sescgo, @ifgoiano e @ifg_oficial publicam eventos/oportunidades
+    // verificados, mas caíam no bloqueio instagram_without_official_source.
+    if (/(^|\.)ifgoiano\.edu\.br$/.test(host)) return true;
+    if (/(^|\.)ifg\.edu\.br$/.test(host)) return true;
+    if (/(^|\.)sescgo\.com\.br$/.test(host)) return true;
     return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host);
   });
 }
