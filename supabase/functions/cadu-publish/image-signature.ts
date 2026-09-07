@@ -14,6 +14,10 @@
 const IG_CDN_HOST_RE = /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$/;
 const IG_ASSET_KEY_RE = /(\d{6,}(?:_\d{6,}){1,})/;
 const VERSIONED_FILE_RE = /^[a-f0-9]{8,}_/;
+// Auditoria b0f5f1cc (2026-09-07): par cadu-1-<hash>.jpg/.png do MESMO asset
+// storage colapsava? Nao — a extensao entrava na assinatura. Mesmo hash de
+// base = mesmo asset; a extensao sai da assinatura (paridade com a pipeline).
+const IMAGE_EXT_RE = /\.(?:jpe?g|png|webp|gif|avif)$/i;
 
 export function imageUrlSignature(value: unknown): string {
   const raw = String(value ?? "").trim();
@@ -30,7 +34,7 @@ export function imageUrlSignature(value: unknown): string {
     const file = (segments[segments.length - 1] || "").toLowerCase();
     const asset = IG_ASSET_KEY_RE.exec(file);
     if (asset) return "ig-cdn/" + asset[1];
-    return "ig-cdn/" + file.replace(VERSIONED_FILE_RE, "").slice(0, 160);
+    return "ig-cdn/" + file.replace(IMAGE_EXT_RE, "").replace(VERSIONED_FILE_RE, "").slice(0, 160);
   }
   let decoded = url.pathname;
   try {
@@ -45,7 +49,7 @@ export function imageUrlSignature(value: unknown): string {
     .map((segment) => (segment === "l" || segment === "i" ? "o" : segment));
   if (segments.length === 0) return host + "/";
   const last = segments.length - 1;
-  segments[last] = segments[last].replace(VERSIONED_FILE_RE, "").slice(0, 160) || segments[last];
+  segments[last] = segments[last].replace(IMAGE_EXT_RE, "").replace(VERSIONED_FILE_RE, "").slice(0, 160) || segments[last];
   return host + "/" + segments.join("/").slice(-240);
 }
 

@@ -473,6 +473,12 @@
       if (Array.isArray(meta[key])) pool = pool.concat(meta[key]);
     });
     var seen = {};
+    // Auditoria b0f5f1cc (2026-09-07): dedupe por assinatura de asset (paridade
+    // com os cards) — variantes da MESMA imagem (?width=, .jpg/.png do mesmo
+    // hash, CDN IG com tokens) apareciam 2-4x na faixa de miniaturas.
+    var signatureOf = (window._KCU && window._KCU.presentation && window._KCU.presentation.imageSignature)
+      || null;
+    var seenSignature = {};
     var out = [];
     pool.forEach(function (value) {
       var raw = String(value == null ? '' : value).trim();
@@ -482,6 +488,11 @@
         || (raw.charAt(0) === '/' && raw.charAt(1) !== '/');
       if (!renderable) return;
       seen[raw] = true;
+      if (signatureOf) {
+        var signature = signatureOf(raw);
+        if (signature && seenSignature[signature]) return;
+        if (signature) seenSignature[signature] = true;
+      }
       out.push(raw);
     });
     return out.slice(0, 12);

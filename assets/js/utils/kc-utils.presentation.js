@@ -3,7 +3,7 @@
 
   Sub-modulo do kc-utils.js - dominio de presentation
   (cards, badges, markers, inferencias e regras visuais de feed).
-  Expoe window._KCU.presentation com 9 funcoes.
+  Expoe window._KCU.presentation com 10 funcoes.
 
   Carregamento: deve ser incluido APOS kc-utils.string.js, kc-utils.format.js,
   kc-utils.taxonomy.js e kc-utils.location.js, e ANTES de kc-utils.js.
@@ -115,6 +115,9 @@
   var _IG_CDN_HOST_RE = /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$/;
   var _IG_ASSET_KEY_RE = /(\d{6,}(?:_\d{6,}){1,})/;
   var _VERSIONED_FILE_RE = /^[a-f0-9]{8,}_/;
+  // Auditoria b0f5f1cc (2026-09-07): par .jpg/.png do mesmo hash de asset
+  // storage nao colapsava (extensao na assinatura). Extensao sai da chave.
+  var _IMAGE_EXT_RE = /\.(?:jpe?g|png|webp|gif|avif)$/i;
   function _imageUrlSignature(value) {
     var raw = String(value == null ? '' : value).trim();
     if (!raw) return '';
@@ -126,7 +129,7 @@
       var file = (segments[segments.length - 1] || '').toLowerCase();
       var asset = _IG_ASSET_KEY_RE.exec(file);
       if (asset) return 'ig-cdn/' + asset[1];
-      return 'ig-cdn/' + file.replace(_VERSIONED_FILE_RE, '').slice(0, 160);
+      return 'ig-cdn/' + file.replace(_IMAGE_EXT_RE, '').replace(_VERSIONED_FILE_RE, '').slice(0, 160);
     }
     var pathSegments;
     try { pathSegments = decodeURIComponent(url.pathname).toLowerCase().split('/'); }
@@ -135,7 +138,7 @@
       .map(function (s) { return (s === 'l' || s === 'i') ? 'o' : s; });
     if (!pathSegments.length) return host + '/';
     var last = pathSegments.length - 1;
-    pathSegments[last] = (pathSegments[last].replace(_VERSIONED_FILE_RE, '').slice(0, 160)) || pathSegments[last];
+    pathSegments[last] = (pathSegments[last].replace(_IMAGE_EXT_RE, '').replace(_VERSIONED_FILE_RE, '').slice(0, 160)) || pathSegments[last];
     return host + '/' + pathSegments.join('/').slice(-240);
   }
 
@@ -143,8 +146,11 @@
     const p = post || {};
     const meta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
     const direct = Array.isArray(p.imagens) ? p.imagens : (Array.isArray(p.images) ? p.images : []);
-    const gallery = []
-      .concat(meta.gallery_image_urls, meta.galleryImageUrls, meta.image_urls, meta.imageUrls)
+    // Auditoria b0f5f1cc (2026-09-07): `[].concat(meta.gallery_image_urls, ...)`
+    // achatava o array em strings e o `.filter(Array.isArray)` descartava TUDO —
+    // a galeria do metadata nunca entrava nos candidatos do card (a imagem
+    // seguinte à capa quebrada nunca era tentada). Colete as listas primeiro.
+    const gallery = [meta.gallery_image_urls, meta.galleryImageUrls, meta.image_urls, meta.imageUrls]
       .filter((list) => Array.isArray(list));
     const pool = []
       .concat(direct)
@@ -1134,6 +1140,7 @@ function renderPostCard(post, options) {
     getDisplayMarkerTags,
     renderMarkerTags,
     renderPostCard,
+    imageSignature: _imageUrlSignature,
   });
 
 })();
