@@ -122,6 +122,25 @@ describe('kc-card__image-wrapper data-kc-image-candidates', () => {
     expect(image.style.display).toBe('none');
   });
 
+  test('auditoria b0f5f1cc: par .jpg/.png do MESMO asset storage colapsa por assinatura', () => {
+    const base = 'https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u1/p1';
+    const { wrapper } = render(buildPost({
+      imagens: [`${base}/cadu-1-80a42aa7.jpg`],
+      metadata: {
+        image_url: `${base}/cadu-1-80a42aa7.png?width=1920&quality=85`,
+        gallery_image_urls: [
+          `${base}/cadu-1-80a42aa7.jpg`,
+          `${base}/cadu-1-80a42aa7.png?width=1920&quality=85`,
+          `${base}/cadu-2-def.jpg`,
+        ],
+      },
+    }));
+    const candidates = candidatesOf(wrapper);
+    // A variante .png?width= do MESMO asset deve sair; imagem de outro asset fica.
+    expect(candidates.filter((url) => url.includes('80a42aa7')).length).toBe(1);
+    expect(candidates.some((url) => url.includes('cadu-2-def'))).toBe(true);
+  });
+
   test.each([
     ['javascript:', 'javascript:alert(1)'],
     ['data não-imagem', 'data:text/html;base64,PGI+'],

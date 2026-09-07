@@ -66,10 +66,11 @@ describe('window._KCU.presentation ? contrato est?tico', () => {
     expect(Object.isFrozen(pres())).toBe(true);
   });
 
-  test('tem exatamente 9 chaves', () => {
+  test('tem exatamente 10 chaves', () => {
     const keys = Object.keys(pres()).sort();
     expect(keys).toEqual([
       'applyPresentationRules', 'cssEscape', 'getDisplayMarkerTags',
+      'imageSignature',
       'inferAchadosLocation', 'inferCaronasRoute', 'inferEventosCategory',
       'inferOportunidadesSubcategory', 'renderMarkerTags', 'renderPostCard',
     ]);
