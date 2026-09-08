@@ -29,6 +29,8 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { isCurrentSessionActive } from "../_shared/active-session.ts";
 import { handleLegacyFreeRetraction } from "./legacy-free-retraction.ts";
+import { handleMediaCorrection } from "./media-correction-handler.ts";
+import { MEDIA_CORRECTION_CONTRACT } from "./media-correction.ts";
 import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
 import {
   categoriesForModule,
@@ -1302,6 +1304,10 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
     return await handleLegacyFreeRetraction(admin, userId, body, current as Record<string, unknown>);
   }
 
+  if (body.mediaCorrection !== undefined) {
+    return await handleMediaCorrection(admin, userId, body, current as Record<string, unknown>, json);
+  }
+
   if (body.integrityCorrection !== undefined) {
     return await handleIntegrityCorrection(admin, userId, body, current as Record<string, unknown>);
   }
@@ -1558,6 +1564,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           capabilityVersion: CAPABILITY_VERSION,
           canonicalReclassification: RECLASSIFICATION_CONTRACT,
           canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
+          canonicalMediaCorrection: MEDIA_CORRECTION_CONTRACT,
           institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
           reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
           createReviewRpc: "kc_create_institutional_source_review",
