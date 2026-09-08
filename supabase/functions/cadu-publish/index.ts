@@ -45,6 +45,7 @@ import { officialCoverCandidates } from "./official-cover.ts";
 import { downloadRemoteImage } from "./image-download.ts";
 import { RemoteResourceError } from "./remote-resource.ts";
 import { dedupeImageUrls } from "./image-signature.ts";
+import { integrityReactivationReason, isActiveIntegrityScoreRepair } from "./integrity-lifecycle.ts";
 import {
   INTEGRITY_COLUMNS,
   INTEGRITY_CONTRACT,
@@ -1199,6 +1200,7 @@ async function handleIntegrityCorrection(
     const input = validateIntegrityRequest(body, current);
     let mapped: ReturnType<typeof mapItemToPost> | undefined;
     let quality: PublishQuality | undefined;
+    let qualityContext: Record<string, unknown> | undefined;
     if (input.operation === "correct") {
       const item = recordValue(input.item) as CaduItem | null;
       if (!item) throw new IntegrityError("Informe o item canonico corrigido.");
@@ -1212,10 +1214,26 @@ async function handleIntegrityCorrection(
       }
       mapped = mapItemToPost(item, { runId: String(metadata.cadu_run_id || "") });
       if (!String(mapped.row.metadata.source_title || "").trim()) throw new IntegrityError("Informe o titulo lexical da fonte canonica.");
+      // The mapper intentionally stores normalized dates, not every caller's
+      // lifecycle flag. Reject contradictory raw claims before normalization
+      // can discard them, as well as transitions in the actual mapped state.
+      const rawLifecycle = { ...current, ...mapped.row, metadata: {
+        ...mapped.row.metadata, ...item,
+        dates: { ...(recordValue(mapped.row.metadata.dates) || {}), ...(recordValue(item.dates) || {}) },
+      } };
+      const reactivation = integrityReactivationReason(current, rawLifecycle);
+      if (reactivation) throw new IntegrityError(`A correcao nao reabre validade ou participacao (${reactivation}).`, "INTEGRITY_REACTIVATION_BLOCKED");
       quality = evaluateCaduPublishQuality(item, mapped);
+      if (quality.blockingWarnings.length === 1 && quality.blockingWarnings[0] === "score_below_auto_publish_threshold" &&
+        isActiveIntegrityScoreRepair(current, { ...current, ...mapped.row }, item.score)) {
+        const warning = "existing_active_post_repair_below_auto_publish_threshold";
+        qualityContext = { context: "existing_active_post_repair", warning, observed_score: item.score };
+        quality = { ...quality, ok: true, blockingWarnings: [], warnings: [...quality.warnings, warning],
+          recommendation: "Reparo factual de post ja ativo. O score observado permanece abaixo do minimo de nova publicacao automatica." };
+      }
       if (!quality.ok) return json(422, { ok: false, code: "QUALITY_BLOCKED", quality });
     }
-    const prepared = await prepareIntegrityUpdate(current, input, mapped?.row as unknown as Record<string, unknown> | undefined);
+    const prepared = await prepareIntegrityUpdate(current, input, mapped?.row as unknown as Record<string, unknown> | undefined, qualityContext);
     // Large metadata snapshots belong in the request body, not PostgREST URL
     // filters. The RPC locks and compares all 15 fields, then writes the row
     // and durable audit receipt in the same transaction.
@@ -1226,6 +1244,9 @@ async function handleIntegrityCorrection(
     });
     if (error) return json(502, { ok: false, code: "INTEGRITY_MUTATION_UNCERTAIN", message: "A resposta da correcao nao foi confirmada. Releia o post e o recibo antes de tentar outra operacao." });
     if (receipt?.code === "EDIT_CONFLICT") return json(409, { ok: false, code: "EDIT_CONFLICT", message: "O snapshot mudou durante a correcao; nenhuma alteracao aplicada." });
+    if (receipt?.ok === false && ["INTEGRITY_REACTIVATION_BLOCKED", "INTEGRITY_ACTIVE_REPAIR_EXPIRED"].includes(receipt?.code)) {
+      return json(422, { ok: false, code: receipt.code, message: "O banco confirmou encerramento ou expiracao antes da escrita; nenhuma alteracao aplicada." });
+    }
     const fresh = recordValue(receipt?.post);
     if (!fresh) return json(502, { ok: false, code: "INTEGRITY_MUTATION_UNCERTAIN", message: "Recibo ausente; releia o post e o historico antes de tentar outra operacao." });
     if (!integrityReceiptMatches(fresh, prepared.expectedContent, input.operationId, prepared.update.metadata) ||
@@ -1239,6 +1260,7 @@ async function handleIntegrityCorrection(
       updated_at: fresh.updated_at, status: fresh.status, source_id: freshMetadata.source_id,
       source_url: freshMetadata.source_url, before_hash: prepared.entry.before_hash,
       after_hash: prepared.entry.after_hash, ...(quality ? { quality } : {}),
+      ...(qualityContext ? { quality_context: qualityContext } : {}),
     });
   } catch (error) {
     if (mutationAttempted) return json(502, { ok: false, code: "INTEGRITY_MUTATION_UNCERTAIN", message: "A conexao terminou sem confirmacao; releia o post e o recibo antes de tentar outra operacao." });
