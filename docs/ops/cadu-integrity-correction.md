@@ -8,7 +8,7 @@ rota de publicação ou reativação de conteúdo moderado.
 ## Implantação
 
 Aplicar as migrações `20260908030526_cadu_post_integrity_cas.sql` e
-`20260908032724_cadu_post_integrity_no_reactivation.sql` pelo mecanismo
+`20260908040757_cadu_post_integrity_no_reactivation.sql` pelo mecanismo
 oficial de migrações antes de implantar a Edge Function `cadu-publish`.
 O workflow de Edge verifica versões requeridas e não aplica migrações.
 Verificar o grant exclusivo `service_role`, a assinatura de cinco argumentos
