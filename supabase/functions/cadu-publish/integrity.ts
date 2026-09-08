@@ -1,6 +1,7 @@
 // Pure preparation for the canonical, reversible same-module repair boundary.
 // Persistence must CAS the complete snapshot and its metadata in one UPDATE.
 import { mediaRows, prepareMediaSelection } from "./integrity-media.ts";
+import { integrityReactivationReason } from "./integrity-lifecycle.ts";
 export const INTEGRITY_CONTRACT = "cadu-edit-integrity-v1";
 export const INTEGRITY_FIELDS = [
   "id", "author_id", "created_at", "title", "description", "price", "location", "module", "category",
@@ -74,6 +75,10 @@ export function validateIntegrityRequest(body: RecordValue, current: RecordValue
   }
   const input = record(body.integrityCorrection);
   if (!input || !["correct", "rollback"].includes(String(input.operation))) throw new IntegrityError("Operacao de integridade invalida.");
+  if (input.operation === "correct") {
+    const score = record(input.item)?.score;
+    if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 1) throw new IntegrityError("Informe o score observado, numerico e finito, sem valor presumido.");
+  }
   const keys = ["operation", "operationId", "expected", "reason", "evidence"];
   keys.push(...(input.operation === "correct" ? ["item", "detachSources"] : ["rollbackOf"]));
   if (input.operation === "correct" && input.mediaSelection !== undefined) keys.push("mediaSelection");
@@ -137,7 +142,7 @@ function detachExactSources(metadata: RecordValue, detachments: unknown): Record
 }
 
 export async function prepareIntegrityUpdate(
-  current: RecordValue, input: RecordValue, mappedRow?: RecordValue,
+  current: RecordValue, input: RecordValue, mappedRow?: RecordValue, qualityContext?: RecordValue,
 ): Promise<{ update: RecordValue; entry: RecordValue; expectedContent: RecordValue; media?: { before: RecordValue[]; after: RecordValue[] } }> {
   const currentMetadata = record(current.metadata)!;
   const history = (currentMetadata[HISTORY_KEY] || []) as RecordValue[];
@@ -209,12 +214,21 @@ export async function prepareIntegrityUpdate(
     }
   }
   const after = contentSnapshot({ ...current, ...update });
+  const reactivation = integrityReactivationReason(current, after);
+  if (reactivation) throw new IntegrityError(`A correcao nao reabre validade ou participacao (${reactivation}).`, "INTEGRITY_REACTIVATION_BLOCKED");
   const entry: RecordValue = {
     contract: INTEGRITY_CONTRACT, operation_id: input.operationId, operation: input.operation,
     at: new Date().toISOString(), reason: String(input.reason).trim(), evidence: input.evidence,
     ...(input.operation === "rollback" ? { rollback_of: input.rollbackOf } : { detached_sources: input.detachSources }),
     before, before_hash: await integrityHash(before), after_hash: await integrityHash(after),
     ...(media ? { media } : {}),
+    ...(input.operation === "correct" ? {
+      observed_score: record(input.item)?.score,
+      source_item_sha256: await integrityHash(input.item),
+      source_id: currentMetadata.source_id, source_url: currentMetadata.source_url,
+      source_revision: record(input.item)?.sourceRevision ?? null,
+      ...(qualityContext ? { quality_context: qualityContext } : {}),
+    } : {}),
   };
   (update.metadata as RecordValue)[HISTORY_KEY] = [...history, entry];
   if (canonical(update).length > 1_000_000) throw new IntegrityError("Historico excede o limite; nenhuma entrada sera removida.");

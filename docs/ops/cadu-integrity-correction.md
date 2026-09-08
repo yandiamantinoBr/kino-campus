@@ -7,7 +7,8 @@ rota de publicação ou reativação de conteúdo moderado.
 
 ## Implantação
 
-Aplicar a migração `20260908030526_cadu_post_integrity_cas.sql` pelo mecanismo
+Aplicar as migrações `20260908030526_cadu_post_integrity_cas.sql` e
+`20260908032724_cadu_post_integrity_no_reactivation.sql` pelo mecanismo
 oficial de migrações antes de implantar a Edge Function `cadu-publish`.
 O workflow de Edge verifica versões requeridas e não aplica migrações.
 Verificar o grant exclusivo `service_role`, a assinatura de cinco argumentos
@@ -26,6 +27,8 @@ Enviar `action: "edit"`, `postId` e `integrityCorrection`. Campos obrigatórios:
   normalizados; seis casas de microssegundos são preservadas.
 - `item`: item canônico completo, com a mesma `sourceId`, `sourceUrl` e módulo.
   O mapper e a barreira de qualidade usuais continuam obrigatórios.
+  `score` deve ser numérico e explícito; a auditoria preserva seu valor real,
+  o hash integral do item e a revisão de origem somente quando informada no item.
 - `detachSources`: lista de `{field,index,entry}`. A entrada inteira deve
   corresponder ao índice do snapshot. Campos permitidos: `merged_sources`,
   `dedup_merged_sources`, `source_urls`. A identidade primária não é removível.
@@ -46,6 +49,24 @@ recibo ausente após despacho retornam `INTEGRITY_MUTATION_UNCERTAIN`: reler o
 post e o histórico antes de repetir. A repetição do snapshot antigo não realiza
 uma segunda mudança.
 
+## Reparo factual de publicação ativa
+
+A nota mínima de 0,70 continua obrigatória para nova publicação e reclassificação.
+Somente esta rota de correção pode tratar o aviso isolado de nota abaixo do mínimo
+quando o registro já está publicado, público, com validade futura e datas vigentes
+conhecidas do módulo. Todas as outras barreiras de qualidade permanecem exigidas.
+O recibo registra `existing_active_post_repair`, o aviso específico e a nota real;
+isso não cria aprovação editorial nem autoriza uma nova publicação.
+
+Depois de adquirir os locks de post e mídia, o banco revalida a atividade usando
+o relógio corrente. O reparo não pode reabrir validade, evento ou candidatura
+encerrados, apagar indicadores de encerramento usados pela página pública, nem
+transformar `canApply:false` em autorização de inscrição. Evento futuro pode ter
+inscrições já encerradas; data de prova não determina a validade de uma oportunidade.
+Correções de fatos históricos permanecem possíveis quando preservam a inatividade
+e passam pela barreira usual. Os recibos `INTEGRITY_REACTIVATION_BLOCKED` e
+`INTEGRITY_ACTIVE_REPAIR_EXPIRED` confirmam bloqueio anterior à primeira escrita.
+
 ## Reversão
 
 Enviar outro UUID de operação, `operation: "rollback"`, `rollbackOf` igual à
@@ -62,6 +83,7 @@ sem descarte automático de entradas antigas.
 
 `deno test --no-lock --node-modules-dir=none --allow-env --allow-read
 supabase/functions/cadu-publish/integrity_test.ts
+supabase/functions/cadu-publish/integrity-lifecycle_test.ts
 supabase/functions/cadu-publish/reclassification_test.ts
 supabase/functions/cadu-publish/mapper_test.ts`
 
@@ -71,3 +93,8 @@ preservação da mídia. O ensaio de 08/09/2026 também executou a migração e 
 pedidos em PostgreSQL descartável com os triggers reais do schema local,
 incluindo dois workers, timeout, falha na auditoria e inserção concorrente de
 mídia. Nenhum teste escreve em produção.
+
+O ensaio `scripts/test-cadu-post-integrity-no-reactivation.js` exige confirmação
+explícita de um PostgreSQL Docker local descartável. Ele reproduz o defeito da
+versão anterior em transação revertida e cobre expiração durante espera de locks,
+os 15 campos do CAS, permissões e manutenção dos recibos e vínculos de mídia.
