@@ -23,7 +23,7 @@ Deno.test("weby /l/ and /o/ variants collapse, distinct dirs stay distinct", () 
 Deno.test("limit and non-http values are respected", () => {
   const values = ["", "notaurl", "https://a.test/1.jpg", "https://a.test/1.jpg?x", "https://a.test/2.jpg"];
   const deduped = dedupeImageUrls(values, 2);
-  assertEquals(deduped, ["https://a.test/1.jpg", "https://a.test/2.jpg"]);
+  assertEquals(deduped, ["https://a.test/1.jpg", "https://a.test/1.jpg?x"]);
 });
 
 function assertEquals<T>(actual: T, expected: T, msg?: string): void {

@@ -1,56 +1,49 @@
-// Assinatura de identidade de imagem (2026-09-03).
-//
-// URLs "diferentes" podem apontar para a MESMA imagem:
-//   - CDN do Instagram: hostname/tokens mudam a cada fetch
-//     (scontent.*.fbcdn.net vs scontent.cdninstagram.com; oh/oe/stp);
-//   - CMS UFG (weby): par thumb/original em /l/ e /o/ do mesmo diretorio.
-//
-// Mesma assinatura da pipeline (openclaw-cadu scripts/lib/image-signature.js):
-//   1. hosts cdninstagram.com / fbcdn.net colapsam para "ig-cdn" + chave
-//      estavel do asset (tupla numerica do filename);
-//   2. demais hosts mantem hostname e normalizam segmento de variante
-//      (l/i -> o), descartando query e prefixo hexa de versao.
-
+// URL identity proves equivalence only for reviewed provider forms. Unknown
+// queries, case, extensions and version/hash prefixes can identify different
+// posters or editions. A Storage filename hash may identify the source URL,
+// not the downloaded bytes.
 const IG_CDN_HOST_RE = /(^|\.)cdninstagram\.com$|(^|\.)fbcdn\.net$/;
-const IG_ASSET_KEY_RE = /(\d{6,}(?:_\d{6,}){1,})/;
-const VERSIONED_FILE_RE = /^[a-f0-9]{8,}_/;
-// Auditoria b0f5f1cc (2026-09-07): par cadu-1-<hash>.jpg/.png do MESMO asset
-// storage colapsava? Nao — a extensao entrava na assinatura. Mesmo hash de
-// base = mesmo asset; a extensao sai da assinatura (paridade com a pipeline).
-const IMAGE_EXT_RE = /\.(?:jpe?g|png|webp|gif|avif)$/i;
+const IG_ASSET_FILE_RE = /^(\d{6,}(?:_\d{6,})+)(?:_[no])?\.(?:jpe?g|png|webp)$/;
+const IG_DELIVERY_PARAMS = new Set(['oh', 'oe', '_nc_ohc', '_nc_ht', '_nc_cat']);
+const IG_REENCODE_RE = /^dst-(?:jpg|jpeg|png|webp)(?:_e\d+)?(?:_s\d+x\d+)?$/;
+const UFG_HOST_RE = /(^|\.)ufg\.br$/;
 
 export function imageUrlSignature(value: unknown): string {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-  let url: URL;
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  let url;
   try {
     url = new URL(raw);
   } catch (_) {
-    return raw.toLowerCase().slice(0, 300);
+    return raw;
   }
-  const host = url.hostname.toLowerCase();
-  if (IG_CDN_HOST_RE.test(host)) {
-    const segments = url.pathname.split("/").filter(Boolean);
-    const file = (segments[segments.length - 1] || "").toLowerCase();
-    const asset = IG_ASSET_KEY_RE.exec(file);
-    if (asset) return "ig-cdn/" + asset[1];
-    return "ig-cdn/" + file.replace(IMAGE_EXT_RE, "").replace(VERSIONED_FILE_RE, "").slice(0, 160);
+  url.hash = '';
+  // Neither credentials nor nonstandard ports are reviewed CDN variants.
+  if (!url.username && !url.password && !url.port && IG_CDN_HOST_RE.test(url.hostname)) {
+    const segments = url.pathname.split('/');
+    const asset = IG_ASSET_FILE_RE.exec(segments[segments.length - 1]);
+    if (asset) {
+      segments[segments.length - 1] = asset[1];
+      // Resize-only paths preserve the asset. Crop paths and every unknown
+      // transformation remain part of its identity.
+      const assetPath = segments.filter(segment => !/^s\d+x\d+$/.test(segment)).join('/');
+      const query = new URLSearchParams();
+      for (const [key, val] of url.searchParams) {
+        if (IG_DELIVERY_PARAMS.has(key)) continue;
+        if (key === 'stp' && IG_REENCODE_RE.test(val)) continue;
+        query.append(key, val);
+      }
+      return `ig-cdn${assetPath}${query.size ? '?' + query.toString() : ''}`;
+    }
   }
-  let decoded = url.pathname;
-  try {
-    decoded = decodeURIComponent(url.pathname);
-  } catch (_) {
-    // pathname bruto
+  if (!url.username && !url.password && !url.port && UFG_HOST_RE.test(url.hostname)) {
+    // Keep the Weby tenant and full filename; /i/ elsewhere is not /o/.
+    url.pathname = url.pathname.replace(
+      /^(\/(?:weby\/)?up\/\d+\/)(?:l|i|m|s|thumb)\//,
+      '$1o/',
+    );
   }
-  const segments = decoded
-    .toLowerCase()
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => (segment === "l" || segment === "i" ? "o" : segment));
-  if (segments.length === 0) return host + "/";
-  const last = segments.length - 1;
-  segments[last] = segments[last].replace(IMAGE_EXT_RE, "").replace(VERSIONED_FILE_RE, "").slice(0, 160) || segments[last];
-  return host + "/" + segments.join("/").slice(-240);
+  return url.href;
 }
 
 /**
