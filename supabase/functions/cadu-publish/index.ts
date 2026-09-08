@@ -28,6 +28,7 @@
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { isCurrentSessionActive } from "../_shared/active-session.ts";
+import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
 import {
   categoriesForModule,
   CaduItem,
@@ -383,6 +384,7 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   };
 
   if (explicitExpired) block("source_marks_expired");
+  for (const issue of applicationDeadlineIssues(item as unknown as Record<string, unknown>)) block(issue);
   if (applicationDeadlineExpired) block("application_deadline_past");
   if (row.module === "eventos") {
     const end = validIsoDate(metadata.data_fim_evento) || validIsoDate(item.dateEnd);
@@ -757,6 +759,11 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
       gallery_image_urls: [],
     },
   };
+  const lateDeadlineIssues = applicationDeadlinePostIssues(insertRow);
+  if (lateDeadlineIssues.length) return json(200, {
+    ok: false, code: "QUALITY_BLOCKED", message: "O prazo de inscricao confirmado encerrou antes da publicacao.",
+    quality: { ...quality, ok: false, blockingWarnings: [...quality.blockingWarnings, ...lateDeadlineIssues] },
+  });
   const { data: post, error } = await admin.from("posts").insert(insertRow).select("*").single();
   if (error || !post) {
     // The partial unique index closes the SELECT/INSERT race. A concurrent
@@ -1109,6 +1116,8 @@ async function handleCanonicalReclassification(
   }
 
   const metadata = { ...mapped.row.metadata };
+  const deadlineTransition = applicationDeadlineTransitionIssue(current, { ...current, ...mapped.row });
+  if (deadlineTransition) return reclassificationError(deadlineTransition, "VALIDATION_FAILED");
   for (const key of RECLASSIFICATION_MEDIA_METADATA_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(currentMetadata, key)) metadata[key] = currentMetadata[key];
   }
@@ -1234,6 +1243,11 @@ async function handleIntegrityCorrection(
       if (!quality.ok) return json(422, { ok: false, code: "QUALITY_BLOCKED", quality });
     }
     const prepared = await prepareIntegrityUpdate(current, input, mapped?.row as unknown as Record<string, unknown> | undefined, qualityContext);
+    if (input.operation === "correct") {
+      const deadlineIssues = applicationDeadlinePostIssues(prepared.expectedContent);
+      if (deadlineIssues.length) return json(422, { ok: false, code: "QUALITY_BLOCKED",
+        quality: { ...quality, ok: false, blockingWarnings: deadlineIssues } });
+    }
     // Large metadata snapshots belong in the request body, not PostgREST URL
     // filters. The RPC locks and compares all 15 fields, then writes the row
     // and durable audit receipt in the same transaction.
@@ -1367,6 +1381,12 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
   if (update.status === "published") update.moderation_reason = null;
 
   if (Object.keys(update).length) {
+    const next = { ...current, ...update };
+    const deadlineTransition = applicationDeadlineTransitionIssue(current, next);
+    const deadlineIssues = update.status === "published" ? applicationDeadlinePostIssues(next) : [];
+    if (deadlineTransition || deadlineIssues.length) return json(422, {
+      ok: false, code: "VALIDATION_FAILED", message: deadlineTransition || deadlineIssues[0],
+    });
     const { error: updErr } = await admin.from("posts").update(update).eq("id", postId);
     if (updErr) return json(500, { ok: false, code: "UPDATE_FAILED", message: updErr.message });
   }

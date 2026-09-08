@@ -270,6 +270,28 @@
     return firstDateMs(metadata, METADATA_EXPIRY_PATHS, 'end');
   }
 
+  function confirmedApplicationDeadlineMs(post) {
+    var metadata = metadataOf(post);
+    var proof = objectValue(metadata.application_deadline_evidence);
+    // The publisher validates the document proof. Public readers only select
+    // its persisted, consistent instant ahead of older date-only aliases.
+    if (proof.contract !== 'cadu-application-deadline-evidence-v1' || proof.role !== 'applicationDeadline' ||
+      proof.timeZone !== 'America/Sao_Paulo' || !/^\d{4}-\d{2}-\d{2}$/.test(String(proof.calendarDate || '')) ||
+      !/^\d{2}:\d{2}$/.test(String(proof.localTime || '')) ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/.test(String(proof.instant || '')) ||
+      ['sourceId', 'sourceUrl', 'sourceRegistryId'].some(function (key) {
+        return typeof proof[key] !== 'string' || !proof[key].trim() || proof[key] !== proof[key].trim();
+      }) ||
+      proof.sourceId !== metadata.source_id || proof.sourceUrl !== metadata.source_url ||
+      proof.sourceRegistryId !== metadata.source_registry_id ||
+      (proof.sourceRevision || null) !== (metadata.source_revision || null) ||
+      proof.instant !== metadata.application_deadline_at) return null;
+    var time = parseDateMs(proof.instant, 'end');
+    if (time == null || time !== parseDateMs(post.expires_at, 'end') ||
+      time !== parseDateMs(proof.calendarDate + 'T' + proof.localTime + ':00-03:00', 'end')) return null;
+    return time;
+  }
+
   function resolveEndTime(post, moduleKey) {
     if (moduleKey === 'eventos') {
       var eventEnd = firstDateMs(post, EVENT_END_PATHS, 'end');
@@ -284,6 +306,8 @@
     }
 
     if (moduleKey === 'oportunidades') {
+      var confirmedDeadline = confirmedApplicationDeadlineMs(post);
+      if (confirmedDeadline != null) return { value: confirmedDeadline, source: 'confirmed-application-deadline' };
       var deadline = firstDateMs(post, DEADLINE_PATHS, 'end');
       if (deadline != null) return { value: deadline, source: 'deadline' };
       var opportunityFallback = genericExpiryMs(post);
@@ -310,7 +334,7 @@
     var end = resolveEndTime(source, moduleKey);
     var now = parseDateMs(opts.now, 'start');
     if (now == null) now = Date.now();
-    var endedByDate = end.value != null && end.value < now;
+    var endedByDate = end.value != null && (end.source === 'confirmed-application-deadline' ? end.value <= now : end.value < now);
     var closed = explicit || endedByDate;
 
     return {

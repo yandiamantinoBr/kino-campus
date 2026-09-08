@@ -8,6 +8,7 @@
 //     remuneracao, area, contato.
 //   - todos os modulos: chaves de metadata corretas para render identico.
 
+import { applicationDeadlineEvidence } from "./application-deadline.ts";
 import {
   CaduItem,
   caduUserTagsForItem,
@@ -778,6 +779,7 @@ function pickCoverImage(candidates: string[], title: string, category: string, s
 }
 
 export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: Date } = {}): MappedPost {
+  const deadlineEvidence = applicationDeadlineEvidence(item as unknown as Record<string, unknown>);
   const warnings: string[] = [];
   const referenceNow = options.now || new Date();
   const selfPacedValidity = selfPacedValidityForItem(item, referenceNow);
@@ -899,6 +901,10 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const semanticDates = normalizeSemanticDates(item);
   if (Object.keys(semanticDates).length > 0) {
     commonMeta.dates = semanticDates;
+  }
+  if (deadlineEvidence) {
+    commonMeta.application_deadline_evidence = deadlineEvidence;
+    commonMeta.application_deadline_at = deadlineEvidence.instant;
   }
 
   const initialArea = module === "oportunidades"
@@ -1058,7 +1064,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const relevanceDate = module === "eventos"
     ? String(metadata.data_fim_evento || metadata.data_evento || "")
     : (module === "oportunidades" ? String(metadata.deadline_date || "") : "");
-  const expiresAt = selfPacedValidity?.verificationExpiresAt || expiryAtEndOfDay(relevanceDate, referenceNow);
+  const expiresAt = deadlineEvidence?.instant || selfPacedValidity?.verificationExpiresAt || expiryAtEndOfDay(relevanceDate, referenceNow);
   if (expiresAt) row.expires_at = expiresAt;
 
   return {

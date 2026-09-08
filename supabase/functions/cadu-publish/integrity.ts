@@ -2,6 +2,7 @@
 // Persistence must CAS the complete snapshot and its metadata in one UPDATE.
 import { mediaRows, prepareMediaSelection } from "./integrity-media.ts";
 import { integrityReactivationReason } from "./integrity-lifecycle.ts";
+import { applicationDeadlineTransitionIssue } from "./application-deadline.ts";
 export const INTEGRITY_CONTRACT = "cadu-edit-integrity-v1";
 export const INTEGRITY_FIELDS = [
   "id", "author_id", "created_at", "title", "description", "price", "location", "module", "category",
@@ -214,6 +215,8 @@ export async function prepareIntegrityUpdate(
     }
   }
   const after = contentSnapshot({ ...current, ...update });
+  const deadlineTransition = applicationDeadlineTransitionIssue(current, after);
+  if (deadlineTransition) throw new IntegrityError(deadlineTransition, "INTEGRITY_REACTIVATION_BLOCKED");
   const reactivation = integrityReactivationReason(current, after);
   if (reactivation) throw new IntegrityError(`A correcao nao reabre validade ou participacao (${reactivation}).`, "INTEGRITY_REACTIVATION_BLOCKED");
   const entry: RecordValue = {
