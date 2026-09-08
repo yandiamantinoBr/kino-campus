@@ -13,6 +13,7 @@
 //
 // Acoes (POST /functions/v1/cadu-publish):
 //   { action: "capabilities" }              -> contrato read-only do endpoint
+//   { action: "diagnose-media", postId, mediaDiagnostic } -> verifica bytes sem mutacao
 //   { action: "publish", item, options? }   -> cria post + capa
 //   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
 //   { action: "edit", postId, fields?, metadata?, userTags?, tags?, image?, images? } -> edita
@@ -30,7 +31,8 @@ import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { isCurrentSessionActive } from "../_shared/active-session.ts";
 import { handleLegacyFreeRetraction } from "./legacy-free-retraction.ts";
 import { handleMediaCorrection } from "./media-correction-handler.ts";
-import { MEDIA_CORRECTION_CONTRACT } from "./media-correction.ts";
+import { MEDIA_COLUMNS, MEDIA_CORRECTION_CONTRACT } from "./media-correction.ts";
+import { handleMediaDiagnostic } from "./media-diagnostic.ts";
 import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
 import {
   categoriesForModule,
@@ -1548,6 +1550,13 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
   const action = String(body.action || "publish");
 
+  // A diagnostic envelope must never fall through to a mutating action when
+  // an operator mistypes the action or combines it with another contract.
+  if (body.mediaDiagnostic !== undefined && body.action !== "diagnose-media") {
+    return json(422, { ok: false, code: "MEDIA_DIAGNOSTIC_INVALID", read_only: true,
+      mutation_dispatched: false, diagnostic_code: "diagnostic_request_invalid" });
+  }
+
   try {
     switch (action) {
       case "capabilities":
@@ -1583,6 +1592,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         return await handleReview(admin, user.id, body);
       case "edit":
         return await handleEdit(admin, user.id, body);
+      case "diagnose-media":
+        return await handleMediaDiagnostic(user.id, body, {
+          readPost: async (id) => {
+            const { data, error } = await admin.from("posts").select(INTEGRITY_COLUMNS).eq("id", id).maybeSingle();
+            if (error) throw new Error("diagnostic_snapshot_unavailable");
+            return data;
+          },
+          readMedia: async (id) => {
+            const { data, error } = await admin.from("post_media").select(MEDIA_COLUMNS).eq("post_id", id).order("sort_order").order("id");
+            if (error || !Array.isArray(data)) throw new Error("diagnostic_snapshot_unavailable");
+            return data;
+          },
+        }, json);
       case "list":
         return await handleList(admin, user.id, body);
       case "check":
