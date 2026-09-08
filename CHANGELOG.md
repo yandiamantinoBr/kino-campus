@@ -1,5 +1,33 @@
 # Changelog
 
+## [2026-09-08] - início e término da oportunidade no kc-create-modal
+
+- Adicionados os campos de data **Início da oportunidade** (`kcField_data`) e
+  **Término/Prazo final** (`kcField_data_fim`) ao formulário de oportunidades do
+  `kc-create-modal` (v11.31.6). Antes, só as publicações da pipeline Cadu
+  carregavam prazo (metadata.deadline_date); pessoas autoras e moderação não
+  conseguiam preencher datas no modal e o anúncio ficava refém da expiração
+  técnica de 30 dias (badge "Seu anúncio expira em N dias").
+- kc-create-post.submit.js (v11.31.7): o par início/término é persistido em
+  `metadata.data`/`metadata.data_fim` e o término é espelhado em
+  `metadata.deadline_date` — o mesmo contrato de prazo que a pipeline usa para
+  oportunidades (as chaves ficam ausentes nos demais módulos, para edições nunca
+  apagarem prazos semânticos legados). Com isso, KCPostLifecycle encerra o
+  anúncio no prazo informado,
+  o ranking de feed (deadlineMs) calcula a janela ativa real e o product exibe o
+  badge "Prazo:". A validação "término não pode ser anterior ao início" passa a
+  valer também para oportunidades (mesma mensagem dos eventos).
+- Edição (kcOpenEditPostModal): datas são normalizadas para `YYYY-MM-DD` antes de
+  preencher os inputs; em oportunidades o término é pré-carregado de
+  `metadata.deadline_date` (e o início de `metadata.dates.applicationOpensAt`),
+  permitindo ver e ajustar o prazo herdado da pipeline. Salvar sem o campo limpa
+  o prazo persistido.
+- kc-search-fields.shared.js: policies de `data`/`data_fim` leem também
+  `metadata.data`/`metadata.data_fim` (projeção de busca enxerga as datas do
+  módulo de oportunidades); snapshot do registry regenerado e contrato
+  EXPECTED_FIELDS.oportunidades atualizado. Cobertura nova em
+  kc-create-post-fields/submit e no contrato do registry.
+
 ## [2026-09-04] - og:image do WhatsApp via /api/og-image e thumbnails fora da quota do Supabase
 
 - Corrigido o preview sem imagem no WhatsApp (og:image não carregava): o SSR

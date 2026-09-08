@@ -43,7 +43,7 @@
     },
     "oportunidades": {
       "groups": ["tipo"],
-      "fields": ["areaAtuacao", "localizacao", "modalidadeTrabalho", "regimeContratacao", "remuneracao", "userTags"]
+      "fields": ["areaAtuacao", "data", "data_fim", "localizacao", "modalidadeTrabalho", "regimeContratacao", "remuneracao", "userTags"]
     }
   },
   "operators": {

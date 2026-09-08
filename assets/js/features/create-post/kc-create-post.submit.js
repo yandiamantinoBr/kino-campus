@@ -1,6 +1,6 @@
 /**
  * @file kc-create-post.submit.js
- * @description Sub-módulo do pipeline de submit/edição do formulário de criação de publicações (v11.31.6).
+ * @description Sub-módulo do pipeline de submit/edição do formulário de criação de publicações (v11.31.7).
  * Extraído de kc-create-post.js. Registra window._KCCreatePost.submit.
  *
  * Dependências em runtime (todas globais, já carregadas antes deste script):
@@ -189,8 +189,9 @@
       }
       kcCreateState.values.userTags = userTagsResult.tags;
 
-      // Eventos: a data de término não pode ser anterior à data de início.
-      if (kcCreateState.moduleKey === 'eventos' && activeDataEvento && activeDataFimEvento && activeDataFimEvento < activeDataEvento) {
+      // Eventos e Oportunidades: a data de término não pode ser anterior à data de início.
+      const isModuleWithDateRange = kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades';
+      if (isModuleWithDateRange && activeDataEvento && activeDataFimEvento && activeDataFimEvento < activeDataEvento) {
         showToast('A data de término não pode ser anterior à data de início.', 'warn', 2800);
         return;
       }
@@ -588,6 +589,13 @@
           data_evento: (kcCreateState.moduleKey === 'eventos') ? activeDataEvento : '',
           data_fim_evento: (kcCreateState.moduleKey === 'eventos') ? activeDataFimEvento : '',
           hora_evento: (kcCreateState.moduleKey === 'eventos') ? activeHoraEvento : '',
+          // oportunidades: início/término informados no modal. data_fim espelha
+          // deadline_date — contrato de prazo do módulo usado por lifecycle
+          // (KCPostLifecycle), ranking de feed e pelo badge "Prazo:" do product.
+          // Fora de oportunidades as chaves ficam ausentes (e não "") para nunca
+          // apagar prazos semânticos legados em edições (ex.: deadline_date de
+          // eventos publicados pela pipeline).
+          ...(isOpportunity ? { data: activeDataEvento, data_fim: activeDataFimEvento, deadline_date: activeDataFimEvento } : {}),
           link: (kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades') ? activeLink : '',
           link_as_cta: activeLinkAsCta,
           gratuito: (kcCreateState.moduleKey === 'eventos') ? activeGratuito : false,

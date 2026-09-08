@@ -1,6 +1,6 @@
 /**
  * @file kc-create-post.fields.js
- * @description Sub-módulo de geração de campos do formulário de criação de publicações (v11.31.5).
+ * @description Sub-módulo de geração de campos do formulário de criação de publicações (v11.31.6).
  * Extraído de kc-create-post.js. Registra window._KCCreatePost.fields.
  *
  * Dependências em runtime:
@@ -259,6 +259,8 @@
         });
       }
       fields.push({ type: 'text', name: 'localizacao', label: 'Local ou campus (opcional)', placeholder: 'Ex: Goiânia / Campus Samambaia / online', required: false });
+      fields.push({ type: 'date', name: 'data', label: 'Início da oportunidade (opcional)', required: false, hint: 'Data de início das inscrições ou da vigência. Deixe em branco se ainda não estiver definida.' });
+      fields.push({ type: 'date', name: 'data_fim', label: 'Término/Prazo final (opcional)', required: false, hint: 'Último dia das inscrições ou da vigência. Depois dessa data o anúncio é encerrado automaticamente nos feeds.' });
       fields.push({ ...moneyFieldMeta, name: 'remuneracao', label: 'Remuneração (opcional)', placeholder: 'Ex: 1200,00', required: false });
       fields.push({ type: 'text', name: 'contato', label: 'Contato', placeholder: 'Ex: email@ufg.br', required: true });
       fields.push({ type: 'url', name: 'link', label: 'Link/Inscrição (opcional)', placeholder: 'https://…', required: false });

@@ -26,7 +26,7 @@ const EXPECTED_FIELDS = {
   'achados-perdidos': ['titulo', 'descricao', 'userTags', 'localizacao', 'recompensa', 'entrega'],
   oportunidades: [
     'titulo', 'descricao', 'userTags', 'areaAtuacao', 'modalidadeTrabalho', 'regimeContratacao',
-    'localizacao', 'remuneracao', 'contato', 'link', 'link_as_cta'
+    'localizacao', 'data', 'data_fim', 'remuneracao', 'contato', 'link', 'link_as_cta'
   ]
 };
 

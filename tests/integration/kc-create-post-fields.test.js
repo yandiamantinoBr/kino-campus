@@ -376,15 +376,24 @@ describe('kc-create-post.fields.js — módulo oportunidades', () => {
 
   test('inclui campo contato obrigatório', () => {
     const idx = source.indexOf("moduleKey === 'oportunidades'");
-    const slice = source.slice(idx, idx + 1500);
+    const slice = source.slice(idx, idx + 2400);
     expect(slice).toContain("name: 'contato'");
   });
 
   test('inclui campo remuneracao e link opcionais', () => {
     const idx = source.indexOf("moduleKey === 'oportunidades'");
-    const slice = source.slice(idx, idx + 1800);
+    const slice = source.slice(idx, idx + 2600);
     expect(slice).toContain("name: 'remuneracao'");
     expect(slice).toContain("name: 'link'");
+  });
+
+  test('inclui data de início e término (prazo) da oportunidade', () => {
+    const idx = source.indexOf("moduleKey === 'oportunidades'");
+    const slice = source.slice(idx, idx + 1800);
+    expect(slice).toContain("type: 'date', name: 'data',");
+    expect(slice).toContain("type: 'date', name: 'data_fim',");
+    expect(slice).toContain("label: 'Início da oportunidade (opcional)'");
+    expect(slice).toContain("label: 'Término/Prazo final (opcional)'");
   });
 });
 

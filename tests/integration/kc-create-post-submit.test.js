@@ -197,6 +197,28 @@ describe('kc-create-post.submit.js — campos ativos e payload', () => {
     expect(source).toContain("kcReadActiveCreateStringValue(activeFieldNames, kcCreateState.values, 'data_fim', '')");
     expect(source).toContain('A data de término não pode ser anterior à data de início.');
   });
+
+  test('oportunidades: persiste início/término e espelha data_fim em deadline_date', () => {
+    const idx = source.indexOf('// oportunidades: início/término informados no modal.');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = source.slice(idx, idx + 600);
+    expect(slice).toContain("...(isOpportunity ? { data: activeDataEvento, data_fim: activeDataFimEvento, deadline_date: activeDataFimEvento } : {})");
+  });
+
+  test('módulos sem datas não recebem as chaves de prazo (não apaga deadline legado)', () => {
+    const idx = source.indexOf('// oportunidades: início/término informados no modal.');
+    const slice = source.slice(idx, idx + 600);
+    expect(slice).toContain("Fora de oportunidades as chaves ficam ausentes (e não \"\")");
+    expect(slice).not.toContain("data: isOpportunity ? activeDataEvento : ''");
+  });
+
+  test('oportunidades: valida término >= início no mesmo contrato de eventos', () => {
+    const idx = source.indexOf('isModuleWithDateRange && activeDataEvento && activeDataFimEvento');
+    expect(idx).toBeGreaterThan(-1);
+    const slice = source.slice(Math.max(0, idx - 200), idx + 200);
+    expect(slice).toContain("kcCreateState.moduleKey === 'eventos' || kcCreateState.moduleKey === 'oportunidades'");
+    expect(slice).toContain('A data de término não pode ser anterior à data de início.');
+  });
 });
 
 // ─── 6. Resolvers de domínio ─────────────────────────────────────────────────
