@@ -703,7 +703,8 @@
     });
   }
 
-  // v9.3.5.4: quando SMTP falhar, mostra link de convite para envio manual
+  // v9.3.5.7: fallback final — quando o envio automático (SMTP do Auth e SMTP
+  // direto) falhar, mostra o link de convite (expira em 60 min) para envio manual.
   function showInviteLinkPrompt(link, email, smtpError) {
     let area = $('#ext-access-invite-link-area');
     if (!area) {
@@ -727,9 +728,9 @@
         <i class="fas fa-link" aria-hidden="true"></i> Link de convite gerado para ${safeEmail}
       </h4>
       <p style="margin:0 0 10px;font-size:0.85em;color:var(--kc-text-dark-secondary);">
-        O SMTP do Supabase Auth não conseguiu enviar automaticamente. Copie o link abaixo e envie pelo seu e-mail
-        (ex: contato@kinocampus.com.br). O link é temporário e pode expirar conforme a configuração
-        do Supabase Auth; envie-o imediatamente.
+        O envio automático falhou (código abaixo). Copie o link e envie pelo seu e-mail
+        (ex: contato@kinocampus.com.br). O link de convite expira em 60 minutos (OTP do Supabase
+        Auth); se precisar reenviar, gere um novo pela ação "Recuperar link".
       </p>
       ${errBlock}
       <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">

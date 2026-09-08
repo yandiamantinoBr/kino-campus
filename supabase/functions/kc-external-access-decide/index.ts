@@ -141,6 +141,41 @@ function buildRejectionEmail(opts: { requesterName: string; baseUrl: string }) {
   return { subject, html, text };
 }
 
+const INVITE_LINK_TTL_MINUTES = 60; // mailer_otp_exp = 3600s no Supabase Auth
+
+function buildInviteEmail(opts: { requesterName: string; inviteLink: string; baseUrl: string }) {
+  const subject = "KinoCampus - Seu acesso foi aprovado";
+  const greeting = opts.requesterName ? `Olá, ${escapeHtml(opts.requesterName)}!` : "Olá!";
+
+  const html = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1f2937;line-height:1.55">
+      ${brandedHeader()}
+      <h2 style="color:#ff6b00;font-size:1.3rem;margin:0 0 12px">Seu acesso foi aprovado!</h2>
+      <p>${greeting}</p>
+      <p>Boas notícias: sua solicitação de acesso à <strong>comunidade KinoCampus</strong> foi <strong>aprovada</strong>. Clique no botão abaixo para criar sua conta:</p>
+      <p style="margin:24px 0"><a href="${escapeHtml(opts.inviteLink)}" style="display:inline-block;background:#ff6b00;color:#ffffff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:700">Criar minha conta</a></p>
+      <p style="font-size:0.9em;color:#6b7280">Se o botão não funcionar, copie e cole este link no navegador:<br/><code style="word-break:break-all">${escapeHtml(opts.inviteLink)}</code></p>
+      <p style="font-size:0.9em;color:#6b7280"><strong>Atenção:</strong> este link é temporário e expira em ${INVITE_LINK_TTL_MINUTES} minutos.</p>
+      ${brandedFooter()}
+    </div>`;
+
+  const text = [
+    "KinoCampus - Seu acesso foi aprovado",
+    "",
+    greeting,
+    "",
+    "Boas notícias: sua solicitação de acesso à comunidade KinoCampus foi aprovada.",
+    "Crie sua conta neste link:",
+    opts.inviteLink,
+    "",
+    "Atenção: este link é temporário e expira em " + INVITE_LINK_TTL_MINUTES + " minutos.",
+    "",
+    "Equipe KinoCampus",
+  ].filter(Boolean).join("\n");
+
+  return { subject, html, text };
+}
+
 /**
  * Sanitize Subject header to pure ASCII (workaround for denomailer@1.6.0 bugs).
  * Strips diacritics, replaces special punctuation, drops residual non-ASCII.
@@ -403,6 +438,7 @@ Deno.serve(async (req) => {
     let inviteSent = false;
     let inviteLink: string | null = null;
     let inviteSendError: string | null = null;
+    let directSmtpFallback = false;
 
     const inviteRes = await adminClient.auth.admin.inviteUserByEmail(requesterEmail, { redirectTo, data: userMetadata });
 
@@ -419,7 +455,7 @@ Deno.serve(async (req) => {
           "INVITE_EMAIL_PROVIDER_FAILED",
         );
         console.warn(
-          "[kc-external-access-decide] invite email failed; trying manual link",
+          "[kc-external-access-decide] invite email failed; trying direct SMTP fallback with generated link",
           { code: inviteSendError },
         );
         try {
@@ -443,6 +479,27 @@ Deno.serve(async (req) => {
             "[kc-external-access-decide] manual invite link failed",
             { code: inviteSendError },
           );
+        }
+        if (inviteLink) {
+          // Fallback resiliente (v9.3.5.7): entrega o link de convite via SMTP
+          // direto (denomailer + Hostinger) quando o SMTP do Supabase Auth falha.
+          try {
+            const inviteEmail = buildInviteEmail({ requesterName, inviteLink, baseUrl });
+            await sendEmail({
+              to: requesterEmail,
+              subject: inviteEmail.subject,
+              html: inviteEmail.html,
+              text: inviteEmail.text,
+              replyTo: getEnv("KC_ADMIN_NOTIFICATION_EMAIL", DEFAULT_ADMIN_EMAIL),
+            });
+            directSmtpFallback = true;
+            inviteSent = true;
+          } catch (smtpErr) {
+            console.warn(
+              "[kc-external-access-decide] direct SMTP invite fallback failed; falling back to manual link",
+              { code: safeErrorCode(smtpErr, "SMTP_DELIVERY_FAILED") },
+            );
+          }
         }
         if (!inviteLink) {
           const failedDelivery = {
@@ -470,8 +527,10 @@ Deno.serve(async (req) => {
     }
 
     const inviteMetaStatus = inviteSent
-      ? { status: "sent", provider: "supabase_auth", sent_at: new Date().toISOString(), redirect_to: redirectTo }
-      : { status: "link_generated", provider: "supabase_auth_manual_send", generated_at: new Date().toISOString(), redirect_to: redirectTo, invite_link: inviteLink, error_code: inviteSendError, note: "SMTP indisponível. Link gerado para envio manual." };
+      ? (directSmtpFallback
+        ? { status: "sent", provider: "hostinger_smtp_invite_link", sent_at: new Date().toISOString(), redirect_to: redirectTo, error_code: inviteSendError, note: "SMTP do Auth falhou; convite entregue via SMTP direto (denomailer) com link gerado." }
+        : { status: "sent", provider: "supabase_auth", sent_at: new Date().toISOString(), redirect_to: redirectTo })
+      : { status: "link_generated", provider: "supabase_auth_manual_send", generated_at: new Date().toISOString(), redirect_to: redirectTo, invite_link: inviteLink, error_code: inviteSendError, note: "SMTP do Auth e fallback direto indisponíveis. Link gerado para envio manual (expira em 60 min)." };
 
     const deliveryStatePersisted = await completeDelivery(inviteMetaStatus);
 
@@ -485,9 +544,9 @@ Deno.serve(async (req) => {
       invite_sent_to: requesterEmail,
       invite_sent: inviteSent,
       invite_link: inviteLink,
-      smtp_error: inviteSendError,
+      smtp_error: directSmtpFallback ? null : inviteSendError,
       message: deliveryStatePersisted
-        ? (inviteSent ? "Convite enviado via SMTP." : "Convite gerado. Copie o link e envie manualmente.")
+        ? (inviteSent ? (directSmtpFallback ? "Convite enviado via SMTP direto (fallback)." : "Convite enviado via SMTP.") : "Convite gerado. Copie o link e envie manualmente.")
         : "A entrega foi executada, mas o resultado não pôde ser confirmado no histórico. Revise o item em processamento.",
     });
   }
