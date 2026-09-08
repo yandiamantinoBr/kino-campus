@@ -28,6 +28,7 @@
 
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { isCurrentSessionActive } from "../_shared/active-session.ts";
+import { handleLegacyFreeRetraction } from "./legacy-free-retraction.ts";
 import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
 import {
   categoriesForModule,
@@ -1295,6 +1296,10 @@ export async function handleEdit(admin: SupabaseClient, userId: string, body: Re
   if (getErr || !current) return json(404, { ok: false, code: "POST_NOT_FOUND", message: "Post nao encontrado." });
   if (current.author_id !== userId) {
     return json(403, { ok: false, code: "NOT_OWNER", message: "O Cadu so pode editar os proprios posts." });
+  }
+
+  if (body.legacyFreeRetraction !== undefined) {
+    return await handleLegacyFreeRetraction(admin, userId, body, current as Record<string, unknown>);
   }
 
   if (body.integrityCorrection !== undefined) {
