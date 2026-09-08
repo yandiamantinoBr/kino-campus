@@ -473,9 +473,8 @@
       if (Array.isArray(meta[key])) pool = pool.concat(meta[key]);
     });
     var seen = {};
-    // Auditoria b0f5f1cc (2026-09-07): dedupe por assinatura de asset (paridade
-    // com os cards) — variantes da MESMA imagem (?width=, .jpg/.png do mesmo
-    // hash, CDN IG com tokens) apareciam 2-4x na faixa de miniaturas.
+    // Mesma identidade conservadora dos cards: somente variantes de entrega
+    // comprovadas colapsam. Extensões e parâmetros desconhecidos ficam distintos.
     var signatureOf = (window._KCU && window._KCU.presentation && window._KCU.presentation.imageSignature)
       || null;
     var seenSignature = {};
