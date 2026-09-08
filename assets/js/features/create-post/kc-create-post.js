@@ -507,6 +507,17 @@ function kcCloseCreatePostModal() {
 }
 
 /**
+ * kcEditFormDateValue — normaliza datas para o formato aceito por
+ * <input type="date"> (YYYY-MM-DD). Valores inválidos viram string vazia.
+ * @param {*} value Valor bruto lido do metadata do post
+ * @returns {string}
+ */
+function kcEditFormDateValue(value) {
+  const match = String(value == null ? '' : value).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+}
+
+/**
  * kcOpenEditPostModal — abre o kc-create-modal preenchido com os dados do post.
  * @param {object} post     Dados normalizados do post (KCPostModel)
  * @param {function} callback  Chamado com os dados atualizados após salvar
@@ -524,6 +535,7 @@ function kcOpenEditPostModal(post, callback) {
     return false;
   }
   const md = (post.metadata && typeof post.metadata === 'object') ? post.metadata : {};
+  const mdDates = (md.dates && typeof md.dates === 'object' && !Array.isArray(md.dates)) ? md.dates : {};
   const userTagsRead = (window.KCPostUserTags && typeof window.KCPostUserTags.read === 'function')
     ? window.KCPostUserTags.read(post)
     : { tags: [] };
@@ -572,8 +584,14 @@ function kcOpenEditPostModal(post, callback) {
     destino: md.destino || '',
     horario: md.horario || '',
     vagas: md.vagas || '',
-    data: md.data_evento || md.data || '',
-    data_fim: md.data_fim_evento || md.data_fim || '',
+    // Datas: eventos usa data_evento/data_fim_evento; oportunidades usa
+    // data/data_fim (com data_fim espelhado em deadline_date pela pipeline).
+    data: kcEditFormDateValue(moduleKey === 'oportunidades'
+      ? (md.data || mdDates.applicationOpensAt || '')
+      : (md.data_evento || md.data || '')),
+    data_fim: kcEditFormDateValue(moduleKey === 'oportunidades'
+      ? (md.data_fim || md.deadline_date || '')
+      : (md.data_fim_evento || md.data_fim || '')),
     hora: md.hora_evento || md.hora || '',
     link: md.link || '',
     link_as_cta: !!(md.link_as_cta),
