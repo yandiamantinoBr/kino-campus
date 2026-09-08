@@ -39,6 +39,21 @@ para referência ao operar/restaurar o setup.
 > SMTP config E o `KC_SMTP_PASS` secret. Em caso de dúvida, validar
 > fazendo `auth/v1/recover` com email próprio.
 
+> ⚠️ **2026-09-08 20:01 UTC — incidente recorrente (mesma causa) resolvido pelo agente DSH**:
+> `inviteUserByEmail` voltou a falhar (`INVITE_EMAIL_PROVIDER_FAILED`) porque o SMTP do
+> Auth guardava uma app password antiga/diferente, enquanto o secret `KC_SMTP_PASS`
+> (denomailer) estava correto — o convite da Keila (keilafidelis@gmail.com) caiu no
+> fallback manual. Evidência: signup de teste retornava `500 Error sending confirmation
+> email` e o AUTH PLAIN com a senha do `KC_SMTP_PASS` (via Edge temporária) retornava
+> `235`. **Fix aplicado**: PATCH via Management API com a seção SMTP **completa**
+> (smtp_host/port/user/pass = KC_SMTP_* + `rate_limit_email_sent`=1000) e convite
+> reenviado (`sent`=true). **Lição nova**: o PATCH em
+> `/v1/projects/{ref}/config/auth` se comporta como REPLACE da seção SMTP — envie
+> SEMPRE host+port+user+pass juntos; enviar só `smtp_pass` zera os demais campos e
+> derruba o rate limit para o default (2/h). Além disso, o link de convite de
+> `generateLink` vale **60 minutos** (`mailer_otp_exp`=3600), não 7 dias (isso é a
+> whitelist `kc_invited_emails`).
+
 ## Onde o SMTP está consumido
 
 ### 1. Supabase Auth (built-in)
@@ -58,9 +73,11 @@ botão "Criar minha conta"). Variável principal: `{{ .ConfirmationURL }}`.
 #### `kc-external-access-decide`
 - Aprovação: chama `auth.admin.inviteUserByEmail` → usa o SMTP do Auth →
   envia o template "Invite User" customizado.
-- Fallback de aprovação: se SMTP falhar (ex.: app password revogada),
-  chama `auth.admin.generateLink` que devolve a URL de convite sem enviar
-  e-mail. A UI admin mostra essa URL com botão "Copiar" para envio manual.
+- Fallback de aprovação (v9.3.5.7): se o SMTP do Auth falhar, gera o link
+  via `auth.admin.generateLink` e tenta entregar o convite **diretamente**
+  pelo SMTP Hostinger (denomailer, provider `hostinger_smtp_invite_link`).
+  Só se esse segundo envio também falhar a UI admin mostra a URL com botão
+  "Copiar" para envio manual (link expira em 60 minutos).
 - Rejeição: tenta enviar via Resend (se configurado). Sem provider, marca
   `metadata.rejection_email.status = pending_provider_setup` e registra no
   admin para reenvio futuro.
