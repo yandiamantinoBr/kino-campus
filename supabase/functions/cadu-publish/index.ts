@@ -17,6 +17,7 @@
 //   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
 //   { action: "edit", postId, fields?, metadata?, userTags?, tags?, image?, images? } -> edita
 //   { action: "edit", postId, reclassification: { expected, item } } -> reclassifica com CAS
+//   { action: "edit", postId, integrityCorrection: { operation, operationId, expected, ... } } -> corrige/reverte com CAS
 //   { action: "list", filters? }            -> lista posts do Cadu (filtra)
 //   { action: "check", sourceUrl?, sourceId? } -> dedup (ja postado?)
 //
@@ -44,6 +45,15 @@ import { officialCoverCandidates } from "./official-cover.ts";
 import { downloadRemoteImage } from "./image-download.ts";
 import { RemoteResourceError } from "./remote-resource.ts";
 import { dedupeImageUrls } from "./image-signature.ts";
+import {
+  INTEGRITY_COLUMNS,
+  INTEGRITY_CONTRACT,
+  IntegrityError,
+  integrityMediaReceiptMatches,
+  integrityReceiptMatches,
+  prepareIntegrityUpdate,
+  validateIntegrityRequest,
+} from "./integrity.ts";
 import {
   INSTITUTIONAL_REVIEW_POLICY_CODE,
   institutionalReviewRpcArguments,
@@ -1181,18 +1191,78 @@ async function handleCanonicalReclassification(
   });
 }
 
+async function handleIntegrityCorrection(
+  admin: SupabaseClient, userId: string, body: Record<string, unknown>, current: Record<string, unknown>,
+) {
+  let mutationAttempted = false;
+  try {
+    const input = validateIntegrityRequest(body, current);
+    let mapped: ReturnType<typeof mapItemToPost> | undefined;
+    let quality: PublishQuality | undefined;
+    if (input.operation === "correct") {
+      const item = recordValue(input.item) as CaduItem | null;
+      if (!item) throw new IntegrityError("Informe o item canonico corrigido.");
+      const validation = validateItem(item);
+      if (!validation.ok) throw new IntegrityError(validation.errors.join(" "), "VALIDATION_FAILED");
+      if (item.module !== current.module) throw new IntegrityError("Use reclassification para trocar o modulo.");
+      const metadata = recordValue(current.metadata) || {};
+      if (metadata.manual_edits_lock === true || metadata.manual_edits_lock === "true" ||
+        metadata.manual_description === true || metadata.manual_description === "true") {
+        throw new IntegrityError("Uma edicao manual protegida exige reconciliacao propria.");
+      }
+      mapped = mapItemToPost(item, { runId: String(metadata.cadu_run_id || "") });
+      if (!String(mapped.row.metadata.source_title || "").trim()) throw new IntegrityError("Informe o titulo lexical da fonte canonica.");
+      quality = evaluateCaduPublishQuality(item, mapped);
+      if (!quality.ok) return json(422, { ok: false, code: "QUALITY_BLOCKED", quality });
+    }
+    const prepared = await prepareIntegrityUpdate(current, input, mapped?.row as unknown as Record<string, unknown> | undefined);
+    // Large metadata snapshots belong in the request body, not PostgREST URL
+    // filters. The RPC locks and compares all 15 fields, then writes the row
+    // and durable audit receipt in the same transaction.
+    mutationAttempted = true;
+    const { data: receipt, error } = await admin.rpc("kc_cadu_correct_post_integrity", {
+      p_post_id: current.id, p_actor_id: userId, p_expected: input.expected, p_update: prepared.update,
+      p_media: prepared.media || null,
+    });
+    if (error) return json(502, { ok: false, code: "INTEGRITY_MUTATION_UNCERTAIN", message: "A resposta da correcao nao foi confirmada. Releia o post e o recibo antes de tentar outra operacao." });
+    if (receipt?.code === "EDIT_CONFLICT") return json(409, { ok: false, code: "EDIT_CONFLICT", message: "O snapshot mudou durante a correcao; nenhuma alteracao aplicada." });
+    const fresh = recordValue(receipt?.post);
+    if (!fresh) return json(502, { ok: false, code: "INTEGRITY_MUTATION_UNCERTAIN", message: "Recibo ausente; releia o post e o historico antes de tentar outra operacao." });
+    if (!integrityReceiptMatches(fresh, prepared.expectedContent, input.operationId, prepared.update.metadata) ||
+      (prepared.media && !integrityMediaReceiptMatches(receipt.post_media, prepared.media.after, current.id))) {
+      return json(502, { ok: false, code: "INTEGRITY_RECEIPT_INVALID", message: "A persistencia nao confirmou o estado completo. Releia antes de tentar outra operacao." });
+    }
+    const freshMetadata = recordValue(fresh.metadata)!;
+    return json(200, {
+      ok: true, code: input.operation === "rollback" ? "INTEGRITY_ROLLED_BACK" : "INTEGRITY_CORRECTED",
+      contract: INTEGRITY_CONTRACT, operation_id: input.operationId, post_id: fresh.id,
+      updated_at: fresh.updated_at, status: fresh.status, source_id: freshMetadata.source_id,
+      source_url: freshMetadata.source_url, before_hash: prepared.entry.before_hash,
+      after_hash: prepared.entry.after_hash, ...(quality ? { quality } : {}),
+    });
+  } catch (error) {
+    if (mutationAttempted) return json(502, { ok: false, code: "INTEGRITY_MUTATION_UNCERTAIN", message: "A conexao terminou sem confirmacao; releia o post e o recibo antes de tentar outra operacao." });
+    if (error instanceof IntegrityError) return json(error.status, { ok: false, code: error.code, message: error.message });
+    return json(422, { ok: false, code: "INTEGRITY_INVALID", message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 export async function handleEdit(admin: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const postId = String(body.postId || "");
   if (!postId) return json(400, { ok: false, code: "MISSING_POST_ID", message: "Informe postId." });
 
   const { data: current, error: getErr } = await admin
     .from("posts")
-    .select("id,author_id,module,category,status,metadata,image_url,expires_at,updated_at")
+    .select(INTEGRITY_COLUMNS)
     .eq("id", postId)
     .maybeSingle();
   if (getErr || !current) return json(404, { ok: false, code: "POST_NOT_FOUND", message: "Post nao encontrado." });
   if (current.author_id !== userId) {
     return json(403, { ok: false, code: "NOT_OWNER", message: "O Cadu so pode editar os proprios posts." });
+  }
+
+  if (body.integrityCorrection !== undefined) {
+    return await handleIntegrityCorrection(admin, userId, body, current as Record<string, unknown>);
   }
 
   if (body.reclassification !== undefined) {
@@ -1440,6 +1510,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           code: "OK",
           capabilityVersion: CAPABILITY_VERSION,
           canonicalReclassification: RECLASSIFICATION_CONTRACT,
+          canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
           institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
           reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
           createReviewRpc: "kc_create_institutional_source_review",
