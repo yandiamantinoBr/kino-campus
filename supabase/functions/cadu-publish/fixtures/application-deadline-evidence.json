@@ -1,0 +1,784 @@
+{
+  "provenance": {
+    "ppgcc": "Captured fresh source artifact run8baeeae1; original selection digest retained.",
+    "carmo": "OFFLINE construction from verified34page PDF for contract tests; this research object is not a captured production item.",
+    "carmoDocumentSha256": "bc3dd2e57704ea8af955d6632d7a5027937ed843f741c367b1d7e560839c19d8"
+  },
+  "ppgcc": {
+    "module": "oportunidades",
+    "sourceRegistryId": "web.ufg.ppg.ppgcc",
+    "sourceId": "web.ufg.ppg.ppgcc:https://ppgcc.inf.ufg.br/n/203275",
+    "sourceUrl": "https://ppgcc.inf.ufg.br/n/203275",
+    "url": "https://ppgcc.inf.ufg.br/n/203275",
+    "sourceRevision": "154cbc8e4900962341e8643b8f4d1885ca014fc72277ff40d6979c50cd965a1d",
+    "dates": {
+      "publishedAt": "2026-08-04T20:18:40.834-03:00",
+      "updatedAt": "2026-08-04T20:22:08.519-03:00",
+      "eventStartsAt": "2026-12-10",
+      "eventEndsAt": null,
+      "eventRangeId": null,
+      "applicationRangeId": null,
+      "applicationRangeCount": 0,
+      "applicationOpensAt": null,
+      "applicationDeadline": "2026-09-16",
+      "resultPublishedAt": null,
+      "applicationStatus": "open",
+      "ambiguousApplicationExtension": null,
+      "eventStatus": "upcoming",
+      "canApply": true,
+      "dateEvidence": [
+        {
+          "date": "2026-08-24",
+          "role": "contextDate",
+          "excerpt": "pp Listar Todas Voltar PÁGINA OFICIAL RELACIONADA: Atualizada em 24/08/26 11:29 O Programa de Pós-Graduação em Ciência da Computação (PPGCC/U",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 560
+        },
+        {
+          "date": "2026-08-14",
+          "role": "contextDate",
+          "excerpt": "Publicação do edital: 04/08/2026 Período de geração da GRU: de 14/08/2026 (8h) a 11/09/2026 (16h) Período de inscrições: de 14/08/2026 (8h)",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 1705
+        },
+        {
+          "date": "2026-09-11",
+          "role": "contextDate",
+          "excerpt": "edital: 04/08/2026 Período de geração da GRU: de 14/08/2026 (8h) a 11/09/2026 (16h) Período de inscrições: de 14/08/2026 (8h) a 16/09/2026 (16h)",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 1723
+        },
+        {
+          "date": "2026-08-14",
+          "role": "applicationDeadline",
+          "excerpt": "U: de 14/08/2026 (8h) a 11/09/2026 (16h) Período de inscrições: de 14/08/2026 (8h) a 16/09/2026 (16h) Resultado final do processo seletivo: 10/1",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 1769
+        },
+        {
+          "date": "2026-09-16",
+          "role": "applicationDeadline",
+          "excerpt": "8h) a 11/09/2026 (16h) Período de inscrições: de 14/08/2026 (8h) a 16/09/2026 (16h) Resultado final do processo seletivo: 10/12/2026 Em caso",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 1787
+        },
+        {
+          "date": "2026-12-10",
+          "role": "eventStartsAt",
+          "excerpt": "2026 (8h) a 16/09/2026 (16h) Resultado final do processo seletivo: 10/12/2026 Em caso de dúvidas, entre em contato pelo e-mail selecao.ppgcc@ufg",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 1845
+        },
+        {
+          "date": "2026-08-05",
+          "role": "contextDate",
+          "excerpt": "CRONOGRAMA 1 Data Descrição 04/08/2026 Publicação do Edital 08/2026. 05/08 e 06/08/2026 Período para impugnação do edital. 07/08/2026 Resultado das solicitaç",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:5",
+          "index": 2094
+        },
+        {
+          "date": "2026-08-06",
+          "role": "contextDate",
+          "excerpt": "CRONOGRAMA 1 Data Descrição 04/08/2026 Publicação do Edital 08/2026. 05/08 e 06/08/2026 Período para impugnação do edital. 07/08/2026 Resultado das solicitaç",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:5",
+          "index": 2111
+        },
+        {
+          "date": "2026-08-07",
+          "role": "contextDate",
+          "excerpt": "Edital 08/2026. 05/08 e 06/08/2026 Período para impugnação do edital. 07/08/2026 Resultado das solicitações de impugnação do edital, se houver. 14/08/",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2148
+        },
+        {
+          "date": "2026-08-14",
+          "role": "contextDate",
+          "excerpt": "8/2026 Resultado das solicitações de impugnação do edital, se houver. 14/08/2026 (às 8h) até 11/09/2026 (às 16h) Período em que o(a) candidato(a) pode",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2222
+        },
+        {
+          "date": "2026-09-11",
+          "role": "contextDate",
+          "excerpt": "licitações de impugnação do edital, se houver. 14/08/2026 (às 8h) até 11/09/2026 (às 16h) Período em que o(a) candidato(a) pode emitir a guia de pagam",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2245
+        },
+        {
+          "date": "2026-08-14",
+          "role": "contextDate",
+          "excerpt": "gamento da taxa GRU, conforme as instruções do sistema de inscrições. 14/08/2026 (às 8h) até 16/09/2026 (às 16h) Período de inscrições para o processo",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2392
+        },
+        {
+          "date": "2026-09-16",
+          "role": "contextDate",
+          "excerpt": "nforme as instruções do sistema de inscrições. 14/08/2026 (às 8h) até 16/09/2026 (às 16h) Período de inscrições para o processo seletivo. 14/08 a 24/0",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2415
+        },
+        {
+          "date": "2026-08-14",
+          "role": "contextDate",
+          "excerpt": "é 16/09/2026 (às 16h) Período de inscrições para o processo seletivo. 14/08 a 24/08/2026 Período para o pedido de isenção da taxa de inscrição. 25/08/2026 Div",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:6",
+          "index": 2483
+        },
+        {
+          "date": "2026-08-24",
+          "role": "contextDate",
+          "excerpt": "é 16/09/2026 (às 16h) Período de inscrições para o processo seletivo. 14/08 a 24/08/2026 Período para o pedido de isenção da taxa de inscrição. 25/08/2026 Div",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:6",
+          "index": 2500
+        },
+        {
+          "date": "2026-08-25",
+          "role": "contextDate",
+          "excerpt": "8 a 24/08/2026 Período para o pedido de isenção da taxa de inscrição. 25/08/2026 Divulgação do Resultado Preliminar dos pedidos de isenção. 26 e 27/08",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2557
+        },
+        {
+          "date": "2026-08-26",
+          "role": "contextDate",
+          "excerpt": "25/08/2026 Divulgação do Resultado Preliminar dos pedidos de isenção. 26 e 27/08/2026 Prazo para interposição de recurso contra o Resultado Preliminar dos",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:0",
+          "index": 2627
+        },
+        {
+          "date": "2026-08-27",
+          "role": "contextDate",
+          "excerpt": "25/08/2026 Divulgação do Resultado Preliminar dos pedidos de isenção. 26 e 27/08/2026 Prazo para interposição de recurso contra o Resultado Preliminar dos",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:0",
+          "index": 2641
+        },
+        {
+          "date": "2026-08-28",
+          "role": "contextDate",
+          "excerpt": "ição de recurso contra o Resultado Preliminar dos pedidos de isenção. 28/08/2026 Divulgação do Resultado Final dos pedidos de isenção. 29/09/2026 Divu",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2732
+        },
+        {
+          "date": "2026-09-29",
+          "role": "contextDate",
+          "excerpt": "ção. 28/08/2026 Divulgação do Resultado Final dos pedidos de isenção. 29/09/2026 Divulgação do resultado preliminar das inscrições homologadas. 30/09",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2797
+        },
+        {
+          "date": "2026-09-30",
+          "role": "contextDate",
+          "excerpt": "9/2026 Divulgação do resultado preliminar das inscrições homologadas. 30/09 a 01/10/2026 Prazo para interposição de recurso contra o resultado preliminar das",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:7",
+          "index": 2871
+        },
+        {
+          "date": "2026-10-01",
+          "role": "contextDate",
+          "excerpt": "9/2026 Divulgação do resultado preliminar das inscrições homologadas. 30/09 a 01/10/2026 Prazo para interposição de recurso contra o resultado preliminar das",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:7",
+          "index": 2888
+        },
+        {
+          "date": "2026-10-06",
+          "role": "contextDate",
+          "excerpt": "de recurso contra o resultado preliminar das inscrições homologadas. 06/10/2026 Divulgação do resultado final das inscrições homologadas. 06/10/2026",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 2983
+        },
+        {
+          "date": "2026-10-06",
+          "role": "contextDate",
+          "excerpt": "06/10/2026 Divulgação do resultado final das inscrições homologadas. 06/10/2026 Divulgação da composição da Comissão de Seleção. 07 a 08/10/2026 Praz",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 3052
+        },
+        {
+          "date": "2026-10-07",
+          "role": "contextDate",
+          "excerpt": "ologadas. 06/10/2026 Divulgação da composição da Comissão de Seleção. 07 a 08/10/2026 Prazo para interposição de recurso contra a composição da Comissão de",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:1",
+          "index": 3112
+        },
+        {
+          "date": "2026-10-08",
+          "role": "contextDate",
+          "excerpt": "ologadas. 06/10/2026 Divulgação da composição da Comissão de Seleção. 07 a 08/10/2026 Prazo para interposição de recurso contra a composição da Comissão de",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:1",
+          "index": 3126
+        },
+        {
+          "date": "2026-10-09",
+          "role": "contextDate",
+          "excerpt": "a interposição de recurso contra a composição da Comissão de Seleção. 09/10/2026 Publicação da composição final da Comissão de Seleção. 19/10/2026 Div",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 3207
+        },
+        {
+          "date": "2026-10-19",
+          "role": "contextDate",
+          "excerpt": "ão. 09/10/2026 Publicação da composição final da Comissão de Seleção. 19/10/2026 Divulgação da data e da hora do Exame Oral do Projeto de Pesquisa e d",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 3273
+        },
+        {
+          "date": "2026-10-20",
+          "role": "contextDate",
+          "excerpt": "isa e da composição das Bancas Examinadoras dos projetos de pesquisa. 20 e 21/10/2026 Prazo para interposição de recurso contra a composição das Bancas Exa",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:2",
+          "index": 3416
+        },
+        {
+          "date": "2026-10-21",
+          "role": "contextDate",
+          "excerpt": "isa e da composição das Bancas Examinadoras dos projetos de pesquisa. 20 e 21/10/2026 Prazo para interposição de recurso contra a composição das Bancas Exa",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:2",
+          "index": 3430
+        },
+        {
+          "date": "2026-10-22",
+          "role": "contextDate",
+          "excerpt": "contra a composição das Bancas Examinadoras dos Projetos de Pesquisa. 22/10/2026 Divulgação, após o período de recurso, da composição das Bancas Exami",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 3537
+        },
+        {
+          "date": "2026-10-26",
+          "role": "contextDate",
+          "excerpt": "urso, da composição das Bancas Examinadoras dos projetos de pesquisa. 26/10 a 13/11/2026 Realização da etapa de avaliação dos projetos de pesquisa e do Exame",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:8",
+          "index": 3651
+        },
+        {
+          "date": "2026-11-13",
+          "role": "contextDate",
+          "excerpt": "urso, da composição das Bancas Examinadoras dos projetos de pesquisa. 26/10 a 13/11/2026 Realização da etapa de avaliação dos projetos de pesquisa e do Exame",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:8",
+          "index": 3668
+        },
+        {
+          "date": "2026-11-17",
+          "role": "contextDate",
+          "excerpt": "s de pesquisa e do Exame Oral dos Projetos pelas Bancas Examinadoras. 17/11/2026 Divulgação do resultado preliminar da Avaliação do Projeto de Pesquis",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 3784
+        },
+        {
+          "date": "2026-11-18",
+          "role": "contextDate",
+          "excerpt": "vulgação do resultado preliminar da Avaliação do Projeto de Pesquisa. 18 e 19/11/2026 Prazo para recurso contra o resultado preliminar da Avaliação do Proj",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:3",
+          "index": 3867
+        },
+        {
+          "date": "2026-11-19",
+          "role": "contextDate",
+          "excerpt": "vulgação do resultado preliminar da Avaliação do Projeto de Pesquisa. 18 e 19/11/2026 Prazo para recurso contra o resultado preliminar da Avaliação do Proj",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:3",
+          "index": 3881
+        },
+        {
+          "date": "2026-11-24",
+          "role": "contextDate",
+          "excerpt": "so contra o resultado preliminar da Avaliação do Projeto de Pesquisa. 24/11/2026 Divulgação do resultado final da Avaliação do Projeto de Pesquisa. 30",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 3969
+        },
+        {
+          "date": "2026-11-30",
+          "role": "contextDate",
+          "excerpt": "26 Divulgação do resultado final da Avaliação do Projeto de Pesquisa. 30/11/2026 Divulgação do resultado preliminar da pontua [Página 3] 3. DO PÚBLIC",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 4047
+        },
+        {
+          "date": "2026-12-07",
+          "role": "contextDate",
+          "excerpt": "Inteligência Artificial e Interação Humana (IAIH) 18 5 Total 46 24 2 07/12/2026 Divulgação do resultado final da verificação da condição de deficiênc",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 5604
+        },
+        {
+          "date": "2026-11-30",
+          "role": "contextDate",
+          "excerpt": "ulgação do resultado final da verificação da condição de deficiência. 30/11 a 04/12/2026 Período para candidatos(as) negros(as) e trans passarem pela comissão",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:9",
+          "index": 5688
+        },
+        {
+          "date": "2026-12-04",
+          "role": "contextDate",
+          "excerpt": "ulgação do resultado final da verificação da condição de deficiência. 30/11 a 04/12/2026 Período para candidatos(as) negros(as) e trans passarem pela comissão",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:9",
+          "index": 5705
+        },
+        {
+          "date": "2026-12-04",
+          "role": "contextDate",
+          "excerpt": "e período de recursos conforme atendimento e divulgação da comissão). 04/12/2026 Divulgação do resultado final da Avaliação do Currículo Lattes. 04/12",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 5881
+        },
+        {
+          "date": "2026-12-04",
+          "role": "contextDate",
+          "excerpt": "/2026 Divulgação do resultado final da Avaliação do Currículo Lattes. 04/12/2026 Divulgação do resultado preliminar do processo seletivo (com possível",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 5956
+        },
+        {
+          "date": "2026-12-07",
+          "role": "contextDate",
+          "excerpt": "reliminar do processo seletivo (com possível remanejamento de vagas). 07 e 08/12/2026 Prazo para interposição de recurso contra o resultado preliminar do p",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:4",
+          "index": 6062
+        },
+        {
+          "date": "2026-12-08",
+          "role": "contextDate",
+          "excerpt": "reliminar do processo seletivo (com possível remanejamento de vagas). 07 e 08/12/2026 Prazo para interposição de recurso contra o resultado preliminar do p",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "rangeId": "item_text:range:4",
+          "index": 6076
+        },
+        {
+          "date": "2026-12-10",
+          "role": "contextDate",
+          "excerpt": "osição de recurso contra o resultado preliminar do processo seletivo. 10/12/2026 Divulgação do resultado final do processo seletivo. [Página 5] 5. DA",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 6165
+        },
+        {
+          "date": "1999-01-29",
+          "role": "contextDate",
+          "excerpt": "ais restrições estabelecidas nos Artigos 18 e 20 da Lei Nº. 9.784, de 29 de janeiro de 1999. 6.4. A seleção se constituirá de duas etapas, descritas a seguir: 1)",
+          "source": "item_text",
+          "yearInferred": false,
+          "temporalDirection": "unknown",
+          "index": 15492
+        }
+      ],
+      "dates": [
+        "1999-01-29",
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-07",
+        "2026-08-14",
+        "2026-08-24",
+        "2026-08-25",
+        "2026-08-26",
+        "2026-08-27",
+        "2026-08-28",
+        "2026-09-11",
+        "2026-09-16",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01",
+        "2026-10-06",
+        "2026-10-07",
+        "2026-10-08",
+        "2026-10-09",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-26",
+        "2026-11-13",
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-24",
+        "2026-11-30",
+        "2026-12-04",
+        "2026-12-07",
+        "2026-12-08",
+        "2026-12-10"
+      ],
+      "futureDates": [
+        "2026-09-11",
+        "2026-09-16",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01",
+        "2026-10-06",
+        "2026-10-07",
+        "2026-10-08",
+        "2026-10-09",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-26",
+        "2026-11-13",
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-24",
+        "2026-11-30",
+        "2026-12-04",
+        "2026-12-07",
+        "2026-12-08",
+        "2026-12-10"
+      ],
+      "pastDates": [
+        "1999-01-29",
+        "2026-08-05",
+        "2026-08-06",
+        "2026-08-07",
+        "2026-08-14",
+        "2026-08-24",
+        "2026-08-25",
+        "2026-08-26",
+        "2026-08-27",
+        "2026-08-28"
+      ],
+      "latestDate": "2026-12-10",
+      "hasDeadline": true,
+      "hasDeadlineByRegex": true,
+      "hasDeadlineByHeuristic": false,
+      "isExpired": false,
+      "isOld": false,
+      "isUpcoming": true,
+      "webyDate": "2026-08-04T20:18:40.834-03:00",
+      "applicationDetailsOnly": false,
+      "applicationScheduled": false,
+      "applicationMethod": "direct_url"
+    },
+    "editorialResearch": {
+      "contract": "cadu-official-source-research-v1",
+      "required": true,
+      "kind": "selection_or_call",
+      "status": "complete",
+      "complete": true,
+      "checkedAt": "2026-09-08T10:21:55.005Z",
+      "failureKind": null,
+      "missingFields": [],
+      "requiredPresentation": [
+        "vacancies",
+        "audienceEligibility",
+        "requirements",
+        "selectionStages",
+        "schedule",
+        "fees",
+        "applicationMethod",
+        "contact"
+      ],
+      "coverage": {
+        "officialReference": {
+          "status": "present",
+          "evidence": []
+        },
+        "applicationWindow": {
+          "status": "present",
+          "evidence": []
+        },
+        "audienceEligibility": {
+          "status": "present",
+          "evidence": [
+            "mestrado",
+            "doutorado",
+            "concluintes",
+            "estudantes",
+            "docentes"
+          ]
+        },
+        "vacancies": {
+          "status": "present",
+          "evidence": [
+            "46",
+            "24"
+          ]
+        },
+        "applicationMethod": {
+          "status": "present",
+          "evidence": [
+            "formulario",
+            "enviar",
+            "plataforma"
+          ]
+        },
+        "requirements": {
+          "status": "present",
+          "evidence": [
+            "diploma",
+            "historico escolar",
+            "curriculo lattes",
+            "identidade",
+            "documentos"
+          ]
+        },
+        "selectionStages": {
+          "status": "present",
+          "evidence": [
+            "analise do curriculo"
+          ]
+        },
+        "schedule": {
+          "status": "present",
+          "evidence": [
+            "10/12/2026",
+            "07/08/2026",
+            "14/08/2026",
+            "11/09/2026",
+            "25/08/2026",
+            "27/08/2026"
+          ]
+        },
+        "fees": {
+          "status": "present",
+          "evidence": [
+            "gratuito",
+            "taxa de inscricao"
+          ]
+        },
+        "locationOrMode": {
+          "status": "present",
+          "evidence": [
+            "presencial",
+            "campus",
+            "faculdade"
+          ]
+        },
+        "certificate": {
+          "status": "present",
+          "evidence": [
+            "certificado"
+          ]
+        },
+        "trainingTopics": {
+          "status": "not_declared",
+          "evidence": []
+        },
+        "contact": {
+          "status": "present",
+          "evidence": [
+            "selecao.ppgcc@ufg.br",
+            "selecao.ppgcc@ufg.br."
+          ]
+        }
+      },
+      "facts": {
+        "vacancyCounts": [
+          "46",
+          "24"
+        ],
+        "applicationDates": [],
+        "audienceTerms": [
+          "mestrado",
+          "doutorado",
+          "concluintes",
+          "estudantes",
+          "docentes"
+        ],
+        "applicationMethodTerms": [
+          "formulario",
+          "enviar",
+          "plataforma"
+        ],
+        "requirementTerms": [
+          "diploma",
+          "historico escolar",
+          "curriculo lattes",
+          "identidade",
+          "documentos"
+        ],
+        "stageTerms": [
+          "analise do curriculo"
+        ],
+        "scheduleDates": [
+          "10/12/2026",
+          "07/08/2026",
+          "14/08/2026",
+          "11/09/2026",
+          "25/08/2026",
+          "27/08/2026",
+          "28/08/2026",
+          "29/09/2026"
+        ],
+        "feeTerms": [
+          "gratuito",
+          "taxa de inscricao"
+        ],
+        "modeTerms": [
+          "presencial",
+          "campus",
+          "faculdade"
+        ],
+        "certificateTerms": [
+          "certificado"
+        ],
+        "trainingTopics": [],
+        "trainingSessions": [],
+        "emails": [
+          "selecao.ppgcc@ufg.br",
+          "selecao.ppgcc@ufg.br."
+        ],
+        "phones": [],
+        "vacancyRoles": {
+          "mestrado": 46,
+          "doutorado": 24
+        }
+      },
+      "digest": "PÁGINA OFICIAL RELACIONADA:\nAtualizada em 24/08/26 11:29 \n O Programa de Pós-Graduação em Ciência da Computação (PPGCC/UFG) torna público o Edital nº 008/2026 , que estabelece as normas para o processo seletivo de ingresso de alunos regulares nos cursos de Mestrado e Doutorado , com ingresso no primeiro e segundo semestres letivos de 2027 . \r\n As inscrições serão realizadas exclusivamente por meio da plataforma EaDmin , conforme cronograma e orientações constantes no edital. \r\n A plataforma EaDmin será o canal oficial para a realização das inscrições, interposição de recursos e divulgação das publicações referentes ao processo seletivo, conforme previsto no Edital. \r\n Documentos \r\n Edital nº 008/2026 – Processo Seletivo para Alunos Regulares 2027 \r\n Anexo I – Termo de Autodeclaração de Pertencimento (doc) \r\n Anexo II – Critérios de Pontuação do Currículo Lattes \r\n Anexo III – Declaração de (In)existência de Vínculo (doc) \r\n Anexo IV – Temas/Áreas de Interesse por Linha de Pesquisa e Docentes \r\n Instructions for International Applicants \r\n ➡ Acessar o Sistema de Inscrições (EaDmin) \r\n Principais datas \r\n Publicação do edital: 04/08/2026 \r\n Período de geração da GRU: de 14/08/2026 (8h) a 11/09/2026 (16h) \r\n Período de inscrições: de 14/08/2026 (8h) a 16/09/2026 (16h) \r\n Resultado final do processo seletivo: 10/12/2026 \r\n Em caso de dúvidas, entre em contato pelo e-mail selecao.ppgcc@ufg.br . \r\n Tweet WhatsApp \n Listar Todas \n Voltar\n\nEDITAL OFICIAL — TRECHOS RELEVANTES:\n[Página 2]\n2. CRONOGRAMA\n1\nData Descrição\n04/08/2026 Publicação do Edital 08/2026.\n05/08 e 06/08/2026 Período para impugnação do edital.\n07/08/2026 Resultado das solicitações de impugnação do edital, se houver.\n14/08/2026 (às 8h) até\n11/09/2026 (às 16h)\nPeríodo em que o(a) candidato(a) pode emitir a guia de pagamento da\ntaxa GRU, conforme as instruções do sistema de inscrições.\n14/08/2026 (às 8h) até\n16/09/2026 (às 16h) Período de inscrições para o processo seletivo.\n14/08 a 24/08/2026 Período para o pedido de isenção da taxa de inscrição.\n25/08/2026 Divulgação do Resultado Preliminar dos pedidos de isenção.\n26 e 27/08/2026 Prazo para interposição de recurso contra o Resultado Preliminar dos\npedidos de isenção.\n28/08/2026 Divulgação do Resultado Final dos pedidos de isenção.\n29/09/2026 Divulgação do resultado preliminar das inscrições homologadas.\n30/09 a 01/10/2026 Prazo para interposição de recurso contra o resultado preliminar das\ninscrições homologadas.\n06/10/2026 Divulgação do resultado final das inscrições homologadas.\n06/10/2026 Divulgação da composição da Comissão de Seleção.\n07 a 08/10/2026 Prazo para interposição de recurso contra a composição da Comissão de\nSeleção.\n09/10/2026 Publicação da composição final da Comissão de Seleção.\n19/10/2026 Divulgação da data e da hora do Exame Oral do Projeto de Pesquisa e da\ncomposição das Bancas Examinadoras dos projetos de pesquisa.\n20 e 21/10/2026 Prazo para interposição de recurso contra a composição das Bancas\nExaminadoras dos Projetos de Pesquisa.\n22/10/2026 Divulgação, após o período de recurso, da composição das Bancas\nExaminadoras dos projetos de pesquisa.\n26/10 a 13/11/2026\nRealização da etapa de avaliação dos projetos de pesquisa e do Exame\nOral dos Projetos pelas Bancas Examinadoras.\n17/11/2026\nDivulgação do resultado preliminar da Avaliação do Projeto de Pesquisa.\n18 e 19/11/2026 Prazo para recurso contra o resultado preliminar da Avaliação do Projeto\nde Pesquisa.\n24/11/2026\nDivulgação do resultado final da Avaliação do Projeto de Pesquisa.\n30/11/2026 Divulgação do resultado preliminar da pontua\n\n[Página 3]\n3. DO PÚBLICO\n3.1. Poderão participar do Processo Seletivo ao Mestrado do PPGCC/UFG todos(as) os(as)\nportadores(as) de diplomas de cursos de graduação, devidamente reconhecidos pelo MEC, em\nCiência da Computação ou em áreas afins; bem como concluintes de graduação, desde que\ncomprovem a conclusão do referido curso, em data anterior à matrícula no Programa de\nPós-Graduação.\n3.2. Poderão se inscrever no Processo Seletivo ao Doutorado do PPGCC/UFG candidatos(as) que\natendam aos seguintes critérios:\na) Possuir diploma de curso de graduação reconhecido pelo MEC, em Ciência da Computação ou\nem áreas afins; e\nb) Ser portador(a) de diploma de Mestrado reconhecido e/ou recomendado pela CAPES, em\nqualquer área do conhecimento; alternativamente, serão aceitos(as) candidatos(as) que ainda\nnão tenham concluído o curso de Mestrado, desde que comprovem a conclusão do referido curso\nem data anterior à matrícula no Doutorado.\n3.3. A caracterização de área afim será realizada pela Comissão de Seleção com base na análise da\nformação acadêmica e do histórico escolar do(a) candidato(a), quando necessário.\n4. DAS VAGAS\n4.1.\n[…]\nníveis (mestrado e doutorado), podem ser vistas no\nquadro a seguir:\nLinha de pesquisa Total de Vagas\nMESTRADO\nTotal de Vagas\nDOUTORADO\nFundamentos de Computação (FC) 5 3\nMetodologias e Técnicas de Computação (MTC) 5 4\nSistemas de Computação (SC) 8 7\nSistemas Inteligentes e Aplicações (SIA) 10 5\nInteligência Artificial e Interação Humana (IAIH) 18 5\nTotal 46 24\n2\n07/12/2026 Divulgação do resultado final da verificação da condição de deficiência.\n30/11 a 04/12/2026\nPeríodo para candidatos(as) negros(as) e trans passarem pela comissão de\nheteroidentificação (resultado e período de recursos conforme\natendimento e divulgação da comissão).\n04/12/2026 Divulgação do resultado final da Avaliação do Currículo Lattes.\n04/12/2026 Divulgação do resultado preliminar do processo seletivo (com possível\nremanejamento de vagas).\n07 e 08/12/2026 Prazo para interposição de recurso contra o resultado preliminar do\nprocesso seletivo.\n10/12/2026 Divulgação do resultado final do processo seletivo.\n\n[Página 5]\n5. DA INSCRIÇÃO\n5.1. As inscrições serão realizadas exclusivamente por meio eletrônico e em conformidade com o\ncronograma estabelecido no item 2 deste edital, pelo sistema de inscrição da plataforma EaDmin\ndisponível no endereço eletrônico: https://eadmin.ciar.ufg.br/selecao/111. Deve ser anexada,\nobrigatoriamente, toda a documentação exigida no item 5.5 deste edital.\n5.2. Será cobrada uma taxa de inscrição no valor de R$ 200,00 (duzentos reais).\n5.3. Na realização da inscrição, o(a) candidato(a) assume, sob as penas da lei, conhecer as instruções\nespecíficas do Processo Seletivo e possuir os documentos comprobatórios das condições exigidas\npor este edital.\n5.4. Para realizar a inscrição, o(a) candidato(a) deverá proceder da seguinte forma:\na. Acessar o processo seletivo na plataforma de seleção EaDmin, disponível no endereço\nhttps://eadmin.ciar.ufg.br/selecao/111.\nb. Caso ainda não possua conta na plataforma, realizar o respectivo cadastro.\nc. Preencher o Formulário de Inscrição com os dados solicitados, indicando a Linha de Pesquisa à\nqual pretende se inscrever e o semestre letivo de preferência para realização da matrícula no\nPPGCC/UFG, caso seja classificado(a) no processo seletivo.\nd. Anexar a documentação exigida para a inscrição (conforme item 5.5) em formato PDF, legível,\nobservando a forma de agrupamento e as restrições de tamanho dos arquivos indicadas pelo\nsistema.\ne. Gerar, conforme as instruções do sistema, a Guia de Recolhimento da União (GRU) para\npagamento da taxa de inscrição no período estabelecido no cronograma, observando que o\nprazo para geração da GRU encerra-se antes do término do período de inscrições, uma vez\nque a guia poderá levar até dois dias úteis para ser registrada no sistema bancário.\nf. Anexar, durante o período de inscrições, o comprovante de pagamento da GRU no sistema.\nNão serão aceitos comprovantes de agendamento de pagamento, de emissão da GRU ou\ndocumentos que não demonstrem a efetiva quitação da taxa de inscrição.\ng. A taxa de inscrição, em hipótese alguma, poderá ser transferida para outro(a) candidato\n\n[Página 6]\ng. Projeto de pesquisa conforme formato definido no item 6.5.8, deste Edital;\nh. Cópia do documento comprobatório de suficiência em língua estrangeira, conforme itens 5.18\na 5.22, deste Edital;\ni. Termo de autodeclaração de pertencimento. Documento a ser entregue apenas pelos(as)\ncandidatos(as) que optarem por concorrer às vagas destinadas a pessoas pertencentes aos\ngrupos minorizados, os quais deverão preencher e assinar o termo de autodeclaração de\npertencimento, disponível no Anexo I deste edital.\nj. Documento que comprove a condição de pertencimento a grupo minorizado, se for o caso,\nconforme definido no Termo de autodeclaração de pertencimento, item 5.5, alínea i. Os\ndocumentos e/ou procedimentos necessários à comprovação da autodeclaração do(a)\ncandidato(a) de pertencimento a determinado grupo minorizado estão definidos nos Art. 2º,\n2º-A; 2º-B, 2º-C; 2º-D e 2º-E da Resolução CONSUNI 07R/2015, conforme o caso (vide Anexo I\ndeste edital).\nk. Para os(as) candidatos(as) que se autodeclararem pessoas com deficiência para fins de\nconcorrência às vagas destinadas aos grupos minorizados, documento comprob\n[…]\nlizar o carregamento dos arquivos da documentação,\nconferir se os arquivos foram devidamente gravados e se a inscrição foi concluída.\n5.11. A Secretaria do PPGCC não realizará análise prévia, conferência ou validação da documentação\nsubmetida pelo(a) candidato(a) antes da etapa de homologação das inscrições.\n5.12. É de inteira responsabilidade do(a) candidato(a) verificar a legibilidade, integridade,\ncompletude e correção dos documentos submetidos no sistema de inscrição.\n5.13. O PPGCC/UFG não mantém qualquer registro e/ou histórico dos arquivos enviados pelo(a)\ncandidato(a) em processos seletivos anteriores.\n5.14. Recomenda-se que o(a) candidato(a) acesse o Sistema de Inscrição com antecedência em relação\nà data de encerramento das inscrições, para organizar os documentos a serem enviados. O\nPPGCC/UFG não se responsabiliza por qualquer problema técnico que impeça o envio do\nFormulário de Inscrição e dos documentos exigidos para efetivar a solicitação de inscrição no\nprazo determinado.\n5\n\n[Página 8]\nl. TEAP (Test of English for Academic and Professional Purposes - área: -\nExatas/Tecnológicas ) - pontuação mínima: 60;\nm. DET (Duolingo English Test): pontuação mínima de 90.\nn. Teste on-line gratuito EF SET 50 (https://www.efset.org/ef-se\n[…]\no direito de requerer condições especiais para a realização das avaliações. Tais\ncondições não incluem atendimento domiciliar.\n5.25. Candidatos(as) com deficiência deverão informar, no ato da inscrição, as condições especiais\nnecessárias à realização das avaliações, devendo anexar declaração ou atestado médico que\nespecifique o grau ou o tipo de necessidade especial.\n5.26. Não serão homologadas as inscrições com documentação incompleta ou que não atendam às\ncondições exigidas neste Edital, sendo que, a critério da Comissão de Seleção, outros\ndocumentos poderão ainda ser solicitados.\n5.27. As informações prestadas são de inteira responsabilidade do(a) candidato(a), dispondo a\nCoordenadoria do PPGCC/UFG do direito de excluir do processo seletivo o(a) candidato(a) que\nnão preencher o formulário de forma completa e/ou que fornecer dados comprovadamente\ninverídicos.\n5.28. Verificação da Condição de Deficiência. Os(As) candidatos(as) que se autodeclararem pessoas\ncom deficiência para fins de concorrência às vagas destinadas aos grupos minorizados serão\nsubmetidos(as) à verificação da condição de deficiência pela Comissão de Verificação da\nCondição de Deficiência da Universidade Federal de Goiás, conforme os procedimentos\nestabelecidos nos itens seguintes.\n5.28.1. A Comissão de Verificação da Condição de Deficiência fará uma análise documental dos\ncandidatos aprovados nas etapas preliminares do processo seletivo e poderá convocar\ncandidata(o) para entrevista presencial ou on-line ou solicitar documentos\ncomplementares caso julgue necessário.\n5.28.2. Será considerada pessoa com deficiência, para fins de ingresso no curso de\npós-graduação da Universidade Federal de Goiás, na condição de pessoa com deficiência\npara fins de concorrência às vagas destinadas aos grupos minorizados, o(a) candidato(a)\n7\n\n[Página 11]\nVIII. no caso de pessoa com deficiência física, o Laudo Médico original, assinado por\nortopedista, deverá ser acompanhado por exames comprobatórios da deficiência;\nIX. no caso de pessoa com transtorno do espectro autista, o Laudo Médico, as\n[…]\nédico deverá ser\nacompanhado dos documentos comprobatórios de uma das deficiências, conforme\nprevistos no Edital.\n5.28.5. O laudo médico original e os exames serão analisados por uma comissão interdisciplinar\nque irá verificar se os documentos são coerentes com as características da deficiência,\natendendo a legislação vigente.\n5.28.6. Os documentos apresentados serão analisados pela Comissão de Verificação da Condição\nde Deficiência da UFG, que emitirá parecer quanto ao atendimento dos requisitos legais\npara concorrência às vagas reservadas.\n5.28.7. O resultado preliminar da verificação da condição de deficiência será divulgado\nconforme o cronograma deste edital, sendo assegurado o prazo para interposição de\nrecurso.\n5.28.8. O(A) candidato(a) que não apresentar a documentação exigida, que deixar de atender à\neventual convocação da Comissão ou que não tiver sua condição de deficiência\nhomologada concorrerá às vagas de ampla concorrência, observadas as disposições da\nResolução CONSUNI nº 07R/2015.\n5.29. Havendo candidatos(as) com inscrições homologadas autodeclarados(as) como preto(a),\npardo(a), pessoa tr\n[…]\nesso\nseletivo e divulgação do resultado final do processo seletivo, será classificado(a) como\ncandidato(a) de ampla concorrência.\n5.32. Nos resultados preliminar e final do Processo Seletivo serão indicados os(as) candidatos(as)\nautodeclarados(as) pertencentes aos grupos minorizados e aqueles(as) selecionados(as) para\nocupação das vagas destinadas aos grupos minorizados.\n5.33. Não será admitida a inclusão, substituição ou complementação de documentos após o\nencerramento do prazo de inscrições, inclusive em fase recursal, exceto quando expressamente\nsolicitada pela Comissão de Seleção para esclarecimento de documento tempestivamente\n[…]\nso seletivo, a Comissão de Seleção poderá se organizar em Bancas\nExaminadoras.\n10\n\n[Página 12]\n6.2. A Comissão de Seleção e as Bancas Examinadoras serão divulgadas previamente na página do\nprocesso seletivo na plataforma EaDmin, disponível em https://eadmin.ciar.ufg.br/selecao/111,\ncom prazo suficiente para a solicitação e o julgamento de afastamento de um(a) ou mais\nmembros, em casos de impedimento ou suspeição.\n6.3. O(A) candidato(a) com inscrição homologada poderá alegar suspeição contra qualquer membro\nou suplente da Comissão de Seleção ou das Bancas Examinadoras, no prazo de dois dias úteis, a\ncontar da divulgação, em aviso público no site do Programa, dos componentes da banca,\nformalizada em petição devidamente fundamentada e instruída com provas pertinentes,\ndestinada à Coordenadoria de Pós-Graduação (CPG) do PPGCC/UFG, apontando uma ou mais\nrestrições estabelecidas nos Artigos 18 e 20 da Lei Nº. 9.784, de 29 de janeiro de 1999.\n6.4. A seleção se constituirá de duas etapas, descritas a seguir: 1) Avaliação do Projeto de Pesquisa; e\n2) Análise do Currículo Lattes.\n6.5. Etapa 1: Avaliação do Projeto de Pesquisa (Eliminatória e classificatória), com nota de projeto\n(NP) de 0 a 10.\n6.5.1. A Avaliação do Projeto de Pesquisa é composta pela avaliação do projeto escrito e pela\napresentação oral do projeto.\n6.5.2. A nota (NP) desta avaliação será composta pela nota do projeto de pesquisa escrito (PE) e\npela nota de apresentação do projeto (AP), que serão atribuídas por uma Banca\nExaminadora, cuja composição, bem como a data e a hora de realização da avaliação,\nserão definidas pela Comissão de Seleção do PPGCC/UFG e previamente divulgadas\nconforme o Cronograma (item 2 deste edital).\n6.5.3. A nota NP será calculada da seguinte forma: .𝑁𝑃 = 𝑃𝐸 × 0, 5 + 𝐴𝑃 × 0, 5\n6.5.4. Serão considerados(as) aprovados(as) na avaliação do projeto de pesquisa os(as)\ncandidatos(as) cuja nota NP seja igual ou superior a 7,0 (sete).\n6.5.5. Caso seja constatado plágio total ou parcial, ou utilização de ferramentas de Inteligência\nArtificial em desacordo com os princípios de autoria acadêmica, o projeto receberá nota\nzero e o(a) candidato(a) que o apresentou",
+      "evidenceDigest": "4c47a39ede4e856b6fa27ad8310bf0a66863ca2849bbff98301aeb5b170b1f2a",
+      "sources": [
+        {
+          "url": "https://ppgcc.inf.ufg.br/n/203275",
+          "type": "official_root",
+          "label": "Notícia oficial",
+          "sha256": "823107da63eb284fd610867781dc128926504b3382cd7cc0c2918b16d4552225"
+        },
+        {
+          "url": "https://ppgcc.inf.ufg.br/p/61333-processo-seletivo-de-alunos-regulares-2027",
+          "type": "official_related_page",
+          "label": "https://ppgcc.inf.ufg.br/p/61333-processo-seletivo-de-alunos-regulares-2027",
+          "sha256": "fa9fde875aa1a6493e594f2989623bd2e2bf0be74da2d5a8ad167bd6ba4a8da1"
+        },
+        {
+          "url": "https://files.cercomp.ufg.br/weby/up/1289/o/Edital_PPGCC-regulares-2027_assinado_assinado.pdf",
+          "type": "official_document",
+          "label": "Edital nº 008/2026 – Processo Seletivo para Alunos Regulares 2027",
+          "sha256": "43f360e53c4242d7a9c80765dacb0dd3f08d03aa698f0c90fb2449ff066fbe14"
+        }
+      ]
+    }
+  },
+  "carmo": {
+    "module": "oportunidades",
+    "sourceRegistryId": "web.legacy.verbena",
+    "sourceId": "web.legacy.verbena:https://institutoverbena.ufg.br/n/203719",
+    "sourceUrl": "https://institutoverbena.ufg.br/n/203719",
+    "url": "https://institutoverbena.ufg.br/n/203719",
+    "sourceRevision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "dates": {
+      "applicationDeadline": "2026-10-26",
+      "applicationOpensAt": "2026-09-25"
+    },
+    "editorialResearch": {
+      "contract": "cadu-official-source-research-v1",
+      "status": "complete",
+      "complete": true,
+      "sources": [
+        {
+          "type": "official_document",
+          "url": "https://sistemas.institutoverbena.ufg.br/2026/concurso-prefeitura-carmo-do-rio-verde/sistema/arquivos/editais/Edital_Concurso_P%C3%BAblico_da_Prefeitura_Municipal_de_Carmo_do_Rio_Verde-GO.pdf",
+          "sha256": "bc3dd2e57704ea8af955d6632d7a5027937ed843f741c367b1d7e560839c19d8"
+        }
+      ],
+      "digest": "2.1.3.1. A inscrição para o concurso, bem como a emissão do boleto serão encerradas às 17h00 (horário oficial de Brasília/DF) do último dia de inscrição, conforme cronograma (Anexo I).\n25/09/2026 a 26/10/2026 • Prazo para realizar upload dos documentos comprobatórios de ter exercido a função de jurado(a) no período entre a data de publicação da Lei nº 11.689, de 9 de junho de 2008 e a data de término das inscrições. • Prazo para o(a) candidato(a) realizar upload da documentação caracterizadora da deficiência (preferencialmente no modelo Anexo III) para concorrer à reserva de vagas - pessoa com deficiência. • Prazo para solicitação de condições especiais para realização de prova. • Prazo para o(a) candidato(a) realizar upload da documentação caracterizadora da deficiência ou atestado médico (preferencialmente no modelo Anexo III) para solicitar tempo adicional para realização de prova - pessoa com deficiência e/ou TDAH e/ou dislexia. • Prazo para realizar inscrição e emitir o boleto bancário da taxa de inscrição, no endereço eletrônico www.institutoverbena.ufg.br, no Portal do(a) candidato(a). No último dia, as inscrições e a emissão do boleto bancário serão até às 17h00."
+    }
+  }
+}

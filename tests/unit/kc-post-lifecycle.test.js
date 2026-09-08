@@ -5,6 +5,57 @@ const lifecycle = require('../../assets/js/shared/kc-post-lifecycle.shared.js');
 const NOW = '2026-08-10T12:00:00-03:00';
 
 describe('KCPostLifecycle', () => {
+  function preciseOpportunity() {
+    const instant = '2026-09-16T19:00:00.000Z';
+    const proof = { contract: 'cadu-application-deadline-evidence-v1', role: 'applicationDeadline',
+      timeZone: 'America/Sao_Paulo', calendarDate: '2026-09-16', localTime: '16:00', instant,
+      sourceId: 'web.ufg.ppg.ppgcc:https://ppgcc.inf.ufg.br/n/203275',
+      sourceRegistryId: 'web.ufg.ppg.ppgcc', sourceUrl: 'https://ppgcc.inf.ufg.br/n/203275', sourceRevision: null };
+    return { module: 'oportunidades', status: 'published', expires_at: instant, metadata: {
+      applicationDeadline: '2026-09-16', application_deadline: '2026-09-16', deadline_date: '2026-09-16',
+      dates: { applicationDeadline: '2026-09-16' }, application_deadline_at: instant,
+      application_deadline_evidence: proof, source_id: proof.sourceId, source_url: proof.sourceUrl,
+      source_registry_id: proof.sourceRegistryId } };
+  }
+
+  test('limite confirmado prevalece sobre dia legado e encerra no instante exato', () => {
+    const post = preciseOpportunity();
+    expect(lifecycle.resolve(post, { now: '2026-09-16T18:59:59.999Z' }).closed).toBe(false);
+    for (const now of ['2026-09-16T19:00:00.000Z', '2026-09-16T19:00:00.001Z', '2026-09-16T22:00:00.000Z']) {
+      expect(lifecycle.resolve(post, { now })).toMatchObject({ closed: true,
+        endSource: 'confirmed-application-deadline', endAt: post.expires_at });
+    }
+  });
+
+  test('prova ausente, contraditória ou de outra fonte preserva leitura legada', () => {
+    for (const change of [
+      post => delete post.metadata.application_deadline_evidence,
+      post => { post.metadata.application_deadline_evidence.contract = 'unknown'; },
+      post => { post.metadata.application_deadline_evidence.role = 'eventEndsAt'; },
+      post => { post.metadata.application_deadline_evidence.localTime = '17:00'; },
+      post => { post.metadata.source_id += '-other'; },
+      post => { post.metadata.source_revision = 'f'.repeat(64); },
+      post => { post.expires_at = '2026-09-17T02:59:59.999Z'; },
+      post => { post.metadata.application_deadline_at = '2026-09-16T20:00:00.000Z'; },
+    ]) {
+      const post = preciseOpportunity(); change(post);
+      expect(lifecycle.resolve(post, { now: '2026-09-16T19:00:01.000Z' })).toMatchObject({
+        closed: false, endSource: 'deadline', endAt: '2026-09-17T02:59:59.999Z' });
+    }
+  });
+
+  test('ausência simultânea da identidade na prova e no post não estabelece vínculo', () => {
+    for (const [proofKey, metadataKey] of [
+      ['sourceId', 'source_id'], ['sourceUrl', 'source_url'], ['sourceRegistryId', 'source_registry_id'],
+    ]) {
+      const post = preciseOpportunity();
+      delete post.metadata.application_deadline_evidence[proofKey]; delete post.metadata[metadataKey];
+      post.metadata.applicationDeadline = '2026-09-01';
+      expect(lifecycle.resolve(post, { now: '2026-09-08T12:00:00Z' })).toMatchObject({
+        closed: true, endSource: 'deadline', endAt: '2026-09-02T02:59:59.999Z' });
+    }
+  });
+
   test('fecha status explícitos e preserva publicação ativa', () => {
     expect(lifecycle.isClosedOrEnded({ module: 'eventos', status: 'closed' }, { now: NOW })).toBe(true);
     expect(lifecycle.isClosedOrEnded({ module: 'eventos', status: 'encerrado' }, { now: NOW })).toBe(true);
