@@ -3,7 +3,8 @@ import { applicationDeadlineEvidence, applicationDeadlineIssues, applicationDead
 import { mapItemToPost } from './mapper.ts';
 import { handleEdit, handlePublish } from './index.ts';
 import { integritySnapshot, prepareIntegrityUpdate, validateIntegrityRequest } from './integrity.ts';
-const fixture=JSON.parse(Deno.readTextFileSync(new URL('./fixtures/application-deadline-evidence.json',import.meta.url)));
+import fixtureData from './fixtures/application-deadline-evidence.json' with { type: 'json' };
+const fixture:Record<string,any>=fixtureData;
 const OWNER='cadu-test-owner';const ID='11111111-1111-4111-8111-111111111111';
 function item(kind='ppgcc'):Record<string,any>{const f=structuredClone(fixture[kind]); const base={...f,title:'Seleção oficial da UFG para alunos e comunidade',category:'concursos',score:0.72,sourceTitle:'Seleção oficial da UFG para alunos e comunidade',
  description:'Consulte os requisitos e documentos da seleção na fonte oficial. As candidaturas obedecem ao prazo estabelecido no edital, com informações completas disponíveis no endereço oficial da instituição.',link:f.url,linkAsCta:true,
