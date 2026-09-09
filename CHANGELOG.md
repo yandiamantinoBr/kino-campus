@@ -8,6 +8,7 @@
 - Service Worker habilitado em produção: sw.enabled true (era false — kill-switch mantido). Sem SW o Chrome não oferece instalação; o sw.js já era production-grade (SWR versionado, HTML network-first, passthrough de Supabase/CDN/fonts).
 - /configuracoes ganhou a seção “Aplicativo” (sempre visível, inclusive para visitantes), orientada a data-attributes — hidratada pelo mesmo módulo, sem acoplamento ao controller.
 - Cobertura nova: tests/unit/kc-pwa-install.test.js (20 testes — detecção de plataforma, instruções, captura de beforeinstallprompt com preventDefault, prompt aceito/cancelado, appinstalled, dismiss persistente, standalone, fallback manual e bloco declarativo).
+- Segurança de dependências (npm audit, gate high do CI): js-yaml 3.15.1 → 3.15.2 (GHSA-2883-xcg3-v3hh), sharp 0.35.3 → 0.35.4 na raiz e no override do @vercel/og com dedupe (GHSA-g89c-p67h-r497 / GHSA-2jg2-4ch7-h545). @vercel/og pinado em 1.0.1 exato: 1.0.2 quebra o render ESM via data-URL (dynamic require de fs no dist empacotado). Pin do teste og-image-runtime atualizado para 0.35.4. Restam apenas moderados (fflate/qs), abaixo do gate.
 
 ## [2026-09-08] - início e término da oportunidade no kc-create-modal
 
