@@ -1,5 +1,14 @@
 # Changelog
 
+## [2026-09-08] - instalar o KinoCampus como app (PWA) no menu lateral e em /configuracoes
+
+- Novo card “Instalar o KinoCampus” no drawer mobile (kc-mobile-menu-drawer), com o visual do kc-context-pitch-card (marca 36px, borda com tinta da marca) e botão de fechar persistente (localStorage, chave versionada). Injeção em runtime pelo novo assets/js/shared/kc-pwa-install.js — funciona nos 12 HTMLs com drawer estático e nos 14 que constroem o drawer via shell, sem duplicar markup.
+- Compatibilidade real entre navegadores: Chromium (Chrome/Edge) usa beforeinstallprompt + prompt() com supressão do infobar nativo; Safari iOS/iPadOS, Firefox Android e desktop recebem passos guiados do fluxo manual (Compartilhar > Adicionar à Tela de Início / menu > Instalar), detectados por UA/touch. Quando o app já roda standalone (display-mode standalone ou navigator.standalone), a UI entra em estado “App instalado”.
+- Base PWA efetiva: manifest.webmanifest na raiz (id, start_url /?source=pwa, scope /, display standalone + display_override, ícones 192/512 + maskable) e ícones PNG gerados da marca (assets/icons: 192, 512, maskable 512, apple-touch-icon 180). Tags de head (manifest, theme-color, apple-*) e include do módulo aplicados nos 26 HTMLs raiz com preservação de CRLF.
+- Service Worker habilitado em produção: sw.enabled true (era false — kill-switch mantido). Sem SW o Chrome não oferece instalação; o sw.js já era production-grade (SWR versionado, HTML network-first, passthrough de Supabase/CDN/fonts).
+- /configuracoes ganhou a seção “Aplicativo” (sempre visível, inclusive para visitantes), orientada a data-attributes — hidratada pelo mesmo módulo, sem acoplamento ao controller.
+- Cobertura nova: tests/unit/kc-pwa-install.test.js (20 testes — detecção de plataforma, instruções, captura de beforeinstallprompt com preventDefault, prompt aceito/cancelado, appinstalled, dismiss persistente, standalone, fallback manual e bloco declarativo).
+
 ## [2026-09-08] - início e término da oportunidade no kc-create-modal
 
 - Adicionados os campos de data **Início da oportunidade** (`kcField_data`) e
