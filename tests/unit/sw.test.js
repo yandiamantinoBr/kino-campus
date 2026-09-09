@@ -130,8 +130,11 @@ describe('kc-sw-register.js — contrato', function () {
     expect(REG).toContain("scope: '/'");
   });
 
-  test('registra no evento load (não bloqueia parse)', function () {
-    expect(REG).toContain("addEventListener('load'");
+  test('registra imediatamente (script defer não bloqueia parse; controla a página antes p/ critério de instalação)', function () {
+    // v12.22.0: registro imediato — quanto antes a página for controlada pelo
+    // SW, mais cedo o Chromium dispara beforeinstallprompt (instalação PWA).
+    expect(REG).toContain('register();');
+    expect(REG).not.toContain("addEventListener('load'");
   });
 
 });
