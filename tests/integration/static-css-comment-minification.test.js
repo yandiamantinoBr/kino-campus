@@ -19,7 +19,7 @@ describe('CSS comment compaction artifact boundary', () => {
     fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-css-comments-'));
     outputRoot = path.join(fixtureRoot, 'dist');
     ['index.html', '_product.html', 'admin/index.html'].forEach((file) => write(file, '<link rel="stylesheet" href="assets/css/styles.css?v=1">'));
-    ['ads.txt', 'llms.txt', 'robots.txt', 'data/database.json'].forEach((file) => write(file, '{}'));
+    ['ads.txt', 'llms.txt', 'robots.txt', 'data/database.json', 'manifest.webmanifest'].forEach((file) => write(file, '{}'));
     write('sw.js', '/* service worker stays unchanged */ var CACHE_VERSION = "fixed";');
     write('assets/js/boot/kc-env.js', 'var KC_ENV={driver:"local"};');
     write('assets/css/styles.css', '/* Explanatory stylesheet section */\r\n:root { --value: foo/* raw custom value */bar; }\r\n');

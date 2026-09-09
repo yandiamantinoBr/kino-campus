@@ -13,6 +13,7 @@ const PUBLIC_ROOT_FILES = Object.freeze([
   'llms.txt',
   'robots.txt',
   'sw.js',
+  'manifest.webmanifest',
 ]);
 // The 404 template is bundled only with api/og-product.js. Publishing it as a
 // static /404.html makes Vercel serve it with HTTP 200 before rewrites run.
@@ -25,6 +26,7 @@ const REQUIRED_OUTPUTS = Object.freeze([
   'data/database.json',
   'robots.txt',
   'sw.js',
+  'manifest.webmanifest',
 ]);
 
 function assertInsideRoot(root, target) {
