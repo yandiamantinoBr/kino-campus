@@ -113,6 +113,7 @@ describe('dist — revisão única do HTML e Service Worker', () => {
     write('llms.txt', '');
     write('robots.txt', '');
     write('sw.js', read(path.join(ROOT, 'sw.js')));
+    write('manifest.webmanifest', '{}');
     outputRoot = path.join(fixtureRoot, 'dist');
     buildStaticOutput({ sourceRoot: fixtureRoot, outputRoot });
   });

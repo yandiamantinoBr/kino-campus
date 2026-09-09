@@ -203,7 +203,7 @@ describe('static build artifact boundary', () => {
     fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kc-js-minification-'));
     outputRoot = path.join(fixtureRoot, 'dist');
     ['index.html', '_product.html', 'admin/index.html'].forEach((file) => write(file, '<script src="assets/js/app.js?v=1"></script>'));
-    ['ads.txt', 'llms.txt', 'robots.txt', 'data/database.json'].forEach((file) => write(file, '{}'));
+    ['ads.txt', 'llms.txt', 'robots.txt', 'data/database.json', 'manifest.webmanifest'].forEach((file) => write(file, '{}'));
     write('sw.js', '/* original service worker */ var CACHE_VERSION = "fixed";');
     write('assets/js/boot/kc-env.js', '/* environment explanation */ var KC_ENV = { driver: "local" };');
     write('assets/js/app.js', '/* application explanation */ function getCampus() { return "Kino Campus"; }');
