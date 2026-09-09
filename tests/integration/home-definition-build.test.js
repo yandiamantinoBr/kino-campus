@@ -42,8 +42,8 @@ afterEach(() => {
 test('production build groups exactly 38 definitions after formatting and keeps source/other pages intact', () => {
   const source = read(path.join(fixture, 'index.html'));
   const result = buildStaticOutput({ sourceRoot: fixture, outputRoot: output, definitionBundles: true });
-  expect(result.definitionBundles.scriptsBefore).toBe(99);
-  expect(result.definitionBundles.scriptsAfter).toBe(65);
+  expect(result.definitionBundles.scriptsBefore).toBe(100);
+  expect(result.definitionBundles.scriptsAfter).toBe(66);
   expect(result.definitionBundles.groups).toHaveLength(4);
   const worker = read(path.join(output, 'sw.js'));
   expect(worker).toContain('/' + result.definitionBundles.groups[0].url);

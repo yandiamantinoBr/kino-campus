@@ -4,7 +4,7 @@
  * Registra o Service Worker (/sw.js) somente quando:
  *   1. O navegador suporta Service Workers (navigator.serviceWorker).
  *   2. KCFF está disponível (window.KCFF).
- *   3. A feature flag 'sw.enabled' está ativa (padrão: false — kill-switch).
+ *   3. A feature flag 'sw.enabled' está ativa (padrão: true — base da instalação PWA; kill-switch disponível).
  *
  * Para ativar em desenvolvimento:
  *   KC_ENV.flags = KC_ENV.flags || {};

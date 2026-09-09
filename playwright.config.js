@@ -20,6 +20,11 @@ module.exports = defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never', outputFolder: 'output/playwright-report' }], ['line']],
   use: {
+    // O Service Worker (habilitado em produção para a instalação PWA) serve
+    // requests direto do cache e não é interceptável por page.route/route.fulfill,
+    // o que torna specs baseados em interceptação não determinísticos com SW ativo.
+    // O comportamento do SW é coberto em tests/unit/sw.test.js (nível unitário).
+    serviceWorkers: 'block',
     baseURL: 'http://localhost:4000',
     trace: 'on-first-retry',
   },

@@ -6,6 +6,14 @@
   <link rel="canonical" href="https://www.kinocampus.com.br/settings.html" />
   <meta name="robots" content="noindex,follow,noarchive" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#333333" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="KinoCampus" />
+
   <meta name="description" content="Configurações da sua conta no KinoCampus — comunidade universitária da UFG." />
   <title>KinoCampus - Configurações</title>
   <link rel="stylesheet" href="assets/css/kc-theme-boot.css?v=8.6.12" />
@@ -16,6 +24,7 @@
   <link rel="stylesheet" href="assets/css/kc-chat-shortcut.css?v=8.6.1" />
   <link rel="stylesheet" href="assets/css/kc-public-shell.css?v=8.6.16" />
   <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css?v=6.4.0" />
+  <script defer src="assets/js/shared/kc-pwa-install.js?v=1.0.0"></script>
 </head>
 <body class="kc-shell-page kc-settings-page">
   <a href="#kc-main" class="kc-skip-link">Pular para o conteúdo principal</a>
@@ -117,6 +126,17 @@
           <button id="settingsExportSearchPreferences" type="button" class="kc-settings-btn"><i class="fas fa-download"></i><span>Baixar preferências (JSON)</span></button>
           <button id="settingsClearSearchPreferences" type="button" class="kc-settings-btn is-danger"><i class="fas fa-trash-can"></i><span>Remover preferências</span></button>
         </div>
+      </section>
+
+      <section id="settingsInstallApp" class="kc-settings-card" aria-labelledby="settingsInstallAppTitle">
+        <span class="kc-settings-eyebrow">Aplicativo</span>
+        <h2 id="settingsInstallAppTitle">Instale o KinoCampus no seu celular</h2>
+        <p>O KinoCampus funciona como app: abre direto pela tela inicial, em tela cheia, com a sua sessão guardada e carregamento mais rápido. Sem loja de aplicativos e sem ocupar quase nada de espaço.</p>
+        <div class="kc-settings-actions-row">
+          <button id="settingsInstallAppButton" type="button" class="kc-settings-btn is-primary" data-kc-install="prompt" data-kc-install-context="settings" aria-expanded="false"><i class="fas fa-mobile-screen-button" aria-hidden="true"></i><span>Instalar aplicativo</span></button>
+        </div>
+        <div class="kc-install-instructions" data-kc-install-steps hidden></div>
+        <p class="kc-settings-help" data-kc-install-status hidden></p>
       </section>
 
       <section id="settingsGuest" class="kc-settings-card" style="display:none;">

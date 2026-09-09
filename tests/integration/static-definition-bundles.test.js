@@ -90,8 +90,8 @@ describe('opt-in static definition bundle artifacts', () => {
     write(sourceRoot, 'index.html', html);
     write(outputRoot, 'index.html', html);
     const result = run();
-    expect(result.scriptsBefore).toBe(99);
-    expect(result.scriptsAfter).toBe(65);
+    expect(result.scriptsBefore).toBe(100);
+    expect(result.scriptsAfter).toBe(66);
     expect(result.groups.every(group => group.bytes > 0)).toBe(true);
     expect(read(outputRoot, 'index.html')).toContain('assets/js/core/kc-consent.js');
     expect(read(outputRoot, 'index.html')).toContain('assets/js/api/kc-supabase.client.js');

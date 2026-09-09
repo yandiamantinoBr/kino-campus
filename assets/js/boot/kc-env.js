@@ -52,7 +52,9 @@
     // - `flags` e a fonte canonica para window.KCFF
     // - `featureFlags` e mantido como alias compat para overrides manuais
     flags: {
-      'sw.enabled': false,
+      // Service Worker: base da instalação como app (PWA) e do shell offline.
+      // Kill-switch disponível: 'sw.enabled': false desliga o registro globalmente.
+      'sw.enabled': true,
       'telemetry.enabled': false,
       'search.schemaFields': false,
       'search.structuredRuntime': false,
