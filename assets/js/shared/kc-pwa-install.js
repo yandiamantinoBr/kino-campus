@@ -1,24 +1,26 @@
 /*
-  KinoCampus - kc-pwa-install.js (v1.0.0)
+  KinoCampus - kc-pwa-install.js (v1.1.0)
 
   Instalação do KinoCampus como app (PWA) em qualquer navegador:
-    - Chrome/Edge (Chromium): captura beforeinstallprompt e chama prompt() no clique.
-    - Safari iOS/iPadOS: instruções guiadas (Compartilhar > Adicionar à Tela de Início).
-    - Firefox (Android/desktop): instruções guiadas (menu > Instalar).
-    - Demais navegadores: instruções genéricas do menu do navegador.
+    - Chrome/Edge (Chromium): captura beforeinstallprompt e chama prompt() no clique
+      — a mesma janela nativa de instalação de apps. O Chromium só dispara o
+      evento quando o site atende os critérios (manifest + service worker com
+      fetch handler ativo e controlando a página, HTTPS).
+    - Safari iOS/iPadOS e Firefox: não expõem API de prompt — o clique mostra
+      UMA linha curta com o gesto nativo do navegador (sem tutorial longo).
 
   Responsabilidades:
     1. Capturar cedo o evento beforeinstallprompt (o módulo é carregado com defer).
     2. Injetar o card "Instalar o KinoCampus" no drawer mobile (#mobileMenuDrawer),
-       com visual alinhado ao kc-context-pitch-card e botão de fechar persistente
-       (localStorage; versão incrementada volta a exibir).
+       com visual alinhado ao kc-context-pitch-card e botão de fechar em coluna
+       própria (canto superior direito), persistente via localStorage.
     3. Hidratar qualquer bloco declarativo [data-kc-install] (ex.: card da página
        /configuracoes), sem acoplamento com controllers.
 
   Contrato declarativo:
-    [data-kc-install="prompt"]   — botão que dispara a instalação (ou mostra passos).
+    [data-kc-install="prompt"]   — botão que dispara a instalação (ou gesto manual).
     [data-kc-install="dismiss"]  — fecha o card do drawer (persiste a decisão).
-    [data-kc-install-steps]      — container onde os passos manuais são renderizados.
+    [data-kc-install-steps]      — container do gesto manual (quando aplicável).
     [data-kc-install-status]     — linha de status (ex.: "App instalado").
 
   Exposição: window.KCPwaInstall
@@ -26,7 +28,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
   var DISMISS_KEY = 'kc_pwa_drawer_install_dismissed_v1';
 
   var deferredPrompt = null;
@@ -78,10 +80,10 @@
   }
 
   /*
-    Plataformas relevantes para o fluxo de instalação manual:
-      ios        — Safari/Chrome no iPhone/iPad (ambos usam o fluxo do Safari)
-      android    — Chrome, Edge, Samsung Internet, Firefox etc. no Android
-      desktop    — desktop sem beforeinstallprompt (Firefox desktop, Safari macOS)
+    Famílias de plataforma para o fluxo de instalação:
+      ios     — Safari/Chrome no iPhone/iPad (ambos usam o fluxo do Safari)
+      android — Chrome, Edge, Samsung Internet, Firefox etc. no Android
+      desktop — desktop (refinado por detectDesktopBrowser)
   */
   function detectPlatform(userAgentOverride) {
     var ua = String(userAgentOverride || (navigator && navigator.userAgent) || '');
@@ -92,39 +94,48 @@
     return 'desktop';
   }
 
-  function buildInstructions(platformOverride) {
+  function detectDesktopBrowser(userAgentOverride) {
+    var ua = String(userAgentOverride || (navigator && navigator.userAgent) || '');
+    if (/firefox|fxios/i.test(ua)) return 'firefox';
+    if (/edg\//i.test(ua)) return 'edge';
+    if (/chrome|chromium|crios/i.test(ua)) return 'chromium';
+    if (/safari/i.test(ua)) return 'safari';
+    return 'chromium';
+  }
+
+  /*
+    Guia do gesto manual, por plataforma. Curto por design: no Chromium o
+    caminho natural é a janela nativa (beforeinstallprompt); o guia só existe
+    para navegadores sem API (iOS/Firefox/Safari) ou quando o navegador ainda
+    não considera o site instalável nesta visita.
+  */
+  function buildInstructions(platformOverride, browserOverride) {
     var platform = platformOverride || detectPlatform();
     if (platform === 'ios') {
       return {
         platform: platform,
-        title: 'No iPhone/iPad (Safari):',
         steps: [
-          'Toque no botão de compartilhar (quadrado com seta para cima) na barra do Safari.',
-          'Role a lista e toque em "Adicionar à Tela de Início".',
-          'Confirme em "Adicionar" (canto superior direito).',
+          'Toque no ícone de compartilhar do Safari.',
+          'Escolha “Adicionar à Tela de Início”.',
+          'Confirme em “Adicionar”.',
         ],
       };
     }
     if (platform === 'android') {
       return {
         platform: platform,
-        title: 'No Android:',
-        steps: [
-          'Abra o menu do navegador (tres pontos, canto superior direito).',
-          'Toque em "Instalar app", "Adicionar à tela de início" ou "Adicionar à Tela de Início".',
-          'Confirme a instalação.',
-        ],
+        hint: { icon: 'fa-ellipsis-vertical', text: 'No menu ⋮ do navegador, toque em “Instalar app”.' },
       };
     }
-    return {
-      platform: platform,
-      title: 'No computador:',
-      steps: [
-        'Procure o ícone de instalação na barra de endereço do navegador.',
-        'Clique nele e confirme em "Instalar".',
-        'No Firefox/Safari, use o menu do navegador > "Instalar" ou "Adicionar ao Dock".',
-      ],
-    };
+    // desktop
+    var browser = browserOverride || detectDesktopBrowser();
+    if (browser === 'firefox') {
+      return { platform: platform, hint: { icon: 'fa-bars', text: 'No menu do Firefox, escolha “Instalar”.' } };
+    }
+    if (browser === 'safari') {
+      return { platform: platform, hint: { icon: 'fa-square-plus', text: 'No Safari, use “Adicionar ao Dock”.' } };
+    }
+    return { platform: platform, hint: { icon: 'fa-arrow-down', text: 'Toque no ícone de instalar na barra de endereço.' } };
   }
 
   // ── Ciclo de vida da instalação ────────────────────────────────────────────
@@ -182,7 +193,8 @@
       return Promise.resolve({ ok: false, reason: 'already-installed' });
     }
     if (!deferredPrompt || promptConsumed) {
-      // Sem API (iOS, Firefox, critérios não atendidos): o chamador mostra os passos.
+      // Sem API (critérios ainda não atendidos nesta visita): o chamador mostra
+      // o gesto curto do navegador.
       return Promise.resolve({ ok: false, reason: 'manual' });
     }
     var promptEvent = deferredPrompt;
@@ -225,15 +237,15 @@
   function buildCardHtml() {
     return [
       '<div class="kc-install-card" data-kc-install-card="true">',
-      '  <button class="kc-install-card__close" data-kc-install="dismiss" type="button" aria-label="N\u00e3o mostrar op\u00e7\u00e3o de instalar novamente"><i class="fas fa-xmark" aria-hidden="true"></i></button>',
       '  <button class="kc-install-card__main" data-kc-install="prompt" type="button" aria-expanded="false">',
       '    <span class="kc-install-card__mark" aria-hidden="true"><img src="assets/favicon.svg" alt="" width="36" height="36" loading="lazy" /></span>',
       '    <span class="kc-install-card__copy">',
       '      <strong>Instalar o KinoCampus</strong>',
-      '      <small>App direto na tela inicial. R\u00e1pido, gr\u00e1tis e discreto.</small>',
+      '      <small>Atalho na tela inicial, em tela cheia.</small>',
       '    </span>',
       '    <span class="kc-install-card__arrow" aria-hidden="true"><i class="fas fa-download"></i></span>',
       '  </button>',
+      '  <button class="kc-install-card__close" data-kc-install="dismiss" type="button" aria-label="N\u00e3o mostrar op\u00e7\u00e3o de instalar novamente"><i class="fas fa-xmark" aria-hidden="true"></i></button>',
       '  <div class="kc-install-card__steps" data-kc-install-steps hidden></div>',
       '</div>',
     ].join('');
@@ -294,20 +306,23 @@
     if (!cardMounted) mountDrawerCard();
   }
 
-  // ── Passos manuais (iOS/Firefox/desktop sem prompt API) ────────────────────
+  // ── Guia manual renderizado (curto, por plataforma) ───────────────────────
 
-  function renderSteps(container, platform) {
+  function renderGuide(container, guide) {
     if (!container) return;
-    var guide = buildInstructions(platform);
-    var items = guide.steps.map(function (step) {
+    if (guide.hint) {
+      container.innerHTML = '<p class="kc-install-hint"><i class="fas ' + escapeHtml(guide.hint.icon) + '" aria-hidden="true"></i>' + escapeHtml(guide.hint.text) + '</p>';
+      container.hidden = false;
+      return;
+    }
+    var items = (guide.steps || []).map(function (step) {
       return '<li>' + escapeHtml(step) + '</li>';
     }).join('');
-    container.innerHTML = '<p class="kc-install-steps__title">' + escapeHtml(guide.title) + '</p>'
-      + '<ol class="kc-install-steps__list">' + items + '</ol>';
+    container.innerHTML = '<ol class="kc-install-steps__list">' + items + '</ol>';
     container.hidden = false;
   }
 
-  function closeSteps(container) {
+  function closeGuide(container) {
     if (!container) return;
     container.hidden = true;
     container.innerHTML = '';
@@ -344,15 +359,15 @@
       return;
     }
     var steps = nearestSteps(button);
-    // Sem prompt nativo (iOS, Firefox, critérios não atendidos): passos guiados
-    // imediatos — atualização de DOM síncrona, sem esperar microtarefas.
+    // Sem prompt nativo disponível (navegador sem API ou critérios ainda não
+    // atendidos nesta visita): gesto curto imediato — DOM síncrono.
     if (!status.canPrompt) {
       if (steps && !steps.hidden) {
-        closeSteps(steps);
+        closeGuide(steps);
         button.setAttribute('aria-expanded', 'false');
         return;
       }
-      renderSteps(steps, status.platform);
+      renderGuide(steps, status.instructions);
       button.setAttribute('aria-expanded', 'true');
       return;
     }
@@ -460,13 +475,14 @@
     promptInstall: promptInstall,
     buildInstructions: buildInstructions,
     detectPlatform: detectPlatform,
+    detectDesktopBrowser: detectDesktopBrowser,
     isStandalone: isStandalone,
     isDrawerDismissed: readDismissed,
     dismissDrawer: function () { writeDismissed(); syncDrawerCard(); },
     mountDrawerCard: mountDrawerCard,
     removeDrawerCard: removeDrawerCard,
     syncDrawerCard: syncDrawerCard,
-    renderSteps: renderSteps,
+    renderGuide: renderGuide,
     buildCardHtml: buildCardHtml,
   };
 
