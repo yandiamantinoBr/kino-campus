@@ -3726,7 +3726,7 @@ main {
 .kc-install-card {
     position: relative;
     margin: 10px 10px 6px;
-    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 30%, var(--kc-border-dark));
+    border: 1px solid rgba(255,107,0,0.3);
     border-radius: 13px;
     background:
         linear-gradient(135deg, color-mix(in srgb, var(--kc-primary-brand) 10%, transparent), color-mix(in srgb, var(--kc-secondary-brand) 7%, transparent)),
@@ -3810,7 +3810,9 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(255,107,0,0.16);
     background: color-mix(in srgb, var(--kc-primary-brand) 16%, transparent);
+    border: 1px solid rgba(255,107,0,0.38);
     border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 38%, transparent);
     color: var(--kc-primary-brand);
     font-size: 0.92rem;
@@ -3830,7 +3832,7 @@ main {
     padding: 0;
     border: none;
     border-radius: 6px;
-    background: color-mix(in srgb, var(--kc-surface-dark) 55%, transparent);
+    background: none;
     color: var(--kc-text-dark-secondary);
     font-size: 0.62rem;
     cursor: pointer;
@@ -13871,3 +13873,7 @@ body.kc-admin-page .kc-consent-btn {
     flex-shrink: 0;
     align-self: center;
 }
+
+
+
+
