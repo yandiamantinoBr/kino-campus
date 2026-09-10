@@ -163,8 +163,10 @@ describe('KCPwaInstall — card do drawer', () => {
     const content = window.document.querySelector('.kc-mobile-menu-content');
     const card = content.querySelector('[data-kc-install-card]');
     expect(card).not.toBeNull();
+    const userSection = content.querySelector('#mobileMenuUserSection');
     const account = content.querySelector('#mobileMenuAccountSection');
-    expect(card.previousElementSibling).toBe(account);
+    expect(card.previousElementSibling).toBe(userSection); // abaixo da user section
+    expect(card.nextElementSibling).toBe(account);
     const main = card.querySelector('[data-kc-install="prompt"]');
     const close = card.querySelector('[data-kc-install="dismiss"]');
     expect(main).not.toBeNull();

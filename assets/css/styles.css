@@ -3725,7 +3725,7 @@ main {
    borda com tinta da marca e fechamento persistente. */
 .kc-install-card {
     position: relative;
-    margin: 10px 12px 6px;
+    margin: 10px 10px 6px;
     border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 30%, var(--kc-border-dark));
     border-radius: 13px;
     background:
@@ -3739,9 +3739,9 @@ main {
     display: grid !important;
     grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    padding: 12px 38px 12px 11px !important;
+    padding: 12px 20px 12px 10px !important;
     background: transparent;
     border: none;
     text-align: left;
@@ -3785,21 +3785,21 @@ main {
 
 .kc-install-card__copy strong {
     color: var(--kc-text-dark-primary);
-    font-size: 0.86rem;
+    font-size: 0.84rem;
     line-height: 1.25;
-    padding-right: 18px;
+    padding-right: 24px;
 }
 
 .kc-install-card__copy small {
     color: var(--kc-text-dark-secondary);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    line-height: 1.35;
+    line-height: 1.38;
 }
 
 .kc-install-card__arrow {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -3814,21 +3814,28 @@ main {
 /* Especificidade vence .kc-mobile-menu-content button (width: 100%). */
 .kc-install-card .kc-install-card__close {
     position: absolute;
-    top: 3px;
-    right: 3px;
-    width: 22px;
-    height: 22px;
+    top: 1px;
+    right: 1px;
+    width: 18px;
+    height: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     border: none;
-    border-radius: 7px;
+    border-radius: 6px;
     background: color-mix(in srgb, var(--kc-surface-dark) 55%, transparent);
     color: var(--kc-text-dark-secondary);
-    font-size: 0.72rem;
+    font-size: 0.62rem;
     cursor: pointer;
     transition: color 180ms ease, background-color 180ms ease;
+}
+
+/* Alvo de toque: o visual é 18px, mas a área tocável cobre ~34px (a11y). */
+.kc-install-card .kc-install-card__close::before {
+    content: "";
+    position: absolute;
+    inset: -9px;
 }
 
 .kc-install-card .kc-install-card__close:hover {

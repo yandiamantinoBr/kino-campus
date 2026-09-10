@@ -1,5 +1,5 @@
 /*
-  KinoCampus - kc-pwa-install.js (v1.2.0)
+  KinoCampus - kc-pwa-install.js (v1.3.0)
 
   Instalação do KinoCampus como app (PWA) em qualquer navegador:
     - Chrome/Edge (Chromium): captura beforeinstallprompt e chama prompt() no clique
@@ -28,7 +28,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var DISMISS_KEY = 'kc_pwa_drawer_install_dismissed_v1';
 
   var deferredPrompt = null;
@@ -273,8 +273,10 @@
   }
 
   function findInsertAnchor(content) {
-    return content.querySelector('#mobileMenuAccountSection')
-      || content.querySelector('#mobileMenuUserSection');
+    // Card fica logo abaixo da seção de usuário (pedido de produto) — acima
+    // dos atalhos da conta e dos links de módulos.
+    return content.querySelector('#mobileMenuUserSection')
+      || content.querySelector('#mobileMenuAccountSection');
   }
 
   function mountDrawerCard() {
