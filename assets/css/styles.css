@@ -3753,7 +3753,13 @@ main {
 }
 
 .kc-mobile-menu-content .kc-install-card__main:hover {
+    background-color: rgba(255, 107, 0, 0.08);
+}
+
+@supports (background: color-mix(in srgb, red, blue)) {
+  .kc-mobile-menu-content .kc-install-card__main:hover {
     background-color: color-mix(in srgb, var(--kc-primary-brand) 8%, transparent);
+  }
 }
 
 .kc-install-card__mark {
@@ -3852,7 +3858,7 @@ main {
 .kc-install-instructions {
     margin: 0;
     padding: 4px 12px 12px;
-    border-top: 1px dashed color-mix(in srgb, var(--kc-primary-brand) 22%, var(--kc-border-dark));
+    border-top: 1px dashed rgba(255, 107, 0, 0.22);
     color: var(--kc-text-dark-secondary);
     font-size: 0.78rem;
     line-height: 1.5;
