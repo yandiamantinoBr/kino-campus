@@ -161,7 +161,16 @@ self.addEventListener('fetch', function (event) {
   if (request.method !== 'GET') return;
   if (request.url.indexOf('chrome-extension') === 0) return;
 
-  if (isPassthrough(request.url) || !isSameOrigin(request.url)) {
+  // Cross-origin (DiceBear/pravatar/CDNs sem CORS etc.): NÃO interceptar.
+  // Responder com fetch(request) faz o SW herdar a CSP do próprio sw.js
+  // (servido com o header Content-Security-Policy do site), cujo connect-src
+  // não lista hosts de terceiros — o que bloqueava avatares DiceBear com
+  // net::ERR_FAILED. Sem respondWith, o navegador busca nativamente.
+  if (!isSameOrigin(request.url)) {
+    return;
+  }
+
+  if (isPassthrough(request.url)) {
     event.respondWith(fetch(request));
     return;
   }

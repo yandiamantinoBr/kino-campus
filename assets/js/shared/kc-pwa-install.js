@@ -1,5 +1,5 @@
 /*
-  KinoCampus - kc-pwa-install.js (v1.1.0)
+  KinoCampus - kc-pwa-install.js (v1.2.0)
 
   Instalação do KinoCampus como app (PWA) em qualquer navegador:
     - Chrome/Edge (Chromium): captura beforeinstallprompt e chama prompt() no clique
@@ -28,7 +28,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var DISMISS_KEY = 'kc_pwa_drawer_install_dismissed_v1';
 
   var deferredPrompt = null;
@@ -193,6 +193,21 @@
       return Promise.resolve({ ok: false, reason: 'already-installed' });
     }
     if (!deferredPrompt || promptConsumed) {
+      // Web Install API (navigator.install, Chromium com a API habilitada):
+      // abre a UI nativa de instalação mesmo sem beforeinstallprompt.
+      if (navigator && typeof navigator.install === 'function') {
+        try {
+          return Promise.resolve(navigator.install()).then(function (result) {
+            var activated = !!(result && result.activated);
+            if (activated) installed = true;
+            return { ok: true, outcome: activated ? 'accepted' : 'dismissed', via: 'install-api' };
+          }).catch(function () {
+            return { ok: false, reason: 'manual' };
+          });
+        } catch (_) {
+          return Promise.resolve({ ok: false, reason: 'manual' });
+        }
+      }
       // Sem API (critérios ainda não atendidos nesta visita): o chamador mostra
       // o gesto curto do navegador.
       return Promise.resolve({ ok: false, reason: 'manual' });

@@ -3724,9 +3724,7 @@ main {
    Visual derivado do kc-context-pitch-card: marca 36px, cópia em duas linhas,
    borda com tinta da marca e fechamento persistente. */
 .kc-install-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
+    position: relative;
     margin: 10px 12px 6px;
     border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 30%, var(--kc-border-dark));
     border-radius: 13px;
@@ -3743,7 +3741,7 @@ main {
     align-items: center;
     gap: 10px;
     width: 100%;
-    padding: 11px 0 11px 11px !important;
+    padding: 12px 38px 12px 11px !important;
     background: transparent;
     border: none;
     text-align: left;
@@ -3789,6 +3787,7 @@ main {
     color: var(--kc-text-dark-primary);
     font-size: 0.86rem;
     line-height: 1.25;
+    padding-right: 18px;
 }
 
 .kc-install-card__copy small {
@@ -3799,31 +3798,42 @@ main {
 }
 
 .kc-install-card__arrow {
-    color: var(--kc-primary-brand);
-    font-size: 1rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--kc-primary-brand) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--kc-primary-brand) 38%, transparent);
+    color: var(--kc-primary-brand);
+    font-size: 0.92rem;
+    flex-shrink: 0;
 }
 
-.kc-install-card__close {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
-    justify-self: end;
-    width: 28px;
-    height: 28px;
-    margin: 4px 4px 0 0;
+/* Especificidade vence .kc-mobile-menu-content button (width: 100%). */
+.kc-install-card .kc-install-card__close {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     border: none;
-    border-radius: 8px;
-    background: transparent;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--kc-surface-dark) 55%, transparent);
     color: var(--kc-text-dark-secondary);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     cursor: pointer;
     transition: color 180ms ease, background-color 180ms ease;
+}
+
+.kc-install-card .kc-install-card__close:hover {
+    color: var(--kc-text-dark-primary);
+    background-color: color-mix(in srgb, var(--kc-primary-brand) 14%, transparent);
 }
 
 .kc-install-card__close:hover {
@@ -3833,7 +3843,6 @@ main {
 
 .kc-install-card__steps,
 .kc-install-instructions {
-    grid-column: 1 / -1;
     margin: 0;
     padding: 4px 12px 12px;
     border-top: 1px dashed color-mix(in srgb, var(--kc-primary-brand) 22%, var(--kc-border-dark));
@@ -13837,12 +13846,15 @@ body.kc-admin-page .kc-consent-btn {
 /* Fallback curto (Chromium sem prompt nativo ainda): uma linha, sem tutorial. */
 .kc-install-hint {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
+    align-items: baseline;
+    gap: 7px;
+    margin: 8px 0 2px;
     color: var(--kc-text-dark-secondary);
+    font-size: 0.76rem;
+    line-height: 1.45;
 }
 .kc-install-hint i {
     color: var(--kc-primary-brand);
     flex-shrink: 0;
+    align-self: center;
 }

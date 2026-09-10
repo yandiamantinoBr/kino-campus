@@ -280,3 +280,34 @@ describe('KCPwaInstall — fallback manual', () => {
     expect(steps.textContent).toContain('Instalar app');
   });
 });
+
+describe('KCPwaInstall — Web Install API (navigator.install)', () => {
+  test('sem beforeinstallprompt, usa navigator.install quando disponível e marca instalado', async () => {
+    const { window, api } = createWindow({});
+    let installCalled = 0;
+    Object.defineProperty(window.navigator, 'install', {
+      value: function () { installCalled += 1; return Promise.resolve({ activated: true }); },
+      configurable: true,
+    });
+    const result = await api.promptInstall();
+    expect(installCalled).toBe(1);
+    expect(result).toEqual({ ok: true, outcome: 'accepted', via: 'install-api' });
+    expect(api.getStatus().installed).toBe(true);
+  });
+
+  test('recusa da Web Install API cai no gesto manual sem quebrar', async () => {
+    const { window, api } = createWindow({});
+    Object.defineProperty(window.navigator, 'install', {
+      value: function () { return Promise.reject(new Error('não suportado')); },
+      configurable: true,
+    });
+    const result = await api.promptInstall();
+    expect(result).toEqual({ ok: false, reason: 'manual' });
+  });
+
+  test('navigator.install indisponível resolve fallback manual (contrato antigo mantido)', async () => {
+    const { api } = createWindow({});
+    const result = await api.promptInstall();
+    expect(result).toEqual({ ok: false, reason: 'manual' });
+  });
+});
