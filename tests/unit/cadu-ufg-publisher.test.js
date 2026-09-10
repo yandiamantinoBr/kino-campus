@@ -1157,6 +1157,13 @@ describe('cadu-ufg-publisher', () => {
       kinoPassword: 'secret',
     });
     publisher.session = { access_token: 'token', user: { id: 'user-1' } };
+    // 2026-09-10: prepareImagesForPost baixa os bytes no chamador (dedup por
+    // conteúdo); o stub precisa devolver bytes distintos por URL.
+    publisher.downloadRemoteImage = jest.fn(async (url) => ({
+      buffer: Buffer.from(String(url)),
+      contentType: 'image/jpeg',
+      ext: 'jpg',
+    }));
     publisher.uploadImageToStorage = jest.fn(async (_postId, sourceUrl) => `https://storage.local/${sourceUrl.split('/').pop()}`);
     const images = Array.from({ length: 7 }, (_, index) => `https://source.local/image-${index + 1}.jpg`);
 

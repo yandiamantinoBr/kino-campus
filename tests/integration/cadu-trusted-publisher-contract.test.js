@@ -147,7 +147,9 @@ describe('Cadu publish — Edge Function', () => {
   test('publica com dedup e upload de imagem com fallback', () => {
     expect(index).toContain('findExisting');
     expect(index).toContain('code: "DUPLICATE"');
-    expect(index).toContain('uploadCover');
+    // 2026-09-10: uploadCover virou uploadImageBytes (recebe bytes já baixados
+    // para o dedup por conteúdo acontecer antes de gravar no Storage).
+    expect(index).toContain('uploadImageBytes');
     expect(index).toContain('prepareFinalImages');
     expect(index).toContain('applyImages');
     expect(index).toContain('kc_cadu_replace_post_media');
