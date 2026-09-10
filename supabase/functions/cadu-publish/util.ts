@@ -340,6 +340,20 @@ export function lightHash(value: unknown): string {
   return ("0000000" + h.toString(16)).slice(-8);
 }
 
+// FNV-1a 32 bits sobre BYTES + comprimento: identidade de CONTEÚDO de imagem
+// para dedup (duas URLs de origem distintas com bytes idênticos devem colapsar
+// em uma única ocorrência na galeria). Não é hash de segurança; a combinação
+// com o comprimento reduz colisões práticas de dois assets distintos.
+export function lightHashBytes(bytes: Uint8Array): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  const lengthTag = bytes.length.toString(16);
+  return ("0000000" + h.toString(16)).slice(-8) + ":" + ("000000" + lengthTag).slice(-6);
+}
+
 // Aceita "1.234,56" / "1234,56" / "1234.56" / "R$ 100" -> numero | null
 export function parseBRLNumber(value: unknown): number | null {
   const raw = String(value ?? "").replace(/r\$\s*/i, "").trim();

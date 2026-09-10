@@ -78,6 +78,7 @@ import {
   isSvgUrl,
   isTemporaryOrSocialImageUrl,
   lightHash,
+  lightHashBytes,
   normalizeText,
   normalizeWhitespace,
   parseBrazilianDate,
@@ -462,36 +463,46 @@ async function downloadImage(url: string): Promise<{ bytes: Uint8Array; contentT
   });
 }
 
-// Sobe a capa para kino-media e devolve a URL publica do Storage (ou "" se falhar)
-// junto da URL de render proporcional (para metadata.cover_render → og:image sem
-// corte e na faixa de KB para crawlers).
+// Sobe os bytes já baixados para kino-media e devolve a URL publica do Storage
+// junto da URL de render proporcional (para metadata.cover_render → og:image
+// sem corte e na faixa de KB para crawlers). O download fica no chamador para
+// que o dedup por conteúdo aconteça ANTES de gravar objeto redundante.
+interface UploadedImageBytes {
+  bytes: Uint8Array;
+  contentType: string;
+  ext: string;
+}
+
 interface UploadedCover {
   publicUrl: string;
   coverRenderUrl: string;
+  // Identidade de CONTEÚDO (FNV-1a sobre bytes + comprimento) para o dedup de
+  // 2026-09-10: URLs de origem distintas com bytes idênticos colapsam em uma
+  // única ocorrência na galeria.
+  contentKey: string;
 }
-async function uploadCover(
+
+async function uploadImageBytes(
   admin: SupabaseClient,
   userId: string,
   postId: string,
   sourceUrl: string,
+  image: UploadedImageBytes,
   index = 0,
 ): Promise<UploadedCover> {
-  const clean = validRemoteImageUrl(sourceUrl);
-  if (!clean) return { publicUrl: "", coverRenderUrl: "" };
-  const { bytes, contentType, ext } = await downloadImage(clean);
-  const path = `post-media/${userId}/${postId}/cadu-${index + 1}-${lightHash(clean)}.${ext}`;
-  const { error } = await admin.storage.from(STORAGE_BUCKET).upload(path, bytes, {
-    contentType,
+  const path = `post-media/${userId}/${postId}/cadu-${index + 1}-${lightHash(sourceUrl)}.${image.ext}`;
+  const { error } = await admin.storage.from(STORAGE_BUCKET).upload(path, image.bytes, {
+    contentType: image.contentType,
     upsert: true,
   });
   if (error) throw error;
   const { data } = admin.storage.from(STORAGE_BUCKET).getPublicUrl(path);
   const publicUrl = data?.publicUrl || "";
-  const dims = readImageDimensions(bytes);
+  const dims = readImageDimensions(image.bytes);
   const coverRenderUrl = dims
     ? buildCoverRenderUrl(publicUrl, COVER_RENDER_WIDTH, Math.round(dims.height * COVER_RENDER_WIDTH / Math.max(1, dims.width)))
     : "";
-  return { publicUrl, coverRenderUrl };
+  return { publicUrl, coverRenderUrl, contentKey: lightHashBytes(image.bytes) };
 }
 
 interface PreparedImage {
@@ -500,6 +511,7 @@ interface PreparedImage {
   uploaded: boolean;
   fallback: boolean;
   error?: string;
+  duplicateOfContent?: boolean;
 }
 
 async function prepareFinalImages(
@@ -516,37 +528,84 @@ async function prepareFinalImages(
     MAX_IMAGE_COUNT,
   );
   const results = new Array<PreparedImage>(cleanCandidates.length);
-  let nextIndex = 0;
   let coverRender = "";
 
-  async function worker(): Promise<void> {
-    while (nextIndex < cleanCandidates.length) {
-      const index = nextIndex;
-      nextIndex += 1;
-      const candidate = cleanCandidates[index];
+  // Fase 1 (2026-09-10): baixa os bytes (paralelo limitado). A decisão de dedup
+  // por conteúdo fica numa barreira ANTES de qualquer gravação no Storage.
+  const downloads = await Promise.all(
+    cleanCandidates.map(async (candidate) => {
       try {
-        const uploadedCover = await uploadCover(admin, userId, postId, candidate, index);
-        const storageUrl = uploadedCover.publicUrl;
-        if (!storageUrl) throw new Error("storage_url_empty");
-        // URLs armazenadas mantêm a identidade exata do objeto (contrato de
-        // dedup/provenância/auditoria do pipeline). A versão de crawler para
-        // og:image (render proporcional sem corte) vai em metadata.cover_render.
-        if (!coverRender && uploadedCover.coverRenderUrl) coverRender = uploadedCover.coverRenderUrl;
-        results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
+        const clean = validRemoteImageUrl(candidate);
+        if (!clean) throw new Error("invalid_image_url");
+        return { ok: true as const, clean, image: await downloadImage(clean) };
       } catch (e) {
-        const error = e instanceof Error ? e.message : String(e);
-        // RemoteResourceError também cobre PermanentResourceError (HTTP 4xx,
-        // unsupported_image_type, empty_image): fallback externo só faz sentido
-        // para falhas transitórias — URL 404 persistida = imagem quebrada no feed.
-        results[index] = allowExternalFallback && !(e instanceof RemoteResourceError) && canPersistExternalImageUrl(candidate)
-          ? { source: candidate, url: candidate, uploaded: false, fallback: true, error }
-          : { source: candidate, url: "", uploaded: false, fallback: false, error };
+        return {
+          ok: false as const,
+          error: e instanceof Error ? e.message : String(e),
+          permanent: e instanceof RemoteResourceError,
+        };
       }
+    }),
+  );
+
+  // Barreira — plano de dedup por conteúdo: a primeira ocorrência de cada
+  // contentKey sobe; bytes idênticos subsequentes ficam fora da galeria e não
+  // gravam objeto redundante no Storage. Decisão síncrona ⇒ sem corrida.
+  const uploadedByContent = new Map<string, string>();
+  const uploadIndices: number[] = [];
+  for (let index = 0; index < cleanCandidates.length; index += 1) {
+    const candidate = cleanCandidates[index];
+    const phase = downloads[index];
+    if (!phase || phase.ok === false) {
+      const error = phase && phase.ok === false ? phase.error : "image_download_missing";
+      const permanent = phase && phase.ok === false ? phase.permanent : false;
+      results[index] = allowExternalFallback && !permanent && canPersistExternalImageUrl(candidate)
+        ? { source: candidate, url: candidate, uploaded: false, fallback: true, error }
+        : { source: candidate, url: "", uploaded: false, fallback: false, error };
+      continue;
     }
+    const contentKey = lightHashBytes(phase.image.bytes);
+    if (uploadedByContent.has(contentKey)) {
+      results[index] = { source: candidate, url: "", uploaded: true, fallback: false, duplicateOfContent: true };
+      continue;
+    }
+    uploadedByContent.set(contentKey, "");
+    uploadIndices.push(index);
   }
 
-  const workerCount = Math.min(IMAGE_UPLOAD_CONCURRENCY, cleanCandidates.length);
-  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  // URLs armazenadas mantêm a identidade exata do objeto (contrato de
+  // dedup/provenância/auditoria do pipeline). A versão de crawler para
+  // og:image (render proporcional sem corte) vai em metadata.cover_render.
+  const uploadOne = async (index: number): Promise<void> => {
+    const candidate = cleanCandidates[index];
+    const phase = downloads[index];
+    try {
+      if (!phase || phase.ok === false) throw new Error("image_download_missing");
+      const uploadedCover = await uploadImageBytes(admin, userId, postId, candidate, phase.image, index);
+      const storageUrl = uploadedCover.publicUrl;
+      if (!storageUrl) throw new Error("storage_url_empty");
+      if (!coverRender && uploadedCover.coverRenderUrl) coverRender = uploadedCover.coverRenderUrl;
+      uploadedByContent.set(uploadedCover.contentKey, storageUrl);
+      results[index] = { source: candidate, url: storageUrl, uploaded: true, fallback: false };
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e);
+      results[index] = allowExternalFallback && !(e instanceof RemoteResourceError) && canPersistExternalImageUrl(candidate)
+        ? { source: candidate, url: candidate, uploaded: false, fallback: true, error }
+        : { source: candidate, url: "", uploaded: false, fallback: false, error };
+    }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(IMAGE_UPLOAD_CONCURRENCY, uploadIndices.length) },
+      async (_worker, workerIndex) => {
+        const stride = Math.min(IMAGE_UPLOAD_CONCURRENCY, uploadIndices.length);
+        for (let slot = workerIndex; slot < uploadIndices.length; slot += stride) {
+          await uploadOne(uploadIndices[slot]);
+        }
+      },
+    ),
+  );
+
   const uploads = results.filter(Boolean);
   const images = uploads.map((entry) => entry.url).filter(Boolean);
 

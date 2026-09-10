@@ -383,23 +383,27 @@ class SupabasePublisher {
     };
   }
 
-  async uploadImageToStorage(postId, url, index) {
+  async uploadImageToStorage(postId, url, index, image) {
     const sourceUrl = imageUrlFromCandidate(url);
     if (!sourceUrl) throw new Error('invalid_image_url');
-    const image = await this.downloadRemoteImage(sourceUrl);
-    const hash = sha256(sourceUrl).slice(0, 12);
+    const resolved = image || await this.downloadRemoteImage(sourceUrl);
+    // 2026-09-10: o hash do objeto guarda a identidade de CONTEÚDO (sha256 dos
+    // bytes), não só da URL — a galeria nunca deve conter duas cópias byte-
+    // idênticas da mesma imagem sob URLs de origem distintas.
+    const contentHash = sha256(resolved.buffer);
+    this.lastImageContentHash = contentHash;
     const safePostId = slugify(postId, 80) || 'post';
-    const objectPath = `post-media/${this.session.user.id}/${safePostId}/cadu-${index + 1}-${hash}.${image.ext}`;
+    const objectPath = `post-media/${this.session.user.id}/${safePostId}/cadu-${index + 1}-${contentHash.slice(0, 12)}.${resolved.ext}`;
     const encodedPath = encodeStoragePath(objectPath);
     const response = await fetch(`${this.url}/storage/v1/object/${encodeURIComponent(this.storageBucket)}/${encodedPath}`, {
       method: 'POST',
       headers: {
         ...this.authHeaders(),
-        'content-type': image.contentType,
+        'content-type': resolved.contentType,
         'cache-control': '31536000',
         'x-upsert': 'false',
       },
-      body: image.buffer,
+      body: resolved.buffer,
     });
     const text = await response.text();
     if (!response.ok) throw new Error(`storage_upload_http_${response.status}:${text.slice(0, 200)}`);
@@ -410,12 +414,26 @@ class SupabasePublisher {
     const allowExternalFallback = options.allowExternalFallback !== false;
     const uploads = [];
     const out = [];
+    // 2026-09-10: dedup por conteúdo — baixa os bytes no chamador para decidir
+    // ANTES de gravar: URLs de origem distintas com bytes idênticos reutilizam
+    // a primeira ocorrência e não geram duas linhas na galeria.
+    const uploadedByContent = new Map();
     const candidates = normalizeImageValues(images);
     for (let index = 0; index < candidates.length; index += 1) {
       const originalUrl = candidates[index];
       try {
-        const storedUrl = await this.uploadImageToStorage(postId, originalUrl, index);
-        uploads.push({ ok: true, source: originalUrl, source_url: imageUrlFromCandidate(originalUrl), url: storedUrl });
+        const sourceUrl = imageUrlFromCandidate(originalUrl);
+        if (!sourceUrl) throw new Error('invalid_image_url');
+        const image = await this.downloadRemoteImage(sourceUrl);
+        const contentHash = sha256(image.buffer);
+        const existingUrl = uploadedByContent.get(contentHash);
+        if (existingUrl) {
+          uploads.push({ ok: true, source: originalUrl, source_url: sourceUrl, url: existingUrl, reused: true });
+          continue;
+        }
+        const storedUrl = await this.uploadImageToStorage(postId, sourceUrl, index, image);
+        uploadedByContent.set(contentHash, storedUrl);
+        uploads.push({ ok: true, source: originalUrl, source_url: sourceUrl, url: storedUrl });
         out.push(storedUrl);
       } catch (error) {
         const fallbackUrl = imageUrlFromCandidate(originalUrl);
