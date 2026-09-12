@@ -20,6 +20,13 @@ const REASON_RE = /^[a-z][a-z0-9_]{1,79}$/;
 const REASON_LIMIT = 20;
 const SOURCE_ID_KEY_PREFIX = "cadu-published-source-id-v1\0";
 const DIRECTIVE_MODULES = new Set(["eventos", "oportunidades"]);
+// v1 routing provenance mirrors cadu-api.auto_repass_blocking_issues and the
+// OpenClaw auto-review-gate-contract. The existing wire directive has no
+// policy_revision field; its exact-key contract and approval scope stay intact.
+// Semantic/source/expiry gates cannot be released by an automatic directive.
+const AUTOMATIC_PROVENANCE_GATES_V1 = new Set([
+  "needs_review", "curator_review_required", "instagram_community_relevance_review",
+]);
 const EXPECTED_KEYS = [
   "approval_scope",
   "automatic",
@@ -253,7 +260,8 @@ export function normalizeReviewPublicationDirective(
     typeof resolvedAt !== "number" || !Number.isSafeInteger(resolvedAt) ||
     resolvedAt <= 0 || typeof automatic !== "boolean" ||
     reasons === null || !sourceUrl ||
-    (automatic && (approvalScope !== "gate_free_automatic" || reasons.length !== 0)) ||
+    (automatic && (approvalScope !== "gate_free_automatic" ||
+      reasons.some((reason) => !AUTOMATIC_PROVENANCE_GATES_V1.has(reason)))) ||
     (!automatic && approvalScope !== "editorial_override")
   ) {
     return null;
