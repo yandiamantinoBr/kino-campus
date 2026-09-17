@@ -83,7 +83,7 @@ function makeRequestRow(options = {}) {
     subject: options.subject || 'Solicitação LGPD',
     message: options.message || 'Quero receber todos os meus dados.',
     contact_email: options.contact_email || 'Titular.Canonico@Example.test',
-    page_path: '/settings.html',
+    page_path: '/configuracoes',
     allow_contact: true,
     metadata: {
       request_kind: requestKind,

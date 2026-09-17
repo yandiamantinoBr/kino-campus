@@ -87,7 +87,7 @@ describe('KCNotifications dropdown hardening', () => {
     window.history.replaceState({}, '', '/');
   });
 
-  test.each(['/mensagens.html', '/mensagens.html?conversation=demo#chat', '/eventos.html'])(
+  test.each(['/mensagens', '/mensagens?conversation=demo#chat', '/eventos'])(
     'marca o atalho como página atual apenas em Mensagens: %s', (route) => {
       window.history.replaceState({}, '', route);
       document.body.innerHTML = '<div class="kc-user-actions"></div>';
@@ -95,9 +95,9 @@ describe('KCNotifications dropdown hardening', () => {
       (0, eval)(code);
       window.KCNotifications.init();
       const shortcut = document.querySelector('.kc-chat-shortcut');
-      expect(shortcut.getAttribute('aria-current')).toBe(route.startsWith('/mensagens.html') ? 'page' : null);
+      expect(shortcut.getAttribute('aria-current')).toBe(route.startsWith('/mensagens') ? 'page' : null);
       expect(shortcut.hasAttribute('aria-expanded')).toBe(false);
-      window.history.replaceState({}, '', '/eventos.html');
+      window.history.replaceState({}, '', '/eventos');
       window.KCNotifications.init();
       expect(shortcut.hasAttribute('aria-current')).toBe(false);
       expect(document.querySelectorAll('.kc-chat-shortcut')).toHaveLength(1);
@@ -123,8 +123,8 @@ describe('KCNotifications dropdown hardening', () => {
   test('mantém Mensagens no menu móvel sem FAB sobre o conteúdo', () => {
     document.body.innerHTML = [
       '<div class="kc-user-actions"><button class="kc-notif-bell" id="kcNotifBell"></button></div>',
-      '<div class="kc-mobile-menu-content"><a href="eventos.html">Eventos</a></div>',
-      '<a class="kc-chat-mobile-fab" href="mensagens.html">legado</a>',
+      '<div class="kc-mobile-menu-content"><a href="/eventos">Eventos</a></div>',
+      '<a class="kc-chat-mobile-fab" href="/mensagens">legado</a>',
     ].join('');
     const code = fs.readFileSync(
       path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
@@ -137,7 +137,7 @@ describe('KCNotifications dropdown hardening', () => {
     window.KCNotifications.init();
 
     expect(document.querySelector('.kc-chat-mobile-fab')).toBeNull();
-    expect(document.querySelectorAll('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.kc-mobile-menu-content a[href="/mensagens"]')).toHaveLength(1);
     expect(document.querySelector('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).not.toBeNull();
     expect(document.querySelectorAll('.kc-user-actions .kc-chat-shortcut')).toHaveLength(1);
   });
@@ -146,7 +146,7 @@ describe('KCNotifications dropdown hardening', () => {
     document.body.innerHTML = [
       '<button class="kc-notif-bell" id="kcNotifBell"></button>',
       '<div class="kc-mobile-menu-content">',
-      '  <a href="mensagens.html"><i class="fas fa-envelope"></i><span>Mensagens</span></a>',
+      '  <a href="/mensagens"><i class="fas fa-envelope"></i><span>Mensagens</span></a>',
       '</div>',
     ].join('');
     const code = fs.readFileSync(
@@ -158,14 +158,14 @@ describe('KCNotifications dropdown hardening', () => {
 
     window.KCNotifications.init();
 
-    expect(document.querySelectorAll('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.kc-mobile-menu-content a[href="/mensagens"]')).toHaveLength(1);
     expect(document.querySelector('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).not.toBeNull();
   });
 
   test('atualiza os contadores do cabeçalho e menu por evento com getCurrentUser disponível', async () => {
     document.body.innerHTML = [
       '<div class="kc-user-actions"><button class="kc-notif-bell" id="kcNotifBell"></button></div>',
-      '<div class="kc-mobile-menu-content"><a href="mensagens.html">Mensagens</a></div>',
+      '<div class="kc-mobile-menu-content"><a href="/mensagens">Mensagens</a></div>',
     ].join('');
     const code = fs.readFileSync(
       path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),
@@ -219,7 +219,7 @@ describe('KCNotifications dropdown hardening', () => {
   test('mantém o listener entre logout e nova sessão sem revelar contadores ao visitante', async () => {
     document.body.innerHTML = [
       '<div class="kc-user-actions"><button class="kc-notif-bell" id="kcNotifBell"></button></div>',
-      '<div class="kc-mobile-menu-content"><a href="mensagens.html">Mensagens</a></div>',
+      '<div class="kc-mobile-menu-content"><a href="/mensagens">Mensagens</a></div>',
     ].join('');
     const code = fs.readFileSync(
       path.resolve(__dirname, '..', '..', 'assets', 'js', 'core', 'kc-notifications.js'),

@@ -70,7 +70,7 @@ function anonymousErasureTicket(overrides = {}) {
     message: 'Pedido legado sem titular Auth vinculado.',
     contact_email: 'verified.owner@example.test',
     allow_contact: true,
-    page_path: '/settings.html',
+    page_path: '/configuracoes',
     created_at: '2026-07-29T12:00:00.000Z',
     metadata: {
       request_kind: 'account_erasure',

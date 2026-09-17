@@ -100,15 +100,15 @@ window.KCPostModel = {
     if (!post._kcModulePage) {
       const mk = String(post.modulo || '').toLowerCase();
       const map = {
-        'compra-venda': 'compra-venda-feed.html',
-        'livros': 'compra-venda-feed.html?filter=livros',
-        'caronas': 'caronas-feed.html',
-        'moradia': 'moradia.html',
-        'eventos': 'eventos.html',
-        'oportunidades': 'oportunidades.html',
-        'achados-perdidos': 'achados-perdidos.html'
+        'compra-venda': '/compra-venda',
+        'livros': '/compra-venda?filter=livros',
+        'caronas': '/caronas',
+        'moradia': '/moradia',
+        'eventos': '/eventos',
+        'oportunidades': '/oportunidades',
+        'achados-perdidos': '/achados-perdidos'
       };
-      post._kcModulePage = map[mk] || 'index.html';
+      post._kcModulePage = map[mk] || '/';
     }
 
     // V8.1.4.1: applyPresentationRules deve ser aplicado no ponto de renderização

@@ -135,7 +135,7 @@
   }
 
   function getSafeProfileHref(userId) {
-    return 'profile.html?id=' + encodeURIComponent(String(userId == null ? '' : userId).trim().slice(0, 160));
+    return '/perfil?id=' + encodeURIComponent(String(userId == null ? '' : userId).trim().slice(0, 160));
   }
 
   function getSafeScore(value) {

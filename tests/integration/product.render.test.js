@@ -295,7 +295,7 @@ describe('product.render.js - breadcrumb responsivo', () => {
   test('mantem cada separador junto ao destino e identifica a pagina atual', () => {
     const rendered = renderBreadcrumb({
       modulo: 'oportunidades',
-      _kcModulePage: 'oportunidades.html',
+      _kcModulePage: '/oportunidades',
       categoria: 'Processos seletivos',
       titulo: 'PPGACV/UFG oferece 28 vagas para mestrado e doutorado',
     });
@@ -303,7 +303,7 @@ describe('product.render.js - breadcrumb responsivo', () => {
     expect(rendered.segments).toBe(4);
     expect(rendered.directChevrons).toBe(0);
     expect(rendered.current).toBe('PPGACV/UFG oferece 28 vagas para mestrado e doutorado');
-    expect(rendered.html).toContain('href="oportunidades.html"');
+    expect(rendered.html).toContain('href="/oportunidades"');
     expect(rendered.html).toContain('aria-hidden="true"');
   });
 

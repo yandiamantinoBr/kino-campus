@@ -6,21 +6,25 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
 
+// A canonical precisa ser a URL FINAL servida (rotas canônicas sem extensão).
+// As URLs .html respondem 308 para a rota limpa, então declará-las como
+// canonical criava sinal circular (Google: "página alternativa com tag
+// canônica adequada" apontando para um redirect).
 const INDEXABLE_PAGES = {
   'index.html': 'https://www.kinocampus.com.br/',
-  'eventos.html': 'https://www.kinocampus.com.br/eventos.html',
-  'oportunidades.html': 'https://www.kinocampus.com.br/oportunidades.html',
-  'moradia.html': 'https://www.kinocampus.com.br/moradia.html',
-  'compra-venda-feed.html': 'https://www.kinocampus.com.br/compra-venda-feed.html',
-  'caronas-feed.html': 'https://www.kinocampus.com.br/caronas-feed.html',
-  'achados-perdidos.html': 'https://www.kinocampus.com.br/achados-perdidos.html',
-  'sobre.html': 'https://www.kinocampus.com.br/sobre.html',
-  'editorial.html': 'https://www.kinocampus.com.br/editorial.html',
-  'ajuda.html': 'https://www.kinocampus.com.br/ajuda.html',
-  'ods.html': 'https://www.kinocampus.com.br/ods.html',
-  'transparencia.html': 'https://www.kinocampus.com.br/transparencia.html',
-  'privacidade.html': 'https://www.kinocampus.com.br/privacidade.html',
-  'termos.html': 'https://www.kinocampus.com.br/termos.html',
+  'eventos.html': 'https://www.kinocampus.com.br/eventos',
+  'oportunidades.html': 'https://www.kinocampus.com.br/oportunidades',
+  'moradia.html': 'https://www.kinocampus.com.br/moradia',
+  'compra-venda-feed.html': 'https://www.kinocampus.com.br/compra-venda',
+  'caronas-feed.html': 'https://www.kinocampus.com.br/caronas',
+  'achados-perdidos.html': 'https://www.kinocampus.com.br/achados-perdidos',
+  'sobre.html': 'https://www.kinocampus.com.br/sobre',
+  'editorial.html': 'https://www.kinocampus.com.br/editorial',
+  'ajuda.html': 'https://www.kinocampus.com.br/ajuda',
+  'ods.html': 'https://www.kinocampus.com.br/ods',
+  'transparencia.html': 'https://www.kinocampus.com.br/transparencia',
+  'privacidade.html': 'https://www.kinocampus.com.br/privacidade',
+  'termos.html': 'https://www.kinocampus.com.br/termos',
 };
 
 const NOINDEX_PAGES = [
@@ -57,14 +61,14 @@ describe('SEO e indexacao publica', () => {
     expect(robots).toMatch(/User-agent:\s*GPTBot\s+Disallow:\s*\//);
     expect(robots).toContain('Disallow: /admin/');
     [
-      '/account-setup.html',
-      '/auth-callback.html',
-      '/create-post.html',
-      '/mensagens.html',
-      '/my-posts.html',
-      '/profile.html',
-      '/search-results.html',
-      '/settings.html',
+      '/conta',
+      '/auth/callback',
+      '/criar-post',
+      '/mensagens',
+      '/meus-posts',
+      '/perfil',
+      '/busca',
+      '/configuracoes',
     ].forEach((route) => expect(robots).not.toContain(`Disallow: ${route}`));
     expect(robots).not.toContain('User-agent: Googlebot');
   });
@@ -128,10 +132,10 @@ describe('SEO e indexacao publica', () => {
     expect(llms).toContain('https://www.kinocampus.com.br/sitemap.xml');
     expect(llms).toContain('/admin/');
     expect(llms).toContain('## Publicações');
-    expect(llms).toContain('https://www.kinocampus.com.br/sobre.html');
-    expect(llms).toContain('https://www.kinocampus.com.br/editorial.html');
+    expect(llms).toContain('https://www.kinocampus.com.br/sobre');
+    expect(llms).toContain('https://www.kinocampus.com.br/editorial');
     expect(llms).toContain('https://www.kinocampus.com.br/feed.xml');
-    expect(llms).toContain('https://www.kinocampus.com.br/transparencia.html');
+    expect(llms).toContain('https://www.kinocampus.com.br/transparencia');
   });
 
   test('paginas publicas tem canonical, robots index e JSON-LD compartilhado', () => {
@@ -204,16 +208,16 @@ describe('SEO e indexacao publica', () => {
     const source = read('assets/js/boot/kc-seo-structured-data.js');
 
     expect(source).toContain("'@type': 'SearchAction'");
-    expect(source).toContain('search-results.html?q={search_term_string}');
+    expect(source).toContain('/busca?q={search_term_string}');
     expect(source).toContain("'@type': 'BreadcrumbList'");
     expect(source).toContain("'@type': 'Organization'");
     expect(source).toContain("type: 'AboutPage'");
-    expect(source).toContain('/editorial.html');
+    expect(source).toContain("'/editorial'");
     expect(source).toContain('Política editorial do KinoCampus');
     expect(source).toContain('Yan Diamantino');
     expect(source).toContain('Universidade Federal de Goias');
     expect(source).toContain("'@type': 'ItemList'");
-    expect(source).toContain('/transparencia.html');
+    expect(source).toContain("'/transparencia'");
   });
 
   test('SSR de product.html injeta conteudo inicial, canonical, robots e JSON-LD rico', () => {

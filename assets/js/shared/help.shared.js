@@ -521,6 +521,11 @@
         if (value) normalized[field.key] = value;
         return;
       }
+      if (field.key === 'page_path' || field.key === 'route') {
+        // Rotas registradas no pedido seguem a forma canonica (sem .html)
+        normalized[field.key] = canonicalHelpPagePath(rawValue);
+        return;
+      }
       normalized[field.key] = trimText(rawValue, field.maxLength || 1200);
     });
 
@@ -545,7 +550,10 @@
     const metadata = normalizeConditionalMetadata(raw.metadata, conditionalFields);
     const privacyRequestKind = getPrivacyRequestKind(type, topic, subtopic);
     if (privacyRequestKind) metadata.request_kind = privacyRequestKind;
-    const pagePath = trimText(raw.page_path || metadata.page_path || '', 255);
+    // Rotas publicas sao canonicas sem extensao (/eventos, /ajuda). O caminho
+    // registrado no pedido de ajuda acompanha essa forma; o `.html` legado e
+    // normalizado para nao poluir o suporte com rotas que hoje redirecionam.
+    const pagePath = canonicalHelpPagePath(raw.page_path || metadata.page_path || '');
     const allowContact = raw.allow_contact !== false;
 
     return Object.freeze({
@@ -564,7 +572,16 @@
     });
   }
 
+  // Normaliza rotas legadas `.html` para a rota canonica sem extensao.
+  function canonicalHelpPagePath(value) {
+    const raw = trimText(value, 255);
+    if (!raw) return '';
+    const semExtensao = raw.replace(/\.html(?=$|[?#])/i, '');
+    return semExtensao === '/index' ? '/' : semExtensao;
+  }
+
   return Object.freeze({
+    canonicalHelpPagePath,
     HELP_TYPE_OPTIONS,
     HELP_PRIORITY_OPTIONS,
     HELP_STATUS_OPTIONS,

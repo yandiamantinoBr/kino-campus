@@ -57,11 +57,11 @@ async function dismissOptionalCookies(page) {
 
 test.describe('Criar Post — create-post.html', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/create-post.html');
+    await page.goto('/criar-post');
   });
 
   test('página carrega com status 200', async ({ page }) => {
-    const response = await page.goto('/create-post.html');
+    const response = await page.goto('/criar-post');
     expect(response.status()).toBe(200);
   });
 
@@ -107,7 +107,13 @@ test.describe('Criar Post - gatilhos globais', () => {
   });
 
   test('Tags adicionais cria chips pesquisáveis sem misturar a taxonomia do módulo', async ({ page }) => {
-    await page.goto('/create-post.html');
+    await page.goto('/criar-post');
+    // A rota não abre o modal de criação automaticamente: abre pelo mesmo
+    // caminho do botão "Criar publicação" (window.kcOpenCreatePostModal) antes
+    // de escolher o módulo, senão os botões de módulo não existem no DOM.
+    await page.evaluate(() => {
+      if (typeof window.kcOpenCreatePostModal === 'function') window.kcOpenCreatePostModal();
+    });
     await page.getByRole('button', { name: /Eventos/ }).click();
 
     const tagsField = page.locator('[data-kc-user-tags-field]');
@@ -139,7 +145,7 @@ test.describe('Criar Post - gatilhos globais', () => {
   });
 
   test('My Posts também abre Tags legadas no mesmo kc-create-modal', async ({ page }) => {
-    await page.goto('/my-posts.html');
+    await page.goto('/meus-posts');
     await openNormalizedLegacyEditor(page);
     await expectLegacyTagsInEditor(page);
   });

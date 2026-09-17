@@ -12,7 +12,7 @@ const SOURCE = fs.readFileSync(
 function bootTelemetry(hasAnalyticsConsent) {
   const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
     runScripts: 'dangerously',
-    url: 'https://www.kinocampus.com.br/oportunidades.html',
+    url: 'https://www.kinocampus.com.br/oportunidades',
   });
   const { window } = dom;
   if (typeof hasAnalyticsConsent === 'boolean') {

@@ -141,9 +141,11 @@
   function safePageTitle() {
     var pathname = currentLocationPart('pathname');
     if (isPublicPostPath(pathname)) return 'KinoCampus \u2014 Publica\u00e7\u00e3o';
-    if (/\/(?:profile|user)\.html$/i.test(pathname)) return 'KinoCampus \u2014 Perfil';
-    if (/\/(?:chat-inbox|mensagens)\.html$/i.test(pathname)) return 'KinoCampus \u2014 Mensagens';
-    if (/\/search-results\.html$/i.test(pathname)) return 'KinoCampus \u2014 Busca';
+    // Rotas canônicas sem extensão (/perfil, /mensagens, /busca) e as formas
+    // legadas com .html continuam reconhecidas.
+    if (/\/(?:perfil|profile|user)(?:\.html)?$/i.test(pathname)) return 'KinoCampus \u2014 Perfil';
+    if (/\/(?:mensagens|chat-inbox)(?:\.html)?$/i.test(pathname)) return 'KinoCampus \u2014 Mensagens';
+    if (/\/(?:busca|search-results)(?:\.html)?$/i.test(pathname)) return 'KinoCampus \u2014 Busca';
 
     var title = String((document && document.title) || '').trim();
     if (!title || looksSensitive(title)) return 'KinoCampus';

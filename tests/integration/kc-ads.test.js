@@ -14,7 +14,7 @@ describe('KCAds feed monetization', () => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
     window.sessionStorage.clear();
-    window.history.replaceState({}, '', '/eventos.html');
+    window.history.replaceState({}, '', '/eventos');
     window.KCConsent = { hasConsent: () => false };
     KCAds.clearFrequencyCaps();
   });
@@ -300,7 +300,7 @@ describe('KCAds feed monetization', () => {
   });
 
   test('busca interna noindex nao e placement de anuncios', () => {
-    window.history.replaceState({}, '', '/search-results.html?q=evento');
+    window.history.replaceState({}, '', '/busca?q=evento');
     window.KCConsent = { hasConsent: (key) => key === 'advertising' };
     document.body.innerHTML = [
       '<div class="kc-feed-list">',
@@ -308,7 +308,7 @@ describe('KCAds feed monetization', () => {
       '</div>',
     ].join('');
 
-    expect(KCAds.isFeedPage('/search-results.html')).toBe(false);
+    expect(KCAds.isFeedPage('/busca')).toBe(false);
     expect(KCAds.maybeLoadAutoAds({
       status: 'active',
       auto_ads_enabled: true,
@@ -347,6 +347,30 @@ describe('KCAds feed monetization', () => {
     expect(document.querySelector('.kc-sidebar').firstElementChild.id).toBe('one');
     expect(document.querySelector('#one').nextElementSibling.getAttribute('data-kc-ad-aside')).toBe('top');
     expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
+  });
+
+  test('reaproveita o placeholder de reserva do slot lateral (anti-CLS)', () => {
+    // kc-ads.js reserva o espaco no DOMContentLoaded para o bloco de anuncio
+    // nao ser inserido depois do primeiro paint (medido: secao de 616px na 3a
+    // posicao da sidebar empurrava o painel pessoal — 0.072 de CLS no desktop).
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Resumo</section>',
+      '<section class="kc-sidebar-section kc-sidebar-section--ads" data-kc-ad-aside="top" data-kc-ad-aside-pending="true" aria-hidden="true"></section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-1', title: 'Topo', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+    ], { module_key: 'eventos' }, document);
+
+    expect(ok).toBe(true);
+    expect(document.querySelectorAll('[data-kc-ad-aside="top"]')).toHaveLength(1);
+    const top = document.querySelector('[data-kc-ad-aside="top"]');
+    expect(top.hasAttribute('data-kc-ad-aside-pending')).toBe(false);
+    expect(top.getAttribute('aria-hidden')).toBeNull();
+    expect(top.querySelector('.kc-ad-card')).toBeTruthy();
+    expect(document.querySelector('#one').nextElementSibling).toBe(top);
   });
 
   test('não duplica a mesma campanha lateral quando só há uma elegível', () => {
@@ -401,7 +425,7 @@ describe('KCAds feed monetization', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
       '<section class="kc-sidebar-section" id="context">Sobre</section>',
-      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="create-post.html">Criar Publicação</a></section>',
+      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="/criar-post">Criar Publicação</a></section>',
       '<section class="kc-sidebar-section" id="smart">Painel</section>',
       '</aside></main>',
     ].join('');
@@ -457,7 +481,7 @@ describe('KCAds feed monetization', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
       '<section class="kc-sidebar-section" id="one">Resumo</section>',
-      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="create-post.html">Criar Publicação</a></section>',
+      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="/criar-post">Criar Publicação</a></section>',
       '</aside></main>',
     ].join('');
 
@@ -570,7 +594,7 @@ describe('KCAds feed monetization', () => {
     const runtime = {
       document: fakeDocument,
       location: {
-        pathname: '/eventos.html',
+        pathname: '/eventos',
         search: '',
         origin: 'https://www.kinocampus.com.br',
       },

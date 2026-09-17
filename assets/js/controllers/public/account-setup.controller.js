@@ -21,7 +21,7 @@
     selectedAvatarUrl: '',
     selectedEmoji: '',
     selectedEmojiColor: '',
-    nextPath: '/index.html',
+    nextPath: '/',
   };
 
   function $(selector) {
@@ -55,10 +55,10 @@
 
   function normalizeNextPath(value) {
     if (shared && typeof shared.normalizeNextPath === 'function') {
-      return shared.normalizeNextPath(value, '/index.html');
+      return shared.normalizeNextPath(value, '/');
     }
     const raw = String(value || '').trim();
-    if (!raw) return '/index.html';
+    if (!raw) return '/';
     return raw.charAt(0) === '/' ? raw : `/${raw}`;
   }
 
@@ -68,7 +68,7 @@
   }
 
   function buildProfileHref() {
-    return state.user && state.user.id ? `/profile.html?id=${encodeURIComponent(state.user.id)}` : '/profile.html';
+    return state.user && state.user.id ? `/perfil?id=${encodeURIComponent(state.user.id)}` : '/perfil';
   }
 
   function buildPreviewPostUrl() {
@@ -661,7 +661,7 @@
       setStatus('Conta atualizada com sucesso. Redirecionando...', 'success');
 
       setTimeout(() => {
-        window.location.href = state.nextPath || '/index.html';
+        window.location.href = state.nextPath || '/';
       }, 600);
     } catch (error) {
       console.error('[AccountSetup] save failed:', error);
@@ -745,7 +745,7 @@
       state.user = await window.KCAPI.getCurrentUser();
     }
     if (!state.user) {
-      window.location.href = 'index.html#login';
+      window.location.href = '/#login';
       return;
     }
 

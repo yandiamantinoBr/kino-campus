@@ -34,14 +34,14 @@
     : (typeof clearTimeout === 'function' ? clearTimeout : function () { });
 
   const FEED_PAGE_MODULES = Object.freeze({
-    '/index.html': '',
     '/': '',
-    '/eventos.html': 'eventos',
-    '/oportunidades.html': 'oportunidades',
-    '/moradia.html': 'moradia',
-    '/compra-venda-feed.html': 'compra-venda',
-    '/caronas-feed.html': 'caronas',
-    '/achados-perdidos.html': 'achados-perdidos',
+    '/': '',
+    '/eventos': 'eventos',
+    '/oportunidades': 'oportunidades',
+    '/moradia': 'moradia',
+    '/compra-venda': 'compra-venda',
+    '/caronas': 'caronas',
+    '/achados-perdidos': 'achados-perdidos',
   });
 
   const BLOCKED_PATH_RE = /\/(?:admin\/|product\.html|_product\.html|create-post\.html|my-posts\.html|profile\.html|settings\.html|mensagens\.html|account-setup\.html|auth-callback\.html|search-results\.html|privacidade\.html|termos\.html|ajuda\.html|transparencia\.html)/i;
@@ -429,6 +429,23 @@
     return Math.floor(Math.max(0, Number(cardsLength) || 0) / INLINE_REAL_POSTS_PER_AD);
   }
 
+  // Miniaturas de anuncio gerenciado seguem o mesmo contrato dos cards do feed
+  // (kc-utils.presentation): objetos do Supabase Storage passam pelo proxy sharp
+  // da Vercel em 640x480 q68; externos ficam intactos. Sem isso o card de
+  // publicidade carregava a arte original (271 KB + 231 KB de formato).
+  const AD_IMAGE_STORAGE_RE = /\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/i;
+  function optimizedAdImageUrl(raw) {
+    const value = String(raw == null ? '' : raw).trim();
+    if (!value || !/^https?:\/\//i.test(value)) return value;
+    try {
+      const match = new URL(value).pathname.match(AD_IMAGE_STORAGE_RE);
+      if (!match) return value;
+      return '/api/og-image?path=' + encodeURIComponent(match[1] + '/' + match[2]) + '&w=640&h=480&fit=cover&q=68';
+    } catch (_) {
+      return value;
+    }
+  }
+
   function buildAdHTML(ad, placement, slotPlacement) {
     const safe = normalizeAdRow(ad);
     const metricPlacement = slotPlacement || placement;
@@ -437,7 +454,7 @@
     const sponsor = safe.advertiser_name || safe.sponsor_label || 'Patrocinado';
     const label = safe.sponsor_label || 'Publicidade';
     const image = safe.image_url
-      ? `<a class="kc-ad-card__media" href="${esc(href)}" rel="sponsored noopener noreferrer"${external ? ' target="_blank"' : ''}><img src="${esc(safe.image_url)}" alt="${esc(safe.title)}" loading="lazy" decoding="async"></a>`
+      ? `<a class="kc-ad-card__media" href="${esc(href)}" rel="sponsored noopener noreferrer"${external ? ' target="_blank"' : ''}><img src="${esc(optimizedAdImageUrl(safe.image_url))}" alt="${esc(safe.title)}" loading="lazy" decoding="async"></a>`
       : '<div class="kc-ad-card__media kc-ad-card__media--fallback" aria-hidden="true"><i class="fas fa-bullhorn"></i></div>';
     return [
       `<article class="kc-ad-card kc-ad-card--${placement === 'feed_aside' ? 'aside' : 'inline'}" data-kc-managed-ad="true" data-kc-ad-id="${esc(safe.id)}" data-kc-ad-placement="${esc(metricPlacement)}" data-kc-ad-title="${esc(safe.title)}">`,
@@ -612,6 +629,44 @@
       .forEach((node) => node.remove());
   }
 
+  // CLS (2026-09-17): o slot lateral entrava no DOM so depois do fetch de
+  // config/anuncios (medido: secao de 616px inserida na 3a posicao da sidebar,
+  // empurrando painel pessoal e tudo abaixo — 0.072 de CLS no desktop). Estes
+  // placeholders vazios reservam a altura no DOMContentLoaded e sao preenchidos
+  // no lugar por renderAsideSection (que ja reutiliza [data-kc-ad-aside]).
+  // Se nenhum anuncio for elegivel, removeManagedAsideAds os descarta.
+  function ensureAsidePlaceholders(targetDoc) {
+    if (!targetDoc || !targetDoc.querySelector) return;
+    if (!shouldRenderAside()) return;
+    const sidebar = targetDoc.querySelector('main .kc-sidebar');
+    if (!sidebar) return;
+    ['top', 'sticky'].forEach((slot) => {
+      if (sidebar.querySelector('[data-kc-ad-aside="' + slot + '"]')) return;
+      const section = targetDoc.createElement('section');
+      section.className = 'kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-' + slot;
+      section.setAttribute('data-kc-ad-aside', slot);
+      section.setAttribute('data-kc-ad-aside-pending', 'true');
+      section.setAttribute('aria-hidden', 'true');
+      if (slot !== 'top') {
+        sidebar.appendChild(section);
+        return;
+      }
+      const createPostBtn = sidebar.querySelector('.kc-create-post-btn');
+      const createPostSection = createPostBtn && typeof createPostBtn.closest === 'function'
+        ? createPostBtn.closest('.kc-sidebar-section')
+        : null;
+      if (createPostSection && createPostSection.parentNode === sidebar) {
+        sidebar.insertBefore(section, createPostSection.nextSibling);
+        return;
+      }
+      const firstContentSection = Array.from(sidebar.children || []).find((node) => {
+        return !(node.getAttribute && node.getAttribute('data-kc-ad-aside'));
+      });
+      if (firstContentSection) sidebar.insertBefore(section, firstContentSection.nextSibling);
+      else sidebar.appendChild(section);
+    });
+  }
+
   function renderAsideSection(sidebar, targetDoc, slot, ad, config) {
     if (!sidebar || !targetDoc) return null;
     const slotPlacement = slotPlacementFor('feed_aside', slot);
@@ -624,6 +679,9 @@
       section.setAttribute('data-kc-ad-aside', slot);
     }
     section.className = 'kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-' + slot;
+    // Slot preenchido: a reserva de altura do placeholder deixa de valer.
+    section.removeAttribute('data-kc-ad-aside-pending');
+    section.removeAttribute('aria-hidden');
     section.innerHTML = [
       '<div class="kc-ad-sidebar-head">',
       '<h3><i class="fas fa-rectangle-ad" aria-hidden="true"></i> Publicidade</h3>',
@@ -907,6 +965,8 @@
 
   function init() {
     if (!root.document || !isFeedPage()) return;
+    // Reserva o espaco do slot lateral ANTES do fetch assincrono de config.
+    ensureAsidePlaceholders(root.document);
     bindConsentListener();
     let retryIndex = 0;
     let retryTimer = null;

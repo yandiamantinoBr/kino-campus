@@ -77,7 +77,7 @@ test.describe('isolamento das operações da conta em configurações', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsContent')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#settingsUserSummary')).toContainText(accountA.email);
 
@@ -178,7 +178,7 @@ test.describe('isolamento das operações da conta em configurações', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsContent')).toBeVisible({ timeout: 15000 });
     await page.evaluate(() => {
       localStorage.setItem('theme', 'dark');
@@ -282,7 +282,7 @@ test.describe('isolamento das operações da conta em configurações', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsContent')).toBeVisible({ timeout: 15000 });
     await page.evaluate(() => {
       const button = document.getElementById('settingsResendConfirmation');

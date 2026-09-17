@@ -123,7 +123,7 @@ describe('product.edit.js - modal fallback de edicao', () => {
 describe('product.edit.js - feedback e navegacao', () => {
   test('mantem feedbacks e redirect pos-exclusao', () => {
     expect(source).toContain('window.confirm(');
-    expect(source).toContain("window.location.href = 'index.html'");
+    expect(source).toContain("window.location.href = '/'");
     expect(source).toContain("toast('Publica\\u00E7\\u00E3o exclu\\u00EDda com sucesso.'");
     expect(source).toContain("toast(msg, 'error', 2800);");
   });

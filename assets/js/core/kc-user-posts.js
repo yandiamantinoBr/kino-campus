@@ -177,15 +177,15 @@
   function kcModulePage(modulo) {
     const m = String(modulo || '').toLowerCase();
     const map = {
-      'compra-venda': 'compra-venda-feed.html',
-      'livros': 'compra-venda-feed.html?filter=livros',
-      'caronas': 'caronas-feed.html',
-      'oportunidades': 'oportunidades.html',
-      'achados-perdidos': 'achados-perdidos.html',
-      'eventos': 'eventos.html',
-      'moradia': 'moradia.html'
+      'compra-venda': '/compra-venda',
+      'livros': '/compra-venda?filter=livros',
+      'caronas': '/caronas',
+      'oportunidades': '/oportunidades',
+      'achados-perdidos': '/achados-perdidos',
+      'eventos': '/eventos',
+      'moradia': '/moradia'
     };
-    return map[m] || 'index.html';
+    return map[m] || '/';
   }
   
   // Minimal card injection (works on pages with .kc-feed-list)

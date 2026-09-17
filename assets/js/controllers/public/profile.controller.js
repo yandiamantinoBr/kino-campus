@@ -253,13 +253,13 @@
   function buildAccountSetupHref() {
     const presentation = getProfilePresentationModule();
     if (presentation && typeof presentation.buildAccountSetupHref === 'function') return presentation.buildAccountSetupHref(buildPresentationDeps());
-    return '/account-setup.html';
+    return '/conta';
   }
 
   function buildSettingsHref() {
     const presentation = getProfilePresentationModule();
     if (presentation && typeof presentation.buildSettingsHref === 'function') return presentation.buildSettingsHref(buildPresentationDeps());
-    return '/settings.html';
+    return '/configuracoes';
   }
 
   function formatChoice(field, value) {

@@ -96,7 +96,11 @@
       message: String(input.message || '').trim().slice(0, 4000),
       priority: String(input.priority || 'normal').trim(),
       status: String(input.status || 'new').trim(),
-      page_path: input.page_path ? String(input.page_path).trim().slice(0, 255) : null,
+      // Normaliza rotas legadas `.html` para a rota canonica sem extensao
+      // (mesmo contrato de `help.shared.js#canonicalHelpPagePath`).
+      page_path: input.page_path
+        ? String(input.page_path).trim().slice(0, 255).replace(/\.html(?=$|[?#])/i, '').replace(/^\/index$/, '/') || null
+        : null,
       contact_email: String(input.contact_email || '').trim().toLowerCase(),
       allow_contact: input.allow_contact !== false,
       metadata: input.metadata && typeof input.metadata === 'object' ? input.metadata : {},

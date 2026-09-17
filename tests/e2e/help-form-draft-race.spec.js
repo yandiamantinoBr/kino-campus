@@ -109,7 +109,7 @@ async function prepareForm(page, baseURL, { authenticated = false } = {}) {
     return route.continue();
   });
 
-  await page.goto('/ajuda.html?request=account_erasure#helpRequestForm', {
+  await page.goto('/ajuda?request=account_erasure#helpRequestForm', {
     waitUntil: 'domcontentloaded',
   });
   await expect.poll(() => page.evaluate(() => window.__draftFixtureTimers.some(

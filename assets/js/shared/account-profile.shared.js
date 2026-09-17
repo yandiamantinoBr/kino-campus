@@ -819,13 +819,13 @@
 
   function normalizeNextPath(value, fallback) {
     const raw = String(value || '').trim();
-    if (!raw) return String(fallback || '/index.html');
+    if (!raw) return String(fallback || '/');
     if (/^https?:\/\//i.test(raw)) {
       try {
         const parsed = new URL(raw);
-        return `${parsed.pathname || '/index.html'}${parsed.search || ''}${parsed.hash || ''}` || String(fallback || '/index.html');
+        return `${parsed.pathname || '/'}${parsed.search || ''}${parsed.hash || ''}` || String(fallback || '/');
       } catch (_) {
-        return String(fallback || '/index.html');
+        return String(fallback || '/');
       }
     }
     if (raw.charAt(0) === '/') return raw;
@@ -866,7 +866,7 @@
       const chatParams = [];
       if (authorId) chatParams.push('with=' + encodeURIComponent(authorId));
       if (postId) chatParams.push('post=' + encodeURIComponent(postId));
-      const chatHref = 'mensagens.html' + (chatParams.length ? '?' + chatParams.join('&') : '');
+      const chatHref = '/mensagens' + (chatParams.length ? '?' + chatParams.join('&') : '');
       return Object.freeze({
         type: 'chat_internal',
         label: 'Conversar no KinoCampus',

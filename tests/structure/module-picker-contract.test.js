@@ -13,6 +13,19 @@ function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 }
 
+// As rotas públicas são canônicas sem extensão (/eventos, /oportunidades) e o
+// vercel.json reescreve cada rota para o arquivo .html correspondente.
+const ROUTE_TO_FILE = (() => {
+  const config = JSON.parse(read('vercel.json'));
+  const map = new Map();
+  (config.rewrites || []).forEach((rewrite) => {
+    if (/^\/[a-z0-9-]+$/i.test(rewrite.source) && /\.html$/i.test(rewrite.destination)) {
+      map.set(rewrite.source, rewrite.destination.replace(/^\/+/, ''));
+    }
+  });
+  return map;
+})();
+
 function canonicalModules() {
   const dom = new JSDOM('', { runScripts: 'outside-only', url: 'http://localhost/' });
   dom.window.eval(read('assets/js/features/create-post/kc-create-post.schema.js'));
@@ -21,7 +34,8 @@ function canonicalModules() {
     label: definition.label,
     emoji: definition.emoji,
     redirect: definition.redirect,
-    page: new URL(definition.redirect, 'http://localhost/').pathname.replace(/^\/+/, ''),
+    route: new URL(definition.redirect, 'http://localhost/').pathname,
+    page: ROUTE_TO_FILE.get(new URL(definition.redirect, 'http://localhost/').pathname) || '',
   }));
 }
 
@@ -40,6 +54,8 @@ describe('contrato estrutural do seletor responsivo de módulos', () => {
     MODULES.forEach((module) => {
       expect(module.label.trim()).not.toBe('');
       expect(module.emoji.trim()).not.toBe('');
+      // rota canônica sem extensão, resolvida por rewrite no vercel.json
+      expect(module.route).toMatch(/^\/[a-z0-9-]+$/);
       expect(module.page).toMatch(/^[a-z0-9/-]+\.html$/);
       expect(fs.existsSync(path.join(ROOT, module.page))).toBe(true);
     });

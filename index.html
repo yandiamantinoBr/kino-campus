@@ -62,27 +62,27 @@
         </a>
       </div>
       <nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
-        <a href="eventos.html">
+        <a href="/eventos">
           <i class="fas fa-calendar"></i>
           <span>Eventos</span>
         </a>
-        <a href="oportunidades.html">
+        <a href="/oportunidades">
           <i class="fas fa-briefcase"></i>
           <span>Oportunidades</span>
         </a>
-        <a href="moradia.html">
+        <a href="/moradia">
           <i class="fas fa-home"></i>
           <span>Moradia</span>
         </a>
-        <a href="compra-venda-feed.html">
+        <a href="/compra-venda">
           <i class="fas fa-shopping-bag"></i>
           <span>Compra e Venda</span>
         </a>
-        <a href="caronas-feed.html">
+        <a href="/caronas">
           <i class="fas fa-car"></i>
           <span>Caronas</span>
         </a>
-        <a href="achados-perdidos.html">
+        <a href="/achados-perdidos">
           <i class="fas fa-search"></i>
           <span>Achados/Perdidos</span>
         </a>
@@ -109,6 +109,9 @@
   <main class="kc-main-content kc-main-content--home" id="kc-main">
     <h1 class="kc-sr-only">KinoCampus — Comunidade UFG</h1>
     <section class="kc-feed-section">
+      <!-- h2 oculto: os cards e o bloco de anuncio usam h3, e o auditor de
+           heading-order do Lighthouse exige um nivel anterior na sequencia. -->
+      <h2 class="kc-sr-only">Publicações da comunidade</h2>
       <div class="kc-hero-carousel kc-hero-loading" id="kc-hero-carousel" aria-busy="true">
         <!-- Slides are injected from active hero_banners only (no hardcoded mock). -->
         <div class="kc-hero-slides" id="kc-hero-slides" data-kc-banners-source="pending"></div>
@@ -191,35 +194,35 @@
         <span class="kc-feed-tabs__divider" aria-hidden="true"></span>
         <!-- Links de navegação para outras seções (nav separado das tabs) -->
         <nav class="kc-feed-tabs__nav" aria-label="Categorias do feed" data-i18n-aria-label="aria-label.feed-categories">
-          <a href="compra-venda-feed.html">
+          <a href="/compra-venda">
             <i class="fas fa-shopping-bag"></i>
             <span>Compra e Venda</span>
           </a>
-          <a href="caronas-feed.html">
+          <a href="/caronas">
             <i class="fas fa-car"></i>
             <span>Caronas</span>
           </a>
-          <a href="compra-venda-feed.html?filter=livros">
+          <a href="/compra-venda?filter=livros">
             <i class="fas fa-book"></i>
             <span>Livros</span>
           </a>
-          <a href="compra-venda-feed.html?filter=eletronicos">
+          <a href="/compra-venda?filter=eletronicos">
             <i class="fas fa-laptop"></i>
             <span>Eletrônicos</span>
           </a>
-          <a href="compra-venda-feed.html?filter=vestuario">
+          <a href="/compra-venda?filter=vestuario">
             <i class="fas fa-shirt"></i>
             <span>Roupas</span>
           </a>
-          <a href="moradia.html">
+          <a href="/moradia">
             <i class="fas fa-home"></i>
             <span>Moradia</span>
           </a>
-          <a href="eventos.html">
+          <a href="/eventos">
             <i class="fas fa-calendar"></i>
             <span>Eventos</span>
           </a>
-          <a href="eventos.html?filter=sustentabilidade">
+          <a href="/eventos?filter=sustentabilidade">
             <i class="fas fa-leaf"></i>
             <span>Sustentabilidade</span>
           </a>
@@ -277,8 +280,8 @@
           </div>
         </div>
         <div class="kc-feed-guide__actions">
-          <a href="sobre.html"><i class="fas fa-circle-info" aria-hidden="true"></i> Sobre a plataforma</a>
-          <a href="editorial.html"><i class="fas fa-pen-to-square" aria-hidden="true"></i> Política editorial</a>
+          <a href="/sobre"><i class="fas fa-circle-info" aria-hidden="true"></i> Sobre a plataforma</a>
+          <a href="/editorial"><i class="fas fa-pen-to-square" aria-hidden="true"></i> Política editorial</a>
         </div>
       </section>
     </section>
@@ -297,7 +300,7 @@
           <summary>Ver contexto da plataforma</summary>
           <p>O KinoCampus reúne publicações de usuários e conteúdos curados a partir de fontes públicas, priorizando prazos, links oficiais, contatos e informações úteis para a decisão.</p>
           <div class="kc-context-pitch-links">
-            <a href="sobre.html">Conhecer missão e curadoria</a>
+            <a href="/sobre">Conhecer missão e curadoria</a>
             <a class="kc-context-pitch-card" href="apresentacao-institucional.html" target="_blank" rel="noopener noreferrer">
               <span class="kc-context-pitch-card__mark" aria-hidden="true"><img src="assets/favicon.svg" alt="" aria-hidden="true" width="100" height="100" /></span>
               <span class="kc-context-pitch-card__copy">
@@ -311,11 +314,19 @@
       </div>
 
       <div class="kc-sidebar-section">
-        <a class="kc-create-post-btn" href="create-post.html">
+        <a class="kc-create-post-btn" href="/criar-post">
           <i class="fas fa-plus"></i>
           Criar Publicação
         </a>
       </div>
+
+      <!-- Reserva do slot de anuncio lateral (anti-CLS). O bloco de publicidade
+           entrava no DOM so depois do fetch de config, como uma secao de 616px
+           que empurrava todo o resto da sidebar (0.072 de CLS no desktop).
+           kc-ads.js preenche este espaco no lugar; se nenhum anuncio for
+           elegivel, o proprio modulo remove o placeholder. -->
+      <section class="kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-top"
+        data-kc-ad-aside="top" data-kc-ad-aside-pending="true" aria-hidden="true"></section>
 
       <div class="kc-sidebar-section kc-sidebar-section--smart" data-kc-home-personal-panel="true">
         <h3>
@@ -337,7 +348,7 @@
           <span>Cashback em evolução</span>
         </div>
         <p class="kc-home-card-copy">Em breve: seu bônus por trocas sustentáveis.</p>
-        <a class="kc-cashback-link-simple" href="compra-venda-feed.html">Explorar trocas da comunidade</a>
+        <a class="kc-cashback-link-simple" href="/compra-venda">Explorar trocas da comunidade</a>
       </div>
 
       <div class="kc-sidebar-section" data-kc-home-categories-section="true">
@@ -368,19 +379,19 @@
           Temas conectados ao uso real da plataforma e ao contexto da comunidade UFG.
         </p>
         <div class="kc-ods-badges">
-          <a class="kc-ods-badge" href="ods.html?goal=4" title="ODS 04: Educação de Qualidade" data-i18n-tooltip="tooltip.ods-04">
+          <a class="kc-ods-badge" href="/ods?goal=4" title="ODS 04: Educação de Qualidade" data-i18n-tooltip="tooltip.ods-04">
             <strong>ODS 04</strong>
             <span>Educação</span>
           </a>
-          <a class="kc-ods-badge" href="ods.html?goal=11" title="ODS 11: Cidades e Comunidades Sustentáveis" data-i18n-tooltip="tooltip.ods-11">
+          <a class="kc-ods-badge" href="/ods?goal=11" title="ODS 11: Cidades e Comunidades Sustentáveis" data-i18n-tooltip="tooltip.ods-11">
             <strong>ODS 11</strong>
             <span>Cidades</span>
           </a>
-          <a class="kc-ods-badge" href="ods.html?goal=12" title="ODS 12: Consumo e Produção Responsáveis" data-i18n-tooltip="tooltip.ods-12">
+          <a class="kc-ods-badge" href="/ods?goal=12" title="ODS 12: Consumo e Produção Responsáveis" data-i18n-tooltip="tooltip.ods-12">
             <strong>ODS 12</strong>
             <span>Consumo responsável</span>
           </a>
-          <a class="kc-ods-badge" href="ods.html?goal=13" title="ODS 13: Ação Contra a Mudança Global do Clima" data-i18n-tooltip="tooltip.ods-13">
+          <a class="kc-ods-badge" href="/ods?goal=13" title="ODS 13: Ação Contra a Mudança Global do Clima" data-i18n-tooltip="tooltip.ods-13">
             <strong>ODS 13</strong>
             <span>Ação climática</span>
           </a>
@@ -404,6 +415,10 @@
       <!-- Calendário de Eventos — componente compartilhado (assets/js/features/kc-events-calendar.js).
            FONTE ÚNICA sincronizada com /eventos.html; o markup (seção + modal) é injetado pelo módulo. -->
       <div class="kc-sidebar-section kc-sidebar-section--cal" data-kc-cal-mount></div>
+
+      <!-- Reserva do slot sticky (mesmo contrato do bloco acima). -->
+      <section class="kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-sticky"
+        data-kc-ad-aside="sticky" data-kc-ad-aside-pending="true" aria-hidden="true"></section>
     </aside>
   </main>
 
@@ -412,14 +427,14 @@
       <i class="fas fa-home"></i>
       <span>Início</span>
     </a>
-    <a href="eventos.html">
+    <a href="/eventos">
       <i class="fas fa-calendar"></i>
       <span>Eventos</span>
     </a>
-    <a class="kc-create-btn" href="create-post.html" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post">
+    <a class="kc-create-btn" href="/criar-post" aria-label="Criar publicação" data-i18n-aria-label="aria-label.create-post">
       <i class="fas fa-plus"></i>
     </a>
-    <a href="oportunidades.html">
+    <a href="/oportunidades">
       <i class="fas fa-briefcase"></i>
       <span>Oportunidades</span>
     </a>
@@ -446,12 +461,12 @@
         </a>
       </div>
       <div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>
-      <a href="achados-perdidos.html"><i class="fas fa-search"></i> Achados/Perdidos</a>
-      <a href="eventos.html"><i class="fas fa-calendar"></i> Eventos</a>
-      <a href="moradia.html"><i class="fas fa-home"></i> Moradia</a>
-      <a href="oportunidades.html"><i class="fas fa-briefcase"></i> Oportunidades</a>
-      <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
-      <a href="caronas-feed.html"><i class="fas fa-car"></i> Caronas</a>
+      <a href="/achados-perdidos"><i class="fas fa-search"></i> Achados/Perdidos</a>
+      <a href="/eventos"><i class="fas fa-calendar"></i> Eventos</a>
+      <a href="/moradia"><i class="fas fa-home"></i> Moradia</a>
+      <a href="/oportunidades"><i class="fas fa-briefcase"></i> Oportunidades</a>
+      <a href="/compra-venda"><i class="fas fa-shopping-bag"></i> Compra e Venda</a>
+      <a href="/caronas"><i class="fas fa-car"></i> Caronas</a>
     </div>
   </div>
   <div class="kc-mobile-menu-overlay" id="mobileMenuOverlay" data-kc-mobile-menu="close"></div>

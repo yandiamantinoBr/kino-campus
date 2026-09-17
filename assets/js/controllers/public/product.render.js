@@ -401,9 +401,13 @@
     var subLbl = post.subcategoriaLabel || post.subcategoria || '';
     var title = post.titulo || post.title || '';
     var parts = [];
-    parts.push('<a class="kc-breadcrumb-segment kc-breadcrumb-segment--home" href="index.html"><i class="fas fa-home" aria-hidden="true"></i><span>KinoCampus</span></a>');
-    var rawModulePage = String((post._kcModulePage || '') || 'index.html').trim();
-    var safeModulePage = /^[a-z0-9_-]+\.html(?:[?#].*)?$/i.test(rawModulePage) ? rawModulePage : 'index.html';
+    parts.push('<a class="kc-breadcrumb-segment kc-breadcrumb-segment--home" href="/"><i class="fas fa-home" aria-hidden="true"></i><span>KinoCampus</span></a>');
+    var rawModulePage = String((post._kcModulePage || '') || '/').trim();
+    // Aceita a rota canonica (`/oportunidades`, `/compra-venda?filter=livros`)
+    // e a forma legada `.html`. Rejeita esquemas e URLs protocol-relative.
+    var safeModulePage = /^(?:\/(?!\/)[^<>"']*|[a-z0-9_-]+\.html(?:[?#][^<>"']*)?)$/i.test(rawModulePage)
+      ? rawModulePage
+      : '/';
     if (modKey) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><a href="' + esc(safeModulePage) + '">' + esc(modLbl) + '</a></span>');
     if (catLbl) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>' + esc(catLbl) + '</span></span>');
     if (subLbl) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>' + esc(subLbl) + '</span></span>');
@@ -458,6 +462,26 @@
   }
 
   // ── setGallery ───────────────────────────────────────────────────────────────
+
+  // Objetos publicos do Supabase Storage entram na PDP pelo tamanho original
+  // (capas de 1920px). O proxy sharp da Vercel (/api/og-image) devolve a mesma
+  // imagem redimensionada/converte para JPEG progressivo, sem consumir a quota
+  // de Image Transformations. Externos ficam intactos.
+  var PRODUCT_STORAGE_RE = /\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/i;
+  function productMediaUrl(raw, width, height, quality) {
+    var value = String(raw == null ? '' : raw).trim();
+    if (!value || !/^https?:\/\//i.test(value)) return value;
+    try {
+      var match = new URL(value).pathname.match(PRODUCT_STORAGE_RE);
+      if (!match) return value;
+      return '/api/og-image?path=' + encodeURIComponent(match[1] + '/' + match[2])
+        + '&w=' + width + (height ? '&h=' + height + '&fit=cover' : '') + '&q=' + quality;
+    } catch (_) {
+      return value;
+    }
+  }
+  function heroMediaUrl(raw) { return productMediaUrl(raw, 1280, 0, 72); }
+  function thumbMediaUrl(raw) { return productMediaUrl(raw, 200, 200, 60); }
 
   function buildGalleryCandidates(post, images) {
     // Mesmo contrato do data-kc-image-candidates dos cards (kc-utils.presentation):
@@ -518,7 +542,12 @@
       // Resiliencia (v11.31.0): hero e miniaturas carregam data-kc-image-candidates;
       // o handler delegado de kc-utils.presentation.js troca a fonte em caso de
       // URL quebrada e, esgotada a galeria, revela o emojiCover do hero.
-      var candidates = buildGalleryCandidates(post, images);
+      var rawCandidates = buildGalleryCandidates(post, images);
+      // Variantes otimizadas mantendo o MESMO indice do pool original: o handler
+      // de erro compara src atual com candidates[index], entao hero e miniatura
+      // precisam de listas internamente consistentes (cada uma no seu tamanho).
+      var candidates = rawCandidates.map(heroMediaUrl);
+      var thumbCandidates = rawCandidates.map(thumbMediaUrl);
       var hasCandidates = candidates.length > 0;
       if (galleryMain && hasCandidates) {
         galleryMain.setAttribute('data-kc-image-candidates', JSON.stringify(candidates));
@@ -532,26 +561,30 @@
         thumbs.innerHTML = '';
         thumbImages.forEach(function (src, idx) {
           var img = document.createElement('img');
-          img.src = src;
+          var rawIndex = hasCandidates ? Math.max(0, rawCandidates.indexOf(src)) : idx;
+          var thumbSrc = hasCandidates && thumbCandidates[rawIndex] ? thumbCandidates[rawIndex] : src;
+          var heroSrc = hasCandidates && candidates[rawIndex] ? candidates[rawIndex] : src;
+          img.src = thumbSrc;
           img.alt = 'Miniatura ' + (idx + 1) + ' de ' + title;
           img.loading = 'lazy';
           img.decoding = 'async';
           img.className = 'kc-thumbnail' + (idx === 0 ? ' active' : '');
           img.setAttribute('data-full-src', src);
           if (hasCandidates) {
-            // Cada miniatura caminha pelos proprios candidatos; o index inicial
-            // e a posicao da fonte desta miniatura no pool do hero.
-            img.setAttribute('data-kc-image-candidates', JSON.stringify(candidates));
-            img.setAttribute('data-kc-image-candidate-index', String(Math.max(0, candidates.indexOf(src))));
+            // Cada miniatura caminha pelos proprios candidatos (mesmo tamanho do
+            // seu src) e o index aponta para a posicao no pool original.
+            img.setAttribute('data-kc-image-candidates', JSON.stringify(thumbCandidates));
+            img.setAttribute('data-kc-image-candidate-index', String(rawIndex));
           }
           img.addEventListener('click', function () {
             var all = thumbs.querySelectorAll('.kc-thumbnail');
             all.forEach(function (t) { t.classList.remove('active'); });
             img.classList.add('active');
             if (galleryMain && hasCandidates) {
-              galleryMain.setAttribute('data-kc-image-candidate-index', String(Math.max(0, candidates.indexOf(src))));
+              galleryMain.setAttribute('data-kc-image-candidate-index', String(rawIndex));
             }
-            if (mainImg) { mainImg.src = src; mainImg.alt = img.alt; }
+            // Hero recebe a variante de hero (1280px), nunca a miniatura de 200px.
+            if (mainImg) { mainImg.src = heroSrc; mainImg.alt = img.alt; }
           });
           thumbs.appendChild(img);
         });

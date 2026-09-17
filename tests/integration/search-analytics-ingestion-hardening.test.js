@@ -32,7 +32,7 @@ const SearchAnalytics = require('../../assets/js/shared/search-analytics.shared.
 
 function createSearchRuntime(rpc) {
   const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
-    url: 'https://www.kinocampus.com.br/search-results.html',
+    url: 'https://www.kinocampus.com.br/busca',
     runScripts: 'outside-only',
   });
   const { window } = dom;

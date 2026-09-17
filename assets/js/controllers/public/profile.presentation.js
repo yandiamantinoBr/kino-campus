@@ -67,10 +67,10 @@
   function buildAccountSetupHref(deps) {
     var state = getState(deps);
     var shared = getShared(deps);
-    var base = '/account-setup.html';
-    var next = '/profile.html' + (state.profileId ? ('?id=' + encodeURIComponent(state.profileId)) : '');
+    var base = '/conta';
+    var next = '/perfil' + (state.profileId ? ('?id=' + encodeURIComponent(state.profileId)) : '');
     if (shared && typeof shared.normalizeNextPath === 'function') {
-      return base + '?next=' + encodeURIComponent(shared.normalizeNextPath(next, '/profile.html'));
+      return base + '?next=' + encodeURIComponent(shared.normalizeNextPath(next, '/perfil'));
     }
     return base + '?next=' + encodeURIComponent(next);
   }
@@ -78,10 +78,10 @@
   function buildSettingsHref(deps) {
     var state = getState(deps);
     var shared = getShared(deps);
-    var base = '/settings.html';
-    var next = '/profile.html' + (state.profileId ? ('?id=' + encodeURIComponent(state.profileId)) : '');
+    var base = '/configuracoes';
+    var next = '/perfil' + (state.profileId ? ('?id=' + encodeURIComponent(state.profileId)) : '');
     if (shared && typeof shared.normalizeNextPath === 'function') {
-      return base + '?next=' + encodeURIComponent(shared.normalizeNextPath(next, '/profile.html'));
+      return base + '?next=' + encodeURIComponent(shared.normalizeNextPath(next, '/perfil'));
     }
     return base + '?next=' + encodeURIComponent(next);
   }
@@ -366,7 +366,7 @@
       var showChat = !ownerView && state.user && state.user.id;
       chatBtn.style.display = showChat ? 'inline-flex' : 'none';
       if (showChat) {
-        chatBtn.href = 'mensagens.html?with=' + encodeURIComponent(profile.id);
+        chatBtn.href = '/mensagens?with=' + encodeURIComponent(profile.id);
       }
     }
 

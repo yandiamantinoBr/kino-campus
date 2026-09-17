@@ -11,73 +11,73 @@
       name: 'KinoCampus - Comunidade UFG',
       description: 'Plataforma comunitária da UFG para eventos, oportunidades, moradia, caronas, compra e venda e achados/perdidos.',
     },
-    '/index.html': {
+    '/': {
       type: 'WebSite',
       name: 'KinoCampus - Comunidade UFG',
       description: 'Plataforma comunitária da UFG para eventos, oportunidades, moradia, caronas, compra e venda e achados/perdidos.',
       canonicalPath: '/',
     },
-    '/eventos.html': {
+    '/eventos': {
       type: 'CollectionPage',
       name: 'Eventos no KinoCampus',
       section: 'Eventos',
       description: 'Eventos acadêmicos, culturais, esportivos e institucionais divulgados para a comunidade da UFG.',
     },
-    '/oportunidades.html': {
+    '/oportunidades': {
       type: 'CollectionPage',
       name: 'Oportunidades no KinoCampus',
       section: 'Oportunidades',
       description: 'Bolsas, editais, estágios, empregos, monitorias e chamadas acadêmicas para a comunidade da UFG.',
     },
-    '/moradia.html': {
+    '/moradia': {
       type: 'CollectionPage',
       name: 'Moradia no KinoCampus',
       section: 'Moradia',
       description: 'Quartos, repúblicas, kitnets e anúncios de moradia para estudantes da UFG.',
     },
-    '/compra-venda-feed.html': {
+    '/compra-venda': {
       type: 'CollectionPage',
       name: 'Compra e venda no KinoCampus',
       section: 'Compra e venda',
       description: 'Itens úteis anunciados pela comunidade universitária da UFG.',
     },
-    '/caronas-feed.html': {
+    '/caronas': {
       type: 'CollectionPage',
       name: 'Caronas no KinoCampus',
       section: 'Caronas',
       description: 'Ofertas e pedidos de carona para deslocamentos ligados à rotina universitária.',
     },
-    '/achados-perdidos.html': {
+    '/achados-perdidos': {
       type: 'CollectionPage',
       name: 'Achados e perdidos no KinoCampus',
       section: 'Achados e perdidos',
       description: 'Itens perdidos ou encontrados pela comunidade universitária da UFG.',
     },
-    '/ajuda.html': {
+    '/ajuda': {
       type: 'ContactPage',
       name: 'Central de ajuda do KinoCampus',
       section: 'Suporte',
       description: 'Canal de suporte para dúvidas, pedidos administrativos e atendimento da plataforma.',
     },
-    '/ods.html': {
+    '/ods': {
       type: 'WebPage',
       name: 'ODS e impacto comunitário no KinoCampus',
       section: 'ODS',
       description: 'Relação da plataforma com objetivos de desenvolvimento sustentável, colaboração e impacto comunitário.',
     },
-    '/privacidade.html': {
+    '/privacidade': {
       type: 'PrivacyPolicy',
       name: 'Declaração de Privacidade do KinoCampus',
       section: 'Privacidade',
       description: 'Informações sobre privacidade, cookies, dados pessoais e direitos dos titulares.',
     },
-    '/transparencia.html': {
+    '/transparencia': {
       type: 'WebPage',
       name: 'Central de Transparência do KinoCampus',
       section: 'Transparência',
       description: 'Mapa público de privacidade, termos, cookies, suporte e direitos LGPD no KinoCampus.',
     },
-    '/sobre.html': {
+    '/sobre': {
       type: 'AboutPage',
       name: 'Sobre o KinoCampus',
       section: 'Sobre',
@@ -89,13 +89,13 @@
       section: 'Apresentacao institucional',
       description: 'Seis percursos expositivos e interativos para conhecer o KinoCampus e sua proposta de parceria com a UFG.',
     },
-    '/editorial.html': {
+    '/editorial': {
       type: 'WebPage',
       name: 'Política editorial do KinoCampus',
       section: 'Política editorial',
       description: 'Fontes, critérios de curadoria, correções, publicidade e responsabilidade editorial do KinoCampus.',
     },
-    '/termos.html': {
+    '/termos': {
       type: 'WebPage',
       name: 'Termos de Uso do KinoCampus',
       section: 'Termos de uso',
@@ -112,7 +112,7 @@
     const existing = document.querySelector('link[rel="canonical"]');
     if (existing && existing.href) return existing.href;
     const path = (meta && meta.canonicalPath) || window.location.pathname || '/';
-    return `${ORIGIN}${path === '/index.html' ? '/' : path}`;
+    return `${ORIGIN}${path === '/' ? '/' : path}`;
   }
 
   function getPageMeta() {
@@ -186,7 +186,7 @@
       publisher: { '@id': `${ORIGIN}/#organization` },
       potentialAction: {
         '@type': 'SearchAction',
-        target: `${ORIGIN}/search-results.html?q={search_term_string}`,
+        target: `${ORIGIN}/busca?q={search_term_string}`,
         'query-input': 'required name=search_term_string',
       },
     };

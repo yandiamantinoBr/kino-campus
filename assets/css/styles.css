@@ -13877,3 +13877,129 @@ body.kc-admin-page .kc-consent-btn {
 
 
 
+
+
+/* ==========================================================================
+   Reservas anti-CLS (2026-09-17)
+   Medido em produção: o CLS de campo (CrUX) estava em 0.41 e o lab apontava
+   shifts em blocos preenchidos por JS depois do primeiro paint. Cada regra
+   abaixo reserva a altura tipicamente renderizada, evitando que o conteúdo
+   abaixo "pule" quando ranking, ferramentas e anúncios entram na página.
+   Valores conferidos com medição real (Playwright) em 1366x900 e 390x844.
+   ========================================================================== */
+
+/* Banner de ranking: 155px no desktop e 173px no mobile quando populado. */
+.kc-ranking-banner {
+  min-height: 150px;
+}
+
+@media (max-width: 640px) {
+  .kc-ranking-banner {
+    min-height: 170px;
+  }
+}
+
+/* Barra de ferramentas do feed: o toggle "ocultar encerrados" e os botões de
+   filtro são injetados por JS depois do primeiro paint (44px de linha). */
+.kc-feed-toolbar {
+  min-height: 44px;
+}
+
+/* Painel pessoal da sidebar: conteúdo personalizado entra via JS (~527px). */
+.kc-sidebar-section--smart {
+  min-height: 300px;
+}
+
+/* Blocos de anúncio: o container do AdSense cresce além do min-height antigo
+   (118px) quando o criativo responsivo carrega (medido: 170-178px). */
+.kc-ad-card--adsense .kc-ad-card__body {
+  min-height: 180px;
+}
+
+.kc-ad-card--adsense .adsbygoogle {
+  min-height: 180px;
+}
+
+.kc-ad-card--adsense.kc-ad-card--aside .kc-ad-card__body,
+.kc-ad-card--adsense.kc-ad-card--aside .adsbygoogle {
+  min-height: 300px;
+}
+
+
+/* ==========================================================================
+   Contraste (WCAG AA) nos links de card — 2026-09-17
+   O auditor color-contrast do Lighthouse mediu 4.42:1 em links laranja sobre
+   a superficie escura do card (#333), logo abaixo do minimo 4.5:1. A variante
+   bright ja existente no design system (#FF8000) entrega ~5.0:1 mantendo a
+   identidade da marca. Escopo restrito ao tema escuro: no tema claro o
+   #FF8000 teria contraste pior que o #FF6B00.
+   ========================================================================== */
+
+[data-theme="dark"] .kc-card__category-source a,
+[data-theme="dark"] .kc-card__description-preview a {
+  color: var(--kc-primary-brand-bright);
+}
+
+
+/* ==========================================================================
+   Reservas anti-CLS — rodada 2 (2026-09-17)
+   Medicao cronometrada em producao (Playwright, primeiro paint -> 9s depois):
+     hero carousel : 190px -> 242px (mobile) / 365px (desktop) / 515px (tablet)
+     painel smart  : 300px -> 527px (desktop) / 573px (tablet)
+     banner ranking: 150px -> 155px  (residual de 5px)
+   Esses crescimentos empurravam banner, abas do feed e sidebar, respondendo
+   pelos shifts de 0.072 (smart) e 0.063 (feed) no Lighthouse desktop.
+   Os valores abaixo reservam o espaco do estado carregado.
+   ========================================================================== */
+
+/* O estado de carregamento do hero e definido em kc-theme-boot.css com
+   .kc-hero-carousel.kc-hero-loading { min-height: 190px } (duas classes
+   vencem uma). A reserva precisa da MESMA especificidade para valer no
+   primeiro paint, que e exatamente quando o slide real ainda nao existe. */
+.kc-hero-carousel,
+.kc-hero-carousel.kc-hero-loading {
+  min-height: 240px;
+}
+
+@media (min-width: 641px) {
+  .kc-hero-carousel,
+.kc-hero-carousel.kc-hero-loading {
+    min-height: 380px;
+  }
+}
+
+.kc-ranking-banner {
+  min-height: 160px;
+}
+
+@media (min-width: 641px) {
+  .kc-sidebar-section--smart {
+    min-height: 520px;
+  }
+}
+
+
+/* Rodada 3: as regras de altura do hero vivem em .kc-hero-banner (o slide
+   interno), nao no container, e uma delas usa !important (190px). A reserva
+   precisa vencer essa declaracao para o slide nao crescer depois do JS. */
+.kc-hero-banner {
+  min-height: 240px !important;
+}
+
+@media (min-width: 641px) {
+  .kc-hero-banner {
+    min-height: 380px !important;
+  }
+}
+
+
+/* Rodada 4 (CLS desktop): o slot lateral de anuncio entrava no DOM so depois do
+   fetch de config, como uma secao de 616px na 3a posicao da sidebar, empurrando
+   o painel pessoal e tudo abaixo (0.072 de CLS). kc-ads.js agora reserva o
+   espaco no DOMContentLoaded com um placeholder vazio; esta regra da a altura
+   medida ao placeholder e deixa de valer quando o anuncio o preenche. */
+.kc-sidebar-section--ads[data-kc-ad-aside-pending="true"] {
+  min-height: 600px;
+  background: transparent;
+  border-color: transparent;
+}

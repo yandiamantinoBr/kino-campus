@@ -95,7 +95,7 @@ test.describe('novo download do complemento de privacidade', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     const supplementButton = page.getByRole('button', {
       name: `Baixar complemento integral do protocolo ${protocol}`,
     });
@@ -272,7 +272,7 @@ test.describe('novo download do complemento de privacidade', () => {
       }
     }, { key: storageKey, ownerId: userId });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsDataSubjectRequests')).toContainText(
       'KC-DSR-20260729-1111111111111111',
       { timeout: 15000 },

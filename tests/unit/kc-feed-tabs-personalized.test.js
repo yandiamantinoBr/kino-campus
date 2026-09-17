@@ -15,8 +15,8 @@ function setupTabsDom() {
       </div>
       <span class="kc-feed-tabs__divider"></span>
       <nav class="kc-feed-tabs__nav" aria-label="Categorias do feed">
-        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
-        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+        <a href="/eventos"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="/oportunidades"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
       </nav>
     </div>
   `;

@@ -26,7 +26,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
           <button class="kc-search-mobile-btn" style="display:inline-flex" aria-label="Buscar"></button>
           <div class="kc-user-actions" style="display:flex;column-gap:6px">
             <button class="kc-notif-bell" style="display:none" aria-label="Notificações"></button>
-            <a class="icon-btn kc-chat-shortcut" style="display:inline-flex" href="mensagens.html" aria-label="Mensagens"></a>
+            <a class="icon-btn kc-chat-shortcut" style="display:inline-flex" href="/mensagens" aria-label="Mensagens"></a>
             <button class="theme-toggle" style="display:inline-flex" aria-label="Alterar tema"></button>
             <a class="btn-login" style="display:inline-flex" href="#login" data-kc-login="true">Login/Cadastro</a>
           </div>
@@ -35,7 +35,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
     </body></html>`, {
       runScripts: 'outside-only',
       pretendToBeVisual: true,
-      url: 'https://www.kinocampus.com.br/mensagens.html',
+      url: 'https://www.kinocampus.com.br/mensagens',
     });
     const { window } = dom;
     windows.push(window);
@@ -205,7 +205,7 @@ describe('wordmark do cabeçalho — linha única e login compacto estável', ()
         nav = document.createElement('nav');
         nav.className = 'kc-nav-links';
         nav.style.cssText = 'display:flex;flex:1 1 0;min-width:0;overflow-x:auto';
-        nav.innerHTML = '<a href="eventos.html">Eventos</a><a href="moradia.html">Moradia</a>';
+        nav.innerHTML = '<a href="/eventos">Eventos</a><a href="/moradia">Moradia</a>';
         container.insertBefore(nav, logo.nextSibling);
         items = Array.from(nav.querySelectorAll('a'));
         const widths = options.itemWidths ?? [32, 36];

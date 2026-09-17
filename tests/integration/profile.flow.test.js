@@ -110,8 +110,8 @@ function createDeps(overrides) {
     $: (selector) => elements[selector] || null,
     bioLimit: 200,
     bindTabsAndLists: jest.fn(),
-    buildAccountSetupHref: jest.fn(() => '/account-setup.html?next=profile'),
-    buildSettingsHref: jest.fn(() => '/settings.html?next=profile'),
+    buildAccountSetupHref: jest.fn(() => '/conta?next=profile'),
+    buildSettingsHref: jest.fn(() => '/configuracoes?next=profile'),
     clearAvatarDraft: jest.fn(() => {
       state.avatarFile = null;
       state.avatarPreviewUrl = '';

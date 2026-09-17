@@ -157,6 +157,31 @@
     return url.href;
   }
 
+  // Imagens publicas do Supabase Storage entram no card em tamanho original
+  // (capas de 1080-1920px chegavam a 400KB+ por card). O proxy sharp da Vercel
+  // (/api/og-image) ja era usado nas miniaturas da busca e e imune a quota de
+  // Image Transformations do Supabase. Aplica-se somente a objetos do Storage:
+  // URLs externas seguem intactas (e continuam como candidatas de fallback).
+  const CARD_IMAGE_WIDTH = 640;
+  const CARD_IMAGE_HEIGHT = 480;
+  const CARD_IMAGE_QUALITY = 68;
+  const KINO_STORAGE_OBJECT_RE = /\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/i;
+
+  function _optimizedCardImageUrl(raw) {
+    const value = String(raw == null ? '' : raw).trim();
+    if (!value || !/^https?:\/\//i.test(value)) return value;
+    try {
+      const match = new URL(value).pathname.match(KINO_STORAGE_OBJECT_RE);
+      if (!match) return value;
+      return '/api/og-image?path=' + encodeURIComponent(`${match[1]}/${match[2]}`)
+        + '&w=' + CARD_IMAGE_WIDTH
+        + '&h=' + CARD_IMAGE_HEIGHT
+        + '&fit=cover&q=' + CARD_IMAGE_QUALITY;
+    } catch (_) {
+      return value;
+    }
+  }
+
   function _buildPostImageCandidates(post) {
     const p = post || {};
     const meta = (p.metadata && typeof p.metadata === 'object' && !Array.isArray(p.metadata)) ? p.metadata : {};
@@ -183,7 +208,8 @@
       if (signature && seenSignature.has(signature)) continue;
       seen.add(raw);
       if (signature) seenSignature.add(signature);
-      out.push(raw);
+      // Dedupe acontece na URL original; o que entra no DOM ja vai otimizado.
+      out.push(_optimizedCardImageUrl(raw));
       if (out.length >= POST_IMAGE_CANDIDATES_LIMIT) break;
     }
     return out;

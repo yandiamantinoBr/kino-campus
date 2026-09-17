@@ -24,7 +24,7 @@ const DRAWER_HTML = [
   '  <div class="kc-mobile-menu-content">',
   '    <div class="kc-mobile-menu-user-section" id="mobileMenuUserSection"></div>',
   '    <div id="mobileMenuAccountSection" class="kc-mobile-menu-account-section"></div>',
-  '    <a href="eventos.html">Eventos</a>',
+  '    <a href="/eventos">Eventos</a>',
   '  </div>',
   '</div>',
 ].join('\n');

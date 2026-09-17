@@ -892,7 +892,7 @@
               ID: <code style="font-size:.9em;">${escHtmlAdmin(pid)}</code>
               &nbsp;·&nbsp; <strong style="color:var(--kc-text-dark);">${open.length}</strong> em aberto
               &nbsp;·&nbsp; <strong>${items.length}</strong> total
-              ${authorId ? `&nbsp;·&nbsp; <a href="../profile.html?id=${encodeURIComponent(authorId)}" target="_blank" style="color:var(--kc-primary-brand);font-size:.95em;">Ver perfil do autor</a>` : ''}
+              ${authorId ? `&nbsp;·&nbsp; <a href="../perfil?id=${encodeURIComponent(authorId)}" target="_blank" style="color:var(--kc-primary-brand);font-size:.95em;">Ver perfil do autor</a>` : ''}
             </div>
             <div style="flex-wrap:wrap;display:flex;gap:2px;">${reasonSummary}</div>
           </div>
@@ -1043,7 +1043,7 @@
               ID: <code style="font-size:.9em;">${escape(pid)}</code>
               &nbsp;·&nbsp; <strong style="color:var(--kc-text-dark);">${open.length}</strong> em aberto
               &nbsp;·&nbsp; <strong>${items.length}</strong> total
-              ${authorId ? `&nbsp;·&nbsp; <a href="../profile.html?id=${encodeURIComponent(authorId)}" target="_blank" style="color:var(--kc-primary-brand);font-size:.95em;">Ver perfil do autor</a>` : ''}
+              ${authorId ? `&nbsp;·&nbsp; <a href="../perfil?id=${encodeURIComponent(authorId)}" target="_blank" style="color:var(--kc-primary-brand);font-size:.95em;">Ver perfil do autor</a>` : ''}
             </div>
             <div style="flex-wrap:wrap;display:flex;gap:2px;">${reasonSummary}</div>
           </div>
@@ -1395,7 +1395,7 @@
     const ok = await checkAdminAccess();
     setLoading(false);
     if (!ok) {
-      setTimeout(() => { window.location.replace('../index.html'); }, 2500);
+      setTimeout(() => { window.location.replace('../'); }, 2500);
       return;
     }
 
