@@ -78,15 +78,15 @@
     'caronas': { label: 'Caronas', href: '/caronas', icon: 'fas fa-car' },
 
     // Subcategorias frequentes
-    'compra-venda:livros': { label: 'Livros', href: 'compra-venda-feed.html?filter=livros', icon: 'fas fa-book' },
-    'compra-venda:eletronicos': { label: 'Eletrônicos', href: 'compra-venda-feed.html?filter=eletronicos', icon: 'fas fa-laptop' },
-    'compra-venda:vestuario': { label: 'Roupas', href: 'compra-venda-feed.html?filter=vestuario', icon: 'fas fa-shirt' },
-    'compra-venda:moveis': { label: 'Móveis', href: 'compra-venda-feed.html?filter=moveis', icon: 'fas fa-couch' },
-    'eventos:sustentabilidade': { label: 'Sustentabilidade', href: 'eventos.html?filter=sustentabilidade', icon: 'fas fa-leaf' },
+    'compra-venda:livros': { label: 'Livros', href: '/compra-venda?filter=livros', icon: 'fas fa-book' },
+    'compra-venda:eletronicos': { label: 'Eletrônicos', href: '/compra-venda?filter=eletronicos', icon: 'fas fa-laptop' },
+    'compra-venda:vestuario': { label: 'Roupas', href: '/compra-venda?filter=vestuario', icon: 'fas fa-shirt' },
+    'compra-venda:moveis': { label: 'Móveis', href: '/compra-venda?filter=moveis', icon: 'fas fa-couch' },
+    'eventos:sustentabilidade': { label: 'Sustentabilidade', href: '/eventos?filter=sustentabilidade', icon: 'fas fa-leaf' },
     'eventos:cultural': { label: 'Culturais', href: '/eventos#culturais', icon: 'fas fa-theater-masks' },
-    'eventos:culturais': { label: 'Culturais', href: 'eventos.html?filter=culturais', icon: 'fas fa-masks-theater' },
+    'eventos:culturais': { label: 'Culturais', href: '/eventos?filter=culturais', icon: 'fas fa-masks-theater' },
     'eventos:academico': { label: 'Acadêmicos', href: '/eventos#academicos', icon: 'fas fa-graduation-cap' },
-    'eventos:academicos': { label: 'Acadêmicos', href: 'eventos.html?filter=academicos', icon: 'fas fa-graduation-cap' },
+    'eventos:academicos': { label: 'Acadêmicos', href: '/eventos?filter=academicos', icon: 'fas fa-graduation-cap' },
     'eventos:palestra': { label: 'Palestras', href: '/eventos#palestras', icon: 'fas fa-microphone-lines' },
     'eventos:palestras': { label: 'Palestras', href: '/eventos#palestras', icon: 'fas fa-microphone-lines' },
     'eventos:congresso': { label: 'Congressos', href: '/eventos#congressos', icon: 'fas fa-users-rectangle' },
@@ -102,9 +102,9 @@
     'oportunidades:editais': { label: 'Editais', href: '/oportunidades#editais', icon: 'fas fa-file-signature' },
     'oportunidades:concurso': { label: 'Concursos', href: '/oportunidades#concursos', icon: 'fas fa-clipboard-check' },
     'oportunidades:concursos': { label: 'Concursos', href: '/oportunidades#concursos', icon: 'fas fa-clipboard-check' },
-    'oportunidades:estagio': { label: 'Estágios', href: 'oportunidades.html?filter=estagio', icon: 'fas fa-user-graduate' },
+    'oportunidades:estagio': { label: 'Estágios', href: '/oportunidades?filter=estagio', icon: 'fas fa-user-graduate' },
     'oportunidades:estagios': { label: 'Estágios', href: '/oportunidades#estagios', icon: 'fas fa-user-graduate' },
-    'oportunidades:bolsa': { label: 'Bolsas', href: 'oportunidades.html?filter=bolsa', icon: 'fas fa-award' },
+    'oportunidades:bolsa': { label: 'Bolsas', href: '/oportunidades?filter=bolsa', icon: 'fas fa-award' },
     'oportunidades:bolsas': { label: 'Bolsas', href: '/oportunidades#bolsas', icon: 'fas fa-award' },
     'oportunidades:pesquisa': { label: 'Pesquisa', href: '/oportunidades#pesquisa', icon: 'fas fa-flask' },
     'oportunidades:curso-capacitacao': { label: 'Cursos', href: '/oportunidades#cursos-capacitacoes', icon: 'fas fa-book-open-reader' },
@@ -113,7 +113,7 @@
     'oportunidades:empregos': { label: 'Empregos', href: '/oportunidades#empregos', icon: 'fas fa-briefcase' },
     'oportunidades:monitoria': { label: 'Monitoria', href: '/oportunidades#monitoria', icon: 'fas fa-chalkboard-teacher' },
     'oportunidades:mobilidade': { label: 'Mobilidade', href: '/oportunidades#mobilidade', icon: 'fas fa-plane-departure' },
-    'moradia:republica': { label: 'Repúblicas', href: 'moradia.html?filter=republica', icon: 'fas fa-people-roof' },
+    'moradia:republica': { label: 'Repúblicas', href: '/moradia?filter=republica', icon: 'fas fa-people-roof' },
   };
 
   function resolveFromSharedCatalog(moduleKey, categoryKey) {

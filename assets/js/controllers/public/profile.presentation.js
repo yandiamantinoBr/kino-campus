@@ -366,7 +366,7 @@
       var showChat = !ownerView && state.user && state.user.id;
       chatBtn.style.display = showChat ? 'inline-flex' : 'none';
       if (showChat) {
-        chatBtn.href = 'mensagens.html?with=' + encodeURIComponent(profile.id);
+        chatBtn.href = '/mensagens?with=' + encodeURIComponent(profile.id);
       }
     }
 

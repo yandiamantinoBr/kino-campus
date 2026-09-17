@@ -357,11 +357,11 @@ function renderCommentCardHTML(id, containerId, raw, currentUserId, isAdmin, dep
   return `
     <div class="${wrapperClass}" data-kc-comment-id="${_esc(String(c.id))}" data-kc-comment-depth="${_esc(String(depth))}" style="${wrapperStyle}">
       <div style="display:flex;gap:10px;margin-bottom:10px;">
-        ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="display: contents;">` : ''}
+        ${c.authorId ? `<a href="/perfil?id=${_esc(c.authorId)}" style="display: contents;">` : ''}
           <img src="${_esc(c.avatar || ((window.KC_CONSTANTS && window.KC_CONSTANTS.DEFAULT_AVATAR_SVG) || ''))}" alt="${_esc(c.author)}" style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;object-fit:cover;background-color:var(--kc-surface-dark);cursor:${c.authorId ? 'pointer' : 'default'};">
         ${c.authorId ? '</a>' : ''}
         <div style="flex:1;">
-          ${c.authorId ? `<a href="profile.html?id=${_esc(c.authorId)}" style="font-weight:bold;text-decoration:none;color:inherit;" class="kc-comment-author-link">${_esc(c.author)}</a>` : `<div style="font-weight:bold;">${_esc(c.author)}</div>`}
+          ${c.authorId ? `<a href="/perfil?id=${_esc(c.authorId)}" style="font-weight:bold;text-decoration:none;color:inherit;" class="kc-comment-author-link">${_esc(c.author)}</a>` : `<div style="font-weight:bold;">${_esc(c.author)}</div>`}
           <div style="font-size:0.85em;color:var(--kc-text-dark-secondary);">${_esc(c.timestamp)}</div>
         </div>
       </div>

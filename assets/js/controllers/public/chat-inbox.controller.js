@@ -2226,7 +2226,7 @@
     if (profileBtn) {
       profileBtn.addEventListener('click', function () {
         if (state.activePeer && state.activePeer.id) {
-          window.location.href = 'profile.html?id=' + encodeURIComponent(state.activePeer.id);
+          window.location.href = '/perfil?id=' + encodeURIComponent(state.activePeer.id);
         }
       });
     }

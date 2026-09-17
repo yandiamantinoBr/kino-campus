@@ -911,7 +911,7 @@
     if (!q) return;
     // trackSearch() is called on search-results.html load to avoid the async
     // insert being aborted by page navigation before the request completes.
-    window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
+    window.location.href = `/busca?q=${encodeURIComponent(q)}`;
   }
 
   function globalSearch(query, redirectToResults = false) {

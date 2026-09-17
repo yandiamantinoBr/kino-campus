@@ -516,7 +516,7 @@
       var scoreEl = document.createElement('span');
 
       link.className = 'kc-ranking-user';
-      link.href = 'profile.html?id=' + encodeURIComponent(String((user && user.user_id) || ''));
+      link.href = '/perfil?id=' + encodeURIComponent(String((user && user.user_id) || ''));
       link.title = name + ' — ' + score + ' pts';
       avatar.className = 'kc-ranking-user-avatar';
       position.className = 'kc-ranking-user-position';

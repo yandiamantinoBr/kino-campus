@@ -84,7 +84,7 @@
 
   function buildProfileHref(profileId) {
     const normalized = String(profileId || '').trim();
-    return normalized ? `profile.html?id=${encodeURIComponent(normalized)}` : '/perfil';
+    return normalized ? `/perfil?id=${encodeURIComponent(normalized)}` : '/perfil';
   }
 
   function isViewerAuthenticated() {
@@ -430,7 +430,7 @@
               window._KCProduct.analytics.trackProfileCta(currentPost);
             }
           } catch (_) {}
-          window.location.href = 'profile.html?id=' + encodeURIComponent(authorId);
+          window.location.href = '/perfil?id=' + encodeURIComponent(authorId);
         } else {
           toast('Perfil indisponível para esta publicação.', 'warn', 2000);
         }
@@ -618,7 +618,7 @@
     if (authorId) {
       return {
         type: 'open_contact',
-        href: 'profile.html?id=' + encodeURIComponent(authorId),
+        href: '/perfil?id=' + encodeURIComponent(authorId),
       };
     }
 

@@ -43,7 +43,7 @@
         {
           key: 'compra-venda',
           label: 'Livros e materiais',
-          href: 'compra-venda-feed.html?filter=livros',
+          href: '/compra-venda?filter=livros',
           icon: 'fas fa-book',
           body: 'A circulação de livros, apostilas e materiais reduz barreiras de entrada e aproveita melhor recursos já existentes na comunidade.'
         },
@@ -182,7 +182,7 @@
         {
           key: 'eventos',
           label: 'Feiras e ações de troca',
-          href: 'eventos.html?filter=sustentabilidade',
+          href: '/eventos?filter=sustentabilidade',
           icon: 'fas fa-leaf',
           body: 'Eventos de troca e sustentabilidade tornam o consumo responsável uma prática visível e coletiva.'
         }
@@ -245,7 +245,7 @@
         {
           key: 'eventos',
           label: 'Educação climática',
-          href: 'eventos.html?filter=sustentabilidade',
+          href: '/eventos?filter=sustentabilidade',
           icon: 'fas fa-seedling',
           body: 'Eventos e campanhas fortalecem cultura climática dentro da universidade e transformam dados em ação local.'
         }

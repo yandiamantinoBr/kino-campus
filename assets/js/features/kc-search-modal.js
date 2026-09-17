@@ -121,7 +121,7 @@
           if (window.kcSearch && typeof window.kcSearch.navigateToResults === 'function') {
             window.kcSearch.navigateToResults(q, { source: 'mobile-modal-enter' });
           } else {
-            window.location.href = `search-results.html?q=${encodeURIComponent(q)}`;
+            window.location.href = `/busca?q=${encodeURIComponent(q)}`;
           }
         }
       }

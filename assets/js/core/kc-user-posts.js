@@ -178,7 +178,7 @@
     const m = String(modulo || '').toLowerCase();
     const map = {
       'compra-venda': '/compra-venda',
-      'livros': 'compra-venda-feed.html?filter=livros',
+      'livros': '/compra-venda?filter=livros',
       'caronas': '/caronas',
       'oportunidades': '/oportunidades',
       'achados-perdidos': '/achados-perdidos',

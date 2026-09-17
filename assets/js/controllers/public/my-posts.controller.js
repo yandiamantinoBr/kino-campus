@@ -475,7 +475,7 @@
       if (typeof window.kcOpenEditPostModal === 'function') {
         window.kcOpenEditPostModal(post, function () { reloadPosts(); });
       } else {
-        window.location.href = 'create-post.html?edit=' + encodeURIComponent(uuid);
+        window.location.href = '/criar-post?edit=' + encodeURIComponent(uuid);
       }
     }).catch(function () {
       showToastMsg('Não foi possível carregar a publicação.', 'error');

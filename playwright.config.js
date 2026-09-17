@@ -35,7 +35,11 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'npx http-server . -p 4000 -s -c-1',
+    // Servidor com os MESMOS redirects/rewrites do vercel.json: as rotas
+    // canônicas sem extensão (/eventos, /perfil) precisam resolver localmente
+    // como resolvem em produção, senão a navegação do app cai em 404 aqui e
+    // nos testes. Ver scripts/e2e-static-server.js.
+    command: 'node scripts/e2e-static-server.js --port 4000',
     url: 'http://localhost:4000',
     reuseExistingServer: !process.env.CI,
     timeout: 30 * 1000,
