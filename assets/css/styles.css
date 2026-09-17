@@ -13991,3 +13991,15 @@ body.kc-admin-page .kc-consent-btn {
     min-height: 380px !important;
   }
 }
+
+
+/* Rodada 4 (CLS desktop): o slot lateral de anuncio entrava no DOM so depois do
+   fetch de config, como uma secao de 616px na 3a posicao da sidebar, empurrando
+   o painel pessoal e tudo abaixo (0.072 de CLS). kc-ads.js agora reserva o
+   espaco no DOMContentLoaded com um placeholder vazio; esta regra da a altura
+   medida ao placeholder e deixa de valer quando o anuncio o preenche. */
+.kc-sidebar-section--ads[data-kc-ad-aside-pending="true"] {
+  min-height: 600px;
+  background: transparent;
+  border-color: transparent;
+}

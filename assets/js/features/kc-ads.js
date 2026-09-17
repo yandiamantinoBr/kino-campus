@@ -629,6 +629,44 @@
       .forEach((node) => node.remove());
   }
 
+  // CLS (2026-09-17): o slot lateral entrava no DOM so depois do fetch de
+  // config/anuncios (medido: secao de 616px inserida na 3a posicao da sidebar,
+  // empurrando painel pessoal e tudo abaixo — 0.072 de CLS no desktop). Estes
+  // placeholders vazios reservam a altura no DOMContentLoaded e sao preenchidos
+  // no lugar por renderAsideSection (que ja reutiliza [data-kc-ad-aside]).
+  // Se nenhum anuncio for elegivel, removeManagedAsideAds os descarta.
+  function ensureAsidePlaceholders(targetDoc) {
+    if (!targetDoc || !targetDoc.querySelector) return;
+    if (!shouldRenderAside()) return;
+    const sidebar = targetDoc.querySelector('main .kc-sidebar');
+    if (!sidebar) return;
+    ['top', 'sticky'].forEach((slot) => {
+      if (sidebar.querySelector('[data-kc-ad-aside="' + slot + '"]')) return;
+      const section = targetDoc.createElement('section');
+      section.className = 'kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-' + slot;
+      section.setAttribute('data-kc-ad-aside', slot);
+      section.setAttribute('data-kc-ad-aside-pending', 'true');
+      section.setAttribute('aria-hidden', 'true');
+      if (slot !== 'top') {
+        sidebar.appendChild(section);
+        return;
+      }
+      const createPostBtn = sidebar.querySelector('.kc-create-post-btn');
+      const createPostSection = createPostBtn && typeof createPostBtn.closest === 'function'
+        ? createPostBtn.closest('.kc-sidebar-section')
+        : null;
+      if (createPostSection && createPostSection.parentNode === sidebar) {
+        sidebar.insertBefore(section, createPostSection.nextSibling);
+        return;
+      }
+      const firstContentSection = Array.from(sidebar.children || []).find((node) => {
+        return !(node.getAttribute && node.getAttribute('data-kc-ad-aside'));
+      });
+      if (firstContentSection) sidebar.insertBefore(section, firstContentSection.nextSibling);
+      else sidebar.appendChild(section);
+    });
+  }
+
   function renderAsideSection(sidebar, targetDoc, slot, ad, config) {
     if (!sidebar || !targetDoc) return null;
     const slotPlacement = slotPlacementFor('feed_aside', slot);
@@ -641,6 +679,9 @@
       section.setAttribute('data-kc-ad-aside', slot);
     }
     section.className = 'kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-' + slot;
+    // Slot preenchido: a reserva de altura do placeholder deixa de valer.
+    section.removeAttribute('data-kc-ad-aside-pending');
+    section.removeAttribute('aria-hidden');
     section.innerHTML = [
       '<div class="kc-ad-sidebar-head">',
       '<h3><i class="fas fa-rectangle-ad" aria-hidden="true"></i> Publicidade</h3>',
@@ -924,6 +965,8 @@
 
   function init() {
     if (!root.document || !isFeedPage()) return;
+    // Reserva o espaco do slot lateral ANTES do fetch assincrono de config.
+    ensureAsidePlaceholders(root.document);
     bindConsentListener();
     let retryIndex = 0;
     let retryTimer = null;
