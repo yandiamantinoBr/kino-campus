@@ -399,6 +399,8 @@ button.kc-cadu-review-provider:focus-visible {
   color: var(--kc-text-dark-primary);
   font-size: .98rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .kc-cadu-review-item__summary {
@@ -748,6 +750,10 @@ button.kc-cadu-review-provider:focus-visible {
 .kc-cadu-review-audit__list {
   display: grid;
   gap: 1px;
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border-top: 1px solid var(--kc-border-dark);
 }
 
@@ -757,6 +763,13 @@ button.kc-cadu-review-provider:focus-visible {
   gap: 6px 12px;
   padding: 11px 14px;
   background: color-mix(in srgb, var(--kc-bg-dark) 45%, transparent);
+}
+
+.kc-cadu-review-audit__item strong,
+.kc-cadu-review-audit__item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .kc-cadu-review-audit__item strong {
@@ -781,6 +794,34 @@ button.kc-cadu-review-provider:focus-visible {
 .kc-cadu-review-audit__legacy i {
   flex: 0 0 auto;
   margin-top: .1em;
+}
+
+.kc-cadu-review-audit__footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--kc-border-dark);
+  background: var(--kc-surface-dark);
+}
+
+.kc-cadu-review-audit__notice {
+  color: var(--kc-text-dark-secondary);
+  font-size: .76rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.kc-cadu-review-audit__notice.is-error {
+  color: #f87171;
+}
+
+.kc-cadu-review-audit__footer button {
+  flex: 0 0 auto;
+  min-height: 34px;
 }
 
 .kc-cadu-reviews .kc-cadu-review-queue {
@@ -855,6 +896,18 @@ button.kc-cadu-review-provider:focus-visible {
   text-decoration: underline;
 }
 
+/* Faixa 700–1080px: o item perde a coluna lateral e as ações ganham
+   uma linha própria, em vez de serem comprimidas em ~190px. */
+@media (max-width: 1080px) and (min-width: 701px) {
+  .kc-cadu-review-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kc-cadu-review-item__actions {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 1080px) {
   .kc-cadu-review-providers {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -872,7 +925,8 @@ button.kc-cadu-review-provider:focus-visible {
 @media (max-width: 700px) {
   .kc-cadu-review-entry,
   .kc-cadu-reviews__header,
-  .kc-cadu-review-audit__head {
+  .kc-cadu-review-audit__head,
+  .kc-cadu-review-audit__footer {
     align-items: stretch;
     flex-direction: column;
   }
@@ -950,7 +1004,8 @@ button.kc-cadu-review-provider:focus-visible {
   }
 
   .kc-cadu-review-pager > div,
-  .kc-cadu-review-pager button {
+  .kc-cadu-review-pager button,
+  .kc-cadu-review-audit__footer button {
     width: 100%;
   }
 

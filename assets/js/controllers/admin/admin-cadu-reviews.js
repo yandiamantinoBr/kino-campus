@@ -11,6 +11,8 @@
   var requestController = null;
   var listRequest = null;
   var countRequestGeneration = 0;
+  // Cada leitura do histórico invalida a anterior; "Carregar mais" também avança.
+  var auditRequestGeneration = 0;
   var pendingReads = Object.create(null);
   var institutionalPending = 0;
   var filterChangeTimer = null;
@@ -21,6 +23,8 @@
   var REVIEW_REPASS_TIMEOUT_MS = 420000;
   // Filtros reativos: agrupa trocas rápidas de seleção em uma única consulta.
   var FILTER_CHANGE_DEBOUNCE_MS = 150;
+  // Histórico: itens da primeira página e incremento de cada "Carregar mais".
+  var AUDIT_PAGE_SIZE = 50;
   var DEFAULT_PAGE_LIMIT = (
     typeof window.matchMedia === 'function'
     && window.matchMedia('(max-width: 700px)').matches
@@ -41,6 +45,11 @@
     decisionDraft: null,
     resolvingId: '',
     auditLoaded: false,
+    auditItems: [],
+    auditOffset: 0,
+    auditHasMore: false,
+    auditLoadingMore: false,
+    auditMoreError: '',
     repassFilter: 'all',
     repassRunning: false
   };
@@ -801,6 +810,13 @@
 
   function invalidateAudit(message) {
     state.auditLoaded = false;
+    // Recorte mudou: páginas acumuladas e cursos de paginação não valem mais.
+    auditRequestGeneration += 1;
+    state.auditItems = [];
+    state.auditOffset = 0;
+    state.auditHasMore = false;
+    state.auditLoadingMore = false;
+    state.auditMoreError = '';
     var target = $('#reviews-audit-list');
     if (target) {
       target.innerHTML = '<div class="kc-cadu-review-empty">' +
@@ -1054,12 +1070,14 @@
     };
   }
 
-  async function fetchInstitutionalAudit(maximum) {
+  async function fetchInstitutionalAudit(maximum, startOffset) {
     var terminalStates = ['approved', 'rejected', 'superseded'];
     var perStateMaximum = Math.min(1000, Math.max(50, maximum));
+    // Cada estado terminal tem seu próprio cursor: a página seguinte continua dele.
+    var baseOffset = Math.max(0, Number(startOffset) || 0);
     var results = await Promise.all(terminalStates.map(async function (reviewState) {
       var items = [];
-      var offset = 0;
+      var offset = baseOffset;
       var hasMore = true;
       while (hasMore && items.length < perStateMaximum) {
         var params = new URLSearchParams();
@@ -1083,24 +1101,26 @@
       return { items: items, truncated: hasMore };
     }));
     var combined = [];
-    var truncated = false;
+    var hasMore = false;
     results.forEach(function (result) {
+      // O corte final é do chamador: fatiar aqui descartaria itens já lidos.
       combined = combined.concat(result.items);
-      truncated = truncated || result.truncated;
+      hasMore = hasMore || result.truncated;
     });
     combined.sort(function (left, right) {
       return resolvedAtValue(right) - resolvedAtValue(left);
     });
-    if (combined.length > maximum) {
-      combined = combined.slice(0, maximum);
-      truncated = true;
-    }
-    return { items: combined, truncated: truncated };
+    return {
+      items: combined,
+      truncated: hasMore,
+      hasMore: hasMore,
+      nextOffset: baseOffset + perStateMaximum
+    };
   }
 
-  async function fetchCentralAudit(maximum) {
+  async function fetchCentralAudit(maximum, startOffset) {
     var items = [];
-    var offset = 0;
+    var offset = Math.max(0, Number(startOffset) || 0);
     var hasMore = true;
     while (hasMore && items.length < maximum) {
       var envelope = await bridge.apiFetchResponse(
@@ -1117,7 +1137,7 @@
         throw new Error('Paginação central inconsistente.');
       }
     }
-    return { items: items, truncated: hasMore };
+    return { items: items, truncated: hasMore, hasMore: hasMore, nextOffset: offset };
   }
 
   function renderAuditItems(target, items) {
@@ -1137,22 +1157,100 @@
         (item.resolution_note ? '<span>' + escapeHtml(item.resolution_note) + '</span>' : '') +
         legacyWarning +
         '</div>';
-    }).join('');
+    }).join('') + auditFooterHtml();
+  }
+
+  function auditItemKey(item) {
+    return String(item.origin || '') + '|' + String(item.item_id || item.id || '') + '|'
+      + String(item.item_version || '') + '|' + String(item.resolved_at == null ? '' : item.resolved_at);
+  }
+
+  function auditFooterHtml() {
+    // Sem truncamento não há aviso nem paginação: a resposta veio completa.
+    if (!state.auditHasMore && !state.auditMoreError) return '';
+    var visible = state.auditItems.length;
+    var html = '<div class="kc-cadu-review-audit__footer">';
+    if (state.auditMoreError) {
+      html += '<span class="kc-cadu-review-audit__notice is-error">Mostrando ' + visible
+        + ' decisões; não foi possível carregar mais agora.</span>';
+    } else {
+      html += '<span class="kc-cadu-review-audit__notice">Mostrando ' + visible
+        + ' decisões mais recentes deste recorte.</span>';
+    }
+    if (state.auditHasMore) {
+      html += '<button type="button" class="kc-btn-secondary" id="reviews-audit-more"'
+        + (state.auditLoadingMore ? ' disabled' : '') + '>'
+        + (state.auditLoadingMore
+          ? '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Carregando…'
+          : 'Carregar mais')
+        + '</button>';
+    }
+    return html + '</div>';
+  }
+
+  function applyAuditPage(result, append) {
+    var merged = append ? state.auditItems.concat(result.items) : result.items.slice();
+    var seen = Object.create(null);
+    var unique = [];
+    merged.forEach(function (item) {
+      var key = auditItemKey(item);
+      if (seen[key]) return;
+      seen[key] = true;
+      unique.push(item);
+    });
+    unique.sort(function (left, right) {
+      return resolvedAtValue(right) - resolvedAtValue(left);
+    });
+    state.auditItems = unique;
+    state.auditOffset = Math.max(0, Number(result.nextOffset) || 0);
+    state.auditHasMore = result.hasMore === true;
+    state.auditMoreError = '';
+  }
+
+  function auditFetchPage(maximum, startOffset) {
+    return state.origin === 'sites'
+      ? fetchInstitutionalAudit(maximum, startOffset)
+      : fetchCentralAudit(maximum, startOffset);
   }
 
   async function loadAudit() {
     var target = $('#reviews-audit-list');
     if (!target || !bridge || typeof bridge.apiFetchResponse !== 'function') return;
+    var generation = ++auditRequestGeneration;
+    state.auditLoadingMore = false;
+    state.auditMoreError = '';
     target.innerHTML = '<div class="kc-cadu-review-empty"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Consultando decisões…</div>';
     try {
-      var result = state.origin === 'sites'
-        ? await fetchInstitutionalAudit(50)
-        : await fetchCentralAudit(50);
+      var result = await auditFetchPage(AUDIT_PAGE_SIZE, 0);
+      if (generation !== auditRequestGeneration) return;
       state.auditLoaded = true;
-      renderAuditItems(target, result.items);
+      applyAuditPage(result, false);
+      renderAuditItems(target, state.auditItems);
     } catch (_) {
+      if (generation !== auditRequestGeneration) return;
+      state.auditLoaded = false;
       target.innerHTML = '<div class="kc-cadu-review-empty">Não foi possível consultar o histórico agora.</div>';
     }
+  }
+
+  async function loadMoreAudit() {
+    var target = $('#reviews-audit-list');
+    if (!target || !state.auditHasMore || state.auditLoadingMore) return;
+    if (!bridge || typeof bridge.apiFetchResponse !== 'function') return;
+    var generation = ++auditRequestGeneration;
+    state.auditLoadingMore = true;
+    state.auditMoreError = '';
+    renderAuditItems(target, state.auditItems);
+    try {
+      var result = await auditFetchPage(AUDIT_PAGE_SIZE, state.auditOffset);
+      if (generation !== auditRequestGeneration) return;
+      applyAuditPage(result, true);
+    } catch (_) {
+      if (generation !== auditRequestGeneration) return;
+      state.auditMoreError = 'A página seguinte do histórico não respondeu agora.';
+    }
+    state.auditLoadingMore = false;
+    renderAuditItems(target, state.auditItems);
   }
 
   async function exportAudit() {
@@ -1278,6 +1376,14 @@
     });
     var auditRefresh = $('#reviews-audit-refresh');
     if (auditRefresh) auditRefresh.addEventListener('click', loadAudit);
+    // O botão "Carregar mais" nasce a cada render: o clique é delegado no contêiner.
+    var auditList = $('#reviews-audit-list');
+    if (auditList) auditList.addEventListener('click', function (event) {
+      var node = event.target;
+      if (node && typeof node.closest === 'function' && node.closest('#reviews-audit-more')) {
+        loadMoreAudit();
+      }
+    });
     var audit = $('#reviews-audit');
     if (audit) audit.addEventListener('toggle', function () {
       if (audit.open && !state.auditLoaded) loadAudit();
