@@ -13877,3 +13877,50 @@ body.kc-admin-page .kc-consent-btn {
 
 
 
+
+
+/* ==========================================================================
+   Reservas anti-CLS (2026-09-17)
+   Medido em produção: o CLS de campo (CrUX) estava em 0.41 e o lab apontava
+   shifts em blocos preenchidos por JS depois do primeiro paint. Cada regra
+   abaixo reserva a altura tipicamente renderizada, evitando que o conteúdo
+   abaixo "pule" quando ranking, ferramentas e anúncios entram na página.
+   Valores conferidos com medição real (Playwright) em 1366x900 e 390x844.
+   ========================================================================== */
+
+/* Banner de ranking: 155px no desktop e 173px no mobile quando populado. */
+.kc-ranking-banner {
+  min-height: 150px;
+}
+
+@media (max-width: 640px) {
+  .kc-ranking-banner {
+    min-height: 170px;
+  }
+}
+
+/* Barra de ferramentas do feed: o toggle "ocultar encerrados" e os botões de
+   filtro são injetados por JS depois do primeiro paint (44px de linha). */
+.kc-feed-toolbar {
+  min-height: 44px;
+}
+
+/* Painel pessoal da sidebar: conteúdo personalizado entra via JS (~527px). */
+.kc-sidebar-section--smart {
+  min-height: 300px;
+}
+
+/* Blocos de anúncio: o container do AdSense cresce além do min-height antigo
+   (118px) quando o criativo responsivo carrega (medido: 170-178px). */
+.kc-ad-card--adsense .kc-ad-card__body {
+  min-height: 180px;
+}
+
+.kc-ad-card--adsense .adsbygoogle {
+  min-height: 180px;
+}
+
+.kc-ad-card--adsense.kc-ad-card--aside .kc-ad-card__body,
+.kc-ad-card--adsense.kc-ad-card--aside .adsbygoogle {
+  min-height: 300px;
+}
