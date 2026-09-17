@@ -320,6 +320,14 @@
         </a>
       </div>
 
+      <!-- Reserva do slot de anuncio lateral (anti-CLS). O bloco de publicidade
+           entrava no DOM so depois do fetch de config, como uma secao de 616px
+           que empurrava todo o resto da sidebar (0.072 de CLS no desktop).
+           kc-ads.js preenche este espaco no lugar; se nenhum anuncio for
+           elegivel, o proprio modulo remove o placeholder. -->
+      <section class="kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-top"
+        data-kc-ad-aside="top" data-kc-ad-aside-pending="true" aria-hidden="true"></section>
+
       <div class="kc-sidebar-section kc-sidebar-section--smart" data-kc-home-personal-panel="true">
         <h3>
           <i class="fas fa-chart-line"></i>
@@ -407,6 +415,10 @@
       <!-- Calendário de Eventos — componente compartilhado (assets/js/features/kc-events-calendar.js).
            FONTE ÚNICA sincronizada com /eventos.html; o markup (seção + modal) é injetado pelo módulo. -->
       <div class="kc-sidebar-section kc-sidebar-section--cal" data-kc-cal-mount></div>
+
+      <!-- Reserva do slot sticky (mesmo contrato do bloco acima). -->
+      <section class="kc-sidebar-section kc-sidebar-section--ads kc-sidebar-section--ads-sticky"
+        data-kc-ad-aside="sticky" data-kc-ad-aside-pending="true" aria-hidden="true"></section>
     </aside>
   </main>
 
