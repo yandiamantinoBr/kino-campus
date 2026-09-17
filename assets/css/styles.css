@@ -13952,13 +13952,19 @@ body.kc-admin-page .kc-consent-btn {
    Os valores abaixo reservam o espaco do estado carregado.
    ========================================================================== */
 
-.kc-hero-carousel {
+/* O estado de carregamento do hero e definido em kc-theme-boot.css com
+   .kc-hero-carousel.kc-hero-loading { min-height: 190px } (duas classes
+   vencem uma). A reserva precisa da MESMA especificidade para valer no
+   primeiro paint, que e exatamente quando o slide real ainda nao existe. */
+.kc-hero-carousel,
+.kc-hero-carousel.kc-hero-loading {
   min-height: 240px;
 }
 
 @media (min-width: 641px) {
-  .kc-hero-carousel {
-    min-height: 360px;
+  .kc-hero-carousel,
+.kc-hero-carousel.kc-hero-loading {
+    min-height: 380px;
   }
 }
 
