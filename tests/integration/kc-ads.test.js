@@ -349,6 +349,30 @@ describe('KCAds feed monetization', () => {
     expect(document.querySelector('.kc-sidebar').lastElementChild.getAttribute('data-kc-ad-aside')).toBe('sticky');
   });
 
+  test('reaproveita o placeholder de reserva do slot lateral (anti-CLS)', () => {
+    // kc-ads.js reserva o espaco no DOMContentLoaded para o bloco de anuncio
+    // nao ser inserido depois do primeiro paint (medido: secao de 616px na 3a
+    // posicao da sidebar empurrava o painel pessoal — 0.072 de CLS no desktop).
+    document.body.innerHTML = [
+      '<main><aside class="kc-sidebar">',
+      '<section class="kc-sidebar-section" id="one">Resumo</section>',
+      '<section class="kc-sidebar-section kc-sidebar-section--ads" data-kc-ad-aside="top" data-kc-ad-aside-pending="true" aria-hidden="true"></section>',
+      '</aside></main>',
+    ].join('');
+
+    const ok = KCAds.renderAsideAds([
+      { id: 'ad-1', title: 'Topo', target_url: 'https://example.com/a', placements: ['feed_aside'] },
+    ], { module_key: 'eventos' }, document);
+
+    expect(ok).toBe(true);
+    expect(document.querySelectorAll('[data-kc-ad-aside="top"]')).toHaveLength(1);
+    const top = document.querySelector('[data-kc-ad-aside="top"]');
+    expect(top.hasAttribute('data-kc-ad-aside-pending')).toBe(false);
+    expect(top.getAttribute('aria-hidden')).toBeNull();
+    expect(top.querySelector('.kc-ad-card')).toBeTruthy();
+    expect(document.querySelector('#one').nextElementSibling).toBe(top);
+  });
+
   test('não duplica a mesma campanha lateral quando só há uma elegível', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
