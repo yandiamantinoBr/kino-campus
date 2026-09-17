@@ -471,7 +471,7 @@
     const rows = [];
     const includeSearch = filters.eventName === 'all' || filters.eventName === 'search';
     const includeViews = filters.eventName === 'all' || filters.eventName === 'post_open';
-    const pageAllowsSearch = filters.pagePath === 'all' || filters.pagePath === 'search-results.html';
+    const pageAllowsSearch = filters.pagePath === 'all' || filters.pagePath === '/busca';
     const pageAllowsViews = filters.pagePath === 'all' || filters.pagePath === '_product.html' || filters.pagePath === 'product.html';
 
     if (includeSearch && pageAllowsSearch && filters.moduleKey === 'all') {
@@ -487,7 +487,7 @@
         rows.push({
           created_at: row.created_at,
           event_name: 'search',
-          page_path: 'search-results.html',
+          page_path: '/busca',
           entity_type: 'search',
           entity_id: row.term || '',
           module_key: '',

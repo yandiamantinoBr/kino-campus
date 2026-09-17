@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="canonical" href="https://www.kinocampus.com.br/settings.html" />
+  <link rel="canonical" href="https://www.kinocampus.com.br/configuracoes" />
   <meta name="robots" content="noindex,follow,noarchive" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -40,12 +40,12 @@
         </a>
       </div>
       <nav class="kc-nav-links" aria-label="Navegação principal" data-i18n-aria-label="aria-label.nav-main">
-        <a href="eventos.html"><i class="fas fa-calendar"></i><span>Eventos</span></a>
-        <a href="oportunidades.html"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
-        <a href="moradia.html"><i class="fas fa-home"></i><span>Moradia</span></a>
-        <a href="compra-venda-feed.html"><i class="fas fa-shopping-bag"></i><span>Compra e Venda</span></a>
-        <a href="caronas-feed.html"><i class="fas fa-car"></i><span>Caronas</span></a>
-        <a href="achados-perdidos.html"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
+        <a href="/eventos"><i class="fas fa-calendar"></i><span>Eventos</span></a>
+        <a href="/oportunidades"><i class="fas fa-briefcase"></i><span>Oportunidades</span></a>
+        <a href="/moradia"><i class="fas fa-home"></i><span>Moradia</span></a>
+        <a href="/compra-venda"><i class="fas fa-shopping-bag"></i><span>Compra e Venda</span></a>
+        <a href="/caronas"><i class="fas fa-car"></i><span>Caronas</span></a>
+        <a href="/achados-perdidos"><i class="fas fa-search"></i><span>Achados/Perdidos</span></a>
       </nav>
       <div class="kc-search-bar" id="kcSearchBar">
         <input id="searchInput" aria-label="Pesquisar" placeholder="Busque por itens, eventos, vagas na UFG..." type="search" data-i18n-aria-label="aria-label.search-input" data-i18n-placeholder="placeholder.search-main" />
@@ -143,7 +143,7 @@
         <h2>Entre para configurar sua conta</h2>
         <div class="kc-settings-actions-row">
           <a class="kc-settings-btn is-primary" href="#login" data-kc-login="true"><i class="fas fa-right-to-bracket"></i><span>Entrar agora</span></a>
-          <a class="kc-settings-btn" href="ajuda.html"><i class="fas fa-circle-question"></i><span>Central de ajuda</span></a>
+          <a class="kc-settings-btn" href="/ajuda"><i class="fas fa-circle-question"></i><span>Central de ajuda</span></a>
         </div>
       </section>
 
@@ -152,8 +152,8 @@
           <section class="kc-settings-card">
             <h2>Conta e perfil</h2>
             <div class="kc-settings-actions-row">
-              <a id="settingsProfileLink" class="kc-settings-btn" href="profile.html"><i class="fas fa-id-badge"></i><span>Ver perfil</span></a>
-              <a id="settingsSetupLink" class="kc-settings-btn is-primary" href="account-setup.html"><i class="fas fa-list-check"></i><span>Completar conta</span></a>
+              <a id="settingsProfileLink" class="kc-settings-btn" href="/perfil"><i class="fas fa-id-badge"></i><span>Ver perfil</span></a>
+              <a id="settingsSetupLink" class="kc-settings-btn is-primary" href="/conta"><i class="fas fa-list-check"></i><span>Completar conta</span></a>
             </div>
             <div class="kc-settings-row">
               <div>
@@ -202,7 +202,7 @@
             </div>
             <div class="kc-settings-actions-row">
               <button id="settingsSaveContact" type="button" class="kc-settings-btn is-primary"><i class="fas fa-floppy-disk"></i><span>Salvar contato</span></button>
-              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-pen"></i><span>Editar dados do contato</span></a>
+              <a class="kc-settings-btn" href="/conta"><i class="fas fa-pen"></i><span>Editar dados do contato</span></a>
             </div>
           </section>
 
@@ -260,7 +260,7 @@
             <div id="settingsNetworksList" class="kc-settings-list kc-settings-list--networks"></div>
             <div class="kc-settings-actions-row">
               <button id="settingsSaveVisibility" type="button" class="kc-settings-btn is-primary"><i class="fas fa-eye"></i><span>Salvar visibilidade</span></button>
-              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-link"></i><span>Editar links</span></a>
+              <a class="kc-settings-btn" href="/conta"><i class="fas fa-link"></i><span>Editar links</span></a>
             </div>
           </section>
 
@@ -295,17 +295,17 @@
               <p class="kc-settings-help" data-i18n-text="privacy.list-loading">Carregando seus protocolos recentes...</p>
             </div>
             <div class="kc-settings-actions-row">
-              <a class="kc-settings-btn" href="ajuda.html#faq-lgpd"><i class="fas fa-circle-question" aria-hidden="true"></i><span data-i18n-text="privacy.action.lgpd-faq">FAQ LGPD na Central de Ajuda</span></a>
+              <a class="kc-settings-btn" href="/ajuda#faq-lgpd"><i class="fas fa-circle-question" aria-hidden="true"></i><span data-i18n-text="privacy.action.lgpd-faq">FAQ LGPD na Central de Ajuda</span></a>
               <a class="kc-settings-btn" href="#settingsSearchPreferences"><i class="fas fa-sliders" aria-hidden="true"></i><span data-i18n-text="privacy.action.search-preferences">Gerenciar dados da busca</span></a>
-              <a class="kc-settings-btn" href="privacidade.html"><i class="fas fa-shield-halved" aria-hidden="true"></i><span data-i18n-text="privacy.action.read-policy">Ler privacidade</span></a>
+              <a class="kc-settings-btn" href="/privacidade"><i class="fas fa-shield-halved" aria-hidden="true"></i><span data-i18n-text="privacy.action.read-policy">Ler privacidade</span></a>
             </div>
           </section>
 
           <section class="kc-settings-card">
             <h2>Ajuda rápida</h2>
             <div class="kc-settings-actions-row">
-              <a class="kc-settings-btn" href="ajuda.html"><i class="fas fa-circle-question"></i><span>Abrir ajuda</span></a>
-              <a class="kc-settings-btn" href="account-setup.html"><i class="fas fa-list-check"></i><span>Revisar onboarding</span></a>
+              <a class="kc-settings-btn" href="/ajuda"><i class="fas fa-circle-question"></i><span>Abrir ajuda</span></a>
+              <a class="kc-settings-btn" href="/conta"><i class="fas fa-list-check"></i><span>Revisar onboarding</span></a>
             </div>
           </section>
         </aside>

@@ -107,7 +107,7 @@ describe('KCBanners', () => {
   test('bindHeroCTAInteractions marks hero CTAs as bound for gesture isolation', () => {
     document.body.innerHTML = [
       '<div class="kc-hero-carousel">',
-      '<a class="kc-btn-primary" href="eventos.html">Participar</a>',
+      '<a class="kc-btn-primary" href="/eventos">Participar</a>',
       '</div>',
     ].join('');
 

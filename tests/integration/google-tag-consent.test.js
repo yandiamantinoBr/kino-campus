@@ -214,7 +214,7 @@ describe('Google tag e consentimento LGPD', () => {
         dataLayer: [],
         location: {
           origin: 'https://www.kinocampus.com.br',
-          href: 'https://www.kinocampus.com.br/auth-callback.html?code=oauth-secret&utm_source=google#access_token=secret',
+          href: 'https://www.kinocampus.com.br/auth/callback?code=oauth-secret&utm_source=google#access_token=secret',
         },
         KCConsent: { hasConsent: (category) => category === 'analytics' },
         addEventListener: () => {},
@@ -246,7 +246,7 @@ describe('Google tag e consentimento LGPD', () => {
     expect(config[2].allow_google_signals).toBe(false);
     expect(config[2].campaign_source).toBe('google');
     expect(pageViews).toHaveLength(1);
-    expect(pageViews[0][2].page_location).toBe('https://www.kinocampus.com.br/auth-callback.html');
+    expect(pageViews[0][2].page_location).toBe('https://www.kinocampus.com.br/auth/callback');
     expect(pageViews[0][2].page_referrer).toBe('https://accounts.google.com/');
     expect(pageViews[0][2].page_location).not.toMatch(/code|token|secret/);
   });
@@ -325,7 +325,7 @@ describe('Google tag e consentimento LGPD', () => {
         dataLayer: [],
         location: {
           origin: 'https://www.kinocampus.com.br',
-          href: 'https://www.kinocampus.com.br/search-results.html?q=nome%40example.com',
+          href: 'https://www.kinocampus.com.br/busca?q=nome%40example.com',
         },
         KCConsent: { hasConsent: () => false },
         addEventListener: () => {},
@@ -346,7 +346,7 @@ describe('Google tag e consentimento LGPD', () => {
     vm.runInNewContext(source, context);
 
     expect(context.window.KCGoogleTag.sanitizePageUrl(context.window.location.href))
-      .toBe('https://www.kinocampus.com.br/search-results.html');
+      .toBe('https://www.kinocampus.com.br/busca');
     expect(context.window.KCGoogleTag.sanitizePageUrl(
       'https://www.kinocampus.com.br/product.html?id=4b39baaf-996b-49ca-a603-b122066946dd&with=user-id'
     )).toBe('https://www.kinocampus.com.br/product.html?id=4b39baaf-996b-49ca-a603-b122066946dd');

@@ -20,12 +20,12 @@
   ]);
 
   const MODULE_HREFS = Object.freeze({
-    eventos: 'eventos.html',
-    oportunidades: 'oportunidades.html',
-    moradia: 'moradia.html',
-    'compra-venda': 'compra-venda-feed.html',
-    caronas: 'caronas-feed.html',
-    'achados-perdidos': 'achados-perdidos.html',
+    eventos: '/eventos',
+    oportunidades: '/oportunidades',
+    moradia: '/moradia',
+    'compra-venda': '/compra-venda',
+    caronas: '/caronas',
+    'achados-perdidos': '/achados-perdidos',
   });
 
   function hasAnalyticsConsent() {

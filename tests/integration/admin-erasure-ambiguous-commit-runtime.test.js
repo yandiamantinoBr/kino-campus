@@ -78,7 +78,7 @@ function makeCanonicalLinkedRow(overrides = {}) {
     subject: 'Excluir minha conta',
     message: 'Solicitação confirmada pelo titular.',
     contact_email: TARGET_EMAIL,
-    page_path: '/settings.html',
+    page_path: '/configuracoes',
     allow_contact: true,
     metadata: {
       request_kind: 'account_erasure',

@@ -220,8 +220,8 @@
 
     target.innerHTML = [
       buildMetricCard('Categoria mais forte', topCategory ? topCategory.label : 'Ainda aprendendo', topCategory ? `${getModuleLabel(topCategory.moduleKey)} · ${topCategory.relevanceLabel || 'Em observação'}` : 'Continue interagindo para personalizar a home.', { href: topCategory ? topCategory.href : null }),
-      buildMetricCard('Itens salvos', formatNumber(favoriteCount + laterCount), `${formatNumber(favoriteCount)} favoritos · ${formatNumber(laterCount)} para ver depois`, { href: 'profile.html' }),
-      buildMetricCard('Destaques pessoais', formatNumber(highlightCount), `${formatNumber(affinityRows.length)} categorias já têm afinidade registrada`, { href: 'profile.html' })
+      buildMetricCard('Itens salvos', formatNumber(favoriteCount + laterCount), `${formatNumber(favoriteCount)} favoritos · ${formatNumber(laterCount)} para ver depois`, { href: '/perfil' }),
+      buildMetricCard('Destaques pessoais', formatNumber(highlightCount), `${formatNumber(affinityRows.length)} categorias já têm afinidade registrada`, { href: '/perfil' })
     ].join('');
   }
 
@@ -240,7 +240,7 @@
     const topCategory = topResult && Array.isArray(topResult.rows) ? topResult.rows[0] : null;
 
     target.innerHTML = [
-      buildMetricCard('Publicações ativas', formatNumber(totalPosts), 'Total de anúncios e avisos visíveis agora.', { href: 'search-results.html' }),
+      buildMetricCard('Publicações ativas', formatNumber(totalPosts), 'Total de anúncios e avisos visíveis agora.', { href: '/busca' }),
       buildMetricCard('Temas em movimento', formatNumber(liveCategories.length), 'Categorias com pelo menos uma publicação ativa neste momento.'),
       buildMetricCard('Tema com mais anúncios', topCategory ? topCategory.label : 'Sem destaque', topCategory ? `${formatNumber(topCategory.count)} publicações ativas agora` : 'Volte em instantes para conferir o movimento da comunidade.', { variant: 'is-honest', href: topCategory ? topCategory.href : null })
     ].join('');

@@ -12,7 +12,7 @@ function renderToggle() {
   `;
 }
 
-function loadFresh(url = '/eventos.html') {
+function loadFresh(url = '/eventos') {
   jest.resetModules();
   delete window.KCHideClosed;
   window.history.replaceState({}, '', url);
@@ -30,7 +30,7 @@ describe('KCHideClosed', () => {
   });
 
   test('lê estado canônico e legado e normaliza a URL', () => {
-    const api = loadFresh('/eventos.html?hideClosed=true&tab=palestras');
+    const api = loadFresh('/eventos?hideClosed=true&tab=palestras');
     expect(api.getState()).toBe(true);
     expect(document.querySelector('[data-kc-hide-closed-input]').checked).toBe(true);
     expect(window.location.search).toContain('closed=1');
@@ -39,7 +39,7 @@ describe('KCHideClosed', () => {
   });
 
   test('mudança do input atualiza URL, aria e emite contrato comum', () => {
-    const api = loadFresh('/oportunidades.html');
+    const api = loadFresh('/oportunidades');
     const input = document.querySelector('[data-kc-hide-closed-input]');
     const listener = jest.fn();
     document.addEventListener('kc:hide-closed-change', listener, { once: true });
@@ -53,7 +53,7 @@ describe('KCHideClosed', () => {
   });
 
   test('botão Mostrar encerrados desliga o filtro', () => {
-    const api = loadFresh('/moradia.html?closed=1');
+    const api = loadFresh('/moradia?closed=1');
     const reveal = document.querySelector('[data-kc-hide-closed-reveal]');
     api.setRevealVisible(true);
     expect(reveal.hidden).toBe(false);
@@ -64,15 +64,15 @@ describe('KCHideClosed', () => {
   });
 
   test('popstate restaura o estado compartilhado', () => {
-    const api = loadFresh('/eventos.html');
-    window.history.replaceState({}, '', '/eventos.html?closed=1');
+    const api = loadFresh('/eventos');
+    window.history.replaceState({}, '', '/eventos?closed=1');
     window.dispatchEvent(new PopStateEvent('popstate'));
     expect(api.getState()).toBe(true);
     expect(document.querySelector('[data-kc-hide-closed-input]').checked).toBe(true);
   });
 
   test('preserva contagem acessível ao alternar o estado de carregamento', () => {
-    const api = loadFresh('/eventos.html?closed=1');
+    const api = loadFresh('/eventos?closed=1');
     const input = document.querySelector('[data-kc-hide-closed-input]');
     const status = document.querySelector('[data-kc-hide-closed-status]');
     api.setHiddenCount(3);

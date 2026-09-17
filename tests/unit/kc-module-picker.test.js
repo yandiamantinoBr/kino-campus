@@ -1,23 +1,23 @@
 describe('kc-module-picker', () => {
   const baseModules = {
-    'compra-venda': { label: 'Compra e Venda', emoji: '🛍️', redirect: 'compra-venda-feed.html' },
-    caronas: { label: 'Caronas', emoji: '🚗', redirect: 'caronas-feed.html' },
-    moradia: { label: 'Moradia', emoji: '🏡', redirect: 'moradia.html' },
-    eventos: { label: 'Eventos', emoji: '📅', redirect: 'eventos.html' },
-    'achados-perdidos': { label: 'Achados e Perdidos', emoji: '🔎', redirect: 'achados-perdidos.html' },
-    oportunidades: { label: 'Oportunidades', emoji: '💼', redirect: 'oportunidades.html' },
+    'compra-venda': { label: 'Compra e Venda', emoji: '🛍️', redirect: '/compra-venda' },
+    caronas: { label: 'Caronas', emoji: '🚗', redirect: '/caronas' },
+    moradia: { label: 'Moradia', emoji: '🏡', redirect: '/moradia' },
+    eventos: { label: 'Eventos', emoji: '📅', redirect: '/eventos' },
+    'achados-perdidos': { label: 'Achados e Perdidos', emoji: '🔎', redirect: '/achados-perdidos' },
+    oportunidades: { label: 'Oportunidades', emoji: '💼', redirect: '/oportunidades' },
   };
 
   beforeAll(() => {
-    window.history.replaceState({}, '', '/eventos.html?closed=1');
+    window.history.replaceState({}, '', '/eventos?closed=1');
     document.body.innerHTML = `
       <header><nav class="kc-nav-links">
-        <a href="eventos.html">Eventos</a>
-        <a href="oportunidades.html">Oportunidades</a>
-        <a href="moradia.html">Moradia</a>
-        <a href="compra-venda-feed.html">Compra e Venda</a>
-        <a href="caronas-feed.html">Caronas</a>
-        <a href="achados-perdidos.html">Achados e Perdidos</a>
+        <a href="/eventos">Eventos</a>
+        <a href="/oportunidades">Oportunidades</a>
+        <a href="/moradia">Moradia</a>
+        <a href="/compra-venda">Compra e Venda</a>
+        <a href="/caronas">Caronas</a>
+        <a href="/achados-perdidos">Achados e Perdidos</a>
       </nav></header>
       <main>
         <button type="button" data-outside>Fora</button>
@@ -35,7 +35,7 @@ describe('kc-module-picker', () => {
   });
 
   beforeEach(() => {
-    window.history.replaceState({}, '', '/eventos.html?closed=1');
+    window.history.replaceState({}, '', '/eventos?closed=1');
     window._KCCreatePost.schema.modules = { ...baseModules };
     window.KCHideClosed.getState.mockReturnValue(true);
     window.KCOverlayLock.lock.mockClear();

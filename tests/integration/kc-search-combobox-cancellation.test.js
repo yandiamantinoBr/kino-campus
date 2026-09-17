@@ -44,7 +44,7 @@ function createSearchPage(searchPosts) {
   return { dom, window };
 }
 
-function createResultsPage(searchPosts, url = 'https://www.kinocampus.com.br/search-results.html?q=evento&closed=1') {
+function createResultsPage(searchPosts, url = 'https://www.kinocampus.com.br/busca?q=evento&closed=1') {
   const dom = new JSDOM(`<!doctype html><html><head></head><body>
     <div class="kc-search-bar"><input id="searchInput" type="search" value="evento"><button type="button">Buscar</button></div>
     <span id="searchQueryText"></span><span id="resultsCount"></span>
@@ -148,7 +148,7 @@ describe('resultados ativos no limite temporal', () => {
     const searchPosts = jest.fn(async () => []);
     const page = createResultsPage(
       searchPosts,
-      'https://www.kinocampus.com.br/search-results.html?q=evento&closed=true'
+      'https://www.kinocampus.com.br/busca?q=evento&closed=true'
     );
 
     await waitFor(() => searchPosts.mock.calls.length >= 1 && page.window.document.getElementById('searchResultsVisibleSummary').textContent.length > 0);

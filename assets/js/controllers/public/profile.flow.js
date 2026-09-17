@@ -127,7 +127,7 @@
     if (presentation && typeof presentation.buildAccountSetupHref === 'function') {
       return presentation.buildAccountSetupHref(deps || {});
     }
-    return '/account-setup.html';
+    return '/conta';
   }
 
   function _buildSettingsHref(deps) {
@@ -138,7 +138,7 @@
     if (presentation && typeof presentation.buildSettingsHref === 'function') {
       return presentation.buildSettingsHref(deps || {});
     }
-    return '/settings.html';
+    return '/configuracoes';
   }
 
   function _getClient(deps) {
@@ -628,7 +628,7 @@
       if (!state.user) {
         showFatal('Voc\u00ea precisa estar logado para ver seu perfil.', deps);
         setTimeout(function () {
-          window.location.href = 'index.html#login';
+          window.location.href = '/#login';
         }, 900);
         return;
       }

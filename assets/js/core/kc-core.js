@@ -131,21 +131,21 @@ function initSmoothAnchors() {
 }
 
 function initMobileNavActive() {
-  const currentPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const currentPage = (window.location.pathname.split('/').pop() || '/').toLowerCase();
   const menuPages = new Set([
-    'achados-perdidos.html',
-    'caronas-feed.html',
-    'compra-venda-feed.html',
-    'moradia.html',
-    'ajuda.html',
-    'search-results.html',
+    '/achados-perdidos',
+    '/caronas',
+    '/compra-venda',
+    '/moradia',
+    '/ajuda',
+    '/busca',
     '_product.html',
-    'my-posts.html',
-    'profile.html',
-    'settings.html',
-    'account-setup.html',
-    'auth-callback.html',
-    'ods.html'
+    '/meus-posts',
+    '/perfil',
+    '/configuracoes',
+    '/conta',
+    '/auth/callback',
+    '/ods'
   ]);
 
   function setLinkActive(link, isActive) {
@@ -156,10 +156,10 @@ function initMobileNavActive() {
   }
 
   function resolveBottomNavKey(page) {
-    if (page === 'index.html') return 'home';
-    if (page === 'eventos.html') return 'events';
-    if (page === 'oportunidades.html') return 'opportunities';
-    if (page === 'create-post.html') return 'create';
+    if (page === '/') return 'home';
+    if (page === '/eventos') return 'events';
+    if (page === '/oportunidades') return 'opportunities';
+    if (page === '/criar-post') return 'create';
     if (menuPages.has(page)) return 'menu';
     return '';
   }
@@ -178,13 +178,13 @@ function initMobileNavActive() {
 
   document.querySelectorAll('.kc-mobile-nav a[href]').forEach((link) => {
     const href = (link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
-    const key = href === 'index.html'
+    const key = href === '/'
       ? 'home'
-      : href === 'eventos.html'
+      : href === '/eventos'
         ? 'events'
-        : href === 'oportunidades.html'
+        : href === '/oportunidades'
           ? 'opportunities'
-          : href === 'create-post.html'
+          : href === '/criar-post'
             ? 'create'
             : '';
     setLinkActive(link, !!key && key === bottomNavKey);

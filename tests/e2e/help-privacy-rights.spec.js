@@ -34,7 +34,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
 
   for (const item of cases) {
     test(`deep link ${item.request} usa somente valores canônicos`, async ({ page }) => {
-      await page.goto(`/ajuda.html?request=${item.request}#helpRequestForm`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`/ajuda?request=${item.request}#helpRequestForm`, { waitUntil: 'domcontentloaded' });
 
       await expect(page.locator('#helpType')).toHaveValue('account_access');
       await expect(page.locator('#helpTopic')).toHaveValue('onboarding_settings');
@@ -63,7 +63,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
 
   test('ignora parâmetros não permitidos e não reflete PII no formulário', async ({ page }) => {
     const pii = 'segredo+url@example.com';
-    await page.goto(`/ajuda.html?request=not_allowed&email=${encodeURIComponent(pii)}`, {
+    await page.goto(`/ajuda?request=not_allowed&email=${encodeURIComponent(pii)}`, {
       waitUntil: 'domcontentloaded'
     });
 
@@ -74,7 +74,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
   });
 
   test('resposta confirmada mostra e preserva protocolo acessível', async ({ page }) => {
-    await page.goto('/ajuda.html?request=data_access_copy#helpRequestForm', {
+    await page.goto('/ajuda?request=data_access_copy#helpRequestForm', {
       waitUntil: 'domcontentloaded'
     });
     await page.evaluate(() => {
@@ -216,7 +216,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       }
     );
 
-    await page.goto('/ajuda.html?request=account_erasure#helpRequestForm', {
+    await page.goto('/ajuda?request=account_erasure#helpRequestForm', {
       waitUntil: 'domcontentloaded'
     });
     await expect(page.locator('#helpPrivacyVerification')).toBeVisible();
@@ -341,7 +341,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
         `
       });
     });
-    await page.goto('/ajuda.html?request=data_access_copy#helpRequestForm', {
+    await page.goto('/ajuda?request=data_access_copy#helpRequestForm', {
       waitUntil: 'domcontentloaded'
     });
 
@@ -438,7 +438,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
         `
       });
     });
-    await page.goto('/ajuda.html?request=data_access_copy#helpRequestForm', {
+    await page.goto('/ajuda?request=data_access_copy#helpRequestForm', {
       waitUntil: 'domcontentloaded'
     });
     await page.locator('[data-help-conditional="account_email"]').fill('same@example.com');
@@ -471,7 +471,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
 
   test('card de Configurações permanece dentro do layout e sem rolagem horizontal no mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
 
     const metrics = await page.evaluate(() => {
       const card = document.getElementById('settingsPrivacyData');
@@ -537,7 +537,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsContent')).toBeVisible();
 
     await page.locator('#settingsLogout').click();
@@ -613,7 +613,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     const accountTrigger = page.locator('a.btn-login');
     await expect(accountTrigger).toHaveClass(/is-auth/);
     await accountTrigger.click();
@@ -792,7 +792,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       localStorage.setItem('sb-project-auth-token', 'refresh-token-que-nao-pode-sair');
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsPrivacyData')).toBeVisible();
 
     const downloadPromise = page.waitForEvent('download');
@@ -971,7 +971,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsPrivacyData')).toBeVisible();
 
     const downloadPromise = page.waitForEvent('download');
@@ -1059,7 +1059,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await page.locator('#settingsDownloadAccountData').click();
     await expect(page.locator('#settingsPrivacyDataStatus')).toContainText(
       'Não foi possível gerar sua cópia agora'
@@ -1195,7 +1195,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await page.locator('#settingsDownloadAccountData').click();
     await expect(page.locator('#settingsPrivacyDataStatus')).toContainText(
       'Não foi possível gerar sua cópia agora'
@@ -1315,7 +1315,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     page.once('dialog', async (dialog) => {
       expect(dialog.message()).toContain('ainda não registra');
       await dialog.accept();
@@ -1408,7 +1408,7 @@ test.describe('direitos de privacidade na Central de Ajuda', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await page.locator('#settingsDownloadAccountData').click();
     await expect.poll(async () => page.evaluate(() => (
       JSON.parse(sessionStorage.getItem('__kc_isolation_attempts') || '[]').length

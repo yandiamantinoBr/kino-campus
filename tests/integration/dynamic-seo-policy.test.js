@@ -852,4 +852,22 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(unavailable.headers['retry-after']).toBe('60');
     expect(unavailable.body).toContain('noindex,follow,noarchive');
   });
+
+  test('publicacao encerrada (closed) resolve 200 com noindex em vez de 404', async () => {
+    // Regressao Search Console 2026-09-17: publicacoes `closed` seguem
+    // legiveis pelo publico (RLS permite anon) e respondiam 404 no SSR,
+    // gerando "Not found (404)" para URLs que o Google ja conhecia.
+    const closed = buildPost({ id: 'post-closed', status: 'closed' });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [closed] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: closed.id } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('noindex,follow,noarchive');
+    expect(response.body).not.toContain('index,follow,max-image-preview:large,max-snippet:-1');
+
+    const requestedUrls = global.fetch.mock.calls.map((call) => String(call[0]));
+    expect(requestedUrls.some((url) => url.includes('status=in.(published,closed)'))).toBe(true);
+  });
 });

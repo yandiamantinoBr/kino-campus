@@ -26,7 +26,7 @@ function bootCore() {
   </body></html>`, {
     runScripts: 'dangerously',
     pretendToBeVisual: true,
-    url: 'https://www.kinocampus.com.br/oportunidades.html',
+    url: 'https://www.kinocampus.com.br/oportunidades',
   });
   dom.window.requestAnimationFrame = (callback) => {
     callback();

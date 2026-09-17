@@ -14,20 +14,20 @@ Este arquivo é um mapa auxiliar para agentes e ferramentas de IA. A fonte prim�
 ## Páginas públicas principais
 
 - [Início](https://www.kinocampus.com.br/) — visão geral da plataforma, módulos e publicações recentes.
-- [Eventos](https://www.kinocampus.com.br/eventos.html) — eventos acadêmicos, culturais, esportivos e institucionais.
-- [Oportunidades](https://www.kinocampus.com.br/oportunidades.html) — bolsas, editais, estágios, empregos, monitorias e chamadas acadêmicas.
-- [Moradia](https://www.kinocampus.com.br/moradia.html) — quartos, repúblicas, imóveis e anúncios de moradia para estudantes.
-- [Compra e venda](https://www.kinocampus.com.br/compra-venda-feed.html) — itens úteis no contexto universitário.
-- [Caronas](https://www.kinocampus.com.br/caronas-feed.html) — ofertas e pedidos de carona.
-- [Achados e perdidos](https://www.kinocampus.com.br/achados-perdidos.html) — itens perdidos ou encontrados.
-- [Sobre o KinoCampus](https://www.kinocampus.com.br/sobre.html) — missão, governança, curadoria, privacidade, publicidade e canais oficiais.
+- [Eventos](https://www.kinocampus.com.br/eventos) — eventos acadêmicos, culturais, esportivos e institucionais.
+- [Oportunidades](https://www.kinocampus.com.br/oportunidades) — bolsas, editais, estágios, empregos, monitorias e chamadas acadêmicas.
+- [Moradia](https://www.kinocampus.com.br/moradia) — quartos, repúblicas, imóveis e anúncios de moradia para estudantes.
+- [Compra e venda](https://www.kinocampus.com.br/compra-venda) — itens úteis no contexto universitário.
+- [Caronas](https://www.kinocampus.com.br/caronas) — ofertas e pedidos de carona.
+- [Achados e perdidos](https://www.kinocampus.com.br/achados-perdidos) — itens perdidos ou encontrados.
+- [Sobre o KinoCampus](https://www.kinocampus.com.br/sobre) — missão, governança, curadoria, privacidade, publicidade e canais oficiais.
 - [Apresentação institucional](https://www.kinocampus.com.br/apresentacao-institucional.html) — seis percursos expositivos e interativos para conhecer a plataforma e sua proposta de parceria com a UFG.
-- [Política editorial](https://www.kinocampus.com.br/editorial.html) — fontes, critérios de curadoria, correções, publicidade e responsabilidade editorial.
-- [Central de ajuda](https://www.kinocampus.com.br/ajuda.html) — suporte, dúvidas e pedidos administrativos.
-- [ODS](https://www.kinocampus.com.br/ods.html) — relação da plataforma com sustentabilidade e impacto comunitário.
-- [Central de Transparência](https://www.kinocampus.com.br/transparencia.html) — mapa público de privacidade, termos, cookies, suporte, LGPD e canais oficiais.
-- [Declaração de Privacidade](https://www.kinocampus.com.br/privacidade.html) — privacidade, cookies, dados pessoais e direitos dos titulares.
-- [Termos de Uso](https://www.kinocampus.com.br/termos.html) — regras de uso da plataforma.
+- [Política editorial](https://www.kinocampus.com.br/editorial) — fontes, critérios de curadoria, correções, publicidade e responsabilidade editorial.
+- [Central de ajuda](https://www.kinocampus.com.br/ajuda) — suporte, dúvidas e pedidos administrativos.
+- [ODS](https://www.kinocampus.com.br/ods) — relação da plataforma com sustentabilidade e impacto comunitário.
+- [Central de Transparência](https://www.kinocampus.com.br/transparencia) — mapa público de privacidade, termos, cookies, suporte, LGPD e canais oficiais.
+- [Declaração de Privacidade](https://www.kinocampus.com.br/privacidade) — privacidade, cookies, dados pessoais e direitos dos titulares.
+- [Termos de Uso](https://www.kinocampus.com.br/termos) — regras de uso da plataforma.
 
 ## Publicações
 

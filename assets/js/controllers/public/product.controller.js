@@ -84,7 +84,7 @@
 
   function buildProfileHref(profileId) {
     const normalized = String(profileId || '').trim();
-    return normalized ? `profile.html?id=${encodeURIComponent(normalized)}` : 'profile.html';
+    return normalized ? `profile.html?id=${encodeURIComponent(normalized)}` : '/perfil';
   }
 
   function isViewerAuthenticated() {
@@ -130,7 +130,7 @@
       if (typeof window.kcOpenAuthModal === 'function') {
         window.kcOpenAuthModal({ tab: 'login', nextPath: buildCurrentPagePath() });
       } else {
-        window.location.href = 'index.html#login';
+        window.location.href = '/#login';
       }
       return true;
     }

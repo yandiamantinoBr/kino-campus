@@ -76,7 +76,7 @@ test.describe('isolamento de privacidade na troca de conta', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.__accountARequestsStarted === true);
     await page.evaluate(() => {
       const status = document.getElementById('settingsPrivacyDataStatus');
@@ -100,7 +100,7 @@ test.describe('isolamento de privacidade na troca de conta', () => {
     await expect(page.locator('#settingsUserSummary')).toContainText(accountB.email);
     await expect(page.locator('#settingsProfileLink')).toHaveAttribute(
       'href',
-      `/profile.html?id=${encodeURIComponent(ACCOUNT_B)}`
+      `/perfil?id=${encodeURIComponent(ACCOUNT_B)}`
     );
     await expect(page.locator('#settingsPrimaryMethod')).toHaveValue('instagram');
     await expect(page.locator('#settingsDataSubjectRequests')).toContainText('KC-B-CURRENT');
@@ -187,7 +187,7 @@ test.describe('isolamento de privacidade na troca de conta', () => {
       });
     });
 
-    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.__accountAProfileStarted === true);
 
     await page.evaluate((nextUser) => {
@@ -253,7 +253,7 @@ test.describe('isolamento de privacidade na troca de conta', () => {
       });
     });
 
-    await page.goto('/ajuda.html?request=data_access_copy#helpRequestForm', {
+    await page.goto('/ajuda?request=data_access_copy#helpRequestForm', {
       waitUntil: 'domcontentloaded',
     });
     const contactEmail = page.locator('#helpContactEmail');

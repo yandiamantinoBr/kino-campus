@@ -142,7 +142,7 @@
   function showError(msg, allowBack) {
     const el = $('#admin-error');
     if (!el) return;
-    el.innerHTML = `${escape(msg)}${allowBack ? ' <a href="../index.html" style="color:#ef9a9a;">Voltar ao início</a>' : ''}`;
+    el.innerHTML = `${escape(msg)}${allowBack ? ' <a href="../" style="color:#ef9a9a;">Voltar ao início</a>' : ''}`;
     el.style.display = 'block';
   }
 
@@ -2173,7 +2173,7 @@
     try {
       const ok = await checkAdminAccess();
       if (!ok) {
-        setTimeout(() => { window.location.replace('../index.html'); }, 2500);
+        setTimeout(() => { window.location.replace('../'); }, 2500);
         return;
       }
 

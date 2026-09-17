@@ -1686,7 +1686,7 @@
         ? `<small id="${esc(helpId)}" class="kc-settings-help">${esc(field.help)}</small>`
         : '';
       const currentValue = key === 'page_path'
-        ? String(window.location.pathname || '/ajuda.html')
+        ? String(window.location.pathname || '/ajuda')
         : '';
 
       if (field.type === 'select') {
@@ -1906,7 +1906,7 @@
       ? Help.getPrivacyRequestKind(getCurrentType(), getCurrentTopic(), getCurrentSubtopic())
       : '';
     const metadata = {
-      route: window.location.pathname || '/ajuda.html',
+      route: window.location.pathname || '/ajuda',
     };
     if (!requestKind) metadata.user_agent = navigator.userAgent || '';
 
@@ -2162,7 +2162,7 @@
             status: 'submitted',
             reason: payload.type || '',
             category: payload.topic || '',
-            page_path: payload.page_path || '/ajuda.html',
+            page_path: payload.page_path || '/ajuda',
           }).catch(function () {});
         }
       } catch (_) { }
@@ -2342,7 +2342,7 @@
       if (window.KCPrivacyAnalytics && typeof window.KCPrivacyAnalytics.track === 'function') {
         window.KCPrivacyAnalytics.track('help_open', {
           source: 'help_page',
-          page_path: '/ajuda.html',
+          page_path: '/ajuda',
         }).catch(function () {});
       }
     } catch (_) { }

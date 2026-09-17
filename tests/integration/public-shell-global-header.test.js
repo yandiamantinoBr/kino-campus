@@ -14,8 +14,8 @@ describe('header global em paginas de conta e suporte', () => {
     const html = read(page);
 
     expect(html).toContain('class="kc-nav-links"');
-    expect(html).toContain('href="eventos.html"');
-    expect(html).toContain('href="oportunidades.html"');
+    expect(html).toContain('href="/eventos"');
+    expect(html).toContain('href="/oportunidades"');
     expect(html).toContain('id="kcSearchBar"');
     expect(html).toContain('id="searchInput"');
     expect(html).toContain('id="kcSearchMobileBtn"');

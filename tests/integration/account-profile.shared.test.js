@@ -83,13 +83,13 @@ describe('KCAccountProfileUtils', () => {
       viewerAuthenticated: true,
       postTitle: 'Mesa para estudo',
       postUrl: 'https://kinocampus.app/_product.html?id=123',
-      viewProfileHref: '/profile.html?id=abc'
+      viewProfileHref: '/perfil?id=abc'
     });
 
     expect(action).toMatchObject({
       type: 'view_profile',
       label: 'Ver perfil',
-      href: '/profile.html?id=abc'
+      href: '/perfil?id=abc'
     });
   });
 

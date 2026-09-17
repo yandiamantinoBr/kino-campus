@@ -167,19 +167,19 @@
   }
 
   function normalizeNextPath(value) {
-    if (shared && typeof shared.normalizeNextPath === 'function') return shared.normalizeNextPath(value, window.location.pathname || '/index.html');
+    if (shared && typeof shared.normalizeNextPath === 'function') return shared.normalizeNextPath(value, window.location.pathname || '/');
     const raw = String(value || '').trim();
-    if (!raw) return window.location.pathname || '/index.html';
+    if (!raw) return window.location.pathname || '/';
     return raw.charAt(0) === '/' ? raw : `/${raw}`;
   }
 
   function buildCurrentPath() {
-    const path = String(window.location.pathname || '/index.html').trim() || '/index.html';
+    const path = String(window.location.pathname || '/').trim() || '/';
     return `${path}${window.location.search || ''}${window.location.hash || ''}`;
   }
 
   function buildCallbackUrl(nextPath, authType) {
-    const url = new URL('/auth-callback.html', window.location.origin);
+    const url = new URL('/auth/callback', window.location.origin);
     url.searchParams.set('next', normalizeNextPath(nextPath || buildCurrentPath()));
     if (authType === 'signup' || authType === 'recovery' || authType === 'invite') {
       url.searchParams.set('mode', authType);
@@ -194,19 +194,19 @@
   }
 
   function buildSettingsHref(nextPath) {
-    const url = new URL('/settings.html', window.location.origin);
+    const url = new URL('/configuracoes', window.location.origin);
     url.searchParams.set('next', normalizeNextPath(nextPath || buildCurrentPath()));
     return `${url.pathname}${url.search}`;
   }
 
   function buildProfileHref(profileId) {
     const isAdmin = String(window.location.pathname || '').includes('/admin/');
-    const base = isAdmin ? '../profile.html' : 'profile.html';
+    const base = isAdmin ? '../perfil' : '/perfil';
     return profileId ? `${base}?id=${encodeURIComponent(profileId)}` : base;
   }
 
-  function buildAdminHref() { return String(window.location.pathname || '').includes('/admin/') ? 'index.html' : 'admin/index.html'; }
-  function buildHelpHref() { return String(window.location.pathname || '').includes('/admin/') ? '../ajuda.html' : 'ajuda.html'; }
+  function buildAdminHref() { return String(window.location.pathname || '').includes('/admin/') ? '/' : 'admin/'; }
+  function buildHelpHref() { return String(window.location.pathname || '').includes('/admin/') ? '../ajuda' : '/ajuda'; }
   function buildRootHref(file) { return String(window.location.pathname || '').includes('/admin/') ? `../${file}` : file; }
   function isOnboardingComplete(profile) {
     return shared && typeof shared.isOnboardingComplete === 'function'
@@ -571,7 +571,7 @@
       '<section class="kc-auth-panel" data-auth-panel="signup" style="display:none;" aria-hidden="true"><form class="kc-auth-form" id="kcAuthSignupForm"><div class="kc-auth-field"><label for="kcAuthSignupEmail">' + _t('auth.modal-email-institutional', 'E-mail institucional') + '</label><input id="kcAuthSignupEmail" name="email" type="email" autocomplete="email" placeholder="' + _t('auth.modal-email-placeholder', 'voce@ufg.br') + '" required /></div><div class="kc-auth-field kc-auth-field--password"><label for="kcAuthSignupPassword">' + _t('auth.modal-password-label', 'Senha') + '</label><div class="kc-auth-input-wrap"><input id="kcAuthSignupPassword" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="' + _t('auth.modal-new-password', 'Crie uma senha') + '" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthSignupPassword" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div><div class="kc-auth-field kc-auth-field--password"><label for="kcAuthSignupConfirm">' + _t('auth.modal-confirm-label', 'Confirmar senha') + '</label><div class="kc-auth-input-wrap"><input id="kcAuthSignupConfirm" name="confirm" type="password" autocomplete="new-password" minlength="6" placeholder="' + _t('auth.modal-confirm-placeholder', 'Repita a senha') + '" required /><button type="button" class="kc-auth-password-toggle" data-kc-password-toggle="kcAuthSignupConfirm" aria-label="Mostrar senha" aria-pressed="false"><i class="fas fa-eye" aria-hidden="true"></i></button></div></div><p class="kc-auth-note">' + _t('auth.modal-signup-note', 'O link de confirmação será enviado para o seu e-mail institucional.') + '</p><div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">' + _t('auth.modal-create-account', 'Criar conta') + '</button></div></form><div class="kc-auth-links kc-auth-links--split"><button type="button" class="kc-auth-link-btn kc-auth-link-btn--inline" data-auth-link="login">' + _t('auth.modal-have-account-link', 'Já tenho conta') + '</button><button type="button" class="kc-auth-link-btn kc-auth-link-btn--quiet kc-auth-link-btn--full" data-auth-link="resend">' + _t('auth.modal-resend-link', 'Reenviar confirmação') + '</button></div></section>',
       '<section class="kc-auth-panel" data-auth-panel="forgot" style="display:none;" aria-hidden="true"><form class="kc-auth-form" id="kcAuthForgotForm"><div class="kc-auth-field"><label for="kcAuthForgotEmail">' + _t('auth.modal-forgot-email-label', 'E-mail da sua conta') + '</label><input id="kcAuthForgotEmail" name="email" type="email" autocomplete="email" placeholder="' + _t('auth.modal-email-placeholder', 'voce@ufg.br') + '" required /></div><p class="kc-auth-note">' + _t('auth.modal-forgot-note', 'Enviaremos um link para redefinir sua senha pelo callback oficial do KinoCampus.') + '</p><div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">' + _t('auth.modal-send-link', 'Enviar link') + '</button></div></form><div class="kc-auth-links"><button type="button" class="kc-auth-link-btn" data-auth-link="login">' + _t('auth.modal-back-to-login', 'Voltar ao login') + '</button></div></section>',
       '<section class="kc-auth-panel" data-auth-panel="resend" style="display:none;" aria-hidden="true"><form class="kc-auth-form" id="kcAuthResendForm"><div class="kc-auth-field"><label for="kcAuthResendEmail">' + _t('auth.modal-resend-email-label', 'E-mail do cadastro') + '</label><input id="kcAuthResendEmail" name="email" type="email" autocomplete="email" placeholder="' + _t('auth.modal-email-placeholder', 'voce@ufg.br') + '" required /></div><p class="kc-auth-note">' + _t('auth.modal-resend-note', 'Se o e-mail anterior expirou ou sumiu, enviamos outro agora.') + '</p><div class="kc-auth-actions"><button class="kc-auth-btn primary" type="submit">' + _t('auth.modal-resend-btn', 'Reenviar') + '</button></div></form><div class="kc-auth-links"><button type="button" class="kc-auth-link-btn" data-auth-link="login">' + _t('auth.modal-back-to-login', 'Voltar ao login') + '</button><button type="button" class="kc-auth-link-btn" data-auth-link="signup">' + _t('auth.modal-go-signup', 'Ir para cadastro') + '</button></div></section>',
-      '<section class="kc-auth-panel" data-auth-panel="user" style="display:none;" aria-hidden="true"><div class="kc-auth-user"><div class="kc-auth-user-card"><div class="kc-auth-user-icon"><i class="fas fa-user"></i></div><div class="kc-auth-user-info"><div class="kc-auth-user-email" id="kcAuthUserEmail">-</div><div class="kc-auth-user-meta" id="kcAuthUserMeta">' + _t('auth.modal-session-active', 'Sessão ativa') + '</div></div></div><div class="kc-auth-user-actions"><a class="kc-auth-btn" id="kcAuthProfileLink" href="profile.html"><i class="fas fa-id-badge"></i><span>' + _t('auth.modal-my-profile', 'Meu perfil') + '</span></a><a class="kc-auth-btn" id="kcAuthSettingsLink" href="settings.html"><i class="fas fa-sliders"></i><span>' + _t('nav.settings', 'Configurações') + '</span></a><a class="kc-auth-btn" id="kcAuthSetupLink" href="account-setup.html"><i class="fas fa-list-check"></i><span>' + _t('auth.modal-complete-signup', 'Completar cadastro') + '</span></a><a class="kc-auth-btn" id="kcAuthHelpLink" href="ajuda.html"><i class="fas fa-circle-question"></i><span>' + _t('auth.modal-help-center', 'Central de ajuda') + '</span></a><button class="kc-auth-btn danger" type="button" id="kcAuthLogoutBtn"><i class="fas fa-right-from-bracket"></i><span>' + _t('common.logout', 'Sair') + '</span></button></div></div></section>',
+      '<section class="kc-auth-panel" data-auth-panel="user" style="display:none;" aria-hidden="true"><div class="kc-auth-user"><div class="kc-auth-user-card"><div class="kc-auth-user-icon"><i class="fas fa-user"></i></div><div class="kc-auth-user-info"><div class="kc-auth-user-email" id="kcAuthUserEmail">-</div><div class="kc-auth-user-meta" id="kcAuthUserMeta">' + _t('auth.modal-session-active', 'Sessão ativa') + '</div></div></div><div class="kc-auth-user-actions"><a class="kc-auth-btn" id="kcAuthProfileLink" href="/perfil"><i class="fas fa-id-badge"></i><span>' + _t('auth.modal-my-profile', 'Meu perfil') + '</span></a><a class="kc-auth-btn" id="kcAuthSettingsLink" href="/configuracoes"><i class="fas fa-sliders"></i><span>' + _t('nav.settings', 'Configurações') + '</span></a><a class="kc-auth-btn" id="kcAuthSetupLink" href="/conta"><i class="fas fa-list-check"></i><span>' + _t('auth.modal-complete-signup', 'Completar cadastro') + '</span></a><a class="kc-auth-btn" id="kcAuthHelpLink" href="/ajuda"><i class="fas fa-circle-question"></i><span>' + _t('auth.modal-help-center', 'Central de ajuda') + '</span></a><button class="kc-auth-btn danger" type="button" id="kcAuthLogoutBtn"><i class="fas fa-right-from-bracket"></i><span>' + _t('common.logout', 'Sair') + '</span></button></div></div></section>',
       '</div><div class="kc-auth-footer"><span class="kc-auth-footer-version">Auth v' + VERSION + '</span></div></div>',
     ].join('');
     document.body.appendChild(overlay);
@@ -587,7 +587,7 @@
         actions.insertAdjacentHTML('beforebegin', [
           '<label class="kc-auth-legal">',
           '<input id="kcAuthTermsAccepted" name="termsAccepted" type="checkbox" required />',
-          '<span>Li e aceito os <a href="' + escapeHtml(buildRootHref('termos.html')) + '" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="' + escapeHtml(buildRootHref('privacidade.html')) + '" target="_blank" rel="noopener">Declaração de Privacidade</a>.</span>',
+          '<span>Li e aceito os <a href="' + escapeHtml(buildRootHref('/termos')) + '" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="' + escapeHtml(buildRootHref('/privacidade')) + '" target="_blank" rel="noopener">Declaração de Privacidade</a>.</span>',
           '</label>',
           '<div class="kc-auth-external-access" id="kcAuthExternalAccessPrompt">',
           '<p><strong>Não tem e-mail institucional UFG?</strong> Solicite uma análise de acesso externo para participar da comunidade KinoCampus.</p>',
@@ -654,7 +654,7 @@
       handle ? `<span class="kc-profile-dropdown__handle">${escapeHtml(handle)}</span>` : '',
       '</div></div><hr class="kc-profile-dropdown__divider" /><nav class="kc-profile-dropdown__menu">',
       `<a href="${escapeHtml(buildProfileHref(user && user.id))}" class="kc-profile-dropdown__item"><i class="fas fa-id-badge"></i><span>${_t('auth.dropdown-my-profile', 'Meu perfil')}</span></a>`,
-      `<a href="my-posts.html" class="kc-profile-dropdown__item"><i class="fas fa-layer-group"></i><span>${_t('auth.dropdown-my-posts', 'Minhas publicações')}</span></a>`,
+      `<a href="/meus-posts" class="kc-profile-dropdown__item"><i class="fas fa-layer-group"></i><span>${_t('auth.dropdown-my-posts', 'Minhas publicações')}</span></a>`,
       `<a href="${escapeHtml(buildSettingsHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-sliders"></i><span>${_t('nav.settings', 'Configurações')}</span></a>`,
       onboardingPending ? `<a href="${escapeHtml(buildAccountSetupHref(buildCurrentPath()))}" class="kc-profile-dropdown__item"><i class="fas fa-list-check"></i><span>${_t('auth.dropdown-complete-signup', 'Completar cadastro')}</span></a>` : '',
       isAdmin ? `<a href="${escapeHtml(buildAdminHref())}" class="kc-profile-dropdown__item"><i class="fas fa-shield-halved" style="color:var(--kc-primary-brand);"></i><span>${_t('nav.admin', 'Administração')}</span></a>` : '',
@@ -782,7 +782,7 @@
         if (mobileUserName) mobileUserName.innerHTML = `<span class="kc-mobile-menu-user-display">${escapeHtml(display)}</span><span class="kc-mobile-menu-user-handle">@${escapeHtml(String(user.email).split('@')[0])}</span>`;
       mobileUserLink.href = '#login';
       if (profileLink) { profileLink.style.display = 'flex'; profileLink.href = buildProfileHref(user.id); }
-      if (myPostsLink) { myPostsLink.style.display = 'flex'; myPostsLink.href = 'my-posts.html'; }
+      if (myPostsLink) { myPostsLink.style.display = 'flex'; myPostsLink.href = '/meus-posts'; }
       if (settingsLink) { settingsLink.style.display = 'flex'; settingsLink.href = buildSettingsHref(buildCurrentPath()); }
       if (adminLink) { adminLink.style.display = profile && profile.is_admin === true ? 'flex' : 'none'; adminLink.href = buildAdminHref(); }
       if (setupLink) { setupLink.style.display = isOnboardingComplete(profile) ? 'none' : 'flex'; setupLink.href = buildAccountSetupHref(buildCurrentPath()); }
@@ -865,7 +865,7 @@
       await syncLegalAcceptance(authUser);
     } catch (_) { profile = null; }
     closeModal();
-    if (!isOnboardingComplete(profile) && !String(window.location.pathname || '').includes('account-setup.html')) {
+    if (!isOnboardingComplete(profile) && !String(window.location.pathname || '').includes('/conta')) {
       window.location.href = buildAccountSetupHref(nextPath);
       return;
     }
@@ -984,7 +984,7 @@
         requester_name: name,
         affiliation_context: affiliation,
         institutional_domain_hint: formatAllowedDomains(readEnv().allowedDomains),
-        route: window.location.pathname || '/index.html',
+        route: window.location.pathname || '/',
         user_agent: navigator.userAgent || '',
       },
     };
@@ -1107,14 +1107,14 @@
     if (!document.body.getAttribute('data-kc-auth-guard')) {
       document.body.setAttribute('data-kc-auth-guard', 'true');
       document.addEventListener('click', function (event) {
-        const trigger = event.target && event.target.closest ? event.target.closest('a[href="create-post.html"], .kc-create-btn, .kc-create-post-btn') : null;
+        const trigger = event.target && event.target.closest ? event.target.closest('a[href="/criar-post"], .kc-create-btn, .kc-create-post-btn') : null;
         if (!trigger || getCurrentUser()) return;
         event.preventDefault();
         event.stopPropagation();
         if (typeof window.showToast === 'function') window.showToast(window.KCi18n ? window.KCi18n.t('auth.login-to-publish') : 'Faça login para publicar.', 'warn', 2200);
       }, true);
     }
-    $all('a[href="create-post.html"], .kc-create-btn, .kc-create-post-btn').forEach((element) => {
+    $all('a[href="/criar-post"], .kc-create-btn, .kc-create-post-btn').forEach((element) => {
       element.classList.toggle('kc-disabled', !isLogged);
       if (!isLogged) element.setAttribute('aria-disabled', 'true');
       else element.removeAttribute('aria-disabled');

@@ -54,8 +54,8 @@ describe('kc-create-post.schema — module contracts', () => {
     expect(source).toContain("'eventos': {");
     expect(source).toContain("'achados-perdidos': {");
     expect(source).toContain("'oportunidades': {");
-    expect(source).toContain("redirect: 'compra-venda-feed.html'");
-    expect(source).toContain("redirect: 'oportunidades.html'");
+    expect(source).toContain("redirect: '/compra-venda'");
+    expect(source).toContain("redirect: '/oportunidades'");
   });
 
   test('keeps ingressos as a first-class compra-venda category', () => {

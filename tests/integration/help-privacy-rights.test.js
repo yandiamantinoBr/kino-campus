@@ -16,7 +16,7 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(html).toContain('?request=data_portability#helpRequestForm');
     expect(html).toContain('?request=account_erasure#helpRequestForm');
     expect(
-      (html.match(/href="settings\.html#settingsPrivacyData"/g) || []).length
+      (html.match(/href="\/configuracoes#settingsPrivacyData"/g) || []).length
     ).toBeGreaterThanOrEqual(3);
     expect(html).toContain('Usar o formulário alternativo');
     expect(html).toContain('id="helpRequestPresetNotice"');
@@ -43,8 +43,8 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(controller).toContain('Object.prototype.hasOwnProperty.call(PRIVACY_DEEP_LINKS, request)');
     expect(controller).toContain("new URLSearchParams(window.location.search || '').get('request')");
     expect(controller).not.toMatch(/params\.get\(['"](?:email|user_id|account_id)['"]\)/);
-    expect(controller).toContain("String(window.location.pathname || '/ajuda.html')");
-    expect(controller).not.toContain("(window.location.pathname || '/ajuda.html') + (window.location.search || '')");
+    expect(controller).toContain("String(window.location.pathname || '/ajuda')");
+    expect(controller).not.toContain("(window.location.pathname || '/ajuda') + (window.location.search || '')");
     expect(controller).toContain('result.data.id || result.data.out_id');
     expect(controller).toContain("dataSubjectProtocol ? 'data_subject_protocol' : 'help_reference'");
     expect(controller).toContain("'Protocolo do titular'");
@@ -161,7 +161,7 @@ describe('public privacy-rights discovery and request contract', () => {
     expect(settingsLogout).toContain('if (loggedOut !== true)');
     expect(settingsLogout).toContain('Sua sessão continua ativa.');
     expect(settingsLogout.indexOf('if (loggedOut !== true)')).toBeLessThan(
-      settingsLogout.indexOf("window.location.href = '/index.html'")
+      settingsLogout.indexOf("window.location.href = '/'")
     );
 
     const shellLogout = authUi.slice(

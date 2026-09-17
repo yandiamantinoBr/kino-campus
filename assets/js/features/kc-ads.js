@@ -34,14 +34,14 @@
     : (typeof clearTimeout === 'function' ? clearTimeout : function () { });
 
   const FEED_PAGE_MODULES = Object.freeze({
-    '/index.html': '',
     '/': '',
-    '/eventos.html': 'eventos',
-    '/oportunidades.html': 'oportunidades',
-    '/moradia.html': 'moradia',
-    '/compra-venda-feed.html': 'compra-venda',
-    '/caronas-feed.html': 'caronas',
-    '/achados-perdidos.html': 'achados-perdidos',
+    '/': '',
+    '/eventos': 'eventos',
+    '/oportunidades': 'oportunidades',
+    '/moradia': 'moradia',
+    '/compra-venda': 'compra-venda',
+    '/caronas': 'caronas',
+    '/achados-perdidos': 'achados-perdidos',
   });
 
   const BLOCKED_PATH_RE = /\/(?:admin\/|product\.html|_product\.html|create-post\.html|my-posts\.html|profile\.html|settings\.html|mensagens\.html|account-setup\.html|auth-callback\.html|search-results\.html|privacidade\.html|termos\.html|ajuda\.html|transparencia\.html)/i;

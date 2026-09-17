@@ -63,7 +63,7 @@
     var data = notif && notif.data ? notif.data : {};
     // v9.3.5.10: chat → mensagens.html#c/<conversation_id>
     if (notif && notif.type === 'direct_message' && data.conversation_id) {
-      return 'mensagens.html#c/' + encodeURIComponent(data.conversation_id);
+      return '/mensagens#c/' + encodeURIComponent(data.conversation_id);
     }
     if (!data.post_id) return null;
     if (window.KCUtils && typeof window.KCUtils.buildProductDetailHref === 'function') {
@@ -202,7 +202,7 @@
   }
 
   function chatHref() {
-    return window.location.pathname.indexOf('/admin/') >= 0 ? '../mensagens.html' : 'mensagens.html';
+    return window.location.pathname.indexOf('/admin/') >= 0 ? '../mensagens' : '/mensagens';
   }
 
   function hasScript(path) {
@@ -263,14 +263,16 @@
       }
     });
 
-    var chatPageActive = /(?:^|\/)mensagens\.html$/i.test(window.location.pathname);
+    // Rota canônica `/mensagens` (o `.html` legado continua reconhecido, mas a
+    // navegação do app usa a rota sem extensão).
+    var chatPageActive = /(?:^|\/)mensagens(?:\.html)?$/i.test(window.location.pathname);
     document.querySelectorAll('.kc-chat-shortcut').forEach(function (link) {
       if (chatPageActive) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
 
     document.querySelectorAll('.kc-mobile-menu-content').forEach(function (menu) {
-      var mobileLink = menu.querySelector('a[href*="mensagens.html"]');
+      var mobileLink = menu.querySelector('a[href*="/mensagens"]');
       if (!mobileLink) {
         mobileLink = document.createElement('a');
         mobileLink.href = href;

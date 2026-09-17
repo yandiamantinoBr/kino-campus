@@ -9,22 +9,25 @@ const GOOGLE_SITE_VERIFICATION = 'pUhcnFNqCxds-Z6VQcj7g5-IbIcEwSVZ9b2l4_OHIcc';
 const GA4_MEASUREMENT_ID = 'G-P9RKYHPB7Z';
 const ADSENSE_PUBLISHER_ID = 'ca-pub-2776499020194231';
 
+// A canonical declarada em cada pagina precisa ser a URL FINAL servida ao
+// crawler. As rotas publicas sao canonicas sem extensao (o .html responde 308
+// para a rota limpa), portanto a canonical nunca pode apontar para o .html.
 const INDEXABLE = {
   'index.html': '/',
-  'eventos.html': '/eventos.html',
-  'oportunidades.html': '/oportunidades.html',
-  'moradia.html': '/moradia.html',
-  'compra-venda-feed.html': '/compra-venda-feed.html',
-  'caronas-feed.html': '/caronas-feed.html',
-  'achados-perdidos.html': '/achados-perdidos.html',
-  'sobre.html': '/sobre.html',
+  'eventos.html': '/eventos',
+  'oportunidades.html': '/oportunidades',
+  'moradia.html': '/moradia',
+  'compra-venda-feed.html': '/compra-venda',
+  'caronas-feed.html': '/caronas',
+  'achados-perdidos.html': '/achados-perdidos',
+  'sobre.html': '/sobre',
   'apresentacao-institucional.html': '/apresentacao-institucional.html',
-  'editorial.html': '/editorial.html',
-  'ajuda.html': '/ajuda.html',
-  'ods.html': '/ods.html',
-  'transparencia.html': '/transparencia.html',
-  'privacidade.html': '/privacidade.html',
-  'termos.html': '/termos.html',
+  'editorial.html': '/editorial',
+  'ajuda.html': '/ajuda',
+  'ods.html': '/ods',
+  'transparencia.html': '/transparencia',
+  'privacidade.html': '/privacidade',
+  'termos.html': '/termos',
 };
 
 const NOINDEX = [
@@ -124,7 +127,7 @@ function auditRobots(errors) {
 function auditSitemap(errors) {
   const sitemap = read('api/sitemap.js');
   if (!sitemap.includes('xmlns:image')) errors.push('api/sitemap.js: namespace de imagem ausente.');
-  if (!sitemap.includes('/editorial.html')) errors.push('api/sitemap.js: pagina editorial ausente.');
+  if (!sitemap.includes("'/editorial'")) errors.push('api/sitemap.js: pagina editorial ausente.');
   if (!sitemap.includes('status=eq.published')) errors.push('api/sitemap.js: filtro de published ausente.');
   if (!sitemap.includes('/product.html?id=')) errors.push('api/sitemap.js: URL canonica de publicacao ausente.');
   if (!sitemap.includes('expires_at')) errors.push('api/sitemap.js: filtro/consulta de expiracao ausente.');

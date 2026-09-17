@@ -792,7 +792,7 @@
       html = '<div class="kc-chat-empty" style="height:100%">' +
         '<div class="kc-chat-empty__icon"><i class="fas fa-user-lock"></i></div>' +
         '<h2 class="kc-chat-empty__title">Faça login para ver suas mensagens</h2>' +
-        '<p class="kc-chat-empty__body"><a href="index.html" style="color:var(--kc-primary-brand);font-weight:700;">Voltar ao início</a></p>' +
+        '<p class="kc-chat-empty__body"><a href="/" style="color:var(--kc-primary-brand);font-weight:700;">Voltar ao início</a></p>' +
         '</div>';
     } else if (reason === 'timeout' || reason === 'auth_timeout') {
       html = '<div class="kc-chat-empty" style="height:100%">' +

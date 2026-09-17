@@ -932,7 +932,7 @@
 
   function isResultsPage() {
     const file = (window.location.pathname.split('/').pop() || '').toLowerCase();
-    return file === 'search-results.html' || !!document.getElementById('searchResultsList');
+    return file === '/busca' || !!document.getElementById('searchResultsList');
   }
 
   function normalizeModuleKey(value) {

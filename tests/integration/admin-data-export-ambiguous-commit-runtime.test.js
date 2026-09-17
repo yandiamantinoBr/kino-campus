@@ -62,7 +62,7 @@ function makeLinkedRow(status = 'queued', overrides = {}) {
     subject: 'Cópia integral dos dados',
     message: 'Identidade e protocolo já validados.',
     contact_email: 'titular@example.test',
-    page_path: '/settings.html',
+    page_path: '/configuracoes',
     allow_contact: true,
     metadata: {
       request_kind: 'data_access_copy',

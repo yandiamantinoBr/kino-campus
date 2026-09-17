@@ -54,7 +54,7 @@
 
   function getCurrentPage() {
     var parts = String(window.location.pathname || '').split('/');
-    return normalizeHref(parts.pop() || 'index.html');
+    return normalizeHref(parts.pop() || '/');
   }
 
   function syncActiveLinks(nav) {
