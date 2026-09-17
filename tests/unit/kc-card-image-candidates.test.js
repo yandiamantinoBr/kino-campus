@@ -14,6 +14,16 @@ const BROKEN_GALLERY = 'https://files.cercomp.ufg.br/weby/up/269/o/post_MEM_02-0
 const WORKING_META_IMAGE = 'https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u1/p1/cadu-1-abc.png';
 const WORKING_META_COVER = 'https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/post-media/u1/p1/cadu-2-def.jpg';
 
+// Objetos do Supabase Storage passam pelo proxy sharp da Vercel (mesmo das
+// miniaturas da busca): card usa 640x480 q68. Externos ficam intactos.
+function cardImage(src) {
+  const match = String(src).match(/\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/i);
+  if (!match) return src;
+  return '/api/og-image?path=' + encodeURIComponent(match[1] + '/' + match[2]) + '&w=640&h=480&fit=cover&q=68';
+}
+const WORKING_META_IMAGE_CARD = cardImage(WORKING_META_IMAGE);
+const WORKING_META_COVER_CARD = cardImage(WORKING_META_COVER);
+
 function buildPost(extra) {
   return Object.assign({
     id: 'candidates-post',
@@ -63,7 +73,7 @@ describe('kc-card__image-wrapper data-kc-image-candidates', () => {
       image_url: WORKING_META_IMAGE,
       metadata: { cover_url: WORKING_META_COVER, image_url: WORKING_META_IMAGE },
     }));
-    expect(candidatesOf(wrapper)).toEqual([BROKEN_GALLERY, WORKING_META_IMAGE, WORKING_META_COVER]);
+    expect(candidatesOf(wrapper)).toEqual([BROKEN_GALLERY, WORKING_META_IMAGE_CARD, WORKING_META_COVER_CARD]);
     expect(wrapper.getAttribute('data-kc-image-emoji')).toBe('\uD83D\uDCC5');
     expect(image.getAttribute('src')).toBe(BROKEN_GALLERY);
     expect(container.querySelector('[onerror]')).toBeNull();
@@ -75,13 +85,13 @@ describe('kc-card__image-wrapper data-kc-image-candidates', () => {
       metadata: { image_url: WORKING_META_IMAGE, cover_url: WORKING_META_COVER },
     }));
     // Ordem do pool: imagens → image_url/cover_url próprios → metadata (cover antes de image).
-    expect(candidatesOf(wrapper)).toEqual([BROKEN_GALLERY, WORKING_META_COVER, WORKING_META_IMAGE]);
+    expect(candidatesOf(wrapper)).toEqual([BROKEN_GALLERY, WORKING_META_COVER_CARD, WORKING_META_IMAGE_CARD]);
     fail(image);
-    expect(image.getAttribute('src')).toBe(WORKING_META_COVER);
+    expect(image.getAttribute('src')).toBe(WORKING_META_COVER_CARD);
     expect(wrapper.getAttribute('data-kc-image-candidate-index')).toBe('1');
     expect(wrapper.classList.contains('kc-image-fallback')).toBe(false);
     fail(image);
-    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE);
+    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE_CARD);
     expect(wrapper.classList.contains('kc-image-fallback')).toBe(false);
   });
 
@@ -151,8 +161,26 @@ describe('kc-card__image-wrapper data-kc-image-candidates', () => {
       imagens: [bad, '  '],
       image_url: WORKING_META_IMAGE,
     }));
-    expect(candidatesOf(wrapper)).toEqual([WORKING_META_IMAGE]);
-    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE);
+    expect(candidatesOf(wrapper)).toEqual([WORKING_META_IMAGE_CARD]);
+    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE_CARD);
+  });
+
+  test('objetos do Supabase Storage viram miniatura no proxy sharp da Vercel', () => {
+    // Performance (2026-09-17): capas do Storage entravam em tamanho original
+    // (400KB+ por card). O card agora pede 640x480 q68 ao /api/og-image, o mesmo
+    // proxy ja usado nas miniaturas da busca (imune a quota de Image Transformations).
+    const { wrapper, image } = render(buildPost({ image_url: WORKING_META_IMAGE }));
+    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE_CARD);
+    expect(image.getAttribute('src')).toContain('/api/og-image?path=');
+    expect(image.getAttribute('src')).toContain('w=640');
+    expect(image.getAttribute('src')).toContain('q=68');
+    expect(candidatesOf(wrapper)).toEqual([WORKING_META_IMAGE_CARD]);
+  });
+
+  test('URLs externas seguem intactas no card (sem proxy)', () => {
+    const externo = 'https://files.cercomp.ufg.br/weby/up/269/o/post_MEM_02-09_.jpg';
+    const { image } = render(buildPost({ imagens: [externo] }));
+    expect(image.getAttribute('src')).toBe(externo);
   });
 
   test('mantém Offline First: dataURL image/* é candidato válido e único', () => {
@@ -178,15 +206,15 @@ describe('kc-card__image-wrapper data-kc-image-candidates', () => {
 
   test('data-full-src acompanha a fonte ao avançar de candidato (lightbox)', () => {
     const wrapper = document.createElement('div');
-    wrapper.setAttribute('data-kc-image-candidates', JSON.stringify([BROKEN_GALLERY, WORKING_META_IMAGE, WORKING_META_COVER]));
+    wrapper.setAttribute('data-kc-image-candidates', JSON.stringify([BROKEN_GALLERY, WORKING_META_IMAGE_CARD, WORKING_META_COVER_CARD]));
     const image = document.createElement('img');
     image.setAttribute('src', BROKEN_GALLERY);
     image.setAttribute('data-full-src', BROKEN_GALLERY);
     wrapper.appendChild(image);
     document.body.appendChild(wrapper);
     fail(image);
-    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE);
-    expect(image.getAttribute('data-full-src')).toBe(WORKING_META_IMAGE);
+    expect(image.getAttribute('src')).toBe(WORKING_META_IMAGE_CARD);
+    expect(image.getAttribute('data-full-src')).toBe(WORKING_META_IMAGE_CARD);
   });
 
   test('data-kc-image-fallback-id revela elemento de capa existente (hero do produto)', () => {
