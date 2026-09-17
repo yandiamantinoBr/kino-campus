@@ -13924,3 +13924,18 @@ body.kc-admin-page .kc-consent-btn {
 .kc-ad-card--adsense.kc-ad-card--aside .adsbygoogle {
   min-height: 300px;
 }
+
+
+/* ==========================================================================
+   Contraste (WCAG AA) nos links de card — 2026-09-17
+   O auditor color-contrast do Lighthouse mediu 4.42:1 em links laranja sobre
+   a superficie escura do card (#333), logo abaixo do minimo 4.5:1. A variante
+   bright ja existente no design system (#FF8000) entrega ~5.0:1 mantendo a
+   identidade da marca. Escopo restrito ao tema escuro: no tema claro o
+   #FF8000 teria contraste pior que o #FF6B00.
+   ========================================================================== */
+
+[data-theme="dark"] .kc-card__category-source a,
+[data-theme="dark"] .kc-card__description-preview a {
+  color: var(--kc-primary-brand-bright);
+}

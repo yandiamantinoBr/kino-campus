@@ -429,6 +429,23 @@
     return Math.floor(Math.max(0, Number(cardsLength) || 0) / INLINE_REAL_POSTS_PER_AD);
   }
 
+  // Miniaturas de anuncio gerenciado seguem o mesmo contrato dos cards do feed
+  // (kc-utils.presentation): objetos do Supabase Storage passam pelo proxy sharp
+  // da Vercel em 640x480 q68; externos ficam intactos. Sem isso o card de
+  // publicidade carregava a arte original (271 KB + 231 KB de formato).
+  const AD_IMAGE_STORAGE_RE = /\/storage\/v1\/(?:object|render\/image)\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/i;
+  function optimizedAdImageUrl(raw) {
+    const value = String(raw == null ? '' : raw).trim();
+    if (!value || !/^https?:\/\//i.test(value)) return value;
+    try {
+      const match = new URL(value).pathname.match(AD_IMAGE_STORAGE_RE);
+      if (!match) return value;
+      return '/api/og-image?path=' + encodeURIComponent(match[1] + '/' + match[2]) + '&w=640&h=480&fit=cover&q=68';
+    } catch (_) {
+      return value;
+    }
+  }
+
   function buildAdHTML(ad, placement, slotPlacement) {
     const safe = normalizeAdRow(ad);
     const metricPlacement = slotPlacement || placement;
@@ -437,7 +454,7 @@
     const sponsor = safe.advertiser_name || safe.sponsor_label || 'Patrocinado';
     const label = safe.sponsor_label || 'Publicidade';
     const image = safe.image_url
-      ? `<a class="kc-ad-card__media" href="${esc(href)}" rel="sponsored noopener noreferrer"${external ? ' target="_blank"' : ''}><img src="${esc(safe.image_url)}" alt="${esc(safe.title)}" loading="lazy" decoding="async"></a>`
+      ? `<a class="kc-ad-card__media" href="${esc(href)}" rel="sponsored noopener noreferrer"${external ? ' target="_blank"' : ''}><img src="${esc(optimizedAdImageUrl(safe.image_url))}" alt="${esc(safe.title)}" loading="lazy" decoding="async"></a>`
       : '<div class="kc-ad-card__media kc-ad-card__media--fallback" aria-hidden="true"><i class="fas fa-bullhorn"></i></div>';
     return [
       `<article class="kc-ad-card kc-ad-card--${placement === 'feed_aside' ? 'aside' : 'inline'}" data-kc-managed-ad="true" data-kc-ad-id="${esc(safe.id)}" data-kc-ad-placement="${esc(metricPlacement)}" data-kc-ad-title="${esc(safe.title)}">`,
