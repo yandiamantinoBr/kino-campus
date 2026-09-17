@@ -3,7 +3,7 @@ const fs = require('fs');
 
 test.describe('preferências de busca', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#settingsSearchPreferences')).toBeVisible();
     await expect(page.locator('[data-search-preference-module="eventos"]')).toBeAttached({ timeout: 15000 });
     // Wait until controller finished hydrate (status not stuck on loading)
@@ -191,7 +191,7 @@ test.describe('preferências de busca', () => {
       }));
     }, { accountA, accountB });
 
-    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('[data-search-preference-module="moradia"]')).toBeChecked();
     await expect(page.locator('[data-search-preference-module="eventos"]')).not.toBeChecked();
 

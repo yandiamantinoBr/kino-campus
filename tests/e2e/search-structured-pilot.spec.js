@@ -53,7 +53,7 @@ test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
     page.on('request', (request) => {
       if (pilotOnlyAssets.some((asset) => request.url().includes(asset))) requested.push(request.url());
     });
-    await page.goto('/busca?q=evento');
+    await page.goto('/search-results.html?q=evento');
     await page.waitForLoadState('networkidle');
     await page.goto('/index.html');
     await page.locator('#searchInput').fill('evento');
@@ -82,7 +82,7 @@ test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
 
   test('resultados exibem critérios removíveis e facetas coerentes', async ({ page }) => {
     await isolateLocalDatabase(page);
-    await page.goto('/busca');
+    await page.goto('/search-results.html');
     await enablePilotWithPosts(page, opportunityFixtures());
     await page.locator('#searchInput').evaluate((input) => {
       input.value = 'estágio remoto computação';
@@ -107,7 +107,7 @@ test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
 
   test('zero-results explica o bloqueio e permite ampliar sem alterar a consulta', async ({ page }) => {
     await isolateLocalDatabase(page);
-    await page.goto('/busca');
+    await page.goto('/search-results.html');
     await enablePilotWithPosts(page, opportunityFixtures({ remote: false }));
     await page.locator('#searchInput').fill('estágio remoto computação');
 
@@ -138,7 +138,7 @@ test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
   test('chips permanecem operáveis no mobile sem overflow horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await isolateLocalDatabase(page);
-    await page.goto('/busca');
+    await page.goto('/search-results.html');
     await enablePilotWithPosts(page, opportunityFixtures());
     await page.locator('#searchInput').evaluate((input) => {
       input.value = 'estágio remoto computação';
@@ -235,7 +235,7 @@ test.describe('V76.42 - busca estruturada, combobox e concorrência', () => {
 
   test('página de resultados também cancela resposta obsoleta', async ({ page }) => {
     await isolateLocalDatabase(page);
-    await page.goto('/busca');
+    await page.goto('/search-results.html');
     await page.evaluate(() => {
       window.__kcResultsAbortCount = 0;
       window.KCAPI.registerAdapter('local', {

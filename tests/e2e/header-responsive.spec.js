@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-async function seedAuthShell(page, path = '/oportunidades') {
+async function seedAuthShell(page, path = '/oportunidades.html') {
   await page.goto(path, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => {
     sessionStorage.setItem('kc:9.0.0:shell:auth-shell', JSON.stringify({

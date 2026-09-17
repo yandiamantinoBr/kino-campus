@@ -132,7 +132,7 @@ test.describe('Seletor responsivo de módulos', () => {
   test('em 769 px o controle do rail não recorta o chip Todas', async ({ page }) => {
     await prepareReadOnlyPage(page);
     await page.setViewportSize({ width: 769, height: 900 });
-    await page.goto('/eventos', { waitUntil: 'domcontentloaded' });
+    await page.goto('/eventos.html', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('.kc-feed-toolbar .kc-scroll-rail__btn--next')).toBeVisible();
 
     const geometry = await page.locator('.kc-feed-toolbar').first().evaluate((toolbar) => {
@@ -165,7 +165,7 @@ test.describe('Seletor responsivo de módulos', () => {
   test('renderiza ícone e chevron locais do seletor com recursos externos bloqueados', async ({ page }) => {
     await prepareReadOnlyPage(page);
     await page.setViewportSize({ width: 769, height: 900 });
-    await page.goto('/eventos', { waitUntil: 'domcontentloaded' });
+    await page.goto('/eventos.html', { waitUntil: 'domcontentloaded' });
 
     const glyphs = await page.locator('[data-kc-module-picker-open]').evaluate((trigger) => {
       const icon = trigger.querySelector(':scope > i:first-child');
@@ -197,7 +197,7 @@ test.describe('Seletor responsivo de módulos', () => {
   test('abre bottom sheet acessível, preserva closed=1 e restaura foco', async ({ page }) => {
     await prepareReadOnlyPage(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/oportunidades?closed=1', { waitUntil: 'domcontentloaded' });
+    await page.goto('/oportunidades.html?closed=1', { waitUntil: 'domcontentloaded' });
 
     const trigger = page.locator('[data-kc-module-picker-open]');
     await expect(page.locator('#kcConsentBanner')).toBeHidden();
@@ -243,7 +243,7 @@ test.describe('Seletor responsivo de módulos', () => {
   test('permanece utilizável acima do consentimento pendente na primeira visita', async ({ page }) => {
     await blockExternalRequests(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/oportunidades', { waitUntil: 'domcontentloaded' });
+    await page.goto('/oportunidades.html', { waitUntil: 'domcontentloaded' });
 
     const consent = page.locator('#kcConsentBanner');
     const trigger = page.locator('[data-kc-module-picker-open]');
@@ -346,7 +346,7 @@ test.describe('Seletor responsivo de módulos', () => {
   test('nomes de módulos permanecem dentro dos cards em 320 px', async ({ page }) => {
     await prepareReadOnlyPage(page);
     await page.setViewportSize({ width: 320, height: 720 });
-    await page.goto('/oportunidades', { waitUntil: 'domcontentloaded' });
+    await page.goto('/oportunidades.html', { waitUntil: 'domcontentloaded' });
     await page.locator('[data-kc-module-picker-open]').click();
 
     const measurements = await page.locator('[data-kc-module-picker-option]').evaluateAll((links) => links.map((link) => {
@@ -370,7 +370,7 @@ test.describe('Seletor responsivo de módulos', () => {
   test('mantém seletor e modal funcionais ao atravessar 768/769 px', async ({ page }) => {
     await prepareReadOnlyPage(page);
     await page.setViewportSize({ width: 768, height: 900 });
-    await page.goto('/eventos', { waitUntil: 'domcontentloaded' });
+    await page.goto('/eventos.html', { waitUntil: 'domcontentloaded' });
     const trigger = page.locator('[data-kc-module-picker-open]');
     await expect(trigger).toBeVisible();
     await trigger.click();

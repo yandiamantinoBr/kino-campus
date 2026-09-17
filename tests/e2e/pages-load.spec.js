@@ -14,10 +14,10 @@ const { test, expect } = require('@playwright/test');
 
 const PAGES = [
   { path: '/',                        name: 'Home (index.html)' },
-  { path: '/compra-venda',  name: 'Compra e Venda Feed' },
-  { path: '/caronas',       name: 'Caronas Feed' },
-  { path: '/eventos',            name: 'Eventos' },
-  { path: '/busca',     name: 'Resultados de Busca' },
+  { path: '/compra-venda-feed.html',  name: 'Compra e Venda Feed' },
+  { path: '/caronas-feed.html',       name: 'Caronas Feed' },
+  { path: '/eventos.html',            name: 'Eventos' },
+  { path: '/search-results.html',     name: 'Resultados de Busca' },
 ];
 
 for (const { path, name } of PAGES) {

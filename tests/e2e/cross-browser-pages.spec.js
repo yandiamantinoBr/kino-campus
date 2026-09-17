@@ -145,7 +145,7 @@ test('abas do feed preservam semântica, identidade visual e largura nos dois te
     await route.abort('blockedbyclient');
   });
 
-  const response = await page.goto('/eventos', { waitUntil: 'load' });
+  const response = await page.goto('/eventos.html', { waitUntil: 'load' });
   expect(response && response.status()).toBe(200);
 
   const semantics = await page.locator('.kc-feed-tabs').evaluate((tabs) => {

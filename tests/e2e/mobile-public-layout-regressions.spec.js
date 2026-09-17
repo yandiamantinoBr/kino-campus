@@ -50,7 +50,7 @@ async function installSearchFixture(page) {
     contentType: 'application/json',
     body: JSON.stringify({ anuncios: [] })
   }));
-  await page.goto('/busca', { waitUntil: 'domcontentloaded' });
+  await page.goto('/search-results.html', { waitUntil: 'domcontentloaded' });
   await page.evaluate((posts) => {
     if (window.KCAPI && window.KCAPI.ENV) {
       window.KCAPI.ENV.driver = 'local';
@@ -201,7 +201,7 @@ test.describe('mobile public layout regressions', () => {
 
     test(`help stacks both columns without overlap at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
-      await page.goto('/ajuda', { waitUntil: 'domcontentloaded' });
+      await page.goto('/ajuda.html', { waitUntil: 'domcontentloaded' });
       await expect(page.locator('html')).not.toHaveClass(/kc-loading/);
 
       const layout = await page.evaluate(() => {
@@ -240,7 +240,7 @@ test.describe('mobile public layout regressions', () => {
   test('search filters are compact before the deferred controller loads', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.route('**/assets/js/features/kc-search.js*', (route) => route.abort());
-    await page.goto('/busca?q=Nutri', { waitUntil: 'domcontentloaded' });
+    await page.goto('/search-results.html?q=Nutri', { waitUntil: 'domcontentloaded' });
 
     await expect(page.locator('#searchResultsFiltersToggle')).toHaveAttribute(
       'aria-expanded',
@@ -256,21 +256,21 @@ test.describe('mobile public layout regressions', () => {
   test('Mensagens fica visível no cabeçalho e no menu sem cobrir conteúdo mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
-    for (const route of ['/', '/eventos', '/oportunidades', '/moradia', '/compra-venda', '/busca', '/ajuda', '/criar-post', '/mensagens']) {
+    for (const route of ['/', '/eventos.html', '/oportunidades.html', '/moradia.html', '/compra-venda-feed.html', '/search-results.html', '/ajuda.html', '/create-post.html', '/mensagens.html']) {
       const response = await page.goto(route, { waitUntil: 'load' });
       expect(response && response.status(), route).toBe(200);
-      if (route === '/criar-post') await expect(page.locator('h1')).toHaveText('Criar Publicação');
+      if (route === '/create-post.html') await expect(page.locator('h1')).toHaveText('Criar Publicação');
       await expect(page.locator('.kc-chat-mobile-fab')).toHaveCount(0);
       await expect(page.locator('.kc-header .kc-chat-shortcut')).toBeVisible();
       await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAccessibleName('Mensagens');
-      if (route === '/mensagens') {
+      if (route === '/mensagens.html') {
         await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAttribute('aria-current', 'page');
         await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveCSS('color', 'rgb(255, 107, 0)');
         await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveCSS('background-color', 'rgba(255, 107, 0, 0.12)');
       } else {
         await expect(page.locator('.kc-header .kc-chat-shortcut')).not.toHaveAttribute('aria-current');
       }
-      await expect(page.locator('.kc-mobile-menu-content a[href="/mensagens"]')).toHaveCount(1);
+      await expect(page.locator('.kc-mobile-menu-content a[href="mensagens.html"]')).toHaveCount(1);
       await expect(page.locator('.kc-chat-mobile-menu-link .kc-chat-shortcut__badge')).toHaveCount(1);
     }
   });
@@ -386,7 +386,7 @@ test.describe('mobile public layout regressions', () => {
       )
     ).toBe('row');
 
-    await page.goto('/ajuda', { waitUntil: 'domcontentloaded' });
+    await page.goto('/ajuda.html', { waitUntil: 'domcontentloaded' });
     const columns = await page.locator('.kc-help-grid').evaluate(
       (element) => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length
     );

@@ -152,7 +152,7 @@ test.describe('concorrência e foco dos protocolos em configurações', () => {
     page.on('download', () => {
       downloadCount += 1;
     });
-    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
 
     const rowA = page.locator(
       `[data-privacy-request-row][data-privacy-request-protocol="${protocolA}"]`,
@@ -341,7 +341,7 @@ test.describe('concorrência e foco dos protocolos em configurações', () => {
       });
     });
 
-    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
     const initialAction = page.locator('[data-privacy-request-action="download_export"]');
     await expect(initialAction).toBeVisible({ timeout: 15000 });
     await initialAction.focus();
@@ -445,7 +445,7 @@ test.describe('concorrência e foco dos protocolos em configurações', () => {
     page.on('download', () => {
       downloadCount += 1;
     });
-    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
     const downloadAction = page.locator('[data-privacy-request-action="download_export"]');
     await expect(downloadAction).toBeVisible({ timeout: 15000 });
     await downloadAction.focus();
@@ -611,7 +611,7 @@ test.describe('concorrência e foco dos protocolos em configurações', () => {
         });
       });
 
-      await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+      await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
       const row = page.locator(
         `[data-privacy-request-row][data-privacy-request-protocol="${protocol}"]`,
       );
@@ -690,7 +690,7 @@ test.describe('concorrência e foco dos protocolos em configurações', () => {
       });
     });
 
-    await page.goto('/configuracoes', { waitUntil: 'domcontentloaded' });
+    await page.goto('/settings.html', { waitUntil: 'domcontentloaded' });
     const row = page.locator(
       `[data-privacy-request-row][data-privacy-request-protocol="${protocol}"]`,
     );
