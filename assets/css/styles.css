@@ -13971,3 +13971,17 @@ body.kc-admin-page .kc-consent-btn {
     min-height: 520px;
   }
 }
+
+
+/* Rodada 3: as regras de altura do hero vivem em .kc-hero-banner (o slide
+   interno), nao no container, e uma delas usa !important (190px). A reserva
+   precisa vencer essa declaracao para o slide nao crescer depois do JS. */
+.kc-hero-banner {
+  min-height: 240px !important;
+}
+
+@media (min-width: 641px) {
+  .kc-hero-banner {
+    min-height: 380px !important;
+  }
+}
