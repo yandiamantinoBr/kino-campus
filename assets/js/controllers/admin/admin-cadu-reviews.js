@@ -13,11 +13,14 @@
   var countRequestGeneration = 0;
   var pendingReads = Object.create(null);
   var institutionalPending = 0;
+  var filterChangeTimer = null;
   // Leituras: autenticação (8 s) + proxy (12 s) + margem de trânsito.
   var REVIEW_READ_TIMEOUT_MS = 25000;
   // Escritas mantêm os limites anteriores; timeout nunca autoriza replay.
   var REVIEW_RESOLUTION_TIMEOUT_MS = 15000;
   var REVIEW_REPASS_TIMEOUT_MS = 420000;
+  // Filtros reativos: agrupa trocas rápidas de seleção em uma única consulta.
+  var FILTER_CHANGE_DEBOUNCE_MS = 150;
   var DEFAULT_PAGE_LIMIT = (
     typeof window.matchMedia === 'function'
     && window.matchMedia('(max-width: 700px)').matches
@@ -601,7 +604,7 @@
       return;
     }
     if (state.error) {
-      target.innerHTML = '<div class="kc-cadu-review-empty">A fila não pôde ser carregada. Nenhuma decisão foi enviada.</div>';
+      target.innerHTML = '<div class="kc-cadu-review-empty is-error" role="alert">A fila não pôde ser carregada. Nenhuma decisão foi enviada.</div>';
       return;
     }
     if (!state.items.length) {
@@ -1241,9 +1244,22 @@
     refresh();
   }
 
+  function scheduleFilterApply() {
+    if (filterChangeTimer) clearTimeout(filterChangeTimer);
+    filterChangeTimer = setTimeout(function () {
+      filterChangeTimer = null;
+      applyFilters();
+    }, FILTER_CHANGE_DEBOUNCE_MS);
+  }
+
   function bindEvents() {
     var form = $('#reviews-filters');
     if (form) form.addEventListener('submit', applyFilters);
+    // Seleção por teclado/mouse aplica o recorte sem exigir o botão Aplicar.
+    ['#reviews-origin', '#reviews-state', '#reviews-limit'].forEach(function (selector) {
+      var field = $(selector);
+      if (field) field.addEventListener('change', scheduleFilterApply);
+    });
     var clear = $('#reviews-clear');
     if (clear) clear.addEventListener('click', clearFilters);
     var refreshButton = $('#reviews-refresh');
