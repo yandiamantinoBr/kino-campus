@@ -34,7 +34,7 @@ describe('search local personalization integration contract', () => {
     const html = read('search-results.html');
     const search = read('assets/js/features/kc-search.js');
     expect(html).toContain('id="searchResultsPersonalization"');
-    expect(html).toContain('settings.html#settingsSearchPreferences');
+    expect(html).toContain('/configuracoes#settingsSearchPreferences');
     expect(search).toContain("recordSearchResultInteraction(post, 'dropdown-click')");
     expect(search).toContain("recordSearchResultInteraction(post, 'results-click')");
     expect(search).not.toMatch(/recordSearchResultInteraction\([^)]*impression/);

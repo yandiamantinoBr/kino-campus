@@ -25,7 +25,7 @@
     const tabs = document.querySelector('[data-kc-ods-goal-tabs]');
     if (!tabs) return;
     tabs.innerHTML = Object.values(Content.goals).map((goal) => `
-      <a href="ods.html?goal=${goal.goal}" class="kc-ods-goal-chip${goal.goal === goalId ? ' is-active' : ''}">
+      <a href="/ods?goal=${goal.goal}" class="kc-ods-goal-chip${goal.goal === goalId ? ' is-active' : ''}">
         <span>ODS ${goal.goal}</span>
         <strong>${goal.title}</strong>
       </a>

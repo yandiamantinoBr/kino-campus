@@ -1260,7 +1260,7 @@
     if (!access.ok) {
       setLoading(false);
       showError(access.message);
-      setTimeout(() => window.location.replace('../index.html'), 2500);
+      setTimeout(() => window.location.replace('../'), 2500);
       return;
     }
 

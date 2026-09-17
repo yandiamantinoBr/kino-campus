@@ -653,7 +653,7 @@ async function kcHandleCreateSubmit() {
 function kcInitCreatePostTriggers() {
   // Intercepta links e botoes existentes
   document.body.addEventListener('click', (e) => {
-    const trigger = e.target.closest('a[href="create-post.html"], .kc-create-btn, .kc-create-post-btn');
+    const trigger = e.target.closest('a[href="/criar-post"], .kc-create-btn, .kc-create-post-btn');
     if (!trigger) return;
 
     // Com JS ativo, create-post.html funciona apenas como fallback de acesso direto.
@@ -667,7 +667,7 @@ function kcInitCreatePostTriggers() {
 
   // Autopen: se a pessoa abrir create-post.html direto
   const page = (window.location.pathname.split('/').pop() || '').toLowerCase();
-  if (page === 'create-post.html') {
+  if (page === '/criar-post') {
     kcOpenCreatePostModal(kcGetModuloFilterForPage());
   }
 }

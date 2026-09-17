@@ -22,7 +22,7 @@
     privacyBusyLease: null,
     accountEmailActionsInFlight: Object.create(null),
     accountLoadGeneration: 0,
-    nextPath: '/index.html',
+    nextPath: '/',
     saving: false,
     lastRealPrimaryMethod: '',
   };
@@ -199,31 +199,31 @@
 
   function normalizeNextPath(value) {
     if (shared && typeof shared.normalizeNextPath === 'function') {
-      return shared.normalizeNextPath(value, '/settings.html');
+      return shared.normalizeNextPath(value, '/configuracoes');
     }
     const raw = String(value || '').trim();
-    if (!raw) return '/settings.html';
+    if (!raw) return '/configuracoes';
     return raw.charAt(0) === '/' ? raw : `/${raw}`;
   }
 
   function readNextPath() {
     const params = new URLSearchParams(window.location.search || '');
-    return normalizeNextPath(params.get('next') || '/index.html');
+    return normalizeNextPath(params.get('next') || '/');
   }
 
   function buildAccountSetupHref() {
     const next = shared && typeof shared.normalizeNextPath === 'function'
-      ? shared.normalizeNextPath(state.nextPath, '/index.html')
-      : (state.nextPath || '/index.html');
-    return `/account-setup.html?next=${encodeURIComponent(next)}`;
+      ? shared.normalizeNextPath(state.nextPath, '/')
+      : (state.nextPath || '/');
+    return `/conta?next=${encodeURIComponent(next)}`;
   }
 
   function buildProfileHref() {
-    return state.user && state.user.id ? `/profile.html?id=${encodeURIComponent(state.user.id)}` : '/profile.html';
+    return state.user && state.user.id ? `/perfil?id=${encodeURIComponent(state.user.id)}` : '/perfil';
   }
 
   function buildCallbackUrl() {
-    const url = new URL('/auth-callback.html', window.location.origin);
+    const url = new URL('/auth/callback', window.location.origin);
     url.searchParams.set('next', normalizeNextPath(state.nextPath));
     return url.toString();
   }
@@ -2404,7 +2404,7 @@
         setStatus('Não foi possível sair da conta agora. Sua sessão continua ativa.', 'error');
         return false;
       }
-      window.location.href = '/index.html';
+      window.location.href = '/';
       return true;
     } catch (error) {
       console.error('[Settings] logout failed:', error);

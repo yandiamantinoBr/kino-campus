@@ -77,13 +77,13 @@ describe('settings search personalization controls', () => {
     expect(html).toContain('id="settingsClearBrowserPrivacyData"');
     expect(html).toContain('Limpar dados deste navegador');
     expect(html).toContain('id="settingsPrivacyHelpFallback"');
-    expect(html).toContain('ajuda.html?request=data_access_copy#helpRequestForm');
+    expect(html).toContain('/ajuda?request=data_access_copy#helpRequestForm');
     expect(html).toContain('id="settingsRequestAccountErasure"');
     expect(html).toContain('id="settingsErasureHelpFallback"');
-    expect(html).toContain('ajuda.html?request=account_erasure#helpRequestForm');
+    expect(html).toContain('/ajuda?request=account_erasure#helpRequestForm');
     expect(html).toContain('id="settingsRequestDataPortability"');
     expect(html).toContain('id="settingsPortabilityHelpFallback"');
-    expect(html).toContain('ajuda.html?request=data_portability#helpRequestForm');
+    expect(html).toContain('/ajuda?request=data_portability#helpRequestForm');
     expect(html).not.toMatch(/ajuda\.html\?[^"]*(?:email|user_id|account_id)=/i);
     expect(html.indexOf('settingsPrivacyData')).toBeGreaterThan(html.indexOf('settingsLogout'));
     expect(controller).toContain("request_kind: kind");

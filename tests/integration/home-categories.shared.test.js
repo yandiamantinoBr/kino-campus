@@ -7,7 +7,7 @@ describe('KCHomeCategoryUtils', () => {
     expect(results[0]).toMatchObject({
       moduleKey: 'eventos',
       categoryKey: 'sustentabilidade',
-      href: 'eventos.html#sustentabilidade'
+      href: '/eventos#sustentabilidade'
     });
   });
 
@@ -18,7 +18,7 @@ describe('KCHomeCategoryUtils', () => {
     });
     expect(HomeCategories.findCategory('oportunidades', 'pesquisa')).toMatchObject({
       categoryKey: 'pesquisa',
-      href: 'oportunidades.html#pesquisa'
+      href: '/oportunidades#pesquisa'
     });
     expect(HomeCategories.findCategory('oportunidades', 'bolsas')).toMatchObject({
       categoryKey: 'bolsa',

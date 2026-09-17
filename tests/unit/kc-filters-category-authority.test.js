@@ -3,7 +3,7 @@ describe('feed category authority', () => {
     jest.resetModules();
     document.body.innerHTML = '';
     document.body.removeAttribute('data-kc-filters');
-    window.history.replaceState({}, '', '/oportunidades.html');
+    window.history.replaceState({}, '', '/oportunidades');
     delete window.KCFeedFilters;
     delete window.kcFilters;
     delete window.filterPosts;
@@ -55,7 +55,7 @@ describe('feed category authority', () => {
   });
 
   test('normaliza aliases de URL com o mesmo catalogo usado pelos cards e chips', () => {
-    window.history.replaceState({}, '', '/oportunidades.html?tab=Cursos%20e%20capacitacoes');
+    window.history.replaceState({}, '', '/oportunidades?tab=Cursos%20e%20capacitacoes');
     document.body.setAttribute('data-kc-filters', 'tab-search');
     document.body.innerHTML = `
       <nav class="kc-feed-tabs">
@@ -79,7 +79,7 @@ describe('feed category authority', () => {
   });
 
   test('decodifica alias externo no hash antes de selecionar categoria', () => {
-    window.history.replaceState({}, '', '/oportunidades.html#Cursos%20e%20capacitacoes');
+    window.history.replaceState({}, '', '/oportunidades#Cursos%20e%20capacitacoes');
     document.body.setAttribute('data-kc-filters', 'tab-search');
     document.body.innerHTML = `
       <nav class="kc-feed-tabs">

@@ -764,7 +764,7 @@
       if (res && res.ok) {
         clearPostSessionCaches();
         toast('Publica\u00E7\u00E3o exclu\u00EDda com sucesso.', 'success', 2000);
-        setTimeout(function () { window.location.href = 'index.html'; }, 300);
+        setTimeout(function () { window.location.href = '/'; }, 300);
         return;
       }
 

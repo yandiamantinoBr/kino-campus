@@ -14,7 +14,7 @@ describe('KCAds feed monetization', () => {
     document.body.innerHTML = '';
     document.head.innerHTML = '';
     window.sessionStorage.clear();
-    window.history.replaceState({}, '', '/eventos.html');
+    window.history.replaceState({}, '', '/eventos');
     window.KCConsent = { hasConsent: () => false };
     KCAds.clearFrequencyCaps();
   });
@@ -300,7 +300,7 @@ describe('KCAds feed monetization', () => {
   });
 
   test('busca interna noindex nao e placement de anuncios', () => {
-    window.history.replaceState({}, '', '/search-results.html?q=evento');
+    window.history.replaceState({}, '', '/busca?q=evento');
     window.KCConsent = { hasConsent: (key) => key === 'advertising' };
     document.body.innerHTML = [
       '<div class="kc-feed-list">',
@@ -308,7 +308,7 @@ describe('KCAds feed monetization', () => {
       '</div>',
     ].join('');
 
-    expect(KCAds.isFeedPage('/search-results.html')).toBe(false);
+    expect(KCAds.isFeedPage('/busca')).toBe(false);
     expect(KCAds.maybeLoadAutoAds({
       status: 'active',
       auto_ads_enabled: true,
@@ -401,7 +401,7 @@ describe('KCAds feed monetization', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
       '<section class="kc-sidebar-section" id="context">Sobre</section>',
-      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="create-post.html">Criar Publicação</a></section>',
+      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="/criar-post">Criar Publicação</a></section>',
       '<section class="kc-sidebar-section" id="smart">Painel</section>',
       '</aside></main>',
     ].join('');
@@ -457,7 +457,7 @@ describe('KCAds feed monetization', () => {
     document.body.innerHTML = [
       '<main><aside class="kc-sidebar">',
       '<section class="kc-sidebar-section" id="one">Resumo</section>',
-      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="create-post.html">Criar Publicação</a></section>',
+      '<section class="kc-sidebar-section" id="create"><a class="kc-create-post-btn" href="/criar-post">Criar Publicação</a></section>',
       '</aside></main>',
     ].join('');
 
@@ -570,7 +570,7 @@ describe('KCAds feed monetization', () => {
     const runtime = {
       document: fakeDocument,
       location: {
-        pathname: '/eventos.html',
+        pathname: '/eventos',
         search: '',
         origin: 'https://www.kinocampus.com.br',
       },

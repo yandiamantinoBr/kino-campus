@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-for (const route of ['/', '/mensagens.html']) {
+for (const route of ['/', '/mensagens']) {
   test(`nome e controles em uma linha no mobile com fontes e temas: ${route}`, async ({ page }) => {
     test.setTimeout(90000);
     await page.addInitScript(() => localStorage.setItem('kc_consent_v1', JSON.stringify({ version: '2026-06-05', necessary: true, preferences: false, analytics: false, advertising: false, updatedAt: new Date().toISOString() })));

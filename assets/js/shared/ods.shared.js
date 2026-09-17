@@ -43,21 +43,21 @@
         {
           key: 'compra-venda',
           label: 'Livros e materiais',
-          href: 'compra-venda-feed.html?filter=livros',
+          href: '/compra-venda?filter=livros',
           icon: 'fas fa-book',
           body: 'A circulação de livros, apostilas e materiais reduz barreiras de entrada e aproveita melhor recursos já existentes na comunidade.'
         },
         {
           key: 'oportunidades',
           label: 'Monitorias e vagas',
-          href: 'oportunidades.html#monitoria',
+          href: '/oportunidades#monitoria',
           icon: 'fas fa-chalkboard-teacher',
           body: 'Monitorias, aulas e vagas acadêmicas ficam mais visíveis e alcançam estudantes além dos círculos imediatos.'
         },
         {
           key: 'eventos',
           label: 'Eventos acadêmicos',
-          href: 'eventos.html#academicos',
+          href: '/eventos#academicos',
           icon: 'fas fa-calendar-alt',
           body: 'Palestras, oficinas e encontros ampliam a oferta de aprendizagem ao longo da vida e fortalecem a extensão universitária.'
         }
@@ -105,21 +105,21 @@
         {
           key: 'moradia',
           label: 'Moradia próxima e compatível',
-          href: 'moradia.html',
+          href: '/moradia',
           icon: 'fas fa-home',
           body: 'Encontrar república, quarto ou apartamento com contexto local reduz atrito de permanência e amplia a segurança na decisão.'
         },
         {
           key: 'caronas',
           label: 'Mobilidade compartilhada',
-          href: 'caronas-feed.html',
+          href: '/caronas',
           icon: 'fas fa-car',
           body: 'Caronas organizadas entre campus e bairros reduzem deslocamentos ineficientes e fortalecem redes de confiança.'
         },
         {
           key: 'eventos',
           label: 'Comunidade ativa',
-          href: 'eventos.html',
+          href: '/eventos',
           icon: 'fas fa-users',
           body: 'Eventos conectam pessoas aos espaços universitários e ajudam a comunidade a participar mais da vida local.'
         }
@@ -168,21 +168,21 @@
         {
           key: 'compra-venda',
           label: 'Reuso de bens',
-          href: 'compra-venda-feed.html',
+          href: '/compra-venda',
           icon: 'fas fa-shopping-bag',
           body: 'O módulo reduz descarte, aproxima oferta e demanda local e alonga o ciclo de vida de livros, eletrônicos, móveis e roupas.'
         },
         {
           key: 'achados-perdidos',
           label: 'Recuperação de objetos',
-          href: 'achados-perdidos.html',
+          href: '/achados-perdidos',
           icon: 'fas fa-search',
           body: 'Quando um item perdido volta ao dono, a plataforma também evita recompras desnecessárias e desperdício.'
         },
         {
           key: 'eventos',
           label: 'Feiras e ações de troca',
-          href: 'eventos.html?filter=sustentabilidade',
+          href: '/eventos?filter=sustentabilidade',
           icon: 'fas fa-leaf',
           body: 'Eventos de troca e sustentabilidade tornam o consumo responsável uma prática visível e coletiva.'
         }
@@ -231,21 +231,21 @@
         {
           key: 'caronas',
           label: 'Caronas compartilhadas',
-          href: 'caronas-feed.html',
+          href: '/caronas',
           icon: 'fas fa-car-side',
           body: 'Agrupar deslocamentos ajuda a reduzir viagens vazias, custos e pressão por transporte individual no entorno do campus.'
         },
         {
           key: 'compra-venda',
           label: 'Extensão do ciclo de vida',
-          href: 'compra-venda-feed.html',
+          href: '/compra-venda',
           icon: 'fas fa-recycle',
           body: 'Reutilizar itens reduz a necessidade de produção nova e evita descarte prematuro de materiais ainda úteis.'
         },
         {
           key: 'eventos',
           label: 'Educação climática',
-          href: 'eventos.html?filter=sustentabilidade',
+          href: '/eventos?filter=sustentabilidade',
           icon: 'fas fa-seedling',
           body: 'Eventos e campanhas fortalecem cultura climática dentro da universidade e transformam dados em ação local.'
         }

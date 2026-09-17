@@ -79,7 +79,7 @@ async function prepare(page, path, options = {}) {
 
 test.describe('V76.44/V76.46 - personalização local opt-in', () => {
   test('resultados próximos usam preferência explícita com explicação e teto', async ({ page }) => {
-    await prepare(page, '/search-results.html');
+    await prepare(page, '/busca');
     await page.locator('#searchInput').fill('campus');
     const cards = page.locator('#searchResultsList [data-kc-search-result-id]');
     await expect(cards).toHaveCount(2);
@@ -142,7 +142,7 @@ test.describe('V76.44/V76.46 - personalização local opt-in', () => {
   });
 
   test('clique deliberado agrega afinidade canônica sem guardar consulta ou identidade', async ({ page }) => {
-    await prepare(page, '/search-results.html', { affinity: true });
+    await prepare(page, '/busca', { affinity: true });
     await page.locator('#searchInput').fill('campus');
     await expect(page.locator('[data-kc-search-result-id="event-near"]')).toBeVisible();
     await page.locator('#searchResultsList').evaluate((list) => {

@@ -401,9 +401,13 @@
     var subLbl = post.subcategoriaLabel || post.subcategoria || '';
     var title = post.titulo || post.title || '';
     var parts = [];
-    parts.push('<a class="kc-breadcrumb-segment kc-breadcrumb-segment--home" href="index.html"><i class="fas fa-home" aria-hidden="true"></i><span>KinoCampus</span></a>');
-    var rawModulePage = String((post._kcModulePage || '') || 'index.html').trim();
-    var safeModulePage = /^[a-z0-9_-]+\.html(?:[?#].*)?$/i.test(rawModulePage) ? rawModulePage : 'index.html';
+    parts.push('<a class="kc-breadcrumb-segment kc-breadcrumb-segment--home" href="/"><i class="fas fa-home" aria-hidden="true"></i><span>KinoCampus</span></a>');
+    var rawModulePage = String((post._kcModulePage || '') || '/').trim();
+    // Aceita a rota canonica (`/oportunidades`, `/compra-venda?filter=livros`)
+    // e a forma legada `.html`. Rejeita esquemas e URLs protocol-relative.
+    var safeModulePage = /^(?:\/(?!\/)[^<>"']*|[a-z0-9_-]+\.html(?:[?#][^<>"']*)?)$/i.test(rawModulePage)
+      ? rawModulePage
+      : '/';
     if (modKey) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><a href="' + esc(safeModulePage) + '">' + esc(modLbl) + '</a></span>');
     if (catLbl) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>' + esc(catLbl) + '</span></span>');
     if (subLbl) parts.push('<span class="kc-breadcrumb-segment"><i class="fas fa-chevron-right" aria-hidden="true"></i><span>' + esc(subLbl) + '</span></span>');

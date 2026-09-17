@@ -88,7 +88,7 @@ describe('index.controller — source contracts', () => {
     expect(source).toContain('getSafeRankingAvatarUrl');
     expect(source).toContain("parsed.protocol !== 'http:' && parsed.protocol !== 'https:'");
     expect(source).toContain('nameEl.textContent = name');
-    expect(source).toContain("link.href = 'profile.html?id=' + encodeURIComponent");
+    expect(source).toContain("link.href = '/perfil?id=' + encodeURIComponent");
     expect(source).not.toContain("'<img src=\"' + avatarSrc");
     expect(source).not.toContain("'<span class=\"kc-ranking-user-name\">' + name");
   });

@@ -63,7 +63,7 @@ describe('admin help auth-bound PII isolation', () => {
       subject: 'Assunto pessoal sigiloso',
       message: 'Mensagem privada que deve sumir no logout',
       contact_email: 'titular@example.test',
-      page_path: '/settings.html',
+      page_path: '/configuracoes',
       allow_contact: true,
       metadata: {},
       created_at: '2026-07-29T12:00:00.000Z',

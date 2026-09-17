@@ -276,9 +276,9 @@ describe('window._KCPR.presentation - comportamento', () => {
       shared
     };
 
-    expect(presentation.buildAccountSetupHref(deps)).toBe('/account-setup.html?next=%2Fprofile.html%3Fid%3Dabc-123');
-    expect(presentation.buildSettingsHref(deps)).toBe('/settings.html?next=%2Fprofile.html%3Fid%3Dabc-123');
-    expect(shared.normalizeNextPath).toHaveBeenCalledWith('/profile.html?id=abc-123', '/profile.html');
+    expect(presentation.buildAccountSetupHref(deps)).toBe('/conta?next=%2Fperfil%3Fid%3Dabc-123');
+    expect(presentation.buildSettingsHref(deps)).toBe('/configuracoes?next=%2Fperfil%3Fid%3Dabc-123');
+    expect(shared.normalizeNextPath).toHaveBeenCalledWith('/perfil?id=abc-123', '/perfil');
   });
 
   test('normalizeSaveKinds deduplica e buildSaveBadges gera as badges', () => {

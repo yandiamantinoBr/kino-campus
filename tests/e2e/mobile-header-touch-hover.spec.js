@@ -90,7 +90,7 @@ test.describe('mobile touch hover does not steal adjacent targets', () => {
       // is correct; verify actual navigation 4px inside, without moving the
       // pointer or clearing the theme button's sticky hover first.
       await page.touchscreen.tap(chatBox.right - 4, chatBox.top + chatBox.height / 2);
-      await expect(page).toHaveURL(/\/mensagens\.html$/);
+      await expect(page).toHaveURL(/\/mensagens$/);
       await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAttribute('aria-current', 'page');
       await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveCSS('color', 'rgb(255, 107, 0)');
     });

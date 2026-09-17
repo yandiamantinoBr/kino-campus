@@ -46,7 +46,7 @@ describe('ranking avatar thumbnails', () => {
     expect(image.loading || image.getAttribute('loading')).toBe('lazy');
     expect(container.textContent).toContain('Ana <Campus>');
     expect(container.textContent).toContain('42 pts');
-    expect(container.querySelector('a').getAttribute('href')).toBe('profile.html?id=test-user');
+    expect(container.querySelector('a').getAttribute('href')).toBe('/perfil?id=test-user');
     expect(container.dataset.kcRankingSignature).toContain(ORIGINAL);
     expect(container.dataset.kcRankingSignature).not.toContain('/render/image/');
     expect(container.querySelector('[onerror], [onload], script')).toBeNull();

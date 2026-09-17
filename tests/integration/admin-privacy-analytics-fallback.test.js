@@ -32,7 +32,7 @@ describe('admin privacy analytics - disponibilidade do consentimento', () => {
       data: [{
         created_at: '2026-07-09T12:00:00.000Z',
         event_name: 'search',
-        page_path: '/eventos.html',
+        page_path: '/eventos',
         session_hash: 'session-1',
       }],
       error: null,

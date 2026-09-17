@@ -33,7 +33,7 @@
         icon: 'fas fa-shopping-bag',
         emoji: '🛍️',
         categoryGroupId: 'categoria',
-        redirect: 'compra-venda-feed.html',
+        redirect: '/compra-venda',
         tagGroups: [
           {
             id: 'categoria',
@@ -66,7 +66,7 @@
         icon: 'fas fa-car',
         emoji: '🚗',
         categoryGroupId: 'tipo',
-        redirect: 'caronas-feed.html',
+        redirect: '/caronas',
         tagGroups: [
           {
             id: 'tipo',
@@ -85,7 +85,7 @@
         icon: 'fas fa-home',
         emoji: '🏡',
         categoryGroupId: 'tipo',
-        redirect: 'moradia.html',
+        redirect: '/moradia',
         tagGroups: [
           {
             id: 'tipo',
@@ -107,7 +107,7 @@
         icon: 'fas fa-calendar',
         emoji: '📅',
         categoryGroupId: 'topico',
-        redirect: 'eventos.html',
+        redirect: '/eventos',
         tagGroups: [
           {
             id: 'topico',
@@ -133,7 +133,7 @@
         icon: 'fas fa-search',
         emoji: '🔎',
         categoryGroupId: 'status',
-        redirect: 'achados-perdidos.html',
+        redirect: '/achados-perdidos',
         tagGroups: [
           {
             id: 'status',
@@ -163,7 +163,7 @@
         icon: 'fas fa-briefcase',
         emoji: '💼',
         categoryGroupId: 'tipo',
-        redirect: 'oportunidades.html',
+        redirect: '/oportunidades',
         tagGroups: [
           {
             id: 'tipo',

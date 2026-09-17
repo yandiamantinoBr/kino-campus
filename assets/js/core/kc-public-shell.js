@@ -5,32 +5,32 @@
   let initScheduled = false;
 
   const MODULE_LINKS = [
-    { href: 'achados-perdidos.html', icon: 'fas fa-search', label: 'Achados/Perdidos' },
-    { href: 'eventos.html', icon: 'fas fa-calendar', label: 'Eventos' },
-    { href: 'moradia.html', icon: 'fas fa-home', label: 'Moradia' },
-    { href: 'oportunidades.html', icon: 'fas fa-briefcase', label: 'Oportunidades' },
-    { href: 'compra-venda-feed.html', icon: 'fas fa-shopping-bag', label: 'Compra e Venda' },
-    { href: 'caronas-feed.html', icon: 'fas fa-car', label: 'Caronas' },
-    { href: 'mensagens.html', icon: 'fas fa-envelope', label: 'Mensagens' }
+    { href: '/achados-perdidos', icon: 'fas fa-search', label: 'Achados/Perdidos' },
+    { href: '/eventos', icon: 'fas fa-calendar', label: 'Eventos' },
+    { href: '/moradia', icon: 'fas fa-home', label: 'Moradia' },
+    { href: '/oportunidades', icon: 'fas fa-briefcase', label: 'Oportunidades' },
+    { href: '/compra-venda', icon: 'fas fa-shopping-bag', label: 'Compra e Venda' },
+    { href: '/caronas', icon: 'fas fa-car', label: 'Caronas' },
+    { href: '/mensagens', icon: 'fas fa-envelope', label: 'Mensagens' }
   ];
   const SHELL_SNAPSHOT_KEY = 'auth-shell';
   const SHELL_SNAPSHOT_MAX_AGE = 1000 * 60 * 60 * 12;
   const MENU_ROUTE_PAGES = new Set([
-    'achados-perdidos.html',
-    'caronas-feed.html',
-    'compra-venda-feed.html',
-    'moradia.html',
-    'ajuda.html',
-    'search-results.html',
+    '/achados-perdidos',
+    '/caronas',
+    '/compra-venda',
+    '/moradia',
+    '/ajuda',
+    '/busca',
     '_product.html',
-    'my-posts.html',
-    'profile.html',
-    'settings.html',
-    'transparencia.html',
-    'mensagens.html',
-    'account-setup.html',
-    'auth-callback.html',
-    'ods.html'
+    '/meus-posts',
+    '/perfil',
+    '/configuracoes',
+    '/transparencia',
+    '/mensagens',
+    '/conta',
+    '/auth/callback',
+    '/ods'
   ]);
 
   function $(selector, root) {
@@ -94,10 +94,10 @@
     const isMenu = activeKey === 'menu';
     return [
       '<nav class="kc-mobile-nav" aria-label="Navegação principal móvel">',
-      `<a href="index.html"${activeKey === 'home' ? ' class="active"' : ''}><i class="fas fa-home"></i><span>Início</span></a>`,
-      `<a href="eventos.html"${isEvents ? ' class="active"' : ''}><i class="fas fa-calendar"></i><span>Eventos</span></a>`,
-      `<a class="kc-create-btn${isCreate ? ' active' : ''}" href="create-post.html" aria-label="Criar publicação"><i class="fas fa-plus"></i></a>`,
-      `<a href="oportunidades.html"${isOpportunities ? ' class="active"' : ''}><i class="fas fa-briefcase"></i><span class="kc-mobile-nav-label-long">Oportunidades</span></a>`,
+      `<a href="/"${activeKey === 'home' ? ' class="active"' : ''}><i class="fas fa-home"></i><span>Início</span></a>`,
+      `<a href="/eventos"${isEvents ? ' class="active"' : ''}><i class="fas fa-calendar"></i><span>Eventos</span></a>`,
+      `<a class="kc-create-btn${isCreate ? ' active' : ''}" href="/criar-post" aria-label="Criar publicação"><i class="fas fa-plus"></i></a>`,
+      `<a href="/oportunidades"${isOpportunities ? ' class="active"' : ''}><i class="fas fa-briefcase"></i><span class="kc-mobile-nav-label-long">Oportunidades</span></a>`,
       `<button class="kc-menu-toggle${isMenu ? ' active' : ''}" aria-label="Abrir menu" aria-expanded="false" aria-controls="mobileMenuDrawer" data-kc-mobile-menu="toggle" type="button"><i class="fas fa-bars"></i><span>Menu</span></button>`,
       '</nav>'
     ].join('');
@@ -242,14 +242,18 @@
   }
 
   function getCurrentPage() {
-    return String((window.location.pathname.split('/').pop() || 'index.html')).toLowerCase();
+    // Rotas canônicas são sem extensão (/eventos, /perfil). Normaliza o
+    // pathname para comparar com hrefs e chaves no mesmo formato.
+    const raw = String((window.location && window.location.pathname) || '/').toLowerCase();
+    const semExtensao = raw.replace(/\.html$/, '').replace(/\/index$/, '/');
+    return semExtensao === '' ? '/' : semExtensao;
   }
 
   function resolveBottomNavKey(page) {
-    if (page === 'index.html') return 'home';
-    if (page === 'eventos.html') return 'events';
-    if (page === 'oportunidades.html') return 'opportunities';
-    if (page === 'create-post.html') return 'create';
+    if (page === '/') return 'home';
+    if (page === '/eventos') return 'events';
+    if (page === '/oportunidades') return 'opportunities';
+    if (page === '/criar-post') return 'create';
     if (MENU_ROUTE_PAGES.has(page)) return 'menu';
     return '';
   }
@@ -278,13 +282,13 @@
 
     document.querySelectorAll('.kc-mobile-nav a[href]').forEach(function (link) {
       const href = String(link.getAttribute('href') || '').split('?')[0].split('#')[0].toLowerCase();
-      const key = href === 'index.html'
+      const key = href === '/'
         ? 'home'
-        : href === 'eventos.html'
+        : href === '/eventos'
           ? 'events'
-          : href === 'oportunidades.html'
+          : href === '/oportunidades'
             ? 'opportunities'
-            : href === 'create-post.html'
+            : href === '/criar-post'
               ? 'create'
               : '';
       setLinkActive(link, !!key && key === bottomNavKey);

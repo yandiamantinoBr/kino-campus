@@ -15,13 +15,13 @@
 const { test, expect } = require('@playwright/test');
 
 const REMAINING_PAGES = [
-  { path: '/moradia.html',           name: 'Moradia' },
-  { path: '/oportunidades.html',     name: 'Oportunidades' },
-  { path: '/achados-perdidos.html',  name: 'Achados e Perdidos' },
-  { path: '/ods.html',               name: 'ODS' },
-  { path: '/my-posts.html',          name: 'Minhas Publicações' },
-  { path: '/profile.html',           name: 'Perfil' },
-  { path: '/settings.html',          name: 'Configurações' },
+  { path: '/moradia',           name: 'Moradia' },
+  { path: '/oportunidades',     name: 'Oportunidades' },
+  { path: '/achados-perdidos',  name: 'Achados e Perdidos' },
+  { path: '/ods',               name: 'ODS' },
+  { path: '/meus-posts',          name: 'Minhas Publicações' },
+  { path: '/perfil',           name: 'Perfil' },
+  { path: '/configuracoes',          name: 'Configurações' },
 ];
 
 for (const { path, name } of REMAINING_PAGES) {

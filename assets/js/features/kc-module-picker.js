@@ -31,7 +31,7 @@
     clean = clean.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
     if (!clean.startsWith('/')) clean = '/' + clean;
     clean = clean.toLowerCase();
-    if (clean.endsWith('/')) clean += 'index.html';
+    if (clean.endsWith('/')) clean += '/';
     return clean.replace(/\/index\.html$/, '/') || '/';
   }
 

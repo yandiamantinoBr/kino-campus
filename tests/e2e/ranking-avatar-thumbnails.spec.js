@@ -113,7 +113,7 @@ for (const configuration of [
       expect(before.height).toBeLessThanOrEqual(44);
       expect(await fixture.image.evaluate((image) => image.naturalWidth >= image.getBoundingClientRect().width * devicePixelRatio)).toBe(true);
       expect((await fixture.container.screenshot({ animations: 'disabled' })).equals(beforePixels)).toBe(true);
-      await expect(fixture.container.locator('a').first()).toHaveAttribute('href', 'profile.html?id=avatar-fixture');
+      await expect(fixture.container.locator('a').first()).toHaveAttribute('href', '/perfil?id=avatar-fixture');
       await expect(fixture.container).toContainText('Ana Campus');
       await expect(fixture.container).toContainText('42 pts');
       await expect(fixture.container.locator('[onerror]')).toHaveCount(0);

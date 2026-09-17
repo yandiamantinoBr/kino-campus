@@ -11,7 +11,7 @@ describe('kc-privacy-analytics.js', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     window.localStorage.clear();
-    window.history.replaceState({}, '', '/search-results.html?q=token');
+    window.history.replaceState({}, '', '/busca?q=token');
     delete window.KCPrivacyAnalytics;
     delete window.KCSupabase;
     delete window.KCConsent;
@@ -40,8 +40,8 @@ describe('kc-privacy-analytics.js', () => {
       query_length_bucket: '9_16',
       email: 'nao@exportar.test',
       token: 'secret',
-      href: 'https://kinocampus.com.br/eventos.html?token=secret#x',
-      page_path: '/search-results.html?q=edital',
+      href: 'https://kinocampus.com.br/eventos?token=secret#x',
+      page_path: '/busca?q=edital',
       module_key: 'eventos',
     });
 
@@ -50,7 +50,7 @@ describe('kc-privacy-analytics.js', () => {
     expect(rpc.mock.calls[0][0]).toBe('kc_track_privacy_event');
     expect(rpc.mock.calls[0][1]).toMatchObject({
       p_event_name: 'search',
-      p_page_path: '/search-results.html',
+      p_page_path: '/busca',
       p_module_key: 'eventos',
     });
     expect(rpc.mock.calls[0][1].p_session_id).toMatch(/^pa_/);

@@ -178,7 +178,7 @@ for (const authenticated of [false, true]) {
     await expect(chat).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await chat.focus();
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/mensagens\.html$/);
+    await expect(page).toHaveURL(/\/mensagens$/);
     await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.kc-header .kc-chat-shortcut')).toHaveCSS('color', 'rgb(255, 107, 0)');
     expect(outboundWrites).toEqual([]);

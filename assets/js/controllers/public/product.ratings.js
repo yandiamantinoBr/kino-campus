@@ -120,7 +120,7 @@
       window.kcOpenAuthModal({ tab: 'login', nextPath: buildCurrentPagePath() });
       return;
     }
-    window.location.href = 'index.html#login';
+    window.location.href = '/#login';
   }
   function ensureSellerRatingModal() {
     if (sellerRatingModal) return sellerRatingModal;

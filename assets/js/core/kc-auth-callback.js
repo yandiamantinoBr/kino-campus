@@ -42,10 +42,10 @@
 
   function normalizeNextPath(value) {
     if (shared && typeof shared.normalizeNextPath === 'function') {
-      return shared.normalizeNextPath(value, '/index.html');
+      return shared.normalizeNextPath(value, '/');
     }
     const raw = String(value || '').trim();
-    if (!raw) return '/index.html';
+    if (!raw) return '/';
     return raw.charAt(0) === '/' ? raw : `/${raw}`;
   }
 
@@ -148,7 +148,7 @@
       : !!(profile && profile.onboarding_completed_at);
 
     if (!complete) {
-      const setupUrl = new URL('/account-setup.html', window.location.origin);
+      const setupUrl = new URL('/conta', window.location.origin);
       setupUrl.searchParams.set('next', normalizedNext);
       return `${setupUrl.pathname}${setupUrl.search}`;
     }
@@ -166,7 +166,7 @@
       iconClass: 'fas fa-circle-exclamation',
       title: 'Não foi possível concluir a autenticação',
       message: message || 'O link pode ter expirado, já ter sido usado ou estar incompleto.',
-      actionHref: '/index.html',
+      actionHref: '/',
       actionLabel: 'Voltar ao inicio',
       actionIcon: 'fas fa-house',
       showProgress: false,
@@ -184,7 +184,7 @@
       message: isInvite
         ? 'Seu acesso foi confirmado. Para finalizar a criação da sua conta, escolha uma senha que você irá usar para entrar no KinoCampus.'
         : 'Seu link de recuperação foi validado. Escolha uma nova senha para continuar usando a plataforma.',
-      actionHref: '/index.html',
+      actionHref: '/',
       actionLabel: '',
       showProgress: false,
       showCountdown: false,

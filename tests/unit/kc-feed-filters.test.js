@@ -3,7 +3,7 @@ describe('KCFeedFilters', () => {
     jest.resetModules();
     document.body.innerHTML = '';
     document.body.removeAttribute('data-kc-filters');
-    window.history.replaceState({}, '', '/eventos.html');
+    window.history.replaceState({}, '', '/eventos');
     delete window.KCFeedFilters;
     delete window.kcFilters;
     window.matchMedia = jest.fn().mockImplementation(() => ({
@@ -16,7 +16,7 @@ describe('KCFeedFilters', () => {
   });
 
   test('readCoreState e writeCoreState sincronizam q e tab na URL', () => {
-    window.history.replaceState({}, '', '/eventos.html?q=feira&tab=culturais');
+    window.history.replaceState({}, '', '/eventos?q=feira&tab=culturais');
     require('../../assets/js/features/kc-feed-filters.js');
 
     expect(window.KCFeedFilters.readCoreState()).toEqual({
@@ -35,7 +35,7 @@ describe('KCFeedFilters', () => {
   });
 
   test('readNumberParam e writeNumberParam tratam valores numéricos na URL', () => {
-    window.history.replaceState({}, '', '/eventos.html?priceMin=12.5&priceMax=99');
+    window.history.replaceState({}, '', '/eventos?priceMin=12.5&priceMax=99');
     require('../../assets/js/features/kc-feed-filters.js');
 
     const params = window.KCFeedFilters.getSearchParams();
@@ -53,7 +53,7 @@ describe('KCFeedFilters', () => {
   });
 
   test('readPresetParam e writePresetParam sincronizam datePreset com allowlist por modulo', () => {
-    window.history.replaceState({}, '', '/eventos.html?datePreset=next7d');
+    window.history.replaceState({}, '', '/eventos?datePreset=next7d');
     require('../../assets/js/features/kc-feed-filters.js');
 
     const utils = window.KCFeedFilters;
@@ -82,7 +82,7 @@ describe('KCFeedFilters', () => {
     expect(utils.normalizeDatePreset('eventos', 'thisMonth')).toBe('thisMonth');
     expect(utils.normalizeDatePreset('eventos', 'thismonth')).toBe('thisMonth');
 
-    window.history.replaceState({}, '', '/eventos.html?datePreset=thismonth');
+    window.history.replaceState({}, '', '/eventos?datePreset=thismonth');
     const params = utils.getSearchParams();
     expect(utils.readPresetParam(params, 'datePreset', utils.getAllowedDatePresets('eventos'))).toBe('thisMonth');
   });
@@ -210,7 +210,7 @@ describe('kcFilters URL bootstrap', () => {
       <div id="noResults"></div>
     `;
     document.body.setAttribute('data-kc-filters', 'tab-search');
-    window.history.replaceState({}, '', '/eventos.html?q=feira&tab=culturais');
+    window.history.replaceState({}, '', '/eventos?q=feira&tab=culturais');
     delete window.KCFeedFilters;
     delete window.kcFilters;
     window.matchMedia = jest.fn().mockImplementation(() => ({

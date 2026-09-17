@@ -92,13 +92,14 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
 
   test('menu principal nasce na ordem fixa atual e nao reordena visualmente pelo JavaScript', () => {
     const script = read('assets/js/features/kc-nav-links-personalized.js');
+    // Rotas canônicas sem extensão (a navegação passou a usar as rotas limpas).
     const expectedOrder = [
-      'eventos.html',
-      'oportunidades.html',
-      'moradia.html',
-      'compra-venda-feed.html',
-      'caronas-feed.html',
-      'achados-perdidos.html',
+      '/eventos',
+      '/oportunidades',
+      '/moradia',
+      '/compra-venda',
+      '/caronas',
+      '/achados-perdidos',
     ];
     [
       '_product.html',
@@ -136,8 +137,8 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     const consent = read('assets/js/core/kc-consent.js');
 
     expect(consent).toContain('Central de Transparência');
-    expect(consent).toContain("getLegalHref('transparencia.html')");
-    expect(consent).toContain("getRootHref('ajuda.html#solicitacoes-suporte')");
+    expect(consent).toContain("getLegalHref('/transparencia')");
+    expect(consent).toContain("getRootHref('/ajuda#solicitacoes-suporte')");
     expect(consent).not.toContain("getRootHref('admin/help-requests.html')");
   });
 });

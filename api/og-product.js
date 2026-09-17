@@ -146,8 +146,16 @@ async function fetchPost(id, {
   const primaryFilter = isUuid ? `id=eq.${encodeURIComponent(id)}`
     : isShortId ? shortIdRangeFilter(id.toLowerCase())
     : `legacy_id=eq.${encodeURIComponent(id)}`;
-  const primaryEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${primaryFilter}&status=eq.published&limit=1`;
-  const primaryCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${primaryFilter}&status=eq.published&limit=1`;
+  // Fix 2026-09-17 (Search Console): publicacoes em `closed` (evento/edital
+  // encerrado, expirado pelo ciclo de vida) continuam publicas para leitura
+  // (RLS permite anon), mas a busca so aceitava `published`. O resultado era
+  // 404 para URLs que o Google ja conhecia — 614 registros `closed` no banco
+  // viravam "Not found (404)" enquanto a pagina seguia acessivel no app.
+  // Agora a busca resolve `published` + `closed`; a politica de indexacao
+  // (shouldIndexPost) decide entre `index` e `noindex` para cada caso.
+  const READABLE_STATUS_FILTER = 'status=in.(published,closed)';
+  const primaryEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${primaryFilter}&${READABLE_STATUS_FILTER}&limit=1`;
+  const primaryCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${primaryFilter}&${READABLE_STATUS_FILTER}&limit=1`;
 
   const lookupDeadline = createLookupDeadline(timeoutMs);
   const requestRows = async (endpoint, compatEndpoint, label) => {
@@ -181,8 +189,8 @@ async function fetchPost(id, {
 
     if (isUuid) {
       const fallbackFilter = `legacy_id=eq.${encodeURIComponent(id)}`;
-      const fallbackEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${fallbackFilter}&status=eq.published&limit=1`;
-      const fallbackCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${fallbackFilter}&status=eq.published&limit=1`;
+      const fallbackEndpoint = `${url}/rest/v1/posts?select=${encodeURI(select)}&${fallbackFilter}&${READABLE_STATUS_FILTER}&limit=1`;
+      const fallbackCompat = `${url}/rest/v1/posts?select=${encodeURI(selectCompat)}&${fallbackFilter}&${READABLE_STATUS_FILTER}&limit=1`;
       const fallbackRows = await requestRows(fallbackEndpoint, fallbackCompat, 'fallback post');
       return fallbackRows.length > 0 ? fallbackRows[0] : null;
     }

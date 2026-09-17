@@ -367,7 +367,7 @@
     var saveBtn = '<button type="button" class="kc-btn-secondary" data-my-post-action="save" data-post-uuid="' + esc(uuid) + '">' +
       '<i class="fas fa-bookmark"></i> Salvar</button>';
 
-    var cloneBtn = '<a href="create-post.html" class="kc-btn-secondary" data-my-post-action="clone" data-post-uuid="' + esc(uuid) + '" style="text-decoration:none;">' +
+    var cloneBtn = '<a href="/criar-post" class="kc-btn-secondary" data-my-post-action="clone" data-post-uuid="' + esc(uuid) + '" style="text-decoration:none;">' +
       '<i class="fas fa-copy"></i> Criar parecido</a>';
 
     var deleteBtn = '<button type="button" class="kc-btn-secondary kc-my-posts-action--danger" data-my-post-action="delete" data-post-uuid="' + esc(uuid) + '">' +
@@ -475,7 +475,7 @@
       if (typeof window.kcOpenEditPostModal === 'function') {
         window.kcOpenEditPostModal(post, function () { reloadPosts(); });
       } else {
-        window.location.href = 'create-post.html?edit=' + encodeURIComponent(uuid);
+        window.location.href = '/criar-post?edit=' + encodeURIComponent(uuid);
       }
     }).catch(function () {
       showToastMsg('Não foi possível carregar a publicação.', 'error');
@@ -801,7 +801,7 @@
           }
         }, 80);
       } else {
-        window.location.href = 'create-post.html';
+        window.location.href = '/criar-post';
       }
     }).catch(function () {
       showToastMsg('Não foi possível carregar dados da publicação.', 'error');
