@@ -115,6 +115,8 @@ describe('admin Cadu UX contracts', () => {
     expect(controller).not.toContain('não há uma simulação completa recente bem-sucedida');
     expect(controller).toContain('A Pipeline completa não exige simulação prévia na versão atual');
     expect(controller).toContain("preconditionDetail.code === 'signed_publish_approval_required'");
+    expect(controller).toContain("preconditionDetail.code === 'pipeline_preflight_blocked'");
+    expect(controller).toContain("(blockedChecks.length ? ('Bloqueios: ' + blockedChecks.join('; ')");
     expect(controller).toContain('function pipelineRunStartOutcomeIsAmbiguous(response)');
     expect(controller).toContain('O POST real não foi repetido automaticamente.');
     expect(controller).toContain("detail.code === 'pipeline_runtime_busy'");

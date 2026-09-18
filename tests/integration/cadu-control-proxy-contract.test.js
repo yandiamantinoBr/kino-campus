@@ -526,6 +526,46 @@ describe('strict Cadu control-plane proxy runtime', () => {
     });
     expect(JSON.stringify(approvalRes.body)).not.toContain('private signing configuration');
     expect(JSON.stringify(approvalRes.body)).not.toContain('service-secret');
+
+    global.fetch.mockResolvedValueOnce(upstreamResponse({
+      status: 412,
+      body: JSON.stringify({
+        detail: {
+          code: 'pipeline_preflight_blocked',
+          message: 'internal preflight trace',
+          token: 'service-secret',
+          blockers: [
+            { id: 'deepseek_key', detail: 'deepseek_balance_unavailable', token: 'service-secret' },
+            { id: 'Not An Id', detail: 'shape violation' },
+            { id: 'browser_cdp', detail: 'CDP respondeu' },
+            'not-an-object',
+          ],
+        },
+      }),
+    }));
+    const blockedReq = request({ method: 'POST', path: 'run/real', body: { stage: 'all' } });
+    const blockedRes = response();
+
+    await pipelineHandler(blockedReq, blockedRes);
+
+    // A blocked preflight must name the failing check, but nothing else from
+    // the upstream envelope crosses the boundary.
+    expect(blockedRes.statusCode).toBe(412);
+    expect(blockedRes.body).toEqual({
+      ok: false,
+      error: 'cadu_api_error',
+      status: 412,
+      detail: {
+        code: 'pipeline_preflight_blocked',
+        blockers: [
+          { id: 'deepseek_key', detail: 'deepseek_balance_unavailable' },
+          { id: 'browser_cdp', detail: 'CDP respondeu' },
+        ],
+      },
+    });
+    expect(JSON.stringify(blockedRes.body)).not.toContain('internal preflight trace');
+    expect(JSON.stringify(blockedRes.body)).not.toContain('service-secret');
+    expect(JSON.stringify(blockedRes.body)).not.toContain('shape violation');
   });
 
   test('drops the obsolete full-pipeline dry-run gate instead of exposing it as a supported contract', async () => {
