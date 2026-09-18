@@ -24,8 +24,19 @@ const PIPELINE_START_KINDS = new Set(['run', 'run_dry-run', 'run_real']);
 const SAFE_UPSTREAM_ERROR_STATUS = new Map([
   ['dedup_preview_required', 412],
   ['signed_publish_approval_required', 412],
+  // A failing mandatory deep-preflight check (provider balance, credentials,
+  // browser CDP, dependencies...). Without this entry the proxy strips the
+  // detail and the operator only sees an opaque cadu_api_error 400/412.
+  ['pipeline_preflight_blocked', 412],
   ['pipeline_runtime_busy', 409],
 ]);
+// A blocked preflight is actionable only when the operator can see WHICH check
+// failed. That is the single upstream detail this proxy forwards as free text,
+// so it stays strictly bounded: a known id shape, a single line, a small count
+// and a hard length cap. Nothing nested, no message, no token, no path.
+const SAFE_PREFLIGHT_BLOCKER_ID = /^[a-z][a-z0-9_]{0,39}$/u;
+const PREFLIGHT_BLOCKER_LIMIT = 8;
+const PREFLIGHT_BLOCKER_DETAIL_MAX = 160;
 
 export { CaduProxyLimitError, readLimitedCaduResponse };
 
@@ -344,6 +355,24 @@ async function sanitizedUpstreamFailure(upstream) {
   const errorCode = parsed?.detail?.code ?? parsed?.code;
   if (typeof errorCode === 'string' && SAFE_UPSTREAM_ERROR_STATUS.get(errorCode) === status) {
     payload.detail = { ...(payload.detail || {}), code: errorCode };
+  }
+  if (errorCode === 'pipeline_preflight_blocked' && status === 412) {
+    const raw = parsed?.detail?.blockers;
+    const blockers = [];
+    if (Array.isArray(raw)) {
+      for (const entry of raw.slice(0, PREFLIGHT_BLOCKER_LIMIT)) {
+        const id = typeof entry?.id === 'string' && SAFE_PREFLIGHT_BLOCKER_ID.test(entry.id)
+          ? entry.id
+          : '';
+        const detail = typeof entry?.detail === 'string'
+          ? entry.detail.replace(/\s+/gu, ' ').trim().slice(0, PREFLIGHT_BLOCKER_DETAIL_MAX)
+          : '';
+        if (id && detail) blockers.push({ id, detail });
+      }
+    }
+    if (blockers.length) {
+      payload.detail = { ...(payload.detail || {}), blockers };
+    }
   }
   return { status, payload };
 }

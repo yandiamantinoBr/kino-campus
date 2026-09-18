@@ -7662,7 +7662,18 @@
         msg = '🛡️ O modo explícito não está disponível nesta versão do cadu-api. Nenhum pipeline foi iniciado. Atualize o painel e confirme o deploy do backend.';
       } else if (resp.status === 412) {
         var preconditionDetail = resp.data && (resp.data.detail || resp.data);
-        if (preconditionDetail && preconditionDetail.code === 'dedup_preview_required') {
+        if (preconditionDetail && preconditionDetail.code === 'pipeline_preflight_blocked') {
+          var blockedChecks = Array.isArray(preconditionDetail.blockers)
+            ? preconditionDetail.blockers
+              .map(function (check) { return check && check.detail ? String(check.detail) : ''; })
+              .filter(Boolean)
+              .slice(0, 8)
+            : [];
+          msg = '⚠️ A execução foi recusada com segurança: uma verificação obrigatória da Pipeline completa está falhando.\n\n' +
+            (blockedChecks.length ? ('Bloqueios: ' + blockedChecks.join('; ') + '\n\n') : '') +
+            (preconditionDetail.hint ? preconditionDetail.hint + '\n\n' : '') +
+            'Nenhum run foi criado.';
+        } else if (preconditionDetail && preconditionDetail.code === 'dedup_preview_required') {
           msg = '⚠️ A execução real foi recusada com segurança porque não há uma prévia recente compatível.\n\nExecute “Simular”, revise o relatório e então tente “Executar real” novamente. Nenhum run real foi criado.';
         } else if (preconditionDetail && preconditionDetail.code === 'signed_publish_approval_required') {
           msg = '🔐 Execução real de "' + stageId + '" requer aprovação assinada (Ed25519).\n\nUse o fluxo de aprovação de publicação (publish-approval-cli) antes de executar este estágio real. A simulação continua disponível. Nenhum run real foi criado.';
