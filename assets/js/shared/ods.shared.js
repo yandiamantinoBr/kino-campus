@@ -7,7 +7,10 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const TCC_SOURCE = 'G:/My Drive/Yan/Educacao/Cursos/Administracao/Bacharelado de Administracao - UFG/TCC - Kino Campus/Relato Tecnico - Kino Campus/TCC - Relato Tecnico - Kino Campus - Yan Diamantino - V.1.6.7.pdf';
+  // Cópia pública e permanente do Relato Técnico (TCC V.1.6.7 FINAL), hospedada
+  // como asset da Release docs-relatorio-tecnico-v1.6.7. O valor anterior era um
+  // caminho local (G:/My Drive/...) — um link quebrado em produção.
+  const TCC_SOURCE = 'https://github.com/yandiamantinoBr/kino-campus/releases/download/docs-relatorio-tecnico-v1.6.7/TCC-Relato-Tecnico-Kino-Campus-V.1.6.7-FINAL.pdf';
 
   const GOALS = Object.freeze({
     '4': Object.freeze({
