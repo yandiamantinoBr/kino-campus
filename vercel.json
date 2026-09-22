@@ -117,6 +117,12 @@
       "permanent": true
     },
     {
+      "source": "/_product.html",
+      "has": [{ "type": "query", "key": "id" }],
+      "destination": "/product.html",
+      "permanent": true
+    },
+    {
       "source": "/pitch",
       "destination": "/apresentacao-institucional.html",
       "permanent": true
