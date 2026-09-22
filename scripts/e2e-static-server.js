@@ -37,6 +37,19 @@ const REWRITES = new Map(
     .map((item) => [item.source, item.destination])
 );
 
+// Fidelidade ao Vercel: redirects podem declarar `has` (ex.: exigir ?id=).
+// Sem esta checagem, um redirect condicional do vercel.json seria aplicado
+// sem a condicao e quebraria o shell _product.html usado por dev local e E2E.
+function matchesHas(regra, search) {
+  const condicoes = Array.isArray(regra.has) ? regra.has : [];
+  if (!condicoes.length) return true;
+  const params = new URLSearchParams(search);
+  return condicoes.every((cond) => {
+    if (cond && cond.type === 'query' && cond.key) return params.has(String(cond.key));
+    return true;
+  });
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -86,7 +99,7 @@ const server = http.createServer((req, res) => {
   // 1) redirects declarados (ex.: /eventos.html -> /eventos, permanente).
   // A query string e preservada, como o Vercel faz.
   const redirect = REDIRECTS.get(urlPath);
-  if (redirect) {
+  if (redirect && matchesHas(redirect, search)) {
     const destino = redirect.destination.includes('?')
       ? redirect.destination
       : redirect.destination + search;

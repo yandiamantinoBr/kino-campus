@@ -118,6 +118,7 @@
     },
     {
       "source": "/_product.html",
+      "has": [{ "type": "query", "key": "id" }],
       "destination": "/product.html",
       "permanent": true
     },

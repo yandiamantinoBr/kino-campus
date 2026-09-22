@@ -42,13 +42,22 @@ describe('higiene de indexação (Search Console)', () => {
     delete global.fetch;
   });
 
-  test('alias legado /_product.html redireciona para a rota canônica de detalhe', () => {
+  test('alias legado /_product.html?id= redireciona para a rota canônica de detalhe', () => {
     const vercel = JSON.parse(read('vercel.json'));
     const redirect = vercel.redirects.find((entry) => entry.source === '/_product.html');
 
     expect(redirect).toBeTruthy();
     expect(redirect.destination).toBe('/product.html');
     expect(redirect.permanent).toBe(true);
+    // só com ?id=: sem id, /_product.html é o shell legado usado pelo driver
+    // local e pelos testes E2E e precisa continuar servindo 200
+    expect(redirect.has).toEqual([{ type: 'query', key: 'id' }]);
+  });
+
+  test('servidor E2E replica a condicao `has` dos redirects do vercel.json', () => {
+    const server = read('scripts/e2e-static-server.js');
+    expect(server).toContain('function matchesHas');
+    expect(server).toContain('matchesHas(redirect, search)');
   });
 
   test('sitemap anuncia somente URLs que respondem 200 — nunca rotas redirecionadas', async () => {
