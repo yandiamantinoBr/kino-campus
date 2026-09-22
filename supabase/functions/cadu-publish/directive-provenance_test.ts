@@ -44,9 +44,8 @@ Deno.test("substantive and unknown automatic gates cannot acquire editorial auth
   }
 });
 
-Deno.test("provenance does not weaken exact source revision, review version, gate or scope checks", () => {
+Deno.test("provenance does not weaken exact source identity, review version, gate or scope checks", () => {
   const changes: Array<(source: Record<string, any>) => void> = [
-    source => source.sourceRevision = "c".repeat(64),
     source => source.sourceId += "-other",
     source => source.itemVersion = "d".repeat(64),
     source => source.reviewId = "11786163-d070-47ca-86e4-ced17a0e911f",
@@ -62,6 +61,16 @@ Deno.test("provenance does not weaken exact source revision, review version, gat
     change(source);
     assert.equal(boundReviewPublicationDirective(source), null);
   }
+});
+
+Deno.test("source revision drift alone preserves the binding (revalidação preservadora)", () => {
+  // Reforma 2026-09-22 (espelho obrigatório do JS — openclaw-cadu PR #556):
+  // source_revision muda com o enriquecimento da própria pipeline e com a
+  // re-coleta; a aprovação da Central sobrevive a esse drift não-material. O
+  // valor aprovado segue selado na diretiva (revalidated_from_version).
+  const source = item(["needs_review"]);
+  source.sourceRevision = "c".repeat(64);
+  assert(boundReviewPublicationDirective(source) !== null);
 });
 
 function readOnlyAdmin() {

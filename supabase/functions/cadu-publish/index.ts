@@ -337,7 +337,15 @@ export function hasOfficialNonInstagramSource(item: CaduItem): boolean {
     if (/(^|\.)ifgoiano\.edu\.br$/.test(host)) return true;
     if (/(^|\.)ifg\.edu\.br$/.test(host)) return true;
     if (/(^|\.)sescgo\.com\.br$/.test(host)) return true;
-    return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host);
+    // 2026-09-22 (fontes de Eventos/Oportunidades): anunciantes auditados que
+    // publicam oportunidades/eventos legítimos para a comunidade UFG — FUNAPE
+    // (fundação de apoio da UFG), UEG (IFES parceira) e Expo Favela GO (evento
+    // apoiado pelo CEI/UFG). Espelho obrigatório do padrão da pipeline
+    // (enrich-instagram-with-official-source.js).
+    if (/(^|\.)funape\.org\.br$/.test(host)) return true;
+    if (/(^|\.)ueg\.br$/.test(host)) return true;
+    if (/(^|\.)goiasexpofavela\.com\.br$/.test(host)) return true;
+    return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host) || /(^|\.)unesco\.org$/.test(host);
   });
 }
 

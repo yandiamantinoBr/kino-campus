@@ -49,6 +49,28 @@ Deno.test("official non-Instagram sources cover institucional hosts além de gov
     enrichmentSources: [{ url: "https://cfa.org.br/jornada2026/", type: "official" }],
   }), true, "cfa.org.br");
 
+  // 2026-09-22: anunciantes auditados de Eventos/Oportunidades
+  assertEquals(hasOfficialNonInstagramSource({
+    ...base,
+    enrichmentSources: [{ url: "https://site.funape.org.br/processo-seletivo", type: "official" }],
+  }), true, "funape.org.br");
+  assertEquals(hasOfficialNonInstagramSource({
+    ...base,
+    enrichmentSources: [{ url: "https://trama.ueg.br/evento", type: "official" }],
+  }), true, "ueg.br");
+  assertEquals(hasOfficialNonInstagramSource({
+    ...base,
+    enrichmentSources: ["https://goiasexpofavela.com.br/"],
+  }), true, "goiasexpofavela.com.br");
+  assertEquals(hasOfficialNonInstagramSource({
+    ...base,
+    enrichmentSources: ["https://www.unesco.org/en/mooc-ethics-ai"],
+  }), true, "unesco.org");
+  assertEquals(hasOfficialNonInstagramSource({
+    ...base,
+    enrichmentSources: ["https://nao-funape.org.br/"],
+  }), false, "lookalike funape");
+
   // instagram isolado e hosts genéricos continuam rejeitados
   assertEquals(hasOfficialNonInstagramSource(base), false, "instagram only");
   assertEquals(hasOfficialNonInstagramSource({
