@@ -120,10 +120,36 @@ Deno.test("bound directive rejects a different source record", () => {
   assertEquals(boundReviewPublicationDirective(item), null);
 });
 
-Deno.test("bound directive rejects source revision drift", () => {
+Deno.test("bound directive survives source revision drift (revalidação preservadora)", () => {
+  // Reforma 2026-09-22: o enriquecimento da própria pipeline muda
+  // source_revision; a aprovação da Central sobrevive a esse drift não-material.
+  // O valor aprovado segue selado na diretiva (revalidated_from_version).
   const item = buildItem({ sourceRevision: sha256Hex("drifted") });
   item.reviewPublicationDirective = buildDirective(buildItem());
-  assertEquals(boundReviewPublicationDirective(item), null);
+  assert(boundReviewPublicationDirective(item) !== null, "drift de revisão bruta não expira a aprovação");
+});
+
+Deno.test("bound directive survives routing-flag and gate-order drift", () => {
+  const reordered = buildItem({ reviewGateReasons: ["needs_review", "feed_item_low_score"] });
+  reordered.gateReason = "needs_review";
+  reordered.reviewPublicationDirective = buildDirective(buildItem(), {
+    review_gate_reasons: ["feed_item_low_score", "needs_review"],
+  });
+  assert(boundReviewPublicationDirective(reordered) !== null, "ordem de gates não expira a aprovação");
+
+  const routingAdded = buildItem({
+    reviewGateReasons: ["feed_item_low_score", "instagram_community_relevance_review"],
+    gateReason: "feed_item_low_score",
+  });
+  routingAdded.reviewPublicationDirective = buildDirective(buildItem());
+  assert(boundReviewPublicationDirective(routingAdded) !== null, "flag de roteamento não expira a aprovação");
+});
+
+Deno.test("bound directive still rejects a new decision gate", () => {
+  const material = buildItem({ reviewGateReasons: ["feed_item_low_score", "expired"] });
+  material.gateReason = "feed_item_low_score";
+  material.reviewPublicationDirective = buildDirective(buildItem());
+  assertEquals(boundReviewPublicationDirective(material), null);
 });
 
 Deno.test("bound directive rejects gate provenance mismatch", () => {
