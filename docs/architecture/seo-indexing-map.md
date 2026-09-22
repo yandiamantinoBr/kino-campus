@@ -64,11 +64,42 @@ Este mapa define quais partes do KinoCampus devem ser rastreadas por buscadores 
   - `Product` + `Offer` para compra/venda com preco.
   - `Article` como fallback editorial para publicacoes comunitarias, com `headline`, `author`, `publisher`, secao, datas, `wordCount` e fonte original quando disponivel.
 
+## Ciclo de vida de uma publicação e indexação
+
+O SSR (`api/og-product.js`) é a fonte de verdade do que o Google vê em
+`/product.html?id={id}`. O contrato, travado em
+`tests/integration/dynamic-seo-policy.test.js`, é:
+
+| Estado no banco | HTTP | robots | Conteúdo inicial |
+| --- | --- | --- | --- |
+| `published` e indexável | 200 | `index,follow` | título, descrição, specs, mídia e JSON-LD |
+| `published`/`closed` legível, fora do índice (encerrado, expirado ou sem conteúdo mínimo) | 200 | `noindex,follow,noarchive` | mesmo conteúdo visível + aviso "… encerrado", sem JSON-LD e sem preload |
+| inexistente, apagado ou `hidden`/`pending` | 404 | `noindex` (meta + `X-Robots-Tag`) | página 404 institucional |
+| falha de backend | 503 | `noindex` | shell sem cache |
+
+Motivo: publicações encerradas continuam legíveis como histórico (o cliente
+renderiza o mesmo aviso em `product.render.js#syncClosedStatusNote`), mas não
+devem competir no índice. Servir o shell "Carregando…" nesse caso criava uma
+página sem conteúdo — sinal de soft-404 — e era o que alimentava a maior parte
+de "Excluded by 'noindex' tag" no Search Console.
+
+Consequências esperadas no Page Indexing do Search Console:
+
+- "Excluded by 'noindex' tag" concentra páginas privadas (correto) e publicações
+  encerradas (correto por política) — não é um erro a validar;
+- "Not found (404)" concentra publicações apagadas — deve continuar 404, nunca
+  redirecionamento em massa;
+- URLs de id curto/legado (`product.html?id=50aba19d`) respondem 200 com
+  canonical no UUID completo e aparecem como "Alternate page with proper
+  canonical tag" — é consolidação correta.
+
 ## Sitemap
 
 `api/sitemap.js` monta XML com:
 
-- paginas publicas estaveis;
+- paginas publicas estaveis (somente URLs que respondem 200 — nunca rotas que
+  redirecionam, ex.: o sitemap declara `/apresentacao-institucional.html`, que é
+  o destino real do redirect `/apresentacao`);
 - ate 1000 publicacoes `published` mais recentes/atualizadas, usando `updated_at` ou `created_at`;
 - imagens principais em `<image:image>` quando a URL de imagem publica for valida;
 - filtro de expiracao por `expires_at` ou datas de encerramento em `metadata`.

@@ -20,7 +20,11 @@ const STATIC_ROUTES = [
   { path: '/caronas', changefreq: 'daily', priority: '0.8' },
   { path: '/achados-perdidos', changefreq: 'daily', priority: '0.8' },
   { path: '/sobre', changefreq: 'monthly', priority: '0.6' },
-  { path: '/apresentacao', changefreq: 'monthly', priority: '0.7' },
+  // URL realmente canônica: /apresentacao redireciona (308) para este arquivo
+  // (canonical próprio, seo-audit, JSON-LD e llms.txt já apontam para cá).
+  // Anunciar a rota redirecionada faz o Google marcar o sitemap como
+  // "Page with redirect" e gera conflito "Google chose different canonical".
+  { path: '/apresentacao-institucional.html', changefreq: 'monthly', priority: '0.7' },
   { path: '/editorial', changefreq: 'monthly', priority: '0.6' },
   { path: '/ajuda', changefreq: 'monthly', priority: '0.5' },
   { path: '/ods', changefreq: 'monthly', priority: '0.5' },

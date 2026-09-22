@@ -117,6 +117,11 @@
       "permanent": true
     },
     {
+      "source": "/_product.html",
+      "destination": "/product.html",
+      "permanent": true
+    },
+    {
       "source": "/pitch",
       "destination": "/apresentacao-institucional.html",
       "permanent": true

@@ -160,7 +160,7 @@ describe('política SEO dinâmica compartilhada', () => {
     expect(response.body.match(/data-kc-product-image-preload="true"/g)).toHaveLength(1);
   });
 
-  test('SSR noindex não antecipa mídia que não será renderizada no HTML inicial', async () => {
+  test('SSR noindex renderiza a mídia no HTML, mas nunca a antecipa com preload', async () => {
     const post = buildPost({
       description: 'Curta.',
       post_media: [{ url: 'https://project.example.supabase.co/storage/noindex.webp', is_cover: true }],
@@ -172,7 +172,38 @@ describe('política SEO dinâmica compartilhada', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('noindex,follow,noarchive');
+    // a imagem entra no HTML inicial (conteúdo visível para quem chega por um
+    // link antigo), mas página noindex nunca ganha <link rel="preload">
+    expect(response.body).toContain('noindex.webp');
     expect(response.body).not.toContain('data-kc-product-image-preload="true"');
+  });
+
+  test('publicação encerrada renderiza conteúdo real, declara o estado e segue noindex', async () => {
+    const closed = buildPost({
+      id: 'post-closed',
+      status: 'closed',
+      title: 'Roda de conversa sobre permanência estudantil',
+    });
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => [closed] });
+
+    const response = createResponse();
+    await productHandler({ query: { id: closed.id } }, response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('noindex,follow,noarchive');
+    expect(response.body).not.toContain('index,follow,max-image-preview:large,max-snippet:-1');
+    expect(response.headers['x-robots-tag']).toBe('noindex, follow, noarchive');
+    // o HTML inicial entrega o conteúdo — nunca o shell "Carregando…"
+    expect(response.body).toContain(
+      '<h1 class="kc-product-title" id="postTitle">Roda de conversa sobre permanência estudantil</h1>',
+    );
+    expect(response.body).not.toContain('>Carregando…</h1>');
+    expect(response.body).toContain(
+      '<title>Roda de conversa sobre permanência estudantil - KinoCampus</title>',
+    );
+    // e declara o mesmo estado de encerramento que o cliente renderiza
+    expect(response.body).toContain('kc-product-status-note--closed');
+    expect(response.body).toContain('Evento encerrado.');
   });
 
   test('query de rota interna de 404 nunca altera a resposta pública do sitemap', async () => {
