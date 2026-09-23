@@ -35,6 +35,8 @@ import { handleMediaCorrection } from "./media-correction-handler.ts";
 import { MEDIA_COLUMNS, MEDIA_CORRECTION_CONTRACT } from "./media-correction.ts";
 import { handleMediaDiagnostic } from "./media-diagnostic.ts";
 import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
+// FRAG-08 (issue #587, 2026-09-22): corpo canonico + limiar unico de weak.
+import { caduDescriptionBody, caduDescriptionQualityFlags, WEAK_DESCRIPTION_MIN_CHARS } from "./description.ts";
 import {
   categoriesForModule,
   CaduItem,
@@ -284,6 +286,14 @@ export function hasResultAnnouncementTitleSignal(value: unknown): boolean {
   return /\b(lista (de|do|das) (habilitados|aprovados|classificados|convocados)|resultado (final|preliminar)(?: do| da| dos| das)?\b|homologa\w*|divulgac\w* do resultado|retifica\w* de resultado|classifica\w* final)\b/.test(normalizeText(value));
 }
 
+// FRAG-08 (issue #587, 2026-09-22): predicado DISTINTO de 'acao executavel'
+// (>=160 chars + link + termo de acao na descricao mapeada). NUNCA foi o gate
+// de weak_description — o codigo do ledger e que era homonimo. Comportamento
+// preservado byte a byte; apenas o codigo emitido passa a
+// `description_not_actionable` para nao ser confundido com weak_description
+// (agora o limiar canonico < WEAK_DESCRIPTION_MIN_CHARS, espelhado em
+// openclaw-cadu data/.openclaw/workspace/scripts/lib/edge-quality-parity.js::
+// edgeHasActionableMarkdownDescription -> edge_quality_description_not_actionable).
 function hasActionableMarkdownDescription(value: unknown): boolean {
   const text = normalizeWhitespace(stripHtml(value || ""));
   const normalized = normalizeText(text);
@@ -429,7 +439,27 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   ) block("institutional_or_biographical_release");
   if (hasResultAnnouncementTitleSignal(item.title)) block("result_announcement_not_publishable");
   if (hasCmsCreditLine(description)) block("cms_credits_in_description");
-  if (!hasActionableMarkdownDescription(description)) block("weak_description");
+  // FRAG-08 (issue #587, 2026-09-22): contrato UNICO de weak_description.
+  // O gate mede o CORPO CANONICO (description.ts::caduDescriptionBody — o
+  // formattedDescription aprovado apos strip de creditos), nao a descricao
+  // mapeada inflada pelos suplementos (link de fonte/documentos) que o mapper
+  // acrescenta. Mesmo limiar dos dois lados: WEAK_DESCRIPTION_MIN_CHARS = 120
+  // (openclaw-cadu lib/quality-gate.js::WEAK_DESCRIPTION_MIN_CHARS, consumido
+  // por pipeline-kino.js e lib/edge-quality-parity.js). Fail-closed: < 120
+  // continua bloqueando publicacao.
+  const canonicalBody = caduDescriptionBody(item);
+  if (canonicalBody.length < WEAK_DESCRIPTION_MIN_CHARS) block("weak_description");
+  // FRAG-08 (issue #587, 2026-09-22): predicado DISTINTO de 'acao executavel'.
+  // hasActionableMarkdownDescription (160 + link + termo de acao sobre a
+  // descricao MAPEADA) mantem o papel, o comportamento e a forca de antes
+  // (nada foi afrouxado); so o codigo do ledger muda — era homonimo de
+  // weak_description e escondia o motivo real. Espelho lockstep em
+  // openclaw-cadu lib/edge-quality-parity.js (edge_quality_description_not_actionable).
+  if (!hasActionableMarkdownDescription(description)) block("description_not_actionable");
+  // FRAG-08 (issue #587, 2026-09-22): heuristica historica de 140 chars
+  // (description.ts::isUsefulFormattedDescription) virou SINAL DE QUALIDADE
+  // sobre o corpo publicado — warn/flag, nunca troca de corpo.
+  for (const flag of caduDescriptionQualityFlags(item)) warn(flag);
 
   // A diretiva de publicação da Central de Revisões (contrato
   // cadu-review-publication-directives-v1) é a autoridade editorial para o

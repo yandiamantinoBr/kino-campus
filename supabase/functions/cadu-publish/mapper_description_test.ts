@@ -73,7 +73,12 @@ Deno.test("publish rejects oversized selected bodies and fallbacks before any lo
   try {
     globalThis.fetch = blocked as typeof fetch;
     Deno.resolveDns = blocked as typeof Deno.resolveDns;
-    for (const formattedDescription of [undefined, "invalid short formatter", `**Evento:** ${"x".repeat(5001)}`]) {
+    // FRAG-08 (issue #587, 2026-09-22): o fallback agora e definido por
+    // PRESENCA (formatted ausente/vazio -> lead), nao por heuristica de
+    // 'utilidade' — "invalid short formatter" deixou de cair no lead gigante
+    // porque o formatted APROVADO e o corpo publicado (capo medido nele; o caso
+    // curto + evidencia bruta longa e contrato novo em description_test.ts).
+    for (const formattedDescription of [undefined, "", "   ", `**Evento:** ${"x".repeat(5001)}`]) {
       const item = { ...base, description: `**Evento:** ${"x".repeat(5001)}`, formattedDescription };
       assert.equal(validateItem(item).ok, false);
       const response = await handlePublish(admin as never, "cadu-user", { item });
