@@ -477,7 +477,8 @@ Avisos bloqueantes retornados diretamente pelo endpoint `cadu-publish` como `QUA
 - `deadline_past`: oportunidade com prazo vencido e sem data futura relevante.
 - `institutional_or_biographical_release`: release institucional/biografico sem acao concreta para o usuario.
 - `cms_credits_in_description`: a descricao ainda contem creditos de CMS (`Texto:`, `Fotos:`, `Por ...`).
-- `weak_description`: descricao curta/crua, sem link e informacao acionavel suficiente.
+- `weak_description`: corpo canonico (formattedDescription aprovado) com menos de 120 caracteres (`WEAK_DESCRIPTION_MIN_CHARS`, contrato FRAG-08/issue #587 — mesmo limiar do quality-gate do openclaw-cadu).
+- `description_not_actionable`: descricao mapeada sem acao executavel (menos de 160 caracteres, sem link ou sem termo de acao — predicado distinto de weak, contrato FRAG-08/issue #587).
 - `score_below_auto_publish_threshold`: score informado abaixo do limiar efetivo de publicacao automatica. O campo `quality.autoPublishScoreMin` informa o valor usado na resposta.
 - `only_temporary_or_svg_images`: candidatas de imagem eram apenas temporarias ou SVG.
 - `instagram_without_official_source`: item veio apenas de Instagram, sem fonte oficial complementar.
