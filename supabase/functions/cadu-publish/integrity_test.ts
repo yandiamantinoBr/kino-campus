@@ -38,7 +38,11 @@ function correctedItem() {
     formattedTitle: "23º CONPEEX: de 9 a 13 de novembro", sourceUrl: SOURCE_URL, sourceId: SOURCE_ID,
     sourceRegistryId: "web.ufg.portal", sourceName: "UFG", location: "Campus Samambaia, Goiânia",
     description: "O 23º CONPEEX acontece de 9 a 13 de novembro de 2099, no Campus Samambaia em Goiânia. O prazo de cadastro de avaliadores já foi encerrado.",
-    formattedDescription: `O 23º CONPEEX acontece de 9 a 13 de novembro de 2099, no Campus Samambaia em Goiânia. O cadastro de avaliadores já foi encerrado. Consulte a programação oficial: ${SOURCE_URL}`,
+    // FRAG-08 (issue #587, 2026-09-22): o corpo APROVADO e o publicado (sem
+    // swap por heuristica). A fixture so passava no gate de acao executavel
+    // porque o lead trocado trazia "prazo"/bloco de fonte; o formatted real e
+    // o corpo do post, entao ele precisa carregar o termo de acao ("evento").
+    formattedDescription: `O 23º CONPEEX acontece de 9 a 13 de novembro de 2099, no Campus Samambaia em Goiânia. O cadastro de avaliadores já foi encerrado. Consulte a programação oficial do evento: ${SOURCE_URL}`,
     text: "CONPEEX 9 a 13 de novembro de 2099. Campus Samambaia, Goiânia.",
     dates: { eventStartsAt: "2099-11-09", eventEndsAt: "2099-11-13" },
     link: SOURCE_URL, linkAsCta: true, actionLabel: "Saiba mais", actionKey: "saiba-mais",
