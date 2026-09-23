@@ -76,19 +76,35 @@ Deno.test("publication does not pre-persist a mapped image before DNS/redirect v
           allowExternalImageFallback: true,
         },
       });
+      // 2026-09-22 (issue #584 / FRAG-05): este teste travava o comportamento
+      // antigo — INSERT com image_url:null ANTES das imagens e PUBLISHED mesmo
+      // sem nenhuma mídia válida (falha virava só media.error no corpo HTTP:
+      // post NO AR sem imagem e sem reason code). O contrato corrigido mantém a
+      // invariante original (nunca persistir capa não validada na fronteira de
+      // rede) e a estende: o row nasce atômico já com a capa validada e, sem
+      // nenhuma mídia válida para um item COM candidatos de imagem, o post NÃO
+      // publica (fail-closed MEDIA_FAILED) com o reason code media_error:<code>
+      // persistido no audit_log.
       const body = await response.json();
-      assert.equal(body.code, "PUBLISHED");
-      assert.equal(body.image_url, mode === "public" ? uploadedUrl : "");
-      assert.equal(inserts.length, 1);
-      assert.equal(inserts[0].image_url, null);
-      assert.deepEqual(
-        (inserts[0].metadata as Record<string, unknown>).gallery_image_urls,
-        [],
-      );
-      assert.equal(
-        (inserts[0].metadata as Record<string, unknown>).cover_url,
-        "",
-      );
+      if (mode === "public") {
+        assert.equal(body.code, "PUBLISHED");
+        assert.equal(body.image_url, uploadedUrl);
+        assert.equal(inserts.length, 1);
+        assert.equal(inserts[0].image_url, uploadedUrl);
+        assert.deepEqual(
+          (inserts[0].metadata as Record<string, unknown>).gallery_image_urls,
+          [uploadedUrl],
+        );
+        assert.equal(
+          (inserts[0].metadata as Record<string, unknown>).cover_url,
+          uploadedUrl,
+        );
+      } else {
+        assert.equal(response.status, 502);
+        assert.equal(body.code, "MEDIA_FAILED");
+        assert.match(String(body.reason), /^media_error:/);
+        assert.equal(inserts.length, 0, "fail-closed: nada publicado sem midia valida");
+      }
       assert.equal(body.media.uploads[0].fallback, false);
       assert.equal(fetches, mode === "dns" ? 0 : 1);
       assert.equal(uploads, mode === "public" ? 1 : 0);
