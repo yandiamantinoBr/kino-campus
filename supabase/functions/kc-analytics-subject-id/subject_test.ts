@@ -1,7 +1,9 @@
 import {
+  createAnalyticsEmailHash,
   createAnalyticsSubjectId,
   isValidAnalyticsIdSecret,
   isValidSupabaseUserId,
+  normalizeAnalyticsEmail,
 } from "./subject.ts";
 
 const USER_ID = "4b39baaf-996b-49ca-a603-b122066946dd";
@@ -24,6 +26,20 @@ Deno.test("separates subject ids across secrets", async () => {
   const first = await createAnalyticsSubjectId(SECRET_A, USER_ID);
   const second = await createAnalyticsSubjectId(SECRET_B, USER_ID);
   if (first === second) throw new Error("secret did not separate identities");
+});
+
+Deno.test("hashes normalized emails for user-provided data without leaking raw values", async () => {
+  const hash = await createAnalyticsEmailHash("  User@Example.COM ");
+  const expected = await createAnalyticsEmailHash("user@example.com");
+  if (!/^[0-9a-f]{64}$/.test(hash)) throw new Error("invalid email hash format");
+  if (hash !== expected) throw new Error("email hash must normalize case and spaces");
+  if (hash.includes("user@example.com")) throw new Error("raw email leaked");
+  if (normalizeAnalyticsEmail("student-at-example.com") !== "") {
+    throw new Error("invalid email accepted");
+  }
+  if ((await createAnalyticsEmailHash("")) !== "") {
+    throw new Error("empty email accepted");
+  }
 });
 
 Deno.test("validates secret and Supabase user id inputs", () => {

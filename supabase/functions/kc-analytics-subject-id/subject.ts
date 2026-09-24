@@ -16,6 +16,24 @@ export function isValidSupabaseUserId(userId: string): boolean {
     .test(userId);
 }
 
+// Hash SHA-256 do e-mail normalizado, usado como user-provided data (UPD).
+// Calculado somente no servidor: o e-mail em claro nunca chega ao navegador.
+export function normalizeAnalyticsEmail(email: string): string {
+  const normalized = (email ?? "").trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) return "";
+  return normalized;
+}
+
+export async function createAnalyticsEmailHash(email: string): Promise<string> {
+  const normalized = normalizeAnalyticsEmail(email);
+  if (!normalized) return "";
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(normalized),
+  );
+  return bytesToHex(new Uint8Array(digest));
+}
+
 export async function createAnalyticsSubjectId(
   secret: string,
   userId: string,

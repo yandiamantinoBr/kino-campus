@@ -5,6 +5,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { isCurrentSessionActive } from "../_shared/active-session.ts";
 import {
+  createAnalyticsEmailHash,
   createAnalyticsSubjectId,
   isValidAnalyticsIdSecret,
 } from "./subject.ts";
@@ -138,7 +139,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const subjectId = await createAnalyticsSubjectId(analyticsSecret, userId);
-    return json(req, 200, { ok: true, subjectId });
+    const emailHash = await createAnalyticsEmailHash(data?.user?.email ?? "");
+    return json(req, 200, { ok: true, subjectId, emailHash });
   } catch (_) {
     return json(req, 503, { ok: false, error: "subject_id_unavailable" });
   }

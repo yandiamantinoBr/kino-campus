@@ -493,6 +493,72 @@ describe('Google tag e consentimento LGPD', () => {
     )).toHaveLength(1);
   });
 
+  test('user-provided data usa o hash SHA-256 vindo do servidor e limpa no logout', async () => {
+    const source = read('assets/js/boot/kc-google-tag.js');
+    const calls = [];
+    const emailHash = 'a1b2c3d4'.repeat(8); // 64 hex chars, como o servidor retorna
+    const context = {
+      window: {
+        dataLayer: [],
+        location: { origin: 'https://www.kinocampus.com.br', href: 'https://www.kinocampus.com.br/' },
+        KCConsent: {
+          hasConsent: (category) => category === 'analytics',
+          getPreferences: () => ({ analytics: true }),
+        },
+        KCSupabase: {
+          getClient: () => ({
+            functions: {
+              invoke: async () => ({
+                data: { ok: true, subjectId: 'kc_0123456789abcdef0123456789abcdef', emailHash },
+                error: null,
+              }),
+            },
+          }),
+        },
+        addEventListener: () => {},
+      },
+      document: {
+        title: 'Kino Campus',
+        referrer: '',
+        addEventListener: () => {},
+        getElementById: () => null,
+        createElement: () => ({}),
+        getElementsByTagName: () => [{ parentNode: { insertBefore: () => {} } }],
+        head: { appendChild: () => {} },
+      },
+      encodeURIComponent,
+      Date,
+      Promise,
+      URL,
+    };
+    context.window.dataLayer.push = function push(args) {
+      calls.push(Array.from(args));
+      return Array.prototype.push.call(this, args);
+    };
+
+    vm.runInNewContext(source, context);
+    await context.window.KCGoogleTag.setUserId('4b39baaf-996b-49ca-a603-b122066946dd');
+    await flushMicrotasks();
+
+    const withHash = calls.filter(
+      (call) => call[0] === 'set' && call[1] && call[1].user_data && call[1].user_data.email_address
+    );
+    expect(withHash.length).toBeGreaterThanOrEqual(1);
+    expect(withHash.at(-1)[1].user_data.email_address).toBe(emailHash);
+
+    await context.window.KCGoogleTag.setUserId(null);
+    await flushMicrotasks();
+    const lastUserData = calls.filter(
+      (call) => call[0] === 'set' && call[1] && call[1].user_data
+    ).at(-1);
+    expect(lastUserData[1].user_data.email_address).toBeNull();
+
+    // Invariante de arquitetura: nenhum hashing/leitura de e-mail no cliente.
+    expect(source).not.toContain('crypto.subtle.digest');
+    expect(source).not.toContain('auth.getUser');
+    expect(JSON.stringify(calls)).not.toContain('@example.com');
+  });
+
   test('User-ID usa HMAC opaco do servidor, respeita consentimento e limpa no logout', async () => {
     const source = read('assets/js/boot/kc-google-tag.js');
     const calls = [];
