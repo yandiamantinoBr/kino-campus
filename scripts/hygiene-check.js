@@ -48,12 +48,12 @@ const kcuScriptChain = [
 ];
 
 const kcadAdminDashboardScriptChain = [
-  '../assets/js/controllers/admin/admin-dashboard.shared.js',
-  '../assets/js/controllers/admin/admin-dashboard.metrics.js',
-  '../assets/js/controllers/admin/admin-dashboard.audit.js',
-  '../assets/js/controllers/admin/admin-dashboard.charts.js',
-  '../assets/js/features/kc-ranking.js',
-  '../assets/js/controllers/admin/admin-dashboard.controller.js',
+  '/assets/js/controllers/admin/admin-dashboard.shared.js',
+  '/assets/js/controllers/admin/admin-dashboard.metrics.js',
+  '/assets/js/controllers/admin/admin-dashboard.audit.js',
+  '/assets/js/controllers/admin/admin-dashboard.charts.js',
+  '/assets/js/features/kc-ranking.js',
+  '/assets/js/controllers/admin/admin-dashboard.controller.js',
 ];
 
 const kclaScriptChain = [
@@ -67,11 +67,11 @@ const kclaScriptChain = [
 ];
 
 const kcprProfileScriptChain = [
-  'assets/js/controllers/public/profile.presentation.js',
-  'assets/js/controllers/public/profile.collections.js',
-  'assets/js/controllers/public/profile.ratings.js',
-  'assets/js/controllers/public/profile.flow.js',
-  'assets/js/controllers/public/profile.controller.js',
+  '/assets/js/controllers/public/profile.presentation.js',
+  '/assets/js/controllers/public/profile.collections.js',
+  '/assets/js/controllers/public/profile.ratings.js',
+  '/assets/js/controllers/public/profile.flow.js',
+  '/assets/js/controllers/public/profile.controller.js',
 ];
 
 const inlineHandlers = new Set([
@@ -578,17 +578,18 @@ function readHtmlFiles(dir, prefix = '') {
 }
 
 function buildExpectedKcuScriptChain(relPath) {
-  const prefix = relPath.startsWith('admin/') ? '../assets/js/utils' : 'assets/js/utils';
+  // Referências de assets são root-absolute em todos os HTMLs desde fix/ga4-tag-root-paths.
+  const prefix = '/assets/js/utils';
   return kcuScriptChain.map((file) => `${prefix}/${file}`);
 }
 
 function buildExpectedKclaScriptChain(relPath) {
-  const prefix = relPath.startsWith('admin/') ? '../assets/js/adapters/local' : 'assets/js/adapters/local';
+  const prefix = '/assets/js/adapters/local';
   return kclaScriptChain.map((file) => `${prefix}/${file}`);
 }
 
 function buildExpectedKcffScriptChain(relPath) {
-  const prefix = relPath.startsWith('admin/') ? '../assets/js' : 'assets/js';
+  const prefix = '/assets/js';
   return [
     `${prefix}/boot/kc-env.js`,
     `${prefix}/boot/kc-feature-flags.js`,
