@@ -158,6 +158,40 @@ function directiveSourceIdentity(value: string): string {
   }
 }
 
+// Espelho de autoRepassBlockingGates (openclaw-cadu:
+// scripts/lib/auto-review-gate-contract.js). Reforma 2026-09-22 (revalidação
+// preservadora): flags de roteamento/proveniência não decidem conteúdo e não
+// expiram autoridade editorial; gates de decisão continuam obrigatoriamente
+// idênticos entre o item atual e o registro aprovado.
+const ROUTING_GATES = new Set([
+  "needs_review",
+  "curator_review_required",
+  "instagram_community_relevance_review",
+]);
+const PROVENANCE_GATES = new Set([
+  "curator_review_required",
+  "instagram_community_relevance_review",
+]);
+
+function decisionGates(reasons: string[]): string[] {
+  return reasons.filter((issue) => {
+    if (!issue || ROUTING_GATES.has(issue)) return false;
+    return !issue.startsWith("curator_gate:") ||
+      PROVENANCE_GATES.has(issue.slice("curator_gate:".length));
+  });
+}
+
+export function sameDecisionGates(
+  itemReasons: string[],
+  directiveReasons: string[],
+): boolean {
+  const material = (reasons: string[]) => [...new Set(decisionGates(reasons))].sort();
+  const current = material(itemReasons);
+  const approved = material(directiveReasons);
+  return current.length === approved.length &&
+    current.every((reason, index) => reason === approved[index]);
+}
+
 function normalizeReasons(value: unknown): string[] | null {
   if (!Array.isArray(value) || value.length > REASON_LIMIT) return null;
   const normalized: string[] = [];
@@ -282,8 +316,10 @@ export function normalizeReviewPublicationDirective(
 }
 
 /**
- * Diretiva ligada ao item exato: forma válida + identidade de fonte, revisão
- * de evidência, proveniência de gates e módulo conferindo com o item.
+ * Diretiva ligada ao item exato: forma válida + identidade de fonte, gates de
+ * decisão e módulo conferindo com o item. A revisão bruta da fonte
+ * (source_revision) não desqualifica o vínculo — ver a nota de revalidação
+ * preservadora em boundReviewPublicationDirective.
  */
 export function boundReviewPublicationDirective(
   item: Record<string, unknown>,
@@ -300,8 +336,13 @@ export function boundReviewPublicationDirective(
     .find((candidate): candidate is string =>
       typeof candidate === "string" && candidate.trim() !== ""
     ) ?? "";
-  const sourceRevision = String(item.sourceRevision ?? item.source_revision ?? "")
-    .trim().toLowerCase();
+  // Reforma 2026-09-22 (revalidação preservadora — espelho obrigatório do JS):
+  // source_revision NÃO faz mais parte do vínculo. Ele muda com o próprio
+  // enriquecimento da pipeline (cache de imagens, deep links, receipts de
+  // corroboração) e com a re-coleta da fonte, e expirava aprovações válidas da
+  // Central (medido: 185/256 aprovados nunca publicavam). Seguem obrigatórios:
+  // identidade do registro (source_comparison_key + URL canônica + módulo),
+  // item_version, review_id e gates de decisão idênticos (falha fechada).
   const itemSourceIdentity = directiveSourceIdentity(
     String(item.sourceUrl || item.url || item.source_url || item.link || ""),
   );
@@ -315,12 +356,10 @@ export function boundReviewPublicationDirective(
 
   if (
     sourceComparisonKey(sourceId.trim()) !== directive.source_comparison_key ||
-    sourceRevision !== directive.source_revision ||
     !itemSourceIdentity || itemSourceIdentity !== directiveSourceIdentityValue ||
     moduleKey !== directive.module ||
     gate.available !== true ||
-    gate.reasons.length !== directive.review_gate_reasons.length ||
-    gate.reasons.some((reason, index) => reason !== directive.review_gate_reasons[index]) ||
+    !sameDecisionGates(gate.reasons, directive.review_gate_reasons) ||
     (carriesDirective && itemVersion !== directive.item_version) ||
     (carriesDirective && reviewId !== directive.review_id)
   ) {

@@ -35,6 +35,8 @@ import { handleMediaCorrection } from "./media-correction-handler.ts";
 import { MEDIA_COLUMNS, MEDIA_CORRECTION_CONTRACT } from "./media-correction.ts";
 import { handleMediaDiagnostic } from "./media-diagnostic.ts";
 import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
+// FRAG-08 (issue #587, 2026-09-22): corpo canonico + limiar unico de weak.
+import { caduDescriptionBody, caduDescriptionQualityFlags, WEAK_DESCRIPTION_MIN_CHARS } from "./description.ts";
 import {
   categoriesForModule,
   CaduItem,
@@ -284,6 +286,14 @@ export function hasResultAnnouncementTitleSignal(value: unknown): boolean {
   return /\b(lista (de|do|das) (habilitados|aprovados|classificados|convocados)|resultado (final|preliminar)(?: do| da| dos| das)?\b|homologa\w*|divulgac\w* do resultado|retifica\w* de resultado|classifica\w* final)\b/.test(normalizeText(value));
 }
 
+// FRAG-08 (issue #587, 2026-09-22): predicado DISTINTO de 'acao executavel'
+// (>=160 chars + link + termo de acao na descricao mapeada). NUNCA foi o gate
+// de weak_description — o codigo do ledger e que era homonimo. Comportamento
+// preservado byte a byte; apenas o codigo emitido passa a
+// `description_not_actionable` para nao ser confundido com weak_description
+// (agora o limiar canonico < WEAK_DESCRIPTION_MIN_CHARS, espelhado em
+// openclaw-cadu data/.openclaw/workspace/scripts/lib/edge-quality-parity.js::
+// edgeHasActionableMarkdownDescription -> edge_quality_description_not_actionable).
 function hasActionableMarkdownDescription(value: unknown): boolean {
   const text = normalizeWhitespace(stripHtml(value || ""));
   const normalized = normalizeText(text);
@@ -337,7 +347,15 @@ export function hasOfficialNonInstagramSource(item: CaduItem): boolean {
     if (/(^|\.)ifgoiano\.edu\.br$/.test(host)) return true;
     if (/(^|\.)ifg\.edu\.br$/.test(host)) return true;
     if (/(^|\.)sescgo\.com\.br$/.test(host)) return true;
-    return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host);
+    // 2026-09-22 (fontes de Eventos/Oportunidades): anunciantes auditados que
+    // publicam oportunidades/eventos legítimos para a comunidade UFG — FUNAPE
+    // (fundação de apoio da UFG), UEG (IFES parceira) e Expo Favela GO (evento
+    // apoiado pelo CEI/UFG). Espelho obrigatório do padrão da pipeline
+    // (enrich-instagram-with-official-source.js).
+    if (/(^|\.)funape\.org\.br$/.test(host)) return true;
+    if (/(^|\.)ueg\.br$/.test(host)) return true;
+    if (/(^|\.)goiasexpofavela\.com\.br$/.test(host)) return true;
+    return /(^|\.)ufg\.br$/.test(host) || /gov\.br$/.test(host) || /even3\.com\.br$/.test(host) || /forms\.gle$/.test(host) || /(^|\.)unesco\.org$/.test(host);
   });
 }
 
@@ -421,7 +439,27 @@ function evaluateCaduPublishQuality(item: CaduItem, mapped: ReturnType<typeof ma
   ) block("institutional_or_biographical_release");
   if (hasResultAnnouncementTitleSignal(item.title)) block("result_announcement_not_publishable");
   if (hasCmsCreditLine(description)) block("cms_credits_in_description");
-  if (!hasActionableMarkdownDescription(description)) block("weak_description");
+  // FRAG-08 (issue #587, 2026-09-22): contrato UNICO de weak_description.
+  // O gate mede o CORPO CANONICO (description.ts::caduDescriptionBody — o
+  // formattedDescription aprovado apos strip de creditos), nao a descricao
+  // mapeada inflada pelos suplementos (link de fonte/documentos) que o mapper
+  // acrescenta. Mesmo limiar dos dois lados: WEAK_DESCRIPTION_MIN_CHARS = 120
+  // (openclaw-cadu lib/quality-gate.js::WEAK_DESCRIPTION_MIN_CHARS, consumido
+  // por pipeline-kino.js e lib/edge-quality-parity.js). Fail-closed: < 120
+  // continua bloqueando publicacao.
+  const canonicalBody = caduDescriptionBody(item);
+  if (canonicalBody.length < WEAK_DESCRIPTION_MIN_CHARS) block("weak_description");
+  // FRAG-08 (issue #587, 2026-09-22): predicado DISTINTO de 'acao executavel'.
+  // hasActionableMarkdownDescription (160 + link + termo de acao sobre a
+  // descricao MAPEADA) mantem o papel, o comportamento e a forca de antes
+  // (nada foi afrouxado); so o codigo do ledger muda — era homonimo de
+  // weak_description e escondia o motivo real. Espelho lockstep em
+  // openclaw-cadu lib/edge-quality-parity.js (edge_quality_description_not_actionable).
+  if (!hasActionableMarkdownDescription(description)) block("description_not_actionable");
+  // FRAG-08 (issue #587, 2026-09-22): heuristica historica de 140 chars
+  // (description.ts::isUsefulFormattedDescription) virou SINAL DE QUALIDADE
+  // sobre o corpo publicado — warn/flag, nunca troca de corpo.
+  for (const flag of caduDescriptionQualityFlags(item)) warn(flag);
 
   // A diretiva de publicação da Central de Revisões (contrato
   // cadu-review-publication-directives-v1) é a autoridade editorial para o
@@ -662,16 +700,27 @@ async function isTrustedPublisher(admin: SupabaseClient, userId: string): Promis
   return !!data;
 }
 
+// Linha existente de dedup com o estado de mídia que o reparo precisa ler
+// (FRAG-05, issue #584): capa persistida, marcador media_state e updated_at
+// para o CAS do marcador de falha.
+interface ExistingPost {
+  id: string;
+  status: string;
+  image_url?: string | null;
+  metadata?: Record<string, unknown> | null;
+  updated_at?: string | null;
+}
+
 async function findExisting(
   admin: SupabaseClient,
   userId: string,
   sourceId: string,
   sourceUrl: string,
-): Promise<{ id: string; status: string } | null> {
+): Promise<ExistingPost | null> {
   if (sourceId) {
     const { data, error } = await admin
       .from("posts")
-      .select("id,status")
+      .select("id,status,image_url,metadata,updated_at")
       .eq("author_id", userId)
       .eq("metadata->>source_id", sourceId)
       .neq("status", "deleted")
@@ -680,12 +729,12 @@ async function findExisting(
       .limit(1)
       .maybeSingle();
     if (error) throw error;
-    if (data) return data as { id: string; status: string };
+    if (data) return data as ExistingPost;
   }
   if (sourceUrl && isDurableSourceIdentityUrl(sourceUrl)) {
     const { data, error } = await admin
       .from("posts")
-      .select("id,status")
+      .select("id,status,image_url,metadata,updated_at")
       .eq("author_id", userId)
       .eq("metadata->>source_url", sourceUrl)
       .neq("status", "deleted")
@@ -694,7 +743,7 @@ async function findExisting(
       .limit(1)
       .maybeSingle();
     if (error) throw error;
-    if (data) return data as { id: string; status: string };
+    if (data) return data as ExistingPost;
   }
   return null;
 }
@@ -703,11 +752,11 @@ async function findActiveSourceIdDuplicate(
   admin: SupabaseClient,
   userId: string,
   sourceId: string,
-): Promise<{ id: string; status: string } | null> {
+): Promise<ExistingPost | null> {
   if (!sourceId) return null;
   const { data, error } = await admin
     .from("posts")
-    .select("id,status")
+    .select("id,status,image_url,metadata,updated_at")
     .eq("author_id", userId)
     .eq("metadata->>source_id", sourceId)
     .in("status", ["published", "closed", "pending"])
@@ -716,16 +765,22 @@ async function findActiveSourceIdDuplicate(
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return data ? data as { id: string; status: string } : null;
+  return data ? data as ExistingPost : null;
 }
 
-function duplicateResponse(existing: { id: string; status: string }) {
+function duplicateResponse(existing: ExistingPost, repair?: DuplicateMediaRepair) {
+  // Contrato DUPLICATE preservado (ok:false, code, post_id, status); os campos
+  // de reparo sao ADITIVOS (FRAG-05, 2026-09-22, issue #584): um rerun que
+  // completou midia pendente/falhada informa media_repaired/reason/media.
   return json(200, {
     ok: false,
     code: "DUPLICATE",
     message: "Ja existe um post deste mesmo conteudo (mesma fonte).",
     post_id: existing.id,
     status: existing.status,
+    media_repaired: !!repair?.repaired,
+    reason: repair?.media?.reason || "",
+    ...(repair?.media ? { media: repair.media } : {}),
   });
 }
 
@@ -738,6 +793,186 @@ function audit(admin: SupabaseClient, action: string, entityId: string, actorId:
     actor_id: actorId,
     payload,
   }).then(() => {}, () => {});
+}
+
+// ── FRAG-05 (issue #584, 2026-09-22): staging explícito de mídia ────────────
+// O publish antigo gravava status:'published' com image_url:null ANTES de
+// preparar as imagens: falha de capa virava só media.error no corpo HTTP (nada
+// persistido), o post ficava NO AR sem imagem e sem reason code, e o rerun
+// respondia DUPLICATE sem permitir reparo de mídia. Agora:
+//   1. a mídia é preparada (rede + Storage) ANTES do INSERT, que nasce atômico
+//      já com a capa validada — status 'published' só após mídia OK;
+//   2. falha de mídia persiste como reason code 'media_error:<code>' (row via
+//      metadata.media_state e/ou audit_log) e o post NÃO fica 'published' sem
+//      capa quando a capa é exigida. Fail-closed idêntico ao que
+//      evaluateCaduPublishQuality já declara: only_temporary_or_svg_images é
+//      BLOQUEANTE (candidatos sem mídia persistível = não publica), enquanto
+//      missing_image_candidates é aviso (modo sem-imagem com motivo registrado).
+//      Os gates de qualidade NÃO mudam aqui — o espelho de paridade
+//      lib/edge-quality-parity.js do openclaw-cadu continua válido sem alteração;
+//   3. rerun que chega DUPLICATE com mídia pendente/falhada COMPLETA a mídia
+//      (kc_cadu_replace_post_media = UPSERT transacional idempotente; marcador
+//      de falha com CAS em updated_at) sem tocar em identidade/dedup além do
+//      necessário — INV-05: ocultação com linhagem, nada de DELETE de posts.
+const MEDIA_STATE_KEY = "media_state";
+
+interface MediaState {
+  status: "ready" | "no_image" | "error";
+  reason: string;
+  image_count: number;
+}
+
+interface PublishMedia {
+  uploaded: boolean;
+  uploaded_count: number;
+  cover_url: string;
+  images: string[];
+  uploads: PreparedImage[];
+  reason: string;
+  error?: string;
+}
+
+interface DuplicateMediaRepair {
+  attempted: boolean;
+  repaired: boolean;
+  media?: PublishMedia;
+}
+
+// Reason code durável de falha de mídia: 'media_error:<code>'.
+export function mediaReasonCode(error: unknown): string {
+  const code = String(error || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64) || "unknown";
+  return `media_error:${code}`;
+}
+
+interface PreparedMedia {
+  images: string[];
+  uploads: PreparedImage[];
+  coverRender: string;
+}
+
+interface PreparedMediaConclusion {
+  media: PublishMedia;
+  state: MediaState;
+  ok: boolean;
+}
+
+// Conclui o preparo de mídia num estado explícito: ready (com ou sem motivo de
+// falha parcial), no_image (modo sem-imagem registrado) ou error (fail-closed).
+function concludePreparedMedia(
+  candidateCount: number,
+  prepared: PreparedMedia | null,
+  failure: string,
+  fallbackCover: string,
+): PreparedMediaConclusion {
+  const uploads = prepared?.uploads || [];
+  const images = prepared?.images || [];
+  const firstError = uploads.find((img) => img.error)?.error || (images.length ? "" : failure);
+  const media: PublishMedia = {
+    uploaded: uploads.some((img) => img.uploaded),
+    uploaded_count: uploads.filter((img) => img.uploaded).length,
+    cover_url: images[0] || fallbackCover,
+    images,
+    uploads,
+    reason: "",
+  };
+  if (!images.length) media.error = firstError || "image_prepare_failed";
+  let state: MediaState;
+  if (images.length) {
+    state = {
+      status: "ready",
+      // Falha parcial também persiste como reason code; o rerun completa.
+      reason: firstError ? mediaReasonCode(firstError) : "",
+      image_count: images.length,
+    };
+  } else if (!candidateCount) {
+    state = { status: "no_image", reason: "missing_image_candidates", image_count: 0 };
+  } else {
+    state = {
+      status: "error",
+      reason: mediaReasonCode(firstError || "image_prepare_failed"),
+      image_count: 0,
+    };
+  }
+  media.reason = state.reason;
+  return { media, state, ok: images.length > 0 || candidateCount === 0 };
+}
+
+// Mídia pendente/falhada = sem capa válida (linhagem FRAG-05) ou marcador
+// explícito de falha/parcial em media_state. Linha legada SAUDÁVEL (capa
+// presente, sem marcador) nunca é tocada — o reparo só completa o que falta.
+function mediaNeedsRepair(existing: ExistingPost): boolean {
+  const meta = recordValue(existing.metadata) || {};
+  const cover = String(existing.image_url || meta.image_url || "").trim();
+  if (!cover) return true;
+  const state = recordValue(meta[MEDIA_STATE_KEY]) || {};
+  if (!Object.keys(state).length) return false;
+  return state.status !== "ready" || !!String(state.reason || "").trim();
+}
+
+// Reparo de mídia do rerun (FRAG-05): completa a galeria/capa do post EXISTENTE
+// sem tocar em identidade/dedup (source_id/source_url/content_hash preservados
+// via deepMergeMetadata) e sem qualquer DELETE — INV-05.
+async function repairDuplicateMedia(
+  admin: SupabaseClient,
+  userId: string,
+  existing: ExistingPost,
+  candidates: string[],
+  allowExternalFallback: boolean,
+): Promise<DuplicateMediaRepair> {
+  if (!mediaNeedsRepair(existing) || !candidates.length) {
+    return { attempted: false, repaired: false };
+  }
+  const meta = recordValue(existing.metadata) || {};
+  let prepared: PreparedMedia | null = null;
+  let failure = "image_prepare_failed";
+  try {
+    prepared = await prepareFinalImages(admin, userId, existing.id, candidates, allowExternalFallback);
+  } catch (e) {
+    failure = e instanceof Error ? e.message : String(e);
+    prepared = null;
+  }
+  const conclusion = concludePreparedMedia(
+    candidates.length,
+    prepared,
+    failure,
+    String(existing.image_url || meta.image_url || ""),
+  );
+  if (conclusion.media.images.length) {
+    // UPSERT transacional idempotente: kc_cadu_replace_post_media substitui
+    // posts.image_url + metadata + post_media numa única transação.
+    const metadata = deepMergeMetadata(meta, {
+      [MEDIA_STATE_KEY]: conclusion.state,
+      cover_render: prepared?.coverRender || "",
+    });
+    await applyImages(admin, existing.id, conclusion.media.images, metadata, prepared?.coverRender || "");
+    audit(admin, "cadu_post_media_repaired", existing.id, userId, {
+      reason: conclusion.state.reason,
+      image_count: conclusion.media.images.length,
+      cover_url: conclusion.media.cover_url,
+      source_url: meta.source_url ?? null,
+      source_id: meta.source_id ?? null,
+    });
+    return { attempted: true, repaired: true, media: conclusion.media };
+  }
+  // Marcador durável da falha no próprio row, com CAS em updated_at: o marcador
+  // só assenta se o post não mudou desde a leitura; o rerun repete em idempotência.
+  const marked = deepMergeMetadata(meta, {
+    [MEDIA_STATE_KEY]: conclusion.state,
+  });
+  let mutation = admin.from("posts").update({ metadata: marked }).eq("id", existing.id);
+  if (existing.updated_at) mutation = mutation.eq("updated_at", existing.updated_at);
+  await mutation;
+  audit(admin, "cadu_post_media_repair_failed", existing.id, userId, {
+    reason: conclusion.state.reason,
+    source_url: meta.source_url ?? null,
+    source_id: meta.source_id ?? null,
+  });
+  return { attempted: true, repaired: false, media: conclusion.media };
 }
 
 // ── publish ───────────────────────────────────────────────────────────────────
@@ -781,10 +1016,19 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
     });
   }
 
-  // Dedup: nao republica o mesmo source_id/source_url.
+  // Dedup: nao republica o mesmo source_id/source_url. FRAG-05 (2026-09-22,
+  // issue #584): um DUPLICATE com mídia pendente/falhada REPARA a mídia
+  // (UPSERT idempotente) em vez de só recusar — identidade/dedup intocados.
   const existing = await findExisting(admin, userId, mapped.dedup.sourceId, mapped.dedup.sourceUrl);
   if (existing) {
-    return duplicateResponse(existing);
+    const repair = await repairDuplicateMedia(
+      admin,
+      userId,
+      existing,
+      mapped.images || [],
+      item.allowExternalImageFallback !== false,
+    );
+    return duplicateResponse(existing, repair);
   }
 
   const quality = evaluateCaduPublishQuality(item, mapped);
@@ -812,7 +1056,11 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
   // Mapping is pure and cannot validate DNS/redirects. Do not persist its
   // candidate cover before prepareFinalImages crosses the network boundary;
   // otherwise a blocked download would leave that unchecked external URL live.
-  const insertRow = {
+  // FRAG-05 (2026-09-22, issue #584): o staging abaixo é somente para a
+  // checagem tardia de prazo — o INSERT real só acontece DEPOIS que a mídia foi
+  // preparada, e nasce atômico já com a capa validada (status 'published' só
+  // após mídia OK).
+  const stagedRow = {
     ...mapped.row,
     author_id: userId,
     status: "published",
@@ -824,15 +1072,76 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
       gallery_image_urls: [],
     },
   };
-  const lateDeadlineIssues = applicationDeadlinePostIssues(insertRow);
+  const lateDeadlineIssues = applicationDeadlinePostIssues(stagedRow);
   if (lateDeadlineIssues.length) return json(200, {
     ok: false, code: "QUALITY_BLOCKED", message: "O prazo de inscricao confirmado encerrou antes da publicacao.",
     quality: { ...quality, ok: false, blockingWarnings: [...quality.blockingWarnings, ...lateDeadlineIssues] },
   });
+  // FRAG-05: mídia ANTES do status final. O postId é reservado para o caminho
+  // do Storage (post-media/...) e os bytes sobem antes de qualquer row 'published'.
+  const postId = crypto.randomUUID();
+  const candidates = mapped.images || [];
+  let prepared: PreparedMedia | null = null;
+  let prepareFailure = "";
+  if (candidates.length) {
+    try {
+      prepared = await prepareFinalImages(
+        admin,
+        userId,
+        postId,
+        candidates,
+        item.allowExternalImageFallback !== false,
+      );
+    } catch (e) {
+      prepareFailure = e instanceof Error ? e.message : String(e);
+    }
+  }
+  const conclusion = concludePreparedMedia(candidates.length, prepared, prepareFailure, "");
+  if (!conclusion.ok) {
+    // Fail-closed: item COM candidatos de imagem e nenhuma mídia válida não
+    // publica (mesmo contrato de only_temporary_or_svg_images). Nada de row
+    // 'published' sem capa; o reason code 'media_error:<code>' persiste no
+    // audit_log com a linhagem do postId reservado e o rerun refaz a publicação.
+    audit(admin, "cadu_post_media_failed", postId, userId, {
+      reason: conclusion.state.reason,
+      source_url: mapped.dedup.sourceUrl || null,
+      source_id: mapped.dedup.sourceId || null,
+      image_candidates: candidates.length,
+      uploads: conclusion.media.uploads.map((img) => ({
+        source: img.source,
+        error: img.error ?? null,
+        fallback: img.fallback,
+      })),
+    });
+    return json(502, {
+      ok: false,
+      code: "MEDIA_FAILED",
+      message: "Nenhuma imagem candidata virou midia valida; o post nao foi publicado (fail-closed).",
+      reason: conclusion.state.reason,
+      media: conclusion.media,
+      quality,
+      warnings: [...validation.warnings, ...mapped.warnings, ...quality.warnings],
+    });
+  }
+
+  const insertRow = {
+    ...stagedRow,
+    id: postId,
+    image_url: conclusion.media.images[0] || null,
+    metadata: {
+      ...stagedRow.metadata,
+      image_url: conclusion.media.images[0] || "",
+      cover_url: conclusion.media.images[0] || "",
+      gallery_image_urls: conclusion.media.images,
+      ...(prepared?.coverRender ? { cover_render: prepared.coverRender } : {}),
+      [MEDIA_STATE_KEY]: conclusion.state,
+    },
+  };
   const { data: post, error } = await admin.from("posts").insert(insertRow).select("*").single();
   if (error || !post) {
     // The partial unique index closes the SELECT/INSERT race. A concurrent
-    // winner is returned as the same idempotent DUPLICATE contract used above.
+    // winner is returned as the same idempotent DUPLICATE contract used above
+    // (com o reparo de mídia do FRAG-05 aplicado ao vencedor).
     if (error?.code === "23505" && mapped.dedup.sourceId) {
       try {
         const racedDuplicate = await findActiveSourceIdDuplicate(
@@ -840,7 +1149,16 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
           userId,
           mapped.dedup.sourceId,
         );
-        if (racedDuplicate) return duplicateResponse(racedDuplicate);
+        if (racedDuplicate) {
+          const repair = await repairDuplicateMedia(
+            admin,
+            userId,
+            racedDuplicate,
+            candidates,
+            item.allowExternalImageFallback !== false,
+          );
+          return duplicateResponse(racedDuplicate, repair);
+        }
       } catch (_) {
         // Preserve the original insert error if the deterministic refetch fails.
       }
@@ -848,45 +1166,31 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
     return json(500, { ok: false, code: "INSERT_FAILED", message: error?.message || "Falha ao inserir o post." });
   }
 
-  // Imagens: sobe para o Storage; em caso de falha por imagem, mantem URL externa
-  // apenas quando ela for estavel. A primeira imagem final e sempre a capa.
-  const media: {
-    uploaded: boolean;
-    uploaded_count: number;
-    cover_url: string;
-    images: string[];
-    uploads: PreparedImage[];
-    error?: string;
-  } = {
-    uploaded: false,
-    uploaded_count: 0,
-    cover_url: String(post.image_url || ""),
-    images: [],
-    uploads: [],
-  };
-  const candidates = mapped.images || [];
-  if (candidates.length) {
+  // post_media: gravação transacional (UPSERT idempotente) após o INSERT, que já
+  // nasceu com a capa validada. Se o RPC falhar, o marcador media_state vira
+  // 'error' (CAS) e o rerun completa via DUPLICATE — nunca publicado sem capa e
+  // nunca sem motivo registrado.
+  const media = conclusion.media;
+  if (media.images.length) {
     try {
-      const prepared = await prepareFinalImages(
-        admin,
-        userId,
-        post.id,
-        candidates,
-        item.allowExternalImageFallback !== false,
-      );
-      media.uploads = prepared.uploads;
-      media.images = prepared.images;
-      media.uploaded_count = prepared.uploads.filter((img) => img.uploaded).length;
-      media.uploaded = media.uploaded_count > 0;
-      if (prepared.images.length) {
-        post.metadata = await applyImages(admin, post.id, prepared.images, post.metadata || {}, prepared.coverRender);
-        post.image_url = prepared.images[0];
-        media.cover_url = prepared.images[0];
-      } else {
-        media.error = prepared.uploads.find((img) => img.error)?.error || "image_prepare_failed";
-      }
+      post.metadata = await applyImages(admin, post.id, media.images, post.metadata || {}, prepared?.coverRender || "");
+      post.image_url = media.images[0];
+      media.cover_url = media.images[0];
     } catch (e) {
       media.error = e instanceof Error ? e.message : String(e);
+      media.reason = mediaReasonCode(media.error);
+      try {
+        const marked = deepMergeMetadata(recordValue(post.metadata) || {}, {
+          [MEDIA_STATE_KEY]: {
+            status: "error",
+            reason: media.reason,
+            image_count: media.images.length,
+          },
+        });
+        await admin.from("posts").update({ metadata: marked }).eq("id", post.id);
+      } catch (_) {
+        // Marcador é best-effort; o motivo também segue no audit e na resposta.
+      }
     }
   }
 
@@ -897,6 +1201,7 @@ export async function handlePublish(admin: SupabaseClient, userId: string, body:
     source_id: mapped.dedup.sourceId,
     image_uploaded: media.uploaded,
     image_count: media.images.length,
+    media_reason: media.reason,
   });
 
   const pending = post.status === "pending";

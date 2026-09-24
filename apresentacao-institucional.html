@@ -100,6 +100,34 @@
       </section>
     </noscript>
   </main>
+  <!-- Texto real da página: o deck vive em um iframe de outra origem e não conta como
+       conteúdo deste documento para os buscadores. Mantém a página indexável com contexto
+       próprio, sem alterar o palco (100vh) da apresentação. -->
+  <section class="kc-pitch-about" aria-labelledby="kc-pitch-about-title">
+    <style>
+      .kc-pitch-about { max-width: 980px; margin: 0 auto; padding: 44px 24px 72px; color: #071a3d; }
+      .kc-pitch-about h2 { font-size: clamp(1.35rem, 2.4vw, 1.8rem); margin-bottom: 14px; }
+      .kc-pitch-about h3 { font-size: 1.05rem; margin: 22px 0 8px; }
+      .kc-pitch-about p { margin-bottom: 14px; line-height: 1.7; color: #384152; max-width: 72ch; }
+      .kc-pitch-about ul { margin: 0 0 18px 22px; }
+      .kc-pitch-about li { margin-bottom: 7px; line-height: 1.65; color: #384152; }
+      .kc-pitch-about a { font-weight: 800; }
+    </style>
+    <h2 id="kc-pitch-about-title">Sobre esta apresentação</h2>
+    <p>A apresentação institucional do KinoCampus é um deck interativo com seis percursos expositivos para conhecer a plataforma e a proposta de parceria com a Universidade Federal de Goiás (UFG). Os percursos têm duração estimada de 5, 15 e 30 minutos, podem ser percorridos em ordem livre e abrem em tela cheia pelo botão no topo desta página.</p>
+    <p>O KinoCampus é uma plataforma comunitária independente para a comunidade da UFG, com publicações públicas sobre eventos, oportunidades, moradia, compra e venda, caronas e achados/perdidos. O objetivo é reunir em um só lugar o que hoje se espalha por grupos de mensagens: informação com contexto, busca e histórico.</p>
+    <h3>O que a plataforma cobre</h3>
+    <ul>
+      <li><a href="/eventos">Eventos</a> — atividades acadêmicas, culturais, esportivas e institucionais.</li>
+      <li><a href="/oportunidades">Oportunidades</a> — bolsas, editais, estágios, monitorias e chamadas acadêmicas.</li>
+      <li><a href="/moradia">Moradia</a> — quartos, repúblicas e imóveis para estudantes.</li>
+      <li><a href="/compra-venda">Compra e venda</a> — itens úteis no contexto universitário.</li>
+      <li><a href="/caronas">Caronas</a> — ofertas e pedidos de carona.</li>
+      <li><a href="/achados-perdidos">Achados e perdidos</a> — itens perdidos ou encontrados.</li>
+    </ul>
+    <h3>Para saber mais</h3>
+    <p>Missão, governança e curadoria estão em <a href="sobre.html">Sobre o KinoCampus</a>; os critérios de publicação e correção estão na <a href="editorial.html">Política editorial</a>. A apresentação também pode ser <a href="https://kino-campus-pitch.vercel.app" target="_blank" rel="noopener noreferrer">aberta diretamente em outra guia</a>.</p>
+  </section>
 
   <script defer src="/assets/js/boot/kc-constants.js?v=8.6.2"></script>
 <script defer src="/assets/js/core/kc-i18n.js?v=8.6.14"></script>

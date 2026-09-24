@@ -26,6 +26,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const SHORT_ID_RE = /^[0-9a-f]{8}$/i;
 const INDEXABLE_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1';
 const NOINDEX_ROBOTS = 'noindex,follow,noarchive';
+const NOINDEX_HEADER_VALUE = 'noindex, follow, noarchive';
 const META_DESCRIPTION_MAX_LENGTH = 180;
 const SEO_TITLE_MAX_LENGTH = 70;
 const SSR_DESCRIPTION_MAX_CHARACTERS = 12_000;
@@ -764,6 +765,28 @@ function replacePriceBlock(html, values) {
   return modified;
 }
 
+// Espelha product.render.js#syncClosedStatusNote: publicações encerradas
+// continuam legíveis como histórico e o HTML inicial precisa declarar o mesmo
+// estado que o cliente desenha (o JS remove e recria o nó pelo mesmo id, então
+// nunca há duplicação).
+function lifecycleLabelOf(post) {
+  const moduleKey = String((post && (post.modulo || post.module)) || '').trim().toLowerCase();
+  if (moduleKey === 'eventos') return 'Evento encerrado';
+  if (moduleKey === 'caronas') return 'Carona encerrada';
+  if (moduleKey === 'compra-venda') return 'Anúncio encerrado';
+  return 'Publicação encerrada';
+}
+
+function isClosedPost(post) {
+  return String((post && (post.status || post.estado)) || '').trim().toLowerCase() === 'closed'
+    || Boolean(post && post.isClosed === true);
+}
+
+function buildLifecycleStatusNoteHtml(post) {
+  if (!isClosedPost(post)) return '';
+  return `<div class="kc-product-status-note kc-product-status-note--closed" id="kcClosedStatusNote"><i class="fas fa-lock" aria-hidden="true"></i><span><strong>${escapeHtml(lifecycleLabelOf(post))}.</strong> Esta publicação continua visível como histórico, mas não está mais ativa. O dono pode reativá-la a qualquer momento.</span></div>`;
+}
+
 function injectVisibleProductContent(html, post, values) {
   const specs = specRowsHtml(post, values);
   let modified = html;
@@ -772,7 +795,11 @@ function injectVisibleProductContent(html, post, values) {
     'breadcrumb',
     buildBreadcrumbHtml(post, values),
   );
-  modified = replaceById(modified, 'postTitle', `<h1 class="kc-product-title" id="postTitle">${escapeHtml(values.title)}</h1>`);
+  modified = replaceById(
+    modified,
+    'postTitle',
+    `${buildLifecycleStatusNoteHtml(post)}<h1 class="kc-product-title" id="postTitle">${escapeHtml(values.title)}</h1>`,
+  );
   modified = replaceById(modified, 'badges', `<div class="kc-product-badges" id="badges">${buildBadgesHtml(post, values)}</div>`);
   modified = replaceById(modified, 'postDescription', `<div class="kc-product-description" id="postDescription">${paragraphHtml(values.rawDescription || values.description)}</div>`);
   modified = replaceById(modified, 'specsGrid', `<div class="kc-specs-grid" id="specsGrid">${specs.grid}</div>`);
@@ -1274,6 +1301,17 @@ function applyNoindexMeta(html, canonicalUrl) {
   return modified;
 }
 
+// Publicações legíveis fora do índice (encerradas/expiradas) continuam
+// servindo 200 — o app as mantém como histórico — mas precisam de título e
+// descrição honestos. Sem isso o SSR devolvia o shell genérico
+// ("KinoCampus - Detalhes"), o que classifica a página como soft-404.
+function applyReadableNonIndexableMeta(html, post, values) {
+  let modified = html;
+  if (cleanText(post && post.title)) modified = replaceTitleTag(modified, values.seoTitle);
+  if (cleanText(post && post.description)) modified = replaceOrInsertMetaDescription(modified, values.description);
+  return modified;
+}
+
 function insertOgImageDimensions(html, values) {
   if (!values || !values.ogImageProxied || /<meta\s+property="og:image:type"/i.test(html)) return html;
   const tags = ['<meta property="og:image:type" content="image/jpeg" />'];
@@ -1369,10 +1407,19 @@ export default async function handler(req, res) {
     // Use the raw shared policy input here. buildProductValues intentionally
     // has a display fallback title, which must never make an untitled record
     // indexable only in SSR while sitemap/RSS exclude it.
-    if (shouldIndexPost(post)) {
+    const indexable = shouldIndexPost(post);
+    if (indexable) {
       modified = applyIndexableMeta(modified, post, values);
-      modified = injectVisibleProductContent(modified, post, values);
+    } else {
+      // Legível, mas fora do índice (encerrada, expirada ou sem conteúdo
+      // mínimo): declara título/descrição honestos e mantém noindex.
+      modified = applyReadableNonIndexableMeta(modified, post, values);
     }
+    // O conteúdo visível entra nos dois caminhos: o app mantém publicações
+    // encerradas legíveis como histórico e o HTML inicial precisa refletir o
+    // mesmo estado que o cliente renderiza — nunca um shell "Carregando…".
+    modified = injectVisibleProductContent(modified, post, values);
+    if (!indexable) res.setHeader('X-Robots-Tag', NOINDEX_HEADER_VALUE);
 
     return sendHtmlResponse(res, 200, modified, 'public, max-age=0, s-maxage=300, stale-while-revalidate=600');
   } catch (err) {
