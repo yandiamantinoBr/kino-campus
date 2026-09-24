@@ -111,7 +111,7 @@ describe('_product.html - ordem canonica dos scripts do split', () => {
 
   test('carrega todos os sub-modulos com defer', () => {
     orderedScripts.forEach((src) => {
-      const re = new RegExp(`<script defer src="${src.replace(/\./g, '\\.')}${versionPattern}"></script>`);
+      const re = new RegExp(`<script defer src="/${src.replace(/\./g, '\\.')}${versionPattern}"></script>`);
       expect(htmlSource).toMatch(re);
     });
   });
@@ -119,7 +119,7 @@ describe('_product.html - ordem canonica dos scripts do split', () => {
   test('preserva a ordem incremental do core para os sub-modulos', () => {
     let lastIndex = -1;
     orderedScripts.forEach((src) => {
-      const re = new RegExp(`<script defer src="${src.replace(/\./g, '\\.')}${versionPattern}"></script>`);
+      const re = new RegExp(`<script defer src="/${src.replace(/\./g, '\\.')}${versionPattern}"></script>`);
       const match = htmlSource.match(re);
       const currentIndex = match ? match.index : -1;
       expect(currentIndex).toBeGreaterThan(lastIndex);

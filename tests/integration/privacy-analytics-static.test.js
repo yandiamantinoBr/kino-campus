@@ -77,8 +77,8 @@ describe('privacidade, cookies e analytics - contratos estaticos', () => {
     expect(page).toContain('privacyEventLogPrev');
     expect(page).toContain('privacyEventLogNext');
     expect(page).toContain('privacyEventLogCount');
-    expect(page).toContain('../assets/js/controllers/admin/admin-export.shared.js?v=8.6.11');
-    expect(page).toContain('../assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.3');
+    expect(page).toContain('/assets/js/controllers/admin/admin-export.shared.js?v=8.6.11');
+    expect(page).toContain('/assets/js/controllers/admin/admin-privacy-analytics.controller.js?v=8.6.3');
     expect(dashboard).toContain('admin-dashboard.privacy.js?v=8.6.11');
     expect(dashboard).toContain('privacy-analytics.html');
     expect(controller).toContain('isMissingRpcError');

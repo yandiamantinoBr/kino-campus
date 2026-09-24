@@ -92,9 +92,9 @@ describe('contrato visual e acessivel de Ocultar encerrados', () => {
     const scripts = Array.from(document.scripts)
       .map((script) => script.getAttribute('src'))
       .filter(Boolean);
-    const lifecycle = scripts.findIndex((src) => src.startsWith('assets/js/shared/kc-post-lifecycle.shared.js?'));
-    const toggle = scripts.findIndex((src) => src.startsWith('assets/js/features/kc-hide-closed.js?'));
-    const filters = scripts.findIndex((src) => src.startsWith('assets/js/api/kc-api.filters.js?'));
+    const lifecycle = scripts.findIndex((src) => src.startsWith('/assets/js/shared/kc-post-lifecycle.shared.js?'));
+    const toggle = scripts.findIndex((src) => src.startsWith('/assets/js/features/kc-hide-closed.js?'));
+    const filters = scripts.findIndex((src) => src.startsWith('/assets/js/api/kc-api.filters.js?'));
 
     expect(lifecycle).toBeGreaterThanOrEqual(0);
     expect(toggle).toBeGreaterThan(lifecycle);
@@ -106,8 +106,8 @@ describe('contrato visual e acessivel de Ocultar encerrados', () => {
     const scripts = Array.from(document.scripts)
       .map((script) => script.getAttribute('src'))
       .filter(Boolean);
-    const lifecycle = scripts.findIndex((src) => src.startsWith('assets/js/shared/kc-post-lifecycle.shared.js?'));
-    const searchShared = scripts.findIndex((src) => src.startsWith('assets/js/shared/kc-search.shared.js?'));
+    const lifecycle = scripts.findIndex((src) => src.startsWith('/assets/js/shared/kc-post-lifecycle.shared.js?'));
+    const searchShared = scripts.findIndex((src) => src.startsWith('/assets/js/shared/kc-search.shared.js?'));
 
     expect(lifecycle).toBeGreaterThanOrEqual(0);
     expect(searchShared).toBeGreaterThan(lifecycle);

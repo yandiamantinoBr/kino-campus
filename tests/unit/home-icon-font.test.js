@@ -86,7 +86,7 @@ describe('optional home icon subset with complete upstream fallback', () => {
   test('home loads the optional definition after vendor CSS and preloads only the compact font', () => {
     expect(html).toContain('assets/css/kc-ui-icons.css?v=1.0.0');
     expect(html.indexOf('assets/css/kc-ui-icons.css')).toBeGreaterThan(html.indexOf('assets/vendor/fontawesome/css/all.min.css'));
-    expect(html).toContain(`href="assets/fonts/kc-ui-icons/${manifest.subsetFile}" as="font" type="font/woff2" crossorigin`);
-    expect(html).not.toContain('href="assets/vendor/fontawesome/webfonts/fa-solid-900.woff2" as="font"');
+    expect(html).toContain(`href="/assets/fonts/kc-ui-icons/${manifest.subsetFile}" as="font" type="font/woff2" crossorigin`);
+    expect(html).not.toContain('href="/assets/vendor/fontawesome/webfonts/fa-solid-900.woff2" as="font"');
   });
 });

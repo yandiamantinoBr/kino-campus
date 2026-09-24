@@ -111,12 +111,12 @@ describe('contrato estrutural do seletor responsivo de módulos', () => {
     const sources = Array.from(document.scripts)
       .map((script) => script.getAttribute('src'))
       .filter(Boolean);
-    const schema = sources.findIndex((src) => src.startsWith('assets/js/features/create-post/kc-create-post.schema.js?'));
-    const picker = sources.findIndex((src) => src.startsWith('assets/js/features/kc-module-picker.js?'));
+    const schema = sources.findIndex((src) => src.startsWith('/assets/js/features/create-post/kc-create-post.schema.js?'));
+    const picker = sources.findIndex((src) => src.startsWith('/assets/js/features/kc-module-picker.js?'));
 
     expect(schema).toBeGreaterThanOrEqual(0);
     expect(picker).toBeGreaterThan(schema);
-    expect(sources.filter((src) => src.startsWith('assets/js/features/kc-module-picker.js?'))).toHaveLength(1);
+    expect(sources.filter((src) => src.startsWith('/assets/js/features/kc-module-picker.js?'))).toHaveLength(1);
   });
 
   test('a busca mantém seu seletor próprio e não duplica o picker de feed', () => {

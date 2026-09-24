@@ -26,7 +26,7 @@ describe('admin Cadu UX contracts', () => {
     ].forEach((relativePath) => {
       const canonicalText = fs.readFileSync(path.join(ROOT, relativePath), 'utf8').replace(/\r\n/g, '\n');
       const version = crypto.createHash('sha256').update(canonicalText, 'utf8').digest('hex').slice(0, 16);
-      expect(html).toContain(`src="../${relativePath}?v=${version}"`);
+      expect(html).toContain(`src="/${relativePath}?v=${version}"`);
     });
   });
 
@@ -34,7 +34,7 @@ describe('admin Cadu UX contracts', () => {
     const relativePath = 'assets/css/admin-cadu-reviews.css';
     const canonicalText = fs.readFileSync(path.join(ROOT, relativePath), 'utf8').replace(/\r\n/g, '\n');
     const version = crypto.createHash('sha256').update(canonicalText, 'utf8').digest('hex').slice(0, 16);
-    expect(html).toContain(`href="../${relativePath}?v=${version}"`);
+    expect(html).toContain(`href="/${relativePath}?v=${version}"`);
   });
 
   test('keeps the feed page size aligned with the visible default', () => {
@@ -229,8 +229,8 @@ describe('admin Cadu UX contracts', () => {
   });
 
   test('loads and validates the canonical registry before enabling source views', () => {
-    expect(html.indexOf('src="../assets/js/controllers/admin/admin-cadu-sources.js')).toBeLessThan(
-      html.indexOf('src="../assets/js/controllers/admin/admin-cadu.controller.js')
+    expect(html.indexOf('src="/assets/js/controllers/admin/admin-cadu-sources.js')).toBeLessThan(
+      html.indexOf('src="/assets/js/controllers/admin/admin-cadu.controller.js')
     );
     ['sources', 'entities', 'instagram', 'deferred'].forEach((view) => {
       expect(html).toContain(`<option value="${view}">`);

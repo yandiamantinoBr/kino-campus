@@ -553,7 +553,7 @@ describe('KCAds feed monetization', () => {
     ].forEach((file) => {
       const html = read(file);
       if (file === 'admin/banners.html') {
-        expect(html).toContain('../assets/js/features/kc-ads.js');
+        expect(html).toContain('/assets/js/features/kc-ads.js');
       } else {
         expect(html).not.toContain('assets/js/features/kc-ads.js');
       }

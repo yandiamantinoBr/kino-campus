@@ -177,7 +177,7 @@ describe('format-only JavaScript minification', () => {
   test('shrinks the Home script transfer without dropping any script', () => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const files = [...new Set([...html.matchAll(/<script\b[^>]*src="([^"]+)"/g)]
-      .map((match) => match[1].split('?')[0]).filter((file) => file.startsWith('assets/js/')))];
+      .map((match) => match[1].split('?')[0].replace(/^\//, '')).filter((file) => file.startsWith('assets/js/')))];
     const totals = files.reduce((total, file) => {
       const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
       const output = minifyJavaScript(source, file);

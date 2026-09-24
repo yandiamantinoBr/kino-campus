@@ -88,11 +88,11 @@ describe('validate-script-chains.js — integridade', function () {
     expect(CHAINS_SCRIPT).toContain('assets/js/boot/kc-telemetry.js');
   });
 
-  test('define cadeia de boot admin (prefixo "../")', function () {
+  test('define cadeia de boot admin (caminhos root-absolute)', function () {
     expect(CHAINS_SCRIPT).toContain('BOOT_CHAIN_ADMIN');
-    expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-constants.js');
-    expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-env.js');
-    expect(CHAINS_SCRIPT).toContain('../assets/js/boot/kc-telemetry.js');
+    expect(CHAINS_SCRIPT).toContain('/assets/js/boot/kc-constants.js');
+    expect(CHAINS_SCRIPT).toContain('/assets/js/boot/kc-env.js');
+    expect(CHAINS_SCRIPT).toContain('/assets/js/boot/kc-telemetry.js');
   });
 
   test('lista páginas públicas e admin pelo manifest compartilhado', function () {
@@ -150,7 +150,7 @@ describe('validate-script-chains.js — cadeia real nos HTMLs canônicos', funct
     test('admin "' + page + '" — cadeia de boot em ordem', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
       var positions = bootChain.map(function (script) {
-        return { script: script, pos: html.indexOf('../assets/js/' + script) };
+        return { script: script, pos: html.indexOf('/assets/js/' + script) };
       });
       positions.forEach(function (item) {
         expect(item.pos).toBeGreaterThan(-1);
