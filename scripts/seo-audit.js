@@ -232,8 +232,11 @@ function auditProductSsr(errors) {
 function auditGoogleTag(errors) {
   const tag = read('assets/js/boot/kc-google-tag.js');
   if (!tag.includes(GA4_MEASUREMENT_ID)) errors.push('kc-google-tag.js: Measurement ID GA4 ausente ou incorreto.');
-  if (!tag.includes("window.gtag('consent', 'default', consentPayload(false, false));")) {
-    errors.push('kc-google-tag.js: Consent Mode default denied ausente.');
+  if (!tag.includes("window.gtag('consent', 'default', consentDefaultsFor(STRICT_CONSENT_REGIONS));")) {
+    errors.push('kc-google-tag.js: Consent Mode v2 por regiao ausente (defaults STRICT_CONSENT_REGIONS).');
+  }
+  if (!tag.includes("window.gtag('consent', 'default', consentCatchAllDefaults());")) {
+    errors.push('kc-google-tag.js: Consent Mode v2 por regiao ausente (defaults catch-all).');
   }
   if (!tag.includes("window.KCConsent.hasConsent('analytics')")) {
     errors.push('kc-google-tag.js: integracao com KCConsent analytics ausente.');

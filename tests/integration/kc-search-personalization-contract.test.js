@@ -13,7 +13,7 @@ describe('search local personalization integration contract', () => {
     const html = read('search-results.html');
     const search = read('assets/js/features/kc-search.js');
     expect(env).toContain("'search.personalization': true");
-    expect(html).not.toContain('<script defer src="assets/js/shared/kc-search-affinity.shared.js');
+    expect(html).not.toContain('<script defer src="/assets/js/shared/kc-search-affinity.shared.js');
     expect(search).toContain("{ file: 'kc-search-affinity.shared.js', global: 'KCSearchAffinity' }");
     expect(search).toContain("window.KCFF.isEnabled('search.personalization', true)");
   });

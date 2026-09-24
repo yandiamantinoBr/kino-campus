@@ -27,7 +27,7 @@ describe('runtime Supabase vendorizado', () => {
   test('as 33 páginas carregam o SDK local antes do cliente KinoCampus', () => {
     ALL_HTML_PAGES.forEach((file) => {
       const html = read(file);
-      const src = file.startsWith('admin/') ? `../${VENDOR_PATH}` : VENDOR_PATH;
+      const src = `/${VENDOR_PATH}`;
       const versionedSrc = `${src}?v=2.112.4`;
       const script = `<script defer src="${versionedSrc}"></script>`;
 

@@ -160,8 +160,8 @@ describe('HTML chain — kc-sw-register injetado após kc-feature-flags', functi
   adminPages.forEach(function (page) {
     test('página admin "' + page + '" inclui kc-sw-register.js após kc-feature-flags.js', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
-      var idxFlags = html.indexOf('../assets/js/boot/kc-feature-flags.js');
-      var idxSW    = html.indexOf('../assets/js/boot/kc-sw-register.js');
+      var idxFlags = html.indexOf('/assets/js/boot/kc-feature-flags.js');
+      var idxSW    = html.indexOf('/assets/js/boot/kc-sw-register.js');
       expect(idxFlags).toBeGreaterThan(-1);
       expect(idxSW).toBeGreaterThan(-1);
       expect(idxSW).toBeGreaterThan(idxFlags);

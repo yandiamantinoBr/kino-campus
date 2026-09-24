@@ -85,7 +85,7 @@ describe('consentimento antecipado sem dependências ou permissões implícitas'
   test('index carrega consentimento primeiro, uma única vez e antes dos coletores', () => {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const scripts = Array.from(html.matchAll(/<script\b(?=[^>]*\bdefer\b)[^>]*\bsrc="([^"]+)"[^>]*>/g), (match) => match[1]);
-    expect(scripts[0]).toBe('assets/js/core/kc-consent.js?v=8.6.5');
+    expect(scripts[0]).toBe('/assets/js/core/kc-consent.js?v=8.6.5');
     expect(scripts.filter((src) => src.includes('kc-consent.js'))).toHaveLength(1);
     expect(html.indexOf('kc-consent.js')).toBeLessThan(html.indexOf('</head>'));
     expect(html.indexOf('kc-consent.js')).toBeLessThan(html.indexOf('kc-speed-insights.js'));
@@ -112,19 +112,24 @@ describe('consentimento antecipado sem dependências ou permissões implícitas'
     });
   });
 
-  test('cold boot e rejeição continuam sem injetar Google ou Vercel mesmo no domínio de produção', () => {
+  test('cold boot e rejeição mantêm Vercel sem injetar e preservam apenas o ping de consentimento do Google', () => {
     vm.runInContext(speedSource, harness.context);
     vm.runInContext(googleSource, harness.context);
     harness.consent.rejectOptional();
-    expect(document.querySelector('#kcGoogleTagScript, script[src*="/_vercel/"]')).toBeNull();
+    // A Google tag carrega sempre (Consent Mode v2); telemetria Vercel continua opt-in.
+    expect(document.querySelector('script[src*="/_vercel/"]')).toBeNull();
+    expect(document.querySelectorAll('#kcGoogleTagScript')).toHaveLength(1);
     expect(harness.window.si).toBeUndefined();
     expect(harness.window.va).toBeUndefined();
     expect(harness.window.KCGoogleTag.hasAnalyticsConsent()).toBe(false);
     const commands = harness.window.dataLayer.map((entry) => Array.from(entry));
     expect(commands).toEqual(expect.arrayContaining([
       ['consent', 'default', expect.objectContaining({ analytics_storage: 'denied', ad_storage: 'denied' })],
+      ['consent', 'update', expect.objectContaining({ analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied' })],
     ]));
-    expect(commands.some((command) => command[0] === 'event' && command[1] === 'page_view')).toBe(false);
+    const pageViews = commands.filter((command) => command[0] === 'event' && command[1] === 'page_view');
+    expect(pageViews).toHaveLength(1);
+    expect(JSON.stringify(pageViews)).not.toContain('user_id');
   });
 
   test('libera o fallback original se KCOverlayLock surgir depois, sem liberar outro modal', () => {

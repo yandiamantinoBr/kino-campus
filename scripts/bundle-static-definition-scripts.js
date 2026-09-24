@@ -232,7 +232,7 @@ function inspectHtml(html) {
 }
 
 function scriptSource(node) { return (node.attrs || []).find(attribute => attribute.name === 'src')?.value || ''; }
-function assetPath(node) { return scriptSource(node).split('?')[0]; }
+function assetPath(node) { return scriptSource(node).split('?')[0].replace(/^\//, ''); }
 function assertTag(node) {
   const attrs = node.attrs || [];
   const location = node.sourceCodeLocation;
@@ -240,7 +240,7 @@ function assertTag(node) {
     || attrs.length !== 2 || !attrs.some(attribute => attribute.name === 'src')
     || !attrs.some(attribute => attribute.name === 'defer' && attribute.value === '')
     || node.childNodes?.some(child => child.value && child.value.trim())) fail('HTML_SCRIPT_ATTRIBUTES', scriptSource(node));
-  if (!/^assets\/js\/[A-Za-z0-9_./-]+\.js(?:\?v=[0-9A-Za-z._-]+)?$/.test(scriptSource(node))) fail('HTML_SCRIPT_URL', scriptSource(node));
+  if (!/^\/?assets\/js\/[A-Za-z0-9_./-]+\.js(?:\?v=[0-9A-Za-z._-]+)?$/.test(scriptSource(node))) fail('HTML_SCRIPT_URL', scriptSource(node));
 }
 
 function groupNodes(html, scripts, group) {

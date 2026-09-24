@@ -110,8 +110,8 @@ describe('HTML chain — kc-telemetry injetado após kc-sw-register', function (
   adminPages.forEach(function (page) {
     test('admin "' + page + '" — kc-telemetry.js após kc-sw-register.js', function () {
       var html = fs.readFileSync(path.join(ROOT, page), 'utf8');
-      var idxSW  = html.indexOf('../assets/js/boot/kc-sw-register.js');
-      var idxTEL = html.indexOf('../assets/js/boot/kc-telemetry.js');
+      var idxSW  = html.indexOf('/assets/js/boot/kc-sw-register.js');
+      var idxTEL = html.indexOf('/assets/js/boot/kc-telemetry.js');
       expect(idxSW).toBeGreaterThan(-1);
       expect(idxTEL).toBeGreaterThan(-1);
       expect(idxTEL).toBeGreaterThan(idxSW);

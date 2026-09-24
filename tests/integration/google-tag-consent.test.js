@@ -109,25 +109,25 @@ describe('Google tag e consentimento LGPD', () => {
     expect(vercel).toContain('https://region1.google-analytics.com');
   });
 
-  test('script usa Consent Mode negado por padrao e libera analytics/publicidade por KCConsent', () => {
+  test('usa Consent Mode v2 com defaults por regiao e libera analytics/publicidade por KCConsent', () => {
     const source = read('assets/js/boot/kc-google-tag.js');
 
     expect(source).toContain("MEASUREMENT_ID = 'G-P9RKYHPB7Z'");
-    expect(source).toContain("window.gtag('consent', 'default', consentPayload(false, false));");
+    expect(source).toContain("window.gtag('consent', 'default', consentDefaultsFor(STRICT_CONSENT_REGIONS));");
+    expect(source).toContain("window.gtag('consent', 'default', consentCatchAllDefaults());");
     expect(source).toContain("gtag('consent', 'update', consentPayload(analyticsGranted, advertisingGranted));");
     expect(source).toContain("window.KCConsent.hasConsent('analytics')");
     expect(source).toContain("window.KCConsent.hasConsent('advertising')");
     expect(source).toContain("ad_storage: advertisingGranted ? 'granted' : 'denied'");
-    expect(source).toContain("ad_user_data: 'denied'");
+    expect(source).toContain("ad_user_data: advertisingGranted ? 'granted' : 'denied'");
     expect(source).toContain("ad_personalization: 'denied'");
     expect(source).toContain('allow_google_signals: false');
     expect(source).toContain('allow_ad_personalization_signals: false');
   });
 
-  test('runtime nao configura page_view quando analytics esta negado', () => {
+  test('runtime carrega a tag e envia page_view mesmo sem consentimento, sem identificador', () => {
     const source = read('assets/js/boot/kc-google-tag.js');
     const calls = [];
-    const listeners = {};
     let insertedScripts = 0;
     const context = {
       window: {
@@ -136,17 +136,21 @@ describe('Google tag e consentimento LGPD', () => {
           origin: 'https://www.kinocampus.com.br',
           href: 'https://www.kinocampus.com.br/',
         },
-        KCConsent: { hasConsent: () => false },
-        addEventListener: (name, handler) => { listeners[name] = handler; },
+        KCConsent: { hasConsent: () => false, getPreferences: () => null },
+        addEventListener: () => {},
       },
       document: {
+        title: 'Kino Campus',
+        referrer: '',
+        addEventListener: () => {},
         getElementById: () => null,
         createElement: () => ({}),
-        getElementsByTagName: () => [{ parentNode: { insertBefore: () => {} } }],
-        head: { appendChild: () => {} },
+        getElementsByTagName: () => [{ parentNode: { insertBefore: () => { insertedScripts += 1; } } }],
+        head: { appendChild: () => { insertedScripts += 1; } },
       },
       encodeURIComponent,
       Date,
+      Promise,
       URL,
     };
     context.window.dataLayer.push = function push(args) {
@@ -156,10 +160,74 @@ describe('Google tag e consentimento LGPD', () => {
 
     vm.runInNewContext(source, context);
 
+    // Consent Mode v2: defaults sempre antes de qualquer outra coisa.
     expect(calls.some((call) => call[0] === 'consent' && call[1] === 'default')).toBe(true);
-    expect(calls.some((call) => call[0] === 'config')).toBe(false);
-    expect(insertedScripts).toBe(0);
+    // A tag carrega e configura SEMPRE (ping de Consent Mode), mesmo sem opt-in.
+    expect(calls.some((call) => call[0] === 'config')).toBe(true);
+    expect(calls.some((call) => call[0] === 'event' && call[1] === 'page_view')).toBe(true);
+    expect(insertedScripts).toBe(1);
+    // O page_view sem consentimento nunca pode carregar identificador.
+    const identifiedCalls = calls.filter((call) => call.some(
+      (arg) => arg && typeof arg === 'object' && arg.user_id != null
+    ));
+    expect(identifiedCalls).toEqual([]);
     expect(context.window.KCGoogleTag.hasAnalyticsConsent()).toBe(false);
+  });
+
+  test('defaults por regiao negam EEA/UK/CH e concedem o restante', () => {
+    const source = read('assets/js/boot/kc-google-tag.js');
+    const calls = [];
+    const context = {
+      window: {
+        dataLayer: [],
+        location: {
+          origin: 'https://www.kinocampus.com.br',
+          href: 'https://www.kinocampus.com.br/',
+        },
+        KCConsent: { hasConsent: () => false, getPreferences: () => null },
+        addEventListener: () => {},
+      },
+      document: {
+        title: 'Kino Campus',
+        referrer: '',
+        addEventListener: () => {},
+        getElementById: () => null,
+        createElement: () => ({}),
+        getElementsByTagName: () => [{ parentNode: { insertBefore: () => {} } }],
+        head: { appendChild: () => {} },
+      },
+      encodeURIComponent,
+      Date,
+      Promise,
+      URL,
+    };
+    context.window.dataLayer.push = function push(args) {
+      calls.push(Array.from(args));
+      return Array.prototype.push.call(this, args);
+    };
+
+    vm.runInNewContext(source, context);
+
+    const defaults = calls.filter((call) => call[0] === 'consent' && call[1] === 'default');
+    expect(defaults.length).toBeGreaterThanOrEqual(2);
+
+    // 1o default: EEA + Reino Unido + Suica com opt-in obrigatorio (tudo negado).
+    const strictDefaults = defaults[0][2];
+    expect(Array.from(strictDefaults.region)).toEqual(expect.arrayContaining(['DE', 'GB', 'CH']));
+    expect(strictDefaults.ad_storage).toBe('denied');
+    expect(strictDefaults.ad_user_data).toBe('denied');
+    expect(strictDefaults.analytics_storage).toBe('denied');
+    expect(strictDefaults.wait_for_update).toBe(500);
+
+    // 2o default: catch-all SEM regiao, mensuracao concedida por padrao.
+    const catchAll = defaults[1][2];
+    expect(catchAll).not.toHaveProperty('region');
+    expect(catchAll.analytics_storage).toBe('granted');
+    expect(catchAll.ad_storage).toBe('granted');
+    expect(catchAll.ad_personalization).toBe('denied');
+
+    expect(Array.from(context.window.KCGoogleTag.strictConsentRegions))
+      .toEqual(expect.arrayContaining(['DE', 'GB', 'CH']));
   });
 
   test.each([

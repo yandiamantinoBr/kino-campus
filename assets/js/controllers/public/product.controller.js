@@ -443,7 +443,7 @@
         const fmt = String(formatBtn.dataset.kcFormat || '').trim();
         if (fmt) {
           if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
-            window.KCLazyLoader.load('assets/js/features/kc-comments.js', function() {
+            window.KCLazyLoader.load('/assets/js/features/kc-comments.js', function() {
               if (typeof window.formatText === 'function') window.formatText(fmt);
             });
           } else if (typeof window.formatText === 'function') {

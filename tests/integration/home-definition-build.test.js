@@ -71,7 +71,7 @@ test('production build groups exactly 38 definitions after formatting and keeps 
 test('strict opt-in cannot silently skip an absent production member', () => {
   const file = GROUPS[3].files.at(-1);
   const source = read(path.join(fixture, 'index.html'));
-  write('index.html', source.replace(new RegExp('<script defer src="' + file.replaceAll('.', '\\.') + '[^"]*"></script>'), ''));
+  write('index.html', source.replace(new RegExp('<script defer src="/?' + file.replaceAll('.', '\\.') + '[^"]*"></script>'), ''));
   expect(() => buildStaticOutput({ sourceRoot: fixture, outputRoot: output, definitionBundles: true }))
     .toThrow('STATIC_DEFINITION_BUNDLE_HTML_GROUP_MEMBERS');
   expect(fs.existsSync(path.join(output, 'assets/js/bundles'))).toBe(false);

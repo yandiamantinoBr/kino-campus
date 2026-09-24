@@ -59,9 +59,7 @@ describe('resiliência visual dos ícones', () => {
       expect(html).not.toContain(CDN_REFERENCE);
       if (!/class=["'][^"']*\bfa(?:s|r|b)\b/u.test(html)) return;
       const relative = path.relative(ROOT, file).replace(/\\/g, '/');
-      const expected = relative.startsWith('admin/')
-        ? '../assets/vendor/fontawesome/css/all.min.css?v=6.4.0'
-        : 'assets/vendor/fontawesome/css/all.min.css?v=6.4.0';
+      const expected = '/assets/vendor/fontawesome/css/all.min.css?v=6.4.0';
       expect(html).toContain(expected);
     });
   });

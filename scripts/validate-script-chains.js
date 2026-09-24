@@ -39,11 +39,11 @@ var BOOT_CHAIN_PUBLIC = [
 ];
 
 var BOOT_CHAIN_ADMIN = [
-  '../assets/js/boot/kc-constants.js',
-  '../assets/js/boot/kc-env.js',
-  '../assets/js/boot/kc-feature-flags.js',
-  '../assets/js/boot/kc-sw-register.js',
-  '../assets/js/boot/kc-telemetry.js',
+  '/assets/js/boot/kc-constants.js',
+  '/assets/js/boot/kc-env.js',
+  '/assets/js/boot/kc-feature-flags.js',
+  '/assets/js/boot/kc-sw-register.js',
+  '/assets/js/boot/kc-telemetry.js',
 ];
 
 // ── Páginas ───────────────────────────────────────────────────────────────────

@@ -241,6 +241,18 @@
     }
   }
 
+  function hasStoredConsentPreference() {
+    try {
+      return !!(
+        window.KCConsent &&
+        typeof window.KCConsent.getPreferences === 'function' &&
+        window.KCConsent.getPreferences()
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   function gtag() {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push(arguments);
@@ -318,10 +330,42 @@
     });
   }
 
+  // Regioes com opt-in obrigatorio (LGPD/GDPR): sinal opcional comeca negado
+  // ate o usuario decidir no banner. Os demais visitantes (inclui BR) herdam o
+  // catch-all concedido e usam o banner como opt-out. Ver docs/analytics.
+  var STRICT_CONSENT_REGIONS = Object.freeze([
+    'GB', 'CH',
+    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU',
+    'IS', 'IE', 'IT', 'LV', 'LI', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO',
+    'SK', 'SI', 'ES', 'SE',
+  ]);
+
+  function consentDefaultsFor(regions) {
+    var payload = consentPayload(false, false);
+    payload.wait_for_update = 500;
+    if (regions && regions.length) {
+      payload.region = Array.prototype.slice.call(regions);
+    }
+    return payload;
+  }
+
+  function consentCatchAllDefaults() {
+    return {
+      ad_storage: 'granted',
+      ad_user_data: 'granted',
+      ad_personalization: 'denied',
+      analytics_storage: 'granted',
+      functionality_storage: 'granted',
+      personalization_storage: 'denied',
+      security_storage: 'granted',
+      wait_for_update: 500,
+    };
+  }
+
   function consentPayload(analyticsGranted, advertisingGranted) {
     return {
       ad_storage: advertisingGranted ? 'granted' : 'denied',
-      ad_user_data: 'denied',
+      ad_user_data: advertisingGranted ? 'granted' : 'denied',
       ad_personalization: 'denied',
       analytics_storage: analyticsGranted ? 'granted' : 'denied',
       functionality_storage: 'granted',
@@ -347,7 +391,7 @@
   }
 
   function sendPageViewOnce() {
-    if (!isCollectionContextAllowed() || !hasAnalyticsConsent() || pageViewSent) return false;
+    if (!isCollectionContextAllowed() || pageViewSent) return false;
     var pageLocation = sanitizePageUrl(window.location && window.location.href);
     if (!pageLocation) return false;
     pageViewSent = true;
@@ -360,14 +404,16 @@
   }
 
   function scheduleInitialPageView() {
-    if (!isCollectionContextAllowed() || !hasAnalyticsConsent() || pageViewSent) {
+    if (!isCollectionContextAllowed() || pageViewSent) {
       return Promise.resolve(false);
     }
     if (initialPageViewRequest) return initialPageViewRequest;
 
-    // Test/non-browser contexts have no timer API. Keep the legacy immediate
-    // behavior there; real browsers always take the bounded auth-aware path.
-    if (!timerApi()) return Promise.resolve(sendPageViewOnce());
+    // Sem timers ou sem consentimento local de Metricas o page_view sai
+    // imediatamente (ping de Consent Mode, sem identificador pessoal); com
+    // consentimento, espera o User-ID pseudonimo para o primeiro hit ja sair
+    // vinculavel. Contextos de teste nao tem timers.
+    if (!timerApi() || !hasAnalyticsConsent()) return Promise.resolve(sendPageViewOnce());
 
     initialPageViewRequest = waitForInitialAuthState()
       .then(function () {
@@ -385,16 +431,8 @@
     return initialPageViewRequest;
   }
 
-  function updateConsent() {
+  function bootGoogleTag() {
     if (!isCollectionContextAllowed()) return false;
-    var analyticsGranted = hasAnalyticsConsent();
-    var advertisingGranted = hasAdvertisingConsent();
-    gtag('consent', 'update', consentPayload(analyticsGranted, advertisingGranted));
-    if (!analyticsGranted) {
-      clearPseudonymousUserId();
-      return true;
-    }
-
     loadScriptOnce();
     if (!window.__KC_GTAG_CONFIGURED__) {
       window.__KC_GTAG_CONFIGURED__ = true;
@@ -409,6 +447,21 @@
       if (pseudonymousUserId) config.user_id = pseudonymousUserId;
       gtag('config', MEASUREMENT_ID, config);
     }
+    scheduleInitialPageView();
+    return true;
+  }
+
+  function updateConsent() {
+    if (!isCollectionContextAllowed()) return false;
+    var analyticsGranted = hasAnalyticsConsent();
+    var advertisingGranted = hasAdvertisingConsent();
+    gtag('consent', 'update', consentPayload(analyticsGranted, advertisingGranted));
+    bootGoogleTag();
+    if (!analyticsGranted) {
+      clearPseudonymousUserId();
+      return true;
+    }
+
     if (authenticatedUserPresent) requestPseudonymousUserId();
     else applyUserId();
     scheduleInitialPageView();
@@ -418,10 +471,18 @@
   if (isCollectionContextAllowed()) {
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || gtag;
-    window.gtag('consent', 'default', consentPayload(false, false));
+    // Consent Mode v2 com defaults por regiao, sempre ANTES de qualquer tag.
+    // STRICT_CONSENT_REGIONS comeca negado; o catch-all sem regiao cobre os
+    // demais visitantes e evita perder mensuração onde nao ha opt-in exigido.
+    window.gtag('consent', 'default', consentDefaultsFor(STRICT_CONSENT_REGIONS));
+    window.gtag('consent', 'default', consentCatchAllDefaults());
     window.gtag('js', new Date());
 
-    updateConsent();
+    // A tag carrega SEMPRE (recomendacao do Google para cobertura de tag,
+    // pings de consent mode e modelagem comportamental). Preferencia ja
+    // persistida vira 'consent update'; sem preferencia, valem os defaults.
+    if (hasStoredConsentPreference()) updateConsent();
+    else bootGoogleTag();
 
     window.addEventListener('kc:consentchange', updateConsent);
     if (document && typeof document.addEventListener === 'function') {
@@ -443,6 +504,9 @@
     readCampaignConfig: readCampaignConfig,
     safePageTitle: safePageTitle,
     sendPageViewOnce: sendPageViewOnce,
+    bootGoogleTag: bootGoogleTag,
+    hasStoredConsentPreference: hasStoredConsentPreference,
+    strictConsentRegions: STRICT_CONSENT_REGIONS,
     setUserId: setUserId,
     updateConsent: updateConsent,
   });
