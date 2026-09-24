@@ -159,6 +159,7 @@
   }
 
   function clearPseudonymousUserId() {
+    clearUserProvidedData();
     userIdRequestVersion += 1;
     userIdRequest = null;
     pseudonymousUserId = null;
@@ -193,7 +194,12 @@
           !isValidPseudonymousUserId(subjectId)
         ) return null;
         pseudonymousUserId = subjectId;
+        var emailHash = result && result.data && isValidEmailHash(result.data.emailHash)
+          ? String(result.data.emailHash)
+          : '';
+        providedEmailHash = emailHash || null;
         applyUserId();
+        applyUserProvidedData();
         return subjectId;
       }, function () { return null; })
       .then(function (subjectId) {
@@ -238,6 +244,40 @@
       );
     } catch (_) {
       return false;
+    }
+  }
+
+  // User-provided data (UPD): o hash SHA-256 do e-mail e calculado no SERVIDOR
+  // pela Edge Function kc-analytics-subject-id e aplicado apenas com sessao
+  // autenticada + Metricas autorizadas. O e-mail nunca e lido no navegador.
+  var providedEmailHash = null;
+
+  function isValidEmailHash(value) {
+    return /^[0-9a-f]{64}$/.test(String(value || ''));
+  }
+
+  function applyUserProvidedData() {
+    if (!isCollectionContextAllowed() || !window.__KC_GTAG_CONFIGURED__ || !hasAnalyticsConsent()) {
+      return false;
+    }
+    if (!providedEmailHash || !authenticatedUserPresent) return false;
+    gtag('set', { user_data: { email_address: providedEmailHash } });
+    return true;
+  }
+
+  function syncUserProvidedData() {
+    if (!isCollectionContextAllowed() || !hasAnalyticsConsent() || !authenticatedUserPresent) {
+      return Promise.resolve(false);
+    }
+    return requestPseudonymousUserId().then(function () {
+      return applyUserProvidedData();
+    }, function () { return false; });
+  }
+
+  function clearUserProvidedData() {
+    providedEmailHash = null;
+    if (isCollectionContextAllowed() && window.__KC_GTAG_CONFIGURED__) {
+      gtag('set', { user_data: { email_address: null } });
     }
   }
 
@@ -462,8 +502,10 @@
       return true;
     }
 
-    if (authenticatedUserPresent) requestPseudonymousUserId();
-    else applyUserId();
+    if (authenticatedUserPresent) {
+      requestPseudonymousUserId();
+      syncUserProvidedData();
+    } else applyUserId();
     scheduleInitialPageView();
     return true;
   }
@@ -504,6 +546,8 @@
     readCampaignConfig: readCampaignConfig,
     safePageTitle: safePageTitle,
     sendPageViewOnce: sendPageViewOnce,
+    syncUserProvidedData: syncUserProvidedData,
+    clearUserProvidedData: clearUserProvidedData,
     bootGoogleTag: bootGoogleTag,
     hasStoredConsentPreference: hasStoredConsentPreference,
     strictConsentRegions: STRICT_CONSENT_REGIONS,

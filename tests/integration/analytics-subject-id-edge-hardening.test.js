@@ -26,12 +26,16 @@ describe('analytics subject id Edge Function hardening', () => {
     expect(INDEX).not.toContain('"Access-Control-Allow-Origin": "*"');
   });
 
-  test('uses a server-only HMAC and returns no raw Supabase UUID', () => {
+  test('uses a server-only HMAC and returns no raw Supabase UUID or e-mail', () => {
     expect(INDEX).toContain('KC_ANALYTICS_ID_SECRET');
     expect(SUBJECT).toContain('{ name: "HMAC", hash: "SHA-256" }');
     expect(SUBJECT).toContain('SUBJECT_PREFIX + userId.toLowerCase()');
-    expect(INDEX).toContain('{ ok: true, subjectId }');
+    // A resposta traz apenas identificadores opacos: subject id (HMAC do UUID) e
+    // o hash SHA-256 do e-mail (UPD, calculado no servidor). Nunca dados brutos.
+    expect(INDEX).toContain('{ ok: true, subjectId, emailHash }');
+    expect(INDEX).toContain('createAnalyticsEmailHash(data?.user?.email ?? "")');
     expect(INDEX).not.toContain('{ ok: true, userId');
+    expect(INDEX).not.toContain('{ ok: true, email');
     expect(INDEX).not.toMatch(/console\.(?:log|error|warn)/);
   });
 
