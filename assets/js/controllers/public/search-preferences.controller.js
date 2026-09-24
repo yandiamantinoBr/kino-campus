@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var REGISTRY_SRC = 'assets/js/shared/kc-search-registry.generated.js?v=8.6.13';
+  var REGISTRY_SRC = '/assets/js/shared/kc-search-registry.generated.js?v=8.6.13';
   var moduleIcons = {
     'achados-perdidos': 'fa-magnifying-glass',
     caronas: 'fa-car',

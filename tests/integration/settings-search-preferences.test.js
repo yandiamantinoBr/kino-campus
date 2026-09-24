@@ -26,8 +26,8 @@ describe('settings search personalization controls', () => {
   test('registry canônico permanece lazy e controller não coleta query nem campos de identidade', () => {
     const html = read('settings.html');
     const controller = read('assets/js/controllers/public/search-preferences.controller.js');
-    expect(html).not.toContain('<script defer src="assets/js/shared/kc-search-registry.generated.js');
-    expect(controller).toContain("REGISTRY_SRC = 'assets/js/shared/kc-search-registry.generated.js");
+    expect(html).not.toContain('<script defer src="/assets/js/shared/kc-search-registry.generated.js');
+    expect(controller).toContain("REGISTRY_SRC = '/assets/js/shared/kc-search-registry.generated.js");
     expect(controller).toContain('window.KCSearchPreferences.preferenceCatalog(registry)');
     expect(controller).not.toMatch(/searchInput|account_id/);
     expect(controller).toContain('getSearchPreferences');

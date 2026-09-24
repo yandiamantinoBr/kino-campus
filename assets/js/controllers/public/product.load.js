@@ -240,7 +240,7 @@
     _commentsLoadedForId = id;
 
     if (window.KCLazyLoader && typeof window.KCLazyLoader.load === 'function') {
-      window.KCLazyLoader.load('assets/js/features/kc-comments.js', function () {
+      window.KCLazyLoader.load('/assets/js/features/kc-comments.js', function () {
         if (typeof window.renderComments === 'function') {
           window.renderComments(id, 'commentsContainer');
         }
