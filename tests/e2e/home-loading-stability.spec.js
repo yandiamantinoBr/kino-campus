@@ -118,7 +118,7 @@ test('critical icon font preload matches the compact stylesheet request without 
   await expect(preload).toHaveAttribute('type', 'font/woff2');
   await expect(preload).toHaveAttribute('crossorigin', '');
   const icons = require('../../assets/fonts/kc-ui-icons/manifest.json');
-  await expect(preload).toHaveAttribute('href', 'assets/fonts/kc-ui-icons/' + icons.subsetFile);
+  await expect(preload).toHaveAttribute('href', '/assets/fonts/kc-ui-icons/' + icons.subsetFile);
   await page.evaluate(() => document.fonts.ready);
   const requests = await page.evaluate(file => performance.getEntriesByType('resource').filter(entry => entry.name.includes('/fonts/kc-ui-icons/' + file)).map(entry => entry.name), icons.subsetFile);
   expect(requests).toHaveLength(1);
