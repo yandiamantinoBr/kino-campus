@@ -4,8 +4,12 @@ for (const width of [390, 1280]) {
   test(`consent paints before later deferred scripts and survives late auth boot at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const optionalRequests = [];
+    // Consent Mode v2: a Google tag (googletagmanager/google-analytics) carrega
+    // por design; AdSense (googlesyndication/doubleclick) e telemetria Vercel
+    // continuam estritamente bloqueados ate a escolha de consentimento.
+    const gatedRequest = /googlesyndication\.com|doubleclick|va\.vercel-scripts\.com|\/_vercel\/(?:insights|speed-insights)\//;
     page.on('request', (request) => {
-      if (/googletagmanager\.com|google-analytics\.com|googlesyndication\.com|\/_vercel\/(?:insights|speed-insights)\//.test(request.url())) {
+      if (/googletagmanager\.com|google-analytics\.com|googlesyndication\.com|doubleclick|va\.vercel-scripts\.com|\/_vercel\/(?:insights|speed-insights)\//.test(request.url())) {
         optionalRequests.push(request.url());
       }
     });
@@ -76,7 +80,7 @@ for (const width of [390, 1280]) {
       await page.locator('.kc-user-actions [data-kc-login]').click();
       await expect(page.locator('#kcAuthModal')).toHaveClass(/active/);
       await expect(page.locator('#kcAuthModal')).toBeVisible();
-      expect(optionalRequests).toEqual([]);
+      expect(optionalRequests.filter((url) => gatedRequest.test(url))).toEqual([]);
     } finally {
       releaseBoot();
     }

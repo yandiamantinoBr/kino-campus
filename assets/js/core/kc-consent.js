@@ -288,7 +288,7 @@
       '<section class="kc-consent-banner" id="kcConsentBanner" role="dialog" aria-live="polite" aria-label="Aviso de privacidade e cookies" data-i18n-aria-label="aria-label.privacy-cookie-notice" hidden>',
       '  <div class="kc-consent-banner__content">',
       '    <strong><i class="fas fa-shield-halved" aria-hidden="true"></i> Privacidade no KinoCampus</strong>',
-      '    <p>Usamos dados necessários para manter a plataforma funcionando. Com sua autorização, também usamos preferências, métricas e publicidade controlada para melhorar a experiência.</p>',
+      '    <p>Usamos dados necessários para manter a plataforma funcionando. Métricas de uso ajudam a melhorar o KinoCampus e são coletadas por padrão fora da EEA, Reino Unido e Suíça - você pode recusar aqui. Preferências e publicidade só com sua autorização.</p>',
       '    <div class="kc-consent-banner__links">',
       `      <a href="${getLegalHref('/privacidade')}">Declaração de Privacidade</a>`,
       `      <a href="${getLegalHref('/termos')}">Termos de Uso</a>`,
@@ -308,7 +308,7 @@
       '      <button type="button" class="kc-consent-modal__close" aria-label="Fechar preferências" data-i18n-aria-label="aria-label.close-cookie-preferences" data-consent-close><span class="kc-consent-modal__close-glyph" aria-hidden="true">×</span></button>',
       '    </header>',
       '    <div class="kc-consent-modal__body">',
-      '      <p>Você controla os usos opcionais. Cookies e dados necessários continuam ativos para autenticação, segurança e funcionamento básico.</p>',
+      '      <p>Você controla os usos opcionais. Cookies e dados necessários continuam ativos para autenticação, segurança e funcionamento básico. Métricas seguem o padrão acima; basta salvar para recusar.</p>',
       '      <label class="kc-consent-option is-locked">',
       '        <span><strong>Necessários</strong><small>Autenticação, segurança, sessão, idioma, tema e operação da plataforma.</small></span>',
       '        <input type="checkbox" checked disabled />',
@@ -355,12 +355,13 @@
     if (active) {
       if (!wasOpen) setBackgroundInert(modal);
       lockScroll(true);
-      const prefs = readPreferences() || DEFAULT_PREFERENCES;
+      const storedPrefs = readPreferences();
+      const prefs = storedPrefs || DEFAULT_PREFERENCES;
       const preferencesInput = $('#kcConsentPreferences');
       const analyticsInput = $('#kcConsentAnalytics');
       const advertisingInput = $('#kcConsentAdvertising');
       if (preferencesInput) preferencesInput.checked = prefs.preferences === true;
-      if (analyticsInput) analyticsInput.checked = prefs.analytics === true;
+      if (analyticsInput) analyticsInput.checked = storedPrefs ? storedPrefs.analytics === true : true;
       if (advertisingInput) advertisingInput.checked = prefs.advertising === true;
       setTimeout(function () {
         const target = $('#kcConsentPreferences') || $('[data-consent-save]');
