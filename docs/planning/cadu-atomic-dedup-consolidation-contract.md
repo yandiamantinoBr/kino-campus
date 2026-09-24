@@ -14,7 +14,7 @@ Estado em 24/09/2026: **proposta local, sem rota de escrita, RPC ou migration**.
 
 Somente dois posts distintos de `eventos` ou `oportunidades`, do mesmo publisher confiável, ambos `published/public`, com o canônico mais antigo e ainda válido, mesma identidade de fonte (`source_id`, `source_url`, `source_registry_id`) **e** fatos públicos, metadata e conteúdo lógico de mídia exatamente iguais. `source_url` por si só nunca autoriza consolidação. Posts com lock manual, tombstone, conflito manual-distinct, validade incerta, mídia diferente ou qualquer campo factual divergente ficam bloqueados. A revisão deve verificar que o canônico mais antigo é realmente o registro válido, não apenas o menor `created_at`.
 
-O preview atual verifica 15 campos canônicos e as seis colunas de cada mídia por post, sem fazer chamadas de rede. Ele retorna `review_only`, nunca `approved` nem `apply`. O banco futuro precisa comparar **todas** as colunas relevantes após adquirir locks, incluindo precisão de microssegundos, e preservar os campos operacionais não editados.
+O preview atual verifica 15 campos canônicos e as seis colunas de cada mídia por post, sem fazer chamadas de rede. A ordem de criação conserva microssegundos, e datas semânticas de inscrição/evento vencidas bloqueiam o par mesmo se `expires_at` ainda for futuro. Ele retorna `review_only`, nunca `approved` nem `apply`. O banco futuro precisa comparar **todas** as colunas relevantes após adquirir locks, incluindo precisão de microssegundos, e preservar os campos operacionais não editados.
 
 ## Interface proposta, ainda ausente
 
@@ -89,7 +89,7 @@ Rollback exige novo `operationId`, referência ao último evento aplicado e CAS 
 
 ## Provas exigidas antes de habilitar aplicação
 
-1. Fixtures com fonte compilatória × item individual, edição manual, divergência de prazo, instrução, preço/local, mídia e par factualmente idêntico. O preview sintético cobre 20 casos; isso **não** prova o RPC.
+1. Fixtures com fonte compilatória × item individual, edição manual, divergência de prazo, instrução, preço/local, mídia, microssegundos e par factualmente idêntico. O preview sintético cobre 29 casos; isso **não** prova o RPC.
 2. Banco local descartável: dois workers disputando o mesmo par; um commit e outro `EDIT_CONFLICT`; replay idempotente; `operationId` reaproveitado com payload diferente; mídia inserida ou alterada durante lock; timestamps com microssegundos; trigger que modifica terceiro campo; falha na ledger/audit que reverte os dois posts.
 3. ACL/RLS: `anon` e `authenticated` sem `EXECUTE`; apenas sessão oficial de Cadu e publisher confiável, via Edge autenticada. Revisão da política de retenção e erasure da nova ledger.
 4. Rollback local sob CAS e bloqueio explícito após mudanças de validade, locks ou moderação. Recibo Edge verifica os dois posts e galerias.

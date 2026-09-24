@@ -9,7 +9,7 @@ const { assessAtomicDedupPreview } = require('./cadu-atomic-dedup-preview');
 const fixture = JSON.parse(fs.readFileSync(path.join(
   __dirname, '../tests/fixtures/cadu-atomic-dedup-pair.json',
 ), 'utf8'));
-const fixedNow = new Date('2098-01-03T00:00:00.000Z');
+const fixedNow = new Date('2098-01-03T12:00:00.000Z');
 const clone = () => structuredClone(fixture);
 const baseline = clone();
 const original = JSON.stringify(baseline);
@@ -18,6 +18,14 @@ assert.equal(exact.decision, 'review_only');
 assert.deepEqual(exact.reasons, []);
 assert(exact.requiredBeforeMutation.includes('fresh_full_post_and_media_CAS'));
 assert.equal(JSON.stringify(baseline), original, 'preview may not mutate input');
+const sameMicrosecond = clone();
+sameMicrosecond.canonical.created_at = '2098-01-02T10:00:00.1Z';
+sameMicrosecond.redundant.created_at = '2098-01-02T10:00:00.100000Z';
+assert.equal(assessAtomicDedupPreview(sameMicrosecond, fixedNow).decision, 'review_only');
+const deadlineToday = clone();
+deadlineToday.canonical.metadata.dates.applicationDeadline = '2098-01-03';
+deadlineToday.redundant.metadata.dates.applicationDeadline = '2098-01-03';
+assert.equal(assessAtomicDedupPreview(deadlineToday, fixedNow).decision, 'review_only');
 
 const blocked = [
   ['same source page, different individual title', (p) => { p.redundant.title = 'Bolsa para outro projeto'; }, 'PUBLIC_FACTS_DIFFER'],
@@ -32,7 +40,35 @@ const blocked = [
   ['pair-level manual distinction', (p) => { p.manualDistinctPair = true; }, 'MANUAL_DISTINCT_OR_LOCKED'],
   ['prior tombstone', (p) => { p.redundant.metadata.merged_into_post_id = p.canonical.id; }, 'EXISTING_DEDUP_TOMBSTONE'],
   ['canonical newer', (p) => { p.canonical.created_at = '2098-01-04T00:00:00.000001Z'; }, 'CANONICAL_NOT_OLDEST'],
+  ['canonical newer by one microsecond', (p) => {
+    p.canonical.created_at = '2098-01-02T10:00:00.123457Z';
+    p.redundant.created_at = '2098-01-02T10:00:00.123456Z';
+  }, 'CANONICAL_NOT_OLDEST'],
+  ['canonical newer by fractional precision', (p) => {
+    p.canonical.created_at = '2098-01-02T10:00:00.1234Z';
+    p.redundant.created_at = '2098-01-02T10:00:00.123399Z';
+  }, 'CANONICAL_NOT_OLDEST'],
   ['canonical expired', (p) => { p.canonical.expires_at = '2098-01-02T00:00:00.000000Z'; }, 'CANONICAL_EXPIRED'],
+  ['semantic application deadline expired despite future expires_at', (p) => {
+    p.canonical.metadata.dates.applicationDeadline = '2098-01-02';
+    p.redundant.metadata.dates.applicationDeadline = '2098-01-02';
+    p.canonical.description = p.redundant.description = 'Inscrições até 2 de janeiro de 2098.';
+  }, 'CANONICAL_SEMANTIC_EXPIRED'],
+  ['expired event end despite future expires_at', (p) => {
+    p.canonical.module = p.redundant.module = 'eventos';
+    p.canonical.metadata.dates = p.redundant.metadata.dates = { eventEndsAt: '2098-01-02' };
+  }, 'CANONICAL_SEMANTIC_EXPIRED'],
+  ['malformed semantic deadline cannot be treated as active', (p) => {
+    p.canonical.metadata.dates.applicationDeadline = '2098-02-30';
+    p.redundant.metadata.dates.applicationDeadline = '2098-02-30';
+  }, 'CANONICAL_SEMANTIC_UNVERIFIED'],
+  ['terminal semantic status', (p) => {
+    p.canonical.metadata.applicationStatus = p.redundant.metadata.applicationStatus = 'closed';
+  }, 'CANONICAL_SEMANTIC_EXPIRED'],
+  ['generic active-until expired when typed date absent', (p) => {
+    p.canonical.metadata.dates = p.redundant.metadata.dates = {};
+    p.canonical.metadata.activeUntil = p.redundant.metadata.activeUntil = '2098-01-02';
+  }, 'CANONICAL_SEMANTIC_EXPIRED'],
   ['not both public', (p) => { p.redundant.status = 'closed'; }, 'NOT_TWO_PUBLIC_POSTS'],
   ['cover differs from media', (p) => { p.redundant.image_url = 'https://example.test/missing.png'; }, 'REDUNDANT_COVER_MISMATCH'],
   ['media snapshot incomplete', (p) => { delete p.redundantMedia[0].created_at; }, 'INVALID_MEDIA_SNAPSHOT'],
@@ -53,7 +89,7 @@ for (const [name, change, code] of blocked) {
 }
 
 console.log(JSON.stringify({
-  passed: blocked.length + 1,
+  passed: blocked.length + 3,
   permittedMutations: 0,
   contract: 'cadu-atomic-dedup-preview-v1',
   fixture: 'synthetic',

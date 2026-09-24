@@ -19,6 +19,29 @@ const MANUAL_FLAGS = [
   'manual_edits_lock', 'manual_description', 'manual_distinct',
   'manual_distinct_pair', 'dedup_manual_distinct',
 ];
+// Match the semantic date aliases checked by cadu-publish/integrity-lifecycle.ts.
+const APPLICATION_DATES = [
+  'applicationDeadline', 'application_deadline', 'applicationDeadlineAt', 'application_deadline_at',
+  'deadlineAt', 'deadline_at', 'deadlineDate', 'deadline_date', 'deadline', 'dataLimite',
+  'data_limite', 'inscricoesAte', 'inscricoes_ate', 'prazoInscricao', 'prazo_inscricao',
+  'submissionDeadline', 'submission_deadline', 'prazo',
+];
+const EVENT_END_DATES = [
+  'eventEndsAt', 'event_ends_at', 'eventEnd', 'event_end', 'endsAt', 'ends_at',
+  'endAt', 'end_at', 'dataFimEvento', 'data_fim_evento', 'dataFim', 'data_fim',
+  'dateEnd', 'date_end', 'dateEndAt', 'date_end_at',
+];
+const EVENT_START_DATES = [
+  'eventStartsAt', 'event_starts_at', 'eventStart', 'event_start', 'startsAt',
+  'starts_at', 'startAt', 'start_at', 'dataInicioEvento', 'data_inicio_evento',
+  'dataEvento', 'data_evento', 'eventDate', 'event_date', 'event_date_detected',
+  'dateStart', 'date_start', 'date', 'data',
+];
+const CLOSED_STATES = new Set([
+  'closed', 'expired', 'past', 'ended', 'cancelled', 'canceled', 'encerrado',
+  'encerrada', 'cancelado', 'cancelada', 'finalizado', 'finalizada',
+  'deleted', 'hidden', 'archived',
+]);
 
 function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -29,9 +52,77 @@ function exactFields(value, fields) {
 }
 
 function timestamp(value) {
-  return typeof value === 'string' && value.length <= 40 &&
-    /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?Z$/.test(value) &&
-    Number.isFinite(Date.parse(value));
+  return timestampMicros(value) !== null;
+}
+
+function timestampMicros(value) {
+  if (typeof value !== 'string' || value.length > 40) return null;
+  const match = value.match(/^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,6}))?Z$/);
+  if (!match || !Number.isFinite(Date.parse(value)) ||
+    new Date(value).toISOString().slice(0, 19) !== match[1]) return null;
+  return `${match[1]}.${(match[2] || '').padEnd(6, '0')}Z`;
+}
+
+function semanticParts(post) {
+  const meta = post.metadata;
+  return [meta, object(meta.dates) ? meta.dates : {}, object(meta.validity) ? meta.validity : {}];
+}
+
+function semanticValues(parts, keys) {
+  return parts.flatMap((part) => keys.map((key) => part[key]))
+    .filter((value) => value !== undefined && value !== null);
+}
+
+function saoPauloToday(now) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  return ['year', 'month', 'day'].map((key) => parts.find((part) => part.type === key).value).join('-');
+}
+
+function semanticDateState(value, now) {
+  if (typeof value !== 'string' || value.length > 40) return 'unknown';
+  const civil = value.match(/^(\d{4}-\d{2}-\d{2})(?:$|[T ])(.*)$/);
+  if (!civil || !Number.isFinite(Date.parse(`${civil[1]}T00:00:00Z`)) ||
+    new Date(`${civil[1]}T00:00:00Z`).toISOString().slice(0, 10) !== civil[1]) return 'unknown';
+  if (value.length === 10) return value < saoPauloToday(now) ? 'past' : 'active';
+  const explicit = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+  const local = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/;
+  if (!explicit.test(value) && !local.test(value)) return 'unknown';
+  const millis = Date.parse(`${value.replace(' ', 'T')}${local.test(value) ? '-03:00' : ''}`);
+  return Number.isFinite(millis) ? (millis <= +now ? 'past' : 'active') : 'unknown';
+}
+
+function semanticState(post, now) {
+  const parts = semanticParts(post);
+  if ((post.metadata.dates !== undefined && !object(post.metadata.dates)) ||
+    (post.metadata.validity !== undefined && !object(post.metadata.validity))) return 'unknown';
+  if (semanticValues(parts, ['expired', 'isExpired', 'is_expired', 'isClosed', 'is_closed'])
+    .some((value) => value === true || value === 'true')) return 'past';
+  if (semanticValues(parts, ['applicationStatus', 'application_status', 'temporalStatus',
+    'lifecycleStatus', 'lifecycle_status', ...(post.module === 'eventos' ? ['eventStatus', 'event_status'] : [])])
+    .some((value) => CLOSED_STATES.has(String(value).trim().toLowerCase()))) return 'past';
+  const applicationDates = semanticValues(parts, APPLICATION_DATES);
+  const eventEndDates = post.module === 'eventos' ? semanticValues(parts, EVENT_END_DATES) : [];
+  const eventDates = post.module === 'eventos' && !eventEndDates.length
+    ? semanticValues(parts, EVENT_START_DATES) : eventEndDates;
+  const dates = [...applicationDates, ...eventDates];
+  const states = dates.map((date) => semanticDateState(date, now));
+  if (states.includes('past')) return 'past';
+  if (states.includes('unknown')) return 'unknown';
+  if (!dates.length) {
+    const generic = semanticValues(parts, [
+      'activeUntil', 'active_until', 'expiresAt', 'expires_at', 'validUntil',
+      'valid_until', 'validThrough', 'data_encerramento', 'expirationDate',
+      'expiration_date',
+    ]).map((date) => semanticDateState(date, now));
+    if (generic.includes('past')) return 'past';
+    if (generic.includes('unknown')) return 'unknown';
+  }
+  if (semanticValues(parts, ['canApply', 'can_apply']).some((value) => value === false || value === 'false')) {
+    return 'unknown';
+  }
+  return 'active';
 }
 
 function mediaShape(rows, postId) {
@@ -72,6 +163,9 @@ function mediaContent(rows) {
 
 function assessAtomicDedupPreview(input, now = new Date()) {
   const reasons = [];
+  if (!(now instanceof Date) || !Number.isFinite(+now)) {
+    return { decision: 'blocked', reasons: ['INVALID_REFERENCE_TIME'] };
+  }
   const keep = input?.canonical;
   const hide = input?.redundant;
   if (![keep, hide].every((post) => exactFields(post, POST_FIELDS) &&
@@ -88,10 +182,19 @@ function assessAtomicDedupPreview(input, now = new Date()) {
   if (!['eventos', 'oportunidades'].includes(keep.module) || keep.module !== hide.module) reasons.push('MODULE_MISMATCH');
   if (keep.status !== 'published' || hide.status !== 'published' ||
     keep.visibility !== 'public' || hide.visibility !== 'public') reasons.push('NOT_TWO_PUBLIC_POSTS');
-  if (Date.parse(keep.created_at) > Date.parse(hide.created_at) ||
-    (keep.created_at === hide.created_at && keep.id > hide.id)) reasons.push('CANONICAL_NOT_OLDEST');
+  const keepCreated = timestampMicros(keep.created_at);
+  const hideCreated = timestampMicros(hide.created_at);
+  if (keepCreated > hideCreated ||
+    (keepCreated === hideCreated && keep.id.toLowerCase() > hide.id.toLowerCase())) {
+    reasons.push('CANONICAL_NOT_OLDEST');
+  }
   if (keep.expires_at !== null && (!timestamp(keep.expires_at) || Date.parse(keep.expires_at) <= +now)) {
     reasons.push('CANONICAL_EXPIRED');
+  }
+  for (const [post, label] of [[keep, 'CANONICAL'], [hide, 'REDUNDANT']]) {
+    const state = semanticState(post, now);
+    if (state === 'past') reasons.push(`${label}_SEMANTIC_EXPIRED`);
+    if (state === 'unknown') reasons.push(`${label}_SEMANTIC_UNVERIFIED`);
   }
   if (!sourceIdentity(keep.metadata) || !sourceIdentity(hide.metadata)) reasons.push('SOURCE_IDENTITY_MISSING');
   else if (['source_id', 'source_url', 'source_registry_id'].some(
