@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { handleEdit } from "./index.ts";
+import { capabilitiesPayload, handleEdit, integrityCapabilitiesPayload } from "./index.ts";
 import {
   INTEGRITY_FIELDS, integrityMediaReceiptMatches, integritySnapshot,
   prepareIntegrityUpdate, preserveRestrictiveDateMarkers, sameValue,
   validateIntegrityRequest,
 } from "./integrity.ts";
 import { integrityReactivationReason, isActiveIntegrityScoreRepair } from "./integrity-lifecycle.ts";
+import { lightHash } from "./util.ts";
 
 const POST_ID = "6fe40430-94f7-480d-a3da-777e38d0b8f0";
 const OWNER = "cadu-user";
@@ -14,6 +15,19 @@ const ROLLBACK_ID = "1b3d02ac-f3de-4023-8629-89807185c2e8";
 const SOURCE_URL = "https://ufg.br/n/203312";
 const SOURCE_ID = `web.ufg.portal:${SOURCE_URL}`;
 const COVER = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/congress.jpg";
+Deno.test("legacy capabilities keep their exact OpenClaw-compatible shape", () => {
+  assert.deepEqual(Object.keys(capabilitiesPayload()).sort(), [
+    "ok", "code", "capabilityVersion", "canonicalReclassification", "canonicalIntegrityCorrection",
+    "canonicalModeration", "canonicalMediaCorrection", "institutionalReviewEnabled",
+    "reviewPolicyCode", "createReviewRpc",
+  ].sort());
+  const probe = integrityCapabilitiesPayload();
+  assert.deepEqual(Object.keys(probe).sort(), ["ok", "code", "read_only", "mutation_dispatched",
+    "repairContractVersion", "canonicalIntegrityCorrection", "preservesHistoricalProvenance",
+    "preservesExactTagPairs"].sort());
+  assert.equal(probe.repairContractVersion, "cadu-integrity-preserve-provenance-v1");
+  assert.equal(probe.read_only, true); assert.equal(probe.mutation_dispatched, false);
+});
 function currentPost() {
   return {
     id: POST_ID, author_id: OWNER, created_at: "2026-08-14T15:16:05.638783+00:00",
@@ -179,6 +193,52 @@ Deno.test("integrity correction atomically restores original CONPEEX and detache
   const history = (state.metadata as Record<string, unknown>).cadu_integrity_history as Record<string, unknown>[];
   assert.equal(history.length, 1); assert.equal(history[0].operation_id, OPERATION_ID);
   assert.deepEqual((history[0].before as Record<string, unknown>).metadata, initial.metadata);
+});
+
+Deno.test("legacy integrity repair keeps exact run provenance and reviewed tag pairs through rollback", async () => {
+  const thematicTags = ["Acadêmicos", "Pesquisa", "Matemática", "Ensino", "Extensão", "Festival",
+    "UFG", "IME", "LEMAT", "Escolas Públicas", "Oficinas", "Goiás"];
+  const thematicKeys = ["academicos", "pesquisa", "matematica", "ensino", "extensao", "festival",
+    "ufg", "ime", "lemat", "escolas-publicas", "oficinas", "goias"];
+  for (const markers of [{}, { cadu_run_id: null, cadu_published: null },
+    { cadu_run_id: "historic-run", cadu_published: false }]) {
+    const initial = currentPost();
+    const initialMeta = initial.metadata as Record<string, unknown>;
+    Object.assign(initialMeta, markers, { tags: thematicTags, tagKeys: thematicKeys });
+    const body = request(initial);
+    const item = body.integrityCorrection.item as Record<string, unknown>;
+    item.tags = [...thematicTags]; item.tagKeys = [...thematicKeys];
+    const harness = fakeAdmin(initial);
+    const response = await handleEdit(harness.admin as never, OWNER, body);
+    assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
+    const corrected = harness.state(); const correctedMeta = corrected.metadata as Record<string, unknown>;
+    assert.deepEqual(correctedMeta.tags, thematicTags); assert.deepEqual(correctedMeta.tagKeys, thematicKeys);
+    assert.deepEqual(correctedMeta.userTags, initialMeta.userTags);
+    for (const key of ["cadu_run_id", "cadu_published"]) {
+      assert.equal(Object.hasOwn(correctedMeta, key), Object.hasOwn(initialMeta, key));
+      if (Object.hasOwn(initialMeta, key)) assert.deepEqual(correctedMeta[key], initialMeta[key]);
+    }
+    assert.equal(correctedMeta.original_title, item.title);
+    assert.equal(correctedMeta.content_hash, lightHash(`${item.title}\n${item.text}`));
+    const rollback = fakeAdmin(corrected as ReturnType<typeof currentPost>);
+    const result = await handleEdit(rollback.admin as never, OWNER, { action: "edit", postId: POST_ID,
+      integrityCorrection: { operation: "rollback", operationId: ROLLBACK_ID, rollbackOf: OPERATION_ID,
+        expected: integritySnapshot(corrected), reason: "Restaurar o snapshot historico exato sem criar linhagem nova.", evidence: evidence() } });
+    assert.equal(result.status, 200, JSON.stringify(await result.clone().json()));
+    const restoredMeta = { ...(rollback.state().metadata as Record<string, unknown>) };
+    delete restoredMeta.cadu_integrity_history;
+    assert.deepEqual(restoredMeta, initialMeta);
+  }
+});
+
+Deno.test("reviewed tag pairs require an exact snapshot copy", async () => {
+  const initial = currentPost(); const meta = initial.metadata as Record<string, unknown>;
+  meta.tags = ["Acadêmicos", "Pesquisa"]; meta.tagKeys = ["academicos", "pesquisa"];
+  const body = request(initial); const item = body.integrityCorrection.item as Record<string, unknown>;
+  item.tags = ["Acadêmicos", "Pesquisa"]; item.tagKeys = ["academicos", "outra-fonte"];
+  const harness = fakeAdmin(initial);
+  assert.equal((await handleEdit(harness.admin as never, OWNER, body)).status, 200);
+  assert.notDeepEqual((harness.state().metadata as Record<string, unknown>).tagKeys, meta.tagKeys);
 });
 
 Deno.test("integrity correction can roll back the exact last state without losing audit history or media", async () => {

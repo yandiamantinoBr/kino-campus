@@ -13,6 +13,7 @@
 //
 // Acoes (POST /functions/v1/cadu-publish):
 //   { action: "capabilities" }              -> contrato read-only do endpoint
+//   { action: "integrity-capabilities" }    -> versao read-only do reparo CAS, isolada do contrato Cadu
 //   { action: "diagnose-media", postId, mediaDiagnostic } -> verifica bytes sem mutacao
 //   { action: "publish", item, options? }   -> cria post + capa
 //   { action: "review", ...reviewEnvelope } -> cria sugestao duravel pending
@@ -135,6 +136,31 @@ function json(status: number, body: Record<string, unknown>) {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS },
   });
+}
+
+// Keep the legacy capabilities envelope byte-for-byte compatible in shape:
+// OpenClaw validates its keys strictly. New repair probes use a separate action.
+export function capabilitiesPayload() {
+  return {
+    ok: true, code: "OK", capabilityVersion: CAPABILITY_VERSION,
+    canonicalReclassification: RECLASSIFICATION_CONTRACT,
+    canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
+    canonicalModeration: MODERATION_CONTRACT,
+    canonicalMediaCorrection: MEDIA_CORRECTION_CONTRACT,
+    institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
+    reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
+    createReviewRpc: "kc_create_institutional_source_review",
+  };
+}
+
+export function integrityCapabilitiesPayload() {
+  return {
+    ok: true, code: "OK", read_only: true, mutation_dispatched: false,
+    repairContractVersion: "cadu-integrity-preserve-provenance-v1",
+    canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
+    preservesHistoricalProvenance: true,
+    preservesExactTagPairs: true,
+  };
 }
 
 const MODULE_PAGE: Record<string, string> = {
@@ -1941,18 +1967,13 @@ export async function handleRequest(req: Request): Promise<Response> {
             message: "O probe de capacidades aceita apenas a acao capabilities.",
           });
         }
-        return json(200, {
-          ok: true,
-          code: "OK",
-          capabilityVersion: CAPABILITY_VERSION,
-          canonicalReclassification: RECLASSIFICATION_CONTRACT,
-          canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
-          canonicalModeration: MODERATION_CONTRACT,
-          canonicalMediaCorrection: MEDIA_CORRECTION_CONTRACT,
-          institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
-          reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
-          createReviewRpc: "kc_create_institutional_source_review",
-        });
+        return json(200, capabilitiesPayload());
+      case "integrity-capabilities":
+        if (Object.keys(body).length !== 1 || body.action !== "integrity-capabilities") {
+          return json(400, { ok: false, code: "BAD_INTEGRITY_CAPABILITY_PROBE",
+            read_only: true, mutation_dispatched: false });
+        }
+        return json(200, integrityCapabilitiesPayload());
       case "publish":
         return await handlePublish(admin, user.id, body);
       case "review":
