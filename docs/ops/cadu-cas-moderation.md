@@ -65,6 +65,18 @@ for futuro. Ele acrescenta uma segunda entrada auditada; não apaga a primeira.
 Se a validade expirou ou qualquer estado mudou, o rollback é bloqueado. Não
 reativar por SQL direto.
 
+## Reversão da implantação
+
+Se o contrato precisar ser retirado, reverter primeiro a versão da Edge para
+um SHA anterior a `moderate` e confirmar que não há chamadas em andamento.
+Depois, aplicar uma **nova migration** transacional que revogue o grant
+`service_role` e remova exclusivamente a assinatura nova
+`public.kc_cadu_moderate_post_cas(uuid,uuid,jsonb,text,uuid,text,jsonb,uuid)`.
+Não remover `audit_log`, `metadata.cadu_moderation_history`, registros de posts
+ou mídias; eles são o histórico da operação. O preflight Edge deve voltar a
+refletir a revisão antiga antes da remoção da função. Nenhuma reversão de
+schema substitui o rollback CAS de um post ocultado por engano.
+
 ## Verificação
 
 Local: `deno test --no-lock --node-modules-dir=none --allow-env --allow-read
