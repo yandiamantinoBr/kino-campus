@@ -348,10 +348,16 @@ function markdownUrlLink(url: unknown): string {
 }
 
 function hasUfgSourceEvidence(sourceUrl: unknown): boolean {
-  const host = hostOf(sourceUrl).toLowerCase().replace(/:\d+$/, "");
+  const source = validRemoteImageUrl(sourceUrl);
+  const host = hostOf(source).toLowerCase().replace(/:\d+$/, "");
   // Registry IDs and Instagram handles are supplied in the item payload.
   // Neither independently proves an institutional affiliation at the Edge.
   return host === "ufg.br" || host.endsWith(".ufg.br");
+}
+
+function sourceUnitClaimsUfg(value: unknown): boolean {
+  const name = normalizeText(value);
+  return /(?:^|[^a-z])ufg(?:[^a-z]|$)|universidade federal de goias/.test(name);
 }
 
 function buildSourceLabel(sourceName: string, ufgSource: boolean): string {
@@ -563,11 +569,13 @@ function buildTags(
 ): { tags: string[]; tagKeys: string[] } {
   const pairs = new Map<string, string>();
   required.forEach(({ key, label }) => appendTagPair(pairs, key, label));
-  if ((module !== "eventos" && module !== "oportunidades") ||
-    hasUfgSourceEvidence(item.sourceUrl)) {
+  const ufgSource = hasUfgSourceEvidence(item.sourceUrl);
+  if ((module !== "eventos" && module !== "oportunidades") || ufgSource) {
     appendTagPair(pairs, "ufg", "UFG");
   }
-  appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
+  if (ufgSource || !sourceUnitClaimsUfg(item.sourceName)) {
+    appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
+  }
   const entries = Array.from(pairs.entries()).slice(0, 10);
   return {
     tagKeys: entries.map(([key]) => key),
@@ -1227,11 +1235,13 @@ function appendEditAutomaticTagPairs(
     const areaKey = slugify(metadata.areaKey || metadata.subcategory || metadata.subcategoriaKey || areaLabel);
     appendTagPair(pairs, areaKey, areaLabel || areaKey);
   }
-  if ((module !== "eventos" && module !== "oportunidades") ||
-    hasUfgSourceEvidence(metadata.source_url)) {
+  const ufgSource = hasUfgSourceEvidence(metadata.source_url);
+  if ((module !== "eventos" && module !== "oportunidades") || ufgSource) {
     appendTagPair(pairs, "ufg", "UFG");
   }
-  appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
+  if (ufgSource || !sourceUnitClaimsUfg(metadata.source_unit)) {
+    appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
+  }
   if (module === "oportunidades") {
     const workModeKey = slugify(metadata.workMode || metadata.workModeLabel || metadata.modalidadeTrabalho);
     const workModeLabel = normalizeWhitespace(
