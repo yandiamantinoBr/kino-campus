@@ -16,6 +16,9 @@ const OPTIONAL_EDITORIAL_KEYS = [
   "dates", "validity", "gratuito", "date_start", "date_end", "expires_at",
 ];
 const HISTORY_KEY = "cadu_integrity_history";
+const RESTRICTIVE_DATE_FALSE_KEYS = ["canApply", "can_apply"];
+const RESTRICTIVE_DATE_TRUE_KEYS = ["isExpired", "is_expired", "expired", "isClosed", "is_closed"];
+const RESTRICTIVE_DATE_STATUS_KEYS = ["applicationStatus", "application_status", "eventStatus", "event_status"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type RecordValue = Record<string, unknown>;
 
@@ -53,6 +56,27 @@ function contentSnapshot(post: RecordValue): RecordValue {
   snapshot.metadata = { ...(record(post.metadata) || {}) };
   delete (snapshot.metadata as RecordValue)[HISTORY_KEY];
   return snapshot;
+}
+
+// mapItemToPost retains the five semantic date roles but intentionally omits
+// participation flags. A factual CAS repair must carry forward the existing
+// restrictive state while still allowing a corrected result/deadline date.
+// Positive/open claims are never inherited from the old snapshot.
+export function preserveRestrictiveDateMarkers(current: unknown, mapped: unknown): RecordValue {
+  const previous = record(current) || {};
+  const next = { ...(record(mapped) || {}) };
+  for (const key of RESTRICTIVE_DATE_FALSE_KEYS) {
+    if (previous[key] === false || previous[key] === "false") next[key] = previous[key];
+  }
+  for (const key of RESTRICTIVE_DATE_TRUE_KEYS) {
+    if (previous[key] === true || previous[key] === "true") next[key] = previous[key];
+  }
+  for (const key of RESTRICTIVE_DATE_STATUS_KEYS) {
+    const value = previous[key];
+    if (typeof value === "string" && value.trim() &&
+      !["open", "active", "accepting"].includes(value.trim().toLowerCase())) next[key] = value;
+  }
+  return next;
 }
 export async function integrityHash(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(canonical(value));
@@ -180,6 +204,9 @@ export async function prepareIntegrityUpdate(
     if (namedEvents.size > 1) throw new IntegrityError("O titulo corrigido contradiz a identidade lexical da fonte primaria.");
     const detached = detachExactSources(currentMetadata, input.detachSources);
     const metadata = { ...detached, ...mappedMetadata };
+    if (record(mappedMetadata.dates)) {
+      metadata.dates = preserveRestrictiveDateMarkers(currentMetadata.dates, mappedMetadata.dates);
+    }
     for (const key of ["location", "localizacao"]) if (key in currentMetadata) metadata[key] = mappedRow.location;
     if ("sourceName" in currentMetadata) metadata.sourceName = mappedMetadata.source_unit;
     if ("category" in currentMetadata) metadata.category = mappedRow.category;
