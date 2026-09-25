@@ -67,6 +67,13 @@ Correções de fatos históricos permanecem possíveis quando preservam a inativ
 e passam pela barreira usual. Os recibos `INTEGRITY_REACTIVATION_BLOCKED` e
 `INTEGRITY_ACTIVE_REPAIR_EXPIRED` confirmam bloqueio anterior à primeira escrita.
 
+Ao substituir `metadata.dates` por datas semânticas corrigidas, a rota conserva
+do snapshot CAS os marcadores restritivos (`canApply:false`, flags de
+encerramento/expiração e estados que não afirmam inscrição aberta). Assim,
+uma correção de data de resultado não transforma um post informativo em uma
+candidatura acionável. O item enviado ainda passa pela checagem de reativação
+antes da preparação e não pode declarar uma nova permissão de inscrição.
+
 ## Reversão
 
 Enviar outro UUID de operação, `operation: "rollback"`, `rollbackOf` igual à

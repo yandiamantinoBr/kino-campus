@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { handleEdit } from "./index.ts";
-import { INTEGRITY_FIELDS, integrityMediaReceiptMatches, integritySnapshot, sameValue } from "./integrity.ts";
+import {
+  INTEGRITY_FIELDS, integrityMediaReceiptMatches, integritySnapshot,
+  prepareIntegrityUpdate, preserveRestrictiveDateMarkers, sameValue,
+  validateIntegrityRequest,
+} from "./integrity.ts";
 import { integrityReactivationReason, isActiveIntegrityScoreRepair } from "./integrity-lifecycle.ts";
 
 const POST_ID = "6fe40430-94f7-480d-a3da-777e38d0b8f0";
@@ -298,4 +302,75 @@ Deno.test("media-only drift fails whole repair and invented media IDs cannot be 
   body.integrityCorrection.mediaSelection.keepIds = [ROLLBACK_ID]; body.integrityCorrection.mediaSelection.coverId = ROLLBACK_ID;
   const rejected = fakeAdmin(currentPost(), { rows });
   assert.equal((await handleEdit(rejected.admin as never, OWNER, body)).status, 422); assert.equal(rejected.writes.length, 0);
+});
+
+Deno.test("factual CAS repair retains canApply:false while replacing a wrongly classified result date", async () => {
+  const initial = currentPost() as Record<string, any>;
+  initial.module = "oportunidades"; initial.category = "estagios";
+  initial.title = "Seleção de bolsa oficial";
+  initial.metadata.source_title = initial.title; initial.metadata.original_title = initial.title;
+  initial.expires_at = "2099-10-17T02:59:59.999Z";
+  initial.metadata.dates = {
+    applicationDeadline: "2099-10-16", resultPublishedAt: "2099-02-18",
+    applicationStatus: "open", canApply: false,
+  };
+  initial.metadata.deadline_date = "2099-10-16";
+  const body = request(initial as ReturnType<typeof currentPost>) as Record<string, any>;
+  body.integrityCorrection.item = {
+    ...correctedItem(), module: "oportunidades", category: "estagios", score: 0.75,
+    dates: { applicationDeadline: "2099-10-16", resultPublishedAt: "2099-02-19", canApply: false },
+  };
+  body.integrityCorrection.detachSources = [];
+  const input = validateIntegrityRequest(body, initial);
+  const mappedRow = {
+    ...initial,
+    metadata: {
+      source_id: SOURCE_ID, source_url: SOURCE_URL,
+      source_title: "Seleção de bolsa oficial",
+      deadline_date: "2099-10-16",
+      dates: { applicationDeadline: "2099-10-16", resultPublishedAt: "2099-02-19" },
+    },
+  };
+  const prepared = await prepareIntegrityUpdate(initial, input, mappedRow);
+  const afterDates = (prepared.update.metadata as Record<string, any>).dates;
+  assert.equal(afterDates.resultPublishedAt, "2099-02-19");
+  assert.equal(afterDates.canApply, false);
+  assert.equal(afterDates.applicationStatus, undefined);
+  assert.equal((prepared.update.metadata as Record<string, any>).source_url, SOURCE_URL);
+  assert.equal(initial.metadata.dates.resultPublishedAt, "2099-02-18");
+});
+
+Deno.test("restrictive date markers cannot be cleared or turned into an active application", async () => {
+  const preserved = preserveRestrictiveDateMarkers(
+    { canApply: false, isExpired: true, applicationStatus: "closed", eventStatus: "past" },
+    { canApply: true, applicationStatus: "open", resultPublishedAt: "2099-02-19" },
+  );
+  assert.deepEqual(preserved, {
+    canApply: false, isExpired: true, applicationStatus: "closed", eventStatus: "past",
+    resultPublishedAt: "2099-02-19",
+  });
+
+  const initial = currentPost() as Record<string, any>;
+  initial.module = "oportunidades"; initial.category = "estagios";
+  initial.title = "Seleção de bolsa oficial";
+  initial.metadata.source_title = initial.title; initial.metadata.original_title = initial.title;
+  initial.metadata.dates = { canApply: false, applicationStatus: "closed", applicationDeadline: "2026-08-14" };
+  initial.metadata.deadline_date = "2026-08-14";
+  const body = request(initial as ReturnType<typeof currentPost>) as Record<string, any>;
+  body.integrityCorrection.detachSources = [];
+  const input = validateIntegrityRequest(body, initial);
+  const mappedRow = {
+    ...initial,
+    metadata: {
+      source_id: SOURCE_ID, source_url: SOURCE_URL, source_title: "Seleção de bolsa oficial",
+      deadline_date: "2099-10-16", dates: { applicationDeadline: "2099-10-16" },
+    },
+  };
+  assert.equal(integrityReactivationReason(initial, mappedRow), "application_closed");
+  const prepared = await prepareIntegrityUpdate(initial, input, mappedRow);
+  const after = { ...initial, ...prepared.update };
+  assert.equal((prepared.update.metadata as Record<string, any>).dates.applicationStatus, "closed");
+  assert.equal((prepared.update.metadata as Record<string, any>).dates.canApply, false);
+  assert.equal(integrityReactivationReason(initial, after), null);
+  assert.equal(initial.metadata.dates.applicationDeadline, "2026-08-14");
 });
