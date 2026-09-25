@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { handleEdit } from "./index.ts";
+import { capabilitiesPayload, handleEdit, integrityCapabilitiesPayload } from "./index.ts";
 import {
   INTEGRITY_FIELDS, integrityMediaReceiptMatches, integritySnapshot,
   prepareIntegrityUpdate, preserveRestrictiveDateMarkers, sameValue,
@@ -15,6 +15,19 @@ const ROLLBACK_ID = "1b3d02ac-f3de-4023-8629-89807185c2e8";
 const SOURCE_URL = "https://ufg.br/n/203312";
 const SOURCE_ID = `web.ufg.portal:${SOURCE_URL}`;
 const COVER = "https://wacyrkwhkvzwkqpolrbg.supabase.co/storage/v1/object/public/kino-media/congress.jpg";
+Deno.test("legacy capabilities keep their exact OpenClaw-compatible shape", () => {
+  assert.deepEqual(Object.keys(capabilitiesPayload()).sort(), [
+    "ok", "code", "capabilityVersion", "canonicalReclassification", "canonicalIntegrityCorrection",
+    "canonicalModeration", "canonicalMediaCorrection", "institutionalReviewEnabled",
+    "reviewPolicyCode", "createReviewRpc",
+  ].sort());
+  const probe = integrityCapabilitiesPayload();
+  assert.deepEqual(Object.keys(probe).sort(), ["ok", "code", "read_only", "mutation_dispatched",
+    "repairContractVersion", "canonicalIntegrityCorrection", "preservesHistoricalProvenance",
+    "preservesExactTagPairs"].sort());
+  assert.equal(probe.repairContractVersion, "cadu-integrity-preserve-provenance-v1");
+  assert.equal(probe.read_only, true); assert.equal(probe.mutation_dispatched, false);
+});
 function currentPost() {
   return {
     id: POST_ID, author_id: OWNER, created_at: "2026-08-14T15:16:05.638783+00:00",
