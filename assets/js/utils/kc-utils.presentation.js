@@ -984,9 +984,23 @@ function renderPostCard(post, options) {
     itemClass: 'kc-card__tag',
   });
 
-  // Descrição (preview com markdown)
+  // Descrição (preview com markdown). Evita cortar um trecho em negrito no
+  // meio: o marcador solto apareceria literalmente no card.
   const rawDesc = String(p.descricao || '').trim();
-  const previewRaw = rawDesc.length > 140 ? (rawDesc.slice(0, 140).trim() + '...') : rawDesc;
+  let previewRaw = rawDesc;
+  if (rawDesc.length > 140) {
+    let end = 140;
+    const openingMarkers = (rawDesc.slice(0, end).match(/\*\*/g) || []).length;
+    if (openingMarkers % 2 !== 0) {
+      const closingMarker = rawDesc.indexOf('**', end);
+      if (closingMarker !== -1 && closingMarker - end <= 60) end = closingMarker + 2;
+    }
+    previewRaw = rawDesc.slice(0, end).trim();
+    if ((previewRaw.match(/\*\*/g) || []).length % 2 !== 0) {
+      previewRaw = previewRaw.replace(/\*\*(?=[^*]*$)/, '');
+    }
+    previewRaw += '...';
+  }
   const preview = _renderMarkdown(previewRaw);
 
   // Autor (via authorId)
