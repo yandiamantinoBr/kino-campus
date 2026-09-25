@@ -19,6 +19,7 @@
 //   { action: "edit", postId, fields?, metadata?, userTags?, tags?, image?, images? } -> edita
 //   { action: "edit", postId, reclassification: { expected, item } } -> reclassifica com CAS
 //   { action: "edit", postId, integrityCorrection: { operation, operationId, expected, ... } } -> corrige/reverte com CAS
+//   { action: "moderate", postId, moderation: { operation, operationId, expected, ... } } -> oculta/reverte com CAS
 //   { action: "list", filters? }            -> lista posts do Cadu (filtra)
 //   { action: "check", sourceUrl?, sourceId? } -> dedup (ja postado?)
 //
@@ -34,6 +35,7 @@ import { handleSourceConflictQuarantine } from "./source-conflict-quarantine.ts"
 import { handleMediaCorrection } from "./media-correction-handler.ts";
 import { MEDIA_COLUMNS, MEDIA_CORRECTION_CONTRACT } from "./media-correction.ts";
 import { handleMediaDiagnostic } from "./media-diagnostic.ts";
+import { handleModeration, MODERATION_CONTRACT } from "./moderation.ts";
 import { applicationDeadlineIssues, applicationDeadlineTransitionIssue, applicationDeadlinePostIssues } from "./application-deadline.ts";
 // FRAG-08 (issue #587, 2026-09-22): corpo canonico + limiar unico de weak.
 import { caduDescriptionBody, caduDescriptionQualityFlags, WEAK_DESCRIPTION_MIN_CHARS } from "./description.ts";
@@ -1925,6 +1927,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     return json(422, { ok: false, code: "MEDIA_DIAGNOSTIC_INVALID", read_only: true,
       mutation_dispatched: false, diagnostic_code: "diagnostic_request_invalid" });
   }
+  if (body.moderation !== undefined && body.action !== "moderate") {
+    return json(422, { ok: false, code: "MODERATION_INVALID", mutation_dispatched: false });
+  }
 
   try {
     switch (action) {
@@ -1942,6 +1947,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           capabilityVersion: CAPABILITY_VERSION,
           canonicalReclassification: RECLASSIFICATION_CONTRACT,
           canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
+          canonicalModeration: MODERATION_CONTRACT,
           canonicalMediaCorrection: MEDIA_CORRECTION_CONTRACT,
           institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,
           reviewPolicyCode: INSTITUTIONAL_REVIEW_POLICY_CODE,
@@ -1961,6 +1967,8 @@ export async function handleRequest(req: Request): Promise<Response> {
         return await handleReview(admin, user.id, body);
       case "edit":
         return await handleEdit(admin, user.id, body);
+      case "moderate":
+        return await handleModeration(admin, user.id, body, json);
       case "diagnose-media":
         return await handleMediaDiagnostic(user.id, body, {
           readPost: async (id) => {
