@@ -347,11 +347,28 @@ function markdownUrlLink(url: unknown): string {
   return clean ? `[${clean}](${clean})` : "";
 }
 
-function buildSourceLabel(sourceName: string): string {
-  const name = normalizeWhitespace(sourceName || "UFG");
-  if (!name || /^ufg$/i.test(name)) return "Fonte oficial: UFG";
-  if (/ufg/i.test(name)) return `Fonte oficial: ${name}`;
-  return `Fonte oficial: ${name}`;
+function hasUfgSourceEvidence(sourceUrl: unknown): boolean {
+  const source = validRemoteImageUrl(sourceUrl);
+  const host = hostOf(source).toLowerCase().replace(/:\d+$/, "");
+  // Registry IDs and Instagram handles are supplied in the item payload.
+  // Neither independently proves an institutional affiliation at the Edge.
+  return host === "ufg.br" || host.endsWith(".ufg.br");
+}
+
+function sourceUnitClaimsUfg(value: unknown): boolean {
+  const name = normalizeText(value);
+  return /(?:^|[^a-z])ufg(?:[^a-z]|$)|universidade federal de goias/.test(name);
+}
+
+function publicSourceName(sourceName: unknown, sourceUrl: unknown): string {
+  const name = normalizeWhitespace(sourceName);
+  return !hasUfgSourceEvidence(sourceUrl) && sourceUnitClaimsUfg(name) ? "" : name;
+}
+
+function buildSourceLabel(sourceName: string, ufgSource: boolean): string {
+  const name = normalizeWhitespace(sourceName);
+  if (!name || /^ufg$/i.test(name)) return ufgSource ? "Fonte oficial: UFG" : "Fonte";
+  return `${ufgSource ? "Fonte oficial" : "Fonte"}: ${name}`;
 }
 
 function normalizeDocumentLinks(item: CaduItem): Array<{ url: string; label: string }> {
@@ -475,7 +492,10 @@ function buildDescription(item: CaduItem, warnings: string[]): string {
   const chunks: string[] = body ? [body] : [];
 
   const sourceUrl = validRemoteImageUrl(item.sourceUrl);
-  const sourceLabel = buildSourceLabel(String(item.sourceName || ""));
+  const sourceLabel = buildSourceLabel(
+    publicSourceName(item.sourceName, item.sourceUrl),
+    hasUfgSourceEvidence(item.sourceUrl),
+  );
   const existingUrls = descriptionUrlKeys(body);
   const alreadyHasSource = sourceUrl && existingUrls.has(new URL(sourceUrl).href);
 
@@ -554,8 +574,13 @@ function buildTags(
 ): { tags: string[]; tagKeys: string[] } {
   const pairs = new Map<string, string>();
   required.forEach(({ key, label }) => appendTagPair(pairs, key, label));
-  appendTagPair(pairs, "ufg", "UFG");
-  appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
+  const ufgSource = hasUfgSourceEvidence(item.sourceUrl);
+  if ((module !== "eventos" && module !== "oportunidades") || ufgSource) {
+    appendTagPair(pairs, "ufg", "UFG");
+  }
+  if (ufgSource || !sourceUnitClaimsUfg(item.sourceName)) {
+    appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
+  }
   const entries = Array.from(pairs.entries()).slice(0, 10);
   return {
     tagKeys: entries.map(([key]) => key),
@@ -804,7 +829,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   // Título: prefere formattedTitle da IA (já otimizado), clamp só em fallback
   const rawTitle = stripInstitutionalPrefix(
     stripTrailingEllipsis(item.formattedTitle || item.formatted_title || item.title || ""),
-    item.sourceName
+    publicSourceName(item.sourceName, item.sourceUrl),
   );
   // Se veio da IA (formattedTitle), confia no tamanho (até 120 chars).
   // Se é título cru da fonte, clamp em 100 para evitar truncamento agressivo.
@@ -844,7 +869,13 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const actionKey = module === "compra-venda" ? secondaryKey : inferredActionKey;
 
   const emails = extractEmails(`${fullText}\n${item.contato || ""}`);
-  const contato = normalizeWhitespace(item.contato) || emails[0] || "Ver link oficial da UFG";
+  const ufgSource = hasUfgSourceEvidence(sourceUrl);
+  const suppliedContact = normalizeWhitespace(item.contato);
+  const contato = (!ufgSource && suppliedContact === "Ver link oficial da UFG"
+    ? "Ver link da fonte"
+    : suppliedContact) || emails[0] || (ufgSource
+      ? "Ver link oficial da UFG"
+      : "Ver link da fonte");
 
   const supportsLinkCta = module === "eventos" || module === "oportunidades";
   const linkAsCta = supportsLinkCta && (item.linkAsCta !== undefined ? !!item.linkAsCta : !!actionLink);
@@ -857,7 +888,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const commonMeta: Record<string, unknown> = {
     source_url: sourceUrl,
     source_host: hostOf(sourceUrl),
-    source_unit: normalizeWhitespace(item.sourceName),
+    source_unit: publicSourceName(item.sourceName, sourceUrl),
     source_id: sourceId,
     source_title: sourceTitle,
     source_registry_id: sourceRegistryId,
@@ -1209,8 +1240,13 @@ function appendEditAutomaticTagPairs(
     const areaKey = slugify(metadata.areaKey || metadata.subcategory || metadata.subcategoriaKey || areaLabel);
     appendTagPair(pairs, areaKey, areaLabel || areaKey);
   }
-  appendTagPair(pairs, "ufg", "UFG");
-  appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
+  const ufgSource = hasUfgSourceEvidence(metadata.source_url);
+  if ((module !== "eventos" && module !== "oportunidades") || ufgSource) {
+    appendTagPair(pairs, "ufg", "UFG");
+  }
+  if (ufgSource || !sourceUnitClaimsUfg(metadata.source_unit)) {
+    appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
+  }
   if (module === "oportunidades") {
     const workModeKey = slugify(metadata.workMode || metadata.workModeLabel || metadata.modalidadeTrabalho);
     const workModeLabel = normalizeWhitespace(
