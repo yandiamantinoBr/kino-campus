@@ -358,10 +358,14 @@ Deno.test("Cadu UFG attribution follows source provenance for events and opportu
   assert.ok(!externalWithoutName.row.description.includes("Fonte oficial: UFG"));
   const claimedUfgName = mapItemToPost({ ...external, sourceName: "UFG" });
   assert.ok(!(claimedUfgName.row.metadata.tagKeys as string[]).includes("ufg"));
+  assert.equal(claimedUfgName.row.metadata.source_unit, "");
+  assert.ok(!claimedUfgName.row.description.includes("Fonte: UFG"));
   const claimedFullName = mapItemToPost({
     ...external, sourceName: "Universidade Federal de Goiás",
   });
   assert.ok(!(claimedFullName.row.metadata.tagKeys as string[]).includes("universidade-federal-de-goias"));
+  assert.equal(claimedFullName.row.metadata.source_unit, "");
+  assert.ok(!claimedFullName.row.description.includes("Fonte: Universidade Federal de Goiás"));
   const edited = buildTaxonomyEditPatch(
     "eventos", "academicos", "academicos",
     { ...mappedExternal.row.metadata, source_unit: "UFG" },

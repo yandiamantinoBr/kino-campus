@@ -360,6 +360,11 @@ function sourceUnitClaimsUfg(value: unknown): boolean {
   return /(?:^|[^a-z])ufg(?:[^a-z]|$)|universidade federal de goias/.test(name);
 }
 
+function publicSourceName(sourceName: unknown, sourceUrl: unknown): string {
+  const name = normalizeWhitespace(sourceName);
+  return !hasUfgSourceEvidence(sourceUrl) && sourceUnitClaimsUfg(name) ? "" : name;
+}
+
 function buildSourceLabel(sourceName: string, ufgSource: boolean): string {
   const name = normalizeWhitespace(sourceName);
   if (!name || /^ufg$/i.test(name)) return ufgSource ? "Fonte oficial: UFG" : "Fonte";
@@ -488,7 +493,7 @@ function buildDescription(item: CaduItem, warnings: string[]): string {
 
   const sourceUrl = validRemoteImageUrl(item.sourceUrl);
   const sourceLabel = buildSourceLabel(
-    String(item.sourceName || ""),
+    publicSourceName(item.sourceName, item.sourceUrl),
     hasUfgSourceEvidence(item.sourceUrl),
   );
   const existingUrls = descriptionUrlKeys(body);
@@ -824,7 +829,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   // Título: prefere formattedTitle da IA (já otimizado), clamp só em fallback
   const rawTitle = stripInstitutionalPrefix(
     stripTrailingEllipsis(item.formattedTitle || item.formatted_title || item.title || ""),
-    item.sourceName
+    publicSourceName(item.sourceName, item.sourceUrl),
   );
   // Se veio da IA (formattedTitle), confia no tamanho (até 120 chars).
   // Se é título cru da fonte, clamp em 100 para evitar truncamento agressivo.
@@ -883,7 +888,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const commonMeta: Record<string, unknown> = {
     source_url: sourceUrl,
     source_host: hostOf(sourceUrl),
-    source_unit: normalizeWhitespace(item.sourceName),
+    source_unit: publicSourceName(item.sourceName, sourceUrl),
     source_id: sourceId,
     source_title: sourceTitle,
     source_registry_id: sourceRegistryId,
