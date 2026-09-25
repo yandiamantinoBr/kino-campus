@@ -339,6 +339,57 @@ function validItem(module: ModuleKey, category: string): CaduItem {
   return item;
 }
 
+Deno.test("Cadu UFG attribution follows source provenance for events and opportunities", () => {
+  const external = {
+    ...validItem("eventos", "academicos"),
+    sourceUrl: "https://www.instagram.com/p/Dc1Fa4hCUqQ/",
+    sourceId: "ig:cfaadm:Dc1Fa4hCUqQ",
+    sourceRegistryId: "ig.cfaadm",
+    sourceName: "ig:@cfaadm",
+  } satisfies CaduItem;
+  const mappedExternal = mapItemToPost(external);
+  assert.ok(!(mappedExternal.row.metadata.tagKeys as string[]).includes("ufg"));
+  assert.equal(mappedExternal.row.metadata.contato, "Ver link da fonte");
+  assert.ok(!mappedExternal.row.description.includes("Fonte oficial"));
+  const legacyFallback = mapItemToPost({ ...external, contato: "Ver link oficial da UFG" });
+  assert.equal(legacyFallback.row.metadata.contato, "Ver link da fonte");
+
+  const externalWithoutName = mapItemToPost({ ...external, sourceName: "" });
+  assert.ok(!externalWithoutName.row.description.includes("Fonte oficial: UFG"));
+  const edited = buildTaxonomyEditPatch(
+    "eventos", "academicos", "academicos",
+    mappedExternal.row.metadata,
+  );
+  assert.ok(!(edited.metadata.tagKeys as string[]).includes("ufg"));
+  const existingTagged = buildTaxonomyEditPatch(
+    "eventos", "academicos", "academicos",
+    { ...mappedExternal.row.metadata, tags: ["Acadêmicos", "UFG"], tagKeys: ["academicos", "ufg"] },
+  );
+  assert.ok((existingTagged.metadata.tagKeys as string[]).includes("ufg"));
+
+  for (const source of [
+    { sourceUrl: "https://propessoas.ufg.br/n/204751", sourceRegistryId: "web.ufg.propessoas" },
+    { sourceUrl: "https://www.instagram.com/p/ufg-unit/", sourceRegistryId: "ig.iptsp-ufg" },
+  ]) {
+    const mapped = mapItemToPost({ ...validItem("oportunidades", "editais"), ...source });
+    assert.ok((mapped.row.metadata.tagKeys as string[]).includes("ufg"));
+    assert.equal(mapped.row.metadata.contato, "Ver link oficial da UFG");
+  }
+
+  const lookalike = mapItemToPost({
+    ...validItem("eventos", "academicos"),
+    sourceUrl: "https://ufg.br.example.org/evento",
+    sourceRegistryId: "ufg.ext.cfa",
+  });
+  assert.ok(!(lookalike.row.metadata.tagKeys as string[]).includes("ufg"));
+  const externalWebRegistry = mapItemToPost({
+    ...validItem("eventos", "academicos"),
+    sourceUrl: "https://www.instagram.com/p/external/",
+    sourceRegistryId: "web.ufg.ext.cfa",
+  });
+  assert.ok(!(externalWebRegistry.row.metadata.tagKeys as string[]).includes("ufg"));
+});
+
 Deno.test("Cadu taxonomy matches every canonical create-post category and label", () => {
   for (const [module, definitions] of Object.entries(EXPECTED_CATEGORIES) as Array<
     [ModuleKey, Array<[string, string]>]
@@ -803,6 +854,8 @@ Deno.test("publish moves legacy independent Cadu tags into the editable contract
       item: {
         ...validItem("eventos", "palestras"),
         sourceName: "Faculdade de Letras",
+        sourceUrl: "https://letras.ufg.br/n/palestra",
+        sourceRegistryId: "web.ufg.letras",
         tags: ["Acad\u00eamicos", "Campus Samambaia"],
         tagKeys: ["academicos", "campus-samambaia"],
       },
@@ -813,6 +866,8 @@ Deno.test("publish moves legacy independent Cadu tags into the editable contract
     {
       item: {
         ...validItem("oportunidades", "empregos"),
+        sourceUrl: "https://ufg.br/n/emprego",
+        sourceRegistryId: "web.ufg.portal",
         area: "Tecnologia",
         tags: ["Est\u00e1gio", "Tecnologia"],
         tagKeys: ["estagios", "tecnologia"],

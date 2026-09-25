@@ -347,11 +347,20 @@ function markdownUrlLink(url: unknown): string {
   return clean ? `[${clean}](${clean})` : "";
 }
 
-function buildSourceLabel(sourceName: string): string {
-  const name = normalizeWhitespace(sourceName || "UFG");
-  if (!name || /^ufg$/i.test(name)) return "Fonte oficial: UFG";
-  if (/ufg/i.test(name)) return `Fonte oficial: ${name}`;
-  return `Fonte oficial: ${name}`;
+function hasUfgSourceEvidence(sourceUrl: unknown, sourceRegistryId: unknown): boolean {
+  const host = hostOf(sourceUrl).toLowerCase().replace(/:\d+$/, "");
+  if (host === "ufg.br" || host.endsWith(".ufg.br")) return true;
+  const registry = normalizeWhitespace(sourceRegistryId).toLowerCase();
+  // `ufg.ext.*` denotes an external entity in the Cadu registry. Instagram
+  // unit IDs carry the official UFG handle in their registry key.
+  return /^(?:web\.)?ufg\.(?!ext(?:\.|$))/.test(registry) ||
+    /^ig\.[a-z0-9._-]*ufg(?:[._-]|$)/.test(registry);
+}
+
+function buildSourceLabel(sourceName: string, ufgSource: boolean): string {
+  const name = normalizeWhitespace(sourceName);
+  if (!name || /^ufg$/i.test(name)) return ufgSource ? "Fonte oficial: UFG" : "Fonte";
+  return `${ufgSource ? "Fonte oficial" : "Fonte"}: ${name}`;
 }
 
 function normalizeDocumentLinks(item: CaduItem): Array<{ url: string; label: string }> {
@@ -475,7 +484,10 @@ function buildDescription(item: CaduItem, warnings: string[]): string {
   const chunks: string[] = body ? [body] : [];
 
   const sourceUrl = validRemoteImageUrl(item.sourceUrl);
-  const sourceLabel = buildSourceLabel(String(item.sourceName || ""));
+  const sourceLabel = buildSourceLabel(
+    String(item.sourceName || ""),
+    hasUfgSourceEvidence(item.sourceUrl, item.sourceRegistryId || item.source_registry_id),
+  );
   const existingUrls = descriptionUrlKeys(body);
   const alreadyHasSource = sourceUrl && existingUrls.has(new URL(sourceUrl).href);
 
@@ -554,7 +566,10 @@ function buildTags(
 ): { tags: string[]; tagKeys: string[] } {
   const pairs = new Map<string, string>();
   required.forEach(({ key, label }) => appendTagPair(pairs, key, label));
-  appendTagPair(pairs, "ufg", "UFG");
+  if ((module !== "eventos" && module !== "oportunidades") ||
+    hasUfgSourceEvidence(item.sourceUrl, item.sourceRegistryId || item.source_registry_id)) {
+    appendTagPair(pairs, "ufg", "UFG");
+  }
   appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
   const entries = Array.from(pairs.entries()).slice(0, 10);
   return {
@@ -844,7 +859,13 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const actionKey = module === "compra-venda" ? secondaryKey : inferredActionKey;
 
   const emails = extractEmails(`${fullText}\n${item.contato || ""}`);
-  const contato = normalizeWhitespace(item.contato) || emails[0] || "Ver link oficial da UFG";
+  const ufgSource = hasUfgSourceEvidence(sourceUrl, sourceRegistryId);
+  const suppliedContact = normalizeWhitespace(item.contato);
+  const contato = (!ufgSource && suppliedContact === "Ver link oficial da UFG"
+    ? "Ver link da fonte"
+    : suppliedContact) || emails[0] || (ufgSource
+      ? "Ver link oficial da UFG"
+      : "Ver link da fonte");
 
   const supportsLinkCta = module === "eventos" || module === "oportunidades";
   const linkAsCta = supportsLinkCta && (item.linkAsCta !== undefined ? !!item.linkAsCta : !!actionLink);
@@ -1209,7 +1230,10 @@ function appendEditAutomaticTagPairs(
     const areaKey = slugify(metadata.areaKey || metadata.subcategory || metadata.subcategoriaKey || areaLabel);
     appendTagPair(pairs, areaKey, areaLabel || areaKey);
   }
-  appendTagPair(pairs, "ufg", "UFG");
+  if ((module !== "eventos" && module !== "oportunidades") ||
+    hasUfgSourceEvidence(metadata.source_url, metadata.source_registry_id)) {
+    appendTagPair(pairs, "ufg", "UFG");
+  }
   appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
   if (module === "oportunidades") {
     const workModeKey = slugify(metadata.workMode || metadata.workModeLabel || metadata.modalidadeTrabalho);
