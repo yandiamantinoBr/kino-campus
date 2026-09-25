@@ -367,14 +367,23 @@ Deno.test("Cadu UFG attribution follows source provenance for events and opportu
   );
   assert.ok((existingTagged.metadata.tagKeys as string[]).includes("ufg"));
 
-  for (const source of [
-    { sourceUrl: "https://propessoas.ufg.br/n/204751", sourceRegistryId: "web.ufg.propessoas" },
-    { sourceUrl: "https://www.instagram.com/p/ufg-unit/", sourceRegistryId: "ig.iptsp-ufg" },
-  ]) {
-    const mapped = mapItemToPost({ ...validItem("oportunidades", "editais"), ...source });
-    assert.ok((mapped.row.metadata.tagKeys as string[]).includes("ufg"));
-    assert.equal(mapped.row.metadata.contato, "Ver link oficial da UFG");
-  }
+  const officialWeb = mapItemToPost({
+    ...validItem("oportunidades", "editais"),
+    sourceUrl: "https://propessoas.ufg.br/n/204751",
+    sourceRegistryId: "web.ufg.propessoas",
+  });
+  assert.ok((officialWeb.row.metadata.tagKeys as string[]).includes("ufg"));
+  assert.equal(officialWeb.row.metadata.contato, "Ver link oficial da UFG");
+
+  const unverifiedInstagram = mapItemToPost({
+    ...validItem("eventos", "academicos"),
+    sourceUrl: "https://www.instagram.com/p/ufg-unit/",
+    sourceId: "ig:iptsp_ufg:ufg-unit",
+    sourceRegistryId: "ig.iptsp-ufg",
+    sourceName: "ig:@iptsp_ufg",
+  });
+  assert.ok(!(unverifiedInstagram.row.metadata.tagKeys as string[]).includes("ufg"));
+  assert.equal(unverifiedInstagram.row.metadata.contato, "Ver link da fonte");
 
   const lookalike = mapItemToPost({
     ...validItem("eventos", "academicos"),
@@ -388,6 +397,12 @@ Deno.test("Cadu UFG attribution follows source provenance for events and opportu
     sourceRegistryId: "web.ufg.ext.cfa",
   });
   assert.ok(!(externalWebRegistry.row.metadata.tagKeys as string[]).includes("ufg"));
+  const claimedWebRegistry = mapItemToPost({
+    ...validItem("eventos", "academicos"),
+    sourceUrl: "https://www.instagram.com/p/claimed-ufg/",
+    sourceRegistryId: "web.ufg.portal",
+  });
+  assert.ok(!(claimedWebRegistry.row.metadata.tagKeys as string[]).includes("ufg"));
 });
 
 Deno.test("Cadu taxonomy matches every canonical create-post category and label", () => {

@@ -347,14 +347,11 @@ function markdownUrlLink(url: unknown): string {
   return clean ? `[${clean}](${clean})` : "";
 }
 
-function hasUfgSourceEvidence(sourceUrl: unknown, sourceRegistryId: unknown): boolean {
+function hasUfgSourceEvidence(sourceUrl: unknown): boolean {
   const host = hostOf(sourceUrl).toLowerCase().replace(/:\d+$/, "");
-  if (host === "ufg.br" || host.endsWith(".ufg.br")) return true;
-  const registry = normalizeWhitespace(sourceRegistryId).toLowerCase();
-  // `ufg.ext.*` denotes an external entity in the Cadu registry. Instagram
-  // unit IDs carry the official UFG handle in their registry key.
-  return /^(?:web\.)?ufg\.(?!ext(?:\.|$))/.test(registry) ||
-    /^ig\.[a-z0-9._-]*ufg(?:[._-]|$)/.test(registry);
+  // Registry IDs and Instagram handles are supplied in the item payload.
+  // Neither independently proves an institutional affiliation at the Edge.
+  return host === "ufg.br" || host.endsWith(".ufg.br");
 }
 
 function buildSourceLabel(sourceName: string, ufgSource: boolean): string {
@@ -486,7 +483,7 @@ function buildDescription(item: CaduItem, warnings: string[]): string {
   const sourceUrl = validRemoteImageUrl(item.sourceUrl);
   const sourceLabel = buildSourceLabel(
     String(item.sourceName || ""),
-    hasUfgSourceEvidence(item.sourceUrl, item.sourceRegistryId || item.source_registry_id),
+    hasUfgSourceEvidence(item.sourceUrl),
   );
   const existingUrls = descriptionUrlKeys(body);
   const alreadyHasSource = sourceUrl && existingUrls.has(new URL(sourceUrl).href);
@@ -567,7 +564,7 @@ function buildTags(
   const pairs = new Map<string, string>();
   required.forEach(({ key, label }) => appendTagPair(pairs, key, label));
   if ((module !== "eventos" && module !== "oportunidades") ||
-    hasUfgSourceEvidence(item.sourceUrl, item.sourceRegistryId || item.source_registry_id)) {
+    hasUfgSourceEvidence(item.sourceUrl)) {
     appendTagPair(pairs, "ufg", "UFG");
   }
   appendIndependentTagPair(pairs, module, item.sourceName, item.sourceName);
@@ -859,7 +856,7 @@ export function mapItemToPost(item: CaduItem, options: { runId?: string; now?: D
   const actionKey = module === "compra-venda" ? secondaryKey : inferredActionKey;
 
   const emails = extractEmails(`${fullText}\n${item.contato || ""}`);
-  const ufgSource = hasUfgSourceEvidence(sourceUrl, sourceRegistryId);
+  const ufgSource = hasUfgSourceEvidence(sourceUrl);
   const suppliedContact = normalizeWhitespace(item.contato);
   const contato = (!ufgSource && suppliedContact === "Ver link oficial da UFG"
     ? "Ver link da fonte"
@@ -1231,7 +1228,7 @@ function appendEditAutomaticTagPairs(
     appendTagPair(pairs, areaKey, areaLabel || areaKey);
   }
   if ((module !== "eventos" && module !== "oportunidades") ||
-    hasUfgSourceEvidence(metadata.source_url, metadata.source_registry_id)) {
+    hasUfgSourceEvidence(metadata.source_url)) {
     appendTagPair(pairs, "ufg", "UFG");
   }
   appendIndependentTagPair(pairs, module, metadata.source_unit, metadata.source_unit);
