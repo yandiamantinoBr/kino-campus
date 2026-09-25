@@ -1947,6 +1947,8 @@ export async function handleRequest(req: Request): Promise<Response> {
           capabilityVersion: CAPABILITY_VERSION,
           canonicalReclassification: RECLASSIFICATION_CONTRACT,
           canonicalIntegrityCorrection: INTEGRITY_CONTRACT,
+          integrityPreservesHistoricalProvenance: true,
+          integrityPreservesExactTagPairs: true,
           canonicalModeration: MODERATION_CONTRACT,
           canonicalMediaCorrection: MEDIA_CORRECTION_CONTRACT,
           institutionalReviewEnabled: INSTITUTIONAL_REVIEW_ENABLED,

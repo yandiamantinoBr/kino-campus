@@ -204,6 +204,23 @@ export async function prepareIntegrityUpdate(
     if (namedEvents.size > 1) throw new IntegrityError("O titulo corrigido contradiz a identidade lexical da fonte primaria.");
     const detached = detachExactSources(currentMetadata, input.detachSources);
     const metadata = { ...detached, ...mappedMetadata };
+    // Mapping a corrected item creates publication markers even for a legacy
+    // post that never had them. An integrity repair cannot establish run or
+    // publisher provenance, so keep their exact prior presence and value.
+    for (const key of ["cadu_run_id", "cadu_published"]) {
+      if (key in currentMetadata) metadata[key] = currentMetadata[key];
+      else delete metadata[key];
+    }
+    // A legacy post may have reviewed thematic tags that the current mapper
+    // cannot recreate. Retain only an explicitly supplied, exact CAS copy of
+    // both arrays while the category stays the same; otherwise use mapping.
+    const item = record(input.item);
+    if (current.category === mappedRow.category &&
+      Array.isArray(item?.tags) && Array.isArray(item?.tagKeys) &&
+      sameValue(item.tags, currentMetadata.tags) && sameValue(item.tagKeys, currentMetadata.tagKeys)) {
+      metadata.tags = currentMetadata.tags;
+      metadata.tagKeys = currentMetadata.tagKeys;
+    }
     if (record(mappedMetadata.dates)) {
       metadata.dates = preserveRestrictiveDateMarkers(currentMetadata.dates, mappedMetadata.dates);
     }
