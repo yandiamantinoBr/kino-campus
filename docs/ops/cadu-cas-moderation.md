@@ -7,7 +7,7 @@ de vínculo com o campus. O contrato não decide sozinho se outro evento é eleg
 
 ## Implantação
 
-1. Aplicar a migration `20260925124649_cadu_cas_moderation.sql` pelo fluxo oficial
+1. Aplicar a migration `20260925132233_cadu_cas_moderation.sql` pelo fluxo oficial
    de migrations. Confirmar a assinatura de nove argumentos e grant exclusivo
    `service_role` da função `kc_cadu_moderate_post_cas`.
 2. Implantar `cadu-publish` da mesma revisão de Git. A Edge revalida JWT, sessão
