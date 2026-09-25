@@ -314,6 +314,24 @@ describe('renderPostCard', () => {
     expect(html).toContain('BBBB');
   });
 
+  test('não divide marcadores de negrito que atravessam o limite de 140 caracteres', () => {
+    for (const descricao of [
+      `**${'B'.repeat(137)}** texto posterior`,
+      `${'A'.repeat(139)}**${'B'.repeat(12)}** texto posterior`,
+    ]) {
+      const html = pres().renderPostCard({
+        id: 'split-bold-preview',
+        modulo: 'eventos',
+        categoria: 'academicos',
+        titulo: 'Evento com trecho em negrito',
+        descricao,
+      });
+
+      expect(html).not.toContain('**');
+      expect(html).toContain('<strong>');
+    }
+  });
+
   test('renderiza article.kc-card com autor vindo da KCAPI', () => {
     window.KCAPI = {
       getAuthorById(id) {

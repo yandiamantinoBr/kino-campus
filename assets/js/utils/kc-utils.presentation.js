@@ -990,6 +990,7 @@ function renderPostCard(post, options) {
   let previewRaw = rawDesc;
   if (rawDesc.length > 140) {
     let end = 140;
+    if (rawDesc[end - 1] === '*' && rawDesc[end] === '*') end += 1;
     const openingMarkers = (rawDesc.slice(0, end).match(/\*\*/g) || []).length;
     if (openingMarkers % 2 !== 0) {
       const closingMarker = rawDesc.indexOf('**', end);
