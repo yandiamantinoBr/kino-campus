@@ -8,7 +8,7 @@ de vínculo com o campus. O contrato não decide sozinho se outro evento é eleg
 ## Implantação
 
 1. Aplicar a migration `20260925124649_cadu_cas_moderation.sql` pelo fluxo oficial
-   de migrations. Confirmar a assinatura de oito argumentos e grant exclusivo
+   de migrations. Confirmar a assinatura de nove argumentos e grant exclusivo
    `service_role` da função `kc_cadu_moderate_post_cas`.
 2. Implantar `cadu-publish` da mesma revisão de Git. A Edge revalida JWT, sessão
    ativa e allowlist do Cadu; o RPC repete o vínculo com a conta confiável e a
@@ -44,7 +44,10 @@ função normaliza somente esses timestamps e `expires_at`. Enviar à Edge:
 
 O RPC trava a linha, compara **todos** os 16 campos e só então muda `status`
 de `published` para `hidden`. Preserva ID, `visibility`, módulo, fonte, conteúdo,
-validade, mídia e comentários. `moderation_reason` vira
+validade, mídia e comentários. A Edge lê as seis colunas de cada associação
+`post_media` antes da operação; o RPC trava essas linhas, compara a galeria
+com o snapshot enviado e devolve a mesma galeria no recibo verificado. Uma
+inserção concorrente de mídia espera o lock da linha pai. `moderation_reason` vira
 `audit-cadu-editorial:<operationId>`; motivo e evidências completos ficam em
 `metadata.cadu_moderation_history` e `audit_log`. O gatilho de status registra
 também a transição. Uma edição concorrente retorna `MODERATION_CONFLICT` sem
@@ -60,8 +63,9 @@ primária, mas a veracidade editorial da evidência requer revisão humana.
 Após nova revisão editorial, usar outro `operationId`, `operation: "rollback"`,
 `rollbackOf` igual ao último ID de ocultação, snapshot fresco completo, motivo e
 evidência. O RPC só restaura `published` se o post ainda estiver exatamente
-oculto por aquela operação, sem alterações concorrentes, e `expires_at` ainda
-for futuro. Ele acrescenta uma segunda entrada auditada; não apaga a primeira.
+oculto por aquela operação, sem edição posterior de conteúdo/metadados/mídia,
+com `updated_at` igual ao instante gravado pelo trigger na ocultação, e
+`expires_at` ainda futuro. Ele acrescenta uma segunda entrada auditada; não apaga a primeira.
 Se a validade expirou ou qualquer estado mudou, o rollback é bloqueado. Não
 reativar por SQL direto.
 
@@ -71,7 +75,7 @@ Se o contrato precisar ser retirado, reverter primeiro a versão da Edge para
 um SHA anterior a `moderate` e confirmar que não há chamadas em andamento.
 Depois, aplicar uma **nova migration** transacional que revogue o grant
 `service_role` e remova exclusivamente a assinatura nova
-`public.kc_cadu_moderate_post_cas(uuid,uuid,jsonb,text,uuid,text,jsonb,uuid)`.
+`public.kc_cadu_moderate_post_cas(uuid,uuid,jsonb,jsonb,text,uuid,text,jsonb,uuid)`.
 Não remover `audit_log`, `metadata.cadu_moderation_history`, registros de posts
 ou mídias; eles são o histórico da operação. O preflight Edge deve voltar a
 refletir a revisão antiga antes da remoção da função. Nenhuma reversão de

@@ -9,6 +9,7 @@ create function public.kc_cadu_moderate_post_cas(
   p_post_id uuid,
   p_actor_id uuid,
   p_expected jsonb,
+  p_expected_media jsonb,
   p_operation text,
   p_operation_id uuid,
   p_reason text,
@@ -25,9 +26,13 @@ declare
   v_actual jsonb;
   v_expected jsonb;
   v_after jsonb;
+  v_guard jsonb;
+  v_media jsonb;
+  v_expected_media jsonb;
   v_history jsonb;
   v_entry jsonb;
   v_now timestamptz := clock_timestamp();
+  v_after_updated_at timestamptz := now();
   v_source_url text;
   v_reason text := btrim(coalesce(p_reason, ''));
   v_keys text[] := array['id','author_id','created_at','title','description','price','location',
@@ -49,6 +54,9 @@ begin
     or (select count(*) from jsonb_object_keys(p_expected)) <> 16
     or not (p_expected ?& v_keys)
     or octet_length(p_expected::text) > 1048576
+    or jsonb_typeof(p_expected_media) is distinct from 'array'
+    or jsonb_array_length(p_expected_media) > 24
+    or octet_length(p_expected_media::text) > 131072
     or (p_operation = 'hide' and p_rollback_of is not null)
     or (p_operation = 'rollback' and (p_rollback_of is null or p_rollback_of = p_operation_id)) then
     raise exception 'invalid moderation request' using errcode = '22023';
@@ -84,6 +92,20 @@ begin
     return jsonb_build_object('ok', false, 'code', 'MODERATION_CONFLICT');
   end if;
 
+  -- Compare the same content and gallery on rollback, even if a caller
+  -- supplies a fresh CAS snapshot after a legitimate intervening edit.
+  perform 1 from public.post_media where post_id = p_post_id for update;
+  select coalesce(jsonb_agg(to_jsonb(pm) order by pm.id), '[]'::jsonb)
+    into v_media from public.post_media pm where pm.post_id = p_post_id;
+  select coalesce(jsonb_agg(to_jsonb(pm) order by pm.id), '[]'::jsonb)
+    into v_expected_media
+    from jsonb_populate_recordset(null::public.post_media, p_expected_media) pm;
+  if v_media is distinct from v_expected_media then
+    return jsonb_build_object('ok', false, 'code', 'MODERATION_CONFLICT');
+  end if;
+  v_guard := (v_actual - 'status' - 'moderation_reason' - 'updated_at' - 'metadata')
+    || jsonb_build_object('metadata', v_post.metadata - 'cadu_moderation_history' - 'cadu_moderation_lock');
+
   v_history := coalesce(v_post.metadata->'cadu_moderation_history', '[]'::jsonb);
   if jsonb_typeof(v_history) is distinct from 'array' or jsonb_array_length(v_history) >= 64
     or exists (select 1 from jsonb_array_elements(v_history) e where e->>'operation_id' = p_operation_id::text) then
@@ -100,9 +122,13 @@ begin
       'operation', 'hide', 'operation_id', p_operation_id,
       'at', v_now, 'actor_id', p_actor_id, 'reason', v_reason,
       'evidence', p_evidence, 'source_url', v_source_url,
+      'after_updated_at', v_after_updated_at, 'guard', v_guard, 'media', v_media,
       'before', jsonb_build_object('status', v_post.status, 'visibility', v_post.visibility,
         'moderation_reason', v_post.moderation_reason, 'updated_at', v_post.updated_at)
     );
+    if octet_length((v_history || jsonb_build_array(v_entry))::text) > 1048576 then
+      raise exception 'moderation history full' using errcode = '22023';
+    end if;
     update public.posts
        set status = 'hidden',
            moderation_reason = 'audit-cadu-editorial:' || p_operation_id::text,
@@ -121,6 +147,9 @@ begin
       or v_entry->'before'->>'status' is distinct from 'published'
       or v_entry->'before'->>'visibility' is distinct from 'public'
       or v_entry->'before'->>'moderation_reason' is not null
+      or (v_entry->>'after_updated_at')::timestamptz is distinct from v_post.updated_at
+      or v_entry->'guard' is distinct from v_guard
+      or v_entry->'media' is distinct from v_media
       or v_post.expires_at is null or v_post.expires_at <= v_now then
       return jsonb_build_object('ok', false, 'code', 'MODERATION_ROLLBACK_BLOCKED');
     end if;
@@ -131,6 +160,9 @@ begin
       'before', jsonb_build_object('status', v_post.status, 'visibility', v_post.visibility,
         'moderation_reason', v_post.moderation_reason, 'updated_at', v_post.updated_at)
     );
+    if octet_length((v_history || jsonb_build_array(v_entry))::text) > 1048576 then
+      raise exception 'moderation history full' using errcode = '22023';
+    end if;
     update public.posts
        set status = 'published',
            moderation_reason = null,
@@ -152,13 +184,14 @@ begin
     p_actor_id
   );
   return jsonb_build_object('ok', true, 'code', 'MODERATION_APPLIED',
-    'operation', p_operation, 'operation_id', p_operation_id, 'post', v_after);
+    'operation', p_operation, 'operation_id', p_operation_id,
+    'post', v_after, 'post_media', v_media);
 end;
 $$;
 
-revoke all on function public.kc_cadu_moderate_post_cas(uuid, uuid, jsonb, text, uuid, text, jsonb, uuid)
+revoke all on function public.kc_cadu_moderate_post_cas(uuid, uuid, jsonb, jsonb, text, uuid, text, jsonb, uuid)
   from public, anon, authenticated;
-grant execute on function public.kc_cadu_moderate_post_cas(uuid, uuid, jsonb, text, uuid, text, jsonb, uuid)
+grant execute on function public.kc_cadu_moderate_post_cas(uuid, uuid, jsonb, jsonb, text, uuid, text, jsonb, uuid)
   to service_role;
 
 commit;

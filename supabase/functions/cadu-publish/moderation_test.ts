@@ -10,6 +10,14 @@ const ACTOR = "d8282222-4848-4848-8484-484848484848";
 const HIDE_ID = "a1a11111-1111-4111-8111-111111111111";
 const ROLLBACK_ID = "b2b22222-2222-4222-8222-222222222222";
 const SOURCE_URL = "https://www.instagram.com/p/Dc1Fa4hCUqQ/";
+const MEDIA = [{
+  id: "30000000-0000-4000-8000-000000000001",
+  post_id: POST_ID,
+  url: "https://example.test/enbra.jpg",
+  is_cover: true,
+  sort_order: 0,
+  created_at: "2026-09-25T01:25:00.123456Z",
+}];
 // deno-lint-ignore no-explicit-any
 type Row = Record<string, any>;
 const json = (status: number, body: Row) => Response.json(body, { status });
@@ -66,12 +74,39 @@ function request(current: Row, operation: "hide" | "rollback" = "hide"): Row {
 
 function harness(
   initial = post(),
-  mode: "normal" | "conflict" | "blocked" | "lost" | "bad-receipt" = "normal",
+  mode:
+    | "normal"
+    | "conflict"
+    | "blocked"
+    | "lost"
+    | "bad-receipt"
+    | "bad-guard"
+    | "bad-timestamp"
+    | "bad-media" = "normal",
 ) {
   let state = structuredClone(initial);
+  const media = structuredClone(MEDIA);
   const calls: Row[] = [];
   const admin = {
     from(table: string) {
+      if (table === "post_media") {
+        return {
+          select(columns: string) {
+            assert(columns.includes("created_at"));
+            return {
+              eq(_key: string, id: string) {
+                assert.equal(id, POST_ID);
+                return {
+                  order: (_column: string) => ({
+                    data: structuredClone(media),
+                    error: null,
+                  }),
+                };
+              },
+            };
+          },
+        };
+      }
       assert.equal(table, "posts");
       return {
         select(columns: string) {
@@ -99,6 +134,7 @@ function harness(
         Object.keys(moderationSnapshot(state)).sort(),
       );
       assert.deepEqual(args.p_expected, moderationSnapshot(state));
+      assert.deepEqual(args.p_expected_media, media);
       calls.push(structuredClone(args));
       if (mode === "conflict") {
         return {
@@ -114,6 +150,22 @@ function harness(
       }
       if (mode === "lost") throw new Error("lost after dispatch");
       const history = state.metadata.cadu_moderation_history || [];
+      if (
+        args.p_operation === "rollback" &&
+        JSON.stringify(history.at(-1)?.media) !== JSON.stringify(media)
+      ) {
+        return {
+          data: { ok: false, code: "MODERATION_ROLLBACK_BLOCKED" },
+          error: null,
+        };
+      }
+      const guard = moderationSnapshot(state);
+      delete guard.status;
+      delete guard.moderation_reason;
+      delete guard.updated_at;
+      guard.metadata = { ...state.metadata };
+      delete (guard.metadata as Row).cadu_moderation_history;
+      delete (guard.metadata as Row).cadu_moderation_lock;
       const entry = {
         operation: args.p_operation,
         operation_id: args.p_operation_id,
@@ -123,6 +175,13 @@ function harness(
         reason: args.p_reason,
         evidence: args.p_evidence,
         source_url: SOURCE_URL,
+        ...(args.p_operation === "hide"
+          ? {
+            guard,
+            media: structuredClone(media),
+            after_updated_at: "2026-09-25T12:49:00.123456Z",
+          }
+          : {}),
         before: {
           status: state.status,
           visibility: state.visibility,
@@ -150,6 +209,18 @@ function harness(
       }
       const response = structuredClone(state);
       if (mode === "bad-receipt") response.location = "changed after CAS";
+      if (mode === "bad-guard") {
+        response.metadata.cadu_moderation_history.at(-1).guard.title =
+          "altered";
+      }
+      if (mode === "bad-timestamp") {
+        response.metadata.cadu_moderation_history.at(-1).after_updated_at =
+          "2026-09-25T12:49:00.123457Z";
+      }
+      const mediaReceipt = structuredClone(media);
+      if (mode === "bad-media") {
+        mediaReceipt[0].url = "https://example.test/changed.jpg";
+      }
       return {
         data: {
           ok: true,
@@ -157,12 +228,20 @@ function harness(
           operation: args.p_operation,
           operation_id: args.p_operation_id,
           post: response,
+          post_media: mediaReceipt,
         },
         error: null,
       };
     },
   };
-  return { admin, calls, state: () => structuredClone(state) };
+  return {
+    admin,
+    calls,
+    state: () => structuredClone(state),
+    changeMedia: (url: string) => {
+      media[0].url = url;
+    },
+  };
 }
 
 Deno.test("Cadu hides a scoped false-attribution post with a complete CAS snapshot", async () => {
@@ -286,6 +365,9 @@ for (
     ["conflict", 409, "MODERATION_CONFLICT"],
     ["lost", 502, "MODERATION_MUTATION_UNCERTAIN"],
     ["bad-receipt", 502, "MODERATION_RECEIPT_INVALID"],
+    ["bad-guard", 502, "MODERATION_RECEIPT_INVALID"],
+    ["bad-timestamp", 502, "MODERATION_RECEIPT_INVALID"],
+    ["bad-media", 502, "MODERATION_RECEIPT_INVALID"],
   ] as const
 ) {
   Deno.test(`moderation ${mode} is not reported as applied`, async () => {
@@ -351,4 +433,23 @@ Deno.test("database rollback veto remains authoritative", async () => {
   );
   assert.equal(response.status, 422);
   assert.equal((await response.json()).code, "MODERATION_ROLLBACK_BLOCKED");
+});
+
+Deno.test("fresh row snapshot cannot roll back after gallery change", async () => {
+  const h = harness();
+  assert.equal(
+    (await handleModeration(h.admin as never, ACTOR, request(post()), json))
+      .status,
+    200,
+  );
+  h.changeMedia("https://example.test/changed.jpg");
+  const rollback = await handleModeration(
+    h.admin as never,
+    ACTOR,
+    request(h.state(), "rollback"),
+    json,
+  );
+  assert.equal(rollback.status, 422);
+  assert.equal((await rollback.json()).code, "MODERATION_ROLLBACK_BLOCKED");
+  assert.equal(h.state().status, "hidden");
 });

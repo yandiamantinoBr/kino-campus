@@ -3,10 +3,13 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import {
   INTEGRITY_COLUMNS,
   INTEGRITY_FIELDS,
+  integrityMediaReceiptMatches,
   integritySnapshot,
   record,
   sameValue,
 } from "./integrity.ts";
+import { mediaRows } from "./integrity-media.ts";
+import { MEDIA_COLUMNS } from "./media-correction.ts";
 
 export const MODERATION_CONTRACT = "cadu-moderation-cas-v1";
 export const MODERATION_COLUMNS = `${INTEGRITY_COLUMNS},moderation_reason`;
@@ -208,12 +211,26 @@ export async function handleModeration(
       message: error instanceof Error ? error.message : "Pedido inválido.",
     });
   }
+  const { data: mediaData, error: mediaError } = await admin.from("post_media")
+    .select(MEDIA_COLUMNS).eq("post_id", body.postId).order("id");
+  let expectedMedia: Row[];
+  try {
+    expectedMedia = mediaRows(mediaData, body.postId).sort((a, b) =>
+      String(a.id).localeCompare(String(b.id))
+    );
+  } catch {
+    return json(503, { ok: false, code: "MODERATION_MEDIA_READ_FAILED" });
+  }
+  if (mediaError) {
+    return json(503, { ok: false, code: "MODERATION_MEDIA_READ_FAILED" });
+  }
   let receipt: Row | null = null;
   try {
     const response = await admin.rpc("kc_cadu_moderate_post_cas", {
       p_post_id: body.postId,
       p_actor_id: userId,
       p_expected: input.expected,
+      p_expected_media: expectedMedia,
       p_operation: input.operation,
       p_operation_id: input.operationId,
       p_reason: input.reason,
@@ -246,6 +263,13 @@ export async function handleModeration(
   }
   const fresh = record(receipt.post);
   const beforeMetadata = record(current.metadata)!;
+  const beforeGuard = moderationSnapshot(current);
+  delete beforeGuard.status;
+  delete beforeGuard.moderation_reason;
+  delete beforeGuard.updated_at;
+  beforeGuard.metadata = { ...beforeMetadata };
+  delete (beforeGuard.metadata as Row).cadu_moderation_history;
+  delete (beforeGuard.metadata as Row).cadu_moderation_lock;
   const afterMetadata = record(fresh?.metadata);
   const beforeHistory = Array.isArray(beforeMetadata.cadu_moderation_history)
     ? beforeMetadata.cadu_moderation_history
@@ -282,6 +306,11 @@ export async function handleModeration(
     receipt.operation !== input.operation ||
     !fresh || !exactKeys(fresh, [...INTEGRITY_FIELDS, "moderation_reason"]) ||
     !last || !afterMetadata || !sameValue(afterMetadata, expectedMetadata) ||
+    !integrityMediaReceiptMatches(
+      receipt.post_media,
+      expectedMedia,
+      body.postId,
+    ) ||
     last.operation !== input.operation ||
     last.operation_id !== input.operationId ||
     last.actor_id !== userId || last.reason !== input.reason ||
@@ -298,7 +327,17 @@ export async function handleModeration(
     ) ||
     (input.operation === "hide" && (fresh.status !== "hidden" ||
       fresh.moderation_reason !== `audit-cadu-editorial:${input.operationId}` ||
-      record(fresh.metadata)?.cadu_moderation_lock !== input.operationId)) ||
+      record(fresh.metadata)?.cadu_moderation_lock !== input.operationId ||
+      !record(last.guard) || !Array.isArray(last.media) ||
+      !integrityMediaReceiptMatches(last.media, expectedMedia, body.postId) ||
+      !sameValue(
+        integritySnapshot(last.guard as Row),
+        integritySnapshot(beforeGuard),
+      ) ||
+      !sameValue(
+        integritySnapshot({ updated_at: last.after_updated_at }).updated_at,
+        integritySnapshot(fresh).updated_at,
+      ))) ||
     (input.operation === "rollback" && (fresh.status !== "published" ||
       fresh.moderation_reason !== null ||
       record(fresh.metadata)?.cadu_moderation_lock !== undefined))
