@@ -288,6 +288,50 @@ describe('renderMarkerTags', () => {
 });
 
 describe('renderPostCard', () => {
+  test('mantém negrito completo quando o corte do resumo cai dentro da data do Festival', () => {
+    const html = pres().renderPostCard({
+      id: 'festival-preview',
+      modulo: 'eventos',
+      categoria: 'academicos',
+      titulo: 'Festival Goiano de Matemática (26 e 27/10)',
+      descricao: '📐 **Festival Goiano de Matemática (FESTMATGO)** — o IME/UFG e o LeMat informam que o evento foi remarcado para **26 e 27 de outubro de 2026**, no Campus Samambaia, em Goiânia.',
+    });
+
+    expect(html).toContain('<strong>26 e 27 de outubro de 2026</strong>');
+    expect(html).not.toContain('**26 e 27');
+  });
+
+  test('remove marcador de negrito sem par quando o fechamento excede o limite do resumo', () => {
+    const html = pres().renderPostCard({
+      id: 'long-bold-preview',
+      modulo: 'eventos',
+      categoria: 'academicos',
+      titulo: 'Evento com descrição longa',
+      descricao: `${'A'.repeat(130)} **${'B'.repeat(90)}** texto posterior`,
+    });
+
+    expect(html).not.toContain('**BBBB');
+    expect(html).toContain('BBBB');
+  });
+
+  test('não divide marcadores de negrito que atravessam o limite de 140 caracteres', () => {
+    for (const descricao of [
+      `**${'B'.repeat(137)}** texto posterior`,
+      `${'A'.repeat(139)}**${'B'.repeat(12)}** texto posterior`,
+    ]) {
+      const html = pres().renderPostCard({
+        id: 'split-bold-preview',
+        modulo: 'eventos',
+        categoria: 'academicos',
+        titulo: 'Evento com trecho em negrito',
+        descricao,
+      });
+
+      expect(html).not.toContain('**');
+      expect(html).toContain('<strong>');
+    }
+  });
+
   test('renderiza article.kc-card com autor vindo da KCAPI', () => {
     window.KCAPI = {
       getAuthorById(id) {
